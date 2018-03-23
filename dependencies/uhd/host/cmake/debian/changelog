@@ -1,0 +1,77 @@
+uhd (3.9.5-0ubuntu1) trusty; urgency=low
+
+  - B200: Update DSPs after changing tick rate
+  - X300: Added option to disable ADC self test, prevent DAC from
+    underrunning
+  - UBX: Fixed noise issues, reduced power consumption/heat, added codes for
+    upcoming board revisions, force RX LNAs on (reduces rx settling time)
+  - WBX: Fixed rev2 and rev3 boards on X300
+  - Utils/Examples: Cleaned up query_gpsdo_sensors, test_dboard_coercion,
+  - Manual: Minor fixes and updates
+  - CMake: Fix lib64 detection, better platform detection, Doxygen may use shorter
+    filenames
+  - Octoclock: GPSDO-related fixes, sequence number consistency fixes, UART
+    fixes (off-by-one errors). uhd_usrp_probe will pick up an OC now,
+    added Wireshark dissector for OC packets
+
+ -- Ettus Research <packages@ettus.com>  Mon, 22 Aug 2016 02:36:40 -0800
+
+uhd (3.9.4-0ubuntu1) trusty; urgency=low
+
+  - GPIO control: Fix address mismatch for RX and full duplex.
+    This fixes full-duplex mode for most devices.
+  - B200: Fixed auto rate selection (can now select 61.44 Msps)
+  - UBX: Fix member declaration order which could cause
+    segfaults for debug builds
+  - Manual/Docs: Numerous fixes, use dot for graphs in manual
+  - Utils: multiple fixes for query_gpsdo_sensors, fixed floating point
+    comparison
+  - Windows: Include registry file in installation
+  - Converters: Improve NEON converters
+
+ -- Ettus Research <packages@ettus.com>  Thu, 05 May 2016 12:56:28 -0800
+
+uhd (3.9.3-0ubuntu1) trusty; urgency=low
+
+  * UBX: Fixed a phase synchronization issue on the sub-1GHz band
+  * USB: Fixed transport issue that crashed when multiple USB devices were
+    connected on a Windows machine, more graceful handling of USB disconnects,,
+    provided .cdf file for installing on Windows
+  * B200: Fixed memory growth/increasing tune times issue
+  * E300: Fixed memory leak with udev, fixed issue with autoboot value, fixes
+    to button behaviour
+  * usrp2, usrp3: Fixed IQ imbalance and DC bias in DDC chain
+  * CMake: Windows registry fixes
+  * Fixed several compiler warnings and minor bugs
+  * Examples: Updated benchmark_rate for improved thread safety
+
+ -- Ettus Research <packages@ettus.com>  Mon, 21 Mar 2016 11:40:26 -0800
+
+uhd (3.9.2-0ubuntu1) trusty; urgency=low
+
+  * E310: Added support for Speedgrade 3
+  * B205mini: Added support
+  * E310: Fixed reference counting bug
+  * B210: Fixed external clock reference bug for devices using ADF4002 PLLs
+  * B210: Fixed codec loopback test
+  * OctoClock: Fixed firmware burning on Windows
+  * B2XX, E3XX, X3XX: Easier time-syncing features. Fixes bug where B210s would
+    only run after issuing set_time_unknown_pps().
+  * X3XX: Fixed bug for IQ imbalance correction
+  * E310: DRAM testbenching
+  * Docs/Manual: Many updates and fixes
+
+ -- Martin Braun <martin.braun@ettus.com>  Wed, 30 Dec 2015 11:48:37 -0800
+
+uhd (3.9.1-0ubuntu1) trusty; urgency=low
+
+  * B200mini: Updated udev rules, removed DCM
+  * B200: Better USB error messages
+  * Cores: Fixed CORDIC scaling issue on all devices that use
+    dsp_core_3000
+  * X300: Fixed GPIO issue
+  * Examples: Added PPS source option
+  * Docs: Multiple manual updates
+
+ -- Nicholas Corgan <nick.corgan@ettus.com>  Tue, 29 Dec 2015 03:06:31 -0800
+
