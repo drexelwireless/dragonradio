@@ -38,20 +38,23 @@ int rxCallback(
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
 
 				// save off channel estimates (each row a new packet)
-				long long unsigned usec;
-				long long unsigned sec;
-				timeval tv;
-				gettimeofday(&tv,0);
-				usec = tv.tv_usec;
-				sec = tv.tv_sec;
-				fp = fopen("channel.dat","a+");
-				fprintf(fp,"llu ",sec*1000000+usec);
-				for(unsigned int loop = 0;loop<M;loop++)
-				{
-					fprintf(fp,"%.8f+%.8f*1j ",std::real(G[loop]),std::imag(G[loop]));
-				}
-				fprintf(fp,"\n");
-				fclose(fp);
+                if(ext_mp_ptr->logchannel)
+                {
+                    long long unsigned usec;
+                    long long unsigned sec;
+                    timeval tv;
+                    gettimeofday(&tv,0);
+                    usec = tv.tv_usec;
+                    sec = tv.tv_sec;
+                    fp = fopen("channel.dat","a+");
+                    fprintf(fp,"llu ",sec*1000000+usec);
+                    for(unsigned int loop = 0;loop<M;loop++)
+                    {
+                        fprintf(fp,"%.8f+%.8f*1j ",std::real(G[loop]),std::imag(G[loop]));
+                    }
+                    fprintf(fp,"\n");
+                    fclose(fp);
+                }
 
                 printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
                 if(M>0)
@@ -98,20 +101,23 @@ int rxCallback(
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
 
 				// save off channel estimates (each row a new packet)
-				long long unsigned usec;
-				long long unsigned sec;
-				timeval tv;
-				gettimeofday(&tv,0);
-				usec = tv.tv_usec;
-				sec = tv.tv_sec;
-				fp = fopen("channel.dat","a+");
-				fprintf(fp,"llu ",sec*1000000+usec);
-				for(unsigned int loop = 0;loop<M;loop++)
-				{
-					fprintf(fp,"%.8f+%.8f*1j ",std::real(G[loop]),std::imag(G[loop]));
-				}
-				fprintf(fp,"\n");
-				fclose(fp);
+                if(ext_mp_ptr->logchannel)
+                {
+                    long long unsigned usec;
+                    long long unsigned sec;
+                    timeval tv;
+                    gettimeofday(&tv,0);
+                    usec = tv.tv_usec;
+                    sec = tv.tv_sec;
+                    fp = fopen("channel.dat","a+");
+                    fprintf(fp,"llu ",sec*1000000+usec);
+                    for(unsigned int loop = 0;loop<M;loop++)
+                    {
+                        fprintf(fp,"%.8f+%.8f*1j ",std::real(G[loop]),std::imag(G[loop]));
+                    }
+                    fprintf(fp,"\n");
+                    fclose(fp);
+                }
 
                 printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
                 if(M>0)
@@ -230,7 +236,9 @@ MACPHY::MACPHY(NET* net,
                unsigned int rx_thread_pool_size,
                float pad_size,
                unsigned int packets_per_slot,
-               bool loopback)
+               bool loopback,
+               bool logchannel,
+               bool logiq)
 {
     ext_net_ptr = net;
 
@@ -246,6 +254,9 @@ MACPHY::MACPHY(NET* net,
     this->packets_per_slot = packets_per_slot;
     this->tx_transport_size = 256;
     this->loopback = loopback;
+    this->logchannel = logchannel;
+    this->logiq = logiq;
+    this->sim_burst_id = 0;
 
     // usrp general setup
     if(!loopback)
@@ -310,10 +321,26 @@ MACPHY::~MACPHY()
 
 void MACPHY::TXRX_SIM_FRAME()
 {
+    std::ofstream txed_data;
+    std::ofstream rxed_data;
+    char txed_data_file[2048];
+    char rxed_data_file[2048];
+
+    // save off clean data (tx)
+    if(logiq && (tx_double_buff.size()>0)) 
+    {
+        sprintf(&txed_data_file[0],"./txdata/txed_data_%llu.bin",sim_burst_id);
+        txed_data.open(txed_data_file,std::ofstream::binary);
+
+        // keep track of how many simulated transmissions there were
+        sim_burst_id++;
+    }
+
     // iterate through tx_double buff (already modulated samples)
     // and apply simulated channel
     for(std::vector<std::vector<std::complex<float> >* >::iterator it=tx_double_buff.begin();it!=tx_double_buff.end();it++)
     {
+        if(txed_data.is_open()) txed_data.write((const char*)&((*it)->front()),(*it)->size()*sizeof(std::complex<float>));
         for(std::vector<std::complex<float> >::iterator it2=(*it)->begin();it2!=(*it)->end();it2++)
         {
             std::complex<float> sample = *it2;
@@ -322,8 +349,13 @@ void MACPHY::TXRX_SIM_FRAME()
         delete *it;
     }
 
+    // close iq log files
+    if(logiq)
+    {
+        txed_data.close();
+        rxed_data.close();
+    }
 
-    // push the samples back to demodulator
 
     // make new ofdmBuffer
     readyOFDMBuffer();

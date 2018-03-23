@@ -21,7 +21,9 @@ int main()
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     float pad_size = .01;                       // inter slot dead time
     unsigned int packets_per_slot = 2;          // how many packets to stuff into each slot
-    bool loopback = true;                       // run in loopback mode (simulated channel gets applied to modulated data)A
+    bool loopback = true;                       // run in loopback mode (simulated channel gets applied to modulated data)
+    bool logchannel = true;                     // set to true if you want channel coefficients logged to "channel.dat"
+    bool logiq = true;                          // set to true if you want txed data and simulated rxed data saved (go into txdata and rxdata dirs, 1 file per burst)
 
     ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -41,7 +43,7 @@ int main()
     }
 
     NET net("tap0",node_id,num_nodes_in_net,&nodes_in_net[0]);
-    MACPHY mp(&net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot,loopback);
+    MACPHY mp(&net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot,loopback,logchannel,logiq);
 
     // start the rx thread
     std::thread rx_worker_thread;

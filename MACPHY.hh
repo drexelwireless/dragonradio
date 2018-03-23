@@ -14,6 +14,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <thread>
+#include <fstream>
 
 #include <NET.hh>
 
@@ -48,7 +49,9 @@ class MACPHY
                unsigned int rx_thread_pool_size,
                float pad_size,
                unsigned int packets_per_slot,
-               bool loopback);
+               bool loopback,
+               bool logchannel,
+               bool logiq);
         ~MACPHY();
         void TX_TDMA_OFDM();
         void TXRX_SIM_FRAME();
@@ -74,6 +77,9 @@ class MACPHY
         float pad_size;
         unsigned int packets_per_slot;
         bool loopback;
+        bool logchannel;
+        bool logiq;
+        long unsigned int sim_burst_id;
 };
 
 #endif
