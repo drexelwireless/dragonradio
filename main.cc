@@ -36,6 +36,13 @@ int main()
         rx_thread_pool_size = 1;
     }
 
+    // if log iq then check to make sure directories exist
+    if(logiq)
+    {
+        system("mkdir rxdata");
+        system("mkdir txdata");
+    }
+
     unsigned char nodes_in_net[num_nodes_in_net];
     for(unsigned int i=0;i<num_nodes_in_net;i++)
     {
