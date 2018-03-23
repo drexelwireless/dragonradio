@@ -24,10 +24,10 @@ NET::~NET()
 
 void NET::readPackets()
 {
-    unsigned char* data = new unsigned char[10000];
     unsigned int dest_id = 0;
     while(continue_reading)
     {
+        unsigned char* data = new unsigned char[10000];
         unsigned int total = tt->cread((char*)data,10000);
         if(total>0)
         {

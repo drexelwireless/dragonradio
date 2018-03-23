@@ -23,7 +23,7 @@ int rxCallback(
     {
         // let first header byte be node id
         // let second header byte be source id
-        if(_header[0]==ext_net_ptr->node_id)
+        if((_header[0]==ext_net_ptr->node_id) && (!(ext_mp_ptr->loopback)))
         {
             // first two btyes of padded payload will be packet length
             unsigned int source_id = _header[1];
@@ -34,6 +34,49 @@ int rxCallback(
                 {
                     return 1;
                 }
+                unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
+                unsigned int packet_id = (_header[2] << 8) | _header[3];
+                printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
+                if(M>0)
+                {
+                    printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
+                }
+                else
+                {
+                    printf("\n");
+                }
+            }
+            else
+            {
+                printf("PAYLOAD INVALID\n");   
+            }
+        }
+        // allow messages that are not destined for us in loopback mode
+        // (these are our own messages)
+        else if(ext_mp_ptr->loopback)
+        {
+            // first two btyes of padded payload will be packet length
+            unsigned int source_id = _header[1];
+            if(_payload_valid)
+            {
+                unsigned int packet_length = ((_payload[0] << 8)|(_payload[1]));
+                if(packet_length==0)
+                {
+                    return 1;
+                }
+
+                // change some of the payload to make this packet look like it was recieved from somewhere else
+                _payload[ext_mp_ptr->padded_bytes+5] = 1&0xff;
+                _payload[ext_mp_ptr->padded_bytes+11] = 2&0xff;
+                _payload[ext_mp_ptr->padded_bytes+26] = 10&0xff;
+                _payload[ext_mp_ptr->padded_bytes+27] = 10&0xff;
+                _payload[ext_mp_ptr->padded_bytes+28] = 10&0xff;
+                _payload[ext_mp_ptr->padded_bytes+29] = 2&0xff;
+                _payload[ext_mp_ptr->padded_bytes+30] = 10&0xff;
+                _payload[ext_mp_ptr->padded_bytes+31] = 10&0xff;
+                _payload[ext_mp_ptr->padded_bytes+32] = 10&0xff;
+                _payload[ext_mp_ptr->padded_bytes+33] = 1&0xff;
+
                 unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
                 printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
@@ -152,7 +195,8 @@ MACPHY::MACPHY(NET* net,
                double frame_size,
                unsigned int rx_thread_pool_size,
                float pad_size,
-               unsigned int packets_per_slot)
+               unsigned int packets_per_slot,
+               bool loopback)
 {
     ext_net_ptr = net;
 
@@ -167,34 +211,38 @@ MACPHY::MACPHY(NET* net,
     this->pad_size = pad_size;
     this->packets_per_slot = packets_per_slot;
     this->tx_transport_size = 256;
+    this->loopback = loopback;
 
     // usrp general setup
-    uhd::device_addr_t dev_addr;
-    this->usrp = uhd::usrp::multi_usrp::make(dev_addr);
-    this->usrp->set_rx_antenna("TX/RX");
-    this->usrp->set_tx_antenna("TX/RX");
-    this->usrp->set_tx_gain(tx_gain);
-    this->usrp->set_rx_gain(rx_gain);
-    this->usrp->set_tx_freq(center_freq);
-    this->usrp->set_rx_freq(center_freq);
-    this->usrp->set_rx_rate(2*bandwidth);
-    this->usrp->set_tx_rate(2*bandwidth);
+    if(!loopback)
+    {
+        uhd::device_addr_t dev_addr;
+        this->usrp = uhd::usrp::multi_usrp::make(dev_addr);
+        this->usrp->set_rx_antenna("TX/RX");
+        this->usrp->set_tx_antenna("TX/RX");
+        this->usrp->set_tx_gain(tx_gain);
+        this->usrp->set_rx_gain(rx_gain);
+        this->usrp->set_tx_freq(center_freq);
+        this->usrp->set_rx_freq(center_freq);
+        this->usrp->set_rx_rate(2*bandwidth);
+        this->usrp->set_tx_rate(2*bandwidth);
 
-    // set time relative to system NTP time
-    // (mod it down to fit in double precision)
-    long usec;
-    long sec;
-    timeval tv;
-    gettimeofday(&tv,0);
-    usec = tv.tv_usec;
-    sec = tv.tv_sec;
-    this->usrp->set_time_now(uhd::time_spec_t((double)(sec%10)+((double)usec)/1e6));
+        // set time relative to system NTP time
+        // (mod it down to fit in double precision)
+        long usec;
+        long sec;
+        timeval tv;
+        gettimeofday(&tv,0);
+        usec = tv.tv_usec;
+        sec = tv.tv_sec;
+        this->usrp->set_time_now(uhd::time_spec_t((double)(sec%10)+((double)usec)/1e6));
 
-    // usrp streaming setup
-    uhd::stream_args_t rx_stream_args("fc32");
-    this->rx_stream = this->usrp->get_rx_stream(rx_stream_args);
-    uhd::stream_args_t tx_stream_args("fc32");
-    this->tx_stream = this->usrp->get_tx_stream(tx_stream_args);
+        // usrp streaming setup
+        uhd::stream_args_t rx_stream_args("fc32");
+        this->rx_stream = this->usrp->get_rx_stream(rx_stream_args);
+        uhd::stream_args_t tx_stream_args("fc32");
+        this->tx_stream = this->usrp->get_tx_stream(tx_stream_args);
+    }
 
     // modem setup (list is for parallel demodulation)
     unsigned char* p = NULL;
@@ -226,6 +274,28 @@ MACPHY::~MACPHY()
     delete mcrx_list;
 }
 
+void MACPHY::TXRX_SIM_FRAME()
+{
+    // iterate through tx_double buff (already modulated samples)
+    // and apply simulated channel
+    for(std::vector<std::vector<std::complex<float> >* >::iterator it=tx_double_buff.begin();it!=tx_double_buff.end();it++)
+    {
+        for(std::vector<std::complex<float> >::iterator it2=(*it)->begin();it2!=(*it)->end();it2++)
+        {
+            std::complex<float> sample = *it2;
+            mcrx_list->at(0)->Execute(&sample,1);
+        }
+        delete *it;
+    }
+
+
+    // push the samples back to demodulator
+
+    // make new ofdmBuffer
+    readyOFDMBuffer();
+
+}
+
 // OFDM PHY
 void MACPHY::readyOFDMBuffer()
 {
@@ -246,7 +316,6 @@ void MACPHY::readyOFDMBuffer()
             {
                 last_packet = tx_packet->packet_id;
                 unsigned char* packet_payload = tx_packet->payload;
-                //printf("STUFFING PACKET %u\n",(packet_payload[42+8]<<24)|(packet_payload[42+9]<<16)|(packet_payload[42+10]<<8)|(packet_payload[42+11]));
                 dest_id = tx_packet->destination_id;
                 unsigned char* padded_packet = new unsigned char[packet_length+padded_bytes];
                 unsigned char header[8];

@@ -212,6 +212,7 @@ void TunTap::add_arp_entries(unsigned int num_nodes_in_net, unsigned char* nodes
             strcat(cmd, ip_address.c_str());
             strcat(cmd, " ");
             strcat(cmd, mac_address.c_str());
+            printf("%s\n",cmd);
             int res = system(cmd);
             if(res < 0)
                 std::cout << "Error setting arp table for node " << current_node << "." << std::endl;

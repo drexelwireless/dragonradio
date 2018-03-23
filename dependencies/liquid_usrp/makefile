@@ -144,8 +144,7 @@ example_src :=				\
 ## TARGET : all - build shared library and examples (default)
 ##
 
-#all : libraries examples
-all : libraries 
+all : libraries
 
 library_objs	= $(patsubst %.cc,%.o,$(library_src))
 
