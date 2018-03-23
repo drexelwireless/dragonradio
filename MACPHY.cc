@@ -4,7 +4,7 @@
 
 MACPHY* ext_mp_ptr;
 NET* ext_net_ptr;
-
+FILE* fp;
 
 int rxCallback(
         unsigned char *  _header,
@@ -36,6 +36,23 @@ int rxCallback(
                 }
                 unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
+
+				// save off channel estimates (each row a new packet)
+				long long unsigned usec;
+				long long unsigned sec;
+				timeval tv;
+				gettimeofday(&tv,0);
+				usec = tv.tv_usec;
+				sec = tv.tv_sec;
+				fp = fopen("channel.dat","a+");
+				fprintf(fp,"llu ",sec*1000000+usec);
+				for(unsigned int loop = 0;loop<M;loop++)
+				{
+					fprintf(fp,"%.8f+%.8f*1j ",std::real(G[loop]),std::imag(G[loop]));
+				}
+				fprintf(fp,"\n");
+				fclose(fp);
+
                 printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
                 if(M>0)
                 {
@@ -79,6 +96,23 @@ int rxCallback(
 
                 unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
+
+				// save off channel estimates (each row a new packet)
+				long long unsigned usec;
+				long long unsigned sec;
+				timeval tv;
+				gettimeofday(&tv,0);
+				usec = tv.tv_usec;
+				sec = tv.tv_sec;
+				fp = fopen("channel.dat","a+");
+				fprintf(fp,"llu ",sec*1000000+usec);
+				for(unsigned int loop = 0;loop<M;loop++)
+				{
+					fprintf(fp,"%.8f+%.8f*1j ",std::real(G[loop]),std::imag(G[loop]));
+				}
+				fprintf(fp,"\n");
+				fclose(fp);
+
                 printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
                 if(M>0)
                 {
