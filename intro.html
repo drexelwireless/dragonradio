@@ -1,0 +1,238 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>About DragonRadio &mdash; DragonRadio  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Building the radio" href="building.html" />
+    <link rel="prev" title="Welcome to DragonRadio’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> DragonRadio
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">About DragonRadio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building.html">Building the radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running.html">Running the Radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="colosseum.html">DragonRadio in the Colosseum</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp.html">C++</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DragonRadio</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>About DragonRadio</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/intro.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="about-dragonradio">
+<h1>About DragonRadio<a class="headerlink" href="#about-dragonradio" title="Permalink to this headline">¶</a></h1>
+<p>DragonRadio originated as Drexel’s entry into DARPA’s <a class="reference external" href="https://archive.darpa.mil/sc2/">SC2</a> competition. It is a software-defined radio built from scratch—it is not based on GNURadio—and has the following notable features:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Runs on the Northeastern Colosseum</strong>. DragonRadio provides an easy path to getting started with the <a class="reference external" href="https://www.northeastern.edu/colosseum/">Colosseum</a>, a large-scale wireless emulator.</p></li>
+<li><p><strong>Uses USRP hardware</strong>. DragonRadio has been tested on both the N210 and X310 platforms.</p></li>
+<li><p><strong>Pure software</strong>. All functionality is implemented in software and can run on stock USRP firmware.</p></li>
+<li><p><strong>Low-level functionality implemented in Modern C++</strong>. All low-level functionality is implemented in C++17 and makes extensive use of modern C++ features like <cite>std::shared_ptr</cite>.</p></li>
+<li><p><strong>Fast signal processing primitives</strong>. DragonRadio includes fast time- and frequency-domain filters, implemented with the help of <a class="reference external" href="https://github.com/xtensor-stack/xsimd">xsimd</a>.</p></li>
+<li><p><strong>OFDM PHY layer</strong>. Included PHY layers are based on <a class="reference external" href="https://github.com/jgaeddert/liquid-dsp">liquid-dsp</a>. However, the PHY interface is modular and not tied to liquid-dsp, so other PHY layers could easily be integrated.</p></li>
+<li><p><strong>FDMA, FDMA/TDMA, and ALOHA MACs</strong>. A sophisticated FDMA/TDMA MAC layer is provided that allows scheduling in both time and frequency. FDMA and ALOHA MACs are also included.</p></li>
+<li><p><strong>Embedded Python interpreter</strong>. DragonRadio embeds a Python interpreter, and all low-level functionality is exposed to Python via <a class="reference external" href="https://github.com/pybind/pybind11">pybind11</a>. The radio is configured from Python.</p></li>
+</ul>
+</div></blockquote>
+<p>Please submit any issues on <a class="reference external" href="https://github.com/drexelwireless/dragonradio">GitHub</a>.</p>
+<p><a class="reference external" href="https://www.cs.drexel.edu/~mainland/">Geoffrey Mainland</a> is the primary author of DragonRadio.</p>
+<p><a class="reference internal" href="_images/NSF_4-Color_bitmap_Logo.png"><img alt="nsf" src="_images/NSF_4-Color_bitmap_Logo.png" style="height: 100px;" /></a> This project is supported by NSF awards <a class="reference external" href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1717088">1717088</a> and <a class="reference external" href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1730140">1730140</a>.</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="building.html" class="btn btn-neutral float-right" title="Building the radio" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to DragonRadio’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018-2020, Drexel University
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

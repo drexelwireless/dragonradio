@@ -1,0 +1,271 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Building the radio &mdash; DragonRadio  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Running the Radio" href="running.html" />
+    <link rel="prev" title="About DragonRadio" href="intro.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> DragonRadio
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">About DragonRadio</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Building the radio</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#building-a-container">Building a container</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-the-documentation">Building the documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="running.html">Running the Radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="colosseum.html">DragonRadio in the Colosseum</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp.html">C++</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DragonRadio</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Building the radio</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/building.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="building-the-radio">
+<h1>Building the radio<a class="headerlink" href="#building-the-radio" title="Permalink to this headline">¶</a></h1>
+<p>DragonRadio is developed under Ubuntu 16.04, the distribution used to the Colosseum. Running the top-level <code class="docutils literal notranslate"><span class="pre">build.sh</span></code> script in a base Ubuntu 16.04 installation installs all necessary prerequisites and builds DragonRadio.</p>
+<div class="section" id="building-a-container">
+<span id="id1"></span><h2>Building a container<a class="headerlink" href="#building-a-container" title="Permalink to this headline">¶</a></h2>
+<p>It is relatively painless to build an <code class="docutils literal notranslate"><span class="pre">lxc</span></code> image that can run directly on the Colosseum using the steps below.</p>
+<ol class="arabic">
+<li><p>Install <code class="docutils literal notranslate"><span class="pre">lxc</span></code> and <code class="docutils literal notranslate"><span class="pre">ansible</span></code>.</p>
+<p>Install <code class="docutils literal notranslate"><span class="pre">lxc</span></code> and <code class="docutils literal notranslate"><span class="pre">ansible</span></code> on the system where you are building the image. On Ubuntu, both can be installed as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo apt install -y ansible lxd
+lxd init
+</pre></div>
+</div>
+<p>You will also need to edit <code class="docutils literal notranslate"><span class="pre">/etc/subuid</span></code> and <code class="docutils literal notranslate"><span class="pre">/etc/subgid</span></code>. The Colosseum instructions on how to <a class="reference external" href="https://colosseumneu.freshdesk.com/support/solutions/articles/61000253428-prepare-a-new-container-for-upload">prepare a container</a> will be helpful.</p>
+</li>
+<li><p>Obtain the Colosseum base image</p>
+<p>Follow the Colosseum instructions to obtain the <a class="reference external" href="https://colosseumneu.freshdesk.com/support/solutions/articles/61000253371-transferring-the-base-lxc-image-from-the-nas">base image</a>, <code class="docutils literal notranslate"><span class="pre">base-1604-nocuda.tar.gz</span></code>, and import it. The <code class="docutils literal notranslate"><span class="pre">--alias</span></code> argument is important!</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lxc import base-1604-nocuda.tar.gz --alias base-1604-nocuda
+</pre></div>
+</div>
+</li>
+<li><p>Build base DragonRadio image</p>
+<p>The image built in this step serves as the base image for all DragonRadio builds. It includes generally useful tools, the <a class="reference external" href="https://colosseumneu.freshdesk.com/support/solutions/articles/61000253397-colosseum-cli">Colosseum CLI</a>, and additional software, like <code class="docutils literal notranslate"><span class="pre">gpsd</span></code>, that are necessary to run the radio in batch mode in the Colosseum. The build is automated using ansible:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> ansible <span class="o">&amp;&amp;</span> ansible-playbook -i inventory playbooks/dragonradio.yml
+</pre></div>
+</div>
+<p>This will result in a <code class="docutils literal notranslate"><span class="pre">dragonradio-1604-base</span></code> image in the top-level <code class="docutils literal notranslate"><span class="pre">images</span></code> directory. The password for the <code class="docutils literal notranslate"><span class="pre">root</span></code> and <code class="docutils literal notranslate"><span class="pre">srn-user</span></code> users in this image is <code class="docutils literal notranslate"><span class="pre">dragonradio</span></code>.</p>
+</li>
+<li><p>Build a DragonRadio image</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">build-image.sh</span></code> takes a <code class="docutils literal notranslate"><span class="pre">git</span></code> reference (tag, hash, etc.) and builds an image based on the given version of the radio. For example, an image based on the <code class="docutils literal notranslate"><span class="pre">master</span></code> branch can be built as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/build-image.sh master
+</pre></div>
+</div>
+<p>The image wil be placed in the <code class="docutils literal notranslate"><span class="pre">images</span></code> directory and have a name of the form <code class="docutils literal notranslate"><span class="pre">REF-DATE-HASH</span></code>, where <code class="docutils literal notranslate"><span class="pre">REF</span></code> is a <code class="docutils literal notranslate"><span class="pre">git</span></code> reference, <code class="docutils literal notranslate"><span class="pre">DATE</span></code> is the build date, and <code class="docutils literal notranslate"><span class="pre">HASH</span></code> is the <code class="docutils literal notranslate"><span class="pre">git</span></code> hash of the version of the radio use to build the image.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">build-image.sh</span></code> script takes one optional flag, <code class="docutils literal notranslate"><span class="pre">-s</span></code>, which will install the <code class="docutils literal notranslate"><span class="pre">dragonradio</span></code> service in the generated image. This service automatically starts the radio on boot, making the image ready-to-run in batch mode in the Colosseum.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="building-the-documentation">
+<h2>Building the documentation<a class="headerlink" href="#building-the-documentation" title="Permalink to this headline">¶</a></h2>
+<p>The documentation can be built as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> docs
+pip install -Ur requirements.txt
+make html
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="running.html" class="btn btn-neutral float-right" title="Running the Radio" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="intro.html" class="btn btn-neutral float-left" title="About DragonRadio" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018-2020, Drexel University
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

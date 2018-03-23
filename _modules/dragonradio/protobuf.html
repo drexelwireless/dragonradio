@@ -1,0 +1,694 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>dragonradio.protobuf &mdash; DragonRadio  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> DragonRadio
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">About DragonRadio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../building.html">Building the radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../running.html">Running the Radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../colosseum.html">DragonRadio in the Colosseum</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../python.html">Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cpp.html">C++</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DragonRadio</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>dragonradio.protobuf</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for dragonradio.protobuf</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2018-2020 Drexel University</span>
+<span class="c1"># Author: Geoffrey Mainland &lt;mainland@drexel.edu&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;Support for protobuf over UDP, TCP, and ZMQ&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">wraps</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pformat</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">zmq.asyncio</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;protobuf&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="setTimestamp"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.setTimestamp">[docs]</a><span class="k">def</span> <span class="nf">setTimestamp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ts</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Set timestamp (sec)&quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">seconds</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">picoseconds</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ts</span> <span class="o">%</span> <span class="mi">1</span> <span class="o">*</span> <span class="mf">1e12</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="getTimestamp"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.getTimestamp">[docs]</a><span class="k">def</span> <span class="nf">getTimestamp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get timestamp (sec)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">seconds</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">picoseconds</span><span class="o">*</span><span class="mf">1e-12</span></div>
+
+<div class="viewcode-block" id="HandlerTable"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.HandlerTable">[docs]</a><span class="k">class</span> <span class="nc">HandlerTable</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Table for protobuf message handlers&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-few-public-methods</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message_types</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message_handlers</span> <span class="o">=</span> <span class="p">{}</span></div>
+
+<div class="viewcode-block" id="handler"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.handler">[docs]</a><span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">message_type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add automatic support for handling protobuf messages with a payload</span>
+<span class="sd">    structure. Should be used to decorate a class handling protobuf messages.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cls (class): The protobuf message class handled</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;handlers&#39;</span><span class="p">):</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">handlers</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">table</span> <span class="o">=</span> <span class="n">HandlerTable</span><span class="p">()</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">handlers</span><span class="p">[</span><span class="n">message_type</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span>
+
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">message_type</span><span class="o">.</span><span class="n">DESCRIPTOR</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+            <span class="n">table</span><span class="o">.</span><span class="n">message_types</span><span class="p">[</span><span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">number</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getmembers</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">predicate</span><span class="o">=</span><span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;message_name&#39;</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
+                <span class="p">(</span><span class="n">cname</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\.&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">message_name</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">cname</span> <span class="o">==</span> <span class="n">message_type</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">fname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">message_types</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Illegal message type &#39;</span><span class="si">{}</span><span class="s2">&#39; for class </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span>\
+                            <span class="nb">format</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="n">message_type</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+
+                    <span class="n">table</span><span class="o">.</span><span class="n">message_handlers</span><span class="p">[</span><span class="n">fname</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span>
+
+        <span class="k">return</span> <span class="bp">cls</span>
+
+    <span class="k">return</span> <span class="n">decorator</span></div>
+
+<div class="viewcode-block" id="findHandler"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.findHandler">[docs]</a><span class="k">def</span> <span class="nf">findHandler</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find the handler associated with a protobuf message&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">handler_obj</span><span class="o">.</span><span class="n">handlers</span><span class="p">[</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span><span class="o">.</span>\
+        <span class="n">message_handlers</span><span class="p">[</span><span class="n">msg</span><span class="o">.</span><span class="n">WhichOneof</span><span class="p">(</span><span class="s1">&#39;payload&#39;</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="handle"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.handle">[docs]</a><span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Indicate that a method handles a specific message. Should be used to</span>
+<span class="sd">    decorate a method of a class that handles protobuf messages.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): The name of the message the function handles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">message_name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">return</span> <span class="n">f</span>
+
+    <span class="k">return</span> <span class="n">decorator</span></div>
+
+<div class="viewcode-block" id="ZMQProtoServer"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ZMQProtoServer">[docs]</a><span class="k">class</span> <span class="nc">ZMQProtoServer</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Protobuf-over-ZMQ server&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-few-public-methods</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handler_obj</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span> <span class="o">=</span> <span class="n">handler_obj</span>
+        <span class="sd">&quot;&quot;&quot;Protobuf message handler object&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span> <span class="o">=</span> <span class="n">loop</span>
+        <span class="sd">&quot;&quot;&quot;asyncio loop&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ZMQProtoServer.startServer"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ZMQProtoServer.startServer">[docs]</a>    <span class="k">def</span> <span class="nf">startServer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start server&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_serverLoop</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">),</span>
+                                     <span class="n">name</span><span class="o">=</span><span class="s1">&#39;ZMQ </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ZMQProtoServer._serverLoop"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ZMQProtoServer._serverLoop">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">_serverLoop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ctx</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+            <span class="n">listen_sock</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PULL</span><span class="p">)</span>
+            <span class="n">listen_sock</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;tcp://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">))</span>
+
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">raw</span> <span class="o">=</span> <span class="k">await</span> <span class="n">listen_sock</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">FromString</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Received message: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pformat</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">f</span> <span class="o">=</span> <span class="n">findHandler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Received unsupported message type: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">CancelledError</span><span class="p">:</span>
+            <span class="n">listen_sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">term</span><span class="p">()</span></div></div>
+
+<div class="viewcode-block" id="ZMQProtoClient"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ZMQProtoClient">[docs]</a><span class="k">class</span> <span class="nc">ZMQProtoClient</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Protobuf-over-ZMQ client&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">server_host</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">server_port</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span> <span class="o">=</span> <span class="n">loop</span>
+        <span class="sd">&quot;&quot;&quot;asyncio loop&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_host</span> <span class="o">=</span> <span class="n">server_host</span>
+        <span class="sd">&quot;&quot;&quot;Server hostname&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_port</span> <span class="o">=</span> <span class="n">server_port</span>
+        <span class="sd">&quot;&quot;&quot;Server port&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctx</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;ZMQ context&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_sock</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;ZMQ server socket&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_type</span><span class="p">,</span> <span class="n">_value</span><span class="p">,</span> <span class="n">_traceback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ZMQProtoClient.open"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ZMQProtoClient.open">[docs]</a>    <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Open connection to server&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctx</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_sock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctx</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PUSH</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_sock</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;tcp://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_port</span><span class="p">))</span>
+        <span class="c1"># See:</span>
+        <span class="c1">#   https://github.com/zeromq/pyzmq/issues/102</span>
+        <span class="c1">#   http://api.zeromq.org/2-1:zmq-setsockopt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_sock</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">LINGER</span><span class="p">,</span> <span class="mi">2500</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ZMQProtoClient.close"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ZMQProtoClient.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Close connection to server&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_sock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ctx</span><span class="o">.</span><span class="n">term</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_sock</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ctx</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="ZMQProtoClient.send"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ZMQProtoClient.send">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Send a message&quot;&quot;&quot;</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_sock</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">())</span></div></div>
+
+<div class="viewcode-block" id="send"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.send">[docs]</a><span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Automatically add support to a function for constructing and sending a</span>
+<span class="sd">    protobuf message. Should be used to decorate the methods of a</span>
+<span class="sd">    ZMQProtoClient subclass.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cls (class): The message class to send.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="nd">@wraps</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
+
+            <span class="k">await</span> <span class="n">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Sending message </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pformat</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">wrapper</span>
+
+    <span class="k">return</span> <span class="n">decorator</span></div>
+
+<div class="viewcode-block" id="ProtobufProtocol"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufProtocol">[docs]</a><span class="k">class</span> <span class="nc">ProtobufProtocol</span><span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract base class for protobuf-over-TCP clients&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-many-instance-attributes</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">handler_obj</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cls</span> <span class="o">=</span> <span class="bp">cls</span>
+        <span class="sd">&quot;&quot;&quot;Protobuf message class of messages received by server&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span> <span class="o">=</span> <span class="n">handler_obj</span>
+        <span class="sd">&quot;&quot;&quot;Protobuf message handler object&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span> <span class="o">=</span> <span class="n">loop</span>
+        <span class="sd">&quot;&quot;&quot;asyncio loop&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connected_event</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;Event set when connection is made&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_task</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Server loop task&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Transport associated with protocol&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;Received bytes&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer_lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;Lock for buffer&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer_cond</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Condition</span><span class="p">(</span><span class="n">lock</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer_lock</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;Condition variable for buffer&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ProtobufProtocol.connection_made"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufProtocol.connection_made">[docs]</a>    <span class="k">def</span> <span class="nf">connection_made</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transport</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span> <span class="o">=</span> <span class="n">transport</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connected_event</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_serverLoop</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="ProtobufProtocol.connection_lost"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufProtocol.connection_lost">[docs]</a>    <span class="k">def</span> <span class="nf">connection_lost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connected_event</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_task</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_task</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ProtobufProtocol.data_received"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufProtocol.data_received">[docs]</a>    <span class="k">def</span> <span class="nf">data_received</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">async</span> <span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
+            <span class="k">with</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer_lock</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buffer_cond</span><span class="o">.</span><span class="n">notify_all</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">f</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="ProtobufProtocol.send"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufProtocol.send">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Serialize and send a protobuf message with its length prepended&quot;&quot;&quot;</span>
+        <span class="c1"># Wait until we are connected</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">connected_event</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Sending message </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pformat</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;!H&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ProtobufProtocol.recv"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufProtocol.recv">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">recv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Receive a protobuf message of the given message class&quot;&quot;&quot;</span>
+        <span class="c1"># Get message length</span>
+        <span class="n">datalen</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recvBytes</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">datalen</span><span class="p">,</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;!H&#39;</span><span class="p">,</span> <span class="n">datalen</span><span class="p">)</span>
+
+        <span class="c1"># Get message</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recvBytes</span><span class="p">(</span><span class="n">datalen</span><span class="p">)</span>
+
+        <span class="c1"># Decode message</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">FromString</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Received message: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pformat</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="ProtobufProtocol._recvBytes"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufProtocol._recvBytes">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">_recvBytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">count</span><span class="p">):</span>
+        <span class="k">with</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer_lock</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer_cond</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">count</span><span class="p">)</span>
+
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[:</span><span class="n">count</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="n">count</span><span class="p">:]</span>
+
+            <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="ProtobufProtocol._serverLoop"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufProtocol._serverLoop">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">_serverLoop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">req</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="p">)</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="n">findHandler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="p">,</span> <span class="n">req</span><span class="p">)</span>
+                <span class="n">resp</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span><span class="p">,</span> <span class="n">req</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">resp</span><span class="p">:</span>
+                    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Received unsupported message type: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">exc</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">CancelledError</span><span class="p">:</span>
+                <span class="k">return</span></div></div>
+
+<div class="viewcode-block" id="TCPProtoServer"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.TCPProtoServer">[docs]</a><span class="k">class</span> <span class="nc">TCPProtoServer</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Server for protobuf-over-TCP&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-few-public-methods</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handler_obj</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span> <span class="o">=</span> <span class="n">handler_obj</span>
+        <span class="sd">&quot;&quot;&quot;Protobuf message handler object&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span> <span class="o">=</span> <span class="n">loop</span>
+        <span class="sd">&quot;&quot;&quot;asyncio loop&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="TCPProtoServer.startServer"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.TCPProtoServer.startServer">[docs]</a>    <span class="k">def</span> <span class="nf">startServer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start a protobuf TCP server&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_serverLoop</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">),</span>
+                                     <span class="n">name</span><span class="o">=</span><span class="s1">&#39;TCP </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="TCPProtoServer._serverLoop"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.TCPProtoServer._serverLoop">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">_serverLoop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">):</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">server</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_server</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="n">ProtobufProtocol</span><span class="p">,</span>
+                                                                <span class="bp">cls</span><span class="o">=</span><span class="bp">cls</span><span class="p">,</span>
+                                                                <span class="n">handler_obj</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span><span class="p">,</span>
+                                                                <span class="n">loop</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="p">),</span>
+                                                        <span class="n">host</span><span class="o">=</span><span class="n">listen_ip</span><span class="p">,</span>
+                                                        <span class="n">port</span><span class="o">=</span><span class="n">listen_port</span><span class="p">,</span>
+                                                        <span class="n">reuse_port</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">await</span> <span class="n">server</span><span class="o">.</span><span class="n">wait_closed</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">CancelledError</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">except</span><span class="p">:</span> <span class="c1"># pylint: disable=bare-except</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s1">&#39;Restarting TCP proto server&#39;</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="TCPProtoClient"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.TCPProtoClient">[docs]</a><span class="k">class</span> <span class="nc">TCPProtoClient</span><span class="p">(</span><span class="n">ProtobufProtocol</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Client for protobuf-over-TCP&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server_host</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">server_port</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_host</span> <span class="o">=</span> <span class="n">server_host</span>
+        <span class="sd">&quot;&quot;&quot;Server hostname&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_port</span> <span class="o">=</span> <span class="n">server_port</span>
+        <span class="sd">&quot;&quot;&quot;Server port&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_type</span><span class="p">,</span> <span class="n">_value</span><span class="p">,</span> <span class="n">_traceback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TCPProtoClient.open"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.TCPProtoClient.open">[docs]</a>    <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Open connection to server&quot;&quot;&quot;</span>
+        <span class="k">async</span> <span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span> <span class="n">_protocol</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                                                          <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">server_host</span><span class="p">,</span>
+                                                                          <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">server_port</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">f</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="TCPProtoClient.close"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.TCPProtoClient.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Close connection to server&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transport</span> <span class="o">=</span> <span class="kc">None</span></div></div>
+
+<div class="viewcode-block" id="rpc"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.rpc">[docs]</a><span class="k">def</span> <span class="nf">rpc</span><span class="p">(</span><span class="n">req_cls</span><span class="p">,</span> <span class="n">resp_cls</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Automatically add support for synchronously waiting on the results of an</span>
+<span class="sd">    RPC call. Should be used to decorate the methods of a TCPProtoClient</span>
+<span class="sd">    subclass.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        req_cls (class): The message class for RPC requests.</span>
+<span class="sd">        resp_cls (class): The message class for RPC responses.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="nd">@wraps</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">async</span> <span class="k">def</span> <span class="nf">run</span><span class="p">():</span>
+                <span class="n">req</span> <span class="o">=</span> <span class="n">req_cls</span><span class="p">()</span>
+                <span class="n">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Sending RPC request </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">req</span><span class="p">)</span>
+                <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+                <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">resp_cls</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Recevied RPC response message </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">resp</span>
+
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">run</span><span class="p">(),</span> <span class="n">timeout</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">wrapper</span>
+
+    <span class="k">return</span> <span class="n">decorator</span></div>
+
+<div class="viewcode-block" id="ProtobufDatagramProtocol"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufDatagramProtocol">[docs]</a><span class="k">class</span> <span class="nc">ProtobufDatagramProtocol</span><span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">DatagramProtocol</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract base class of client for protobuf-over-UDP&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">handler_obj</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cls</span> <span class="o">=</span> <span class="bp">cls</span>
+        <span class="sd">&quot;&quot;&quot;Protobuf message class of messages received by server&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span> <span class="o">=</span> <span class="n">handler_obj</span>
+        <span class="sd">&quot;&quot;&quot;Protobuf message handler object&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span> <span class="o">=</span> <span class="n">loop</span>
+        <span class="sd">&quot;&quot;&quot;asyncio loop&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connected_event</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;Event set when connection is made&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Transport associated with protocol&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ProtobufDatagramProtocol.connection_made"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufDatagramProtocol.connection_made">[docs]</a>    <span class="k">def</span> <span class="nf">connection_made</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transport</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span> <span class="o">=</span> <span class="n">transport</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connected_event</span><span class="o">.</span><span class="n">set</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ProtobufDatagramProtocol.connection_lost"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufDatagramProtocol.connection_lost">[docs]</a>    <span class="k">def</span> <span class="nf">connection_lost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connected_event</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="ProtobufDatagramProtocol.datagram_received"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufDatagramProtocol.datagram_received">[docs]</a>    <span class="k">def</span> <span class="nf">datagram_received</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">addr</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="o">.</span><span class="n">FromString</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Received message: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pformat</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+
+            <span class="n">f</span> <span class="o">=</span> <span class="n">findHandler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+            <span class="n">f</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Received unsupported message type: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ProtobufDatagramProtocol.send"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.ProtobufDatagramProtocol.send">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Serialize and send a protobuf message with its length prepended&quot;&quot;&quot;</span>
+        <span class="c1"># Wait until we are connected</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">connected_event</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Sending message </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pformat</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">(),</span> <span class="n">addr</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="UDPProtoServer"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.UDPProtoServer">[docs]</a><span class="k">class</span> <span class="nc">UDPProtoServer</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Server for protobuf-over-UDP&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-few-public-methods</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handler_obj</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span> <span class="o">=</span> <span class="n">handler_obj</span>
+        <span class="sd">&quot;&quot;&quot;Protobuf message handler object&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span> <span class="o">=</span> <span class="n">loop</span>
+        <span class="sd">&quot;&quot;&quot;asyncio loop&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="UDPProtoServer.startServer"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.UDPProtoServer.startServer">[docs]</a>    <span class="k">def</span> <span class="nf">startServer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start a protobuf UDP server&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_serverLoop</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">),</span>
+                                     <span class="n">name</span><span class="o">=</span><span class="s1">&#39;UDP </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="UDPProtoServer._serverLoop"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.UDPProtoServer._serverLoop">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">_serverLoop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create server endpoint&quot;&quot;&quot;</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_datagram_endpoint</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="n">ProtobufDatagramProtocol</span><span class="p">,</span>
+                                                         <span class="bp">cls</span><span class="o">=</span><span class="bp">cls</span><span class="p">,</span>
+                                                         <span class="n">handler_obj</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">handler_obj</span><span class="p">,</span>
+                                                         <span class="n">loop</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="p">),</span>
+                                                 <span class="n">local_addr</span><span class="o">=</span><span class="p">(</span><span class="n">listen_ip</span><span class="p">,</span> <span class="n">listen_port</span><span class="p">),</span>
+                                                 <span class="n">allow_broadcast</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="UDPProtoClient"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.UDPProtoClient">[docs]</a><span class="k">class</span> <span class="nc">UDPProtoClient</span><span class="p">(</span><span class="n">ProtobufDatagramProtocol</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Client for protobuf-over-UDP&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server_host</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">server_port</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_host</span> <span class="o">=</span> <span class="n">server_host</span>
+        <span class="sd">&quot;&quot;&quot;Server hostname&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_port</span> <span class="o">=</span> <span class="n">server_port</span>
+        <span class="sd">&quot;&quot;&quot;Server port&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_type</span><span class="p">,</span> <span class="n">_value</span><span class="p">,</span> <span class="n">_traceback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="UDPProtoClient.open"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.UDPProtoClient.open">[docs]</a>    <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Open connection to server&quot;&quot;&quot;</span>
+        <span class="k">async</span> <span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_datagram_endpoint</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="p">,</span>
+                <span class="n">remote_addr</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_port</span><span class="p">),</span>
+                <span class="n">allow_broadcast</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">f</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="UDPProtoClient.close"><a class="viewcode-back" href="../../python.html#dragonradio.protobuf.UDPProtoClient.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Close connection to server&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transport</span> <span class="o">=</span> <span class="kc">None</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018-2020, Drexel University
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

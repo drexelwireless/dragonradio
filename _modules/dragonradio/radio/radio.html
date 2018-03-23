@@ -1,0 +1,1466 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>dragonradio.radio.radio &mdash; DragonRadio  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home" alt="Documentation Home"> DragonRadio
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../intro.html">About DragonRadio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../building.html">Building the radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../running.html">Running the Radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../colosseum.html">DragonRadio in the Colosseum</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../python.html">Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cpp.html">C++</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DragonRadio</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>dragonradio.radio.radio</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for dragonradio.radio.radio</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2018-2020 Drexel University</span>
+<span class="c1"># Author: Geoffrey Mainland &lt;mainland@drexel.edu&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;Radio class for managing the radio.&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">ipaddress</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">dragonradio</span>
+<span class="kn">from</span> <span class="nn">dragonradio</span> <span class="kn">import</span> <span class="n">Channel</span><span class="p">,</span> <span class="n">Channels</span> <span class="c1"># pylint: disable=no-name-in-module</span>
+<span class="kn">import</span> <span class="nn">dragonradio.channels</span>
+<span class="kn">from</span> <span class="nn">dragonradio.liquid</span> <span class="kn">import</span> <span class="n">MCS</span> <span class="c1"># pylint: disable=no-name-in-module</span>
+<span class="kn">import</span> <span class="nn">dragonradio.schedule</span>
+<span class="kn">import</span> <span class="nn">dragonradio.signal</span>
+<span class="kn">import</span> <span class="nn">dragonradio.tasks</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;radio&#39;</span><span class="p">)</span>
+
+<span class="n">_MACS</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;aloha&#39;</span><span class="p">:</span> <span class="kc">True</span>
+        <span class="p">,</span> <span class="s1">&#39;tdma&#39;</span><span class="p">:</span> <span class="kc">True</span>
+        <span class="p">,</span> <span class="s1">&#39;tdma-fdma&#39;</span><span class="p">:</span> <span class="kc">True</span>
+        <span class="p">,</span> <span class="s1">&#39;fdma&#39;</span><span class="p">:</span> <span class="kc">False</span>
+        <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">_isSlottedMAC</span><span class="p">(</span><span class="n">mac</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">_MACS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">mac</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown MAC </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">mac</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Radio"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio">[docs]</a><span class="k">class</span> <span class="nc">Radio</span><span class="p">(</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">TaskManager</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Radio configuration, setup, and maintenance&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-many-public-methods</span>
+    <span class="c1"># pylint: disable=too-many-instance-attributes</span>
+    <span class="c1"># pylint: disable=no-member</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">mac</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">loop</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">loop</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Radio version: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Radio configuration:</span><span class="se">\n</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="sd">&quot;&quot;&quot;Config object for radio&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">node_id</span>
+        <span class="sd">&quot;&quot;&quot;This node&#39;s ID&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Our DragonRadio logger&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;Lock protecting radio configuration&quot;&quot;&quot;</span>
+
+        <span class="c1"># Set the TX and RX rates to None to ensure they are properly set</span>
+        <span class="c1"># everywhere by setTXRate and setRXRate the first time those two</span>
+        <span class="c1"># functions are called.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_rate</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Current TX rate. None if not yet set.&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rx_rate</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Current RX rate. None if not yet set.&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_channel_idx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="sd">&quot;&quot;&quot;Default TX channel index&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;The radio&#39;s MAC&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Our MAC schedule&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="sd">&quot;&quot;&quot;Channels&quot;&quot;&quot;</span>
+
+        <span class="c1"># Copy configuration to RadioConfig</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configureRadioConfig</span><span class="p">()</span>
+
+        <span class="c1"># Add global work queue workers</span>
+        <span class="n">dragonradio</span><span class="o">.</span><span class="n">work_queue</span><span class="o">.</span><span class="n">addThreads</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Initialize USRP</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configureUSRP</span><span class="p">()</span>
+
+        <span class="c1"># Configure valid decimation rates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configureValidDecimationRates</span><span class="p">()</span>
+
+        <span class="c1"># Create the logger *after* we create the USRP so that we have a global</span>
+        <span class="c1"># clock</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configureLogging</span><span class="p">()</span>
+
+        <span class="c1"># Configure snapshots</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configureSnapshots</span><span class="p">()</span>
+
+        <span class="c1"># Create the PHY</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mkPHY</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">header_mcs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcs_table</span><span class="p">)</span>
+
+        <span class="c1"># Configure channelizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mkChannelizer</span><span class="p">()</span>
+
+        <span class="c1"># Configure synthesizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mkSynthesizer</span><span class="p">(</span><span class="n">_isSlottedMAC</span><span class="p">(</span><span class="n">mac</span><span class="p">))</span>
+
+        <span class="c1"># Hook up the radio components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configureComponents</span><span class="p">()</span>
+
+        <span class="c1"># If we are in TDMA mode, set channel bandwidth to None so we use a</span>
+        <span class="c1"># single channel. After this, we must re-configure our channels.</span>
+        <span class="k">if</span> <span class="n">mac</span> <span class="o">==</span> <span class="s1">&#39;tdma&#39;</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">channel_bandwidth</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Configure channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configureDefaultChannels</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Radio.start"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_ns</span><span class="o">=</span><span class="nb">locals</span><span class="p">()):</span>
+        <span class="sd">&quot;&quot;&quot;Start the radio&quot;&quot;&quot;</span>
+        <span class="c1"># Collect snapshots if requested</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">snapshot_period</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">startSnapshots</span><span class="p">()</span>
+
+        <span class="c1"># Add radio nodes to the network if number of nodes was specified</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">num_nodes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">addNode</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Configure the MAC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configureMAC</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mac</span><span class="p">)</span>
+
+        <span class="c1"># Either start the interactive loop or run the loop ourselves</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">interactive</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">IPython.terminal.embed</span>
+            <span class="kn">from</span> <span class="nn">traitlets.config</span> <span class="kn">import</span> <span class="n">Config</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">Config</span><span class="p">()</span>
+
+            <span class="n">c</span><span class="o">.</span><span class="n">TerminalInteractiveShell</span><span class="o">.</span><span class="n">loop_runner</span> <span class="o">=</span> <span class="s1">&#39;asyncio&#39;</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">TerminalInteractiveShell</span><span class="o">.</span><span class="n">autoawait</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="n">user_ns</span><span class="p">[</span><span class="s1">&#39;radio&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+
+            <span class="n">shell</span> <span class="o">=</span> <span class="n">IPython</span><span class="o">.</span><span class="n">terminal</span><span class="o">.</span><span class="n">embed</span><span class="o">.</span><span class="n">InteractiveShellEmbed</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">user_ns</span><span class="o">=</span><span class="n">user_ns</span><span class="p">)</span>
+            <span class="n">shell</span><span class="o">.</span><span class="n">enable_gui</span><span class="p">(</span><span class="s1">&#39;asyncio&#39;</span><span class="p">)</span>
+            <span class="n">shell</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">sig</span> <span class="ow">in</span> <span class="p">[</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">add_signal_handler</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">run_forever</span><span class="p">()</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="Radio.stop"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop the radio and all associated tasks&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stop</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Radio._stop"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio._stop">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">_stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Task to stop the radio and all associated tasks&quot;&quot;&quot;</span>
+        <span class="c1"># Stop radio tasks</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopTasks</span><span class="p">()</span>
+
+        <span class="c1"># Wait for remaining tasks and stop the event loop</span>
+        <span class="k">await</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">tasks</span><span class="o">.</span><span class="n">stopEventLoop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.configureRadioConfig"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureRadioConfig">[docs]</a>    <span class="k">def</span> <span class="nf">configureRadioConfig</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure the singleton RadioConfig object&quot;&quot;&quot;</span>
+        <span class="c1"># Make sure RadioConfig has node id</span>
+        <span class="n">dragonradio</span><span class="o">.</span><span class="n">rc</span><span class="o">.</span><span class="n">node_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span>
+
+        <span class="c1"># Copy configuration settings to the C++ RadioConfig object</span>
+        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">,</span> <span class="s1">&#39;debug&#39;</span><span class="p">,</span> <span class="s1">&#39;mtu&#39;</span><span class="p">,</span> <span class="s1">&#39;verbose_packet_trace&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">rc</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">attr</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Radio.configureUSRP"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureUSRP">[docs]</a>    <span class="k">def</span> <span class="nf">configureUSRP</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct USRP object from configuration parameters&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="c1"># Create the USRP</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">USRP</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">addr</span><span class="p">,</span>
+                                     <span class="n">config</span><span class="o">.</span><span class="n">tx_subdev</span><span class="p">,</span>
+                                     <span class="n">config</span><span class="o">.</span><span class="n">rx_subdev</span><span class="p">,</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
+                                     <span class="n">config</span><span class="o">.</span><span class="n">tx_antenna</span><span class="p">,</span>
+                                     <span class="n">config</span><span class="o">.</span><span class="n">rx_antenna</span><span class="p">,</span>
+                                     <span class="n">config</span><span class="o">.</span><span class="n">tx_gain</span><span class="p">,</span>
+                                     <span class="n">config</span><span class="o">.</span><span class="n">rx_gain</span><span class="p">)</span>
+
+        <span class="c1"># Set USRP clock and time sources. If they were not specified in the</span>
+        <span class="c1"># configuration, we leave the default setting as-is.</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">clock_source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">clock_source</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">clock_source</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">time_source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">time_source</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">time_source</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_max_samps_factor</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">rx_max_samps_factor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_max_samps_factor</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_max_samps_factor</span></div>
+
+<div class="viewcode-block" id="Radio.configureLogging"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureLogging">[docs]</a>    <span class="k">def</span> <span class="nf">configureLogging</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure radio logging&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">logdir</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getRadioLogPath</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">Logger</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="s1">&#39;version&#39;</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="s1">&#39;node_id&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;log_sources&#39;</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">log_sources</span><span class="p">:</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+            <span class="n">dragonradio</span><span class="o">.</span><span class="n">Logger</span><span class="o">.</span><span class="n">singleton</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span></div>
+
+<div class="viewcode-block" id="Radio.configureSnapshots"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureSnapshots">[docs]</a>    <span class="k">def</span> <span class="nf">configureSnapshots</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure snapshots&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">snapshot_period</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_collector</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">SnapshotCollector</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_collector</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Make sure RadioConfig has snapshot collector</span>
+        <span class="n">dragonradio</span><span class="o">.</span><span class="n">rc</span><span class="o">.</span><span class="n">snapshot_collector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_collector</span></div>
+
+<div class="viewcode-block" id="Radio.configureComponents"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureComponents">[docs]</a>    <span class="k">def</span> <span class="nf">configureComponents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook up all the radio components&quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=pointless-statement</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="c1"># Create object representing internal and external IP networks</span>
+        <span class="n">int_net</span> <span class="o">=</span> <span class="n">ipaddress</span><span class="o">.</span><span class="n">IPv4Network</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">internal_net</span><span class="p">)</span>
+        <span class="n">ext_net</span> <span class="o">=</span> <span class="n">ipaddress</span><span class="o">.</span><span class="n">IPv4Network</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">external_net</span><span class="p">)</span>
+
+        <span class="c1"># Create tun/tap interface and net neighborhood</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tuntap</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">TunTap</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">tap_iface</span><span class="p">,</span>
+                                         <span class="n">config</span><span class="o">.</span><span class="n">tap_ipaddr</span><span class="p">,</span>
+                                         <span class="nb">str</span><span class="p">(</span><span class="n">int_net</span><span class="o">.</span><span class="n">netmask</span><span class="p">),</span>
+                                         <span class="n">config</span><span class="o">.</span><span class="n">tap_macaddr</span><span class="p">,</span>
+                                         <span class="kc">False</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mtu</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">net</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">Net</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tuntap</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">)</span>
+
+        <span class="c1"># Configure the controller</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mkController</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">evm_thresholds</span><span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Create flow performance measurement component</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flowperf</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">FlowPerformance</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">measurement_period</span><span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Create packet compression component</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">packet_compressor</span> <span class="o">=</span> \
+            <span class="n">dragonradio</span><span class="o">.</span><span class="n">PacketCompressor</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">packet_compression</span><span class="p">,</span>
+                                         <span class="nb">int</span><span class="p">(</span><span class="n">int_net</span><span class="o">.</span><span class="n">network_address</span><span class="p">),</span>
+                                         <span class="nb">int</span><span class="p">(</span><span class="n">int_net</span><span class="o">.</span><span class="n">netmask</span><span class="p">),</span>
+                                         <span class="nb">int</span><span class="p">(</span><span class="n">ext_net</span><span class="o">.</span><span class="n">network_address</span><span class="p">),</span>
+                                         <span class="nb">int</span><span class="p">(</span><span class="n">ext_net</span><span class="o">.</span><span class="n">netmask</span><span class="p">))</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Configure packet path from channelizer to tun/tap</span>
+        <span class="c1">#</span>
+        <span class="c1">#   channelizer -&gt; controller -&gt; PacketCompressor.radio -&gt; FlowPerformance.radio -&gt; tun/tap</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">source</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">radio_in</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">radio_out</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">packet_compressor</span><span class="o">.</span><span class="n">radio_in</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">packet_compressor</span><span class="o">.</span><span class="n">radio_out</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">flowperf</span><span class="o">.</span><span class="n">radio_in</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">flowperf</span><span class="o">.</span><span class="n">radio_out</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tuntap</span><span class="o">.</span><span class="n">sink</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Configure packet path from tun/tap to the synthesizer</span>
+        <span class="c1">#</span>
+        <span class="c1"># The path is:</span>
+        <span class="c1">#   tun/tap -&gt; NetFilter -&gt; FlowPerformance.net -&gt; NetFirewall -&gt;</span>
+        <span class="c1">#       PacketCompressor.net -&gt; NetQueue -&gt; controller -&gt; synthesizer</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netfilter</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">NetFilter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="p">,</span>
+                                               <span class="nb">int</span><span class="p">(</span><span class="n">int_net</span><span class="o">.</span><span class="n">network_address</span><span class="p">),</span>
+                                               <span class="nb">int</span><span class="p">(</span><span class="n">int_net</span><span class="o">.</span><span class="n">netmask</span><span class="p">),</span>
+                                               <span class="nb">int</span><span class="p">(</span><span class="n">int_net</span><span class="o">.</span><span class="n">broadcast_address</span><span class="p">),</span>
+                                               <span class="nb">int</span><span class="p">(</span><span class="n">ext_net</span><span class="o">.</span><span class="n">network_address</span><span class="p">),</span>
+                                               <span class="nb">int</span><span class="p">(</span><span class="n">ext_net</span><span class="o">.</span><span class="n">netmask</span><span class="p">),</span>
+                                               <span class="nb">int</span><span class="p">(</span><span class="n">ext_net</span><span class="o">.</span><span class="n">broadcast_address</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netfirewall</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">NetFirewall</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mkNetQueue</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tuntap</span><span class="o">.</span><span class="n">source</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">netfilter</span><span class="o">.</span><span class="n">input</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">netfilter</span><span class="o">.</span><span class="n">output</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">flowperf</span><span class="o">.</span><span class="n">net_in</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">flowperf</span><span class="o">.</span><span class="n">net_out</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">netfirewall</span><span class="o">.</span><span class="n">input</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">netfirewall</span><span class="o">.</span><span class="n">output</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">packet_compressor</span><span class="o">.</span><span class="n">net_in</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">packet_compressor</span><span class="o">.</span><span class="n">net_out</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">netq</span><span class="o">.</span><span class="n">push</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">netq</span><span class="o">.</span><span class="n">pop</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">net_in</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">net_out</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">sink</span>
+
+        <span class="c1"># Allow Controller access to the network queue</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">net_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">netq</span></div>
+
+<div class="viewcode-block" id="Radio.mkPHY"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.mkPHY">[docs]</a>    <span class="k">def</span> <span class="nf">mkPHY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">header_mcs</span><span class="p">,</span> <span class="n">mcs_table</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct a PHY from configuration parameters&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">phy</span> <span class="o">==</span> <span class="s1">&#39;flexframe&#39;</span><span class="p">:</span>
+            <span class="n">phy</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">FlexFrame</span><span class="p">(</span><span class="n">header_mcs</span><span class="p">,</span>
+                                               <span class="n">mcs_table</span><span class="p">,</span>
+                                               <span class="n">config</span><span class="o">.</span><span class="n">soft_header</span><span class="p">,</span>
+                                               <span class="n">config</span><span class="o">.</span><span class="n">soft_payload</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">phy</span> <span class="o">==</span> <span class="s1">&#39;newflexframe&#39;</span><span class="p">:</span>
+            <span class="n">phy</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">NewFlexFrame</span><span class="p">(</span><span class="n">header_mcs</span><span class="p">,</span>
+                                                  <span class="n">mcs_table</span><span class="p">,</span>
+                                                  <span class="n">config</span><span class="o">.</span><span class="n">soft_header</span><span class="p">,</span>
+                                                  <span class="n">config</span><span class="o">.</span><span class="n">soft_payload</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">phy</span> <span class="o">==</span> <span class="s1">&#39;ofdm&#39;</span><span class="p">:</span>
+            <span class="n">phy</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">OFDM</span><span class="p">(</span><span class="n">header_mcs</span><span class="p">,</span>
+                                          <span class="n">mcs_table</span><span class="p">,</span>
+                                          <span class="n">config</span><span class="o">.</span><span class="n">soft_header</span><span class="p">,</span>
+                                          <span class="n">config</span><span class="o">.</span><span class="n">soft_payload</span><span class="p">,</span>
+                                          <span class="n">config</span><span class="o">.</span><span class="n">M</span><span class="p">,</span>
+                                          <span class="n">config</span><span class="o">.</span><span class="n">cp_len</span><span class="p">,</span>
+                                          <span class="n">config</span><span class="o">.</span><span class="n">taper_len</span><span class="p">,</span>
+                                          <span class="n">config</span><span class="o">.</span><span class="n">subcarriers</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown PHY: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">config</span><span class="o">.</span><span class="n">phy</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">phy</span></div>
+
+<div class="viewcode-block" id="Radio.mkChannelizer"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.mkChannelizer">[docs]</a>    <span class="k">def</span> <span class="nf">mkChannelizer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct a Channelizer according to configuration parameters&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">channelizer</span> <span class="o">==</span> <span class="s1">&#39;overlap&#39;</span><span class="p">:</span>
+            <span class="n">channelizer</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">OverlapTDChannelizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                           <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_rate</span><span class="p">,</span>
+                                                           <span class="n">Channels</span><span class="p">([]),</span>
+                                                           <span class="n">config</span><span class="o">.</span><span class="n">num_demodulation_threads</span><span class="p">)</span>
+
+            <span class="n">channelizer</span><span class="o">.</span><span class="n">enforce_ordering</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">channelizer_enforce_ordering</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">channelizer</span> <span class="o">==</span> <span class="s1">&#39;timedomain&#39;</span><span class="p">:</span>
+            <span class="n">channelizer</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">TDChannelizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_rate</span><span class="p">,</span>
+                                                    <span class="n">Channels</span><span class="p">([]),</span>
+                                                    <span class="n">config</span><span class="o">.</span><span class="n">num_demodulation_threads</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">channelizer</span> <span class="o">==</span> <span class="s1">&#39;freqdomain&#39;</span><span class="p">:</span>
+            <span class="n">channelizer</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">FDChannelizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_rate</span><span class="p">,</span>
+                                                    <span class="n">Channels</span><span class="p">([]),</span>
+                                                    <span class="n">config</span><span class="o">.</span><span class="n">num_demodulation_threads</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown channelizer: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">config</span><span class="o">.</span><span class="n">channelizer</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">channelizer</span></div>
+
+<div class="viewcode-block" id="Radio.mkSynthesizer"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.mkSynthesizer">[docs]</a>    <span class="k">def</span> <span class="nf">mkSynthesizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slotted</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct a Synthesizer according to configuration parameters&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">slotted</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">==</span> <span class="s1">&#39;timedomain&#39;</span><span class="p">:</span>
+                <span class="n">synthesizer</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">TDSlotSynthesizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                            <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span><span class="p">,</span>
+                                                            <span class="n">Channels</span><span class="p">([]),</span>
+                                                            <span class="n">config</span><span class="o">.</span><span class="n">num_modulation_threads</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">==</span> <span class="s1">&#39;freqdomain&#39;</span><span class="p">:</span>
+                <span class="n">synthesizer</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">FDSlotSynthesizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                            <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span><span class="p">,</span>
+                                                            <span class="n">Channels</span><span class="p">([]),</span>
+                                                            <span class="n">config</span><span class="o">.</span><span class="n">num_modulation_threads</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">==</span> <span class="s1">&#39;multichannel&#39;</span><span class="p">:</span>
+                <span class="n">synthesizer</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">MultichannelSynthesizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                                  <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span><span class="p">,</span>
+                                                                  <span class="n">Channels</span><span class="p">([]),</span>
+                                                                  <span class="n">config</span><span class="o">.</span><span class="n">num_modulation_threads</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown synthesizer: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">==</span> <span class="s1">&#39;timedomain&#39;</span><span class="p">:</span>
+                <span class="n">synthesizer</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">TDSynthesizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                        <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span><span class="p">,</span>
+                                                        <span class="n">Channels</span><span class="p">([]),</span>
+                                                        <span class="n">config</span><span class="o">.</span><span class="n">num_modulation_threads</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">==</span> <span class="s1">&#39;freqdomain&#39;</span><span class="p">:</span>
+                <span class="n">synthesizer</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">FDSynthesizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                        <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span><span class="p">,</span>
+                                                        <span class="n">Channels</span><span class="p">([]),</span>
+                                                        <span class="n">config</span><span class="o">.</span><span class="n">num_modulation_threads</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">==</span> <span class="s1">&#39;multichannel&#39;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Multichannel synthesizer can only be used with a slotted MAC&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown synthesizer: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">synthesizer</span></div>
+
+<div class="viewcode-block" id="Radio.mkController"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.mkController">[docs]</a>    <span class="k">def</span> <span class="nf">mkController</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evm_thresholds</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct a Controller according to configuration parameters&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">arq</span><span class="p">:</span>
+            <span class="n">controller</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">SmartController</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="p">,</span>
+                                                     <span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                                     <span class="n">config</span><span class="o">.</span><span class="n">slot_size</span><span class="p">,</span>
+                                                     <span class="n">config</span><span class="o">.</span><span class="n">arq_window</span><span class="p">,</span>
+                                                     <span class="n">config</span><span class="o">.</span><span class="n">arq_window</span><span class="p">,</span>
+                                                     <span class="n">evm_thresholds</span><span class="p">)</span>
+
+            <span class="c1"># Add MCU to MTU</span>
+            <span class="n">dragonradio</span><span class="o">.</span><span class="n">rc</span><span class="o">.</span><span class="n">mtu</span> <span class="o">+=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_mcu</span>
+
+            <span class="c1"># ARQ parameters</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">enforce_ordering</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_enforce_ordering</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">max_retransmissions</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_max_retransmissions</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">ack_delay</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_ack_delay</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">ack_delay_estimation_window</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_ack_delay_estimation_window</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">retransmission_delay</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_retransmission_delay</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">min_retransmission_delay</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_min_retransmission_delay</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">retransmission_delay_slop</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_retransmission_delay_slop</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">sack_delay</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_sack_delay</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">explicit_nak_window</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_explicit_nak_win</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">explicit_nak_window_duration</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_explicit_nak_win_duration</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">selective_ack</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_selective_ack</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">selective_ack_feedback_delay</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_selective_ack_feedback_delay</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">move_along</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_move_along</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">decrease_retrans_mcsidx</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_decrease_retrans_mcsidx</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">broadcast_gain</span><span class="o">.</span><span class="n">dB</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_broadcast_gain_db</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">ack_gain</span><span class="o">.</span><span class="n">dB</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">arq_ack_gain_db</span>
+
+            <span class="c1"># AMC parameters</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">short_per_window</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_short_per_window</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">long_per_window</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_long_per_window</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">long_stats_window</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_long_stats_window</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_broadcast</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_broadcast</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_broadcast</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_ack</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_ack</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_ack</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_min</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_min</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_max</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_max</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_init</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_init</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_up_per_threshold</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_up_per_threshold</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_down_per_threshold</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_down_per_threshold</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_alpha</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_alpha</span>
+            <span class="n">controller</span><span class="o">.</span><span class="n">mcsidx_prob_floor</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_mcsidx_prob_floor</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">controller</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">DummyController</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">controller</span></div>
+
+<div class="viewcode-block" id="Radio.mkNetQueue"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.mkNetQueue">[docs]</a>    <span class="k">def</span> <span class="nf">mkNetQueue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct a network queue according to configuration parameters&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">queue</span> <span class="o">==</span> <span class="s1">&#39;fifo&#39;</span><span class="p">:</span>
+            <span class="n">netq</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">SimpleQueue</span><span class="p">(</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">SimpleQueue</span><span class="o">.</span><span class="n">FIFO</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">queue</span> <span class="o">==</span> <span class="s1">&#39;lifo&#39;</span><span class="p">:</span>
+            <span class="n">netq</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">SimpleQueue</span><span class="p">(</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">SimpleQueue</span><span class="o">.</span><span class="n">LIFO</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">queue</span> <span class="o">==</span> <span class="s1">&#39;mandate&#39;</span><span class="p">:</span>
+            <span class="n">netq</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">MandateQueue</span><span class="p">()</span>
+            <span class="n">netq</span><span class="o">.</span><span class="n">bonus_phase</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">mandate_bonus_phase</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown queue type: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">config</span><span class="o">.</span><span class="n">queue</span><span class="p">)</span>
+
+        <span class="n">netq</span><span class="o">.</span><span class="n">transmission_delay</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">transmission_delay</span>
+
+        <span class="k">return</span> <span class="n">netq</span></div>
+
+<div class="viewcode-block" id="Radio.mkAutoGain"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.mkAutoGain">[docs]</a>    <span class="k">def</span> <span class="nf">mkAutoGain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct an AutoGain object according to configuration parameters&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="n">autogain</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">AutoGain</span><span class="p">()</span>
+
+        <span class="n">autogain</span><span class="o">.</span><span class="n">soft_tx_gain_0dBFS</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">soft_tx_gain</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">auto_soft_tx_gain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">autogain</span><span class="o">.</span><span class="n">recalc0dBFSEstimate</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">auto_soft_tx_gain</span><span class="p">)</span>
+            <span class="n">autogain</span><span class="o">.</span><span class="n">auto_soft_tx_gain_clip_frac</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">auto_soft_tx_gain_clip_frac</span>
+
+        <span class="k">return</span> <span class="n">autogain</span></div>
+
+<div class="viewcode-block" id="Radio.configureDefaultChannels"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureDefaultChannels">[docs]</a>    <span class="k">def</span> <span class="nf">configureDefaultChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure default channels&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="n">bandwidth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bandwidth</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">channel_bandwidth</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cbw</span> <span class="o">=</span> <span class="n">bandwidth</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cbw</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">channel_bandwidth</span>
+
+        <span class="n">channels</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">defaultChannelPlan</span><span class="p">(</span><span class="n">bandwidth</span><span class="p">,</span> <span class="n">cbw</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">((</span><span class="s2">&quot;Channels: </span><span class="si">%s</span><span class="s2"> &quot;</span>
+                      <span class="s2">&quot;(bandwidth=</span><span class="si">%g</span><span class="s2">; &quot;</span>
+                      <span class="s2">&quot;rx_oversample=</span><span class="si">%d</span><span class="s2">; &quot;</span>
+                      <span class="s2">&quot;tx_oversample=</span><span class="si">%d</span><span class="s2">; &quot;</span>
+                      <span class="s2">&quot;channel bandwidth=</span><span class="si">%g</span><span class="s2">)&quot;</span><span class="p">),</span>
+            <span class="nb">list</span><span class="p">(</span><span class="n">channels</span><span class="p">),</span>
+            <span class="n">bandwidth</span><span class="p">,</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">rx_oversample_factor</span><span class="p">,</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">tx_oversample_factor</span><span class="p">,</span>
+            <span class="n">cbw</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setChannels</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.setChannels"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setChannels">[docs]</a>    <span class="k">def</span> <span class="nf">setChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set current channels.</span>
+
+<span class="sd">        This function will configure the necessary RX and TX rates and</span>
+<span class="sd">        initialize the synthesizer and channelizer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">channels</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">max_channels</span><span class="p">]</span>
+
+        <span class="c1"># Initialize RX chain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setRXChannels</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span>
+
+        <span class="c1"># Initialize TX chain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTXChannels</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span>
+
+        <span class="c1"># Reconfigure the MAC</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">reconfigure</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Radio.setRXChannels"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setRXChannels">[docs]</a>    <span class="k">def</span> <span class="nf">setRXChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure RX chain for channels&quot;&quot;&quot;</span>
+        <span class="c1"># Initialize channelizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setRXRate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bandwidth</span><span class="p">)</span>
+
+        <span class="c1"># We need to do this *after* setting the RX rate because it is used to</span>
+        <span class="c1"># determine filter parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setChannelizerChannels</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.setTXChannels"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setTXChannels">[docs]</a>    <span class="k">def</span> <span class="nf">setTXChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure TX chain for channels&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tx_upsample</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setTXRate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bandwidth</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setSynthesizerChannels</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setTXChannel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tx_channel_idx</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.setChannelizerChannels"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setChannelizerChannels">[docs]</a>    <span class="k">def</span> <span class="nf">setChannelizerChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set channelizer&#39;s channels.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> \
+            <span class="n">Channels</span><span class="p">([(</span><span class="n">chan</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">genChannelizerTaps</span><span class="p">(</span><span class="n">chan</span><span class="p">))</span> <span class="k">for</span> <span class="n">chan</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Radio.setSynthesizerChannels"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setSynthesizerChannels">[docs]</a>    <span class="k">def</span> <span class="nf">setSynthesizerChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set synthesizer&#39;s channels.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> \
+            <span class="n">Channels</span><span class="p">([(</span><span class="n">chan</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">genSynthesizerTaps</span><span class="p">(</span><span class="n">chan</span><span class="p">))</span> <span class="k">for</span> <span class="n">chan</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">])</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Tell the MAC the minimum number of samples in a slot</span>
+        <span class="c1">#</span>
+        <span class="n">min_channel_bandwidth</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">chan</span><span class="o">.</span><span class="n">bw</span> <span class="k">for</span> <span class="p">(</span><span class="n">chan</span><span class="p">,</span> <span class="n">_taps</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">channels</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">min_channel_bandwidth</span> <span class="o">=</span> <span class="n">min_channel_bandwidth</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">min_channel_bandwidth</span> <span class="o">=</span> <span class="n">min_channel_bandwidth</span></div>
+
+<div class="viewcode-block" id="Radio.configureValidDecimationRates"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureValidDecimationRates">[docs]</a>    <span class="k">def</span> <span class="nf">configureValidDecimationRates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Determine valid decimation and interpolation rates&quot;&quot;&quot;</span>
+        <span class="c1"># See:</span>
+        <span class="c1">#   https://files.ettus.com/manual/page_general.html#general_sampleratenotes</span>
+
+        <span class="c1"># Start out with only even rates. We sort this list in reverse so we can</span>
+        <span class="c1"># easily find the first rate that is less than or equal to the requested</span>
+        <span class="c1"># decimation rate.</span>
+        <span class="n">rates</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="mi">2</span><span class="o">**</span><span class="n">i</span> <span class="o">*</span> <span class="mi">5</span><span class="o">**</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">)],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># If the rate exceeds 128, then rate must be evenly divisible by 2</span>
+        <span class="n">rates</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rates</span> <span class="k">if</span> <span class="n">r</span> <span class="o">&lt;=</span> <span class="mi">128</span> <span class="ow">or</span> <span class="n">r</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># If the rate exceeds 256, the rate must be evenly divisible by 4.</span>
+        <span class="n">rates</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rates</span> <span class="k">if</span> <span class="n">r</span> <span class="o">&lt;=</span> <span class="mi">256</span> <span class="ow">or</span> <span class="n">r</span> <span class="o">%</span> <span class="mi">4</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">valid_rates</span> <span class="o">=</span> <span class="n">rates</span></div>
+
+<div class="viewcode-block" id="Radio.validRate"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.validRate">[docs]</a>    <span class="k">def</span> <span class="nf">validRate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_rate</span><span class="p">,</span> <span class="n">clock_rate</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find a valid rate no less than min_rate given the clock rate clock_rate.</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            min_rate: The minimum desired rate</span>
+<span class="sd">            clock_rate: The radio clock rate</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A rate no less than rate min_rate that is supported by the hardware&quot;&quot;&quot;</span>
+        <span class="c1"># Compute decimation rate</span>
+        <span class="n">dec_rate</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">clock_rate</span><span class="o">/</span><span class="n">min_rate</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Desired decimation rate: </span><span class="si">%g</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">dec_rate</span><span class="p">)</span>
+
+        <span class="c1"># Otherwise, make sure we use a safe decimation rate</span>
+        <span class="k">if</span> <span class="n">dec_rate</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">rate</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_rates</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dec_rate</span> <span class="o">&gt;=</span> <span class="n">rate</span><span class="p">:</span>
+                    <span class="n">dec_rate</span> <span class="o">=</span> <span class="n">rate</span>
+                    <span class="k">break</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Actual decimation rate: </span><span class="si">%g</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">dec_rate</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">clock_rate</span><span class="o">/</span><span class="n">dec_rate</span></div>
+
+<div class="viewcode-block" id="Radio.setRXRate"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setRXRate">[docs]</a>    <span class="k">def</span> <span class="nf">setRXRate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rate</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set RX rate&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">rx_bandwidth</span><span class="p">:</span>
+            <span class="n">want_rx_rate</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">rx_bandwidth</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rx_rate_oversample</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">rx_oversample_factor</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="o">.</span><span class="n">min_rx_rate_oversample</span>
+
+            <span class="n">want_rx_rate</span> <span class="o">=</span> <span class="n">rate</span><span class="o">*</span><span class="n">rx_rate_oversample</span>
+            <span class="c1"># We max out at about 50Mhz with UHD 3.9</span>
+            <span class="n">want_rx_rate</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">want_rx_rate</span><span class="p">,</span> <span class="mf">50e6</span><span class="p">)</span>
+
+        <span class="n">want_rx_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validRate</span><span class="p">(</span><span class="n">want_rx_rate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">clock_rate</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rx_rate</span> <span class="o">!=</span> <span class="n">want_rx_rate</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_rate</span> <span class="o">=</span> <span class="n">want_rx_rate</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rx_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_rate</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rx_rate</span> <span class="o">!=</span> <span class="n">want_rx_rate</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Wanted RX rate </span><span class="si">%g</span><span class="s1">, but got </span><span class="si">%g</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">want_rx_rate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rx_rate</span><span class="p">))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">rx_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rx_rate</span></div>
+
+<div class="viewcode-block" id="Radio.setTXRate"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setTXRate">[docs]</a>    <span class="k">def</span> <span class="nf">setTXRate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rate</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set TX rate&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_bandwidth</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_upsample</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;TX bandwidth set, but TX upsampling requested.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_bandwidth</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_upsample</span><span class="p">:</span>
+            <span class="n">want_tx_rate</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_bandwidth</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tx_rate_oversample</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_oversample_factor</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="o">.</span><span class="n">min_tx_rate_oversample</span>
+
+            <span class="n">want_tx_rate</span> <span class="o">=</span> <span class="n">rate</span><span class="o">*</span><span class="n">tx_rate_oversample</span>
+
+        <span class="n">want_tx_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validRate</span><span class="p">(</span><span class="n">want_tx_rate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">clock_rate</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tx_rate</span> <span class="o">!=</span> <span class="n">want_tx_rate</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span> <span class="o">=</span> <span class="n">want_tx_rate</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tx_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tx_rate</span> <span class="o">!=</span> <span class="n">want_tx_rate</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Wanted TX rate </span><span class="si">%g</span><span class="s1">, but got </span><span class="si">%g</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">want_tx_rate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tx_rate</span><span class="p">))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">tx_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tx_rate</span></div>
+
+<div class="viewcode-block" id="Radio.setTXChannel"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setTXChannel">[docs]</a>    <span class="k">def</span> <span class="nf">setTXChannel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channel_idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the transmission channel.</span>
+
+<span class="sd">        If we are upsampling on TX, this is a no-op. Otherwise we configure the</span>
+<span class="sd">        radio&#39;s frequency and bandwidth and synthesizer for the new, single</span>
+<span class="sd">        channel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_upsample</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Attempt to set TX channel when upsampling&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Determine TX channel from index</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tx_channel_idx</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">channel_idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tx_channel_idx</span><span class="p">]</span>
+
+            <span class="c1"># Set TX rate</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setTXRate</span><span class="p">(</span><span class="n">channel</span><span class="o">.</span><span class="n">bw</span><span class="p">)</span>
+
+            <span class="c1"># Set TX frequency</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Setting TX frequency offset to </span><span class="si">%g</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">channel</span><span class="o">.</span><span class="n">fc</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">+</span> <span class="n">channel</span><span class="o">.</span><span class="n">fc</span>
+
+            <span class="c1"># Set synthesizer channel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setSynthesizerChannels</span><span class="p">([</span><span class="n">Channel</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">channel</span><span class="o">.</span><span class="n">bw</span><span class="p">)])</span>
+
+            <span class="c1"># Allow the MAC to figure out the TX offset so snapshot self</span>
+            <span class="c1"># tranmissions are correctly logged</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">reconfigure</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Radio.reconfigureBandwidthAndFrequency"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.reconfigureBandwidthAndFrequency">[docs]</a>    <span class="k">def</span> <span class="nf">reconfigureBandwidthAndFrequency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bandwidth</span><span class="p">,</span> <span class="n">frequency</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reconfigure the radio for the given bandwidth and frequency&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">bandwidth</span> <span class="o">==</span> <span class="n">config</span><span class="o">.</span><span class="n">bandwidth</span> <span class="ow">and</span> <span class="n">frequency</span> <span class="o">==</span> <span class="n">config</span><span class="o">.</span><span class="n">frequency</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reconfiguring radio: bandwidth=</span><span class="si">%f</span><span class="s2">, frequency=</span><span class="si">%f</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">bandwidth</span><span class="p">,</span> <span class="n">frequency</span><span class="p">)</span>
+
+        <span class="c1"># Set current frequency</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="n">frequency</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span>
+
+        <span class="c1"># If we are upsampling on TX, set TX frequency. Otherwise the call to</span>
+        <span class="c1"># setTXChannel below will set the appropriate TX frequency.</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_upsample</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span>
+
+        <span class="c1"># If the bandwidth has changed, re-configure channels. Otherwise just</span>
+        <span class="c1"># set the current channel---we need to re-set the channel after a</span>
+        <span class="c1"># frequency change because although the channel number may be the same,</span>
+        <span class="c1"># the corresponding frequency will be different.</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">bandwidth</span> <span class="o">!=</span> <span class="n">bandwidth</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">bandwidth</span> <span class="o">=</span> <span class="n">bandwidth</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">configureDefaultChannels</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setTXChannel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tx_channel_idx</span><span class="p">)</span>
+
+        <span class="c1"># When the environment changes, we reset MCS transition probabilities</span>
+        <span class="c1"># because we need to re-explore to find the best MCS.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">SmartController</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">resetMCSTransitionProbabilities</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Radio.genChannelizerTaps"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.genChannelizerTaps">[docs]</a>    <span class="k">def</span> <span class="nf">genChannelizerTaps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate channelizer filter taps for given channel&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="c1"># Calculate channelizer taps</span>
+        <span class="k">if</span> <span class="n">channel</span><span class="o">.</span><span class="n">bw</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_rate</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">channelizer</span> <span class="o">==</span> <span class="s1">&#39;freqdomain&#39;</span><span class="p">:</span>
+            <span class="n">wp</span> <span class="o">=</span> <span class="mf">0.95</span><span class="o">*</span><span class="n">channel</span><span class="o">.</span><span class="n">bw</span>
+            <span class="n">ws</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="n">bw</span>
+            <span class="n">fs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_rate</span>
+
+            <span class="n">h</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">lowpass</span><span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">ws</span><span class="p">,</span> <span class="n">fs</span><span class="p">,</span> <span class="n">ftype</span><span class="o">=</span><span class="s1">&#39;firpm1f2&#39;</span><span class="p">,</span> <span class="n">Nmax</span><span class="o">=</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">FDChannelizer</span><span class="o">.</span><span class="n">P</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">wp</span> <span class="o">=</span> <span class="mf">0.9</span><span class="o">*</span><span class="n">channel</span><span class="o">.</span><span class="n">bw</span>
+            <span class="n">ws</span> <span class="o">=</span> <span class="mf">1.1</span><span class="o">*</span><span class="n">channel</span><span class="o">.</span><span class="n">bw</span>
+            <span class="n">fs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">rx_rate</span>
+
+            <span class="n">h</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">lowpass</span><span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">ws</span><span class="p">,</span> <span class="n">fs</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Created prototype lowpass filter for channelizer: N=</span><span class="si">%d</span><span class="s1">; wp=</span><span class="si">%g</span><span class="s1">; ws=</span><span class="si">%g</span><span class="s1">; fs=</span><span class="si">%g</span><span class="s1">&#39;</span><span class="p">,</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="n">wp</span><span class="p">,</span> <span class="n">ws</span><span class="p">,</span> <span class="n">fs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">h</span></div>
+
+<div class="viewcode-block" id="Radio.genSynthesizerTaps"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.genSynthesizerTaps">[docs]</a>    <span class="k">def</span> <span class="nf">genSynthesizerTaps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate synthesizer filter taps for given channel&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">channel</span><span class="o">.</span><span class="n">bw</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">==</span> <span class="s1">&#39;freqdomain&#39;</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">==</span> <span class="s1">&#39;multichannel&#39;</span><span class="p">:</span>
+            <span class="c1"># Frequency-space synthesizers don&#39;t apply a filter</span>
+            <span class="k">return</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">wp</span> <span class="o">=</span> <span class="mf">0.9</span><span class="o">*</span><span class="n">channel</span><span class="o">.</span><span class="n">bw</span>
+        <span class="n">ws</span> <span class="o">=</span> <span class="mf">1.1</span><span class="o">*</span><span class="n">channel</span><span class="o">.</span><span class="n">bw</span>
+        <span class="n">fs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">tx_rate</span>
+
+        <span class="n">h</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">lowpass</span><span class="p">(</span><span class="n">wp</span><span class="p">,</span> <span class="n">ws</span><span class="p">,</span> <span class="n">fs</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Created prototype lowpass filter for synthesizer: N=</span><span class="si">%d</span><span class="s1">; wp=</span><span class="si">%g</span><span class="s1">; ws=</span><span class="si">%g</span><span class="s1">; fs=</span><span class="si">%g</span><span class="s1">&#39;</span><span class="p">,</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="n">wp</span><span class="p">,</span> <span class="n">ws</span><span class="p">,</span> <span class="n">fs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">h</span></div>
+
+<div class="viewcode-block" id="Radio.configureMAC"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureMAC">[docs]</a>    <span class="k">def</span> <span class="nf">configureMAC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mac</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure MAC&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mac</span> <span class="o">==</span> <span class="s1">&#39;aloha&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">configureALOHA</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">mac</span> <span class="o">==</span> <span class="s1">&#39;tdma&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">configureSimpleMACSchedule</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">mac</span> <span class="o">==</span> <span class="s1">&#39;tdma-fdma&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">configureSimpleMACSchedule</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">mac</span> <span class="o">==</span> <span class="s1">&#39;fdma&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">configureSimpleMACSchedule</span><span class="p">(</span><span class="n">fdma_mac</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown MAC: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mac</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Radio.deleteMAC"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.deleteMAC">[docs]</a>    <span class="k">def</span> <span class="nf">deleteMAC</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete the current MAC&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="Radio.configureALOHA"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureALOHA">[docs]</a>    <span class="k">def</span> <span class="nf">configureALOHA</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configure ALOHA MAC&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">SlottedALOHA</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_collector</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="p">,</span>
+                                            <span class="n">config</span><span class="o">.</span><span class="n">slot_size</span><span class="p">,</span>
+                                            <span class="n">config</span><span class="o">.</span><span class="n">guard_size</span><span class="p">,</span>
+                                            <span class="n">config</span><span class="o">.</span><span class="n">slot_send_lead_time</span><span class="p">,</span>
+                                            <span class="n">config</span><span class="o">.</span><span class="n">aloha_prob</span><span class="p">)</span>
+
+        <span class="c1"># Install slot-per-channel schedule for ALOHA MAC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">installALOHASchedule</span><span class="p">()</span>
+
+        <span class="c1"># We may not use superslots with the ALOHA MAC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">superslots</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Set up overlap channelizer</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">OverlapTDChannelizer</span><span class="p">):</span>
+            <span class="c1"># We need to demodulate half the previous slot because a sender</span>
+            <span class="c1"># could start transmitting a packet halfway into a slot + epsilon.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">prev_demod</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">slot_size</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">cur_demod</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">slot_size</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">finishConfiguringMAC</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Radio.configureTDMA"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureTDMA">[docs]</a>    <span class="k">def</span> <span class="nf">configureTDMA</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nslots</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configures a TDMA MAC with &#39;nslots&#39; slots.</span>
+
+<span class="sd">        This function sets up a TDMA MAC for a schedule with `nslots` slots, but</span>
+<span class="sd">        it does not claim any of the slots. After calling this function, the</span>
+<span class="sd">        node *will not transmit* until it is given a slot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            nslots: The number of slots in the schedule</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">TDMA</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">nslots</span> <span class="o">==</span> <span class="n">nslots</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Replace the synthesizer if it is not a SlotSynthesizer</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">SlotSynthesizer</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">replaceSynthesizer</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Replace the MAC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deleteMAC</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">TDMA</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_collector</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="p">,</span>
+                                    <span class="n">config</span><span class="o">.</span><span class="n">slot_size</span><span class="p">,</span>
+                                    <span class="n">config</span><span class="o">.</span><span class="n">guard_size</span><span class="p">,</span>
+                                    <span class="n">config</span><span class="o">.</span><span class="n">slot_send_lead_time</span><span class="p">,</span>
+                                    <span class="n">nslots</span><span class="p">)</span>
+
+        <span class="c1"># We may use superslots with the TDMA MAC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">superslots</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">superslots</span>
+
+        <span class="c1"># Set up overlap channelizer</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">OverlapTDChannelizer</span><span class="p">):</span>
+            <span class="c1"># When using superslots, we need to demodulate half the previous</span>
+            <span class="c1"># slot because a sender could start transmitting a packet halfway</span>
+            <span class="c1"># into a slot + epsilon.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">superslots</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">prev_demod</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">slot_size</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">cur_demod</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">slot_size</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">prev_demod</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">demod_overlap_size</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="o">.</span><span class="n">cur_demod</span> <span class="o">=</span> \
+                    <span class="n">config</span><span class="o">.</span><span class="n">slot_size</span> <span class="o">-</span> <span class="n">config</span><span class="o">.</span><span class="n">guard_size</span> <span class="o">+</span> <span class="n">config</span><span class="o">.</span><span class="n">demod_overlap_size</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">finishConfiguringMAC</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Radio.configureFDMA"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureFDMA">[docs]</a>    <span class="k">def</span> <span class="nf">configureFDMA</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configures a FDMA MAC.&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">FDMA</span><span class="p">):</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Replace the synthesizer if it is not a ChannelSynthesizer</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">ChannelSynthesizer</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">replaceSynthesizer</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Replace the MAC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deleteMAC</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">FDMA</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">phy</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_collector</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="p">,</span>
+                                    <span class="n">config</span><span class="o">.</span><span class="n">slot_size</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">finishConfiguringMAC</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Radio.finishConfiguringMAC"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.finishConfiguringMAC">[docs]</a>    <span class="k">def</span> <span class="nf">finishConfiguringMAC</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Finish configuring MAC&quot;&quot;&quot;</span>
+        <span class="n">bws</span> <span class="o">=</span> <span class="p">[</span><span class="n">chan</span><span class="o">.</span><span class="n">bw</span> <span class="k">for</span> <span class="p">(</span><span class="n">chan</span><span class="p">,</span> <span class="n">_taps</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">channels</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bws</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">min_channel_bandwidth</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">bws</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.replaceSynthesizer"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.replaceSynthesizer">[docs]</a>    <span class="k">def</span> <span class="nf">replaceSynthesizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slotted</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Replace the synthesizer&quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=pointless-statement</span>
+
+        <span class="c1"># Disconnect synthesizer. When the controller is disconnected from the</span>
+        <span class="c1"># old synthesizer, it disconnects itself from the upstream queue, so we</span>
+        <span class="c1"># must re-reconnect the queue to the controller too. We go ahead and</span>
+        <span class="c1"># disconnect everything here to prevent issues with disconnect/connect</span>
+        <span class="c1"># order during re-connection. The network queue is disconnected first to</span>
+        <span class="c1"># ensure we don&#39;t lose any network packets during the transition.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netq</span><span class="o">.</span><span class="n">pop</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">net_in</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">net_out</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+
+        <span class="c1"># Replace synthesizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mkSynthesizer</span><span class="p">(</span><span class="n">slotted</span><span class="p">)</span>
+
+        <span class="c1"># Reconnect the controller to the synthesizer.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netq</span><span class="o">.</span><span class="n">pop</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">net_in</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">net_out</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">sink</span>
+
+        <span class="c1"># Re-configure TX chain, which includes synthesizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setTXChannels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.setALOHAChannel"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.setALOHAChannel">[docs]</a>    <span class="k">def</span> <span class="nf">setALOHAChannel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channel_idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the transmission channel for the ALOHA MAC.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="p">,</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">SlottedALOHA</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Cannot change ALOHA channel for non-ALOHA MAC&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tx_upsample</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">slotidx</span> <span class="o">=</span> <span class="n">channel_idx</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setTXChannel</span><span class="p">(</span><span class="n">channel_idx</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.installALOHASchedule"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.installALOHASchedule">[docs]</a>    <span class="k">def</span> <span class="nf">installALOHASchedule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Install a schedule for an ALOHA MAC.</span>
+
+<span class="sd">        This installs a schedule with one slot per channel. If we are not</span>
+<span class="sd">        resampling on TX, it installs a schedule with one slot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">slotidx</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># All nodes can transmit</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">_node_id</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">can_transmit</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tx_upsample</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;bool&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setTXChannel</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">schedule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">schedule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span></div>
+
+<div class="viewcode-block" id="Radio.installMACSchedule"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.installMACSchedule">[docs]</a>    <span class="k">def</span> <span class="nf">installMACSchedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sched</span><span class="p">,</span> <span class="n">fdma_mac</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Install a MAC schedule.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sched: The schedule, which is a nchannels X nslots array of node</span>
+<span class="sd">                IDs.</span>
+<span class="sd">            fdma_mac: If True, use the FDMA MAC</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Installing MAC schedule:</span><span class="se">\n</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">sched</span><span class="p">)</span>
+
+        <span class="c1"># Get number of channels and slots</span>
+        <span class="p">(</span><span class="n">_nchannels</span><span class="p">,</span> <span class="n">nslots</span><span class="p">)</span> <span class="o">=</span> <span class="n">sched</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># First configure the TDMA MAC for the desired number of slots</span>
+        <span class="k">if</span> <span class="n">fdma_mac</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">nslots</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;FDMA schedule has more than one slot: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sched</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">configureFDMA</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">configureTDMA</span><span class="p">(</span><span class="n">nslots</span><span class="p">)</span>
+
+        <span class="c1"># Determine which nodes are allowed to transmit</span>
+        <span class="n">nodes_with_slot</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">sched</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+        <span class="k">if</span> <span class="mi">0</span> <span class="ow">in</span> <span class="n">nodes_with_slot</span><span class="p">:</span>
+            <span class="n">nodes_with_slot</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">can_transmit</span> <span class="o">=</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="n">nodes_with_slot</span>
+
+        <span class="c1"># If we are upsampling on TX, go ahead and install the schedule</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_upsample</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span> <span class="o">=</span> <span class="p">(</span><span class="n">sched</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">)</span>
+        <span class="c1"># Otherwise we need to pick a channel we&#39;re allowed to send on and stick</span>
+        <span class="c1"># to that</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">chan</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">schedule</span><span class="o">.</span><span class="n">bestScheduleChannel</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;No MAC schedule entry for radio </span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">)</span>
+                <span class="n">chan</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">setTXChannel</span><span class="p">(</span><span class="n">chan</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span> <span class="o">=</span> <span class="p">[</span><span class="n">sched</span><span class="p">[</span><span class="n">chan</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span><span class="o">.</span><span class="n">schedule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span><span class="o">.</span><span class="n">schedule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac_schedule</span></div>
+
+<div class="viewcode-block" id="Radio.configureSimpleMACSchedule"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.configureSimpleMACSchedule">[docs]</a>    <span class="k">def</span> <span class="nf">configureSimpleMACSchedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fdma_mac</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set a simple static schedule.&quot;&quot;&quot;</span>
+        <span class="n">nchannels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">nodes</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">nchannels</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sched</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">schedule</span><span class="o">.</span><span class="n">pureTDMASchedule</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sched</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">schedule</span><span class="o">.</span><span class="n">fullChannelMACSchedule</span><span class="p">(</span><span class="n">nchannels</span><span class="p">,</span>
+                                                                <span class="mi">1</span><span class="p">,</span>
+                                                                <span class="n">nodes</span><span class="p">,</span>
+                                                                <span class="mi">3</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">installMACSchedule</span><span class="p">(</span><span class="n">sched</span><span class="p">,</span> <span class="n">fdma_mac</span><span class="o">=</span><span class="n">fdma_mac</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.synchronizeClock"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.synchronizeClock">[docs]</a>    <span class="k">def</span> <span class="nf">synchronizeClock</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Use timestamps to synchronize our clock with the time master (the gateway)&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">time_master</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">clock</span><span class="o">.</span><span class="n">t0</span>
+
+        <span class="c1"># Perform linear regression on all timestamps</span>
+        <span class="n">echoed</span> <span class="o">=</span> <span class="n">_relativizeTimestamps</span><span class="p">(</span><span class="n">t0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">echoed_timestamps</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;TIMESYNC: echoed timestamps: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">echoed</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">echoed</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">master</span> <span class="o">=</span> <span class="n">_relativizeTimestamps</span><span class="p">(</span><span class="n">t0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">time_master</span><span class="p">]</span><span class="o">.</span><span class="n">timestamps</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;TIMESYNC: time master&#39;s timestamps: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">master</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">master</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">echoed</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">master</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># If we have a GPSDO, then assume skew is zero</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">clock_noskew</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">clock_source</span> <span class="o">==</span> <span class="s1">&#39;external&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">usrp</span><span class="o">.</span><span class="n">time_source</span> <span class="o">==</span> <span class="s1">&#39;external&#39;</span><span class="p">):</span>
+                <span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">tau</span><span class="p">)</span> <span class="o">=</span> <span class="n">timestampRegressionNoSkew</span><span class="p">(</span><span class="n">echoed</span><span class="p">,</span> <span class="n">master</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">tau</span><span class="p">)</span> <span class="o">=</span> <span class="n">timestampRegression</span><span class="p">(</span><span class="n">echoed</span><span class="p">,</span> <span class="n">master</span><span class="p">)</span>
+
+            <span class="n">old_sigma</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">clock</span><span class="o">.</span><span class="n">skew</span>
+            <span class="n">old_delta</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">clock</span><span class="o">.</span><span class="n">offset</span><span class="o">.</span><span class="n">secs</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">((</span><span class="s2">&quot;TIMESYNC: regression parameters: &quot;</span>
+                          <span class="s2">&quot;old_sigma=</span><span class="si">%g</span><span class="s2">; &quot;</span>
+                          <span class="s2">&quot;old_delta=</span><span class="si">%g</span><span class="s2">; &quot;</span>
+                          <span class="s2">&quot;sigma=</span><span class="si">%g</span><span class="s2">; &quot;</span>
+                          <span class="s2">&quot;delta=</span><span class="si">%g</span><span class="s2">; &quot;</span>
+                          <span class="s2">&quot;tau=</span><span class="si">%g</span><span class="s2">&quot;</span><span class="p">),</span>
+                <span class="n">old_sigma</span><span class="p">,</span> <span class="n">old_delta</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">tau</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="ow">and</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">sigma</span><span class="p">):</span>
+                <span class="n">dragonradio</span><span class="o">.</span><span class="n">clock</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">dragonradio</span><span class="o">.</span><span class="n">MonoTimePoint</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+                <span class="n">dragonradio</span><span class="o">.</span><span class="n">clock</span><span class="o">.</span><span class="n">skew</span> <span class="o">=</span> <span class="n">sigma</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">logEvent</span><span class="p">((</span><span class="s2">&quot;TIMESYNC: set skew and offset: &quot;</span>
+                                      <span class="s2">&quot;sigma=</span><span class="si">{:g}</span><span class="s2">; &quot;</span>
+                                      <span class="s2">&quot;delta=</span><span class="si">{:g}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">delta</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Radio.getRadioLogPath"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.getRadioLogPath">[docs]</a>    <span class="k">def</span> <span class="nf">getRadioLogPath</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determine where the HDF5 log file created by the low-level radio will</span>
+<span class="sd">        live.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">logdir</span><span class="p">,</span> <span class="s1">&#39;radio.h5&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">path</span>
+
+        <span class="c1"># If the radio log exists, create a new one.</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">logdir</span><span class="p">,</span> <span class="s1">&#39;radio-</span><span class="si">{:02d}</span><span class="s1">.h5&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">path</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+<div class="viewcode-block" id="Radio.startSnapshots"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.startSnapshots">[docs]</a>    <span class="k">def</span> <span class="nf">startSnapshots</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start the snapshot logger&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">createTask</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">snapshotTask</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;snapshots&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Radio.snapshotTask"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Radio.snapshotTask">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">snapshotTask</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Snapshot logging task&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+        <span class="n">collector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_collector</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Sleep a random amount to de-synchronize with other radios collecting</span>
+            <span class="c1"># snapshots.</span>
+            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">snapshot_duration</span><span class="p">))</span>
+
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="c1"># Collecting snapshot for config.snapshot_duration</span>
+                <span class="n">collector</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">snapshot_duration</span><span class="p">)</span>
+
+                <span class="c1"># Stop collecting slots</span>
+                <span class="n">collector</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+                <span class="c1"># Wait for remaining packets in snapshot to be demodulated and</span>
+                <span class="c1"># get the snapshot</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">snapshot_finish_wait</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">snapshot_finish_wait</span><span class="p">)</span>
+
+                <span class="n">snapshot</span> <span class="o">=</span> <span class="n">collector</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+                <span class="c1"># Log the snapshot</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">log_snapshots</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">logSnapshot</span><span class="p">(</span><span class="n">snapshot</span><span class="p">)</span>
+
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">snapshot_period</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">CancelledError</span><span class="p">:</span>
+            <span class="k">return</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Center frequency&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">frequency</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">bandwidth</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Bandwidth&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">bandwidth</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">max_bandwidth</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">header_mcs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">&quot;Header MCS&quot;</span>
+        <span class="k">return</span> <span class="n">MCS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">header_check</span><span class="p">,</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">header_fec0</span><span class="p">,</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">header_fec1</span><span class="p">,</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">header_ms</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mcs_table</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;MCS table&quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=no-else-return</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">amc</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_table</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="n">MCS</span><span class="p">(</span><span class="o">*</span><span class="n">mcs</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mkAutoGain</span><span class="p">())</span> <span class="k">for</span> <span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">_thresh</span><span class="p">)</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_table</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mcs</span> <span class="o">=</span> <span class="n">MCS</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">check</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">fec0</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">fec1</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">ms</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="p">[(</span><span class="n">mcs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mkAutoGain</span><span class="p">())]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">evm_thresholds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;EVM thresholds for each MCS&quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=no-else-return</span>
+
+        <span class="k">def</span> <span class="nf">zeroToNone</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">x</span>
+
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">amc</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_table</span><span class="p">:</span>
+            <span class="c1"># libconfig can&#39;t parse None, so we use zero to represent a</span>
+            <span class="c1"># non-existant threshold (zero is not a valid EVM threshold)</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">zeroToNone</span><span class="p">(</span><span class="n">thresh</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">_mcs</span><span class="p">,</span> <span class="n">thresh</span><span class="p">)</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">amc_table</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="kc">None</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcs_table</span><span class="p">]</span></div>
+
+<span class="k">def</span> <span class="nf">_relativizeTimestamps</span><span class="p">(</span><span class="n">t0</span><span class="p">,</span> <span class="n">ts</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Make (t_send, t_recv) timestamps relative to t0&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[((</span><span class="n">t_send</span><span class="o">-</span><span class="n">t0</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span><span class="p">,</span> <span class="p">(</span><span class="n">t_recv</span><span class="o">-</span><span class="n">t0</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">t_send</span><span class="p">,</span> <span class="n">t_recv</span><span class="p">)</span> <span class="ow">in</span> <span class="n">ts</span><span class="p">]</span>
+
+<div class="viewcode-block" id="timestampRegression"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.timestampRegression">[docs]</a><span class="k">def</span> <span class="nf">timestampRegression</span><span class="p">(</span><span class="n">echoed</span><span class="p">,</span> <span class="n">master</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform a linear regression on timestamps to determine clock skew and delta&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-many-locals</span>
+
+    <span class="n">avec</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">echoed</span><span class="p">]</span>
+    <span class="n">bvec</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="ow">in</span> <span class="n">echoed</span><span class="p">]</span>
+
+    <span class="n">cvec</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">master</span><span class="p">]</span>
+    <span class="n">dvec</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="ow">in</span> <span class="n">master</span><span class="p">]</span>
+
+    <span class="n">abar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">avec</span><span class="p">)</span>
+    <span class="n">bbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">bvec</span><span class="p">)</span>
+
+    <span class="n">cbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cvec</span><span class="p">)</span>
+    <span class="n">dbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dvec</span><span class="p">)</span>
+
+    <span class="n">covab</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([(</span><span class="n">a</span> <span class="o">-</span> <span class="n">abar</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">bbar</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="ow">in</span> <span class="n">echoed</span><span class="p">])</span>
+    <span class="n">vara</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([(</span><span class="n">a</span> <span class="o">-</span> <span class="n">abar</span><span class="p">)</span><span class="o">**</span><span class="mf">2.0</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">avec</span><span class="p">])</span>
+
+    <span class="n">covcd</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([(</span><span class="n">c</span> <span class="o">-</span> <span class="n">cbar</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">d</span> <span class="o">-</span> <span class="n">dbar</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="ow">in</span> <span class="n">master</span><span class="p">])</span>
+    <span class="n">vard</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([(</span><span class="n">d</span> <span class="o">-</span> <span class="n">dbar</span><span class="p">)</span><span class="o">**</span><span class="mf">2.0</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dvec</span><span class="p">])</span>
+
+    <span class="n">sigma</span> <span class="o">=</span> <span class="p">(</span><span class="n">covab</span> <span class="o">+</span> <span class="n">covcd</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">vara</span> <span class="o">+</span> <span class="n">vard</span><span class="p">)</span>
+
+    <span class="n">delta_plus_tau</span> <span class="o">=</span> <span class="n">bbar</span> <span class="o">-</span> <span class="n">sigma</span><span class="o">*</span><span class="n">abar</span>
+    <span class="n">delta_minus_tau</span> <span class="o">=</span> <span class="n">cbar</span> <span class="o">-</span> <span class="n">sigma</span><span class="o">*</span><span class="n">dbar</span>
+
+    <span class="n">delta</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta_plus_tau</span> <span class="o">+</span> <span class="n">delta_minus_tau</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta_plus_tau</span> <span class="o">-</span> <span class="n">delta_minus_tau</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">tau</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="timestampRegressionNoSkew"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.timestampRegressionNoSkew">[docs]</a><span class="k">def</span> <span class="nf">timestampRegressionNoSkew</span><span class="p">(</span><span class="n">echoed</span><span class="p">,</span> <span class="n">master</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform a linear regression on timestamps to determine clock delta (assuming no skew)&quot;&quot;&quot;</span>
+    <span class="n">avec</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">echoed</span><span class="p">]</span>
+    <span class="n">bvec</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="ow">in</span> <span class="n">echoed</span><span class="p">]</span>
+
+    <span class="n">cvec</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">master</span><span class="p">]</span>
+    <span class="n">dvec</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="ow">in</span> <span class="n">master</span><span class="p">]</span>
+
+    <span class="n">abar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">avec</span><span class="p">)</span>
+    <span class="n">bbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">bvec</span><span class="p">)</span>
+
+    <span class="n">cbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cvec</span><span class="p">)</span>
+    <span class="n">dbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dvec</span><span class="p">)</span>
+
+    <span class="n">delta_plus_tau</span> <span class="o">=</span> <span class="n">bbar</span> <span class="o">-</span> <span class="n">abar</span>
+    <span class="n">delta_minus_tau</span> <span class="o">=</span> <span class="n">cbar</span> <span class="o">-</span> <span class="n">dbar</span>
+
+    <span class="n">delta</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta_plus_tau</span> <span class="o">+</span> <span class="n">delta_minus_tau</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta_plus_tau</span> <span class="o">-</span> <span class="n">delta_minus_tau</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">tau</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018-2020, Drexel University
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,1057 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>dragonradio.radio.config &mdash; DragonRadio  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home" alt="Documentation Home"> DragonRadio
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../intro.html">About DragonRadio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../building.html">Building the radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../running.html">Running the Radio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../colosseum.html">DragonRadio in the Colosseum</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../python.html">Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cpp.html">C++</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DragonRadio</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>dragonradio.radio.config</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for dragonradio.radio.config</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2018-2020 Drexel University</span>
+<span class="c1"># Author: Geoffrey Mainland &lt;mainland@drexel.edu&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;Radio configuration&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">configparser</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pformat</span>
+<span class="kn">import</span> <span class="nn">platform</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">import</span> <span class="nn">libconf</span>
+
+<span class="kn">import</span> <span class="nn">dragonradio</span>
+<span class="kn">import</span> <span class="nn">dragonradio.liquid</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;config&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="getNodeIdFromHostname"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.getNodeIdFromHostname">[docs]</a><span class="k">def</span> <span class="nf">getNodeIdFromHostname</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Determine node ID from hostname&quot;&quot;&quot;</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;([0-9]{1,3})$&#39;</span><span class="p">,</span> <span class="n">platform</span><span class="o">.</span><span class="n">node</span><span class="p">())</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Cannot determine node id from hostname&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ExtendAction"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.ExtendAction">[docs]</a><span class="k">class</span> <span class="nc">ExtendAction</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add a list of values to an argument&#39;s value&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-few-public-methods</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">option_strings</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">option_strings</span><span class="o">=</span><span class="n">option_strings</span><span class="p">,</span>
+                         <span class="n">nargs</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">namespace</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dest</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="n">items</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">const</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dest</span><span class="p">,</span> <span class="n">items</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LogLevelAction"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.LogLevelAction">[docs]</a><span class="k">class</span> <span class="nc">LogLevelAction</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Set log level along with verbose and debug flags&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-few-public-methods</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">option_strings</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">option_strings</span><span class="o">=</span><span class="n">option_strings</span><span class="p">,</span>
+                         <span class="n">nargs</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">namespace</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dest</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">const</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">const</span> <span class="o">&lt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">:</span>
+            <span class="n">namespace</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">namespace</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">const</span> <span class="o">&lt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">:</span>
+            <span class="n">namespace</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">namespace</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="LoadConfigAction"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.LoadConfigAction">[docs]</a><span class="k">class</span> <span class="nc">LoadConfigAction</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Load configuration parameters from a file in libconf format.&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-few-public-methods</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">option_strings</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">option_strings</span><span class="o">=</span><span class="n">option_strings</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">namespace</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">namespace</span><span class="o">.</span><span class="n">loadConfig</span><span class="p">(</span><span class="n">values</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="parser"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.parser">[docs]</a><span class="k">def</span> <span class="nf">parser</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Return the default configuration parser.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Config</span><span class="p">()</span><span class="o">.</span><span class="n">parser</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Config"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Config">[docs]</a><span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Radio configuration&quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=too-many-instance-attributes</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># pylint: disable=too-many-statements</span>
+
+        <span class="c1"># Set some default values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loglevel</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span> <span class="o">=</span> <span class="n">getNodeIdFromHostname</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Log parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_directory</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_sources</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_interfaces</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_invalid_headers</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_snapshots</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_protobuf</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_scoring</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compress_interface_logs</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># This is the actual path to the log directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logdir_</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># USRP settings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addr</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rx_antenna</span> <span class="o">=</span> <span class="s1">&#39;RX2&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_antenna</span> <span class="o">=</span> <span class="s1">&#39;TX/RX&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rx_subdev</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_subdev</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rx_max_samps_factor</span> <span class="o">=</span> <span class="mi">8</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_max_samps_factor</span> <span class="o">=</span> <span class="mi">8</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clock_source</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Clock source for the USRP device&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_source</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Time source for the USRP device&quot;&quot;&quot;</span>
+
+        <span class="c1"># Frequency and bandwidth</span>
+        <span class="c1"># Default frequency in the Colosseum is 1GHz</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="mf">1e9</span>
+        <span class="sd">&quot;&quot;&quot;Radio frequency&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bandwidth</span> <span class="o">=</span> <span class="mf">5e6</span>
+        <span class="sd">&quot;&quot;&quot;Radio bandwidth to use&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_bandwidth</span> <span class="o">=</span> <span class="mf">50e6</span>
+        <span class="sd">&quot;&quot;&quot;Max bandwidth radio can handle&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rx_bandwidth</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;If set, always receive at this bandwidth. Otherwise, calculate</span>
+<span class="sd">        receive bandwidth based on RX oversample factor and radio bandwidth.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_bandwidth</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;If set, always transmit at this bandwidth. Otherwise, calculate</span>
+<span class="sd">        transmit bandwidth based on TX oversample factor and channel</span>
+<span class="sd">        bandwidth.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rx_oversample_factor</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="sd">&quot;&quot;&quot;Oversample factor on RX&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_oversample_factor</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="sd">&quot;&quot;&quot;Oversample factor on TX&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_bandwidth</span> <span class="o">=</span> <span class="mf">1e6</span>
+        <span class="sd">&quot;&quot;&quot;Default channel bandwidth for FDMA&quot;&quot;&quot;</span>
+
+        <span class="c1"># TX/RX gain parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_gain</span> <span class="o">=</span> <span class="mi">25</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rx_gain</span> <span class="o">=</span> <span class="mi">25</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">soft_tx_gain</span> <span class="o">=</span> <span class="o">-</span><span class="mi">8</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_soft_tx_gain</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_soft_tx_gain_clip_frac</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="c1"># PHY parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phy</span> <span class="o">=</span> <span class="s1">&#39;ofdm&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_modulation_threads</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_demodulation_threads</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_channels</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tx_upsample</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Channelizer parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelizer</span> <span class="o">=</span> <span class="s1">&#39;freqdomain&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelizer_enforce_ordering</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Synthesizer parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synthesizer</span> <span class="o">=</span> <span class="s1">&#39;freqdomain&#39;</span>
+
+        <span class="c1"># General liquid modulation options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check</span> <span class="o">=</span> <span class="s1">&#39;crc32&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fec0</span> <span class="o">=</span> <span class="s1">&#39;rs8&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fec1</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span> <span class="o">=</span> <span class="s1">&#39;qpsk&#39;</span>
+
+        <span class="c1"># Header MCS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header_check</span> <span class="o">=</span> <span class="s1">&#39;crc32&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header_fec0</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header_fec1</span> <span class="o">=</span> <span class="s1">&#39;v29p78&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header_ms</span> <span class="o">=</span> <span class="s1">&#39;bpsk&#39;</span>
+
+        <span class="c1"># Soft decoding options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">soft_header</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">soft_payload</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># OFDM parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="mi">48</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cp_len</span> <span class="o">=</span> <span class="mi">6</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">taper_len</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subcarriers</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># MAC parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac</span> <span class="o">=</span> <span class="s1">&#39;tdma-fdma&#39;</span>
+        <span class="sd">&quot;&quot;&quot;Mac&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slot_size</span> <span class="o">=</span> <span class="o">.</span><span class="mi">035</span>
+        <span class="sd">&quot;&quot;&quot;Total slot duration, including guard interval (seconds)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">guard_size</span> <span class="o">=</span> <span class="o">.</span><span class="mi">01</span>
+        <span class="sd">&quot;&quot;&quot;Size of slot guard interval (seconds)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">demod_overlap_size</span> <span class="o">=</span> <span class="o">.</span><span class="mi">005</span>
+        <span class="sd">&quot;&quot;&quot;Size of demodulation overlap if using the overlapping demodulator (seconds)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slot_send_lead_time</span> <span class="o">=</span> <span class="mf">5e-3</span>
+        <span class="sd">&quot;&quot;&quot;Lead time needed for slot transmission (seconds)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aloha_prob</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span>
+        <span class="sd">&quot;&quot;&quot;Probability of transmission in a given slot for ALOHA&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">superslots</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="sd">&quot;&quot;&quot;True if slots should be combined into superslots&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neighbor_discovery_period</span> <span class="o">=</span> <span class="mi">12</span>
+        <span class="sd">&quot;&quot;&quot;Neighbor discovery period at radio startup (sec)&quot;&quot;&quot;</span>
+
+        <span class="c1"># ARQ options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="sd">&quot;&quot;&quot;Should ARQ be enabled?&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_window</span> <span class="o">=</span> <span class="mi">1024</span>
+        <span class="sd">&quot;&quot;&quot;ARQ window size&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_enforce_ordering</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="sd">&quot;&quot;&quot;Should ARQ enforce packet ordering?&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_max_retransmissions</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;Maximum number of times a packet is allowed to be retransmitted&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_ack_delay</span> <span class="o">=</span> <span class="mf">100e-3</span>
+        <span class="sd">&quot;&quot;&quot;Maximum delay before an explicit ACK is sent (sec)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_ack_delay_estimation_window</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="sd">&quot;&quot;&quot;Time window over which to estimate ACK delay (sec)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_retransmission_delay</span> <span class="o">=</span> <span class="mf">500e-3</span>
+        <span class="sd">&quot;&quot;&quot;Default duration of retransmission timer (sec)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_min_retransmission_delay</span> <span class="o">=</span> <span class="mf">200e-3</span>
+        <span class="sd">&quot;&quot;&quot;Minimum duration of retransmission timer (sec)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_retransmission_delay_slop</span> <span class="o">=</span> <span class="mf">1.1</span>
+        <span class="sd">&quot;&quot;&quot;Safety factor for retransmission timer estimator&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_sack_delay</span> <span class="o">=</span> <span class="mf">50e-3</span>
+        <span class="sd">&quot;&quot;&quot;Maximum time to wait for a regular packet to have a SACK attached (sec)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_explicit_nak_win</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="sd">&quot;&quot;&quot;Maximum number of NAKs to send during NAK window&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_explicit_nak_win_duration</span> <span class="o">=</span> <span class="mf">0.1</span>
+        <span class="sd">&quot;&quot;&quot;Duration of NAK window (sec)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_selective_ack</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="sd">&quot;&quot;&quot;Send selective ACKs?&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_selective_ack_feedback_delay</span> <span class="o">=</span> <span class="mf">0.300</span>
+        <span class="sd">&quot;&quot;&quot;Maximum time to wait before counting a selective NAK as a TX failure&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_mcu</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="sd">&quot;&quot;&quot;Maximum number of extra bytes beyond MTU to be used for control information&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_move_along</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="sd">&quot;&quot;&quot;Move the send window along even when it&#39;s full&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_decrease_retrans_mcsidx</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="sd">&quot;&quot;&quot;Decrease MCS index for retransmitted packets with a deadline&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_broadcast_gain_db</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="sd">&quot;&quot;&quot;Gain to be applied to broadcast packets (dB)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arq_ack_gain_db</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="sd">&quot;&quot;&quot;Gain to be applied to ACK packets (dB)&quot;&quot;&quot;</span>
+
+        <span class="c1"># AMC options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_table</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_short_per_window</span> <span class="o">=</span> <span class="mf">100e-3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_long_per_window</span> <span class="o">=</span> <span class="mf">400e-3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_long_stats_window</span> <span class="o">=</span> <span class="mf">400e-3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_broadcast</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_ack</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_min</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_max</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_init</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_up_per_threshold</span> <span class="o">=</span> <span class="mf">0.04</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_down_per_threshold</span> <span class="o">=</span> <span class="mf">0.10</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_alpha</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amc_mcsidx_prob_floor</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+        <span class="c1"># Snapshot options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_period</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;How often to take a snapshot (sec)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_duration</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="sd">&quot;&quot;&quot;Duration of each snapshot (sec)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_finish_wait</span> <span class="o">=</span> <span class="mf">200e-3</span>
+        <span class="sd">&quot;&quot;&quot;How long to wait for demodulation to finish after stopping a snapshot (sec)&quot;&quot;&quot;</span>
+
+        <span class="c1"># Network options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mtu</span> <span class="o">=</span> <span class="mi">1500</span>
+        <span class="sd">&quot;&quot;&quot;&quot;Maximum Transmission Unit&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_net</span> <span class="o">=</span> <span class="s1">&#39;10.10.10.0/24&#39;</span>
+        <span class="sd">&quot;&quot;&quot;IP network for internal radio network&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">external_net</span> <span class="o">=</span> <span class="s1">&#39;192.168.0.0/16&#39;</span>
+        <span class="sd">&quot;&quot;&quot;IP network for external network&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tap_iface</span> <span class="o">=</span> <span class="s1">&#39;tap0&#39;</span>
+        <span class="sd">&quot;&quot;&quot;Tap interface to use&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tap_ipaddr</span> <span class="o">=</span> <span class="s1">&#39;10.10.10.</span><span class="si">%d</span><span class="s1">&#39;</span>
+        <span class="sd">&quot;&quot;&quot;printf-style string specifying node IP address&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tap_macaddr</span> <span class="o">=</span> <span class="s1">&#39;c6:ff:ff:ff:ff:</span><span class="si">%02x</span><span class="s1">&#39;</span>
+        <span class="sd">&quot;&quot;&quot;printf-style string specifying node MAC address&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="s1">&#39;fifo&#39;</span>
+        <span class="sd">&quot;&quot;&quot;Network queue to use&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">packet_compression</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="sd">&quot;&quot;&quot;Enable packet compression?&quot;&quot;&quot;</span>
+
+        <span class="c1"># Queue options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transmission_delay</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="sd">&quot;&quot;&quot;Estimated packet transmission delay (seconds)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mandate_bonus_phase</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="sd">&quot;&quot;&quot;Flag indicating whether or not to have a bonus phase&quot;&quot;&quot;</span>
+
+        <span class="c1"># Neighbor discover options</span>
+        <span class="c1"># discovery_hello_interval is how often we send HELLO packets during</span>
+        <span class="c1"># discovery, and standard_hello_interval is how often we send HELLO</span>
+        <span class="c1"># packets during the rest of the run</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">discovery_hello_interval</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">standard_hello_interval</span> <span class="o">=</span> <span class="mf">60.0</span>
+
+        <span class="c1"># Clock synchronization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clock_sync_interval</span> <span class="o">=</span> <span class="mf">10.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clock_noskew</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="sd">&quot;&quot;&quot;Assume no clock skew relative to master&quot;&quot;&quot;</span>
+
+        <span class="c1"># Measurement options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">measurement_period</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="c1"># Scoring options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_performance_age</span> <span class="o">=</span> <span class="mf">8.0</span>
+        <span class="sd">&quot;&quot;&quot;Performance reports may be from a measurement period no older than</span>
+<span class="sd">        this many seconds&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">stats_ignore_window</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">measurement_period</span> <span class="o">+</span> <span class="mf">0.5</span>
+        <span class="sd">&quot;&quot;&quot;Ignore flow statistics during this (most recent) time window&quot;&quot;&quot;</span>
+
+        <span class="c1"># Internal agent options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_update_period</span> <span class="o">=</span> <span class="mi">5</span>
+
+        <span class="c1"># Collaboration server options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">force_gateway</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collab_iface</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collab_server_ip</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collab_server_port</span> <span class="o">=</span> <span class="mi">5556</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collab_client_port</span> <span class="o">=</span> <span class="mi">5557</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collab_peer_port</span> <span class="o">=</span> <span class="mi">5558</span>
+
+        <span class="c1"># Collaboration agent message periods</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">location_update_period</span> <span class="o">=</span> <span class="mi">15</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spectrum_usage_update_period</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detailed_performance_update_period</span> <span class="o">=</span> <span class="mi">5</span>
+
+        <span class="c1"># Spectrum usage tuning parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spec_future_period</span> <span class="o">=</span> <span class="mf">10.0</span>
+        <span class="sd">&quot;&quot;&quot;How far into the future to predict spectrum usage&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spec_chan_trim_lo</span> <span class="o">=</span> <span class="mf">0.05</span>
+        <span class="sd">&quot;&quot;&quot;Trim this fraction of the bandwidth from the low edge of channel when predicting&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spec_chan_trim_hi</span> <span class="o">=</span> <span class="mf">0.05</span>
+        <span class="sd">&quot;&quot;&quot;Trim this fraction of the bandwidth from the high edge of channel when predicting&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pformat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">logdir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Log directory&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logdir_</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">logdir_</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_directory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">logdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_directory</span><span class="p">,</span> <span class="s1">&#39;node-</span><span class="si">{:03d}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">logdir</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">logdir</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logdir_</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">logdir</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">logdir_</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">log_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Log level&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLevelName</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loglevel</span><span class="p">)</span>
+
+    <span class="nd">@log_level</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">log_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loglevel</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">logging</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Config.mergeConfig"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Config.mergeConfig">[docs]</a>    <span class="k">def</span> <span class="nf">mergeConfig</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Merge a configuration into this configuration&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Config.loadConfig"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Config.loadConfig">[docs]</a>    <span class="k">def</span> <span class="nf">loadConfig</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load configuration parameters from a radio.conf file in libconf format.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">io</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mergeConfig</span><span class="p">(</span><span class="n">libconf</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">))</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loaded radio config &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;Cannot load radio config &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+<div class="viewcode-block" id="Config.loadColosseumIni"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Config.loadColosseumIni">[docs]</a>    <span class="k">def</span> <span class="nf">loadColosseumIni</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load configuration parameters from a colosseum_config.ini file.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Read colosseum.ini &#39;</span><span class="si">%s</span><span class="s2">&#39;:</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;Cannot open colosseum_config.ini &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+            <span class="k">raise</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">()</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s1">&#39;COLLABORATION&#39;</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;COLLABORATION&#39;</span><span class="p">]:</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;COLLABORATION&#39;</span><span class="p">][</span><span class="n">key</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="s1">&#39;RF&#39;</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;RF&#39;</span><span class="p">]:</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;RF&#39;</span><span class="p">][</span><span class="n">key</span><span class="p">]))</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loaded colosseum_config.ini &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;Cannot load colosseum_config.ini &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+<div class="viewcode-block" id="Config.parser"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Config.parser">[docs]</a>    <span class="k">def</span> <span class="nf">parser</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create an argument parser and populate it with arguments.&quot;&quot;&quot;</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Run dragonradio.&#39;</span><span class="p">,</span>
+            <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addArguments</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">parser</span></div>
+
+<div class="viewcode-block" id="Config.addArguments"><a class="viewcode-back" href="../../../python.html#dragonradio.radio.Config.addArguments">[docs]</a>    <span class="k">def</span> <span class="nf">addArguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Populate an ArgumentParser with arguments corresponding to configuration</span>
+<span class="sd">        parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=too-many-statements</span>
+        <span class="c1"># pylint: disable=too-many-locals</span>
+
+        <span class="k">def</span> <span class="nf">enumHelp</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">__members__</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+
+        <span class="c1"># Node ID</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;node_id&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set node ID&#39;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-n&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set number of nodes in network&#39;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--interactive&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;interactive&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;enter interactive shell after radio is started&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Load configuration file</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--config&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">LoadConfigAction</span><span class="p">,</span>
+                            <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;FILE&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;load configuration options from a file&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Log parameters</span>
+        <span class="n">log</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Logging&#39;</span><span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-d&#39;</span><span class="p">,</span> <span class="s1">&#39;--debug&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">LogLevelAction</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+                         <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;loglevel&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;print debugging information&#39;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-v&#39;</span><span class="p">,</span> <span class="s1">&#39;--verbose&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">LogLevelAction</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+                         <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;loglevel&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;be verbose&#39;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--verbose-packet-trace&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;verbose_packet_trace&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;show trace of packets written to network&#39;</span><span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-l&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;log_directory&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;PATH&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;specify directory for log files&#39;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--log-iq&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">ExtendAction</span><span class="p">,</span>
+                         <span class="n">const</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;log_slots&#39;</span><span class="p">,</span> <span class="s1">&#39;log_recv_symbols&#39;</span><span class="p">,</span> <span class="s1">&#39;log_sent_iq&#39;</span><span class="p">],</span>
+                         <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;log_sources&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;log IQ data&#39;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--log-iface&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;append&#39;</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;log_interfaces&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;IFACE&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;log packets received on interface&#39;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--log-invalid-headers&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;log_invalid_headers&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;log packets with invalid headers&#39;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--log-snapshots&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;log_snapshots&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;log snapshots&#39;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--log-protobuf&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;log_protobuf&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;log protobuf&#39;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--compress-iface-logs&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;compress_interface_logs&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;compress interface logs&#39;</span><span class="p">)</span>
+
+        <span class="c1"># USRP settings</span>
+        <span class="n">usrp</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;USRP&#39;</span><span class="p">)</span>
+
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--addr&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;addr&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;specify device address&#39;</span><span class="p">)</span>
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--rx-subdev&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;rx_subdev&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;DEVICE&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;specify RX subdevice&#39;</span><span class="p">)</span>
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tx-subdev&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tx_subdev&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;DEVICE&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;specify TX subdevice&#39;</span><span class="p">)</span>
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--rx-antenna&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;rx_antenna&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;ANTENNA&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set RX antenna&#39;</span><span class="p">)</span>
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tx-antenna&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tx_antenna&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;ANTENNA&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set TX antenna&#39;</span><span class="p">)</span>
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--rx-max-samps-factor&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;rx_max_samps_factor&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set multiplicative factor for rx_max_samps&#39;</span><span class="p">)</span>
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tx-max-samps-factor&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tx_max_samps_factor&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set multiplicative factor for tx_max_samps&#39;</span><span class="p">)</span>
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--clock-source&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;clock_source&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;CLOCK&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set clock source&#39;</span><span class="p">)</span>
+        <span class="n">usrp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--time-source&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;time_source&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;CLOCK&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set time source&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Frequency and bandwidth</span>
+        <span class="n">freqbw</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Frequency and bandwidth&#39;</span><span class="p">)</span>
+
+        <span class="n">freqbw</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-f&#39;</span><span class="p">,</span> <span class="s1">&#39;--frequency&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;frequency&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;HZ&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set center frequency (Hz)&#39;</span><span class="p">)</span>
+        <span class="n">freqbw</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-b&#39;</span><span class="p">,</span> <span class="s1">&#39;--bandwidth&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;bandwidth&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;HZ&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set bandwidth (Hz)&#39;</span><span class="p">)</span>
+        <span class="n">freqbw</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--max-bandwidth&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;max_bandwidth&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;HZ&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set maximum bandwidth (Hz)&#39;</span><span class="p">)</span>
+        <span class="n">freqbw</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--rx-bandwidth&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;rx_bandwidth&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;HZ&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set receive bandwidth (Hz)&#39;</span><span class="p">)</span>
+        <span class="n">freqbw</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tx-bandwidth&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tx_bandwidth&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;HZ&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set transmit bandwidth (Hz)&#39;</span><span class="p">)</span>
+        <span class="n">freqbw</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--rx-oversample&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;rx_oversample_factor&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set RX oversample factor&#39;</span><span class="p">)</span>
+        <span class="n">freqbw</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tx-oversample&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tx_oversample_factor&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set TX oversample factor&#39;</span><span class="p">)</span>
+        <span class="n">freqbw</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--channel-bandwidth&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;channel_bandwidth&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;HZ&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set channel bandwidth (Hz)&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Gain-related options</span>
+        <span class="n">gain</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Gain&#39;</span><span class="p">)</span>
+
+        <span class="n">gain</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-G&#39;</span><span class="p">,</span> <span class="s1">&#39;--tx-gain&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tx_gain&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;DB&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set UHD TX gain (dB)&#39;</span><span class="p">)</span>
+        <span class="n">gain</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-R&#39;</span><span class="p">,</span> <span class="s1">&#39;--rx-gain&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;rx_gain&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;DB&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set UHD RX gain (dB)&#39;</span><span class="p">)</span>
+        <span class="n">gain</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-g&#39;</span><span class="p">,</span> <span class="s1">&#39;--soft-tx-gain&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;soft_tx_gain&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;DB&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set soft TX gain (dB)&#39;</span><span class="p">)</span>
+        <span class="n">gain</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--auto-soft-tx-gain&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;auto_soft_tx_gain&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;COUNT&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use COUNT packets to calculate soft TX gain to attain 0dBFS&#39;</span><span class="p">)</span>
+        <span class="n">gain</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--auto-soft-tx-gain-clip-frac&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;auto_soft_tx_gain_clip_frac&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;FRACTION&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;clip fraction for automatic soft TX gain&#39;</span><span class="p">)</span>
+
+        <span class="c1"># PHY parameters</span>
+        <span class="n">phy</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;PHY&#39;</span><span class="p">)</span>
+
+        <span class="n">phy</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--phy&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                         <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;flexframe&#39;</span><span class="p">,</span> <span class="s1">&#39;newflexframe&#39;</span><span class="p">,</span> <span class="s1">&#39;ofdm&#39;</span><span class="p">],</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;phy&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set PHY&#39;</span><span class="p">)</span>
+        <span class="n">phy</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--max-channels&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;max_channels&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set maximum number of channels&#39;</span><span class="p">)</span>
+        <span class="n">phy</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tx-upsample&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tx_upsample&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use software upsampler on TX&#39;</span><span class="p">)</span>
+        <span class="n">phy</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no-tx-upsample&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tx_upsample&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use USRP</span><span class="se">\&#39;</span><span class="s1">s hardware upsampler on TX&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Channelizer parameters</span>
+        <span class="n">phy</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--channelizer&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                         <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;freqdomain&#39;</span><span class="p">,</span> <span class="s1">&#39;timedomain&#39;</span><span class="p">,</span> <span class="s1">&#39;overlap&#39;</span><span class="p">],</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;channelizer&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set channelization algorithm&#39;</span><span class="p">)</span>
+        <span class="n">phy</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--channelizer-enforce-ordering&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;channelizer_enforce_ordering&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;enforce packet order when demodulating in channelizer&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Synthesizer parameters</span>
+        <span class="n">phy</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--synthesizer&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                         <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;multichannel&#39;</span><span class="p">,</span> <span class="s1">&#39;freqdomain&#39;</span><span class="p">,</span> <span class="s1">&#39;timedomain&#39;</span><span class="p">],</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;synthesizer&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set synthesizer algorithm&#39;</span><span class="p">)</span>
+
+        <span class="c1"># General liquid modulation options</span>
+        <span class="n">liquid</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;liquid-dsp&#39;</span><span class="p">)</span>
+
+        <span class="n">liquid</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-r&#39;</span><span class="p">,</span> <span class="s1">&#39;--check&#39;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">CRCScheme</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;check&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set data validity check: &#39;</span> <span class="o">+</span> \
+                                <span class="n">enumHelp</span><span class="p">(</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">CRCScheme</span><span class="p">))</span>
+        <span class="n">liquid</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-c&#39;</span><span class="p">,</span> <span class="s1">&#39;--fec0&#39;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">FECScheme</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;fec0&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;FEC&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set inner FEC: &#39;</span> <span class="o">+</span> \
+                                <span class="n">enumHelp</span><span class="p">(</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">FECScheme</span><span class="p">))</span>
+        <span class="n">liquid</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-k&#39;</span><span class="p">,</span> <span class="s1">&#39;--fec1&#39;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">FECScheme</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;fec1&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;FEC&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set outer FEC: &#39;</span> <span class="o">+</span> \
+                                <span class="n">enumHelp</span><span class="p">(</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">FECScheme</span><span class="p">))</span>
+        <span class="n">liquid</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-m&#39;</span><span class="p">,</span> <span class="s1">&#39;--mod&#39;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">ModulationScheme</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;ms&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;MODULATION&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set modulation scheme: &#39;</span> <span class="o">+</span> \
+                                <span class="n">enumHelp</span><span class="p">(</span><span class="n">dragonradio</span><span class="o">.</span><span class="n">liquid</span><span class="o">.</span><span class="n">ModulationScheme</span><span class="p">))</span>
+
+        <span class="c1"># Soft decoding options</span>
+        <span class="n">liquid</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--soft-header&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;soft_header&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use soft decoding for header&#39;</span><span class="p">)</span>
+        <span class="n">liquid</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--soft-payload&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;soft_payload&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use soft decoding for payload&#39;</span><span class="p">)</span>
+
+        <span class="c1"># OFDM-specific options</span>
+        <span class="n">ofdm</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;OFDM&#39;</span><span class="p">)</span>
+
+        <span class="n">ofdm</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-M&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;M&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set number of OFDM subcarriers&#39;</span><span class="p">)</span>
+        <span class="n">ofdm</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-C&#39;</span><span class="p">,</span> <span class="s1">&#39;--cp&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;cp_len&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set OFDM cyclic prefix length&#39;</span><span class="p">)</span>
+        <span class="n">ofdm</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-T&#39;</span><span class="p">,</span> <span class="s1">&#39;--taper&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;taper_len&#39;</span><span class="p">,</span>
+                          <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set OFDM taper length&#39;</span><span class="p">)</span>
+        <span class="n">ofdm</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--subcarriers&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                          <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;subcarriers&#39;</span><span class="p">,</span>
+                          <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set OFDM subcarrier allocation (.=null, P=pilot, +=data)&#39;</span><span class="p">)</span>
+
+        <span class="c1"># MAC parameters</span>
+        <span class="n">mac</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;MAC&#39;</span><span class="p">)</span>
+
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--mac&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                         <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;aloha&#39;</span><span class="p">,</span> <span class="s1">&#39;tdma&#39;</span><span class="p">,</span> <span class="s1">&#39;tdma-fdma&#39;</span><span class="p">,</span> <span class="s1">&#39;fdma&#39;</span><span class="p">],</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;mac&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set MAC&#39;</span><span class="p">)</span>
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--aloha&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="s1">&#39;aloha&#39;</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;mac&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use slotted ALOHA MAC&#39;</span><span class="p">)</span>
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tdma&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="s1">&#39;tdma&#39;</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;mac&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use pure TDMA MAC&#39;</span><span class="p">)</span>
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--fdma&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="s1">&#39;fdma&#39;</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;mac&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use FDMA MAC&#39;</span><span class="p">)</span>
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tdma-fdma&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="s1">&#39;tdma-fdma&#39;</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;mac&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use TDMA/FDMA MAC&#39;</span><span class="p">)</span>
+
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--slot-size&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;slot_size&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set MAC slot size (sec)&#39;</span><span class="p">)</span>
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--guard-size&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;guard_size&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set MAC guard interval (sec)&#39;</span><span class="p">)</span>
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--demod-overlap-size&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;demod_overlap_size&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set demodulation overlap interval (sec)&#39;</span><span class="p">)</span>
+        <span class="n">mac</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--superslots&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;superslots&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use TDMA superslots&#39;</span><span class="p">)</span>
+
+        <span class="c1"># ARQ options</span>
+        <span class="n">arq</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;ARQ&#39;</span><span class="p">)</span>
+
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--arq&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq&#39;</span><span class="p">,</span>
+                         <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;enable ARQ&#39;</span><span class="p">)</span>
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no-arq&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq&#39;</span><span class="p">,</span>
+                         <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;disable ARQ&#39;</span><span class="p">)</span>
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--arq-window&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq_window&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;NPACKETS&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set ARQ window size&#39;</span><span class="p">)</span>
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--arq-enforce-ordering&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq_enforce_ordering&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;enforce packet order when performing ARQ&#39;</span><span class="p">)</span>
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--max-retransmissions&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq_max_retransmissions&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;COUNT&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set maximum number of retransmission attempts&#39;</span><span class="p">)</span>
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--explicit-nak-window&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq_explicit_nak_win&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;NPACKETS&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set explicit NAK window size&#39;</span><span class="p">)</span>
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--explicit-nak-window-duration&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq_explicit_nak_win_duration&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set explicit NAK window duration (sec)&#39;</span><span class="p">)</span>
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--selective-ack&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq_selective_ack&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;send selective ACK</span><span class="se">\&#39;</span><span class="s1">s&#39;</span><span class="p">)</span>
+        <span class="n">arq</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no-selective-ack&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;arq_selective_ack&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;do not send selective ACK</span><span class="se">\&#39;</span><span class="s1">s&#39;</span><span class="p">)</span>
+
+        <span class="c1"># AMC options</span>
+        <span class="n">amc</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;AMC&#39;</span><span class="p">)</span>
+
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--amc&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc&#39;</span><span class="p">,</span>
+                         <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;enable AMC&#39;</span><span class="p">)</span>
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no-amc&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc&#39;</span><span class="p">,</span>
+                         <span class="n">default</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;disable AMC&#39;</span><span class="p">)</span>
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--short-per-window&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc_short_per_window&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;time window used to calculate short-term PER&#39;</span><span class="p">)</span>
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--long-per-window&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc_long_per_window&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;time window used to calculate long-term PER&#39;</span><span class="p">)</span>
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--long-stats-window&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc_long_stats_window&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;time window used to calculate long-term statistics, &#39;</span>
+                               <span class="s1">&#39;e.g., EVM and RSSI&#39;</span><span class="p">))</span>
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--mcsidx-up-per-threshold&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc_mcsidx_up_per_threshold&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;FRACTION&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set PER threshold for increasing modulation level&#39;</span><span class="p">)</span>
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--mcsidx-down-per-threshold&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc_mcsidx_down_per_threshold&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;FRACTION&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set PER threshold for decreasing modulation level&#39;</span><span class="p">)</span>
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--mcsidx-alpha&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc_mcsidx_alpha&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;ALPHA&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set decay factor for learning MCS transition probabilities&#39;</span><span class="p">)</span>
+        <span class="n">amc</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--mcsidx-prob-floor&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;amc_mcsidx_prob_floor&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;FRACTION&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set minimum MCS transition probability&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Snapshot options</span>
+        <span class="n">snapshot</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Snapshots&#39;</span><span class="p">)</span>
+
+        <span class="n">snapshot</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--snapshot-period&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                              <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;snapshot_period&#39;</span><span class="p">,</span>
+                              <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                              <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set snapshot period (sec)&#39;</span><span class="p">)</span>
+        <span class="n">snapshot</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--snapshot-duration&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                              <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;snapshot_duration&#39;</span><span class="p">,</span>
+                              <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;SEC&#39;</span><span class="p">,</span>
+                              <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set snapshot duration (sec)&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Network options</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Network&#39;</span><span class="p">)</span>
+
+        <span class="n">net</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--mtu&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;mtu&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;BYTES&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set Maximum Transmission Unit (bytes)&#39;</span><span class="p">)</span>
+
+        <span class="n">net</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tap&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tap_iface&#39;</span><span class="p">,</span>
+                         <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;IFACE&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;name of tap interface&#39;</span><span class="p">)</span>
+
+        <span class="n">net</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--queue&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                         <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;fifo&#39;</span><span class="p">,</span> <span class="s1">&#39;lifo&#39;</span><span class="p">,</span> <span class="s1">&#39;mandate&#39;</span><span class="p">],</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;queue&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set network queuing algorithm&#39;</span><span class="p">)</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--fifo&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="s1">&#39;fifo&#39;</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;queue&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use FIFO network queue algorithm&#39;</span><span class="p">)</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lifo&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="s1">&#39;lifo&#39;</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;queue&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;use LIFO network queue algorithm&#39;</span><span class="p">)</span>
+
+        <span class="n">net</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--packet-compression&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;packet_compression&#39;</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;enable network packet compress&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Collaboration server options</span>
+        <span class="n">collab</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Collaboration&#39;</span><span class="p">)</span>
+
+        <span class="n">collab</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--force-gateway&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_const&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;force_gateway&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;force this node to act as a gateway&#39;</span><span class="p">)</span>
+        <span class="n">collab</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--collab-server-ip&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;collab_server_ip&#39;</span><span class="p">,</span>
+                            <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;IP&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;set collaboration server IP address&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Set defaults</span>
+        <span class="n">defaults</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="n">parser</span><span class="o">.</span><span class="n">_actions</span><span class="p">:</span> <span class="c1"># pylint: disable=protected-access</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="n">LogLevelAction</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="n">ExtendAction</span><span class="p">):</span>
+                <span class="n">dest</span> <span class="o">=</span> <span class="n">act</span><span class="o">.</span><span class="n">dest</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dest</span><span class="p">)</span> <span class="ow">and</span> <span class="n">parser</span><span class="o">.</span><span class="n">get_default</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span> <span class="o">!=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">:</span>
+                    <span class="n">defaults</span><span class="p">[</span><span class="n">dest</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dest</span><span class="p">)</span>
+
+        <span class="n">parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="o">**</span><span class="n">defaults</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018-2020, Drexel University
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

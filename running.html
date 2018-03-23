@@ -1,0 +1,775 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Running the Radio &mdash; DragonRadio  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="DragonRadio in the Colosseum" href="colosseum.html" />
+    <link rel="prev" title="Building the radio" href="building.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> DragonRadio
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">About DragonRadio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building.html">Building the radio</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Running the Radio</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-stand-alone-radio">The Stand-alone Radio</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-sc2-radio">The SC2 Radio</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#networking">Networking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#logging">Logging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#command-line-argument-reference">Command-line Argument Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Named Arguments">Named Arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Logging">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#USRP">USRP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Frequency and bandwidth">Frequency and bandwidth</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Gain">Gain</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#PHY">PHY</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#liquid-dsp">liquid-dsp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#OFDM">OFDM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#MAC">MAC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ARQ">ARQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#AMC">AMC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Snapshots">Snapshots</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Network">Network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Collaboration">Collaboration</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="colosseum.html">DragonRadio in the Colosseum</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp.html">C++</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DragonRadio</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Running the Radio</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/running.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="running-the-radio">
+<h1>Running the Radio<a class="headerlink" href="#running-the-radio" title="Permalink to this headline">¶</a></h1>
+<p>The radio is initialized via Python. The <code class="docutils literal notranslate"><span class="pre">dragonradio</span></code> binary will treat its first argument as the name of a Python script to run to set up the radio, ignoring all further arguments. The Python script will receive all but the zeroth argument (the name of the <code class="docutils literal notranslate"><span class="pre">dragonradio</span></code> binary) as its arguments. Radio scripts are located in the <code class="docutils literal notranslate"><span class="pre">scripts</span></code> directory.</p>
+<p>The radio must be run with root privileges in order to properly configure the USRP and network. Help removing this restriction is welcome.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">build.sh</span></code> script will create a virtualenv environment containing all needed Python modules. You may either activate this virtualenv before invoking the radio, or you may set the <code class="docutils literal notranslate"><span class="pre">VIRTUAL_ENV</span></code> environment variable to point to the virtualenv before you invoke <code class="docutils literal notranslate"><span class="pre">dragonradio</span></code>.</p>
+<div class="section" id="the-stand-alone-radio">
+<h2>The Stand-alone Radio<a class="headerlink" href="#the-stand-alone-radio" title="Permalink to this headline">¶</a></h2>
+<p>Let’s take a look at an example invocation of the stand-alone radio, which uses the <code class="docutils literal notranslate"><span class="pre">scripts/standalone-radio.py</span></code> to configure the radio:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">VIRTUAL_ENV</span><span class="o">=</span>env ./dragonradio scripts/standalone-radio.py <span class="se">\</span>
+   --auto-soft-tx-gain <span class="m">100</span> -G <span class="m">25</span> -R <span class="m">25</span> <span class="se">\</span>
+   --slot-size<span class="o">=</span><span class="m">0</span>.05 --guard-size<span class="o">=</span><span class="m">0</span>.001 --superslots --tdma-fdma <span class="se">\</span>
+   --fifo --packet-compression <span class="se">\</span>
+   -l logs -d <span class="se">\</span>
+   -b 10e6
+</pre></div>
+</div>
+<p>The command-line parameters have the following effects:</p>
+<ol class="arabic simple">
+<li><p>The digital soft gain is automatically adjusted to 0dB using the first 100 transmitted packets. This is necessary for liquid-dsp-based PHYs.</p></li>
+<li><p>The transmit and received hard gain is set to 25 dB.</p></li>
+<li><p>The TDMA/FDMA MAC is used with a TDMA slot size of 50ms and a guard interval of 1ms. Superslots are enabled.</p></li>
+<li><p>A FIFO network queue is used.</p></li>
+<li><p>Packet header compression is enabled.</p></li>
+<li><p>Logs will be written to the <code class="docutils literal notranslate"><span class="pre">logs</span></code> directory, and debugging is enabled.</p></li>
+<li><p>The radio bandwidth is set to 10 Mhz.</p></li>
+</ol>
+<p>Note the following defaults:</p>
+<ol class="arabic simple">
+<li><p>The TDMA/FDMA MAC uses 1 MHz channels. This can be overridden using the <code class="docutils literal notranslate"><span class="pre">--channel-bandwidth</span></code> option.</p></li>
+<li><p>The radio node ID is derived from the hostname. This can be overridden using the <code class="docutils literal notranslate"><span class="pre">-i</span></code> option.</p></li>
+<li><p>The radio assumes there are two radio nodes, numbered 1 and 2, in the network. This number is used to configure a MAC schedule. It can be overridden using the <code class="docutils literal notranslate"><span class="pre">-n</span></code> option.</p></li>
+</ol>
+<p>The next invocation of the stand-alone radio adds the options <code class="docutils literal notranslate"><span class="pre">--config</span> <span class="pre">config/features/amc.conf</span> <span class="pre">--amc</span> <span class="pre">--arq</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">VIRTUAL_ENV</span><span class="o">=</span>env ./dragonradio scripts/standalone-radio.py <span class="se">\</span>
+   --config config/features/amc.conf --amc --arq <span class="se">\</span>
+   --auto-soft-tx-gain <span class="m">100</span> -G <span class="m">25</span> -R <span class="m">25</span> <span class="se">\</span>
+   --slot-size<span class="o">=</span><span class="m">0</span>.05 --guard-size<span class="o">=</span><span class="m">0</span>.001 --superslots --tdma-fdma <span class="se">\</span>
+   --fifo --packet-compression <span class="se">\</span>
+   -l logs -d <span class="se">\</span>
+   -b 10e6
+</pre></div>
+</div>
+<p>These options have additional effects:</p>
+<ol class="arabic simple">
+<li><p>Options are loaded from the configuration file <code class="docutils literal notranslate"><span class="pre">config/features/amc.conf</span></code>.</p></li>
+<li><p>Automatic Modulation and Coding (AMC) is enabled.</p></li>
+<li><p>Automatic Repeat Request (ARQ) is enabled.</p></li>
+</ol>
+<p>The <code class="docutils literal notranslate"><span class="pre">--config</span></code> option may be specified multiple times. This features loads configuration settings from a <a class="reference external" href="http://www.hyperrealm.com/libconfig/libconfig_manual.html#Configuration-Files">libconfig</a> format configuration file, making it easy to specify a large set of options without typing out a long command line. Radio options are managed by the <a class="reference internal" href="python.html#dragonradio.radio.Config" title="dragonradio.radio.Config"><code class="xref py py-class docutils literal notranslate"><span class="pre">dragonradio.radio.Config</span></code></a> class; see its documentation for a description of all available radio options. See the <a class="reference internal" href="#cli-reference"><span class="std std-ref">Command-line Argument Reference</span></a> for a description of all available command-line options. Most, but not all, radio options can be configured on the command line.</p>
+</div>
+<div class="section" id="the-sc2-radio">
+<h2>The SC2 Radio<a class="headerlink" href="#the-sc2-radio" title="Permalink to this headline">¶</a></h2>
+<p>Here is an example invocation of the SC2 competition radio:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">VIRTUAL_ENV</span><span class="o">=</span>env ./dragonradio scripts/sc2-radio.py <span class="se">\</span>
+   --config config/srn/radio.conf <span class="se">\</span>
+   --colosseum-ini config/srn/colosseum_config.ini
+   --collab-server-ip <span class="m">10</span>.32.143.101 <span class="se">\</span>
+   --bootstrap --foreground <span class="se">\</span>
+   -b 10e6 <span class="se">\</span>
+   -l logs <span class="se">\</span>
+   start
+</pre></div>
+</div>
+<p>These parameters have the following effects:</p>
+<ol class="arabic simple">
+<li><p>Load the configuration file <code class="docutils literal notranslate"><span class="pre">config/srn/radio.conf</span></code>.</p></li>
+<li><p>Load the Colosseum INI file <code class="docutils literal notranslate"><span class="pre">config/srn/colosseum_config.ini</span></code>.</p></li>
+<li><p>Set the IP address of the collaboration server to <code class="docutils literal notranslate"><span class="pre">10.32.143.101</span></code>.</p></li>
+<li><p>Boostrap the radio. Without the <code class="docutils literal notranslate"><span class="pre">--bootstrap</span></code> option, the radio will wait to be told to start transmitting.</p></li>
+<li><p>Run in the foreground. Without this option, the radio will daemonize and run in the background.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">start</span></code> the radio. This initializes the radio but does not start transmitting until told to begin unless the <code class="docutils literal notranslate"><span class="pre">--bootstrap</span></code> option is given.</p></li>
+</ol>
+<p>By default, when run in the background, that radio will write its PID to the file <code class="docutils literal notranslate"><span class="pre">/var/run/dragonradio.pid</span></code>. It can be invoked with the <code class="docutils literal notranslate"><span class="pre">stop</span></code> command instead of the <code class="docutils literal notranslate"><span class="pre">start</span></code> command to terminate the radio. The <code class="docutils literal notranslate"><span class="pre">dragonradio-client</span></code> script can be used to control the daemonized radio.</p>
+</div>
+<div class="section" id="networking">
+<h2>Networking<a class="headerlink" href="#networking" title="Permalink to this headline">¶</a></h2>
+<p>After starting up, the radio will create a <code class="docutils literal notranslate"><span class="pre">tap0</span></code> device with IP address <code class="docutils literal notranslate"><span class="pre">10.10.10.NODEID</span></code> and a netmask of <code class="docutils literal notranslate"><span class="pre">255.255.255.0</span></code>, where <code class="docutils literal notranslate"><span class="pre">NODEID</span></code> is the node ID. Packets sent to this subnet will in turn be sent over the radio.</p>
+</div>
+<div class="section" id="logging">
+<h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h2>
+<p>The radio provides extensive logging. The low-level C++ radio will create a log in <a class="reference external" href="https://portal.hdfgroup.org/display/HDF5/HDF5">HDF5 format</a> named <code class="docutils literal notranslate"><span class="pre">radio.h5</span></code>. If the file <code class="docutils literal notranslate"><span class="pre">radio.h5</span></code> exists, it will create <code class="docutils literal notranslate"><span class="pre">radio-N.h5</span></code> where <code class="docutils literal notranslate"><span class="pre">N</span></code> is the first number such that <code class="docutils literal notranslate"><span class="pre">radio-N.h5</span></code> does not exist; this allows the radio to be restarted if it crashes while guaranteeing it won’t overwrite old logs.</p>
+<p>Each HDF5 log has the following attributes:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">config</span></code>: The radio configuration, dumped from the <a class="reference internal" href="python.html#dragonradio.radio.Config" title="dragonradio.radio.Config"><code class="xref py py-class docutils literal notranslate"><span class="pre">Config</span></code></a> object used to configure the radio.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">version</span></code>: The version of the radio.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">node_id</span></code>: The numeric radio node identifier.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">start</span></code>: Start time of logging, in seconds since the epoch.</p></li>
+</ol>
+<p>A HDF5 log contains the following tables:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">event</span></code>: Logged messages, consisting of a time (offset from <code class="docutils literal notranslate"><span class="pre">start</span></code> of the log) and a string.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">recv</span></code>: Received packets.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">selftx</span></code>: Self-transmissions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">send</span></code>: Sent packets.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">slots</span></code>: IQ data received by MAC.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">snapshots</span></code>: Snapshotted IQ data.</p></li>
+</ol>
+</div>
+<div class="section" id="command-line-argument-reference">
+<span id="cli-reference"></span><h2>Command-line Argument Reference<a class="headerlink" href="#command-line-argument-reference" title="Permalink to this headline">¶</a></h2>
+<p><p>Run dragonradio.</p>
+</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">dragonradio</span> <span class="n">SCRIPT</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">i</span> <span class="n">ID</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">n</span> <span class="n">N</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">interactive</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">config</span> <span class="n">FILE</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">d</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">v</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">verbose</span><span class="o">-</span><span class="n">packet</span><span class="o">-</span><span class="n">trace</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">l</span> <span class="n">PATH</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">iq</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">iface</span> <span class="n">IFACE</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">invalid</span><span class="o">-</span><span class="n">headers</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">snapshots</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">protobuf</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">compress</span><span class="o">-</span><span class="n">iface</span><span class="o">-</span><span class="n">logs</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">addr</span> <span class="n">ADDR</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">rx</span><span class="o">-</span><span class="n">subdev</span> <span class="n">DEVICE</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">tx</span><span class="o">-</span><span class="n">subdev</span> <span class="n">DEVICE</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">rx</span><span class="o">-</span><span class="n">antenna</span> <span class="n">ANTENNA</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tx</span><span class="o">-</span><span class="n">antenna</span> <span class="n">ANTENNA</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">rx</span><span class="o">-</span><span class="nb">max</span><span class="o">-</span><span class="n">samps</span><span class="o">-</span><span class="n">factor</span> <span class="n">X</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tx</span><span class="o">-</span><span class="nb">max</span><span class="o">-</span><span class="n">samps</span><span class="o">-</span><span class="n">factor</span> <span class="n">X</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">clock</span><span class="o">-</span><span class="n">source</span> <span class="n">CLOCK</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">time</span><span class="o">-</span><span class="n">source</span> <span class="n">CLOCK</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">f</span> <span class="n">HZ</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">b</span> <span class="n">HZ</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="nb">max</span><span class="o">-</span><span class="n">bandwidth</span> <span class="n">HZ</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">rx</span><span class="o">-</span><span class="n">bandwidth</span> <span class="n">HZ</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tx</span><span class="o">-</span><span class="n">bandwidth</span> <span class="n">HZ</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">rx</span><span class="o">-</span><span class="n">oversample</span> <span class="n">X</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tx</span><span class="o">-</span><span class="n">oversample</span> <span class="n">X</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">channel</span><span class="o">-</span><span class="n">bandwidth</span> <span class="n">HZ</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">G</span> <span class="n">DB</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">R</span> <span class="n">DB</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">g</span> <span class="n">DB</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">auto</span><span class="o">-</span><span class="n">soft</span><span class="o">-</span><span class="n">tx</span><span class="o">-</span><span class="n">gain</span> <span class="n">COUNT</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">auto</span><span class="o">-</span><span class="n">soft</span><span class="o">-</span><span class="n">tx</span><span class="o">-</span><span class="n">gain</span><span class="o">-</span><span class="n">clip</span><span class="o">-</span><span class="n">frac</span> <span class="n">FRACTION</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">phy</span> <span class="p">{</span><span class="n">flexframe</span><span class="p">,</span><span class="n">newflexframe</span><span class="p">,</span><span class="n">ofdm</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="nb">max</span><span class="o">-</span><span class="n">channels</span> <span class="n">MAX_CHANNELS</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tx</span><span class="o">-</span><span class="n">upsample</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">tx</span><span class="o">-</span><span class="n">upsample</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">channelizer</span> <span class="p">{</span><span class="n">freqdomain</span><span class="p">,</span><span class="n">timedomain</span><span class="p">,</span><span class="n">overlap</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">channelizer</span><span class="o">-</span><span class="n">enforce</span><span class="o">-</span><span class="n">ordering</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">synthesizer</span> <span class="p">{</span><span class="n">multichannel</span><span class="p">,</span><span class="n">freqdomain</span><span class="p">,</span><span class="n">timedomain</span><span class="p">}]</span> <span class="p">[</span><span class="o">-</span><span class="n">r</span> <span class="n">CHECK</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">c</span> <span class="n">FEC</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">k</span> <span class="n">FEC</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">m</span> <span class="n">MODULATION</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">soft</span><span class="o">-</span><span class="n">header</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">soft</span><span class="o">-</span><span class="n">payload</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">-</span><span class="n">M</span> <span class="n">N</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">C</span> <span class="n">N</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">T</span> <span class="n">N</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">subcarriers</span> <span class="n">SUBCARRIERS</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">mac</span> <span class="p">{</span><span class="n">aloha</span><span class="p">,</span><span class="n">tdma</span><span class="p">,</span><span class="n">tdma</span><span class="o">-</span><span class="n">fdma</span><span class="p">,</span><span class="n">fdma</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">aloha</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tdma</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">fdma</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tdma</span><span class="o">-</span><span class="n">fdma</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">slot</span><span class="o">-</span><span class="n">size</span> <span class="n">SEC</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">guard</span><span class="o">-</span><span class="n">size</span> <span class="n">SEC</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">demod</span><span class="o">-</span><span class="n">overlap</span><span class="o">-</span><span class="n">size</span> <span class="n">SEC</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">superslots</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">arq</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">arq</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">arq</span><span class="o">-</span><span class="n">window</span> <span class="n">NPACKETS</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">arq</span><span class="o">-</span><span class="n">enforce</span><span class="o">-</span><span class="n">ordering</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="nb">max</span><span class="o">-</span><span class="n">retransmissions</span> <span class="n">COUNT</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">explicit</span><span class="o">-</span><span class="n">nak</span><span class="o">-</span><span class="n">window</span> <span class="n">NPACKETS</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">explicit</span><span class="o">-</span><span class="n">nak</span><span class="o">-</span><span class="n">window</span><span class="o">-</span><span class="n">duration</span> <span class="n">SEC</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">selective</span><span class="o">-</span><span class="n">ack</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">selective</span><span class="o">-</span><span class="n">ack</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">amc</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">amc</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">short</span><span class="o">-</span><span class="n">per</span><span class="o">-</span><span class="n">window</span> <span class="n">SEC</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">long</span><span class="o">-</span><span class="n">per</span><span class="o">-</span><span class="n">window</span> <span class="n">SEC</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">long</span><span class="o">-</span><span class="n">stats</span><span class="o">-</span><span class="n">window</span> <span class="n">SEC</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">mcsidx</span><span class="o">-</span><span class="n">up</span><span class="o">-</span><span class="n">per</span><span class="o">-</span><span class="n">threshold</span> <span class="n">FRACTION</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">mcsidx</span><span class="o">-</span><span class="n">down</span><span class="o">-</span><span class="n">per</span><span class="o">-</span><span class="n">threshold</span> <span class="n">FRACTION</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">mcsidx</span><span class="o">-</span><span class="n">alpha</span> <span class="n">ALPHA</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">mcsidx</span><span class="o">-</span><span class="n">prob</span><span class="o">-</span><span class="n">floor</span> <span class="n">FRACTION</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">snapshot</span><span class="o">-</span><span class="n">period</span> <span class="n">SEC</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">snapshot</span><span class="o">-</span><span class="n">duration</span> <span class="n">SEC</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">mtu</span> <span class="n">BYTES</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tap</span> <span class="n">IFACE</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">queue</span> <span class="p">{</span><span class="n">fifo</span><span class="p">,</span><span class="n">lifo</span><span class="p">,</span><span class="n">mandate</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">fifo</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">lifo</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">packet</span><span class="o">-</span><span class="n">compression</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">force</span><span class="o">-</span><span class="n">gateway</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">collab</span><span class="o">-</span><span class="n">server</span><span class="o">-</span><span class="n">ip</span> <span class="n">IP</span><span class="p">]</span>
+</pre></div>
+</div>
+<div class="section" id="Named Arguments">
+<h3>Named Arguments<a class="headerlink" href="#Named Arguments" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>-i</kbd></dt>
+<dd><p>set node ID</p>
+</dd>
+<dt><kbd>-n</kbd></dt>
+<dd><p>set number of nodes in network</p>
+</dd>
+<dt><kbd>--interactive</kbd></dt>
+<dd><p>enter interactive shell after radio is started</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--config</kbd></dt>
+<dd><p>load configuration options from a file</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="Logging">
+<h3>Logging<a class="headerlink" href="#Logging" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>-d, --debug</kbd></dt>
+<dd><p>print debugging information</p>
+</dd>
+<dt><kbd>-v, --verbose</kbd></dt>
+<dd><p>be verbose</p>
+</dd>
+<dt><kbd>--verbose-packet-trace</kbd></dt>
+<dd><p>show trace of packets written to network</p>
+</dd>
+<dt><kbd>-l</kbd></dt>
+<dd><p>specify directory for log files</p>
+</dd>
+<dt><kbd>--log-iq</kbd></dt>
+<dd><p>log IQ data</p>
+</dd>
+<dt><kbd>--log-iface</kbd></dt>
+<dd><p>log packets received on interface</p>
+<p>Default: []</p>
+</dd>
+<dt><kbd>--log-invalid-headers</kbd></dt>
+<dd><p>log packets with invalid headers</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--log-snapshots</kbd></dt>
+<dd><p>log snapshots</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--log-protobuf</kbd></dt>
+<dd><p>log protobuf</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--compress-iface-logs</kbd></dt>
+<dd><p>compress interface logs</p>
+<p>Default: False</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="USRP">
+<h3>USRP<a class="headerlink" href="#USRP" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--addr</kbd></dt>
+<dd><p>specify device address</p>
+<p>Default: “”</p>
+</dd>
+<dt><kbd>--rx-subdev</kbd></dt>
+<dd><p>specify RX subdevice</p>
+</dd>
+<dt><kbd>--tx-subdev</kbd></dt>
+<dd><p>specify TX subdevice</p>
+</dd>
+<dt><kbd>--rx-antenna</kbd></dt>
+<dd><p>set RX antenna</p>
+<p>Default: “RX2”</p>
+</dd>
+<dt><kbd>--tx-antenna</kbd></dt>
+<dd><p>set TX antenna</p>
+<p>Default: “TX/RX”</p>
+</dd>
+<dt><kbd>--rx-max-samps-factor</kbd></dt>
+<dd><p>set multiplicative factor for rx_max_samps</p>
+<p>Default: 8</p>
+</dd>
+<dt><kbd>--tx-max-samps-factor</kbd></dt>
+<dd><p>set multiplicative factor for tx_max_samps</p>
+<p>Default: 8</p>
+</dd>
+<dt><kbd>--clock-source</kbd></dt>
+<dd><p>set clock source</p>
+</dd>
+<dt><kbd>--time-source</kbd></dt>
+<dd><p>set time source</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="Frequency and bandwidth">
+<h3>Frequency and bandwidth<a class="headerlink" href="#Frequency and bandwidth" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>-f, --frequency</kbd></dt>
+<dd><p>set center frequency (Hz)</p>
+<p>Default: 1000000000.0</p>
+</dd>
+<dt><kbd>-b, --bandwidth</kbd></dt>
+<dd><p>set bandwidth (Hz)</p>
+<p>Default: 5000000.0</p>
+</dd>
+<dt><kbd>--max-bandwidth</kbd></dt>
+<dd><p>set maximum bandwidth (Hz)</p>
+<p>Default: 50000000.0</p>
+</dd>
+<dt><kbd>--rx-bandwidth</kbd></dt>
+<dd><p>set receive bandwidth (Hz)</p>
+</dd>
+<dt><kbd>--tx-bandwidth</kbd></dt>
+<dd><p>set transmit bandwidth (Hz)</p>
+</dd>
+<dt><kbd>--rx-oversample</kbd></dt>
+<dd><p>set RX oversample factor</p>
+<p>Default: 1.0</p>
+</dd>
+<dt><kbd>--tx-oversample</kbd></dt>
+<dd><p>set TX oversample factor</p>
+<p>Default: 1.0</p>
+</dd>
+<dt><kbd>--channel-bandwidth</kbd></dt>
+<dd><p>set channel bandwidth (Hz)</p>
+<p>Default: 1000000.0</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="Gain">
+<h3>Gain<a class="headerlink" href="#Gain" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>-G, --tx-gain</kbd></dt>
+<dd><p>set UHD TX gain (dB)</p>
+<p>Default: 25</p>
+</dd>
+<dt><kbd>-R, --rx-gain</kbd></dt>
+<dd><p>set UHD RX gain (dB)</p>
+<p>Default: 25</p>
+</dd>
+<dt><kbd>-g, --soft-tx-gain</kbd></dt>
+<dd><p>set soft TX gain (dB)</p>
+<p>Default: -8</p>
+</dd>
+<dt><kbd>--auto-soft-tx-gain</kbd></dt>
+<dd><p>use COUNT packets to calculate soft TX gain to attain 0dBFS</p>
+</dd>
+<dt><kbd>--auto-soft-tx-gain-clip-frac</kbd></dt>
+<dd><p>clip fraction for automatic soft TX gain</p>
+<p>Default: 1.0</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="PHY">
+<h3>PHY<a class="headerlink" href="#PHY" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--phy</kbd></dt>
+<dd><p>Possible choices: flexframe, newflexframe, ofdm</p>
+<p>set PHY</p>
+<p>Default: “ofdm”</p>
+</dd>
+<dt><kbd>--max-channels</kbd></dt>
+<dd><p>set maximum number of channels</p>
+<p>Default: 10</p>
+</dd>
+<dt><kbd>--tx-upsample</kbd></dt>
+<dd><p>use software upsampler on TX</p>
+<p>Default: True</p>
+</dd>
+<dt><kbd>--no-tx-upsample</kbd></dt>
+<dd><p>use USRP’s hardware upsampler on TX</p>
+<p>Default: True</p>
+</dd>
+<dt><kbd>--channelizer</kbd></dt>
+<dd><p>Possible choices: freqdomain, timedomain, overlap</p>
+<p>set channelization algorithm</p>
+<p>Default: “freqdomain”</p>
+</dd>
+<dt><kbd>--channelizer-enforce-ordering</kbd></dt>
+<dd><p>enforce packet order when demodulating in channelizer</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--synthesizer</kbd></dt>
+<dd><p>Possible choices: multichannel, freqdomain, timedomain</p>
+<p>set synthesizer algorithm</p>
+<p>Default: “freqdomain”</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="liquid-dsp">
+<h3>liquid-dsp<a class="headerlink" href="#liquid-dsp" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>-r, --check</kbd></dt>
+<dd><p>set data validity check: checksum, crc16, crc24, crc32, crc8, none, unknown</p>
+<p>Default: crc32</p>
+</dd>
+<dt><kbd>-c, --fec0</kbd></dt>
+<dd><p>set inner FEC: g2412, h128, h74, h84, none, rep3, rep5, rs8, secded2216, secded3932, secded7264, unknown, v27, v27p23, v27p34, v27p45, v27p56, v27p67, v27p78, v29, v29p23, v29p34, v29p45, v29p56, v29p67, v29p78, v39, v615</p>
+<p>Default: rs8</p>
+</dd>
+<dt><kbd>-k, --fec1</kbd></dt>
+<dd><p>set outer FEC: g2412, h128, h74, h84, none, rep3, rep5, rs8, secded2216, secded3932, secded7264, unknown, v27, v27p23, v27p34, v27p45, v27p56, v27p67, v27p78, v29, v29p23, v29p34, v29p45, v29p56, v29p67, v29p78, v39, v615</p>
+<p>Default: none</p>
+</dd>
+<dt><kbd>-m, --mod</kbd></dt>
+<dd><p>set modulation scheme: V29, apsk128, apsk16, apsk256, apsk32, apsk4, apsk64, apsk8, arb, arb128opt, arb16opt, arb256opt, arb32opt, arb64opt, arb64vt, ask128, ask16, ask2, ask256, ask32, ask4, ask64, ask8, bpsk, dpsk128, dpsk16, dpsk2, dpsk256, dpsk32, dpsk4, dpsk64, dpsk8, ook, psk128, psk16, psk2, psk256, psk32, psk4, psk64, psk8, qam128, qam16, qam256, qam32, qam4, qam64, qam8, qpsk, sqam128, sqam32, unknown</p>
+<p>Default: qpsk</p>
+</dd>
+<dt><kbd>--soft-header</kbd></dt>
+<dd><p>use soft decoding for header</p>
+<p>Default: True</p>
+</dd>
+<dt><kbd>--soft-payload</kbd></dt>
+<dd><p>use soft decoding for payload</p>
+<p>Default: True</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="OFDM">
+<h3>OFDM<a class="headerlink" href="#OFDM" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>-M</kbd></dt>
+<dd><p>set number of OFDM subcarriers</p>
+<p>Default: 48</p>
+</dd>
+<dt><kbd>-C, --cp</kbd></dt>
+<dd><p>set OFDM cyclic prefix length</p>
+<p>Default: 6</p>
+</dd>
+<dt><kbd>-T, --taper</kbd></dt>
+<dd><p>set OFDM taper length</p>
+<p>Default: 4</p>
+</dd>
+<dt><kbd>--subcarriers</kbd></dt>
+<dd><p>set OFDM subcarrier allocation (.=null, P=pilot, +=data)</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="MAC">
+<h3>MAC<a class="headerlink" href="#MAC" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--mac</kbd></dt>
+<dd><p>Possible choices: aloha, tdma, tdma-fdma, fdma</p>
+<p>set MAC</p>
+<p>Default: “tdma-fdma”</p>
+</dd>
+<dt><kbd>--aloha</kbd></dt>
+<dd><p>use slotted ALOHA MAC</p>
+<p>Default: “tdma-fdma”</p>
+</dd>
+<dt><kbd>--tdma</kbd></dt>
+<dd><p>use pure TDMA MAC</p>
+<p>Default: “tdma-fdma”</p>
+</dd>
+<dt><kbd>--fdma</kbd></dt>
+<dd><p>use FDMA MAC</p>
+<p>Default: “tdma-fdma”</p>
+</dd>
+<dt><kbd>--tdma-fdma</kbd></dt>
+<dd><p>use TDMA/FDMA MAC</p>
+<p>Default: “tdma-fdma”</p>
+</dd>
+<dt><kbd>--slot-size</kbd></dt>
+<dd><p>set MAC slot size (sec)</p>
+<p>Default: 0.035</p>
+</dd>
+<dt><kbd>--guard-size</kbd></dt>
+<dd><p>set MAC guard interval (sec)</p>
+<p>Default: 0.01</p>
+</dd>
+<dt><kbd>--demod-overlap-size</kbd></dt>
+<dd><p>set demodulation overlap interval (sec)</p>
+<p>Default: 0.005</p>
+</dd>
+<dt><kbd>--superslots</kbd></dt>
+<dd><p>use TDMA superslots</p>
+<p>Default: False</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="ARQ">
+<h3>ARQ<a class="headerlink" href="#ARQ" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--arq</kbd></dt>
+<dd><p>enable ARQ</p>
+</dd>
+<dt><kbd>--no-arq</kbd></dt>
+<dd><p>disable ARQ</p>
+</dd>
+<dt><kbd>--arq-window</kbd></dt>
+<dd><p>set ARQ window size</p>
+<p>Default: 1024</p>
+</dd>
+<dt><kbd>--arq-enforce-ordering</kbd></dt>
+<dd><p>enforce packet order when performing ARQ</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--max-retransmissions</kbd></dt>
+<dd><p>set maximum number of retransmission attempts</p>
+</dd>
+<dt><kbd>--explicit-nak-window</kbd></dt>
+<dd><p>set explicit NAK window size</p>
+<p>Default: 10</p>
+</dd>
+<dt><kbd>--explicit-nak-window-duration</kbd></dt>
+<dd><p>set explicit NAK window duration (sec)</p>
+<p>Default: 0.1</p>
+</dd>
+<dt><kbd>--selective-ack</kbd></dt>
+<dd><p>send selective ACK’s</p>
+<p>Default: True</p>
+</dd>
+<dt><kbd>--no-selective-ack</kbd></dt>
+<dd><p>do not send selective ACK’s</p>
+<p>Default: True</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="AMC">
+<h3>AMC<a class="headerlink" href="#AMC" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--amc</kbd></dt>
+<dd><p>enable AMC</p>
+</dd>
+<dt><kbd>--no-amc</kbd></dt>
+<dd><p>disable AMC</p>
+</dd>
+<dt><kbd>--short-per-window</kbd></dt>
+<dd><p>time window used to calculate short-term PER</p>
+<p>Default: 0.1</p>
+</dd>
+<dt><kbd>--long-per-window</kbd></dt>
+<dd><p>time window used to calculate long-term PER</p>
+<p>Default: 0.4</p>
+</dd>
+<dt><kbd>--long-stats-window</kbd></dt>
+<dd><p>time window used to calculate long-term statistics, e.g., EVM and RSSI</p>
+<p>Default: 0.4</p>
+</dd>
+<dt><kbd>--mcsidx-up-per-threshold</kbd></dt>
+<dd><p>set PER threshold for increasing modulation level</p>
+<p>Default: 0.04</p>
+</dd>
+<dt><kbd>--mcsidx-down-per-threshold</kbd></dt>
+<dd><p>set PER threshold for decreasing modulation level</p>
+<p>Default: 0.1</p>
+</dd>
+<dt><kbd>--mcsidx-alpha</kbd></dt>
+<dd><p>set decay factor for learning MCS transition probabilities</p>
+<p>Default: 0.5</p>
+</dd>
+<dt><kbd>--mcsidx-prob-floor</kbd></dt>
+<dd><p>set minimum MCS transition probability</p>
+<p>Default: 0.1</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="Snapshots">
+<h3>Snapshots<a class="headerlink" href="#Snapshots" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--snapshot-period</kbd></dt>
+<dd><p>set snapshot period (sec)</p>
+</dd>
+<dt><kbd>--snapshot-duration</kbd></dt>
+<dd><p>set snapshot duration (sec)</p>
+<p>Default: 0.5</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="Network">
+<h3>Network<a class="headerlink" href="#Network" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--mtu</kbd></dt>
+<dd><p>set Maximum Transmission Unit (bytes)</p>
+<p>Default: 1500</p>
+</dd>
+<dt><kbd>--tap</kbd></dt>
+<dd><p>name of tap interface</p>
+<p>Default: “tap0”</p>
+</dd>
+<dt><kbd>--queue</kbd></dt>
+<dd><p>Possible choices: fifo, lifo, mandate</p>
+<p>set network queuing algorithm</p>
+<p>Default: “fifo”</p>
+</dd>
+<dt><kbd>--fifo</kbd></dt>
+<dd><p>use FIFO network queue algorithm</p>
+<p>Default: “fifo”</p>
+</dd>
+<dt><kbd>--lifo</kbd></dt>
+<dd><p>use LIFO network queue algorithm</p>
+<p>Default: “fifo”</p>
+</dd>
+<dt><kbd>--packet-compression</kbd></dt>
+<dd><p>enable network packet compress</p>
+<p>Default: False</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="Collaboration">
+<h3>Collaboration<a class="headerlink" href="#Collaboration" title="Permalink to this headline">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--force-gateway</kbd></dt>
+<dd><p>force this node to act as a gateway</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--collab-server-ip</kbd></dt>
+<dd><p>set collaboration server IP address</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="colosseum.html" class="btn btn-neutral float-right" title="DragonRadio in the Colosseum" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="building.html" class="btn btn-neutral float-left" title="Building the radio" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018-2020, Drexel University
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
