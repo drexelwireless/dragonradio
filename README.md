@@ -3,7 +3,27 @@
 Cloning this repository
   - git clone https://github.com/dwsl/full-radio.git
   - make the dependencies
-  - run make in the cloned repo to get started
+    - sudo apt-get install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils cmake build-essential
+    - cd libfec
+    - ./configure
+    - make
+    - sudo make install
+    - sudo ldconfig
+    - cd ../liquid_dsp
+    - ./bootstrap.sh
+    - ./configure
+    - make
+    - sudo make install
+    - sudo ldconfig
+    - cd ../liquid_usrp
+    - ./bootstrap.sh
+    - ./configure
+    - (edit the makefile to NOT build the examples) -- line 147 in makefile backspace "examples" so that we just build libraries
+    - make
+    - sudo make install
+    - sudo ldconfig
+    - cd ../../
+  - run make root level of full-radio
   - (to update when changes are made to master run "git pull origin master" in your full-radio folder)
 
 Running in loopback (you don't need a USRP)
