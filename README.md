@@ -1,5 +1,11 @@
 # full-radio
 
+Cloning this repository
+  - git clone https://github.com/dwsl/full-radio.git
+  - make the dependencies
+  - run make in the cloned repo to get started
+  - (to update when changes are made to master run "git pull origin master" in your full-radio folder)
+
 Running in loopback (you don't need a USRP)
   - set main.cc's loopback bool to true
   - run make at the terminal
