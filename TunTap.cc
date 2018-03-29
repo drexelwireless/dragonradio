@@ -208,7 +208,7 @@ void TunTap::add_arp_entries(unsigned int num_nodes_in_net, unsigned char* nodes
             else
                 mac_address = mac_address_base + "0" + std::to_string(current_node);
             ip_address = ip_address_base + std::to_string(current_node);
-            strcpy(cmd, "arp -s ");
+            strcpy(cmd, "arp -i tap0 -s ");
             strcat(cmd, ip_address.c_str());
             strcat(cmd, " ");
             strcat(cmd, mac_address.c_str());
