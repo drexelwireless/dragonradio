@@ -270,7 +270,7 @@ MACPHY::MACPHY(const char* addr,
         uhd::device_addr_t dev_addr(addr);
 
         this->usrp = uhd::usrp::multi_usrp::make(dev_addr);
-        this->usrp->set_rx_antenna("TX/RX");
+        this->usrp->set_rx_antenna("RX2");
         this->usrp->set_tx_antenna("TX/RX");
         this->usrp->set_tx_gain(tx_gain);
         this->usrp->set_rx_gain(rx_gain);
