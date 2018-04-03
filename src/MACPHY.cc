@@ -17,44 +17,35 @@ int rxCallback(
 {
     MACPHY* mp = reinterpret_cast<MACPHY*>(_userdata);
 
-    if(_header_valid)
-    {
-        // let first header byte be node id
-        // let second header byte be source id
-        if((_header[0]==mp->net->node_id))
-        {
-            // first two btyes of padded payload will be packet length
-            unsigned int source_id = _header[1];
-            if(_payload_valid)
-            {
-                unsigned int packet_length = ((_payload[0] << 8)|(_payload[1]));
-                if(packet_length==0)
-                {
-                    return 1;
-                }
-                unsigned int num_written = mp->net->tt->cwrite((char*)(_payload+mp->padded_bytes),packet_length);
-                unsigned int packet_id = (_header[2] << 8) | _header[3];
-
-                printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
-                if(M>0)
-                {
-                    printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
-                }
-                else
-                {
-                    printf("\n");
-                }
-            }
-            else
-            {
-                printf("PAYLOAD INVALID\n");
-            }
-        }
-    }
-    else
-    {
+    if (!_header_valid) {
         printf("HEADER INVALID\n");
+        return 0;
     }
+
+    if (!_payload_valid) {
+        printf("PAYLOAD INVALID\n");
+        return 0;
+    }
+
+    // let first header byte be node id
+    // let second header byte be source id
+    if (_header[0] != mp->net->node_id)
+        return 0;
+
+    unsigned int source_id     = _header[1];
+    unsigned int packet_length = ((_payload[0] << 8)|(_payload[1]));
+
+    if (packet_length==0)
+        return 1;
+
+    unsigned int num_written = mp->net->tt->cwrite((char*)(_payload+mp->padded_bytes),packet_length);
+    unsigned int packet_id = (_header[2] << 8) | _header[3];
+
+    printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
+    if (M>0)
+        printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
+    else
+        printf("\n");
 
     return 0;
 }
