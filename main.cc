@@ -6,7 +6,11 @@
 #include <unistd.h>
 #include <thread>
 
-int main()
+void usage(void)
+{
+}
+
+int main(int argc, char** argv)
 {
     // TODO
     // make these things CLI configurable
@@ -21,10 +25,32 @@ int main()
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     float pad_size = .01;                       // inter slot dead time
     unsigned int packets_per_slot = 2;          // how many packets to stuff into each slot
-    bool loopback = true;                       // run in loopback mode (simulated channel gets applied to modulated data)
+    bool loopback = false;                       // run in loopback mode (simulated channel gets applied to modulated data)
     bool logchannel = true;                     // set to true if you want channel coefficients logged to "channel.dat"
     bool logiq = true;                          // set to true if you want txed data and simulated rxed data saved (go into txdata and rxdata dirs, 1 file per burst)
     bool apply_channel = false;
+
+    int ch;
+
+    while ((ch = getopt(argc, argv, "ln:")) != -1) {
+      switch (ch) {
+        case 'l':
+          loopback = true;
+          break;
+
+        case 'n':
+          node_id = atoi(optarg);
+          printf("node_id = %d\n", node_id);
+          break;
+
+        case '?':
+        default:
+        usage();
+      }
+    }
+
+    argc -= optind;
+    argv += optind;
 
     ///////////////////////////////////////////////////////////////////////////////////////
 
