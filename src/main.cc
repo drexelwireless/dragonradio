@@ -82,7 +82,7 @@ int main(int argc, char** argv)
         nodes_in_net[i] = i+1;
     }
 
-    NET net("tap0",node_id,num_nodes_in_net,&nodes_in_net[0]);
+    NET net("tap0",node_id,num_nodes_in_net,nodes_in_net);
     MACPHY mp(addr, &net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot,loopback,logchannel,logiq,apply_channel);
 
     // start the rx thread
