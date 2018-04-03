@@ -59,89 +59,6 @@ int rxCallback(
     return 0;
 }
 
-void run_demod(MACPHY* mp, std::vector<std::complex<float> >* usrp_double_buff,unsigned int thread_idx)
-{
-    for(std::vector<std::complex<float> >::iterator double_it=usrp_double_buff->begin();double_it!=usrp_double_buff->end();double_it++)
-    {
-        std::complex<float> usrp_sample = *double_it;
-        ((mp->mcrx_list)->at(thread_idx))->Execute(&usrp_sample,1);
-    }
-    delete usrp_double_buff;
-}
-
-void rx_worker(MACPHY* mp)
-{
-    const size_t max_samps_per_packet = mp->usrp->get_device()->get_max_recv_samps_per_packet();
-
-    // keep track of demod threads
-    unsigned int ii;
-    std::thread threads[mp->rx_thread_pool_size];
-    bool thread_joined[mp->rx_thread_pool_size];
-    for(ii=0;ii<mp->rx_thread_pool_size;ii++)
-    {
-        thread_joined[ii] = true;
-    }
-
-    while(mp->continue_running)
-    {
-        for(ii=0;ii<mp->rx_thread_pool_size;ii++)
-        {
-            // figure out number of samples for the next slot
-            size_t num_samps_to_deliver = (size_t)((mp->usrp->get_rx_rate())*(mp->slot_size))+(mp->usrp->get_rx_rate()*(mp->pad_size))*2.0;
-
-            // init counter for samples and allocate double buffer
-            size_t uhd_num_delivered_samples = 0;
-            std::vector<std::complex<float> >* this_double_buff = new std::vector<std::complex<float> >;
-
-            // calculate time to wait for streaming (precisely time beginning of each slot)
-            double time_now;
-            double wait_time;
-            double full;
-            double frac;
-            uhd::time_spec_t uhd_system_time_now = mp->usrp->get_time_now(0);
-            time_now = (double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
-            wait_time = mp->frame_size - 1.0*fmod(time_now,mp->frame_size)-(mp->pad_size);
-            frac = modf(time_now+wait_time,&full);
-
-            // make new streamer with timing calc
-            uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_MORE);
-            stream_cmd.stream_now = false;
-            stream_cmd.time_spec = uhd::time_spec_t((time_t)full,frac);
-            mp->rx_stream->issue_stream_cmd(stream_cmd);
-
-            uhd::rx_metadata_t rx_md;
-
-            while(uhd_num_delivered_samples<num_samps_to_deliver)
-            {
-                // create new vector to hold samps for this demod process
-                std::vector<std::complex<float> > this_rx_buff(max_samps_per_packet);
-                size_t this_num_delivered_samples = mp->usrp->get_device()->recv(
-                        &this_rx_buff.front(), this_rx_buff.size(), rx_md,
-                        uhd::io_type_t::COMPLEX_FLOAT32,
-                        uhd::device::RECV_MODE_ONE_PACKET
-                        );
-
-                for(unsigned int kk=0;kk<this_num_delivered_samples;kk++)
-                {
-                    this_double_buff->push_back(this_rx_buff[kk]);
-                }
-
-                //this_double_buff.push_back(this_rx_buff);
-                uhd_num_delivered_samples += this_num_delivered_samples;
-            }
-
-            if(!thread_joined[ii])
-            {
-                threads[ii].join();
-                thread_joined[ii] = true;
-            }
-            threads[ii] = std::thread(run_demod,mp,this_double_buff,ii);
-            thread_joined[ii] = false;
-
-        }
-    }
-}
-
 MACPHY::MACPHY(const char* addr,
                NET* net,
                double center_freq,
@@ -214,17 +131,105 @@ MACPHY::MACPHY(const char* addr,
     }
 
     this->continue_running = true;
+
+    // start the rx thread
+    rx_worker_thread = std::thread(&MACPHY::rx_worker, this);
 }
 
 MACPHY::~MACPHY()
 {
     continue_running = false;
+    rx_worker_thread.join();
+
     delete mctx;
     for(std::vector<multichannelrx*>::iterator it=mcrx_list->begin();it!=mcrx_list->end();it++)
     {
         delete *it;
     }
     delete mcrx_list;
+}
+
+void MACPHY::rx_worker(void)
+{
+    const size_t max_samps_per_packet = usrp->get_device()->get_max_recv_samps_per_packet();
+
+    // keep track of demod threads
+    unsigned int ii;
+    std::thread threads[rx_thread_pool_size];
+    bool thread_joined[rx_thread_pool_size];
+    for(ii=0;ii<rx_thread_pool_size;ii++)
+    {
+        thread_joined[ii] = true;
+    }
+
+    while(continue_running)
+    {
+        for(ii=0;ii<rx_thread_pool_size;ii++)
+        {
+            // figure out number of samples for the next slot
+            size_t num_samps_to_deliver = (size_t)((usrp->get_rx_rate())*(slot_size))+(usrp->get_rx_rate()*(pad_size))*2.0;
+
+            // init counter for samples and allocate double buffer
+            size_t uhd_num_delivered_samples = 0;
+            std::vector<std::complex<float> >* this_double_buff = new std::vector<std::complex<float> >;
+
+            // calculate time to wait for streaming (precisely time beginning of each slot)
+            double time_now;
+            double wait_time;
+            double full;
+            double frac;
+            uhd::time_spec_t uhd_system_time_now = usrp->get_time_now(0);
+            time_now = (double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
+            wait_time = frame_size - 1.0*fmod(time_now,frame_size)-(pad_size);
+            frac = modf(time_now+wait_time,&full);
+
+            // make new streamer with timing calc
+            uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_MORE);
+            stream_cmd.stream_now = false;
+            stream_cmd.time_spec = uhd::time_spec_t((time_t)full,frac);
+            rx_stream->issue_stream_cmd(stream_cmd);
+
+            uhd::rx_metadata_t rx_md;
+
+            while(uhd_num_delivered_samples<num_samps_to_deliver)
+            {
+                // create new vector to hold samps for this demod process
+                std::vector<std::complex<float> > this_rx_buff(max_samps_per_packet);
+                size_t this_num_delivered_samples = usrp->get_device()->recv(
+                        &this_rx_buff.front(), this_rx_buff.size(), rx_md,
+                        uhd::io_type_t::COMPLEX_FLOAT32,
+                        uhd::device::RECV_MODE_ONE_PACKET
+                        );
+
+                for(unsigned int kk=0;kk<this_num_delivered_samples;kk++)
+                {
+                    this_double_buff->push_back(this_rx_buff[kk]);
+                }
+
+                //this_double_buff.push_back(this_rx_buff);
+                uhd_num_delivered_samples += this_num_delivered_samples;
+            }
+
+            if(!thread_joined[ii])
+            {
+                threads[ii].join();
+                thread_joined[ii] = true;
+            }
+            threads[ii] = std::thread(&MACPHY::run_demod,this,this_double_buff,ii);
+            thread_joined[ii] = false;
+
+        }
+    }
+}
+
+void MACPHY::run_demod(std::vector<std::complex<float> >* usrp_double_buff,unsigned int thread_idx)
+{
+    for(std::vector<std::complex<float> >::iterator double_it=usrp_double_buff->begin();double_it!=usrp_double_buff->end();double_it++)
+    {
+        std::complex<float> usrp_sample = *double_it;
+        mcrx_list->at(thread_idx)->Execute(&usrp_sample,1);
+    }
+    delete usrp_double_buff;
 }
 
 // OFDM PHY

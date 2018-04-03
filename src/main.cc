@@ -60,18 +60,12 @@ int main(int argc, char** argv)
     NET net("tap0",node_id,num_nodes_in_net,nodes_in_net);
     MACPHY mp(addr, &net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot);
 
-    // start the rx thread
-    std::thread rx_worker_thread;
-    rx_worker_thread = std::thread(rx_worker,&mp);
-
     // use main thread for tx_worker
     mp.readyOFDMBuffer();
     while(mp.continue_running)
     {
         mp.TX_TDMA_OFDM();
     }
-
-    rx_worker_thread.join();
 
     printf("Done\n");
 }

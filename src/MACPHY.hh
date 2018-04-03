@@ -57,24 +57,10 @@ class MACPHY
         float pad_size;
         unsigned int packets_per_slot;
         long unsigned int sim_burst_id;
+        std::thread rx_worker_thread;
+
+        void rx_worker(void);
+        void run_demod(std::vector<std::complex<float> >* usrp_double_buff,unsigned int thread_idx);
 };
-
-
-int rxCallback(
-        unsigned char *  _header,
-        int              _header_valid,
-        unsigned char *  _payload,
-        unsigned int     _payload_len,
-        int              _payload_valid,
-        framesyncstats_s _stats,
-        void *           _userdata,
-        liquid_float_complex* G,
-        liquid_float_complex* G_hat,
-        unsigned int M
-    );
-
-void rx_worker(MACPHY* mp);
-
-void run_demod(MACPHY* mp, std::vector<std::complex<float> >* usrp_double_buff, unsigned int thread_idx);
 
 #endif
