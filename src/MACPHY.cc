@@ -23,7 +23,7 @@ int rxCallback(
     {
         // let first header byte be node id
         // let second header byte be source id
-        if((_header[0]==ext_net_ptr->node_id) && (!(ext_mp_ptr->loopback)))
+        if((_header[0]==ext_net_ptr->node_id))
         {
             // first two btyes of padded payload will be packet length
             unsigned int source_id = _header[1];
@@ -34,69 +34,6 @@ int rxCallback(
                 {
                     return 1;
                 }
-                unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
-                unsigned int packet_id = (_header[2] << 8) | _header[3];
-
-                // save off channel estimates (each row a new packet)
-                if(ext_mp_ptr->logchannel)
-                {
-                    long long unsigned usec;
-                    long long unsigned sec;
-                    timeval tv;
-                    gettimeofday(&tv,0);
-                    usec = tv.tv_usec;
-                    sec = tv.tv_sec;
-                    fp = fopen("channel.dat","a+");
-                    fprintf(fp,"llu ",sec*1000000+usec);
-                    for(unsigned int loop = 0;loop<M;loop++)
-                    {
-                        fprintf(fp,"%.8f+%.8f*1j ",std::real(G[loop]),std::imag(G[loop]));
-                    }
-                    fprintf(fp,"\n");
-                    fclose(fp);
-                }
-
-                printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
-                if(M>0)
-                {
-                    printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
-                }
-                else
-                {
-                    printf("\n");
-                }
-            }
-            else
-            {
-                printf("PAYLOAD INVALID\n");
-            }
-        }
-        // allow messages that are not destined for us in loopback mode
-        // (these are our own messages)
-        else if(ext_mp_ptr->loopback)
-        {
-            // first two btyes of padded payload will be packet length
-            unsigned int source_id = _header[1];
-            if(_payload_valid)
-            {
-                unsigned int packet_length = ((_payload[0] << 8)|(_payload[1]));
-                if(packet_length==0)
-                {
-                    return 1;
-                }
-
-                // change some of the payload to make this packet look like it was recieved from somewhere else
-                _payload[ext_mp_ptr->padded_bytes+5] = 1&0xff;
-                _payload[ext_mp_ptr->padded_bytes+11] = 2&0xff;
-                _payload[ext_mp_ptr->padded_bytes+26] = 10&0xff;
-                _payload[ext_mp_ptr->padded_bytes+27] = 10&0xff;
-                _payload[ext_mp_ptr->padded_bytes+28] = 10&0xff;
-                _payload[ext_mp_ptr->padded_bytes+29] = 2&0xff;
-                _payload[ext_mp_ptr->padded_bytes+30] = 10&0xff;
-                _payload[ext_mp_ptr->padded_bytes+31] = 10&0xff;
-                _payload[ext_mp_ptr->padded_bytes+32] = 10&0xff;
-                _payload[ext_mp_ptr->padded_bytes+33] = 1&0xff;
-
                 unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
 
@@ -237,10 +174,7 @@ MACPHY::MACPHY(const char* addr,
                unsigned int rx_thread_pool_size,
                float pad_size,
                unsigned int packets_per_slot,
-               bool loopback,
-               bool logchannel,
-               bool logiq,
-               bool apply_channel)
+               bool logchannel)
 {
     ext_net_ptr = net;
 
@@ -255,46 +189,37 @@ MACPHY::MACPHY(const char* addr,
     this->pad_size = pad_size;
     this->packets_per_slot = packets_per_slot;
     this->tx_transport_size = 512;
-    this->loopback = loopback;
     this->logchannel = logchannel;
-    this->logiq = logiq;
-    this->apply_channel = apply_channel;
     this->sim_burst_id = 0;
 
-    if(loopback)
-        this->tx_transport_size=25000;
-
     // usrp general setup
-    if(!loopback)
-    {
-        uhd::device_addr_t dev_addr(addr);
+    uhd::device_addr_t dev_addr(addr);
 
-        this->usrp = uhd::usrp::multi_usrp::make(dev_addr);
-        this->usrp->set_rx_antenna("RX2");
-        this->usrp->set_tx_antenna("TX/RX");
-        this->usrp->set_tx_gain(tx_gain);
-        this->usrp->set_rx_gain(rx_gain);
-        this->usrp->set_tx_freq(center_freq);
-        this->usrp->set_rx_freq(center_freq);
-        this->usrp->set_rx_rate(2*bandwidth);
-        this->usrp->set_tx_rate(2*bandwidth);
+    this->usrp = uhd::usrp::multi_usrp::make(dev_addr);
+    this->usrp->set_rx_antenna("RX2");
+    this->usrp->set_tx_antenna("TX/RX");
+    this->usrp->set_tx_gain(tx_gain);
+    this->usrp->set_rx_gain(rx_gain);
+    this->usrp->set_tx_freq(center_freq);
+    this->usrp->set_rx_freq(center_freq);
+    this->usrp->set_rx_rate(2*bandwidth);
+    this->usrp->set_tx_rate(2*bandwidth);
 
-        // set time relative to system NTP time
-        // (mod it down to fit in double precision)
-        long usec;
-        long sec;
-        timeval tv;
-        gettimeofday(&tv,0);
-        usec = tv.tv_usec;
-        sec = tv.tv_sec;
-        this->usrp->set_time_now(uhd::time_spec_t((double)(sec%10)+((double)usec)/1e6));
+    // set time relative to system NTP time
+    // (mod it down to fit in double precision)
+    long usec;
+    long sec;
+    timeval tv;
+    gettimeofday(&tv,0);
+    usec = tv.tv_usec;
+    sec = tv.tv_sec;
+    this->usrp->set_time_now(uhd::time_spec_t((double)(sec%10)+((double)usec)/1e6));
 
-        // usrp streaming setup
-        uhd::stream_args_t rx_stream_args("fc32");
-        this->rx_stream = this->usrp->get_rx_stream(rx_stream_args);
-        uhd::stream_args_t tx_stream_args("fc32");
-        this->tx_stream = this->usrp->get_tx_stream(tx_stream_args);
-    }
+    // usrp streaming setup
+    uhd::stream_args_t rx_stream_args("fc32");
+    this->rx_stream = this->usrp->get_rx_stream(rx_stream_args);
+    uhd::stream_args_t tx_stream_args("fc32");
+    this->tx_stream = this->usrp->get_tx_stream(tx_stream_args);
 
     // modem setup (list is for parallel demodulation)
     unsigned char* p = NULL;
@@ -324,190 +249,6 @@ MACPHY::~MACPHY()
         delete *it;
     }
     delete mcrx_list;
-}
-
-void MACPHY::TXRX_SIM_FRAME()
-{
-    std::ofstream txed_data;
-    std::ofstream rxed_data;
-    std::ofstream emulated_channel_data;
-    char txed_data_file[2048];
-    char rxed_data_file[2048];
-    char emulated_channel_file[2048];
-
-    // save off clean data (tx)
-    if(logiq && (tx_double_buff.size()>0))
-    {
-        sprintf(&txed_data_file[0],"./txdata/txed_data_%llu.bin",sim_burst_id);
-        txed_data.open(txed_data_file,std::ofstream::binary);
-
-        sprintf(&rxed_data_file[0],"./rxdata/rxed_data_%llu.bin",sim_burst_id);
-        rxed_data.open(rxed_data_file,std::ofstream::binary);
-
-        sprintf(&emulated_channel_file[0],"./emulated_channel/emulated_channel_%llu.bin",sim_burst_id);
-        emulated_channel_data.open(emulated_channel_file,std::ofstream::binary);
-
-        // keep track of how many simulated transmissions there were
-        sim_burst_id++;
-    }
-
-    // setup constants for rician channel
-    unsigned int h_len = 51; // length of doppler filter
-    float fd = 0.1f;    // max doppler frequency
-    float K = 2.0f;     // rician fading factor
-    float omega = 1.0f; // mean power
-    float theta = 0.0f; // angle of arrival for multipath components
-
-    // make doppler coefficients
-    float h[h_len];
-    liquid_firdes_doppler(h_len,fd,K,theta,h);
-    float std = 0.0f;
-    for (unsigned int i=0; i<h_len; i++)
-        std += h[i]*h[i];
-    std = sqrtf(std);
-    for (unsigned int i=0; i<h_len; i++)
-        h[i] /= std;
-
-    // make doppler filter from doppler coefficients
-    firfilt_crcf fdoppler = firfilt_crcf_create(h,h_len);
-
-    // iterate through tx_double buff (already modulated samples)
-    // and apply simulated channel
-    for(std::vector<std::vector<std::complex<float> >* >::iterator it=tx_double_buff.begin();it!=tx_double_buff.end();it++)
-    {
-        unsigned int num_samples = 2*((*it)->size());
-
-        // save off clean data
-        if(txed_data.is_open()) txed_data.write((const char*)&((*it)->front()),(*it)->size()*sizeof(std::complex<float>));
-
-
-        // resample input samples
-        unsigned int X_size = (*it)->size();
-        std::complex<float> X[X_size];
-        unsigned int nw;
-        unsigned int n = 0;
-        for(std::vector<std::complex<float> >::iterator it2=(*it)->begin();it2!=(*it)->end();it2++)
-        {
-            std::complex<float> sample = *it2;
-            //mcrx_list->at(0)->Execute(&sample,1);
-            //msresamp_crcf_execute(resamp_tx,&sample,1,&X[n],&nw);
-            //n+=nw;
-
-            X[n] = sample;
-            n+=1;
-        }
-        delete *it;
-
-        //std::vector<std::complex<float> > X_vec(&X[0],&X[0]+num_samples);
-        //if(txed_data.is_open()) txed_data.write((const char*)&X_vec.front(),X_vec.size()*sizeof(std::complex<float>));
-
-        // setup rician channel (stuff that changes with the number of samples)
-        if(apply_channel)
-        {
-            // setup resamplers
-            msresamp_crcf resamp_tx = msresamp_crcf_create(2.0f,60.0f);
-            msresamp_crcf resamp_rx = msresamp_crcf_create(0.5f,60.0f);
-            std::complex<float> v;
-            std::complex<float> x;
-            float s = sqrtf((omega*K)/(K+1.0));
-            float sig = sqrtf(0.5f*omega/(K+1.0));
-            std::complex<float> y[num_samples];
-            for(unsigned int i=0;i<num_samples;i++)
-            {
-                crandnf(&v);
-                firfilt_crcf_push(fdoppler,v);
-                firfilt_crcf_execute(fdoppler,&x);
-                y[i] = std::complex<float>(0.0,1.0)*(std::real(x)*sig+s) + std::imag(x)*sig;
-            }
-
-            // downsample y
-            std::complex<float> yy[X_size];
-            n = 0;
-            for(unsigned int i=0;i<num_samples;i++)
-            {
-                std::complex<float> sample = y[i];
-                msresamp_crcf_execute(resamp_rx,&sample,1,&yy[n],&nw);
-                n+=nw;
-            }
-
-            std::complex<float> x_out[X_size];
-            firfilt_cccf cconv = firfilt_cccf_create(&yy[0],X_size);
-            for(unsigned int i=0;i<X_size;i++)
-            {
-                firfilt_cccf_push(cconv,X[i]);
-            }
-            for(unsigned int i=0;i<X_size;i++)
-            {
-                firfilt_cccf_push(cconv,X[i]);
-                firfilt_cccf_execute(cconv,&x_out[i]);
-            }
-            firfilt_cccf_destroy(cconv);
-
-            /*// fft X and y to perform convolution
-            std::complex<float> Xf[num_samples];
-            std::complex<float> Yf[num_samples];
-            fftplan fft_X = fft_create_plan(num_samples,&X[0],&Xf[0],LIQUID_FFT_FORWARD,0);
-            fftplan fft_Y = fft_create_plan(num_samples,&y[0],&Yf[0],LIQUID_FFT_FORWARD,0);
-            fft_execute(fft_X);
-            fft_execute(fft_Y);
-            fft_destroy_plan(fft_X);
-            fft_destroy_plan(fft_Y);
-
-            // perform convolution
-            std::complex<float> Xf_out[num_samples];
-            for(unsigned int i=0;i<num_samples;i++)
-                Xf_out[i] = Xf[i]*Yf[i];*/
-
-            /*std::complex<float> x_out[num_samples];
-            fftplan ifft_x = fft_create_plan(num_samples,&Xf_out[0],&x_out[0],LIQUID_FFT_BACKWARD,0);
-            fft_execute(ifft_x);
-            fft_destroy_plan(ifft_x);*/
-
-            // downsample output and push to demod
-            /*std::complex<float> x_out_ds[num_samples];
-            n = 0;
-            for(unsigned int i=0;i<num_samples;i++)
-            {
-                std::complex<float> sample = x_out[i];
-                msresamp_crcf_execute(resamp_rx,&sample,1,&x_out_ds[n],&nw);
-                n += nw;
-            }*/
-            for(unsigned int i=0;i<X_size;i++)
-            {
-                std::complex<float> sample = x_out[i];
-                mcrx_list->at(0)->Execute(&sample,1);
-            }
-
-            std::vector<std::complex<float> > x_out_vec(&x_out[0],&x_out[0]+X_size);
-            std::vector<std::complex<float> > emulated_channel_vec(&yy[0],&yy[0]+X_size);
-            if(rxed_data.is_open()) rxed_data.write((const char*)&x_out_vec.front(),x_out_vec.size()*sizeof(std::complex<float>));
-            if(emulated_channel_data.is_open()) emulated_channel_data.write((const char*)&emulated_channel_vec.front(),emulated_channel_vec.size()*sizeof(std::complex<float>));
-
-            msresamp_crcf_destroy(resamp_tx);
-            msresamp_crcf_destroy(resamp_rx);
-        }
-        else
-        {
-            for(unsigned int i=0;i<X_size;i++)
-            {
-                mcrx_list->at(0)->Execute(&X[i],1);
-            }
-        }
-    }
-
-    firfilt_crcf_destroy(fdoppler);
-
-    // close iq log files
-    if(logiq)
-    {
-        txed_data.close();
-        rxed_data.close();
-        emulated_channel_data.close();
-    }
-
-    // make new ofdmBuffer
-    readyOFDMBuffer();
-
 }
 
 // OFDM PHY
@@ -559,7 +300,6 @@ void MACPHY::readyOFDMBuffer()
                     for(unsigned int jj=0;jj<mctx_buffer_length;jj++)
                     {
                         float scalar = 0.2f;
-                        if(loopback) scalar = 1.0f;
                         usrp_tx_buff->at(num_generated_samples) = (scalar*mctx_buffer[jj]);
                         num_generated_samples++;
                     }

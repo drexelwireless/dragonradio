@@ -25,22 +25,15 @@ int main(int argc, char** argv)
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     float pad_size = .01;                       // inter slot dead time
     unsigned int packets_per_slot = 2;          // how many packets to stuff into each slot
-    bool loopback = false;                       // run in loopback mode (simulated channel gets applied to modulated data)
     bool logchannel = true;                     // set to true if you want channel coefficients logged to "channel.dat"
-    bool logiq = true;                          // set to true if you want txed data and simulated rxed data saved (go into txdata and rxdata dirs, 1 file per burst)
-    bool apply_channel = false;
     const char* addr = NULL;
 
     int ch;
 
-    while ((ch = getopt(argc, argv, "a:ln:")) != -1) {
+    while ((ch = getopt(argc, argv, "a:n:")) != -1) {
       switch (ch) {
         case 'a':
           addr = optarg;
-          break;
-
-        case 'l':
-          loopback = true;
           break;
 
         case 'n':
@@ -59,23 +52,6 @@ int main(int argc, char** argv)
 
     ///////////////////////////////////////////////////////////////////////////////////////
 
-    // if this is loopback we have to override some things
-    if(loopback)
-    {
-        node_id = 1;
-        num_nodes_in_net = 2;
-        packets_per_slot = 1;
-        rx_thread_pool_size = 1;
-    }
-
-    // if log iq then check to make sure directories exist
-    if(logiq)
-    {
-        system("mkdir rxdata");
-        system("mkdir txdata");
-        system("mkdir emulated_channel");
-    }
-
     unsigned char nodes_in_net[num_nodes_in_net];
     for(unsigned int i=0;i<num_nodes_in_net;i++)
     {
@@ -83,18 +59,17 @@ int main(int argc, char** argv)
     }
 
     NET net("tap0",node_id,num_nodes_in_net,nodes_in_net);
-    MACPHY mp(addr, &net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot,loopback,logchannel,logiq,apply_channel);
+    MACPHY mp(addr, &net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot,logchannel);
 
     // start the rx thread
     std::thread rx_worker_thread;
-    if(!loopback) rx_worker_thread = std::thread(rx_worker,rx_thread_pool_size);
+    rx_worker_thread = std::thread(rx_worker,rx_thread_pool_size);
 
     // use main thread for tx_worker
     mp.readyOFDMBuffer();
     while(mp.continue_running)
     {
-        if(loopback) mp.TXRX_SIM_FRAME();
-        else mp.TX_TDMA_OFDM();
+        mp.TX_TDMA_OFDM();
     }
 
     rx_worker_thread.join();

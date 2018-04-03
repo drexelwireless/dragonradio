@@ -50,13 +50,9 @@ class MACPHY
                unsigned int rx_thread_pool_size,
                float pad_size,
                unsigned int packets_per_slot,
-               bool loopback,
-               bool logchannel,
-               bool logiq,
-               bool apply_channel);
+               bool logchannel);
         ~MACPHY();
         void TX_TDMA_OFDM();
-        void TXRX_SIM_FRAME();
         void readyOFDMBuffer();
 
         // other shite
@@ -78,10 +74,7 @@ class MACPHY
         unsigned int rx_thread_pool_size;
         float pad_size;
         unsigned int packets_per_slot;
-        bool loopback;
         bool logchannel;
-        bool logiq;
-        bool apply_channel;
         long unsigned int sim_burst_id;
 };
 
