@@ -6,8 +6,6 @@
 #include <vector>
 #include <complex>
 #include <liquid/liquid.h>
-#include <liquid/multichannelrx.h>
-#include <liquid/multichanneltx.h>
 #include <stdio.h>
 #include <uhd/usrp/multi_usrp.hpp>
 #include <uhd/utils/msg.hpp>
@@ -16,7 +14,9 @@
 #include <thread>
 #include <fstream>
 
-#include <NET.hh>
+#include "NET.hh"
+#include "multichannelrx.h"
+#include "multichanneltx.h"
 
 int rxCallback(
         unsigned char *  _header,

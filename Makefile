@@ -9,7 +9,7 @@ CXX      = g++
 LINKER   = g++
 CPPFLAGS = -Isrc -I/usr/local/include/
 CXXFLAGS = -O2 -g3 -Wall -pedantic -ansi -fPIC -std=c++0x
-LDFLAGS  = -lc -lconfig -lfftw3f -lliquid -lm -lpthread -luhd -lliquidusrp
+LDFLAGS  = -lc -lconfig -lfftw3f -lliquid -lm -lpthread -luhd
 
 SRCDIR = src
 OBJDIR = obj
