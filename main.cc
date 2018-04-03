@@ -29,11 +29,16 @@ int main(int argc, char** argv)
     bool logchannel = true;                     // set to true if you want channel coefficients logged to "channel.dat"
     bool logiq = true;                          // set to true if you want txed data and simulated rxed data saved (go into txdata and rxdata dirs, 1 file per burst)
     bool apply_channel = false;
+    const char* addr = NULL;
 
     int ch;
 
-    while ((ch = getopt(argc, argv, "ln:")) != -1) {
+    while ((ch = getopt(argc, argv, "a:ln:")) != -1) {
       switch (ch) {
+        case 'a':
+          addr = optarg;
+          break;
+
         case 'l':
           loopback = true;
           break;
@@ -78,7 +83,7 @@ int main(int argc, char** argv)
     }
 
     NET net("tap0",node_id,num_nodes_in_net,&nodes_in_net[0]);
-    MACPHY mp(&net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot,loopback,logchannel,logiq,apply_channel);
+    MACPHY mp(addr, &net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot,loopback,logchannel,logiq,apply_channel);
 
     // start the rx thread
     std::thread rx_worker_thread;

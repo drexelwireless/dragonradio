@@ -39,7 +39,8 @@ class MACPHY
 {
     public:
         //functions
-        MACPHY(NET* net,
+        MACPHY(const char* addr,
+               NET* net,
                double center_freq,
                double bandwidth,
                unsigned int padded_bytes,

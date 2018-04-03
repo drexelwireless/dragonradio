@@ -226,7 +226,8 @@ void rx_worker(unsigned int rx_thread_pool_size)
     }
 }
 
-MACPHY::MACPHY(NET* net,
+MACPHY::MACPHY(const char* addr,
+               NET* net,
                double center_freq,
                double bandwidth,
                unsigned int padded_bytes,
@@ -266,7 +267,8 @@ MACPHY::MACPHY(NET* net,
     // usrp general setup
     if(!loopback)
     {
-        uhd::device_addr_t dev_addr;
+        uhd::device_addr_t dev_addr(addr);
+
         this->usrp = uhd::usrp::multi_usrp::make(dev_addr);
         this->usrp->set_rx_antenna("TX/RX");
         this->usrp->set_tx_antenna("TX/RX");
