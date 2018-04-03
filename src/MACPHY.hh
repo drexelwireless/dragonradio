@@ -49,8 +49,7 @@ class MACPHY
                double frame_size,
                unsigned int rx_thread_pool_size,
                float pad_size,
-               unsigned int packets_per_slot,
-               bool logchannel);
+               unsigned int packets_per_slot);
         ~MACPHY();
         void TX_TDMA_OFDM();
         void readyOFDMBuffer();
@@ -74,7 +73,6 @@ class MACPHY
         unsigned int rx_thread_pool_size;
         float pad_size;
         unsigned int packets_per_slot;
-        bool logchannel;
         long unsigned int sim_burst_id;
 };
 

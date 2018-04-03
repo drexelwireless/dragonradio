@@ -25,7 +25,6 @@ int main(int argc, char** argv)
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     float pad_size = .01;                       // inter slot dead time
     unsigned int packets_per_slot = 2;          // how many packets to stuff into each slot
-    bool logchannel = true;                     // set to true if you want channel coefficients logged to "channel.dat"
     const char* addr = NULL;
 
     int ch;
@@ -59,7 +58,7 @@ int main(int argc, char** argv)
     }
 
     NET net("tap0",node_id,num_nodes_in_net,nodes_in_net);
-    MACPHY mp(addr, &net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot,logchannel);
+    MACPHY mp(addr, &net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot);
 
     // start the rx thread
     std::thread rx_worker_thread;

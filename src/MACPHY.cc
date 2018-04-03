@@ -37,25 +37,6 @@ int rxCallback(
                 unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
 
-                // save off channel estimates (each row a new packet)
-                if(ext_mp_ptr->logchannel)
-                {
-                    long long unsigned usec;
-                    long long unsigned sec;
-                    timeval tv;
-                    gettimeofday(&tv,0);
-                    usec = tv.tv_usec;
-                    sec = tv.tv_sec;
-                    fp = fopen("channel.dat","a+");
-                    fprintf(fp,"llu ",sec*1000000+usec);
-                    for(unsigned int loop = 0;loop<M;loop++)
-                    {
-                        fprintf(fp,"%.8f+%.8f*1j ",std::real(G[loop]),std::imag(G[loop]));
-                    }
-                    fprintf(fp,"\n");
-                    fclose(fp);
-                }
-
                 printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
                 if(M>0)
                 {
@@ -173,8 +154,7 @@ MACPHY::MACPHY(const char* addr,
                double frame_size,
                unsigned int rx_thread_pool_size,
                float pad_size,
-               unsigned int packets_per_slot,
-               bool logchannel)
+               unsigned int packets_per_slot)
 {
     ext_net_ptr = net;
 
@@ -189,7 +169,6 @@ MACPHY::MACPHY(const char* addr,
     this->pad_size = pad_size;
     this->packets_per_slot = packets_per_slot;
     this->tx_transport_size = 512;
-    this->logchannel = logchannel;
     this->sim_burst_id = 0;
 
     // usrp general setup
