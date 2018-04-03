@@ -21,7 +21,7 @@
 #define IP_FMT  "10.10.10.%d"
 #define MAC_FMT "c6:ff:ff:ff:%02x"
 
-TunTap::TunTap(std::string tap, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char *nodes_in_net)
+TunTap::TunTap(const std::string& tap, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char *nodes_in_net)
     : persistent_interface(true), tap(tap), node_id(node_id)
 {
     persistent_interface = false;
@@ -54,7 +54,7 @@ TunTap::TunTap(std::string tap, unsigned int node_id, unsigned int num_nodes_in_
             fprintf(stderr, "system() - error bringing interface up\n");
     }
 
-    tap_fd = tap_alloc(tap, IFF_TAP | IFF_NO_PI);
+    tap_fd = tap_alloc(this->tap, IFF_TAP | IFF_NO_PI);
     if (tap_fd < 0) {
         fprintf(stderr, "Error connecting to tap interface %s\n", tap.c_str());
         exit(1);

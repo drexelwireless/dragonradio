@@ -21,7 +21,7 @@ class NET
 {
     public:
         // functions
-        NET(char* tap_name, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
+        NET(const std::string& tap_name, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
         ~NET();
         void readPackets();
         tx_packet_t* get_next_packet();

@@ -2,7 +2,7 @@
 
 #include "NET.hh"
 
-NET::NET(char* tap_name, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net)
+NET::NET(const std::string& tap_name, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net)
 {
     printf("Creating NETWORK\n");
     this->node_id = node_id;

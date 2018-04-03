@@ -11,7 +11,7 @@
 class TunTap
 {
 public:
-    TunTap(std::string tap, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
+    TunTap(const std::string& tap, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
 
     int cwrite(char *buf, int n);
     int cread(char *buf, int n);
