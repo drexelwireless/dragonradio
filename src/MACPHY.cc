@@ -2,10 +2,6 @@
 
 #include "MACPHY.hh"
 
-MACPHY* ext_mp_ptr;
-NET* ext_net_ptr;
-FILE* fp;
-
 int rxCallback(
         unsigned char *  _header,
         int              _header_valid,
@@ -19,11 +15,13 @@ int rxCallback(
         unsigned int M
         )
 {
+    MACPHY* mp = reinterpret_cast<MACPHY*>(_userdata);
+
     if(_header_valid)
     {
         // let first header byte be node id
         // let second header byte be source id
-        if((_header[0]==ext_net_ptr->node_id))
+        if((_header[0]==mp->net->node_id))
         {
             // first two btyes of padded payload will be packet length
             unsigned int source_id = _header[1];
@@ -34,7 +32,7 @@ int rxCallback(
                 {
                     return 1;
                 }
-                unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
+                unsigned int num_written = mp->net->tt->cwrite((char*)(_payload+mp->padded_bytes),packet_length);
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
 
                 printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
@@ -61,35 +59,35 @@ int rxCallback(
     return 0;
 }
 
-void run_demod(std::vector<std::complex<float> >* usrp_double_buff,unsigned int thread_idx)
+void run_demod(MACPHY* mp, std::vector<std::complex<float> >* usrp_double_buff,unsigned int thread_idx)
 {
     for(std::vector<std::complex<float> >::iterator double_it=usrp_double_buff->begin();double_it!=usrp_double_buff->end();double_it++)
     {
         std::complex<float> usrp_sample = *double_it;
-        ((ext_mp_ptr->mcrx_list)->at(thread_idx))->Execute(&usrp_sample,1);
+        ((mp->mcrx_list)->at(thread_idx))->Execute(&usrp_sample,1);
     }
     delete usrp_double_buff;
 }
 
-void rx_worker(unsigned int rx_thread_pool_size)
+void rx_worker(MACPHY* mp)
 {
-    const size_t max_samps_per_packet = ext_mp_ptr->usrp->get_device()->get_max_recv_samps_per_packet();
+    const size_t max_samps_per_packet = mp->usrp->get_device()->get_max_recv_samps_per_packet();
 
     // keep track of demod threads
     unsigned int ii;
-    std::thread threads[rx_thread_pool_size];
-    bool thread_joined[rx_thread_pool_size];
-    for(ii=0;ii<rx_thread_pool_size;ii++)
+    std::thread threads[mp->rx_thread_pool_size];
+    bool thread_joined[mp->rx_thread_pool_size];
+    for(ii=0;ii<mp->rx_thread_pool_size;ii++)
     {
         thread_joined[ii] = true;
     }
 
-    while(ext_mp_ptr->continue_running)
+    while(mp->continue_running)
     {
-        for(ii=0;ii<rx_thread_pool_size;ii++)
+        for(ii=0;ii<mp->rx_thread_pool_size;ii++)
         {
             // figure out number of samples for the next slot
-            size_t num_samps_to_deliver = (size_t)((ext_mp_ptr->usrp->get_rx_rate())*(ext_mp_ptr->slot_size))+(ext_mp_ptr->usrp->get_rx_rate()*(ext_mp_ptr->pad_size))*2.0;
+            size_t num_samps_to_deliver = (size_t)((mp->usrp->get_rx_rate())*(mp->slot_size))+(mp->usrp->get_rx_rate()*(mp->pad_size))*2.0;
 
             // init counter for samples and allocate double buffer
             size_t uhd_num_delivered_samples = 0;
@@ -100,16 +98,16 @@ void rx_worker(unsigned int rx_thread_pool_size)
             double wait_time;
             double full;
             double frac;
-            uhd::time_spec_t uhd_system_time_now = ext_mp_ptr->usrp->get_time_now(0);
+            uhd::time_spec_t uhd_system_time_now = mp->usrp->get_time_now(0);
             time_now = (double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
-            wait_time = ext_mp_ptr->frame_size - 1.0*fmod(time_now,ext_mp_ptr->frame_size)-(ext_mp_ptr->pad_size);
+            wait_time = mp->frame_size - 1.0*fmod(time_now,mp->frame_size)-(mp->pad_size);
             frac = modf(time_now+wait_time,&full);
 
             // make new streamer with timing calc
             uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_MORE);
             stream_cmd.stream_now = false;
             stream_cmd.time_spec = uhd::time_spec_t((time_t)full,frac);
-            ext_mp_ptr->rx_stream->issue_stream_cmd(stream_cmd);
+            mp->rx_stream->issue_stream_cmd(stream_cmd);
 
             uhd::rx_metadata_t rx_md;
 
@@ -117,7 +115,7 @@ void rx_worker(unsigned int rx_thread_pool_size)
             {
                 // create new vector to hold samps for this demod process
                 std::vector<std::complex<float> > this_rx_buff(max_samps_per_packet);
-                size_t this_num_delivered_samples = ext_mp_ptr->usrp->get_device()->recv(
+                size_t this_num_delivered_samples = mp->usrp->get_device()->recv(
                         &this_rx_buff.front(), this_rx_buff.size(), rx_md,
                         uhd::io_type_t::COMPLEX_FLOAT32,
                         uhd::device::RECV_MODE_ONE_PACKET
@@ -137,7 +135,7 @@ void rx_worker(unsigned int rx_thread_pool_size)
                 threads[ii].join();
                 thread_joined[ii] = true;
             }
-            threads[ii] = std::thread(run_demod,this_double_buff,ii);
+            threads[ii] = std::thread(run_demod,mp,this_double_buff,ii);
             thread_joined[ii] = false;
 
         }
@@ -156,8 +154,6 @@ MACPHY::MACPHY(const char* addr,
                float pad_size,
                unsigned int packets_per_slot)
 {
-    ext_net_ptr = net;
-
     this->net = net;
     this->num_nodes_in_net = net->num_nodes_in_net;
     this->node_id = net->node_id;
@@ -207,16 +203,17 @@ MACPHY::MACPHY(const char* addr,
     for(unsigned int jj=0;jj<rx_thread_pool_size;jj++)
     {
         framesync_callback callback[1];
+        void               *userdata[1];
+
         callback[0] = rxCallback;
-        void* userdata[1];
-        userdata[0] = NULL;
-        multichannelrx* this_mcrx = new multichannelrx(1,480,6,4,(unsigned char*)NULL,userdata,callback);
-        mcrx_list->push_back(this_mcrx);
+        userdata[0] = this;
+
+        multichannelrx* mcrx = new multichannelrx(1,480,6,4,(unsigned char*)NULL,userdata,callback);
+
+        mcrx_list->push_back(mcrx);
     }
 
     this->continue_running = true;
-
-    ext_mp_ptr = this;
 }
 
 MACPHY::~MACPHY()

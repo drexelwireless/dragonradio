@@ -18,23 +18,6 @@
 #include "multichannelrx.h"
 #include "multichanneltx.h"
 
-int rxCallback(
-        unsigned char *  _header,
-        int              _header_valid,
-        unsigned char *  _payload,
-        unsigned int     _payload_len,
-        int              _payload_valid,
-        framesyncstats_s _stats,
-        void *           _userdata,
-        liquid_float_complex* G,
-        liquid_float_complex* G_hat,
-        unsigned int M
-    );
-
-void rx_worker(unsigned int rx_thread_pool_size);
-
-void run_demod(std::vector<std::complex<float> >* usrp_double_buff, unsigned int thread_idx);
-
 class MACPHY
 {
     public:
@@ -75,5 +58,23 @@ class MACPHY
         unsigned int packets_per_slot;
         long unsigned int sim_burst_id;
 };
+
+
+int rxCallback(
+        unsigned char *  _header,
+        int              _header_valid,
+        unsigned char *  _payload,
+        unsigned int     _payload_len,
+        int              _payload_valid,
+        framesyncstats_s _stats,
+        void *           _userdata,
+        liquid_float_complex* G,
+        liquid_float_complex* G_hat,
+        unsigned int M
+    );
+
+void rx_worker(MACPHY* mp);
+
+void run_demod(MACPHY* mp, std::vector<std::complex<float> >* usrp_double_buff, unsigned int thread_idx);
 
 #endif

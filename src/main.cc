@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 
     // start the rx thread
     std::thread rx_worker_thread;
-    rx_worker_thread = std::thread(rx_worker,rx_thread_pool_size);
+    rx_worker_thread = std::thread(rx_worker,&mp);
 
     // use main thread for tx_worker
     mp.readyOFDMBuffer();
