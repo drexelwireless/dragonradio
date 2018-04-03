@@ -1,7 +1,7 @@
 /* TunTap.hh
  *
  * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited)
- * 
+ *
  */
 #ifndef TUNTAP_HH_
 #define TUNTAP_HH_
@@ -30,22 +30,22 @@
 
 class TunTap
 {
-	public:
-		int cwrite(char *buf, int n);
-		int cread(char *buf, int n);
-		int tap_alloc(char *dev, int flags);
-		void close_interface();
+    public:
+        int cwrite(char *buf, int n);
+        int cread(char *buf, int n);
+        int tap_alloc(char *dev, int flags);
+        void close_interface();
         void add_arp_entries(unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
-		TunTap(std::string tap, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
-	private:
-		int tap_fd;
-		fd_set tx_set;
-		unsigned int BUFSIZE;
-		bool persistent_interface;
-		char user[20];
-		char cmd[80];
-		char tap_name[IFNAMSIZ];
+        TunTap(std::string tap, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
+    private:
+        int tap_fd;
+        fd_set tx_set;
+        unsigned int BUFSIZE;
+        bool persistent_interface;
+        char user[20];
+        char cmd[80];
+        char tap_name[IFNAMSIZ];
         unsigned char node_id;
 };
 
-#endif	// TUNTAP_HH_
+#endif    // TUNTAP_HH_

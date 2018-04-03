@@ -67,6 +67,6 @@ int main()
     }
 
     rx_worker_thread.join();
-    
+
     printf("Done\n");
 }

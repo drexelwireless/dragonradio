@@ -3,7 +3,7 @@
 ##################################################
 
 CXX 				:= g++
-CXXFLAGS			:= -I./ -I/usr/local/include/ -O2 -g3 -Wall -pedantic -ansi  -fPIC  -std=c++0x 
+CXXFLAGS			:= -I./ -I/usr/local/include/ -O2 -g3 -Wall -pedantic -ansi  -fPIC  -std=c++0x
 LIBS				:= -lc -lconfig -lfftw3f -lliquid -lm -lpthread -luhd -lliquidusrp
 RM				:= rm -f
 BINS				:= full-radio

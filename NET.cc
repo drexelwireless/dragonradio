@@ -5,7 +5,7 @@
 NET::NET(char* tap_name, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net)
 {
     printf("Creating NETWORK\n");
-    this->node_id = node_id; 
+    this->node_id = node_id;
     this->num_nodes_in_net = num_nodes_in_net;
     this->nodes_in_net = nodes_in_net;
     this->tt = new TunTap(tap_name, node_id, num_nodes_in_net, nodes_in_net);
@@ -75,5 +75,5 @@ tx_packet_t* NET::get_next_packet()
         null_packet->payload_size = 0;
         return null_packet;
     }
-    
+
 }

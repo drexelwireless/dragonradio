@@ -37,7 +37,7 @@ int rxCallback(
                 unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
 
-				// save off channel estimates (each row a new packet)
+                // save off channel estimates (each row a new packet)
                 if(ext_mp_ptr->logchannel)
                 {
                     long long unsigned usec;
@@ -68,7 +68,7 @@ int rxCallback(
             }
             else
             {
-                printf("PAYLOAD INVALID\n");   
+                printf("PAYLOAD INVALID\n");
             }
         }
         // allow messages that are not destined for us in loopback mode
@@ -100,7 +100,7 @@ int rxCallback(
                 unsigned int num_written = ext_net_ptr->tt->cwrite((char*)(_payload+ext_mp_ptr->padded_bytes),packet_length);
                 unsigned int packet_id = (_header[2] << 8) | _header[3];
 
-				// save off channel estimates (each row a new packet)
+                // save off channel estimates (each row a new packet)
                 if(ext_mp_ptr->logchannel)
                 {
                     long long unsigned usec;
@@ -131,7 +131,7 @@ int rxCallback(
             }
             else
             {
-                printf("PAYLOAD INVALID\n");   
+                printf("PAYLOAD INVALID\n");
             }
         }
     }
@@ -204,7 +204,7 @@ void rx_worker(unsigned int rx_thread_pool_size)
                         uhd::io_type_t::COMPLEX_FLOAT32,
                         uhd::device::RECV_MODE_ONE_PACKET
                         );
-    
+
                 for(unsigned int kk=0;kk<this_num_delivered_samples;kk++)
                 {
                     this_double_buff->push_back(this_rx_buff[kk]);
@@ -221,7 +221,7 @@ void rx_worker(unsigned int rx_thread_pool_size)
             }
             threads[ii] = std::thread(run_demod,this_double_buff,ii);
             thread_joined[ii] = false;
-            
+
         }
     }
 }
@@ -296,7 +296,7 @@ MACPHY::MACPHY(NET* net,
 
     // modem setup (list is for parallel demodulation)
     unsigned char* p = NULL;
-    mctx = new multichanneltx(1, 480, 6, 4,p); 
+    mctx = new multichanneltx(1, 480, 6, 4,p);
     mcrx_list = new std::vector<multichannelrx*>;
     for(unsigned int jj=0;jj<rx_thread_pool_size;jj++)
     {
@@ -334,7 +334,7 @@ void MACPHY::TXRX_SIM_FRAME()
     char emulated_channel_file[2048];
 
     // save off clean data (tx)
-    if(logiq && (tx_double_buff.size()>0)) 
+    if(logiq && (tx_double_buff.size()>0))
     {
         sprintf(&txed_data_file[0],"./txdata/txed_data_%llu.bin",sim_burst_id);
         txed_data.open(txed_data_file,std::ofstream::binary);
@@ -398,7 +398,7 @@ void MACPHY::TXRX_SIM_FRAME()
 
         //std::vector<std::complex<float> > X_vec(&X[0],&X[0]+num_samples);
         //if(txed_data.is_open()) txed_data.write((const char*)&X_vec.front(),X_vec.size()*sizeof(std::complex<float>));
-        
+
         // setup rician channel (stuff that changes with the number of samples)
         if(apply_channel)
         {
@@ -467,7 +467,7 @@ void MACPHY::TXRX_SIM_FRAME()
             for(unsigned int i=0;i<num_samples;i++)
             {
                 std::complex<float> sample = x_out[i];
-                msresamp_crcf_execute(resamp_rx,&sample,1,&x_out_ds[n],&nw); 
+                msresamp_crcf_execute(resamp_rx,&sample,1,&x_out_ds[n],&nw);
                 n += nw;
             }*/
             for(unsigned int i=0;i<X_size;i++)
@@ -502,7 +502,7 @@ void MACPHY::TXRX_SIM_FRAME()
         rxed_data.close();
         emulated_channel_data.close();
     }
-    
+
     // make new ofdmBuffer
     readyOFDMBuffer();
 
@@ -549,7 +549,7 @@ void MACPHY::readyOFDMBuffer()
                 // populate usrp buffer
                 unsigned int mctx_buffer_length = 2;
                 std::complex<float> mctx_buffer[mctx_buffer_length];
-                std::vector<std::complex<float> >* usrp_tx_buff = new std::vector<std::complex<float> >(tx_transport_size); 
+                std::vector<std::complex<float> >* usrp_tx_buff = new std::vector<std::complex<float> >(tx_transport_size);
                 unsigned int num_generated_samples=0;
                 while(!mctx->IsChannelReadyForData(0))
                 {
@@ -595,7 +595,7 @@ void MACPHY::TX_TDMA_OFDM()
 
     frame_pos = fmod(time_now,frame_size);
     wait_time = ((node_id)*slot_size) - frame_pos;
-    if(wait_time<0) 
+    if(wait_time<0)
     {
         printf("MISS\n");
         wait_time+=(frame_size);
@@ -621,17 +621,17 @@ void MACPHY::TX_TDMA_OFDM()
     tx_md.start_of_burst = false;
     tx_md.end_of_burst = true;
     tx_stream->send("",0,tx_md,0.0);
-    
+
     // readyNextBuffer
     readyOFDMBuffer();
 
     // wait out the rest of the slot
     uhd_system_time_now = this->usrp->get_time_now(0);
-    double new_time_now =(double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs()); 
+    double new_time_now =(double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
     while((new_time_now-(time_now+wait_time))<(frame_size-pad_size))
     {
         usleep(10);
         uhd_system_time_now = this->usrp->get_time_now(0);
-        new_time_now =(double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs()); 
+        new_time_now =(double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
     }
 }
