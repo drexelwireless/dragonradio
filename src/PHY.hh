@@ -34,10 +34,10 @@ public:
     std::shared_ptr<NET> net;
     unsigned int node_id;
     unsigned int padded_bytes;
-    std::vector<multichannelrx*>* mcrx_list;
+    std::unique_ptr<multichanneltx> mctx;
+    std::vector<std::unique_ptr<multichannelrx>> mcrx_list;
     std::vector<std::vector<std::complex<float> >* > tx_double_buff;
     unsigned int tx_transport_size;
-    multichanneltx* mctx;
     unsigned int rx_thread_pool_size;
 
 

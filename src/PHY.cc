@@ -43,9 +43,8 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
     this->tx_transport_size = 512;
 
     // modem setup (list is for parallel demodulation)
-    mctx = new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
+    mctx = std::unique_ptr<multichanneltx>(new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR));
 
-    mcrx_list = new std::vector<multichannelrx*>;
     for(unsigned int jj=0;jj<rx_thread_pool_size;jj++)
     {
         framesync_callback callback[1];
@@ -54,9 +53,9 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
         callback[0] = rxCallback;
         userdata[0] = this;
 
-        multichannelrx* mcrx = new multichannelrx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback);
+        std::unique_ptr<multichannelrx> mcrx(new multichannelrx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback));
 
-        mcrx_list->push_back(mcrx);
+        mcrx_list.push_back(std::move(mcrx));
     }
 
     // keep track of demod threads
@@ -69,12 +68,6 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
 
 PHY::~PHY()
 {
-    delete mctx;
-    for(std::vector<multichannelrx*>::iterator it=mcrx_list->begin();it!=mcrx_list->end();it++)
-    {
-        delete *it;
-    }
-    delete mcrx_list;
 }
 
 int rxCallback(
@@ -170,7 +163,7 @@ void PHY::run_demod(std::vector<std::complex<float> >* usrp_double_buff,unsigned
     for(std::vector<std::complex<float> >::iterator double_it=usrp_double_buff->begin();double_it!=usrp_double_buff->end();double_it++)
     {
         std::complex<float> usrp_sample = *double_it;
-        mcrx_list->at(thread_idx)->Execute(&usrp_sample,1);
+        mcrx_list.at(thread_idx)->Execute(&usrp_sample,1);
     }
     delete usrp_double_buff;
 }
