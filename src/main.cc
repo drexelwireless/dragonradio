@@ -1,7 +1,8 @@
 // DWSL - full radio stack
 
-#include <MACPHY.hh>
+#include <MAC.hh>
 #include <NET.hh>
+#include <PHY.hh>
 #include <USRP.hh>
 #include <stdio.h>
 #include <unistd.h>
@@ -60,14 +61,11 @@ int main(int argc, char** argv)
 
     std::shared_ptr<FloatIQTransport> t(new USRP(addr, center_freq, bandwidth, "TX/RX", "RX2", tx_gain, rx_gain));
     std::shared_ptr<NET>              net(new NET("tap0",node_id,num_nodes_in_net,nodes_in_net));
-    std::shared_ptr<MACPHY>           mp(new MACPHY(t, net,padded_bytes,frame_size,rx_thread_pool_size,pad_size,packets_per_slot));
+    std::shared_ptr<PHY>              phy(new PHY(t, net,padded_bytes,rx_thread_pool_size));
+    std::shared_ptr<MAC>              mac(new MAC(t, net, phy,frame_size,pad_size,packets_per_slot));
 
     // use main thread for tx_worker
-    mp->readyOFDMBuffer();
-    while(mp->continue_running)
-    {
-        mp->TX_TDMA_OFDM();
-    }
+    mac->run();
 
     printf("Done\n");
 }
