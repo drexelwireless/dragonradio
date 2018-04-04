@@ -1,6 +1,7 @@
 // DWSL - full radio stack
 
 #include "MACPHY.hh"
+#include "USRP.hh"
 
 int rxCallback(
         unsigned char *  _header,
@@ -50,17 +51,14 @@ int rxCallback(
     return 0;
 }
 
-MACPHY::MACPHY(const char* addr,
+MACPHY::MACPHY(std::shared_ptr<FloatIQTransport> t,
                NET* net,
-               double center_freq,
-               double bandwidth,
                unsigned int padded_bytes,
-               float tx_gain,
-               float rx_gain,
                double frame_size,
                unsigned int rx_thread_pool_size,
                float pad_size,
                unsigned int packets_per_slot)
+  : t(t)
 {
     this->net = net;
     this->num_nodes_in_net = net->num_nodes_in_net;
@@ -74,35 +72,6 @@ MACPHY::MACPHY(const char* addr,
     this->packets_per_slot = packets_per_slot;
     this->tx_transport_size = 512;
     this->sim_burst_id = 0;
-
-    // usrp general setup
-    uhd::device_addr_t dev_addr(addr);
-
-    this->usrp = uhd::usrp::multi_usrp::make(dev_addr);
-    this->usrp->set_rx_antenna("RX2");
-    this->usrp->set_tx_antenna("TX/RX");
-    this->usrp->set_tx_gain(tx_gain);
-    this->usrp->set_rx_gain(rx_gain);
-    this->usrp->set_tx_freq(center_freq);
-    this->usrp->set_rx_freq(center_freq);
-    this->usrp->set_rx_rate(2*bandwidth);
-    this->usrp->set_tx_rate(2*bandwidth);
-
-    // set time relative to system NTP time
-    // (mod it down to fit in double precision)
-    long usec;
-    long sec;
-    timeval tv;
-    gettimeofday(&tv,0);
-    usec = tv.tv_usec;
-    sec = tv.tv_sec;
-    this->usrp->set_time_now(uhd::time_spec_t((double)(sec%10)+((double)usec)/1e6));
-
-    // usrp streaming setup
-    uhd::stream_args_t rx_stream_args("fc32");
-    this->rx_stream = this->usrp->get_rx_stream(rx_stream_args);
-    uhd::stream_args_t tx_stream_args("fc32");
-    this->tx_stream = this->usrp->get_tx_stream(tx_stream_args);
 
     // modem setup (list is for parallel demodulation)
     unsigned char* p = NULL;
@@ -142,7 +111,7 @@ MACPHY::~MACPHY()
 
 void MACPHY::rx_worker(void)
 {
-    const size_t max_samps_per_packet = usrp->get_device()->get_max_recv_samps_per_packet();
+    const size_t max_samps_per_packet = t->get_max_recv_samps_per_packet();
 
     // keep track of demod threads
     unsigned int ii;
@@ -158,7 +127,7 @@ void MACPHY::rx_worker(void)
         for(ii=0;ii<rx_thread_pool_size;ii++)
         {
             // figure out number of samples for the next slot
-            size_t num_samps_to_deliver = (size_t)((usrp->get_rx_rate())*(slot_size))+(usrp->get_rx_rate()*(pad_size))*2.0;
+            size_t num_samps_to_deliver = (size_t)((t->get_rx_rate())*(slot_size))+(t->get_rx_rate()*(pad_size))*2.0;
 
             // init counter for samples and allocate double buffer
             size_t uhd_num_delivered_samples = 0;
@@ -167,18 +136,10 @@ void MACPHY::rx_worker(void)
             // calculate time to wait for streaming (precisely time beginning of each slot)
             double time_now;
             double wait_time;
-            double full;
-            double frac;
-            uhd::time_spec_t uhd_system_time_now = usrp->get_time_now(0);
-            time_now = (double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
-            wait_time = frame_size - 1.0*fmod(time_now,frame_size)-(pad_size);
-            frac = modf(time_now+wait_time,&full);
 
-            // make new streamer with timing calc
-            uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_MORE);
-            stream_cmd.stream_now = false;
-            stream_cmd.time_spec = uhd::time_spec_t((time_t)full,frac);
-            rx_stream->issue_stream_cmd(stream_cmd);
+            time_now = t->get_time_now();
+            wait_time = frame_size - 1.0*fmod(time_now,frame_size)-(pad_size);
+            t->recv_at(time_now+wait_time);
 
             uhd::rx_metadata_t rx_md;
 
@@ -186,11 +147,8 @@ void MACPHY::rx_worker(void)
             {
                 // create new vector to hold samps for this demod process
                 std::vector<std::complex<float> > this_rx_buff(max_samps_per_packet);
-                size_t this_num_delivered_samples = usrp->get_device()->recv(
-                        &this_rx_buff.front(), this_rx_buff.size(), rx_md,
-                        uhd::io_type_t::COMPLEX_FLOAT32,
-                        uhd::device::RECV_MODE_ONE_PACKET
-                        );
+
+                size_t this_num_delivered_samples = t->recv(&this_rx_buff.front(), this_rx_buff.size());
 
                 for(unsigned int kk=0;kk<this_num_delivered_samples;kk++)
                 {
@@ -300,52 +258,41 @@ void MACPHY::TX_TDMA_OFDM()
     double time_now;
     double frame_pos;
     double wait_time;
-    double full;
-    double frac;
-    uhd::tx_metadata_t tx_md;
 
-    uhd::time_spec_t uhd_system_time_now = this->usrp->get_time_now(0);
-    time_now = (double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
-
+    time_now = t->get_time_now();
     frame_pos = fmod(time_now,frame_size);
     wait_time = ((node_id)*slot_size) - frame_pos;
-    if(wait_time<0)
-    {
+    if (wait_time<0) {
         printf("MISS\n");
-        wait_time+=(frame_size);
+        wait_time += frame_size;
     }
-    frac = modf(time_now+wait_time,&full);
-    tx_md.time_spec = uhd::time_spec_t((time_t)full,frac);
-    tx_md.has_time_spec = true;
-    tx_md.start_of_burst = false;
-    tx_md.end_of_burst = false;
 
     // tx timed burst
     if(tx_double_buff.size()>0)
     {
+        t->start_burst();
+
         for(std::vector<std::vector<std::complex<float> >* >::iterator it=tx_double_buff.begin();it!=tx_double_buff.end();it++)
         {
             // tx that packet (each buffer in the double buff is one packet)
-            tx_stream->send(&((*it)->front()),(*it)->size(),tx_md);
+            t->send(time_now+wait_time, &((*it)->front()),(*it)->size());
             delete *it;
         }
-    }
 
-    // clear buffer
-    tx_md.start_of_burst = false;
-    tx_md.end_of_burst = true;
-    tx_stream->send("",0,tx_md,0.0);
+        // Clear buffer
+        t->end_burst();
+        t->send(time_now+wait_time, NULL, 0);
+    }
 
     // readyNextBuffer
     readyOFDMBuffer();
 
     // wait out the rest of the slot
-    uhd_system_time_now = this->usrp->get_time_now(0);
-    double new_time_now =(double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
+    double new_time_now = t->get_time_now();
+
     while((new_time_now-(time_now+wait_time))<(frame_size-pad_size))
     {
         usleep(10);
-        uhd_system_time_now = this->usrp->get_time_now(0);
-        new_time_now =(double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
+        new_time_now = t->get_time_now();
     }
 }

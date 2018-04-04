@@ -2,6 +2,7 @@
 
 #include <MACPHY.hh>
 #include <NET.hh>
+#include <USRP.hh>
 #include <stdio.h>
 #include <unistd.h>
 #include <thread>
@@ -57,8 +58,10 @@ int main(int argc, char** argv)
         nodes_in_net[i] = i+1;
     }
 
+    std::shared_ptr<FloatIQTransport> t(new USRP(addr, center_freq, bandwidth, "TX/RX", "RX2", tx_gain, rx_gain));
+
     NET net("tap0",node_id,num_nodes_in_net,nodes_in_net);
-    MACPHY mp(addr, &net,center_freq,bandwidth,padded_bytes,tx_gain,rx_gain,frame_size,rx_thread_pool_size,pad_size,packets_per_slot);
+    MACPHY mp(t, &net,padded_bytes,frame_size,rx_thread_pool_size,pad_size,packets_per_slot);
 
     // use main thread for tx_worker
     mp.readyOFDMBuffer();
