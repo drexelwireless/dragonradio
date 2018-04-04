@@ -35,8 +35,6 @@ class MACPHY
         // other shite
         std::shared_ptr<FloatIQTransport> t;
         std::shared_ptr<NET> net;
-        unsigned int num_nodes_in_net;
-        unsigned char* nodes_in_net;
         unsigned int node_id;
         double frame_size;
         double slot_size;
@@ -49,7 +47,6 @@ class MACPHY
         unsigned int rx_thread_pool_size;
         float pad_size;
         unsigned int packets_per_slot;
-        long unsigned int sim_burst_id;
         std::thread rx_worker_thread;
 
         void rx_worker(void);

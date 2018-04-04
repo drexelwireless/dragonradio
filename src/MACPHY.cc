@@ -60,17 +60,14 @@ MACPHY::MACPHY(std::shared_ptr<FloatIQTransport> t,
                unsigned int packets_per_slot)
   : t(t), net(net)
 {
-    this->num_nodes_in_net = net->num_nodes_in_net;
     this->node_id = net->node_id;
-    this->nodes_in_net = net->nodes_in_net;
     this->padded_bytes = padded_bytes;
     this->frame_size = frame_size;
-    this->slot_size = frame_size/((double)(num_nodes_in_net));
+    this->slot_size = frame_size/((double)(net->num_nodes_in_net));
     this->rx_thread_pool_size = rx_thread_pool_size;
     this->pad_size = pad_size;
     this->packets_per_slot = packets_per_slot;
     this->tx_transport_size = 512;
-    this->sim_burst_id = 0;
 
     // modem setup (list is for parallel demodulation)
     unsigned char* p = NULL;
