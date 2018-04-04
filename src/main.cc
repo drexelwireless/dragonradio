@@ -59,15 +59,14 @@ int main(int argc, char** argv)
     }
 
     std::shared_ptr<FloatIQTransport> t(new USRP(addr, center_freq, bandwidth, "TX/RX", "RX2", tx_gain, rx_gain));
-
-    NET net("tap0",node_id,num_nodes_in_net,nodes_in_net);
-    MACPHY mp(t, &net,padded_bytes,frame_size,rx_thread_pool_size,pad_size,packets_per_slot);
+    std::shared_ptr<NET>              net(new NET("tap0",node_id,num_nodes_in_net,nodes_in_net));
+    std::shared_ptr<MACPHY>           mp(new MACPHY(t, net,padded_bytes,frame_size,rx_thread_pool_size,pad_size,packets_per_slot));
 
     // use main thread for tx_worker
-    mp.readyOFDMBuffer();
-    while(mp.continue_running)
+    mp->readyOFDMBuffer();
+    while(mp->continue_running)
     {
-        mp.TX_TDMA_OFDM();
+        mp->TX_TDMA_OFDM();
     }
 
     printf("Done\n");

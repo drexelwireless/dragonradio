@@ -52,15 +52,14 @@ int rxCallback(
 }
 
 MACPHY::MACPHY(std::shared_ptr<FloatIQTransport> t,
-               NET* net,
+               std::shared_ptr<NET> net,
                unsigned int padded_bytes,
                double frame_size,
                unsigned int rx_thread_pool_size,
                float pad_size,
                unsigned int packets_per_slot)
-  : t(t)
+  : t(t), net(net)
 {
-    this->net = net;
     this->num_nodes_in_net = net->num_nodes_in_net;
     this->node_id = net->node_id;
     this->nodes_in_net = net->nodes_in_net;

@@ -22,7 +22,7 @@ class MACPHY
     public:
         //functions
         MACPHY(std::shared_ptr<FloatIQTransport> t,
-               NET* net,
+               std::shared_ptr<NET> net,
                unsigned int padded_bytes,
                double frame_size,
                unsigned int rx_thread_pool_size,
@@ -34,12 +34,12 @@ class MACPHY
 
         // other shite
         std::shared_ptr<FloatIQTransport> t;
+        std::shared_ptr<NET> net;
         unsigned int num_nodes_in_net;
         unsigned char* nodes_in_net;
         unsigned int node_id;
         double frame_size;
         double slot_size;
-        NET* net;
         unsigned int padded_bytes;
         std::vector<multichannelrx*>* mcrx_list;
         std::vector<std::vector<std::complex<float> >* > tx_double_buff;
