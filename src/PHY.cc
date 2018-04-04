@@ -13,6 +13,21 @@ int rxCallback(
         unsigned int M
     );
 
+/** Number of channels */
+const unsigned int NUM_CHANNELS = 1;
+
+/** Number of OFDM subcarriers */
+const unsigned int M = 480;
+
+/** OFDM cyclic prefix length */
+const unsigned int CP_LEN = 6;
+
+/** OFDM taper prefix length */
+const unsigned int TP_LEN = 4;
+
+/** OFDM subcarrier allocation */
+unsigned char *SUBCAR = nullptr;
+
 PHY::PHY(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<NET> net,
          unsigned int padded_bytes,
@@ -28,8 +43,8 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
     this->tx_transport_size = 512;
 
     // modem setup (list is for parallel demodulation)
-    unsigned char* p = NULL;
-    mctx = new multichanneltx(1, 480, 6, 4,p);
+    mctx = new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
+
     mcrx_list = new std::vector<multichannelrx*>;
     for(unsigned int jj=0;jj<rx_thread_pool_size;jj++)
     {
@@ -39,7 +54,7 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
         callback[0] = rxCallback;
         userdata[0] = this;
 
-        multichannelrx* mcrx = new multichannelrx(1,480,6,4,(unsigned char*)NULL,userdata,callback);
+        multichannelrx* mcrx = new multichannelrx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback);
 
         mcrx_list->push_back(mcrx);
     }
