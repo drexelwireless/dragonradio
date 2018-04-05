@@ -21,7 +21,7 @@
 #define IP_FMT  "10.10.10.%d"
 #define MAC_FMT "c6:ff:ff:ff:%02x"
 
-TunTap::TunTap(const std::string& tap, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char *nodes_in_net)
+TunTap::TunTap(const std::string& tap, unsigned int node_id, const std::vector<unsigned char>& nodes_in_net)
     : persistent_interface(true), tap(tap), node_id(node_id)
 {
     persistent_interface = false;
@@ -60,7 +60,7 @@ TunTap::TunTap(const std::string& tap, unsigned int node_id, unsigned int num_no
         exit(1);
     }
 
-    add_arp_entries(num_nodes_in_net, nodes_in_net);
+    add_arp_entries(nodes_in_net);
 }
 
 int TunTap::cwrite(char *buf, int n)
@@ -141,13 +141,13 @@ int TunTap::tap_alloc(std::string& dev, int flags)
 
 }
 
-void TunTap::add_arp_entries(unsigned int num_nodes_in_net, unsigned char* nodes_in_net)
+void TunTap::add_arp_entries(const std::vector<unsigned char>& nodes_in_net)
 {
     unsigned char current_node;
 
-    for(unsigned int i = 0; i < num_nodes_in_net; i++)
+    for(auto it = nodes_in_net.begin(); it != nodes_in_net.end(); it++)
     {
-        current_node = nodes_in_net[i];
+        current_node = *it;
         if (current_node != node_id) {
             if (sys("arp -i %s -s " IP_FMT " " MAC_FMT, tap.c_str(), current_node, current_node) < 0)
                 fprintf(stderr, "Error setting arp table for node %d.\n", current_node);

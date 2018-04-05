@@ -7,17 +7,18 @@
 #define TUNTAP_HH_
 
 #include <string>
+#include <vector>
 
 class TunTap
 {
 public:
-    TunTap(const std::string& tap, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
+    TunTap(const std::string& tap, unsigned int node_id, const std::vector<unsigned char>& nodes_in_net);
 
     int cwrite(char *buf, int n);
     int cread(char *buf, int n);
     int tap_alloc(std::string& dev, int flags);
     void close_interface();
-    void add_arp_entries(unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
+    void add_arp_entries(const std::vector<unsigned char>& nodes_in_net);
 
 private:
     bool          persistent_interface;

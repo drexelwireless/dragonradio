@@ -21,7 +21,7 @@ class NET
 {
     public:
         // functions
-        NET(const std::string& tap_name, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net);
+        NET(const std::string& tap_name, unsigned int node_id, const std::vector<unsigned char>& nodes_in_net);
         ~NET();
         void readPackets();
         tx_packet_t* get_next_packet();
@@ -33,7 +33,6 @@ class NET
         bool continue_reading;
         std::thread readThread;
         unsigned int num_nodes_in_net;
-        unsigned char* nodes_in_net;
         unsigned int txed_packets;
         unsigned int curr_packet_id;
 };

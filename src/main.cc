@@ -53,14 +53,15 @@ int main(int argc, char** argv)
 
     ///////////////////////////////////////////////////////////////////////////////////////
 
-    unsigned char nodes_in_net[num_nodes_in_net];
+    std::vector<unsigned char> nodes_in_net(num_nodes_in_net);
+
     for(unsigned int i=0;i<num_nodes_in_net;i++)
     {
         nodes_in_net[i] = i+1;
     }
 
     std::shared_ptr<FloatIQTransport> t(new USRP(addr, center_freq, bandwidth, "TX/RX", "RX2", tx_gain, rx_gain));
-    std::shared_ptr<NET>              net(new NET("tap0",node_id,num_nodes_in_net,nodes_in_net));
+    std::shared_ptr<NET>              net(new NET("tap0",node_id,nodes_in_net));
     std::shared_ptr<PHY>              phy(new PHY(t, net,padded_bytes,rx_thread_pool_size));
     std::shared_ptr<MAC>              mac(new MAC(t, net, phy,frame_size,pad_size,packets_per_slot));
 

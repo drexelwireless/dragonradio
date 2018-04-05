@@ -2,13 +2,12 @@
 
 #include "NET.hh"
 
-NET::NET(const std::string& tap_name, unsigned int node_id, unsigned int num_nodes_in_net, unsigned char* nodes_in_net)
+NET::NET(const std::string& tap_name, unsigned int node_id, const std::vector<unsigned char>& nodes_in_net)
 {
     printf("Creating NETWORK\n");
     this->node_id = node_id;
-    this->num_nodes_in_net = num_nodes_in_net;
-    this->nodes_in_net = nodes_in_net;
-    this->tt = new TunTap(tap_name, node_id, num_nodes_in_net, nodes_in_net);
+    this->num_nodes_in_net = nodes_in_net.size();
+    this->tt = new TunTap(tap_name, node_id, nodes_in_net);
     this->continue_reading = true;
     this->readThread = std::thread(&NET::readPackets,this);
     this->txed_packets = 0;
