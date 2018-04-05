@@ -47,11 +47,8 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
 
     for(unsigned int jj=0;jj<rx_thread_pool_size;jj++)
     {
-        framesync_callback callback[1];
-        void               *userdata[1];
-
-        callback[0] = rxCallback;
-        userdata[0] = this;
+        framesync_callback callback[1] = { rxCallback };
+        void               *userdata[1] = { this };
 
         std::unique_ptr<multichannelrx> mcrx(new multichannelrx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback));
 
