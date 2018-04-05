@@ -40,6 +40,21 @@ const int FEC_INNER = LIQUID_FEC_CONV_V27;
 /** Outer FEC */
 const int FEC_OUTER = LIQUID_FEC_RS_M8;
 
+typedef uint8_t NodeId;
+typedef uint16_t PacketId;
+
+struct Header {
+    NodeId   src;
+    NodeId   dest;
+    PacketId pkt_id;
+    uint16_t pkt_len;
+};
+
+union PHYHeader {
+    Header        h;
+    unsigned char bytes[8];
+};
+
 PHY::PHY(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<NET> net,
          unsigned int padded_bytes,
@@ -90,7 +105,8 @@ int rxCallback(
         unsigned int M
         )
 {
-    PHY* phy = reinterpret_cast<PHY*>(_userdata);
+    PHY*    phy = reinterpret_cast<PHY*>(_userdata);
+    Header* h = reinterpret_cast<Header*>(_header);
 
     if (!_header_valid) {
         printf("HEADER INVALID\n");
@@ -104,19 +120,15 @@ int rxCallback(
 
     // let first header byte be node id
     // let second header byte be source id
-    if (_header[0] != phy->net->node_id)
+    if (h->dest != phy->net->node_id)
         return 0;
 
-    unsigned int source_id     = _header[1];
-    unsigned int packet_length = ((_payload[0] << 8)|(_payload[1]));
-
-    if (packet_length==0)
+    if (h->pkt_len == 0)
         return 1;
 
-    unsigned int num_written = phy->net->tt->cwrite((char*)(_payload+phy->padded_bytes),packet_length);
-    unsigned int packet_id = (_header[2] << 8) | _header[3];
+    unsigned int num_written = phy->net->tt->cwrite((char*)(_payload+phy->padded_bytes), h->pkt_len);
 
-    printf("Written %u bytes (PID %u) from %u",num_written,packet_id,source_id);
+    printf("Written %u bytes (PID %u) from %u", num_written, h->pkt_id, h->src);
     if (M>0)
         printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
     else
@@ -176,23 +188,22 @@ void PHY::prepareTXBurst(int npackets)
         {
             if(last_packet!=(tx_packet->packet_id))
             {
-                last_packet = tx_packet->packet_id;
-                unsigned char* packet_payload = tx_packet->payload;
-                dest_id = tx_packet->destination_id;
+                PHYHeader      header;
                 unsigned char* padded_packet = new unsigned char[packet_length+padded_bytes];
-                unsigned char header[8];
+                unsigned char* packet_payload = tx_packet->payload;
+
+                last_packet = tx_packet->packet_id;
+                dest_id = tx_packet->destination_id;
                 memmove(padded_packet+padded_bytes,packet_payload,packet_length);
-                padded_packet[0] = (packet_length>>8) & 0xff;
-                padded_packet[1] = (packet_length) & 0xff;
-                header[0] = dest_id;
-                header[1] = node_id;
-                header[2] = ((tx_packet->packet_id)>>8) & 0xff;
-                header[3] = (tx_packet->packet_id) & 0xff;
-                for(unsigned int ii=4;ii<8;ii++)
-                {
-                    header[ii] = 0&0xff;
-                }
-                mctx->UpdateData(0,header,padded_packet,padded_bytes+packet_length,MOD,FEC_INNER,FEC_OUTER);
+
+                memset(&header, 0, sizeof(header));
+
+                header.h.src = node_id;
+                header.h.dest = dest_id;
+                header.h.pkt_id = tx_packet->packet_id;
+                header.h.pkt_len = packet_length;
+
+                mctx->UpdateData(0,header.bytes,padded_packet,padded_bytes+packet_length,MOD,FEC_INNER,FEC_OUTER);
 
                 // populate usrp buffer
                 unsigned int mctx_buffer_length = 2;
