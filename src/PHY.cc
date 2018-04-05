@@ -57,10 +57,10 @@ union PHYHeader {
 
 PHY::PHY(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<NET> net,
-         unsigned int padded_bytes,
+         size_t min_packet_size,
          unsigned int rx_thread_pool_size)
   : node_id(net->node_id),
-    padded_bytes(padded_bytes),
+    min_packet_size(min_packet_size),
     t(t),
     net(net),
     rx_thread_pool_size(rx_thread_pool_size),
@@ -126,7 +126,7 @@ int rxCallback(
     if (h->pkt_len == 0)
         return 1;
 
-    unsigned int num_written = phy->net->tt->cwrite((char*)(_payload+phy->padded_bytes), h->pkt_len);
+    unsigned int num_written = phy->net->tt->cwrite((char*)(_payload), h->pkt_len);
 
     printf("Written %u bytes (PID %u) from %u", num_written, h->pkt_id, h->src);
     if (M>0)
@@ -189,12 +189,12 @@ void PHY::prepareTXBurst(int npackets)
             if(last_packet!=(tx_packet->packet_id))
             {
                 PHYHeader      header;
-                unsigned char* padded_packet = new unsigned char[packet_length+padded_bytes];
-                unsigned char* packet_payload = tx_packet->payload;
+                size_t         padded_packet_len = std::max((size_t) packet_length, min_packet_size);
+                unsigned char* padded_packet = new unsigned char[padded_packet_len];
 
                 last_packet = tx_packet->packet_id;
                 dest_id = tx_packet->destination_id;
-                memmove(padded_packet+padded_bytes,packet_payload,packet_length);
+                memmove(padded_packet,tx_packet->payload,packet_length);
 
                 memset(&header, 0, sizeof(header));
 
@@ -203,7 +203,7 @@ void PHY::prepareTXBurst(int npackets)
                 header.h.pkt_id = tx_packet->packet_id;
                 header.h.pkt_len = packet_length;
 
-                mctx->UpdateData(0,header.bytes,padded_packet,padded_bytes+packet_length,MOD,FEC_INNER,FEC_OUTER);
+                mctx->UpdateData(0,header.bytes,padded_packet,padded_packet_len,MOD,FEC_INNER,FEC_OUTER);
 
                 // populate usrp buffer
                 unsigned int mctx_buffer_length = 2;

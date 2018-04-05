@@ -22,7 +22,7 @@ class PHY
 public:
     PHY(std::shared_ptr<FloatIQTransport> t,
         std::shared_ptr<NET> net,
-        unsigned int padded_bytes,
+        size_t min_packet_size,
         unsigned int rx_thread_pool_size);
     ~PHY();
 
@@ -33,7 +33,7 @@ public:
 
     // other shite
     unsigned int node_id;
-    unsigned int padded_bytes;
+    size_t min_packet_size;
     std::shared_ptr<FloatIQTransport> t;
     std::shared_ptr<NET> net;
     std::unique_ptr<multichanneltx> mctx;

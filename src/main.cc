@@ -18,7 +18,7 @@ int main(int argc, char** argv)
     // make these things CLI configurable
     double center_freq = 1340e6;                // Hz
     double bandwidth = 5e6;                    // Hz
-    unsigned int padded_bytes = 512;            // bytes to add to each paylaod
+    unsigned int min_packet_size = 512;        // minimum radio packet size
     float tx_gain = 25;                         // dB
     float rx_gain = 25;                         // dB
     unsigned int node_id = 1;                   // must be in {1,...,num_nodes_in_net}
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 
     std::shared_ptr<FloatIQTransport> t(new USRP(addr, center_freq, bandwidth, "TX/RX", "RX2", tx_gain, rx_gain));
     std::shared_ptr<NET>              net(new NET("tap0",node_id,nodes_in_net));
-    std::shared_ptr<PHY>              phy(new PHY(t, net,padded_bytes,rx_thread_pool_size));
+    std::shared_ptr<PHY>              phy(new PHY(t, net,min_packet_size,rx_thread_pool_size));
     std::shared_ptr<MAC>              mac(new MAC(t, net, phy,frame_size,pad_size,packets_per_slot));
 
     // use main thread for tx_worker
