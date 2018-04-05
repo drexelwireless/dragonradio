@@ -1,5 +1,10 @@
 // DWSL - full radio stack
 
+#include <sys/types.h>
+#include <netinet/if_ether.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+
 #include "NET.hh"
 
 NET::NET(const std::string& tap_name, unsigned int node_id, const std::vector<unsigned char>& nodes_in_net)
@@ -28,9 +33,13 @@ void NET::readPackets()
     {
         unsigned char* data = new unsigned char[10000];
         unsigned int total = tt->cread((char*)data,10000);
+        struct ip* ip = reinterpret_cast<struct ip*>(data + sizeof(struct ether_header));
+
         if(total>0)
         {
-            dest_id = data[33];
+            // Destination node is last octet of the IP address by convention
+            dest_id = ntohl(ip->ip_dst.s_addr) & 0xff;
+
             if(dest_id>0)
             {
                 tx_packet_t tx_packet;
