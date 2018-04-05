@@ -31,6 +31,15 @@ unsigned char *SUBCAR = nullptr;
 /** Number of IQ samples per IQ buffer */
 const unsigned int tx_transport_size = 512;
 
+/** Modulation */
+const int MOD = LIQUID_MODEM_QPSK;
+
+/** Inner FEC */
+const int FEC_INNER = LIQUID_FEC_CONV_V27;
+
+/** Outer FEC */
+const int FEC_OUTER = LIQUID_FEC_RS_M8;
+
 PHY::PHY(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<NET> net,
          unsigned int padded_bytes,
@@ -183,7 +192,7 @@ void PHY::prepareTXBurst(int npackets)
                 {
                     header[ii] = 0&0xff;
                 }
-                mctx->UpdateData(0,header,padded_packet,padded_bytes+packet_length,LIQUID_MODEM_QPSK,LIQUID_FEC_CONV_V27,LIQUID_FEC_RS_M8);
+                mctx->UpdateData(0,header,padded_packet,padded_bytes+packet_length,MOD,FEC_INNER,FEC_OUTER);
 
                 // populate usrp buffer
                 unsigned int mctx_buffer_length = 2;
