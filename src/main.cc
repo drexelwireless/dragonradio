@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     float pad_size = .01;                       // inter slot dead time
     unsigned int packets_per_slot = 2;          // how many packets to stuff into each slot
-    const char* addr = NULL;
+    std::string addr;
 
     int ch;
 
