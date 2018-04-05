@@ -32,10 +32,10 @@ public:
     void burstRX(double when, size_t nsamps);
 
     // other shite
-    std::shared_ptr<FloatIQTransport> t;
-    std::shared_ptr<NET> net;
     unsigned int node_id;
     unsigned int padded_bytes;
+    std::shared_ptr<FloatIQTransport> t;
+    std::shared_ptr<NET> net;
     std::unique_ptr<multichanneltx> mctx;
     std::vector<std::unique_ptr<multichannelrx>> mcrx_list;
     /** Buffer holding modulated data */

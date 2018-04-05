@@ -32,14 +32,14 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<NET> net,
          unsigned int padded_bytes,
          unsigned int rx_thread_pool_size)
-  : t(t),
+  : node_id(net->node_id),
+    padded_bytes(padded_bytes),
+    t(t),
     net(net),
+    rx_thread_pool_size(rx_thread_pool_size),
     threads(rx_thread_pool_size),
     thread_joined(rx_thread_pool_size)
 {
-    this->node_id = net->node_id;
-    this->padded_bytes = padded_bytes;
-    this->rx_thread_pool_size = rx_thread_pool_size;
     this->tx_transport_size = 512;
 
     // modem setup (list is for parallel demodulation)
