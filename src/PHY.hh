@@ -40,7 +40,6 @@ public:
     std::vector<std::unique_ptr<multichannelrx>> mcrx_list;
     /** Buffer holding modulated data */
     std::vector<std::unique_ptr<IQBuffer>> tx_buf;
-    unsigned int tx_transport_size;
     unsigned int rx_thread_pool_size;
 
     std::vector<std::thread> threads;

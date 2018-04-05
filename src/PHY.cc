@@ -28,6 +28,9 @@ const unsigned int TP_LEN = 4;
 /** OFDM subcarrier allocation */
 unsigned char *SUBCAR = nullptr;
 
+/** Number of IQ samples per IQ buffer */
+const unsigned int tx_transport_size = 512;
+
 PHY::PHY(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<NET> net,
          unsigned int padded_bytes,
@@ -40,8 +43,6 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
     threads(rx_thread_pool_size),
     thread_joined(rx_thread_pool_size)
 {
-    this->tx_transport_size = 512;
-
     // modem setup (list is for parallel demodulation)
     mctx = std::unique_ptr<multichanneltx>(new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR));
 
