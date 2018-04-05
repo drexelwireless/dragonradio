@@ -115,59 +115,41 @@ int rxCallback(
     return 0;
 }
 
+void run_demod(multichannelrx& mcrx, std::unique_ptr<IQBuffer> usrp_double_buff)
+{
+    mcrx.Execute(&(*usrp_double_buff)[0], usrp_double_buff->size());
+}
+
 void PHY::burstRX(double when, size_t nsamps)
 {
     const size_t max_samps_per_packet = t->get_max_recv_samps_per_packet();
 
-    unsigned int ii;
-    for(ii=0;ii<rx_thread_pool_size;ii++)
-    {
+    for (unsigned int i = 0; i < rx_thread_pool_size; i++) {
         // init counter for samples and allocate double buffer
-        size_t uhd_num_delivered_samples = 0;
-        std::vector<std::complex<float> >* this_double_buff = new std::vector<std::complex<float> >;
+        size_t                    uhd_num_delivered_samples = 0;
+        std::unique_ptr<IQBuffer> rx_buf(new IQBuffer);
 
         t->recv_at(when);
 
-        while(uhd_num_delivered_samples<nsamps)
-        {
-            // create new vector to hold samps for this demod process
-            std::vector<std::complex<float> > this_rx_buff(max_samps_per_packet);
+        while (uhd_num_delivered_samples < nsamps) {
+            rx_buf->resize(uhd_num_delivered_samples + max_samps_per_packet);
 
-            size_t this_num_delivered_samples = t->recv(&this_rx_buff.front(), this_rx_buff.size());
-
-            for(unsigned int kk=0;kk<this_num_delivered_samples;kk++)
-            {
-                this_double_buff->push_back(this_rx_buff[kk]);
-            }
-
-            //this_double_buff.push_back(this_rx_buff);
-            uhd_num_delivered_samples += this_num_delivered_samples;
+            uhd_num_delivered_samples += t->recv(&(*rx_buf)[uhd_num_delivered_samples], max_samps_per_packet);
         }
 
-        if(!thread_joined[ii])
-        {
-            threads[ii].join();
-            thread_joined[ii] = true;
-        }
+        rx_buf->resize(uhd_num_delivered_samples);
 
-        threads[ii] = std::thread(&PHY::run_demod,this,this_double_buff,ii);
-        thread_joined[ii] = false;
-    }
-}
+        if (!thread_joined[i])
+            threads[i].join();
 
-void PHY::run_demod(std::vector<std::complex<float> >* usrp_double_buff,unsigned int thread_idx)
-{
-    for(std::vector<std::complex<float> >::iterator double_it=usrp_double_buff->begin();double_it!=usrp_double_buff->end();double_it++)
-    {
-        std::complex<float> usrp_sample = *double_it;
-        mcrx_list.at(thread_idx)->Execute(&usrp_sample,1);
+        thread_joined[i] = false;
+        threads[i] = std::thread(run_demod, std::ref(*(mcrx_list[i])), std::move(rx_buf));
     }
-    delete usrp_double_buff;
 }
 
 void PHY::prepareTXBurst(int npackets)
 {
-    tx_double_buff.clear();
+    tx_buf.clear();
     unsigned int packet_count = 0;
     int last_packet = -1;
     while((packet_count<npackets) && (net->tx_packets.size()>0))
@@ -204,12 +186,12 @@ void PHY::prepareTXBurst(int npackets)
 
                 // populate usrp buffer
                 unsigned int mctx_buffer_length = 2;
-                std::complex<float> mctx_buffer[mctx_buffer_length];
-                std::vector<std::complex<float> >* usrp_tx_buff = new std::vector<std::complex<float> >(tx_transport_size);
+                std::vector<std::complex<float>> mctx_buffer(mctx_buffer_length);
+                std::unique_ptr<IQBuffer> usrp_tx_buff(new IQBuffer(tx_transport_size));
                 unsigned int num_generated_samples=0;
                 while(!mctx->IsChannelReadyForData(0))
                 {
-                    mctx->GenerateSamples(mctx_buffer);
+                    mctx->GenerateSamples(&(mctx_buffer[0]));
                     for(unsigned int jj=0;jj<mctx_buffer_length;jj++)
                     {
                         float scalar = 0.2f;
@@ -218,14 +200,14 @@ void PHY::prepareTXBurst(int npackets)
                     }
                     if(num_generated_samples==tx_transport_size)
                     {
-                        tx_double_buff.push_back(usrp_tx_buff);
-                        usrp_tx_buff = new std::vector<std::complex<float> >(tx_transport_size);
+                        tx_buf.push_back(std::move(usrp_tx_buff));
+                        usrp_tx_buff.reset(new IQBuffer(tx_transport_size));
                         num_generated_samples = 0;
                     }
                 }
                 if(num_generated_samples>0)
                 {
-                    tx_double_buff.push_back(usrp_tx_buff);
+                    tx_buf.push_back(std::move(usrp_tx_buff));
                     num_generated_samples = 0;
                 }
                 delete[] padded_packet;
@@ -238,19 +220,18 @@ void PHY::prepareTXBurst(int npackets)
 void PHY::burstTX(double when)
 {
     // tx timed burst
-    if(tx_double_buff.size()>0)
-    {
+    if (tx_buf.size() > 0) {
         t->start_burst();
 
-        for(std::vector<std::vector<std::complex<float> >* >::iterator it=tx_double_buff.begin();it!=tx_double_buff.end();it++)
-        {
+        for(auto it = tx_buf.begin(); it != tx_buf.end(); it++) {
+            if (std::next(it) == tx_buf.end())
+                t->end_burst();
+
             // tx that packet (each buffer in the double buff is one packet)
             t->send(when, &((*it)->front()),(*it)->size());
-            delete *it;
         }
 
         // Clear buffer
-        t->end_burst();
-        t->send(when, NULL, 0);
+        tx_buf.clear();
     }
 }

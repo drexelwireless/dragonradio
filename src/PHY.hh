@@ -15,6 +15,8 @@
 #include "multichanneltx.h"
 #include "USRP.hh"
 
+typedef std::vector<std::complex<float>> IQBuffer;
+
 class PHY
 {
 public:
@@ -36,16 +38,15 @@ public:
     unsigned int padded_bytes;
     std::unique_ptr<multichanneltx> mctx;
     std::vector<std::unique_ptr<multichannelrx>> mcrx_list;
-    std::vector<std::vector<std::complex<float> >* > tx_double_buff;
+    /** Buffer holding modulated data */
+    std::vector<std::unique_ptr<IQBuffer>> tx_buf;
     unsigned int tx_transport_size;
     unsigned int rx_thread_pool_size;
-
 
     std::vector<std::thread> threads;
     std::vector<bool>        thread_joined;
 
     void rx_worker(void);
-    void run_demod(std::vector<std::complex<float> >* usrp_double_buff,unsigned int thread_idx);
 };
 
 #endif /* PHY_H_ */
