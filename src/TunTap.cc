@@ -15,13 +15,14 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "Node.hh"
 #include "TunTap.hh"
 #include "Util.hh"
 
 #define IP_FMT  "10.10.10.%d"
 #define MAC_FMT "c6:ff:ff:ff:%02x"
 
-TunTap::TunTap(const std::string& tap, unsigned int node_id, const std::vector<unsigned char>& nodes_in_net)
+TunTap::TunTap(const std::string& tap, NodeId node_id, const std::vector<unsigned char>& nodes_in_net)
     : persistent_interface(true), tap(tap), node_id(node_id)
 {
     persistent_interface = false;

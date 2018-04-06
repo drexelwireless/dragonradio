@@ -8,6 +8,8 @@
 #include <thread>
 #include <stdio.h>
 
+#include "Node.hh"
+
 typedef struct
 {
     unsigned int packet_id;
@@ -21,14 +23,14 @@ class NET
 {
     public:
         // functions
-        NET(const std::string& tap_name, unsigned int node_id, const std::vector<unsigned char>& nodes_in_net);
+        NET(const std::string& tap_name, NodeId node_id, const std::vector<unsigned char>& nodes_in_net);
         ~NET();
         void readPackets();
         tx_packet_t* get_next_packet();
 
         // other shite
         std::queue<tx_packet_t> tx_packets;
-        unsigned int node_id;
+        NodeId node_id;
         TunTap* tt;
         bool continue_reading;
         std::thread readThread;

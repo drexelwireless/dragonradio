@@ -11,6 +11,7 @@
 #include <fstream>
 
 #include "NET.hh"
+#include "Node.hh"
 #include "multichannelrx.h"
 #include "multichanneltx.h"
 #include "USRP.hh"
@@ -32,7 +33,7 @@ public:
     void burstRX(double when, size_t nsamps);
 
     // other shite
-    unsigned int node_id;
+    NodeId node_id;
     size_t min_packet_size;
     std::shared_ptr<FloatIQTransport> t;
     std::shared_ptr<NET> net;
