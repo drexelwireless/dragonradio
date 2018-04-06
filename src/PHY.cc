@@ -40,9 +40,6 @@ const int FEC_INNER = LIQUID_FEC_CONV_V27;
 /** Outer FEC */
 const int FEC_OUTER = LIQUID_FEC_RS_M8;
 
-typedef uint8_t NodeId;
-typedef uint16_t PacketId;
-
 struct Header {
     NodeId   src;
     NodeId   dest;
@@ -174,33 +171,27 @@ void PHY::prepareTXBurst(unsigned int npackets)
     tx_buf.clear();
     unsigned int packet_count = 0;
 
-    while((packet_count<npackets) && (net->tx_packets.size()>0))
-    //for(packet_count=0;packet_count<packets_per_slot;packet_count++)
-    {
+    while ((packet_count < npackets) && (net->tx_packets.size() > 0)) {
+        std::unique_ptr<RadioPacket> pkt = net->get_next_packet();
+
         printf("Got Packet\n");
 
-        // construct next header and padded payload
-        unsigned int packet_length;
-        unsigned int dest_id;
-        tx_packet_t* tx_packet = net->get_next_packet();
-        packet_length = tx_packet->payload_size;
-        if(packet_length>0)
-        {
-            PHYHeader      header;
-            size_t         padded_packet_len = std::max((size_t) packet_length, min_packet_size);
-            unsigned char* padded_packet = new unsigned char[padded_packet_len];
-
-            dest_id = tx_packet->destination_id;
-            memmove(padded_packet,tx_packet->payload,packet_length);
+        if (pkt) {
+            PHYHeader header;
+            size_t    padded_payload_len = std::max((size_t) pkt->payload_len, min_packet_size);
 
             memset(&header, 0, sizeof(header));
 
             header.h.src = node_id;
-            header.h.dest = dest_id;
-            header.h.pkt_id = tx_packet->packet_id;
-            header.h.pkt_len = packet_length;
+            header.h.dest = pkt->dest;
+            header.h.pkt_id = pkt->packet_id;
+            header.h.pkt_len = pkt->payload_len;
 
-            mctx->UpdateData(0,header.bytes,padded_packet,padded_packet_len,MOD,FEC_INNER,FEC_OUTER);
+            // XXX We assume that the radio packet's buffer has at least
+            // min_packet_size bytes available. This is true because we set the
+            // size of this buffer to 2000 when we allocate the RadioPacket in
+            // NET.cc.
+            mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], padded_payload_len, MOD, FEC_INNER, FEC_OUTER);
 
             // populate usrp buffer
             unsigned int mctx_buffer_length = 2;
@@ -228,8 +219,6 @@ void PHY::prepareTXBurst(unsigned int npackets)
                 tx_buf.push_back(std::move(usrp_tx_buff));
                 num_generated_samples = 0;
             }
-            delete[] padded_packet;
-            delete tx_packet;
         }
     }
 }
