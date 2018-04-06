@@ -169,11 +169,11 @@ void PHY::burstRX(double when, size_t nsamps)
     }
 }
 
-void PHY::prepareTXBurst(int npackets)
+void PHY::prepareTXBurst(unsigned int npackets)
 {
     tx_buf.clear();
     unsigned int packet_count = 0;
-    int last_packet = -1;
+
     while((packet_count<npackets) && (net->tx_packets.size()>0))
     //for(packet_count=0;packet_count<packets_per_slot;packet_count++)
     {
@@ -186,54 +186,50 @@ void PHY::prepareTXBurst(int npackets)
         packet_length = tx_packet->payload_size;
         if(packet_length>0)
         {
-            if(last_packet!=(tx_packet->packet_id))
+            PHYHeader      header;
+            size_t         padded_packet_len = std::max((size_t) packet_length, min_packet_size);
+            unsigned char* padded_packet = new unsigned char[padded_packet_len];
+
+            dest_id = tx_packet->destination_id;
+            memmove(padded_packet,tx_packet->payload,packet_length);
+
+            memset(&header, 0, sizeof(header));
+
+            header.h.src = node_id;
+            header.h.dest = dest_id;
+            header.h.pkt_id = tx_packet->packet_id;
+            header.h.pkt_len = packet_length;
+
+            mctx->UpdateData(0,header.bytes,padded_packet,padded_packet_len,MOD,FEC_INNER,FEC_OUTER);
+
+            // populate usrp buffer
+            unsigned int mctx_buffer_length = 2;
+            std::vector<std::complex<float>> mctx_buffer(mctx_buffer_length);
+            std::unique_ptr<IQBuffer> usrp_tx_buff(new IQBuffer(tx_transport_size));
+            unsigned int num_generated_samples=0;
+            while(!mctx->IsChannelReadyForData(0))
             {
-                PHYHeader      header;
-                size_t         padded_packet_len = std::max((size_t) packet_length, min_packet_size);
-                unsigned char* padded_packet = new unsigned char[padded_packet_len];
-
-                last_packet = tx_packet->packet_id;
-                dest_id = tx_packet->destination_id;
-                memmove(padded_packet,tx_packet->payload,packet_length);
-
-                memset(&header, 0, sizeof(header));
-
-                header.h.src = node_id;
-                header.h.dest = dest_id;
-                header.h.pkt_id = tx_packet->packet_id;
-                header.h.pkt_len = packet_length;
-
-                mctx->UpdateData(0,header.bytes,padded_packet,padded_packet_len,MOD,FEC_INNER,FEC_OUTER);
-
-                // populate usrp buffer
-                unsigned int mctx_buffer_length = 2;
-                std::vector<std::complex<float>> mctx_buffer(mctx_buffer_length);
-                std::unique_ptr<IQBuffer> usrp_tx_buff(new IQBuffer(tx_transport_size));
-                unsigned int num_generated_samples=0;
-                while(!mctx->IsChannelReadyForData(0))
+                mctx->GenerateSamples(&(mctx_buffer[0]));
+                for(unsigned int jj=0;jj<mctx_buffer_length;jj++)
                 {
-                    mctx->GenerateSamples(&(mctx_buffer[0]));
-                    for(unsigned int jj=0;jj<mctx_buffer_length;jj++)
-                    {
-                        float scalar = 0.2f;
-                        usrp_tx_buff->at(num_generated_samples) = (scalar*mctx_buffer[jj]);
-                        num_generated_samples++;
-                    }
-                    if(num_generated_samples==tx_transport_size)
-                    {
-                        tx_buf.push_back(std::move(usrp_tx_buff));
-                        usrp_tx_buff.reset(new IQBuffer(tx_transport_size));
-                        num_generated_samples = 0;
-                    }
+                    float scalar = 0.2f;
+                    usrp_tx_buff->at(num_generated_samples) = (scalar*mctx_buffer[jj]);
+                    num_generated_samples++;
                 }
-                if(num_generated_samples>0)
+                if(num_generated_samples==tx_transport_size)
                 {
                     tx_buf.push_back(std::move(usrp_tx_buff));
+                    usrp_tx_buff.reset(new IQBuffer(tx_transport_size));
                     num_generated_samples = 0;
                 }
-                delete[] padded_packet;
-                delete tx_packet;
             }
+            if(num_generated_samples>0)
+            {
+                tx_buf.push_back(std::move(usrp_tx_buff));
+                num_generated_samples = 0;
+            }
+            delete[] padded_packet;
+            delete tx_packet;
         }
     }
 }

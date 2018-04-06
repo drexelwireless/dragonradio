@@ -26,7 +26,7 @@ public:
         unsigned int rx_thread_pool_size);
     ~PHY();
 
-    void prepareTXBurst(int npackets);
+    void prepareTXBurst(unsigned int npackets);
     void burstTX(double when);
 
     void burstRX(double when, size_t nsamps);
