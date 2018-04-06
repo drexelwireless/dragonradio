@@ -63,9 +63,10 @@ TunTap::TunTap(const std::string& tap, unsigned int node_id, const std::vector<u
     add_arp_entries(nodes_in_net);
 }
 
-int TunTap::cwrite(char *buf, int n)
+ssize_t TunTap::cwrite(void *buf, size_t n)
 {
-    int nwrite;
+    ssize_t nwrite;
+
     if ((nwrite = write(tap_fd, buf, n)) < 0) {
         perror("Writing data");
         exit(1);
@@ -73,7 +74,7 @@ int TunTap::cwrite(char *buf, int n)
     return nwrite;
 }
 
-int TunTap::cread(char *buf, int n)
+ssize_t TunTap::cread(void *buf, size_t n)
 {
     fd_set tx_set;
     struct timeval timeout = {1,0}; //1 second timeoout
@@ -86,7 +87,7 @@ int TunTap::cread(char *buf, int n)
         exit(1);
     }
 
-    uint16_t nread = 0;
+    ssize_t nread = 0;
 
     if (FD_ISSET(tap_fd, &tx_set)) {
         if ((nread = read(tap_fd, buf, n)) < 0) {

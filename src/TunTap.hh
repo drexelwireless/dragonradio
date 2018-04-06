@@ -14,8 +14,8 @@ class TunTap
 public:
     TunTap(const std::string& tap, unsigned int node_id, const std::vector<unsigned char>& nodes_in_net);
 
-    int cwrite(char *buf, int n);
-    int cread(char *buf, int n);
+    ssize_t cwrite(void *buf, size_t n);
+    ssize_t cread(void *buf, size_t n);
     int tap_alloc(std::string& dev, int flags);
     void close_interface();
     void add_arp_entries(const std::vector<unsigned char>& nodes_in_net);
