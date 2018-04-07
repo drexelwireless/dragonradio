@@ -69,6 +69,15 @@ int main(int argc, char** argv)
         nodes_in_net[i] = i+1;
     }
 
+    // See:
+    //   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
+    // Not applying recommended TX/RX gains yet...
+    if (x310) {
+        center_freq = 2.4e9;
+        //tx_gain = 23;
+        //rx_gain = 8;
+    }
+
     std::shared_ptr<FloatIQTransport> t(new USRP(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain));
     std::shared_ptr<NET>              net(new NET("tap0",node_id,nodes_in_net));
     std::shared_ptr<PHY>              phy(new PHY(t, net, bandwidth, min_packet_size, rx_thread_pool_size));
