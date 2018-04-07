@@ -111,9 +111,14 @@ size_t USRP::recv(const std::complex<float>* buf, size_t count)
 {
     uhd::rx_metadata_t rx_md;
 
-    return usrp->get_device()->recv(buf, count, rx_md,
-        uhd::io_type_t::COMPLEX_FLOAT32,
-        uhd::device::RECV_MODE_ONE_PACKET);
+    count = usrp->get_device()->recv(buf, count, rx_md,
+                uhd::io_type_t::COMPLEX_FLOAT32,
+                uhd::device::RECV_MODE_ONE_PACKET);
+
+    if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
+
+    return count;
 }
 
 void USRP::start_burst(void)
