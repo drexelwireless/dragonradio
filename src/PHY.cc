@@ -54,6 +54,7 @@ union PHYHeader {
 
 PHY::PHY(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<NET> net,
+         double bandwidth,
          size_t min_packet_size,
          unsigned int rx_thread_pool_size)
   : node_id(net->node_id),
@@ -64,6 +65,10 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
     threads(rx_thread_pool_size),
     thread_joined(rx_thread_pool_size)
 {
+    // MultiChannel TX/RX requires oversampling by a factor of 2
+    t->set_tx_rate(2*bandwidth);
+    t->set_rx_rate(2*bandwidth);
+
     // modem setup (list is for parallel demodulation)
     mctx = std::unique_ptr<multichanneltx>(new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR));
 

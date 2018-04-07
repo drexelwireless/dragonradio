@@ -5,7 +5,6 @@
 
 USRP::USRP(const std::string& addr,
            double center_freq,
-           double bandwidth,
            const std::string& tx_ant,
            const std::string& rx_ant,
            float tx_gain,
@@ -20,9 +19,6 @@ USRP::USRP(const std::string& addr,
 
     usrp->set_tx_freq(center_freq);
     usrp->set_rx_freq(center_freq);
-
-    usrp->set_tx_rate(2*bandwidth);
-    usrp->set_rx_rate(2*bandwidth);
 
     // Set USRP time relative to system NTP time
     timeval tv;
@@ -54,9 +50,19 @@ double USRP::get_tx_rate(void)
     return usrp->get_tx_rate();
 }
 
+void USRP::set_tx_rate(double rate)
+{
+    usrp->set_tx_rate(rate);
+}
+
 double USRP::get_rx_rate(void)
 {
     return usrp->get_rx_rate();
+}
+
+void USRP::set_rx_rate(double rate)
+{
+    usrp->set_rx_rate(rate);
 }
 
 size_t USRP::get_max_send_samps_per_packet(void)

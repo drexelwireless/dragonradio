@@ -22,6 +22,7 @@ class PHY
 public:
     PHY(std::shared_ptr<FloatIQTransport> t,
         std::shared_ptr<NET> net,
+        double bandwidth,
         size_t min_packet_size,
         unsigned int rx_thread_pool_size);
     ~PHY();

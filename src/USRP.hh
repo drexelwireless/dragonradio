@@ -11,7 +11,6 @@ class USRP : public FloatIQTransport
 public:
     USRP(const std::string& addr,
          double center_freq,
-         double bandwidth,
          const std::string& tx_ant,
          const std::string& rx_ant,
          float tx_gain,
@@ -21,7 +20,9 @@ public:
     double get_time_now(void);
 
     double get_tx_rate(void);
+    void   set_tx_rate(double rate);
     double get_rx_rate(void);
+    void   set_rx_rate(double rate);
 
     size_t get_max_send_samps_per_packet(void);
     size_t get_max_recv_samps_per_packet(void);

@@ -13,7 +13,9 @@ public:
     virtual double get_time_now(void) = 0;
 
     virtual double get_tx_rate(void) = 0;
+    virtual void   set_tx_rate(double rate) = 0;
     virtual double get_rx_rate(void) = 0;
+    virtual void   set_rx_rate(double rate) = 0;
 
     virtual size_t get_max_send_samps_per_packet(void) = 0;
     virtual size_t get_max_recv_samps_per_packet(void) = 0;
