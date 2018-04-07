@@ -4,12 +4,13 @@
 #include "USRP.hh"
 
 USRP::USRP(const std::string& addr,
+           bool x310,
            double center_freq,
            const std::string& tx_ant,
            const std::string& rx_ant,
            float tx_gain,
            float rx_gain)
-  : usrp(uhd::usrp::multi_usrp::make(addr))
+  : usrp(uhd::usrp::multi_usrp::make(addr)), x310(x310)
 {
     usrp->set_tx_antenna(tx_ant);
     usrp->set_rx_antenna(rx_ant);
@@ -17,8 +18,25 @@ USRP::USRP(const std::string& addr,
     usrp->set_tx_gain(tx_gain);
     usrp->set_rx_gain(rx_gain);
 
-    usrp->set_tx_freq(center_freq);
-    usrp->set_rx_freq(center_freq);
+    // See:
+    //   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
+    if (x310) {
+        double lo_offset = -42.0e6;
+        usrp->set_tx_freq(uhd::tune_request_t(center_freq, lo_offset));
+    } else
+        usrp->set_tx_freq(center_freq);
+
+    if (x310) {
+        double lo_offset = +42.0e6;
+        usrp->set_rx_freq(uhd::tune_request_t(center_freq, lo_offset));
+    } else
+        usrp->set_rx_freq(center_freq);
+
+    // See:
+    //   https://files.ettus.com/manual/page_general.html
+    while (not usrp->get_rx_sensor("lo_locked").to_bool())
+        //sleep for a short time in milliseconds
+        usleep(10);
 
     // Set USRP time relative to system NTP time
     timeval tv;

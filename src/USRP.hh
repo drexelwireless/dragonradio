@@ -10,6 +10,7 @@ class USRP : public FloatIQTransport
 {
 public:
     USRP(const std::string& addr,
+         bool x310,
          double center_freq,
          const std::string& tx_ant,
          const std::string& rx_ant,
@@ -36,6 +37,7 @@ public:
 
 private:
     uhd::usrp::multi_usrp::sptr usrp;
+    bool                        x310;
     uhd::tx_metadata_t          tx_md;
     uhd::tx_streamer::sptr      tx_stream;
     uhd::rx_streamer::sptr      rx_stream;

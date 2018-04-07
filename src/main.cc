@@ -27,12 +27,21 @@ int main(int argc, char** argv)
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     float pad_size = .01;                       // inter slot dead time
     unsigned int packets_per_slot = 2;          // how many packets to stuff into each slot
+    bool x310 = true;                           // is this an x310
     std::string addr;
 
     int ch;
 
-    while ((ch = getopt(argc, argv, "a:n:")) != -1) {
+    while ((ch = getopt(argc, argv, "23a:n:")) != -1) {
       switch (ch) {
+        case '2':
+          x310 = false;
+          break;
+
+        case '3':
+          x310 = true;
+          break;
+
         case 'a':
           addr = optarg;
           break;
@@ -60,7 +69,7 @@ int main(int argc, char** argv)
         nodes_in_net[i] = i+1;
     }
 
-    std::shared_ptr<FloatIQTransport> t(new USRP(addr, center_freq, "TX/RX", "RX2", tx_gain, rx_gain));
+    std::shared_ptr<FloatIQTransport> t(new USRP(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain));
     std::shared_ptr<NET>              net(new NET("tap0",node_id,nodes_in_net));
     std::shared_ptr<PHY>              phy(new PHY(t, net, bandwidth, min_packet_size, rx_thread_pool_size));
     std::shared_ptr<MAC>              mac(new MAC(t, net, phy,frame_size,pad_size,packets_per_slot));
