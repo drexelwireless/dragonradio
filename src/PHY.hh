@@ -10,13 +10,12 @@
 #include <thread>
 #include <fstream>
 
+#include "ModPacket.hh"
 #include "NET.hh"
 #include "Node.hh"
 #include "multichannelrx.h"
 #include "multichanneltx.h"
 #include "USRP.hh"
-
-typedef std::vector<std::complex<float>> IQBuffer;
 
 class PHY
 {
@@ -26,6 +25,8 @@ public:
         size_t min_packet_size,
         unsigned int rx_thread_pool_size);
     ~PHY();
+
+    std::unique_ptr<ModPacket> modPkt(std::unique_ptr<RadioPacket> pkt);
 
     void prepareTXBurst(unsigned int npackets);
     void burstTX(double when);

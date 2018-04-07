@@ -166,6 +166,55 @@ void PHY::burstRX(double when, size_t nsamps)
     }
 }
 
+std::unique_ptr<ModPacket> PHY::modPkt(std::unique_ptr<RadioPacket> pkt)
+{
+    std::unique_ptr<ModPacket> mpkt(new ModPacket);
+    PHYHeader                  header;
+    size_t                     len = std::max((size_t) pkt->payload_len, min_packet_size);
+
+    memset(&header, 0, sizeof(header));
+
+    header.h.src = node_id;
+    header.h.dest = pkt->dest;
+    header.h.pkt_id = pkt->packet_id;
+    header.h.pkt_len = pkt->payload_len;
+
+    // XXX We assume that the radio packet's buffer has at least min_packet_size
+    // bytes available. This is true because we set the size of this buffer to
+    // 2000 when we allocate the RadioPacket in NET.cc.
+    mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], len, MOD, FEC_INNER, FEC_OUTER);
+
+    const float               scalar = 0.2f;
+    const size_t              BUFLEN = 2;
+    std::complex<float>       buf[BUFLEN];
+    size_t                    nsamples = 0;
+    std::unique_ptr<IQBuffer> iqbuf(new IQBuffer(tx_transport_size));
+
+    while (!mctx->IsChannelReadyForData(0)) {
+        mctx->GenerateSamples(buf);
+
+        for (unsigned int i = 0; i < BUFLEN; i++)
+            (*iqbuf)[nsamples++] = scalar*buf[i];
+
+        if (nsamples == tx_transport_size) {
+            iqbuf->resize(nsamples);
+
+            mpkt->appendSamples(std::move(iqbuf));
+
+            iqbuf.reset(new IQBuffer(tx_transport_size));
+            nsamples = 0;
+        }
+    }
+
+    if (nsamples > 0) {
+        iqbuf->resize(nsamples);
+
+        mpkt->appendSamples(std::move(iqbuf));
+    }
+
+    return mpkt;
+}
+
 void PHY::prepareTXBurst(unsigned int npackets)
 {
     tx_buf.clear();
@@ -177,48 +226,12 @@ void PHY::prepareTXBurst(unsigned int npackets)
         printf("Got Packet\n");
 
         if (pkt) {
-            PHYHeader header;
-            size_t    padded_payload_len = std::max((size_t) pkt->payload_len, min_packet_size);
+            std::unique_ptr<ModPacket> mpkt = modPkt(std::move(pkt));
 
-            memset(&header, 0, sizeof(header));
-
-            header.h.src = node_id;
-            header.h.dest = pkt->dest;
-            header.h.pkt_id = pkt->packet_id;
-            header.h.pkt_len = pkt->payload_len;
-
-            // XXX We assume that the radio packet's buffer has at least
-            // min_packet_size bytes available. This is true because we set the
-            // size of this buffer to 2000 when we allocate the RadioPacket in
-            // NET.cc.
-            mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], padded_payload_len, MOD, FEC_INNER, FEC_OUTER);
-
-            // populate usrp buffer
-            unsigned int mctx_buffer_length = 2;
-            std::vector<std::complex<float>> mctx_buffer(mctx_buffer_length);
-            std::unique_ptr<IQBuffer> usrp_tx_buff(new IQBuffer(tx_transport_size));
-            unsigned int num_generated_samples=0;
-            while(!mctx->IsChannelReadyForData(0))
-            {
-                mctx->GenerateSamples(&(mctx_buffer[0]));
-                for(unsigned int jj=0;jj<mctx_buffer_length;jj++)
-                {
-                    float scalar = 0.2f;
-                    usrp_tx_buff->at(num_generated_samples) = (scalar*mctx_buffer[jj]);
-                    num_generated_samples++;
-                }
-                if(num_generated_samples==tx_transport_size)
-                {
-                    tx_buf.push_back(std::move(usrp_tx_buff));
-                    usrp_tx_buff.reset(new IQBuffer(tx_transport_size));
-                    num_generated_samples = 0;
-                }
-            }
-            if(num_generated_samples>0)
-            {
-                tx_buf.push_back(std::move(usrp_tx_buff));
-                num_generated_samples = 0;
-            }
+            if (mpkt)
+                tx_buf.insert(tx_buf.end(),
+                              std::make_move_iterator(mpkt->samples.begin()),
+                              std::make_move_iterator(mpkt->samples.end()));
         }
     }
 }
