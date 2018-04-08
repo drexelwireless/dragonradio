@@ -53,14 +53,16 @@ int liquidRxCallback(unsigned char *  _header,
 PHY::PHY(std::shared_ptr<IQTransport> t,
          std::shared_ptr<NET> net,
          double bandwidth,
-         size_t min_packet_size,
-         unsigned int rx_thread_pool_size)
+         size_t minPacketSize,
+         unsigned int rxThreadPoolSize)
   : t(t),
     net(net),
-    node_id(net->getNodeId()),
-    min_packet_size(min_packet_size),
-    threads(rx_thread_pool_size),
-    thread_joined(rx_thread_pool_size)
+    nodeId(net->getNodeId()),
+    minPacketSize(minPacketSize),
+    done(false),
+    nextThread(0),
+    threads(rxThreadPoolSize),
+    threadQueues(rxThreadPoolSize)
 {
     // MultiChannel TX/RX requires oversampling by a factor of 2
     t->set_tx_rate(2*bandwidth);
@@ -69,20 +71,18 @@ PHY::PHY(std::shared_ptr<IQTransport> t,
     // modem setup (list is for parallel demodulation)
     mctx = std::unique_ptr<multichanneltx>(new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR));
 
-    for (unsigned int i = 0; i < rx_thread_pool_size; i++) {
+    for (unsigned int i = 0; i < rxThreadPoolSize; i++) {
         framesync_callback callback[1] = { liquidRxCallback };
         void               *userdata[1] = { this };
 
         std::unique_ptr<multichannelrx> mcrx(new multichannelrx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback));
 
-        mcrx_list.push_back(std::move(mcrx));
+        mcrxs.push_back(std::move(mcrx));
     }
 
-    // keep track of demod threads
-    for (unsigned int i = 0; i < rx_thread_pool_size; i++)
-        thread_joined[i] = true;
-
-    next_thread = 0;
+    // Initialize workers and their queues
+    for (unsigned int i = 0; i < rxThreadPoolSize; i++)
+        threads[i] = std::thread(&PHY::demodWorker, this, std::ref(*(mcrxs[i])), std::ref(threadQueues[i]));
 }
 
 PHY::~PHY()
@@ -91,28 +91,26 @@ PHY::~PHY()
 
 void PHY::join(void)
 {
-    for (unsigned int i = 0; i < threads.size(); ++i) {
-        if (!thread_joined[i]) {
-            threads[i].join();
-            thread_joined[i] = true;
-        }
-    }
+    done = true;
+
+    for (unsigned int i = 0; i < threads.size(); ++i)
+        threads[i].join();
 }
 
 std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
 {
     std::unique_ptr<ModPacket> mpkt(new ModPacket);
     PHYHeader                  header;
-    size_t                     len = std::max((size_t) pkt->payload_len, min_packet_size);
+    size_t                     len = std::max((size_t) pkt->payload_len, minPacketSize);
 
     memset(&header, 0, sizeof(header));
 
-    header.h.src = node_id;
+    header.h.src = nodeId;
     header.h.dest = pkt->dest;
     header.h.pkt_id = pkt->packet_id;
     header.h.pkt_len = pkt->payload_len;
 
-    // XXX We assume that the radio packet's buffer has at least min_packet_size
+    // XXX We assume that the radio packet's buffer has at least minPacketSize
     // bytes available. This is true because we set the size of this buffer to
     // 2000 when we allocate the RadioPacket in NET.cc.
     mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], len, MOD, FEC_INNER, FEC_OUTER);
@@ -148,21 +146,24 @@ std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
     return mpkt;
 }
 
-void run_demod(multichannelrx& mcrx, std::unique_ptr<IQBuffer> usrp_double_buff)
-{
-    mcrx.Execute(&(*usrp_double_buff)[0], usrp_double_buff->size());
-}
-
 void PHY::demodulate(std::unique_ptr<IQBuffer> buf)
 {
-    if (!thread_joined[next_thread]) {
-        threads[next_thread].join();
-        thread_joined[next_thread] = true;
-    }
+    threadQueues[nextThread].push(std::move(buf));
+    nextThread = (nextThread + 1) % threads.size();
+}
 
-    thread_joined[next_thread] = false;
-    threads[next_thread] = std::thread(run_demod, std::ref(*(mcrx_list[next_thread])), std::move(buf));
-    next_thread = (next_thread + 1) % threads.size();
+void PHY::demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<IQBuffer>>& q)
+{
+    while (!done) {
+        std::unique_ptr<IQBuffer> buf;
+
+        q.pop(buf);
+
+        if (not buf)
+            continue;
+
+        mcrx.Execute(&(*buf)[0], buf->size());
+    }
 }
 
 int liquidRxCallback(unsigned char *  _header,

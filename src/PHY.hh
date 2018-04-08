@@ -15,6 +15,7 @@
 #include "Node.hh"
 #include "multichannelrx.h"
 #include "multichanneltx.h"
+#include "SafeQueue.hh"
 #include "USRP.hh"
 
 class PHY
@@ -23,8 +24,8 @@ public:
     PHY(std::shared_ptr<IQTransport> t,
         std::shared_ptr<NET> net,
         double bandwidth,
-        size_t min_packet_size,
-        unsigned int rx_thread_pool_size);
+        size_t minPacketSize,
+        unsigned int rxThreadPoolSize);
     ~PHY();
 
     void join(void);
@@ -47,15 +48,26 @@ private:
     std::shared_ptr<IQTransport> t;
     std::shared_ptr<NET>         net;
 
-    NodeId node_id;
-    size_t min_packet_size;
+    NodeId nodeId;
+    size_t minPacketSize;
 
     std::unique_ptr<multichanneltx>              mctx;
-    std::vector<std::unique_ptr<multichannelrx>> mcrx_list;
+    std::vector<std::unique_ptr<multichannelrx>> mcrxs;
 
+    /** Flag indicating if we should stop processing packets */
+    bool done;
+
+    /** Next thread to hand work to */
+    int nextThread;
+
+    /** Demodulation threads */
     std::vector<std::thread> threads;
-    std::vector<bool>        thread_joined;
-    int                      next_thread;
+
+    /** Demodulation threads' queues holding data to demodulate */
+    std::vector<SafeQueue<std::unique_ptr<IQBuffer>>> threadQueues;
+
+    /** Demodulation worker */
+    void demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<IQBuffer>>& q);
 };
 
 #endif /* PHY_H_ */
