@@ -57,7 +57,7 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
          double bandwidth,
          size_t min_packet_size,
          unsigned int rx_thread_pool_size)
-  : node_id(net->node_id),
+  : node_id(net->getNodeId()),
     min_packet_size(min_packet_size),
     t(t),
     net(net),
@@ -121,13 +121,13 @@ int rxCallback(
 
     // let first header byte be node id
     // let second header byte be source id
-    if (h->dest != phy->net->node_id)
+    if (h->dest != phy->net->getNodeId())
         return 0;
 
     if (h->pkt_len == 0)
         return 1;
 
-    unsigned int num_written = phy->net->tt->cwrite((char*)(_payload), h->pkt_len);
+    unsigned int num_written = phy->net->sendPacket(_payload, h->pkt_len);
 
     printf("Written %u bytes (PID %u) from %u", num_written, h->pkt_id, h->src);
     if (M>0)
@@ -225,19 +225,20 @@ void PHY::prepareTXBurst(unsigned int npackets)
     tx_buf.clear();
     unsigned int packet_count = 0;
 
-    while ((packet_count < npackets) && (net->tx_packets.size() > 0)) {
-        std::unique_ptr<RadioPacket> pkt = net->get_next_packet();
+    while (packet_count < npackets) {
+        std::unique_ptr<RadioPacket> pkt = net->recvPacket();
+
+        if (not pkt)
+            break;
 
         printf("Got Packet\n");
 
-        if (pkt) {
-            std::unique_ptr<ModPacket> mpkt = modPkt(std::move(pkt));
+        std::unique_ptr<ModPacket> mpkt = modPkt(std::move(pkt));
 
-            if (mpkt)
-                tx_buf.insert(tx_buf.end(),
-                              std::make_move_iterator(mpkt->samples.begin()),
-                              std::make_move_iterator(mpkt->samples.end()));
-        }
+        if (mpkt)
+            tx_buf.insert(tx_buf.end(),
+                          std::make_move_iterator(mpkt->samples.begin()),
+                          std::make_move_iterator(mpkt->samples.end()));
     }
 }
 

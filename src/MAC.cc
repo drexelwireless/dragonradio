@@ -12,7 +12,7 @@ MAC::MAC(std::shared_ptr<FloatIQTransport> t,
   : t(t), net(net), phy(phy)
 {
     this->frame_size = frame_size;
-    this->slot_size = frame_size/((double)(net->num_nodes_in_net));
+    this->slot_size = frame_size/((double)(net->getNumNodes()));
     this->pad_size = pad_size;
     this->packets_per_slot = packets_per_slot;
 
@@ -56,7 +56,7 @@ void MAC::run(void)
 
         time_now = t->get_time_now();
         frame_pos = fmod(time_now,frame_size);
-        wait_time = net->node_id*slot_size - frame_pos;
+        wait_time = net->getNodeId()*slot_size - frame_pos;
         if (wait_time<0) {
             printf("MISS\n");
             wait_time += frame_size;
