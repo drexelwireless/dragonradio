@@ -83,11 +83,10 @@ PHY::PHY(std::shared_ptr<FloatIQTransport> t,
     }
 
     // keep track of demod threads
-    unsigned int ii;
-    for(ii=0;ii<rx_thread_pool_size;ii++)
-    {
-        thread_joined[ii] = true;
-    }
+    for (unsigned int i = 0; i < rx_thread_pool_size; i++)
+        thread_joined[i] = true;
+
+    next_thread = 0;
 }
 
 PHY::~PHY()
@@ -148,27 +147,28 @@ void PHY::burstRX(double when, size_t nsamps)
 {
     const size_t max_samps_per_packet = t->get_max_recv_samps_per_packet();
 
-    for (unsigned int i = 0; i < rx_thread_pool_size; i++) {
-        // init counter for samples and allocate double buffer
-        size_t                    uhd_num_delivered_samples = 0;
-        std::unique_ptr<IQBuffer> rx_buf(new IQBuffer);
-
-        t->recv_at(when);
-
-        while (uhd_num_delivered_samples < nsamps) {
-            rx_buf->resize(uhd_num_delivered_samples + max_samps_per_packet);
-
-            uhd_num_delivered_samples += t->recv(&(*rx_buf)[uhd_num_delivered_samples], max_samps_per_packet);
-        }
-
-        rx_buf->resize(uhd_num_delivered_samples);
-
-        if (!thread_joined[i])
-            threads[i].join();
-
-        thread_joined[i] = false;
-        threads[i] = std::thread(run_demod, std::ref(*(mcrx_list[i])), std::move(rx_buf));
+    if (!thread_joined[next_thread]) {
+        threads[next_thread].join();
+        thread_joined[next_thread] = true;
     }
+
+    // init counter for samples and allocate double buffer
+    size_t                    uhd_num_delivered_samples = 0;
+    std::unique_ptr<IQBuffer> rx_buf(new IQBuffer);
+
+    t->recv_at(when);
+
+    while (uhd_num_delivered_samples < nsamps) {
+        rx_buf->resize(uhd_num_delivered_samples + max_samps_per_packet);
+
+        uhd_num_delivered_samples += t->recv(&(*rx_buf)[uhd_num_delivered_samples], max_samps_per_packet);
+    }
+
+    rx_buf->resize(uhd_num_delivered_samples);
+
+    thread_joined[next_thread] = false;
+    threads[next_thread] = std::thread(run_demod, std::ref(*(mcrx_list[next_thread])), std::move(rx_buf));
+    next_thread = (next_thread + 1) % rx_thread_pool_size;
 }
 
 std::unique_ptr<ModPacket> PHY::modPkt(std::unique_ptr<RadioPacket> pkt)

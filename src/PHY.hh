@@ -47,6 +47,7 @@ public:
 
     std::vector<std::thread> threads;
     std::vector<bool>        thread_joined;
+    int                      next_thread;
 
     void rx_worker(void);
 };
