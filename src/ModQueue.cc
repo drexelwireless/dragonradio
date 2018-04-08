@@ -19,6 +19,7 @@ ModQueue::~ModQueue()
 void ModQueue::join(void)
 {
     done = true;
+    prod.notify_all();
     modThread.join();
 }
 
@@ -33,10 +34,8 @@ void ModQueue::setWatermark(size_t w)
 
     watermark = w;
 
-    if (w > oldWatermark) {
-        printf("Setting watermark %d %d\n", (int) nsamples, (int) watermark);
+    if (w > oldWatermark)
         prod.notify_all();
-    }
 }
 
 std::unique_ptr<ModPacket> ModQueue::pop(size_t maxSamples)
@@ -59,13 +58,16 @@ std::unique_ptr<ModPacket> ModQueue::pop(size_t maxSamples)
 
 void ModQueue::modWorker(void)
 {
-    while (!done) {
+    for (;;) {
         // Wait for queue to be below watermark
         {
             std::unique_lock<std::mutex> lock(m);
 
-            prod.wait(lock, [this]{ return nsamples < watermark; });
+            prod.wait(lock, [this]{ return done || nsamples < watermark; });
         }
+
+        if (done)
+            break;
 
         // Get a packet from the network
         std::unique_ptr<RadioPacket> pkt = net->recvPacket();

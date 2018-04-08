@@ -14,7 +14,7 @@ NET::NET(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& 
     curPacketId(0),
     done(false)
 {
-    printf("Creating NETWORK\n");
+    printf("Creating tap interface %s\n", tap_name.c_str());
 
     tt.reset(new TunTap(tap_name, nodeId, nodes));
 
@@ -24,7 +24,7 @@ NET::NET(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& 
 
 NET::~NET()
 {
-    printf("Closing Network\n");
+    printf("Closing tap interface\n");
 }
 
 NodeId NET::getNodeId(void)
@@ -59,6 +59,8 @@ ssize_t NET::sendPacket(void* data, size_t n)
 void NET::join(void)
 {
     done = true;
+    recvQueue.join();
+    sendQueue.join();
     recvThread.join();
     sendThread.join();
 }
@@ -94,6 +96,7 @@ void NET::sendWorker(void)
 
         sendQueue.pop(pkt);
 
-        tt->cwrite(&(*pkt)[0], pkt->size());
+        if (pkt)
+            tt->cwrite(&(*pkt)[0], pkt->size());
     }
 }

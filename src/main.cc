@@ -1,5 +1,8 @@
 // DWSL - full radio stack
 
+#include <sys/types.h>
+#include <signal.h>
+
 #include <MAC.hh>
 #include <NET.hh>
 #include <PHY.hh>
@@ -82,8 +85,20 @@ int main(int argc, char** argv)
     std::shared_ptr<PHY>         phy(new PHY(t, net, bandwidth, min_packet_size, rx_thread_pool_size));
     std::shared_ptr<MAC>         mac(new MAC(t, net, phy, frame_size, pad_size));
 
-    // use main thread for tx_worker
-    mac->run();
+    // Wait for Ctrl-C
+    sigset_t waitset;
+    int      sig;
 
-    printf("Done\n");
+    sigemptyset(&waitset);
+    sigaddset(&waitset, SIGINT);
+
+    sigprocmask(SIG_BLOCK, &waitset, NULL);
+
+    sigwait(&waitset, &sig);
+
+    net->join();
+    phy->join();
+    mac->join();
+
+    printf("Done!\n");
 }

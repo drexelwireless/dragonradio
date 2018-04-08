@@ -12,25 +12,31 @@ MAC::MAC(std::shared_ptr<IQTransport> t,
          double pad_size)
   : t(t), net(net), phy(phy),
     modQueue(net, phy),
-    frame_size(frame_size), pad_size(pad_size),
-    continue_running(true)
+    frame_size(frame_size),
+    slot_size(frame_size/net->getNumNodes()),
+    pad_size(pad_size),
+    done(false)
 {
-    slot_size = frame_size/net->getNumNodes();
 
-    // start the rx thread
-    rx_worker_thread = std::thread(&MAC::rx_worker, this);
+    rxThread = std::thread(&MAC::rxWorker, this);
+    txThread = std::thread(&MAC::txWorker, this);
 }
 
 MAC::~MAC()
 {
-    continue_running = false;
-    rx_worker_thread.join();
 }
 
-void MAC::rx_worker(void)
+void MAC::join(void)
 {
-    while(continue_running)
-    {
+    done = true;
+    rxThread.join();
+    txThread.join();
+    modQueue.join();
+}
+
+void MAC::rxWorker(void)
+{
+    while (!done) {
         size_t num_samps_to_deliver = (size_t)((t->get_rx_rate())*(slot_size))+(t->get_rx_rate()*(pad_size))*2.0;
 
         // calculate time to wait for streaming (precisely time beginning of each slot)
@@ -46,13 +52,13 @@ void MAC::rx_worker(void)
     }
 }
 
-void MAC::run(void)
+void MAC::txWorker(void)
 {
     size_t slot_samps = t->get_tx_rate()*(slot_size - pad_size);
 
     modQueue.setWatermark(slot_samps);
 
-    while (continue_running) {
+    while (!done) {
         double time_now;
         double frame_pos;
         double wait_time;

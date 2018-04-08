@@ -82,7 +82,10 @@ PHY::PHY(std::shared_ptr<IQTransport> t,
 
     // Initialize workers and their queues
     for (unsigned int i = 0; i < rxThreadPoolSize; i++)
-        threads[i] = std::thread(&PHY::demodWorker, this, std::ref(*(mcrxs[i])), std::ref(threadQueues[i]));
+        threads[i] = std::thread(&PHY::demodWorker,
+                                 this,
+                                 std::ref(*(mcrxs[i])),
+                                 std::ref(threadQueues[i]));
 }
 
 PHY::~PHY()
@@ -93,8 +96,10 @@ void PHY::join(void)
 {
     done = true;
 
-    for (unsigned int i = 0; i < threads.size(); ++i)
+    for (unsigned int i = 0; i < threads.size(); ++i) {
+        threadQueues[i].join();
         threads[i].join();
+    }
 }
 
 std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)

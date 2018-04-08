@@ -8,12 +8,16 @@
 template<typename T>
 class SafeQueue {
 public:
+    SafeQueue() : done(false) {};
+
     void push(const T& val);
     void push(T&& val);
     void pop(T& val);
-    bool maybePop(T& val);
+
+    void join(void);
 
 private:
+    bool                    done;
     std::mutex              m;
     std::condition_variable cond;
     std::queue<T>           q;
@@ -42,9 +46,19 @@ void SafeQueue<T>::pop(T& val)
 {
     std::unique_lock<std::mutex> lock(m);
 
-    cond.wait(lock, [this]{ return !q.empty(); });
+    cond.wait(lock, [this]{ return done || !q.empty(); });
+    if (done)
+        return;
     val = std::move(q.front());
     q.pop();
+}
+
+
+template<typename T>
+void SafeQueue<T>::join(void)
+{
+    done = true;
+    cond.notify_all();
 }
 
 #endif /* SAFEQUEUE_H_ */
