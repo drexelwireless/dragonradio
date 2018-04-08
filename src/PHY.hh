@@ -20,7 +20,7 @@
 class PHY
 {
 public:
-    PHY(std::shared_ptr<FloatIQTransport> t,
+    PHY(std::shared_ptr<IQTransport> t,
         std::shared_ptr<NET> net,
         double bandwidth,
         size_t min_packet_size,
@@ -36,7 +36,7 @@ public:
     // other shite
     NodeId node_id;
     size_t min_packet_size;
-    std::shared_ptr<FloatIQTransport> t;
+    std::shared_ptr<IQTransport> t;
     std::shared_ptr<NET> net;
     std::unique_ptr<multichanneltx> mctx;
     std::vector<std::unique_ptr<multichannelrx>> mcrx_list;

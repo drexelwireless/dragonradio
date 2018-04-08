@@ -77,10 +77,10 @@ int main(int argc, char** argv)
         //rx_gain = 8;
     }
 
-    std::shared_ptr<FloatIQTransport> t(new USRP(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain));
-    std::shared_ptr<NET>              net(new NET("tap0",node_id,nodes_in_net));
-    std::shared_ptr<PHY>              phy(new PHY(t, net, bandwidth, min_packet_size, rx_thread_pool_size));
-    std::shared_ptr<MAC>              mac(new MAC(t, net, phy, frame_size, pad_size));
+    std::shared_ptr<IQTransport> t(new USRP(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain));
+    std::shared_ptr<NET>         net(new NET("tap0",node_id,nodes_in_net));
+    std::shared_ptr<PHY>         phy(new PHY(t, net, bandwidth, min_packet_size, rx_thread_pool_size));
+    std::shared_ptr<MAC>         mac(new MAC(t, net, phy, frame_size, pad_size));
 
     // use main thread for tx_worker
     mac->run();

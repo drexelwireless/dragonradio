@@ -21,7 +21,7 @@ class MAC
 {
     public:
         //functions
-        MAC(std::shared_ptr<FloatIQTransport> t,
+        MAC(std::shared_ptr<IQTransport> t,
             std::shared_ptr<NET> net,
             std::shared_ptr<PHY> phy,
             double frame_size,
@@ -29,7 +29,7 @@ class MAC
         ~MAC();
         void run(void);
 
-        std::shared_ptr<FloatIQTransport> t;
+        std::shared_ptr<IQTransport> t;
         std::shared_ptr<NET> net;
         std::shared_ptr<PHY> phy;
         ModQueue             modQueue;

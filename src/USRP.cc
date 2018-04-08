@@ -107,7 +107,7 @@ void USRP::recv_at(double when)
     rx_stream->issue_stream_cmd(stream_cmd);
 }
 
-size_t USRP::recv(const std::complex<float>* buf, size_t count)
+size_t USRP::recv(std::complex<float>* buf, size_t count)
 {
     uhd::rx_metadata_t rx_md;
 

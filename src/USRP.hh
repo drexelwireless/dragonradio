@@ -6,7 +6,7 @@
 
 #include "IQTransport.hh"
 
-class USRP : public FloatIQTransport
+class USRP : public IQTransport
 {
 public:
     USRP(const std::string& addr,
@@ -29,7 +29,7 @@ public:
     size_t get_max_recv_samps_per_packet(void);
 
     void   recv_at(double when);
-    size_t recv(const std::complex<float>* buf, size_t count);
+    size_t recv(std::complex<float>* buf, size_t count);
 
     void   start_burst(void);
     void   end_burst(void);

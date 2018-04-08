@@ -5,7 +5,7 @@
 #include "MAC.hh"
 #include "USRP.hh"
 
-MAC::MAC(std::shared_ptr<FloatIQTransport> t,
+MAC::MAC(std::shared_ptr<IQTransport> t,
          std::shared_ptr<NET> net,
          std::shared_ptr<PHY> phy,
          double frame_size,

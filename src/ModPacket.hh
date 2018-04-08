@@ -3,11 +3,7 @@
 
 #include <sys/types.h>
 
-#include <complex>
-#include <vector>
-
-/** A buffer of IQ samples */
-typedef std::vector<std::complex<float>> IQBuffer;
+#include "IQBuffer.hh"
 
 /** A modulated data packet to be sent over the radio */
 struct ModPacket

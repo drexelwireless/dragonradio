@@ -52,7 +52,7 @@ union PHYHeader {
     unsigned char bytes[8];
 };
 
-PHY::PHY(std::shared_ptr<FloatIQTransport> t,
+PHY::PHY(std::shared_ptr<IQTransport> t,
          std::shared_ptr<NET> net,
          double bandwidth,
          size_t min_packet_size,
