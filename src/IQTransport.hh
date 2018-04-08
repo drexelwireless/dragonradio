@@ -3,6 +3,8 @@
 
 #include <sys/types.h>
 
+#include <deque>
+
 #include "IQBuffer.hh"
 
 class IQTransport
@@ -18,15 +20,11 @@ public:
     virtual double get_rx_rate(void) = 0;
     virtual void   set_rx_rate(double rate) = 0;
 
-    virtual size_t get_max_send_samps_per_packet(void) = 0;
-    virtual size_t get_max_recv_samps_per_packet(void) = 0;
+    /** Transmit samples in queue of IQBuffers in a burst at the given time */
+    virtual void burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs) = 0;
 
-    virtual void   recv_at(double when) = 0;
-    virtual size_t recv(std::complex<float>* buf, size_t count) = 0;
-
-    virtual void   start_burst(void) = 0;
-    virtual void   end_burst(void) = 0;
-    virtual size_t send(double when, const std::complex<float>* buf, size_t count) = 0;
+    /** Collect a burst of nsamps samples at time when */
+    virtual std::unique_ptr<IQBuffer> burstRX(double when, size_t nsamps) = 0;
 };
 
 #endif /* IQTRANSPORT_H_ */

@@ -74,7 +74,7 @@ void ModQueue::modWorker(void)
             continue;
 
         // Modulate the packet
-        std::unique_ptr<ModPacket> mpkt = phy->modPkt(std::move(pkt));
+        std::unique_ptr<ModPacket> mpkt = phy->modulate(std::move(pkt));
 
         if (not mpkt)
             continue;

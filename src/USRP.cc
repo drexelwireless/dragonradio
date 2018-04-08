@@ -83,20 +83,36 @@ void USRP::set_rx_rate(double rate)
     usrp->set_rx_rate(rate);
 }
 
-size_t USRP::get_max_send_samps_per_packet(void)
-{
-    return usrp->get_device()->get_max_send_samps_per_packet();
-}
-
-size_t USRP::get_max_recv_samps_per_packet(void)
-{
-    return usrp->get_device()->get_max_recv_samps_per_packet();
-}
-
-void USRP::recv_at(double when)
+void USRP::burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs)
 {
     double full;
     double frac;
+
+    frac = modf(when, &full);
+
+    for (auto it = bufs.begin(); it != bufs.end(); ++it) {
+        uhd::tx_metadata_t tx_md;
+        IQBuffer&          iqbuf = **it;
+
+        tx_md.time_spec = uhd::time_spec_t((time_t) full, frac);
+        tx_md.has_time_spec = true;
+
+        if (it == bufs.begin())
+            tx_md.start_of_burst = true;
+        else if (std::next(it) == bufs.end())
+            tx_md.end_of_burst = true;
+
+        tx_stream->send(&iqbuf[0], iqbuf.size(), tx_md);
+    }
+}
+
+std::unique_ptr<IQBuffer> USRP::burstRX(double when, size_t nsamps)
+{
+    size_t                    ndelivered = 0;
+    const size_t              maxSamps = usrp->get_device()->get_max_recv_samps_per_packet();
+    double                    full;
+    double                    frac;
+    std::unique_ptr<IQBuffer> buf(new IQBuffer);
 
     frac = modf(when, &full);
 
@@ -105,47 +121,24 @@ void USRP::recv_at(double when)
     stream_cmd.stream_now = false;
     stream_cmd.time_spec = uhd::time_spec_t((time_t) full, frac);
     rx_stream->issue_stream_cmd(stream_cmd);
-}
 
-size_t USRP::recv(std::complex<float>* buf, size_t count)
-{
-    uhd::rx_metadata_t rx_md;
+    while (ndelivered < nsamps) {
+        uhd::rx_metadata_t rx_md;
+        ssize_t            n;
 
-    count = usrp->get_device()->recv(buf, count, rx_md,
-                uhd::io_type_t::COMPLEX_FLOAT32,
-                uhd::device::RECV_MODE_ONE_PACKET);
+        buf->resize(ndelivered + maxSamps);
 
-    if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
-        fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
+        n = usrp->get_device()->recv(&(*buf)[ndelivered], maxSamps, rx_md,
+                                     uhd::io_type_t::COMPLEX_FLOAT32,
+                                     uhd::device::RECV_MODE_ONE_PACKET);
 
-    return count;
-}
+        if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+            fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
 
-void USRP::start_burst(void)
-{
-    tx_md.start_of_burst = true;
-}
+        ndelivered += n;
+    }
 
-void USRP::end_burst(void)
-{
-    tx_md.end_of_burst = true;
-}
+    buf->resize(ndelivered);
 
-size_t USRP::send(double when, const std::complex<float>* buf, size_t count)
-{
-    double full;
-    double frac;
-    size_t ret;
-
-    frac = modf(when, &full);
-
-    tx_md.time_spec = uhd::time_spec_t((time_t) full, frac);
-    tx_md.has_time_spec = true;
-
-    ret = tx_stream->send(buf, count, tx_md);
-
-    tx_md.start_of_burst = false;
-    tx_md.end_of_burst = false;
-
-    return ret;
+    return buf;
 }

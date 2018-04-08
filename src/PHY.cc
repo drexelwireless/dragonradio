@@ -138,40 +138,7 @@ int rxCallback(
     return 0;
 }
 
-void run_demod(multichannelrx& mcrx, std::unique_ptr<IQBuffer> usrp_double_buff)
-{
-    mcrx.Execute(&(*usrp_double_buff)[0], usrp_double_buff->size());
-}
-
-void PHY::burstRX(double when, size_t nsamps)
-{
-    const size_t max_samps_per_packet = t->get_max_recv_samps_per_packet();
-
-    if (!thread_joined[next_thread]) {
-        threads[next_thread].join();
-        thread_joined[next_thread] = true;
-    }
-
-    // init counter for samples and allocate double buffer
-    size_t                    uhd_num_delivered_samples = 0;
-    std::unique_ptr<IQBuffer> rx_buf(new IQBuffer);
-
-    t->recv_at(when);
-
-    while (uhd_num_delivered_samples < nsamps) {
-        rx_buf->resize(uhd_num_delivered_samples + max_samps_per_packet);
-
-        uhd_num_delivered_samples += t->recv(&(*rx_buf)[uhd_num_delivered_samples], max_samps_per_packet);
-    }
-
-    rx_buf->resize(uhd_num_delivered_samples);
-
-    thread_joined[next_thread] = false;
-    threads[next_thread] = std::thread(run_demod, std::ref(*(mcrx_list[next_thread])), std::move(rx_buf));
-    next_thread = (next_thread + 1) % rx_thread_pool_size;
-}
-
-std::unique_ptr<ModPacket> PHY::modPkt(std::unique_ptr<RadioPacket> pkt)
+std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
 {
     std::unique_ptr<ModPacket> mpkt(new ModPacket);
     PHYHeader                  header;
@@ -220,18 +187,19 @@ std::unique_ptr<ModPacket> PHY::modPkt(std::unique_ptr<RadioPacket> pkt)
     return mpkt;
 }
 
-void PHY::burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs)
+void run_demod(multichannelrx& mcrx, std::unique_ptr<IQBuffer> usrp_double_buff)
 {
-    if (!bufs.empty())
-        t->start_burst();
+    mcrx.Execute(&(*usrp_double_buff)[0], usrp_double_buff->size());
+}
 
-    for (auto it = bufs.begin(); it != bufs.end(); ++it) {
-        IQBuffer& iqbuf = **it;
-
-        if (std::next(it) == bufs.end())
-            t->end_burst();
-
-        // tx that packet (each buffer in the double buff is one packet)
-        t->send(when, &iqbuf[0], iqbuf.size());
+void PHY::demodulate(std::unique_ptr<IQBuffer> buf)
+{
+    if (!thread_joined[next_thread]) {
+        threads[next_thread].join();
+        thread_joined[next_thread] = true;
     }
+
+    thread_joined[next_thread] = false;
+    threads[next_thread] = std::thread(run_demod, std::ref(*(mcrx_list[next_thread])), std::move(buf));
+    next_thread = (next_thread + 1) % rx_thread_pool_size;
 }

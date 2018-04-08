@@ -40,7 +40,9 @@ void MAC::rx_worker(void)
         time_now = t->get_time_now();
         wait_time = frame_size - 1.0*fmod(time_now,frame_size)-(pad_size);
 
-        phy->burstRX(time_now+wait_time, num_samps_to_deliver);
+        std::unique_ptr<IQBuffer> buf = t->burstRX(time_now+wait_time, num_samps_to_deliver);
+
+        phy->demodulate(std::move(buf));
     }
 }
 
@@ -93,5 +95,5 @@ void MAC::txSlot(double when, size_t maxSamples)
                      std::make_move_iterator(mpkt->samples.end()));
     }
 
-    phy->burstTX(when, txBuf);
+    t->burstTX(when, txBuf);
 }

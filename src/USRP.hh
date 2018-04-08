@@ -25,15 +25,9 @@ public:
     double get_rx_rate(void);
     void   set_rx_rate(double rate);
 
-    size_t get_max_send_samps_per_packet(void);
-    size_t get_max_recv_samps_per_packet(void);
+    void burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs);
 
-    void   recv_at(double when);
-    size_t recv(std::complex<float>* buf, size_t count);
-
-    void   start_burst(void);
-    void   end_burst(void);
-    size_t send(double when, const std::complex<float>* buf, size_t count);
+    std::unique_ptr<IQBuffer> burstRX(double when, size_t nsamps);
 
 private:
     uhd::usrp::multi_usrp::sptr usrp;

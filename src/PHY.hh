@@ -27,11 +27,9 @@ public:
         unsigned int rx_thread_pool_size);
     ~PHY();
 
-    std::unique_ptr<ModPacket> modPkt(std::unique_ptr<RadioPacket> pkt);
+    std::unique_ptr<ModPacket> modulate(std::unique_ptr<RadioPacket> pkt);
 
-    void burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs);
-
-    void burstRX(double when, size_t nsamps);
+    void demodulate(std::unique_ptr<IQBuffer> buf);
 
     // other shite
     NodeId node_id;
@@ -40,15 +38,11 @@ public:
     std::shared_ptr<NET> net;
     std::unique_ptr<multichanneltx> mctx;
     std::vector<std::unique_ptr<multichannelrx>> mcrx_list;
-    /** Buffer holding modulated radio packets */
-    std::queue<std::unique_ptr<ModPacket>> modPackets;
     unsigned int rx_thread_pool_size;
 
     std::vector<std::thread> threads;
     std::vector<bool>        thread_joined;
     int                      next_thread;
-
-    void rx_worker(void);
 };
 
 #endif /* PHY_H_ */
