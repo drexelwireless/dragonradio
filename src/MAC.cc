@@ -36,17 +36,24 @@ void MAC::join(void)
 
 void MAC::rxWorker(void)
 {
+    double time_now;
+    double wait_time;
+    double pre_slot_start_time;
+    size_t nsamps;
+
     while (!done) {
-        size_t num_samps_to_deliver = (size_t)((t->get_rx_rate())*(slot_size))+(t->get_rx_rate()*(pad_size))*2.0;
+        nsamps = (size_t)((t->get_rx_rate())*(slot_size))+(t->get_rx_rate()*(pad_size))*2.0;
 
-        // calculate time to wait for streaming (precisely time beginning of each slot)
-        double time_now;
-        double wait_time;
-
+        // Time rx to start at pad before next slot
         time_now = t->get_time_now();
-        wait_time = frame_size - 1.0*fmod(time_now,frame_size)-(pad_size);
+        wait_time = frame_size - fmod(time_now, frame_size) - pad_size;
 
-        std::unique_ptr<IQBuffer> buf = t->burstRX(time_now+wait_time, num_samps_to_deliver);
+        if (wait_time < 0)
+            continue;
+
+        pre_slot_start_time = time_now + wait_time;
+
+        std::unique_ptr<IQBuffer> buf = t->burstRX(pre_slot_start_time, nsamps);
 
         phy->demodulate(std::move(buf));
     }
