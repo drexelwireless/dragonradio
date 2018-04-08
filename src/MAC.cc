@@ -55,31 +55,34 @@ void MAC::rxWorker(void)
 void MAC::txWorker(void)
 {
     size_t slot_samps = t->get_tx_rate()*(slot_size - pad_size);
+    double time_now;
+    double frame_pos;
+    double wait_time;
+    double slot_start_time;
 
     modQueue.setWatermark(slot_samps);
 
     while (!done) {
-        double time_now;
-        double frame_pos;
-        double wait_time;
-
+        // Schedule transmission for start of our slot
         time_now = t->get_time_now();
-        frame_pos = fmod(time_now,frame_size);
+        frame_pos = fmod(time_now, frame_size);
         wait_time = net->getNodeId()*slot_size - frame_pos;
-        if (wait_time<0) {
+
+        if (wait_time < 0) {
             printf("MISS\n");
             wait_time += frame_size;
         }
 
-        txSlot(time_now+wait_time, slot_samps);
+        slot_start_time = time_now + wait_time;
 
-        // wait out the rest of the slot
-        double new_time_now = t->get_time_now();
+        txSlot(slot_start_time, slot_samps);
 
-        while((new_time_now-(time_now+wait_time))<(frame_size-pad_size))
-        {
+        // Wait out the rest of the frame
+        time_now = t->get_time_now();
+
+        while (time_now - slot_start_time < frame_size - pad_size) {
             usleep(10);
-            new_time_now = t->get_time_now();
+            time_now = t->get_time_now();
         }
     }
 }
