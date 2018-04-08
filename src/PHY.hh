@@ -29,8 +29,9 @@ public:
 
     std::unique_ptr<ModPacket> modPkt(std::unique_ptr<RadioPacket> pkt);
 
-    void prepareTXBurst(unsigned int npackets);
-    void burstTX(double when);
+    void prepareTXBurst(size_t nsamps);
+    void burstTX(double when, size_t max_nsamps);
+    bool canTX(size_t max_nsamps);
 
     void burstRX(double when, size_t nsamps);
 
@@ -41,8 +42,8 @@ public:
     std::shared_ptr<NET> net;
     std::unique_ptr<multichanneltx> mctx;
     std::vector<std::unique_ptr<multichannelrx>> mcrx_list;
-    /** Buffer holding modulated data */
-    std::vector<std::unique_ptr<IQBuffer>> tx_buf;
+    /** Buffer holding modulated radio packets */
+    std::queue<std::unique_ptr<ModPacket>> modPackets;
     unsigned int rx_thread_pool_size;
 
     std::vector<std::thread> threads;

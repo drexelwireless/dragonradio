@@ -24,20 +24,17 @@ class MAC
             std::shared_ptr<NET> net,
             std::shared_ptr<PHY> phy,
             double frame_size,
-            float pad_size,
-            unsigned int packets_per_slot);
+            double pad_size);
         ~MAC();
         void run(void);
 
-        // other shite
         std::shared_ptr<FloatIQTransport> t;
         std::shared_ptr<NET> net;
         std::shared_ptr<PHY> phy;
         double frame_size;
         double slot_size;
+        double pad_size;
         bool continue_running;
-        float pad_size;
-        unsigned int packets_per_slot;
         std::thread rx_worker_thread;
 
         void rx_worker(void);

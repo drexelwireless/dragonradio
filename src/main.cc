@@ -26,7 +26,6 @@ int main(int argc, char** argv)
     double frame_size = .07;                     // slot_size*num_nodes_in_net (seconds)
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     float pad_size = .01;                       // inter slot dead time
-    unsigned int packets_per_slot = 2;          // how many packets to stuff into each slot
     bool x310 = true;                           // is this an x310
     std::string addr;
 
@@ -81,7 +80,7 @@ int main(int argc, char** argv)
     std::shared_ptr<FloatIQTransport> t(new USRP(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain));
     std::shared_ptr<NET>              net(new NET("tap0",node_id,nodes_in_net));
     std::shared_ptr<PHY>              phy(new PHY(t, net, bandwidth, min_packet_size, rx_thread_pool_size));
-    std::shared_ptr<MAC>              mac(new MAC(t, net, phy,frame_size,pad_size,packets_per_slot));
+    std::shared_ptr<MAC>              mac(new MAC(t, net, phy, frame_size, pad_size));
 
     // use main thread for tx_worker
     mac->run();

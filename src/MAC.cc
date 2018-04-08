@@ -7,16 +7,11 @@ MAC::MAC(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<NET> net,
          std::shared_ptr<PHY> phy,
          double frame_size,
-         float pad_size,
-         unsigned int packets_per_slot)
-  : t(t), net(net), phy(phy)
+         double pad_size)
+  : t(t), net(net), phy(phy), frame_size(frame_size), pad_size(pad_size),
+    continue_running(true)
 {
-    this->frame_size = frame_size;
-    this->slot_size = frame_size/((double)(net->getNumNodes()));
-    this->pad_size = pad_size;
-    this->packets_per_slot = packets_per_slot;
-
-    this->continue_running = true;
+    slot_size = frame_size/net->getNumNodes();
 
     // start the rx thread
     rx_worker_thread = std::thread(&MAC::rx_worker, this);
@@ -47,7 +42,9 @@ void MAC::rx_worker(void)
 
 void MAC::run(void)
 {
-    phy->prepareTXBurst(packets_per_slot);
+    size_t slot_samps = t->get_tx_rate()*(slot_size - pad_size);
+
+    phy->prepareTXBurst(slot_samps);
 
     while (continue_running) {
         double time_now;
@@ -62,10 +59,10 @@ void MAC::run(void)
             wait_time += frame_size;
         }
 
-        phy->burstTX(time_now+wait_time);
+        phy->burstTX(time_now+wait_time, slot_samps);
 
         // readyNextBuffer
-        phy->prepareTXBurst(packets_per_slot);
+        phy->prepareTXBurst(slot_samps);
 
         // wait out the rest of the slot
         double new_time_now = t->get_time_now();

@@ -220,12 +220,12 @@ std::unique_ptr<ModPacket> PHY::modPkt(std::unique_ptr<RadioPacket> pkt)
     return mpkt;
 }
 
-void PHY::prepareTXBurst(unsigned int npackets)
+void PHY::prepareTXBurst(size_t need_nsamps)
 {
-    tx_buf.clear();
-    unsigned int packet_count = 0;
+    size_t nsamps = 0;
+    int npackets = 0;
 
-    while (packet_count < npackets) {
+    while (nsamps < need_nsamps) {
         std::unique_ptr<RadioPacket> pkt = net->recvPacket();
 
         if (not pkt)
@@ -235,28 +235,41 @@ void PHY::prepareTXBurst(unsigned int npackets)
 
         std::unique_ptr<ModPacket> mpkt = modPkt(std::move(pkt));
 
-        if (mpkt)
-            tx_buf.insert(tx_buf.end(),
-                          std::make_move_iterator(mpkt->samples.begin()),
-                          std::make_move_iterator(mpkt->samples.end()));
+        if (mpkt) {
+            nsamps += mpkt->nsamples;
+            modPackets.push(std::move(mpkt));
+            ++npackets;
+        }
     }
 }
 
-void PHY::burstTX(double when)
+void PHY::burstTX(double when, size_t nsamps)
 {
-    // tx timed burst
-    if (tx_buf.size() > 0) {
-        t->start_burst();
+    if (!canTX(nsamps))
+        return;
 
-        for(auto it = tx_buf.begin(); it != tx_buf.end(); it++) {
-            if (std::next(it) == tx_buf.end())
+    t->start_burst();
+
+    do {
+        std::unique_ptr<ModPacket> mpkt = std::move(modPackets.front());
+
+        modPackets.pop();
+
+        nsamps -= mpkt->nsamples;
+
+        for (auto it = mpkt->samples.begin(); it != mpkt->samples.end(); it++) {
+            IQBuffer& iqbuf = **it;
+
+            if (std::next(it) == mpkt->samples.end() && !canTX(nsamps))
                 t->end_burst();
 
             // tx that packet (each buffer in the double buff is one packet)
-            t->send(when, &((*it)->front()),(*it)->size());
+            t->send(when, &iqbuf[0], iqbuf.size());
         }
+    } while (canTX(nsamps));
+}
 
-        // Clear buffer
-        tx_buf.clear();
-    }
+bool PHY::canTX(size_t max_nsamps)
+{
+    return !modPackets.empty() && modPackets.front()->nsamples <= max_nsamps;
 }
