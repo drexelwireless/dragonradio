@@ -151,23 +151,24 @@ std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
     return mpkt;
 }
 
-void PHY::demodulate(std::unique_ptr<IQBuffer> buf)
+void PHY::demodulate(std::unique_ptr<DemodBuffer> buf)
 {
     threadQueues[nextThread].push(std::move(buf));
     nextThread = (nextThread + 1) % threads.size();
 }
 
-void PHY::demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<IQBuffer>>& q)
+void PHY::demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<DemodBuffer>>& q)
 {
     while (!done) {
-        std::unique_ptr<IQBuffer> buf;
+        std::unique_ptr<DemodBuffer> buf;
 
         q.pop(buf);
 
         if (not buf)
             continue;
 
-        mcrx.Execute(&(*buf)[0], buf->size());
+        for (auto it = buf->begin(); it != buf->end(); ++it)
+            mcrx.Execute(&(**it)[0], (*it)->size());
     }
 }
 
