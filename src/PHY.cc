@@ -1,18 +1,5 @@
 #include "PHY.hh"
 
-int rxCallback(
-        unsigned char *  _header,
-        int              _header_valid,
-        unsigned char *  _payload,
-        unsigned int     _payload_len,
-        int              _payload_valid,
-        framesyncstats_s _stats,
-        void *           _userdata,
-        liquid_float_complex* G,
-        liquid_float_complex* G_hat,
-        unsigned int M
-    );
-
 /** Number of channels */
 const unsigned int NUM_CHANNELS = 1;
 
@@ -52,16 +39,26 @@ union PHYHeader {
     unsigned char bytes[8];
 };
 
+int liquidRxCallback(unsigned char *  _header,
+                     int              _header_valid,
+                     unsigned char *  _payload,
+                     unsigned int     _payload_len,
+                     int              _payload_valid,
+                     framesyncstats_s _stats,
+                     void *           _userdata,
+                     liquid_float_complex* G,
+                     liquid_float_complex* G_hat,
+                     unsigned int M);
+
 PHY::PHY(std::shared_ptr<IQTransport> t,
          std::shared_ptr<NET> net,
          double bandwidth,
          size_t min_packet_size,
          unsigned int rx_thread_pool_size)
-  : node_id(net->getNodeId()),
-    min_packet_size(min_packet_size),
-    t(t),
+  : t(t),
     net(net),
-    rx_thread_pool_size(rx_thread_pool_size),
+    node_id(net->getNodeId()),
+    min_packet_size(min_packet_size),
     threads(rx_thread_pool_size),
     thread_joined(rx_thread_pool_size)
 {
@@ -72,9 +69,8 @@ PHY::PHY(std::shared_ptr<IQTransport> t,
     // modem setup (list is for parallel demodulation)
     mctx = std::unique_ptr<multichanneltx>(new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR));
 
-    for(unsigned int jj=0;jj<rx_thread_pool_size;jj++)
-    {
-        framesync_callback callback[1] = { rxCallback };
+    for (unsigned int i = 0; i < rx_thread_pool_size; i++) {
+        framesync_callback callback[1] = { liquidRxCallback };
         void               *userdata[1] = { this };
 
         std::unique_ptr<multichannelrx> mcrx(new multichannelrx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback));
@@ -93,49 +89,14 @@ PHY::~PHY()
 {
 }
 
-int rxCallback(
-        unsigned char *  _header,
-        int              _header_valid,
-        unsigned char *  _payload,
-        unsigned int     _payload_len,
-        int              _payload_valid,
-        framesyncstats_s _stats,
-        void *           _userdata,
-        liquid_float_complex* G,
-        liquid_float_complex* G_hat,
-        unsigned int M
-        )
+void PHY::join(void)
 {
-    PHY*    phy = reinterpret_cast<PHY*>(_userdata);
-    Header* h = reinterpret_cast<Header*>(_header);
-
-    if (!_header_valid) {
-        printf("HEADER INVALID\n");
-        return 0;
+    for (unsigned int i = 0; i < threads.size(); ++i) {
+        if (!thread_joined[i]) {
+            threads[i].join();
+            thread_joined[i] = true;
+        }
     }
-
-    if (!_payload_valid) {
-        printf("PAYLOAD INVALID\n");
-        return 0;
-    }
-
-    // let first header byte be node id
-    // let second header byte be source id
-    if (h->dest != phy->net->getNodeId())
-        return 0;
-
-    if (h->pkt_len == 0)
-        return 1;
-
-    unsigned int num_written = phy->net->sendPacket(_payload, h->pkt_len);
-
-    printf("Written %u bytes (PID %u) from %u", num_written, h->pkt_id, h->src);
-    if (M>0)
-        printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
-    else
-        printf("\n");
-
-    return 0;
 }
 
 std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
@@ -201,5 +162,68 @@ void PHY::demodulate(std::unique_ptr<IQBuffer> buf)
 
     thread_joined[next_thread] = false;
     threads[next_thread] = std::thread(run_demod, std::ref(*(mcrx_list[next_thread])), std::move(buf));
-    next_thread = (next_thread + 1) % rx_thread_pool_size;
+    next_thread = (next_thread + 1) % threads.size();
+}
+
+int liquidRxCallback(unsigned char *  _header,
+                     int              _header_valid,
+                     unsigned char *  _payload,
+                     unsigned int     _payload_len,
+                     int              _payload_valid,
+                     framesyncstats_s _stats,
+                     void *           _userdata,
+                     liquid_float_complex* G,
+                     liquid_float_complex* G_hat,
+                     unsigned int M)
+{
+    return reinterpret_cast<PHY*>(_userdata)->rxCallback(_header,
+                                                         _header_valid,
+                                                         _payload,
+                                                         _payload_len,
+                                                         _payload_valid,
+                                                         _stats,
+                                                         G,
+                                                         G_hat,
+                                                         M);
+}
+
+int PHY::rxCallback(unsigned char *  _header,
+                    int              _header_valid,
+                    unsigned char *  _payload,
+                    unsigned int     _payload_len,
+                    int              _payload_valid,
+                    framesyncstats_s _stats,
+                    liquid_float_complex* G,
+                    liquid_float_complex* G_hat,
+                    unsigned int M)
+{
+    Header* h = reinterpret_cast<Header*>(_header);
+
+    if (!_header_valid) {
+        printf("HEADER INVALID\n");
+        return 0;
+    }
+
+    if (!_payload_valid) {
+        printf("PAYLOAD INVALID\n");
+        return 0;
+    }
+
+    // let first header byte be node id
+    // let second header byte be source id
+    if (h->dest != net->getNodeId())
+        return 0;
+
+    if (h->pkt_len == 0)
+        return 1;
+
+    unsigned int num_written = net->sendPacket(_payload, h->pkt_len);
+
+    printf("Written %u bytes (PID %u) from %u", num_written, h->pkt_id, h->src);
+    if (M>0)
+        printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
+    else
+        printf("\n");
+
+    return 0;
 }
