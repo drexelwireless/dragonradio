@@ -41,10 +41,9 @@ std::unique_ptr<RadioPacket> NET::recvPacket(void)
 {
     std::unique_ptr<RadioPacket> pkt;
 
-    if (recvQueue.maybePop(pkt))
-        return pkt;
-    else
-        return nullptr;
+    recvQueue.pop(pkt);
+
+    return pkt;
 }
 
 ssize_t NET::sendPacket(void* data, size_t n)

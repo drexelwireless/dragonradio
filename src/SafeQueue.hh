@@ -47,18 +47,4 @@ void SafeQueue<T>::pop(T& val)
     q.pop();
 }
 
-template<typename T>
-bool SafeQueue<T>::maybePop(T& val)
-{
-    std::unique_lock<std::mutex> lock(m);
-
-    if (q.empty())
-        return false;
-
-    val = std::move(q.front());
-    q.pop();
-
-    return true;
-}
-
 #endif /* SAFEQUEUE_H_ */

@@ -29,9 +29,7 @@ public:
 
     std::unique_ptr<ModPacket> modPkt(std::unique_ptr<RadioPacket> pkt);
 
-    void prepareTXBurst(size_t nsamps);
-    void burstTX(double when, size_t max_nsamps);
-    bool canTX(size_t max_nsamps);
+    void burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs);
 
     void burstRX(double when, size_t nsamps);
 

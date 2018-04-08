@@ -12,6 +12,7 @@
 #include <thread>
 #include <fstream>
 
+#include "ModQueue.hh"
 #include "NET.hh"
 #include "PHY.hh"
 #include "USRP.hh"
@@ -31,6 +32,7 @@ class MAC
         std::shared_ptr<FloatIQTransport> t;
         std::shared_ptr<NET> net;
         std::shared_ptr<PHY> phy;
+        ModQueue             modQueue;
         double frame_size;
         double slot_size;
         double pad_size;
@@ -38,6 +40,8 @@ class MAC
         std::thread rx_worker_thread;
 
         void rx_worker(void);
+
+        void txSlot(double when, size_t maxSamples);
 };
 
 #endif /* MAC_H_ */

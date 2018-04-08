@@ -220,56 +220,18 @@ std::unique_ptr<ModPacket> PHY::modPkt(std::unique_ptr<RadioPacket> pkt)
     return mpkt;
 }
 
-void PHY::prepareTXBurst(size_t need_nsamps)
+void PHY::burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs)
 {
-    size_t nsamps = 0;
-    int npackets = 0;
+    if (!bufs.empty())
+        t->start_burst();
 
-    while (nsamps < need_nsamps) {
-        std::unique_ptr<RadioPacket> pkt = net->recvPacket();
+    for (auto it = bufs.begin(); it != bufs.end(); ++it) {
+        IQBuffer& iqbuf = **it;
 
-        if (not pkt)
-            break;
+        if (std::next(it) == bufs.end())
+            t->end_burst();
 
-        printf("Got Packet\n");
-
-        std::unique_ptr<ModPacket> mpkt = modPkt(std::move(pkt));
-
-        if (mpkt) {
-            nsamps += mpkt->nsamples;
-            modPackets.push(std::move(mpkt));
-            ++npackets;
-        }
+        // tx that packet (each buffer in the double buff is one packet)
+        t->send(when, &iqbuf[0], iqbuf.size());
     }
-}
-
-void PHY::burstTX(double when, size_t nsamps)
-{
-    if (!canTX(nsamps))
-        return;
-
-    t->start_burst();
-
-    do {
-        std::unique_ptr<ModPacket> mpkt = std::move(modPackets.front());
-
-        modPackets.pop();
-
-        nsamps -= mpkt->nsamples;
-
-        for (auto it = mpkt->samples.begin(); it != mpkt->samples.end(); it++) {
-            IQBuffer& iqbuf = **it;
-
-            if (std::next(it) == mpkt->samples.end() && !canTX(nsamps))
-                t->end_burst();
-
-            // tx that packet (each buffer in the double buff is one packet)
-            t->send(when, &iqbuf[0], iqbuf.size());
-        }
-    } while (canTX(nsamps));
-}
-
-bool PHY::canTX(size_t max_nsamps)
-{
-    return !modPackets.empty() && modPackets.front()->nsamples <= max_nsamps;
 }

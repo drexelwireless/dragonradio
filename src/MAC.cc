@@ -1,5 +1,7 @@
 // DWSL - full radio stack
 
+#include <deque>
+
 #include "MAC.hh"
 #include "USRP.hh"
 
@@ -8,7 +10,9 @@ MAC::MAC(std::shared_ptr<FloatIQTransport> t,
          std::shared_ptr<PHY> phy,
          double frame_size,
          double pad_size)
-  : t(t), net(net), phy(phy), frame_size(frame_size), pad_size(pad_size),
+  : t(t), net(net), phy(phy),
+    modQueue(net, phy),
+    frame_size(frame_size), pad_size(pad_size),
     continue_running(true)
 {
     slot_size = frame_size/net->getNumNodes();
@@ -44,7 +48,7 @@ void MAC::run(void)
 {
     size_t slot_samps = t->get_tx_rate()*(slot_size - pad_size);
 
-    phy->prepareTXBurst(slot_samps);
+    modQueue.setWatermark(slot_samps);
 
     while (continue_running) {
         double time_now;
@@ -59,10 +63,7 @@ void MAC::run(void)
             wait_time += frame_size;
         }
 
-        phy->burstTX(time_now+wait_time, slot_samps);
-
-        // readyNextBuffer
-        phy->prepareTXBurst(slot_samps);
+        txSlot(time_now+wait_time, slot_samps);
 
         // wait out the rest of the slot
         double new_time_now = t->get_time_now();
@@ -73,4 +74,24 @@ void MAC::run(void)
             new_time_now = t->get_time_now();
         }
     }
+}
+
+void MAC::txSlot(double when, size_t maxSamples)
+{
+    std::deque<std::unique_ptr<IQBuffer>> txBuf;
+
+    while (maxSamples > 0) {
+        std::unique_ptr<ModPacket> mpkt = modQueue.pop(maxSamples);
+
+        if (not mpkt)
+            break;
+
+        maxSamples -= mpkt->nsamples;
+
+        txBuf.insert(txBuf.end(),
+                     std::make_move_iterator(mpkt->samples.begin()),
+                     std::make_move_iterator(mpkt->samples.end()));
+    }
+
+    phy->burstTX(when, txBuf);
 }
