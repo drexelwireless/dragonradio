@@ -36,9 +36,9 @@ void MAC::join(void)
 
 void MAC::rxWorker(void)
 {
-    double time_now;
-    double wait_time;
-    double pre_slot_start_time;
+    uhd::time_spec_t time_now;
+    uhd::time_spec_t wait_time;
+    uhd::time_spec_t pre_slot_start_time;
     size_t nsamps;
 
     while (!done) {
@@ -46,9 +46,9 @@ void MAC::rxWorker(void)
 
         // Time rx to start at pad before next slot
         time_now = usrp->get_time_now();
-        wait_time = frame_size - fmod(time_now, frame_size) - pad_size;
+        wait_time = frame_size - fmod(time_now.get_real_secs(), frame_size) - pad_size;
 
-        if (wait_time < 0)
+        if (wait_time < 0.0)
             continue;
 
         pre_slot_start_time = time_now + wait_time;
@@ -63,21 +63,21 @@ void MAC::rxWorker(void)
 
 void MAC::txWorker(void)
 {
-    size_t slot_samps = usrp->get_tx_rate()*(slot_size - pad_size);
-    double time_now;
-    double frame_pos;
-    double wait_time;
-    double slot_start_time;
+    size_t           slot_samps = usrp->get_tx_rate()*(slot_size - pad_size);
+    uhd::time_spec_t time_now;
+    uhd::time_spec_t frame_pos;
+    uhd::time_spec_t wait_time;
+    uhd::time_spec_t slot_start_time;
 
     modQueue.setWatermark(slot_samps);
 
     while (!done) {
         // Schedule transmission for start of our slot
         time_now = usrp->get_time_now();
-        frame_pos = fmod(time_now, frame_size);
+        frame_pos = fmod(time_now.get_real_secs(), frame_size);
         wait_time = net->getNodeId()*slot_size - frame_pos;
 
-        if (wait_time < 0) {
+        if (wait_time < 0.0) {
             printf("MISS\n");
             wait_time += frame_size;
         }
@@ -96,7 +96,7 @@ void MAC::txWorker(void)
     }
 }
 
-void MAC::txSlot(double when, size_t maxSamples)
+void MAC::txSlot(uhd::time_spec_t when, size_t maxSamples)
 {
     std::deque<std::unique_ptr<IQBuffer>> txBuf;
 

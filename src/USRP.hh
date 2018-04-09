@@ -19,16 +19,16 @@ public:
          float rx_gain);
     ~USRP();
 
-    double get_time_now(void);
+    uhd::time_spec_t get_time_now(void);
 
     double get_tx_rate(void);
     void   set_tx_rate(double rate);
     double get_rx_rate(void);
     void   set_rx_rate(double rate);
 
-    void burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs);
+    void burstTX(uhd::time_spec_t when, std::deque<std::unique_ptr<IQBuffer>>& bufs);
 
-    std::unique_ptr<IQBuffer> burstRX(double when, size_t nsamps);
+    std::unique_ptr<IQBuffer> burstRX(uhd::time_spec_t when, size_t nsamps);
 
 private:
     uhd::usrp::multi_usrp::sptr usrp;

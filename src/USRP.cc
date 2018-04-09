@@ -56,11 +56,9 @@ USRP::~USRP()
 {
 }
 
-double USRP::get_time_now(void)
+uhd::time_spec_t USRP::get_time_now(void)
 {
-    uhd::time_spec_t uhd_system_time_now = usrp->get_time_now(0);
-
-    return (double)(uhd_system_time_now.get_full_secs()) + (double)(uhd_system_time_now.get_frac_secs());
+    return usrp->get_time_now(0);
 }
 
 double USRP::get_tx_rate(void)
@@ -83,18 +81,13 @@ void USRP::set_rx_rate(double rate)
     usrp->set_rx_rate(rate);
 }
 
-void USRP::burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs)
+void USRP::burstTX(uhd::time_spec_t when, std::deque<std::unique_ptr<IQBuffer>>& bufs)
 {
-    double full;
-    double frac;
-
-    frac = modf(when, &full);
-
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
         uhd::tx_metadata_t tx_md;
         IQBuffer&          iqbuf = **it;
 
-        tx_md.time_spec = uhd::time_spec_t((time_t) full, frac);
+        tx_md.time_spec = when;
         tx_md.has_time_spec = true;
 
         if (it == bufs.begin())
@@ -106,20 +99,16 @@ void USRP::burstTX(double when, std::deque<std::unique_ptr<IQBuffer>>& bufs)
     }
 }
 
-std::unique_ptr<IQBuffer> USRP::burstRX(double when, size_t nsamps)
+std::unique_ptr<IQBuffer> USRP::burstRX(uhd::time_spec_t when, size_t nsamps)
 {
     size_t                    ndelivered = 0;
     const size_t              maxSamps = usrp->get_device()->get_max_recv_samps_per_packet();
-    double                    full;
-    double                    frac;
     std::unique_ptr<IQBuffer> buf(new IQBuffer);
-
-    frac = modf(when, &full);
 
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_MORE);
 
     stream_cmd.stream_now = false;
-    stream_cmd.time_spec = uhd::time_spec_t((time_t) full, frac);
+    stream_cmd.time_spec = when;
     rx_stream->issue_stream_cmd(stream_cmd);
 
     while (ndelivered < nsamps) {
