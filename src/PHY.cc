@@ -50,12 +50,12 @@ int liquidRxCallback(unsigned char *  _header,
                      liquid_float_complex* G_hat,
                      unsigned int M);
 
-PHY::PHY(std::shared_ptr<IQTransport> t,
+PHY::PHY(std::shared_ptr<USRP> usrp,
          std::shared_ptr<NET> net,
          double bandwidth,
          size_t minPacketSize,
          unsigned int rxThreadPoolSize)
-  : t(t),
+  : usrp(usrp),
     net(net),
     nodeId(net->getNodeId()),
     minPacketSize(minPacketSize),
@@ -65,8 +65,8 @@ PHY::PHY(std::shared_ptr<IQTransport> t,
     threadQueues(rxThreadPoolSize)
 {
     // MultiChannel TX/RX requires oversampling by a factor of 2
-    t->set_tx_rate(2*bandwidth);
-    t->set_rx_rate(2*bandwidth);
+    usrp->set_tx_rate(2*bandwidth);
+    usrp->set_rx_rate(2*bandwidth);
 
     // modem setup (list is for parallel demodulation)
     mctx = std::unique_ptr<multichanneltx>(new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR));

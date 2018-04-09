@@ -23,7 +23,7 @@ using DemodBuffer = std::deque<std::shared_ptr<IQBuffer>>;
 class PHY
 {
 public:
-    PHY(std::shared_ptr<IQTransport> t,
+    PHY(std::shared_ptr<USRP> usrp,
         std::shared_ptr<NET> net,
         double bandwidth,
         size_t minPacketSize,
@@ -47,8 +47,8 @@ public:
                    unsigned int M);
 
 private:
-    std::shared_ptr<IQTransport> t;
-    std::shared_ptr<NET>         net;
+    std::shared_ptr<USRP> usrp;
+    std::shared_ptr<NET>  net;
 
     NodeId nodeId;
     size_t minPacketSize;

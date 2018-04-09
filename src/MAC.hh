@@ -21,7 +21,7 @@ class MAC
 {
 public:
     //functions
-    MAC(std::shared_ptr<IQTransport> t,
+    MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<NET> net,
         std::shared_ptr<PHY> phy,
         double frame_size,
@@ -31,10 +31,10 @@ public:
     void join(void);
 
 private:
-    std::shared_ptr<IQTransport> t;
-    std::shared_ptr<NET>         net;
-    std::shared_ptr<PHY>         phy;
-    ModQueue                     modQueue;
+    std::shared_ptr<USRP> usrp;
+    std::shared_ptr<NET>  net;
+    std::shared_ptr<PHY>  phy;
+    ModQueue              modQueue;
 
     double frame_size;
     double slot_size;

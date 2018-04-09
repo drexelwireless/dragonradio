@@ -5,12 +5,12 @@
 #include "MAC.hh"
 #include "USRP.hh"
 
-MAC::MAC(std::shared_ptr<IQTransport> t,
+MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<NET> net,
          std::shared_ptr<PHY> phy,
          double frame_size,
          double pad_size)
-  : t(t), net(net), phy(phy),
+  : usrp(usrp), net(net), phy(phy),
     modQueue(net, phy),
     frame_size(frame_size),
     slot_size(frame_size/net->getNumNodes()),
@@ -42,10 +42,10 @@ void MAC::rxWorker(void)
     size_t nsamps;
 
     while (!done) {
-        nsamps = (size_t)((t->get_rx_rate())*(slot_size))+(t->get_rx_rate()*(pad_size))*2.0;
+        nsamps = (size_t)((usrp->get_rx_rate())*(slot_size))+(usrp->get_rx_rate()*(pad_size))*2.0;
 
         // Time rx to start at pad before next slot
-        time_now = t->get_time_now();
+        time_now = usrp->get_time_now();
         wait_time = frame_size - fmod(time_now, frame_size) - pad_size;
 
         if (wait_time < 0)
@@ -55,7 +55,7 @@ void MAC::rxWorker(void)
 
         std::unique_ptr<DemodBuffer> buf(new DemodBuffer());
 
-        buf->push_back(t->burstRX(pre_slot_start_time, nsamps));
+        buf->push_back(usrp->burstRX(pre_slot_start_time, nsamps));
 
         phy->demodulate(std::move(buf));
     }
@@ -63,7 +63,7 @@ void MAC::rxWorker(void)
 
 void MAC::txWorker(void)
 {
-    size_t slot_samps = t->get_tx_rate()*(slot_size - pad_size);
+    size_t slot_samps = usrp->get_tx_rate()*(slot_size - pad_size);
     double time_now;
     double frame_pos;
     double wait_time;
@@ -73,7 +73,7 @@ void MAC::txWorker(void)
 
     while (!done) {
         // Schedule transmission for start of our slot
-        time_now = t->get_time_now();
+        time_now = usrp->get_time_now();
         frame_pos = fmod(time_now, frame_size);
         wait_time = net->getNodeId()*slot_size - frame_pos;
 
@@ -87,11 +87,11 @@ void MAC::txWorker(void)
         txSlot(slot_start_time, slot_samps);
 
         // Wait out the rest of the frame
-        time_now = t->get_time_now();
+        time_now = usrp->get_time_now();
 
         while (time_now - slot_start_time < frame_size - pad_size) {
             usleep(10);
-            time_now = t->get_time_now();
+            time_now = usrp->get_time_now();
         }
     }
 }
@@ -113,5 +113,5 @@ void MAC::txSlot(double when, size_t maxSamples)
                      std::make_move_iterator(mpkt->samples.end()));
     }
 
-    t->burstTX(when, txBuf);
+    usrp->burstTX(when, txBuf);
 }

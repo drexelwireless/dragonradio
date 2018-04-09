@@ -1,12 +1,13 @@
 #ifndef USRP_H_
 #define USRP_H_
 
+#include <deque>
 #include <string>
 #include <uhd/usrp/multi_usrp.hpp>
 
-#include "IQTransport.hh"
+#include "IQBuffer.hh"
 
-class USRP : public IQTransport
+class USRP
 {
 public:
     USRP(const std::string& addr,
