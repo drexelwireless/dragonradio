@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     //   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
     // Not applying recommended TX/RX gains yet...
     if (x310) {
-        center_freq = 2.4e9;
+        center_freq = 3e9;
         //tx_gain = 23;
         //rx_gain = 8;
     }
