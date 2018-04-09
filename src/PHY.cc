@@ -133,8 +133,6 @@ std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
             (*iqbuf)[nsamples++] = scalar*buf[i];
 
         if (nsamples == tx_transport_size) {
-            iqbuf->resize(nsamples);
-
             mpkt->appendSamples(std::move(iqbuf));
 
             iqbuf = std::make_unique<IQBuf>(tx_transport_size);
