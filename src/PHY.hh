@@ -18,8 +18,6 @@
 #include "SafeQueue.hh"
 #include "USRP.hh"
 
-using DemodBuffer = std::deque<std::shared_ptr<IQBuf>>;
-
 class PHY
 {
 public:
@@ -34,7 +32,7 @@ public:
 
     std::unique_ptr<ModPacket> modulate(std::unique_ptr<RadioPacket> pkt);
 
-    void demodulate(std::unique_ptr<DemodBuffer> buf);
+    void demodulate(std::unique_ptr<IQQueue> buf);
 
     int rxCallback(unsigned char *  _header,
                    int              _header_valid,
@@ -66,10 +64,10 @@ private:
     std::vector<std::thread> threads;
 
     /** Demodulation threads' queues holding data to demodulate */
-    std::vector<SafeQueue<std::unique_ptr<DemodBuffer>>> threadQueues;
+    std::vector<SafeQueue<std::unique_ptr<IQQueue>>> threadQueues;
 
     /** Demodulation worker */
-    void demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<DemodBuffer>>& q);
+    void demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<IQQueue>>& q);
 };
 
 #endif /* PHY_H_ */

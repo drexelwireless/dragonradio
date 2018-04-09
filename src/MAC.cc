@@ -53,7 +53,7 @@ void MAC::rxWorker(void)
 
         pre_slot_start_time = time_now + wait_time;
 
-        std::unique_ptr<DemodBuffer> buf(new DemodBuffer());
+        std::unique_ptr<IQQueue> buf(new IQQueue());
 
         buf->push_back(usrp->burstRX(pre_slot_start_time, nsamps));
 
