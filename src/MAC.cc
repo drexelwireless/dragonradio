@@ -53,11 +53,12 @@ void MAC::rxWorker(void)
 
         pre_slot_start_time = time_now + wait_time;
 
-        std::unique_ptr<IQQueue> buf(new IQQueue());
+        std::unique_ptr<IQQueue> q(new IQQueue());
+        std::unique_ptr<IQBuf>   buf(usrp->burstRX(pre_slot_start_time, nsamps));
 
-        buf->push_back(usrp->burstRX(pre_slot_start_time, nsamps));
+        q->push_back(IQSlice(std::move(buf), 0, buf->size()));
 
-        phy->demodulate(std::move(buf));
+        phy->demodulate(std::move(q));
     }
 }
 

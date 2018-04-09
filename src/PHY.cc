@@ -168,7 +168,7 @@ void PHY::demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<IQQueue>>&
             continue;
 
         for (auto it = buf->begin(); it != buf->end(); ++it)
-            mcrx.Execute(&(**it)[0], (*it)->size());
+            mcrx.Execute(&(*it)[0], it->size());
     }
 }
 
