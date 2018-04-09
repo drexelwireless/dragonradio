@@ -122,13 +122,11 @@ std::unique_ptr<IQBuf> USRP::burstRX(uhd::time_spec_t t_start, size_t nsamps)
     const double           txRate = usrp->get_rx_rate(); // TX rate in Hz
     uhd::time_spec_t       t_end = t_start + static_cast<double>(nsamps)/txRate;
     size_t                 ndelivered = 0;
-    std::unique_ptr<IQBuf> buf(new IQBuf);
+    std::unique_ptr<IQBuf> buf(new IQBuf(nsamps + MAXSAMPS));
 
     for (;;) {
         uhd::rx_metadata_t rx_md;
         ssize_t            n;
-
-        buf->resize(ndelivered + MAXSAMPS);
 
         n = rx_stream->recv(&(*buf)[ndelivered], MAXSAMPS, rx_md, 0.1, false);
 
