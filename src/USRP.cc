@@ -98,28 +98,39 @@ void USRP::burstTX(uhd::time_spec_t when, std::deque<std::unique_ptr<IQBuf>>& bu
         tx_stream->send(&iqbuf[0], iqbuf.size(), tx_md);
     }
 }
-
-std::unique_ptr<IQBuf> USRP::burstRX(uhd::time_spec_t when, size_t nsamps)
+void USRP::startRXStream(uhd::time_spec_t when)
 {
-    size_t                 ndelivered = 0;
-    const size_t           maxSamps = usrp->get_device()->get_max_recv_samps_per_packet();
-    std::unique_ptr<IQBuf> buf(new IQBuf);
-
-    uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_MORE);
+    uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 
     stream_cmd.stream_now = false;
+    stream_cmd.num_samps = 0;
     stream_cmd.time_spec = when;
     rx_stream->issue_stream_cmd(stream_cmd);
+}
 
-    while (ndelivered < nsamps) {
+void USRP::stopRXStream(void)
+{
+    uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
+
+    rx_stream->issue_stream_cmd(stream_cmd);
+}
+
+const size_t MAXSAMPS = 2048;
+
+std::unique_ptr<IQBuf> USRP::burstRX(uhd::time_spec_t t_start, size_t nsamps)
+{
+    const double           txRate = usrp->get_rx_rate(); // TX rate in Hz
+    uhd::time_spec_t       t_end = t_start + static_cast<double>(nsamps)/txRate;
+    size_t                 ndelivered = 0;
+    std::unique_ptr<IQBuf> buf(new IQBuf);
+
+    for (;;) {
         uhd::rx_metadata_t rx_md;
         ssize_t            n;
 
-        buf->resize(ndelivered + maxSamps);
+        buf->resize(ndelivered + MAXSAMPS);
 
-        n = usrp->get_device()->recv(&(*buf)[ndelivered], maxSamps, rx_md,
-                                     uhd::io_type_t::COMPLEX_FLOAT32,
-                                     uhd::device::RECV_MODE_ONE_PACKET);
+        n = rx_stream->recv(&(*buf)[ndelivered], MAXSAMPS, rx_md, 0.1, false);
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
@@ -128,6 +139,9 @@ std::unique_ptr<IQBuf> USRP::burstRX(uhd::time_spec_t when, size_t nsamps)
             buf->set_timestamp(rx_md.time_spec);
 
         ndelivered += n;
+
+        if (rx_md.time_spec + static_cast<double>(n)/txRate >= t_end)
+            break;
     }
 
     buf->resize(ndelivered);

@@ -26,8 +26,16 @@ public:
     double get_rx_rate(void);
     void   set_rx_rate(double rate);
 
+    /** Transmit samples in queue of IQBuffers in a burst at the given time */
     void burstTX(uhd::time_spec_t when, std::deque<std::unique_ptr<IQBuf>>& bufs);
 
+    /** Start streaming read */
+    void startRXStream(uhd::time_spec_t when);
+
+    /** Stop streaming read */
+    void stopRXStream(void);
+
+    /** Receive specified number of samples at the given time */
     std::unique_ptr<IQBuf> burstRX(uhd::time_spec_t when, size_t nsamps);
 
 private:

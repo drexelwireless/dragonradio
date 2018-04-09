@@ -25,7 +25,7 @@ public:
         std::shared_ptr<NET> net,
         std::shared_ptr<PHY> phy,
         double frame_size,
-        double pad_size);
+        double guard_size);
     ~MAC();
 
     void join(void);
@@ -36,9 +36,17 @@ private:
     std::shared_ptr<PHY>  phy;
     ModQueue              modQueue;
 
+    /** Length of TDMA frame (sec) */
     double frame_size;
+
+    /** Length of a single TDMA slot, *including* guard (sec) */
     double slot_size;
-    double pad_size;
+
+    /** Length of inter-slot guard (sec) */
+    double guard_size;
+
+    /** Length of previous slot's samples we try to demod in the current slot (sec) */
+    double slop_size;
 
     /** Flag indicating if we should stop processing packets */
     bool done;
