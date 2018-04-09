@@ -18,7 +18,7 @@
 #include "SafeQueue.hh"
 #include "USRP.hh"
 
-using DemodBuffer = std::deque<std::shared_ptr<IQBuffer>>;
+using DemodBuffer = std::deque<std::shared_ptr<IQBuf>>;
 
 class PHY
 {

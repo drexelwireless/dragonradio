@@ -11,7 +11,7 @@ struct ModPacket
     ModPacket(void) : nsamples(0) {};
 
     /** Append an IQ sample buffer */
-    void appendSamples(std::unique_ptr<IQBuffer> buf)
+    void appendSamples(std::unique_ptr<IQBuf> buf)
     {
         nsamples += buf->size();
         samples.push_back(std::move(buf));
@@ -22,7 +22,7 @@ struct ModPacket
 
     /** Buffers containing the modulated samples. Modulating a packet can
         produce more than one IQ buffer! */
-    std::vector<std::unique_ptr<IQBuffer>> samples;
+    std::vector<std::unique_ptr<IQBuf>> samples;
 };
 
 #endif /* MODPACKET_HH_ */

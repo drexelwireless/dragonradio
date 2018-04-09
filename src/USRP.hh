@@ -26,9 +26,9 @@ public:
     double get_rx_rate(void);
     void   set_rx_rate(double rate);
 
-    void burstTX(uhd::time_spec_t when, std::deque<std::unique_ptr<IQBuffer>>& bufs);
+    void burstTX(uhd::time_spec_t when, std::deque<std::unique_ptr<IQBuf>>& bufs);
 
-    std::unique_ptr<IQBuffer> burstRX(uhd::time_spec_t when, size_t nsamps);
+    std::unique_ptr<IQBuf> burstRX(uhd::time_spec_t when, size_t nsamps);
 
 private:
     uhd::usrp::multi_usrp::sptr usrp;

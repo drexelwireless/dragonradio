@@ -98,7 +98,7 @@ void MAC::txWorker(void)
 
 void MAC::txSlot(uhd::time_spec_t when, size_t maxSamples)
 {
-    std::deque<std::unique_ptr<IQBuffer>> txBuf;
+    std::deque<std::unique_ptr<IQBuf>> txBuf;
 
     while (maxSamples > 0) {
         std::unique_ptr<ModPacket> mpkt = modQueue.pop(maxSamples);
