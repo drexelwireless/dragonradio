@@ -69,13 +69,13 @@ PHY::PHY(std::shared_ptr<USRP> usrp,
     usrp->set_rx_rate(2*bandwidth);
 
     // modem setup (list is for parallel demodulation)
-    mctx = std::unique_ptr<multichanneltx>(new multichanneltx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR));
+    mctx = std::make_unique<multichanneltx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
 
     for (unsigned int i = 0; i < rxThreadPoolSize; i++) {
         framesync_callback callback[1] = { liquidRxCallback };
         void               *userdata[1] = { this };
 
-        std::unique_ptr<multichannelrx> mcrx(new multichannelrx(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback));
+        auto mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback);
 
         mcrxs.push_back(std::move(mcrx));
     }
@@ -104,9 +104,9 @@ void PHY::join(void)
 
 std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
 {
-    std::unique_ptr<ModPacket> mpkt(new ModPacket);
-    PHYHeader                  header;
-    size_t                     len = std::max((size_t) pkt->payload_len, minPacketSize);
+    auto      mpkt = std::make_unique<ModPacket>();
+    PHYHeader header;
+    size_t    len = std::max((size_t) pkt->payload_len, minPacketSize);
 
     memset(&header, 0, sizeof(header));
 
@@ -120,11 +120,11 @@ std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
     // 2000 when we allocate the RadioPacket in NET.cc.
     mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], len, MOD, FEC_INNER, FEC_OUTER);
 
-    const float            scalar = 0.2f;
-    const size_t           BUFLEN = 2;
-    std::complex<float>    buf[BUFLEN];
-    size_t                 nsamples = 0;
-    std::unique_ptr<IQBuf> iqbuf(new IQBuf(tx_transport_size));
+    const float         scalar = 0.2f;
+    const size_t        BUFLEN = 2;
+    std::complex<float> buf[BUFLEN];
+    size_t              nsamples = 0;
+    auto                iqbuf = std::make_unique<IQBuf>(tx_transport_size);
 
     while (!mctx->IsChannelReadyForData(0)) {
         mctx->GenerateSamples(buf);
@@ -137,7 +137,7 @@ std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
 
             mpkt->appendSamples(std::move(iqbuf));
 
-            iqbuf.reset(new IQBuf(tx_transport_size));
+            iqbuf = std::make_unique<IQBuf>(tx_transport_size);
             nsamples = 0;
         }
     }

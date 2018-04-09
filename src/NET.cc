@@ -16,7 +16,7 @@ NET::NET(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& 
 {
     printf("Creating tap interface %s\n", tap_name.c_str());
 
-    tt.reset(new TunTap(tap_name, nodeId, nodes));
+    tt = std::make_unique<TunTap>(tap_name, nodeId, nodes);
 
     recvThread = std::thread(&NET::recvWorker, this);
     sendThread = std::thread(&NET::sendWorker, this);
@@ -48,7 +48,7 @@ std::unique_ptr<RadioPacket> NET::recvPacket(void)
 
 ssize_t NET::sendPacket(void* data, size_t n)
 {
-    std::unique_ptr<NetPacket> pkt(new NetPacket(n));
+    auto pkt = std::make_unique<NetPacket>(n);
 
     memcpy(&(*pkt)[0], data, n);
     sendQueue.push(std::move(pkt));
@@ -72,7 +72,7 @@ const size_t MAX_PKT_SIZE = 2000;
 void NET::recvWorker(void)
 {
     while (!done) {
-        std::unique_ptr<RadioPacket> pkt(new RadioPacket(MAX_PKT_SIZE));
+        auto pkt = std::make_unique<RadioPacket>(MAX_PKT_SIZE);
 
         pkt->payload_len = tt->cread(&(pkt->payload)[0], pkt->payload.size());
 

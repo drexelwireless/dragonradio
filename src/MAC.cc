@@ -79,7 +79,7 @@ void MAC::rxWorker(void)
 
             // Queue samples for demodulation
             if (curSlot) {
-                std::unique_ptr<IQQueue> q(new IQQueue());
+                auto q = std::make_unique<IQQueue>();
 
                 // We demodulate the part of the previous frame that was
                 // oversampled plus an additional slop_samps samples to handle

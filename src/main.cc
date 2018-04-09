@@ -80,10 +80,10 @@ int main(int argc, char** argv)
         //rx_gain = 8;
     }
 
-    std::shared_ptr<USRP> usrp(new USRP(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain));
-    std::shared_ptr<NET>  net(new NET("tap0",node_id,nodes_in_net));
-    std::shared_ptr<PHY>  phy(new PHY(usrp, net, bandwidth, min_packet_size, rx_thread_pool_size));
-    std::shared_ptr<MAC>  mac(new MAC(usrp, net, phy, frame_size, guard_size));
+    auto usrp = std::make_shared<USRP>(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain);
+    auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
+    auto phy = std::make_shared<PHY>(usrp, net, bandwidth, min_packet_size, rx_thread_pool_size);
+    auto mac = std::make_shared<MAC>(usrp, net, phy, frame_size, guard_size);
 
     // Wait for Ctrl-C
     sigset_t waitset;
