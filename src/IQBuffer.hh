@@ -6,6 +6,8 @@
 #include <memory>
 #include <vector>
 
+#include <uhd/types/time_spec.hpp>
+
 /** A buffer of IQ samples */
 class IQBuf {
 public:
@@ -69,8 +71,22 @@ public:
         data.resize(sz);
     }
 
+    void set_timestamp(uhd::time_spec_t t)
+    {
+        timestamp = t;
+    }
+
+    uhd::time_spec_t get_timestamp(void)
+    {
+        return timestamp;
+    }
+
 private:
+    /** IQ samples */
     std::vector<std::complex<float>> data;
+
+    /** Timestamp of the first sample */
+    uhd::time_spec_t timestamp;
 };
 
 /** A queue of IQ samples */

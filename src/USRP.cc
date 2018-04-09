@@ -124,6 +124,9 @@ std::unique_ptr<IQBuf> USRP::burstRX(uhd::time_spec_t when, size_t nsamps)
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
 
+        if (ndelivered == 0)
+            buf->set_timestamp(rx_md.time_spec);
+
         ndelivered += n;
     }
 
