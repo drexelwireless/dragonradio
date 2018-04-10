@@ -16,7 +16,7 @@ public:
              std::shared_ptr<PHY> phy);
     ~ModQueue();
 
-    void join(void);
+    void stop(void);
 
     size_t getWatermark(void);
 

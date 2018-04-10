@@ -14,7 +14,7 @@ public:
     void push(T&& val);
     void pop(T& val);
 
-    void join(void);
+    void stop(void);
 
 private:
     bool                    done;
@@ -55,7 +55,7 @@ void SafeQueue<T>::pop(T& val)
 
 
 template<typename T>
-void SafeQueue<T>::join(void)
+void SafeQueue<T>::stop(void)
 {
     done = true;
     cond.notify_all();

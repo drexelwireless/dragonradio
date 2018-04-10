@@ -28,7 +28,7 @@ public:
         double guard_size);
     ~MAC();
 
-    void join(void);
+    void stop(void);
 
 private:
     std::shared_ptr<USRP> usrp;

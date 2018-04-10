@@ -28,7 +28,7 @@ public:
         unsigned int rxThreadPoolSize);
     ~PHY();
 
-    void join(void);
+    void stop(void);
 
     std::unique_ptr<ModPacket> modulate(std::unique_ptr<RadioPacket> pkt);
 

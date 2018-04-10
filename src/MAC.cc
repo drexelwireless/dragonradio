@@ -29,12 +29,17 @@ MAC::~MAC()
 {
 }
 
-void MAC::join(void)
+void MAC::stop(void)
 {
     done = true;
-    rxThread.join();
-    txThread.join();
-    modQueue.join();
+
+    if (rxThread.joinable())
+        rxThread.join();
+
+    if (txThread.joinable())
+        txThread.join();
+        
+    modQueue.stop();
 }
 
 void MAC::rxWorker(void)

@@ -16,11 +16,13 @@ ModQueue::~ModQueue()
 {
 }
 
-void ModQueue::join(void)
+void ModQueue::stop(void)
 {
     done = true;
     prod.notify_all();
-    modThread.join();
+
+    if (modThread.joinable())
+        modThread.join();
 }
 
 size_t ModQueue::getWatermark(void)

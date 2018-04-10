@@ -33,7 +33,7 @@ public:
     ssize_t sendPacket(void* data, size_t n);
 
     /** Terminate packet processing threads */
-    void join(void);
+    void stop(void);
 
 private:
     /** Our tun/tap interface */

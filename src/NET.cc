@@ -56,13 +56,17 @@ ssize_t NET::sendPacket(void* data, size_t n)
     return n;
 }
 
-void NET::join(void)
+void NET::stop(void)
 {
     done = true;
-    recvQueue.join();
-    sendQueue.join();
-    recvThread.join();
-    sendThread.join();
+    recvQueue.stop();
+    sendQueue.stop();
+
+    if (recvThread.joinable())
+        recvThread.join();
+
+    if (sendThread.joinable())
+        sendThread.join();
 }
 
 /** Maximum radio packet size. Really 1500 (MTU) + 14 (size of Ethernet header),

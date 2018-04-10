@@ -92,13 +92,15 @@ PHY::~PHY()
 {
 }
 
-void PHY::join(void)
+void PHY::stop(void)
 {
     done = true;
 
     for (unsigned int i = 0; i < threads.size(); ++i) {
-        threadQueues[i].join();
-        threads[i].join();
+        threadQueues[i].stop();
+
+        if (threads[i].joinable())
+            threads[i].join();
     }
 }
 

@@ -96,9 +96,9 @@ int main(int argc, char** argv)
 
     sigwait(&waitset, &sig);
 
-    net->join();
-    phy->join();
-    mac->join();
+    net->stop();
+    phy->stop();
+    mac->stop();
 
     printf("Done!\n");
 }
