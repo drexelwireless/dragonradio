@@ -10,6 +10,8 @@ class SafeQueue {
 public:
     SafeQueue() : done(false) {};
 
+    bool empty(void) const;
+
     void push(const T& val);
     void push(T&& val);
     void pop(T& val);
@@ -22,6 +24,14 @@ private:
     std::condition_variable cond;
     std::queue<T>           q;
 };
+
+template<typename T>
+bool SafeQueue<T>::empty(void) const
+{
+    std::lock_guard<std::mutex> lock(m);
+
+    return q.empty();
+}
 
 template<typename T>
 void SafeQueue<T>::push(const T& val)
