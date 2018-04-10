@@ -104,7 +104,7 @@ void PHY::stop(void)
     }
 }
 
-std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
+std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<NetPacket> pkt)
 {
     auto      mpkt = std::make_unique<ModPacket>();
     PHYHeader header;
@@ -112,14 +112,14 @@ std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<RadioPacket> pkt)
 
     memset(&header, 0, sizeof(header));
 
-    header.h.src = nodeId;
+    header.h.src = pkt->src;
     header.h.dest = pkt->dest;
-    header.h.pkt_id = pkt->packet_id;
+    header.h.pkt_id = pkt->pkt_id;
     header.h.pkt_len = pkt->payload_len;
 
     // XXX We assume that the radio packet's buffer has at least minPacketSize
     // bytes available. This is true because we set the size of this buffer to
-    // 2000 when we allocate the RadioPacket in NET.cc.
+    // 2000 when we allocate the NetPacket in NET.cc.
     mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], len, MOD, FEC_INNER, FEC_OUTER);
 
     const float         scalar = 0.2f;
@@ -218,17 +218,21 @@ int PHY::rxCallback(unsigned char *  _header,
         return 0;
     }
 
-    // let first header byte be node id
-    // let second header byte be source id
     if (h->dest != net->getNodeId())
         return 0;
 
     if (h->pkt_len == 0)
         return 1;
 
-    unsigned int num_written = net->sendPacket(_payload, h->pkt_len);
+    auto pkt = std::make_unique<RadioPacket>(_payload, h->pkt_len);
 
-    printf("Written %u bytes (PID %u) from %u", num_written, h->pkt_id, h->src);
+    pkt->src = h->src;
+    pkt->dest = h->dest;
+    pkt->pkt_id = h->pkt_id;
+
+    net->sendPacket(std::move(pkt));
+
+    printf("Written %u bytes (PID %u) from %u", h->pkt_len, h->pkt_id, h->src);
     if (M>0)
         printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
     else

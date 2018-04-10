@@ -72,7 +72,7 @@ void ModQueue::modWorker(void)
             break;
 
         // Get a packet from the network
-        std::unique_ptr<RadioPacket> pkt = net->recvPacket();
+        std::unique_ptr<NetPacket> pkt = net->recvPacket();
 
         if (not pkt)
             continue;

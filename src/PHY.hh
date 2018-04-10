@@ -30,7 +30,7 @@ public:
 
     void stop(void);
 
-    std::unique_ptr<ModPacket> modulate(std::unique_ptr<RadioPacket> pkt);
+    std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt);
 
     void demodulate(std::unique_ptr<IQQueue> buf);
 

@@ -37,23 +37,18 @@ unsigned int NET::getNumNodes(void)
     return numNodes;
 }
 
-std::unique_ptr<RadioPacket> NET::recvPacket(void)
+std::unique_ptr<NetPacket> NET::recvPacket(void)
 {
-    std::unique_ptr<RadioPacket> pkt;
+    std::unique_ptr<NetPacket> pkt;
 
     recvQueue.pop(pkt);
 
     return pkt;
 }
 
-ssize_t NET::sendPacket(void* data, size_t n)
+void NET::sendPacket(std::unique_ptr<RadioPacket> pkt)
 {
-    auto pkt = std::make_unique<NetPacket>(n);
-
-    memcpy(&(*pkt)[0], data, n);
     sendQueue.push(std::move(pkt));
-
-    return n;
 }
 
 void NET::stop(void)
@@ -76,17 +71,19 @@ const size_t MAX_PKT_SIZE = 2000;
 void NET::recvWorker(void)
 {
     while (!done) {
-        auto pkt = std::make_unique<RadioPacket>(MAX_PKT_SIZE);
+        auto pkt = std::make_unique<NetPacket>(MAX_PKT_SIZE);
 
         pkt->payload_len = tt->cread(&(pkt->payload)[0], pkt->payload.size());
 
         if (pkt->payload_len > 0) {
             struct ip* ip = reinterpret_cast<struct ip*>(&(pkt->payload)[0] + sizeof(struct ether_header));
 
+            pkt->src = nodeId;
+
             // Destination node is last octet of the IP address by convention
             pkt->dest = ntohl(ip->ip_dst.s_addr) & 0xff;
 
-            pkt->packet_id = curPacketId++;
+            pkt->pkt_id = curPacketId++;
 
             recvQueue.push(std::move(pkt));
         }
@@ -96,11 +93,11 @@ void NET::recvWorker(void)
 void NET::sendWorker(void)
 {
     while (!done) {
-        std::unique_ptr<NetPacket> pkt;
+        std::unique_ptr<RadioPacket> pkt;
 
         sendQueue.pop(pkt);
 
         if (pkt)
-            tt->cwrite(&(*pkt)[0], pkt->size());
+            tt->cwrite(&(pkt->payload)[0], pkt->payload.size());
     }
 }

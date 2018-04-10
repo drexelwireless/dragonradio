@@ -9,10 +9,8 @@
 #include <stdio.h>
 
 #include "Node.hh"
-#include "RadioPacket.hh"
+#include "Packet.hh"
 #include "SafeQueue.hh"
-
-typedef std::vector<char> NetPacket;
 
 class NET
 {
@@ -27,10 +25,10 @@ public:
     unsigned int getNumNodes(void);
 
     /** Receive a radio packet from the network */
-    std::unique_ptr<RadioPacket> recvPacket(void);
+    std::unique_ptr<NetPacket> recvPacket(void);
 
     /** Send a network packet to the network */
-    ssize_t sendPacket(void* data, size_t n);
+    void sendPacket(std::unique_ptr<RadioPacket> pkt);
 
     /** Terminate packet processing threads */
     void stop(void);
@@ -64,10 +62,10 @@ private:
     void sendWorker(void);
 
     /** Radio packets received from the network */
-    SafeQueue<std::unique_ptr<RadioPacket>> recvQueue;
+    SafeQueue<std::unique_ptr<NetPacket>> recvQueue;
 
     /** Network packets to send to the network */
-    SafeQueue<std::unique_ptr<NetPacket>> sendQueue;
+    SafeQueue<std::unique_ptr<RadioPacket>> sendQueue;
 };
 
 #endif
