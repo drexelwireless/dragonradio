@@ -15,21 +15,65 @@
 #include "SafeQueue.hh"
 #include "USRP.hh"
 
-class PHY
+class Modulator
 {
 public:
-    PHY(std::shared_ptr<USRP> usrp,
-        std::shared_ptr<NET> net,
-        double bandwidth,
-        size_t minPacketSize,
-        unsigned int rxThreadPoolSize);
-    ~PHY();
+    Modulator(size_t minPacketSize);
+    ~Modulator();
 
-    void stop(void);
+    Modulator(const Modulator&) = delete;
+    Modulator(Modulator&& other) :
+        minPacketSize(other.minPacketSize),
+        mctx(std::move(other.mctx))
+        {}
+
+    Modulator& operator=(const Modulator&) = delete;
+    Modulator& operator=(Modulator&&) = delete;
 
     std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt);
 
-    void demodulate(std::unique_ptr<IQQueue> buf);
+private:
+    size_t minPacketSize;
+
+    std::unique_ptr<multichanneltx> mctx;
+};
+
+class Demodulator
+{
+public:
+    Demodulator(std::shared_ptr<NET> net);
+    ~Demodulator();
+
+    Demodulator(const Demodulator&) = delete;
+    Demodulator(Demodulator&& other) :
+        net(other.net),
+        mcrx(std::move(other.mcrx)),
+        pkts(std::move(other.pkts))
+        {}
+
+    Demodulator& operator=(const Demodulator&) = delete;
+    Demodulator& operator=(Demodulator&&) = delete;
+
+    void demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q);
+
+private:
+    std::shared_ptr<NET> net;
+
+    std::unique_ptr<multichannelrx> mcrx;
+
+    std::queue<std::unique_ptr<RadioPacket>>* pkts;
+
+    static int liquidRxCallback(unsigned char *  _header,
+                                int              _header_valid,
+                                unsigned char *  _payload,
+                                unsigned int     _payload_len,
+                                int              _payload_valid,
+                                framesyncstats_s _stats,
+                                void *           _userdata,
+                                liquid_float_complex* G,
+                                liquid_float_complex* G_hat,
+                                unsigned int M);
+
 
     int rxCallback(unsigned char *  _header,
                    int              _header_valid,
@@ -40,31 +84,45 @@ public:
                    liquid_float_complex* G,
                    liquid_float_complex* G_hat,
                    unsigned int M);
+};
+
+class PHY
+{
+public:
+    PHY(std::shared_ptr<NET> net,
+        double bandwidth,
+        size_t minPacketSize) :
+        net(net),
+        bandwidth(bandwidth),
+        minPacketSize(minPacketSize)
+    {
+    }
+
+    // MultiChannel TX/RX requires oversampling by a factor of 2
+    double getRxRate(void) const
+    {
+        return 2*bandwidth;
+    }
+
+    double getTxRate(void) const
+    {
+        return 2*bandwidth;
+    }
+
+    Demodulator make_demodulator(void) const
+    {
+        return Demodulator(net);
+    }
+
+    Modulator make_modulator(void) const
+    {
+        return Modulator(minPacketSize);
+    }
 
 private:
-    std::shared_ptr<USRP> usrp;
-    std::shared_ptr<NET>  net;
-
-    NodeId nodeId;
+    std::shared_ptr<NET> net;
+    double bandwidth;
     size_t minPacketSize;
-
-    std::unique_ptr<multichanneltx>              mctx;
-    std::vector<std::unique_ptr<multichannelrx>> mcrxs;
-
-    /** Flag indicating if we should stop processing packets */
-    bool done;
-
-    /** Next thread to hand work to */
-    int nextThread;
-
-    /** Demodulation threads */
-    std::vector<std::thread> threads;
-
-    /** Demodulation threads' queues holding data to demodulate */
-    std::vector<SafeQueue<std::unique_ptr<IQQueue>>> threadQueues;
-
-    /** Demodulation worker */
-    void demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<IQQueue>>& q);
 };
 
 #endif /* PHY_H_ */

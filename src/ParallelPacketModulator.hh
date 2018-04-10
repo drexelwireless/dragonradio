@@ -11,7 +11,6 @@
 class ParallelPacketModulator
 {
 public:
-    //functions
     ParallelPacketModulator(std::shared_ptr<NET> net,
                             std::shared_ptr<PHY> phy);
     ~ParallelPacketModulator();
@@ -22,7 +21,7 @@ public:
 
     void setWatermark(size_t watermark);
 
-    /** Pop a modulated packet, but only if it consist of maxSamples sampels or
+    /** Pop a modulated packet, but only if it consist of maxSamples samples or
         fewer */
     std::unique_ptr<ModPacket> pop(size_t maxSamples);
 

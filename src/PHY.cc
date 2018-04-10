@@ -39,72 +39,25 @@ union PHYHeader {
     unsigned char bytes[8];
 };
 
-int liquidRxCallback(unsigned char *  _header,
-                     int              _header_valid,
-                     unsigned char *  _payload,
-                     unsigned int     _payload_len,
-                     int              _payload_valid,
-                     framesyncstats_s _stats,
-                     void *           _userdata,
-                     liquid_float_complex* G,
-                     liquid_float_complex* G_hat,
-                     unsigned int M);
+/** Mutex protecting access to the multichanneltxrx code, which is not
+ *  re-rentrant!
+ */
+static std::mutex mctxrx_mutex;
 
-PHY::PHY(std::shared_ptr<USRP> usrp,
-         std::shared_ptr<NET> net,
-         double bandwidth,
-         size_t minPacketSize,
-         unsigned int rxThreadPoolSize)
-  : usrp(usrp),
-    net(net),
-    nodeId(net->getNodeId()),
-    minPacketSize(minPacketSize),
-    done(false),
-    nextThread(0),
-    threads(rxThreadPoolSize),
-    threadQueues(rxThreadPoolSize)
+Modulator::Modulator(size_t minPacketSize) :
+    minPacketSize(minPacketSize)
 {
-    // MultiChannel TX/RX requires oversampling by a factor of 2
-    usrp->set_tx_rate(2*bandwidth);
-    usrp->set_rx_rate(2*bandwidth);
+    std::lock_guard<std::mutex> lck(mctxrx_mutex);
 
     // modem setup (list is for parallel demodulation)
     mctx = std::make_unique<multichanneltx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
-
-    for (unsigned int i = 0; i < rxThreadPoolSize; i++) {
-        framesync_callback callback[1] = { liquidRxCallback };
-        void               *userdata[1] = { this };
-
-        auto mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback);
-
-        mcrxs.push_back(std::move(mcrx));
-    }
-
-    // Initialize workers and their queues
-    for (unsigned int i = 0; i < rxThreadPoolSize; i++)
-        threads[i] = std::thread(&PHY::demodWorker,
-                                 this,
-                                 std::ref(*(mcrxs[i])),
-                                 std::ref(threadQueues[i]));
 }
 
-PHY::~PHY()
+Modulator::~Modulator()
 {
 }
 
-void PHY::stop(void)
-{
-    done = true;
-
-    for (unsigned int i = 0; i < threads.size(); ++i) {
-        threadQueues[i].stop();
-
-        if (threads[i].joinable())
-            threads[i].join();
-    }
-}
-
-std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<NetPacket> pkt)
+std::unique_ptr<ModPacket> Modulator::modulate(std::unique_ptr<NetPacket> pkt)
 {
     auto      mpkt = std::make_unique<ModPacket>();
     PHYHeader header;
@@ -151,60 +104,63 @@ std::unique_ptr<ModPacket> PHY::modulate(std::unique_ptr<NetPacket> pkt)
     return mpkt;
 }
 
-void PHY::demodulate(std::unique_ptr<IQQueue> buf)
+Demodulator::Demodulator(std::shared_ptr<NET> net) :
+    net(net)
 {
-    threadQueues[nextThread].push(std::move(buf));
-    nextThread = (nextThread + 1) % threads.size();
+    std::lock_guard<std::mutex> lck(mctxrx_mutex);
+
+    // modem setup (list is for parallel demodulation)
+    framesync_callback callback[1] = { &Demodulator::liquidRxCallback };
+    void               *userdata[1] = { this };
+
+    mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback);
 }
 
-void PHY::demodWorker(multichannelrx& mcrx, SafeQueue<std::unique_ptr<IQQueue>>& q)
+Demodulator::~Demodulator()
 {
-    while (!done) {
-        std::unique_ptr<IQQueue> buf;
-
-        q.pop(buf);
-
-        if (not buf)
-            continue;
-
-        mcrx.Reset();
-
-        for (auto it = buf->begin(); it != buf->end(); ++it)
-            mcrx.Execute(&(*it)[0], it->size());
-    }
 }
 
-int liquidRxCallback(unsigned char *  _header,
-                     int              _header_valid,
-                     unsigned char *  _payload,
-                     unsigned int     _payload_len,
-                     int              _payload_valid,
-                     framesyncstats_s _stats,
-                     void *           _userdata,
-                     liquid_float_complex* G,
-                     liquid_float_complex* G_hat,
-                     unsigned int M)
+void Demodulator::demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q)
 {
-    return reinterpret_cast<PHY*>(_userdata)->rxCallback(_header,
-                                                         _header_valid,
-                                                         _payload,
-                                                         _payload_len,
-                                                         _payload_valid,
-                                                         _stats,
-                                                         G,
-                                                         G_hat,
-                                                         M);
+    pkts = &q;
+
+    mcrx->Reset();
+
+    for (auto it = buf->begin(); it != buf->end(); ++it)
+        mcrx->Execute(&(*it)[0], it->size());
 }
 
-int PHY::rxCallback(unsigned char *  _header,
-                    int              _header_valid,
-                    unsigned char *  _payload,
-                    unsigned int     _payload_len,
-                    int              _payload_valid,
-                    framesyncstats_s _stats,
-                    liquid_float_complex* G,
-                    liquid_float_complex* G_hat,
-                    unsigned int M)
+int Demodulator::liquidRxCallback(unsigned char *  _header,
+                                  int              _header_valid,
+                                  unsigned char *  _payload,
+                                  unsigned int     _payload_len,
+                                  int              _payload_valid,
+                                  framesyncstats_s _stats,
+                                  void *           _userdata,
+                                  liquid_float_complex* G,
+                                  liquid_float_complex* G_hat,
+                                  unsigned int M)
+{
+    return reinterpret_cast<Demodulator*>(_userdata)->rxCallback(_header,
+                                                                 _header_valid,
+                                                                 _payload,
+                                                                 _payload_len,
+                                                                 _payload_valid,
+                                                                 _stats,
+                                                                 G,
+                                                                 G_hat,
+                                                                 M);
+}
+
+int Demodulator::rxCallback(unsigned char *  _header,
+                            int              _header_valid,
+                            unsigned char *  _payload,
+                            unsigned int     _payload_len,
+                            int              _payload_valid,
+                            framesyncstats_s _stats,
+                            liquid_float_complex* G,
+                            liquid_float_complex* G_hat,
+                            unsigned int M)
 {
     Header* h = reinterpret_cast<Header*>(_header);
 
@@ -230,7 +186,7 @@ int PHY::rxCallback(unsigned char *  _header,
     pkt->dest = h->dest;
     pkt->pkt_id = h->pkt_id;
 
-    net->sendPacket(std::move(pkt));
+    pkts->push(std::move(pkt));
 
     printf("Written %u bytes (PID %u) from %u", h->pkt_len, h->pkt_id, h->src);
     if (M>0)

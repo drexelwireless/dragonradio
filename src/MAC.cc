@@ -11,15 +11,21 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<NET> net,
          std::shared_ptr<PHY> phy,
          double frame_size,
-         double guard_size)
-  : usrp(usrp), net(net), phy(phy),
+         double guard_size,
+         size_t rx_pool_size)
+  : usrp(usrp),
+    net(net),
     modQueue(net, phy),
+    demodQueue(net, phy, rx_pool_size),
     frame_size(frame_size),
     slot_size(frame_size/net->getNumNodes()),
     guard_size(guard_size),
     done(false)
 {
     slop_size = 0.5*guard_size;
+
+    usrp->set_rx_rate(phy->getRxRate());
+    usrp->set_tx_rate(phy->getTxRate());
 
     rxThread = std::thread(&MAC::rxWorker, this);
     txThread = std::thread(&MAC::txWorker, this);
@@ -38,8 +44,9 @@ void MAC::stop(void)
 
     if (txThread.joinable())
         txThread.join();
-        
+
     modQueue.stop();
+    demodQueue.stop();
 }
 
 void MAC::rxWorker(void)
@@ -102,7 +109,7 @@ void MAC::rxWorker(void)
                 // Also demodulate the entire current frame
                 q->push_back(IQSlice(curSlot, 0, curSlot->size()));
 
-                phy->demodulate(std::move(q));
+                demodQueue.push(std::move(q));
             }
 
             // Determine how much we oversampled

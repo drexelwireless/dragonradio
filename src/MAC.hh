@@ -3,38 +3,35 @@
 #ifndef MAC_H_
 #define MAC_H_
 
+#include <liquid/liquid.h>
+
 #include <vector>
 #include <complex>
-#include <liquid/liquid.h>
-#include <stdio.h>
-#include <math.h>
-#include <sys/time.h>
-#include <thread>
-#include <fstream>
 
 #include "NET.hh"
 #include "PHY.hh"
+#include "ParallelPacketDemodulator.hh"
 #include "ParallelPacketModulator.hh"
 #include "USRP.hh"
 
 class MAC
 {
 public:
-    //functions
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<NET> net,
         std::shared_ptr<PHY> phy,
         double frame_size,
-        double guard_size);
+        double guard_size,
+        size_t rx_pool_size);
     ~MAC();
 
     void stop(void);
 
 private:
-    std::shared_ptr<USRP>   usrp;
-    std::shared_ptr<NET>    net;
-    std::shared_ptr<PHY>    phy;
-    ParallelPacketModulator modQueue;
+    std::shared_ptr<USRP>     usrp;
+    std::shared_ptr<NET>      net;
+    ParallelPacketModulator   modQueue;
+    ParallelPacketDemodulator demodQueue;
 
     /** Length of TDMA frame (sec) */
     double frame_size;

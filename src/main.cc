@@ -82,8 +82,8 @@ int main(int argc, char** argv)
 
     auto usrp = std::make_shared<USRP>(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain);
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
-    auto phy = std::make_shared<PHY>(usrp, net, bandwidth, min_packet_size, rx_thread_pool_size);
-    auto mac = std::make_shared<MAC>(usrp, net, phy, frame_size, guard_size);
+    auto phy = std::make_shared<PHY>(net, bandwidth, min_packet_size);
+    auto mac = std::make_shared<MAC>(usrp, net, phy, frame_size, guard_size, rx_thread_pool_size);
 
     // Wait for Ctrl-C
     sigset_t waitset;
@@ -97,7 +97,6 @@ int main(int argc, char** argv)
     sigwait(&waitset, &sig);
 
     net->stop();
-    phy->stop();
     mac->stop();
 
     printf("Done!\n");
