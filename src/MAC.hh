@@ -12,9 +12,9 @@
 #include <thread>
 #include <fstream>
 
-#include "ModQueue.hh"
 #include "NET.hh"
 #include "PHY.hh"
+#include "ParallelPacketModulator.hh"
 #include "USRP.hh"
 
 class MAC
@@ -31,10 +31,10 @@ public:
     void stop(void);
 
 private:
-    std::shared_ptr<USRP> usrp;
-    std::shared_ptr<NET>  net;
-    std::shared_ptr<PHY>  phy;
-    ModQueue              modQueue;
+    std::shared_ptr<USRP>   usrp;
+    std::shared_ptr<NET>    net;
+    std::shared_ptr<PHY>    phy;
+    ParallelPacketModulator modQueue;
 
     /** Length of TDMA frame (sec) */
     double frame_size;

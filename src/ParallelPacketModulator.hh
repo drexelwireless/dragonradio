@@ -1,5 +1,5 @@
-#ifndef MODQUEUE_H_
-#define MODQUEUE_H_
+#ifndef PARALLELPACKETMODULATOR_H_
+#define PARALLELPACKETMODULATOR_H_
 
 #include <condition_variable>
 #include <mutex>
@@ -8,13 +8,13 @@
 #include "NET.hh"
 #include "PHY.hh"
 
-class ModQueue
+class ParallelPacketModulator
 {
 public:
     //functions
-    ModQueue(std::shared_ptr<NET> net,
-             std::shared_ptr<PHY> phy);
-    ~ModQueue();
+    ParallelPacketModulator(std::shared_ptr<NET> net,
+                            std::shared_ptr<PHY> phy);
+    ~ParallelPacketModulator();
 
     void stop(void);
 
@@ -52,4 +52,4 @@ private:
     std::queue<std::unique_ptr<ModPacket>> q;
 };
 
-#endif /* MODQUEUE_H_ */
+#endif /* PARALLELPACKETMODULATOR_H_ */

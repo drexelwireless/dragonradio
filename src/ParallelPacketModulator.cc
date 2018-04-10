@@ -1,22 +1,22 @@
-#include "ModQueue.hh"
+#include "ParallelPacketModulator.hh"
 #include "NET.hh"
 #include "PHY.hh"
 
-ModQueue::ModQueue(std::shared_ptr<NET> net,
-                   std::shared_ptr<PHY> phy)
+ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<NET> net,
+                                                 std::shared_ptr<PHY> phy)
  : net(net), phy(phy),
    done(false),
    watermark(0),
    nsamples(0)
 {
-   modThread = std::thread(&ModQueue::modWorker, this);
+   modThread = std::thread(&ParallelPacketModulator::modWorker, this);
 }
 
-ModQueue::~ModQueue()
+ParallelPacketModulator::~ParallelPacketModulator()
 {
 }
 
-void ModQueue::stop(void)
+void ParallelPacketModulator::stop(void)
 {
     done = true;
     prod.notify_all();
@@ -25,12 +25,12 @@ void ModQueue::stop(void)
         modThread.join();
 }
 
-size_t ModQueue::getWatermark(void)
+size_t ParallelPacketModulator::getWatermark(void)
 {
     return watermark;
 }
 
-void ModQueue::setWatermark(size_t w)
+void ParallelPacketModulator::setWatermark(size_t w)
 {
     size_t oldWatermark = watermark;
 
@@ -40,7 +40,7 @@ void ModQueue::setWatermark(size_t w)
         prod.notify_all();
 }
 
-std::unique_ptr<ModPacket> ModQueue::pop(size_t maxSamples)
+std::unique_ptr<ModPacket> ParallelPacketModulator::pop(size_t maxSamples)
 {
     std::unique_ptr<ModPacket>   pkt;
     std::unique_lock<std::mutex> lock(m);
@@ -58,7 +58,7 @@ std::unique_ptr<ModPacket> ModQueue::pop(size_t maxSamples)
     return pkt;
 }
 
-void ModQueue::modWorker(void)
+void ParallelPacketModulator::modWorker(void)
 {
     for (;;) {
         // Wait for queue to be below watermark
