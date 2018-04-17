@@ -63,7 +63,6 @@ void SafeQueue<T>::pop(T& val)
     q.pop();
 }
 
-
 template<typename T>
 void SafeQueue<T>::stop(void)
 {
