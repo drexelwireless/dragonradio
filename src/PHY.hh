@@ -3,18 +3,15 @@
 
 #include <vector>
 #include <complex>
+
 #include <liquid/liquid.h>
-#include <stdio.h>
-#include <math.h>
-#include <sys/time.h>
-#include <thread>
-#include <fstream>
+#include <liquid/multichannelrx.h>
+#include <liquid/multichanneltx.h>
 
 #include "ModPacket.hh"
 #include "NET.hh"
 #include "Node.hh"
-#include "multichannelrx.h"
-#include "multichanneltx.h"
+#include "PHY.hh"
 #include "SafeQueue.hh"
 #include "USRP.hh"
 
