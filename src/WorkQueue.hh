@@ -71,13 +71,13 @@ void WorkQueue<T, W>::stop(void)
 template <typename T, typename W>
 void WorkQueue<T, W>::submit(const T& item)
 {
-    work_q.push(std::move(item));
+    work_q.emplace(item);
 }
 
 template <typename T, typename W>
 void WorkQueue<T, W>::submit(T&& item)
 {
-    work_q.push(std::move(item));
+    work_q.emplace(std::move(item));
 }
 
 template <typename T, typename W>
