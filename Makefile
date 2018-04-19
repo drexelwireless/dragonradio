@@ -5,6 +5,7 @@
 TARGET = full-radio
 
 RM       = rm -f
+RMRF     = rm -rf
 CXX      = g++
 LINKER   = g++
 CPPFLAGS = -Isrc -I/usr/local/include/
@@ -27,11 +28,18 @@ all : $(TARGET)
 .PHONY : clean
 clean :
 	$(RM) $(OBJECTS) $(TARGET)
+	$(RMRF) docs/html
 
 $(TARGET) : $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) -o $@
 
 -include $(SOURCES:$(SRCDIR)/%.cc=$(OBJDIR)/%.dep)
+
+.PHONY : html
+html : docs/html/index.html
+
+docs/html/index.html : $(SOURCES) $(INCLUDES)
+	doxygen docs/Doxyfile
 
 #
 # Rules for virtual goals
