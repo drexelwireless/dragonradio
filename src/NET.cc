@@ -4,7 +4,9 @@
 #include <netinet/if_ether.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <string.h>
+
+#include <cstddef>
+#include <cstring>
 
 #include "NET.hh"
 
@@ -77,11 +79,14 @@ void NET::recvWorker(void)
 
         if (pkt->payload_len > 0) {
             struct ip* ip = reinterpret_cast<struct ip*>(&(pkt->payload)[0] + sizeof(struct ether_header));
+            in_addr    ip_dst;
+
+            std::memcpy(&ip_dst, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
 
             pkt->src = nodeId;
 
             // Destination node is last octet of the IP address by convention
-            pkt->dest = ntohl(ip->ip_dst.s_addr) & 0xff;
+            pkt->dest = ntohl(ip_dst.s_addr) & 0xff;
 
             pkt->pkt_id = curPacketId++;
 
