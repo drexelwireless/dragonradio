@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "buffer.hh"
 #include "Node.hh"
 
 typedef uint16_t PacketId;
@@ -27,7 +28,7 @@ struct NetPacket
 
     /** Payload data. In general, this buffer may be larger than is needed to
         hold the payload. */
-    std::vector<unsigned char> payload;
+    buffer<unsigned char> payload;
 
     /** The true length of the payload */
     size_t payload_len;
@@ -51,7 +52,7 @@ struct RadioPacket
     NodeId dest;
 
     /** Payload data. */
-    std::vector<unsigned char> payload;
+    buffer<unsigned char> payload;
 };
 
 #endif /* PACKET_HH_ */
