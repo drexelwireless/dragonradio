@@ -1,0 +1,15 @@
+[submodule "dependencies/libfec"]
+	path = dependencies/libfec
+	url = git@github.com:Opendigitalradio/ka9q-fec.git
+[submodule "dependencies/liquid-dsp"]
+	path = dependencies/liquid-dsp
+	url = git@github.com:mainland/liquid-dsp.git
+	branch = sc2
+[submodule "dependencies/liquid-usrp"]
+	path = dependencies/liquid-usrp
+	url = git@github.com:mainland/liquid-usrp.git
+	branch = sc2
+[submodule "dependencies/uhd"]
+	path = dependencies/uhd
+	url = git@github.com:mainland/uhd.git
+	branch = sc2
