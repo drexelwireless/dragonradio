@@ -14,6 +14,8 @@ public:
 
     void push(const T& val);
     void push(T&& val);
+    void emplace(const T& val);
+    void emplace(T&& val);
     void pop(T& val);
 
     void stop(void);
@@ -48,6 +50,24 @@ void SafeQueue<T>::push(T&& val)
     std::lock_guard<std::mutex> lock(m);
 
     q.push(std::move(val));
+    cond.notify_one();
+}
+
+template<typename T>
+void SafeQueue<T>::emplace(const T& val)
+{
+    std::lock_guard<std::mutex> lock(m);
+
+    q.emplace(val);
+    cond.notify_one();
+}
+
+template<typename T>
+void SafeQueue<T>::emplace(T&& val)
+{
+    std::lock_guard<std::mutex> lock(m);
+
+    q.emplace(std::move(val));
     cond.notify_one();
 }
 
