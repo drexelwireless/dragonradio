@@ -87,7 +87,7 @@ void MAC::rxWorker(void)
             t_next_slot += slot_size;
 
             // Read samples for current slot
-            curSlot = std::move(usrp->burstRX(t_cur_slot, slot_samps));
+            curSlot = usrp->burstRX(t_cur_slot, slot_samps);
 
             // Queue samples for demodulation
             if (curSlot) {
