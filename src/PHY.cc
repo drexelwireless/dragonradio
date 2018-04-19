@@ -61,19 +61,17 @@ std::unique_ptr<ModPacket> Modulator::modulate(std::unique_ptr<NetPacket> pkt)
 {
     auto      mpkt = std::make_unique<ModPacket>();
     PHYHeader header;
-    size_t    len = std::max((size_t) pkt->payload_len, minPacketSize);
 
     memset(&header, 0, sizeof(header));
 
     header.h.src = pkt->src;
     header.h.dest = pkt->dest;
     header.h.pkt_id = pkt->pkt_id;
-    header.h.pkt_len = pkt->payload_len;
+    header.h.pkt_len = pkt->payload.size();
 
-    // XXX We assume that the radio packet's buffer has at least minPacketSize
-    // bytes available. This is true because we set the size of this buffer to
-    // 2000 when we allocate the NetPacket in NET.cc.
-    mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], len, MOD, FEC_INNER, FEC_OUTER);
+    pkt->payload.resize(std::max((size_t) pkt->payload.size(), minPacketSize));
+
+    mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], pkt->payload.size(), MOD, FEC_INNER, FEC_OUTER);
 
     const float         scalar = 0.2f;
     const size_t        BUFLEN = 2;

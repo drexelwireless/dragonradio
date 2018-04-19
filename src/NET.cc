@@ -67,17 +67,19 @@ void NET::stop(void)
 }
 
 /** Maximum radio packet size. Really 1500 (MTU) + 14 (size of Ethernet header),
-    which we should properly calculate ate some point. */
+    which we should properly calculate at some point. */
 const size_t MAX_PKT_SIZE = 2000;
 
 void NET::recvWorker(void)
 {
     while (!done) {
-        auto pkt = std::make_unique<NetPacket>(MAX_PKT_SIZE);
+        auto    pkt = std::make_unique<NetPacket>(MAX_PKT_SIZE);
+        ssize_t count;
 
-        pkt->payload_len = tt->cread(&(pkt->payload)[0], pkt->payload.size());
+        count = tt->cread(&(pkt->payload)[0], pkt->payload.size());
+        pkt->payload.resize(count);
 
-        if (pkt->payload_len > 0) {
+        if (pkt->payload.size() > 0) {
             struct ip* ip = reinterpret_cast<struct ip*>(&(pkt->payload)[0] + sizeof(struct ether_header));
             in_addr    ip_dst;
 

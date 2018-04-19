@@ -26,12 +26,8 @@ struct NetPacket
     /** Destination node */
     NodeId dest;
 
-    /** Payload data. In general, this buffer may be larger than is needed to
-        hold the payload. */
+    /** Payload data. */
     buffer<unsigned char> payload;
-
-    /** The true length of the payload */
-    size_t payload_len;
 };
 
 /** A packet from the radio to be sent over the network */
