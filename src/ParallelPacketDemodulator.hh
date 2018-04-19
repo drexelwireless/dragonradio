@@ -8,7 +8,7 @@
 
 #include "NET.hh"
 #include "PHY.hh"
-#include "WorkQueue.hh"
+#include "OrderedWorkQueue.hh"
 
 class ParallelPacketDemodulator
 {
@@ -20,7 +20,7 @@ private:
         ~Worker() {}
 
         Worker(const Worker&) = delete;
-        Worker(Worker&& other) : net(other.net), demod(std::move(other.demod)), pkts(std::move(other.pkts)) {}
+        Worker(Worker&& other) : net(other.net), demod(std::move(other.demod)) {}
 
         Worker& operator=(const Worker&) = delete;
         Worker& operator=(Worker&&) = delete;
@@ -30,9 +30,19 @@ private:
             return std::make_unique<Worker>(phy, net);
         }
 
-        void operator ()(std::unique_ptr<IQQueue>& buf)
+        std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>> operator ()(std::unique_ptr<IQQueue>& buf)
         {
+            std::queue<std::unique_ptr<RadioPacket>> pkts;
+
             demod.demodulate(std::move(buf), pkts);
+
+            return std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>>(net, std::move(pkts));
+        }
+
+        static void result(std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>> res)
+        {
+            NET& net = res.first;
+            std::queue<std::unique_ptr<RadioPacket>>& pkts = res.second;
 
             while (!pkts.empty()) {
                 net.sendPacket(std::move(pkts.front()));
@@ -44,7 +54,6 @@ private:
     private:
         NET& net;
         Demodulator demod;
-        std::queue<std::unique_ptr<RadioPacket>> pkts;
     };
 
 public:
@@ -63,7 +72,7 @@ private:
     std::shared_ptr<PHY> phy;
 
     /** Work queue for demodulating packets */
-    WorkQueue<std::unique_ptr<IQQueue>, Worker> workQueue;
+    OrderedWorkQueue<std::unique_ptr<IQQueue>, std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>>, Worker> workQueue;
 
     /** Function to create a demodulation worker */
     std::function<void(std::unique_ptr<IQQueue>&)> mkDemodWorker(void);
