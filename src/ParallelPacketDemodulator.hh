@@ -34,7 +34,7 @@ private:
         {
             std::queue<std::unique_ptr<RadioPacket>> pkts;
 
-            demod.demodulate(std::move(buf), pkts);
+            demod->demodulate(std::move(buf), pkts);
 
             return std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>>(net, std::move(pkts));
         }
@@ -53,7 +53,7 @@ private:
 
     private:
         NET& net;
-        Demodulator demod;
+        std::unique_ptr<PHY::Demodulator> demod;
     };
 
 public:
@@ -78,7 +78,7 @@ private:
     std::function<void(std::unique_ptr<IQQueue>&)> mkDemodWorker(void);
 
     /** Demodulation worker */
-    void demodWorker(std::unique_ptr<Demodulator> demod, std::unique_ptr<IQQueue>& buf);
+    void demodWorker(std::unique_ptr<PHY::Demodulator> demod, std::unique_ptr<IQQueue>& buf);
 };
 
 #endif /* PARALLELPACKETDEMODULATOR_H_ */

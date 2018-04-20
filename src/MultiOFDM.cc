@@ -1,4 +1,4 @@
-#include "PHY.hh"
+#include "MultiOFDM.hh"
 
 /** Number of channels */
 const unsigned int NUM_CHANNELS = 1;
@@ -44,7 +44,7 @@ union PHYHeader {
  */
 static std::mutex mctxrx_mutex;
 
-Modulator::Modulator(size_t minPacketSize) :
+MultiOFDM::Modulator::Modulator(size_t minPacketSize) :
     minPacketSize(minPacketSize)
 {
     std::lock_guard<std::mutex> lck(mctxrx_mutex);
@@ -53,11 +53,11 @@ Modulator::Modulator(size_t minPacketSize) :
     mctx = std::make_unique<multichanneltx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
 }
 
-Modulator::~Modulator()
+MultiOFDM::Modulator::~Modulator()
 {
 }
 
-std::unique_ptr<ModPacket> Modulator::modulate(std::unique_ptr<NetPacket> pkt)
+std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPacket> pkt)
 {
     auto      mpkt = std::make_unique<ModPacket>();
     PHYHeader header;
@@ -102,7 +102,7 @@ std::unique_ptr<ModPacket> Modulator::modulate(std::unique_ptr<NetPacket> pkt)
     return mpkt;
 }
 
-Demodulator::Demodulator(std::shared_ptr<NET> net) :
+MultiOFDM::Demodulator::Demodulator(std::shared_ptr<NET> net) :
     net(net)
 {
     std::lock_guard<std::mutex> lck(mctxrx_mutex);
@@ -114,11 +114,11 @@ Demodulator::Demodulator(std::shared_ptr<NET> net) :
     mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback);
 }
 
-Demodulator::~Demodulator()
+MultiOFDM::Demodulator::~Demodulator()
 {
 }
 
-void Demodulator::demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q)
+void MultiOFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q)
 {
     pkts = &q;
 
@@ -128,16 +128,16 @@ void Demodulator::demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::uniqu
         mcrx->Execute(&(*it)[0], it->size());
 }
 
-int Demodulator::liquidRxCallback(unsigned char *  _header,
-                                  int              _header_valid,
-                                  unsigned char *  _payload,
-                                  unsigned int     _payload_len,
-                                  int              _payload_valid,
-                                  framesyncstats_s _stats,
-                                  void *           _userdata,
-                                  liquid_float_complex* G,
-                                  liquid_float_complex* G_hat,
-                                  unsigned int M)
+int MultiOFDM::Demodulator::liquidRxCallback(unsigned char *  _header,
+                                             int              _header_valid,
+                                             unsigned char *  _payload,
+                                             unsigned int     _payload_len,
+                                             int              _payload_valid,
+                                             framesyncstats_s _stats,
+                                             void *           _userdata,
+                                             liquid_float_complex* G,
+                                             liquid_float_complex* G_hat,
+                                             unsigned int M)
 {
     return reinterpret_cast<Demodulator*>(_userdata)->rxCallback(_header,
                                                                  _header_valid,
@@ -150,15 +150,15 @@ int Demodulator::liquidRxCallback(unsigned char *  _header,
                                                                  M);
 }
 
-int Demodulator::rxCallback(unsigned char *  _header,
-                            int              _header_valid,
-                            unsigned char *  _payload,
-                            unsigned int     _payload_len,
-                            int              _payload_valid,
-                            framesyncstats_s _stats,
-                            liquid_float_complex* G,
-                            liquid_float_complex* G_hat,
-                            unsigned int M)
+int MultiOFDM::Demodulator::rxCallback(unsigned char *  _header,
+                                       int              _header_valid,
+                                       unsigned char *  _payload,
+                                       unsigned int     _payload_len,
+                                       int              _payload_valid,
+                                       framesyncstats_s _stats,
+                                       liquid_float_complex* G,
+                                       liquid_float_complex* G_hat,
+                                       unsigned int M)
 {
     Header* h = reinterpret_cast<Header*>(_header);
 

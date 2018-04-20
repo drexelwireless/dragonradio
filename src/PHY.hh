@@ -1,128 +1,76 @@
 #ifndef PHY_H_
 #define PHY_H_
 
-#include <vector>
-#include <complex>
-
-#include <liquid/liquid.h>
-#include <liquid/multichannelrx.h>
-#include <liquid/multichanneltx.h>
-
+#include "IQBuffer.hh"
 #include "ModPacket.hh"
-#include "NET.hh"
-#include "Node.hh"
-#include "PHY.hh"
-#include "SafeQueue.hh"
-#include "USRP.hh"
+#include "Packet.hh"
 
-class Modulator
-{
+/** @brief A physical layer protocol that can provide a modulator and
+ * demodulator.
+ */
+class PHY {
 public:
-    Modulator(size_t minPacketSize);
-    ~Modulator();
-
-    Modulator(const Modulator&) = delete;
-    Modulator(Modulator&& other) :
-        minPacketSize(other.minPacketSize),
-        mctx(std::move(other.mctx))
-        {}
-
-    Modulator& operator=(const Modulator&) = delete;
-    Modulator& operator=(Modulator&&) = delete;
-
-    std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt);
-
-private:
-    size_t minPacketSize;
-
-    std::unique_ptr<multichanneltx> mctx;
-};
-
-class Demodulator
-{
-public:
-    Demodulator(std::shared_ptr<NET> net);
-    ~Demodulator();
-
-    Demodulator(const Demodulator&) = delete;
-    Demodulator(Demodulator&& other) :
-        net(other.net),
-        mcrx(std::move(other.mcrx)),
-        pkts(std::move(other.pkts))
-        {}
-
-    Demodulator& operator=(const Demodulator&) = delete;
-    Demodulator& operator=(Demodulator&&) = delete;
-
-    void demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q);
-
-private:
-    std::shared_ptr<NET> net;
-
-    std::unique_ptr<multichannelrx> mcrx;
-
-    std::queue<std::unique_ptr<RadioPacket>>* pkts;
-
-    static int liquidRxCallback(unsigned char *  _header,
-                                int              _header_valid,
-                                unsigned char *  _payload,
-                                unsigned int     _payload_len,
-                                int              _payload_valid,
-                                framesyncstats_s _stats,
-                                void *           _userdata,
-                                liquid_float_complex* G,
-                                liquid_float_complex* G_hat,
-                                unsigned int M);
-
-
-    int rxCallback(unsigned char *  _header,
-                   int              _header_valid,
-                   unsigned char *  _payload,
-                   unsigned int     _payload_len,
-                   int              _payload_valid,
-                   framesyncstats_s _stats,
-                   liquid_float_complex* G,
-                   liquid_float_complex* G_hat,
-                   unsigned int M);
-};
-
-class PHY
-{
-public:
-    PHY(std::shared_ptr<NET> net,
-        double bandwidth,
-        size_t minPacketSize) :
-        net(net),
-        bandwidth(bandwidth),
-        minPacketSize(minPacketSize)
+    /** @brief Modulate IQ data. */
+    class Modulator
     {
+    public:
+        Modulator() {};
+        virtual ~Modulator() {};
+
+        /** @brief Modulate a packet to produce IQ samples.
+         *  @param pkt The NetPacket to modulate.
+         *  @return A ModPacket containing IQ samples.
+         */
+        virtual std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) = 0;
+    };
+
+    /** @brief Demodulate IQ data.
+     */
+    class Demodulator
+    {
+    public:
+        Demodulator() {};
+        virtual ~Demodulator() {};
+
+        /** @brief  Demodulate IQ samples, placing any demodulated packet into
+         * the given queue.
+         * @param buf the buffer of IQ samples.
+         * @param q the queue in which to place demodulated packets.
+         */
+        virtual void demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q) = 0;
+    };
+
+    PHY(double bandwidth) : _bandwidth(bandwidth) {}
+    virtual ~PHY() {}
+
+    /** @brief Return the IQ oversample rate (with respect to PHY bandwidth)
+     * needed for demodulation
+     * @return The RX oversample rate
+     */
+    virtual double getRxRateOversample(void) const = 0;
+
+    /** @brief Return the IQ oversample rate (with respect to PHY bandwidth)
+      * needed for modulation
+      * @return The TX oversample rate
+      */
+    virtual double getTxRateOversample(void) const = 0;
+
+    /** @brief Return bandwidth (without oversampling).
+     * @return The bandwidth used by the PHY.
+     */
+    virtual double getBandwidth(void) const
+    {
+        return _bandwidth;
     }
 
-    // MultiChannel TX/RX requires oversampling by a factor of 2
-    double getRxRate(void) const
-    {
-        return 2*bandwidth;
-    }
+    /** @brief Create a Modulator for this %PHY */
+    virtual std::unique_ptr<Modulator> make_modulator(void) const = 0;
 
-    double getTxRate(void) const
-    {
-        return 2*bandwidth;
-    }
+    /** @brief Create a Demodulator for this %PHY */
+    virtual std::unique_ptr<Demodulator> make_demodulator(void) const = 0;
 
-    Demodulator make_demodulator(void) const
-    {
-        return Demodulator(net);
-    }
-
-    Modulator make_modulator(void) const
-    {
-        return Modulator(minPacketSize);
-    }
-
-private:
-    std::shared_ptr<NET> net;
-    double bandwidth;
-    size_t minPacketSize;
+protected:
+    double _bandwidth;
 };
 
 #endif /* PHY_H_ */

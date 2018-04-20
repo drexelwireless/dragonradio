@@ -24,8 +24,8 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
 {
     slop_size = 0.5*guard_size;
 
-    usrp->set_rx_rate(phy->getRxRate());
-    usrp->set_tx_rate(phy->getTxRate());
+    usrp->set_rx_rate(phy->getBandwidth()*phy->getRxRateOversample());
+    usrp->set_tx_rate(phy->getBandwidth()*phy->getTxRateOversample());
 
     rxThread = std::thread(&MAC::rxWorker, this);
     txThread = std::thread(&MAC::txWorker, this);

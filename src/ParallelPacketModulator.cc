@@ -61,7 +61,7 @@ std::unique_ptr<ModPacket> ParallelPacketModulator::pop(size_t maxSamples)
 
 void ParallelPacketModulator::modWorker(void)
 {
-    Modulator modulator = phy->make_modulator();
+    std::unique_ptr<PHY::Modulator> modulator = phy->make_modulator();
 
     for (;;) {
         // Wait for queue to be below watermark
@@ -81,7 +81,7 @@ void ParallelPacketModulator::modWorker(void)
             continue;
 
         // Modulate the packet
-        std::unique_ptr<ModPacket> mpkt = modulator.modulate(std::move(pkt));
+        std::unique_ptr<ModPacket> mpkt = modulator->modulate(std::move(pkt));
 
         if (not mpkt)
             continue;
