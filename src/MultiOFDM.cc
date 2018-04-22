@@ -1,3 +1,4 @@
+#include "Liquid.hh"
 #include "MultiOFDM.hh"
 
 /** Number of channels */
@@ -39,15 +40,10 @@ union PHYHeader {
     unsigned char bytes[8];
 };
 
-/** Mutex protecting access to the multichanneltxrx code, which is not
- *  re-rentrant!
- */
-static std::mutex mctxrx_mutex;
-
 MultiOFDM::Modulator::Modulator(size_t minPacketSize) :
     minPacketSize(minPacketSize)
 {
-    std::lock_guard<std::mutex> lck(mctxrx_mutex);
+    std::lock_guard<std::mutex> lck(liquid_mutex);
 
     // modem setup (list is for parallel demodulation)
     mctx = std::make_unique<multichanneltx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
@@ -105,7 +101,7 @@ std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPac
 MultiOFDM::Demodulator::Demodulator(std::shared_ptr<NET> net) :
     net(net)
 {
-    std::lock_guard<std::mutex> lck(mctxrx_mutex);
+    std::lock_guard<std::mutex> lck(liquid_mutex);
 
     // modem setup (list is for parallel demodulation)
     framesync_callback callback[1] = { &Demodulator::liquidRxCallback };
