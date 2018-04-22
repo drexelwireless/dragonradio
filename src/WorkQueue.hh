@@ -44,8 +44,11 @@ WorkQueue<T, W>::WorkQueue(const unsigned int nthreads, F&& f, Args&&... args) :
     done(false)
 {
     for (unsigned int i = 0; i < nthreads; ++i) {
-        // XXX should use std::invoke here, but GCC 5.4 doesn't yet support it...
+#if __cplusplus >= 201703L
+        workers.emplace_back(std::invoke(std::forward<F>(f), std::forward<Args>(args)...));
+#else /*  __cplusplus < 201703 */
         workers.emplace_back(std::forward<F>(f)(std::forward<Args>(args)...));
+#endif /*  __cplusplus < 201703 */
         threads.emplace_back(std::thread(&WorkQueue<T, W>::run_worker, this, std::ref(*workers.back())));
     }
 }
