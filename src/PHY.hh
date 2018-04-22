@@ -28,6 +28,11 @@ public:
         Modulator() {};
         virtual ~Modulator() {};
 
+        /** @brief Set soft TX gain.
+         * @param dB The soft gain in dB.
+         */
+        virtual void setSoftTXGain(float dB) = 0;
+
         /** @brief Modulate a packet to produce IQ samples.
          *  @param pkt The NetPacket to modulate.
          *  @return A ModPacket containing IQ samples.

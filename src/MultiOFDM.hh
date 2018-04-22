@@ -35,10 +35,13 @@ public:
         Modulator& operator=(const Modulator&) = delete;
         Modulator& operator=(Modulator&&) = delete;
 
+        virtual void setSoftTXGain(float dB) override;
+
         std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) override;
 
     private:
         size_t minPacketSize;
+        float _g;
 
         std::unique_ptr<multichanneltx> mctx;
     };
