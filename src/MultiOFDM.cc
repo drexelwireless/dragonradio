@@ -28,12 +28,8 @@ const int FEC_INNER = LIQUID_FEC_CONV_V27;
 /** Outer FEC */
 const int FEC_OUTER = LIQUID_FEC_RS_M8;
 
-struct Header {
-    NodeId   src;
-    NodeId   dest;
-    PacketId pkt_id;
-    uint16_t pkt_len;
-};
+// liquid fixes the header size at 8 bytes
+static_assert(sizeof(Header) <= 8, "sizeof(Header) must be no more than 8 bytes");
 
 union PHYHeader {
     Header        h;

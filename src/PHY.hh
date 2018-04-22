@@ -5,6 +5,17 @@
 #include "ModPacket.hh"
 #include "Packet.hh"
 
+/** @brief %PHY packet header. */
+struct Header {
+    NodeId   src;     /**< @brief Packet source node. */
+    NodeId   dest;    /**< @brief Packet destination node. */
+    PacketId pkt_id;  /**< @brief Packet identifier. */
+    uint16_t pkt_len; /**< @brief Length of the packet payload. */
+                      /**< The packet payload may be padded. This field gives
+                       * the size of the non-padded portion of the payload.
+                       */
+};
+
 /** @brief A physical layer protocol that can provide a modulator and
  * demodulator.
  */
