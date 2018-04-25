@@ -119,12 +119,12 @@ public:
         return 2;
     }
 
-    std::unique_ptr<PHY::Demodulator> make_demodulator(void) const override
+    std::unique_ptr<PHY::Demodulator> make_demodulator(void) override
     {
         return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(net)));
     }
 
-    std::unique_ptr<PHY::Modulator> make_modulator(void) const override
+    std::unique_ptr<PHY::Modulator> make_modulator(void) override
     {
         return std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(new Modulator(minPacketSize)));
     }

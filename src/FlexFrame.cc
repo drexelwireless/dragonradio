@@ -12,8 +12,8 @@ union PHYHeader {
     unsigned char bytes[14];
 };
 
-FlexFrame::Modulator::Modulator(size_t minPacketSize) :
-    minPacketSize(minPacketSize),
+FlexFrame::Modulator::Modulator(FlexFrame& phy) :
+    _phy(phy),
     _g(1.0)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
@@ -22,12 +22,12 @@ FlexFrame::Modulator::Modulator(size_t minPacketSize) :
     _fg = flexframegen_create(&_fgprops);
 }
 
-FlexFrame::Modulator::Modulator(size_t minPacketSize,
+FlexFrame::Modulator::Modulator(FlexFrame& phy,
                                 crc_scheme check,
                                 fec_scheme fec0,
                                 fec_scheme fec1,
                                 modulation_scheme ms) :
-    minPacketSize(minPacketSize),
+    _phy(phy),
     _g(1.0)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
@@ -120,7 +120,7 @@ std::unique_ptr<ModPacket> FlexFrame::Modulator::modulate(std::unique_ptr<NetPac
     header.h.pkt_id = pkt->pkt_id;
     header.h.pkt_len = pkt->payload.size();
 
-    pkt->payload.resize(std::max((size_t) pkt->payload.size(), minPacketSize));
+    pkt->payload.resize(std::max((size_t) pkt->payload.size(), _phy.minPacketSize));
 
     flexframegen_reset(_fg);
     flexframegen_assemble(_fg, header.bytes, &(pkt->payload)[0], pkt->payload.size());
@@ -163,7 +163,9 @@ std::unique_ptr<ModPacket> FlexFrame::Modulator::modulate(std::unique_ptr<NetPac
     return mpkt;
 }
 
-FlexFrame::Demodulator::Demodulator(std::shared_ptr<NET> net) :
+FlexFrame::Demodulator::Demodulator(FlexFrame& phy,
+                                    std::shared_ptr<NET> net) :
+  _phy(phy),
   net(net)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
@@ -271,15 +273,15 @@ const fec_scheme FEC_OUTER = LIQUID_FEC_RS_M8;
 /** Modulation */
 const modulation_scheme MODSCHEME = LIQUID_MODEM_QPSK;
 
-std::unique_ptr<PHY::Demodulator> FlexFrame::make_demodulator(void) const
+std::unique_ptr<PHY::Demodulator> FlexFrame::make_demodulator(void)
 {
-    return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(net)));
+    return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this, net)));
 }
 
-std::unique_ptr<PHY::Modulator> FlexFrame::make_modulator(void) const
+std::unique_ptr<PHY::Modulator> FlexFrame::make_modulator(void)
 {
     auto modulator = std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(
-      new Modulator(minPacketSize, CHECK, FEC_INNER, FEC_OUTER, MODSCHEME)));
+      new Modulator(*this, CHECK, FEC_INNER, FEC_OUTER, MODSCHEME)));
 
     modulator->setSoftTXGain(-4.0f);
 

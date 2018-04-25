@@ -1,6 +1,8 @@
 #ifndef PHY_H_
 #define PHY_H_
 
+#include <queue>
+
 #include "IQBuffer.hh"
 #include "ModPacket.hh"
 #include "Packet.hh"
@@ -80,10 +82,10 @@ public:
     }
 
     /** @brief Create a Modulator for this %PHY */
-    virtual std::unique_ptr<Modulator> make_modulator(void) const = 0;
+    virtual std::unique_ptr<Modulator> make_modulator(void) = 0;
 
     /** @brief Create a Demodulator for this %PHY */
-    virtual std::unique_ptr<Demodulator> make_demodulator(void) const = 0;
+    virtual std::unique_ptr<Demodulator> make_demodulator(void) = 0;
 
 protected:
     double _bandwidth;

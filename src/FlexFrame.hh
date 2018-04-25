@@ -16,12 +16,12 @@ public:
         /** @brief Construct Modulator with default check, FEC's, and modulation
          * scheme.
          */
-        Modulator(size_t minPacketSize);
+        Modulator(FlexFrame& phy);
 
         /** @brief Construct a flexframegen with the given check, inner and
          * outer FEC's, and modulation schemed.
          */
-        explicit Modulator(size_t minPacketSize,
+        explicit Modulator(FlexFrame& phy,
                            crc_scheme check,
                            fec_scheme fec0,
                            fec_scheme fec1,
@@ -67,9 +67,8 @@ public:
         std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) override;
 
     private:
-        /** @brief Minimum packet size. */
-        /** Packets will be padded to at least this many bytes */
-        size_t minPacketSize;
+        /** @brief Associated FlexFrame PHY. */
+        FlexFrame& _phy;
 
         /** @brief Soft TX gain */
         float _g;
@@ -90,7 +89,7 @@ public:
     class Demodulator : public PHY::Demodulator
     {
     public:
-        Demodulator(std::shared_ptr<NET> net);
+        Demodulator(FlexFrame& phy, std::shared_ptr<NET> net);
         ~Demodulator();
 
         Demodulator(const Demodulator&) = delete;
@@ -105,6 +104,9 @@ public:
         void demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q) override;
 
     private:
+        /** @brief Associated FlexFrame PHY. */
+        FlexFrame& _phy;
+
         /** @brief NET object to which we send received packets. */
         std::shared_ptr<NET> net;
 
@@ -162,12 +164,16 @@ public:
         return 1.0;
     }
 
-    std::unique_ptr<PHY::Demodulator> make_demodulator(void) const override;
+    std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
 
-    std::unique_ptr<PHY::Modulator> make_modulator(void) const override;
+    std::unique_ptr<PHY::Modulator> make_modulator(void) override;
 
 private:
+    /** @brief NET object to which we send received packets. */
     std::shared_ptr<NET> net;
+
+    /** @brief Minimum packet size. */
+    /** Packets will be padded to at least this many bytes */
     size_t minPacketSize;
 };
 
