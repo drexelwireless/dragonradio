@@ -3,6 +3,7 @@
 
 #include <liquid/liquid.h>
 
+#include "Logger.hh"
 #include "NET.hh"
 #include "PHY.hh"
 
@@ -110,6 +111,14 @@ public:
         /** @brief NET object to which we send received packets. */
         std::shared_ptr<NET> net;
 
+        /** @brief The timestamp of the slot we are demodulating. */
+        uhd::time_spec_t _demod_start;
+
+        /** @brief The offset (in samples) from the beggining of the slot at
+         * which we started demodulating.
+         */
+        size_t _demod_off;
+
         /** @brief Queue of demodulated packets. */
         /** This variable is used by the liquid packet demodulation callback to
          * store demodulated packets.
@@ -142,10 +151,12 @@ public:
     };
 
     FlexFrame(std::shared_ptr<NET> net,
+              std::shared_ptr<Logger> logger,
               double bandwidth,
               size_t minPacketSize) :
         PHY(bandwidth),
         net(net),
+        _logger(logger),
         minPacketSize(minPacketSize)
     {
     }
@@ -171,6 +182,9 @@ public:
 private:
     /** @brief NET object to which we send received packets. */
     std::shared_ptr<NET> net;
+
+    /** @brief The Logger to use. Should be nullptr for no logging. */
+    std::shared_ptr<Logger> _logger;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */

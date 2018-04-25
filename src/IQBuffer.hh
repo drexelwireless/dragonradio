@@ -83,7 +83,6 @@ public:
         return timestamp;
     }
 
-private:
     /** IQ samples */
     buffer<std::complex<float>> data;
 
@@ -166,7 +165,6 @@ public:
         return len;
     }
 
-private:
     std::shared_ptr<IQBuf> buf;
     size_t                 off;
     size_t                 len;

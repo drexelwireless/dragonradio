@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <thread>
 
+#include "FlexFrame.hh"
 #include "MAC.hh"
 #include "NET.hh"
 #include "MultiOFDM.hh"
@@ -31,11 +32,12 @@ int main(int argc, char** argv)
     double guard_size = .01;                    // inter-slot guard time (sec)
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     bool x310 = true;                           // is this an x310
+    const char* logfile = NULL;
     std::string addr;
 
     int ch;
 
-    while ((ch = getopt(argc, argv, "23a:n:")) != -1) {
+    while ((ch = getopt(argc, argv, "23a:l:n:")) != -1) {
       switch (ch) {
         case '2':
           x310 = false;
@@ -47,6 +49,10 @@ int main(int argc, char** argv)
 
         case 'a':
           addr = optarg;
+          break;
+
+        case 'l':
+          logfile = optarg;
           break;
 
         case 'n':
@@ -82,8 +88,15 @@ int main(int argc, char** argv)
     }
 
     auto usrp = std::make_shared<USRP>(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain);
+
+    std::shared_ptr<Logger> log;
+
+    if (logfile)
+        log = std::make_shared<Logger>(logfile, node_id, usrp->get_time_now(), bandwidth);
+
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
-    auto phy = std::make_shared<MultiOFDM>(net, bandwidth, min_packet_size);
+    //auto phy = std::make_shared<MultiOFDM>(net, bandwidth, min_packet_size);
+    auto phy = std::make_shared<FlexFrame>(net, log, bandwidth, min_packet_size);
     auto mac = std::make_shared<MAC>(usrp, net, std::static_pointer_cast<PHY>(phy), frame_size, guard_size, rx_thread_pool_size);
 
     // Wait for Ctrl-C
@@ -99,6 +112,8 @@ int main(int argc, char** argv)
 
     net->stop();
     mac->stop();
+    if (log)
+        log->stop();
 
     printf("Done!\n");
 }

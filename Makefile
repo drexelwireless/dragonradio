@@ -8,9 +8,16 @@ RM       = rm -f
 RMRF     = rm -rf
 CXX      = g++
 LINKER   = g++
-CPPFLAGS = -Isrc -I/usr/local/include/
+CPPFLAGS = -Isrc -I/usr/local/include/ -I/usr/include/hdf5/serial/
 CXXFLAGS = -O2 -g3 -Wall -pedantic -ansi -fPIC -std=c++17 
 LDFLAGS  = -lc -lconfig -lfftw3f -lliquid -lliquidusrp -lm -lpthread -luhd
+
+LDFLAGS += \
+	/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5_hl_cpp.a \
+	/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5_cpp.a \
+	/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5_hl.a \
+	/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.a \
+	-lsz -lz -ldl
 
 SRCDIR = src
 OBJDIR = obj

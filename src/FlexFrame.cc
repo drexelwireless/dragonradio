@@ -190,10 +190,18 @@ void FlexFrame::Demodulator::demodulate(std::unique_ptr<IQQueue> buf,
 
     flexframesync_reset(_fs);
 
+    _demod_start = buf->begin()->buf->timestamp;
+    _demod_off = buf->begin()->off;
+
     for (auto it = buf->begin(); it != buf->end(); ++it)
         flexframesync_execute(_fs,
           reinterpret_cast<liquid_float_complex*>(&(*it)[0]),
           it->size());
+
+    if (_phy._logger && pkts->size() > 0) {
+        for (auto it = buf->begin(); it != buf->end(); ++it)
+            _phy._logger->logSlot(it->buf);
+    }
 }
 
 int FlexFrame::Demodulator::_callback(unsigned char *  _header,
@@ -233,6 +241,9 @@ void FlexFrame::Demodulator::callback(unsigned char *  _header,
                                       unsigned int M)
 {
     Header* h = reinterpret_cast<Header*>(_header);
+    size_t off = _demod_off;
+
+    _demod_off += _stats.end_counter;
 
     if (!_header_valid) {
         printf("HEADER INVALID\n");
@@ -249,6 +260,15 @@ void FlexFrame::Demodulator::callback(unsigned char *  _header,
 
     if (h->pkt_len == 0)
         return;
+
+    if (_phy._logger) {
+        auto buf = std::make_shared<buffer<std::complex<float>>>(_stats.num_framesyms);
+        memcpy(buf->data(), _stats.framesyms, _stats.num_framesyms*sizeof(std::complex<float>));
+        _phy._logger->logRecv(_demod_start, *h,
+                              off + _stats.start_counter,
+                              off + _stats.end_counter,
+                              std::move(buf));
+    }
 
     auto pkt = std::make_unique<RadioPacket>(_payload, h->pkt_len);
 
