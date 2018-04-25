@@ -108,6 +108,8 @@ std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPac
         mpkt->appendSamples(std::move(iqbuf));
     }
 
+    mpkt->pkt = std::move(pkt);
+
     return mpkt;
 }
 

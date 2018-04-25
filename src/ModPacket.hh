@@ -4,6 +4,7 @@
 #include <sys/types.h>
 
 #include "IQBuffer.hh"
+#include "Packet.hh"
 
 /** A modulated data packet to be sent over the radio */
 struct ModPacket
@@ -24,6 +25,9 @@ struct ModPacket
      * can produce more than one IQ buffer!
      */
     std::vector<std::shared_ptr<IQBuf>> samples;
+
+    /** @brief The un-modulated packet. */
+    std::unique_ptr<NetPacket> pkt;
 };
 
 #endif /* MODPACKET_HH_ */
