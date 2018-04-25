@@ -169,19 +169,17 @@ void MAC::txWorker(void)
 
 void MAC::txSlot(uhd::time_spec_t when, size_t maxSamples)
 {
-    std::deque<std::unique_ptr<IQBuf>> txBuf;
+    std::deque<std::shared_ptr<IQBuf>> txBuf;
 
     while (maxSamples > 0) {
-        std::unique_ptr<ModPacket> mpkt = modQueue.pop(maxSamples);
+        std::shared_ptr<ModPacket> mpkt = modQueue.pop(maxSamples);
 
         if (not mpkt)
             break;
 
         maxSamples -= mpkt->nsamples;
 
-        txBuf.insert(txBuf.end(),
-                     std::make_move_iterator(mpkt->samples.begin()),
-                     std::make_move_iterator(mpkt->samples.end()));
+        txBuf.insert(txBuf.end(), mpkt->samples.begin(), mpkt->samples.end());
     }
 
     usrp->burstTX(when, txBuf);

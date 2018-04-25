@@ -81,7 +81,7 @@ void USRP::set_rx_rate(double rate)
     usrp->set_rx_rate(rate);
 }
 
-void USRP::burstTX(uhd::time_spec_t when, std::deque<std::unique_ptr<IQBuf>>& bufs)
+void USRP::burstTX(uhd::time_spec_t when, std::deque<std::shared_ptr<IQBuf>>& bufs)
 {
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
         uhd::tx_metadata_t tx_md;
