@@ -6,6 +6,7 @@
 #include "IQBuffer.hh"
 #include "ModPacket.hh"
 #include "Packet.hh"
+#include "RadioPacketSink.hh"
 
 /** @brief %PHY packet header. */
 struct Header {
@@ -55,7 +56,7 @@ public:
          * @param buf the buffer of IQ samples.
          * @param q the queue in which to place demodulated packets.
          */
-        virtual void demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q) = 0;
+        virtual void demodulate(std::unique_ptr<IQQueue> buf) = 0;
     };
 
     PHY(double bandwidth) : _bandwidth(bandwidth) {}

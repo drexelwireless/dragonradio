@@ -95,9 +95,10 @@ int main(int argc, char** argv)
         log = std::make_shared<Logger>(logfile, node_id, usrp->get_time_now(), bandwidth);
 
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
-    //auto phy = std::make_shared<MultiOFDM>(net, bandwidth, min_packet_size);
-    auto phy = std::make_shared<FlexFrame>(net, log, bandwidth, min_packet_size);
-    auto mac = std::make_shared<MAC>(usrp, net, std::static_pointer_cast<PHY>(phy), log, frame_size, guard_size, rx_thread_pool_size);
+    auto sink = std::make_shared<RadioPacketSink>(net);
+    //auto phy = std::make_shared<MultiOFDM>(sink, bandwidth, min_packet_size);
+    auto phy = std::make_shared<FlexFrame>(sink, log, bandwidth, min_packet_size);
+    auto mac = std::make_shared<MAC>(usrp, net, sink, std::static_pointer_cast<PHY>(phy), log, frame_size, guard_size, rx_thread_pool_size);
 
     // Wait for Ctrl-C
     sigset_t waitset;
@@ -110,6 +111,7 @@ int main(int argc, char** argv)
 
     sigwait(&waitset, &sig);
 
+    sink->stop();
     net->stop();
     mac->stop();
     if (log)

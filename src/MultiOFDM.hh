@@ -26,7 +26,7 @@ public:
          * @param minPacketSize The minimum number of bytes we will send in a
          * packet.
          */
-        Modulator(size_t minPacketSize);
+        Modulator(MultiOFDM& phy);
         ~Modulator();
 
         Modulator(const Modulator&) = delete;
@@ -40,10 +40,14 @@ public:
         std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) override;
 
     private:
-        size_t minPacketSize;
+        /** @brief Our associated PHY. */
+        MultiOFDM& _phy;
+
+        /** @brief Soft TX gain. */
         float _g;
 
-        std::unique_ptr<multichanneltx> mctx;
+        /** @brief Our liquid-usrp multichanneltx object. */
+        std::unique_ptr<multichanneltx> _mctx;
     };
 
     /** @brief Demodulate IQ data using the liquid-usrp multi-channel OFDM %PHY
@@ -52,7 +56,7 @@ public:
     class Demodulator : public PHY::Demodulator
     {
     public:
-        Demodulator(std::shared_ptr<NET> net);
+        Demodulator(MultiOFDM& phy);
         ~Demodulator();
 
         Demodulator(const Demodulator&) = delete;
@@ -61,14 +65,14 @@ public:
         Demodulator& operator=(const Demodulator&) = delete;
         Demodulator& operator=(Demodulator&&) = delete;
 
-        void demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q) override;
+        void demodulate(std::unique_ptr<IQQueue> buf) override;
 
     private:
-        std::shared_ptr<NET> net;
+        /** @brief Our associated PHY. */
+        MultiOFDM& _phy;
 
+        /** @brief Our liquid-usrp multichannelrx object. */
         std::unique_ptr<multichannelrx> mcrx;
-
-        std::queue<std::unique_ptr<RadioPacket>>* pkts;
 
         static int liquidRxCallback(unsigned char *  _header,
                                     int              _header_valid,
@@ -95,16 +99,17 @@ public:
 
     /**
      * @param net The NET to which we send demodulated packets.
+     * @prama sink The RadioPacketSink to which we should send received packets.
      * @prama bandwidth The bandwidth used by the PHY (without oversampling).
      * @param minPacketSize The minimum number of bytes we will send in a
      * packet.
      */
-    MultiOFDM(std::shared_ptr<NET> net,
+    MultiOFDM(std::shared_ptr<RadioPacketSink> sink,
               double bandwidth,
               size_t minPacketSize) :
         PHY(bandwidth),
-        net(net),
-        minPacketSize(minPacketSize)
+        _sink(sink),
+        _minPacketSize(minPacketSize)
     {
     }
 
@@ -121,17 +126,21 @@ public:
 
     std::unique_ptr<PHY::Demodulator> make_demodulator(void) override
     {
-        return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(net)));
+        return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this)));
     }
 
     std::unique_ptr<PHY::Modulator> make_modulator(void) override
     {
-        return std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(new Modulator(minPacketSize)));
+        return std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(new Modulator(*this)));
     }
 
 private:
-    std::shared_ptr<NET> net;
-    size_t minPacketSize;
+    /** @brief The RadioPacketSink to which we should send received packets. */
+    std::shared_ptr<RadioPacketSink> _sink;
+
+    /** @brief Minimum packet size. */
+    /** Packets will be padded to at least this many bytes */
+    size_t _minPacketSize;
 };
 
 #endif /* MULTIOFDM_H_ */

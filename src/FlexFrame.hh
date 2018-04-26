@@ -90,7 +90,7 @@ public:
     class Demodulator : public PHY::Demodulator
     {
     public:
-        Demodulator(FlexFrame& phy, std::shared_ptr<NET> net);
+        Demodulator(FlexFrame& phy);
         ~Demodulator();
 
         Demodulator(const Demodulator&) = delete;
@@ -102,14 +102,11 @@ public:
         /** @brief Print internals of the associated flexframesync. */
         void print(void);
 
-        void demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q) override;
+        void demodulate(std::unique_ptr<IQQueue> buf) override;
 
     private:
         /** @brief Associated FlexFrame PHY. */
         FlexFrame& _phy;
-
-        /** @brief NET object to which we send received packets. */
-        std::shared_ptr<NET> net;
 
         /** @brief Flag indicating whether or not any packets were recevied. */
         /** We use this to decide whether or not to log the slots being
@@ -117,12 +114,6 @@ public:
          * this flag will be set to true, but there will be no packets in pkts.
          */
         bool _pkts_received;
-
-        /** @brief Queue of demodulated packets. */
-        /** This variable is used by the liquid packet demodulation callback to
-         * store demodulated packets.
-         */
-        std::queue<std::unique_ptr<RadioPacket>>* pkts;
 
         /** @brief The timestamp of the slot we are demodulating. */
         uhd::time_spec_t _demod_start;
@@ -157,14 +148,14 @@ public:
                       unsigned int M);
     };
 
-    FlexFrame(std::shared_ptr<NET> net,
+    FlexFrame(std::shared_ptr<RadioPacketSink> sink,
               std::shared_ptr<Logger> logger,
               double bandwidth,
               size_t minPacketSize) :
         PHY(bandwidth),
-        net(net),
+        _sink(sink),
         _logger(logger),
-        minPacketSize(minPacketSize)
+        _minPacketSize(minPacketSize)
     {
     }
 
@@ -187,15 +178,15 @@ public:
     std::unique_ptr<PHY::Modulator> make_modulator(void) override;
 
 private:
-    /** @brief NET object to which we send received packets. */
-    std::shared_ptr<NET> net;
+    /** @brief The RadioPacketSink to which we should send received packets. */
+    std::shared_ptr<RadioPacketSink> _sink;
 
     /** @brief The Logger to use. Should be nullptr for no logging. */
     std::shared_ptr<Logger> _logger;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */
-    size_t minPacketSize;
+    size_t _minPacketSize;
 };
 
 #endif /* FLEXFRAME_H_ */

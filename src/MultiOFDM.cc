@@ -34,15 +34,15 @@ union PHYHeader {
     unsigned char bytes[8];
 };
 
-MultiOFDM::Modulator::Modulator(size_t minPacketSize) :
-    minPacketSize(minPacketSize),
+MultiOFDM::Modulator::Modulator(MultiOFDM& phy) :
+    _phy(phy),
     // Corresponds to ~-14dB
     _g(0.2)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     // modem setup (list is for parallel demodulation)
-    mctx = std::make_unique<multichanneltx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
+    _mctx = std::make_unique<multichanneltx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
 }
 
 MultiOFDM::Modulator::~Modulator()
@@ -71,9 +71,9 @@ std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPac
     header.h.pkt_id = pkt->pkt_id;
     header.h.pkt_len = pkt->payload.size();
 
-    pkt->payload.resize(std::max((size_t) pkt->payload.size(), minPacketSize));
+    pkt->payload.resize(std::max((size_t) pkt->payload.size(), _phy._minPacketSize));
 
-    mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], pkt->payload.size(), MOD, FEC_INNER, FEC_OUTER);
+    _mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], pkt->payload.size(), MOD, FEC_INNER, FEC_OUTER);
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);
@@ -82,8 +82,8 @@ std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPac
     // Local copy of gain
     const float g = _g;
 
-    while (!mctx->IsChannelReadyForData(0)) {
-        mctx->GenerateSamples(&(*iqbuf)[nsamples]);
+    while (!_mctx->IsChannelReadyForData(0)) {
+        _mctx->GenerateSamples(&(*iqbuf)[nsamples]);
 
         // Apply soft gain. Note that this is where nsamples is incremented.
         for (unsigned int i = 0; i < NGEN; i++)
@@ -107,8 +107,8 @@ std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPac
     return mpkt;
 }
 
-MultiOFDM::Demodulator::Demodulator(std::shared_ptr<NET> net) :
-    net(net)
+MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
+    _phy(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
@@ -123,10 +123,8 @@ MultiOFDM::Demodulator::~Demodulator()
 {
 }
 
-void MultiOFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf, std::queue<std::unique_ptr<RadioPacket>>& q)
+void MultiOFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf)
 {
-    pkts = &q;
-
     mcrx->Reset();
 
     for (auto it = buf->begin(); it != buf->end(); ++it)
@@ -177,7 +175,7 @@ int MultiOFDM::Demodulator::rxCallback(unsigned char *  _header,
         return 0;
     }
 
-    if (h->dest != net->getNodeId())
+    if (!_phy._sink->wantPacket(h->dest))
         return 0;
 
     if (h->pkt_len == 0)
@@ -189,7 +187,7 @@ int MultiOFDM::Demodulator::rxCallback(unsigned char *  _header,
     pkt->dest = h->dest;
     pkt->pkt_id = h->pkt_id;
 
-    pkts->push(std::move(pkt));
+    _phy._sink->push(std::move(pkt));
 
     printf("Written %u bytes (PID %u) from %u", h->pkt_len, h->pkt_id, h->src);
     if (M>0)

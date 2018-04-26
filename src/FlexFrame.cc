@@ -119,7 +119,7 @@ std::unique_ptr<ModPacket> FlexFrame::Modulator::modulate(std::unique_ptr<NetPac
     header.h.pkt_id = pkt->pkt_id;
     header.h.pkt_len = pkt->payload.size();
 
-    pkt->payload.resize(std::max((size_t) pkt->payload.size(), _phy.minPacketSize));
+    pkt->payload.resize(std::max((size_t) pkt->payload.size(), _phy._minPacketSize));
 
     flexframegen_reset(_fg);
     flexframegen_assemble(_fg, header.bytes, &(pkt->payload)[0], pkt->payload.size());
@@ -159,10 +159,8 @@ std::unique_ptr<ModPacket> FlexFrame::Modulator::modulate(std::unique_ptr<NetPac
     return mpkt;
 }
 
-FlexFrame::Demodulator::Demodulator(FlexFrame& phy,
-                                    std::shared_ptr<NET> net) :
-  _phy(phy),
-  net(net)
+FlexFrame::Demodulator::Demodulator(FlexFrame& phy) :
+  _phy(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
@@ -179,10 +177,8 @@ void FlexFrame::Demodulator::print(void)
     flexframesync_print(_fs);
 }
 
-void FlexFrame::Demodulator::demodulate(std::unique_ptr<IQQueue> buf,
-                                        std::queue<std::unique_ptr<RadioPacket>>& q)
+void FlexFrame::Demodulator::demodulate(std::unique_ptr<IQQueue> buf)
 {
-    pkts = &q;
     _pkts_received = false;
 
     _demod_start = buf->begin()->buf->timestamp;
@@ -267,7 +263,7 @@ void FlexFrame::Demodulator::callback(unsigned char *  _header,
         return;
     }
 
-    if (h->dest != net->getNodeId())
+    if (!_phy._sink->wantPacket(h->dest))
         return;
 
     if (h->pkt_len == 0)
@@ -279,7 +275,7 @@ void FlexFrame::Demodulator::callback(unsigned char *  _header,
     pkt->dest = h->dest;
     pkt->pkt_id = h->pkt_id;
 
-    pkts->push(std::move(pkt));
+    _phy._sink->push(std::move(pkt));
 
     printf("Written %u bytes (PID %u) from %u\n", h->pkt_len, h->pkt_id, h->src);
 }
@@ -298,7 +294,7 @@ const modulation_scheme MODSCHEME = LIQUID_MODEM_QPSK;
 
 std::unique_ptr<PHY::Demodulator> FlexFrame::make_demodulator(void)
 {
-    return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this, net)));
+    return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this)));
 }
 
 std::unique_ptr<PHY::Modulator> FlexFrame::make_modulator(void)

@@ -8,7 +8,8 @@
 
 #include "NET.hh"
 #include "PHY.hh"
-#include "OrderedWorkQueue.hh"
+#include "RadioPacketSink.hh"
+#include "WorkQueue.hh"
 
 class ParallelPacketDemodulator
 {
@@ -16,51 +17,34 @@ private:
     class Worker
     {
     public:
-        Worker(PHY& phy, NET& net) : net(net), demod(phy.make_demodulator()) {}
+        Worker(PHY& phy) : demod(phy.make_demodulator()) {}
         ~Worker() {}
 
         Worker(const Worker&) = delete;
-        Worker(Worker&& other) : net(other.net), demod(std::move(other.demod)) {}
+        Worker(Worker&& other) = delete;
 
         Worker& operator=(const Worker&) = delete;
         Worker& operator=(Worker&&) = delete;
 
-        static std::unique_ptr<Worker> make_worker(PHY& phy, NET& net)
+        static std::unique_ptr<Worker> make_worker(PHY& phy)
         {
-            return std::make_unique<Worker>(phy, net);
+            return std::make_unique<Worker>(phy);
         }
 
-        std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>> operator ()(std::unique_ptr<IQQueue>& buf)
+        void operator ()(std::unique_ptr<IQQueue>& buf)
         {
-            std::queue<std::unique_ptr<RadioPacket>> pkts;
-
-            demod->demodulate(std::move(buf), pkts);
-
-            return std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>>(net, std::move(pkts));
-        }
-
-        static void result(std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>> res)
-        {
-            NET& net = res.first;
-            std::queue<std::unique_ptr<RadioPacket>>& pkts = res.second;
-
-            while (!pkts.empty()) {
-                net.sendPacket(std::move(pkts.front()));
-
-                pkts.pop();
-            }
+            demod->demodulate(std::move(buf));
         }
 
     private:
-        NET& net;
         std::unique_ptr<PHY::Demodulator> demod;
     };
 
 public:
     ParallelPacketDemodulator(std::shared_ptr<NET> net,
                               std::shared_ptr<PHY> phy,
+                              std::shared_ptr<RadioPacketSink> sink,
                               unsigned int nthreads);
-
     ~ParallelPacketDemodulator();
 
     void stop(void);
@@ -71,11 +55,14 @@ private:
     std::shared_ptr<NET> net;
     std::shared_ptr<PHY> phy;
 
+    /** @brief Sink for radio packets. */
+    std::shared_ptr<RadioPacketSink> _sink;
+
     /** Work queue for demodulating packets */
-    OrderedWorkQueue<std::unique_ptr<IQQueue>, std::pair<NET&,std::queue<std::unique_ptr<RadioPacket>>>, Worker> workQueue;
+    WorkQueue<std::unique_ptr<IQQueue>, Worker> workQueue;
 
     /** Function to create a demodulation worker */
-    std::function<void(std::unique_ptr<IQQueue>&)> mkDemodWorker(void);
+    void mkDemodWorker(void);
 
     /** Demodulation worker */
     void demodWorker(std::unique_ptr<PHY::Demodulator> demod, std::unique_ptr<IQQueue>& buf);
