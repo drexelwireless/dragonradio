@@ -96,8 +96,7 @@ void addAttribute(H5::H5Location &loc,
 
 Logger::Logger(const std::string& filename,
                NodeId node_id,
-               uhd::time_spec_t t_start,
-               double bandwidth) :
+               uhd::time_spec_t t_start) :
   _t_start((time_t) t_start.get_full_secs()),
   _t_last_slot((time_t) 0),
   _done(false)
@@ -146,7 +145,6 @@ Logger::Logger(const std::string& filename,
     _file = H5::H5File(filename, H5F_ACC_TRUNC);
     addAttribute(_file, "node_id", node_id);
     addAttribute(_file, "start", (uint32_t) t_start.get_full_secs());
-    addAttribute(_file, "bandwidth", bandwidth);
 
     _slots = std::make_unique<ExtensibleDataSet>(_file, "slots", h5_slot);
     _recv = std::make_unique<ExtensibleDataSet>(_file, "recv", h5_packet_recv);
@@ -159,6 +157,16 @@ Logger::Logger(const std::string& filename,
 Logger::~Logger()
 {
     _file.close();
+}
+
+void Logger::setTXBandwidth(double bw)
+{
+    addAttribute(_file, "tx_bandwidth", bw);
+}
+
+void Logger::setRXBandwidth(double bw)
+{
+    addAttribute(_file, "rx_bandwidth", bw);
 }
 
 void Logger::stop(void)

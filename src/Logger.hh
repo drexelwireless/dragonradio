@@ -22,9 +22,11 @@ class Logger {
 public:
     Logger(const std::string& filename,
            NodeId node_id,
-           uhd::time_spec_t t_start,
-           double bandwidth);
+           uhd::time_spec_t t_start);
     ~Logger();
+
+    void setTXBandwidth(double bw);
+    void setRXBandwidth(double bw);
 
     void stop(void);
 

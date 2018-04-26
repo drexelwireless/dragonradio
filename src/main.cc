@@ -97,7 +97,7 @@ int main(int argc, char** argv)
     std::shared_ptr<Logger> log;
 
     if (logfile)
-        log = std::make_shared<Logger>(logfile, node_id, usrp->get_time_now(), bandwidth);
+        log = std::make_shared<Logger>(logfile, node_id, usrp->get_time_now());
 
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
     auto sink = std::make_shared<RadioPacketSink>(net);
@@ -110,6 +110,11 @@ int main(int argc, char** argv)
         phy = std::make_shared<FlexFrame>(sink, log, min_packet_size);
 
     auto mac = std::make_shared<MAC>(usrp, net, sink, phy, log, bandwidth, frame_size, guard_size, rx_thread_pool_size);
+
+    if (log) {
+        log->setTXBandwidth(bandwidth*phy->getTxRateOversample());
+        log->setRXBandwidth(bandwidth*phy->getRxRateOversample());
+    }
 
     // Wait for Ctrl-C
     sigset_t waitset;
