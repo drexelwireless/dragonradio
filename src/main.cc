@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     unsigned int num_nodes_in_net = 2;          // number of nodes in network
     double frame_size = .07;                    // slot_size*num_nodes_in_net (seconds)
     double guard_size = .01;                    // inter-slot guard time (sec)
-    unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
+    unsigned int rx_thread_pool_size = 10;       // number of threads available for demodulation
     bool x310 = true;                           // is this an x310
     bool multichannel = false;                  // Should we use multichannel code?
     const char* logfile = NULL;

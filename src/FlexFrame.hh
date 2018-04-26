@@ -163,12 +163,12 @@ public:
 
     double getRxRateOversample(void) const override
     {
-        return 1.0;
+        return 2.0;
     }
 
     double getTxRateOversample(void) const override
     {
-        return 1.0;
+        return 2.0;
     }
 
     std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
