@@ -34,8 +34,11 @@ USRP::USRP(const std::string& addr,
 
     // See:
     //   https://files.ettus.com/manual/page_general.html
-    while (not usrp->get_rx_sensor("lo_locked").to_bool())
+    while (not usrp->get_tx_sensor("lo_locked").to_bool())
         //sleep for a short time in milliseconds
+        usleep(10);
+
+    while (not usrp->get_rx_sensor("lo_locked").to_bool())
         usleep(10);
 
     // Set USRP time relative to system NTP time
