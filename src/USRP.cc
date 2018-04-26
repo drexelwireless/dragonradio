@@ -50,6 +50,10 @@ USRP::USRP(const std::string& addr,
 
     tx_stream = usrp->get_tx_stream(stream_args);
     rx_stream = usrp->get_rx_stream(stream_args);
+
+    // Turn on DC offset correction
+    usrp->set_tx_dc_offset(true);
+    usrp->set_rx_dc_offset(true);
 }
 
 USRP::~USRP()
