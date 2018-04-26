@@ -34,11 +34,15 @@ public:
                  uint32_t start_samples,
                  uint32_t end_samples,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
+     void logSend(const uhd::time_spec_t& t,
+                  const Header& hdr,
+                  std::shared_ptr<buffer<std::complex<float>>> buf);
 
 private:
     H5::H5File _file;
     std::unique_ptr<ExtensibleDataSet> _slots;
-    std::unique_ptr<ExtensibleDataSet> _packets;
+    std::unique_ptr<ExtensibleDataSet> _recv;
+    std::unique_ptr<ExtensibleDataSet> _send;
     uhd::time_spec_t _t_start;
     uhd::time_spec_t _t_last_slot;
 
@@ -59,6 +63,9 @@ private:
                   const Header& hdr,
                   uint32_t start_samples,
                   uint32_t end_samples,
+                  std::shared_ptr<buffer<std::complex<float>>> buf);
+    void _logSend(const uhd::time_spec_t& t,
+                  const Header& hdr,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
 };
 

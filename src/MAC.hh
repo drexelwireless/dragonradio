@@ -8,6 +8,7 @@
 #include <vector>
 #include <complex>
 
+#include "Logger.hh"
 #include "NET.hh"
 #include "PHY.hh"
 #include "ParallelPacketDemodulator.hh"
@@ -20,6 +21,7 @@ public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<NET> net,
         std::shared_ptr<PHY> phy,
+        std::shared_ptr<Logger> logger,
         double frame_size,
         double guard_size,
         size_t rx_pool_size);
@@ -30,6 +32,7 @@ public:
 private:
     std::shared_ptr<USRP>     usrp;
     std::shared_ptr<NET>      net;
+    std::shared_ptr<Logger>   logger;
     ParallelPacketModulator   modQueue;
     ParallelPacketDemodulator demodQueue;
 

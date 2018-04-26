@@ -2,6 +2,7 @@
 
 #include <errno.h>
 
+#include <cstring>
 #include <deque>
 
 #include "MAC.hh"
@@ -10,11 +11,13 @@
 MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<NET> net,
          std::shared_ptr<PHY> phy,
+         std::shared_ptr<Logger> logger,
          double frame_size,
          double guard_size,
          size_t rx_pool_size)
   : usrp(usrp),
     net(net),
+    logger(logger),
     modQueue(net, phy),
     demodQueue(net, phy, rx_pool_size),
     frame_size(frame_size),
@@ -178,6 +181,25 @@ void MAC::txSlot(uhd::time_spec_t when, size_t maxSamples)
             break;
 
         maxSamples -= mpkt->nsamples;
+
+        if (logger) {
+            Header hdr;
+            auto buf = std::make_shared<buffer<std::complex<float>>>(mpkt->nsamples);
+            size_t n = 0;
+
+            hdr.pkt_id = mpkt->pkt->pkt_id;
+            hdr.src = mpkt->pkt->src;
+            hdr.dest = mpkt->pkt->dest;
+
+            for (auto it = mpkt->samples.begin(); it != mpkt->samples.end(); ++it) {
+                std::memcpy(buf->data() + n,
+                            (*it)->data.data(),
+                            (*it)->size()*sizeof(std::complex<float>));
+                n += (*it)->size();
+            }
+
+            logger->logSend(when, hdr, buf);
+        }
 
         txBuf.insert(txBuf.end(), mpkt->samples.begin(), mpkt->samples.end());
     }

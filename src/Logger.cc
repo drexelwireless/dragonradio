@@ -12,8 +12,8 @@ struct SlotEntry {
     hvl_t iq_data;
 };
 
-/** @brief Log entry for packets */
-struct PacketEntry {
+/** @brief Log entry for received packets */
+struct PacketRecvEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
     double timestamp;
@@ -27,6 +27,21 @@ struct PacketEntry {
     uint32_t start_samples;
     /** @brief Offset (in samples) from timestamp slot to end of frame. */
     uint32_t end_samples;
+    /** @brief Raw IQ data. */
+    hvl_t iq_data;
+};
+
+/** @brief Log entry for sent packets */
+struct PacketSendEntry {
+    /** @brief Timestamp of the slot in which the packet occurred. */
+    /** If the packet spans two slots, this is the timestamp of the first slot. */
+    double timestamp;
+    /** @brief Packet ID. */
+    uint16_t pkt_id;
+    /** @brief Packet source. */
+    uint8_t src;
+    /** @brief Packet destination. */
+    uint8_t dest;
     /** @brief Raw IQ data. */
     hvl_t iq_data;
 };
@@ -101,16 +116,25 @@ Logger::Logger(const std::string& filename,
     h5_slot.insertMember("timestamp", HOFFSET(SlotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_iqdata);
 
-    // H5 type for packets
-    H5::CompType h5_packet(sizeof(PacketEntry));
+    // H5 type for received packets
+    H5::CompType h5_packet_recv(sizeof(PacketRecvEntry));
 
-    h5_packet.insertMember("timestamp", HOFFSET(PacketEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
-    h5_packet.insertMember("pkt_id", HOFFSET(PacketEntry, pkt_id), H5::PredType::NATIVE_UINT16);
-    h5_packet.insertMember("src", HOFFSET(PacketEntry, src), H5::PredType::NATIVE_UINT8);
-    h5_packet.insertMember("dest", HOFFSET(PacketEntry, dest), H5::PredType::NATIVE_UINT8);
-    h5_packet.insertMember("start_samples", HOFFSET(PacketEntry, start_samples), H5::PredType::NATIVE_UINT32);
-    h5_packet.insertMember("end_samples", HOFFSET(PacketEntry, end_samples), H5::PredType::NATIVE_UINT32);
-    h5_packet.insertMember("iq_data", HOFFSET(PacketEntry, iq_data), h5_iqdata);
+    h5_packet_recv.insertMember("timestamp", HOFFSET(PacketRecvEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_recv.insertMember("pkt_id", HOFFSET(PacketRecvEntry, pkt_id), H5::PredType::NATIVE_UINT16);
+    h5_packet_recv.insertMember("src", HOFFSET(PacketRecvEntry, src), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("dest", HOFFSET(PacketRecvEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("start_samples", HOFFSET(PacketRecvEntry, start_samples), H5::PredType::NATIVE_UINT32);
+    h5_packet_recv.insertMember("end_samples", HOFFSET(PacketRecvEntry, end_samples), H5::PredType::NATIVE_UINT32);
+    h5_packet_recv.insertMember("iq_data", HOFFSET(PacketRecvEntry, iq_data), h5_iqdata);
+
+    // H5 type for sent packets
+    H5::CompType h5_packet_send(sizeof(PacketSendEntry));
+
+    h5_packet_send.insertMember("timestamp", HOFFSET(PacketSendEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("pkt_id", HOFFSET(PacketSendEntry, pkt_id), H5::PredType::NATIVE_UINT16);
+    h5_packet_send.insertMember("src", HOFFSET(PacketSendEntry, src), H5::PredType::NATIVE_UINT8);
+    h5_packet_send.insertMember("dest", HOFFSET(PacketSendEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
 
     // Create H5 groups
     _file = H5::H5File(filename, H5F_ACC_TRUNC);
@@ -119,7 +143,8 @@ Logger::Logger(const std::string& filename,
     addAttribute(_file, "bandwidth", bandwidth);
 
     _slots = std::make_unique<ExtensibleDataSet>(_file, "slots", h5_slot);
-    _packets = std::make_unique<ExtensibleDataSet>(_file, "packets", h5_packet);
+    _recv = std::make_unique<ExtensibleDataSet>(_file, "recv", h5_packet_recv);
+    _send = std::make_unique<ExtensibleDataSet>(_file, "send", h5_packet_send);
 
     // Start worker thread
     worker_thread = std::thread(&Logger::worker, this);
@@ -160,6 +185,13 @@ void Logger::logRecv(const uhd::time_spec_t& t,
     log_q.emplace([=](){ _logRecv(t, hdr, start_samples, end_samples, buf); });
 }
 
+void Logger::logSend(const uhd::time_spec_t& t,
+                     const Header& hdr,
+                     std::shared_ptr<buffer<std::complex<float>>> buf)
+{
+    log_q.emplace([=](){ _logSend(t, hdr, buf); });
+}
+
 void Logger::worker(void)
 {
     std::function<void()> entry;
@@ -190,7 +222,7 @@ void Logger::_logRecv(const uhd::time_spec_t& t,
                       uint32_t end_samples,
                       std::shared_ptr<buffer<std::complex<float>>> buf)
 {
-    PacketEntry entry;
+    PacketRecvEntry entry;
 
     entry.timestamp = (t - _t_start).get_real_secs();
     entry.pkt_id = hdr.pkt_id;
@@ -201,5 +233,21 @@ void Logger::_logRecv(const uhd::time_spec_t& t,
     entry.iq_data.p = &(*buf)[0];
     entry.iq_data.len = buf->size();
 
-    _packets->write(&entry, 1);
+    _recv->write(&entry, 1);
+}
+
+void Logger::_logSend(const uhd::time_spec_t& t,
+                      const Header& hdr,
+                      std::shared_ptr<buffer<std::complex<float>>> buf)
+{
+    PacketSendEntry entry;
+
+    entry.timestamp = (t - _t_start).get_real_secs();
+    entry.pkt_id = hdr.pkt_id;
+    entry.src = hdr.src;
+    entry.dest = hdr.dest;
+    entry.iq_data.p = &(*buf)[0];
+    entry.iq_data.len = buf->size();
+
+    _send->write(&entry, 1);
 }
