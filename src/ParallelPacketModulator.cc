@@ -49,12 +49,12 @@ std::unique_ptr<ModPacket> ParallelPacketModulator::pop(size_t maxSamples)
     if (q.empty())
         return nullptr;
 
-    if (q.front()->nsamples > maxSamples)
+    if (q.front()->samples->size() > maxSamples)
         return nullptr;
 
     pkt = std::move(q.front());
     q.pop();
-    nsamples -= pkt->nsamples;
+    nsamples -= pkt->samples->size();
     prod.notify_all();
     return pkt;
 }
@@ -89,7 +89,7 @@ void ParallelPacketModulator::modWorker(void)
         // Put the packet on the queue
         std::lock_guard<std::mutex> lock(m);
 
-        nsamples += mpkt->nsamples;
+        nsamples += mpkt->samples->size();
         q.push(std::move(mpkt));
         cons.notify_one();
     }

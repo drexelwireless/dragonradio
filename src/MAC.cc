@@ -180,28 +180,19 @@ void MAC::txSlot(uhd::time_spec_t when, size_t maxSamples)
         if (not mpkt)
             break;
 
-        maxSamples -= mpkt->nsamples;
+        maxSamples -= mpkt->samples->size();
 
         if (logger) {
             Header hdr;
-            auto buf = std::make_shared<buffer<std::complex<float>>>(mpkt->nsamples);
-            size_t n = 0;
 
             hdr.pkt_id = mpkt->pkt->pkt_id;
             hdr.src = mpkt->pkt->src;
             hdr.dest = mpkt->pkt->dest;
 
-            for (auto it = mpkt->samples.begin(); it != mpkt->samples.end(); ++it) {
-                std::memcpy(buf->data() + n,
-                            (*it)->data.data(),
-                            (*it)->size()*sizeof(std::complex<float>));
-                n += (*it)->size();
-            }
-
-            logger->logSend(when, hdr, buf);
+            logger->logSend(when, hdr, mpkt->samples);
         }
 
-        txBuf.insert(txBuf.end(), mpkt->samples.begin(), mpkt->samples.end());
+        txBuf.emplace_back(std::move(mpkt->samples));
     }
 
     usrp->burstTX(when, txBuf);

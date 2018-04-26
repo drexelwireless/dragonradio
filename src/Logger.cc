@@ -195,7 +195,7 @@ void Logger::logRecv(const uhd::time_spec_t& t,
 
 void Logger::logSend(const uhd::time_spec_t& t,
                      const Header& hdr,
-                     std::shared_ptr<buffer<std::complex<float>>> buf)
+                     std::shared_ptr<IQBuf> buf)
 {
     log_q.emplace([=](){ _logSend(t, hdr, buf); });
 }
@@ -250,7 +250,7 @@ void Logger::_logRecv(const uhd::time_spec_t& t,
 
 void Logger::_logSend(const uhd::time_spec_t& t,
                       const Header& hdr,
-                      std::shared_ptr<buffer<std::complex<float>>> buf)
+                      std::shared_ptr<IQBuf> buf)
 {
     PacketSendEntry entry;
 
@@ -258,8 +258,8 @@ void Logger::_logSend(const uhd::time_spec_t& t,
     entry.pkt_id = hdr.pkt_id;
     entry.src = hdr.src;
     entry.dest = hdr.dest;
-    entry.iq_data.p = &(*buf)[0];
-    entry.iq_data.len = buf->size();
+    entry.iq_data.p = &(buf->data)[0];
+    entry.iq_data.len = buf->data.size();
 
     _send->write(&entry, 1);
 }

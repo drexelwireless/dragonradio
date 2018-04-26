@@ -9,22 +9,8 @@
 /** A modulated data packet to be sent over the radio */
 struct ModPacket
 {
-    ModPacket(void) : nsamples(0) {};
-
-    /** @brief Append an IQ sample buffer. */
-    void appendSamples(std::shared_ptr<IQBuf> buf)
-    {
-        nsamples += buf->size();
-        samples.push_back(buf);
-    }
-
-    /** @brief Total number of modulated samples. */
-    size_t nsamples;
-
-    /** @brief  Buffers containing the modulated samples. Modulating a packet
-     * can produce more than one IQ buffer!
-     */
-    std::vector<std::shared_ptr<IQBuf>> samples;
+    /** @brief Buffer containing the modulated samples. */
+    std::shared_ptr<IQBuf> samples;
 
     /** @brief The un-modulated packet. */
     std::unique_ptr<NetPacket> pkt;

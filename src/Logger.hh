@@ -38,7 +38,7 @@ public:
                  std::shared_ptr<buffer<std::complex<float>>> buf);
      void logSend(const uhd::time_spec_t& t,
                   const Header& hdr,
-                  std::shared_ptr<buffer<std::complex<float>>> buf);
+                  std::shared_ptr<IQBuf> buf);
 
 private:
     H5::H5File _file;
@@ -70,7 +70,7 @@ private:
                   std::shared_ptr<buffer<std::complex<float>>> buf);
     void _logSend(const uhd::time_spec_t& t,
                   const Header& hdr,
-                  std::shared_ptr<buffer<std::complex<float>>> buf);
+                  std::shared_ptr<IQBuf> buf);
 };
 
 #endif /* LOGGER_H_ */
