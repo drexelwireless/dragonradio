@@ -189,11 +189,5 @@ int MultiOFDM::Demodulator::rxCallback(unsigned char *  _header,
 
     _phy._sink->push(std::move(pkt));
 
-    printf("Written %u bytes (PID %u) from %u", h->pkt_len, h->pkt_id, h->src);
-    if (M>0)
-        printf("|| %u subcarriers || 100th channel sample %.4f+%.4f*1j\n",M,std::real(G[100]),std::imag(G[100]));
-    else
-        printf("\n");
-
     return 0;
 }

@@ -40,6 +40,11 @@ void RadioPacketSink::worker(void)
         if (_done)
             break;
 
+        printf("Written %lu bytes (PID %u) from %u\n",
+            (unsigned long) pkt->payload.size(),
+            (unsigned int) pkt->pkt_id,
+            (unsigned int) pkt->src);
+
         _net->sendPacket(std::move(pkt));
     }
 }

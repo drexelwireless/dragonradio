@@ -276,8 +276,6 @@ void FlexFrame::Demodulator::callback(unsigned char *  _header,
     pkt->pkt_id = h->pkt_id;
 
     _phy._sink->push(std::move(pkt));
-
-    printf("Written %u bytes (PID %u) from %u\n", h->pkt_len, h->pkt_id, h->src);
 }
 
 /** CRC */
