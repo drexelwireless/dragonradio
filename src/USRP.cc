@@ -54,6 +54,9 @@ USRP::USRP(const std::string& addr,
     // Turn on DC offset correction
     usrp->set_tx_dc_offset(true);
     usrp->set_rx_dc_offset(true);
+
+    // Get max number of samples in a TX packet
+    _tx_max_samps = 512;
 }
 
 USRP::~USRP()
@@ -87,19 +90,43 @@ void USRP::set_rx_rate(double rate)
 
 void USRP::burstTX(uhd::time_spec_t when, std::deque<std::shared_ptr<IQBuf>>& bufs)
 {
+    uhd::tx_metadata_t tx_md;
+
+    // We walk through the supplied queue of buffers and trasmit each in chunks
+    // whose size is no more than _tx_max_samps bytes, which is the maximum size
+    // of a USRP TX packet. This allows us to avoid being "late" even when we
+    // have a very large buffer to send.
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
-        uhd::tx_metadata_t tx_md;
-        IQBuf&             iqbuf = **it;
+        IQBuf& iqbuf = **it; // Current buffer we are sending
+        size_t off = 0;      // Offset into the current buffer of next send
+        size_t n = 0;        // Size of next send
 
-        tx_md.time_spec = when;
-        tx_md.has_time_spec = true;
+        while (off < iqbuf.size()) {
+            // Compute how many samples we will sent in this transmission
+            n = std::min(_tx_max_samps, iqbuf.size() - off);
 
-        if (it == bufs.begin())
-            tx_md.start_of_burst = true;
-        else if (std::next(it) == bufs.end())
-            tx_md.end_of_burst = true;
+            // If this is the first segment we are sending, give it a time spec
+            // and mark it as the start of a burst. Otherwise, mark it as not
+            // having a time spec (and not being the start of a burst).
+            if (it == bufs.begin()) {
+                tx_md.time_spec = when;
+                tx_md.has_time_spec = true;
+                tx_md.start_of_burst = true;
+            } else {
+                tx_md.has_time_spec = false;
+                tx_md.start_of_burst = false;
+            }
 
-        tx_stream->send(&iqbuf[0], iqbuf.size(), tx_md);
+            // If this is the last segment of the current buffer *and* this is
+            // the last buffer, mark this transmission as the end of the burst.
+            tx_md.end_of_burst = off + n == iqbuf.size()
+                              && std::next(it) == bufs.end();
+
+            // Send the buffer segment and update the offset into the current
+            // buffer.
+            tx_stream->send(&iqbuf[off], n, tx_md);
+            off += n;
+        }
     }
 }
 void USRP::startRXStream(uhd::time_spec_t when)

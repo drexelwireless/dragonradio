@@ -44,6 +44,9 @@ private:
     uhd::tx_metadata_t          tx_md;
     uhd::tx_streamer::sptr      tx_stream;
     uhd::rx_streamer::sptr      rx_stream;
+
+    /** @brief Maximum number of sampels in a TX packet. */
+    size_t _tx_max_samps;
 };
 
 #endif /* USRP_H_ */
