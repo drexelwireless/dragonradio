@@ -30,6 +30,8 @@ public:
 
     void logSlot(std::shared_ptr<IQBuf> buf);
     void logRecv(const uhd::time_spec_t& t,
+                 bool header_valid,
+                 bool payload_valid,
                  const Header& hdr,
                  uint32_t start_samples,
                  uint32_t end_samples,
@@ -60,6 +62,8 @@ private:
 
     void _logSlot(std::shared_ptr<IQBuf> buf);
     void _logRecv(const uhd::time_spec_t& t,
+                  bool header_valid,
+                  bool payload_valid,
                   const Header& hdr,
                   uint32_t start_samples,
                   uint32_t end_samples,

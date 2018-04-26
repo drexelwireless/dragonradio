@@ -17,6 +17,10 @@ struct PacketRecvEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
     double timestamp;
+    /** @brief Was header valid? */
+    uint8_t header_valid;
+    /** @brief Was payload valid? */
+    uint8_t payload_valid;
     /** @brief Packet ID. */
     uint16_t pkt_id;
     /** @brief Packet source. */
@@ -121,6 +125,8 @@ Logger::Logger(const std::string& filename,
 
     h5_packet_recv.insertMember("timestamp", HOFFSET(PacketRecvEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("pkt_id", HOFFSET(PacketRecvEntry, pkt_id), H5::PredType::NATIVE_UINT16);
+    h5_packet_recv.insertMember("header_valid", HOFFSET(PacketRecvEntry, header_valid), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("payload_valid", HOFFSET(PacketRecvEntry, payload_valid), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("src", HOFFSET(PacketRecvEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("dest", HOFFSET(PacketRecvEntry, dest), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("start_samples", HOFFSET(PacketRecvEntry, start_samples), H5::PredType::NATIVE_UINT32);
@@ -177,12 +183,14 @@ void Logger::logSlot(std::shared_ptr<IQBuf> buf)
 
 
 void Logger::logRecv(const uhd::time_spec_t& t,
+                     bool header_valid,
+                     bool payload_valid,
                      const Header& hdr,
                      uint32_t start_samples,
                      uint32_t end_samples,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
-    log_q.emplace([=](){ _logRecv(t, hdr, start_samples, end_samples, buf); });
+    log_q.emplace([=](){ _logRecv(t, header_valid, payload_valid, hdr, start_samples, end_samples, buf); });
 }
 
 void Logger::logSend(const uhd::time_spec_t& t,
@@ -217,6 +225,8 @@ void Logger::_logSlot(std::shared_ptr<IQBuf> buf)
 }
 
 void Logger::_logRecv(const uhd::time_spec_t& t,
+                      bool header_valid,
+                      bool payload_valid,
                       const Header& hdr,
                       uint32_t start_samples,
                       uint32_t end_samples,
@@ -225,6 +235,8 @@ void Logger::_logRecv(const uhd::time_spec_t& t,
     PacketRecvEntry entry;
 
     entry.timestamp = (t - _t_start).get_real_secs();
+    entry.header_valid = header_valid;
+    entry.payload_valid = payload_valid;
     entry.pkt_id = hdr.pkt_id;
     entry.src = hdr.src;
     entry.dest = hdr.dest;

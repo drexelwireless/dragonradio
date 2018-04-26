@@ -111,6 +111,19 @@ public:
         /** @brief NET object to which we send received packets. */
         std::shared_ptr<NET> net;
 
+        /** @brief Flag indicating whether or not any packets were recevied. */
+        /** We use this to decide whether or not to log the slots being
+         * demodulated. Note that we may "receive" a bad packets, in which case
+         * this flag will be set to true, but there will be no packets in pkts.
+         */
+        bool _pkts_received;
+
+        /** @brief Queue of demodulated packets. */
+        /** This variable is used by the liquid packet demodulation callback to
+         * store demodulated packets.
+         */
+        std::queue<std::unique_ptr<RadioPacket>>* pkts;
+
         /** @brief The timestamp of the slot we are demodulating. */
         uhd::time_spec_t _demod_start;
 
@@ -118,12 +131,6 @@ public:
          * which we started demodulating.
          */
         size_t _demod_off;
-
-        /** @brief Queue of demodulated packets. */
-        /** This variable is used by the liquid packet demodulation callback to
-         * store demodulated packets.
-         */
-        std::queue<std::unique_ptr<RadioPacket>>* pkts;
 
         /** @brief The liquid-dsp flexframesync object */
         flexframesync _fs;
