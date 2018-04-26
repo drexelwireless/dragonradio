@@ -11,6 +11,7 @@
 #include "MAC.hh"
 #include "NET.hh"
 #include "MultiOFDM.hh"
+#include "OFDM.hh"
 #include "USRP.hh"
 
 void usage(void)
@@ -33,12 +34,13 @@ int main(int argc, char** argv)
     unsigned int rx_thread_pool_size = 10;       // number of threads available for demodulation
     bool x310 = true;                           // is this an x310
     bool multichannel = false;                  // Should we use multichannel code?
+    bool ofdm = false;                         // Should we use OFDM code?
     const char* logfile = NULL;
     std::string addr;
 
     int ch;
 
-    while ((ch = getopt(argc, argv, "23a:l:mn:")) != -1) {
+    while ((ch = getopt(argc, argv, "23a:l:mn:o")) != -1) {
       switch (ch) {
         case '2':
           x310 = false;
@@ -63,6 +65,10 @@ int main(int argc, char** argv)
         case 'n':
           node_id = atoi(optarg);
           printf("node_id = %d\n", node_id);
+          break;
+
+        case 'o':
+          ofdm = true;
           break;
 
         case '?':
@@ -104,7 +110,9 @@ int main(int argc, char** argv)
 
     std::shared_ptr<PHY> phy;
 
-    if (multichannel)
+    if (ofdm)
+        phy = std::make_shared<OFDM>(sink, log, 48, 6, 4, nullptr, min_packet_size);
+    else if (multichannel)
         phy = std::make_shared<MultiOFDM>(sink, min_packet_size);
     else
         phy = std::make_shared<FlexFrame>(sink, log, min_packet_size);
