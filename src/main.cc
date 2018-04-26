@@ -32,12 +32,13 @@ int main(int argc, char** argv)
     double guard_size = .01;                    // inter-slot guard time (sec)
     unsigned int rx_thread_pool_size = 4;       // number of threads available for demodulation
     bool x310 = true;                           // is this an x310
+    bool multichannel = false;                  // Should we use multichannel code?
     const char* logfile = NULL;
     std::string addr;
 
     int ch;
 
-    while ((ch = getopt(argc, argv, "23a:l:n:")) != -1) {
+    while ((ch = getopt(argc, argv, "23a:l:mn:")) != -1) {
       switch (ch) {
         case '2':
           x310 = false;
@@ -53,6 +54,10 @@ int main(int argc, char** argv)
 
         case 'l':
           logfile = optarg;
+          break;
+
+        case 'm':
+          multichannel = true;
           break;
 
         case 'n':
@@ -96,9 +101,15 @@ int main(int argc, char** argv)
 
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
     auto sink = std::make_shared<RadioPacketSink>(net);
-    //auto phy = std::make_shared<MultiOFDM>(sink, bandwidth, min_packet_size);
-    auto phy = std::make_shared<FlexFrame>(sink, log, bandwidth, min_packet_size);
-    auto mac = std::make_shared<MAC>(usrp, net, sink, std::static_pointer_cast<PHY>(phy), log, frame_size, guard_size, rx_thread_pool_size);
+
+    std::shared_ptr<PHY> phy;
+
+    if (multichannel)
+        phy = std::make_shared<MultiOFDM>(sink, bandwidth, min_packet_size);
+    else
+        phy = std::make_shared<FlexFrame>(sink, log, bandwidth, min_packet_size);
+
+    auto mac = std::make_shared<MAC>(usrp, net, sink, phy, log, frame_size, guard_size, rx_thread_pool_size);
 
     // Wait for Ctrl-C
     sigset_t waitset;
