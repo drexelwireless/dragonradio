@@ -59,7 +59,7 @@ public:
         virtual void demodulate(std::unique_ptr<IQQueue> buf) = 0;
     };
 
-    PHY(double bandwidth) : _bandwidth(bandwidth) {}
+    PHY() {}
     virtual ~PHY() {}
 
     /** @brief Return the IQ oversample rate (with respect to PHY bandwidth)
@@ -74,22 +74,11 @@ public:
       */
     virtual double getTxRateOversample(void) const = 0;
 
-    /** @brief Return bandwidth (without oversampling).
-     * @return The bandwidth used by the PHY.
-     */
-    virtual double getBandwidth(void) const
-    {
-        return _bandwidth;
-    }
-
     /** @brief Create a Modulator for this %PHY */
     virtual std::unique_ptr<Modulator> make_modulator(void) = 0;
 
     /** @brief Create a Demodulator for this %PHY */
     virtual std::unique_ptr<Demodulator> make_demodulator(void) = 0;
-
-protected:
-    double _bandwidth;
 };
 
 #endif /* PHY_H_ */

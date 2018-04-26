@@ -105,11 +105,11 @@ int main(int argc, char** argv)
     std::shared_ptr<PHY> phy;
 
     if (multichannel)
-        phy = std::make_shared<MultiOFDM>(sink, bandwidth, min_packet_size);
+        phy = std::make_shared<MultiOFDM>(sink, min_packet_size);
     else
-        phy = std::make_shared<FlexFrame>(sink, log, bandwidth, min_packet_size);
+        phy = std::make_shared<FlexFrame>(sink, log, min_packet_size);
 
-    auto mac = std::make_shared<MAC>(usrp, net, sink, phy, log, frame_size, guard_size, rx_thread_pool_size);
+    auto mac = std::make_shared<MAC>(usrp, net, sink, phy, log, bandwidth, frame_size, guard_size, rx_thread_pool_size);
 
     // Wait for Ctrl-C
     sigset_t waitset;

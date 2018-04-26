@@ -24,6 +24,7 @@ public:
         std::shared_ptr<RadioPacketSink> sink,
         std::shared_ptr<PHY> phy,
         std::shared_ptr<Logger> logger,
+        double bandwidth,
         double frame_size,
         double guard_size,
         size_t rx_pool_size);
@@ -38,6 +39,9 @@ private:
     std::shared_ptr<Logger>   logger;
     ParallelPacketModulator   modQueue;
     ParallelPacketDemodulator demodQueue;
+
+    /** @brief Bandwidth */
+    double _bandwidth;
 
     /** Length of TDMA frame (sec) */
     double frame_size;

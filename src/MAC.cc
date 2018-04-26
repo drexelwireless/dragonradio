@@ -13,6 +13,7 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<RadioPacketSink> sink,
          std::shared_ptr<PHY> phy,
          std::shared_ptr<Logger> logger,
+         double bandwidth,
          double frame_size,
          double guard_size,
          size_t rx_pool_size)
@@ -22,6 +23,7 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
     logger(logger),
     modQueue(net, phy),
     demodQueue(net, phy, sink, rx_pool_size),
+    _bandwidth(bandwidth),
     frame_size(frame_size),
     slot_size(frame_size/net->getNumNodes()),
     guard_size(guard_size),
@@ -29,8 +31,8 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
 {
     slop_size = 0.5*guard_size;
 
-    usrp->set_rx_rate(phy->getBandwidth()*phy->getRxRateOversample());
-    usrp->set_tx_rate(phy->getBandwidth()*phy->getTxRateOversample());
+    usrp->set_rx_rate(_bandwidth*phy->getRxRateOversample());
+    usrp->set_tx_rate(_bandwidth*phy->getTxRateOversample());
 
     rxThread = std::thread(&MAC::rxWorker, this);
     txThread = std::thread(&MAC::txWorker, this);

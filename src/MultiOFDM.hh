@@ -105,9 +105,7 @@ public:
      * packet.
      */
     MultiOFDM(std::shared_ptr<RadioPacketSink> sink,
-              double bandwidth,
               size_t minPacketSize) :
-        PHY(bandwidth),
         _sink(sink),
         _minPacketSize(minPacketSize)
     {

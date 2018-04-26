@@ -150,9 +150,7 @@ public:
 
     FlexFrame(std::shared_ptr<RadioPacketSink> sink,
               std::shared_ptr<Logger> logger,
-              double bandwidth,
               size_t minPacketSize) :
-        PHY(bandwidth),
         _sink(sink),
         _logger(logger),
         _minPacketSize(minPacketSize)
