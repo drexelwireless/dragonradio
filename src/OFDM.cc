@@ -294,7 +294,7 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
 const crc_scheme CHECK = LIQUID_CRC_32;
 
 /** Inner FEC */
-const fec_scheme FEC_INNER = LIQUID_FEC_CONV_V27;
+const fec_scheme FEC_INNER = LIQUID_FEC_CONV_V29;
 
 /** Outer FEC */
 const fec_scheme FEC_OUTER = LIQUID_FEC_RS_M8;
@@ -312,7 +312,7 @@ std::unique_ptr<PHY::Modulator> OFDM::make_modulator(void)
     auto modulator = std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(
       new Modulator(*this, CHECK, FEC_INNER, FEC_OUTER, MODSCHEME)));
 
-    modulator->setSoftTXGain(-4.0f);
+    modulator->setSoftTXGain(-12.0f);
 
     return modulator;
 }

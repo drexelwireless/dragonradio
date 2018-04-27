@@ -16,14 +16,14 @@ const unsigned int TP_LEN = 4;
 /** OFDM subcarrier allocation */
 unsigned char *SUBCAR = nullptr;
 
-/** Modulation */
-const int MOD = LIQUID_MODEM_QPSK;
-
 /** Inner FEC */
-const int FEC_INNER = LIQUID_FEC_CONV_V27;
+const int FEC_INNER = LIQUID_FEC_CONV_V29;
 
 /** Outer FEC */
 const int FEC_OUTER = LIQUID_FEC_RS_M8;
+
+/** Modulation */
+const int MOD = LIQUID_MODEM_QPSK;
 
 // liquid fixes the header size at 8 bytes
 static_assert(sizeof(Header) <= 8, "sizeof(Header) must be no more than 8 bytes");
@@ -190,4 +190,18 @@ int MultiOFDM::Demodulator::rxCallback(unsigned char *  _header,
     _phy._sink->push(std::move(pkt));
 
     return 0;
+}
+
+std::unique_ptr<PHY::Demodulator> MultiOFDM::make_demodulator(void)
+{
+    return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this)));
+}
+
+std::unique_ptr<PHY::Modulator> MultiOFDM::make_modulator(void)
+{
+    auto modulator = std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(new Modulator(*this)));
+
+    modulator->setSoftTXGain(-12.0f);
+
+    return modulator;
 }
