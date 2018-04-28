@@ -5,6 +5,8 @@
 #include <cstring>
 #include <deque>
 
+#include <uhd/utils/thread_priority.hpp>
+
 #include "MAC.hh"
 #include "USRP.hh"
 
@@ -73,6 +75,8 @@ void MAC::rxWorker(void)
     std::shared_ptr<IQBuf> prevSlot;       // IQ buffer for previous slot's data
     std::shared_ptr<IQBuf> curSlot;        // IQ buffer for current slot's data
 
+    uhd::set_thread_priority_safe();
+
     txRate = usrp->get_rx_rate();
     slot_samps = txRate * slot_size;
     slop_samps = txRate * slop_size;
@@ -140,6 +144,8 @@ void MAC::txWorker(void)
     uhd::time_spec_t t_send_slot; // Time at which *our* slot starts
     double           t_frame_pos; // Offset into the current frame (sec)
     size_t           slot_samps;  // Number of samples to send in a slot
+
+    uhd::set_thread_priority_safe();
 
     slot_samps = usrp->get_tx_rate()*(slot_size - guard_size);
 
