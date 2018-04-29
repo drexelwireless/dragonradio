@@ -5,27 +5,71 @@
 #include <mutex>
 #include <queue>
 
+/** @brief A thread-safe queue. */
+/** A SafeQueue is a thread-safe FIFO queue. Any call to pop will block until an
+ * element is inserted until the queue is stopped by a call to stop. Once stop
+ * has been invoked, elements can still be inserted, but any call to pop will
+ * immediately return.
+ */
 template<typename T>
 class SafeQueue {
 public:
-    SafeQueue() : done(false) {};
+    SafeQueue();
+    ~SafeQueue();
 
+    SafeQueue(const SafeQueue&) = delete;
+    SafeQueue(SafeQueue&&) = delete;
+
+    SafeQueue& operator=(const SafeQueue&) = delete;
+    SafeQueue& operator=(SafeQueue&&) = delete;
+
+    /** @brief return true if the queue is empty. */
     bool empty(void) const;
 
+    /** @brief Push an element on the end of the queue .*/
     void push(const T& val);
-    void push(T&& val);
-    void emplace(const T& val);
-    void emplace(T&& val);
-    void pop(T& val);
 
+    /** @brief Push an element on the end of the queue. */
+    void push(T&& val);
+
+    /** @brief Construct an element in-place on the end of the queue. */
+    void emplace(const T& val);
+
+    /** @brief Construct an element in-place on the end of the queue. */
+    void emplace(T&& val);
+
+    /** @brief Access the first element of the queue and pop it.
+     * @param val Reference to location where popped value should be copied.
+     * @return true if a value was popped, false otherwise.
+     */
+    bool pop(T& val);
+
+    /** @brief Mark the queue as stopped. */
     void stop(void);
 
 private:
-    bool                    done;
-    std::mutex              m;
+    /** @brief Flag indicating that processing of the queue should stop. */
+    bool done;
+
+    /** @brief Mutex protecting the queue. */
+    std::mutex m;
+
+    /** @brief Condition variable protecting the queue. */
     std::condition_variable cond;
-    std::queue<T>           q;
+
+    /** @brief The queue itself. */
+    std::queue<T> q;
 };
+
+template<typename T>
+SafeQueue<T>::SafeQueue() : done(false)
+{
+}
+
+template<typename T>
+SafeQueue<T>::~SafeQueue()
+{
+}
 
 template<typename T>
 bool SafeQueue<T>::empty(void) const
@@ -72,15 +116,18 @@ void SafeQueue<T>::emplace(T&& val)
 }
 
 template<typename T>
-void SafeQueue<T>::pop(T& val)
+bool SafeQueue<T>::pop(T& val)
 {
     std::unique_lock<std::mutex> lock(m);
 
     cond.wait(lock, [this]{ return done || !q.empty(); });
-    if (done)
-        return;
-    val = std::move(q.front());
-    q.pop();
+    if (q.empty())
+        return false;
+    else {
+        val = std::move(q.front());
+        q.pop();
+        return true;
+    }
 }
 
 template<typename T>
