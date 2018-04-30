@@ -66,11 +66,6 @@ bool NET::wantPacket(NodeId dest)
     return dest == nodeId;
 }
 
-void NET::sendPacket(std::unique_ptr<RadioPacket> pkt)
-{
-    sendQueue.push(std::move(pkt));
-}
-
 /** Maximum radio packet size. Really 1500 (MTU) + 14 (size of Ethernet header),
     which we should properly calculate at some point. */
 const size_t MAX_PKT_SIZE = 2000;

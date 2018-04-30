@@ -189,8 +189,10 @@ void OFDM::Demodulator::print(void)
     ofdmflexframesync_print(_fs);
 }
 
-void OFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf)
+void OFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q)
 {
+    _q = &q;
+
     _pkts_received = false;
 
     _demod_start = buf->begin()->buf->timestamp;
@@ -287,7 +289,7 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
     pkt->dest = h->dest;
     pkt->pkt_id = h->pkt_id;
 
-    _phy._net->sendPacket(std::move(pkt));
+    _q->push(std::move(pkt));
 }
 
 /** CRC */

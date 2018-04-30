@@ -16,7 +16,8 @@ private:
     class Worker
     {
     public:
-        Worker(PHY& phy) : demod(phy.make_demodulator()) {}
+        Worker(std::shared_ptr<NET> net,
+               std::shared_ptr<PHY> phy);
         ~Worker() {}
 
         Worker(const Worker&) = delete;
@@ -25,13 +26,14 @@ private:
         Worker& operator=(const Worker&) = delete;
         Worker& operator=(Worker&&) = delete;
 
-        void operator ()(std::unique_ptr<IQQueue>& buf)
-        {
-            demod->demodulate(std::move(buf));
-        }
+        void operator ()(std::unique_ptr<IQQueue>& buf);
 
     private:
-        std::unique_ptr<PHY::Demodulator> demod;
+        /** @brief Destination for packets. */
+        std::shared_ptr<NET> _net;
+
+        /** @brief Our demodulator. */
+        std::unique_ptr<PHY::Demodulator> _demod;
     };
 
 public:

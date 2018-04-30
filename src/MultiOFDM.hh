@@ -65,7 +65,7 @@ public:
         Demodulator& operator=(const Demodulator&) = delete;
         Demodulator& operator=(Demodulator&&) = delete;
 
-        void demodulate(std::unique_ptr<IQQueue> buf) override;
+        void demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q) override;
 
     private:
         /** @brief Our associated PHY. */
@@ -73,6 +73,9 @@ public:
 
         /** @brief Our liquid-usrp multichannelrx object. */
         std::unique_ptr<multichannelrx> mcrx;
+
+        /** @brief Queue on which to place demodulated packets. */
+        SafeQueue<std::unique_ptr<RadioPacket>>* _q;
 
         static int liquidRxCallback(unsigned char *  _header,
                                     int              _header_valid,

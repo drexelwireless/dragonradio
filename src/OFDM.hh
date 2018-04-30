@@ -106,11 +106,14 @@ public:
         /** @brief Print internals of the associated flexframesync. */
         void print(void);
 
-        void demodulate(std::unique_ptr<IQQueue> buf) override;
+        void demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q) override;
 
     private:
         /** @brief Associated OFDM PHY. */
         OFDM& _phy;
+
+        /** @brief Queue on which to place demodulated packets. */
+        SafeQueue<std::unique_ptr<RadioPacket>>* _q;
 
         /** @brief Flag indicating whether or not any packets were recevied. */
         /** We use this to decide whether or not to log the slots being

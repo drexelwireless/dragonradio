@@ -123,8 +123,10 @@ MultiOFDM::Demodulator::~Demodulator()
 {
 }
 
-void MultiOFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf)
+void MultiOFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q)
 {
+    _q = &q;
+
     mcrx->Reset();
 
     for (auto it = buf->begin(); it != buf->end(); ++it)
@@ -187,7 +189,7 @@ int MultiOFDM::Demodulator::rxCallback(unsigned char *  _header,
     pkt->dest = h->dest;
     pkt->pkt_id = h->pkt_id;
 
-    _phy._net->sendPacket(std::move(pkt));
+    _q->push(std::move(pkt));
 
     return 0;
 }
