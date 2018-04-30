@@ -49,6 +49,12 @@ docs/html/index.html : $(SOURCES) $(INCLUDES)
 	doxygen docs/Doxyfile
 
 #
+# Print an arbitrary makefile variable
+#
+print-% :
+	@echo $* = $($*)
+
+#
 # Rules for virtual goals
 #
 ifeq ($(MAKECMDGOALS),)
