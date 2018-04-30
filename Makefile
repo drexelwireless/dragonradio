@@ -22,9 +22,27 @@ LDFLAGS += \
 SRCDIR = src
 OBJDIR = obj
 
-SOURCES  := $(wildcard $(SRCDIR)/*.cc)
-INCLUDES := $(wildcard $(SRCDIR)/*.hh)
-OBJECTS  := $(SOURCES:$(SRCDIR)/%.cc=$(OBJDIR)/%.o)
+ALLSOURCES := $(shell find $(SRCDIR) -name '*.cc')
+
+ALLINCLUDES := $(shell find  $(SRCDIR) -name '*.hh')
+
+SOURCES := \
+    ExtensibleDataSet.cc \
+    FlexFrame.cc \
+    Liquid.cc \
+    Logger.cc \
+    MAC.cc \
+    MultiOFDM.cc \
+    main.cc \
+    NET.cc \
+    OFDM.cc \
+    ParallelPacketDemodulator.cc \
+    ParallelPacketModulator.cc \
+    TunTap.cc \
+    USRP.cc \
+    Util.cc
+
+OBJECTS := $(patsubst %.cc,$(OBJDIR)/%.o,$(SOURCES))
 
 include mk/common.mk
 include mk/cc.mk
@@ -40,12 +58,12 @@ clean :
 $(TARGET) : $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) -o $@
 
--include $(SOURCES:$(SRCDIR)/%.cc=$(OBJDIR)/%.dep)
+-include $(patsubst %.cc,$(OBJDIR)/%.dep,$(SOURCES))
 
 .PHONY : html
 html : docs/html/index.html
 
-docs/html/index.html : $(SOURCES) $(INCLUDES)
+docs/html/index.html : $(ALLSOURCES) $(ALLINCLUDES)
 	doxygen docs/Doxyfile
 
 #
