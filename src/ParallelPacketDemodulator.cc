@@ -11,7 +11,7 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<NET> net,
                                                      unsigned int nthreads) :
     net(net),
     phy(phy),
-    workQueue(nthreads, &Worker::make_worker, *phy)
+    workQueue(nthreads, *phy)
 {
 }
 

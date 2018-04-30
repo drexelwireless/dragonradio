@@ -25,11 +25,6 @@ private:
         Worker& operator=(const Worker&) = delete;
         Worker& operator=(Worker&&) = delete;
 
-        static std::unique_ptr<Worker> make_worker(PHY& phy)
-        {
-            return std::make_unique<Worker>(phy);
-        }
-
         void operator ()(std::unique_ptr<IQQueue>& buf)
         {
             demod->demodulate(std::move(buf));
@@ -57,7 +52,7 @@ private:
     std::shared_ptr<PHY> phy;
 
     /** Work queue for demodulating packets */
-    WorkQueue<std::unique_ptr<IQQueue>, Worker> workQueue;
+    WorkQueue<Worker, std::unique_ptr<IQQueue>> workQueue;
 
     /** Function to create a demodulation worker */
     void mkDemodWorker(void);

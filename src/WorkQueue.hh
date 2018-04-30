@@ -10,11 +10,11 @@
 #include "SafeQueue.hh"
 
 /** A work queue. */
-template <typename T, typename W>
+template <typename W, typename T>
 class WorkQueue {
 public:
-    template <typename F, typename... Args>
-    explicit WorkQueue(const unsigned int nthreads, F&& f, Args&&... args);
+    template <typename... WArgs>
+    explicit WorkQueue(const unsigned int nthreads, WArgs&&... args);
 
     WorkQueue(const WorkQueue&) = delete;
     WorkQueue(WorkQueue&&) = delete;
@@ -38,28 +38,24 @@ private:
     void run_worker(W& worker);
 };
 
-template <typename T, typename W>
-template <typename F, typename... Args>
-WorkQueue<T, W>::WorkQueue(const unsigned int nthreads, F&& f, Args&&... args) :
+template <typename W, typename T>
+template <typename... WArgs>
+WorkQueue<W, T>::WorkQueue(const unsigned int nthreads, WArgs&&... args) :
     done(false)
 {
     for (unsigned int i = 0; i < nthreads; ++i) {
-#if __cplusplus >= 201703L
-        workers.emplace_back(std::invoke(std::forward<F>(f), std::forward<Args>(args)...));
-#else /*  __cplusplus < 201703 */
-        workers.emplace_back(std::forward<F>(f)(std::forward<Args>(args)...));
-#endif /*  __cplusplus < 201703 */
-        threads.emplace_back(std::thread(&WorkQueue<T, W>::run_worker, this, std::ref(*workers.back())));
+        workers.emplace_back(std::make_unique<W>(std::forward<WArgs>(args)...));
+        threads.emplace_back(std::thread(&WorkQueue<W, T>::run_worker, this, std::ref(*workers.back())));
     }
 }
 
-template <typename T, typename W>
-WorkQueue<T, W>::~WorkQueue()
+template <typename W, typename T>
+WorkQueue<W, T>::~WorkQueue()
 {
 }
 
-template <typename T, typename W>
-void WorkQueue<T, W>::stop(void)
+template <typename W, typename T>
+void WorkQueue<W, T>::stop(void)
 {
     done = true;
 
@@ -71,20 +67,20 @@ void WorkQueue<T, W>::stop(void)
     }
 }
 
-template <typename T, typename W>
-void WorkQueue<T, W>::submit(const T& item)
+template <typename W, typename T>
+void WorkQueue<W, T>::submit(const T& item)
 {
     work_q.emplace(item);
 }
 
-template <typename T, typename W>
-void WorkQueue<T, W>::submit(T&& item)
+template <typename W, typename T>
+void WorkQueue<W, T>::submit(T&& item)
 {
     work_q.emplace(std::move(item));
 }
 
-template <typename T, typename W>
-void WorkQueue<T, W>::run_worker(W& worker)
+template <typename W, typename T>
+void WorkQueue<W, T>::run_worker(W& worker)
 {
     T item;
 
