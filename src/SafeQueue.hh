@@ -23,7 +23,10 @@ public:
     SafeQueue& operator=(const SafeQueue&) = delete;
     SafeQueue& operator=(SafeQueue&&) = delete;
 
-    /** @brief return true if the queue is empty. */
+    /** @brief Reset queue to empty state. */
+    void reset(void);
+
+    /** @brief Return true if the queue is empty. */
     bool empty(void) const;
 
     /** @brief Push an element on the end of the queue .*/
@@ -69,6 +72,16 @@ SafeQueue<T>::SafeQueue() : done(false)
 template<typename T>
 SafeQueue<T>::~SafeQueue()
 {
+}
+
+template<typename T>
+void SafeQueue<T>::reset(void)
+{
+    std::lock_guard<std::mutex> lock(m);
+    std::queue<T> newq;
+
+    done = false;
+    q.swap(newq);
 }
 
 template<typename T>
