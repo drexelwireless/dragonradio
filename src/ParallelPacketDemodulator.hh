@@ -55,12 +55,6 @@ private:
 
     /** Work queue for demodulating packets */
     WorkQueue<Worker, std::unique_ptr<IQQueue>> workQueue;
-
-    /** Function to create a demodulation worker */
-    void mkDemodWorker(void);
-
-    /** Demodulation worker */
-    void demodWorker(std::unique_ptr<PHY::Demodulator> demod, std::unique_ptr<IQQueue>& buf);
 };
 
 #endif /* PARALLELPACKETDEMODULATOR_H_ */
