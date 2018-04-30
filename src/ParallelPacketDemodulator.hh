@@ -8,7 +8,6 @@
 
 #include "NET.hh"
 #include "PHY.hh"
-#include "RadioPacketSink.hh"
 #include "WorkQueue.hh"
 
 class ParallelPacketDemodulator
@@ -43,7 +42,6 @@ private:
 public:
     ParallelPacketDemodulator(std::shared_ptr<NET> net,
                               std::shared_ptr<PHY> phy,
-                              std::shared_ptr<RadioPacketSink> sink,
                               unsigned int nthreads);
     ~ParallelPacketDemodulator();
 
@@ -52,11 +50,11 @@ public:
     void push(std::unique_ptr<IQQueue> buf);
 
 private:
+    /** @brief Destination for packets. */
     std::shared_ptr<NET> net;
-    std::shared_ptr<PHY> phy;
 
-    /** @brief Sink for radio packets. */
-    std::shared_ptr<RadioPacketSink> _sink;
+    /** @brief PHY we use for demodulation. */
+    std::shared_ptr<PHY> phy;
 
     /** Work queue for demodulating packets */
     WorkQueue<std::unique_ptr<IQQueue>, Worker> workQueue;

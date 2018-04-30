@@ -275,7 +275,7 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
         return;
     }
 
-    if (!_phy._sink->wantPacket(h->dest))
+    if (!_phy._net->wantPacket(h->dest))
         return;
 
     if (h->pkt_len == 0)
@@ -287,7 +287,7 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
     pkt->dest = h->dest;
     pkt->pkt_id = h->pkt_id;
 
-    _phy._sink->push(std::move(pkt));
+    _phy._net->sendPacket(std::move(pkt));
 }
 
 /** CRC */

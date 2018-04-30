@@ -99,14 +99,14 @@ public:
 
     /**
      * @param net The NET to which we send demodulated packets.
-     * @prama sink The RadioPacketSink to which we should send received packets.
+     * @prama net The NET to which we should send received packets.
      * @prama bandwidth The bandwidth used by the PHY (without oversampling).
      * @param minPacketSize The minimum number of bytes we will send in a
      * packet.
      */
-    MultiOFDM(std::shared_ptr<RadioPacketSink> sink,
+    MultiOFDM(std::shared_ptr<NET> net,
               size_t minPacketSize) :
-        _sink(sink),
+        _net(net),
         _minPacketSize(minPacketSize)
     {
     }
@@ -127,8 +127,8 @@ public:
     std::unique_ptr<PHY::Modulator> make_modulator(void) override;
 
 private:
-    /** @brief The RadioPacketSink to which we should send received packets. */
-    std::shared_ptr<RadioPacketSink> _sink;
+    /** @brief The NET to which we should send received packets. */
+    std::shared_ptr<NET> _net;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */

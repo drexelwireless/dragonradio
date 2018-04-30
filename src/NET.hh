@@ -18,53 +18,56 @@ public:
     NET(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& nodes);
     ~NET();
 
-    /** Get this node's ID */
-    NodeId getNodeId(void);
-
-    /** Get the number of nodes in the network */
-    unsigned int getNumNodes(void);
-
-    /** Receive a radio packet from the network */
-    std::unique_ptr<NetPacket> recvPacket(void);
-
-    /** Send a network packet to the network */
-    void sendPacket(std::unique_ptr<RadioPacket> pkt);
-
-    /** Terminate packet processing threads */
+    /** @brief Halt packet processing. */
     void stop(void);
 
+    /** @breif Get this node's ID */
+    NodeId getNodeId(void);
+
+    /** @brief Get the number of nodes in the network */
+    unsigned int getNumNodes(void);
+
+    /** @brief Receive a packet from the network */
+    std::unique_ptr<NetPacket> recvPacket(void);
+
+    /** @brief Return true if we want a packet sent to this destination. */
+    bool wantPacket(NodeId dest);
+
+    /** @brief Send a packet to the network */
+    void sendPacket(std::unique_ptr<RadioPacket> pkt);
+
 private:
-    /** Our tun/tap interface */
+    /** @brief Our tun/tap interface */
     std::unique_ptr<TunTap> tt;
 
-    /** This node's ID */
+    /** @brief This node's ID */
     NodeId nodeId;
 
-    /** The number of nodes in the network */
+    /** @brief The number of nodes in the network */
     unsigned int numNodes;
 
-    /** Current packet id */
+    /** @brief Current packet id */
     PacketId curPacketId;
 
-    /** Flag indicating if we should stop processing packets */
+    /** @brief Flag indicating if we should stop processing packets */
     bool done;
 
-    /** Thread running recvWorker */
+    /** @brief Thread running recvWorker */
     std::thread recvThread;
 
-    /** Read packets from tun/tap and queue them in recvQueue */
+    /** @brief Read packets from tun/tap and queue them in recvQueue */
     void recvWorker(void);
 
-    /** Thread running sendWorker */
+    /** @brief Thread running sendWorker */
     std::thread sendThread;
 
-    /** Read packets from sendQueue and send them on tun/tap */
+    /** @brief Read packets from sendQueue and send them on tun/tap */
     void sendWorker(void);
 
-    /** Radio packets received from the network */
+    /** @brief Radio packets received from the network */
     SafeQueue<std::unique_ptr<NetPacket>> recvQueue;
 
-    /** Network packets to send to the network */
+    /** @brief Network packets to send to the network */
     SafeQueue<std::unique_ptr<RadioPacket>> sendQueue;
 };
 

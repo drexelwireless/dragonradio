@@ -13,7 +13,6 @@
 #include "PHY.hh"
 #include "ParallelPacketDemodulator.hh"
 #include "ParallelPacketModulator.hh"
-#include "RadioPacketSink.hh"
 #include "USRP.hh"
 
 class MAC
@@ -21,7 +20,6 @@ class MAC
 public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<NET> net,
-        std::shared_ptr<RadioPacketSink> sink,
         std::shared_ptr<PHY> phy,
         std::shared_ptr<Logger> logger,
         double bandwidth,
@@ -35,7 +33,6 @@ public:
 private:
     std::shared_ptr<USRP>     usrp;
     std::shared_ptr<NET>      net;
-    std::shared_ptr<RadioPacketSink> sink;
     std::shared_ptr<Logger>   logger;
     ParallelPacketModulator   modQueue;
     ParallelPacketDemodulator demodQueue;

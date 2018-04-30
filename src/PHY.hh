@@ -6,7 +6,6 @@
 #include "IQBuffer.hh"
 #include "ModPacket.hh"
 #include "Packet.hh"
-#include "RadioPacketSink.hh"
 
 /** @brief %PHY packet header. */
 struct Header {

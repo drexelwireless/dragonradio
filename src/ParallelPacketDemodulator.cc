@@ -8,11 +8,9 @@ using namespace std::placeholders;
 
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<NET> net,
                                                      std::shared_ptr<PHY> phy,
-                                                     std::shared_ptr<RadioPacketSink> sink,
                                                      unsigned int nthreads) :
     net(net),
     phy(phy),
-    _sink(sink),
     workQueue(nthreads, &Worker::make_worker, *phy)
 {
 }

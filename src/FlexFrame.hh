@@ -148,10 +148,10 @@ public:
                       unsigned int M);
     };
 
-    FlexFrame(std::shared_ptr<RadioPacketSink> sink,
+    FlexFrame(std::shared_ptr<NET> net,
               std::shared_ptr<Logger> logger,
               size_t minPacketSize) :
-        _sink(sink),
+        _net(net),
         _logger(logger),
         _minPacketSize(minPacketSize)
     {
@@ -176,8 +176,8 @@ public:
     std::unique_ptr<PHY::Modulator> make_modulator(void) override;
 
 private:
-    /** @brief The RadioPacketSink to which we should send received packets. */
-    std::shared_ptr<RadioPacketSink> _sink;
+    /** @brief The NET to which we should send received packets. */
+    std::shared_ptr<NET> _net;
 
     /** @brief The Logger to use. Should be nullptr for no logging. */
     std::shared_ptr<Logger> _logger;

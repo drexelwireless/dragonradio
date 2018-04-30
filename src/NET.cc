@@ -29,6 +29,19 @@ NET::~NET()
     printf("Closing tap interface\n");
 }
 
+void NET::stop(void)
+{
+    done = true;
+    recvQueue.stop();
+    sendQueue.stop();
+
+    if (recvThread.joinable())
+        recvThread.join();
+
+    if (sendThread.joinable())
+        sendThread.join();
+}
+
 NodeId NET::getNodeId(void)
 {
     return nodeId;
@@ -48,22 +61,14 @@ std::unique_ptr<NetPacket> NET::recvPacket(void)
     return pkt;
 }
 
+bool NET::wantPacket(NodeId dest)
+{
+    return dest == nodeId;
+}
+
 void NET::sendPacket(std::unique_ptr<RadioPacket> pkt)
 {
     sendQueue.push(std::move(pkt));
-}
-
-void NET::stop(void)
-{
-    done = true;
-    recvQueue.stop();
-    sendQueue.stop();
-
-    if (recvThread.joinable())
-        recvThread.join();
-
-    if (sendThread.joinable())
-        sendThread.join();
 }
 
 /** Maximum radio packet size. Really 1500 (MTU) + 14 (size of Ethernet header),
@@ -99,12 +104,16 @@ void NET::recvWorker(void)
 
 void NET::sendWorker(void)
 {
+    std::unique_ptr<RadioPacket> pkt;
+
     while (!done) {
-        std::unique_ptr<RadioPacket> pkt;
+        if (sendQueue.pop(pkt)) {
+            printf("Written %lu bytes (PID %u) from %u\n",
+                (unsigned long) pkt->payload.size(),
+                (unsigned int) pkt->pkt_id,
+                (unsigned int) pkt->src);
 
-        sendQueue.pop(pkt);
-
-        if (pkt)
             tt->cwrite(&(pkt->payload)[0], pkt->payload.size());
+        }
     }
 }

@@ -163,7 +163,7 @@ public:
      * @param fec1 The outer forward error-correction scheme.
      * @param mod_scheme The modulation scheme scheme.
      */
-    OFDM(std::shared_ptr<RadioPacketSink> sink,
+    OFDM(std::shared_ptr<NET> net,
          std::shared_ptr<Logger> logger,
          unsigned int M,
          unsigned int cp_len,
@@ -174,7 +174,7 @@ public:
          _cp_len(cp_len),
          _taper_len(taper_len),
          _p(p),
-        _sink(sink),
+        _net(net),
         _logger(logger),
         _minPacketSize(minPacketSize)
     {
@@ -205,8 +205,8 @@ private:
     unsigned int _taper_len;
     unsigned char *_p;
 
-    /** @brief The RadioPacketSink to which we should send received packets. */
-    std::shared_ptr<RadioPacketSink> _sink;
+    /** @brief The NET to which we should send received packets. */
+    std::shared_ptr<NET> _net;
 
     /** @brief The Logger to use. Should be nullptr for no logging. */
     std::shared_ptr<Logger> _logger;

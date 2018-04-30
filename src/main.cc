@@ -106,18 +106,17 @@ int main(int argc, char** argv)
         log = std::make_shared<Logger>(logfile, node_id, usrp->get_time_now());
 
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
-    auto sink = std::make_shared<RadioPacketSink>(net);
 
     std::shared_ptr<PHY> phy;
 
     if (ofdm)
-        phy = std::make_shared<OFDM>(sink, log, 48, 6, 4, nullptr, min_packet_size);
+        phy = std::make_shared<OFDM>(net, log, 48, 6, 4, nullptr, min_packet_size);
     else if (multichannel)
-        phy = std::make_shared<MultiOFDM>(sink, min_packet_size);
+        phy = std::make_shared<MultiOFDM>(net, min_packet_size);
     else
-        phy = std::make_shared<FlexFrame>(sink, log, min_packet_size);
+        phy = std::make_shared<FlexFrame>(net, log, min_packet_size);
 
-    auto mac = std::make_shared<MAC>(usrp, net, sink, phy, log, bandwidth, frame_size, guard_size, rx_thread_pool_size);
+    auto mac = std::make_shared<MAC>(usrp, net, phy, log, bandwidth, frame_size, guard_size, rx_thread_pool_size);
 
     if (log) {
         log->setTXBandwidth(bandwidth*phy->getTxRateOversample());
@@ -135,7 +134,6 @@ int main(int argc, char** argv)
 
     sigwait(&waitset, &sig);
 
-    sink->stop();
     net->stop();
     mac->stop();
     if (log)
