@@ -7,12 +7,12 @@
 #include <unistd.h>
 #include <thread>
 
-#include "FlexFrame.hh"
 #include "MAC.hh"
 #include "NET.hh"
-#include "MultiOFDM.hh"
-#include "OFDM.hh"
 #include "USRP.hh"
+#include "phy/FlexFrame.hh"
+#include "phy/MultiOFDM.hh"
+#include "phy/OFDM.hh"
 
 void usage(void)
 {

@@ -2,7 +2,7 @@
 
 #include "ParallelPacketDemodulator.hh"
 #include "NET.hh"
-#include "PHY.hh"
+#include "phy/PHY.hh"
 
 using namespace std::placeholders;
 

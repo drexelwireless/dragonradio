@@ -7,8 +7,8 @@
 #include <queue>
 
 #include "NET.hh"
-#include "PHY.hh"
 #include "WorkQueue.hh"
+#include "phy/PHY.hh"
 
 class ParallelPacketDemodulator
 {

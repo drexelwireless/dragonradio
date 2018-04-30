@@ -10,10 +10,10 @@
 
 #include "Logger.hh"
 #include "NET.hh"
-#include "PHY.hh"
 #include "ParallelPacketDemodulator.hh"
 #include "ParallelPacketModulator.hh"
 #include "USRP.hh"
+#include "phy/PHY.hh"
 
 class MAC
 {

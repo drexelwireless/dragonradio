@@ -10,7 +10,7 @@
 
 #include "ModPacket.hh"
 #include "NET.hh"
-#include "PHY.hh"
+#include "phy/PHY.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp multi-channel OFDM %PHY code. */
 class MultiOFDM : public PHY

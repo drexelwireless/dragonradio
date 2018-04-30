@@ -1,28 +1,32 @@
-#ifndef FLEXFRAME_H_
-#define FLEXFRAME_H_
+#ifndef OFDM_H_
+#define OFDM_H_
 
 #include <liquid/liquid.h>
 
 #include "Logger.hh"
 #include "NET.hh"
-#include "PHY.hh"
+#include "phy/PHY.hh"
 
-/** @brief A %PHY thats uses the liquid-usrp flexframegen code. */
-class FlexFrame : public PHY {
+/** @brief A %PHY thats uses the liquid-usrp ofdmflexframegen code. */
+class OFDM : public PHY {
 public:
-    /** @brief Modulate IQ data using a liquid-usrp flexframe. */
+    /** @brief Modulate IQ data using a liquid-usrp ofdmflexframegen. */
     class Modulator : public PHY::Modulator
     {
     public:
         /** @brief Construct Modulator with default check, FEC's, and modulation
          * scheme.
          */
-        Modulator(FlexFrame& phy);
+        Modulator(OFDM& phy);
 
         /** @brief Construct a flexframegen with the given check, inner and
          * outer FEC's, and modulation schemed.
+         * @param check The data validity check.
+         * @param fec0 The inner forward error-correction scheme.
+         * @param fec1 The outer forward error-correction scheme.
+         * @param mod_scheme The modulation scheme scheme.
          */
-        explicit Modulator(FlexFrame& phy,
+        explicit Modulator(OFDM& phy,
                            crc_scheme check,
                            fec_scheme fec0,
                            fec_scheme fec1,
@@ -68,19 +72,19 @@ public:
         std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) override;
 
     private:
-        /** @brief Associated FlexFrame PHY. */
-        FlexFrame& _phy;
+        /** @brief Associated OFDM PHY. */
+        OFDM& _phy;
 
         /** @brief Soft TX gain */
         float _g;
 
         /** @brief The liquid-dsp flexframegen object */
-        flexframegen _fg;
+        ofdmflexframegen _fg;
 
-        /** @brief The liquid-dsp flexframegenprops object  associated with this
-          * flexframegen.
-          */
-        flexframegenprops_s _fgprops;
+        /** @brief The liquid-dsp ofdmflexframegenprops object associated with
+         * this ofdmflexframegen.
+         */
+        ofdmflexframegenprops_s _fgprops;
 
         /** Update frame properties to match _fgprops. */
         void update_props(void);
@@ -90,7 +94,7 @@ public:
     class Demodulator : public PHY::Demodulator
     {
     public:
-        Demodulator(FlexFrame& phy);
+        Demodulator(OFDM& phy);
         ~Demodulator();
 
         Demodulator(const Demodulator&) = delete;
@@ -105,8 +109,8 @@ public:
         void demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q) override;
 
     private:
-        /** @brief Associated FlexFrame PHY. */
-        FlexFrame& _phy;
+        /** @brief Associated OFDM PHY. */
+        OFDM& _phy;
 
         /** @brief Queue on which to place demodulated packets. */
         SafeQueue<std::unique_ptr<RadioPacket>>* _q;
@@ -127,7 +131,7 @@ public:
         size_t _demod_off;
 
         /** @brief The liquid-dsp flexframesync object */
-        flexframesync _fs;
+        ofdmflexframesync _fs;
 
         static int _callback(unsigned char *  _header,
                              int              _header_valid,
@@ -151,27 +155,46 @@ public:
                       unsigned int M);
     };
 
-    FlexFrame(std::shared_ptr<NET> net,
-              std::shared_ptr<Logger> logger,
-              size_t minPacketSize) :
+    /** @brief Construct an OFDM PHY.
+     * @param M The number of subcarriers.
+     * @param cp_len The cyclic prefix length
+     * @param taper_len The taper length (OFDM symbol overlap)
+     * @param p The subcarrier allocation (null, pilot, data). Should have
+     * M entries.
+     * @param check The data validity check.
+     * @param fec0 The inner forward error-correction scheme.
+     * @param fec1 The outer forward error-correction scheme.
+     * @param mod_scheme The modulation scheme scheme.
+     */
+    OFDM(std::shared_ptr<NET> net,
+         std::shared_ptr<Logger> logger,
+         unsigned int M,
+         unsigned int cp_len,
+         unsigned int taper_len,
+         unsigned char *p,
+         size_t minPacketSize) :
+         _M(M),
+         _cp_len(cp_len),
+         _taper_len(taper_len),
+         _p(p),
         _net(net),
         _logger(logger),
         _minPacketSize(minPacketSize)
     {
     }
 
-    ~FlexFrame()
+    ~OFDM()
     {
     }
 
     double getRxRateOversample(void) const override
     {
-        return 2.0;
+        return 1.0;
     }
 
     double getTxRateOversample(void) const override
     {
-        return 2.0;
+        return 1.0;
     }
 
     std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
@@ -179,6 +202,12 @@ public:
     std::unique_ptr<PHY::Modulator> make_modulator(void) override;
 
 private:
+    // OFDM parameters
+    unsigned int _M;
+    unsigned int _cp_len;
+    unsigned int _taper_len;
+    unsigned char *_p;
+
     /** @brief The NET to which we should send received packets. */
     std::shared_ptr<NET> _net;
 
@@ -190,4 +219,4 @@ private:
     size_t _minPacketSize;
 };
 
-#endif /* FLEXFRAME_H_ */
+#endif /* OFDM_H_ */

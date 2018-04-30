@@ -28,19 +28,19 @@ ALLINCLUDES := $(shell find  $(SRCDIR) -name '*.hh')
 
 SOURCES := \
     ExtensibleDataSet.cc \
-    FlexFrame.cc \
     Liquid.cc \
     Logger.cc \
     MAC.cc \
-    MultiOFDM.cc \
     main.cc \
     NET.cc \
-    OFDM.cc \
     ParallelPacketDemodulator.cc \
     ParallelPacketModulator.cc \
     TunTap.cc \
     USRP.cc \
-    Util.cc
+    Util.cc \
+    phy/FlexFrame.cc \
+    phy/MultiOFDM.cc \
+    phy/OFDM.cc
 
 OBJECTS := $(patsubst %.cc,$(OBJDIR)/%.o,$(SOURCES))
 
