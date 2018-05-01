@@ -10,83 +10,20 @@
 
 #include "buffer.hh"
 
-/** A buffer of IQ samples */
-class IQBuf {
+/** @brief A buffer of IQ samples */
+struct IQBuf : buffer<std::complex<float>> {
 public:
-    IQBuf()
-    {
-    }
+    IQBuf(size_t sz) : buffer(sz) {}
 
-    IQBuf(size_t sz) :
-        data(sz)
-    {
-    }
+    ~IQBuf() noexcept {}
 
-    IQBuf(const IQBuf& other) :
-        data(other.data)
-    {
-    }
+    IQBuf(const IQBuf&) = delete;
+    IQBuf(IQBuf&&) = delete;
 
-    IQBuf(IQBuf&& other) noexcept :
-        data(std::move(other.data))
-    {
-    }
+    IQBuf& operator=(const IQBuf&) = delete;
+    IQBuf& operator=(IQBuf&&) = delete;
 
-    ~IQBuf() noexcept
-    {
-    }
-
-    IQBuf& operator=(const IQBuf& other)
-    {
-        IQBuf tmp(other);
-        *this = std::move(tmp);
-        return *this;
-    }
-
-    IQBuf& operator=(IQBuf&& other) noexcept
-    {
-        if (this == &other)
-            return *this;
-
-        data = std::move(other.data);
-
-        return *this;
-    }
-
-    const std::complex<float>& operator[](int i) const
-    {
-        return data[i];
-    }
-
-    std::complex<float>& operator[](int i)
-    {
-        return data[i];
-    }
-
-    size_t size(void)
-    {
-        return data.size();
-    }
-
-    void resize(size_t sz)
-    {
-        data.resize(sz);
-    }
-
-    void set_timestamp(uhd::time_spec_t t)
-    {
-        timestamp = t;
-    }
-
-    uhd::time_spec_t get_timestamp(void)
-    {
-        return timestamp;
-    }
-
-    /** IQ samples */
-    buffer<std::complex<float>> data;
-
-    /** Timestamp of the first sample */
+    /** @brief Timestamp of the first sample */
     uhd::time_spec_t timestamp;
 };
 

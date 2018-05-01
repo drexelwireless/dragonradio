@@ -168,7 +168,7 @@ std::unique_ptr<IQBuf> USRP::burstRX(uhd::time_spec_t t_start, size_t nsamps)
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
 
         if (ndelivered == 0)
-            buf->set_timestamp(rx_md.time_spec);
+            buf->timestamp = rx_md.time_spec;
 
         ndelivered += n;
 

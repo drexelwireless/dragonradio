@@ -266,8 +266,8 @@ void Logger::_logSend(const uhd::time_spec_t& t,
     entry.pkt_id = hdr.pkt_id;
     entry.src = hdr.src;
     entry.dest = hdr.dest;
-    entry.iq_data.p = &(buf->data)[0];
-    entry.iq_data.len = buf->data.size();
+    entry.iq_data.p = buf->data();
+    entry.iq_data.len = buf->size();
 
     _send->write(&entry, 1);
 }

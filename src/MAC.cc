@@ -118,7 +118,7 @@ void MAC::rxWorker(void)
             }
 
             // Determine how much we oversampled
-            t_samp_start = curSlot->get_timestamp();
+            t_samp_start = curSlot->timestamp;
             t_samp_end = t_samp_start + static_cast<double>(curSlot->size()) / txRate;
             oversample = (t_samp_end - t_next_slot).get_real_secs() * txRate;
 
