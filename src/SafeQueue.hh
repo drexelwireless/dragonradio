@@ -95,36 +95,45 @@ bool SafeQueue<T>::empty(void) const
 template<typename T>
 void SafeQueue<T>::push(const T& val)
 {
-    std::lock_guard<std::mutex> lock(m);
+    {
+        std::lock_guard<std::mutex> lock(m);
 
-    q.push(val);
+        q.push(val);
+    }
+
     cond.notify_one();
 }
 
 template<typename T>
 void SafeQueue<T>::push(T&& val)
 {
-    std::lock_guard<std::mutex> lock(m);
+    {
+        std::lock_guard<std::mutex> lock(m);
 
-    q.push(std::move(val));
+        q.push(std::move(val));
+    }
     cond.notify_one();
 }
 
 template<typename T>
 void SafeQueue<T>::emplace(const T& val)
 {
-    std::lock_guard<std::mutex> lock(m);
+    {
+        std::lock_guard<std::mutex> lock(m);
 
-    q.emplace(val);
+        q.emplace(val);
+    }
     cond.notify_one();
 }
 
 template<typename T>
 void SafeQueue<T>::emplace(T&& val)
 {
-    std::lock_guard<std::mutex> lock(m);
+    {
+        std::lock_guard<std::mutex> lock(m);
 
-    q.emplace(std::move(val));
+        q.emplace(std::move(val));
+    }
     cond.notify_one();
 }
 
