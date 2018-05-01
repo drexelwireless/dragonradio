@@ -34,6 +34,9 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
     usrp->set_rx_rate(_bandwidth*phy->getRxRateOversample());
     usrp->set_tx_rate(_bandwidth*phy->getTxRateOversample());
 
+    phy->setRxRate(_bandwidth*phy->getRxRateOversample());
+    phy->setTxRate(_bandwidth*phy->getTxRateOversample());
+
     rxThread = std::thread(&MAC::rxWorker, this);
     txThread = std::thread(&MAC::txWorker, this);
 }

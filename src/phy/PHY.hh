@@ -74,11 +74,34 @@ public:
       */
     virtual double getTxRateOversample(void) const = 0;
 
+    /** @brief Tell the PHY what RX sample rate we are running at.
+     * @param rate The rate.
+     */
+    virtual void setRxRate(double rate)
+    {
+        _rx_rate = rate;
+    }
+
+    /** @brief Tell the PHY what TX sample rate we are running at.
+     * @param rate The rate.
+     */
+    virtual void setTxRate(double rate)
+    {
+        _tx_rate = rate;
+    }
+
     /** @brief Create a Modulator for this %PHY */
     virtual std::unique_ptr<Modulator> make_modulator(void) = 0;
 
     /** @brief Create a Demodulator for this %PHY */
     virtual std::unique_ptr<Demodulator> make_demodulator(void) = 0;
+
+protected:
+    /** @brief RX sample rate */
+    double _rx_rate;
+
+    /** @brief TX sample rate */
+    double _tx_rate;
 };
 
 #endif /* PHY_H_ */
