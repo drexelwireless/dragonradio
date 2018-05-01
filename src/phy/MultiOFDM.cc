@@ -69,11 +69,11 @@ std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPac
     header.h.src = pkt->src;
     header.h.dest = pkt->dest;
     header.h.pkt_id = pkt->pkt_id;
-    header.h.pkt_len = pkt->payload.size();
+    header.h.pkt_len = pkt->size();
 
-    pkt->payload.resize(std::max((size_t) pkt->payload.size(), _phy._minPacketSize));
+    pkt->resize(std::max((size_t) pkt->size(), _phy._minPacketSize));
 
-    _mctx->UpdateData(0, header.bytes, &(pkt->payload)[0], pkt->payload.size(), MOD, FEC_INNER, FEC_OUTER);
+    _mctx->UpdateData(0, header.bytes, pkt->data(), pkt->size(), MOD, FEC_INNER, FEC_OUTER);
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);

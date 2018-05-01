@@ -76,11 +76,11 @@ void NET::recvWorker(void)
         auto    pkt = std::make_unique<NetPacket>(MAX_PKT_SIZE);
         ssize_t count;
 
-        count = tt->cread(&(pkt->payload)[0], pkt->payload.size());
-        pkt->payload.resize(count);
+        count = tt->cread(pkt->data(), pkt->size());
+        pkt->resize(count);
 
-        if (pkt->payload.size() > 0) {
-            struct ip* ip = reinterpret_cast<struct ip*>(&(pkt->payload)[0] + sizeof(struct ether_header));
+        if (pkt->size() > 0) {
+            struct ip* ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(struct ether_header));
             in_addr    ip_dst;
 
             std::memcpy(&ip_dst, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
@@ -104,11 +104,11 @@ void NET::sendWorker(void)
     while (!done) {
         if (sendQueue.pop(pkt)) {
             printf("Written %lu bytes (PID %u) from %u\n",
-                (unsigned long) pkt->payload.size(),
+                (unsigned long) pkt->size(),
                 (unsigned int) pkt->pkt_id,
                 (unsigned int) pkt->src);
 
-            tt->cwrite(&(pkt->payload)[0], pkt->payload.size());
+            tt->cwrite(pkt->data(), pkt->size());
         }
     }
 }

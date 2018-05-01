@@ -122,12 +122,12 @@ std::unique_ptr<ModPacket> OFDM::Modulator::modulate(std::unique_ptr<NetPacket> 
     header.h.src = pkt->src;
     header.h.dest = pkt->dest;
     header.h.pkt_id = pkt->pkt_id;
-    header.h.pkt_len = pkt->payload.size();
+    header.h.pkt_len = pkt->size();
 
-    pkt->payload.resize(std::max((size_t) pkt->payload.size(), _phy._minPacketSize));
+    pkt->resize(std::max((size_t) pkt->size(), _phy._minPacketSize));
 
     ofdmflexframegen_reset(_fg);
-    ofdmflexframegen_assemble(_fg, header.bytes, &(pkt->payload)[0], pkt->payload.size());
+    ofdmflexframegen_assemble(_fg, header.bytes, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);

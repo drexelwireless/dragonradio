@@ -12,43 +12,34 @@
 
 typedef uint16_t PacketId;
 
-/** A packet from the network to be sent over the radio */
-struct NetPacket
+/** @brief A packet recevied from the network. */
+struct NetPacket : public buffer<unsigned char>
 {
-    NetPacket(size_t n) : payload(n) {};
+    NetPacket(size_t n) : buffer(n) {};
 
-    /** Packet ID */
+    /** @brief Packet ID */
     PacketId pkt_id;
 
-    /** Source node (should be this node) */
+    /** @brief Source node (should be this node) */
     NodeId src;
 
-    /** Destination node */
+    /** @brief Destination node */
     NodeId dest;
-
-    /** Payload data. */
-    buffer<unsigned char> payload;
 };
 
-/** A packet from the radio to be sent over the network */
-struct RadioPacket
+/** @brief A packet recevied from the radio. */
+struct RadioPacket : public buffer<unsigned char>
 {
-    RadioPacket(unsigned char* data, size_t n) : payload(n)
-    {
-        memcpy(&(payload)[0], data, n);
-    };
+    RadioPacket(unsigned char* data, size_t n) : buffer(data, n) {}
 
-    /** Packet ID */
+    /** @brief Packet ID */
     PacketId pkt_id;
 
-    /** Source node (should be this node) */
+    /** @brief Source node */
     NodeId src;
 
-    /** Destination node */
+    /** @brief Destination node (should be this node) */
     NodeId dest;
-
-    /** Payload data. */
-    buffer<unsigned char> payload;
 };
 
 #endif /* PACKET_HH_ */
