@@ -3,48 +3,27 @@
 
 #include <condition_variable>
 #include <functional>
+#include <list>
 #include <mutex>
-#include <queue>
 
+#include "Logger.hh"
 #include "NET.hh"
-#include "WorkQueue.hh"
 #include "phy/PHY.hh"
 
 class ParallelPacketDemodulator
 {
-private:
-    class Worker
-    {
-    public:
-        Worker(std::shared_ptr<NET> net,
-               std::shared_ptr<PHY> phy);
-        ~Worker() {}
-
-        Worker(const Worker&) = delete;
-        Worker(Worker&& other) = delete;
-
-        Worker& operator=(const Worker&) = delete;
-        Worker& operator=(Worker&&) = delete;
-
-        void operator ()(std::unique_ptr<IQQueue>& buf);
-
-    private:
-        /** @brief Destination for packets. */
-        std::shared_ptr<NET> _net;
-
-        /** @brief Our demodulator. */
-        std::unique_ptr<PHY::Demodulator> _demod;
-    };
-
 public:
     ParallelPacketDemodulator(std::shared_ptr<NET> net,
                               std::shared_ptr<PHY> phy,
-                              unsigned int nthreads);
+                              std::shared_ptr<Logger> logger,
+                              unsigned int nthreads,
+                              const size_t prev_slop,
+                              const size_t cur_slop);
     ~ParallelPacketDemodulator();
 
     void stop(void);
 
-    void push(std::unique_ptr<IQQueue> buf);
+    void push(std::shared_ptr<IQBuf> buf);
 
 private:
     /** @brief Destination for packets. */
@@ -53,8 +32,35 @@ private:
     /** @brief PHY we use for demodulation. */
     std::shared_ptr<PHY> phy;
 
-    /** Work queue for demodulating packets */
-    WorkQueue<Worker, std::unique_ptr<IQQueue>> workQueue;
+    /** @brief The Logger to use. Should be nullptr for no logging. */
+    std::shared_ptr<Logger> logger;
+
+    /** @brief Number of samples to demod from tail of previous slot. */
+    const size_t prev_slop;
+
+    /** @brief Number of samples NOT to demod from tail of current slot. */
+    const size_t cur_slop;
+
+    /** @brief Flag that is true when we shoudl finish processing. */
+    bool done;
+
+    /** @brief Mutex protecting the queue of IQ buffers. */
+    std::mutex m;
+
+    /** @brief Condition variable protecting the queue of IQ buffers. */
+    std::condition_variable cond;
+
+    /** @brief The number of items in the queue of IQ buffers. */
+    size_t size;
+
+    /** @brief The queue IQ buffers. */
+    std::list<std::shared_ptr<IQBuf>> q;
+
+    /** @brief Worker threads. */
+    std::vector<std::thread> threads;
+
+    /** @brief A demodulation worker. */
+    void worker(void);
 };
 
 #endif /* PARALLELPACKETDEMODULATOR_H_ */

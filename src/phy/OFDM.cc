@@ -175,7 +175,7 @@ OFDM::Demodulator::Demodulator(OFDM& phy) :
                                    _phy._cp_len,
                                    _phy._taper_len,
                                    _phy._p,
-                                   &Demodulator::_callback,
+                                   &Demodulator::liquid_callback,
                                    this);
 }
 
@@ -189,38 +189,33 @@ void OFDM::Demodulator::print(void)
     ofdmflexframesync_print(_fs);
 }
 
-void OFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q)
+void OFDM::Demodulator::reset(uhd::time_spec_t timestamp, size_t off)
 {
-    _q = &q;
-
-    _pkts_received = false;
-
-    _demod_start = buf->begin()->buf->timestamp;
-    _demod_off = buf->begin()->off;
-
     ofdmflexframesync_reset(_fs);
 
-    for (auto it = buf->begin(); it != buf->end(); ++it)
-        ofdmflexframesync_execute(_fs,
-          reinterpret_cast<liquid_float_complex*>(&(*it)[0]),
-          it->size());
-
-    if (_phy._logger && _pkts_received) {
-        for (auto it = buf->begin(); it != buf->end(); ++it)
-            _phy._logger->logSlot(it->buf);
-    }
+    _demod_start = timestamp;
+    _demod_off = off;
 }
 
-int OFDM::Demodulator::_callback(unsigned char *  _header,
-                                 int              _header_valid,
-                                 unsigned char *  _payload,
-                                 unsigned int     _payload_len,
-                                 int              _payload_valid,
-                                 framesyncstats_s _stats,
-                                 void *           _userdata,
-                                 liquid_float_complex* G,
-                                 liquid_float_complex* G_hat,
-                                 unsigned int M)
+void OFDM::Demodulator::demodulate(std::complex<float>* data,
+                                   size_t count,
+                                   std::function<void(std::unique_ptr<RadioPacket>)> callback)
+{
+    _callback = callback;
+
+    ofdmflexframesync_execute(_fs, reinterpret_cast<liquid_float_complex*>(data), count);
+}
+
+int OFDM::Demodulator::liquid_callback(unsigned char *  _header,
+                                       int              _header_valid,
+                                       unsigned char *  _payload,
+                                       unsigned int     _payload_len,
+                                       int              _payload_valid,
+                                       framesyncstats_s _stats,
+                                       void *           _userdata,
+                                       liquid_float_complex* G,
+                                       liquid_float_complex* G_hat,
+                                       unsigned int M)
 {
     reinterpret_cast<OFDM::Demodulator*>(_userdata)->
         callback(_header,
@@ -249,8 +244,6 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
 {
     Header* h = reinterpret_cast<Header*>(_header);
 
-    _pkts_received = true;
-
     if (_phy._logger) {
         auto buf = std::make_shared<buffer<std::complex<float>>>(_stats.num_framesyms);
         memcpy(buf->data(), _stats.framesyms, _stats.num_framesyms*sizeof(std::complex<float>));
@@ -269,19 +262,25 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
 
     if (!_header_valid) {
         printf("HEADER INVALID\n");
+        _callback(nullptr);
         return;
     }
 
     if (!_payload_valid) {
         printf("PAYLOAD INVALID\n");
+        _callback(nullptr);
         return;
     }
 
-    if (!_phy._net->wantPacket(h->dest))
+    if (!_phy._net->wantPacket(h->dest)) {
+        _callback(nullptr);
         return;
+    }
 
-    if (h->pkt_len == 0)
+    if (h->pkt_len == 0) {
+        _callback(nullptr);
         return;
+    }
 
     auto pkt = std::make_unique<RadioPacket>(_payload, h->pkt_len);
 
@@ -289,7 +288,7 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
     pkt->dest = h->dest;
     pkt->pkt_id = h->pkt_id;
 
-    _q->push(std::move(pkt));
+    _callback(std::move(pkt));
 }
 
 /** CRC */

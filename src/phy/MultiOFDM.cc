@@ -113,7 +113,7 @@ MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     // modem setup (list is for parallel demodulation)
-    framesync_callback callback[1] = { &Demodulator::liquidRxCallback };
+    framesync_callback callback[1] = { &Demodulator::liquid_callback };
     void               *userdata[1] = { this };
 
     mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback);
@@ -123,65 +123,99 @@ MultiOFDM::Demodulator::~Demodulator()
 {
 }
 
-void MultiOFDM::Demodulator::demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q)
+void MultiOFDM::Demodulator::reset(uhd::time_spec_t timestamp, size_t off)
 {
-    _q = &q;
-
     mcrx->Reset();
 
-    for (auto it = buf->begin(); it != buf->end(); ++it)
-        mcrx->Execute(&(*it)[0], it->size());
+    _demod_start = timestamp;
+    _demod_off = off;
 }
 
-int MultiOFDM::Demodulator::liquidRxCallback(unsigned char *  _header,
-                                             int              _header_valid,
-                                             unsigned char *  _payload,
-                                             unsigned int     _payload_len,
-                                             int              _payload_valid,
-                                             framesyncstats_s _stats,
-                                             void *           _userdata,
-                                             liquid_float_complex* G,
-                                             liquid_float_complex* G_hat,
-                                             unsigned int M)
+void MultiOFDM::Demodulator::demodulate(std::complex<float>* data,
+                                        size_t count,
+                                        std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
-    return reinterpret_cast<Demodulator*>(_userdata)->rxCallback(_header,
-                                                                 _header_valid,
-                                                                 _payload,
-                                                                 _payload_len,
-                                                                 _payload_valid,
-                                                                 _stats,
-                                                                 G,
-                                                                 G_hat,
-                                                                 M);
+    _callback = callback;
+
+    mcrx->Execute(data, count);
 }
 
-int MultiOFDM::Demodulator::rxCallback(unsigned char *  _header,
-                                       int              _header_valid,
-                                       unsigned char *  _payload,
-                                       unsigned int     _payload_len,
-                                       int              _payload_valid,
-                                       framesyncstats_s _stats,
-                                       liquid_float_complex* G,
-                                       liquid_float_complex* G_hat,
-                                       unsigned int M)
+int MultiOFDM::Demodulator::liquid_callback(unsigned char *  _header,
+                                            int              _header_valid,
+                                            unsigned char *  _payload,
+                                            unsigned int     _payload_len,
+                                            int              _payload_valid,
+                                            framesyncstats_s _stats,
+                                            void *           _userdata,
+                                            liquid_float_complex* G,
+                                            liquid_float_complex* G_hat,
+                                            unsigned int M)
+{
+    return reinterpret_cast<Demodulator*>(_userdata)->callback(_header,
+                                                               _header_valid,
+                                                               _payload,
+                                                               _payload_len,
+                                                               _payload_valid,
+                                                               _stats,
+                                                               G,
+                                                               G_hat,
+                                                               M);
+}
+
+// Resampling factor for the mtulichannel code. We need to multiply sample
+// counters by this factor to account for the fact that the multichannel code is
+// resampling before pushing samples to the frame synchronizer.
+const unsigned int RESAMPFACT = 2;
+
+int MultiOFDM::Demodulator::callback(unsigned char *  _header,
+                                     int              _header_valid,
+                                     unsigned char *  _payload,
+                                     unsigned int     _payload_len,
+                                     int              _payload_valid,
+                                     framesyncstats_s _stats,
+                                     liquid_float_complex* G,
+                                     liquid_float_complex* G_hat,
+                                     unsigned int M)
 {
     Header* h = reinterpret_cast<Header*>(_header);
 
+    if (_phy._logger) {
+        auto buf = std::make_shared<buffer<std::complex<float>>>(_stats.num_framesyms);
+        memcpy(buf->data(), _stats.framesyms, _stats.num_framesyms*sizeof(std::complex<float>));
+        _phy._logger->logRecv(_demod_start,
+                              _header_valid,
+                              _payload_valid,
+                              *h,
+                              _demod_off + RESAMPFACT*_stats.start_counter,
+                              _demod_off + RESAMPFACT*_stats.end_counter,
+                              std::move(buf));
+    }
+
+    // Update demodulation offset. The framesync object is reset after the
+    // callback is called, which sets its internal counters to 0.
+    _demod_off += RESAMPFACT*_stats.end_counter;
+
     if (!_header_valid) {
         printf("HEADER INVALID\n");
+        _callback(nullptr);
         return 0;
     }
 
     if (!_payload_valid) {
         printf("PAYLOAD INVALID\n");
+        _callback(nullptr);
         return 0;
     }
 
-    if (!_phy._net->wantPacket(h->dest))
+    if (!_phy._net->wantPacket(h->dest)) {
+        _callback(nullptr);
         return 0;
+    }
 
-    if (h->pkt_len == 0)
+    if (h->pkt_len == 0) {
+        _callback(nullptr);
         return 1;
+    }
 
     auto pkt = std::make_unique<RadioPacket>(_payload, h->pkt_len);
 
@@ -189,7 +223,7 @@ int MultiOFDM::Demodulator::rxCallback(unsigned char *  _header,
     pkt->dest = h->dest;
     pkt->pkt_id = h->pkt_id;
 
-    _q->push(std::move(pkt));
+    _callback(std::move(pkt));
 
     return 0;
 }

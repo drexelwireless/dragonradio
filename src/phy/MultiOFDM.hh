@@ -8,6 +8,7 @@
 #include <liquid/multichannelrx.h>
 #include <liquid/multichanneltx.h>
 
+#include "Logger.hh"
 #include "ModPacket.hh"
 #include "NET.hh"
 #include "phy/PHY.hh"
@@ -65,7 +66,11 @@ public:
         Demodulator& operator=(const Demodulator&) = delete;
         Demodulator& operator=(Demodulator&&) = delete;
 
-        void demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q) override;
+        void reset(uhd::time_spec_t timestamp, size_t off) override;
+
+        void demodulate(std::complex<float>* data,
+                        size_t count,
+                        std::function<void(std::unique_ptr<RadioPacket>)> callback) override;
 
     private:
         /** @brief Our associated PHY. */
@@ -74,29 +79,37 @@ public:
         /** @brief Our liquid-usrp multichannelrx object. */
         std::unique_ptr<multichannelrx> mcrx;
 
-        /** @brief Queue on which to place demodulated packets. */
-        SafeQueue<std::unique_ptr<RadioPacket>>* _q;
+        /** @brief Callback for received packets. */
+        std::function<void(std::unique_ptr<RadioPacket>)> _callback;
 
-        static int liquidRxCallback(unsigned char *  _header,
-                                    int              _header_valid,
-                                    unsigned char *  _payload,
-                                    unsigned int     _payload_len,
-                                    int              _payload_valid,
-                                    framesyncstats_s _stats,
-                                    void *           _userdata,
-                                    liquid_float_complex* G,
-                                    liquid_float_complex* G_hat,
-                                    unsigned int M);
+        /** @brief The timestamp of the slot we are demodulating. */
+        uhd::time_spec_t _demod_start;
 
-        int rxCallback(unsigned char *  _header,
-                       int              _header_valid,
-                       unsigned char *  _payload,
-                       unsigned int     _payload_len,
-                       int              _payload_valid,
-                       framesyncstats_s _stats,
-                       liquid_float_complex* G,
-                       liquid_float_complex* G_hat,
-                       unsigned int M);
+        /** @brief The offset (in samples) from the beggining of the slot at
+         * which we started demodulating.
+         */
+        size_t _demod_off;
+
+        static int liquid_callback(unsigned char *  _header,
+                                   int              _header_valid,
+                                   unsigned char *  _payload,
+                                   unsigned int     _payload_len,
+                                   int              _payload_valid,
+                                   framesyncstats_s _stats,
+                                   void *           _userdata,
+                                   liquid_float_complex* G,
+                                   liquid_float_complex* G_hat,
+                                   unsigned int M);
+
+        int callback(unsigned char *  _header,
+                     int              _header_valid,
+                     unsigned char *  _payload,
+                     unsigned int     _payload_len,
+                     int              _payload_valid,
+                     framesyncstats_s _stats,
+                     liquid_float_complex* G,
+                     liquid_float_complex* G_hat,
+                     unsigned int M);
     };
 
 
@@ -108,8 +121,10 @@ public:
      * packet.
      */
     MultiOFDM(std::shared_ptr<NET> net,
+              std::shared_ptr<Logger> logger,
               size_t minPacketSize) :
         _net(net),
+        _logger(logger),
         _minPacketSize(minPacketSize)
     {
     }
@@ -132,6 +147,9 @@ public:
 private:
     /** @brief The NET to which we should send received packets. */
     std::shared_ptr<NET> _net;
+
+    /** @brief The Logger to use. Should be nullptr for no logging. */
+    std::shared_ptr<Logger> _logger;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */

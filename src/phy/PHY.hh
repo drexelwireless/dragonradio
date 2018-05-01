@@ -1,6 +1,7 @@
 #ifndef PHY_H_
 #define PHY_H_
 
+#include <functional>
 #include <queue>
 
 #include "IQBuffer.hh"
@@ -51,12 +52,22 @@ public:
         Demodulator() {};
         virtual ~Demodulator() {};
 
-        /** @brief  Demodulate IQ samples, placing any demodulated packet into
-         * the given queue.
-         * @param buf the buffer of IQ samples.
-         * @param q the queue in which to place demodulated packets.
+        /** @brief Reset the internal state of the demodulator.
+         * @brief timestamp The timestamp of IQ buffer from which the first
+         * provided sample willcome.
+         * @brief off The offset of the first provided sample.
          */
-        virtual void demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q) = 0;
+        virtual void reset(uhd::time_spec_t timestamp, size_t off) = 0;
+
+        /** @brief Demodulate IQ samples.
+         * @param data IQ samples to demodulate.
+         * @param count The number of samples to demodulate
+         * @param callback The function to call with any demodulated packets. If
+         * a bad packet is received, the argument will be nullptr.
+         */
+        virtual void demodulate(std::complex<float>* data,
+                                size_t count,
+                                std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
     };
 
     PHY() {}

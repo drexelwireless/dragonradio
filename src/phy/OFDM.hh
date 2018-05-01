@@ -106,21 +106,18 @@ public:
         /** @brief Print internals of the associated flexframesync. */
         void print(void);
 
-        void demodulate(std::unique_ptr<IQQueue> buf, SafeQueue<std::unique_ptr<RadioPacket>>& q) override;
+        void reset(uhd::time_spec_t timestamp, size_t off) override;
+
+        void demodulate(std::complex<float>* data,
+                        size_t count,
+                        std::function<void(std::unique_ptr<RadioPacket>)> callback) override;
 
     private:
         /** @brief Associated OFDM PHY. */
         OFDM& _phy;
 
-        /** @brief Queue on which to place demodulated packets. */
-        SafeQueue<std::unique_ptr<RadioPacket>>* _q;
-
-        /** @brief Flag indicating whether or not any packets were recevied. */
-        /** We use this to decide whether or not to log the slots being
-         * demodulated. Note that we may "receive" a bad packets, in which case
-         * this flag will be set to true, but there will be no packets in pkts.
-         */
-        bool _pkts_received;
+        /** @brief Callback for received packets. */
+        std::function<void(std::unique_ptr<RadioPacket>)> _callback;
 
         /** @brief The timestamp of the slot we are demodulating. */
         uhd::time_spec_t _demod_start;
@@ -133,16 +130,16 @@ public:
         /** @brief The liquid-dsp flexframesync object */
         ofdmflexframesync _fs;
 
-        static int _callback(unsigned char *  _header,
-                             int              _header_valid,
-                             unsigned char *  _payload,
-                             unsigned int     _payload_len,
-                             int              _payload_valid,
-                             framesyncstats_s _stats,
-                             void *           _userdata,
-                             liquid_float_complex* G,
-                             liquid_float_complex* G_hat,
-                             unsigned int M);
+        static int liquid_callback(unsigned char *  _header,
+                                   int              _header_valid,
+                                   unsigned char *  _payload,
+                                   unsigned int     _payload_len,
+                                   int              _payload_valid,
+                                   framesyncstats_s _stats,
+                                   void *           _userdata,
+                                   liquid_float_complex* G,
+                                   liquid_float_complex* G_hat,
+                                   unsigned int M);
 
         void callback(unsigned char *  _header,
                       int              _header_valid,

@@ -49,9 +49,6 @@ private:
     /** Length of inter-slot guard (sec) */
     double guard_size;
 
-    /** Length of previous slot's samples we try to demod in the current slot (sec) */
-    double slop_size;
-
     /** Flag indicating if we should stop processing packets */
     bool done;
 

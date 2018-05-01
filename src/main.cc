@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     if (ofdm)
         phy = std::make_shared<OFDM>(net, log, 48, 6, 4, nullptr, min_packet_size);
     else if (multichannel)
-        phy = std::make_shared<MultiOFDM>(net, min_packet_size);
+        phy = std::make_shared<MultiOFDM>(net, log, min_packet_size);
     else
         phy = std::make_shared<FlexFrame>(net, log, min_packet_size);
 
