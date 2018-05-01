@@ -68,6 +68,7 @@ void MAC::rxWorker(void)
     size_t                 slop_samps;     // Number of samples in slop
     size_t                 oversample;     // Number of samples we oversampled as part of previous slot
     size_t                 prevslop_samps; // Number of samples from the previous slot that we demodulate with the current slot
+    size_t                 curslop_samps;  // Number of samples from the current slot that we DON'T demodulate with the current slot
     int                    slot;           // Curent slot index in the frame
     double                 txRate;         // TX rate in Hz
     std::shared_ptr<IQBuf> prevSlot;       // IQ buffer for previous slot's data
@@ -99,32 +100,40 @@ void MAC::rxWorker(void)
             curSlot = usrp->burstRX(t_cur_slot, slot_samps);
 
             // Queue samples for demodulation
-            if (curSlot) {
-                auto q = std::make_unique<IQQueue>();
+            auto q = std::make_unique<IQQueue>();
 
-                // We demodulate the part of the previous frame that was
-                // oversampled plus an additional slop_samps samples to handle
-                // the fact that our slots are not perfectly aligned.
-                prevslop_samps = oversample + slop_samps;
+            // We demodulate the part of the previous frame that was oversampled
+            // plus an additional slop_samps samples to handle the fact that our
+            // slots are not perfectly aligned. That is, we demodulate what was
+            // previosuly oversampled AND the last slop_samps in the previous
+            // frame's guard interval.
+            prevslop_samps = oversample + slop_samps;
 
-                if (prevSlot) {
-                    if (prevslop_samps > prevSlot->size())
-                        // Should never happen!
-                        q->push_back(IQSlice(prevSlot));
-                    else
-                        q->push_back(IQSlice(prevSlot, prevSlot->size() - prevslop_samps, prevslop_samps));
-                }
-
-                // Also demodulate the entire current frame
-                q->push_back(IQSlice(curSlot, 0, curSlot->size()));
-
-                demodQueue.push(std::move(q));
+            if (prevSlot) {
+                if (prevslop_samps > prevSlot->size())
+                    // Should never happen!
+                    q->push_back(IQSlice(prevSlot));
+                else
+                    q->push_back(IQSlice(prevSlot, prevSlot->size() - prevslop_samps, prevslop_samps));
             }
 
             // Determine how much we oversampled
             t_samp_start = curSlot->get_timestamp();
             t_samp_end = t_samp_start + static_cast<double>(curSlot->size()) / txRate;
             oversample = (t_samp_end - t_next_slot).get_real_secs() * txRate;
+
+            // Also demodulate the current slot MINUS what we oversampled AND an
+            // additional slop_samps. That is, we attempt to demodulate the
+            // current slot except for the last slop_samps samples in the guard
+            // interval.
+            curslop_samps = oversample + slop_samps;
+            if (curslop_samps > curSlot->size())
+                // Should never happen!
+                q->push_back(IQSlice(curSlot));
+            else
+                q->push_back(IQSlice(curSlot, 0, curSlot->size() - curslop_samps));
+
+            demodQueue.push(std::move(q));
 
             // Move to the next slot
             prevSlot = curSlot;
