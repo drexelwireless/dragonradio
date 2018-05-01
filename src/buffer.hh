@@ -33,6 +33,17 @@ public:
         _capacity = count;
     }
 
+    explicit buffer(const T *data, size_type count)
+    {
+        _data = reinterpret_cast<T*>(malloc(count*sizeof(T)));
+        if (!_data)
+            throw std::bad_alloc();
+
+        memcpy(_data, data, count*sizeof(T));
+        _size = count;
+        _capacity = count;
+    }
+
     buffer(const buffer& other)
     {
         _data = reinterpret_cast<T*>(malloc(other._size*sizeof(T)));
