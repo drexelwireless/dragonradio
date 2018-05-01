@@ -25,6 +25,9 @@ public:
 
     /** @brief Timestamp of the first sample */
     uhd::time_spec_t timestamp;
+
+    /** @brief Number of samples by which we oversampled. */
+    size_t oversample;
 };
 
 /** A slice of a buffer of IQ samples */
