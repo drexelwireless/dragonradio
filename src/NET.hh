@@ -33,9 +33,8 @@ public:
     /** @brief Return true if we want a packet sent to this destination. */
     bool wantPacket(NodeId dest);
 
-    /** @brief Queue of network packets to send to the network */
-    /** Packets placed on this queue will be sent to the network. */
-    SafeQueue<std::unique_ptr<RadioPacket>> sendQueue;
+    /** @brief Send a packet to the network. */
+    void send(std::unique_ptr<RadioPacket> pkt);
 
 private:
     /** @brief Our tun/tap interface */
@@ -58,12 +57,6 @@ private:
 
     /** @brief Read packets from tun/tap and queue them in recvQueue */
     void recvWorker(void);
-
-    /** @brief Thread running sendWorker */
-    std::thread sendThread;
-
-    /** @brief Read packets from sendQueue and send them on tun/tap */
-    void sendWorker(void);
 
     /** @brief Radio packets received from the network */
     SafeQueue<std::unique_ptr<NetPacket>> recvQueue;

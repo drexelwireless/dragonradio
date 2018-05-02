@@ -67,7 +67,7 @@ void ParallelPacketDemodulator::worker(void)
     auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
         received = true;
         if (pkt)
-            net->sendQueue.push(std::move(pkt));
+            net->send(std::move(pkt));
     };
 
     while (!done) {

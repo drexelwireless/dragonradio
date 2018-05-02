@@ -21,7 +21,6 @@ NET::NET(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& 
     tt = std::make_unique<TunTap>(tap_name, nodeId, nodes);
 
     recvThread = std::thread(&NET::recvWorker, this);
-    sendThread = std::thread(&NET::sendWorker, this);
 }
 
 NET::~NET()
@@ -33,13 +32,9 @@ void NET::stop(void)
 {
     done = true;
     recvQueue.stop();
-    sendQueue.stop();
 
     if (recvThread.joinable())
         recvThread.join();
-
-    if (sendThread.joinable())
-        sendThread.join();
 }
 
 NodeId NET::getNodeId(void)
@@ -64,6 +59,16 @@ std::unique_ptr<NetPacket> NET::recvPacket(void)
 bool NET::wantPacket(NodeId dest)
 {
     return dest == nodeId;
+}
+
+void NET::send(std::unique_ptr<RadioPacket> pkt)
+{
+    tt->cwrite(pkt->data(), pkt->size());
+
+    printf("Written %lu bytes (PID %u) from %u\n",
+        (unsigned long) pkt->size(),
+        (unsigned int) pkt->pkt_id,
+        (unsigned int) pkt->src);
 }
 
 /** Maximum radio packet size. Really 1500 (MTU) + 14 (size of Ethernet header),
@@ -93,22 +98,6 @@ void NET::recvWorker(void)
             pkt->pkt_id = curPacketId++;
 
             recvQueue.push(std::move(pkt));
-        }
-    }
-}
-
-void NET::sendWorker(void)
-{
-    std::unique_ptr<RadioPacket> pkt;
-
-    while (!done) {
-        if (sendQueue.pop(pkt)) {
-            printf("Written %lu bytes (PID %u) from %u\n",
-                (unsigned long) pkt->size(),
-                (unsigned int) pkt->pkt_id,
-                (unsigned int) pkt->src);
-
-            tt->cwrite(pkt->data(), pkt->size());
         }
     }
 }
