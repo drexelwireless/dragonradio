@@ -9,14 +9,12 @@ using namespace std::placeholders;
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<NET> net,
                                                      std::shared_ptr<PHY> phy,
                                                      std::shared_ptr<Logger> logger,
-                                                     unsigned int nthreads,
-                                                     const size_t prev_slop,
-                                                     const size_t cur_slop) :
+                                                     unsigned int nthreads) :
     net(net),
     phy(phy),
     logger(logger),
-    prev_slop(prev_slop),
-    cur_slop(cur_slop),
+    _prev_samps(0),
+    _cur_samps(0),
     done(false),
     size(0)
 {
@@ -37,6 +35,13 @@ void ParallelPacketDemodulator::stop(void)
         if (threads[i].joinable())
             threads[i].join();
     }
+}
+
+void ParallelPacketDemodulator::setDemodParameters(const size_t prev_samps,
+                                                   const size_t cur_samps)
+{
+    _prev_samps = prev_samps;
+    _cur_samps = cur_samps;
 }
 
 void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
@@ -83,21 +88,40 @@ void ParallelPacketDemodulator::worker(void)
 
         received = false;
 
-        size_t buf1_nsamples = buf1->oversample + prev_slop;
-        size_t buf2_nsamples = buf2->size() - buf2->oversample - cur_slop;
+        // Calculate how many samples we want to demodulate from the tail end of
+        // the previous slot
+        size_t buf1_nsamples = buf1->oversample + _prev_samps;
 
-        // Should never happen!
         if (buf1_nsamples > buf1->size())
+            // Should never happen!
             buf1_nsamples = buf1->size();
 
-        // Should never happen!
-        if (buf2->oversample + cur_slop > buf2->size())
-            buf2_nsamples = 0;
-
+        // Reset the state of the demodulator
         demod->reset(buf1->timestamp, buf1->size() - buf1_nsamples);
-        demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, callback);
-        demod->demodulate(buf2->data(), buf2_nsamples, callback);
 
+        // Demodulate the last part of the guard interval of the previous slots
+        demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, callback);
+
+        // Calculate how many samples from the current slot we want to
+        // demodulate. We do not demodulate the tail end of the guard interval.
+        size_t ndemodulated = 0; // How many samples we've already demodulated
+        size_t nwanted;          // How many samples we still want to demodulate.
+        size_t n = 0;
+
+        nwanted = _cur_samps - buf2->undersample;
+
+        for (;;) {
+            n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
+
+            demod->demodulate(&(*buf2)[ndemodulated], n, callback);
+            ndemodulated += n;
+            nwanted -= n;
+
+            if (buf2->complete)
+                break;
+        }
+
+        // If we received any packets, log both slots.
         if (logger && received) {
             logger->logSlot(buf1);
             logger->logSlot(buf2);

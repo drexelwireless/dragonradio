@@ -1,6 +1,7 @@
 #ifndef IQBUFFER_H_
 #define IQBUFFER_H_
 
+#include <atomic>
 #include <complex>
 #include <deque>
 #include <memory>
@@ -13,7 +14,7 @@
 /** @brief A buffer of IQ samples */
 struct IQBuf : buffer<std::complex<float>> {
 public:
-    IQBuf(size_t sz) : buffer(sz) {}
+    IQBuf(size_t sz) : buffer(sz), nsamples(0), complete(false) {}
 
     ~IQBuf() noexcept {}
 
@@ -26,7 +27,19 @@ public:
     /** @brief Timestamp of the first sample */
     uhd::time_spec_t timestamp;
 
-    /** @brief Number of samples by which we oversampled. */
+    /** @brief Number of samples received so far. */
+    /** This value is valid untile the buffer is marked complete. */
+    std::atomic<size_t> nsamples;
+
+    /** @brief Flag that is true when receive is completed. */
+    bool complete;
+
+    /** @brief Number of undersamples at the beginning of the buffer. That is,
+     * this is how many samples we missed at the beginning of the receive.
+     */
+    size_t undersample;
+
+    /** @brief Number oversamples at the end of buffer. */
     size_t oversample;
 };
 

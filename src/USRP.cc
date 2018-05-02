@@ -1,6 +1,8 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
+#include <atomic>
+
 #include "USRP.hh"
 
 USRP::USRP(const std::string& addr,
@@ -149,34 +151,50 @@ void USRP::stopRXStream(void)
     rx_stream->issue_stream_cmd(stream_cmd);
 }
 
-const size_t MAXSAMPS = 2048;
-
-std::unique_ptr<IQBuf> USRP::burstRX(uhd::time_spec_t t_start, size_t nsamps)
+void USRP::burstRX(uhd::time_spec_t t_start, size_t nsamps, IQBuf& buf)
 {
     const double     txRate = usrp->get_rx_rate(); // TX rate in Hz
     uhd::time_spec_t t_end = t_start + static_cast<double>(nsamps)/txRate;
     size_t           ndelivered = 0;
-    auto             buf = std::make_unique<IQBuf>(nsamps + MAXSAMPS);
+
+    buf.resize(nsamps + MAXSAMPS);
 
     for (;;) {
         uhd::rx_metadata_t rx_md;
         ssize_t            n;
 
-        n = rx_stream->recv(&(*buf)[ndelivered], MAXSAMPS, rx_md, 0.1, false);
+        n = rx_stream->recv(&buf[ndelivered], MAXSAMPS, rx_md, 0.1, false);
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
 
-        if (ndelivered == 0)
-            buf->timestamp = rx_md.time_spec;
+        if (ndelivered == 0) {
+            buf.timestamp = rx_md.time_spec;
+            buf.undersample = (buf.timestamp - t_start).get_real_secs() * txRate;
+        }
 
         ndelivered += n;
 
-        if (rx_md.time_spec + static_cast<double>(n)/txRate >= t_end)
+        // If we have received enough samples to move us past t_end, stop
+        // receiving.
+        if (rx_md.time_spec + static_cast<double>(n)/txRate >= t_end) {
+            // Set proper buffer size
+            buf.resize(ndelivered);
+
+            // Determine how much we oversampled. Why do we *add* the number of
+            // undersamples? Because this represents how many samples "late" we
+            // started sampling. If we sample nsamps starting at undersample,
+            // then we have sampled undersample too many samples!
+            buf.oversample = (ndelivered - nsamps) + buf.undersample;
+
+            // Mark the buffer as complete.
+            buf.complete = true;
+
+            // One last store to the atomic nsamples field to ensure write
+            // ordering.
+            buf.nsamples.store(ndelivered, std::memory_order_release);
             break;
+        } else
+            buf.nsamples.store(ndelivered, std::memory_order_release);
     }
-
-    buf->resize(ndelivered);
-
-    return buf;
 }

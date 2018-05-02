@@ -22,10 +22,7 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
     net(net),
     logger(logger),
     modQueue(net, phy),
-    demodQueue(net, phy, logger,
-               rx_pool_size,
-               0.5*guard_size*bandwidth*phy->getRxRateOversample(),
-               0.5*guard_size*bandwidth*phy->getRxRateOversample()),
+    demodQueue(net, phy, logger, rx_pool_size),
     _bandwidth(bandwidth),
     frame_size(frame_size),
     slot_size(frame_size/net->getNumNodes()),
@@ -40,6 +37,9 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
 
     rxThread = std::thread(&MAC::rxWorker, this);
     txThread = std::thread(&MAC::txWorker, this);
+
+    demodQueue.setDemodParameters(0.5*guard_size*bandwidth*phy->getRxRateOversample(),
+                                  (slot_size - 0.5*guard_size)*bandwidth*phy->getRxRateOversample());
 }
 
 MAC::~MAC()
@@ -62,15 +62,13 @@ void MAC::stop(void)
 
 void MAC::rxWorker(void)
 {
-    uhd::time_spec_t       t_now;        // Current time
-    uhd::time_spec_t       t_cur_slot;   // Time at which current slot starts
-    uhd::time_spec_t       t_next_slot;  // Time at which next slot starts
-    uhd::time_spec_t       t_samp_start; // Time at which current slot buffer starts
-    uhd::time_spec_t       t_samp_end;   // Time at which current slot buffer ends
-    double                 t_slot_pos;   // Offset into the current slot (sec)
-    size_t                 slot_samps;   // Number of samples in a slot
-    int                    slot;         // Curent slot index in the frame
-    double                 txRate;       // TX rate in Hz
+    uhd::time_spec_t t_now;        // Current time
+    uhd::time_spec_t t_cur_slot;   // Time at which current slot starts
+    uhd::time_spec_t t_next_slot;  // Time at which next slot starts
+    double           t_slot_pos;   // Offset into the current slot (sec)
+    size_t           slot_samps;   // Number of samples in a slot
+    int              slot;         // Curent slot index in the frame
+    double           txRate;       // TX rate in Hz
 
     uhd::set_thread_priority_safe();
 
@@ -93,14 +91,11 @@ void MAC::rxWorker(void)
             t_next_slot += slot_size;
 
             // Read samples for current slot
-            std::shared_ptr<IQBuf> curSlot = usrp->burstRX(t_cur_slot, slot_samps);
+            auto curSlot = std::make_shared<IQBuf>(slot_samps + USRP::MAXSAMPS);
 
-            // Determine how much we oversampled
-            t_samp_start = curSlot->timestamp;
-            t_samp_end = t_samp_start + static_cast<double>(curSlot->size()) / txRate;
-            curSlot->oversample = (t_samp_end - t_next_slot).get_real_secs() * txRate;
+            demodQueue.push(curSlot);
 
-            demodQueue.push(std::move(curSlot));
+            usrp->burstRX(t_cur_slot, slot_samps, *curSlot);
 
             // Move to the next slot
             ++slot;
