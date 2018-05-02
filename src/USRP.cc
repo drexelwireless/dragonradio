@@ -107,7 +107,7 @@ void USRP::burstTX(uhd::time_spec_t when, std::deque<std::shared_ptr<IQBuf>>& bu
         size_t n = 0;        // Size of next send
 
         while (off < iqbuf.size()) {
-            // Compute how many samples we will sent in this transmission
+            // Compute how many samples we will send in this transmission
             n = std::min(_tx_max_samps, iqbuf.size() - off);
 
             // If this is the first segment we are sending, give it a time spec
