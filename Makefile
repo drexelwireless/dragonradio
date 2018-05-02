@@ -9,7 +9,7 @@ RMRF     = rm -rf
 CXX      = g++
 LINKER   = g++
 CPPFLAGS = -Isrc -I/usr/local/include/ -I/usr/include/hdf5/serial/
-CXXFLAGS = -Ofast -march=native -g3 -Wall -pedantic -ansi -std=c++17 
+CXXFLAGS = -Ofast -march=native -g3 -Wall -pedantic -ansi -std=c++17
 LDFLAGS  = -lc -lconfig -lfftw3f -lliquid -lliquidusrp -lm -lpthread -luhd
 
 LDFLAGS += \
