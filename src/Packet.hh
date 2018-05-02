@@ -27,10 +27,12 @@ struct NetPacket : public buffer<unsigned char>
     NodeId dest;
 };
 
-/** @brief A packet recevied from the radio. */
+/** @brief A packet received from the radio. */
 struct RadioPacket : public buffer<unsigned char>
 {
-    RadioPacket(unsigned char* data, size_t n) : buffer(data, n) {}
+    RadioPacket() : buffer(), barrier(false) {};
+
+    RadioPacket(unsigned char* data, size_t n) : buffer(data, n), barrier(false) {}
 
     /** @brief Packet ID */
     PacketId pkt_id;
@@ -40,6 +42,11 @@ struct RadioPacket : public buffer<unsigned char>
 
     /** @brief Destination node (should be this node) */
     NodeId dest;
+
+    /** @brief This Boolean is true if this packet is a barrier and should not
+     * be processed or removed from a queue except by its creator.
+     */
+    bool barrier;
 };
 
 #endif /* PACKET_HH_ */

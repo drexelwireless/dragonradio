@@ -35,6 +35,7 @@ SOURCES := \
     NET.cc \
     ParallelPacketDemodulator.cc \
     ParallelPacketModulator.cc \
+    RadioPacketQueue.cc \
     TunTap.cc \
     USRP.cc \
     Util.cc \
