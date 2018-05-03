@@ -6,24 +6,25 @@
 #include <queue>
 
 #include "NET.hh"
+#include "PacketModulator.hh"
 #include "phy/PHY.hh"
 
-class ParallelPacketModulator
+/** @brief A parallel packet modulator. */
+class ParallelPacketModulator : public PacketModulator
 {
 public:
     ParallelPacketModulator(std::shared_ptr<NET> net,
                             std::shared_ptr<PHY> phy);
-    ~ParallelPacketModulator();
+    virtual ~ParallelPacketModulator();
 
+    size_t getWatermark(void) override;
+
+    void setWatermark(size_t watermark) override;
+
+    std::unique_ptr<ModPacket> pop(size_t maxSamples) override;
+
+    /** @brief Stop modulating. */
     void stop(void);
-
-    size_t getWatermark(void);
-
-    void setWatermark(size_t watermark);
-
-    /** Pop a modulated packet, but only if it consist of maxSamples samples or
-        fewer */
-    std::unique_ptr<ModPacket> pop(size_t maxSamples);
 
 private:
     std::shared_ptr<NET> net;

@@ -7,6 +7,7 @@
 #include <mutex>
 
 #include "NET.hh"
+#include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
 #include "phy/PHY.hh"
 
@@ -39,7 +40,7 @@ public:
              std::shared_ptr<IQBuf>& buf1,
              std::shared_ptr<IQBuf>& buf2);
 
-    /** @brief Stop processing this queue.*/
+    /** @brief Stop processing this queue. */
     void stop(void);
 
 private:
@@ -63,14 +64,14 @@ private:
 };
 
 /** @brief A parallel packet demodulator. */
-class ParallelPacketDemodulator
+class ParallelPacketDemodulator : public PacketDemodulator
 {
 public:
     ParallelPacketDemodulator(std::shared_ptr<NET> net,
                               std::shared_ptr<PHY> phy,
                               bool order,
                               unsigned int nthreads);
-    ~ParallelPacketDemodulator();
+    virtual ~ParallelPacketDemodulator();
 
     /** @brief Set demodulation parameters.
      * @brief prev_samps The number of samples from the end of the previous slot
@@ -79,12 +80,12 @@ public:
      * demodulate.
      */
     void setDemodParameters(const size_t prev_samps,
-                            const size_t cur_samps);
+                            const size_t cur_samps) override;
 
     /** @brief Add an IQ buffer to demodulate. */
-    void push(std::shared_ptr<IQBuf> buf);
+    void push(std::shared_ptr<IQBuf> buf) override;
 
-    /** @brief Stop demodulating.*/
+    /** @brief Stop demodulating. */
     void stop(void);
 
 private:
