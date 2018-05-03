@@ -2,20 +2,8 @@
 #include "Logger.hh"
 #include "MultiOFDM.hh"
 
-/** Number of channels */
+// Number of channels. We only use 1!
 const unsigned int NUM_CHANNELS = 1;
-
-/** Number of OFDM subcarriers */
-const unsigned int M = 480;
-
-/** OFDM cyclic prefix length */
-const unsigned int CP_LEN = 6;
-
-/** OFDM taper prefix length */
-const unsigned int TP_LEN = 4;
-
-/** OFDM subcarrier allocation */
-unsigned char *SUBCAR = nullptr;
 
 // liquid fixes the header size at 8 bytes
 static_assert(sizeof(Header) <= 8, "sizeof(Header) must be no more than 8 bytes");
@@ -32,7 +20,11 @@ MultiOFDM::Modulator::Modulator(MultiOFDM& phy) :
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     // modem setup (list is for parallel demodulation)
-    _mctx = std::make_unique<multichanneltx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR);
+    _mctx = std::make_unique<multichanneltx>(NUM_CHANNELS,
+                                             _phy._M,
+                                             _phy._cp_len,
+                                             _phy._taper_len,
+                                             _phy._p);
 }
 
 MultiOFDM::Modulator::~Modulator()
@@ -107,7 +99,13 @@ MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
     framesync_callback callback[1] = { &Demodulator::liquid_callback };
     void               *userdata[1] = { this };
 
-    mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS, M, CP_LEN, TP_LEN, SUBCAR, userdata, callback);
+    mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS,
+                                            _phy._M,
+                                            _phy._cp_len,
+                                            _phy._taper_len,
+                                            _phy._p,
+                                            userdata,
+                                            callback);
 }
 
 MultiOFDM::Demodulator::~Demodulator()

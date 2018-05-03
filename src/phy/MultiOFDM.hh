@@ -97,17 +97,28 @@ public:
     };
 
 
-    /**
-     * @param net The NET to which we send demodulated packets.
-     * @prama net The NET to which we should send received packets.
-     * @prama bandwidth The bandwidth used by the PHY (without oversampling).
+    /** @brief Construct a multichannel OFDM PHY.
+     * @param net The NET to which we should send received packets.
+     * @param M The number of subcarriers.
+     * @param cp_len The cyclic prefix length
+     * @param taper_len The taper length (OFDM symbol overlap)
+     * @param p The subcarrier allocation (null, pilot, data). Should have
+     * M entries.
      * @param minPacketSize The minimum number of bytes we will send in a
      * packet.
      */
     MultiOFDM(std::shared_ptr<NET> net,
+              unsigned int M,
+              unsigned int cp_len,
+              unsigned int taper_len,
+              unsigned char *p,
               size_t minPacketSize) :
-        _net(net),
-        _minPacketSize(minPacketSize)
+              _M(M),
+              _cp_len(cp_len),
+              _taper_len(taper_len),
+              _p(p),
+              _net(net),
+              _minPacketSize(minPacketSize)
     {
     }
 
@@ -127,6 +138,12 @@ public:
     std::unique_ptr<PHY::Modulator> make_modulator(void) override;
 
 private:
+    // OFDM parameters
+    unsigned int _M;
+    unsigned int _cp_len;
+    unsigned int _taper_len;
+    unsigned char *_p;
+
     /** @brief The NET to which we should send received packets. */
     std::shared_ptr<NET> _net;
 
