@@ -3,6 +3,7 @@
 
 #include <liquid/liquid.h>
 
+#include "Liquid.hh"
 #include "NET.hh"
 #include "phy/PHY.hh"
 
@@ -44,7 +45,7 @@ public:
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
-    class Demodulator : public PHY::Demodulator
+    class Demodulator : public LiquidDemodulator
     {
     public:
         Demodulator(FlexFrame& phy);
@@ -69,34 +70,8 @@ public:
         /** @brief Associated FlexFrame PHY. */
         FlexFrame& _phy;
 
-        /** @brief Callback for received packets. */
-        std::function<void(std::unique_ptr<RadioPacket>)> _callback;
-
-        /** @brief The timestamp of the slot we are demodulating. */
-        Clock::time_point _demod_start;
-
-        /** @brief The offset (in samples) from the beggining of the slot at
-         * which we started demodulating.
-         */
-        size_t _demod_off;
-
         /** @brief The liquid-dsp flexframesync object */
         flexframesync _fs;
-
-        static int liquid_callback(unsigned char *  _header,
-                                   int              _header_valid,
-                                   unsigned char *  _payload,
-                                   unsigned int     _payload_len,
-                                   int              _payload_valid,
-                                   framesyncstats_s _stats,
-                                   void *           _userdata);
-
-        void callback(unsigned char *  _header,
-                      int              _header_valid,
-                      unsigned char *  _payload,
-                      unsigned int     _payload_len,
-                      int              _payload_valid,
-                      framesyncstats_s _stats);
     };
 
     FlexFrame(std::shared_ptr<NET> net,

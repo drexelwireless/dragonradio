@@ -106,7 +106,8 @@ std::unique_ptr<ModPacket> OFDM::Modulator::modulate(std::unique_ptr<NetPacket> 
 }
 
 OFDM::Demodulator::Demodulator(OFDM& phy) :
-  _phy(phy)
+    LiquidDemodulator([&phy](Header& hdr) { return phy._net->wantPacket(hdr.dest); } ),
+    _phy(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
@@ -114,7 +115,7 @@ OFDM::Demodulator::Demodulator(OFDM& phy) :
                                    _phy._cp_len,
                                    _phy._taper_len,
                                    _phy._p,
-                                   &Demodulator::liquid_callback,
+                                   &LiquidDemodulator::liquid_callback,
                                    this);
 }
 
@@ -143,82 +144,6 @@ void OFDM::Demodulator::demodulate(std::complex<float>* data,
     _callback = callback;
 
     ofdmflexframesync_execute(_fs, reinterpret_cast<liquid_float_complex*>(data), count);
-}
-
-int OFDM::Demodulator::liquid_callback(unsigned char *  _header,
-                                       int              _header_valid,
-                                       unsigned char *  _payload,
-                                       unsigned int     _payload_len,
-                                       int              _payload_valid,
-                                       framesyncstats_s _stats,
-                                       void *           _userdata)
-{
-    reinterpret_cast<OFDM::Demodulator*>(_userdata)->
-        callback(_header,
-                 _header_valid,
-                 _payload,
-                 _payload_len,
-                 _payload_valid,
-                 _stats);
-    // The ofdmflexframsync code doesn't actually use the callback's return
-    // value for anything!
-    return 0;
-}
-
-void OFDM::Demodulator::callback(unsigned char *  _header,
-                                 int              _header_valid,
-                                 unsigned char *  _payload,
-                                 unsigned int     _payload_len,
-                                 int              _payload_valid,
-                                 framesyncstats_s _stats)
-{
-    Header* h = reinterpret_cast<Header*>(_header);
-
-    if (logger) {
-        auto buf = std::make_shared<buffer<std::complex<float>>>(_stats.num_framesyms);
-        memcpy(buf->data(), _stats.framesyms, _stats.num_framesyms*sizeof(std::complex<float>));
-        logger->logRecv(_demod_start,
-                        _header_valid,
-                        _payload_valid,
-                        *h,
-                        _demod_off + _stats.start_counter,
-                        _demod_off + _stats.end_counter,
-                        std::move(buf));
-    }
-
-    // Update demodulation offset. The framesync object is reset after the
-    // callback is called, which sets its internal counters to 0.
-    _demod_off += _stats.end_counter;
-
-    if (!_header_valid) {
-        printf("HEADER INVALID\n");
-        _callback(nullptr);
-        return;
-    }
-
-    if (!_payload_valid) {
-        printf("PAYLOAD INVALID\n");
-        _callback(nullptr);
-        return;
-    }
-
-    if (!_phy._net->wantPacket(h->dest)) {
-        _callback(nullptr);
-        return;
-    }
-
-    if (h->pkt_len == 0) {
-        _callback(nullptr);
-        return;
-    }
-
-    auto pkt = std::make_unique<RadioPacket>(_payload, h->pkt_len);
-
-    pkt->src = h->src;
-    pkt->dest = h->dest;
-    pkt->pkt_id = h->pkt_id;
-
-    _callback(std::move(pkt));
 }
 
 std::unique_ptr<PHY::Demodulator> OFDM::make_demodulator(void)

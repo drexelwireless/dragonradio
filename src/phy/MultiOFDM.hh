@@ -44,7 +44,7 @@ public:
     /** @brief Demodulate IQ data using the liquid-usrp multi-channel OFDM %PHY
       * code.
       */
-    class Demodulator : public PHY::Demodulator
+    class Demodulator : public LiquidDemodulator
     {
     public:
         Demodulator(MultiOFDM& phy);
@@ -68,32 +68,6 @@ public:
 
         /** @brief Our liquid-usrp multichannelrx object. */
         std::unique_ptr<multichannelrx> mcrx;
-
-        /** @brief Callback for received packets. */
-        std::function<void(std::unique_ptr<RadioPacket>)> _callback;
-
-        /** @brief The timestamp of the slot we are demodulating. */
-        Clock::time_point _demod_start;
-
-        /** @brief The offset (in samples) from the beggining of the slot at
-         * which we started demodulating.
-         */
-        size_t _demod_off;
-
-        static int liquid_callback(unsigned char *  _header,
-                                   int              _header_valid,
-                                   unsigned char *  _payload,
-                                   unsigned int     _payload_len,
-                                   int              _payload_valid,
-                                   framesyncstats_s _stats,
-                                   void *           _userdata);
-
-        int callback(unsigned char *  _header,
-                     int              _header_valid,
-                     unsigned char *  _payload,
-                     unsigned int     _payload_len,
-                     int              _payload_valid,
-                     framesyncstats_s _stats);
     };
 
 

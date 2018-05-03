@@ -91,12 +91,15 @@ std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPac
 }
 
 MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
+    LiquidDemodulator([&phy](Header& hdr) { return phy._net->wantPacket(hdr.dest); } ),
     _phy(phy)
 {
+    _resamp_fact = 2;
+
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     // modem setup (list is for parallel demodulation)
-    framesync_callback callback[1] = { &Demodulator::liquid_callback };
+    framesync_callback callback[1] = { &LiquidDemodulator::liquid_callback };
     void               *userdata[1] = { this };
 
     mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS,
@@ -127,85 +130,6 @@ void MultiOFDM::Demodulator::demodulate(std::complex<float>* data,
     _callback = callback;
 
     mcrx->Execute(data, count);
-}
-
-int MultiOFDM::Demodulator::liquid_callback(unsigned char *  _header,
-                                            int              _header_valid,
-                                            unsigned char *  _payload,
-                                            unsigned int     _payload_len,
-                                            int              _payload_valid,
-                                            framesyncstats_s _stats,
-                                            void *           _userdata)
-{
-    return reinterpret_cast<Demodulator*>(_userdata)->callback(_header,
-                                                               _header_valid,
-                                                               _payload,
-                                                               _payload_len,
-                                                               _payload_valid,
-                                                               _stats);
-}
-
-// Resampling factor for the mtulichannel code. We need to multiply sample
-// counters by this factor to account for the fact that the multichannel code is
-// resampling before pushing samples to the frame synchronizer.
-const unsigned int RESAMPFACT = 2;
-
-int MultiOFDM::Demodulator::callback(unsigned char *  _header,
-                                     int              _header_valid,
-                                     unsigned char *  _payload,
-                                     unsigned int     _payload_len,
-                                     int              _payload_valid,
-                                     framesyncstats_s _stats)
-{
-    Header* h = reinterpret_cast<Header*>(_header);
-
-    if (logger) {
-        auto buf = std::make_shared<buffer<std::complex<float>>>(_stats.num_framesyms);
-        memcpy(buf->data(), _stats.framesyms, _stats.num_framesyms*sizeof(std::complex<float>));
-        logger->logRecv(_demod_start,
-                        _header_valid,
-                        _payload_valid,
-                        *h,
-                        _demod_off + RESAMPFACT*_stats.start_counter,
-                        _demod_off + RESAMPFACT*_stats.end_counter,
-                        std::move(buf));
-    }
-
-    // Update demodulation offset. The framesync object is reset after the
-    // callback is called, which sets its internal counters to 0.
-    _demod_off += RESAMPFACT*_stats.end_counter;
-
-    if (!_header_valid) {
-        printf("HEADER INVALID\n");
-        _callback(nullptr);
-        return 0;
-    }
-
-    if (!_payload_valid) {
-        printf("PAYLOAD INVALID\n");
-        _callback(nullptr);
-        return 0;
-    }
-
-    if (!_phy._net->wantPacket(h->dest)) {
-        _callback(nullptr);
-        return 0;
-    }
-
-    if (h->pkt_len == 0) {
-        _callback(nullptr);
-        return 1;
-    }
-
-    auto pkt = std::make_unique<RadioPacket>(_payload, h->pkt_len);
-
-    pkt->src = h->src;
-    pkt->dest = h->dest;
-    pkt->pkt_id = h->pkt_id;
-
-    _callback(std::move(pkt));
-
-    return 0;
 }
 
 std::unique_ptr<PHY::Demodulator> MultiOFDM::make_demodulator(void)
