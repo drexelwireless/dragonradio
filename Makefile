@@ -27,6 +27,7 @@ ALLSOURCES := $(shell find $(SRCDIR) -name '*.cc')
 ALLINCLUDES := $(shell find  $(SRCDIR) -name '*.hh')
 
 SOURCES := \
+    Clock.cc \
     ExtensibleDataSet.cc \
     Liquid.cc \
     Logger.cc \

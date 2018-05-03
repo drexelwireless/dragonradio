@@ -103,7 +103,7 @@ int main(int argc, char** argv)
     std::shared_ptr<Logger> log;
 
     if (logfile)
-        log = std::make_shared<Logger>(logfile, node_id, usrp->get_time_now());
+        log = std::make_shared<Logger>(logfile, node_id);
 
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
 

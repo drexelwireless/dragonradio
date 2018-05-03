@@ -3,6 +3,7 @@
 
 #include <atomic>
 
+#include "Clock.hh"
 #include "USRP.hh"
 
 USRP::USRP(const std::string& addr,
@@ -43,12 +44,8 @@ USRP::USRP(const std::string& addr,
     while (not usrp->get_rx_sensor("lo_locked").to_bool())
         usleep(10);
 
-    // Set USRP time relative to system NTP time
-    timeval tv;
-
-    gettimeofday(&tv, NULL);
-
-    usrp->set_time_now(uhd::time_spec_t(tv.tv_sec, ((double)tv.tv_usec)/1e6));
+    // Set up clock
+    Clock::setUSRP(usrp);
 
     // Set up USRP streaming
     uhd::stream_args_t stream_args("fc32");
@@ -66,11 +63,6 @@ USRP::USRP(const std::string& addr,
 
 USRP::~USRP()
 {
-}
-
-uhd::time_spec_t USRP::get_time_now(void)
-{
-    return usrp->get_time_now(0);
 }
 
 double USRP::get_tx_rate(void)
@@ -93,7 +85,7 @@ void USRP::set_rx_rate(double rate)
     usrp->set_rx_rate(rate);
 }
 
-void USRP::burstTX(uhd::time_spec_t when, std::deque<std::shared_ptr<IQBuf>>& bufs)
+void USRP::burstTX(Clock::time_point when, std::deque<std::shared_ptr<IQBuf>>& bufs)
 {
     uhd::tx_metadata_t tx_md;
 
@@ -134,7 +126,7 @@ void USRP::burstTX(uhd::time_spec_t when, std::deque<std::shared_ptr<IQBuf>>& bu
         }
     }
 }
-void USRP::startRXStream(uhd::time_spec_t when)
+void USRP::startRXStream(Clock::time_point when)
 {
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 
@@ -151,11 +143,11 @@ void USRP::stopRXStream(void)
     rx_stream->issue_stream_cmd(stream_cmd);
 }
 
-void USRP::burstRX(uhd::time_spec_t t_start, size_t nsamps, IQBuf& buf)
+void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
-    const double     txRate = usrp->get_rx_rate(); // TX rate in Hz
-    uhd::time_spec_t t_end = t_start + static_cast<double>(nsamps)/txRate;
-    size_t           ndelivered = 0;
+    const double      txRate = usrp->get_rx_rate(); // TX rate in Hz
+    Clock::time_point t_end = t_start + static_cast<double>(nsamps)/txRate;
+    size_t            ndelivered = 0;
 
     buf.resize(nsamps + MAXSAMPS);
 

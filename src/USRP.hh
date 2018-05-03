@@ -5,6 +5,7 @@
 #include <string>
 #include <uhd/usrp/multi_usrp.hpp>
 
+#include "Clock.hh"
 #include "IQBuffer.hh"
 
 /** @brief A USRP. */
@@ -20,18 +21,16 @@ public:
          float rx_gain);
     ~USRP();
 
-    uhd::time_spec_t get_time_now(void);
-
     double get_tx_rate(void);
     void   set_tx_rate(double rate);
     double get_rx_rate(void);
     void   set_rx_rate(double rate);
 
     /** @brief Transmit samples in queue of IQBuffers in a burst at the given time */
-    void burstTX(uhd::time_spec_t when, std::deque<std::shared_ptr<IQBuf>>& bufs);
+    void burstTX(Clock::time_point when, std::deque<std::shared_ptr<IQBuf>>& bufs);
 
     /** @brief Start streaming read */
-    void startRXStream(uhd::time_spec_t when);
+    void startRXStream(Clock::time_point when);
 
     /** @brief Stop streaming read */
     void stopRXStream(void);
@@ -41,7 +40,7 @@ public:
      * @param The number of samples to receive.
      * @param buf The IQBuf to hold received IQ samples.
      */
-    void burstRX(uhd::time_spec_t when, size_t nsamps, IQBuf& buf);
+    void burstRX(Clock::time_point when, size_t nsamps, IQBuf& buf);
 
     /** Maximum number of samples we will read at a time during burstRX. */
     static const size_t MAXSAMPS = 2048;

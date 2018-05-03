@@ -21,8 +21,7 @@
 class Logger {
 public:
     Logger(const std::string& filename,
-           NodeId node_id,
-           uhd::time_spec_t t_start);
+           NodeId node_id);
     ~Logger();
 
     void setTXBandwidth(double bw);
@@ -31,14 +30,14 @@ public:
     void stop(void);
 
     void logSlot(std::shared_ptr<IQBuf> buf);
-    void logRecv(const uhd::time_spec_t& t,
+    void logRecv(const Clock::time_point& t,
                  bool header_valid,
                  bool payload_valid,
                  const Header& hdr,
                  uint32_t start_samples,
                  uint32_t end_samples,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
-     void logSend(const uhd::time_spec_t& t,
+     void logSend(const Clock::time_point& t,
                   const Header& hdr,
                   std::shared_ptr<IQBuf> buf);
 
@@ -47,8 +46,8 @@ private:
     std::unique_ptr<ExtensibleDataSet> _slots;
     std::unique_ptr<ExtensibleDataSet> _recv;
     std::unique_ptr<ExtensibleDataSet> _send;
-    uhd::time_spec_t _t_start;
-    uhd::time_spec_t _t_last_slot;
+    Clock::time_point _t_start;
+    Clock::time_point _t_last_slot;
 
     /** @brief Flag indicating we should terminate the logger. */
     bool _done;
@@ -63,16 +62,15 @@ private:
     void worker(void);
 
     void _logSlot(std::shared_ptr<IQBuf> buf);
-    void _logRecv(const uhd::time_spec_t& t,
+    void _logRecv(const Clock::time_point& t,
                   bool header_valid,
                   bool payload_valid,
                   const Header& hdr,
                   uint32_t start_samples,
                   uint32_t end_samples,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
-    void _logSend(const uhd::time_spec_t& t,
+    void _logSend(const Clock::time_point& t,
                   const Header& hdr,
                   std::shared_ptr<IQBuf> buf);
 };
-
 #endif /* LOGGER_H_ */

@@ -4,6 +4,7 @@
 
 #include <H5Cpp.h>
 
+#include "Clock.hh"
 #include "Logger.hh"
 
 /** @brief Log entry for slots */
@@ -95,9 +96,8 @@ void addAttribute(H5::H5Location &loc,
 }
 
 Logger::Logger(const std::string& filename,
-               NodeId node_id,
-               uhd::time_spec_t t_start) :
-  _t_start((time_t) t_start.get_full_secs()),
+               NodeId node_id) :
+  _t_start(Clock::now()),
   _t_last_slot((time_t) 0),
   _done(false)
 {
@@ -144,7 +144,7 @@ Logger::Logger(const std::string& filename,
     // Create H5 groups
     _file = H5::H5File(filename, H5F_ACC_TRUNC);
     addAttribute(_file, "node_id", node_id);
-    addAttribute(_file, "start", (uint32_t) t_start.get_full_secs());
+    addAttribute(_file, "start", (uint32_t) _t_start.get_full_secs());
 
     _slots = std::make_unique<ExtensibleDataSet>(_file, "slots", h5_slot);
     _recv = std::make_unique<ExtensibleDataSet>(_file, "recv", h5_packet_recv);
@@ -190,7 +190,7 @@ void Logger::logSlot(std::shared_ptr<IQBuf> buf)
 }
 
 
-void Logger::logRecv(const uhd::time_spec_t& t,
+void Logger::logRecv(const Clock::time_point& t,
                      bool header_valid,
                      bool payload_valid,
                      const Header& hdr,
@@ -201,7 +201,7 @@ void Logger::logRecv(const uhd::time_spec_t& t,
     log_q.emplace([=](){ _logRecv(t, header_valid, payload_valid, hdr, start_samples, end_samples, buf); });
 }
 
-void Logger::logSend(const uhd::time_spec_t& t,
+void Logger::logSend(const Clock::time_point& t,
                      const Header& hdr,
                      std::shared_ptr<IQBuf> buf)
 {
@@ -232,7 +232,7 @@ void Logger::_logSlot(std::shared_ptr<IQBuf> buf)
     _slots->write(&entry, 1);
 }
 
-void Logger::_logRecv(const uhd::time_spec_t& t,
+void Logger::_logRecv(const Clock::time_point& t,
                       bool header_valid,
                       bool payload_valid,
                       const Header& hdr,
@@ -256,7 +256,7 @@ void Logger::_logRecv(const uhd::time_spec_t& t,
     _recv->write(&entry, 1);
 }
 
-void Logger::_logSend(const uhd::time_spec_t& t,
+void Logger::_logSend(const Clock::time_point& t,
                       const Header& hdr,
                       std::shared_ptr<IQBuf> buf)
 {

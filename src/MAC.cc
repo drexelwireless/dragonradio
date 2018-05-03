@@ -7,6 +7,7 @@
 
 #include <uhd/utils/thread_priority.hpp>
 
+#include "Clock.hh"
 #include "MAC.hh"
 #include "USRP.hh"
 
@@ -62,13 +63,13 @@ void MAC::stop(void)
 
 void MAC::rxWorker(void)
 {
-    uhd::time_spec_t t_now;        // Current time
-    uhd::time_spec_t t_cur_slot;   // Time at which current slot starts
-    uhd::time_spec_t t_next_slot;  // Time at which next slot starts
-    double           t_slot_pos;   // Offset into the current slot (sec)
-    size_t           slot_samps;   // Number of samples in a slot
-    int              slot;         // Curent slot index in the frame
-    double           txRate;       // TX rate in Hz
+    Clock::time_point t_now;        // Current time
+    Clock::time_point t_cur_slot;   // Time at which current slot starts
+    Clock::time_point t_next_slot;  // Time at which next slot starts
+    double            t_slot_pos;   // Offset into the current slot (sec)
+    size_t            slot_samps;   // Number of samples in a slot
+    int               slot;         // Curent slot index in the frame
+    double            txRate;       // TX rate in Hz
 
     uhd::set_thread_priority_safe();
 
@@ -77,7 +78,7 @@ void MAC::rxWorker(void)
 
     while (!done) {
         // Set up streaming starting at *next* slot
-        t_now = usrp->get_time_now();
+        t_now = Clock::now();
         t_slot_pos = fmod(t_now.get_real_secs(), slot_size);
         t_next_slot = t_now + slot_size - t_slot_pos;
         slot = fmod(t_now.get_real_secs(), frame_size) / slot_size;
@@ -86,7 +87,7 @@ void MAC::rxWorker(void)
 
         while (!done) {
             // Update times
-            t_now = usrp->get_time_now();
+            t_now = Clock::now();
             t_cur_slot = t_next_slot;
             t_next_slot += slot_size;
 
@@ -107,10 +108,10 @@ void MAC::rxWorker(void)
 
 void MAC::txWorker(void)
 {
-    uhd::time_spec_t t_now;       // Current time
-    uhd::time_spec_t t_send_slot; // Time at which *our* slot starts
-    double           t_frame_pos; // Offset into the current frame (sec)
-    size_t           slot_samps;  // Number of samples to send in a slot
+    Clock::time_point t_now;       // Current time
+    Clock::time_point t_send_slot; // Time at which *our* slot starts
+    double            t_frame_pos; // Offset into the current frame (sec)
+    size_t            slot_samps;  // Number of samples to send in a slot
 
     uhd::set_thread_priority_safe();
 
@@ -120,7 +121,7 @@ void MAC::txWorker(void)
 
     while (!done) {
         // Figure out when our next send slot is
-        t_now = usrp->get_time_now();
+        t_now = Clock::now();
         t_frame_pos = fmod(t_now.get_real_secs(), frame_size);
         t_send_slot = t_now + net->getNodeId()*slot_size - t_frame_pos;
 
@@ -133,10 +134,10 @@ void MAC::txWorker(void)
         txSlot(t_send_slot, slot_samps);
 
         // Wait out the rest of the frame
-        struct timespec  ts;
-        uhd::time_spec_t t_sleep;
+        struct timespec   ts;
+        Clock::time_point t_sleep;
 
-        t_now = usrp->get_time_now();
+        t_now = Clock::now();
         t_sleep = t_send_slot + frame_size - guard_size - t_now;
 
         ts.tv_sec = t_sleep.get_full_secs();
@@ -147,7 +148,7 @@ void MAC::txWorker(void)
     }
 }
 
-void MAC::txSlot(uhd::time_spec_t when, size_t maxSamples)
+void MAC::txSlot(Clock::time_point when, size_t maxSamples)
 {
     std::deque<std::shared_ptr<IQBuf>> txBuf;
 

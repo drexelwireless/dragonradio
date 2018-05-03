@@ -106,7 +106,7 @@ public:
         /** @brief Print internals of the associated flexframesync. */
         void print(void);
 
-        void reset(uhd::time_spec_t timestamp, size_t off) override;
+        void reset(Clock::time_point timestamp, size_t off) override;
 
         void demodulate(std::complex<float>* data,
                         size_t count,
@@ -120,7 +120,7 @@ public:
         std::function<void(std::unique_ptr<RadioPacket>)> _callback;
 
         /** @brief The timestamp of the slot we are demodulating. */
-        uhd::time_spec_t _demod_start;
+        Clock::time_point _demod_start;
 
         /** @brief The offset (in samples) from the beggining of the slot at
          * which we started demodulating.

@@ -189,7 +189,7 @@ void OFDM::Demodulator::print(void)
     ofdmflexframesync_print(_fs);
 }
 
-void OFDM::Demodulator::reset(uhd::time_spec_t timestamp, size_t off)
+void OFDM::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
     ofdmflexframesync_reset(_fs);
 

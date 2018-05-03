@@ -177,7 +177,7 @@ void FlexFrame::Demodulator::print(void)
     flexframesync_print(_fs);
 }
 
-void FlexFrame::Demodulator::reset(uhd::time_spec_t timestamp, size_t off)
+void FlexFrame::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
     flexframesync_reset(_fs);
 

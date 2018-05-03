@@ -57,7 +57,7 @@ public:
          * provided sample willcome.
          * @brief off The offset of the first provided sample.
          */
-        virtual void reset(uhd::time_spec_t timestamp, size_t off) = 0;
+        virtual void reset(Clock::time_point timestamp, size_t off) = 0;
 
         /** @brief Demodulate IQ samples.
          * @param data IQ samples to demodulate.

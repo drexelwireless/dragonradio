@@ -123,7 +123,7 @@ MultiOFDM::Demodulator::~Demodulator()
 {
 }
 
-void MultiOFDM::Demodulator::reset(uhd::time_spec_t timestamp, size_t off)
+void MultiOFDM::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
     mcrx->Reset();
 

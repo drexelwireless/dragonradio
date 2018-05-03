@@ -10,6 +10,7 @@
 #include <uhd/types/time_spec.hpp>
 
 #include "buffer.hh"
+#include "Clock.hh"
 
 /** @brief A buffer of IQ samples */
 struct IQBuf : buffer<std::complex<float>> {
@@ -25,7 +26,7 @@ public:
     IQBuf& operator=(IQBuf&&) = delete;
 
     /** @brief Timestamp of the first sample */
-    uhd::time_spec_t timestamp;
+    Clock::time_point timestamp;
 
     /** @brief Number of samples received so far. */
     /** This value is valid untile the buffer is marked complete. */

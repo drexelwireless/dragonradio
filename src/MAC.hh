@@ -65,7 +65,7 @@ private:
     void txWorker(void);
 
     /** Transmit one slot's worth of samples */
-    void txSlot(uhd::time_spec_t when, size_t maxSamples);
+    void txSlot(Clock::time_point when, size_t maxSamples);
 };
 
 #endif /* MAC_H_ */
