@@ -18,11 +18,19 @@
 #include "SafeQueue.hh"
 #include "phy/PHY.hh"
 
+class Logger;
+
+/** @brief The global logger. */
+extern std::shared_ptr<Logger> logger;
+
 class Logger {
 public:
-    Logger(const std::string& filename,
-           NodeId node_id);
+    Logger();
     ~Logger();
+
+    void open(const std::string& filename);
+
+    void setNodeId(NodeId node_id);
 
     void setTXBandwidth(double bw);
     void setRXBandwidth(double bw);

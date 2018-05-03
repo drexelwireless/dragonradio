@@ -8,22 +8,21 @@
 #include <uhd/utils/thread_priority.hpp>
 
 #include "Clock.hh"
+#include "Logger.hh"
 #include "MAC.hh"
 #include "USRP.hh"
 
 MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<NET> net,
          std::shared_ptr<PHY> phy,
-         std::shared_ptr<Logger> logger,
          double bandwidth,
          double frame_size,
          double guard_size,
          size_t rx_pool_size)
   : usrp(usrp),
     net(net),
-    logger(logger),
     modQueue(net, phy),
-    demodQueue(net, phy, logger, false, rx_pool_size),
+    demodQueue(net, phy, false, rx_pool_size),
     _bandwidth(bandwidth),
     frame_size(frame_size),
     slot_size(frame_size/net->getNumNodes()),

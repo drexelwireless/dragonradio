@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <thread>
 
+#include "Logger.hh"
 #include "MAC.hh"
 #include "NET.hh"
 #include "USRP.hh"
@@ -100,27 +101,28 @@ int main(int argc, char** argv)
 
     auto usrp = std::make_shared<USRP>(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain);
 
-    std::shared_ptr<Logger> log;
-
-    if (logfile)
-        log = std::make_shared<Logger>(logfile, node_id);
+    if (logfile) {
+        logger = std::make_shared<Logger>();
+        logger->open(logfile);
+        logger->setNodeId(node_id);
+    }
 
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
 
     std::shared_ptr<PHY> phy;
 
     if (ofdm)
-        phy = std::make_shared<OFDM>(net, log, 48, 6, 4, nullptr, min_packet_size);
+        phy = std::make_shared<OFDM>(net, 48, 6, 4, nullptr, min_packet_size);
     else if (multichannel)
-        phy = std::make_shared<MultiOFDM>(net, log, min_packet_size);
+        phy = std::make_shared<MultiOFDM>(net, min_packet_size);
     else
-        phy = std::make_shared<FlexFrame>(net, log, min_packet_size);
+        phy = std::make_shared<FlexFrame>(net, min_packet_size);
 
-    auto mac = std::make_shared<MAC>(usrp, net, phy, log, bandwidth, frame_size, guard_size, rx_thread_pool_size);
+    auto mac = std::make_shared<MAC>(usrp, net, phy, bandwidth, frame_size, guard_size, rx_thread_pool_size);
 
-    if (log) {
-        log->setTXBandwidth(bandwidth*phy->getTxRateOversample());
-        log->setRXBandwidth(bandwidth*phy->getRxRateOversample());
+    if (logger) {
+        logger->setTXBandwidth(bandwidth*phy->getTxRateOversample());
+        logger->setRXBandwidth(bandwidth*phy->getRxRateOversample());
     }
 
     // Wait for Ctrl-C
@@ -136,8 +138,10 @@ int main(int argc, char** argv)
 
     net->stop();
     mac->stop();
-    if (log)
-        log->stop();
+    if (logger) {
+        logger->stop();
+        logger.reset();
+    }
 
     printf("Done!\n");
 }

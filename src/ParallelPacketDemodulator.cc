@@ -1,5 +1,6 @@
 #include <functional>
 
+#include "Logger.hh"
 #include "ParallelPacketDemodulator.hh"
 #include "NET.hh"
 #include "phy/PHY.hh"
@@ -8,12 +9,10 @@ using namespace std::placeholders;
 
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<NET> net,
                                                      std::shared_ptr<PHY> phy,
-                                                     std::shared_ptr<Logger> logger,
                                                      bool order,
                                                      unsigned int nthreads) :
     net(net),
     phy(phy),
-    logger(logger),
     _order(order),
     _prev_samps(0),
     _cur_samps(0),

@@ -7,6 +7,8 @@
 #include "Clock.hh"
 #include "Logger.hh"
 
+std::shared_ptr<Logger> logger;
+
 /** @brief Log entry for slots */
 struct SlotEntry {
     double timestamp;
@@ -95,11 +97,19 @@ void addAttribute(H5::H5Location &loc,
     att.write(h5_type, &val);
 }
 
-Logger::Logger(const std::string& filename,
-               NodeId node_id) :
+Logger::Logger(void) :
   _t_start(Clock::now()),
   _t_last_slot((time_t) 0),
   _done(false)
+{
+}
+
+Logger::~Logger()
+{
+    _file.close();
+}
+
+void Logger::open(const std::string& filename)
 {
     // H5 compound type for complex floats
     // This matches numpy's format
@@ -143,7 +153,6 @@ Logger::Logger(const std::string& filename,
 
     // Create H5 groups
     _file = H5::H5File(filename, H5F_ACC_TRUNC);
-    addAttribute(_file, "node_id", node_id);
     addAttribute(_file, "start", (uint32_t) _t_start.get_full_secs());
 
     _slots = std::make_unique<ExtensibleDataSet>(_file, "slots", h5_slot);
@@ -154,9 +163,9 @@ Logger::Logger(const std::string& filename,
     worker_thread = std::thread(&Logger::worker, this);
 }
 
-Logger::~Logger()
+void Logger::setNodeId(NodeId node_id)
 {
-    _file.close();
+    addAttribute(_file, "node_id", node_id);
 }
 
 void Logger::setTXBandwidth(double bw)

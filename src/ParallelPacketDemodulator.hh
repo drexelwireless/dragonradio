@@ -6,7 +6,6 @@
 #include <list>
 #include <mutex>
 
-#include "Logger.hh"
 #include "NET.hh"
 #include "RadioPacketQueue.hh"
 #include "phy/PHY.hh"
@@ -69,7 +68,6 @@ class ParallelPacketDemodulator
 public:
     ParallelPacketDemodulator(std::shared_ptr<NET> net,
                               std::shared_ptr<PHY> phy,
-                              std::shared_ptr<Logger> logger,
                               bool order,
                               unsigned int nthreads);
     ~ParallelPacketDemodulator();
@@ -95,9 +93,6 @@ private:
 
     /** @brief PHY we use for demodulation. */
     std::shared_ptr<PHY> phy;
-
-    /** @brief The Logger to use. Should be nullptr for no logging. */
-    std::shared_ptr<Logger> logger;
 
     /** @brief Should packets be output in order of reception? This increases
      * latency.

@@ -2,6 +2,7 @@
 
 #include "FlexFrame.hh"
 #include "Liquid.hh"
+#include "Logger.hh"
 
 union PHYHeader {
     Header        h;
@@ -223,16 +224,16 @@ void FlexFrame::Demodulator::callback(unsigned char *  _header,
 {
     Header* h = reinterpret_cast<Header*>(_header);
 
-    if (_phy._logger) {
+    if (logger) {
         auto buf = std::make_shared<buffer<std::complex<float>>>(_stats.num_framesyms);
         memcpy(buf->data(), _stats.framesyms, _stats.num_framesyms*sizeof(std::complex<float>));
-        _phy._logger->logRecv(_demod_start,
-                              _header_valid,
-                              _payload_valid,
-                              *h,
-                              _demod_off + _stats.start_counter,
-                              _demod_off + _stats.end_counter,
-                              std::move(buf));
+        logger->logRecv(_demod_start,
+                        _header_valid,
+                        _payload_valid,
+                        *h,
+                        _demod_off + _stats.start_counter,
+                        _demod_off + _stats.end_counter,
+                        std::move(buf));
     }
 
     // Update demodulation offset. The framesync object is reset after the

@@ -8,7 +8,6 @@
 #include <liquid/multichannelrx.h>
 #include <liquid/multichanneltx.h>
 
-#include "Logger.hh"
 #include "ModPacket.hh"
 #include "NET.hh"
 #include "phy/PHY.hh"
@@ -115,10 +114,8 @@ public:
      * packet.
      */
     MultiOFDM(std::shared_ptr<NET> net,
-              std::shared_ptr<Logger> logger,
               size_t minPacketSize) :
         _net(net),
-        _logger(logger),
         _minPacketSize(minPacketSize)
     {
     }
@@ -141,9 +138,6 @@ public:
 private:
     /** @brief The NET to which we should send received packets. */
     std::shared_ptr<NET> _net;
-
-    /** @brief The Logger to use. Should be nullptr for no logging. */
-    std::shared_ptr<Logger> _logger;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */

@@ -3,7 +3,6 @@
 
 #include <liquid/liquid.h>
 
-#include "Logger.hh"
 #include "NET.hh"
 #include "phy/PHY.hh"
 
@@ -158,7 +157,6 @@ public:
      * @param mod_scheme The modulation scheme scheme.
      */
     OFDM(std::shared_ptr<NET> net,
-         std::shared_ptr<Logger> logger,
          unsigned int M,
          unsigned int cp_len,
          unsigned int taper_len,
@@ -169,7 +167,6 @@ public:
          _taper_len(taper_len),
          _p(p),
         _net(net),
-        _logger(logger),
         _minPacketSize(minPacketSize)
     {
     }
@@ -201,9 +198,6 @@ private:
 
     /** @brief The NET to which we should send received packets. */
     std::shared_ptr<NET> _net;
-
-    /** @brief The Logger to use. Should be nullptr for no logging. */
-    std::shared_ptr<Logger> _logger;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */
