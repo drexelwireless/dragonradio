@@ -96,20 +96,14 @@ public:
                                    unsigned int     _payload_len,
                                    int              _payload_valid,
                                    framesyncstats_s _stats,
-                                   void *           _userdata,
-                                   liquid_float_complex* G,
-                                   liquid_float_complex* G_hat,
-                                   unsigned int M);
+                                   void *           _userdata);
 
         int callback(unsigned char *  _header,
                      int              _header_valid,
                      unsigned char *  _payload,
                      unsigned int     _payload_len,
                      int              _payload_valid,
-                     framesyncstats_s _stats,
-                     liquid_float_complex* G,
-                     liquid_float_complex* G_hat,
-                     unsigned int M);
+                     framesyncstats_s _stats);
     };
 
 

@@ -146,20 +146,14 @@ int MultiOFDM::Demodulator::liquid_callback(unsigned char *  _header,
                                             unsigned int     _payload_len,
                                             int              _payload_valid,
                                             framesyncstats_s _stats,
-                                            void *           _userdata,
-                                            liquid_float_complex* G,
-                                            liquid_float_complex* G_hat,
-                                            unsigned int M)
+                                            void *           _userdata)
 {
     return reinterpret_cast<Demodulator*>(_userdata)->callback(_header,
                                                                _header_valid,
                                                                _payload,
                                                                _payload_len,
                                                                _payload_valid,
-                                                               _stats,
-                                                               G,
-                                                               G_hat,
-                                                               M);
+                                                               _stats);
 }
 
 // Resampling factor for the mtulichannel code. We need to multiply sample
@@ -172,10 +166,7 @@ int MultiOFDM::Demodulator::callback(unsigned char *  _header,
                                      unsigned char *  _payload,
                                      unsigned int     _payload_len,
                                      int              _payload_valid,
-                                     framesyncstats_s _stats,
-                                     liquid_float_complex* G,
-                                     liquid_float_complex* G_hat,
-                                     unsigned int M)
+                                     framesyncstats_s _stats)
 {
     Header* h = reinterpret_cast<Header*>(_header);
 

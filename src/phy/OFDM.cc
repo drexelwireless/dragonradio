@@ -212,10 +212,7 @@ int OFDM::Demodulator::liquid_callback(unsigned char *  _header,
                                        unsigned int     _payload_len,
                                        int              _payload_valid,
                                        framesyncstats_s _stats,
-                                       void *           _userdata,
-                                       liquid_float_complex* G,
-                                       liquid_float_complex* G_hat,
-                                       unsigned int M)
+                                       void *           _userdata)
 {
     reinterpret_cast<OFDM::Demodulator*>(_userdata)->
         callback(_header,
@@ -223,10 +220,7 @@ int OFDM::Demodulator::liquid_callback(unsigned char *  _header,
                  _payload,
                  _payload_len,
                  _payload_valid,
-                 _stats,
-                 G,
-                 G_hat,
-                 M);
+                 _stats);
     // The ofdmflexframsync code doesn't actually use the callback's return
     // value for anything!
     return 0;
@@ -237,10 +231,7 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
                                  unsigned char *  _payload,
                                  unsigned int     _payload_len,
                                  int              _payload_valid,
-                                 framesyncstats_s _stats,
-                                 liquid_float_complex* G,
-                                 liquid_float_complex* G_hat,
-                                 unsigned int M)
+                                 framesyncstats_s _stats)
 {
     Header* h = reinterpret_cast<Header*>(_header);
 
