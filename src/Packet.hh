@@ -7,6 +7,8 @@
 
 #include <vector>
 
+#include <liquid/liquid.h>
+
 #include "buffer.hh"
 #include "Node.hh"
 
@@ -25,6 +27,21 @@ struct NetPacket : public buffer<unsigned char>
 
     /** @brief Destination node */
     NodeId dest;
+
+    /** @brief CRC */
+    crc_scheme check;
+
+    /** @brief FEC0 (inner FEC) */
+    fec_scheme fec0;
+
+    /** @brief FEC1 (outer FEC) */
+    fec_scheme fec1;
+
+    /** @brief Modulation scheme */
+    modulation_scheme ms;
+
+    /** @brief Soft TX gain */
+    float g;
 };
 
 /** @brief A packet received from the radio. */

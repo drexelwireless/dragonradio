@@ -23,29 +23,105 @@ public:
 
     std::unique_ptr<ModPacket> pop(size_t maxSamples) override;
 
+    /** @brief Get the data validity check used by the flexframe. */
+    crc_scheme get_check(void)
+    {
+        return _check;
+    }
+
+    /** @brief Set the data validity check used by the flexframe. */
+    void set_check(crc_scheme check)
+    {
+        _check = check;
+    }
+
+    /** @brief Get the inner FEC used by the flexframe. */
+    fec_scheme get_fec0(void)
+    {
+        return _fec0;
+    }
+
+    /** @brief Set the inner FEC used by the flexframe. */
+    void set_fec0(fec_scheme fec0)
+    {
+        _fec0 = fec0;
+    }
+
+    /** @brief Get the outer FEC used by the flexframe. */
+    fec_scheme get_fec1(void)
+    {
+        return _fec1;
+    }
+
+    /** @brief Set the outer FEC used by the flexframe. */
+    void set_fec1(fec_scheme fec1)
+    {
+        _fec1 = fec1;
+    }
+
+    /** @brief Get the modulation scheme used by the flexframe. */
+    modulation_scheme get_mod_scheme(void)
+    {
+        return _ms;
+    }
+
+    /** @brief Set the modulation scheme used by the flexframe. */
+    void set_mod_scheme(modulation_scheme ms)
+    {
+        _ms = ms;
+    }
+
+    /** @brief Get soft TX gain (dB). */
+    float getSoftTXGain(void)
+    {
+        return 20.0*logf(_g)/logf(10.0);
+    }
+
+    /** @brief Set soft TX gain.
+     * @param dB The soft gain (dB).
+     */
+    void setSoftTXGain(float dB)
+    {
+        _g = powf(10.0f, dB/20.0f);
+    }
+
     /** @brief Stop modulating. */
     void stop(void);
 
 private:
+    /** @brief Our network. */
     std::shared_ptr<NET> net;
+
+    /** @brief Our PHY. */
     std::shared_ptr<PHY> phy;
 
-    /** Flag indicating if we should stop processing packets */
+    // PHY parameters
+    crc_scheme        _check;
+    fec_scheme        _fec0;
+    fec_scheme        _fec1;
+    modulation_scheme _ms;
+
+    /** @brief Soft TX gain */
+    float _g;
+
+    /** @brief Flag indicating if we should stop processing packets */
     bool done;
 
-    /** Thread running modWorker */
+    /** @brief Thread running modWorker */
     std::thread modThread;
 
-    /** Thread modulating packets */
+    /** @brief Thread modulating packets */
     void modWorker(void);
 
-    /** Number of modulated samples we want to have on-hand at all times */
+    /** @brief  Number of modulated samples we want to have on-hand at all
+     * times.
+     */
     size_t watermark;
 
-    /** Number of modulated samples we have */
+    /** @brief Number of modulated samples we have */
     size_t nsamples;
 
-    /** Modulated radio packets */
+    /* Modulated radio packets */
     std::mutex                             m;
     std::condition_variable                prod;
     std::condition_variable                cons;

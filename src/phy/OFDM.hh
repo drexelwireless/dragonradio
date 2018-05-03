@@ -13,24 +13,7 @@ public:
     class Modulator : public PHY::Modulator
     {
     public:
-        /** @brief Construct Modulator with default check, FEC's, and modulation
-         * scheme.
-         */
         Modulator(OFDM& phy);
-
-        /** @brief Construct a flexframegen with the given check, inner and
-         * outer FEC's, and modulation schemed.
-         * @param check The data validity check.
-         * @param fec0 The inner forward error-correction scheme.
-         * @param fec1 The outer forward error-correction scheme.
-         * @param mod_scheme The modulation scheme scheme.
-         */
-        explicit Modulator(OFDM& phy,
-                           crc_scheme check,
-                           fec_scheme fec0,
-                           fec_scheme fec1,
-                           modulation_scheme ms);
-
         ~Modulator();
 
         Modulator(const Modulator&) = delete;
@@ -39,43 +22,14 @@ public:
         Modulator& operator=(const Modulator&) = delete;
         Modulator& operator=(Modulator&&) = delete;
 
-        virtual void setSoftTXGain(float dB) override;
-
         /** @brief Print internals of the associated flexframegen. */
         void print(void);
-
-        /** @brief Get the data validity check used by the flexframe. */
-        crc_scheme get_check(void);
-
-        /** @brief Set the data validity check used by the flexframe. */
-        void set_check(crc_scheme check);
-
-        /** @brief Get the inner FEC used by the flexframe. */
-        fec_scheme get_fec0(void);
-
-        /** @brief Set the inner FEC used by the flexframe. */
-        void set_fec0(fec_scheme fec0);
-
-        /** @brief Get the outer FEC used by the flexframe. */
-        fec_scheme get_fec1(void);
-
-        /** @brief Set the outer FEC used by the flexframe. */
-        void set_fec1(fec_scheme fec1);
-
-        /** @brief Get the modulation scheme used by the flexframe. */
-        modulation_scheme get_mod_scheme(void);
-
-        /** @brief Set the modulation scheme used by the flexframe. */
-        void set_mod_scheme(modulation_scheme ms);
 
         std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) override;
 
     private:
         /** @brief Associated OFDM PHY. */
         OFDM& _phy;
-
-        /** @brief Soft TX gain */
-        float _g;
 
         /** @brief The liquid-dsp flexframegen object */
         ofdmflexframegen _fg;
@@ -86,7 +40,7 @@ public:
         ofdmflexframegenprops_s _fgprops;
 
         /** Update frame properties to match _fgprops. */
-        void update_props(void);
+        void update_props(NetPacket& pkt);
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
@@ -151,10 +105,6 @@ public:
      * @param taper_len The taper length (OFDM symbol overlap)
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
-     * @param check The data validity check.
-     * @param fec0 The inner forward error-correction scheme.
-     * @param fec1 The outer forward error-correction scheme.
-     * @param mod_scheme The modulation scheme scheme.
      */
     OFDM(std::shared_ptr<NET> net,
          unsigned int M,
@@ -166,8 +116,8 @@ public:
          _cp_len(cp_len),
          _taper_len(taper_len),
          _p(p),
-        _net(net),
-        _minPacketSize(minPacketSize)
+         _net(net),
+         _minPacketSize(minPacketSize)
     {
     }
 

@@ -22,10 +22,6 @@ public:
     class Modulator : public PHY::Modulator
     {
     public:
-        /**
-         * @param minPacketSize The minimum number of bytes we will send in a
-         * packet.
-         */
         Modulator(MultiOFDM& phy);
         ~Modulator();
 
@@ -35,16 +31,11 @@ public:
         Modulator& operator=(const Modulator&) = delete;
         Modulator& operator=(Modulator&&) = delete;
 
-        virtual void setSoftTXGain(float dB) override;
-
         std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) override;
 
     private:
         /** @brief Our associated PHY. */
         MultiOFDM& _phy;
-
-        /** @brief Soft TX gain. */
-        float _g;
 
         /** @brief Our liquid-usrp multichanneltx object. */
         std::unique_ptr<multichanneltx> _mctx;

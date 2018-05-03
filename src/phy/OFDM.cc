@@ -11,35 +11,11 @@ union PHYHeader {
 };
 
 OFDM::Modulator::Modulator(OFDM& phy) :
-    _phy(phy),
-    _g(1.0)
+    _phy(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     ofdmflexframegenprops_init_default(&_fgprops);
-    _fg = ofdmflexframegen_create(_phy._M,
-                                  _phy._cp_len,
-                                  _phy._taper_len,
-                                  _phy._p,
-                                  &_fgprops);
-}
-
-OFDM::Modulator::Modulator(OFDM& phy,
-                           crc_scheme check,
-                           fec_scheme fec0,
-                           fec_scheme fec1,
-                           modulation_scheme ms) :
-    _phy(phy),
-    _g(1.0)
-{
-    std::lock_guard<std::mutex> lck(liquid_mutex);
-
-    ofdmflexframegenprops_init_default(&_fgprops);
-    _fgprops.check = check;
-    _fgprops.fec0 = fec0;
-    _fgprops.fec1 = fec1;
-    _fgprops.mod_scheme = ms;
-
     _fg = ofdmflexframegen_create(_phy._M,
                                   _phy._cp_len,
                                   _phy._taper_len,
@@ -52,63 +28,24 @@ OFDM::Modulator::~Modulator()
     ofdmflexframegen_destroy(_fg);
 }
 
-void OFDM::Modulator::setSoftTXGain(float dB)
-{
-    _g = powf(10.0f, dB/20.0f);
-}
-
 void OFDM::Modulator::print(void)
 {
     ofdmflexframegen_print(_fg);
 }
 
-crc_scheme OFDM::Modulator::get_check(void)
+void OFDM::Modulator::update_props(NetPacket& pkt)
 {
-    return static_cast<crc_scheme>(_fgprops.check);
-}
+    if (_fgprops.check != pkt.check ||
+        _fgprops.fec0 != pkt.fec0 ||
+        _fgprops.fec1 != pkt.fec1 ||
+        _fgprops.mod_scheme != pkt.ms) {
+        _fgprops.check = pkt.check;
+        _fgprops.fec0 = pkt.fec0;
+        _fgprops.fec1 = pkt.fec1;
+        _fgprops.mod_scheme = pkt.ms;
 
-void OFDM::Modulator::set_check(crc_scheme check)
-{
-    _fgprops.check = check;
-    update_props();
-}
-
-fec_scheme OFDM::Modulator::get_fec0(void)
-{
-    return static_cast<fec_scheme>(_fgprops.fec0);
-}
-
-void OFDM::Modulator::set_fec0(fec_scheme fec0)
-{
-    _fgprops.fec0 = fec0;
-    update_props();
-}
-
-fec_scheme OFDM::Modulator::get_fec1(void)
-{
-    return static_cast<fec_scheme>(_fgprops.fec1);
-}
-
-void OFDM::Modulator::set_fec1(fec_scheme fec1)
-{
-    _fgprops.fec1 = fec1;
-    update_props();
-}
-
-modulation_scheme OFDM::Modulator::get_mod_scheme(void)
-{
-    return static_cast<modulation_scheme>(_fgprops.mod_scheme);
-}
-
-void OFDM::Modulator::set_mod_scheme(modulation_scheme ms)
-{
-    _fgprops.mod_scheme = ms;
-    update_props();
-}
-
-void OFDM::Modulator::update_props(void)
-{
-    ofdmflexframegen_setprops(_fg, &_fgprops);
+        ofdmflexframegen_setprops(_fg, &_fgprops);
+    }
 }
 
 // Initial sample buffer size
@@ -127,6 +64,7 @@ std::unique_ptr<ModPacket> OFDM::Modulator::modulate(std::unique_ptr<NetPacket> 
 
     pkt->resize(std::max((size_t) pkt->size(), _phy._minPacketSize));
 
+    update_props(*pkt);
     ofdmflexframegen_reset(_fg);
     ofdmflexframegen_assemble(_fg, header.bytes, pkt->data(), pkt->size());
 
@@ -137,7 +75,7 @@ std::unique_ptr<ModPacket> OFDM::Modulator::modulate(std::unique_ptr<NetPacket> 
     // Number of generated samples in the buffer
     size_t nsamples = 0;
     // Local copy of gain
-    const float g = _g;
+    const float g = pkt->g;
     // Flag indicating when we've reached the last symbol
     bool last_symbol = false;
 
@@ -283,18 +221,6 @@ void OFDM::Demodulator::callback(unsigned char *  _header,
     _callback(std::move(pkt));
 }
 
-/** CRC */
-const crc_scheme CHECK = LIQUID_CRC_32;
-
-/** Inner FEC */
-const fec_scheme FEC_INNER = LIQUID_FEC_CONV_V29;
-
-/** Outer FEC */
-const fec_scheme FEC_OUTER = LIQUID_FEC_RS_M8;
-
-/** Modulation */
-const modulation_scheme MODSCHEME = LIQUID_MODEM_QPSK;
-
 std::unique_ptr<PHY::Demodulator> OFDM::make_demodulator(void)
 {
     return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this)));
@@ -302,10 +228,5 @@ std::unique_ptr<PHY::Demodulator> OFDM::make_demodulator(void)
 
 std::unique_ptr<PHY::Modulator> OFDM::make_modulator(void)
 {
-    auto modulator = std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(
-      new Modulator(*this, CHECK, FEC_INNER, FEC_OUTER, MODSCHEME)));
-
-    modulator->setSoftTXGain(-12.0f);
-
-    return modulator;
+    return std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(new Modulator(*this)));
 }
