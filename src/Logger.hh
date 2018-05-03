@@ -38,11 +38,13 @@ public:
 
     void logSlot(std::shared_ptr<IQBuf> buf);
     void logRecv(const Clock::time_point& t,
+                 uint32_t start_samples,
+                 uint32_t end_samples,
                  bool header_valid,
                  bool payload_valid,
                  const Header& hdr,
-                 uint32_t start_samples,
-                 uint32_t end_samples,
+                 float evm,
+                 float rssi,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
      void logSend(const Clock::time_point& t,
                   const Header& hdr,
@@ -72,11 +74,13 @@ private:
 
     void _logSlot(std::shared_ptr<IQBuf> buf);
     void _logRecv(const Clock::time_point& t,
+                  uint32_t start_samples,
+                  uint32_t end_samples,
                   bool header_valid,
                   bool payload_valid,
                   const Header& hdr,
-                  uint32_t start_samples,
-                  uint32_t end_samples,
+                  float evm,
+                  float rssi,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
     void _logSend(const Clock::time_point& t,
                   const Header& hdr,

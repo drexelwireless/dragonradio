@@ -60,6 +60,12 @@ struct RadioPacket : public buffer<unsigned char>
     /** @brief Destination node (should be this node) */
     NodeId dest;
 
+    /** @brief Error vector magnitude [dB] */
+    float evm;
+
+    /** @brief Received signal strength indicator [dB] */
+    float rssi;
+
     /** @brief This Boolean is true if this packet is a barrier and should not
      * be processed or removed from a queue except by its creator.
      */
