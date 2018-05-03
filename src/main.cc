@@ -10,6 +10,8 @@
 #include "Logger.hh"
 #include "MAC.hh"
 #include "NET.hh"
+#include "ParallelPacketModulator.hh"
+#include "ParallelPacketDemodulator.hh"
 #include "USRP.hh"
 #include "phy/FlexFrame.hh"
 #include "phy/MultiOFDM.hh"
@@ -118,7 +120,11 @@ int main(int argc, char** argv)
     else
         phy = std::make_shared<FlexFrame>(net, min_packet_size);
 
-    auto mac = std::make_shared<MAC>(usrp, net, phy, bandwidth, frame_size, guard_size, rx_thread_pool_size);
+    auto modulator = std::make_shared<ParallelPacketModulator>(net, phy);
+
+    auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, false, rx_thread_pool_size);
+
+    auto mac = std::make_shared<MAC>(usrp, net, phy, modulator, demodulator, bandwidth, frame_size, guard_size);
 
     if (logger) {
         logger->setTXBandwidth(bandwidth*phy->getTxRateOversample());
@@ -138,6 +144,8 @@ int main(int argc, char** argv)
 
     net->stop();
     mac->stop();
+    modulator->stop();
+    demodulator->stop();
     if (logger) {
         logger->stop();
         logger.reset();

@@ -15,31 +15,36 @@
 MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<NET> net,
          std::shared_ptr<PHY> phy,
+         std::shared_ptr<PacketModulator> modulator,
+         std::shared_ptr<PacketDemodulator> demodulator,
          double bandwidth,
          double frame_size,
-         double guard_size,
-         size_t rx_pool_size)
-  : usrp(usrp),
-    net(net),
-    modQueue(net, phy),
-    demodQueue(net, phy, false, rx_pool_size),
+         double guard_size)
+  : _usrp(usrp),
+    _net(net),
+    _phy(phy),
+    _modulator(modulator),
+    _demodulator(demodulator),
     _bandwidth(bandwidth),
-    frame_size(frame_size),
-    slot_size(frame_size/net->getNumNodes()),
-    guard_size(guard_size),
-    done(false)
+    _frame_size(frame_size),
+    _slot_size(frame_size/net->getNumNodes()),
+    _guard_size(guard_size),
+    _done(false)
 {
-    usrp->set_rx_rate(_bandwidth*phy->getRxRateOversample());
-    usrp->set_tx_rate(_bandwidth*phy->getTxRateOversample());
+    _rx_rate = _bandwidth*phy->getRxRateOversample();
+    _tx_rate = _bandwidth*phy->getTxRateOversample();
 
-    phy->setRxRate(_bandwidth*phy->getRxRateOversample());
-    phy->setTxRate(_bandwidth*phy->getTxRateOversample());
+    usrp->set_rx_rate(_rx_rate);
+    usrp->set_tx_rate(_tx_rate);
 
-    rxThread = std::thread(&MAC::rxWorker, this);
-    txThread = std::thread(&MAC::txWorker, this);
+    phy->setRxRate(_rx_rate);
+    phy->setTxRate(_tx_rate);
 
-    demodQueue.setDemodParameters(0.5*guard_size*bandwidth*phy->getRxRateOversample(),
-                                  (slot_size - 0.5*guard_size)*bandwidth*phy->getRxRateOversample());
+    _rxThread = std::thread(&MAC::rxWorker, this);
+    _txThread = std::thread(&MAC::txWorker, this);
+
+    _demodulator->setDemodParameters(0.5*_guard_size*_rx_rate,
+                                     (_slot_size - 0.5*_guard_size)*_tx_rate);
 }
 
 MAC::~MAC()
@@ -48,16 +53,13 @@ MAC::~MAC()
 
 void MAC::stop(void)
 {
-    done = true;
+    _done = true;
 
-    if (rxThread.joinable())
-        rxThread.join();
+    if (_rxThread.joinable())
+        _rxThread.join();
 
-    if (txThread.joinable())
-        txThread.join();
-
-    modQueue.stop();
-    demodQueue.stop();
+    if (_txThread.joinable())
+        _txThread.join();
 }
 
 void MAC::rxWorker(void)
@@ -72,36 +74,36 @@ void MAC::rxWorker(void)
 
     uhd::set_thread_priority_safe();
 
-    txRate = usrp->get_rx_rate();
-    slot_samps = txRate * slot_size;
+    txRate = _usrp->get_rx_rate();
+    slot_samps = txRate * _slot_size;
 
-    while (!done) {
+    while (!_done) {
         // Set up streaming starting at *next* slot
         t_now = Clock::now();
-        t_slot_pos = fmod(t_now.get_real_secs(), slot_size);
-        t_next_slot = t_now + slot_size - t_slot_pos;
-        slot = fmod(t_now.get_real_secs(), frame_size) / slot_size;
+        t_slot_pos = fmod(t_now.get_real_secs(), _slot_size);
+        t_next_slot = t_now + _slot_size - t_slot_pos;
+        slot = fmod(t_now.get_real_secs(), _frame_size) / _slot_size;
 
-        usrp->startRXStream(t_next_slot);
+        _usrp->startRXStream(t_next_slot);
 
-        while (!done) {
+        while (!_done) {
             // Update times
             t_now = Clock::now();
             t_cur_slot = t_next_slot;
-            t_next_slot += slot_size;
+            t_next_slot += _slot_size;
 
             // Read samples for current slot
             auto curSlot = std::make_shared<IQBuf>(slot_samps + USRP::MAXSAMPS);
 
-            demodQueue.push(curSlot);
+            _demodulator->push(curSlot);
 
-            usrp->burstRX(t_cur_slot, slot_samps, *curSlot);
+            _usrp->burstRX(t_cur_slot, slot_samps, *curSlot);
 
             // Move to the next slot
             ++slot;
         }
 
-        usrp->stopRXStream();
+        _usrp->stopRXStream();
     }
 }
 
@@ -114,19 +116,19 @@ void MAC::txWorker(void)
 
     uhd::set_thread_priority_safe();
 
-    slot_samps = usrp->get_tx_rate()*(slot_size - guard_size);
+    slot_samps = _usrp->get_tx_rate()*(_slot_size - _guard_size);
 
-    modQueue.setWatermark(slot_samps);
+    _modulator->setWatermark(slot_samps);
 
-    while (!done) {
+    while (!_done) {
         // Figure out when our next send slot is
         t_now = Clock::now();
-        t_frame_pos = fmod(t_now.get_real_secs(), frame_size);
-        t_send_slot = t_now + net->getNodeId()*slot_size - t_frame_pos;
+        t_frame_pos = fmod(t_now.get_real_secs(), _frame_size);
+        t_send_slot = t_now + _net->getNodeId()*_slot_size - t_frame_pos;
 
         while (t_send_slot < t_now) {
             printf("MISS\n");
-            t_send_slot += frame_size;
+            t_send_slot += _frame_size;
         }
 
         // Schedule transmission for start of our slot
@@ -137,7 +139,7 @@ void MAC::txWorker(void)
         Clock::time_point t_sleep;
 
         t_now = Clock::now();
-        t_sleep = t_send_slot + frame_size - guard_size - t_now;
+        t_sleep = t_send_slot + _frame_size - _guard_size - t_now;
 
         ts.tv_sec = t_sleep.get_full_secs();
         ts.tv_nsec = t_sleep.get_frac_secs()*1e9;
@@ -152,7 +154,7 @@ void MAC::txSlot(Clock::time_point when, size_t maxSamples)
     std::deque<std::shared_ptr<IQBuf>> txBuf;
 
     while (maxSamples > 0) {
-        std::shared_ptr<ModPacket> mpkt = modQueue.pop(maxSamples);
+        std::shared_ptr<ModPacket> mpkt = _modulator->pop(maxSamples);
 
         if (not mpkt)
             break;
@@ -172,5 +174,5 @@ void MAC::txSlot(Clock::time_point when, size_t maxSamples)
         txBuf.emplace_back(std::move(mpkt->samples));
     }
 
-    usrp->burstTX(when, txBuf);
+    _usrp->burstTX(when, txBuf);
 }

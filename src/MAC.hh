@@ -9,59 +9,77 @@
 #include <complex>
 
 #include "NET.hh"
-#include "ParallelPacketDemodulator.hh"
-#include "ParallelPacketModulator.hh"
+#include "PacketDemodulator.hh"
+#include "PacketModulator.hh"
 #include "USRP.hh"
 #include "phy/PHY.hh"
 
+/** @brief A TDMA MAC. */
 class MAC
 {
 public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<NET> net,
         std::shared_ptr<PHY> phy,
+        std::shared_ptr<PacketModulator> modulator,
+        std::shared_ptr<PacketDemodulator> demodulator,
         double bandwidth,
         double frame_size,
-        double guard_size,
-        size_t rx_pool_size);
+        double guard_size);
     ~MAC();
 
     void stop(void);
 
 private:
-    std::shared_ptr<USRP>     usrp;
-    std::shared_ptr<NET>      net;
-    ParallelPacketModulator   modQueue;
-    ParallelPacketDemodulator demodQueue;
+    /** @brief Our USRP device. */
+    std::shared_ptr<USRP> _usrp;
+
+    /** @brief The network we interact with. */
+    std::shared_ptr<NET> _net;
+
+    /** @brief Our PHY. */
+    std::shared_ptr<PHY> _phy;
+
+    /** @brief Our packet modulator. */
+    std::shared_ptr<PacketModulator> _modulator;
+
+    /** @brief Our packet demodulator. */
+    std::shared_ptr<PacketDemodulator> _demodulator;
 
     /** @brief Bandwidth */
     double _bandwidth;
 
-    /** Length of TDMA frame (sec) */
-    double frame_size;
+    /** @brief RX rate */
+    double _rx_rate;
 
-    /** Length of a single TDMA slot, *including* guard (sec) */
-    double slot_size;
+    /** @brief TX rate */
+    double _tx_rate;
 
-    /** Length of inter-slot guard (sec) */
-    double guard_size;
+    /** @brief Length of TDMA frame (sec) */
+    double _frame_size;
 
-    /** Flag indicating if we should stop processing packets */
-    bool done;
+    /** @brief Length of a single TDMA slot, *including* guard (sec) */
+    double _slot_size;
 
-    /** Thread running rxWorker */
-    std::thread rxThread;
+    /** @brief Length of inter-slot guard (sec) */
+    double _guard_size;
 
-    /** Worker receiving packets */
+    /** @brief Flag indicating if we should stop processing packets */
+    bool _done;
+
+    /** @brief Thread running rxWorker */
+    std::thread _rxThread;
+
+    /** @brief Worker receiving packets */
     void rxWorker(void);
 
-    /** Thread running txWorker */
-    std::thread txThread;
+    /** @brief Thread running txWorker */
+    std::thread _txThread;
 
-    /** Worker transmitting packets */
+    /** @brief Worker transmitting packets */
     void txWorker(void);
 
-    /** Transmit one slot's worth of samples */
+    /** @brief Transmit one slot's worth of samples */
     void txSlot(Clock::time_point when, size_t maxSamples);
 };
 
