@@ -40,6 +40,11 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
     phy->setRxRate(_rx_rate);
     phy->setTxRate(_tx_rate);
 
+    if (logger) {
+        logger->setAttribute("tx_bandwidth", _tx_rate);
+        logger->setAttribute("rx_bandwidth", _rx_rate);
+    }
+
     _rxThread = std::thread(&MAC::rxWorker, this);
     _txThread = std::thread(&MAC::txWorker, this);
 

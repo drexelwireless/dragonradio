@@ -104,9 +104,12 @@ int main(int argc, char** argv)
     auto usrp = std::make_shared<USRP>(addr, x310, center_freq, "TX/RX", x310 ? "RX2" : "TX/RX", tx_gain, rx_gain);
 
     if (logfile) {
-        logger = std::make_shared<Logger>();
+        Clock::time_point t_start = Clock::time_point(Clock::now().get_full_secs());
+
+        logger = std::make_shared<Logger>(t_start);
         logger->open(logfile);
-        logger->setNodeId(node_id);
+        logger->setAttribute("start", (uint32_t) t_start.get_full_secs());
+        logger->setAttribute("node_id", node_id);
     }
 
     auto net = std::make_shared<NET>("tap0",node_id,nodes_in_net);
@@ -125,11 +128,6 @@ int main(int argc, char** argv)
     auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, false, rx_thread_pool_size);
 
     auto mac = std::make_shared<MAC>(usrp, net, phy, modulator, demodulator, bandwidth, frame_size, guard_size);
-
-    if (logger) {
-        logger->setTXBandwidth(bandwidth*phy->getTxRateOversample());
-        logger->setRXBandwidth(bandwidth*phy->getRxRateOversample());
-    }
 
     // Wait for Ctrl-C
     sigset_t waitset;

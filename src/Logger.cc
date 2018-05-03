@@ -53,52 +53,8 @@ struct PacketSendEntry {
     hvl_t iq_data;
 };
 
-void addAttribute(H5::H5Location &loc,
-                  const std::string& name,
-                  const std::string& val)
-{
-    H5::StrType   h5_type(H5::PredType::C_S1, H5T_VARIABLE);
-    H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = loc.createAttribute(name, h5_type, attr_space);
-
-    att.write(h5_type, val);
-}
-
-void addAttribute(H5::H5Location &loc,
-                  const std::string& name,
-                  uint8_t val)
-{
-    H5::IntType   h5_type(H5::PredType::NATIVE_UINT8);
-    H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = loc.createAttribute(name, h5_type, attr_space);
-
-    att.write(h5_type, &val);
-}
-
-void addAttribute(H5::H5Location &loc,
-                  const std::string& name,
-                  uint32_t val)
-{
-    H5::IntType   h5_type(H5::PredType::NATIVE_UINT32);
-    H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = loc.createAttribute(name, h5_type, attr_space);
-
-    att.write(h5_type, &val);
-}
-
-void addAttribute(H5::H5Location &loc,
-                  const std::string& name,
-                  double val)
-{
-    H5::FloatType h5_type(H5::PredType::NATIVE_DOUBLE);
-    H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = loc.createAttribute(name, h5_type, attr_space);
-
-    att.write(h5_type, &val);
-}
-
-Logger::Logger(void) :
-  _t_start(Clock::now()),
+Logger::Logger(Clock::time_point t_start) :
+  _t_start(t_start),
   _t_last_slot((time_t) 0),
   _done(false)
 {
@@ -153,7 +109,6 @@ void Logger::open(const std::string& filename)
 
     // Create H5 groups
     _file = H5::H5File(filename, H5F_ACC_TRUNC);
-    addAttribute(_file, "start", (uint32_t) _t_start.get_full_secs());
 
     _slots = std::make_unique<ExtensibleDataSet>(_file, "slots", h5_slot);
     _recv = std::make_unique<ExtensibleDataSet>(_file, "recv", h5_packet_recv);
@@ -163,29 +118,40 @@ void Logger::open(const std::string& filename)
     worker_thread = std::thread(&Logger::worker, this);
 }
 
-void Logger::setNodeId(NodeId node_id)
+void Logger::setAttribute(const std::string& name, const std::string& val)
 {
-    addAttribute(_file, "node_id", node_id);
+    H5::StrType   h5_type(H5::PredType::C_S1, H5T_VARIABLE);
+    H5::DataSpace attr_space(H5S_SCALAR);
+    H5::Attribute att = _file.createAttribute(name, h5_type, attr_space);
+
+    att.write(h5_type, val);
 }
 
-void Logger::setTXBandwidth(double bw)
+void Logger::setAttribute(const std::string& name, uint8_t val)
 {
-    addAttribute(_file, "tx_bandwidth", bw);
+    H5::IntType   h5_type(H5::PredType::NATIVE_UINT8);
+    H5::DataSpace attr_space(H5S_SCALAR);
+    H5::Attribute att = _file.createAttribute(name, h5_type, attr_space);
+
+    att.write(h5_type, &val);
 }
 
-void Logger::setRXBandwidth(double bw)
+void Logger::setAttribute(const std::string& name, uint32_t val)
 {
-    addAttribute(_file, "rx_bandwidth", bw);
+    H5::IntType   h5_type(H5::PredType::NATIVE_UINT32);
+    H5::DataSpace attr_space(H5S_SCALAR);
+    H5::Attribute att = _file.createAttribute(name, h5_type, attr_space);
+
+    att.write(h5_type, &val);
 }
 
-void Logger::stop(void)
+void Logger::setAttribute(const std::string& name, double val)
 {
-    _done = true;
+    H5::FloatType h5_type(H5::PredType::NATIVE_DOUBLE);
+    H5::DataSpace attr_space(H5S_SCALAR);
+    H5::Attribute att = _file.createAttribute(name, h5_type, attr_space);
 
-    log_q.stop();
-
-    if (worker_thread.joinable())
-        worker_thread.join();
+    att.write(h5_type, &val);
 }
 
 void Logger::logSlot(std::shared_ptr<IQBuf> buf)
@@ -197,7 +163,6 @@ void Logger::logSlot(std::shared_ptr<IQBuf> buf)
         _t_last_slot = buf->timestamp;
     }
 }
-
 
 void Logger::logRecv(const Clock::time_point& t,
                      bool header_valid,
@@ -215,6 +180,16 @@ void Logger::logSend(const Clock::time_point& t,
                      std::shared_ptr<IQBuf> buf)
 {
     log_q.emplace([=](){ _logSend(t, hdr, buf); });
+}
+
+void Logger::stop(void)
+{
+    _done = true;
+
+    log_q.stop();
+
+    if (worker_thread.joinable())
+        worker_thread.join();
 }
 
 void Logger::worker(void)

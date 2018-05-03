@@ -12,6 +12,7 @@
 #include <H5Cpp.h>
 
 #include "buffer.hh"
+#include "Clock.hh"
 #include "ExtensibleDataSet.hh"
 #include "IQBuffer.hh"
 #include "Node.hh"
@@ -25,17 +26,15 @@ extern std::shared_ptr<Logger> logger;
 
 class Logger {
 public:
-    Logger();
+    Logger(Clock::time_point t_start);
     ~Logger();
 
     void open(const std::string& filename);
 
-    void setNodeId(NodeId node_id);
-
-    void setTXBandwidth(double bw);
-    void setRXBandwidth(double bw);
-
-    void stop(void);
+    void setAttribute(const std::string& name, const std::string& val);
+    void setAttribute(const std::string& name, const uint8_t val);
+    void setAttribute(const std::string& name, const uint32_t val);
+    void setAttribute(const std::string& name, const double val);
 
     void logSlot(std::shared_ptr<IQBuf> buf);
     void logRecv(const Clock::time_point& t,
@@ -48,6 +47,8 @@ public:
      void logSend(const Clock::time_point& t,
                   const Header& hdr,
                   std::shared_ptr<IQBuf> buf);
+
+    void stop(void);
 
 private:
     H5::H5File _file;
