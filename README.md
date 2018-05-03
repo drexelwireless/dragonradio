@@ -1,44 +1,39 @@
-# full-radio
+# `full-radio`
 
-Cloning this repository
-  - git clone https://github.com/dwsl/full-radio.git
-  - make the dependencies
-    - sudo apt-get install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils cmake build-essential
-    - cd libfec
-    - ./configure
-    - make
-    - sudo make install
-    - sudo ldconfig
-    - cd ../liquid_dsp
-    - ./bootstrap.sh
-    - ./configure
-    - make
-    - sudo make install
-    - sudo ldconfig
-    - cd ../liquid_usrp
-    - ./bootstrap.sh
-    - ./configure
-    - (edit the makefile to NOT build the examples) -- line 147 in makefile backspace "examples" so that we just build libraries
-    - make
-    - sudo make install
-    - sudo ldconfig
-    - cd ../../
-  - run make root level of full-radio
-  - (to update when changes are made to master run "git pull origin master" in your full-radio folder)
+## Cloning the repository
 
-Running in loopback (you don't need a USRP)
-  - set main.cc's loopback bool to true
-  - run make at the terminal
-  - run ./full-radio at the terminal
-  - open up a new terminal and run ping 10.10.10.2
-  - the loopback mode will "spoof" the data packet to make it appear like it's source was 10.10.10.2 even though it was transmitted from 10.10.10.1. This makes the operating system think it's got data to handle, so it does. Therefore, all types of network applications will be supported even in loopback.
-  
-Running in normal mode (loopback set to false)
-  - get atleast two nodes connected to USRPs
-  - set one node's node_id to 2 in main.cc (other should be left at 1)
-  - run make at the terminal of both nodes
-  - run ./full-radio at the terminal of both nodes
-  - open up new terminal on both nodes
-  - run some kind of network application (ping,scp,nc,MGEN,iperf) node 1 will have ip address 10.10.10.1 and 2 will have 10.10.10.2
+This version of full-radio utilizes submodules, so you will need to perform a recursive checkout as follows:
+
+```
+git clone --recursive -b mainland https://github.com/dwsl/full-radio.git full-radio
+```
+
+The submodules point to public GitHub repos with SC2-specific changes for uhd, liquid-dsp, and liquid-usrp. There is also a submodule for libfec, although it doesn't currently include any patches.
+
+## Building the radio
+
+If you are using Ubuntu, the `build-dependencies.sh` script will build and install all dependencies, including any necessary packages and all submodules in the `dependencies` directory.
+
+After installing the dependencies, typing `make` should suffice to build the radio binary, which is `full-radio`.
+
+## Running the radio
+
+Available CLI options can be displayed by invoking `full-radio` with either the `-?` or `-h` options.
+
+The options are largely identical to the options for the liquid-usrp examples: if the examples and `full-radio` both allow setting the same parameter, then the corresponding option flags are identical.
+
+This radio also allows a choice of PHY: flexframe-based PHY (the default), ofdmflexframe-based PHY (`-o`), and the multichannel ofdmflexframe-based PHY (`-u`).
+
+The `-i` option sets the node's ID. This is all you need to run a pair of radios. It defaults to 1.
+
+After starting up, the radio will create a `tap` device with IP address `10.10.10.NODEID` and a netmask of `255.255.255.0`, where `NODEID` is the node ID set with `-i`. Packets sent to this subnet will be sent over the radio.
+
+## Logging
+
+The radio provides extensive logging, available using the `-l` flag, which takes one argument that is the name of the log file. Logs are formatted as [HDF5](https://portal.hdfgroup.org/display/HDF5/HDF5).
+
+Radio configuration parameters are all stored as HDF5 attributes on the file itself. Additionally, three groups of data are also stored in the file: received packets, sent packets, and received time slots.
+
+When a packet is received, the IQ data for the time slot it belongs to is logged along with the IQ data for the previous time slot. This results in a substantial amount of data.
   
   
