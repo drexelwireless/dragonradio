@@ -21,7 +21,7 @@ public:
 
     void setWatermark(size_t watermark) override;
 
-    std::unique_ptr<ModPacket> pop(size_t maxSamples) override;
+    void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples);
 
     /** @brief Get the data validity check used by the flexframe. */
     crc_scheme get_check(void)

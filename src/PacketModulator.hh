@@ -18,10 +18,13 @@ public:
      */
     virtual void setWatermark(size_t watermark) = 0;
 
-    /** @brief Pop a modulated packet, but only if it consist of maxSamples
-     * samples or fewer.
+    /** @brief Pop a list of modulated packet such that the total number of
+     * modulated samples is maxSamples or fewer.
+     * @param pkts A reference to a list to which the popped packets will be
+     * appended.
+     * @param maxSample The maximum number of samples to pop.
      */
-    virtual std::unique_ptr<ModPacket> pop(size_t maxSamples) = 0;
+    virtual void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples) = 0;
 };
 
 #endif /* PACKETMODULATOR_H_ */

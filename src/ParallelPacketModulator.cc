@@ -46,27 +46,22 @@ void ParallelPacketModulator::setWatermark(size_t w)
         prod.notify_all();
 }
 
-std::unique_ptr<ModPacket> ParallelPacketModulator::pop(size_t maxSamples)
+void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples)
 {
-    std::unique_ptr<ModPacket>   pkt;
-
     {
         std::unique_lock<std::mutex> lock(m);
 
-        if (q.empty())
-            return nullptr;
+        while (!q.empty() && q.front()->samples->size() <= maxSamples) {
+            size_t n = q.front()->samples->size();
 
-        if (q.front()->samples->size() > maxSamples)
-            return nullptr;
-
-        pkt = std::move(q.front());
-        q.pop();
-        nsamples -= pkt->samples->size();
+            pkts.emplace_back(std::move(q.front()));
+            q.pop();
+            nsamples -= n;
+            maxSamples -= n;
+        }
     }
 
     prod.notify_all();
-
-    return pkt;
 }
 
 void ParallelPacketModulator::modWorker(void)

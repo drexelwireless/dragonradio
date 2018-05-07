@@ -156,28 +156,26 @@ void MAC::txWorker(void)
 
 void MAC::txSlot(Clock::time_point when, size_t maxSamples)
 {
-    std::list<std::shared_ptr<IQBuf>> txBuf;
+    std::list<std::shared_ptr<IQBuf>>     txBuf;
+    std::list<std::unique_ptr<ModPacket>> modBuf;
 
-    while (maxSamples > 0) {
-        std::shared_ptr<ModPacket> mpkt = _modulator->pop(maxSamples);
+    _modulator->pop(modBuf, maxSamples);
 
-        if (not mpkt)
-            break;
+    if (!modBuf.empty()) {
+        for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
+            if (logger) {
+                Header hdr;
 
-        maxSamples -= mpkt->samples->size();
+                hdr.pkt_id = (*it)->pkt->pkt_id;
+                hdr.src = (*it)->pkt->src;
+                hdr.dest = (*it)->pkt->dest;
 
-        if (logger) {
-            Header hdr;
+                logger->logSend(when, hdr, (*it)->samples);
+            }
 
-            hdr.pkt_id = mpkt->pkt->pkt_id;
-            hdr.src = mpkt->pkt->src;
-            hdr.dest = mpkt->pkt->dest;
-
-            logger->logSend(when, hdr, mpkt->samples);
+            txBuf.emplace_back(std::move((*it)->samples));
         }
 
-        txBuf.emplace_back(std::move(mpkt->samples));
+        _usrp->burstTX(when, txBuf);
     }
-
-    _usrp->burstTX(when, txBuf);
 }
