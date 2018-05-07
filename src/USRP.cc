@@ -57,8 +57,10 @@ USRP::USRP(const std::string& addr,
     usrp->set_tx_dc_offset(true);
     usrp->set_rx_dc_offset(true);
 
-    // Get max number of samples in a TX packet
-    _tx_max_samps = 512;
+    // During TX and RX, attempt to send/receive 8x the maximum number of
+    // samples in a packet
+    _tx_max_samps = 8*tx_stream->get_max_num_samps();
+    _rx_max_samps = 8*rx_stream->get_max_num_samps();
 }
 
 USRP::~USRP()
@@ -85,9 +87,14 @@ void USRP::set_rx_rate(double rate)
     usrp->set_rx_rate(rate);
 }
 
-void USRP::burstTX(Clock::time_point when, std::deque<std::shared_ptr<IQBuf>>& bufs)
+void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs)
 {
-    uhd::tx_metadata_t tx_md;
+    uhd::tx_metadata_t tx_md; // TX metadata for UHD
+    size_t             n;     // Size of next send
+
+    tx_md.time_spec = when;
+    tx_md.has_time_spec = true;
+    tx_md.start_of_burst = true;
 
     // We walk through the supplied queue of buffers and trasmit each in chunks
     // whose size is no more than _tx_max_samps bytes, which is the maximum size
@@ -95,24 +102,10 @@ void USRP::burstTX(Clock::time_point when, std::deque<std::shared_ptr<IQBuf>>& b
     // have a very large buffer to send.
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
         IQBuf& iqbuf = **it; // Current buffer we are sending
-        size_t off = 0;      // Offset into the current buffer of next send
-        size_t n = 0;        // Size of next send
 
-        while (off < iqbuf.size()) {
+        for (size_t off = 0; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
             n = std::min(_tx_max_samps, iqbuf.size() - off);
-
-            // If this is the first segment we are sending, give it a time spec
-            // and mark it as the start of a burst. Otherwise, mark it as not
-            // having a time spec (and not being the start of a burst).
-            if (it == bufs.begin()) {
-                tx_md.time_spec = when;
-                tx_md.has_time_spec = true;
-                tx_md.start_of_burst = true;
-            } else {
-                tx_md.has_time_spec = false;
-                tx_md.start_of_burst = false;
-            }
 
             // If this is the last segment of the current buffer *and* this is
             // the last buffer, mark this transmission as the end of the burst.
@@ -121,11 +114,16 @@ void USRP::burstTX(Clock::time_point when, std::deque<std::shared_ptr<IQBuf>>& b
 
             // Send the buffer segment and update the offset into the current
             // buffer.
-            tx_stream->send(&iqbuf[off], n, tx_md);
-            off += n;
+            n = tx_stream->send(&iqbuf[off], n, tx_md);
+
+            // Future transmissions do not have time specs and are not the start
+            // of a burst.
+            tx_md.has_time_spec = false;
+            tx_md.start_of_burst = false;
         }
     }
 }
+
 void USRP::startRXStream(Clock::time_point when)
 {
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
@@ -149,13 +147,13 @@ void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
     Clock::time_point t_end = t_start + static_cast<double>(nsamps)/txRate;
     size_t            ndelivered = 0;
 
-    buf.resize(nsamps + MAXSAMPS);
+    buf.resize(nsamps + _rx_max_samps);
 
     for (;;) {
         uhd::rx_metadata_t rx_md;
         ssize_t            n;
 
-        n = rx_stream->recv(&buf[ndelivered], MAXSAMPS, rx_md, 0.1, false);
+        n = rx_stream->recv(&buf[ndelivered], _rx_max_samps, rx_md, 0.1, false);
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());

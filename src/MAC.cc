@@ -98,7 +98,7 @@ void MAC::rxWorker(void)
             t_next_slot += _slot_size;
 
             // Read samples for current slot
-            auto curSlot = std::make_shared<IQBuf>(slot_samps + USRP::MAXSAMPS);
+            auto curSlot = std::make_shared<IQBuf>(slot_samps + _usrp->getMaxRXSamps());
 
             _demodulator->push(curSlot);
 
@@ -156,7 +156,7 @@ void MAC::txWorker(void)
 
 void MAC::txSlot(Clock::time_point when, size_t maxSamples)
 {
-    std::deque<std::shared_ptr<IQBuf>> txBuf;
+    std::list<std::shared_ptr<IQBuf>> txBuf;
 
     while (maxSamples > 0) {
         std::shared_ptr<ModPacket> mpkt = _modulator->pop(maxSamples);
