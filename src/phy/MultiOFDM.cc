@@ -37,7 +37,7 @@ const size_t NGEN = 2;
 // Initial sample buffer size
 const size_t MODBUF_SIZE = 16384;
 
-std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPacket> pkt)
+void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt)
 {
     PHYHeader header;
 
@@ -81,13 +81,9 @@ std::unique_ptr<ModPacket> MultiOFDM::Modulator::modulate(std::unique_ptr<NetPac
     // Resize the final buffer to the number of samples generated.
     iqbuf->resize(nsamples);
 
-    // Construct and return the ModPacket
-    auto mpkt = std::make_unique<ModPacket>();
-
-    mpkt->samples = std::move(iqbuf);
-    mpkt->pkt = std::move(pkt);
-
-    return mpkt;
+    // Fill in the ModPacket
+    mpkt.samples = std::move(iqbuf);
+    mpkt.pkt = std::move(pkt);
 }
 
 MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :

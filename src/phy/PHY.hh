@@ -33,10 +33,10 @@ public:
         virtual ~Modulator() {};
 
         /** @brief Modulate a packet to produce IQ samples.
+         *  @param mpkt The ModPacket in which to place modulated samples.
          *  @param pkt The NetPacket to modulate.
-         *  @return A ModPacket containing IQ samples.
          */
-        virtual std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) = 0;
+        virtual void modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt) = 0;
     };
 
     /** @brief Demodulate IQ data.

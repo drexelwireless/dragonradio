@@ -31,7 +31,7 @@ public:
         Modulator& operator=(const Modulator&) = delete;
         Modulator& operator=(Modulator&&) = delete;
 
-        std::unique_ptr<ModPacket> modulate(std::unique_ptr<NetPacket> pkt) override;
+        void modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt) override;
 
     private:
         /** @brief Our associated PHY. */

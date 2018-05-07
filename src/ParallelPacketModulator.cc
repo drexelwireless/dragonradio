@@ -92,10 +92,9 @@ void ParallelPacketModulator::modWorker(void)
         pkt->g = _g;
 
         // Modulate the packet
-        std::unique_ptr<ModPacket> mpkt = modulator->modulate(std::move(pkt));
+        auto mpkt = std::make_unique<ModPacket>();
 
-        if (not mpkt)
-            continue;
+        modulator->modulate(*mpkt, std::move(pkt));
 
         // Put the packet on the queue
         {
