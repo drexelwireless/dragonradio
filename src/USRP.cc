@@ -12,8 +12,10 @@ USRP::USRP(const std::string& addr,
            const std::string& tx_ant,
            const std::string& rx_ant,
            float tx_gain,
-           float rx_gain)
-  : usrp(uhd::usrp::multi_usrp::make(addr)), x310(x310)
+           float rx_gain) :
+    usrp(uhd::usrp::multi_usrp::make(addr)),
+    x310(x310),
+    _done(false)
 {
     usrp->set_tx_antenna(tx_ant);
     usrp->set_rx_antenna(rx_ant);
@@ -61,6 +63,9 @@ USRP::USRP(const std::string& addr,
     // samples in a packet
     _tx_max_samps = 8*tx_stream->get_max_num_samps();
     _rx_max_samps = 8*rx_stream->get_max_num_samps();
+
+    // Start thread that receives TX errors
+    _tx_thread = std::thread(&USRP::_tx_error, this);
 }
 
 USRP::~USRP()
@@ -186,5 +191,51 @@ void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
             break;
         } else
             buf.nsamples.store(ndelivered, std::memory_order_release);
+    }
+}
+
+void USRP::stop(void)
+{
+    _done = true;
+
+    if (_tx_thread.joinable())
+        _tx_thread.join();
+}
+
+void USRP::_tx_error(void)
+{
+    uhd::async_metadata_t async_md;
+
+    while (!_done) {
+        if (tx_stream->recv_async_msg(async_md, 0.1)) {
+            switch(async_md.event_code){
+                case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
+                    break;
+
+                case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
+                    fprintf(stderr, "TX error: an internal send buffer has emptied\n");
+                    break;
+
+                case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
+                    fprintf(stderr, "TX error: packet loss between host and device\n");
+                    break;
+
+                case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
+                    fprintf(stderr, "TX error: packet had time that was late\n");
+                    break;
+
+                case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
+                    fprintf(stderr, "TX error: underflow occurred inside a packet\n");
+                    break;
+
+                case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:
+                    fprintf(stderr, "TX error: packet loss within a burst\n");
+                    break;
+
+                case uhd::async_metadata_t::EVENT_CODE_USER_PAYLOAD:
+                    fprintf(stderr, "TX error: some kind of custom user payload\n");
+                    break;
+            }
+        }
     }
 }

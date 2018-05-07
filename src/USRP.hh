@@ -3,6 +3,8 @@
 
 #include <deque>
 #include <string>
+#include <thread>
+
 #include <uhd/usrp/multi_usrp.hpp>
 
 #include "Clock.hh"
@@ -59,6 +61,9 @@ public:
         return _rx_max_samps;
     }
 
+    /** @brief Stop processing data. */
+    void stop(void);
+
 private:
     /** @brief Our associated UHD USRP. */
     uhd::usrp::multi_usrp::sptr usrp;
@@ -79,6 +84,15 @@ private:
     /** @brief Maximum number of samples we will read at a time during burstRX.
      */
     size_t _rx_max_samps;
+
+    /** @brief Flag indicating the we should stop processing data. */
+    bool _done;
+
+    /** @brief Thread that receives TX errors. */
+    std::thread _tx_thread;
+
+    /** @brief Worker that receives TX errors. */
+    void _tx_error(void);
 };
 
 #endif /* USRP_H_ */

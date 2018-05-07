@@ -216,6 +216,7 @@ int main(int argc, char** argv)
     mac->stop();
     modulator->stop();
     demodulator->stop();
+    usrp->stop();
     if (logger) {
         logger->stop();
         logger.reset();
