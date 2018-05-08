@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     double guard_size = .01;                 // inter-slot guard time (sec)
     unsigned int nmodthreads = 2;            // number of threads available for modulation
     unsigned int ndemodthreads = 10;         // number of threads available for demodulation
-    bool ordered = false;                    // Force ordered demodulation
+    bool ordered = true;                     // Force ordered demodulation
 
     int ch;
 
