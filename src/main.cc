@@ -8,7 +8,6 @@
 #include <thread>
 
 #include "Logger.hh"
-#include "MAC.hh"
 #include "NET.hh"
 #include "ParallelPacketModulator.hh"
 #include "ParallelPacketDemodulator.hh"
@@ -16,6 +15,7 @@
 #include "phy/FlexFrame.hh"
 #include "phy/MultiOFDM.hh"
 #include "phy/OFDM.hh"
+#include "mac/TDMA.hh"
 
 void usage(void)
 {
@@ -197,7 +197,7 @@ int main(int argc, char** argv)
 
     auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, ordered, ndemodthreads);
 
-    auto mac = std::make_shared<MAC>(usrp, net, phy, modulator, demodulator, bandwidth, frame_size, guard_size);
+    auto mac = std::make_shared<TDMA>(usrp, net, phy, modulator, demodulator, bandwidth, frame_size, guard_size);
 
     // Wait for Ctrl-C
     sigset_t waitset;

@@ -31,7 +31,6 @@ SOURCES := \
     ExtensibleDataSet.cc \
     Liquid.cc \
     Logger.cc \
-    MAC.cc \
     main.cc \
     NET.cc \
     ParallelPacketDemodulator.cc \
@@ -42,7 +41,8 @@ SOURCES := \
     Util.cc \
     phy/FlexFrame.cc \
     phy/MultiOFDM.cc \
-    phy/OFDM.cc
+    phy/OFDM.cc \
+    mac/TDMA.cc
 
 OBJECTS := $(patsubst %.cc,$(OBJDIR)/%.o,$(SOURCES))
 

@@ -9,17 +9,17 @@
 
 #include "Clock.hh"
 #include "Logger.hh"
-#include "MAC.hh"
 #include "USRP.hh"
+#include "mac/TDMA.hh"
 
-MAC::MAC(std::shared_ptr<USRP> usrp,
-         std::shared_ptr<NET> net,
-         std::shared_ptr<PHY> phy,
-         std::shared_ptr<PacketModulator> modulator,
-         std::shared_ptr<PacketDemodulator> demodulator,
-         double bandwidth,
-         double frame_size,
-         double guard_size)
+TDMA::TDMA(std::shared_ptr<USRP> usrp,
+           std::shared_ptr<NET> net,
+           std::shared_ptr<PHY> phy,
+           std::shared_ptr<PacketModulator> modulator,
+           std::shared_ptr<PacketDemodulator> demodulator,
+           double bandwidth,
+           double frame_size,
+           double guard_size)
   : _usrp(usrp),
     _net(net),
     _phy(phy),
@@ -45,18 +45,18 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
         logger->setAttribute("rx_bandwidth", _rx_rate);
     }
 
-    _rxThread = std::thread(&MAC::rxWorker, this);
-    _txThread = std::thread(&MAC::txWorker, this);
+    _rxThread = std::thread(&TDMA::rxWorker, this);
+    _txThread = std::thread(&TDMA::txWorker, this);
 
     _demodulator->setDemodParameters(0.5*_guard_size*_rx_rate,
                                      (_slot_size - 0.5*_guard_size)*_tx_rate);
 }
 
-MAC::~MAC()
+TDMA::~TDMA()
 {
 }
 
-void MAC::stop(void)
+void TDMA::stop(void)
 {
     _done = true;
 
@@ -67,7 +67,7 @@ void MAC::stop(void)
         _txThread.join();
 }
 
-void MAC::rxWorker(void)
+void TDMA::rxWorker(void)
 {
     Clock::time_point t_now;        // Current time
     Clock::time_point t_cur_slot;   // Time at which current slot starts
@@ -112,7 +112,7 @@ void MAC::rxWorker(void)
     }
 }
 
-void MAC::txWorker(void)
+void TDMA::txWorker(void)
 {
     Clock::time_point t_now;       // Current time
     Clock::time_point t_send_slot; // Time at which *our* slot starts
@@ -154,7 +154,7 @@ void MAC::txWorker(void)
     }
 }
 
-void MAC::txSlot(Clock::time_point when, size_t maxSamples)
+void TDMA::txSlot(Clock::time_point when, size_t maxSamples)
 {
     std::list<std::shared_ptr<IQBuf>>     txBuf;
     std::list<std::unique_ptr<ModPacket>> modBuf;

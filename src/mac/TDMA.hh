@@ -1,7 +1,5 @@
-// DWSL - full radio stack
-
-#ifndef MAC_H_
-#define MAC_H_
+#ifndef TDMA_H_
+#define TDMA_H_
 
 #include <liquid/liquid.h>
 
@@ -13,22 +11,23 @@
 #include "PacketModulator.hh"
 #include "USRP.hh"
 #include "phy/PHY.hh"
+#include "mac/MAC.hh"
 
 /** @brief A TDMA MAC. */
-class MAC
+class TDMA : public MAC
 {
 public:
-    MAC(std::shared_ptr<USRP> usrp,
-        std::shared_ptr<NET> net,
-        std::shared_ptr<PHY> phy,
-        std::shared_ptr<PacketModulator> modulator,
-        std::shared_ptr<PacketDemodulator> demodulator,
-        double bandwidth,
-        double frame_size,
-        double guard_size);
-    ~MAC();
+    TDMA(std::shared_ptr<USRP> usrp,
+         std::shared_ptr<NET> net,
+         std::shared_ptr<PHY> phy,
+         std::shared_ptr<PacketModulator> modulator,
+         std::shared_ptr<PacketDemodulator> demodulator,
+         double bandwidth,
+         double frame_size,
+         double guard_size);
+    virtual ~TDMA();
 
-    void stop(void);
+    void stop(void) override;
 
 private:
     /** @brief Our USRP device. */
@@ -83,4 +82,4 @@ private:
     void txSlot(Clock::time_point when, size_t maxSamples);
 };
 
-#endif /* MAC_H_ */
+#endif /* TDMA_H_ */
