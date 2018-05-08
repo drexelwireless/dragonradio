@@ -8,11 +8,15 @@ RM       = rm -f
 RMRF     = rm -rf
 CXX      = g++
 LINKER   = g++
-CPPFLAGS = -Isrc -I/usr/local/include/ -I/usr/include/hdf5/serial/
+CPPFLAGS = -Isrc -I/usr/local/include/
 CXXFLAGS = -Ofast -march=native -g3 -Wall -pedantic -ansi -std=c++17
-LDFLAGS  = -lc -lconfig -lfftw3f -lliquid -lliquidusrp -lm -lpthread -luhd
+LDFLAGS  =
+LIBS     = -lc -lconfig -lfftw3f -lliquid -lliquidusrp -lm -lpthread -luhd
 
-LDFLAGS += \
+# Needed for HDF5
+CPPFLAGS += -I/usr/include/hdf5/serial
+
+LIBS += \
 	/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5_hl_cpp.a \
 	/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5_cpp.a \
 	/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5_hl.a \
@@ -58,7 +62,7 @@ clean :
 	$(RMRF) docs/html
 
 $(TARGET) : $(OBJECTS)
-	$(LINKER) $(OBJECTS) $(LDFLAGS) -o $@
+	$(LINKER) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
 
 -include $(patsubst %.cc,$(OBJDIR)/%.dep,$(SOURCES))
 
