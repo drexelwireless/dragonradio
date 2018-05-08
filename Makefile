@@ -11,7 +11,7 @@ LINKER   = g++
 CPPFLAGS = -Isrc -I/usr/local/include/
 CXXFLAGS = -Ofast -march=native -g3 -Wall -pedantic -ansi -std=c++17
 LDFLAGS  =
-LIBS     = -lc -lconfig -lfftw3f -lliquid -lliquidusrp -lm -lpthread -luhd
+LIBS     = -lc -lfftw3f -lliquid -lliquidusrp -lm -lpthread -luhd
 
 # Needed for HDF5
 CPPFLAGS += -I/usr/include/hdf5/serial
