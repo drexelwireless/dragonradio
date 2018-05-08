@@ -28,7 +28,6 @@ def main():
         node = log.nodes[node_id]
         print("Node {}:".format(node_id))
         print("\t{}".format(node.start))
-        print("\t{}".format(node.crc_scheme))
         for attr in node.log_attrs:
             print("\t{}: {}".format(attr, node.log_attrs[attr]))
 

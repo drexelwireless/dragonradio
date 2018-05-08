@@ -16,8 +16,112 @@ class Slot:
     def data(self):
         return self._iqdata
 
+LIQUID_CRC = [ 'unknown'
+             , 'none'
+             , 'checksum'
+             , 'crc8'
+             , 'crc16'
+             , 'crc24'
+             , 'crc32' ]
+
+LIQUID_FEC = [ 'unknown'
+             , 'none'
+             , 'rep3'
+             , 'rep5'
+             , 'h74'
+             , 'h84'
+             , 'h128'
+             , 'g2412'
+             , 'secded2216'
+             , 'secded3932'
+             , 'secded7264'
+             , 'v27'
+             , 'v29'
+             , 'v39'
+             , 'v615'
+             , 'v27p23'
+             , 'v27p34'
+             , 'v27p45'
+             , 'v27p56'
+             , 'v27p67'
+             , 'v27p78'
+             , 'v29p23'
+             , 'v29p34'
+             , 'v29p45'
+             , 'v29p56'
+             , 'v29p67'
+             , 'v29p78'
+             , 'rs8' ]
+
+LIQUID_MS = [ 'unknown'
+
+              # phase-shift keying
+            , 'psk2'
+            , 'psk4'
+            , 'psk8'
+            , 'psk16'
+            , 'psk32'
+            , 'psk64'
+            , 'psk128'
+            , 'psk256'
+
+              # differential phase-shift keying
+            , 'dpsk2'
+            , 'dpsk4'
+            , 'dpsk8'
+            , 'dpsk16'
+            , 'dpsk32'
+            , 'dpsk64'
+            , 'dpsk128'
+            , 'dpsk256'
+
+              # amplitude-shift keying
+            , 'ask2'
+            , 'ask4'
+            , 'ask8'
+            , 'ask16'
+            , 'ask32'
+            , 'ask64'
+            , 'ask128'
+            , 'ask256'
+
+              # quadrature amplitude-shift keying
+            , 'qam4'
+            , 'qam8'
+            , 'qam16'
+            , 'qam32'
+            , 'qam64'
+            , 'qam128'
+            , 'qam256'
+
+              # amplitude/phase-shift keying
+            , 'apsk4'
+            , 'apsk8'
+            , 'apsk16'
+            , 'apsk32'
+            , 'apsk64'
+            , 'apsk128'
+            , 'apsk256'
+
+              # specific modem types
+            , 'bpsk'
+            , 'qpsk'
+            , 'ook'
+            , 'sqam32'
+            , 'sqam128'
+            , 'V29'
+            , 'arb16opt'
+            , 'arb32opt'
+            , 'arb64opt'
+            , 'arb128opt'
+            , 'arb256opt'
+            , 'arb64vt'
+
+              # arbitrary modem type
+            , 'arb' ]
+
 class RecvPacket:
-    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, pkt_id, src, dest, evm, rssi, iqdata):
+    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, pkt_id, src, dest, crc, fec0, fec1, ms, evm, rssi, iqdata):
         self._timestamp = timestamp
         self._start = start
         self._end = end
@@ -26,13 +130,18 @@ class RecvPacket:
         self._pkt_id = pkt_id
         self._src = src
         self._dest = dest
+        self._crc = crc
+        self._fec0 = fec0
+        self._fec1 = fec1
+        self._ms = ms
         self._evm = evm
         self._rssi = rssi
         self._iqdata = iqdata
 
     def __str__(self):
-        return "Packet {} ({} -> {})".\
-        format(self.pkt_id, self.src, self.dest)
+        return "Packet(pkt_id={pkt_id}, src={src}, dest={dest}, ms={ms}, fec0={fec0}, fec1={fec1})".\
+        format(pkt_id=self.pkt_id, src=self.src,  dest=self.dest, \
+               ms=self.ms, fec0=self.fec0,  fec1=self.fec1)
 
     @property
     def timestamp(self):
@@ -73,6 +182,26 @@ class RecvPacket:
     def dest(self):
         """Destination node ID"""
         return self._dest
+
+    @property
+    def crc(self):
+        """Liquid CRC"""
+        return LIQUID_CRC[self._crc]
+
+    @property
+    def fec0(self):
+        """Liquid FEC0"""
+        return LIQUID_FEC[self._fec0]
+
+    @property
+    def fec1(self):
+        """Liquid FEC1"""
+        return LIQUID_FEC[self._fec1]
+
+    @property
+    def ms(self):
+        """Liquid modulation scheme"""
+        return LIQUID_MS[self._ms]
 
     @property
     def evm(self):

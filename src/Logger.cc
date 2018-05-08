@@ -34,6 +34,14 @@ struct PacketRecvEntry {
     uint8_t src;
     /** @brief Packet destination. */
     uint8_t dest;
+    /** @brief Liquid CRC scheme. */
+    crc_scheme crc;
+    /** @brief Liquid inner FEC scheme. */
+    fec_scheme fec0;
+    /** @brief Liquid outer FEC scheme. */
+    fec_scheme fec1;
+    /** @brief Liquid modulation scheme. */
+    modulation_scheme ms;
     /** @brief EVM [dB]. */
     float evm;
     /** @brief RSSI [dB]. */
@@ -83,6 +91,27 @@ void Logger::open(const std::string& filename)
     // H5 type for variable-length IQ data
     H5::VarLenType h5_iqdata(&h5_complex32);
 
+    // H5 type for Liquid CRC scheme
+    H5::EnumType h5_crc_scheme(sizeof(crc_scheme));
+    crc_scheme crc;
+
+    for (unsigned int i = 0; i < LIQUID_CRC_NUM_SCHEMES; ++i)
+        h5_crc_scheme.insert(crc_scheme_str[i][0], (crc=static_cast<crc_scheme>(i), &crc));
+
+    // H5 type for Liquid FEC scheme
+    H5::EnumType h5_fec_scheme(sizeof(fec_scheme));
+    fec_scheme fec;
+
+    for (unsigned int i = 0; i < LIQUID_FEC_NUM_SCHEMES; ++i)
+        h5_fec_scheme.insert(fec_scheme_str[i][0], (fec=static_cast<fec_scheme>(i), &fec));
+
+    // H5 type for Liquid modulation scheme
+    H5::EnumType h5_modulation_scheme(sizeof(modulation_scheme));
+    modulation_scheme ms;
+
+    for (unsigned int i = 0; i < LIQUID_MODEM_NUM_SCHEMES; ++i)
+        h5_modulation_scheme.insert(modulation_types[i].name, (ms=static_cast<modulation_scheme>(i), &ms));
+
     // H5 type for slots
     H5::CompType h5_slot(sizeof(SlotEntry));
 
@@ -100,6 +129,10 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("payload_valid", HOFFSET(PacketRecvEntry, payload_valid), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("src", HOFFSET(PacketRecvEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("dest", HOFFSET(PacketRecvEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("crc", HOFFSET(PacketRecvEntry, crc), h5_crc_scheme);
+    h5_packet_recv.insertMember("fec0", HOFFSET(PacketRecvEntry, fec0), h5_fec_scheme);
+    h5_packet_recv.insertMember("fec1", HOFFSET(PacketRecvEntry, fec1), h5_fec_scheme);
+    h5_packet_recv.insertMember("ms", HOFFSET(PacketRecvEntry, ms), h5_modulation_scheme);
     h5_packet_recv.insertMember("evm", HOFFSET(PacketRecvEntry, evm), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("rssi", HOFFSET(PacketRecvEntry, rssi), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("iq_data", HOFFSET(PacketRecvEntry, iq_data), h5_iqdata);
@@ -176,11 +209,15 @@ void Logger::logRecv(const Clock::time_point& t,
                      bool header_valid,
                      bool payload_valid,
                      const Header& hdr,
+                     crc_scheme crc,
+                     fec_scheme fec0,
+                     fec_scheme fec1,
+                     modulation_scheme ms,
                      float evm,
                      float rssi,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
-    log_q.emplace([=](){ _logRecv(t, start_samples, end_samples, header_valid, payload_valid, hdr, evm, rssi, buf); });
+    log_q.emplace([=](){ _logRecv(t, start_samples, end_samples, header_valid, payload_valid, hdr, crc, fec0, fec1, ms, evm, rssi, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
@@ -230,6 +267,10 @@ void Logger::_logRecv(const Clock::time_point& t,
                       bool header_valid,
                       bool payload_valid,
                       const Header& hdr,
+                      crc_scheme crc,
+                      fec_scheme fec0,
+                      fec_scheme fec1,
+                      modulation_scheme ms,
                       float evm,
                       float rssi,
                       std::shared_ptr<buffer<std::complex<float>>> buf)
@@ -244,6 +285,10 @@ void Logger::_logRecv(const Clock::time_point& t,
     entry.pkt_id = hdr.pkt_id;
     entry.src = hdr.src;
     entry.dest = hdr.dest;
+    entry.crc = crc;
+    entry.fec0 = fec0;
+    entry.fec1 = fec1;
+    entry.ms = ms;
     entry.evm = evm;
     entry.rssi = rssi;
     entry.iq_data.p = &(*buf)[0];

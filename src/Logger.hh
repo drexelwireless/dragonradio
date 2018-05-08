@@ -43,6 +43,10 @@ public:
                  bool header_valid,
                  bool payload_valid,
                  const Header& hdr,
+                 crc_scheme crc,
+                 fec_scheme fec0,
+                 fec_scheme fec1,
+                 modulation_scheme ms,
                  float evm,
                  float rssi,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
@@ -79,6 +83,10 @@ private:
                   bool header_valid,
                   bool payload_valid,
                   const Header& hdr,
+                  crc_scheme crc,
+                  fec_scheme fec0,
+                  fec_scheme fec1,
+                  modulation_scheme ms,
                   float evm,
                   float rssi,
                   std::shared_ptr<buffer<std::complex<float>>> buf);

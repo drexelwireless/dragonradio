@@ -174,10 +174,6 @@ int main(int argc, char** argv)
         logger->setAttribute("M", M);
         logger->setAttribute("cp_len", cp_len);
         logger->setAttribute("taper_len", taper_len);
-        logger->setAttribute("crc_scheme", crc_scheme_str[check][0]);
-        logger->setAttribute("fec0", fec_scheme_str[fec0][0]);
-        logger->setAttribute("fec1", fec_scheme_str[fec1][0]);
-        logger->setAttribute("modulation_scheme", modulation_types[ms].name);
     }
 
     auto net = std::make_shared<NET>("tap0", node_id, nodes_in_net);
