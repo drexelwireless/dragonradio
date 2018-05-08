@@ -8,7 +8,6 @@
 #include <thread>
 
 #include "Logger.hh"
-#include "NET.hh"
 #include "ParallelPacketModulator.hh"
 #include "ParallelPacketDemodulator.hh"
 #include "USRP.hh"
@@ -16,6 +15,7 @@
 #include "phy/MultiOFDM.hh"
 #include "phy/OFDM.hh"
 #include "mac/TDMA.hh"
+#include "net/Net.hh"
 
 void usage(void)
 {
@@ -176,7 +176,7 @@ int main(int argc, char** argv)
         logger->setAttribute("taper_len", taper_len);
     }
 
-    auto net = std::make_shared<NET>("tap0", node_id, nodes_in_net);
+    auto net = std::make_shared<Net>("tap0", node_id, nodes_in_net);
 
     std::shared_ptr<PHY> phy;
 

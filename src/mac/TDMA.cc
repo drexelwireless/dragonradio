@@ -13,7 +13,7 @@
 #include "mac/TDMA.hh"
 
 TDMA::TDMA(std::shared_ptr<USRP> usrp,
-           std::shared_ptr<NET> net,
+           std::shared_ptr<Net> net,
            std::shared_ptr<PHY> phy,
            std::shared_ptr<PacketModulator> modulator,
            std::shared_ptr<PacketDemodulator> demodulator,

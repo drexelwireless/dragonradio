@@ -36,17 +36,17 @@ SOURCES := \
     Liquid.cc \
     Logger.cc \
     main.cc \
-    NET.cc \
     ParallelPacketDemodulator.cc \
     ParallelPacketModulator.cc \
     RadioPacketQueue.cc \
-    TunTap.cc \
     USRP.cc \
     Util.cc \
     phy/FlexFrame.cc \
     phy/MultiOFDM.cc \
     phy/OFDM.cc \
-    mac/TDMA.cc
+    mac/TDMA.cc \
+    net/Net.cc \
+    net/TunTap.cc
 
 OBJECTS := $(patsubst %.cc,$(OBJDIR)/%.o,$(SOURCES))
 

@@ -6,19 +6,19 @@
 #include <vector>
 #include <complex>
 
-#include "NET.hh"
 #include "PacketDemodulator.hh"
 #include "PacketModulator.hh"
 #include "USRP.hh"
 #include "phy/PHY.hh"
 #include "mac/MAC.hh"
+#include "net/Net.hh"
 
 /** @brief A TDMA MAC. */
 class TDMA : public MAC
 {
 public:
     TDMA(std::shared_ptr<USRP> usrp,
-         std::shared_ptr<NET> net,
+         std::shared_ptr<Net> net,
          std::shared_ptr<PHY> phy,
          std::shared_ptr<PacketModulator> modulator,
          std::shared_ptr<PacketDemodulator> demodulator,
@@ -34,7 +34,7 @@ private:
     std::shared_ptr<USRP> _usrp;
 
     /** @brief The network we interact with. */
-    std::shared_ptr<NET> _net;
+    std::shared_ptr<Net> _net;
 
     /** @brief Our PHY. */
     std::shared_ptr<PHY> _phy;

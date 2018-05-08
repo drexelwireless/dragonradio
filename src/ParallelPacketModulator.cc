@@ -1,8 +1,8 @@
 #include "ParallelPacketModulator.hh"
-#include "NET.hh"
 #include "phy/PHY.hh"
+#include "net/Net.hh"
 
-ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<NET> net,
+ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
                                                  size_t nthreads) :
     net(net),

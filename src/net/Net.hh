@@ -1,9 +1,6 @@
-// DWSL - full radio stack
-
 #ifndef NET_HH_
 #define NET_HH_
 
-#include <TunTap.hh>
 #include <queue>
 #include <thread>
 #include <stdio.h>
@@ -11,12 +8,13 @@
 #include "Node.hh"
 #include "Packet.hh"
 #include "SafeQueue.hh"
+#include "net/TunTap.hh"
 
-class NET
+class Net
 {
 public:
-    NET(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& nodes);
-    ~NET();
+    Net(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& nodes);
+    ~Net();
 
     /** @brief Halt packet processing. */
     void stop(void);

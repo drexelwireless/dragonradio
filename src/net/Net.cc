@@ -1,5 +1,3 @@
-// DWSL - full radio stack
-
 #include <sys/types.h>
 #include <netinet/if_ether.h>
 #include <netinet/in.h>
@@ -8,9 +6,9 @@
 #include <cstddef>
 #include <cstring>
 
-#include "NET.hh"
+#include "net/Net.hh"
 
-NET::NET(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& nodes)
+Net::Net(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& nodes)
   : nodeId(nodeId),
     numNodes(nodes.size()),
     curPacketId(0),
@@ -20,15 +18,15 @@ NET::NET(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& 
 
     tt = std::make_unique<TunTap>(tap_name, nodeId, nodes);
 
-    recvThread = std::thread(&NET::recvWorker, this);
+    recvThread = std::thread(&Net::recvWorker, this);
 }
 
-NET::~NET()
+Net::~Net()
 {
     printf("Closing tap interface\n");
 }
 
-void NET::stop(void)
+void Net::stop(void)
 {
     done = true;
     recvQueue.stop();
@@ -37,17 +35,17 @@ void NET::stop(void)
         recvThread.join();
 }
 
-NodeId NET::getNodeId(void)
+NodeId Net::getNodeId(void)
 {
     return nodeId;
 }
 
-unsigned int NET::getNumNodes(void)
+unsigned int Net::getNumNodes(void)
 {
     return numNodes;
 }
 
-std::unique_ptr<NetPacket> NET::recvPacket(void)
+std::unique_ptr<NetPacket> Net::recvPacket(void)
 {
     std::unique_ptr<NetPacket> pkt;
 
@@ -56,12 +54,12 @@ std::unique_ptr<NetPacket> NET::recvPacket(void)
     return pkt;
 }
 
-bool NET::wantPacket(NodeId dest)
+bool Net::wantPacket(NodeId dest)
 {
     return dest == nodeId;
 }
 
-void NET::send(std::unique_ptr<RadioPacket> pkt)
+void Net::send(std::unique_ptr<RadioPacket> pkt)
 {
     tt->cwrite(pkt->data(), pkt->size());
 
@@ -75,7 +73,7 @@ void NET::send(std::unique_ptr<RadioPacket> pkt)
     which we should properly calculate at some point. */
 const size_t MAX_PKT_SIZE = 2000;
 
-void NET::recvWorker(void)
+void Net::recvWorker(void)
 {
     while (!done) {
         auto    pkt = std::make_unique<NetPacket>(MAX_PKT_SIZE);

@@ -2,12 +2,12 @@
 
 #include "Logger.hh"
 #include "ParallelPacketDemodulator.hh"
-#include "NET.hh"
 #include "phy/PHY.hh"
+#include "net/Net.hh"
 
 using namespace std::placeholders;
 
-ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<NET> net,
+ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
                                                      std::shared_ptr<PHY> phy,
                                                      bool order,
                                                      unsigned int nthreads) :

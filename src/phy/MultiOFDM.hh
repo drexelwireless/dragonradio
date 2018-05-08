@@ -9,8 +9,8 @@
 #include <liquid/multichanneltx.h>
 
 #include "ModPacket.hh"
-#include "NET.hh"
 #include "phy/PHY.hh"
+#include "net/Net.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp multi-channel OFDM %PHY code. */
 class MultiOFDM : public PHY
@@ -72,7 +72,7 @@ public:
 
 
     /** @brief Construct a multichannel OFDM PHY.
-     * @param net The NET to which we should send received packets.
+     * @param net The Net to which we should send received packets.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
@@ -81,7 +81,7 @@ public:
      * @param minPacketSize The minimum number of bytes we will send in a
      * packet.
      */
-    MultiOFDM(std::shared_ptr<NET> net,
+    MultiOFDM(std::shared_ptr<Net> net,
               unsigned int M,
               unsigned int cp_len,
               unsigned int taper_len,
@@ -118,8 +118,8 @@ private:
     unsigned int _taper_len;
     unsigned char *_p;
 
-    /** @brief The NET to which we should send received packets. */
-    std::shared_ptr<NET> _net;
+    /** @brief The Net to which we should send received packets. */
+    std::shared_ptr<Net> _net;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */

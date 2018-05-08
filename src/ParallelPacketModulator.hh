@@ -5,15 +5,15 @@
 #include <mutex>
 #include <queue>
 
-#include "NET.hh"
 #include "PacketModulator.hh"
 #include "phy/PHY.hh"
+#include "net/Net.hh"
 
 /** @brief A parallel packet modulator. */
 class ParallelPacketModulator : public PacketModulator
 {
 public:
-    ParallelPacketModulator(std::shared_ptr<NET> net,
+    ParallelPacketModulator(std::shared_ptr<Net> net,
                             std::shared_ptr<PHY> phy,
                             size_t nthreads);
     virtual ~ParallelPacketModulator();
@@ -91,7 +91,7 @@ public:
 
 private:
     /** @brief Our network. */
-    std::shared_ptr<NET> net;
+    std::shared_ptr<Net> net;
 
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy;

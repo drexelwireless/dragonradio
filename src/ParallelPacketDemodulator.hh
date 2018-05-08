@@ -6,10 +6,10 @@
 #include <list>
 #include <mutex>
 
-#include "NET.hh"
 #include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
 #include "phy/PHY.hh"
+#include "net/Net.hh"
 
 /** @brief A thread-safe queue of IQ buffers that need to be demodulated. */
 class IQBufQueue {
@@ -67,7 +67,7 @@ private:
 class ParallelPacketDemodulator : public PacketDemodulator
 {
 public:
-    ParallelPacketDemodulator(std::shared_ptr<NET> net,
+    ParallelPacketDemodulator(std::shared_ptr<Net> net,
                               std::shared_ptr<PHY> phy,
                               bool order,
                               unsigned int nthreads);
@@ -90,7 +90,7 @@ public:
 
 private:
     /** @brief Destination for packets. */
-    std::shared_ptr<NET> net;
+    std::shared_ptr<Net> net;
 
     /** @brief PHY we use for demodulation. */
     std::shared_ptr<PHY> phy;

@@ -16,8 +16,8 @@
 #include <unistd.h>
 
 #include "Node.hh"
-#include "TunTap.hh"
 #include "Util.hh"
+#include "net/TunTap.hh"
 
 #define IP_FMT  "10.10.10.%d"
 #define MAC_FMT "c6:ff:ff:ff:%02x"
