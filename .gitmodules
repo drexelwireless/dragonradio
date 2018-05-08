@@ -13,3 +13,6 @@
 	path = dependencies/uhd
 	url = git@github.com:mainland/uhd.git
 	branch = sc2
+[submodule "dependencies/pybind11"]
+	path = dependencies/pybind11
+	url = git@github.com:pybind/pybind11.git
