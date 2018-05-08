@@ -14,7 +14,8 @@ class ParallelPacketModulator : public PacketModulator
 {
 public:
     ParallelPacketModulator(std::shared_ptr<NET> net,
-                            std::shared_ptr<PHY> phy);
+                            std::shared_ptr<PHY> phy,
+                            size_t nthreads);
     virtual ~ParallelPacketModulator();
 
     size_t getWatermark(void) override;
@@ -108,23 +109,27 @@ private:
     bool done;
 
     /** @brief Thread running modWorker */
-    std::thread modThread;
+    std::vector<std::thread> mod_threads;
 
     /** @brief Thread modulating packets */
-    void modWorker(void);
+    void mod_worker(void);
 
-    /** @brief  Number of modulated samples we want to have on-hand at all
-     * times.
-     */
+    /** @brief Number of modulated samples we want to have on-hand at all times. */
     size_t watermark;
 
     /** @brief Number of modulated samples we have */
     size_t nsamples;
 
-    /* Modulated radio packets */
-    std::mutex                             m;
-    std::condition_variable                prod;
-    std::condition_variable                cons;
+    /** @brief Mutex to serialize access to the network */
+    std::mutex net_mutex;
+
+    /* @brief Mutex protecting queue of modulated packets */
+    std::mutex m;
+
+    /* @brief Condition variable used to signal modulation workers */
+    std::condition_variable prod;
+
+    /* @brief Queue of modulated packets */
     std::queue<std::unique_ptr<ModPacket>> q;
 };
 

@@ -83,7 +83,9 @@ int main(int argc, char** argv)
     unsigned int min_packet_size = 512;      // minimum radio packet size
     double frame_size = .07;                 // slot_size*num_nodes_in_net (seconds)
     double guard_size = .01;                 // inter-slot guard time (sec)
-    unsigned int rx_thread_pool_size = 10;   // number of threads available for demodulation
+    unsigned int nmodthreads = 2;            // number of threads available for modulation
+    unsigned int ndemodthreads = 10;         // number of threads available for demodulation
+    bool ordered = false;                    // Force ordered demodulation
 
     int ch;
 
@@ -189,7 +191,7 @@ int main(int argc, char** argv)
     else
         phy = std::make_shared<FlexFrame>(net, min_packet_size);
 
-    auto modulator = std::make_shared<ParallelPacketModulator>(net, phy);
+    auto modulator = std::make_shared<ParallelPacketModulator>(net, phy, nmodthreads);
 
     modulator->set_check(check);
     modulator->set_fec0(fec0);
@@ -197,7 +199,7 @@ int main(int argc, char** argv)
     modulator->set_mod_scheme(ms);
     modulator->setSoftTXGain(soft_txgain);
 
-    auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, false, rx_thread_pool_size);
+    auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, ordered, ndemodthreads);
 
     auto mac = std::make_shared<MAC>(usrp, net, phy, modulator, demodulator, bandwidth, frame_size, guard_size);
 
