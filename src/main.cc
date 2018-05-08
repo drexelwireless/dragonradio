@@ -81,7 +81,7 @@ int main(int argc, char** argv)
     // TODO
     // make these things CLI configurable
     unsigned int min_packet_size = 512;      // minimum radio packet size
-    double frame_size = .07;                 // slot_size*num_nodes_in_net (seconds)
+    double slot_size = .035;                 // slot size *including* guard (seconds)
     double guard_size = .01;                 // inter-slot guard time (sec)
     unsigned int nmodthreads = 2;            // number of threads available for modulation
     unsigned int ndemodthreads = 10;         // number of threads available for demodulation
@@ -197,7 +197,7 @@ int main(int argc, char** argv)
 
     auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, ordered, ndemodthreads);
 
-    auto mac = std::make_shared<TDMA>(usrp, net, phy, modulator, demodulator, bandwidth, frame_size, guard_size);
+    auto mac = std::make_shared<TDMA>(usrp, net, phy, modulator, demodulator, bandwidth, slot_size, guard_size);
 
     // Wait for Ctrl-C
     sigset_t waitset;

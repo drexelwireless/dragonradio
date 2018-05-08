@@ -23,7 +23,7 @@ public:
          std::shared_ptr<PacketModulator> modulator,
          std::shared_ptr<PacketDemodulator> demodulator,
          double bandwidth,
-         double frame_size,
+         double slot_size,
          double guard_size);
     virtual ~TDMA();
 
