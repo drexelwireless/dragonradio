@@ -69,8 +69,8 @@ $(TARGET) : $(OBJECTS)
 .PHONY : html
 html : docs/html/index.html
 
-docs/html/index.html : $(ALLSOURCES) $(ALLINCLUDES)
-	doxygen docs/Doxyfile
+docs/html/index.html : docs/Doxyfile $(ALLSOURCES) $(ALLINCLUDES)
+	doxygen $<
 
 #
 # Print an arbitrary makefile variable
