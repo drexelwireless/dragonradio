@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstring>
 
+#include "RadioConfig.hh"
 #include "Util.hh"
 #include "net/Net.hh"
 
@@ -17,7 +18,8 @@ Net::Net(const std::string& tap_name,
     curPacketId(0),
     done(false)
 {
-    printf("Creating tap interface %s\n", tap_name.c_str());
+    if (rc->verbose)
+        printf("Creating tap interface %s\n", tap_name.c_str());
 
     tt = std::make_unique<TunTap>(tap_name, false, 1500, ip_fmt, mac_fmt, nodeId);
 
@@ -26,7 +28,8 @@ Net::Net(const std::string& tap_name,
 
 Net::~Net()
 {
-    printf("Closing tap interface\n");
+    if (rc->verbose)
+        printf("Closing tap interface\n");
 }
 
 void Net::stop(void)
@@ -74,10 +77,11 @@ void Net::send(std::unique_ptr<RadioPacket> pkt)
 {
     tt->cwrite(pkt->data(), pkt->size());
 
-    printf("Written %lu bytes (PID %u) from %u\n",
-        (unsigned long) pkt->size(),
-        (unsigned int) pkt->pkt_id,
-        (unsigned int) pkt->src);
+    if (rc->verbose)
+        printf("Written %lu bytes (PID %u) from %u\n",
+            (unsigned long) pkt->size(),
+            (unsigned int) pkt->pkt_id,
+            (unsigned int) pkt->src);
 }
 
 /** Maximum radio packet size. Really 1500 (MTU) + 14 (size of Ethernet header),

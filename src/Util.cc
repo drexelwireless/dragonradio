@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "RadioConfig.hh"
 #include "Util.hh"
 
 int sys(const char *fmt, ...)
@@ -17,6 +18,7 @@ int sys(const char *fmt, ...)
 
     res = system(cmd);
 
-    printf("%s\n", cmd);
+    if (rc->verbose)
+        printf("%s\n", cmd);
     return res;
 }
