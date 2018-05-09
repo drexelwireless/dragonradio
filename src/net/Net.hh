@@ -1,6 +1,9 @@
 #ifndef NET_HH_
 #define NET_HH_
 
+#include <math.h>
+
+#include <map>
 #include <queue>
 #include <thread>
 #include <stdio.h>
@@ -9,9 +12,45 @@
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
 
+struct Node {
+    Node();
+    ~Node();
+
+    /** @brief Soft TX gain (multiplicative factor) */
+    double g;
+
+    /** @brief Modulation scheme */
+    modulation_scheme ms;
+
+    /** @brief Data validity check */
+    crc_scheme check;
+
+    /** @brief Inner FEC */
+    fec_scheme fec0;
+
+    /** @brief Outer FEC */
+    fec_scheme fec1;
+
+    /** @brief Get soft TX gain (dB). */
+    float getSoftTXGain(void)
+    {
+        return 20.0*logf(g)/logf(10.0);
+    }
+
+    /** @brief Set soft TX gain.
+     * @param dB The soft gain (dB).
+     */
+    void setSoftTXGain(float dB)
+    {
+        g = powf(10.0f, dB/20.0f);
+    }
+};
+
 class Net
 {
 public:
+    using map_type = std::map<NodeId, Node>;
+
     Net(const std::string& tap_name,
         const std::string& ip_fmt,
         const std::string& mac_fmt,
@@ -25,7 +64,13 @@ public:
     NodeId getMyNodeId(void);
 
     /** @brief Get the number of nodes in the network */
-    size_t getNumNodes(void);
+    map_type::size_type size(void);
+
+    /** @brief Get the number of nodes in the network */
+    map_type::size_type count(NodeId nodeId);
+
+    /** @brief Get the entry for a particular node in the network */
+    Node& operator[](NodeId nodeid);
 
     /** @brief Add a node to the network */
     void addNode(NodeId nodeId);
@@ -47,7 +92,7 @@ private:
     NodeId myNodeId;
 
     /** @brief The nodes in the network */
-    std::vector<NodeId> nodes;
+    std::map<NodeId, Node> nodes;
 
     /** @brief Current packet id */
     PacketId curPacketId;

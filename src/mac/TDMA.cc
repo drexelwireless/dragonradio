@@ -26,7 +26,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
     _modulator(modulator),
     _demodulator(demodulator),
     _bandwidth(bandwidth),
-    _frame_size(slot_size*net->getNumNodes()),
+    _frame_size(slot_size*net->size()),
     _slot_size(slot_size),
     _guard_size(guard_size),
     _done(false)

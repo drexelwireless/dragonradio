@@ -10,6 +10,19 @@
 #include "Util.hh"
 #include "net/Net.hh"
 
+Node::Node() :
+    ms(rc->ms),
+    check(rc->check),
+    fec0(rc->fec0),
+    fec1(rc->fec1)
+{
+    setSoftTXGain(rc->soft_txgain);
+}
+
+Node::~Node()
+{
+}
+
 Net::Net(const std::string& tap_name,
          const std::string& ip_fmt,
          const std::string& mac_fmt,
@@ -46,14 +59,24 @@ NodeId Net::getMyNodeId(void)
     return myNodeId;
 }
 
-size_t Net::getNumNodes(void)
+Net::map_type::size_type Net::size(void)
 {
     return nodes.size();
 }
 
+Net::map_type::size_type Net::count(NodeId nodeid)
+{
+    return nodes.count(nodeid);
+}
+
+Node& Net::operator[](NodeId nodeid)
+{
+    return nodes[nodeid];
+}
+
 void Net::addNode(NodeId nodeId)
 {
-    nodes.emplace_back(nodeId);
+    nodes.emplace(nodeId, Node());
 
     if (nodeId != this->myNodeId)
         tt->add_arp_entry(nodeId);
@@ -103,14 +126,24 @@ void Net::recvWorker(void)
 
             std::memcpy(&ip_dst, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
 
-            pkt->src = myNodeId;
-
             // Destination node is last octet of the IP address by convention
-            pkt->dest = ntohl(ip_dst.s_addr) & 0xff;
+            NodeId destId = ntohl(ip_dst.s_addr) & 0xff;
 
-            pkt->pkt_id = curPacketId++;
+            if (nodes.count(destId) == 1) {
+                Node&  dest = (*this)[destId];
 
-            recvQueue.push(std::move(pkt));
+                pkt->src = myNodeId;
+                pkt->dest = destId;
+
+                pkt->pkt_id = curPacketId++;
+                pkt->check = dest.check;
+                pkt->fec0 = dest.fec0;
+                pkt->fec1 = dest.fec1;
+                pkt->ms = dest.ms;
+                pkt->g = dest.g;
+
+                recvQueue.push(std::move(pkt));
+            }
         }
     }
 }

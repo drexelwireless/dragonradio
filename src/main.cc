@@ -182,12 +182,6 @@ int main(int argc, char** argv)
 
     auto modulator = std::make_shared<ParallelPacketModulator>(net, phy, nmodthreads);
 
-    modulator->set_check(rc->check);
-    modulator->set_fec0(rc->fec0);
-    modulator->set_fec1(rc->fec1);
-    modulator->set_mod_scheme(rc->ms);
-    modulator->setSoftTXGain(rc->soft_txgain);
-
     auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, ordered, ndemodthreads);
 
     auto mac = std::make_shared<TDMA>(usrp, net, phy, modulator, demodulator, bandwidth, slot_size, guard_size);

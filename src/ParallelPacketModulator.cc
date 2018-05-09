@@ -7,11 +7,6 @@ ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  size_t nthreads) :
     net(net),
     phy(phy),
-    _check(LIQUID_CRC_32),
-    _fec0(LIQUID_FEC_CONV_V29),
-    _fec1(LIQUID_FEC_RS_M8),
-    _ms(LIQUID_MODEM_QPSK),
-    _g(1.0),
     done(false),
     watermark(0),
     nsamples(0)
@@ -116,12 +111,6 @@ void ParallelPacketModulator::mod_worker(void)
             q.emplace(std::make_unique<ModPacket>());
             mpkt = q.back().get();
         }
-
-        pkt->check = _check;
-        pkt->fec0 = _fec0;
-        pkt->fec1 = _fec1;
-        pkt->ms = _ms;
-        pkt->g = _g;
 
         // Modulate the packet
         modulator->modulate(*mpkt, std::move(pkt));
