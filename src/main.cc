@@ -10,6 +10,7 @@
 #include "Logger.hh"
 #include "ParallelPacketModulator.hh"
 #include "ParallelPacketDemodulator.hh"
+#include "RadioConfig.hh"
 #include "USRP.hh"
 #include "phy/FlexFrame.hh"
 #include "phy/MultiOFDM.hh"
@@ -50,7 +51,6 @@ void usage(void)
 
 int main(int argc, char** argv)
 {
-    bool verbose = true;
     bool use_ofdm = false;
     bool use_multi = false;
     const char* logfile = NULL;
@@ -61,7 +61,6 @@ int main(int argc, char** argv)
 
     double frequency = 3e9;             // carrier frequency
     double bandwidth = 5e6;             // bandwidth
-    double soft_txgain = -12.0f;        // software tx gain [dB]
     double uhd_txgain = 25.0;           // uhd (hardware) tx gain [dB]
     double uhd_rxgain = 25.0;           // uhd (hardware) rx gain [dB]
 
@@ -69,12 +68,6 @@ int main(int argc, char** argv)
     unsigned int M = 48;                // number of subcarriers
     unsigned int cp_len = 6;            // cyclic prefix length
     unsigned int taper_len = 4;         // taper length
-
-    // Liquid check/FEC/modulation scheme
-    modulation_scheme ms = LIQUID_MODEM_QPSK; // modulation scheme
-    crc_scheme check = LIQUID_CRC_32;         // data validity check
-    fec_scheme fec0 = LIQUID_FEC_CONV_V29;    // fec (inner)
-    fec_scheme fec1 = LIQUID_FEC_RS_M8;       // fec (outer)
 
     std::string addr; // Device address
 
@@ -87,51 +80,53 @@ int main(int argc, char** argv)
     unsigned int ndemodthreads = 10;         // number of threads available for demodulation
     bool ordered = true;                     // Force ordered demodulation
 
+    rc = std::make_shared<RadioConfig>();
+
     int ch;
 
     while ((ch = getopt(argc,argv,"hqvoul:a:23i:n:f:b:g:G:N:M:C:T:P:m:c:k:")) != EOF) {
         switch (ch) {
         case '?':
-        case 'h':   usage();                        return 0;
-        case 'q':   verbose     = false;            break;
-        case 'v':   verbose     = true;             break;
-        case 'o':   use_ofdm    = true;             break;
-        case 'u':   use_multi   = true;             break;
-        case 'l':   logfile     = optarg;           break;
-        case 'a':   addr        = optarg;           break;
-        case '2':   x310        = false;            break;
-        case '3':   x310        = true;             break;
-        case 'i':   node_id     = atoi(optarg);     break;
-        case 'n':   num_nodes   = atoi(optarg);     break;
-        case 'f':   frequency   = atof(optarg);     break;
-        case 'b':   bandwidth   = atof(optarg);     break;
-        case 'g':   soft_txgain = atof(optarg);     break;
-        case 'G':   uhd_txgain  = atof(optarg);     break;
-        case 'R':   uhd_rxgain  = atof(optarg);     break;
-        case 'M':   M           = atoi(optarg);     break;
-        case 'C':   cp_len      = atoi(optarg);     break;
-        case 'T':   taper_len   = atoi(optarg);     break;
-        case 'm':   ms          = liquid_getopt_str2mod(optarg);    break;
-        case 'c':   fec0        = liquid_getopt_str2fec(optarg);    break;
-        case 'k':   fec1        = liquid_getopt_str2fec(optarg);    break;
-        case 'r':   check       = liquid_getopt_str2crc(optarg);    break;
-        default:    usage();                        return 0;
+        case 'h':   usage();                            return 0;
+        case 'q':   rc->verbose     = false;            break;
+        case 'v':   rc->verbose     = true;             break;
+        case 'o':   use_ofdm        = true;             break;
+        case 'u':   use_multi       = true;             break;
+        case 'l':   logfile         = optarg;           break;
+        case 'a':   addr            = optarg;           break;
+        case '2':   x310            = false;            break;
+        case '3':   x310            = true;             break;
+        case 'i':   node_id         = atoi(optarg);     break;
+        case 'n':   num_nodes       = atoi(optarg);     break;
+        case 'f':   frequency       = atof(optarg);     break;
+        case 'b':   bandwidth       = atof(optarg);     break;
+        case 'g':   rc->soft_txgain = atof(optarg);     break;
+        case 'G':   uhd_txgain      = atof(optarg);     break;
+        case 'R':   uhd_rxgain      = atof(optarg);     break;
+        case 'M':   M               = atoi(optarg);     break;
+        case 'C':   cp_len          = atoi(optarg);     break;
+        case 'T':   taper_len       = atoi(optarg);     break;
+        case 'm':   rc->ms          = liquid_getopt_str2mod(optarg);    break;
+        case 'c':   rc->fec0        = liquid_getopt_str2fec(optarg);    break;
+        case 'k':   rc->fec1        = liquid_getopt_str2fec(optarg);    break;
+        case 'r':   rc->check       = liquid_getopt_str2crc(optarg);    break;
+        default:    usage();                            return 0;
         }
     }
 
     if (cp_len == 0 || cp_len > M) {
         fprintf(stderr,"error: %s, cyclic prefix must be in (0,M]\n", argv[0]);
         exit(1);
-    } else if (ms == LIQUID_MODEM_UNKNOWN) {
+    } else if (rc->ms == LIQUID_MODEM_UNKNOWN) {
         fprintf(stderr,"error: %s, unknown/unsupported mod. scheme\n", argv[0]);
         exit(-1);
-    } else if (fec0 == LIQUID_FEC_UNKNOWN) {
+    } else if (rc->fec0 == LIQUID_FEC_UNKNOWN) {
         fprintf(stderr,"error: %s, unknown/unsupported inner fec scheme\n", argv[0]);
         exit(-1);
-    } else if (fec1 == LIQUID_FEC_UNKNOWN) {
+    } else if (rc->fec1 == LIQUID_FEC_UNKNOWN) {
         fprintf(stderr,"error: %s, unknown/unsupported outer fec scheme\n", argv[0]);
         exit(-1);
-    } else if (check == LIQUID_CRC_UNKNOWN) {
+    } else if (rc->check == LIQUID_CRC_UNKNOWN) {
         fprintf(stderr,"error: %s, unknown/unsupported check scheme\n", argv[0]);
         exit(-1);
     }
@@ -163,7 +158,7 @@ int main(int argc, char** argv)
         logger->setAttribute("start", (uint32_t) t_start.get_full_secs());
         logger->setAttribute("node_id", node_id);
         logger->setAttribute("frequency", frequency);
-        logger->setAttribute("soft_tx_gain", soft_txgain);
+        logger->setAttribute("soft_tx_gain", rc->soft_txgain);
         logger->setAttribute("tx_gain", uhd_txgain);
         logger->setAttribute("rx_gain", uhd_rxgain);
         logger->setAttribute("M", M);
@@ -187,11 +182,11 @@ int main(int argc, char** argv)
 
     auto modulator = std::make_shared<ParallelPacketModulator>(net, phy, nmodthreads);
 
-    modulator->set_check(check);
-    modulator->set_fec0(fec0);
-    modulator->set_fec1(fec1);
-    modulator->set_mod_scheme(ms);
-    modulator->setSoftTXGain(soft_txgain);
+    modulator->set_check(rc->check);
+    modulator->set_fec0(rc->fec0);
+    modulator->set_fec1(rc->fec1);
+    modulator->set_mod_scheme(rc->ms);
+    modulator->setSoftTXGain(rc->soft_txgain);
 
     auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, ordered, ndemodthreads);
 

@@ -37,6 +37,7 @@ SOURCES := \
     main.cc \
     ParallelPacketDemodulator.cc \
     ParallelPacketModulator.cc \
+    RadioConfig.cc \
     RadioPacketQueue.cc \
     USRP.cc \
     Util.cc \
