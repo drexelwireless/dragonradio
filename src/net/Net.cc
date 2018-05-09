@@ -41,8 +41,6 @@ Net::Net(const std::string& tap_name,
 
 Net::~Net()
 {
-    if (rc->verbose)
-        printf("Closing tap interface\n");
 }
 
 void Net::stop(void)

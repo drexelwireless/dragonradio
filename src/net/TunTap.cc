@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "RadioConfig.hh"
 #include "Util.hh"
 #include "net/TunTap.hh"
 
@@ -155,6 +156,9 @@ void TunTap::open_tap(std::string& dev, int flags)
 
 void TunTap::close_tap(void)
 {
+    if (rc->verbose)
+        printf("Closing tap interface\n");
+
     // Detach Tap Interface
     close(fd_);
 
