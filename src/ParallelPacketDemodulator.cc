@@ -27,6 +27,7 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
 
 ParallelPacketDemodulator::~ParallelPacketDemodulator()
 {
+    stop();
 }
 
 void ParallelPacketDemodulator::setDemodParameters(const size_t prev_samps,

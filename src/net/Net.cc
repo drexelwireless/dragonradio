@@ -29,18 +29,27 @@ Net::Net(const std::string& tap_name,
          NodeId nodeId) :
     my_node_id_(nodeId),
     cur_pkt_id_(0),
-    done_(false)
+    done_(true)
 {
     if (rc->verbose)
         printf("Creating tap interface %s\n", tap_name.c_str());
 
     tuntapdev_ = std::make_unique<TunTap>(tap_name, false, 1500, ip_fmt, mac_fmt, nodeId);
 
-    recv_thread_ = std::thread(&Net::recvWorker, this);
+    start();
 }
 
 Net::~Net()
 {
+    stop();
+}
+
+void Net::start(void)
+{
+    if (done_) {
+        done_ = false;
+        recv_thread_ = std::thread(&Net::recvWorker, this);
+    }
 }
 
 void Net::stop(void)

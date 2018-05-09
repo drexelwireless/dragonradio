@@ -50,6 +50,7 @@ USRP::USRP(const std::string& addr,
 
 USRP::~USRP()
 {
+    stop();
 }
 
 // See the following for X310 LO offset advice:

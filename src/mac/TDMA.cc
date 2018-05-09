@@ -46,6 +46,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
 
 TDMA::~TDMA()
 {
+    stop();
 }
 
 size_t TDMA::getNumSlots(void)

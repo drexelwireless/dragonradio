@@ -72,6 +72,7 @@ SafeQueue<T>::SafeQueue() : done_(false)
 template<typename T>
 SafeQueue<T>::~SafeQueue()
 {
+    stop();
 }
 
 template<typename T>

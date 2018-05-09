@@ -63,6 +63,9 @@ public:
     Net& operator=(const Net&) = delete;
     Net& operator=(Net&&) = delete;
 
+    /** @brief Start packet processing. */
+    void start(void);
+
     /** @brief Halt packet processing. */
     void stop(void);
 

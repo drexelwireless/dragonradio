@@ -74,6 +74,7 @@ Logger::Logger(Clock::time_point t_start) :
 
 Logger::~Logger()
 {
+    stop();
     file_.close();
 }
 

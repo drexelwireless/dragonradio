@@ -17,10 +17,14 @@ ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
 
 ParallelPacketModulator::~ParallelPacketModulator()
 {
+    stop();
 }
 
 void ParallelPacketModulator::stop(void)
 {
+    // XXX We must stop the Net in order to stop the modulator threads.
+    net_->stop();
+
     done_ = true;
     producer_cond_.notify_all();
 

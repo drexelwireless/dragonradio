@@ -7,6 +7,7 @@ RadioPacketQueue::RadioPacketQueue() :
 
 RadioPacketQueue::~RadioPacketQueue()
 {
+    stop();
 }
 
 void RadioPacketQueue::push(std::unique_ptr<RadioPacket> pkt)

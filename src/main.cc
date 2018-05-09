@@ -199,15 +199,5 @@ int main(int argc, char** argv)
 
     sigwait(&waitset, &sig);
 
-    net->stop();
-    mac->stop();
-    modulator->stop();
-    demodulator->stop();
-    usrp->stop();
-    if (logger) {
-        logger->stop();
-        logger.reset();
-    }
-
     printf("Done!\n");
 }
