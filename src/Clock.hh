@@ -18,8 +18,8 @@ public:
 
     static time_point now() noexcept
     {
-        if (_usrp)
-            return _usrp->get_time_now();
+        if (usrp_)
+            return usrp_->get_time_now();
         else
             return uhd::time_spec_t(0.0);
     }
@@ -28,7 +28,7 @@ public:
     static void releaseUSRP(void);
 
 private:
-    static uhd::usrp::multi_usrp::sptr _usrp;
+    static uhd::usrp::multi_usrp::sptr usrp_;
 };
 
 #endif /* CLOCK_H_ */

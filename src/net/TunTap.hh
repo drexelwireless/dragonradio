@@ -43,19 +43,19 @@ public:
 
 private:
     /** @brief Flag indicatign whether or not the interface is persistent. */
-    bool _persistent;
+    bool persistent_;
 
     /** @brief The name of the tun/tap device */
-    std::string _tapdev;
+    std::string tapdev_;
 
     /** @brief A sprintf-style format string for tun/tap IP address */
-    const std::string _ip_fmt;
+    const std::string ip_fmt_;
 
     /** @brief A sprintf-style format string for tun/tap MAC addresses */
-    const std::string _mac_fmt;
+    const std::string mac_fmt_;
 
     /** @brief File descriptor for tun/tap device */
-    int _fd;
+    int fd_;
 
     /** @brief Create and open a tun/tap device.
      * @param dev The name of the device to open; may be the empty string. This

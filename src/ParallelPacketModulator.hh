@@ -18,9 +18,9 @@ public:
                             size_t nthreads);
     virtual ~ParallelPacketModulator();
 
-    size_t getWatermark(void) override;
+    size_t getLowWaterMark(void) override;
 
-    void setWatermark(size_t watermark) override;
+    void setLowWaterMark(size_t mark) override;
 
     void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples);
 
@@ -29,37 +29,37 @@ public:
 
 private:
     /** @brief Our network. */
-    std::shared_ptr<Net> net;
+    std::shared_ptr<Net> net_;
 
     /** @brief Our PHY. */
-    std::shared_ptr<PHY> phy;
+    std::shared_ptr<PHY> phy_;
 
     /** @brief Flag indicating if we should stop processing packets */
-    bool done;
+    bool done_;
 
     /** @brief Thread running modWorker */
-    std::vector<std::thread> mod_threads;
-
-    /** @brief Thread modulating packets */
-    void mod_worker(void);
+    std::vector<std::thread> mod_threads_;
 
     /** @brief Number of modulated samples we want to have on-hand at all times. */
-    size_t watermark;
+    size_t low_water_mark_;
 
     /** @brief Number of modulated samples we have */
-    size_t nsamples;
+    size_t nsamples_;
 
     /** @brief Mutex to serialize access to the network */
-    std::mutex net_mutex;
+    std::mutex net_mutex_;
 
     /* @brief Mutex protecting queue of modulated packets */
-    std::mutex m;
+    std::mutex pkt_mutex_;
 
     /* @brief Condition variable used to signal modulation workers */
-    std::condition_variable prod;
+    std::condition_variable producer_cond_;
 
     /* @brief Queue of modulated packets */
-    std::queue<std::unique_ptr<ModPacket>> q;
+    std::queue<std::unique_ptr<ModPacket>> pkt_q_;
+
+    /** @brief Thread modulating packets */
+    void modWorker(void);
 };
 
 #endif /* PARALLELPACKETMODULATOR_H_ */

@@ -11,40 +11,40 @@ union PHYHeader {
 };
 
 OFDM::Modulator::Modulator(OFDM& phy) :
-    _phy(phy)
+    phy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
-    ofdmflexframegenprops_init_default(&_fgprops);
-    _fg = ofdmflexframegen_create(_phy._M,
-                                  _phy._cp_len,
-                                  _phy._taper_len,
-                                  _phy._p,
-                                  &_fgprops);
+    ofdmflexframegenprops_init_default(&fgprops_);
+    fg_ = ofdmflexframegen_create(phy_.M_,
+                                  phy_.cp_len_,
+                                  phy_.taper_len_,
+                                  phy_.p_,
+                                  &fgprops_);
 }
 
 OFDM::Modulator::~Modulator()
 {
-    ofdmflexframegen_destroy(_fg);
+    ofdmflexframegen_destroy(fg_);
 }
 
 void OFDM::Modulator::print(void)
 {
-    ofdmflexframegen_print(_fg);
+    ofdmflexframegen_print(fg_);
 }
 
 void OFDM::Modulator::update_props(NetPacket& pkt)
 {
-    if (_fgprops.check != pkt.check ||
-        _fgprops.fec0 != pkt.fec0 ||
-        _fgprops.fec1 != pkt.fec1 ||
-        _fgprops.mod_scheme != pkt.ms) {
-        _fgprops.check = pkt.check;
-        _fgprops.fec0 = pkt.fec0;
-        _fgprops.fec1 = pkt.fec1;
-        _fgprops.mod_scheme = pkt.ms;
+    if (fgprops_.check != pkt.check ||
+        fgprops_.fec0 != pkt.fec0 ||
+        fgprops_.fec1 != pkt.fec1 ||
+        fgprops_.mod_scheme != pkt.ms) {
+        fgprops_.check = pkt.check;
+        fgprops_.fec0 = pkt.fec0;
+        fgprops_.fec1 = pkt.fec1;
+        fgprops_.mod_scheme = pkt.ms;
 
-        ofdmflexframegen_setprops(_fg, &_fgprops);
+        ofdmflexframegen_setprops(fg_, &fgprops_);
     }
 }
 
@@ -62,16 +62,16 @@ void OFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt)
     header.h.pkt_id = pkt->pkt_id;
     header.h.pkt_len = pkt->size();
 
-    pkt->resize(std::max((size_t) pkt->size(), _phy._minPacketSize));
+    pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
 
     update_props(*pkt);
-    ofdmflexframegen_reset(_fg);
-    ofdmflexframegen_assemble(_fg, header.bytes, pkt->data(), pkt->size());
+    ofdmflexframegen_reset(fg_);
+    ofdmflexframegen_assemble(fg_, header.bytes, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);
     // Number of symbols generated
-    const size_t NGEN = _phy._M + _phy._cp_len;
+    const size_t NGEN = phy_.M_ + phy_.cp_len_;
     // Number of generated samples in the buffer
     size_t nsamples = 0;
     // Local copy of gain
@@ -80,7 +80,7 @@ void OFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt)
     bool last_symbol = false;
 
     while (!last_symbol) {
-        last_symbol = ofdmflexframegen_writesymbol(_fg,
+        last_symbol = ofdmflexframegen_writesymbol(fg_,
           reinterpret_cast<liquid_float_complex*>(&(*iqbuf)[nsamples]));
 
         // Apply soft gain. Note that this is where nsamples is incremented.
@@ -102,44 +102,44 @@ void OFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt)
 }
 
 OFDM::Demodulator::Demodulator(OFDM& phy) :
-    LiquidDemodulator(phy._net),
-    _phy(phy)
+    LiquidDemodulator(phy.net_),
+    phy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
-    _fs = ofdmflexframesync_create(_phy._M,
-                                   _phy._cp_len,
-                                   _phy._taper_len,
-                                   _phy._p,
+    fs_ = ofdmflexframesync_create(phy_.M_,
+                                   phy_.cp_len_,
+                                   phy_.taper_len_,
+                                   phy_.p_,
                                    &LiquidDemodulator::liquid_callback,
                                    this);
 }
 
 OFDM::Demodulator::~Demodulator()
 {
-    ofdmflexframesync_destroy(_fs);
+    ofdmflexframesync_destroy(fs_);
 }
 
 void OFDM::Demodulator::print(void)
 {
-    ofdmflexframesync_print(_fs);
+    ofdmflexframesync_print(fs_);
 }
 
 void OFDM::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
-    ofdmflexframesync_reset(_fs);
+    ofdmflexframesync_reset(fs_);
 
-    _demod_start = timestamp;
-    _demod_off = off;
+    demod_start_ = timestamp;
+    demod_off_ = off;
 }
 
 void OFDM::Demodulator::demodulate(std::complex<float>* data,
                                    size_t count,
                                    std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
-    _callback = callback;
+    callback_ = callback;
 
-    ofdmflexframesync_execute(_fs, reinterpret_cast<liquid_float_complex*>(data), count);
+    ofdmflexframesync_execute(fs_, reinterpret_cast<liquid_float_complex*>(data), count);
 }
 
 std::unique_ptr<PHY::Demodulator> OFDM::make_demodulator(void)

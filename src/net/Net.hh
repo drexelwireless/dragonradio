@@ -86,28 +86,28 @@ public:
 
 private:
     /** @brief Our tun/tap interface */
-    std::unique_ptr<TunTap> tt;
+    std::unique_ptr<TunTap> tuntapdev_;
 
     /** @brief This node's ID */
-    NodeId myNodeId;
+    NodeId my_node_id_;
 
     /** @brief The nodes in the network */
-    std::map<NodeId, Node> nodes;
+    std::map<NodeId, Node> nodes_;
 
     /** @brief Current packet id */
-    PacketId curPacketId;
+    PacketId cur_pkt_id_;
 
     /** @brief Flag indicating if we should stop processing packets */
-    bool done;
+    bool done_;
 
     /** @brief Thread running recvWorker */
-    std::thread recvThread;
+    std::thread recv_thread_;
+
+    /** @brief Radio packets received from the network */
+    SafeQueue<std::unique_ptr<NetPacket>> recv_q_;
 
     /** @brief Read packets from tun/tap and queue them in recvQueue */
     void recvWorker(void);
-
-    /** @brief Radio packets received from the network */
-    SafeQueue<std::unique_ptr<NetPacket>> recvQueue;
 };
 
 #endif /* NET_HH_ */

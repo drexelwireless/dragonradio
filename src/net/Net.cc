@@ -27,16 +27,16 @@ Net::Net(const std::string& tap_name,
          const std::string& ip_fmt,
          const std::string& mac_fmt,
          NodeId nodeId) :
-    myNodeId(nodeId),
-    curPacketId(0),
-    done(false)
+    my_node_id_(nodeId),
+    cur_pkt_id_(0),
+    done_(false)
 {
     if (rc->verbose)
         printf("Creating tap interface %s\n", tap_name.c_str());
 
-    tt = std::make_unique<TunTap>(tap_name, false, 1500, ip_fmt, mac_fmt, nodeId);
+    tuntapdev_ = std::make_unique<TunTap>(tap_name, false, 1500, ip_fmt, mac_fmt, nodeId);
 
-    recvThread = std::thread(&Net::recvWorker, this);
+    recv_thread_ = std::thread(&Net::recvWorker, this);
 }
 
 Net::~Net()
@@ -47,58 +47,58 @@ Net::~Net()
 
 void Net::stop(void)
 {
-    done = true;
-    recvQueue.stop();
+    done_ = true;
+    recv_q_.stop();
 
-    if (recvThread.joinable())
-        recvThread.join();
+    if (recv_thread_.joinable())
+        recv_thread_.join();
 }
 
 NodeId Net::getMyNodeId(void)
 {
-    return myNodeId;
+    return my_node_id_;
 }
 
 Net::map_type::size_type Net::size(void)
 {
-    return nodes.size();
+    return nodes_.size();
 }
 
 Net::map_type::size_type Net::count(NodeId nodeid)
 {
-    return nodes.count(nodeid);
+    return nodes_.count(nodeid);
 }
 
 Node& Net::operator[](NodeId nodeid)
 {
-    return nodes[nodeid];
+    return nodes_[nodeid];
 }
 
 void Net::addNode(NodeId nodeId)
 {
-    nodes.emplace(nodeId, Node());
+    nodes_.emplace(nodeId, Node());
 
-    if (nodeId != this->myNodeId)
-        tt->add_arp_entry(nodeId);
+    if (nodeId != my_node_id_)
+        tuntapdev_->add_arp_entry(nodeId);
 }
 
 std::unique_ptr<NetPacket> Net::recvPacket(void)
 {
     std::unique_ptr<NetPacket> pkt;
 
-    recvQueue.pop(pkt);
+    recv_q_.pop(pkt);
 
     return pkt;
 }
 
 bool Net::wantPacket(NodeId dest)
 {
-    return dest == myNodeId;
+    return dest == my_node_id_;
 }
 
 void Net::send(std::unique_ptr<RadioPacket> pkt)
 {
-    tt->cwrite(pkt->data(), pkt->size());
+    tuntapdev_->cwrite(pkt->data(), pkt->size());
 
     if (rc->verbose)
         printf("Written %lu bytes (PID %u) from %u\n",
@@ -113,11 +113,11 @@ const size_t MAX_PKT_SIZE = 2000;
 
 void Net::recvWorker(void)
 {
-    while (!done) {
+    while (!done_) {
         auto    pkt = std::make_unique<NetPacket>(MAX_PKT_SIZE);
         ssize_t count;
 
-        count = tt->cread(pkt->data(), pkt->size());
+        count = tuntapdev_->cread(pkt->data(), pkt->size());
         pkt->resize(count);
 
         if (pkt->size() > 0) {
@@ -129,20 +129,20 @@ void Net::recvWorker(void)
             // Destination node is last octet of the IP address by convention
             NodeId destId = ntohl(ip_dst.s_addr) & 0xff;
 
-            if (nodes.count(destId) == 1) {
+            if (nodes_.count(destId) == 1) {
                 Node&  dest = (*this)[destId];
 
-                pkt->src = myNodeId;
+                pkt->src = my_node_id_;
                 pkt->dest = destId;
 
-                pkt->pkt_id = curPacketId++;
+                pkt->pkt_id = cur_pkt_id_++;
                 pkt->check = dest.check;
                 pkt->fec0 = dest.fec0;
                 pkt->fec1 = dest.fec1;
                 pkt->ms = dest.ms;
                 pkt->g = dest.g;
 
-                recvQueue.push(std::move(pkt));
+                recv_q_.push(std::move(pkt));
             }
         }
     }

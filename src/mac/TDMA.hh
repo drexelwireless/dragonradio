@@ -65,49 +65,49 @@ public:
 
 private:
     /** @brief Our USRP device. */
-    std::shared_ptr<USRP> _usrp;
+    std::shared_ptr<USRP> usrp_;
 
     /** @brief Our PHY. */
-    std::shared_ptr<PHY> _phy;
+    std::shared_ptr<PHY> phy_;
 
     /** @brief Our packet modulator. */
-    std::shared_ptr<PacketModulator> _modulator;
+    std::shared_ptr<PacketModulator> modulator_;
 
     /** @brief Our packet demodulator. */
-    std::shared_ptr<PacketDemodulator> _demodulator;
+    std::shared_ptr<PacketDemodulator> demodulator_;
 
     /** @brief Bandwidth */
-    double _bandwidth;
+    double bandwidth_;
 
     /** @brief RX rate */
-    double _rx_rate;
+    double rx_rate_;
 
     /** @brief TX rate */
-    double _tx_rate;
+    double tx_rate_;
 
     /** @brief Length of TDMA frame (sec) */
-    double _frame_size;
+    double frame_size_;
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
-    double _slot_size;
+    double slot_size_;
 
     /** @brief Length of inter-slot guard (sec) */
-    double _guard_size;
+    double guard_size_;
 
     /** @brief The slot schedule */
-    std::vector<bool> _slots;
+    std::vector<bool> slots_;
 
     /** @brief Flag indicating if we should stop processing packets */
-    bool _done;
+    bool done_;
 
     /** @brief Thread running rxWorker */
-    std::thread _rxThread;
+    std::thread rx_thread_;
+
+    /** @brief Thread running txWorker */
+    std::thread tx_thread_;
 
     /** @brief Worker receiving packets */
     void rxWorker(void);
-
-    /** @brief Thread running txWorker */
-    std::thread _txThread;
 
     /** @brief Worker transmitting packets */
     void txWorker(void);

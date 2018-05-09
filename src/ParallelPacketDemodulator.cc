@@ -9,20 +9,20 @@ using namespace std::placeholders;
 
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
                                                      std::shared_ptr<PHY> phy,
-                                                     bool order,
+                                                     bool ordered,
                                                      unsigned int nthreads) :
-    net(net),
-    phy(phy),
-    _order(order),
-    _prev_samps(0),
-    _cur_samps(0),
-    done(false),
-    demod_q(radio_q)
+    net_(net),
+    phy_(phy),
+    ordered_(ordered),
+    prev_samps_(0),
+    cur_samps_(0),
+    done_(false),
+    demod_q_(radio_q_)
 {
-    net_thread = std::thread(&ParallelPacketDemodulator::net_worker, this);
+    net_thread_ = std::thread(&ParallelPacketDemodulator::netWorker, this);
 
     for (unsigned int i = 0; i < nthreads; ++i)
-        demod_threads.emplace_back(std::thread(&ParallelPacketDemodulator::demod_worker, this));
+        demod_threads_.emplace_back(std::thread(&ParallelPacketDemodulator::demodWorker, this));
 }
 
 ParallelPacketDemodulator::~ParallelPacketDemodulator()
@@ -32,34 +32,34 @@ ParallelPacketDemodulator::~ParallelPacketDemodulator()
 void ParallelPacketDemodulator::setDemodParameters(const size_t prev_samps,
                                                    const size_t cur_samps)
 {
-    _prev_samps = prev_samps;
-    _cur_samps = cur_samps;
+    prev_samps_ = prev_samps;
+    cur_samps_ = cur_samps;
 }
 
 void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
 {
-    demod_q.push(buf);
+    demod_q_.push(buf);
 }
 
 void ParallelPacketDemodulator::stop(void)
 {
-    done = true;
+    done_ = true;
 
-    demod_q.stop();
-    radio_q.stop();
+    demod_q_.stop();
+    radio_q_.stop();
 
-    if (net_thread.joinable())
-        net_thread.join();
+    if (net_thread_.joinable())
+        net_thread_.join();
 
-    for (unsigned int i = 0; i < demod_threads.size(); ++i) {
-        if (demod_threads[i].joinable())
-            demod_threads[i].join();
+    for (unsigned int i = 0; i < demod_threads_.size(); ++i) {
+        if (demod_threads_[i].joinable())
+            demod_threads_[i].join();
     }
 }
 
-void ParallelPacketDemodulator::demod_worker(void)
+void ParallelPacketDemodulator::demodWorker(void)
 {
-    auto                      demod = phy->make_demodulator();
+    auto                      demod = phy_->make_demodulator();
     RadioPacketQueue::barrier b;
     std::shared_ptr<IQBuf>    buf1;
     std::shared_ptr<IQBuf>    buf2;
@@ -68,22 +68,22 @@ void ParallelPacketDemodulator::demod_worker(void)
     auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
         received = true;
         if (pkt) {
-            if (_order)
-                radio_q.push(b, std::move(pkt));
+            if (ordered_)
+                radio_q_.push(b, std::move(pkt));
             else
-                net->send(std::move(pkt));
+                net_->send(std::move(pkt));
         }
     };
 
-    while (!done) {
-        if (!demod_q.pop(b, buf1, buf2))
+    while (!done_) {
+        if (!demod_q_.pop(b, buf1, buf2))
             break;
 
         received = false;
 
         // Calculate how many samples we want to demodulate from the tail end of
         // the previous slot
-        size_t buf1_nsamples = buf1->oversample + _prev_samps;
+        size_t buf1_nsamples = buf1->oversample + prev_samps_;
 
         if (buf1_nsamples > buf1->size())
             // Should never happen!
@@ -101,7 +101,7 @@ void ParallelPacketDemodulator::demod_worker(void)
         size_t nwanted;          // How many samples we still want to demodulate.
         size_t n = 0;
 
-        nwanted = _cur_samps - buf2->undersample;
+        nwanted = cur_samps_ - buf2->undersample;
 
         for (;;) {
             n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
@@ -115,7 +115,7 @@ void ParallelPacketDemodulator::demod_worker(void)
         }
 
         // Remove the barrier since we are done producing packets
-        radio_q.erase_barrier(b);
+        radio_q_.eraseBarrier(b);
 
         // If we received any packets, log both slots.
         if (logger && received) {
@@ -125,20 +125,20 @@ void ParallelPacketDemodulator::demod_worker(void)
     }
 }
 
-void ParallelPacketDemodulator::net_worker(void)
+void ParallelPacketDemodulator::netWorker(void)
 {
     std::unique_ptr<RadioPacket> pkt;
 
-    while (!done) {
-        if (radio_q.pop(pkt))
-            net->send(std::move(pkt));
+    while (!done_) {
+        if (radio_q_.pop(pkt))
+            net_->send(std::move(pkt));
     }
 }
 
 IQBufQueue::IQBufQueue(RadioPacketQueue& radio_q) :
-    _radio_q(radio_q),
-    _done(false),
-    _size(0)
+    radio_q_(radio_q),
+    done_(false),
+    size_(0)
 {
 }
 
@@ -150,14 +150,14 @@ void IQBufQueue::push(std::shared_ptr<IQBuf> buf)
 {
     // Push the packet on the end of the queue
     {
-        std::lock_guard<std::mutex> lock(_m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        _q.push_back(buf);
-        ++_size;
+        q_.push_back(buf);
+        ++size_;
     }
 
     // Signal anyone waiting on the queue
-    _cond.notify_one();
+    cond_.notify_one();
 }
 
 bool IQBufQueue::pop(RadioPacketQueue::barrier& b,
@@ -166,23 +166,23 @@ bool IQBufQueue::pop(RadioPacketQueue::barrier& b,
 {
     // Acquire the previous slot and the current slot, removing the previous
     // slot from the queue since we no longer need it.
-    std::unique_lock<std::mutex> lock(_m);
+    std::unique_lock<std::mutex> lock(m_);
 
-    _cond.wait(lock, [this]{ return _done || _size > 1; });
-    if (_done)
+    cond_.wait(lock, [this]{ return done_ || size_ > 1; });
+    if (done_)
         return false;
 
-    b = _radio_q.push_barrier();
-    buf1 = std::move(_q.front());
-    _q.pop_front();
-    --_size;
-    buf2 = _q.front();
+    b = radio_q_.pushBarrier();
+    buf1 = std::move(q_.front());
+    q_.pop_front();
+    --size_;
+    buf2 = q_.front();
 
     return true;
 }
 
 void IQBufQueue::stop(void)
 {
-    _done = true;
-    _cond.notify_all();
+    done_ = true;
+    cond_.notify_all();
 }

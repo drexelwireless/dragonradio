@@ -28,17 +28,17 @@ public:
 
     private:
         /** @brief Associated OFDM PHY. */
-        OFDM& _phy;
+        OFDM& phy_;
 
         /** @brief The liquid-dsp flexframegen object */
-        ofdmflexframegen _fg;
+        ofdmflexframegen fg_;
 
         /** @brief The liquid-dsp ofdmflexframegenprops object associated with
          * this ofdmflexframegen.
          */
-        ofdmflexframegenprops_s _fgprops;
+        ofdmflexframegenprops_s fgprops_;
 
-        /** Update frame properties to match _fgprops. */
+        /** Update frame properties to match fgprops_. */
         void update_props(NetPacket& pkt);
     };
 
@@ -66,10 +66,10 @@ public:
 
     private:
         /** @brief Associated OFDM PHY. */
-        OFDM& _phy;
+        OFDM& phy_;
 
         /** @brief The liquid-dsp flexframesync object */
-        ofdmflexframesync _fs;
+        ofdmflexframesync fs_;
     };
 
     /** @brief Construct an OFDM PHY.
@@ -88,12 +88,12 @@ public:
          unsigned int taper_len,
          unsigned char *p,
          size_t minPacketSize) :
-         _M(M),
-         _cp_len(cp_len),
-         _taper_len(taper_len),
-         _p(p),
-         _net(net),
-         _minPacketSize(minPacketSize)
+         M_(M),
+         cp_len_(cp_len),
+         taper_len_(taper_len),
+         p_(p),
+         net_(net),
+         min_pkt_size_(minPacketSize)
     {
     }
 
@@ -101,12 +101,12 @@ public:
     {
     }
 
-    double getRxRateOversample(void) const override
+    double getRXRateOversample(void) const override
     {
         return 1.0;
     }
 
-    double getTxRateOversample(void) const override
+    double getTXRateOversample(void) const override
     {
         return 1.0;
     }
@@ -117,17 +117,17 @@ public:
 
 private:
     // OFDM parameters
-    unsigned int _M;
-    unsigned int _cp_len;
-    unsigned int _taper_len;
-    unsigned char *_p;
+    unsigned int M_;
+    unsigned int cp_len_;
+    unsigned int taper_len_;
+    unsigned char *p_;
 
     /** @brief The Net to which we should send received packets. */
-    std::shared_ptr<Net> _net;
+    std::shared_ptr<Net> net_;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */
-    size_t _minPacketSize;
+    size_t min_pkt_size_;
 };
 
 #endif /* OFDM_H_ */

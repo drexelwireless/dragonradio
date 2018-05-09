@@ -66,15 +66,15 @@ struct PacketSendEntry {
 };
 
 Logger::Logger(Clock::time_point t_start) :
-  _t_start(t_start),
-  _t_last_slot((time_t) 0),
-  _done(false)
+  t_start_(t_start),
+  t_last_slot_((time_t) 0),
+  done_(false)
 {
 }
 
 Logger::~Logger()
 {
-    _file.close();
+    file_.close();
 }
 
 void Logger::open(const std::string& filename)
@@ -147,21 +147,21 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
 
     // Create H5 groups
-    _file = H5::H5File(filename, H5F_ACC_TRUNC);
+    file_ = H5::H5File(filename, H5F_ACC_TRUNC);
 
-    _slots = std::make_unique<ExtensibleDataSet>(_file, "slots", h5_slot);
-    _recv = std::make_unique<ExtensibleDataSet>(_file, "recv", h5_packet_recv);
-    _send = std::make_unique<ExtensibleDataSet>(_file, "send", h5_packet_send);
+    slots_ = std::make_unique<ExtensibleDataSet>(file_, "slots", h5_slot);
+    recv_ = std::make_unique<ExtensibleDataSet>(file_, "recv", h5_packet_recv);
+    send_ = std::make_unique<ExtensibleDataSet>(file_, "send", h5_packet_send);
 
     // Start worker thread
-    worker_thread = std::thread(&Logger::worker, this);
+    worker_thread_ = std::thread(&Logger::worker, this);
 }
 
 void Logger::setAttribute(const std::string& name, const std::string& val)
 {
     H5::StrType   h5_type(H5::PredType::C_S1, H5T_VARIABLE);
     H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = _file.createAttribute(name, h5_type, attr_space);
+    H5::Attribute att = file_.createAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, val);
 }
@@ -170,7 +170,7 @@ void Logger::setAttribute(const std::string& name, uint8_t val)
 {
     H5::IntType   h5_type(H5::PredType::NATIVE_UINT8);
     H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = _file.createAttribute(name, h5_type, attr_space);
+    H5::Attribute att = file_.createAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, &val);
 }
@@ -179,7 +179,7 @@ void Logger::setAttribute(const std::string& name, uint32_t val)
 {
     H5::IntType   h5_type(H5::PredType::NATIVE_UINT32);
     H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = _file.createAttribute(name, h5_type, attr_space);
+    H5::Attribute att = file_.createAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, &val);
 }
@@ -188,7 +188,7 @@ void Logger::setAttribute(const std::string& name, double val)
 {
     H5::FloatType h5_type(H5::PredType::NATIVE_DOUBLE);
     H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = _file.createAttribute(name, h5_type, attr_space);
+    H5::Attribute att = file_.createAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, &val);
 }
@@ -197,9 +197,9 @@ void Logger::logSlot(std::shared_ptr<IQBuf> buf)
 {
     // Only log slots we haven't logged before. We should never be asked to log
     // a slot that is older than the youngest slot we've ever logged.
-    if (buf->timestamp > _t_last_slot) {
-        log_q.emplace([=](){ _logSlot(buf); });
-        _t_last_slot = buf->timestamp;
+    if (buf->timestamp > t_last_slot_) {
+        log_q_.emplace([=](){ logSlot_(buf); });
+        t_last_slot_ = buf->timestamp;
     }
 }
 
@@ -217,51 +217,51 @@ void Logger::logRecv(const Clock::time_point& t,
                      float rssi,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
-    log_q.emplace([=](){ _logRecv(t, start_samples, end_samples, header_valid, payload_valid, hdr, crc, fec0, fec1, ms, evm, rssi, buf); });
+    log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, crc, fec0, fec1, ms, evm, rssi, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
                      const Header& hdr,
                      std::shared_ptr<IQBuf> buf)
 {
-    log_q.emplace([=](){ _logSend(t, hdr, buf); });
+    log_q_.emplace([=](){ logSend_(t, hdr, buf); });
 }
 
 void Logger::stop(void)
 {
-    _done = true;
+    done_ = true;
 
-    log_q.stop();
+    log_q_.stop();
 
-    if (worker_thread.joinable())
-        worker_thread.join();
+    if (worker_thread_.joinable())
+        worker_thread_.join();
 }
 
 void Logger::worker(void)
 {
     std::function<void()> entry;
 
-    while (!_done) {
-        log_q.pop(entry);
-        if (_done)
+    while (!done_) {
+        log_q_.pop(entry);
+        if (done_)
             break;
 
         entry();
     }
 }
 
-void Logger::_logSlot(std::shared_ptr<IQBuf> buf)
+void Logger::logSlot_(std::shared_ptr<IQBuf> buf)
 {
     SlotEntry entry;
 
-    entry.timestamp = (buf->timestamp - _t_start).get_real_secs();
+    entry.timestamp = (buf->timestamp - t_start_).get_real_secs();
     entry.iq_data.p = &(*buf)[0];
     entry.iq_data.len = buf->size();
 
-    _slots->write(&entry, 1);
+    slots_->write(&entry, 1);
 }
 
-void Logger::_logRecv(const Clock::time_point& t,
+void Logger::logRecv_(const Clock::time_point& t,
                       uint32_t start_samples,
                       uint32_t end_samples,
                       bool header_valid,
@@ -277,7 +277,7 @@ void Logger::_logRecv(const Clock::time_point& t,
 {
     PacketRecvEntry entry;
 
-    entry.timestamp = (t - _t_start).get_real_secs();
+    entry.timestamp = (t - t_start_).get_real_secs();
     entry.start_samples = start_samples;
     entry.end_samples = end_samples;
     entry.header_valid = header_valid;
@@ -294,21 +294,21 @@ void Logger::_logRecv(const Clock::time_point& t,
     entry.iq_data.p = &(*buf)[0];
     entry.iq_data.len = buf->size();
 
-    _recv->write(&entry, 1);
+    recv_->write(&entry, 1);
 }
 
-void Logger::_logSend(const Clock::time_point& t,
+void Logger::logSend_(const Clock::time_point& t,
                       const Header& hdr,
                       std::shared_ptr<IQBuf> buf)
 {
     PacketSendEntry entry;
 
-    entry.timestamp = (t - _t_start).get_real_secs();
+    entry.timestamp = (t - t_start_).get_real_secs();
     entry.pkt_id = hdr.pkt_id;
     entry.src = hdr.src;
     entry.dest = hdr.dest;
     entry.iq_data.p = buf->data();
     entry.iq_data.len = buf->size();
 
-    _send->write(&entry, 1);
+    send_->write(&entry, 1);
 }

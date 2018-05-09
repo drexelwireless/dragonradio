@@ -2,11 +2,11 @@
 
 #include "Clock.hh"
 
-uhd::usrp::multi_usrp::sptr Clock::_usrp;
+uhd::usrp::multi_usrp::sptr Clock::usrp_;
 
 void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 {
-    _usrp = usrp;
+    usrp_ = usrp;
 
     // Set USRP time relative to system NTP time
     timeval tv;
@@ -18,5 +18,5 @@ void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 
 void Clock::releaseUSRP(void)
 {
-    _usrp.reset();
+    usrp_.reset();
 }

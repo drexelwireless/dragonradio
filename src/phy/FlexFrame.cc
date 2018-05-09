@@ -10,36 +10,36 @@ union PHYHeader {
 };
 
 FlexFrame::Modulator::Modulator(FlexFrame& phy) :
-    _phy(phy)
+    phy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
-    flexframegenprops_init_default(&_fgprops);
-    _fg = flexframegen_create(&_fgprops);
+    flexframegenprops_init_default(&fgprops_);
+    fg_ = flexframegen_create(&fgprops_);
 }
 
 FlexFrame::Modulator::~Modulator()
 {
-    flexframegen_destroy(_fg);
+    flexframegen_destroy(fg_);
 }
 
 void FlexFrame::Modulator::print(void)
 {
-    flexframegen_print(_fg);
+    flexframegen_print(fg_);
 }
 
 void FlexFrame::Modulator::update_props(NetPacket& pkt)
 {
-    if (_fgprops.check != pkt.check ||
-        _fgprops.fec0 != pkt.fec0 ||
-        _fgprops.fec1 != pkt.fec1 ||
-        _fgprops.mod_scheme != pkt.ms) {
-        _fgprops.check = pkt.check;
-        _fgprops.fec0 = pkt.fec0;
-        _fgprops.fec1 = pkt.fec1;
-        _fgprops.mod_scheme = pkt.ms;
+    if (fgprops_.check != pkt.check ||
+        fgprops_.fec0 != pkt.fec0 ||
+        fgprops_.fec1 != pkt.fec1 ||
+        fgprops_.mod_scheme != pkt.ms) {
+        fgprops_.check = pkt.check;
+        fgprops_.fec0 = pkt.fec0;
+        fgprops_.fec1 = pkt.fec1;
+        fgprops_.mod_scheme = pkt.ms;
 
-        flexframegen_setprops(_fg, &_fgprops);
+        flexframegen_setprops(fg_, &fgprops_);
     }
 }
 
@@ -60,11 +60,11 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
     header.h.pkt_id = pkt->pkt_id;
     header.h.pkt_len = pkt->size();
 
-    pkt->resize(std::max((size_t) pkt->size(), _phy._minPacketSize));
+    pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
 
     update_props(*pkt);
-    flexframegen_reset(_fg);
-    flexframegen_assemble(_fg, header.bytes, pkt->data(), pkt->size());
+    flexframegen_reset(fg_);
+    flexframegen_assemble(fg_, header.bytes, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);
@@ -76,7 +76,7 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
     bool last_symbol = false;
 
     while (!last_symbol) {
-        last_symbol = flexframegen_write_samples(_fg,
+        last_symbol = flexframegen_write_samples(fg_,
           reinterpret_cast<liquid_float_complex*>(&(*iqbuf)[nsamples]));
 
         // Apply soft gain. Note that this is where nsamples is incremented.
@@ -98,39 +98,39 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
 }
 
 FlexFrame::Demodulator::Demodulator(FlexFrame& phy) :
-    LiquidDemodulator(phy._net),
-    _phy(phy)
+    LiquidDemodulator(phy.net_),
+    phy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
-    _fs = flexframesync_create(&LiquidDemodulator::liquid_callback, this);
+    fs_ = flexframesync_create(&LiquidDemodulator::liquid_callback, this);
 }
 
 FlexFrame::Demodulator::~Demodulator()
 {
-    flexframesync_destroy(_fs);
+    flexframesync_destroy(fs_);
 }
 
 void FlexFrame::Demodulator::print(void)
 {
-    flexframesync_print(_fs);
+    flexframesync_print(fs_);
 }
 
 void FlexFrame::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
-    flexframesync_reset(_fs);
+    flexframesync_reset(fs_);
 
-    _demod_start = timestamp;
-    _demod_off = off;
+    demod_start_ = timestamp;
+    demod_off_ = off;
 }
 
 void FlexFrame::Demodulator::demodulate(std::complex<float>* data,
                                         size_t count,
                                         std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
-    _callback = callback;
+    callback_ = callback;
 
-    flexframesync_execute(_fs, reinterpret_cast<liquid_float_complex*>(data), count);
+    flexframesync_execute(fs_, reinterpret_cast<liquid_float_complex*>(data), count);
 }
 
 std::unique_ptr<PHY::Demodulator> FlexFrame::make_demodulator(void)

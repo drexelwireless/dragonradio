@@ -56,27 +56,27 @@ public:
     void stop(void);
 
 private:
-    H5::H5File _file;
-    std::unique_ptr<ExtensibleDataSet> _slots;
-    std::unique_ptr<ExtensibleDataSet> _recv;
-    std::unique_ptr<ExtensibleDataSet> _send;
-    Clock::time_point _t_start;
-    Clock::time_point _t_last_slot;
+    H5::H5File file_;
+    std::unique_ptr<ExtensibleDataSet> slots_;
+    std::unique_ptr<ExtensibleDataSet> recv_;
+    std::unique_ptr<ExtensibleDataSet> send_;
+    Clock::time_point t_start_;
+    Clock::time_point t_last_slot_;
 
     /** @brief Flag indicating we should terminate the logger. */
-    bool _done;
+    bool done_;
 
     /** @brief Pending log entries. */
-    SafeQueue<std::function<void(void)>> log_q;
+    SafeQueue<std::function<void(void)>> log_q_;
 
     /** @brief Log worker thread. */
-    std::thread worker_thread;
+    std::thread worker_thread_;
 
     /** @brief Log worker. */
     void worker(void);
 
-    void _logSlot(std::shared_ptr<IQBuf> buf);
-    void _logRecv(const Clock::time_point& t,
+    void logSlot_(std::shared_ptr<IQBuf> buf);
+    void logRecv_(const Clock::time_point& t,
                   uint32_t start_samples,
                   uint32_t end_samples,
                   bool header_valid,
@@ -89,7 +89,7 @@ private:
                   float evm,
                   float rssi,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
-    void _logSend(const Clock::time_point& t,
+    void logSend_(const Clock::time_point& t,
                   const Header& hdr,
                   std::shared_ptr<IQBuf> buf);
 };

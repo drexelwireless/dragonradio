@@ -1,7 +1,7 @@
 #include "RadioPacketQueue.hh"
 
 RadioPacketQueue::RadioPacketQueue() :
-    _done(false)
+    done_(false)
 {
 }
 
@@ -12,27 +12,27 @@ RadioPacketQueue::~RadioPacketQueue()
 void RadioPacketQueue::push(std::unique_ptr<RadioPacket> pkt)
 {
     {
-        std::lock_guard<std::mutex> lock(_m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        _q.emplace_back(std::move(pkt));
+        q_.emplace_back(std::move(pkt));
     }
 
-    _cond.notify_one();
+    cond_.notify_one();
 }
 
 void RadioPacketQueue::push(RadioPacketQueue::barrier b,
                             std::unique_ptr<RadioPacket> pkt)
 {
     {
-        std::lock_guard<std::mutex> lock(_m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        _q.emplace(b, std::move(pkt));
+        q_.emplace(b, std::move(pkt));
     }
 
-    _cond.notify_one();
+    cond_.notify_one();
 }
 
-RadioPacketQueue::barrier RadioPacketQueue::push_barrier(void)
+RadioPacketQueue::barrier RadioPacketQueue::pushBarrier(void)
 {
     auto pkt = std::make_unique<RadioPacket>();
 
@@ -41,43 +41,43 @@ RadioPacketQueue::barrier RadioPacketQueue::push_barrier(void)
     RadioPacketQueue::barrier b;
 
     {
-        std::lock_guard<std::mutex> lock(_m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        b = _q.emplace(_q.end(), std::move(pkt));
+        b = q_.emplace(q_.end(), std::move(pkt));
     }
 
-    _cond.notify_one();
+    cond_.notify_one();
 
     return b;
 }
 
-void RadioPacketQueue::erase_barrier(RadioPacketQueue::barrier b)
+void RadioPacketQueue::eraseBarrier(RadioPacketQueue::barrier b)
 {
     {
-        std::lock_guard<std::mutex> lock(_m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        _q.erase(b);
+        q_.erase(b);
     }
 
-    _cond.notify_all();
+    cond_.notify_all();
 }
 
 bool RadioPacketQueue::pop(std::unique_ptr<RadioPacket>& pkt)
 {
-    std::unique_lock<std::mutex> lock(_m);
+    std::unique_lock<std::mutex> lock(m_);
 
-    _cond.wait(lock, [this]{ return _done || (!_q.empty() && !_q.front()->barrier); });
-    if (_done)
+    cond_.wait(lock, [this]{ return done_ || (!q_.empty() && !q_.front()->barrier); });
+    if (done_)
         return false;
     else {
-        pkt = std::move(_q.front());
-        _q.pop_front();
+        pkt = std::move(q_.front());
+        q_.pop_front();
         return true;
     }
 }
 
 void RadioPacketQueue::stop(void)
 {
-    _done = true;
-    _cond.notify_all();
+    done_ = true;
+    cond_.notify_all();
 }

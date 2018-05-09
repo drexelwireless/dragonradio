@@ -45,22 +45,22 @@ public:
 
 private:
     /** @brief The queue on which demodulated packets should be placed. */
-    RadioPacketQueue& _radio_q;
+    RadioPacketQueue& radio_q_;
 
     /** @brief Flag that is true when we should finish processing. */
-    bool _done;
+    bool done_;
 
     /** @brief Mutex protecting the queue of IQ buffers. */
-    std::mutex _m;
+    std::mutex m_;
 
     /** @brief Condition variable protecting the queue of IQ buffers. */
-    std::condition_variable _cond;
+    std::condition_variable cond_;
 
     /** @brief The number of items in the queue of IQ buffers. */
-    size_t _size;
+    size_t size_;
 
     /** @brief The queue of IQ buffers. */
-    std::list<std::shared_ptr<IQBuf>> _q;
+    std::list<std::shared_ptr<IQBuf>> q_;
 };
 
 /** @brief A parallel packet demodulator. */
@@ -69,7 +69,7 @@ class ParallelPacketDemodulator : public PacketDemodulator
 public:
     ParallelPacketDemodulator(std::shared_ptr<Net> net,
                               std::shared_ptr<PHY> phy,
-                              bool order,
+                              bool ordered,
                               unsigned int nthreads);
     virtual ~ParallelPacketDemodulator();
 
@@ -90,42 +90,42 @@ public:
 
 private:
     /** @brief Destination for packets. */
-    std::shared_ptr<Net> net;
+    std::shared_ptr<Net> net_;
 
     /** @brief PHY we use for demodulation. */
-    std::shared_ptr<PHY> phy;
+    std::shared_ptr<PHY> phy_;
 
-    /** @brief Should packets be output in order of reception? This increases
-     * latency.
+    /** @brief Should packets be output in the order they were actually
+     * received? Setting this to true increases latency!
      */
-    bool _order;
+    bool ordered_;
 
     /** @brief Number of samples to demod from tail of previous slot. */
-    size_t _prev_samps;
+    size_t prev_samps_;
 
     /** @brief Number of samples NOT to demod from tail of current slot. */
-    size_t _cur_samps;
+    size_t cur_samps_;
 
     /** @brief Flag that is true when we should finish processing. */
-    bool done;
+    bool done_;
 
     /** @brief IQ buffers we need to demodulate. */
-    IQBufQueue demod_q;
+    IQBufQueue demod_q_;
 
     /** @brief Queue of radio packets. */
-    RadioPacketQueue radio_q;
+    RadioPacketQueue radio_q_;
 
     /** @brief Demodulation worker threads. */
-    std::vector<std::thread> demod_threads;
-
-    /** @brief A demodulation worker. */
-    void demod_worker(void);
+    std::vector<std::thread> demod_threads_;
 
     /** @brief Network send thread. */
-    std::thread net_thread;
+    std::thread net_thread_;
+
+    /** @brief A demodulation worker. */
+    void demodWorker(void);
 
     /** @brief The network wend worker. */
-    void net_worker(void);
+    void netWorker(void);
 };
 
 #endif /* PARALLELPACKETDEMODULATOR_H_ */

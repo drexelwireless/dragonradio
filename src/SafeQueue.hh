@@ -52,20 +52,20 @@ public:
 
 private:
     /** @brief Flag indicating that processing of the queue should stop. */
-    bool done;
+    bool done_;
 
     /** @brief Mutex protecting the queue. */
-    std::mutex m;
+    std::mutex m_;
 
     /** @brief Condition variable protecting the queue. */
-    std::condition_variable cond;
+    std::condition_variable cond_;
 
     /** @brief The queue itself. */
-    std::queue<T> q;
+    std::queue<T> q_;
 };
 
 template<typename T>
-SafeQueue<T>::SafeQueue() : done(false)
+SafeQueue<T>::SafeQueue() : done_(false)
 {
 }
 
@@ -77,77 +77,77 @@ SafeQueue<T>::~SafeQueue()
 template<typename T>
 void SafeQueue<T>::reset(void)
 {
-    std::lock_guard<std::mutex> lock(m);
+    std::lock_guard<std::mutex> lock(m_);
     std::queue<T> newq;
 
-    done = false;
-    q.swap(newq);
+    done_ = false;
+    q_.swap(newq);
 }
 
 template<typename T>
 bool SafeQueue<T>::empty(void) const
 {
-    std::lock_guard<std::mutex> lock(m);
+    std::lock_guard<std::mutex> lock(m_);
 
-    return q.empty();
+    return q_.empty();
 }
 
 template<typename T>
 void SafeQueue<T>::push(const T& val)
 {
     {
-        std::lock_guard<std::mutex> lock(m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        q.push(val);
+        q_.push(val);
     }
 
-    cond.notify_one();
+    cond_.notify_one();
 }
 
 template<typename T>
 void SafeQueue<T>::push(T&& val)
 {
     {
-        std::lock_guard<std::mutex> lock(m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        q.push(std::move(val));
+        q_.push(std::move(val));
     }
-    cond.notify_one();
+    cond_.notify_one();
 }
 
 template<typename T>
 void SafeQueue<T>::emplace(const T& val)
 {
     {
-        std::lock_guard<std::mutex> lock(m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        q.emplace(val);
+        q_.emplace(val);
     }
-    cond.notify_one();
+    cond_.notify_one();
 }
 
 template<typename T>
 void SafeQueue<T>::emplace(T&& val)
 {
     {
-        std::lock_guard<std::mutex> lock(m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        q.emplace(std::move(val));
+        q_.emplace(std::move(val));
     }
-    cond.notify_one();
+    cond_.notify_one();
 }
 
 template<typename T>
 bool SafeQueue<T>::pop(T& val)
 {
-    std::unique_lock<std::mutex> lock(m);
+    std::unique_lock<std::mutex> lock(m_);
 
-    cond.wait(lock, [this]{ return done || !q.empty(); });
-    if (q.empty())
+    cond_.wait(lock, [this]{ return done_ || !q_.empty(); });
+    if (q_.empty())
         return false;
     else {
-        val = std::move(q.front());
-        q.pop();
+        val = std::move(q_.front());
+        q_.pop();
         return true;
     }
 }
@@ -155,8 +155,8 @@ bool SafeQueue<T>::pop(T& val)
 template<typename T>
 void SafeQueue<T>::stop(void)
 {
-    done = true;
-    cond.notify_all();
+    done_ = true;
+    cond_.notify_all();
 }
 
 #endif /* SAFEQUEUE_H_ */

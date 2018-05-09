@@ -72,28 +72,28 @@ public:
      * needed for demodulation
      * @return The RX oversample rate
      */
-    virtual double getRxRateOversample(void) const = 0;
+    virtual double getRXRateOversample(void) const = 0;
 
     /** @brief Return the IQ oversample rate (with respect to PHY bandwidth)
       * needed for modulation
       * @return The TX oversample rate
       */
-    virtual double getTxRateOversample(void) const = 0;
+    virtual double getTXRateOversample(void) const = 0;
 
     /** @brief Tell the PHY what RX sample rate we are running at.
      * @param rate The rate.
      */
-    virtual void setRxRate(double rate)
+    virtual void setRXRate(double rate)
     {
-        _rx_rate = rate;
+        rx_rate_ = rate;
     }
 
     /** @brief Tell the PHY what TX sample rate we are running at.
      * @param rate The rate.
      */
-    virtual void setTxRate(double rate)
+    virtual void setTXRate(double rate)
     {
-        _tx_rate = rate;
+        tx_rate_ = rate;
     }
 
     /** @brief Create a Modulator for this %PHY */
@@ -104,10 +104,10 @@ public:
 
 protected:
     /** @brief RX sample rate */
-    double _rx_rate;
+    double rx_rate_;
 
     /** @brief TX sample rate */
-    double _tx_rate;
+    double tx_rate_;
 };
 
 #endif /* PHY_H_ */

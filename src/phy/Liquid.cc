@@ -4,8 +4,8 @@
 std::mutex liquid_mutex;
 
 LiquidDemodulator::LiquidDemodulator(std::shared_ptr<Net> net) :
-    _net(net),
-    _resamp_fact(1)
+    net_(net),
+    resamp_fact_(1)
 {
 }
 
@@ -13,78 +13,78 @@ LiquidDemodulator::~LiquidDemodulator()
 {
 }
 
-int LiquidDemodulator::liquid_callback(unsigned char *  _header,
-                                       int              _header_valid,
-                                       unsigned char *  _payload,
-                                       unsigned int     _payload_len,
-                                       int              _payload_valid,
-                                       framesyncstats_s _stats,
-                                       void *           _userdata)
+int LiquidDemodulator::liquid_callback(unsigned char *  header_,
+                                       int              header_valid_,
+                                       unsigned char *  payload_,
+                                       unsigned int     payload_len_,
+                                       int              payload_valid_,
+                                       framesyncstats_s stats_,
+                                       void *           userdata_)
 {
-    return reinterpret_cast<LiquidDemodulator*>(_userdata)->
-        callback(_header,
-                 _header_valid,
-                 _payload,
-                 _payload_len,
-                 _payload_valid,
-                 _stats);
+    return reinterpret_cast<LiquidDemodulator*>(userdata_)->
+        callback(header_,
+                 header_valid_,
+                 payload_,
+                 payload_len_,
+                 payload_valid_,
+                 stats_);
 }
 
-int LiquidDemodulator::callback(unsigned char *  _header,
-                                int              _header_valid,
-                                unsigned char *  _payload,
-                                unsigned int     _payload_len,
-                                int              _payload_valid,
-                                framesyncstats_s _stats)
+int LiquidDemodulator::callback(unsigned char *  header_,
+                                int              header_valid_,
+                                unsigned char *  payload_,
+                                unsigned int     payload_len_,
+                                int              payload_valid_,
+                                framesyncstats_s stats_)
 {
-    Header* h = reinterpret_cast<Header*>(_header);
-    size_t  off = _demod_off;   // Save demodulation offset for use when we log.
+    Header* h = reinterpret_cast<Header*>(header_);
+    size_t  off = demod_off_;   // Save demodulation offset for use when we log.
     bool    incomplete = false; // Is this an incomplete packet?
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
-    _demod_off += _stats.end_counter;
+    demod_off_ += stats_.end_counter;
 
-    if (!_header_valid) {
+    if (!header_valid_) {
         printf("HEADER INVALID\n");
         incomplete = true;
-    } else if (!_payload_valid) {
+    } else if (!payload_valid_) {
         printf("PAYLOAD INVALID\n");
         incomplete = true;
-    } else if (!_net->wantPacket(h->dest))
+    } else if (!net_->wantPacket(h->dest))
         return 0;
     else if (h->pkt_len == 0)
         return 0;
 
     if (incomplete)
-        _callback(nullptr);
+        callback_(nullptr);
     else {
-        auto pkt = std::make_unique<RadioPacket>(_payload, h->pkt_len);
+        auto pkt = std::make_unique<RadioPacket>(payload_, h->pkt_len);
 
         pkt->src = h->src;
         pkt->dest = h->dest;
         pkt->pkt_id = h->pkt_id;
-        pkt->evm = _stats.evm;
-        pkt->rssi = _stats.rssi;
+        pkt->evm = stats_.evm;
+        pkt->rssi = stats_.rssi;
 
-        _callback(std::move(pkt));
+        callback_(std::move(pkt));
     }
 
     if (logger) {
-        auto buf = std::make_shared<buffer<std::complex<float>>>(_stats.num_framesyms);
-        memcpy(buf->data(), _stats.framesyms, _stats.num_framesyms*sizeof(std::complex<float>));
-        logger->logRecv(_demod_start,
-                        off + _stats.start_counter,
-                        off + _stats.end_counter,
-                        _header_valid,
-                        _payload_valid,
+        auto buf = std::make_shared<buffer<std::complex<float>>>(stats_.num_framesyms);
+        memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
+        logger->logRecv(demod_start_,
+                        off + stats_.start_counter,
+                        off + stats_.end_counter,
+                        header_valid_,
+                        payload_valid_,
                         *h,
-                        static_cast<crc_scheme>(_stats.check),
-                        static_cast<fec_scheme>(_stats.fec0),
-                        static_cast<fec_scheme>(_stats.fec1),
-                        static_cast<modulation_scheme>(_stats.mod_scheme),
-                        _stats.evm,
-                        _stats.rssi,
+                        static_cast<crc_scheme>(stats_.check),
+                        static_cast<fec_scheme>(stats_.fec0),
+                        static_cast<fec_scheme>(stats_.fec1),
+                        static_cast<modulation_scheme>(stats_.mod_scheme),
+                        stats_.evm,
+                        stats_.rssi,
                         std::move(buf));
     }
 

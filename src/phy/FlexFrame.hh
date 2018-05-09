@@ -28,17 +28,17 @@ public:
 
     private:
         /** @brief Associated FlexFrame PHY. */
-        FlexFrame& _phy;
+        FlexFrame& phy_;
 
         /** @brief The liquid-dsp flexframegen object */
-        flexframegen _fg;
+        flexframegen fg_;
 
         /** @brief The liquid-dsp flexframegenprops object  associated with this
           * flexframegen.
           */
-        flexframegenprops_s _fgprops;
+        flexframegenprops_s fgprops_;
 
-        /** Update frame properties to match _fgprops. */
+        /** Update frame properties to match fgprops_. */
         void update_props(NetPacket& pkt);
     };
 
@@ -66,16 +66,16 @@ public:
 
     private:
         /** @brief Associated FlexFrame PHY. */
-        FlexFrame& _phy;
+        FlexFrame& phy_;
 
         /** @brief The liquid-dsp flexframesync object */
-        flexframesync _fs;
+        flexframesync fs_;
     };
 
     FlexFrame(std::shared_ptr<Net> net,
               size_t minPacketSize) :
-        _net(net),
-        _minPacketSize(minPacketSize)
+        net_(net),
+        min_pkt_size_(minPacketSize)
     {
     }
 
@@ -83,12 +83,12 @@ public:
     {
     }
 
-    double getRxRateOversample(void) const override
+    double getRXRateOversample(void) const override
     {
         return 2.0;
     }
 
-    double getTxRateOversample(void) const override
+    double getTXRateOversample(void) const override
     {
         return 2.0;
     }
@@ -99,11 +99,11 @@ public:
 
 private:
     /** @brief The Net to which we should send received packets. */
-    std::shared_ptr<Net> _net;
+    std::shared_ptr<Net> net_;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */
-    size_t _minPacketSize;
+    size_t min_pkt_size_;
 };
 
 #endif /* FLEXFRAME_H_ */

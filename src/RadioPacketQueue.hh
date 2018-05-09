@@ -46,12 +46,12 @@ public:
     /** @brief Push a barrier onto the queue.
      * @return A barrier.
      */
-    barrier push_barrier(void);
+    barrier pushBarrier(void);
 
     /** @brief Erase a barrier from the queue.
      * @param The barrier.
      */
-    void erase_barrier(barrier b);
+    void eraseBarrier(barrier b);
 
     /** @brief Get a RadioPacket from the queue.
      * @param pkt The popped packet.
@@ -64,19 +64,19 @@ public:
 
 private:
     /** @brief Flag that is true when we should finish processing. */
-    bool _done;
+    bool done_;
 
     /** @brief Mutex protecting the queue of packets. */
-    std::mutex _m;
+    std::mutex m_;
 
     /** @brief Condition variable protecting the queue of packets. */
-    std::condition_variable _cond;
+    std::condition_variable cond_;
 
     /** @brief The number of items in the queue of packets. */
-    size_t _size;
+    size_t size_;
 
     /** @brief The queue of packets. */
-    std::list<std::unique_ptr<RadioPacket>> _q;
+    std::list<std::unique_ptr<RadioPacket>> q_;
 };
 
 

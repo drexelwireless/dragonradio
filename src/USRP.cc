@@ -8,88 +8,128 @@
 
 USRP::USRP(const std::string& addr,
            bool x310,
-           double center_freq,
+           double freq,
            const std::string& tx_ant,
            const std::string& rx_ant,
            float tx_gain,
            float rx_gain) :
-    usrp(uhd::usrp::multi_usrp::make(addr)),
-    x310(x310),
-    _done(false)
+    usrp_(uhd::usrp::multi_usrp::make(addr)),
+    x310_(x310),
+    done_(false)
 {
-    usrp->set_tx_antenna(tx_ant);
-    usrp->set_rx_antenna(rx_ant);
+    usrp_->set_tx_antenna(tx_ant);
+    usrp_->set_rx_antenna(rx_ant);
 
-    usrp->set_tx_gain(tx_gain);
-    usrp->set_rx_gain(rx_gain);
+    usrp_->set_tx_gain(tx_gain);
+    usrp_->set_rx_gain(rx_gain);
 
-    // See:
-    //   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
-    if (x310) {
-        double lo_offset = -42.0e6;
-        usrp->set_tx_freq(uhd::tune_request_t(center_freq, lo_offset));
-    } else
-        usrp->set_tx_freq(center_freq);
-
-    if (x310) {
-        double lo_offset = +42.0e6;
-        usrp->set_rx_freq(uhd::tune_request_t(center_freq, lo_offset));
-    } else
-        usrp->set_rx_freq(center_freq);
-
-    // See:
-    //   https://files.ettus.com/manual/page_general.html
-    while (not usrp->get_tx_sensor("lo_locked").to_bool())
-        //sleep for a short time in milliseconds
-        usleep(10);
-
-    while (not usrp->get_rx_sensor("lo_locked").to_bool())
-        usleep(10);
+    setRXFrequency(freq);
 
     // Set up clock
-    Clock::setUSRP(usrp);
+    setTXFrequency(freq);
+    Clock::setUSRP(usrp_);
 
     // Set up USRP streaming
     uhd::stream_args_t stream_args("fc32");
 
-    tx_stream = usrp->get_tx_stream(stream_args);
-    rx_stream = usrp->get_rx_stream(stream_args);
+    tx_stream_ = usrp_->get_tx_stream(stream_args);
+    rx_stream_ = usrp_->get_rx_stream(stream_args);
 
     // Turn on DC offset correction
-    usrp->set_tx_dc_offset(true);
-    usrp->set_rx_dc_offset(true);
+    usrp_->set_tx_dc_offset(true);
+    usrp_->set_rx_dc_offset(true);
 
     // During TX and RX, attempt to send/receive 8x the maximum number of
     // samples in a packet
-    _tx_max_samps = 8*tx_stream->get_max_num_samps();
-    _rx_max_samps = 8*rx_stream->get_max_num_samps();
+    tx_max_samps_ = 8*tx_stream_->get_max_num_samps();
+    rx_max_samps_ = 8*rx_stream_->get_max_num_samps();
 
     // Start thread that receives TX errors
-    _tx_thread = std::thread(&USRP::_tx_error, this);
+    tx_error_thread_ = std::thread(&USRP::txErrorWorker, this);
 }
 
 USRP::~USRP()
 {
 }
 
-double USRP::get_tx_rate(void)
+// See the following for X310 LO offset advice:
+//   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
+//
+// See the following for instructions of waitign for LO to settle:
+//   https://files.ettus.com/manual/page_general.html
+
+double USRP::getTXFrequency(void)
 {
-    return usrp->get_tx_rate();
+    return usrp_->get_tx_freq();
 }
 
-void USRP::set_tx_rate(double rate)
+void USRP::setTXFrequency(double freq)
 {
-    usrp->set_tx_rate(rate);
+    if (x310_) {
+        double lo_offset = -42.0e6;
+        usrp_->set_tx_freq(uhd::tune_request_t(freq, lo_offset));
+    } else
+        usrp_->set_tx_freq(freq);
+
+    while (!usrp_->get_tx_sensor("lo_locked").to_bool())
+        usleep(10);
 }
 
-double USRP::get_rx_rate(void)
+double USRP::getRXFrequency(void)
 {
-    return usrp->get_rx_rate();
+    return usrp_->get_rx_freq();
 }
 
-void USRP::set_rx_rate(double rate)
+void USRP::setRXFrequency(double freq)
 {
-    usrp->set_rx_rate(rate);
+    if (x310_) {
+        double lo_offset = +42.0e6;
+        usrp_->set_rx_freq(uhd::tune_request_t(freq, lo_offset));
+    } else
+        usrp_->set_rx_freq(freq);
+
+    while (!usrp_->get_rx_sensor("lo_locked").to_bool())
+        usleep(10);
+}
+
+double USRP::getTXRate(void)
+{
+    return usrp_->get_tx_rate();
+}
+
+void USRP::setTXRate(double rate)
+{
+    usrp_->set_tx_rate(rate);
+}
+
+double USRP::getRXRate(void)
+{
+    return usrp_->get_rx_rate();
+}
+
+void USRP::setRXRate(double rate)
+{
+    usrp_->set_rx_rate(rate);
+}
+
+double USRP::getTXGain(void)
+{
+    return usrp_->get_tx_gain();
+}
+
+void USRP::setTXGain(float db)
+{
+    return usrp_->set_tx_gain(db);
+}
+
+double USRP::getRXGain(void)
+{
+    return usrp_->get_rx_gain();
+}
+
+void USRP::setRXGain(float db)
+{
+    return usrp_->set_rx_gain(db);
 }
 
 void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs)
@@ -102,7 +142,7 @@ void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bu
     tx_md.start_of_burst = true;
 
     // We walk through the supplied queue of buffers and trasmit each in chunks
-    // whose size is no more than _tx_max_samps bytes, which is the maximum size
+    // whose size is no more than tx_max_samps_ bytes, which is the maximum size
     // of a USRP TX packet. This allows us to avoid being "late" even when we
     // have a very large buffer to send.
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
@@ -110,7 +150,7 @@ void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bu
 
         for (size_t off = 0; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
-            n = std::min(_tx_max_samps, iqbuf.size() - off);
+            n = std::min(tx_max_samps_, iqbuf.size() - off);
 
             // If this is the last segment of the current buffer *and* this is
             // the last buffer, mark this transmission as the end of the burst.
@@ -119,7 +159,7 @@ void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bu
 
             // Send the buffer segment and update the offset into the current
             // buffer.
-            n = tx_stream->send(&iqbuf[off], n, tx_md);
+            n = tx_stream_->send(&iqbuf[off], n, tx_md);
 
             // Future transmissions do not have time specs and are not the start
             // of a burst.
@@ -136,29 +176,29 @@ void USRP::startRXStream(Clock::time_point when)
     stream_cmd.stream_now = false;
     stream_cmd.num_samps = 0;
     stream_cmd.time_spec = when;
-    rx_stream->issue_stream_cmd(stream_cmd);
+    rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
 void USRP::stopRXStream(void)
 {
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
 
-    rx_stream->issue_stream_cmd(stream_cmd);
+    rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
 void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
-    const double      txRate = usrp->get_rx_rate(); // TX rate in Hz
+    const double      txRate = usrp_->get_rx_rate(); // TX rate in Hz
     Clock::time_point t_end = t_start + static_cast<double>(nsamps)/txRate;
     size_t            ndelivered = 0;
 
-    buf.resize(nsamps + _rx_max_samps);
+    buf.resize(nsamps + rx_max_samps_);
 
     for (;;) {
         uhd::rx_metadata_t rx_md;
         ssize_t            n;
 
-        n = rx_stream->recv(&buf[ndelivered], _rx_max_samps, rx_md, 0.1, false);
+        n = rx_stream_->recv(&buf[ndelivered], rx_max_samps_, rx_md, 0.1, false);
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
@@ -196,18 +236,18 @@ void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
 
 void USRP::stop(void)
 {
-    _done = true;
+    done_ = true;
 
-    if (_tx_thread.joinable())
-        _tx_thread.join();
+    if (tx_error_thread_.joinable())
+        tx_error_thread_.join();
 }
 
-void USRP::_tx_error(void)
+void USRP::txErrorWorker(void)
 {
     uhd::async_metadata_t async_md;
 
-    while (!_done) {
-        if (tx_stream->recv_async_msg(async_md, 0.1)) {
+    while (!done_) {
+        if (tx_stream_->recv_async_msg(async_md, 0.1)) {
             switch(async_md.event_code){
                 case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
                     break;

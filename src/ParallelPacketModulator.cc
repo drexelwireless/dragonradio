@@ -5,14 +5,14 @@
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
                                                  size_t nthreads) :
-    net(net),
-    phy(phy),
-    done(false),
-    watermark(0),
-    nsamples(0)
+    net_(net),
+    phy_(phy),
+    done_(false),
+    low_water_mark_(0),
+    nsamples_(0)
 {
     for (size_t i = 0; i < nthreads; ++i)
-        mod_threads.emplace_back(std::thread(&ParallelPacketModulator::mod_worker, this));
+        mod_threads_.emplace_back(std::thread(&ParallelPacketModulator::modWorker, this));
 }
 
 ParallelPacketModulator::~ParallelPacketModulator()
@@ -21,37 +21,37 @@ ParallelPacketModulator::~ParallelPacketModulator()
 
 void ParallelPacketModulator::stop(void)
 {
-    done = true;
-    prod.notify_all();
+    done_ = true;
+    producer_cond_.notify_all();
 
-    for (size_t i = 0; i < mod_threads.size(); ++i) {
-        if (mod_threads[i].joinable())
-            mod_threads[i].join();
+    for (size_t i = 0; i < mod_threads_.size(); ++i) {
+        if (mod_threads_[i].joinable())
+            mod_threads_[i].join();
     }
 }
 
-size_t ParallelPacketModulator::getWatermark(void)
+size_t ParallelPacketModulator::getLowWaterMark(void)
 {
-    return watermark;
+    return low_water_mark_;
 }
 
-void ParallelPacketModulator::setWatermark(size_t w)
+void ParallelPacketModulator::setLowWaterMark(size_t mark)
 {
-    size_t oldWatermark = watermark;
+    size_t old_low_water_mark = low_water_mark_;
 
-    watermark = w;
+    low_water_mark_ = mark;
 
-    if (w > oldWatermark)
-        prod.notify_all();
+    if (mark > old_low_water_mark)
+        producer_cond_.notify_all();
 }
 
 void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples)
 {
     {
-        std::unique_lock<std::mutex> lock(m);
+        std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-        while (!q.empty()) {
-            ModPacket& mpkt = *(q.front());
+        while (!pkt_q_.empty()) {
+            ModPacket& mpkt = *(pkt_q_.front());
 
             if (mpkt.complete.test_and_set(std::memory_order_acquire))
                 break;
@@ -63,39 +63,39 @@ void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, s
                 break;
             }
 
-            pkts.emplace_back(std::move(q.front()));
-            q.pop();
-            nsamples -= n;
+            pkts.emplace_back(std::move(pkt_q_.front()));
+            pkt_q_.pop();
+            nsamples_ -= n;
             maxSamples -= n;
         }
     }
 
-    prod.notify_all();
+    producer_cond_.notify_all();
 }
 
-void ParallelPacketModulator::mod_worker(void)
+void ParallelPacketModulator::modWorker(void)
 {
-    std::unique_ptr<PHY::Modulator> modulator = phy->make_modulator();
+    std::unique_ptr<PHY::Modulator> modulator = phy_->make_modulator();
     std::unique_ptr<NetPacket>      pkt;
     ModPacket                       *mpkt;
 
     for (;;) {
-        // Wait for queue to be below watermark
+        // Wait for queue to be below low-water mark
         {
-            std::unique_lock<std::mutex> lock(m);
+            std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-            prod.wait(lock, [this]{ return done || nsamples < watermark; });
+            producer_cond_.wait(lock, [this]{ return done_ || nsamples_ < low_water_mark_; });
         }
 
         // Exit if we are done
-        if (done)
+        if (done_)
             break;
 
         {
             // Get a packet from the network
-            std::unique_lock<std::mutex> net_lock(net_mutex);
+            std::unique_lock<std::mutex> net_lock(net_mutex_);
 
-            pkt = net->recvPacket();
+            pkt = net_->recvPacket();
 
             if (!pkt)
                 continue;
@@ -106,10 +106,10 @@ void ParallelPacketModulator::mod_worker(void)
             // network. Note that we acquire the lock on the network first, then
             // the lock on the queue. We don't want to hold the lock on the
             // queue for long because that will starve the transmitter.
-            std::unique_lock<std::mutex> lock(m);
+            std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-            q.emplace(std::make_unique<ModPacket>());
-            mpkt = q.back().get();
+            pkt_q_.emplace(std::make_unique<ModPacket>());
+            mpkt = pkt_q_.back().get();
         }
 
         // Modulate the packet
@@ -129,9 +129,9 @@ void ParallelPacketModulator::mod_worker(void)
         // we are merely restoring the universe to its rightful balance post
         // hoc.
         {
-            std::lock_guard<std::mutex> lock(m);
+            std::lock_guard<std::mutex> lock(pkt_mutex_);
 
-            nsamples += n;
+            nsamples_ += n;
         }
     }
 }

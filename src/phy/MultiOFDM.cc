@@ -15,16 +15,16 @@ union PHYHeader {
 };
 
 MultiOFDM::Modulator::Modulator(MultiOFDM& phy) :
-    _phy(phy)
+    phy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     // modem setup (list is for parallel demodulation)
-    _mctx = std::make_unique<multichanneltx>(NUM_CHANNELS,
-                                             _phy._M,
-                                             _phy._cp_len,
-                                             _phy._taper_len,
-                                             _phy._p);
+    mctx_ = std::make_unique<multichanneltx>(NUM_CHANNELS,
+                                             phy_.M_,
+                                             phy_.cp_len_,
+                                             phy_.taper_len_,
+                                             phy_.p_);
 }
 
 MultiOFDM::Modulator::~Modulator()
@@ -48,9 +48,9 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
     header.h.pkt_id = pkt->pkt_id;
     header.h.pkt_len = pkt->size();
 
-    pkt->resize(std::max((size_t) pkt->size(), _phy._minPacketSize));
+    pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
 
-    _mctx->UpdateData(0,
+    mctx_->UpdateData(0,
                       header.bytes,
                       pkt->data(),
                       pkt->size(),
@@ -65,8 +65,8 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
     // Local copy of gain
     const float g = pkt->g;
 
-    while (!_mctx->IsChannelReadyForData(0)) {
-        _mctx->GenerateSamples(&(*iqbuf)[nsamples]);
+    while (!mctx_->IsChannelReadyForData(0)) {
+        mctx_->GenerateSamples(&(*iqbuf)[nsamples]);
 
         // Apply soft gain. Note that this is where nsamples is incremented.
         for (unsigned int i = 0; i < NGEN; i++)
@@ -87,10 +87,10 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
 }
 
 MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
-    LiquidDemodulator(phy._net),
-    _phy(phy)
+    LiquidDemodulator(phy.net_),
+    phy_(phy)
 {
-    _resamp_fact = 2;
+    resamp_fact_ = 2;
 
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
@@ -98,13 +98,13 @@ MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
     framesync_callback callback[1] = { &LiquidDemodulator::liquid_callback };
     void               *userdata[1] = { this };
 
-    mcrx = std::make_unique<multichannelrx>(NUM_CHANNELS,
-                                            _phy._M,
-                                            _phy._cp_len,
-                                            _phy._taper_len,
-                                            _phy._p,
-                                            userdata,
-                                            callback);
+    mcrx_ = std::make_unique<multichannelrx>(NUM_CHANNELS,
+                                             phy_.M_,
+                                             phy_.cp_len_,
+                                             phy_.taper_len_,
+                                             phy_.p_,
+                                             userdata,
+                                             callback);
 }
 
 MultiOFDM::Demodulator::~Demodulator()
@@ -113,19 +113,19 @@ MultiOFDM::Demodulator::~Demodulator()
 
 void MultiOFDM::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
-    mcrx->Reset();
+    mcrx_->Reset();
 
-    _demod_start = timestamp;
-    _demod_off = off;
+    demod_start_ = timestamp;
+    demod_off_ = off;
 }
 
 void MultiOFDM::Demodulator::demodulate(std::complex<float>* data,
                                         size_t count,
                                         std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
-    _callback = callback;
+    callback_ = callback;
 
-    mcrx->Execute(data, count);
+    mcrx_->Execute(data, count);
 }
 
 std::unique_ptr<PHY::Demodulator> MultiOFDM::make_demodulator(void)

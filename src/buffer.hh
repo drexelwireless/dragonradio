@@ -21,179 +21,179 @@ public:
     using iterator = value_type*;
     using const_iterator = const value_type*;
 
-    buffer() : _data(nullptr), _size(0), _capacity(0) {}
+    buffer() : data_(nullptr), size_(0), capacity_(0) {}
 
     explicit buffer(size_type count)
     {
-        _data = reinterpret_cast<T*>(malloc(count*sizeof(T)));
-        if (!_data)
+        data_ = reinterpret_cast<T*>(malloc(count*sizeof(T)));
+        if (!data_)
             throw std::bad_alloc();
 
-        _size = count;
-        _capacity = count;
+        size_ = count;
+        capacity_ = count;
     }
 
     explicit buffer(const T *data, size_type count)
     {
-        _data = reinterpret_cast<T*>(malloc(count*sizeof(T)));
-        if (!_data)
+        data_ = reinterpret_cast<T*>(malloc(count*sizeof(T)));
+        if (!data_)
             throw std::bad_alloc();
 
-        memcpy(_data, data, count*sizeof(T));
-        _size = count;
-        _capacity = count;
+        memcpy(data_, data, count*sizeof(T));
+        size_ = count;
+        capacity_ = count;
     }
 
     buffer(const buffer& other)
     {
-        _data = reinterpret_cast<T*>(malloc(other._size*sizeof(T)));
-        if (!_data)
+        data_ = reinterpret_cast<T*>(malloc(other.size_*sizeof(T)));
+        if (!data_)
             throw std::bad_alloc();
 
-        std::memcpy(_data, other._data, other._size*sizeof(T));
+        std::memcpy(data_, other.data_, other.size_*sizeof(T));
 
-        _size = other._size;
-        _capacity = other._size;
+        size_ = other.size_;
+        capacity_ = other.size_;
     }
 
     buffer(buffer&& other) noexcept
     {
-        _data = other._data;
-        _size = other._size;
-        _capacity = other._size;
+        data_ = other.data_;
+        size_ = other.size_;
+        capacity_ = other.size_;
 
-        other._data = nullptr;
-        other._size = 0;
-        other._capacity = 0;
+        other.data_ = nullptr;
+        other.size_ = 0;
+        other.capacity_ = 0;
     }
 
     ~buffer()
     {
-        if (_data)
-            free(_data);
+        if (data_)
+            free(data_);
     }
 
     buffer& operator=(const buffer& other)
     {
-        _data = reinterpret_cast<T*>(malloc(other._size*sizeof(T)));
-        if (!_data)
+        data_ = reinterpret_cast<T*>(malloc(other.size_*sizeof(T)));
+        if (!data_)
             throw std::bad_alloc();
 
-        std::memcpy(_data, other._data, other._size*sizeof(T));
+        std::memcpy(data_, other.data_, other.size_*sizeof(T));
 
-        _size = other._size;
-        _capacity = other._size;
+        size_ = other.size_;
+        capacity_ = other.size_;
 
         return *this;
     }
 
     buffer& operator=(buffer&& other) noexcept
     {
-        _data = other._data;
-        _size = other._size;
-        _capacity = other._size;
+        data_ = other.data_;
+        size_ = other.size_;
+        capacity_ = other.size_;
 
-        other._data = nullptr;
-        other._size = 0;
-        other._capacity = 0;
+        other.data_ = nullptr;
+        other.size_ = 0;
+        other.capacity_ = 0;
 
         return *this;
     }
 
     reference at(size_type pos)
     {
-        if (pos >= _size)
+        if (pos >= size_)
             throw std::out_of_range("buffer range check");
 
-        return _data[pos];
+        return data_[pos];
     }
 
     const_reference at(size_type pos) const
     {
-        if (pos >= _size)
+        if (pos >= size_)
             throw std::out_of_range("buffer range check");
 
-        return _data[pos];
+        return data_[pos];
     }
 
     reference operator [](size_type pos)
     {
-        return _data[pos];
+        return data_[pos];
     }
 
     const_reference operator [](size_type pos) const
     {
-        return _data[pos];
+        return data_[pos];
     }
 
     reference front(void)
     {
-        return _data[0];
+        return data_[0];
     }
 
     const_reference front(void) const
     {
-        return _data[0];
+        return data_[0];
     }
 
     reference back(void)
     {
-        return _data[_size-1];
+        return data_[size_-1];
     }
 
     const_reference back(void) const
     {
-        return _data[_size-1];
+        return data_[size_-1];
     }
 
     value_type* data() noexcept
     {
-        return _data;
+        return data_;
     }
 
     const value_type* data() const noexcept
     {
-        return _data;
+        return data_;
     }
 
     iterator begin(void) noexcept
     {
-        return _data;
+        return data_;
     }
 
     const_iterator begin(void) const noexcept
     {
-        return _data;
+        return data_;
     }
 
     const_iterator cbegin(void) const noexcept
     {
-        return _data;
+        return data_;
     }
 
     iterator end(void) noexcept
     {
-        return _data + _size;
+        return data_ + size_;
     }
 
     const_iterator end(void) const noexcept
     {
-        return _data + _size;
+        return data_ + size_;
     }
 
     const_iterator cend(void) const noexcept
     {
-        return _data + _size;
+        return data_ + size_;
     }
 
     bool empty(void) const noexcept
     {
-        return _size == 0;
+        return size_ == 0;
     }
 
     size_type size(void) const noexcept
     {
-        return _size;
+        return size_;
     }
 
     size_type max_size(void) const noexcept
@@ -203,91 +203,91 @@ public:
 
     void reserve(size_type new_cap)
     {
-        if (new_cap > _capacity) {
-            size_type _new_capacity = _capacity;
+        if (new_cap > capacity_) {
+            size_type new_capacity_ = capacity_;
 
-            while (_new_capacity < new_cap)
-                _new_capacity *= 2;
+            while (new_capacity_ < new_cap)
+                new_capacity_ *= 2;
 
-            T* new_data = reinterpret_cast<T*>(realloc(_data, _new_capacity*sizeof(T)));
+            T* new_data = reinterpret_cast<T*>(realloc(data_, new_capacity_*sizeof(T)));
             if (!new_data)
                 throw std::bad_alloc();
 
-            _data = new_data;
-            _capacity = _new_capacity;
+            data_ = new_data;
+            capacity_ = new_capacity_;
         }
     }
 
     size_type capacity(void) const noexcept
     {
-        return _capacity;
+        return capacity_;
     }
 
     void shrink_to_fit(void)
     {
-        T* new_data = reinterpret_cast<T*>(realloc(_data, _size*sizeof(T)));
+        T* new_data = reinterpret_cast<T*>(realloc(data_, size_*sizeof(T)));
         if (!new_data)
             throw std::bad_alloc();
 
-        _data = new_data;
-        _capacity = _size;
+        data_ = new_data;
+        capacity_ = size_;
     }
 
     void clear(void) noexcept
     {
-        _size = 0;
+        size_ = 0;
     }
 
     void push_back(const T& value)
     {
-        reserve(_size+1);
-        _data[_size] = value;
-        ++_size;
+        reserve(size_+1);
+        data_[size_] = value;
+        ++size_;
     }
 
     void push_back(T&& value)
     {
-        reserve(_size+1);
-        new (&_data[_size]) T(std::move(value));
-        ++_size;
+        reserve(size_+1);
+        new (&data_[size_]) T(std::move(value));
+        ++size_;
     }
 
     template< class... Args >
     reference emplace_back(Args&&... args)
     {
-        reserve(_size+1);
-        new (&_data[_size]) T(std::forward<Args>(args)...);
-        ++_size;
+        reserve(size_+1);
+        new (&data_[size_]) T(std::forward<Args>(args)...);
+        ++size_;
     }
 
     void pop_back(void)
     {
-        --_size;
+        --size_;
     }
 
     void resize(size_type count)
     {
         reserve(count);
-        _size = count;
+        size_ = count;
     }
 
     void swap(buffer<T>& other)
     {
-        std::swap(_data, other._data);
-        std::swap(_size, other._size);
-        std::swap(_capacity, other._capacity);
+        std::swap(data_, other.data_);
+        std::swap(size_, other.size_);
+        std::swap(capacity_, other.capacity_);
     }
 
 private:
-    T* _data;
-    size_t _size;
-    size_t _capacity;
+    T* data_;
+    size_t size_;
+    size_t capacity_;
 };
 
 template<typename T>
 bool operator==(const buffer<T>& lhs, const buffer<T>& rhs)
 {
-    return lhs._size == rhs.size()
+    return lhs.size_ == rhs.size()
            && std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
