@@ -184,7 +184,9 @@ int main(int argc, char** argv)
 
     auto demodulator = std::make_shared<ParallelPacketDemodulator>(net, phy, ordered, ndemodthreads);
 
-    auto mac = std::make_shared<TDMA>(usrp, net, phy, modulator, demodulator, bandwidth, slot_size, guard_size);
+    auto mac = std::make_shared<TDMA>(usrp, phy, modulator, demodulator, bandwidth, net->size(), slot_size, guard_size);
+
+    mac->addSlot(net->getMyNodeId() - 1);
 
     // Wait for Ctrl-C
     sigset_t waitset;

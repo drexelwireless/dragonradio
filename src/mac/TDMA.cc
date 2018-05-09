@@ -1,10 +1,3 @@
-// DWSL - full radio stack
-
-#include <errno.h>
-
-#include <cstring>
-#include <deque>
-
 #include <uhd/utils/thread_priority.hpp>
 
 #include "Clock.hh"
@@ -13,24 +6,24 @@
 #include "mac/TDMA.hh"
 
 TDMA::TDMA(std::shared_ptr<USRP> usrp,
-           std::shared_ptr<Net> net,
            std::shared_ptr<PHY> phy,
            std::shared_ptr<PacketModulator> modulator,
            std::shared_ptr<PacketDemodulator> demodulator,
            double bandwidth,
+           size_t nslots,
            double slot_size,
            double guard_size)
   : _usrp(usrp),
-    _net(net),
     _phy(phy),
     _modulator(modulator),
     _demodulator(demodulator),
     _bandwidth(bandwidth),
-    _frame_size(slot_size*net->size()),
     _slot_size(slot_size),
     _guard_size(guard_size),
     _done(false)
 {
+    _slots.resize(nslots, false);
+
     _rx_rate = _bandwidth*phy->getRxRateOversample();
     _tx_rate = _bandwidth*phy->getTxRateOversample();
 
@@ -48,12 +41,39 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
     _rxThread = std::thread(&TDMA::rxWorker, this);
     _txThread = std::thread(&TDMA::txWorker, this);
 
-    _demodulator->setDemodParameters(0.5*_guard_size*_rx_rate,
-                                     (_slot_size - 0.5*_guard_size)*_tx_rate);
+    reconfigure();
 }
 
 TDMA::~TDMA()
 {
+}
+
+void TDMA::setNSlots(size_t n)
+{
+    _slots.resize(n, false);
+    reconfigure();
+}
+
+void TDMA::setSlotSize(double t)
+{
+    _guard_size = t;
+    reconfigure();
+}
+
+void TDMA::setGuardSize(double t)
+{
+    _slot_size = t;
+    reconfigure();
+}
+
+void TDMA::addSlot(size_t i)
+{
+    _slots[i] = true;
+}
+
+void TDMA::removeSlot(size_t i)
+{
+    _slots[i] = false;
 }
 
 void TDMA::stop(void)
@@ -116,7 +136,6 @@ void TDMA::txWorker(void)
 {
     Clock::time_point t_now;       // Current time
     Clock::time_point t_send_slot; // Time at which *our* slot starts
-    double            t_frame_pos; // Offset into the current frame (sec)
     size_t            slot_samps;  // Number of samples to send in a slot
 
     uhd::set_thread_priority_safe();
@@ -126,32 +145,54 @@ void TDMA::txWorker(void)
     _modulator->setWatermark(slot_samps);
 
     while (!_done) {
-        // Figure out when our next send slot is
+        // Figure out when our next send slot is.
         t_now = Clock::now();
-        t_frame_pos = fmod(t_now.get_real_secs(), _frame_size);
-        t_send_slot = t_now + _net->getMyNodeId()*_slot_size - t_frame_pos;
 
-        while (t_send_slot < t_now) {
+        for (;;) {
+            t_send_slot = findNextSlot(t_now);
+            if (t_send_slot > t_now)
+                break;
+
+            t_now = t_send_slot;
             printf("MISS\n");
-            t_send_slot += _frame_size;
         }
 
         // Schedule transmission for start of our slot
         txSlot(t_send_slot, slot_samps);
 
-        // Wait out the rest of the frame
-        struct timespec   ts;
+        // Sleep until the beginning of the guard interval before our next TX
+        // slot
         Clock::time_point t_sleep;
 
         t_now = Clock::now();
-        t_sleep = t_send_slot + _frame_size - _guard_size - t_now;
+        t_sleep = findNextSlot(t_now) - t_now - _guard_size;
 
-        ts.tv_sec = t_sleep.get_full_secs();
-        ts.tv_nsec = t_sleep.get_frac_secs()*1e9;
+        if (t_sleep > 0.0) {
+            struct timespec ts;
 
-        if (nanosleep(&ts, NULL) < 0)
-            perror("txWorker: slumber interrupted");
+            ts.tv_sec = t_sleep.get_full_secs();
+            ts.tv_nsec = t_sleep.get_frac_secs()*1e9;
+
+            if (nanosleep(&ts, NULL) < 0)
+                perror("txWorker: slumber interrupted");
+        }
     }
+}
+
+Clock::time_point TDMA::findNextSlot(Clock::time_point t)
+{
+    double t_secs = t.get_real_secs(); // Time t in seconds
+    double t_slot_pos;                 // Offset into the current slot (sec)
+    size_t cur_slot;                   // Current slot index
+    size_t tx_slot;                    // Slots before we can TX
+
+    t_slot_pos = fmod(t_secs, _slot_size);
+    cur_slot = fmod(t_secs, _frame_size) / _slot_size;
+
+    for (tx_slot = 1; !_slots[(cur_slot + tx_slot) % _slots.size()]; ++tx_slot)
+        ;
+
+    return (t - t_slot_pos) + tx_slot*_slot_size;
 }
 
 void TDMA::txSlot(Clock::time_point when, size_t maxSamples)
@@ -178,4 +219,11 @@ void TDMA::txSlot(Clock::time_point when, size_t maxSamples)
 
         _usrp->burstTX(when, txBuf);
     }
+}
+
+void TDMA::reconfigure(void)
+{
+    _frame_size = _slot_size*_slots.size();
+    _demodulator->setDemodParameters(0.5*_guard_size*_rx_rate,
+                                     (_slot_size - 0.5*_guard_size)*_tx_rate);
 }

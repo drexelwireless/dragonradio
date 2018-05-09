@@ -18,23 +18,42 @@ class TDMA : public MAC
 {
 public:
     TDMA(std::shared_ptr<USRP> usrp,
-         std::shared_ptr<Net> net,
          std::shared_ptr<PHY> phy,
          std::shared_ptr<PacketModulator> modulator,
          std::shared_ptr<PacketDemodulator> demodulator,
          double bandwidth,
+         size_t nslots,
          double slot_size,
          double guard_size);
     virtual ~TDMA();
 
+    /** @brief Set number of slots
+     * @param n The number of slots
+     */
+    void setNSlots(size_t n);
+
+    /** @brief Set slot size, including guard interval
+     * @param t Slot size in seconds
+     */
+    void setSlotSize(double t);
+
+    /** @brief Set guard interval size
+     * @param t Guard interval size in seconds
+     */
+    void setGuardSize(double t);
+
+    /** @brief Mark a slot as belonging to us */
+    void addSlot(size_t i);
+
+    /** @brief Mark a slot as not belonging to us */
+    void removeSlot(size_t i);
+
+    /** @brief Stop processing packets */
     void stop(void) override;
 
 private:
     /** @brief Our USRP device. */
     std::shared_ptr<USRP> _usrp;
-
-    /** @brief The network we interact with. */
-    std::shared_ptr<Net> _net;
 
     /** @brief Our PHY. */
     std::shared_ptr<PHY> _phy;
@@ -63,6 +82,9 @@ private:
     /** @brief Length of inter-slot guard (sec) */
     double _guard_size;
 
+    /** @brief The slot schedule */
+    std::vector<bool> _slots;
+
     /** @brief Flag indicating if we should stop processing packets */
     bool _done;
 
@@ -78,8 +100,17 @@ private:
     /** @brief Worker transmitting packets */
     void txWorker(void);
 
+    /** @brief Find next TX slot
+     * @param t Time at which to start looking for a TX slot
+     * @returns The beginning of the next TX slot.
+     */
+    Clock::time_point findNextSlot(Clock::time_point t);
+
     /** @brief Transmit one slot's worth of samples */
     void txSlot(Clock::time_point when, size_t maxSamples);
+
+    /** @brief Reconfigure the MAC when TDMA parameters change */
+    void reconfigure(void);
 };
 
 #endif /* TDMA_H_ */
