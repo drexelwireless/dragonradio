@@ -9,6 +9,7 @@
 #include "Packet.hh"
 #include "phy/Liquid.hh"
 #include "phy/PHY.hh"
+#include "net/Net.hh"
 
 /** @brief Creation of liquid objects is not re-rentrant, so we need to protect access
  * with a mutex.
@@ -17,12 +18,12 @@ extern std::mutex liquid_mutex;
 
 class LiquidDemodulator : public PHY::Demodulator {
 public:
-    LiquidDemodulator(std::function<bool(Header&)> predicate);
+    LiquidDemodulator(std::shared_ptr<Net> net);
     virtual ~LiquidDemodulator();
 
 protected:
-    /** @brief Predicate to filter received received packets. */
-    std::function<bool(Header&)> _predicate;
+    /** @brief The Net destination for demodulated packets. */
+    std::shared_ptr<Net> _net;
 
     /** @brief Callback for received packets. */
     std::function<void(std::unique_ptr<RadioPacket>)> _callback;

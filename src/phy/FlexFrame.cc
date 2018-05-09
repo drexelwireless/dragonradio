@@ -98,7 +98,7 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
 }
 
 FlexFrame::Demodulator::Demodulator(FlexFrame& phy) :
-    LiquidDemodulator([&phy](Header& hdr) { return phy._net->wantPacket(hdr.dest); } ),
+    LiquidDemodulator(phy._net),
     _phy(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);

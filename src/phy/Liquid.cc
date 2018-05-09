@@ -3,8 +3,8 @@
 
 std::mutex liquid_mutex;
 
-LiquidDemodulator::LiquidDemodulator(std::function<bool(Header&)> predicate) :
-    _predicate(predicate),
+LiquidDemodulator::LiquidDemodulator(std::shared_ptr<Net> net) :
+    _net(net),
     _resamp_fact(1)
 {
 }
@@ -51,7 +51,7 @@ int LiquidDemodulator::callback(unsigned char *  _header,
     } else if (!_payload_valid) {
         printf("PAYLOAD INVALID\n");
         incomplete = true;
-    } else if (!_predicate(*h))
+    } else if (!_net->wantPacket(h->dest))
         return 0;
     else if (h->pkt_len == 0)
         return 0;
