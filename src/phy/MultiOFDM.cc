@@ -1,6 +1,6 @@
-#include "Liquid.hh"
 #include "Logger.hh"
-#include "MultiOFDM.hh"
+#include "phy/Liquid.hh"
+#include "phy/MultiOFDM.hh"
 
 // Number of channels. We only use 1!
 const unsigned int NUM_CHANNELS = 1;

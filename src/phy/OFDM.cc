@@ -1,8 +1,8 @@
 #include <liquid/liquid.h>
 
-#include "Liquid.hh"
 #include "Logger.hh"
-#include "OFDM.hh"
+#include "phy/Liquid.hh"
+#include "phy/OFDM.hh"
 
 union PHYHeader {
     Header        h;

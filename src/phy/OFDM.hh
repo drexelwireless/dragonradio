@@ -1,8 +1,7 @@
 #ifndef OFDM_H_
 #define OFDM_H_
 
-#include <liquid/liquid.h>
-
+#include "phy/Liquid.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 

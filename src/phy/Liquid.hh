@@ -7,6 +7,7 @@
 
 #include "Clock.hh"
 #include "Packet.hh"
+#include "phy/Liquid.hh"
 #include "phy/PHY.hh"
 
 /** @brief Creation of liquid objects is not re-rentrant, so we need to protect access

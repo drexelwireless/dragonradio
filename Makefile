@@ -33,7 +33,6 @@ ALLINCLUDES := $(shell find  $(SRCDIR) -name '*.hh')
 SOURCES := \
     Clock.cc \
     ExtensibleDataSet.cc \
-    Liquid.cc \
     Logger.cc \
     main.cc \
     ParallelPacketDemodulator.cc \
@@ -42,6 +41,7 @@ SOURCES := \
     USRP.cc \
     Util.cc \
     phy/FlexFrame.cc \
+    phy/Liquid.cc \
     phy/MultiOFDM.cc \
     phy/OFDM.cc \
     mac/TDMA.cc \

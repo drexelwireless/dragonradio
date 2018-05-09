@@ -4,11 +4,11 @@
 #include <vector>
 #include <complex>
 
-#include <liquid/liquid.h>
 #include <liquid/multichannelrx.h>
 #include <liquid/multichanneltx.h>
 
 #include "ModPacket.hh"
+#include "phy/Liquid.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 

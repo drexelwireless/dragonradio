@@ -1,9 +1,7 @@
 #ifndef FLEXFRAME_H_
 #define FLEXFRAME_H_
 
-#include <liquid/liquid.h>
-
-#include "Liquid.hh"
+#include "phy/Liquid.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
