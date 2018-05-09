@@ -23,6 +23,13 @@ public:
          float rx_gain);
     ~USRP();
 
+    USRP() = delete;
+    USRP(const USRP&) = delete;
+    USRP(USRP&&) = delete;
+
+    USRP& operator=(const USRP&) = delete;
+    USRP& operator=(USRP&&) = delete;
+
     /** @brief Get TX frequency. */
     double getTXFrequency(void);
 

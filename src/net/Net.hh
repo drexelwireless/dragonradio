@@ -57,6 +57,12 @@ public:
         NodeId nodeId);
     ~Net();
 
+    Net(const Net&) = delete;
+    Net(Net&&) = delete;
+
+    Net& operator=(const Net&) = delete;
+    Net& operator=(Net&&) = delete;
+
     /** @brief Halt packet processing. */
     void stop(void);
 

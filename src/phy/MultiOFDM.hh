@@ -96,6 +96,17 @@ public:
     {
     }
 
+
+    ~MultiOFDM()
+    {
+    }
+
+    MultiOFDM(const MultiOFDM&) = delete;
+    MultiOFDM(MultiOFDM&&) = delete;
+
+    MultiOFDM& operator=(const MultiOFDM&) = delete;
+    MultiOFDM& operator=(MultiOFDM&&) = delete;
+
     // MultiChannel TX/RX requires oversampling by a factor of 2
     double getRXRateOversample(void) const override
     {

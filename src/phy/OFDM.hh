@@ -101,6 +101,12 @@ public:
     {
     }
 
+    OFDM(const OFDM&) = delete;
+    OFDM(OFDM&&) = delete;
+
+    OFDM& operator=(const OFDM&) = delete;
+    OFDM& operator=(OFDM&&) = delete;
+
     double getRXRateOversample(void) const override
     {
         return 1.0;

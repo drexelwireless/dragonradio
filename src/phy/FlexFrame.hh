@@ -83,6 +83,12 @@ public:
     {
     }
 
+    FlexFrame(const FlexFrame&) = delete;
+    FlexFrame(FlexFrame&&) = delete;
+
+    FlexFrame& operator=(const FlexFrame&) = delete;
+    FlexFrame& operator=(FlexFrame&&) = delete;
+
     double getRXRateOversample(void) const override
     {
         return 2.0;

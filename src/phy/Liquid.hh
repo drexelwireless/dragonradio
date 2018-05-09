@@ -21,6 +21,12 @@ public:
     LiquidDemodulator(std::shared_ptr<Net> net);
     virtual ~LiquidDemodulator();
 
+    LiquidDemodulator(const LiquidDemodulator&) = delete;
+    LiquidDemodulator(LiquidDemodulator&&) = delete;
+
+    LiquidDemodulator& operator=(const LiquidDemodulator&) = delete;
+    LiquidDemodulator& operator=(LiquidDemodulator&&) = delete;
+
 protected:
     /** @brief The Net destination for demodulated packets. */
     std::shared_ptr<Net> net_;

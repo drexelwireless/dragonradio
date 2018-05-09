@@ -27,6 +27,12 @@ public:
          double guard_size);
     virtual ~TDMA();
 
+    TDMA(const TDMA&) = delete;
+    TDMA(TDMA&&) = delete;
+
+    TDMA& operator=(const TDMA&) = delete;
+    TDMA& operator=(TDMA&&) = delete;
+
     /** @brief Get number of slots
      */
     size_t getNumSlots(void);
