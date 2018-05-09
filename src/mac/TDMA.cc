@@ -129,7 +129,7 @@ void TDMA::txWorker(void)
         // Figure out when our next send slot is
         t_now = Clock::now();
         t_frame_pos = fmod(t_now.get_real_secs(), _frame_size);
-        t_send_slot = t_now + _net->getNodeId()*_slot_size - t_frame_pos;
+        t_send_slot = t_now + _net->getMyNodeId()*_slot_size - t_frame_pos;
 
         while (t_send_slot < t_now) {
             printf("MISS\n");

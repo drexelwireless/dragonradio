@@ -15,7 +15,6 @@
 #include "Clock.hh"
 #include "ExtensibleDataSet.hh"
 #include "IQBuffer.hh"
-#include "Node.hh"
 #include "SafeQueue.hh"
 #include "phy/PHY.hh"
 

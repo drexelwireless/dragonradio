@@ -5,7 +5,6 @@
 #include <thread>
 #include <stdio.h>
 
-#include "Node.hh"
 #include "Packet.hh"
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
@@ -13,17 +12,23 @@
 class Net
 {
 public:
-    Net(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& nodes);
+    Net(const std::string& tap_name,
+        const std::string& ip_fmt,
+        const std::string& mac_fmt,
+        NodeId nodeId);
     ~Net();
 
     /** @brief Halt packet processing. */
     void stop(void);
 
     /** @breif Get this node's ID */
-    NodeId getNodeId(void);
+    NodeId getMyNodeId(void);
 
     /** @brief Get the number of nodes in the network */
-    unsigned int getNumNodes(void);
+    size_t getNumNodes(void);
+
+    /** @brief Add a node to the network */
+    void addNode(NodeId nodeId);
 
     /** @brief Receive a packet from the network */
     std::unique_ptr<NetPacket> recvPacket(void);
@@ -39,10 +44,10 @@ private:
     std::unique_ptr<TunTap> tt;
 
     /** @brief This node's ID */
-    NodeId nodeId;
+    NodeId myNodeId;
 
-    /** @brief The number of nodes in the network */
-    unsigned int numNodes;
+    /** @brief The nodes in the network */
+    std::vector<NodeId> nodes;
 
     /** @brief Current packet id */
     PacketId curPacketId;
@@ -60,4 +65,4 @@ private:
     SafeQueue<std::unique_ptr<NetPacket>> recvQueue;
 };
 
-#endif
+#endif /* NET_HH_ */

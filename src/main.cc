@@ -141,11 +141,6 @@ int main(int argc, char** argv)
 
     ///////////////////////////////////////////////////////////////////////////////////////
 
-    std::vector<unsigned char> nodes_in_net(num_nodes);
-
-    for (unsigned int i=0; i<num_nodes; i++)
-        nodes_in_net[i] = i+1;
-
     // See:
     //   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
     // Not applying recommended TX/RX gains yet...
@@ -176,7 +171,10 @@ int main(int argc, char** argv)
         logger->setAttribute("taper_len", taper_len);
     }
 
-    auto net = std::make_shared<Net>("tap0", node_id, nodes_in_net);
+    auto net = std::make_shared<Net>("tap0", "10.10.10.%d", "c6:ff:ff:ff:%02x", node_id);
+
+    for (NodeId i = 1; i <= num_nodes; i++)
+      net->addNode(i);
 
     std::shared_ptr<PHY> phy;
 

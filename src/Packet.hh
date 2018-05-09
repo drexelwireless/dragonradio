@@ -10,7 +10,8 @@
 #include <liquid/liquid.h>
 
 #include "buffer.hh"
-#include "Node.hh"
+
+typedef uint8_t NodeId;
 
 typedef uint16_t PacketId;
 

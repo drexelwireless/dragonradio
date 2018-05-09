@@ -6,17 +6,20 @@
 #include <cstddef>
 #include <cstring>
 
+#include "Util.hh"
 #include "net/Net.hh"
 
-Net::Net(const std::string& tap_name, NodeId nodeId, const std::vector<NodeId>& nodes)
-  : nodeId(nodeId),
-    numNodes(nodes.size()),
+Net::Net(const std::string& tap_name,
+         const std::string& ip_fmt,
+         const std::string& mac_fmt,
+         NodeId nodeId) :
+    myNodeId(nodeId),
     curPacketId(0),
     done(false)
 {
     printf("Creating tap interface %s\n", tap_name.c_str());
 
-    tt = std::make_unique<TunTap>(tap_name, nodeId, nodes);
+    tt = std::make_unique<TunTap>(tap_name, false, 1500, ip_fmt, mac_fmt, nodeId);
 
     recvThread = std::thread(&Net::recvWorker, this);
 }
@@ -35,14 +38,22 @@ void Net::stop(void)
         recvThread.join();
 }
 
-NodeId Net::getNodeId(void)
+NodeId Net::getMyNodeId(void)
 {
-    return nodeId;
+    return myNodeId;
 }
 
-unsigned int Net::getNumNodes(void)
+size_t Net::getNumNodes(void)
 {
-    return numNodes;
+    return nodes.size();
+}
+
+void Net::addNode(NodeId nodeId)
+{
+    nodes.emplace_back(nodeId);
+
+    if (nodeId != this->myNodeId)
+        tt->add_arp_entry(nodeId);
 }
 
 std::unique_ptr<NetPacket> Net::recvPacket(void)
@@ -56,7 +67,7 @@ std::unique_ptr<NetPacket> Net::recvPacket(void)
 
 bool Net::wantPacket(NodeId dest)
 {
-    return dest == nodeId;
+    return dest == myNodeId;
 }
 
 void Net::send(std::unique_ptr<RadioPacket> pkt)
@@ -88,7 +99,7 @@ void Net::recvWorker(void)
 
             std::memcpy(&ip_dst, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
 
-            pkt->src = nodeId;
+            pkt->src = myNodeId;
 
             // Destination node is last octet of the IP address by convention
             pkt->dest = ntohl(ip_dst.s_addr) & 0xff;
