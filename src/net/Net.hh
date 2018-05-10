@@ -75,8 +75,8 @@ public:
     /** @brief Get the number of nodes in the network */
     map_type::size_type size(void);
 
-    /** @brief Get the number of nodes in the network */
-    map_type::size_type count(NodeId nodeId);
+    /** @brief Return true if node is in the network, false otherwise */
+    bool contains(NodeId nodeId);
 
     /** @brief Get the entry for a particular node in the network */
     Node& operator[](NodeId nodeid);
@@ -102,6 +102,9 @@ private:
 
     /** @brief The nodes in the network */
     std::map<NodeId, Node> nodes_;
+
+    /** @brief Mutex protecting nodes in the network */
+    std::mutex nodes_mutex_;
 
     /** @brief Current packet id */
     PacketId cur_pkt_id_;

@@ -68,21 +68,29 @@ NodeId Net::getMyNodeId(void)
 
 Net::map_type::size_type Net::size(void)
 {
+    std::lock_guard<std::mutex> lock(nodes_mutex_);
+
     return nodes_.size();
 }
 
-Net::map_type::size_type Net::count(NodeId nodeid)
+bool Net::contains(NodeId nodeid)
 {
-    return nodes_.count(nodeid);
+    std::lock_guard<std::mutex> lock(nodes_mutex_);
+
+    return nodes_.count(nodeid) == 1;
 }
 
 Node& Net::operator[](NodeId nodeid)
 {
-    return nodes_[nodeid];
+    std::lock_guard<std::mutex> lock(nodes_mutex_);
+
+    return nodes_.at(nodeid);
 }
 
 void Net::addNode(NodeId nodeId)
 {
+    std::lock_guard<std::mutex> lock(nodes_mutex_);
+
     nodes_.emplace(nodeId, Node());
 
     if (nodeId != my_node_id_)
@@ -136,7 +144,7 @@ void Net::recvWorker(void)
             // Destination node is last octet of the IP address by convention
             NodeId destId = ntohl(ip_dst.s_addr) & 0xff;
 
-            if (nodes_.count(destId) == 1) {
+            if (contains(destId)) {
                 Node&  dest = (*this)[destId];
 
                 pkt->src = my_node_id_;
