@@ -81,6 +81,12 @@ public:
     /** @brief Return true if node is in the network, false otherwise */
     bool contains(NodeId nodeId);
 
+    /** @brief Return an iterator to the beginning of nodes. */
+    map_type::iterator begin(void);
+
+    /** @brief Return an iterator to the end of nodes. */
+    map_type::iterator end(void);
+
     /** @brief Get the entry for a particular node in the network */
     Node& operator[](NodeId nodeid);
 

@@ -151,7 +151,7 @@ def main():
 
     mac = dragonradio.TDMA(usrp, phy, modulator, demodulator,
                            args.bandwidth,
-                           net.size,
+                           len(net),
                            slot_size,
                            guard_size);
 

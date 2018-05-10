@@ -81,6 +81,16 @@ bool Net::contains(NodeId nodeid)
     return nodes_.count(nodeid) == 1;
 }
 
+Net::map_type::iterator Net::begin(void)
+{
+    return nodes_.begin();
+}
+
+Net::map_type::iterator Net::end(void)
+{
+    return nodes_.end();
+}
+
 Node& Net::operator[](NodeId nodeid)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
