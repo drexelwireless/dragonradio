@@ -49,17 +49,6 @@ TDMA::~TDMA()
     stop();
 }
 
-size_t TDMA::getNumSlots(void)
-{
-    return slots_.size();
-}
-
-void TDMA::setNumSlots(size_t n)
-{
-    slots_.resize(n, false);
-    reconfigure();
-}
-
 double TDMA::getSlotSize(void)
 {
     return slot_size_;
@@ -82,14 +71,30 @@ void TDMA::setGuardSize(double t)
     reconfigure();
 }
 
-void TDMA::addSlot(size_t i)
+TDMA::slots_type::size_type TDMA::size(void)
 {
-    slots_[i] = true;
+    return slots_.size();
 }
 
-void TDMA::removeSlot(size_t i)
+void TDMA::resize(TDMA::slots_type::size_type n)
 {
-    slots_[i] = false;
+    slots_.resize(n, false);
+    reconfigure();
+}
+
+TDMA::slots_type::reference TDMA::operator [](TDMA::slots_type::size_type i)
+{
+    return slots_.at(i);
+}
+
+TDMA::slots_type::iterator TDMA::begin(void)
+{
+    return slots_.begin();
+}
+
+TDMA::slots_type::iterator TDMA::end(void)
+{
+    return slots_.end();
 }
 
 void TDMA::stop(void)

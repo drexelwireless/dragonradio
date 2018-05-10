@@ -215,10 +215,26 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       size_t,
                       double,
                       double>())
-        .def_property("num_slots", &TDMA::getNumSlots, &TDMA::setNumSlots)
+        .def("__getitem__", [](TDMA &mac, TDMA::slots_type::size_type i) {
+            try {
+                return mac[i];
+            } catch (const std::out_of_range&) {
+                throw py::index_error();
+            }
+        })
+        .def("__setitem__", [](TDMA &mac, TDMA::slots_type::size_type i, bool v) {
+            try {
+                mac[i] = v;
+            } catch (const std::out_of_range&) {
+              throw py::index_error();
+            }
+        })
+        .def("__len__", &TDMA::size)
+        .def("__iter__", [](TDMA &mac) {
+            return py::make_iterator(mac.begin(), mac.end());
+         }, py::keep_alive<0, 1>())
+        .def("resize", &TDMA::resize)
         .def_property("slot_size", &TDMA::getSlotSize, &TDMA::setSlotSize)
         .def_property("guard_size", &TDMA::getGuardSize, &TDMA::setGuardSize)
-        .def("addSlot", &TDMA::addSlot)
-        .def("removeSlot", &TDMA::removeSlot)
         ;
 }

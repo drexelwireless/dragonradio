@@ -155,7 +155,7 @@ def main():
                            slot_size,
                            guard_size);
 
-    mac.addSlot(net.my_node_id - 1)
+    mac[net.my_node_id - 1] = True
 
     # Wait for Ctrl-C
     signal.sigwait([signal.SIGINT])

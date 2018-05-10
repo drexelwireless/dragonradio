@@ -17,6 +17,8 @@
 class TDMA : public MAC
 {
 public:
+    using slots_type = std::vector<bool>;
+
     TDMA(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
          std::shared_ptr<PacketModulator> modulator,
@@ -32,15 +34,6 @@ public:
 
     TDMA& operator=(const TDMA&) = delete;
     TDMA& operator=(TDMA&&) = delete;
-
-    /** @brief Get number of slots
-     */
-    size_t getNumSlots(void);
-
-    /** @brief Set number of slots
-     * @param n The number of slots
-     */
-    void setNumSlots(size_t n);
 
     /** @brief Get slot size, including guard interval
      */
@@ -60,11 +53,23 @@ public:
      */
     void setGuardSize(double t);
 
-    /** @brief Mark a slot as belonging to us */
-    void addSlot(size_t i);
+    /** @brief Get number of slots
+     */
+    slots_type::size_type size(void);
 
-    /** @brief Mark a slot as not belonging to us */
-    void removeSlot(size_t i);
+    /** @brief Set number of slots
+     * @param n The number of slots
+     */
+    void resize(slots_type::size_type n);
+
+    /** @brief Access a slot */
+    slots_type::reference operator [](size_t i);
+
+    /** @brief Return an iterator to the beginning of slots. */
+    slots_type::iterator begin(void);
+
+    /** @brief Return an iterator to the end of slots. */
+    slots_type::iterator end(void);
 
     /** @brief Stop processing packets */
     void stop(void) override;
@@ -101,7 +106,7 @@ private:
     double guard_size_;
 
     /** @brief The slot schedule */
-    std::vector<bool> slots_;
+    slots_type slots_;
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
