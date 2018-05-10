@@ -77,6 +77,28 @@ public:
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
+     * @param minPacketSize The minimum number of bytes we will send in a
+     * packet.
+     */
+    OFDM(std::shared_ptr<Net> net,
+         unsigned int M,
+         unsigned int cp_len,
+         unsigned int taper_len,
+         size_t minPacketSize) :
+         M_(M),
+         cp_len_(cp_len),
+         taper_len_(taper_len),
+         p_(NULL),
+         net_(net),
+         min_pkt_size_(minPacketSize)
+    {
+    }
+
+    /** @brief Construct an OFDM PHY.
+     * @param net The Net to which we should send received packets.
+     * @param M The number of subcarriers.
+     * @param cp_len The cyclic prefix length
+     * @param taper_len The taper length (OFDM symbol overlap)
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
      * @param minPacketSize The minimum number of bytes we will send in a
