@@ -31,9 +31,9 @@ public:
     void open(const std::string& filename);
 
     void setAttribute(const std::string& name, const std::string& val);
-    void setAttribute(const std::string& name, const uint8_t val);
-    void setAttribute(const std::string& name, const uint32_t val);
-    void setAttribute(const std::string& name, const double val);
+    void setAttribute(const std::string& name, uint8_t val);
+    void setAttribute(const std::string& name, uint32_t val);
+    void setAttribute(const std::string& name, double val);
 
     void logSlot(std::shared_ptr<IQBuf> buf);
     void logRecv(const Clock::time_point& t,
