@@ -10,7 +10,8 @@
 #include "Util.hh"
 #include "net/Net.hh"
 
-Node::Node() :
+Node::Node(NodeId id) :
+    id(id),
     ms(rc->ms),
     check(rc->check),
     fec0(rc->fec0),
@@ -91,7 +92,7 @@ void Net::addNode(NodeId nodeId)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
 
-    nodes_.emplace(nodeId, Node());
+    nodes_.emplace(nodeId, Node(nodeId));
 
     if (nodeId != my_node_id_)
         tuntapdev_->add_arp_entry(nodeId);

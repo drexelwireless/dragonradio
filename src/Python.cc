@@ -115,9 +115,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class Node to Python
     py::class_<Node, std::shared_ptr<Node>>(m, "Node")
-        .def(py::init<>())
-        .def_readwrite("g", &Node::g, "soft TX gain (multiplicative factor)")
-        .def_readwrite("ms", &Node::ms, "modulation scheme")
+        .def(py::init<NodeId>())
+        .def_readonly("id", &Node::id, "Node ID")
+        .def_readwrite("g", &Node::g, "Soft TX gain (multiplicative factor)")
+        .def_readwrite("ms", &Node::ms, "Modulation scheme")
         .def_readwrite("check", &Node::check, "Data validity check")
         .def_readwrite("fec0", &Node::fec0, "Inner FEC")
         .def_readwrite("fec1", &Node::fec1, "Outer FEC")

@@ -13,8 +13,11 @@
 #include "net/TunTap.hh"
 
 struct Node {
-    Node();
+    Node(NodeId id);
     ~Node();
+
+    /** @brief Node ID */
+    NodeId id;
 
     /** @brief Soft TX gain (multiplicative factor) */
     double g;
