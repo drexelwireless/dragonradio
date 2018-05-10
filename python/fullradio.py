@@ -92,14 +92,14 @@ def main():
 
     if args.logfile:
         dragonradio.logger = dragonradio.Logger(args.logfile)
-        dragonradio.logger.setAttribute('node_id', args.node_id);
-        dragonradio.logger.setAttribute('frequency', args.frequency);
-        dragonradio.logger.setAttribute('soft_tx_gain', args.soft_tx_gain);
-        dragonradio.logger.setAttribute('tx_gain', args.tx_gain);
-        dragonradio.logger.setAttribute('rx_gain', args.rx_gain);
-        dragonradio.logger.setAttribute('M', args.M);
-        dragonradio.logger.setAttribute('cp_len', args.cp_len);
-        dragonradio.logger.setAttribute('taper_len', args.taper_len);
+        dragonradio.logger.setAttribute('node_id', args.node_id)
+        dragonradio.logger.setAttribute('frequency', args.frequency)
+        dragonradio.logger.setAttribute('soft_tx_gain', args.soft_tx_gain)
+        dragonradio.logger.setAttribute('tx_gain', args.tx_gain)
+        dragonradio.logger.setAttribute('rx_gain', args.rx_gain)
+        dragonradio.logger.setAttribute('M', args.M)
+        dragonradio.logger.setAttribute('cp_len', args.cp_len)
+        dragonradio.logger.setAttribute('taper_len', args.taper_len)
 
     if args.device == 'x310':
         x310 = True
@@ -147,13 +147,13 @@ def main():
 
     # slot size *including* guard (seconds)
     slot_size = .035
-    guard_size = .01;
+    guard_size = .01
 
     mac = dragonradio.TDMA(usrp, phy, modulator, demodulator,
                            args.bandwidth,
                            len(net),
                            slot_size,
-                           guard_size);
+                           guard_size)
 
     mac[net.my_node_id - 1] = True
 
