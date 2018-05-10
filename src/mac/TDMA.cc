@@ -164,13 +164,23 @@ void TDMA::txWorker(void)
         // Figure out when our next send slot is.
         t_now = Clock::now();
 
-        for (;;) {
-            t_send_slot = findNextSlot(t_now);
-            if (t_send_slot > t_now)
-                break;
+        while (!done_) {
+            if (!findNextSlot(t_now, t_send_slot)) {
+                struct timespec ts;
 
-            t_now = t_send_slot;
-            printf("MISS\n");
+                // Sleep for 100ms
+                ts.tv_sec = 0;
+                ts.tv_nsec = 100e6;
+
+                nanosleep(&ts, NULL);
+                t_now = Clock::now();
+            } else {
+                if (t_send_slot > t_now)
+                    break;
+
+                t_now = t_send_slot;
+                printf("MISS\n");
+            }
         }
 
         // Schedule transmission for start of our slot
@@ -181,7 +191,10 @@ void TDMA::txWorker(void)
         Clock::time_point t_sleep;
 
         t_now = Clock::now();
-        t_sleep = findNextSlot(t_now) - t_now - guard_size_;
+        if (findNextSlot(t_now, t_sleep))
+            t_sleep = t_sleep - t_now - guard_size_;
+        else
+            t_sleep = 10e-3;
 
         if (t_sleep > 0.0) {
             struct timespec ts;
@@ -195,7 +208,7 @@ void TDMA::txWorker(void)
     }
 }
 
-Clock::time_point TDMA::findNextSlot(Clock::time_point t)
+bool TDMA::findNextSlot(Clock::time_point t, Clock::time_point &t_next)
 {
     double t_secs = t.get_real_secs(); // Time t in seconds
     double t_slot_pos;                 // Offset into the current slot (sec)
@@ -205,10 +218,14 @@ Clock::time_point TDMA::findNextSlot(Clock::time_point t)
     t_slot_pos = fmod(t_secs, slot_size_);
     cur_slot = fmod(t_secs, frame_size_) / slot_size_;
 
-    for (tx_slot = 1; !slots_[(cur_slot + tx_slot) % slots_.size()]; ++tx_slot)
-        ;
+    for (tx_slot = 1; tx_slot <= slots_.size(); ++tx_slot) {
+        if (!slots_[(cur_slot + tx_slot) % slots_.size()]) {
+            t_next = (t - t_slot_pos) + tx_slot*slot_size_;
+            return true;
+        }
+    }
 
-    return (t - t_slot_pos) + tx_slot*slot_size_;
+    return false;
 }
 
 void TDMA::txSlot(Clock::time_point when, size_t maxSamples)

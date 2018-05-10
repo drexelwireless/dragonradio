@@ -120,9 +120,10 @@ private:
 
     /** @brief Find next TX slot
      * @param t Time at which to start looking for a TX slot
-     * @returns The beginning of the next TX slot.
+     * @param t_next The beginning of the next TX slot
+     * @returns True if a slot was found, false otherwise
      */
-    Clock::time_point findNextSlot(Clock::time_point t);
+    bool findNextSlot(Clock::time_point t, Clock::time_point &t_next);
 
     /** @brief Transmit one slot's worth of samples */
     void txSlot(Clock::time_point when, size_t maxSamples);
