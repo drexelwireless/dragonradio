@@ -18,11 +18,23 @@ After installing the dependencies, typing `make` should suffice to build the rad
 
 ## Running the radio
 
-Available CLI options can be displayed by invoking `full-radio` with either the `-?` or `-h` options.
+The radio is initialized via Python. The `full-radio` binary will treat its first argument as the name of a Python script to run to set up the radio, ignoring all further arguments. The Python script will receive all but the first argument passed to `full-radio`, which is the name of the binary, `full-radio`, as its list of arguments.
 
-The options are largely identical to the options for the liquid-usrp examples: if the examples and `full-radio` both allow setting the same parameter, then the corresponding option flags are identical.
+The radio must be run with root privileges in order to properly configure the network.
 
-This radio also allows a choice of PHY: flexframe-based PHY (the default), ofdmflexframe-based PHY (`-o`), and the multichannel ofdmflexframe-based PHY (`-u`).
+### Running the radio with `fullradio.py`
+
+The `python/fullradio.py` script is a simple example of how to configure the radio from Python: it parses command-line options and configures the radio appropriately. 
+
+Available CLI options can be displayed by invoking `fullradio.py` with the `-h` or `--help` options, e.g.,
+
+```
+./full-radio ./python/fullradio.py -h
+```
+
+The options are largely identical to the options for the liquid-usrp examples: if the examples and `fullradio.py` both allow setting the same parameter, then the corresponding option flags are identical.
+
+This radio also allows a choice of PHY: flexframe-based PHY (the default), ofdmflexframe-based PHY (`--ofdm`), and the multichannel ofdmflexframe-based PHY (`--multi-ofdm`).
 
 The `-i` option sets the node's ID. This is all you need to run a pair of radios. It defaults to 1.
 

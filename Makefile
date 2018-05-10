@@ -23,6 +23,11 @@ LIBS += \
 	/usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.a \
 	-lsz -lz -ldl
 
+# Needed for Python
+CPPFLAGS += -I/usr/include/python3.5 -Idependencies/pybind11/include
+
+LIBS += -lpython3.5m
+
 SRCDIR = src
 OBJDIR = obj
 
@@ -37,6 +42,7 @@ SOURCES := \
     main.cc \
     ParallelPacketDemodulator.cc \
     ParallelPacketModulator.cc \
+    Python.cc \
     RadioConfig.cc \
     RadioPacketQueue.cc \
     USRP.cc \
