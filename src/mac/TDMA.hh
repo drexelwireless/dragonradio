@@ -27,15 +27,27 @@ public:
          double guard_size);
     virtual ~TDMA();
 
+    /** @brief Get number of slots
+     */
+    size_t getNumSlots(void);
+
     /** @brief Set number of slots
      * @param n The number of slots
      */
-    void setNSlots(size_t n);
+    void setNumSlots(size_t n);
+
+    /** @brief Get slot size, including guard interval
+     */
+    double getSlotSize(void);
 
     /** @brief Set slot size, including guard interval
      * @param t Slot size in seconds
      */
     void setSlotSize(double t);
+
+    /** @brief Get guard interval size
+     */
+    double getGuardSize(void);
 
     /** @brief Set guard interval size
      * @param t Guard interval size in seconds

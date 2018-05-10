@@ -48,21 +48,36 @@ TDMA::~TDMA()
 {
 }
 
-void TDMA::setNSlots(size_t n)
+size_t TDMA::getNumSlots(void)
+{
+    return _slots.size();
+}
+
+void TDMA::setNumSlots(size_t n)
 {
     _slots.resize(n, false);
     reconfigure();
 }
 
+double TDMA::getSlotSize(void)
+{
+    return _slot_size;
+}
+
 void TDMA::setSlotSize(double t)
 {
-    _guard_size = t;
+    _slot_size = t;
     reconfigure();
+}
+
+double TDMA::getGuardSize(void)
+{
+    return _guard_size;
 }
 
 void TDMA::setGuardSize(double t)
 {
-    _slot_size = t;
+    _guard_size = t;
     reconfigure();
 }
 
