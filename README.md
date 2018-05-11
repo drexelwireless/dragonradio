@@ -34,7 +34,7 @@ Available CLI options can be displayed by invoking `fullradio.py` with the `-h` 
 
 The options are largely identical to the options for the liquid-usrp examples: if the examples and `fullradio.py` both allow setting the same parameter, then the corresponding option flags are identical.
 
-This radio also allows a choice of PHY: flexframe-based PHY (the default), ofdmflexframe-based PHY (`--ofdm`), and the multichannel ofdmflexframe-based PHY (`--multi-ofdm`).
+This radio also allows a choice of PHY: flexframe-based PHY (`--phy flexframe`, the default), ofdmflexframe-based PHY (`--phy ofdm`), and the multichannel ofdmflexframe-based PHY (`--phy multi-ofdm`).
 
 The `-i` option sets the node's ID. This is all you need to run a pair of radios. It defaults to 1.
 
