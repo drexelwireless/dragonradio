@@ -2,6 +2,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <time.h>
 
 #include "RadioConfig.hh"
 #include "Util.hh"
@@ -21,4 +23,17 @@ int sys(const char *fmt, ...)
     if (rc->verbose)
         printf("%s\n", cmd);
     return res;
+}
+
+int doze(double sec)
+{
+    struct timespec ts;
+    double whole, frac;
+
+    frac = modf(sec, &whole);
+
+    ts.tv_sec = whole;
+    ts.tv_nsec = frac*1e9;
+
+    return nanosleep(&ts, NULL);
 }
