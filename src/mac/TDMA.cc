@@ -3,6 +3,7 @@
 #include "Clock.hh"
 #include "Logger.hh"
 #include "USRP.hh"
+#include "Util.hh"
 #include "mac/TDMA.hh"
 
 TDMA::TDMA(std::shared_ptr<USRP> usrp,
@@ -156,7 +157,7 @@ void TDMA::rxWorker(void)
 void TDMA::txWorker(void)
 {
     Clock::time_point t_now;       // Current time
-    Clock::time_point t_send_slot; // Time at which *our* slot starts
+    Clock::time_point t_next_slot; // Time at which our next slot starts
     size_t            slot_samps;  // Number of samples to send in a slot
 
     uhd::set_thread_priority_safe();
@@ -169,47 +170,17 @@ void TDMA::txWorker(void)
         // Figure out when our next send slot is.
         t_now = Clock::now();
 
-        while (!done_) {
-            if (!findNextSlot(t_now, t_send_slot)) {
-                struct timespec ts;
-
-                // Sleep for 100ms
-                ts.tv_sec = 0;
-                ts.tv_nsec = 100e6;
-
-                nanosleep(&ts, NULL);
-                t_now = Clock::now();
-            } else {
-                if (t_send_slot > t_now)
-                    break;
-
-                t_now = t_send_slot;
-                printf("MISS\n");
-            }
+        if (!findNextSlot(t_now, t_next_slot)) {
+            // Sleep for 100ms if we don't yet have a slot
+            doze(100e-3);
+            continue;
         }
 
         // Schedule transmission for start of our slot
-        txSlot(t_send_slot, slot_samps);
+        txSlot(t_next_slot, slot_samps);
 
-        // Sleep until the beginning of the guard interval before our next TX
-        // slot
-        Clock::time_point t_sleep;
-
-        t_now = Clock::now();
-        if (findNextSlot(t_now, t_sleep))
-            t_sleep = t_sleep - t_now - guard_size_;
-        else
-            t_sleep = 10e-3;
-
-        if (t_sleep > 0.0) {
-            struct timespec ts;
-
-            ts.tv_sec = t_sleep.get_full_secs();
-            ts.tv_nsec = t_sleep.get_frac_secs()*1e9;
-
-            if (nanosleep(&ts, NULL) < 0)
-                perror("txWorker: slumber interrupted");
-        }
+        // Sleep until the end of our transmission
+        doze((t_next_slot - t_now).get_real_secs() + slot_size_);
     }
 }
 
