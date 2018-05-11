@@ -5,6 +5,7 @@
 
 namespace py = pybind11;
 
+#include "Logger.hh"
 #include "RadioConfig.hh"
 
 int main(int argc, char** argv)
@@ -34,13 +35,20 @@ int main(int argc, char** argv)
     py::module::import("sys").attr("argv") = args;
 
     // Evaluate the Python script
+    int ret;
+
     try {
         py::eval_file(argv[1], scope);
 
         printf("Done!\n");
-        return EXIT_SUCCESS;
+        ret = EXIT_SUCCESS;
     } catch (const std::exception &e) {
         fprintf(stderr, "Python exception: %s\n", e.what());
-        return EXIT_FAILURE;
+        ret = EXIT_FAILURE;
     }
+
+    if (logger)
+        logger.reset();
+
+    return ret;
 }
