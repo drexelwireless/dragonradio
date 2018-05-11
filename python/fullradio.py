@@ -76,7 +76,7 @@ def main():
                         default='rs8',
                         help='set outer FEC: ' + enumHelp(dragonradio.FECScheme))
     parser.add_argument('-r', '--check',
-                        action='store', type=dragonradio.CRCScheme, dest='crc',
+                        action='store', type=dragonradio.CRCScheme, dest='check',
                         default='crc32',
                         help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
 
@@ -93,6 +93,11 @@ def main():
 
     #dragonradio.rc = dragonradio.RadioConfig()
     dragonradio.rc.verbose = args.verbose
+    dragonradio.rc.soft_txgain = args.soft_tx_gain
+    dragonradio.rc.ms = args.ms
+    dragonradio.rc.check = args.check
+    dragonradio.rc.fec0 = args.fec0
+    dragonradio.rc.fec1 = args.fec1
 
     if args.logfile:
         dragonradio.logger = dragonradio.Logger(args.logfile)
