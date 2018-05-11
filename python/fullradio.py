@@ -79,7 +79,11 @@ def main():
                         action='store', type=dragonradio.CRCScheme, dest='crc',
                         default='crc32',
                         help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
-    args = parser.parse_args()
+
+    try:
+        args = parser.parse_args()
+    except SystemExit as ex:
+        return ex.code
 
     # See:
     #   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
