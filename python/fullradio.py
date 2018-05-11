@@ -130,9 +130,9 @@ def main():
     if args.phy == 'flexframe':
         phy = dragonradio.FlexFrame(net, min_packet_size)
     elif args.phy == 'ofdm':
-        phy = dragonradio.OFDM(net, args.N, args.cp_len, args.taper_len, min_packet_size)
+        phy = dragonradio.OFDM(net, args.M, args.cp_len, args.taper_len, min_packet_size)
     elif args.phy == 'multiofdm':
-        phy = dragonradio.OFDM(net, args.N, args.cp_len, args.taper_len, min_packet_size)
+        phy = dragonradio.OFDM(net, args.M, args.cp_len, args.taper_len, min_packet_size)
     else:
         print('Bad PHY: {}'.format(args.phy), file=sys.stderr)
         sys.exit(1)
