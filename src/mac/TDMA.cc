@@ -224,7 +224,7 @@ bool TDMA::findNextSlot(Clock::time_point t, Clock::time_point &t_next)
     cur_slot = fmod(t_secs, frame_size_) / slot_size_;
 
     for (tx_slot = 1; tx_slot <= slots_.size(); ++tx_slot) {
-        if (!slots_[(cur_slot + tx_slot) % slots_.size()]) {
+        if (slots_[(cur_slot + tx_slot) % slots_.size()]) {
             t_next = (t - t_slot_pos) + tx_slot*slot_size_;
             return true;
         }
