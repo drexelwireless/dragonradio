@@ -9,7 +9,7 @@ const unsigned int NUM_CHANNELS = 1;
 static_assert(sizeof(Header) <= 8, "sizeof(Header) must be no more than 8 bytes");
 
 union PHYHeader {
-    Header        h;
+    Header h;
     // OFDMFLEXFRAME_H_USER in liquid.internal.h
     unsigned char bytes[8];
 };

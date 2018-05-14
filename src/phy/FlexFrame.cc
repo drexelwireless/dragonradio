@@ -4,7 +4,7 @@
 #include "phy/FlexFrame.hh"
 
 union PHYHeader {
-    Header        h;
+    Header h;
     // FLEXFRAME_H_USER in liquid.internal.h
     unsigned char bytes[14];
 };

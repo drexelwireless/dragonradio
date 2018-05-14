@@ -5,9 +5,9 @@
 #include "phy/OFDM.hh"
 
 union PHYHeader {
-    Header        h;
-    // FLEXFRAME_H_USER in liquid.internal.h
-    unsigned char bytes[14];
+    Header h;
+    // OFDMFLEXFRAME_H_USER in liquid.internal.h
+    unsigned char bytes[8];
 };
 
 OFDM::Modulator::Modulator(OFDM& phy) :
