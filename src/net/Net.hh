@@ -19,6 +19,9 @@ struct Node {
     /** @brief Node ID */
     NodeId id;
 
+    /** @brief Current packet sequence number for this destination */
+    Seq seq;
+
     /** @brief Modulation scheme */
     modulation_scheme ms;
 
@@ -147,9 +150,6 @@ private:
 
     /** @brief Mutex protecting nodes in the network */
     std::mutex nodes_mutex_;
-
-    /** @brief Current packet id */
-    PacketId cur_pkt_id_;
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;

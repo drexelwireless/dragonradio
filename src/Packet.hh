@@ -13,21 +13,21 @@
 
 typedef uint8_t NodeId;
 
-typedef uint16_t PacketId;
+typedef uint16_t Seq;
 
 /** @brief A packet recevied from the network. */
 struct NetPacket : public buffer<unsigned char>
 {
     NetPacket(size_t n) : buffer(n) {};
 
-    /** @brief Packet ID */
-    PacketId pkt_id;
-
     /** @brief Source node (should be this node) */
     NodeId src;
 
     /** @brief Destination node */
     NodeId dest;
+
+    /** @brief Sequence number */
+    Seq seq;
 
     /** @brief CRC */
     crc_scheme check;
@@ -52,14 +52,14 @@ struct RadioPacket : public buffer<unsigned char>
 
     RadioPacket(unsigned char* data, size_t n) : buffer(data, n), barrier(false) {}
 
-    /** @brief Packet ID */
-    PacketId pkt_id;
-
     /** @brief Source node */
     NodeId src;
 
     /** @brief Destination node (should be this node) */
     NodeId dest;
+
+    /** @brief Packet sequence number */
+    Seq seq;
 
     /** @brief Error vector magnitude [dB] */
     float evm;

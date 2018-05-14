@@ -121,13 +121,13 @@ LIQUID_MS = [ 'unknown'
             , 'arb' ]
 
 class RecvPacket:
-    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, pkt_id, src, dest, crc, fec0, fec1, ms, evm, rssi, iqdata):
+    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, seq, src, dest, crc, fec0, fec1, ms, evm, rssi, iqdata):
         self._timestamp = timestamp
         self._start = start
         self._end = end
         self._hdr_valid = hdr_valid
         self._payload_valid = payload_valid
-        self._pkt_id = pkt_id
+        self._seq = seq
         self._src = src
         self._dest = dest
         self._crc = crc
@@ -139,8 +139,8 @@ class RecvPacket:
         self._iqdata = iqdata
 
     def __str__(self):
-        return "Packet(pkt_id={pkt_id}, src={src}, dest={dest}, ms={ms}, fec0={fec0}, fec1={fec1})".\
-        format(pkt_id=self.pkt_id, src=self.src,  dest=self.dest, \
+        return "Packet(seq={seq}, src={src}, dest={dest}, ms={ms}, fec0={fec0}, fec1={fec1})".\
+        format(seq=self.seq, src=self.src,  dest=self.dest, \
                ms=self.ms, fec0=self.fec0,  fec1=self.fec1)
 
     @property
@@ -169,9 +169,9 @@ class RecvPacket:
         return self._payload_valid
 
     @property
-    def pkt_id(self):
-        """Packet ID"""
-        return self._pkt_id
+    def seq(self):
+        """Sequence number"""
+        return self._seq
 
     @property
     def src(self):
@@ -219,9 +219,9 @@ class RecvPacket:
         return self._iqdata
 
 class SendPacket:
-    def __init__(self, timestamp, pkt_id, src, dest, iqdata):
+    def __init__(self, timestamp, seq, src, dest, iqdata):
         self._timestamp = timestamp
-        self._pkt_id = pkt_id
+        self._seq = seq
         self._src = src
         self._dest = dest
         self._iqdata = iqdata
@@ -232,9 +232,9 @@ class SendPacket:
         return self._timestamp
 
     @property
-    def pkt_id(self):
-        """Packet ID"""
-        return self._pkt_id
+    def seq(self):
+        """Sequence number"""
+        return self._seq
 
     @property
     def src(self):
@@ -314,7 +314,7 @@ class Log:
             self._recv[node.node_id] = [RecvPacket(*x) for x in f['recv']]
             self._send[node.node_id]= [SendPacket(*x) for x in f['send']]
 
-            self._recv[node.node_id].sort(key=lambda x: x.pkt_id)
+            self._recv[node.node_id].sort(key=lambda x: x.seq)
 
             return node
 
@@ -354,7 +354,7 @@ class Log:
 
         return None
 
-    def findReceivedPacketIndex(self, node, pkt_id):
+    def findReceivedPacketIndex(self, node, seq):
         """
         Find the index of a packet in a node's list of received packets.
 
@@ -368,14 +368,14 @@ class Log:
         recv = self.received[node.node_id]
 
         for i in range(0, len(recv)):
-            if recv[i].pkt_id == pkt_id:
+            if recv[i].seq == seq:
                 return i
-            elif recv[i].pkt_id > pkt_id:
+            elif recv[i].seq > seq:
                 return None
 
         return None
 
-    def findSentPacketIndex(self, node, pkt_id):
+    def findSentPacketIndex(self, node, seq):
         """
         Find the index of a packet in a node's list of sent packets.
 
@@ -389,9 +389,9 @@ class Log:
         send = self.sent[node.node_id]
 
         for i in range(0, len(send)):
-            if send[i].pkt_id == pkt_id:
+            if send[i].seq == seq:
                 return i
-            elif send[i].pkt_id > pkt_id:
+            elif send[i].seq > seq:
                 return None
 
         return None

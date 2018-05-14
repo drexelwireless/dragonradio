@@ -12,6 +12,7 @@
 
 Node::Node(NodeId id) :
     id(id),
+    seq(0),
     ms(rc->ms),
     check(rc->check),
     fec0(rc->fec0),
@@ -32,7 +33,6 @@ Net::Net(const std::string& tap_name,
          const std::string& mac_fmt,
          NodeId nodeId) :
     my_node_id_(nodeId),
-    cur_pkt_id_(0),
     done_(true)
 {
     if (rc->verbose)
@@ -130,9 +130,9 @@ void Net::send(std::unique_ptr<RadioPacket> pkt)
     tuntapdev_->cwrite(pkt->data(), pkt->size());
 
     if (rc->verbose)
-        printf("Written %lu bytes (PID %u) from %u\n",
+        printf("Written %lu bytes (seq# %u) from %u\n",
             (unsigned long) pkt->size(),
-            (unsigned int) pkt->pkt_id,
+            (unsigned int) pkt->seq,
             (unsigned int) pkt->src);
 }
 
@@ -159,12 +159,12 @@ void Net::recvWorker(void)
             NodeId destId = ntohl(ip_dst.s_addr) & 0xff;
 
             if (contains(destId)) {
-                Node&  dest = (*this)[destId];
+                Node& dest = (*this)[destId];
 
                 pkt->src = my_node_id_;
                 pkt->dest = destId;
 
-                pkt->pkt_id = cur_pkt_id_++;
+                pkt->seq = dest.seq++;
                 pkt->check = dest.check;
                 pkt->fec0 = dest.fec0;
                 pkt->fec1 = dest.fec1;

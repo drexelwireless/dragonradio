@@ -54,9 +54,9 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
             if (logger) {
                 Header hdr;
 
-                hdr.pkt_id = (*it)->pkt->pkt_id;
                 hdr.src = (*it)->pkt->src;
                 hdr.dest = (*it)->pkt->dest;
+                hdr.seq = (*it)->pkt->seq;
 
                 logger->logSend(when, hdr, (*it)->samples);
             }

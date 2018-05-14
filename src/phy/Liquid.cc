@@ -63,7 +63,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 
         pkt->src = h->src;
         pkt->dest = h->dest;
-        pkt->pkt_id = h->pkt_id;
+        pkt->seq = h->seq;
         pkt->evm = stats_.evm;
         pkt->rssi = stats_.rssi;
 

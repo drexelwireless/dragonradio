@@ -45,7 +45,7 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
 
     header.h.src = pkt->src;
     header.h.dest = pkt->dest;
-    header.h.pkt_id = pkt->pkt_id;
+    header.h.seq = pkt->seq;
     header.h.pkt_len = pkt->size();
 
     pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
