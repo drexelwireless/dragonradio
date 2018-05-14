@@ -157,6 +157,10 @@ def main():
                            slot_size,
                            guard_size)
 
+    if args.logfile:
+        logger.setAttribute('tx_bandwidth', usrp.tx_rate)
+        logger.setAttribute('rx_bandwidth', usrp.rx_rate)
+
     mac[net.my_node_id - 1] = True
 
     # Wait for Ctrl-C

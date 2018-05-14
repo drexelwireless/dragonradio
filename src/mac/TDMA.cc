@@ -1,7 +1,6 @@
 #include <uhd/utils/thread_priority.hpp>
 
 #include "Clock.hh"
-#include "Logger.hh"
 #include "USRP.hh"
 #include "Util.hh"
 #include "mac/TDMA.hh"
@@ -28,11 +27,6 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
 
     phy->setRXRate(rx_rate_);
     phy->setTXRate(tx_rate_);
-
-    if (logger) {
-        logger->setAttribute("tx_bandwidth", tx_rate_);
-        logger->setAttribute("rx_bandwidth", rx_rate_);
-    }
 
     reconfigure();
 
