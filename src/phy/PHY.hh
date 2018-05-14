@@ -5,9 +5,9 @@
 #include <queue>
 
 #include "IQBuffer.hh"
-#include "ModPacket.hh"
 #include "Packet.hh"
 #include "SafeQueue.hh"
+#include "phy/ModPacket.hh"
 
 /** @brief %PHY packet header. */
 struct Header {

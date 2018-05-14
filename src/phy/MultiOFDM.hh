@@ -7,9 +7,7 @@
 #include <liquid/multichannelrx.h>
 #include <liquid/multichanneltx.h>
 
-#include "ModPacket.hh"
 #include "phy/Liquid.hh"
-#include "phy/PHY.hh"
 #include "net/Net.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp multi-channel OFDM %PHY code. */

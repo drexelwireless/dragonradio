@@ -2,7 +2,6 @@
 #define FLEXFRAME_H_
 
 #include "phy/Liquid.hh"
-#include "phy/PHY.hh"
 #include "net/Net.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp flexframegen code. */

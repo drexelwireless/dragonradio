@@ -1,7 +1,7 @@
 #ifndef PACKETMODULATOR_H_
 #define PACKETMODULATOR_H_
 
-#include "ModPacket.hh"
+#include "phy/ModPacket.hh"
 
 /** @brief A packet modulator. */
 class PacketModulator
