@@ -19,10 +19,12 @@ def main():
     parser.add_argument('--addr', action='store', dest='addr',
                         default='',
                         help='specify device address')
-    parser.add_argument('--device', action='store', dest='device',
-                        choices=['n210', 'x310'],
-                        default='x310',
-                        help='specify device type')
+    parser.add_argument('--rx-antenna', action='store', dest='rx_antenna',
+                        default='RX2',
+                        help='set RX antenna')
+    parser.add_argument('--tx-antenna', action='store', dest='tx_antenna',
+                        default='TX/RX',
+                        help='set TX antenna')
     parser.add_argument('--phy', action='store', dest='phy',
                         choices=['flexframe', 'ofdm', 'multiofdm'],
                         default='flexframe',
@@ -99,22 +101,10 @@ def main():
     dragonradio.rc.fec0 = args.fec0
     dragonradio.rc.fec1 = args.fec1
 
-    if args.device == 'x310':
-        x310 = True
-    else:
-        x310 = False
-
-    tx_antenna = 'TX/RX'
-    if x310:
-        rx_antanna = 'RX2'
-    else:
-        rx_antanna = 'TX/RX'
-
     usrp = dragonradio.USRP(args.addr,
-                            x310,
                             args.frequency,
-                            tx_antenna,
-                            rx_antanna,
+                            args.tx_antenna,
+                            args.rx_antenna,
                             args.tx_gain,
                             args.rx_gain)
 

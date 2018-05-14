@@ -7,16 +7,16 @@
 #include "USRP.hh"
 
 USRP::USRP(const std::string& addr,
-           bool x310,
            double freq,
            const std::string& tx_ant,
            const std::string& rx_ant,
            float tx_gain,
            float rx_gain) :
     usrp_(uhd::usrp::multi_usrp::make(addr)),
-    x310_(x310),
     done_(false)
 {
+    determineDeviceType();
+
     usrp_->set_tx_antenna(tx_ant);
     usrp_->set_rx_antenna(rx_ant);
 
@@ -35,14 +35,20 @@ USRP::USRP(const std::string& addr,
     tx_stream_ = usrp_->get_tx_stream(stream_args);
     rx_stream_ = usrp_->get_rx_stream(stream_args);
 
-    // Turn on DC offset correction
-    usrp_->set_tx_dc_offset(true);
-    usrp_->set_rx_dc_offset(true);
+    // Turn on DC offset correction on X310
+    if (device_type_ == kUSRPX310) {
+        usrp_->set_tx_dc_offset(true);
+        usrp_->set_rx_dc_offset(true);
+    }
 
-    // During TX and RX, attempt to send/receive 8x the maximum number of
-    // samples in a packet
-    tx_max_samps_ = 8*tx_stream_->get_max_num_samps();
-    rx_max_samps_ = 8*rx_stream_->get_max_num_samps();
+    // Set maximum number of samples we attempt to TX/RX.
+    if (device_type_ == kUSRPX310) {
+        tx_max_samps_ = 8*tx_stream_->get_max_num_samps();
+        rx_max_samps_ = 8*rx_stream_->get_max_num_samps();
+    } else {
+        tx_max_samps_ = 512;
+        rx_max_samps_ = 2048;
+    }
 
     // Start thread that receives TX errors
     tx_error_thread_ = std::thread(&USRP::txErrorWorker, this);
@@ -51,6 +57,11 @@ USRP::USRP(const std::string& addr,
 USRP::~USRP()
 {
     stop();
+}
+
+USRP::DeviceType USRP::getDeviceType(void)
+{
+    return device_type_;
 }
 
 // See the following for X310 LO offset advice:
@@ -66,7 +77,7 @@ double USRP::getTXFrequency(void)
 
 void USRP::setTXFrequency(double freq)
 {
-    if (x310_) {
+    if (device_type_ == kUSRPX310) {
         double lo_offset = -42.0e6;
         usrp_->set_tx_freq(uhd::tune_request_t(freq, lo_offset));
     } else
@@ -83,7 +94,7 @@ double USRP::getRXFrequency(void)
 
 void USRP::setRXFrequency(double freq)
 {
-    if (x310_) {
+    if (device_type_ == kUSRPX310) {
         double lo_offset = +42.0e6;
         usrp_->set_rx_freq(uhd::tune_request_t(freq, lo_offset));
     } else
@@ -241,6 +252,18 @@ void USRP::stop(void)
 
     if (tx_error_thread_.joinable())
         tx_error_thread_.join();
+}
+
+void USRP::determineDeviceType(void)
+{
+    std::string mboard = usrp_->get_mboard_name();
+
+    if (mboard.find("N210") == 0)
+        device_type_ = kUSRPN210;
+    else if (mboard.find("X310") == 0)
+        device_type_ = kUSRPX310;
+    else
+        device_type_ = kUSRPUnknown;
 }
 
 void USRP::txErrorWorker(void)

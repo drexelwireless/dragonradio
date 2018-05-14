@@ -14,8 +14,13 @@
 class USRP
 {
 public:
+    enum DeviceType {
+        kUSRPN210,
+        kUSRPX310,
+        kUSRPUnknown
+    };
+
     USRP(const std::string& addr,
-         bool x310,
          double freq,
          const std::string& tx_ant,
          const std::string& rx_ant,
@@ -29,6 +34,9 @@ public:
 
     USRP& operator=(const USRP&) = delete;
     USRP& operator=(USRP&&) = delete;
+
+    /** @brief Get type of this device. */
+    DeviceType getDeviceType(void);
 
     /** @brief Get TX frequency. */
     double getTXFrequency(void);
@@ -103,8 +111,8 @@ private:
     /** @brief Our associated UHD USRP. */
     uhd::usrp::multi_usrp::sptr usrp_;
 
-    /** @brief Flag indicating whether or not this is an X310. */
-    bool x310_;
+    /** @brief The DeviceType of the main device */
+    DeviceType device_type_;
 
     /** @brief The UHD TX stream for this USRP. */
     uhd::tx_streamer::sptr tx_stream_;
@@ -125,6 +133,9 @@ private:
 
     /** @brief Thread that receives TX errors. */
     std::thread tx_error_thread_;
+
+    /** @brief Determine the type of the main device. */
+    void determineDeviceType(void);
 
     /** @brief Worker that receives TX errors. */
     void txErrorWorker(void);
