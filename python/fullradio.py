@@ -99,17 +99,6 @@ def main():
     dragonradio.rc.fec0 = args.fec0
     dragonradio.rc.fec1 = args.fec1
 
-    if args.logfile:
-        dragonradio.logger = dragonradio.Logger(args.logfile)
-        dragonradio.logger.setAttribute('node_id', args.node_id)
-        dragonradio.logger.setAttribute('frequency', args.frequency)
-        dragonradio.logger.setAttribute('soft_tx_gain', args.soft_tx_gain)
-        dragonradio.logger.setAttribute('tx_gain', args.tx_gain)
-        dragonradio.logger.setAttribute('rx_gain', args.rx_gain)
-        dragonradio.logger.setAttribute('M', args.M)
-        dragonradio.logger.setAttribute('cp_len', args.cp_len)
-        dragonradio.logger.setAttribute('taper_len', args.taper_len)
-
     if args.device == 'x310':
         x310 = True
     else:
@@ -128,6 +117,20 @@ def main():
                             rx_antanna,
                             args.tx_gain,
                             args.rx_gain)
+
+    # Create the logger *after* we create the USRP so that we have a global
+    # clock
+    if args.logfile:
+        logger = dragonradio.Logger(args.logfile)
+        logger.setAttribute('node_id', args.node_id)
+        logger.setAttribute('frequency', args.frequency)
+        logger.setAttribute('soft_tx_gain', args.soft_tx_gain)
+        logger.setAttribute('tx_gain', args.tx_gain)
+        logger.setAttribute('rx_gain', args.rx_gain)
+        logger.setAttribute('M', args.M)
+        logger.setAttribute('cp_len', args.cp_len)
+        logger.setAttribute('taper_len', args.taper_len)
+        dragonradio.Logger.singleton = logger
 
     net = dragonradio.Net('tap0', '10.10.10.%d', 'c6:ff:ff:ff:%02x', args.node_id)
 

@@ -72,15 +72,15 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class Logger to Python
     py::class_<Logger, std::shared_ptr<Logger>>(m, "Logger")
+        .def_property_static("singleton",
+            [](py::object) { return logger; },
+            [](py::object, std::shared_ptr<Logger> log) { return logger = log; })
         .def(py::init(&mkLogger))
         .def("setAttribute", py::overload_cast<const std::string&, const std::string&>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, uint8_t>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, uint32_t>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, double>(&Logger::setAttribute))
         ;
-
-    // Export our global Logger
-    m.attr("logger") = logger;
 
     // Export class RadioConfig to Python
     py::class_<RadioConfig, std::shared_ptr<RadioConfig>>(m, "RadioConfig")

@@ -28,6 +28,13 @@ public:
     Logger(Clock::time_point t_start);
     ~Logger();
 
+    Logger() = delete;
+    Logger(const Logger&) = delete;
+    Logger(Logger&&) = delete;
+
+    Logger& operator=(const Logger&) = delete;
+    Logger& operator=(Logger&&) = delete;
+
     void open(const std::string& filename);
 
     void setAttribute(const std::string& name, const std::string& val);
