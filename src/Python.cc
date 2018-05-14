@@ -138,13 +138,13 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       const std::string&,
                       const std::string&,
                       NodeId>())
-        .def("__getitem__", [](Net &net, NodeId key) {
+        .def("__getitem__", [](Net &net, NodeId key) -> Node& {
             try {
                 return net[key];
             } catch (const std::out_of_range&) {
                 throw py::key_error("key '" + std::to_string(key) + "' does not exist");
             }
-        })
+        }, py::return_value_policy::reference_internal)
         .def("__len__", &Net::size)
         .def("__iter__", [](Net &net) {
             return py::make_key_iterator(net.begin(), net.end());
