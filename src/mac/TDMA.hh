@@ -1,20 +1,18 @@
 #ifndef TDMA_H_
 #define TDMA_H_
 
-#include <liquid/liquid.h>
-
 #include <vector>
-#include <complex>
 
 #include "USRP.hh"
 #include "phy/PHY.hh"
 #include "phy/PacketDemodulator.hh"
 #include "phy/PacketModulator.hh"
 #include "mac/MAC.hh"
+#include "mac/SlottedMAC.hh"
 #include "net/Net.hh"
 
 /** @brief A TDMA MAC. */
-class TDMA : public MAC
+class TDMA : public SlottedMAC
 {
 public:
     using slots_type = std::vector<bool>;
@@ -34,24 +32,6 @@ public:
 
     TDMA& operator=(const TDMA&) = delete;
     TDMA& operator=(TDMA&&) = delete;
-
-    /** @brief Get slot size, including guard interval
-     */
-    double getSlotSize(void);
-
-    /** @brief Set slot size, including guard interval
-     * @param t Slot size in seconds
-     */
-    void setSlotSize(double t);
-
-    /** @brief Get guard interval size
-     */
-    double getGuardSize(void);
-
-    /** @brief Set guard interval size
-     * @param t Guard interval size in seconds
-     */
-    void setGuardSize(double t);
 
     /** @brief Get number of slots
      */
@@ -75,41 +55,11 @@ public:
     void stop(void) override;
 
 private:
-    /** @brief Our USRP device. */
-    std::shared_ptr<USRP> usrp_;
-
-    /** @brief Our PHY. */
-    std::shared_ptr<PHY> phy_;
-
-    /** @brief Our packet modulator. */
-    std::shared_ptr<PacketModulator> modulator_;
-
-    /** @brief Our packet demodulator. */
-    std::shared_ptr<PacketDemodulator> demodulator_;
-
     /** @brief Bandwidth */
     double bandwidth_;
 
-    /** @brief RX rate */
-    double rx_rate_;
-
-    /** @brief TX rate */
-    double tx_rate_;
-
     /** @brief Length of TDMA frame (sec) */
     double frame_size_;
-
-    /** @brief Length of a single TDMA slot, *including* guard (sec) */
-    double slot_size_;
-
-    /** @brief Length of inter-slot guard (sec) */
-    double guard_size_;
-
-    /** @brief Number of RX samples in a full slot */
-    size_t rx_slot_samps_;
-
-    /** @brief Number of TX samples in the non-guard portion of a slot */
-    size_t tx_slot_samps_;
 
     /** @brief The slot schedule */
     slots_type slots_;
@@ -136,11 +86,8 @@ private:
      */
     bool findNextSlot(Clock::time_point t, Clock::time_point &t_next);
 
-    /** @brief Transmit one slot's worth of samples */
-    void txSlot(Clock::time_point when, size_t maxSamples);
-
     /** @brief Reconfigure the MAC when TDMA parameters change */
-    void reconfigure(void);
+    void reconfigure(void) override;
 };
 
 #endif /* TDMA_H_ */

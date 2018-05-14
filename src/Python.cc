@@ -10,6 +10,7 @@ namespace py = pybind11;
 #include "phy/OFDM.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
+#include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
 #include "net/Net.hh"
 
@@ -211,8 +212,14 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
         ;
 
+    // Export class SlottedMAC to Python
+    py::class_<SlottedMAC, MAC, std::shared_ptr<SlottedMAC>>(m, "SlottedMAC")
+        .def_property("slot_size", &SlottedMAC::getSlotSize, &SlottedMAC::setSlotSize)
+        .def_property("guard_size", &SlottedMAC::getGuardSize, &SlottedMAC::setGuardSize)
+        ;
+
     // Export class TDMA to Python
-    py::class_<TDMA, MAC, std::shared_ptr<TDMA>>(m, "TDMA")
+    py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<USRP>,
                       std::shared_ptr<PHY>,
                       std::shared_ptr<PacketModulator>,
@@ -240,7 +247,5 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             return py::make_iterator(mac.begin(), mac.end());
          }, py::keep_alive<0, 1>())
         .def("resize", &TDMA::resize)
-        .def_property("slot_size", &TDMA::getSlotSize, &TDMA::setSlotSize)
-        .def_property("guard_size", &TDMA::getGuardSize, &TDMA::setGuardSize)
         ;
 }

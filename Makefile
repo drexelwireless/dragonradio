@@ -51,6 +51,7 @@ SOURCES := \
     phy/ParallelPacketDemodulator.cc \
     phy/ParallelPacketModulator.cc \
     phy/RadioPacketQueue.cc \
+    mac/SlottedMAC.cc \
     mac/TDMA.cc \
     net/Net.cc \
     net/TunTap.cc

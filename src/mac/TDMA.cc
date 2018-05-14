@@ -14,13 +14,8 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            size_t nslots,
            double slot_size,
            double guard_size)
-  : usrp_(usrp),
-    phy_(phy),
-    modulator_(modulator),
-    demodulator_(demodulator),
+  : SlottedMAC(usrp, phy, modulator, demodulator, slot_size, guard_size),
     bandwidth_(bandwidth),
-    slot_size_(slot_size),
-    guard_size_(guard_size),
     done_(false)
 {
     slots_.resize(nslots, false);
@@ -39,37 +34,15 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
         logger->setAttribute("rx_bandwidth", rx_rate_);
     }
 
+    reconfigure();
+
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
     tx_thread_ = std::thread(&TDMA::txWorker, this);
-
-    reconfigure();
 }
 
 TDMA::~TDMA()
 {
     stop();
-}
-
-double TDMA::getSlotSize(void)
-{
-    return slot_size_;
-}
-
-void TDMA::setSlotSize(double t)
-{
-    slot_size_ = t;
-    reconfigure();
-}
-
-double TDMA::getGuardSize(void)
-{
-    return guard_size_;
-}
-
-void TDMA::setGuardSize(double t)
-{
-    guard_size_ = t;
-    reconfigure();
 }
 
 TDMA::slots_type::size_type TDMA::size(void)
@@ -192,32 +165,6 @@ bool TDMA::findNextSlot(Clock::time_point t, Clock::time_point &t_next)
     }
 
     return false;
-}
-
-void TDMA::txSlot(Clock::time_point when, size_t maxSamples)
-{
-    std::list<std::shared_ptr<IQBuf>>     txBuf;
-    std::list<std::unique_ptr<ModPacket>> modBuf;
-
-    modulator_->pop(modBuf, maxSamples);
-
-    if (!modBuf.empty()) {
-        for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
-            if (logger) {
-                Header hdr;
-
-                hdr.pkt_id = (*it)->pkt->pkt_id;
-                hdr.src = (*it)->pkt->src;
-                hdr.dest = (*it)->pkt->dest;
-
-                logger->logSend(when, hdr, (*it)->samples);
-            }
-
-            txBuf.emplace_back(std::move((*it)->samples));
-        }
-
-        usrp_->burstTX(when, txBuf);
-    }
 }
 
 void TDMA::reconfigure(void)
