@@ -30,8 +30,8 @@ ParallelPacketDemodulator::~ParallelPacketDemodulator()
     stop();
 }
 
-void ParallelPacketDemodulator::setDemodParameters(const size_t prev_samps,
-                                                   const size_t cur_samps)
+void ParallelPacketDemodulator::setWindowParameters(const size_t prev_samps,
+                                                    const size_t cur_samps)
 {
     prev_samps_ = prev_samps;
     cur_samps_ = cur_samps;

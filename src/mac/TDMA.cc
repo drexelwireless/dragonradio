@@ -228,6 +228,6 @@ void TDMA::reconfigure(void)
 
     modulator_->setLowWaterMark(tx_slot_samps_);
 
-    demodulator_->setDemodParameters(0.5*guard_size_*rx_rate_,
-                                     (slot_size_ - 0.5*guard_size_)*tx_rate_);
+    demodulator_->setWindowParameters(0.5*guard_size_*rx_rate_,
+                                      (slot_size_ - 0.5*guard_size_)*tx_rate_);
 }

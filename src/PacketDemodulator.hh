@@ -16,8 +16,8 @@ public:
      * @brief cur_samps The number of samples from the current slot to
      * demodulate.
      */
-    virtual void setDemodParameters(const size_t prev_samps,
-                                    const size_t cur_samps) = 0;
+    virtual void setWindowParameters(const size_t prev_samps,
+                                     const size_t cur_samps) = 0;
 
     /** @brief Add an IQ buffer to demodulate. */
     virtual void push(std::shared_ptr<IQBuf> buf) = 0;

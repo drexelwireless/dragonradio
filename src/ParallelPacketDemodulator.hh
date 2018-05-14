@@ -73,14 +73,14 @@ public:
                               unsigned int nthreads);
     virtual ~ParallelPacketDemodulator();
 
-    /** @brief Set demodulation parameters.
+    /** @brief Set window parameters for demodulation.
      * @brief prev_samps The number of samples from the end of the previous slot
      * to demodulate.
      * @brief cur_samps The number of samples from the current slot to
      * demodulate.
      */
-    void setDemodParameters(const size_t prev_samps,
-                            const size_t cur_samps) override;
+    void setWindowParameters(const size_t prev_samps,
+                             const size_t cur_samps) override;
 
     /** @brief Add an IQ buffer to demodulate. */
     void push(std::shared_ptr<IQBuf> buf) override;
