@@ -207,6 +207,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       std::shared_ptr<PHY>,
                       bool,
                       unsigned int>())
+        .def_property("ordered", &ParallelPacketDemodulator::getOrdered, &ParallelPacketDemodulator::setOrdered)
         ;
 
     // Export class MAC to Python

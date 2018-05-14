@@ -85,6 +85,14 @@ public:
     /** @brief Add an IQ buffer to demodulate. */
     void push(std::shared_ptr<IQBuf> buf) override;
 
+    /** @brief Return flag indicating whether or not demodulation queue enforces
+     * packet order.
+     */
+    bool getOrdered(void);
+
+    /** @brief Set whether or not demodulation queue enforces packet order. */
+    void setOrdered(bool ordered);
+
     /** @brief Stop demodulating. */
     void stop(void);
 

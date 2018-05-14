@@ -58,6 +58,17 @@ void ParallelPacketDemodulator::stop(void)
     }
 }
 
+
+bool ParallelPacketDemodulator::getOrdered(void)
+{
+    return ordered_;
+}
+
+void ParallelPacketDemodulator::setOrdered(bool ordered)
+{
+    ordered_ = ordered;
+}
+
 void ParallelPacketDemodulator::demodWorker(void)
 {
     auto                      demod = phy_->make_demodulator();
