@@ -1,5 +1,5 @@
-#include "ParallelPacketModulator.hh"
 #include "phy/PHY.hh"
+#include "phy/ParallelPacketModulator.hh"
 #include "net/Net.hh"
 
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,

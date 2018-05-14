@@ -1,4 +1,4 @@
-#include "RadioPacketQueue.hh"
+#include "phy/RadioPacketQueue.hh"
 
 RadioPacketQueue::RadioPacketQueue() :
     done_(false)

@@ -40,17 +40,17 @@ SOURCES := \
     ExtensibleDataSet.cc \
     Logger.cc \
     main.cc \
-    ParallelPacketDemodulator.cc \
-    ParallelPacketModulator.cc \
     Python.cc \
     RadioConfig.cc \
-    RadioPacketQueue.cc \
     USRP.cc \
     Util.cc \
     phy/FlexFrame.cc \
     phy/Liquid.cc \
     phy/MultiOFDM.cc \
     phy/OFDM.cc \
+    phy/ParallelPacketDemodulator.cc \
+    phy/ParallelPacketModulator.cc \
+    phy/RadioPacketQueue.cc \
     mac/TDMA.cc \
     net/Net.cc \
     net/TunTap.cc

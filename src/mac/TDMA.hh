@@ -6,10 +6,10 @@
 #include <vector>
 #include <complex>
 
-#include "PacketDemodulator.hh"
-#include "PacketModulator.hh"
 #include "USRP.hh"
 #include "phy/PHY.hh"
+#include "phy/PacketDemodulator.hh"
+#include "phy/PacketModulator.hh"
 #include "mac/MAC.hh"
 #include "net/Net.hh"
 

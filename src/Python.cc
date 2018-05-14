@@ -3,13 +3,13 @@
 namespace py = pybind11;
 
 #include "Logger.hh"
-#include "ParallelPacketModulator.hh"
-#include "ParallelPacketDemodulator.hh"
 #include "RadioConfig.hh"
 #include "USRP.hh"
 #include "phy/FlexFrame.hh"
 #include "phy/MultiOFDM.hh"
 #include "phy/OFDM.hh"
+#include "phy/ParallelPacketModulator.hh"
+#include "phy/ParallelPacketDemodulator.hh"
 #include "mac/TDMA.hh"
 #include "net/Net.hh"
 

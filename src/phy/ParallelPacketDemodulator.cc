@@ -1,8 +1,8 @@
 #include <functional>
 
 #include "Logger.hh"
-#include "ParallelPacketDemodulator.hh"
 #include "phy/PHY.hh"
+#include "phy/ParallelPacketDemodulator.hh"
 #include "net/Net.hh"
 
 using namespace std::placeholders;
