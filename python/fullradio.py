@@ -127,6 +127,9 @@ def main():
     for i in range(0, args.num_nodes):
         net.addNode(i+1)
 
+    for node in net:
+        net[node].desired_soft_tx_gain = 0.0
+
     min_packet_size = 512
 
     if args.phy == 'flexframe':

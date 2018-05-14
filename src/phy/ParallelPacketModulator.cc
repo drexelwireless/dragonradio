@@ -1,3 +1,5 @@
+#include "RadioConfig.hh"
+#include "phy/Gain.hh"
 #include "phy/PHY.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "net/Net.hh"
@@ -116,8 +118,30 @@ void ParallelPacketModulator::modWorker(void)
             mpkt = pkt_q_.back().get();
         }
 
+        Node &node = (*net_)[pkt->dest];
+
+        if (node.recalc_soft_tx_gain)
+            pkt->g = 1.0;
+
         // Modulate the packet
         modulator->modulate(*mpkt, std::move(pkt));
+
+        if (node.recalc_soft_tx_gain) {
+            float g = autoSoftGain0dBFS(*mpkt->samples, node.desired_soft_tx_gain_clip_frac);
+
+            node.g = g;
+            node.setSoftTXGain(node.getSoftTXGain() + node.desired_soft_tx_gain);
+            node.recalc_soft_tx_gain = false;
+
+            if (rc->verbose)
+                fprintf(stderr, "%u: new soft TX gain (dB): %f\n", node.id, node.getSoftTXGain());
+
+            // Apply the new soft gain
+            g = node.g;
+
+            for (size_t i = 0; i < mpkt->samples->size(); ++i)
+                (*mpkt->samples)[i] *= g;
+        }
 
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();

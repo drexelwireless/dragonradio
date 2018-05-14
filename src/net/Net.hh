@@ -19,9 +19,6 @@ struct Node {
     /** @brief Node ID */
     NodeId id;
 
-    /** @brief Soft TX gain (multiplicative factor) */
-    float g;
-
     /** @brief Modulation scheme */
     modulation_scheme ms;
 
@@ -33,6 +30,27 @@ struct Node {
 
     /** @brief Outer FEC */
     fec_scheme fec1;
+
+    /** @brief Soft TX gain (multiplicative factor) */
+    float g;
+
+    /** @brief Desired soft gain in dBFS. Defaults to 0.0. */
+    /** This is our soft TX gain goal, in dBFS. Note well the units! We use this
+     * value to dynamically set the multiplicative soft gain based on generated
+     * IQ values.
+     */
+    float desired_soft_tx_gain;
+
+    /** @brief Fraction of unclipped IQ values. Defaults to 0.999. */
+    /** This sets the fraction of values guaranteed to be unclipped when the
+     * soft TX gain is automatically determined.
+     */
+    float desired_soft_tx_gain_clip_frac;
+
+    /** @brief Set to force recalculation of soft TX gain based on
+     * desired_soft_tx_gain on next transmission.
+     */
+    bool recalc_soft_tx_gain;
 
     /** @brief Get soft TX gain (dB). */
     float getSoftTXGain(void)
@@ -46,6 +64,21 @@ struct Node {
     void setSoftTXGain(float dB)
     {
         g = powf(10.0f, dB/20.0f);
+    }
+
+    /** @brief Get desired soft TX gain (dBFS). */
+    float getDesiredSoftTXGain(void)
+    {
+        return desired_soft_tx_gain;
+    }
+
+    /** @brief Set desired soft TX gain.
+     * @param dBFs The soft gain (dBFS).
+     */
+    void setDesiredSoftTXGain(float dBFS)
+    {
+        desired_soft_tx_gain = dBFS;
+        recalc_soft_tx_gain = true;
     }
 };
 

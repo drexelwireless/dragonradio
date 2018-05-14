@@ -130,6 +130,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_readwrite("fec0", &Node::fec0, "Inner FEC")
         .def_readwrite("fec1", &Node::fec1, "Outer FEC")
         .def_property("soft_tx_gain", &Node::getSoftTXGain, &Node::setSoftTXGain, "Soft TX gain (dB)")
+        .def_property("desired_soft_tx_gain", &Node::getDesiredSoftTXGain, &Node::setDesiredSoftTXGain, "Desired soft TX gain (dBFS)")
+        .def_readwrite("desired_soft_tx_gain_clip_frac", &Node::desired_soft_tx_gain_clip_frac, "Clipping threshold for automatic TX soft gain")
         ;
 
     // Export class Net to Python

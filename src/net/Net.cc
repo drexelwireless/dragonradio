@@ -15,7 +15,10 @@ Node::Node(NodeId id) :
     ms(rc->ms),
     check(rc->check),
     fec0(rc->fec0),
-    fec1(rc->fec1)
+    fec1(rc->fec1),
+    desired_soft_tx_gain(0.0),
+    desired_soft_tx_gain_clip_frac(0.999),
+    recalc_soft_tx_gain(false)
 {
     setSoftTXGain(rc->soft_txgain);
 }

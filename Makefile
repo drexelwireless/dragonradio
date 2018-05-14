@@ -45,6 +45,7 @@ SOURCES := \
     USRP.cc \
     Util.cc \
     phy/FlexFrame.cc \
+    phy/Gain.cc \
     phy/Liquid.cc \
     phy/MultiOFDM.cc \
     phy/OFDM.cc \
