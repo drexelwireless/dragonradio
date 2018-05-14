@@ -28,6 +28,10 @@ struct PacketRecvEntry {
     uint8_t header_valid;
     /** @brief Was payload valid? */
     uint8_t payload_valid;
+    /** @brief Packet current hop. */
+    uint8_t curhop;
+    /** @brief Packet next hop. */
+    uint8_t nexthop;
     /** @brief Packet sequence number. */
     uint16_t seq;
     /** @brief Packet source. */
@@ -55,6 +59,10 @@ struct PacketSendEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
     double timestamp;
+    /** @brief Packet current hop. */
+    uint8_t curhop;
+    /** @brief Packet next hop. */
+    uint8_t nexthop;
     /** @brief Packet sequence number. */
     uint16_t seq;
     /** @brief Packet source. */
@@ -125,9 +133,11 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("timestamp", HOFFSET(PacketRecvEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("start_samples", HOFFSET(PacketRecvEntry, start_samples), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("end_samples", HOFFSET(PacketRecvEntry, end_samples), H5::PredType::NATIVE_UINT32);
-    h5_packet_recv.insertMember("seq", HOFFSET(PacketRecvEntry, seq), H5::PredType::NATIVE_UINT16);
     h5_packet_recv.insertMember("header_valid", HOFFSET(PacketRecvEntry, header_valid), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("payload_valid", HOFFSET(PacketRecvEntry, payload_valid), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("curhop", HOFFSET(PacketRecvEntry, curhop), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("nexthop", HOFFSET(PacketRecvEntry, nexthop), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("seq", HOFFSET(PacketRecvEntry, seq), H5::PredType::NATIVE_UINT16);
     h5_packet_recv.insertMember("src", HOFFSET(PacketRecvEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("dest", HOFFSET(PacketRecvEntry, dest), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("crc", HOFFSET(PacketRecvEntry, crc), h5_crc_scheme);
@@ -142,6 +152,8 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_packet_send(sizeof(PacketSendEntry));
 
     h5_packet_send.insertMember("timestamp", HOFFSET(PacketSendEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("curhop", HOFFSET(PacketSendEntry, curhop), H5::PredType::NATIVE_UINT8);
+    h5_packet_send.insertMember("nexthop", HOFFSET(PacketSendEntry, nexthop), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("seq", HOFFSET(PacketSendEntry, seq), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("src", HOFFSET(PacketSendEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("dest", HOFFSET(PacketSendEntry, dest), H5::PredType::NATIVE_UINT8);
@@ -210,6 +222,8 @@ void Logger::logRecv(const Clock::time_point& t,
                      bool header_valid,
                      bool payload_valid,
                      const Header& hdr,
+                     NodeId src,
+                     NodeId dest,
                      crc_scheme crc,
                      fec_scheme fec0,
                      fec_scheme fec1,
@@ -218,14 +232,16 @@ void Logger::logRecv(const Clock::time_point& t,
                      float rssi,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
-    log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, crc, fec0, fec1, ms, evm, rssi, buf); });
+    log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
                      const Header& hdr,
+                     NodeId src,
+                     NodeId dest,
                      std::shared_ptr<IQBuf> buf)
 {
-    log_q_.emplace([=](){ logSend_(t, hdr, buf); });
+    log_q_.emplace([=](){ logSend_(t, hdr, src, dest, buf); });
 }
 
 void Logger::stop(void)
@@ -268,6 +284,8 @@ void Logger::logRecv_(const Clock::time_point& t,
                       bool header_valid,
                       bool payload_valid,
                       const Header& hdr,
+                      NodeId src,
+                      NodeId dest,
                       crc_scheme crc,
                       fec_scheme fec0,
                       fec_scheme fec1,
@@ -283,9 +301,11 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.end_samples = end_samples;
     entry.header_valid = header_valid;
     entry.payload_valid = payload_valid;
+    entry.curhop = hdr.curhop;
+    entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
-    entry.src = hdr.src;
-    entry.dest = hdr.dest;
+    entry.src = src;
+    entry.dest = dest;
     entry.crc = crc;
     entry.fec0 = fec0;
     entry.fec1 = fec1;
@@ -300,14 +320,18 @@ void Logger::logRecv_(const Clock::time_point& t,
 
 void Logger::logSend_(const Clock::time_point& t,
                       const Header& hdr,
+                      NodeId src,
+                      NodeId dest,
                       std::shared_ptr<IQBuf> buf)
 {
     PacketSendEntry entry;
 
     entry.timestamp = (t - t_start_).get_real_secs();
+    entry.curhop = hdr.curhop;
+    entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
-    entry.src = hdr.src;
-    entry.dest = hdr.dest;
+    entry.src = src;
+    entry.dest = dest;
     entry.iq_data.p = buf->data();
     entry.iq_data.len = buf->size();
 

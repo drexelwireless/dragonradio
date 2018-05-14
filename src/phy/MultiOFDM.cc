@@ -43,8 +43,8 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
 
     memset(&header, 0, sizeof(header));
 
-    header.h.src = pkt->src;
-    header.h.dest = pkt->dest;
+    header.h.curhop = pkt->curhop;
+    header.h.nexthop = pkt->nexthop;
     header.h.seq = pkt->seq;
     header.h.pkt_len = pkt->size();
 

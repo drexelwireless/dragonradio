@@ -121,12 +121,14 @@ LIQUID_MS = [ 'unknown'
             , 'arb' ]
 
 class RecvPacket:
-    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, seq, src, dest, crc, fec0, fec1, ms, evm, rssi, iqdata):
+    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, curhop, nexthop, seq, src, dest, crc, fec0, fec1, ms, evm, rssi, iqdata):
         self._timestamp = timestamp
         self._start = start
         self._end = end
         self._hdr_valid = hdr_valid
         self._payload_valid = payload_valid
+        self._curhop = curhop
+        self._nexthop = nexthop
         self._seq = seq
         self._src = src
         self._dest = dest
@@ -167,6 +169,16 @@ class RecvPacket:
     def payload_valid(self):
         """Flag indicating whther or not the payload is valid"""
         return self._payload_valid
+
+    @property
+    def curhop(self):
+        """Currrent hop node ID"""
+        return self._src
+
+    @property
+    def nexthop(self):
+        """Next hop node ID"""
+        return self._dest
 
     @property
     def seq(self):
@@ -219,8 +231,10 @@ class RecvPacket:
         return self._iqdata
 
 class SendPacket:
-    def __init__(self, timestamp, seq, src, dest, iqdata):
+    def __init__(self, timestamp, curhop, nexthop, seq, src, dest, iqdata):
         self._timestamp = timestamp
+        self._curhop = curhop
+        self._nexthop = nexthop
         self._seq = seq
         self._src = src
         self._dest = dest
@@ -230,6 +244,16 @@ class SendPacket:
     def timestamp(self):
         """Packet timestamp (in seconds since the logging node's start timestamp)"""
         return self._timestamp
+
+    @property
+    def curhop(self):
+        """Currrent hop node ID"""
+        return self._src
+
+    @property
+    def nexthop(self):
+        """Next hop node ID"""
+        return self._dest
 
     @property
     def seq(self):

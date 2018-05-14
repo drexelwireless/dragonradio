@@ -201,7 +201,7 @@ class ReceivePlot:
                 msg = ''
 
             self.fig.canvas.set_window_title('Node {} Received Packets'.format(self.node.node_id))
-            self.fig.suptitle('Packet {} from node {} (evm {:03.1f}dB, rssi {:03.1f}dB) {}'.format(self.pkt.pkt_id, self.pkt.src, self.pkt.evm, self.pkt.rssi, msg))
+            self.fig.suptitle('Packet {} from node {} (evm {:03.1f}dB, rssi {:03.1f}dB) {}'.format(self.pkt.seq, self.pkt.src, self.pkt.evm, self.pkt.rssi, msg))
 
             t0 = self.ts[0]
 
@@ -242,7 +242,7 @@ class ReceivePlot:
         if not node:
             return
 
-        idx = self.log.findSentPacketIndex(node, self.pkt.pkt_id)
+        idx = self.log.findSentPacketIndex(node, self.pkt.seq)
 
         fig = viewer.txFig(node)
         fig.plot(idx)
@@ -258,7 +258,7 @@ class ReceivePlot:
 
         # If the packet we are marking is the current packet, its label appears
         # in red. Otherwise, its label appears in black.
-        if pkt.pkt_id == self.pkt.pkt_id:
+        if pkt.seq == self.pkt.seq:
             color = 'r'
         else:
             color = 'k'
@@ -269,7 +269,7 @@ class ReceivePlot:
                     xycoords='data',
                     arrowprops=dict(arrowstyle='<->', connectionstyle='bar, fraction=0.5', ec='k'))
 
-        ax.text((t_start + t_end) / 2, ymax + 0.1*(ymax - ymin), str(pkt.pkt_id),
+        ax.text((t_start + t_end) / 2, ymax + 0.1*(ymax - ymin), str(pkt.seq),
                 ha='center',
                 va='bottom',
                 weight='bold',
@@ -337,7 +337,7 @@ class SendPlot:
             self.spos.set_val(idx)
 
             self.fig.canvas.set_window_title('Node {} Sent Packets'.format(self.node.node_id))
-            self.fig.suptitle('Packet {} to node {}'.format(self.pkt.pkt_id, self.pkt.dest))
+            self.fig.suptitle('Packet {} to node {}'.format(self.pkt.seq, self.pkt.dest))
 
             self.constellation.plot(self.pkt.data)
             self.waveform.plot(self.pkt.data)
@@ -364,7 +364,7 @@ class SendPlot:
         if not node:
             return
 
-        idx = self.log.findReceivedPacketIndex(node, self.pkt.pkt_id)
+        idx = self.log.findReceivedPacketIndex(node, self.pkt.seq)
 
         fig = viewer.rxFig(node)
         fig.plot(idx)

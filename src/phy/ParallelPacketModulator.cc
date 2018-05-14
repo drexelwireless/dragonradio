@@ -118,26 +118,26 @@ void ParallelPacketModulator::modWorker(void)
             mpkt = pkt_q_.back().get();
         }
 
-        Node &node = (*net_)[pkt->dest];
+        Node &nexthop = (*net_)[pkt->nexthop];
 
-        if (node.recalc_soft_tx_gain)
+        if (nexthop.recalc_soft_tx_gain)
             pkt->g = 1.0;
 
         // Modulate the packet
         modulator->modulate(*mpkt, std::move(pkt));
 
-        if (node.recalc_soft_tx_gain) {
-            float g = autoSoftGain0dBFS(*mpkt->samples, node.desired_soft_tx_gain_clip_frac);
+        if (nexthop.recalc_soft_tx_gain) {
+            float g = autoSoftGain0dBFS(*mpkt->samples, nexthop.desired_soft_tx_gain_clip_frac);
 
-            node.g = g;
-            node.setSoftTXGain(node.getSoftTXGain() + node.desired_soft_tx_gain);
-            node.recalc_soft_tx_gain = false;
+            nexthop.g = g;
+            nexthop.setSoftTXGain(nexthop.getSoftTXGain() + nexthop.desired_soft_tx_gain);
+            nexthop.recalc_soft_tx_gain = false;
 
             if (rc->verbose)
-                fprintf(stderr, "%u: new soft TX gain (dB): %f\n", node.id, node.getSoftTXGain());
+                fprintf(stderr, "%u: new soft TX gain (dB): %f\n", nexthop.id, nexthop.getSoftTXGain());
 
             // Apply the new soft gain
-            g = node.g;
+            g = nexthop.g;
 
             for (size_t i = 0; i < mpkt->samples->size(); ++i)
                 (*mpkt->samples)[i] *= g;

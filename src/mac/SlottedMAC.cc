@@ -54,11 +54,15 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
             if (logger) {
                 Header hdr;
 
-                hdr.src = (*it)->pkt->src;
-                hdr.dest = (*it)->pkt->dest;
+                hdr.curhop = (*it)->pkt->curhop;
+                hdr.nexthop = (*it)->pkt->nexthop;
                 hdr.seq = (*it)->pkt->seq;
 
-                logger->logSend(when, hdr, (*it)->samples);
+                logger->logSend(when,
+                                hdr,
+                                (*it)->pkt->src,
+                                (*it)->pkt->dest,
+                                (*it)->samples);
             }
 
             txBuf.emplace_back(std::move((*it)->samples));

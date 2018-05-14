@@ -49,6 +49,8 @@ public:
                  bool header_valid,
                  bool payload_valid,
                  const Header& hdr,
+                 NodeId src,
+                 NodeId dest,
                  crc_scheme crc,
                  fec_scheme fec0,
                  fec_scheme fec1,
@@ -58,6 +60,8 @@ public:
                  std::shared_ptr<buffer<std::complex<float>>> buf);
      void logSend(const Clock::time_point& t,
                   const Header& hdr,
+                  NodeId src,
+                  NodeId dest,
                   std::shared_ptr<IQBuf> buf);
 
     void stop(void);
@@ -89,6 +93,8 @@ private:
                   bool header_valid,
                   bool payload_valid,
                   const Header& hdr,
+                  NodeId src,
+                  NodeId dest,
                   crc_scheme crc,
                   fec_scheme fec0,
                   fec_scheme fec1,
@@ -98,6 +104,8 @@ private:
                   std::shared_ptr<buffer<std::complex<float>>> buf);
     void logSend_(const Clock::time_point& t,
                   const Header& hdr,
+                  NodeId src,
+                  NodeId dest,
                   std::shared_ptr<IQBuf> buf);
 };
 #endif /* LOGGER_H_ */

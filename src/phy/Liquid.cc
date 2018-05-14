@@ -51,7 +51,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     } else if (!payload_valid_) {
         printf("PAYLOAD INVALID\n");
         incomplete = true;
-    } else if (!net_->wantPacket(h->dest))
+    } else if (!net_->wantPacket(h->nexthop))
         return 0;
     else if (h->pkt_len == 0)
         return 0;
@@ -61,9 +61,11 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     else {
         auto pkt = std::make_unique<RadioPacket>(payload_, h->pkt_len);
 
-        pkt->src = h->src;
-        pkt->dest = h->dest;
+        pkt->curhop = h->curhop;
+        pkt->nexthop = h->nexthop;
         pkt->seq = h->seq;
+        pkt->src = h->curhop;
+        pkt->dest = h->nexthop;
         pkt->evm = stats_.evm;
         pkt->rssi = stats_.rssi;
 
@@ -79,6 +81,8 @@ int LiquidDemodulator::callback(unsigned char *  header_,
                         header_valid_,
                         payload_valid_,
                         *h,
+                        h->curhop,
+                        h->nexthop,
                         static_cast<crc_scheme>(stats_.check),
                         static_cast<fec_scheme>(stats_.fec0),
                         static_cast<fec_scheme>(stats_.fec1),

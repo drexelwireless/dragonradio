@@ -150,26 +150,37 @@ void Net::recvWorker(void)
         pkt->resize(count);
 
         if (pkt->size() > 0) {
-            struct ip* ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(struct ether_header));
-            in_addr    ip_dst;
+            struct ether_header* eth = reinterpret_cast<struct ether_header*>(pkt->data());
+            struct ip*           ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(struct ether_header));
+            in_addr              ip_src;
+            in_addr              ip_dst;
 
+            std::memcpy(&ip_src, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_src), sizeof(ip_src));
             std::memcpy(&ip_dst, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
 
-            // Destination node is last octet of the IP address by convention
-            NodeId destId = ntohl(ip_dst.s_addr) & 0xff;
+            // Node number is last octet of the ethernet MAC address by convention
+            NodeId curhop_id = eth->ether_shost[5];
+            NodeId nexthop_id = eth->ether_dhost[5];
 
-            if (contains(destId)) {
-                Node& dest = (*this)[destId];
+            // Node number is last octet of the IP address by convention
+            NodeId src_id = ntohl(ip_src.s_addr) & 0xff;
+            NodeId dest_id = ntohl(ip_dst.s_addr) & 0xff;
 
-                pkt->src = my_node_id_;
-                pkt->dest = destId;
+            if (contains(nexthop_id)) {
+                Node& nexthop = (*this)[nexthop_id];
 
-                pkt->seq = dest.seq++;
-                pkt->check = dest.check;
-                pkt->fec0 = dest.fec0;
-                pkt->fec1 = dest.fec1;
-                pkt->ms = dest.ms;
-                pkt->g = dest.g;
+                pkt->curhop = curhop_id;
+                pkt->nexthop = nexthop_id;
+                pkt->seq = nexthop.seq++;
+
+                pkt->src = src_id;
+                pkt->dest = dest_id;
+
+                pkt->check = nexthop.check;
+                pkt->fec0 = nexthop.fec0;
+                pkt->fec1 = nexthop.fec1;
+                pkt->ms = nexthop.ms;
+                pkt->g = nexthop.g;
 
                 recv_q_.push(std::move(pkt));
             }

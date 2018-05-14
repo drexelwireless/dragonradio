@@ -20,14 +20,20 @@ struct NetPacket : public buffer<unsigned char>
 {
     NetPacket(size_t n) : buffer(n) {};
 
-    /** @brief Source node (should be this node) */
-    NodeId src;
+    /** @brief Current hop (should be this node) */
+    NodeId curhop;
 
-    /** @brief Destination node */
-    NodeId dest;
+    /** @brief Next hop */
+    NodeId nexthop;
 
     /** @brief Sequence number */
     Seq seq;
+
+    /** @brief Source */
+    NodeId src;
+
+    /** @brief Destination */
+    NodeId dest;
 
     /** @brief CRC */
     crc_scheme check;
@@ -52,14 +58,20 @@ struct RadioPacket : public buffer<unsigned char>
 
     RadioPacket(unsigned char* data, size_t n) : buffer(data, n), barrier(false) {}
 
-    /** @brief Source node */
-    NodeId src;
+    /** @brief Current hop */
+    NodeId curhop;
 
-    /** @brief Destination node (should be this node) */
-    NodeId dest;
+    /** @brief Next hop (should be this node) */
+    NodeId nexthop;
 
     /** @brief Packet sequence number */
     Seq seq;
+
+    /** @brief Source */
+    NodeId src;
+
+    /** @brief Destination */
+    NodeId dest;
 
     /** @brief Error vector magnitude [dB] */
     float evm;

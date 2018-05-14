@@ -11,8 +11,8 @@
 
 /** @brief %PHY packet header. */
 struct Header {
-    NodeId   src;     /**< @brief Packet source node. */
-    NodeId   dest;    /**< @brief Packet destination node. */
+    NodeId   curhop;  /**< @brief Current hop. */
+    NodeId   nexthop; /**< @brief Next hop. */
     Seq      seq;     /**< @brief Packet sequence number. */
     uint16_t pkt_len; /**< @brief Length of the packet payload. */
                       /**< The packet payload may be padded. This field gives
