@@ -253,8 +253,8 @@ class ReceivePlot:
     def bracketPacket(self, pkt, ax):
         t_start = pkt.start/self.Fs
         t_end = pkt.end/self.Fs
-        # XXX hard-coded constant for y position of arrow. Fix this!
-        y = 3e6
+
+        (ymin, ymax) = ax.get_ylim()
 
         # If the packet we are marking is the current packet, its label appears
         # in red. Otherwise, its label appears in black.
@@ -264,13 +264,12 @@ class ReceivePlot:
             color = 'k'
 
         ax.annotate('',
-                    xy=(t_start, y),
-                    xytext=(t_end, y),
+                    xy=(t_start, ymax),
+                    xytext=(t_end, ymax),
                     xycoords='data',
                     arrowprops=dict(arrowstyle='<->', connectionstyle='bar, fraction=0.5', ec='k'))
 
-        # XXX hard-coded constant for y position of label. Fix this!
-        ax.text((t_start + t_end) / 2, y + 1e6, str(pkt.pkt_id),
+        ax.text((t_start + t_end) / 2, ymax + 0.1*(ymax - ymin), str(pkt.pkt_id),
                 ha='center',
                 va='bottom',
                 weight='bold',
