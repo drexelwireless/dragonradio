@@ -129,8 +129,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_readwrite("check", &Node::check, "Data validity check")
         .def_readwrite("fec0", &Node::fec0, "Inner FEC")
         .def_readwrite("fec1", &Node::fec1, "Outer FEC")
-        .def("getSoftTXGain", &Node::getSoftTXGain, "Get soft TX gain in dB")
-        .def("setSoftTXGain", &Node::setSoftTXGain, "Set soft TX gain in dB")
+        .def_property("soft_tx_gain", &Node::getSoftTXGain, &Node::setSoftTXGain, "Soft TX gain (dB)")
         ;
 
     // Export class Net to Python
