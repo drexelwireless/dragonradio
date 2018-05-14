@@ -20,7 +20,7 @@ struct Node {
     NodeId id;
 
     /** @brief Soft TX gain (multiplicative factor) */
-    double g;
+    float g;
 
     /** @brief Modulation scheme */
     modulation_scheme ms;
