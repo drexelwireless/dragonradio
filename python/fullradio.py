@@ -1,7 +1,9 @@
 import argparse
-import dragonradio
+import IPython
 import signal
 import sys
+
+import dragonradio
 
 def enumHelp(cls):
     return ', '.join(sorted(cls.__members__.keys()))
@@ -81,6 +83,9 @@ def main():
                         action='store', type=dragonradio.CRCScheme, dest='check',
                         default='crc32',
                         help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
+    parser.add_argument('--interactive',
+                        action='store_true', dest='interactive',
+                        help='enter interactive shell after radio is configured')
 
     try:
         args = parser.parse_args()
@@ -165,6 +170,9 @@ def main():
         logger.setAttribute('rx_bandwidth', usrp.rx_rate)
 
     mac[net.my_node_id - 1] = True
+
+    if args.interactive:
+        IPython.embed()
 
     # Wait for Ctrl-C
     signal.sigwait([signal.SIGINT])

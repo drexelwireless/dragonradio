@@ -19,3 +19,6 @@ sudo apt install python3-h5py
 
 # Build and install liquid-usrp
 (cd dependencies/liquid-usrp && ./bootstrap.sh && ./configure && make && sudo make install && sudo ldconfig)
+
+# Install Python dependencies
+./build-python-dependencies.sh
