@@ -115,14 +115,9 @@ void TDMA::rxWorker(void)
     Clock::time_point t_cur_slot;   // Time at which current slot starts
     Clock::time_point t_next_slot;  // Time at which next slot starts
     double            t_slot_pos;   // Offset into the current slot (sec)
-    size_t            slot_samps;   // Number of samples in a slot
     int               slot;         // Curent slot index in the frame
-    double            txRate;       // TX rate in Hz
 
     uhd::set_thread_priority_safe();
-
-    txRate = usrp_->getRXRate();
-    slot_samps = txRate * slot_size_;
 
     while (!done_) {
         // Set up streaming starting at *next* slot
@@ -140,11 +135,11 @@ void TDMA::rxWorker(void)
             t_next_slot += slot_size_;
 
             // Read samples for current slot
-            auto curSlot = std::make_shared<IQBuf>(slot_samps + usrp_->getMaxRXSamps());
+            auto curSlot = std::make_shared<IQBuf>(rx_slot_samps_ + usrp_->getMaxRXSamps());
 
             demodulator_->push(curSlot);
 
-            usrp_->burstRX(t_cur_slot, slot_samps, *curSlot);
+            usrp_->burstRX(t_cur_slot, rx_slot_samps_, *curSlot);
 
             // Move to the next slot
             ++slot;
@@ -158,13 +153,8 @@ void TDMA::txWorker(void)
 {
     Clock::time_point t_now;       // Current time
     Clock::time_point t_next_slot; // Time at which our next slot starts
-    size_t            slot_samps;  // Number of samples to send in a slot
 
     uhd::set_thread_priority_safe();
-
-    slot_samps = usrp_->getTXRate()*(slot_size_ - guard_size_);
-
-    modulator_->setLowWaterMark(slot_samps);
 
     while (!done_) {
         // Figure out when our next send slot is.
@@ -177,7 +167,7 @@ void TDMA::txWorker(void)
         }
 
         // Schedule transmission for start of our slot
-        txSlot(t_next_slot, slot_samps);
+        txSlot(t_next_slot, tx_slot_samps_);
 
         // Sleep until the end of our transmission
         doze((t_next_slot - t_now).get_real_secs() + slot_size_);
@@ -233,6 +223,11 @@ void TDMA::txSlot(Clock::time_point when, size_t maxSamples)
 void TDMA::reconfigure(void)
 {
     frame_size_ = slot_size_*slots_.size();
+    rx_slot_samps_ = rx_rate_*slot_size_;
+    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
+
+    modulator_->setLowWaterMark(tx_slot_samps_);
+
     demodulator_->setDemodParameters(0.5*guard_size_*rx_rate_,
                                      (slot_size_ - 0.5*guard_size_)*tx_rate_);
 }

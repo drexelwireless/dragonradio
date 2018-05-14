@@ -105,6 +105,12 @@ private:
     /** @brief Length of inter-slot guard (sec) */
     double guard_size_;
 
+    /** @brief Number of RX samples in a full slot */
+    size_t rx_slot_samps_;
+
+    /** @brief Number of TX samples in the non-guard portion of a slot */
+    size_t tx_slot_samps_;
+
     /** @brief The slot schedule */
     slots_type slots_;
 
