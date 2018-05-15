@@ -151,22 +151,25 @@ void Net::recvWorker(void)
 
         if (pkt->size() > 0) {
             struct ether_header* eth = reinterpret_cast<struct ether_header*>(pkt->data());
-            struct ip*           ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(struct ether_header));
-            in_addr              ip_src;
-            in_addr              ip_dst;
-
-            std::memcpy(&ip_src, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_src), sizeof(ip_src));
-            std::memcpy(&ip_dst, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
 
             // Node number is last octet of the ethernet MAC address by convention
             NodeId curhop_id = eth->ether_shost[5];
             NodeId nexthop_id = eth->ether_dhost[5];
 
-            // Node number is last octet of the IP address by convention
-            NodeId src_id = ntohl(ip_src.s_addr) & 0xff;
-            NodeId dest_id = ntohl(ip_dst.s_addr) & 0xff;
+            // Only transmit IP packets where we are the source and we know
+            // of the destination.
+            if (ntohs(eth->ether_type) == ETHERTYPE_IP && curhop_id == my_node_id_ && contains(nexthop_id)) {
+                struct ip* ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(struct ether_header));
+                in_addr    ip_src;
+                in_addr    ip_dst;
 
-            if (contains(nexthop_id)) {
+                std::memcpy(&ip_src, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_src), sizeof(ip_src));
+                std::memcpy(&ip_dst, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
+
+                // Node number is last octet of the IP address by convention
+                NodeId src_id = ntohl(ip_src.s_addr) & 0xff;
+                NodeId dest_id = ntohl(ip_dst.s_addr) & 0xff;
+
                 Node& nexthop = (*this)[nexthop_id];
 
                 pkt->curhop = curhop_id;
