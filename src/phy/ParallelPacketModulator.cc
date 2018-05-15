@@ -119,14 +119,20 @@ void ParallelPacketModulator::modWorker(void)
         }
 
         Node &nexthop = (*net_)[pkt->nexthop];
+        bool recalc = false;
 
-        if (nexthop.recalc_soft_tx_gain)
+        // XXX Mostly-benign race condition here. More than one modulator could
+        // end up re-calculating the soft TX gain.
+        if (nexthop.recalc_soft_tx_gain) {
+            nexthop.recalc_soft_tx_gain = false;
             pkt->g = 1.0;
+            recalc = true;
+        }
 
         // Modulate the packet
         modulator->modulate(*mpkt, std::move(pkt));
 
-        if (nexthop.recalc_soft_tx_gain) {
+        if (recalc) {
             float g = autoSoftGain0dBFS(*mpkt->samples, nexthop.desired_soft_tx_gain_clip_frac);
 
             nexthop.g = g;
