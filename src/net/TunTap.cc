@@ -34,6 +34,7 @@ TunTap::TunTap(const std::string& tapdev,
                uint8_t last_octet) :
     persistent_(persistent),
     tapdev_(tapdev),
+    mtu_(mtu),
     ip_fmt_(ip_fmt),
     mac_fmt_(mac_fmt)
 {
@@ -107,6 +108,11 @@ ssize_t TunTap::cread(void *buf, size_t n)
     }
 
     return nread;
+}
+
+size_t TunTap::getMTU(void)
+{
+    return mtu_;
 }
 
 void TunTap::addARPEntry(uint8_t last_octet)

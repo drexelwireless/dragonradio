@@ -35,6 +35,9 @@ public:
     /** @brief Read from the tun/tap device */
     ssize_t cread(void *buf, size_t n);
 
+    /** @brief Return the MTU of this interface */
+    size_t getMTU(void);
+
     /** @brief Add an ARP table entry with the given last octet */
     void addARPEntry(uint8_t last_octet);
 
@@ -47,6 +50,9 @@ private:
 
     /** @brief The name of the tun/tap device */
     std::string tapdev_;
+
+    /** @brief MTU of the interface */
+    size_t mtu_;
 
     /** @brief A sprintf-style format string for tun/tap IP address */
     const std::string ip_fmt_;
