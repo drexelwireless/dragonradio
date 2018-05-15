@@ -28,20 +28,12 @@ Node::~Node()
 {
 }
 
-Net::Net(const std::string& tap_name,
-         const std::string& ip_fmt,
-         const std::string& mac_fmt,
-         size_t mtu,
+Net::Net(std::shared_ptr<TunTap> tuntap,
          NodeId nodeId) :
-    mtu_(mtu),
+    tuntap_(tuntap),
     my_node_id_(nodeId),
     done_(true)
 {
-    if (rc->verbose)
-        printf("Creating tap interface %s\n", tap_name.c_str());
-
-    tuntapdev_ = std::make_unique<TunTap>(tap_name, false, mtu_, ip_fmt, mac_fmt, nodeId);
-
     start();
 }
 
@@ -110,7 +102,7 @@ void Net::addNode(NodeId nodeId)
     nodes_.emplace(nodeId, Node(nodeId));
 
     if (nodeId != my_node_id_)
-        tuntapdev_->addARPEntry(nodeId);
+        tuntap_->addARPEntry(nodeId);
 }
 
 std::unique_ptr<NetPacket> Net::recvPacket(void)
@@ -129,7 +121,7 @@ bool Net::wantPacket(NodeId dest)
 
 void Net::send(std::unique_ptr<RadioPacket> pkt)
 {
-    tuntapdev_->cwrite(pkt->data(), pkt->size());
+    tuntap_->cwrite(pkt->data(), pkt->size());
 
     if (rc->verbose)
         printf("Written %lu bytes (seq# %u) from %u\n",
@@ -141,10 +133,10 @@ void Net::send(std::unique_ptr<RadioPacket> pkt)
 void Net::recvWorker(void)
 {
     while (!done_) {
-        auto    pkt = std::make_unique<NetPacket>(mtu_ + sizeof(struct ether_header));
+        auto    pkt = std::make_unique<NetPacket>(tuntap_->getMTU() + sizeof(struct ether_header));
         ssize_t count;
 
-        count = tuntapdev_->cread(pkt->data(), pkt->size());
+        count = tuntap_->cread(pkt->data(), pkt->size());
         pkt->resize(count);
 
         if (pkt->size() > 0) {

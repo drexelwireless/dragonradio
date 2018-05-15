@@ -38,6 +38,9 @@ TunTap::TunTap(const std::string& tapdev,
     ip_fmt_(ip_fmt),
     mac_fmt_(mac_fmt)
 {
+    if (rc->verbose)
+        printf("Creating tap interface %s\n", tapdev.c_str());
+
     if (!persistent_) {
         // Check if tap is already up
         if (sys("ifconfig %s > /dev/null 2>&1", tapdev_.c_str()) != 0) {

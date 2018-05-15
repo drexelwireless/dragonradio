@@ -120,6 +120,17 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("rx_gain", &USRP::getRXGain, &USRP::setRXGain)
         ;
 
+    // Export class TunTap to Python
+    py::class_<TunTap, std::shared_ptr<TunTap>>(m, "TunTap")
+        .def(py::init<const std::string&,
+                      bool,
+                      size_t,
+                      const std::string,
+                      const std::string,
+                      uint8_t>())
+        .def_property_readonly("mtu", &TunTap::getMTU)
+        ;
+
     // Export class Node to Python
     py::class_<Node, std::shared_ptr<Node>>(m, "Node")
         .def_readonly("id", &Node::id, "Node ID")
@@ -135,10 +146,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class Net to Python
     py::class_<Net, std::shared_ptr<Net>>(m, "Net")
-        .def(py::init<const std::string&,
-                      const std::string&,
-                      const std::string&,
-                      size_t,
+        .def(py::init<std::shared_ptr<TunTap>,
                       NodeId>())
         .def("__getitem__", [](Net &net, NodeId key) -> Node& {
             try {

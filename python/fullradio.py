@@ -131,7 +131,9 @@ def main():
         logger.setAttribute('taper_len', args.taper_len)
         dragonradio.Logger.singleton = logger
 
-    net = dragonradio.Net('tap0', '10.10.10.%d', 'c6:ff:ff:ff:ff:%02x', 1500, args.node_id)
+    tuntap = dragonradio.TunTap('tap0', False, 1500, '10.10.10.%d', 'c6:ff:ff:ff:ff:%02x', args.node_id)
+
+    net = dragonradio.Net(tuntap, args.node_id)
 
     for i in range(0, args.num_nodes):
         net.addNode(i+1)

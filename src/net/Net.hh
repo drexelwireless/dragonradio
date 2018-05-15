@@ -90,10 +90,7 @@ class Net
 public:
     using map_type = std::map<NodeId, Node>;
 
-    Net(const std::string& tap_name,
-        const std::string& ip_fmt,
-        const std::string& mac_fmt,
-        size_t mtu,
+    Net(std::shared_ptr<TunTap> tuntap,
         NodeId nodeId);
     ~Net();
 
@@ -141,7 +138,7 @@ public:
 
 private:
     /** @brief Our tun/tap interface */
-    std::unique_ptr<TunTap> tuntapdev_;
+    std::shared_ptr<TunTap> tuntap_;
 
     /** @brief MTU of this interface */
     size_t mtu_;
