@@ -55,6 +55,10 @@ def main():
                         action='store', type=float, dest='rx_gain',
                         default=25,
                         help='set UHD RX gain (dB)')
+    parser.add_argument('--auto-soft-tx-gain',
+                        action='store_true', dest='auto_soft_tx_gain',
+                        default=False,
+                        help='automatically choose soft TX gain')
     parser.add_argument('-M',
                         action='store', type=int, dest='M',
                         default=48,
@@ -132,8 +136,9 @@ def main():
     for i in range(0, args.num_nodes):
         net.addNode(i+1)
 
-    for node in net:
-        net[node].desired_soft_tx_gain = 0.0
+    if args.auto_soft_tx_gain:
+        for node in net:
+            net[node].desired_soft_tx_gain = 0.0
 
     min_packet_size = 512
 
