@@ -110,7 +110,7 @@ void Net::addNode(NodeId nodeId)
     nodes_.emplace(nodeId, Node(nodeId));
 
     if (nodeId != my_node_id_)
-        tuntapdev_->add_arp_entry(nodeId);
+        tuntapdev_->addARPEntry(nodeId);
 }
 
 std::unique_ptr<NetPacket> Net::recvPacket(void)

@@ -36,10 +36,10 @@ public:
     ssize_t cread(void *buf, size_t n);
 
     /** @brief Add an ARP table entry with the given last octet */
-    void add_arp_entry(uint8_t last_octet);
+    void addARPEntry(uint8_t last_octet);
 
     /** @brief Delete an ARP table entry with the given last octet */
-    void delete_arp_entry(uint8_t last_octet);
+    void deleteARPEntry(uint8_t last_octet);
 
 private:
     /** @brief Flag indicatign whether or not the interface is persistent. */
@@ -63,10 +63,10 @@ private:
      * @param flags Flags to pass in the ifr_flags field of the ifreq given to
      * ioctl.
      */
-    void open_tap(std::string& dev, int flags);
+    void openTap(std::string& dev, int flags);
 
     /** @brief Close the tun/tap device. */
-    void close_tap(void);
+    void closeTap(void);
 };
 
 #endif    // TUNTAP_HH_

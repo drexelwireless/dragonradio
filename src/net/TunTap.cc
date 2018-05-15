@@ -64,12 +64,12 @@ TunTap::TunTap(const std::string& tapdev,
             fprintf(stderr, "system() - error bringing interface up\n");
     }
 
-    open_tap(tapdev_, IFF_TAP | IFF_NO_PI);
+    openTap(tapdev_, IFF_TAP | IFF_NO_PI);
 }
 
 TunTap::~TunTap(void)
 {
-    close_tap();
+    closeTap();
 }
 
 ssize_t TunTap::cwrite(const void *buf, size_t n)
@@ -109,13 +109,13 @@ ssize_t TunTap::cread(void *buf, size_t n)
     return nread;
 }
 
-void TunTap::add_arp_entry(uint8_t last_octet)
+void TunTap::addARPEntry(uint8_t last_octet)
 {
     if (sys(("arp -i %s -s " + ip_fmt_ + " " + mac_fmt_).c_str(), tapdev_.c_str(), last_octet, last_octet) < 0)
         fprintf(stderr, "Error adding ARP entry for last octet %d.\n", last_octet);
 }
 
-void TunTap::delete_arp_entry(uint8_t last_octet)
+void TunTap::deleteARPEntry(uint8_t last_octet)
 {
     if (sys(("arp -d " + ip_fmt_).c_str(), last_octet) < 0)
         fprintf(stderr, "Error deleting ARP entry for last octet %d.\n", last_octet);
@@ -123,7 +123,7 @@ void TunTap::delete_arp_entry(uint8_t last_octet)
 
 const char *clonedev = "/dev/net/tun";
 
-void TunTap::open_tap(std::string& dev, int flags)
+void TunTap::openTap(std::string& dev, int flags)
 {
     struct ifreq ifr;
     int err;
@@ -154,7 +154,7 @@ void TunTap::open_tap(std::string& dev, int flags)
     dev = ifr.ifr_name;
 }
 
-void TunTap::close_tap(void)
+void TunTap::closeTap(void)
 {
     if (rc->verbose)
         printf("Closing tap interface\n");
