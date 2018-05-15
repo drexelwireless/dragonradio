@@ -93,6 +93,7 @@ public:
     Net(const std::string& tap_name,
         const std::string& ip_fmt,
         const std::string& mac_fmt,
+        size_t mtu,
         NodeId nodeId);
     ~Net();
 
@@ -141,6 +142,9 @@ public:
 private:
     /** @brief Our tun/tap interface */
     std::unique_ptr<TunTap> tuntapdev_;
+
+    /** @brief MTU of this interface */
+    size_t mtu_;
 
     /** @brief This node's ID */
     NodeId my_node_id_;

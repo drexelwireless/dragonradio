@@ -31,14 +31,16 @@ Node::~Node()
 Net::Net(const std::string& tap_name,
          const std::string& ip_fmt,
          const std::string& mac_fmt,
+         size_t mtu,
          NodeId nodeId) :
+    mtu_(mtu),
     my_node_id_(nodeId),
     done_(true)
 {
     if (rc->verbose)
         printf("Creating tap interface %s\n", tap_name.c_str());
 
-    tuntapdev_ = std::make_unique<TunTap>(tap_name, false, 1500, ip_fmt, mac_fmt, nodeId);
+    tuntapdev_ = std::make_unique<TunTap>(tap_name, false, mtu_, ip_fmt, mac_fmt, nodeId);
 
     start();
 }
@@ -136,14 +138,10 @@ void Net::send(std::unique_ptr<RadioPacket> pkt)
             (unsigned int) pkt->src);
 }
 
-/** Maximum radio packet size. Really 1500 (MTU) + 14 (size of Ethernet header),
-    which we should properly calculate at some point. */
-const size_t MAX_PKT_SIZE = 2000;
-
 void Net::recvWorker(void)
 {
     while (!done_) {
-        auto    pkt = std::make_unique<NetPacket>(MAX_PKT_SIZE);
+        auto    pkt = std::make_unique<NetPacket>(mtu_ + sizeof(struct ether_header));
         ssize_t count;
 
         count = tuntapdev_->cread(pkt->data(), pkt->size());

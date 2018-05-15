@@ -138,6 +138,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init<const std::string&,
                       const std::string&,
                       const std::string&,
+                      size_t,
                       NodeId>())
         .def("__getitem__", [](Net &net, NodeId key) -> Node& {
             try {
