@@ -9,11 +9,10 @@ using namespace std::placeholders;
 
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
                                                      std::shared_ptr<PHY> phy,
-                                                     bool ordered,
                                                      unsigned int nthreads) :
     net_(net),
     phy_(phy),
-    ordered_(ordered),
+    ordered_(false),
     prev_samps_(0),
     cur_samps_(0),
     done_(false),

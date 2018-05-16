@@ -204,7 +204,6 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<ParallelPacketDemodulator, PacketDemodulator, std::shared_ptr<ParallelPacketDemodulator>>(m, "ParallelPacketDemodulator")
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
-                      bool,
                       unsigned int>())
         .def_property("ordered", &ParallelPacketDemodulator::getOrdered, &ParallelPacketDemodulator::setOrdered)
         ;

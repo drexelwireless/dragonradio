@@ -154,11 +154,14 @@ def main():
 
     num_modulation_threads = 2
     num_demodulation_threads = 10
-    ordered_demodulation = True
 
     modulator = dragonradio.ParallelPacketModulator(net, phy, num_modulation_threads)
 
-    demodulator = dragonradio.ParallelPacketDemodulator(net, phy, ordered_demodulation, num_demodulation_threads)
+    demodulator = dragonradio.ParallelPacketDemodulator(net, phy, num_demodulation_threads)
+
+    # Setting the demodulator's ordered property to True forces packets to be
+    # demodulated in order. This increases latency.
+    #demodulator.ordered = True
 
     # slot size *including* guard (seconds)
     slot_size = .035

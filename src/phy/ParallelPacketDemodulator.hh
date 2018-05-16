@@ -69,7 +69,6 @@ class ParallelPacketDemodulator : public PacketDemodulator
 public:
     ParallelPacketDemodulator(std::shared_ptr<Net> net,
                               std::shared_ptr<PHY> phy,
-                              bool ordered,
                               unsigned int nthreads);
     virtual ~ParallelPacketDemodulator();
 
