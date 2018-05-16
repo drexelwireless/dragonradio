@@ -5,9 +5,7 @@
  */
 
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <netinet/if_ether.h>
 #include <linux/if.h>
 #include <linux/if_tun.h>
@@ -152,46 +150,17 @@ void TunTap::closeTap(void)
     }
 }
 
-ssize_t TunTap::cwrite(const void *buf, size_t n)
+void TunTap::send(std::unique_ptr<RadioPacket>&& pkt)
 {
     ssize_t nwrite;
 
-    if ((nwrite = write(fd_, buf, n)) < 0) {
+    if ((nwrite = write(fd_, pkt->data(), pkt->size())) < 0) {
         perror("Writing data");
         exit(1);
     }
 
-    return nwrite;
-}
-
-ssize_t TunTap::cread(void *buf, size_t n)
-{
-    fd_set tx_set;
-    struct timeval timeout = {1,0}; //1 second timeoout
-
-    FD_ZERO(&tx_set);
-    FD_SET(fd_, &tx_set);
-
-    if (select(fd_ + 1, &tx_set, NULL, NULL, &timeout) < 0) {
-        perror("select()");
-        exit(1);
-    }
-
-    ssize_t nread = 0;
-
-    if (FD_ISSET(fd_, &tx_set)) {
-        if ((nread = read(fd_, buf, n)) < 0) {
-            perror("read()");
-            exit(1);
-        }
-    }
-
-    return nread;
-}
-
-void TunTap::send(std::unique_ptr<RadioPacket>&& pkt)
-{
-    cwrite(pkt->data(), pkt->size());
+    if ((size_t) nwrite != pkt->size())
+        fprintf(stderr, "Couldn't write full packet to tun/tap!");
 
     if (rc->verbose)
         printf("Written %lu bytes (seq# %u) from %u\n",
@@ -210,36 +179,29 @@ void TunTap::stop(void)
 {
     done_ = true;
 
+    wakeThread(worker_thread_);
+
     if (worker_thread_.joinable())
         worker_thread_.join();
 }
 
 void TunTap::worker(void)
 {
-    fd_set tx_set;
-    struct timeval timeout = {1, 0}; // 1 second timeoout
+    makeThreadWakeable();
 
     while (!done_) {
-        FD_ZERO(&tx_set);
-        FD_SET(fd_, &tx_set);
+        auto    pkt = std::make_unique<NetPacket>(mtu_ + sizeof(struct ether_header));
+        ssize_t nread;
 
-        if (select(fd_ + 1, &tx_set, NULL, NULL, &timeout) < 0) {
-            perror("select()");
+        if ((nread = read(fd_, pkt->data(), pkt->size())) < 0) {
+            if (errno == EINTR)
+                continue;
+
+            perror("read()");
             exit(1);
         }
 
-        if (FD_ISSET(fd_, &tx_set)) {
-            auto    pkt = std::make_unique<NetPacket>(mtu_ + sizeof(struct ether_header));
-            ssize_t nread;
-
-            if ((nread = read(fd_, pkt->data(), pkt->size())) < 0) {
-                perror("read()");
-                exit(1);
-            }
-
-            pkt->resize(nread);
-
-            source.push(std::move(pkt));
-        }
+        pkt->resize(nread);
+        source.push(std::move(pkt));
     }
 }

@@ -81,12 +81,6 @@ private:
     /** @brief Close the tun/tap device. */
     void closeTap(void);
 
-    /** @brief Write to the tun/tap device */
-    ssize_t cwrite(const void *buf, size_t n);
-
-    /** @brief Read from the tun/tap device */
-    ssize_t cread(void *buf, size_t n);
-
     /** @brief Send a packet to the tun/tap device */
     void send(std::unique_ptr<RadioPacket>&& pkt);
 

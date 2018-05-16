@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <signal.h>
 #include <time.h>
 
 #include "RadioConfig.hh"
@@ -36,4 +37,25 @@ int doze(double sec)
     ts.tv_nsec = frac*1e9;
 
     return nanosleep(&ts, NULL);
+}
+
+void dummySignalHandler(int)
+{
+}
+
+void makeThreadWakeable(void)
+{
+    struct sigaction sa = {0};
+
+    sa.sa_handler = dummySignalHandler;
+
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+        perror("makeThreadWakeable() failed");
+        exit(1);
+    }
+}
+
+void wakeThread(std::thread& t)
+{
+    pthread_kill(t.native_handle(), SIGUSR1);
 }
