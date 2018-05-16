@@ -34,9 +34,13 @@ Available CLI options can be displayed by invoking `fullradio.py` with the `-h` 
 
 The options are largely identical to the options for the liquid-usrp examples: if the examples and `fullradio.py` both allow setting the same parameter, then the corresponding option flags are identical.
 
-This radio also allows a choice of PHY: flexframe-based PHY (`--phy flexframe`, the default), ofdmflexframe-based PHY (`--phy ofdm`), and the multichannel ofdmflexframe-based PHY (`--phy multi-ofdm`).
+Notable flags supported by the `fullradio.py` include:
 
-The `-i` option sets the node's ID. This is all you need to run a pair of radios. It defaults to 1.
+ * `--i NODEID` Set the node's ID. Defaults to 1.
+ * `--phy PHY` Choose the physical layer used by the radio. Options are the flexframe-based PHY (`--phy flexframe`), ofdmflexframe-based PHY (`--phy ofdm`), and the multichannel ofdmflexframe-based PHY (`--phy multi-ofdm`). The default is `flexframe`.
+ * `--rx-antenna` Set the RX antenna. Defaults to `RX2`. **You must change this to `TX/RX` if you are running on the Grid**.
+ * `--auto-soft-tx-gain` Automatically (attempt to) set the soft TX gain to 0 dBFS.
+ * `--interactive` Drop into an [IPython](https://ipython.org/) shell once the radio has started up. You can then manipulate the radio components in the shell.
 
 After starting up, the radio will create a `tap` device with IP address `10.10.10.NODEID` and a netmask of `255.255.255.0`, where `NODEID` is the node ID set with `-i`. Packets sent to this subnet will be sent over the radio.
 
