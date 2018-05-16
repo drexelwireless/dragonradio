@@ -7,9 +7,12 @@
 #define TUNTAP_HH_
 
 #include <string>
+#include <thread>
 #include <vector>
 
-class TunTap
+#include "net/Element.hh"
+
+class TunTap : public Element
 {
 public:
     /** @brief Create a tun/tap device.
@@ -27,13 +30,7 @@ public:
            const std::string ip_fmt,
            const std::string mac_fmt,
            uint8_t last_octet);
-    ~TunTap();
-
-    /** @brief Write to the tun/tap device */
-    ssize_t cwrite(const void *buf, size_t n);
-
-    /** @brief Read from the tun/tap device */
-    ssize_t cread(void *buf, size_t n);
+    virtual ~TunTap();
 
     /** @brief Return the MTU of this interface */
     size_t getMTU(void);
@@ -43,6 +40,16 @@ public:
 
     /** @brief Delete an ARP table entry with the given last octet */
     void deleteARPEntry(uint8_t last_octet);
+
+    /** @brief Sink for radio packets. Packets written here are sent to the
+     * tun/tap device.
+     */
+    RadioIn<Push> sink;
+
+    /** @brief Source for network packets. Packets read here are received from
+     * the tun/tap device.
+     */
+    NetOut<Push> source;
 
 private:
     /** @brief Flag indicatign whether or not the interface is persistent. */
@@ -73,6 +80,30 @@ private:
 
     /** @brief Close the tun/tap device. */
     void closeTap(void);
+
+    /** @brief Write to the tun/tap device */
+    ssize_t cwrite(const void *buf, size_t n);
+
+    /** @brief Read from the tun/tap device */
+    ssize_t cread(void *buf, size_t n);
+
+    /** @brief Send a packet to the tun/tap device */
+    void send(std::unique_ptr<RadioPacket>&& pkt);
+
+    /** @brief Flag indicating whether or not we are done receiving */
+    bool done_;
+
+    /** @brief Start the receive worker */
+    void start(void);
+
+    /** @brief Stop the receive worker */
+    void stop(void);
+
+    /** @brief Receive worker thread */
+    std::thread worker_thread_;
+
+    /** @brief Receive worker */
+    void worker(void);
 };
 
 #endif    // TUNTAP_HH_

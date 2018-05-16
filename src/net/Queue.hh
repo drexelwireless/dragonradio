@@ -12,9 +12,15 @@ using namespace std::placeholders;
 template <class T>
 class Queue : public Element {
 public:
-    Queue() :
-        in(*this, std::bind(static_cast<void (SafeQueue<T>::*)(T&&)>(&SafeQueue<T>::push), &queue_, _1)),
-        out(*this, std::bind(&SafeQueue<T>::pop, &queue_, _1))
+    Queue()
+      : in(*this,
+           nullptr,
+           nullptr,
+           std::bind(static_cast<void (SafeQueue<T>::*)(T&&)>(&SafeQueue<T>::push), &queue_, _1))
+      , out(*this,
+            std::bind(&SafeQueue<T>::reset, &queue_),
+            std::bind(&SafeQueue<T>::stop, &queue_),
+            std::bind(&SafeQueue<T>::pop, &queue_, _1))
     {
     }
 
@@ -23,10 +29,10 @@ public:
     }
 
     /** @brief The queue's packet input port. */
-    DirPort<In, Push,T> in;
+    Port<In, Push, T> in;
 
     /** @brief The queue's packet output port. */
-    DirPort<Out, Pull,T> out;
+    Port<Out, Pull, T> out;
 
 protected:
     /** @brief The queue. */

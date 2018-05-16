@@ -165,6 +165,28 @@ def main():
     # demodulated in order. This increases latency.
     #demodulator.ordered = True
 
+    #
+    # Configure packet path from demodulator to tun/tap
+    # Right now, the path is direct:
+    #   tun/tap -> demodulator
+    #
+    demodulator.source >> tuntap.sink
+
+    #
+    # Configure packet path from tun/tap to the modulator
+    # The path is:
+    #   tun/tap -> NetFilter -> NetQueue -> Modulator
+    #
+    netfilter = dragonradio.NetFilter(net)
+
+    netq = dragonradio.NetQueue()
+
+    tuntap.source >> netfilter.input
+
+    netfilter.output >> netq.push
+
+    netq.pop >> modulator.sink
+
     # slot size *including* guard (seconds)
     slot_size = .035
     guard_size = .01

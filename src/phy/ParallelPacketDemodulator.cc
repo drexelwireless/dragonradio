@@ -10,6 +10,7 @@ using namespace std::placeholders;
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
                                                      std::shared_ptr<PHY> phy,
                                                      unsigned int nthreads) :
+    source(*this, nullptr, nullptr),
     net_(net),
     phy_(phy),
     ordered_(false),
@@ -82,7 +83,7 @@ void ParallelPacketDemodulator::demodWorker(void)
             if (ordered_)
                 radio_q_.push(b, std::move(pkt));
             else
-                net_->send(std::move(pkt));
+                source.push(std::move(pkt));
         }
     };
 
@@ -142,7 +143,7 @@ void ParallelPacketDemodulator::netWorker(void)
 
     while (!done_) {
         if (radio_q_.pop(pkt))
-            net_->send(std::move(pkt));
+            source.push(std::move(pkt));
     }
 }
 
