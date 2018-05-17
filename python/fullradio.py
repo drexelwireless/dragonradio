@@ -144,16 +144,22 @@ def main():
 
     min_packet_size = 512
 
+    #
+    # Configure the PHY
+    #
     if args.phy == 'flexframe':
-        phy = dragonradio.FlexFrame(net, min_packet_size)
+        phy = dragonradio.FlexFrame(min_packet_size)
     elif args.phy == 'ofdm':
-        phy = dragonradio.OFDM(net, args.M, args.cp_len, args.taper_len, min_packet_size)
+        phy = dragonradio.OFDM(args.M, args.cp_len, args.taper_len, min_packet_size)
     elif args.phy == 'multiofdm':
-        phy = dragonradio.MultiOFDM(net, args.M, args.cp_len, args.taper_len, min_packet_size)
+        phy = dragonradio.MultiOFDM(args.M, args.cp_len, args.taper_len, min_packet_size)
     else:
         print('Bad PHY: {}'.format(args.phy), file=sys.stderr)
         sys.exit(1)
 
+    #
+    # Configure the modulator and demodulator
+    #
     num_modulation_threads = 2
     num_demodulation_threads = 10
 
@@ -166,16 +172,23 @@ def main():
     #demodulator.ordered = True
 
     #
+    # Configure the controller
+    #
+    controller = dragonradio.DummyController(net)
+
+    #
     # Configure packet path from demodulator to tun/tap
     # Right now, the path is direct:
-    #   tun/tap -> demodulator
+    #   demodulator -> controller -> tun/tap
     #
-    demodulator.source >> tuntap.sink
+    demodulator.source >> controller.radio_in
+
+    controller.radio_out >> tuntap.sink
 
     #
     # Configure packet path from tun/tap to the modulator
     # The path is:
-    #   tun/tap -> NetFilter -> NetQueue -> Modulator
+    #   tun/tap -> NetFilter -> NetQueue -> controller -> modulator
     #
     netfilter = dragonradio.NetFilter(net)
 
@@ -185,7 +198,13 @@ def main():
 
     netfilter.output >> netq.push
 
-    netq.pop >> modulator.sink
+    netq.pop >> controller.net_in
+
+    controller.net_out >> modulator.sink
+
+    #
+    # Configure the MAC
+    #
 
     # slot size *including* guard (seconds)
     slot_size = .035
@@ -203,10 +222,15 @@ def main():
 
     mac[net.my_node_id - 1] = True
 
+    #
+    # Start IPython shell if we are in interactive mode
+    #
     if args.interactive:
         IPython.embed()
 
+    #
     # Wait for Ctrl-C
+    #
     signal.sigwait([signal.SIGINT])
 
     # We don't need to explicitly destroy these objects

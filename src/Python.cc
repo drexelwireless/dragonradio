@@ -10,6 +10,8 @@ namespace py = pybind11;
 #include "phy/OFDM.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
+#include "mac/Controller.hh"
+#include "mac/DummyController.hh"
 #include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
 #include "net/Element.hh"
@@ -267,14 +269,12 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class FlexFrame to Python
     py::class_<FlexFrame, PHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
-        .def(py::init<std::shared_ptr<Net>,
-                      size_t>())
+        .def(py::init<size_t>())
         ;
 
     // Export class OFDM to Python
     py::class_<OFDM, PHY, std::shared_ptr<OFDM>>(m, "OFDM")
-        .def(py::init<std::shared_ptr<Net>,
-                      unsigned int,
+        .def(py::init<unsigned int,
                       unsigned int,
                       unsigned int,
                       size_t>())
@@ -282,8 +282,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class MultiOFDM to Python
     py::class_<MultiOFDM, PHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
-        .def(py::init<std::shared_ptr<Net>,
-                      unsigned int,
+        .def(py::init<unsigned int,
                       unsigned int,
                       unsigned int,
                       size_t>())
@@ -317,6 +316,19 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
+        ;
+
+    // Export class Controller to Python
+    py::class_<Controller, std::shared_ptr<Controller>>(m, "Controller")
+        .def_property_readonly("net_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_in); } )
+        .def_property_readonly("net_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_out); } )
+        .def_property_readonly("radio_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_in); } )
+        .def_property_readonly("radio_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_out); } )
+        ;
+
+    // Export class DummyController to Python
+    py::class_<DummyController, Controller, std::shared_ptr<DummyController>>(m, "DummyController")
+        .def(py::init<std::shared_ptr<Net>>())
         ;
 
     // Export class SlottedMAC to Python

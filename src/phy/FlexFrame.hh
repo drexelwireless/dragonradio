@@ -2,7 +2,6 @@
 #define FLEXFRAME_H_
 
 #include "phy/Liquid.hh"
-#include "net/Net.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp flexframegen code. */
 class FlexFrame : public PHY {
@@ -71,9 +70,7 @@ public:
         flexframesync fs_;
     };
 
-    FlexFrame(std::shared_ptr<Net> net,
-              size_t minPacketSize) :
-        net_(net),
+    FlexFrame(size_t minPacketSize) :
         min_pkt_size_(minPacketSize)
     {
     }
@@ -103,9 +100,6 @@ public:
     std::unique_ptr<PHY::Modulator> make_modulator(void) override;
 
 private:
-    /** @brief The Net to which we should send received packets. */
-    std::shared_ptr<Net> net_;
-
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */
     size_t min_pkt_size_;

@@ -95,7 +95,6 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> 
 }
 
 FlexFrame::Demodulator::Demodulator(FlexFrame& phy) :
-    LiquidDemodulator(phy.net_),
     phy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);

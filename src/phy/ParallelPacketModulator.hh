@@ -22,12 +22,12 @@ public:
 
     void setLowWaterMark(size_t mark) override;
 
-    void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples);
+    void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples) override;
 
     /** @brief Stop modulating. */
     void stop(void);
 
-    /** @brief Inpout port for packets. */
+    /** @brief Input port for packets. */
     NetIn<Pull> sink;
 
 private:
