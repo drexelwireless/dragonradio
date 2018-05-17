@@ -367,6 +367,16 @@ class Log:
 
         return result
 
+    def findSlot(self, node, t):
+        for slot in self._slots[node.node_id]:
+            t_start = slot.timestamp
+            t_end = slot.timestamp + len(slot.data) / node.rx_bandwidth
+
+            if t >= t_start and t < t_end:
+                return slot
+
+        return None
+
     def findSlots(self, node, pkt):
         slots = self._slots[node.node_id]
 
