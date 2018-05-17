@@ -2,7 +2,7 @@
 # Note: install all dependencies system-wide for this makefile to work
 ##################################################
 
-TARGET = full-radio
+TARGETS = full-radio flexframedemod
 
 RM       = rm -f
 RMRF     = rm -rf
@@ -63,15 +63,18 @@ include mk/common.mk
 include mk/cc.mk
 
 .PHONY : all
-all : $(TARGET)
+all : $(TARGETS)
 
 .PHONY : clean
 clean :
-	$(RM) $(OBJECTS) $(TARGET)
+	$(RM) $(OBJECTS) $(TARGETS)
 	$(RMRF) docs/html
 
-$(TARGET) : $(OBJECTS)
+full-radio : $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
+
+flexframedemod : util/flexframedemod.cc
+	$(CXX) $< $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LIBS) -o $@
 
 -include $(patsubst %.cc,$(OBJDIR)/%.dep,$(SOURCES))
 
