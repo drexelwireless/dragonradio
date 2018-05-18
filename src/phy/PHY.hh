@@ -37,6 +37,18 @@ public:
          *  @param pkt The NetPacket to modulate.
          */
         virtual void modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt) = 0;
+
+        /** @brief Set the contents of a Header based on a NetPacket.
+         *  @param hdr The Header that is the destination.
+         *  @param pkt The NetPacket that is the source.
+         */
+        void setHeader(Header& hdr, const NetPacket& pkt)
+        {
+            hdr.curhop = pkt.curhop;
+            hdr.nexthop = pkt.nexthop;
+            hdr.seq = pkt.seq;
+            hdr.pkt_len = pkt.size();
+        }
     };
 
     /** @brief Demodulate IQ data.
