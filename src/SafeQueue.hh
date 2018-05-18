@@ -2,8 +2,8 @@
 #define SAFEQUEUE_H_
 
 #include <condition_variable>
+#include <list>
 #include <mutex>
-#include <queue>
 
 /** @brief A thread-safe queue. */
 /** A SafeQueue is a thread-safe FIFO queue. Any call to pop will block until an
@@ -41,6 +41,18 @@ public:
     /** @brief Construct an element in-place on the end of the queue. */
     void emplace(T&& val);
 
+    /** @brief Push an element on the front of the queue .*/
+    void push_front(const T& val);
+
+    /** @brief Push an element on the front of the queue. */
+    void push_front(T&& val);
+
+    /** @brief Construct an element in-place on the front of the queue. */
+    void emplace_front(const T& val);
+
+    /** @brief Construct an element in-place on the front of the queue. */
+    void emplace_front(T&& val);
+
     /** @brief Access the first element of the queue and pop it.
      * @param val Reference to location where popped value should be copied.
      * @return true if a value was popped, false otherwise.
@@ -61,7 +73,7 @@ private:
     std::condition_variable cond_;
 
     /** @brief The queue itself. */
-    std::queue<T> q_;
+    std::list<T> q_;
 };
 
 template<typename T>
@@ -79,7 +91,7 @@ template<typename T>
 void SafeQueue<T>::reset(void)
 {
     std::lock_guard<std::mutex> lock(m_);
-    std::queue<T> newq;
+    std::list<T> newq;
 
     done_ = false;
     q_.swap(newq);
@@ -99,7 +111,7 @@ void SafeQueue<T>::push(const T& val)
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        q_.push(val);
+        q_.push_back(val);
     }
 
     cond_.notify_one();
@@ -111,8 +123,9 @@ void SafeQueue<T>::push(T&& val)
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        q_.push(std::move(val));
+        q_.push_back(std::move(val));
     }
+
     cond_.notify_one();
 }
 
@@ -122,8 +135,9 @@ void SafeQueue<T>::emplace(const T& val)
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        q_.emplace(val);
+        q_.emplace_back(val);
     }
+
     cond_.notify_one();
 }
 
@@ -133,8 +147,57 @@ void SafeQueue<T>::emplace(T&& val)
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        q_.emplace(std::move(val));
+        q_.emplace_back(std::move(val));
     }
+
+    cond_.notify_one();
+}
+
+template<typename T>
+void SafeQueue<T>::push_front(const T& val)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        q_.push_front(val);
+    }
+
+    cond_.notify_one();
+}
+
+template<typename T>
+void SafeQueue<T>::push_front(T&& val)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        q_.push_front(std::move(val));
+    }
+
+    cond_.notify_one();
+}
+
+template<typename T>
+void SafeQueue<T>::emplace_front(const T& val)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        q_.emplace_front(val);
+    }
+
+    cond_.notify_one();
+}
+
+template<typename T>
+void SafeQueue<T>::emplace_front(T&& val)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        q_.emplace_front(std::move(val));
+    }
+
     cond_.notify_one();
 }
 
@@ -148,7 +211,7 @@ bool SafeQueue<T>::pop(T& val)
         return false;
     else {
         val = std::move(q_.front());
-        q_.pop();
+        q_.pop_front();
         return true;
     }
 }
