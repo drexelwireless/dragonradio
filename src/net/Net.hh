@@ -37,6 +37,20 @@ struct Node {
     /** @brief Soft TX gain (multiplicative factor) */
     float g;
 
+    /** @brief Get soft TX gain (dB). */
+    float getSoftTXGain(void)
+    {
+        return 20.0*logf(g)/logf(10.0);
+    }
+
+    /** @brief Set soft TX gain.
+     * @param dB The soft gain (dB).
+     */
+    void setSoftTXGain(float dB)
+    {
+        g = powf(10.0f, dB/20.0f);
+    }
+
     /** @brief Desired soft gain in dBFS. Defaults to 0.0. */
     /** This is our soft TX gain goal, in dBFS. Note well the units! We use this
      * value to dynamically set the multiplicative soft gain based on generated
@@ -51,23 +65,9 @@ struct Node {
     float desired_soft_tx_gain_clip_frac;
 
     /** @brief Set to force recalculation of soft TX gain based on
-     * desired_soft_tx_gain on next transmission.
+     * desired_soft_tx_gain next time a packet to this node is modulated.
      */
     bool recalc_soft_tx_gain;
-
-    /** @brief Get soft TX gain (dB). */
-    float getSoftTXGain(void)
-    {
-        return 20.0*logf(g)/logf(10.0);
-    }
-
-    /** @brief Set soft TX gain.
-     * @param dB The soft gain (dB).
-     */
-    void setSoftTXGain(float dB)
-    {
-        g = powf(10.0f, dB/20.0f);
-    }
 
     /** @brief Get desired soft TX gain (dBFS). */
     float getDesiredSoftTXGain(void)
