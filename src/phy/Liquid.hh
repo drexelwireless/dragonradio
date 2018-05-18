@@ -11,8 +11,8 @@
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
-/** @brief Creation of liquid objects is not re-rentrant, so we need to protect access
- * with a mutex.
+/** @brief Creation of liquid objects is not re-rentrant, so we need to protect
+ * access with a mutex.
  */
 extern std::mutex liquid_mutex;
 
