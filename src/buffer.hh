@@ -7,9 +7,7 @@
 
 template <typename T>
 class buffer {
-#if __cplusplus >= 201703L
-    static_assert(std:: is_standard_layout_v<T>, "Buffer can only contain types with a standard layout");
-#endif /*  __cplusplus >= 201703 */
+    static_assert(std::is_standard_layout<T>::value, "Buffer can only contain types with a standard layout");
 public:
     using value_type = T;
     using size_type = std::size_t;
