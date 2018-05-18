@@ -174,7 +174,7 @@ def main():
     #
     # Configure the controller
     #
-    controller = dragonradio.DummyController(net)
+    controller = dragonradio.SmartController(net)
 
     #
     # Configure packet path from demodulator to tun/tap
