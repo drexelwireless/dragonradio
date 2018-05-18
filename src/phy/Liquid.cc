@@ -53,13 +53,13 @@ int LiquidDemodulator::callback(unsigned char *  header_,
         incomplete = true;
     } else if (!net_->wantPacket(h->nexthop))
         return 0;
-    else if (h->pkt_len == 0)
+    else if (h->data_len == 0)
         return 0;
 
     if (incomplete)
         callback_(nullptr);
     else {
-        auto pkt = std::make_unique<RadioPacket>(payload_, h->pkt_len);
+        auto pkt = std::make_unique<RadioPacket>(payload_, h->data_len);
 
         pkt->curhop = h->curhop;
         pkt->nexthop = h->nexthop;

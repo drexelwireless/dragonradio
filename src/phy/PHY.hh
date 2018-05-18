@@ -11,13 +11,20 @@
 
 /** @brief %PHY packet header. */
 struct Header {
-    NodeId   curhop;  /**< @brief Current hop. */
-    NodeId   nexthop; /**< @brief Next hop. */
-    Seq      seq;     /**< @brief Packet sequence number. */
-    uint16_t pkt_len; /**< @brief Length of the packet payload. */
-                      /**< The packet payload may be padded. This field gives
-                       * the size of the non-padded portion of the payload.
-                       */
+    /** @brief Current hop. */
+    NodeId curhop;
+
+    /** @brief Next hop. */
+    NodeId nexthop;
+
+    /** @brief Packet sequence number. */
+    Seq seq;
+
+    /** @brief Length of the packet payload. */
+    /** The packet payload may be padded or contain control data. This field
+     * gives the size of the data portion of the payload.
+     */
+    uint16_t data_len;
 };
 
 /** @brief A physical layer protocol that can provide a modulator and
@@ -47,7 +54,7 @@ public:
             hdr.curhop = pkt.curhop;
             hdr.nexthop = pkt.nexthop;
             hdr.seq = pkt.seq;
-            hdr.pkt_len = pkt.size();
+            hdr.data_len = pkt.size();
         }
     };
 
