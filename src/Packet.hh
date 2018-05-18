@@ -13,6 +13,8 @@
 
 typedef uint8_t NodeId;
 
+typedef uint16_t PacketFlags;
+
 typedef uint16_t Seq;
 
 /** @brief A packet recevied from the network. */
@@ -25,6 +27,9 @@ struct NetPacket : public buffer<unsigned char>
 
     /** @brief Next hop */
     NodeId nexthop;
+
+    /** @brief Packet flags. */
+    PacketFlags flags;
 
     /** @brief Sequence number */
     Seq seq;
@@ -63,6 +68,9 @@ struct RadioPacket : public buffer<unsigned char>
 
     /** @brief Next hop (should be this node) */
     NodeId nexthop;
+
+    /** @brief Packet flags. */
+    PacketFlags flags;
 
     /** @brief Packet sequence number */
     Seq seq;

@@ -20,6 +20,9 @@ struct Header {
     /** @brief Packet sequence number. */
     Seq seq;
 
+    /** @brief Packet flags. */
+    PacketFlags flags;
+
     /** @brief Length of the packet payload. */
     /** The packet payload may be padded or contain control data. This field
      * gives the size of the data portion of the payload.
@@ -54,6 +57,7 @@ public:
             hdr.curhop = pkt.curhop;
             hdr.nexthop = pkt.nexthop;
             hdr.seq = pkt.seq;
+            hdr.flags = pkt.flags;
             hdr.data_len = pkt.size();
         }
     };

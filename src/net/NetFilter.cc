@@ -45,6 +45,7 @@ bool NetFilter::process(std::unique_ptr<NetPacket>& pkt)
         pkt->curhop = curhop_id;
         pkt->nexthop = nexthop_id;
         pkt->seq = nexthop.seq++;
+        pkt->flags = 0;
 
         pkt->src = src_id;
         pkt->dest = dest_id;
