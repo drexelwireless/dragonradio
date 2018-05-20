@@ -5,9 +5,8 @@
  */
 
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
+#include <netinet/if_ether.h>
 #include <linux/if.h>
 #include <linux/if_tun.h>
 #include <fcntl.h>
@@ -15,9 +14,13 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <functional>
+
 #include "RadioConfig.hh"
 #include "Util.hh"
 #include "net/TunTap.hh"
+
+using namespace std::placeholders;
 
 /** @file TunTap.cc
  * This code has been heavily modified from the version included in the
@@ -32,11 +35,21 @@ TunTap::TunTap(const std::string& tapdev,
                const std::string ip_fmt,
                const std::string mac_fmt,
                uint8_t last_octet) :
+    sink(*this,
+         std::bind(&TunTap::start, this),
+         std::bind(&TunTap::stop, this),
+         std::bind(&TunTap::send, this, _1)),
+    source(*this, nullptr, nullptr),
     persistent_(persistent),
     tapdev_(tapdev),
+    mtu_(mtu),
     ip_fmt_(ip_fmt),
-    mac_fmt_(mac_fmt)
+    mac_fmt_(mac_fmt),
+    done_(true)
 {
+    if (rc->verbose)
+        printf("Creating tap interface %s\n", tapdev.c_str());
+
     if (!persistent_) {
         // Check if tap is already up
         if (sys("ifconfig %s > /dev/null 2>&1", tapdev_.c_str()) != 0) {
@@ -64,58 +77,27 @@ TunTap::TunTap(const std::string& tapdev,
             fprintf(stderr, "system() - error bringing interface up\n");
     }
 
-    open_tap(tapdev_, IFF_TAP | IFF_NO_PI);
+    openTap(tapdev_, IFF_TAP | IFF_NO_PI);
 }
 
 TunTap::~TunTap(void)
 {
-    close_tap();
+    stop();
+    closeTap();
 }
 
-ssize_t TunTap::cwrite(const void *buf, size_t n)
+size_t TunTap::getMTU(void)
 {
-    ssize_t nwrite;
-
-    if ((nwrite = write(fd_, buf, n)) < 0) {
-        perror("Writing data");
-        exit(1);
-    }
-
-    return nwrite;
+    return mtu_;
 }
 
-ssize_t TunTap::cread(void *buf, size_t n)
-{
-    fd_set tx_set;
-    struct timeval timeout = {1,0}; //1 second timeoout
-
-    FD_ZERO(&tx_set);
-    FD_SET(fd_, &tx_set);
-
-    if (select(fd_ + 1, &tx_set, NULL, NULL, &timeout) < 0) {
-        perror("select()");
-        exit(1);
-    }
-
-    ssize_t nread = 0;
-
-    if (FD_ISSET(fd_, &tx_set)) {
-        if ((nread = read(fd_, buf, n)) < 0) {
-            perror("read()");
-            exit(1);
-        }
-    }
-
-    return nread;
-}
-
-void TunTap::add_arp_entry(uint8_t last_octet)
+void TunTap::addARPEntry(uint8_t last_octet)
 {
     if (sys(("arp -i %s -s " + ip_fmt_ + " " + mac_fmt_).c_str(), tapdev_.c_str(), last_octet, last_octet) < 0)
         fprintf(stderr, "Error adding ARP entry for last octet %d.\n", last_octet);
 }
 
-void TunTap::delete_arp_entry(uint8_t last_octet)
+void TunTap::deleteARPEntry(uint8_t last_octet)
 {
     if (sys(("arp -d " + ip_fmt_).c_str(), last_octet) < 0)
         fprintf(stderr, "Error deleting ARP entry for last octet %d.\n", last_octet);
@@ -123,7 +105,7 @@ void TunTap::delete_arp_entry(uint8_t last_octet)
 
 const char *clonedev = "/dev/net/tun";
 
-void TunTap::open_tap(std::string& dev, int flags)
+void TunTap::openTap(std::string& dev, int flags)
 {
     struct ifreq ifr;
     int err;
@@ -154,7 +136,7 @@ void TunTap::open_tap(std::string& dev, int flags)
     dev = ifr.ifr_name;
 }
 
-void TunTap::close_tap(void)
+void TunTap::closeTap(void)
 {
     if (rc->verbose)
         printf("Closing tap interface\n");
@@ -165,5 +147,61 @@ void TunTap::close_tap(void)
     if (!persistent_) {
         if (sys("ip tuntap del dev %s mode tap", tapdev_.c_str()) < 0)
             fprintf(stderr, "Error deleting tap.");
+    }
+}
+
+void TunTap::send(std::unique_ptr<RadioPacket>&& pkt)
+{
+    ssize_t nwrite;
+
+    if ((nwrite = write(fd_, pkt->data(), pkt->size())) < 0) {
+        perror("Writing data");
+        exit(1);
+    }
+
+    if ((size_t) nwrite != pkt->size())
+        fprintf(stderr, "Couldn't write full packet to tun/tap!");
+
+    if (rc->verbose)
+        printf("Written %lu bytes (seq# %u) from %u\n",
+            (unsigned long) pkt->size(),
+            (unsigned int) pkt->seq,
+            (unsigned int) pkt->src);
+}
+
+void TunTap::start(void)
+{
+    done_ = false;
+    worker_thread_ = std::thread(&TunTap::worker, this);
+}
+
+void TunTap::stop(void)
+{
+    done_ = true;
+
+    wakeThread(worker_thread_);
+
+    if (worker_thread_.joinable())
+        worker_thread_.join();
+}
+
+void TunTap::worker(void)
+{
+    makeThreadWakeable();
+
+    while (!done_) {
+        auto    pkt = std::make_unique<NetPacket>(mtu_ + sizeof(struct ether_header));
+        ssize_t nread;
+
+        if ((nread = read(fd_, pkt->data(), pkt->size())) < 0) {
+            if (errno == EINTR)
+                continue;
+
+            perror("read()");
+            exit(1);
+        }
+
+        pkt->resize(nread);
+        source.push(std::move(pkt));
     }
 }

@@ -64,7 +64,7 @@ private:
 };
 
 /** @brief A parallel packet demodulator. */
-class ParallelPacketDemodulator : public PacketDemodulator
+class ParallelPacketDemodulator : public PacketDemodulator, public Element
 {
 public:
     ParallelPacketDemodulator(std::shared_ptr<Net> net,
@@ -91,6 +91,9 @@ public:
 
     /** @brief Set whether or not demodulation queue enforces packet order. */
     void setOrdered(bool ordered);
+
+    /** @brief Demodulated packets */
+    RadioOut<Push> source;
 
     /** @brief Stop demodulating. */
     void stop(void);

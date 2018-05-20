@@ -7,6 +7,7 @@
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
                                                  size_t nthreads) :
+    sink(*this, nullptr, nullptr),
     net_(net),
     phy_(phy),
     done_(false),
@@ -24,8 +25,8 @@ ParallelPacketModulator::~ParallelPacketModulator()
 
 void ParallelPacketModulator::stop(void)
 {
-    // XXX We must stop the Net in order to stop the modulator threads.
-    net_->stop();
+    // XXX We must disconnect the sink in order to stop the modulator threads.
+    sink.disconnect();
 
     done_ = true;
     producer_cond_.notify_all();
@@ -101,9 +102,7 @@ void ParallelPacketModulator::modWorker(void)
             // Get a packet from the network
             std::unique_lock<std::mutex> net_lock(net_mutex_);
 
-            pkt = net_->recvPacket();
-
-            if (!pkt)
+            if (!sink.pull(pkt))
                 continue;
 
             // Now place a ModPacket in our queue. The packet isn't complete

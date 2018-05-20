@@ -55,6 +55,7 @@ SOURCES := \
     mac/SlottedMAC.cc \
     mac/TDMA.cc \
     net/Net.cc \
+    net/NetFilter.cc \
     net/TunTap.cc
 
 OBJECTS := $(patsubst %.cc,$(OBJDIR)/%.o,$(SOURCES))

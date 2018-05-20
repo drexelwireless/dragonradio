@@ -12,7 +12,10 @@ namespace py = pybind11;
 #include "phy/ParallelPacketDemodulator.hh"
 #include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
+#include "net/Element.hh"
 #include "net/Net.hh"
+#include "net/NetFilter.hh"
+#include "net/Queue.hh"
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
 {
@@ -24,6 +27,48 @@ std::shared_ptr<Logger> mkLogger(const std::string& path)
 
     return log;
 }
+
+template <class D, class P, class T>
+struct PortWrapper
+{
+    std::shared_ptr<Element> element;
+    Port<D, P, T> *port;
+
+    template <class U>
+    PortWrapper(std::shared_ptr<U> e, Port<D, P, T> *p) :
+        element(std::static_pointer_cast<Element>(e)), port(p) {}
+    ~PortWrapper() = default;
+
+    PortWrapper() = delete;
+};
+
+template <class U, class D, class P, class T>
+std::unique_ptr<PortWrapper<D,P,T>> exposePort(std::shared_ptr<U> e, Port<D, P, T> *p)
+{
+    return std::make_unique<PortWrapper<D,P,T>>(std::static_pointer_cast<Element>(e), p);
+}
+
+template <typename D>
+using NetInWrapper = PortWrapper<In,D,std::unique_ptr<NetPacket>>;
+
+template <typename D>
+using NetOutWrapper = PortWrapper<Out,D,std::unique_ptr<NetPacket>>;
+
+using NetInPush = NetInWrapper<Push>;
+using NetInPull = NetInWrapper<Pull>;
+using NetOutPush = NetOutWrapper<Push>;
+using NetOutPull = NetOutWrapper<Pull>;
+
+template <typename D>
+using RadioInWrapper = PortWrapper<In,D,std::unique_ptr<RadioPacket>>;
+
+template <typename D>
+using RadioOutWrapper = PortWrapper<Out,D,std::unique_ptr<RadioPacket>>;
+
+using RadioInPush = RadioInWrapper<Push>;
+using RadioInPull = RadioInWrapper<Pull>;
+using RadioOutPush = RadioOutWrapper<Push>;
+using RadioOutPull = RadioOutWrapper<Pull>;
 
 PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     // Create enum type CRCScheme for liquid CRC schemes
@@ -120,6 +165,68 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("rx_gain", &USRP::getRXGain, &USRP::setRXGain)
         ;
 
+    // Export port wrapper classes to Python
+    py::class_<NetInPush, std::unique_ptr<NetInPush>>(m, "NetInPush")
+        .def("__lshift__", [](NetInPush *in, NetOutPush *out) { out->port->connect(in->element, in->port); } )
+        .def("disconnect", [](NetInPush *in) { if (in->port->isConnected()) { reinterpret_cast<NetOut<Push>*>(in->port->partner())->disconnect(); } })
+        ;
+    py::class_<NetInPull, std::unique_ptr<NetInPull>>(m, "NetInPull")
+        .def("__lshift__", [](NetInPull *in, NetOutPull *out) { in->port->connect(out->element, out->port); } )
+        .def("disconnect", [](NetInPull *in) { in->port->disconnect(); } )
+        ;
+    py::class_<NetOutPull, std::unique_ptr<NetOutPull>>(m, "NetOutPull")
+        .def("__rshift__", [](NetOutPull *out, NetInPull *in) { in->port->connect(out->element, out->port); } )
+        .def("disconnect", [](NetOutPull *out) { if (out->port->isConnected()) { reinterpret_cast<NetIn<Pull>*>(out->port->partner())->disconnect(); } })
+        ;
+    py::class_<NetOutPush, std::unique_ptr<NetOutPush>>(m, "NetOutPush")
+        .def("__rshift__", [](NetOutPush *out, NetInPush *in) { out->port->connect(in->element, in->port); } )
+        .def("disconnect", [](NetOutPush *out) { out->port->disconnect(); } )
+        ;
+
+    py::class_<RadioInPush, std::unique_ptr<RadioInPush>>(m, "RadioInPush")
+        .def("__lshift__", [](RadioInPush *in, RadioOutPush *out) { out->port->connect(in->element, in->port); } )
+        .def("disconnect", [](RadioInPush *in) { if (in->port->isConnected()) { reinterpret_cast<RadioOut<Push>*>(in->port->partner())->disconnect(); } })
+        ;
+    py::class_<RadioInPull, std::unique_ptr<RadioInPull>>(m, "RadioInPull")
+        .def("__lshift__", [](RadioInPull *in, RadioOutPull *out) { in->port->connect(out->element, out->port); } )
+        .def("disconnect", [](RadioInPull *in) { in->port->disconnect(); } )
+        ;
+    py::class_<RadioOutPull, std::unique_ptr<RadioOutPull>>(m, "RadioOutPull")
+        .def("__rshift__", [](RadioOutPull *out, RadioInPull *in) { in->port->connect(out->element, out->port); } )
+        .def("disconnect", [](RadioOutPull *out) { if (out->port->isConnected()) { reinterpret_cast<RadioIn<Pull>*>(out->port->partner())->disconnect(); } })
+        ;
+    py::class_<RadioOutPush, std::unique_ptr<RadioOutPush>>(m, "RadioOutPush")
+        .def("__rshift__", [](RadioOutPush *out, RadioInPush *in) { out->port->connect(in->element, in->port); } )
+        .def("disconnect", [](RadioOutPush *out) { out->port->disconnect(); } )
+        ;
+
+    // Export class NetQueue to Python
+    py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
+        .def(py::init())
+        .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
+        .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
+        ;
+
+    // Export class NetFilter to Python
+    py::class_<NetFilter, std::shared_ptr<NetFilter>>(m, "NetFilter")
+        .def(py::init<std::shared_ptr<Net>>())
+        .def_property_readonly("input", [](std::shared_ptr<NetFilter> element) { return exposePort(element, &element->in); } )
+        .def_property_readonly("output", [](std::shared_ptr<NetFilter> element) { return exposePort(element, &element->out); } )
+        ;
+
+    // Export class TunTap to Python
+    py::class_<TunTap, std::shared_ptr<TunTap>>(m, "TunTap")
+        .def(py::init<const std::string&,
+                      bool,
+                      size_t,
+                      const std::string,
+                      const std::string,
+                      uint8_t>())
+        .def_property_readonly("mtu", &TunTap::getMTU)
+        .def_property_readonly("source", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->source); } )
+        .def_property_readonly("sink", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->sink); } )
+        ;
+
     // Export class Node to Python
     py::class_<Node, std::shared_ptr<Node>>(m, "Node")
         .def_readonly("id", &Node::id, "Node ID")
@@ -135,9 +242,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class Net to Python
     py::class_<Net, std::shared_ptr<Net>>(m, "Net")
-        .def(py::init<const std::string&,
-                      const std::string&,
-                      const std::string&,
+        .def(py::init<std::shared_ptr<TunTap>,
                       NodeId>())
         .def("__getitem__", [](Net &net, NodeId key) -> Node& {
             try {
@@ -194,6 +299,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
                       unsigned int>())
+        .def_property_readonly("sink", [](std::shared_ptr<ParallelPacketModulator> element) { return exposePort(element, &element->sink); } )
         ;
 
     // Export class PacketDemodulator to Python
@@ -206,6 +312,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       std::shared_ptr<PHY>,
                       unsigned int>())
         .def_property("ordered", &ParallelPacketDemodulator::getOrdered, &ParallelPacketDemodulator::setOrdered)
+        .def_property_readonly("source", [](std::shared_ptr<ParallelPacketDemodulator> e) { return exposePort(e, &e->source); } )
         ;
 
     // Export class MAC to Python

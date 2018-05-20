@@ -10,7 +10,7 @@
 #include "net/Net.hh"
 
 /** @brief A parallel packet modulator. */
-class ParallelPacketModulator : public PacketModulator
+class ParallelPacketModulator : public PacketModulator, public Element
 {
 public:
     ParallelPacketModulator(std::shared_ptr<Net> net,
@@ -26,6 +26,9 @@ public:
 
     /** @brief Stop modulating. */
     void stop(void);
+
+    /** @brief Inpout port for packets. */
+    NetIn<Pull> sink;
 
 private:
     /** @brief Our network. */

@@ -131,7 +131,9 @@ def main():
         logger.setAttribute('taper_len', args.taper_len)
         dragonradio.Logger.singleton = logger
 
-    net = dragonradio.Net('tap0', '10.10.10.%d', 'c6:ff:ff:ff:ff:%02x', args.node_id)
+    tuntap = dragonradio.TunTap('tap0', False, 1500, '10.10.10.%d', 'c6:ff:ff:ff:ff:%02x', args.node_id)
+
+    net = dragonradio.Net(tuntap, args.node_id)
 
     for i in range(0, args.num_nodes):
         net.addNode(i+1)
@@ -162,6 +164,28 @@ def main():
     # Setting the demodulator's ordered property to True forces packets to be
     # demodulated in order. This increases latency.
     #demodulator.ordered = True
+
+    #
+    # Configure packet path from demodulator to tun/tap
+    # Right now, the path is direct:
+    #   tun/tap -> demodulator
+    #
+    demodulator.source >> tuntap.sink
+
+    #
+    # Configure packet path from tun/tap to the modulator
+    # The path is:
+    #   tun/tap -> NetFilter -> NetQueue -> Modulator
+    #
+    netfilter = dragonradio.NetFilter(net)
+
+    netq = dragonradio.NetQueue()
+
+    tuntap.source >> netfilter.input
+
+    netfilter.output >> netq.push
+
+    netq.pop >> modulator.sink
 
     # slot size *including* guard (seconds)
     slot_size = .035

@@ -85,14 +85,12 @@ struct Node {
     }
 };
 
-class Net
+class Net : public Element
 {
 public:
     using map_type = std::map<NodeId, Node>;
 
-    Net(const std::string& tap_name,
-        const std::string& ip_fmt,
-        const std::string& mac_fmt,
+    Net(std::shared_ptr<TunTap> tuntap,
         NodeId nodeId);
     ~Net();
 
@@ -101,12 +99,6 @@ public:
 
     Net& operator=(const Net&) = delete;
     Net& operator=(Net&&) = delete;
-
-    /** @brief Start packet processing. */
-    void start(void);
-
-    /** @brief Halt packet processing. */
-    void stop(void);
 
     /** @breif Get this node's ID */
     NodeId getMyNodeId(void);
@@ -129,18 +121,12 @@ public:
     /** @brief Add a node to the network */
     void addNode(NodeId nodeId);
 
-    /** @brief Receive a packet from the network */
-    std::unique_ptr<NetPacket> recvPacket(void);
-
     /** @brief Return true if we want a packet sent to this destination. */
     bool wantPacket(NodeId dest);
 
-    /** @brief Send a packet to the network. */
-    void send(std::unique_ptr<RadioPacket> pkt);
-
 private:
     /** @brief Our tun/tap interface */
-    std::unique_ptr<TunTap> tuntapdev_;
+    std::shared_ptr<TunTap> tuntap_;
 
     /** @brief This node's ID */
     NodeId my_node_id_;
@@ -150,18 +136,6 @@ private:
 
     /** @brief Mutex protecting nodes in the network */
     std::mutex nodes_mutex_;
-
-    /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
-
-    /** @brief Thread running recvWorker */
-    std::thread recv_thread_;
-
-    /** @brief Radio packets received from the network */
-    SafeQueue<std::unique_ptr<NetPacket>> recv_q_;
-
-    /** @brief Read packets from tun/tap and queue them in recvQueue */
-    void recvWorker(void);
 };
 
 #endif /* NET_HH_ */
