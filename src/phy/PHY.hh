@@ -9,27 +9,6 @@
 #include "SafeQueue.hh"
 #include "phy/ModPacket.hh"
 
-/** @brief %PHY packet header. */
-struct Header {
-    /** @brief Current hop. */
-    NodeId curhop;
-
-    /** @brief Next hop. */
-    NodeId nexthop;
-
-    /** @brief Packet sequence number. */
-    Seq seq;
-
-    /** @brief Packet flags. */
-    PacketFlags flags;
-
-    /** @brief Length of the packet payload. */
-    /** The packet payload may be padded or contain control data. This field
-     * gives the size of the data portion of the payload.
-     */
-    uint16_t data_len;
-};
-
 /** @brief A physical layer protocol that can provide a modulator and
  * demodulator.
  */
