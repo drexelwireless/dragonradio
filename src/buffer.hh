@@ -1,8 +1,12 @@
 #ifndef BUFFER_H_
 #define BUFFER_H_
 
+#include <algorithm>
 #include <cstring>
+#include <cstdlib>
 #include <limits>
+#include <new>
+#include <stdexcept>
 #include <type_traits>
 
 template <typename T>
@@ -23,7 +27,7 @@ public:
 
     explicit buffer(size_type count)
     {
-        data_ = reinterpret_cast<T*>(malloc(count*sizeof(T)));
+        data_ = reinterpret_cast<T*>(std::malloc(count*sizeof(T)));
         if (!data_)
             throw std::bad_alloc();
 
@@ -33,7 +37,7 @@ public:
 
     explicit buffer(const T *data, size_type count)
     {
-        data_ = reinterpret_cast<T*>(malloc(count*sizeof(T)));
+        data_ = reinterpret_cast<T*>(std::malloc(count*sizeof(T)));
         if (!data_)
             throw std::bad_alloc();
 
@@ -44,7 +48,7 @@ public:
 
     buffer(const buffer& other)
     {
-        data_ = reinterpret_cast<T*>(malloc(other.size_*sizeof(T)));
+        data_ = reinterpret_cast<T*>(std::malloc(other.size_*sizeof(T)));
         if (!data_)
             throw std::bad_alloc();
 
@@ -73,7 +77,7 @@ public:
 
     buffer& operator=(const buffer& other)
     {
-        data_ = reinterpret_cast<T*>(malloc(other.size_*sizeof(T)));
+        data_ = reinterpret_cast<T*>(std::malloc(other.size_*sizeof(T)));
         if (!data_)
             throw std::bad_alloc();
 
@@ -207,7 +211,7 @@ public:
             while (new_capacity_ < new_cap)
                 new_capacity_ *= 2;
 
-            T* new_data = reinterpret_cast<T*>(realloc(data_, new_capacity_*sizeof(T)));
+            T* new_data = reinterpret_cast<T*>(std::realloc(data_, new_capacity_*sizeof(T)));
             if (!new_data)
                 throw std::bad_alloc();
 
@@ -223,7 +227,7 @@ public:
 
     void shrink_to_fit(void)
     {
-        T* new_data = reinterpret_cast<T*>(realloc(data_, size_*sizeof(T)));
+        T* new_data = reinterpret_cast<T*>(std::realloc(data_, size_*sizeof(T)));
         if (!new_data)
             throw std::bad_alloc();
 
