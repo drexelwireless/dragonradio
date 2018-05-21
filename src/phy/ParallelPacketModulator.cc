@@ -83,7 +83,7 @@ void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, s
 void ParallelPacketModulator::modWorker(void)
 {
     std::unique_ptr<PHY::Modulator> modulator = phy_->make_modulator();
-    std::unique_ptr<NetPacket>      pkt;
+    std::shared_ptr<NetPacket>      pkt;
     ModPacket                       *mpkt;
 
     for (;;) {

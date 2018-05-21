@@ -51,7 +51,7 @@ void OFDM::Modulator::update_props(NetPacket& pkt)
 // Initial sample buffer size
 const size_t MODBUF_SIZE = 16384;
 
-void OFDM::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt)
+void OFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt)
 {
     PHYHeader header;
 

@@ -49,10 +49,10 @@ std::unique_ptr<PortWrapper<D,P,T>> exposePort(std::shared_ptr<U> e, Port<D, P, 
 }
 
 template <typename D>
-using NetInWrapper = PortWrapper<In,D,std::unique_ptr<NetPacket>>;
+using NetInWrapper = PortWrapper<In,D,std::shared_ptr<NetPacket>>;
 
 template <typename D>
-using NetOutWrapper = PortWrapper<Out,D,std::unique_ptr<NetPacket>>;
+using NetOutWrapper = PortWrapper<Out,D,std::shared_ptr<NetPacket>>;
 
 using NetInPush = NetInWrapper<Push>;
 using NetInPull = NetInWrapper<Pull>;
@@ -60,10 +60,10 @@ using NetOutPush = NetOutWrapper<Push>;
 using NetOutPull = NetOutWrapper<Pull>;
 
 template <typename D>
-using RadioInWrapper = PortWrapper<In,D,std::unique_ptr<RadioPacket>>;
+using RadioInWrapper = PortWrapper<In,D,std::shared_ptr<RadioPacket>>;
 
 template <typename D>
-using RadioOutWrapper = PortWrapper<Out,D,std::unique_ptr<RadioPacket>>;
+using RadioOutWrapper = PortWrapper<Out,D,std::shared_ptr<RadioPacket>>;
 
 using RadioInPush = RadioInWrapper<Push>;
 using RadioInPull = RadioInWrapper<Pull>;

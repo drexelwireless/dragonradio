@@ -8,14 +8,14 @@
 
 using namespace std::placeholders;
 
-class NetFilter : public Processor<std::unique_ptr<NetPacket>>
+class NetFilter : public Processor<std::shared_ptr<NetPacket>>
 {
 public:
     NetFilter(std::shared_ptr<Net> net);
     ~NetFilter();
 
 protected:
-    bool process(std::unique_ptr<NetPacket>& pkt) override;
+    bool process(std::shared_ptr<NetPacket>& pkt) override;
 
 private:
     /* @brief The Net we use to filter packets */

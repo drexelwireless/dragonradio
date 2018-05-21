@@ -49,7 +49,7 @@ const size_t NGEN = 2;
 // Initial sample buffer size
 const size_t MODBUF_SIZE = 16384;
 
-void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt)
+void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt)
 {
     PHYHeader header;
 

@@ -18,7 +18,7 @@ struct ModPacket
     std::shared_ptr<IQBuf> samples;
 
     /** @brief The un-modulated packet. */
-    std::unique_ptr<NetPacket> pkt;
+    std::shared_ptr<NetPacket> pkt;
 
     /** @brief Flag that is set until modulation is completed. */
     std::atomic_flag complete;

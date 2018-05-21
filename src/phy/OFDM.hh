@@ -23,7 +23,7 @@ public:
         /** @brief Print internals of the associated flexframegen. */
         void print(void);
 
-        void modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt) override;
+        void modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt) override;
 
     private:
         /** @brief Associated OFDM PHY. */

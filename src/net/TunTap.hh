@@ -82,7 +82,7 @@ private:
     void closeTap(void);
 
     /** @brief Send a packet to the tun/tap device */
-    void send(std::unique_ptr<RadioPacket>&& pkt);
+    void send(std::shared_ptr<RadioPacket>&& pkt);
 
     /** @brief Flag indicating whether or not we are done receiving */
     bool done_;

@@ -15,7 +15,7 @@ NetFilter::~NetFilter()
 {
 }
 
-bool NetFilter::process(std::unique_ptr<NetPacket>& pkt)
+bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 {
     if (pkt->size() == 0)
         return false;

@@ -39,8 +39,8 @@ protected:
     SafeQueue<T> queue_;
 };
 
-using NetQueue = Queue<std::unique_ptr<NetPacket>>;
+using NetQueue = Queue<std::shared_ptr<NetPacket>>;
 
-using RadioQueue = Queue<std::unique_ptr<RadioPacket>>;
+using RadioQueue = Queue<std::shared_ptr<RadioPacket>>;
 
 #endif /* FIFO_HH_ */

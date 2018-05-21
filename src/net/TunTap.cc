@@ -150,7 +150,7 @@ void TunTap::closeTap(void)
     }
 }
 
-void TunTap::send(std::unique_ptr<RadioPacket>&& pkt)
+void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
 {
     ssize_t nwrite;
 
@@ -191,7 +191,7 @@ void TunTap::worker(void)
 
     while (!done_) {
         size_t  maxlen = mtu_ + sizeof(struct ether_header);
-        auto    pkt = std::make_unique<NetPacket>(sizeof(ExtendedHeader) + maxlen);
+        auto    pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader) + maxlen);
         ssize_t nread;
 
         if ((nread = read(fd_, pkt->data() + sizeof(ExtendedHeader), maxlen)) < 0) {

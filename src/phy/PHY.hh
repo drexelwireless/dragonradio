@@ -25,7 +25,7 @@ public:
          *  @param mpkt The ModPacket in which to place modulated samples.
          *  @param pkt The NetPacket to modulate.
          */
-        virtual void modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt) = 0;
+        virtual void modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt) = 0;
 
         /** @brief Set the contents of a Header based on a NetPacket.
          *  @param hdr The Header that is the destination.

@@ -307,15 +307,15 @@ protected:
 };
 
 template <typename D>
-using NetIn = Port<In,D,std::unique_ptr<NetPacket>>;
+using NetIn = Port<In,D,std::shared_ptr<NetPacket>>;
 
 template <typename D>
-using NetOut = Port<Out,D,std::unique_ptr<NetPacket>>;
+using NetOut = Port<Out,D,std::shared_ptr<NetPacket>>;
 
 template <typename D>
-using RadioIn = Port<In,D,std::unique_ptr<RadioPacket>>;
+using RadioIn = Port<In,D,std::shared_ptr<RadioPacket>>;
 
 template <typename D>
-using RadioOut = Port<Out,D,std::unique_ptr<RadioPacket>>;
+using RadioOut = Port<Out,D,std::shared_ptr<RadioPacket>>;
 
 #endif /* ELEMENT_HH_ */
