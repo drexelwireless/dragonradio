@@ -63,8 +63,8 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 
         pkt->curhop = h->curhop;
         pkt->nexthop = h->nexthop;
-        pkt->seq = h->seq;
         pkt->flags = h->flags;
+        pkt->seq = h->seq;
         pkt->data_len = h->data_len;
         pkt->src = h->curhop;
         pkt->dest = h->nexthop;

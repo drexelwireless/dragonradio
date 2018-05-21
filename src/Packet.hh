@@ -25,11 +25,11 @@ struct Header {
     /** @brief Next hop. */
     NodeId nexthop;
 
-    /** @brief Packet sequence number. */
-    Seq seq;
-
     /** @brief Packet flags. */
     PacketFlags flags;
+
+    /** @brief Packet sequence number. */
+    Seq seq;
 
     /** @brief Length of the packet payload. */
     /** The packet payload may be padded or contain control data. This field
