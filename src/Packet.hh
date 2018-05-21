@@ -38,6 +38,15 @@ struct Header {
     uint16_t data_len;
 };
 
+/** @brief Extened header that appears in radio payload. */
+struct ExtendedHeader {
+    /** @brief Source */
+    NodeId src;
+
+    /** @brief Destination */
+    NodeId dest;
+};
+
 /** @brief A packet recevied from the network. */
 struct NetPacket : public buffer<unsigned char>
 {
@@ -78,6 +87,12 @@ struct NetPacket : public buffer<unsigned char>
 
     /** @brief Soft TX gain */
     float g;
+
+    /** @brief Get extended header */
+    ExtendedHeader &getExtendedHeader(void)
+    {
+        return *reinterpret_cast<ExtendedHeader*>(data());
+    }
 };
 
 /** @brief A packet received from the radio. */
@@ -118,6 +133,12 @@ struct RadioPacket : public buffer<unsigned char>
      * be processed or removed from a queue except by its creator.
      */
     bool barrier;
+
+    /** @brief Get extended header */
+    ExtendedHeader &getExtendedHeader(void)
+    {
+        return *reinterpret_cast<ExtendedHeader*>(data());
+    }
 };
 
 #endif /* PACKET_HH_ */

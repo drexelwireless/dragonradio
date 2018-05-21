@@ -154,7 +154,7 @@ void TunTap::send(std::unique_ptr<RadioPacket>&& pkt)
 {
     ssize_t nwrite;
 
-    if ((nwrite = write(fd_, pkt->data(), pkt->data_len)) < 0) {
+    if ((nwrite = write(fd_, pkt->data() + sizeof(ExtendedHeader), pkt->data_len)) < 0) {
         perror("Writing data");
         exit(1);
     }
@@ -190,10 +190,11 @@ void TunTap::worker(void)
     makeThreadWakeable();
 
     while (!done_) {
-        auto    pkt = std::make_unique<NetPacket>(mtu_ + sizeof(struct ether_header));
+        size_t  maxlen = mtu_ + sizeof(struct ether_header);
+        auto    pkt = std::make_unique<NetPacket>(sizeof(ExtendedHeader) + maxlen);
         ssize_t nread;
 
-        if ((nread = read(fd_, pkt->data(), pkt->size())) < 0) {
+        if ((nread = read(fd_, pkt->data() + sizeof(ExtendedHeader), maxlen)) < 0) {
             if (errno == EINTR)
                 continue;
 
@@ -202,7 +203,7 @@ void TunTap::worker(void)
         }
 
         pkt->data_len = nread;
-        pkt->resize(nread);
+        pkt->resize(sizeof(ExtendedHeader) + nread);
         source.push(std::move(pkt));
     }
 }

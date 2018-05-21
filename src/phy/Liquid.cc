@@ -59,7 +59,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     if (incomplete)
         callback_(nullptr);
     else {
-        auto pkt = std::make_unique<RadioPacket>(payload_, h->data_len);
+        auto pkt = std::make_unique<RadioPacket>(payload_, sizeof(struct ExtendedHeader) + h->data_len);
 
         pkt->curhop = h->curhop;
         pkt->nexthop = h->nexthop;

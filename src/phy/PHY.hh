@@ -31,13 +31,18 @@ public:
          *  @param hdr The Header that is the destination.
          *  @param pkt The NetPacket that is the source.
          */
-        void setHeader(Header& hdr, const NetPacket& pkt)
+        void setHeader(Header& hdr, NetPacket& pkt)
         {
+            ExtendedHeader& ehdr = pkt.getExtendedHeader();
+
             hdr.curhop = pkt.curhop;
             hdr.nexthop = pkt.nexthop;
             hdr.flags = pkt.flags;
             hdr.seq = pkt.seq;
             hdr.data_len = pkt.data_len;
+
+            ehdr.src = pkt.src;
+            ehdr.dest = pkt.dest;
         }
     };
 
