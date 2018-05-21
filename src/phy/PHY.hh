@@ -58,7 +58,7 @@ public:
             hdr.nexthop = pkt.nexthop;
             hdr.seq = pkt.seq;
             hdr.flags = pkt.flags;
-            hdr.data_len = pkt.size();
+            hdr.data_len = pkt.data_len;
         }
     };
 

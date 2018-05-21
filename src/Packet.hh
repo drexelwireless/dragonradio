@@ -34,6 +34,9 @@ struct NetPacket : public buffer<unsigned char>
     /** @brief Sequence number */
     Seq seq;
 
+    /** @brief Length of data portion of the packet */
+    uint16_t data_len;
+
     /** @brief Source */
     NodeId src;
 
@@ -74,6 +77,9 @@ struct RadioPacket : public buffer<unsigned char>
 
     /** @brief Packet sequence number */
     Seq seq;
+
+    /** @brief Length of data portion of the packet */
+    uint16_t data_len;
 
     /** @brief Source */
     NodeId src;
