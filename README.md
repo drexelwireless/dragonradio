@@ -12,9 +12,7 @@ The submodules point to public GitHub repos with SC2-specific changes for uhd, l
 
 ## Building the radio
 
-If you are using Ubuntu, the `build-dependencies.sh` script will build and install all dependencies, including any necessary packages and all submodules in the `dependencies` directory.
-
-After installing the dependencies, typing `make` should suffice to build the radio binary, which is `full-radio`.
+If you are using Ubuntu, the `build.sh` script will install all necessary dependencies and build the radio binary, which is named `full-radio`.
 
 ## Running the radio
 
