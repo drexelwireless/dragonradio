@@ -8,7 +8,6 @@
 #include <liquid/multichanneltx.h>
 
 #include "phy/Liquid.hh"
-#include "net/Net.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp multi-channel OFDM %PHY code. */
 class MultiOFDM : public PHY
@@ -69,7 +68,6 @@ public:
     };
 
     /** @brief Construct a multichannel OFDM PHY.
-     * @param net The Net to which we should send received packets.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
@@ -78,8 +76,7 @@ public:
      * @param minPacketSize The minimum number of bytes we will send in a
      * packet.
      */
-    MultiOFDM(std::shared_ptr<Net> net,
-              unsigned int M,
+    MultiOFDM(unsigned int M,
               unsigned int cp_len,
               unsigned int taper_len,
               size_t minPacketSize) :
@@ -87,13 +84,11 @@ public:
               cp_len_(cp_len),
               taper_len_(taper_len),
               p_(NULL),
-              net_(net),
               min_pkt_size_(minPacketSize)
     {
     }
 
     /** @brief Construct a multichannel OFDM PHY.
-     * @param net The Net to which we should send received packets.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
@@ -102,8 +97,7 @@ public:
      * @param minPacketSize The minimum number of bytes we will send in a
      * packet.
      */
-    MultiOFDM(std::shared_ptr<Net> net,
-              unsigned int M,
+    MultiOFDM(unsigned int M,
               unsigned int cp_len,
               unsigned int taper_len,
               unsigned char *p,
@@ -112,7 +106,6 @@ public:
               cp_len_(cp_len),
               taper_len_(taper_len),
               p_(p),
-              net_(net),
               min_pkt_size_(minPacketSize)
     {
     }
@@ -148,9 +141,6 @@ private:
     unsigned int cp_len_;
     unsigned int taper_len_;
     unsigned char *p_;
-
-    /** @brief The Net to which we should send received packets. */
-    std::shared_ptr<Net> net_;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */

@@ -53,6 +53,9 @@ SOURCES := \
     phy/ParallelPacketDemodulator.cc \
     phy/ParallelPacketModulator.cc \
     phy/RadioPacketQueue.cc \
+    mac/Controller.cc \
+    mac/DummyController.cc \
+    mac/SmartController.cc \
     mac/SlottedMAC.cc \
     mac/TDMA.cc \
     net/Net.cc \

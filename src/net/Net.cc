@@ -22,7 +22,9 @@ Node::Node(NodeId id) :
     fec1(rc->fec1),
     desired_soft_tx_gain(0.0),
     desired_soft_tx_gain_clip_frac(0.999),
-    recalc_soft_tx_gain(false)
+    recalc_soft_tx_gain(false),
+    ack_delay(100e-3),
+    retransmission_delay(500e-3)
 {
     setSoftTXGain(rc->soft_txgain);
 }

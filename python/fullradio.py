@@ -90,6 +90,9 @@ def main():
     parser.add_argument('--interactive',
                         action='store_true', dest='interactive',
                         help='enter interactive shell after radio is configured')
+    parser.add_argument('--arq', action='store_true', dest='arq',
+                        default=False,
+                        help='enable ARQ')
 
     try:
         args = parser.parse_args()
@@ -144,16 +147,22 @@ def main():
 
     min_packet_size = 512
 
+    #
+    # Configure the PHY
+    #
     if args.phy == 'flexframe':
-        phy = dragonradio.FlexFrame(net, min_packet_size)
+        phy = dragonradio.FlexFrame(min_packet_size)
     elif args.phy == 'ofdm':
-        phy = dragonradio.OFDM(net, args.M, args.cp_len, args.taper_len, min_packet_size)
+        phy = dragonradio.OFDM(args.M, args.cp_len, args.taper_len, min_packet_size)
     elif args.phy == 'multiofdm':
-        phy = dragonradio.MultiOFDM(net, args.M, args.cp_len, args.taper_len, min_packet_size)
+        phy = dragonradio.MultiOFDM(args.M, args.cp_len, args.taper_len, min_packet_size)
     else:
         print('Bad PHY: {}'.format(args.phy), file=sys.stderr)
         sys.exit(1)
 
+    #
+    # Configure the modulator and demodulator
+    #
     num_modulation_threads = 2
     num_demodulation_threads = 10
 
@@ -166,16 +175,26 @@ def main():
     #demodulator.ordered = True
 
     #
+    # Configure the controller
+    #
+    if args.arq:
+        controller = dragonradio.SmartController(net, 1024, 1024)
+    else:
+        controller = dragonradio.DummyController(net)
+
+    #
     # Configure packet path from demodulator to tun/tap
     # Right now, the path is direct:
-    #   tun/tap -> demodulator
+    #   demodulator -> controller -> tun/tap
     #
-    demodulator.source >> tuntap.sink
+    demodulator.source >> controller.radio_in
+
+    controller.radio_out >> tuntap.sink
 
     #
     # Configure packet path from tun/tap to the modulator
     # The path is:
-    #   tun/tap -> NetFilter -> NetQueue -> Modulator
+    #   tun/tap -> NetFilter -> NetQueue -> controller -> modulator
     #
     netfilter = dragonradio.NetFilter(net)
 
@@ -185,7 +204,20 @@ def main():
 
     netfilter.output >> netq.push
 
-    netq.pop >> modulator.sink
+    netq.pop >> controller.net_in
+
+    controller.net_out >> modulator.sink
+
+    #
+    # If we are using a SmartController, tell it that the network queue is a
+    # splice queue so that it can splice packets at the front of the queue.
+    #
+    if args.arq:
+        controller.splice_queue = netq
+
+    #
+    # Configure the MAC
+    #
 
     # slot size *including* guard (seconds)
     slot_size = .035
@@ -203,10 +235,15 @@ def main():
 
     mac[net.my_node_id - 1] = True
 
+    #
+    # Start IPython shell if we are in interactive mode
+    #
     if args.interactive:
         IPython.embed()
 
+    #
     # Wait for Ctrl-C
+    #
     signal.sigwait([signal.SIGINT])
 
     # We don't need to explicitly destroy these objects

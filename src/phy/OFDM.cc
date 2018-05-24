@@ -99,7 +99,6 @@ void OFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt)
 }
 
 OFDM::Demodulator::Demodulator(OFDM& phy) :
-    LiquidDemodulator(phy.net_),
     phy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);

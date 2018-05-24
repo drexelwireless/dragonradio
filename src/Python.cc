@@ -10,6 +10,9 @@ namespace py = pybind11;
 #include "phy/OFDM.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
+#include "mac/Controller.hh"
+#include "mac/DummyController.hh"
+#include "mac/SmartController.hh"
 #include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
 #include "net/Element.hh"
@@ -200,8 +203,12 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("disconnect", [](RadioOutPush *out) { out->port->disconnect(); } )
         ;
 
+    // Export class NetSpliceQueue to Python
+    py::class_<NetSpliceQueue, std::shared_ptr<NetSpliceQueue>>(m, "NetSpliceQueue")
+        ;
+
     // Export class NetQueue to Python
-    py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
+    py::class_<NetQueue, NetSpliceQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
         .def(py::init())
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
@@ -238,6 +245,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("soft_tx_gain", &Node::getSoftTXGain, &Node::setSoftTXGain, "Soft TX gain (dB)")
         .def_property("desired_soft_tx_gain", &Node::getDesiredSoftTXGain, &Node::setDesiredSoftTXGain, "Desired soft TX gain (dBFS)")
         .def_readwrite("desired_soft_tx_gain_clip_frac", &Node::desired_soft_tx_gain_clip_frac, "Clipping threshold for automatic TX soft gain")
+        .def_readwrite("ack_delay", &Node::ack_delay, "ACK delay (in seconds)")
+        .def_readwrite("retransmission_delay", &Node::retransmission_delay, "Packet retransmission delay (in seconds)")
         ;
 
     // Export class Net to Python
@@ -267,14 +276,12 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class FlexFrame to Python
     py::class_<FlexFrame, PHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
-        .def(py::init<std::shared_ptr<Net>,
-                      size_t>())
+        .def(py::init<size_t>())
         ;
 
     // Export class OFDM to Python
     py::class_<OFDM, PHY, std::shared_ptr<OFDM>>(m, "OFDM")
-        .def(py::init<std::shared_ptr<Net>,
-                      unsigned int,
+        .def(py::init<unsigned int,
                       unsigned int,
                       unsigned int,
                       size_t>())
@@ -282,8 +289,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class MultiOFDM to Python
     py::class_<MultiOFDM, PHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
-        .def(py::init<std::shared_ptr<Net>,
-                      unsigned int,
+        .def(py::init<unsigned int,
                       unsigned int,
                       unsigned int,
                       size_t>())
@@ -317,6 +323,27 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
+        ;
+
+    // Export class Controller to Python
+    py::class_<Controller, std::shared_ptr<Controller>>(m, "Controller")
+        .def_property_readonly("net_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_in); } )
+        .def_property_readonly("net_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_out); } )
+        .def_property_readonly("radio_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_in); } )
+        .def_property_readonly("radio_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_out); } )
+        ;
+
+    // Export class DummyController to Python
+    py::class_<DummyController, Controller, std::shared_ptr<DummyController>>(m, "DummyController")
+        .def(py::init<std::shared_ptr<Net>>())
+        ;
+
+    // Export class SmartController to Python
+    py::class_<SmartController, Controller, std::shared_ptr<SmartController>>(m, "SmartController")
+        .def(py::init<std::shared_ptr<Net>,
+                      Seq::uint_type,
+                      Seq::uint_type>())
+        .def_property("splice_queue", &SmartController::getSpliceQueue, &SmartController::setSpliceQueue)
         ;
 
     // Export class SlottedMAC to Python
