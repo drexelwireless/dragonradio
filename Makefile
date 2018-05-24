@@ -42,6 +42,7 @@ SOURCES := \
     main.cc \
     Python.cc \
     RadioConfig.cc \
+    TimerQueue.cc \
     USRP.cc \
     Util.cc \
     phy/FlexFrame.cc \
