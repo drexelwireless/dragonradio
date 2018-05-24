@@ -163,10 +163,12 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
         fprintf(stderr, "Couldn't write full packet to tun/tap!\n");
 
     if (rc->verbose)
-        printf("Written %lu bytes (seq# %u) from %u\n",
+        printf("Written %lu bytes (seq# %u) from %u (evm = %.2f; rssi = %.2f)\n",
             (unsigned long) nwrite,
             (unsigned int) pkt->seq,
-            (unsigned int) pkt->src);
+            (unsigned int) pkt->src,
+            pkt->evm,
+            pkt->rssi);
 }
 
 void TunTap::start(void)
