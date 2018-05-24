@@ -14,6 +14,9 @@
 template<typename T>
 class SafeQueue {
 public:
+    using iterator = typename std::list<T>::iterator;
+    using const_iterator = typename std::list<T>::const_iterator;
+
     SafeQueue();
     ~SafeQueue();
 
@@ -58,6 +61,14 @@ public:
      * @return true if a value was popped, false otherwise.
      */
     bool pop(T& val);
+
+    /** @brief Transfer elements from a list to the front of this queue. */
+    void splice_front(std::list<T>& other);
+    void splice_front(std::list<T>&& other);
+    void splice_front(std::list<T>& other, const_iterator it);
+    void splice_front(std::list<T>&& other, const_iterator it);
+    void splice_front(std::list<T>& other, const_iterator first, const_iterator last);
+    void splice_front(std::list<T>&& other, const_iterator first, const_iterator last);
 
     /** @brief Mark the queue as stopped. */
     void stop(void);
@@ -214,6 +225,66 @@ bool SafeQueue<T>::pop(T& val)
         q_.pop_front();
         return true;
     }
+}
+
+template<typename T>
+void SafeQueue<T>::splice_front(std::list<T>& other)
+{
+    std::unique_lock<std::mutex> lock(m_);
+
+    q_.splice(q_.begin(), other);
+
+    cond_.notify_all();
+}
+
+template<typename T>
+void SafeQueue<T>::splice_front(std::list<T>&& other)
+{
+    std::unique_lock<std::mutex> lock(m_);
+
+    q_.splice(q_.begin(), other);
+
+    cond_.notify_all();
+}
+
+template<typename T>
+void SafeQueue<T>::splice_front(std::list<T>& other, const_iterator it)
+{
+    std::unique_lock<std::mutex> lock(m_);
+
+    q_.splice(q_.begin(), other, it);
+
+    cond_.notify_all();
+}
+
+template<typename T>
+void SafeQueue<T>::splice_front(std::list<T>&& other, const_iterator it)
+{
+    std::unique_lock<std::mutex> lock(m_);
+
+    q_.splice(q_.begin(), other, it);
+
+    cond_.notify_all();
+}
+
+template<typename T>
+void SafeQueue<T>::splice_front(std::list<T>& other, const_iterator first, const_iterator last)
+{
+    std::unique_lock<std::mutex> lock(m_);
+
+    q_.splice(q_.begin(), other, first, last);
+
+    cond_.notify_all();
+}
+
+template<typename T>
+void SafeQueue<T>::splice_front(std::list<T>&& other, const_iterator first, const_iterator last)
+{
+    std::unique_lock<std::mutex> lock(m_);
+
+    q_.splice(q_.begin(), other, first, last);
+
+    cond_.notify_all();
 }
 
 template<typename T>
