@@ -4,14 +4,17 @@
 #include <functional>
 
 #include "SafeQueue.hh"
+#include "SpliceQueue.hh"
 #include "net/Element.hh"
 
 using namespace std::placeholders;
 
 /** @brief A (FIFO) queue Element. */
 template <class T>
-class Queue : public Element {
+class Queue : public SpliceQueue<T> {
 public:
+    using const_iterator = typename SpliceQueue<T>::const_iterator;
+
     Queue()
       : in(*this,
            nullptr,
@@ -26,6 +29,22 @@ public:
 
     virtual ~Queue()
     {
+    }
+
+
+    void push_front(T&& item) override
+    {
+        queue_.push_front(std::move(item));
+    }
+
+    void splice_front(std::list<T>& items)
+    {
+        queue_.splice_front(items);
+    }
+
+    void splice_front(std::list<T>& items, const_iterator first, const_iterator last) override
+    {
+        queue_.splice_front(items, first, last);
     }
 
     /** @brief The queue's packet input port. */
