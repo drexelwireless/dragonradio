@@ -83,6 +83,12 @@ struct Node {
         desired_soft_tx_gain = dBFS;
         recalc_soft_tx_gain = true;
     }
+
+    /** @brief ACK delay in seconds */
+    double ack_delay;
+
+    /** @brief Packet re-transmit delay in seconds */
+    double retransmission_delay;
 };
 
 class Net : public Element

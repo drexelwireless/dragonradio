@@ -13,6 +13,14 @@
 
 typedef uint8_t NodeId;
 
+enum {
+    /** @brief Set if the packet is ACKing */
+    kACK = 0,
+
+    /** @brief Set if the packet is NAKing */
+    kNAK
+};
+
 typedef uint16_t PacketFlags;
 
 struct Seq {
@@ -84,9 +92,12 @@ struct ExtendedHeader {
 
     /** @brief Destination */
     NodeId dest;
+
+    /** @brief Sequence number we are ACK'ing or NAK'ing. */
+    Seq ack;
 };
 
-/** @brief A packet recevied from the network. */
+/** @brief A packet received from the network. */
 struct NetPacket : public buffer<unsigned char>
 {
     NetPacket(size_t n) : buffer(n) {};
@@ -137,9 +148,9 @@ struct NetPacket : public buffer<unsigned char>
 /** @brief A packet received from the radio. */
 struct RadioPacket : public buffer<unsigned char>
 {
-    RadioPacket() : buffer(), barrier(false) {};
+    RadioPacket() : buffer(), delivered(false), barrier(false) {};
 
-    RadioPacket(unsigned char* data, size_t n) : buffer(data, n), barrier(false) {}
+    RadioPacket(unsigned char* data, size_t n) : buffer(data, n), delivered(false), barrier(false) {}
 
     /** @brief Current hop */
     NodeId curhop;
@@ -167,6 +178,9 @@ struct RadioPacket : public buffer<unsigned char>
 
     /** @brief Received signal strength indicator [dB] */
     float rssi;
+
+    /** @brief This flag is set if the packet has been delivered. */
+    bool delivered;
 
     /** @brief This Boolean is true if this packet is a barrier and should not
      * be processed or removed from a queue except by its creator.

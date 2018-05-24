@@ -203,8 +203,12 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("disconnect", [](RadioOutPush *out) { out->port->disconnect(); } )
         ;
 
+    // Export class NetSpliceQueue to Python
+    py::class_<NetSpliceQueue, std::shared_ptr<NetSpliceQueue>>(m, "NetSpliceQueue")
+        ;
+
     // Export class NetQueue to Python
-    py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
+    py::class_<NetQueue, NetSpliceQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
         .def(py::init())
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
@@ -241,6 +245,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("soft_tx_gain", &Node::getSoftTXGain, &Node::setSoftTXGain, "Soft TX gain (dB)")
         .def_property("desired_soft_tx_gain", &Node::getDesiredSoftTXGain, &Node::setDesiredSoftTXGain, "Desired soft TX gain (dBFS)")
         .def_readwrite("desired_soft_tx_gain_clip_frac", &Node::desired_soft_tx_gain_clip_frac, "Clipping threshold for automatic TX soft gain")
+        .def_readwrite("ack_delay", &Node::ack_delay, "ACK delay (in seconds)")
+        .def_readwrite("retransmission_delay", &Node::retransmission_delay, "Packet retransmission delay (in seconds)")
         ;
 
     // Export class Net to Python
@@ -334,7 +340,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class SmartController to Python
     py::class_<SmartController, Controller, std::shared_ptr<SmartController>>(m, "SmartController")
-        .def(py::init<std::shared_ptr<Net>>())
+        .def(py::init<std::shared_ptr<Net>,
+                      Seq::uint_type,
+                      Seq::uint_type>())
+        .def_property("splice_queue", &SmartController::getSpliceQueue, &SmartController::setSpliceQueue)
         ;
 
     // Export class SlottedMAC to Python

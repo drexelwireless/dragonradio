@@ -90,6 +90,9 @@ def main():
     parser.add_argument('--interactive',
                         action='store_true', dest='interactive',
                         help='enter interactive shell after radio is configured')
+    parser.add_argument('--arq', action='store_true', dest='arq',
+                        default=False,
+                        help='enable ARQ')
 
     try:
         args = parser.parse_args()
@@ -174,7 +177,10 @@ def main():
     #
     # Configure the controller
     #
-    controller = dragonradio.SmartController(net)
+    if args.arq:
+        controller = dragonradio.SmartController(net, 1024, 1024)
+    else:
+        controller = dragonradio.DummyController(net)
 
     #
     # Configure packet path from demodulator to tun/tap
@@ -201,6 +207,13 @@ def main():
     netq.pop >> controller.net_in
 
     controller.net_out >> modulator.sink
+
+    #
+    # If we are using a SmartController, tell it that the network queue is a
+    # splice queue so that it can splice packets at the front of the queue.
+    #
+    if args.arq:
+        controller.splice_queue = netq
 
     #
     # Configure the MAC

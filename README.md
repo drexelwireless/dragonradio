@@ -39,6 +39,7 @@ Notable flags supported by the `fullradio.py` include:
  * `--rx-antenna` Set the RX antenna. Defaults to `RX2`. **You must change this to `TX/RX` if you are running on the Grid**.
  * `--auto-soft-tx-gain` Automatically (attempt to) set the soft TX gain to 0 dBFS.
  * `--interactive` Drop into an [IPython](https://ipython.org/) shell once the radio has started up. You can then manipulate the radio components in the shell.
+ * `--arq` Enables selective-repeat ARQ.
 
 After starting up, the radio will create a `tap` device with IP address `10.10.10.NODEID` and a netmask of `255.255.255.0`, where `NODEID` is the node ID set with `-i`. Packets sent to this subnet will be sent over the radio.
 
