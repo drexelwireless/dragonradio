@@ -9,17 +9,6 @@
 #include "SafeQueue.hh"
 #include "phy/ModPacket.hh"
 
-/** @brief %PHY packet header. */
-struct Header {
-    NodeId   curhop;  /**< @brief Current hop. */
-    NodeId   nexthop; /**< @brief Next hop. */
-    Seq      seq;     /**< @brief Packet sequence number. */
-    uint16_t pkt_len; /**< @brief Length of the packet payload. */
-                      /**< The packet payload may be padded. This field gives
-                       * the size of the non-padded portion of the payload.
-                       */
-};
-
 /** @brief A physical layer protocol that can provide a modulator and
  * demodulator.
  */
@@ -37,6 +26,24 @@ public:
          *  @param pkt The NetPacket to modulate.
          */
         virtual void modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> pkt) = 0;
+
+        /** @brief Set the contents of a Header based on a NetPacket.
+         *  @param hdr The Header that is the destination.
+         *  @param pkt The NetPacket that is the source.
+         */
+        void setHeader(Header& hdr, NetPacket& pkt)
+        {
+            ExtendedHeader& ehdr = pkt.getExtendedHeader();
+
+            hdr.curhop = pkt.curhop;
+            hdr.nexthop = pkt.nexthop;
+            hdr.flags = pkt.flags;
+            hdr.seq = pkt.seq;
+            hdr.data_len = pkt.data_len;
+
+            ehdr.src = pkt.src;
+            ehdr.dest = pkt.dest;
+        }
     };
 
     /** @brief Demodulate IQ data.

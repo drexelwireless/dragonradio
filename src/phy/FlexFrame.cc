@@ -55,10 +55,7 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::unique_ptr<NetPacket> 
 
     memset(&header, 0, sizeof(header));
 
-    header.h.curhop = pkt->curhop;
-    header.h.nexthop = pkt->nexthop;
-    header.h.seq = pkt->seq;
-    header.h.pkt_len = pkt->size();
+    setHeader(header.h, *pkt);
 
     pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
 

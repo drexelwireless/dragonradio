@@ -13,7 +13,39 @@
 
 typedef uint8_t NodeId;
 
+typedef uint16_t PacketFlags;
+
 typedef uint16_t Seq;
+
+/** @brief %PHY packet header. */
+struct Header {
+    /** @brief Current hop. */
+    NodeId curhop;
+
+    /** @brief Next hop. */
+    NodeId nexthop;
+
+    /** @brief Packet flags. */
+    PacketFlags flags;
+
+    /** @brief Packet sequence number. */
+    Seq seq;
+
+    /** @brief Length of the packet payload. */
+    /** The packet payload may be padded or contain control data. This field
+     * gives the size of the data portion of the payload.
+     */
+    uint16_t data_len;
+};
+
+/** @brief Extened header that appears in radio payload. */
+struct ExtendedHeader {
+    /** @brief Source */
+    NodeId src;
+
+    /** @brief Destination */
+    NodeId dest;
+};
 
 /** @brief A packet recevied from the network. */
 struct NetPacket : public buffer<unsigned char>
@@ -26,8 +58,14 @@ struct NetPacket : public buffer<unsigned char>
     /** @brief Next hop */
     NodeId nexthop;
 
+    /** @brief Packet flags. */
+    PacketFlags flags;
+
     /** @brief Sequence number */
     Seq seq;
+
+    /** @brief Length of data portion of the packet */
+    uint16_t data_len;
 
     /** @brief Source */
     NodeId src;
@@ -49,6 +87,12 @@ struct NetPacket : public buffer<unsigned char>
 
     /** @brief Soft TX gain */
     float g;
+
+    /** @brief Get extended header */
+    ExtendedHeader &getExtendedHeader(void)
+    {
+        return *reinterpret_cast<ExtendedHeader*>(data());
+    }
 };
 
 /** @brief A packet received from the radio. */
@@ -64,8 +108,14 @@ struct RadioPacket : public buffer<unsigned char>
     /** @brief Next hop (should be this node) */
     NodeId nexthop;
 
+    /** @brief Packet flags. */
+    PacketFlags flags;
+
     /** @brief Packet sequence number */
     Seq seq;
+
+    /** @brief Length of data portion of the packet */
+    uint16_t data_len;
 
     /** @brief Source */
     NodeId src;
@@ -83,6 +133,12 @@ struct RadioPacket : public buffer<unsigned char>
      * be processed or removed from a queue except by its creator.
      */
     bool barrier;
+
+    /** @brief Get extended header */
+    ExtendedHeader &getExtendedHeader(void)
+    {
+        return *reinterpret_cast<ExtendedHeader*>(data());
+    }
 };
 
 #endif /* PACKET_HH_ */

@@ -20,7 +20,7 @@ bool NetFilter::process(std::unique_ptr<NetPacket>& pkt)
     if (pkt->size() == 0)
         return false;
 
-    struct ether_header* eth = reinterpret_cast<struct ether_header*>(pkt->data());
+    struct ether_header* eth = reinterpret_cast<struct ether_header*>(pkt->data() + sizeof(ExtendedHeader));
 
     // Node number is last octet of the ethernet MAC address by convention
     NodeId curhop_id = eth->ether_shost[5];
@@ -29,7 +29,7 @@ bool NetFilter::process(std::unique_ptr<NetPacket>& pkt)
     // Only transmit IP packets where we are the source and we know
     // of the destination.
     if (ntohs(eth->ether_type) == ETHERTYPE_IP && curhop_id == net_->getMyNodeId() && net_->contains(nexthop_id)) {
-        struct ip* ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(struct ether_header));
+        struct ip* ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
         in_addr    ip_src;
         in_addr    ip_dst;
 
@@ -44,7 +44,10 @@ bool NetFilter::process(std::unique_ptr<NetPacket>& pkt)
 
         pkt->curhop = curhop_id;
         pkt->nexthop = nexthop_id;
+        pkt->flags = 0;
         pkt->seq = nexthop.seq++;
+        // Nb pkt->data_len is set in TunTap when the packet is read from the
+        // network.
 
         pkt->src = src_id;
         pkt->dest = dest_id;
