@@ -10,23 +10,12 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PacketModulator> modulator,
            std::shared_ptr<PacketDemodulator> demodulator,
            double bandwidth,
-           size_t nslots,
            double slot_size,
-           double guard_size)
-  : SlottedMAC(usrp, phy, modulator, demodulator, slot_size, guard_size),
-    bandwidth_(bandwidth),
-    done_(false)
+           double guard_size,
+           size_t nslots)
+  : SlottedMAC(usrp, phy, modulator, demodulator, bandwidth, slot_size, guard_size)
 {
     slots_.resize(nslots, false);
-
-    rx_rate_ = bandwidth_*phy->getRXRateOversample();
-    tx_rate_ = bandwidth_*phy->getTXRateOversample();
-
-    usrp->setRXRate(rx_rate_);
-    usrp->setTXRate(tx_rate_);
-
-    phy->setRXRate(rx_rate_);
-    phy->setTXRate(tx_rate_);
 
     reconfigure();
 
@@ -74,46 +63,6 @@ void TDMA::stop(void)
 
     if (tx_thread_.joinable())
         tx_thread_.join();
-}
-
-void TDMA::rxWorker(void)
-{
-    Clock::time_point t_now;        // Current time
-    Clock::time_point t_cur_slot;   // Time at which current slot starts
-    Clock::time_point t_next_slot;  // Time at which next slot starts
-    double            t_slot_pos;   // Offset into the current slot (sec)
-    int               slot;         // Curent slot index in the frame
-
-    uhd::set_thread_priority_safe();
-
-    while (!done_) {
-        // Set up streaming starting at *next* slot
-        t_now = Clock::now();
-        t_slot_pos = fmod(t_now.get_real_secs(), slot_size_);
-        t_next_slot = t_now + slot_size_ - t_slot_pos;
-        slot = fmod(t_now.get_real_secs(), frame_size_) / slot_size_;
-
-        usrp_->startRXStream(t_next_slot);
-
-        while (!done_) {
-            // Update times
-            t_now = Clock::now();
-            t_cur_slot = t_next_slot;
-            t_next_slot += slot_size_;
-
-            // Read samples for current slot
-            auto curSlot = std::make_shared<IQBuf>(rx_slot_samps_ + usrp_->getMaxRXSamps());
-
-            demodulator_->push(curSlot);
-
-            usrp_->burstRX(t_cur_slot, rx_slot_samps_, *curSlot);
-
-            // Move to the next slot
-            ++slot;
-        }
-
-        usrp_->stopRXStream();
-    }
 }
 
 void TDMA::txWorker(void)
@@ -164,11 +113,6 @@ bool TDMA::findNextSlot(Clock::time_point t, Clock::time_point &t_next)
 void TDMA::reconfigure(void)
 {
     frame_size_ = slot_size_*slots_.size();
-    rx_slot_samps_ = rx_rate_*slot_size_;
-    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
 
-    modulator_->setLowWaterMark(tx_slot_samps_);
-
-    demodulator_->setWindowParameters(0.5*guard_size_*rx_rate_,
-                                      (slot_size_ - 0.5*guard_size_)*tx_rate_);
+    SlottedMAC::reconfigure();
 }

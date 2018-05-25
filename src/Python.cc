@@ -321,10 +321,6 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property_readonly("source", [](std::shared_ptr<ParallelPacketDemodulator> e) { return exposePort(e, &e->source); } )
         ;
 
-    // Export class MAC to Python
-    py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
-        ;
-
     // Export class Controller to Python
     py::class_<Controller, std::shared_ptr<Controller>>(m, "Controller")
         .def_property_readonly("net_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_in); } )
@@ -346,6 +342,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("splice_queue", &SmartController::getSpliceQueue, &SmartController::setSpliceQueue)
         ;
 
+    // Export class MAC to Python
+    py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
+        ;
+
     // Export class SlottedMAC to Python
     py::class_<SlottedMAC, MAC, std::shared_ptr<SlottedMAC>>(m, "SlottedMAC")
         .def_property("slot_size", &SlottedMAC::getSlotSize, &SlottedMAC::setSlotSize)
@@ -359,9 +359,9 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
                       double,
-                      size_t,
                       double,
-                      double>())
+                      double,
+                      size_t>())
         .def("__getitem__", [](TDMA &mac, TDMA::slots_type::size_type i) {
             try {
                 return mac[i];

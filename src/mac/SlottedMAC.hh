@@ -16,6 +16,7 @@ public:
                std::shared_ptr<PHY> phy,
                std::shared_ptr<PacketModulator> modulator,
                std::shared_ptr<PacketDemodulator> demodulator,
+               double bandwidth,
                double slot_size,
                double guard_size);
     virtual ~SlottedMAC();
@@ -44,25 +45,10 @@ public:
      */
     virtual void setGuardSize(double t);
 
+    /** @brief Stop processing packets. */
+    virtual void stop(void) = 0;
+
 protected:
-    /** @brief Our USRP device. */
-    std::shared_ptr<USRP> usrp_;
-
-    /** @brief Our PHY. */
-    std::shared_ptr<PHY> phy_;
-
-    /** @brief Our packet modulator. */
-    std::shared_ptr<PacketModulator> modulator_;
-
-    /** @brief Our packet demodulator. */
-    std::shared_ptr<PacketDemodulator> demodulator_;
-
-    /** @brief RX rate */
-    double rx_rate_;
-
-    /** @brief TX rate */
-    double tx_rate_;
-
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;
 
@@ -75,11 +61,17 @@ protected:
     /** @brief Number of TX samples in the non-guard portion of a slot */
     size_t tx_slot_samps_;
 
+    /** @brief Flag indicating if we should stop processing packets */
+    bool done_;
+
+    /** @brief Worker receiving packets */
+    void rxWorker(void);
+
     /** @brief Transmit one slot's worth of samples */
     virtual void txSlot(Clock::time_point when, size_t maxSamples);
 
     /** @brief Reconfigure the MAC when slot parameters change */
-    virtual void reconfigure(void) = 0;
+    virtual void reconfigure(void);
 };
 
 #endif /* SLOTTEDMAC_H_ */

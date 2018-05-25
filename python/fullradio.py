@@ -225,9 +225,9 @@ def main():
 
     mac = dragonradio.TDMA(usrp, phy, modulator, demodulator,
                            args.bandwidth,
-                           len(net),
                            slot_size,
-                           guard_size)
+                           guard_size,
+                           len(net))
 
     if args.logfile:
         logger.setAttribute('tx_bandwidth', usrp.tx_rate)
