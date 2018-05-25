@@ -13,6 +13,7 @@ namespace py = pybind11;
 #include "mac/Controller.hh"
 #include "mac/DummyController.hh"
 #include "mac/SmartController.hh"
+#include "mac/SlottedALOHA.hh"
 #include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
 #include "net/Element.hh"
@@ -381,5 +382,18 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             return py::make_iterator(mac.begin(), mac.end());
          }, py::keep_alive<0, 1>())
         .def("resize", &TDMA::resize)
+        ;
+
+    // Export class SlottedALOHA to Python
+    py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
+        .def(py::init<std::shared_ptr<USRP>,
+                      std::shared_ptr<PHY>,
+                      std::shared_ptr<PacketModulator>,
+                      std::shared_ptr<PacketDemodulator>,
+                      double,
+                      double,
+                      double,
+                      double>())
+        .def_property("p", &SlottedALOHA::getTXProb, &SlottedALOHA::setTXProb)
         ;
 }
