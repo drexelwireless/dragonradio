@@ -89,8 +89,3 @@ void Net::addNode(NodeId nodeId)
     if (nodeId != my_node_id_)
         tuntap_->addARPEntry(nodeId);
 }
-
-bool Net::wantPacket(NodeId dest)
-{
-    return dest == my_node_id_;
-}

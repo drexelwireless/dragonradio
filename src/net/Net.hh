@@ -127,9 +127,6 @@ public:
     /** @brief Add a node to the network */
     void addNode(NodeId nodeId);
 
-    /** @brief Return true if we want a packet sent to this destination. */
-    bool wantPacket(NodeId dest);
-
 private:
     /** @brief Our tun/tap interface */
     std::shared_ptr<TunTap> tuntap_;
