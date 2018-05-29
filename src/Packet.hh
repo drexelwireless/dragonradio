@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <cstddef>
+#include <iterator>
 #include <vector>
 
 #include <liquid/liquid.h>
@@ -18,7 +20,13 @@ enum {
     kACK = 0,
 
     /** @brief Set if the packet is NAKing */
-    kNAK
+    kNAK,
+
+    /** @brief Set if this is a broadcast packet */
+    kBroadcast,
+
+    /** @brief Set if the packet has control data */
+    kControl
 };
 
 typedef uint16_t PacketFlags;
@@ -64,6 +72,30 @@ struct Seq {
     uint_type seq_;
 };
 
+/** @brief A Control message */
+struct ControlMsg {
+    enum Type {
+        kHello,
+        kTimestamp
+    };
+
+    struct Hello {
+        bool is_gateway;
+    };
+
+    struct Timestamp {
+        uint64_t secs;
+        double frac_secs;
+    };
+
+    Type type;
+
+    union {
+        Hello hello;
+        Timestamp timestamp;
+    };
+};
+
 /** @brief %PHY packet header. */
 struct Header {
     /** @brief Current hop. */
@@ -100,6 +132,30 @@ struct ExtendedHeader {
 /** @brief A packet. */
 struct Packet : public buffer<unsigned char>
 {
+    class iterator : public std::iterator<std::input_iterator_tag, ControlMsg> {
+    public:
+        iterator(const Packet &pkt);
+        iterator(const Packet &pkt, int);
+        ~iterator() = default;
+
+        iterator() = delete;
+
+        bool operator ==(const iterator& other);
+        bool operator !=(const iterator& other);
+
+        iterator& operator ++();
+        iterator& operator ++(int);
+
+        const ControlMsg &operator *();
+        const ControlMsg *operator ->();
+
+    private:
+        const Packet &pkt_;
+        uint16_t ctrl_len_;
+        const unsigned char *ctrl_ptr_;
+        ControlMsg ctrl_;
+    };
+
     Packet() : buffer() {};
     Packet(size_t n) : buffer(n) {};
     Packet(unsigned char* data, size_t n) : buffer(data, n) {}
@@ -184,6 +240,21 @@ struct Packet : public buffer<unsigned char>
         src = ehdr.src;
         dest = ehdr.dest;
     }
+
+    /** @brief Append a control message to a packet */
+    void appendControl(ControlMsg &ctrl);
+
+    /** @brief Return iterator to beginning control data. */
+    iterator begin() const
+    {
+        return iterator(*this);
+    }
+
+    /** @brief Return iterator to end of control data. */
+    iterator end() const
+    {
+        return iterator(*this, 0);
+    }
 };
 
 /** @brief A packet received from the network. */
@@ -227,5 +298,20 @@ struct RadioPacket : public Packet
      */
     bool barrier;
 };
+
+/** @brief Compute the size of the specified control message. */
+constexpr size_t ctrlsize(ControlMsg::Type ty)
+{
+    switch (ty) {
+        case ControlMsg::kHello:
+            return offsetof(ControlMsg, hello) + sizeof(ControlMsg::Hello);
+
+        case ControlMsg::kTimestamp:
+            return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);
+
+        default:
+            return 0;
+    }
+}
 
 #endif /* PACKET_HH_ */

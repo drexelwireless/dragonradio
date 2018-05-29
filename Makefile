@@ -40,6 +40,7 @@ SOURCES := \
     ExtensibleDataSet.cc \
     Logger.cc \
     main.cc \
+    Packet.cc \
     Python.cc \
     RadioConfig.cc \
     TimerQueue.cc \

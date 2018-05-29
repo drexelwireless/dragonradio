@@ -140,6 +140,8 @@ public:
 
     void ack(RecvWindow &recvw);
 
+    void broadcastHello(void);
+
     /** @brief Get the controller's splice queue. */
     std::shared_ptr<NetSpliceQueue> getSpliceQueue(void)
     {

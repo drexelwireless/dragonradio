@@ -343,6 +343,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       Seq::uint_type,
                       Seq::uint_type>())
         .def_property("splice_queue", &SmartController::getSpliceQueue, &SmartController::setSpliceQueue)
+        .def("broadcastHello", &SmartController::broadcastHello)
         ;
 
     // Export class MAC to Python

@@ -1,3 +1,4 @@
+#include "RadioConfig.hh"
 #include "mac/SmartController.hh"
 
 #define DEBUG 0
@@ -98,13 +99,34 @@ bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
 
 void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 {
-    // XXX We should handle broadcast packets here!
+    if (!pkt->isFlagSet(kBroadcast) && pkt->nexthop != net_->getMyNodeId())
+        return;
+
+    // Process control info
+    if (pkt->isFlagSet(kControl)) {
+        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+            switch (it->type) {
+                case ControlMsg::Type::kHello:
+                {
+                    Node &node = net_->addNode(pkt->curhop);
+
+                    node.is_gateway = it->hello.is_gateway;
+
+                    dprintf("Received HELLO from %u\n", (unsigned) pkt->curhop);
+                }
+                break;
+
+                default:
+                    break;
+            }
+        }
+    }
+
+    // If this packet was not destined for us, we are done
     if (pkt->nexthop != net_->getMyNodeId())
         return;
 
-    // TODO Process any control info here
-
-    // Get node ID of source and teh extended header
+    // Get node ID of source and the extended header
     NodeId         prevhop = pkt->curhop;
     ExtendedHeader &ehdr = pkt->getExtendedHeader();
 
@@ -293,6 +315,40 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->fec1 = dest.fec1;
     pkt->ms = dest.ms;
     pkt->g = dest.g;
+
+    spliceq_->push_front(std::move(pkt));
+}
+
+void SmartController::broadcastHello(void)
+{
+    if (!spliceq_)
+        return;
+
+    dprintf("Sending HELLO\n");
+
+    auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
+
+    pkt->curhop = net_->getMyNodeId();
+    pkt->nexthop = 0;
+    pkt->flags = 0;
+    pkt->seq = 0;
+    pkt->data_len = 0;
+    pkt->src = net_->getMyNodeId();
+    pkt->dest = 0;
+    pkt->check = LIQUID_CRC_32;
+    pkt->fec0 = LIQUID_FEC_CONV_V27;
+    pkt->fec1 = LIQUID_FEC_NONE;
+    pkt->ms = LIQUID_MODEM_QPSK;
+    pkt->g = 1.0;
+
+    pkt->setFlag(kBroadcast);
+
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kHello;
+    msg.hello.is_gateway = rc->is_gateway;
+
+    pkt->appendControl(msg);
 
     spliceq_->push_front(std::move(pkt));
 }
