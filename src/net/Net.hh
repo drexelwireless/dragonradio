@@ -125,7 +125,7 @@ public:
     Node& operator[](NodeId nodeid);
 
     /** @brief Add a node to the network */
-    void addNode(NodeId nodeId);
+    Node &addNode(NodeId nodeId);
 
 private:
     /** @brief Our tun/tap interface */

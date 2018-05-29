@@ -266,7 +266,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             return py::make_key_iterator(net.begin(), net.end());
          }, py::keep_alive<0, 1>())
         .def_property_readonly("my_node_id", &Net::getMyNodeId)
-        .def("addNode", &Net::addNode)
+        .def("addNode", &Net::addNode, py::return_value_policy::reference_internal)
         ;
 
     // Export class PHY to Python

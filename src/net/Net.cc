@@ -80,12 +80,14 @@ Node& Net::operator[](NodeId nodeid)
     return nodes_.at(nodeid);
 }
 
-void Net::addNode(NodeId nodeId)
+Node &Net::addNode(NodeId nodeId)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
 
-    nodes_.emplace(nodeId, Node(nodeId));
+    auto entry = nodes_.emplace(nodeId, Node(nodeId));
 
     if (nodeId != my_node_id_)
         tuntap_->addARPEntry(nodeId);
+
+    return entry.first->second;
 }
