@@ -117,32 +117,36 @@ void ParallelPacketModulator::modWorker(void)
             mpkt = pkt_q_.back().get();
         }
 
-        Node &nexthop = (*net_)[pkt->nexthop];
         bool recalc = false;
+        Node *nexthop = nullptr;
 
-        // XXX Mostly-benign race condition here. More than one modulator could
-        // end up re-calculating the soft TX gain.
-        if (nexthop.recalc_soft_tx_gain) {
-            nexthop.recalc_soft_tx_gain = false;
-            pkt->g = 1.0;
-            recalc = true;
+        if (net_->contains(pkt->nexthop)) {
+            nexthop = &(*net_)[pkt->nexthop];
+
+            // XXX Mostly-benign race condition here. More than one modulator could
+            // end up re-calculating the soft TX gain.
+            if (nexthop->recalc_soft_tx_gain) {
+                nexthop->recalc_soft_tx_gain = false;
+                pkt->g = 1.0;
+                recalc = true;
+            }
         }
 
         // Modulate the packet
         modulator->modulate(*mpkt, std::move(pkt));
 
         if (recalc) {
-            float g = autoSoftGain0dBFS(*mpkt->samples, nexthop.desired_soft_tx_gain_clip_frac);
+            float g = autoSoftGain0dBFS(*mpkt->samples, nexthop->desired_soft_tx_gain_clip_frac);
 
-            nexthop.g = g;
-            nexthop.setSoftTXGain(nexthop.getSoftTXGain() + nexthop.desired_soft_tx_gain);
-            nexthop.recalc_soft_tx_gain = false;
+            nexthop->g = g;
+            nexthop->setSoftTXGain(nexthop->getSoftTXGain() + nexthop->desired_soft_tx_gain);
+            nexthop->recalc_soft_tx_gain = false;
 
             if (rc->verbose)
-                fprintf(stderr, "%u: new soft TX gain (dB): %f\n", nexthop.id, nexthop.getSoftTXGain());
+                fprintf(stderr, "%u: new soft TX gain (dB): %f\n", nexthop->id, nexthop->getSoftTXGain());
 
             // Apply the new soft gain
-            g = nexthop.g;
+            g = nexthop->g;
 
             for (size_t i = 0; i < mpkt->samples->size(); ++i)
                 (*mpkt->samples)[i] *= g;
