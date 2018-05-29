@@ -266,6 +266,9 @@ void SmartController::retransmit(SendWindow &sendw)
 
 void SmartController::ack(RecvWindow &recvw)
 {
+    if (!spliceq_)
+        return;
+
     std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
     dprintf("Sending delayed ACK %u\n", (unsigned) recvw.ack);
@@ -290,8 +293,7 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->ms = dest.ms;
     pkt->g = dest.g;
 
-    if (spliceq_)
-        spliceq_->push_front(std::move(pkt));
+    spliceq_->push_front(std::move(pkt));
 }
 
 bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
