@@ -283,6 +283,7 @@ void SmartController::ack(RecvWindow &recvw)
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = recvw.node_id;
+    pkt->flags = 0;
     pkt->seq = 0;
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
