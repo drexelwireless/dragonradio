@@ -131,6 +131,24 @@ struct Packet : public buffer<unsigned char>
     /** @brief Destination */
     NodeId dest;
 
+    /** @brief Set a flag */
+    void setFlag(unsigned f)
+    {
+        flags |= (1 << f);
+    }
+
+    /** @brief Clear a flag */
+    void clearFlag(unsigned f)
+    {
+        flags &= ~(1 << f);
+    }
+
+    /** @brief Test if a flag is set */
+    bool isFlagSet(unsigned f) const
+    {
+        return flags & (1 << f);
+    }
+
     /** @brief Get extended header */
     ExtendedHeader &getExtendedHeader(void)
     {

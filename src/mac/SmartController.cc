@@ -54,7 +54,7 @@ bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
         // max sequence number we've received.
         assert(recvw.ack <= recvw.max + 1);
 
-        pkt->flags |= (1 << kACK);
+        pkt->setFlag(kACK);
         ehdr.ack = recvw.ack;
 
         if (pkt->data_len == 0)
@@ -115,7 +115,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         SendWindow                      &sendw = *sendwptr;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
-        if (pkt->flags & (1 << kACK)) {
+        if (pkt->isFlagSet(kACK)) {
             if (ehdr.ack > sendw.unack) {
                 dprintf("Got ACK %d\n", (int) ehdr.ack);
 
@@ -156,7 +156,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     spliceq_->splice_front(sendw.pending, first, last);
                 }
             }
-        } else if (pkt->flags & (1 << kNAK)) {
+        } else if (pkt->isFlagSet(kNAK)) {
             if (ehdr.ack >= sendw.unack) {
                 if (!sendw[ehdr.ack])
                     fprintf(stderr, "Received NAK from node %d for seq %d, but can't find that packet!\n",
