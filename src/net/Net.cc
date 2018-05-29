@@ -86,7 +86,8 @@ Node &Net::addNode(NodeId nodeId)
 
     auto entry = nodes_.emplace(nodeId, Node(nodeId));
 
-    if (nodeId != my_node_id_)
+    // If the entry is new, add an ARP entry for it
+    if (entry.second && nodeId != my_node_id_)
         tuntap_->addARPEntry(nodeId);
 
     return entry.first->second;
