@@ -136,6 +136,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<RadioConfig, std::shared_ptr<RadioConfig>>(m, "RadioConfig")
         .def(py::init())
         .def_readwrite("verbose", &RadioConfig::verbose)
+        .def_readwrite("is_gateway", &RadioConfig::is_gateway)
         .def_readwrite("soft_txgain", &RadioConfig::soft_txgain)
         .def_readwrite("ms", &RadioConfig::ms)
         .def_readwrite("check", &RadioConfig::check)
@@ -238,6 +239,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     // Export class Node to Python
     py::class_<Node, std::shared_ptr<Node>>(m, "Node")
         .def_readonly("id", &Node::id, "Node ID")
+        .def_readwrite("is_gateway", &Node::is_gateway, "Flag indicating whether or not this node is the gateway")
         .def_readwrite("g", &Node::g, "Soft TX gain (multiplicative factor)")
         .def_readwrite("ms", &Node::ms, "Modulation scheme")
         .def_readwrite("check", &Node::check, "Data validity check")

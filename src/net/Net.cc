@@ -15,6 +15,7 @@ using namespace std::placeholders;
 
 Node::Node(NodeId id) :
     id(id),
+    is_gateway(false),
     seq(0),
     ms(rc->ms),
     check(rc->check),

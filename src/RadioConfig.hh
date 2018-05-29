@@ -18,6 +18,9 @@ public:
     /** @brief Give verbose debug messages on the console */
     bool verbose;
 
+    /** @brief Flag indicating whether or not this node is the gateway */
+    bool is_gateway;
+
     /** @brief Default soft TX gain (dB) */
     double soft_txgain;
 

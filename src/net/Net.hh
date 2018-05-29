@@ -19,6 +19,9 @@ struct Node {
     /** @brief Node ID */
     NodeId id;
 
+    /** @brief Flag indicating whether or not this node is the gateway */
+    bool is_gateway;
+
     /** @brief Current packet sequence number for this destination */
     Seq seq;
 
