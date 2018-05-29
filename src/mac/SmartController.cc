@@ -270,25 +270,25 @@ void SmartController::ack(RecvWindow &recvw)
 
     dprintf("Sending delayed ACK %u\n", (unsigned) recvw.ack);
 
-    // Create an ACK-only packet
-    auto           pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
-    ExtendedHeader &ehdr = pkt->getExtendedHeader();
-    Node           &dest = (*net_)[recvw.node_id];
+    // Create an ACK-only packet. Why don't we set the ACK field here!? Because
+    // it will be filled out when the packet flows back through the controller
+    // on its way out the radio. We are just providing the opportunity for an
+    // ACK by injecting a packet without a data payload at the head of the
+    // queue.
+    auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
+    Node &dest = (*net_)[recvw.node_id];
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = recvw.node_id;
     pkt->seq = 0;
     pkt->data_len = 0;
-    pkt->src = 0;
-    pkt->dest = 0;
+    pkt->src = net_->getMyNodeId();
+    pkt->dest = recvw.node_id;
     pkt->check = dest.check;
     pkt->fec0 = dest.fec0;
     pkt->fec1 = dest.fec1;
     pkt->ms = dest.ms;
     pkt->g = dest.g;
-
-    ehdr.src = 0;
-    ehdr.dest = 0;
 
     if (spliceq_)
         spliceq_->push_front(std::move(pkt));
