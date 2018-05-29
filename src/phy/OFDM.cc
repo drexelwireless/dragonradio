@@ -57,7 +57,7 @@ void OFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt)
 
     memset(&header, 0, sizeof(header));
 
-    setHeader(header.h, *pkt);
+    pkt->toHeader(header.h);
 
     pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
 

@@ -136,6 +136,36 @@ struct Packet : public buffer<unsigned char>
     {
         return *reinterpret_cast<ExtendedHeader*>(data());
     }
+
+    /** @brief Copy internal values to a PHY header */
+    void toHeader(Header &hdr)
+    {
+        ExtendedHeader &ehdr = getExtendedHeader();
+
+        hdr.curhop = curhop;
+        hdr.nexthop = nexthop;
+        hdr.flags = flags;
+        hdr.seq = seq;
+        hdr.data_len = data_len;
+
+        ehdr.src = src;
+        ehdr.dest = dest;
+    }
+
+    /** @brief Copy values from PHY header to packet */
+    void fromHeader(Header &hdr)
+    {
+        ExtendedHeader &ehdr = getExtendedHeader();
+
+        curhop = hdr.curhop;
+        nexthop = hdr.nexthop;
+        flags = hdr.flags;
+        seq = hdr.seq;
+        data_len = std::min(hdr.data_len, static_cast<uint16_t>(sizeof(ExtendedHeader) + size()));
+
+        src = ehdr.src;
+        dest = ehdr.dest;
+    }
 };
 
 /** @brief A packet received from the network. */

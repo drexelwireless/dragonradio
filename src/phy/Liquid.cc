@@ -57,13 +57,8 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     else {
         auto pkt = std::make_unique<RadioPacket>(payload_, sizeof(struct ExtendedHeader) + h->data_len);
 
-        pkt->curhop = h->curhop;
-        pkt->nexthop = h->nexthop;
-        pkt->flags = h->flags;
-        pkt->seq = h->seq;
-        pkt->data_len = h->data_len;
-        pkt->src = h->curhop;
-        pkt->dest = h->nexthop;
+        pkt->fromHeader(*h);
+
         pkt->evm = stats_.evm;
         pkt->rssi = stats_.rssi;
 
