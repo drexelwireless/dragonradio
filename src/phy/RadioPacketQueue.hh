@@ -72,9 +72,6 @@ private:
     /** @brief Condition variable protecting the queue of packets. */
     std::condition_variable cond_;
 
-    /** @brief The number of items in the queue of packets. */
-    size_t size_;
-
     /** @brief The queue of packets. */
     std::list<std::unique_ptr<RadioPacket>> q_;
 };
