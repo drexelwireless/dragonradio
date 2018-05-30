@@ -13,6 +13,7 @@ namespace py = pybind11;
 #include "mac/Controller.hh"
 #include "mac/DummyController.hh"
 #include "mac/SmartController.hh"
+#include "mac/SlottedALOHA.hh"
 #include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
 #include "net/Element.hh"
@@ -321,10 +322,6 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property_readonly("source", [](std::shared_ptr<ParallelPacketDemodulator> e) { return exposePort(e, &e->source); } )
         ;
 
-    // Export class MAC to Python
-    py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
-        ;
-
     // Export class Controller to Python
     py::class_<Controller, std::shared_ptr<Controller>>(m, "Controller")
         .def_property_readonly("net_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_in); } )
@@ -346,6 +343,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("splice_queue", &SmartController::getSpliceQueue, &SmartController::setSpliceQueue)
         ;
 
+    // Export class MAC to Python
+    py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
+        ;
+
     // Export class SlottedMAC to Python
     py::class_<SlottedMAC, MAC, std::shared_ptr<SlottedMAC>>(m, "SlottedMAC")
         .def_property("slot_size", &SlottedMAC::getSlotSize, &SlottedMAC::setSlotSize)
@@ -359,9 +360,9 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
                       double,
-                      size_t,
                       double,
-                      double>())
+                      double,
+                      size_t>())
         .def("__getitem__", [](TDMA &mac, TDMA::slots_type::size_type i) {
             try {
                 return mac[i];
@@ -381,5 +382,18 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             return py::make_iterator(mac.begin(), mac.end());
          }, py::keep_alive<0, 1>())
         .def("resize", &TDMA::resize)
+        ;
+
+    // Export class SlottedALOHA to Python
+    py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
+        .def(py::init<std::shared_ptr<USRP>,
+                      std::shared_ptr<PHY>,
+                      std::shared_ptr<PacketModulator>,
+                      std::shared_ptr<PacketDemodulator>,
+                      double,
+                      double,
+                      double,
+                      double>())
+        .def_property("p", &SlottedALOHA::getTXProb, &SlottedALOHA::setTXProb)
         ;
 }

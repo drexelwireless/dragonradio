@@ -55,7 +55,9 @@ SOURCES := \
     phy/RadioPacketQueue.cc \
     mac/Controller.cc \
     mac/DummyController.cc \
+    mac/MAC.cc \
     mac/SmartController.cc \
+    mac/SlottedALOHA.cc \
     mac/SlottedMAC.cc \
     mac/TDMA.cc \
     net/Net.cc \

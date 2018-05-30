@@ -22,9 +22,9 @@ public:
          std::shared_ptr<PacketModulator> modulator,
          std::shared_ptr<PacketDemodulator> demodulator,
          double bandwidth,
-         size_t nslots,
          double slot_size,
-         double guard_size);
+         double guard_size,
+         size_t nslots);
     virtual ~TDMA();
 
     TDMA(const TDMA&) = delete;
@@ -55,26 +55,17 @@ public:
     void stop(void) override;
 
 private:
-    /** @brief Bandwidth */
-    double bandwidth_;
-
     /** @brief Length of TDMA frame (sec) */
     double frame_size_;
 
     /** @brief The slot schedule */
     slots_type slots_;
 
-    /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
-
     /** @brief Thread running rxWorker */
     std::thread rx_thread_;
 
     /** @brief Thread running txWorker */
     std::thread tx_thread_;
-
-    /** @brief Worker receiving packets */
-    void rxWorker(void);
 
     /** @brief Worker transmitting packets */
     void txWorker(void);

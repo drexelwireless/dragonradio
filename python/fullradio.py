@@ -93,6 +93,9 @@ def main():
     parser.add_argument('--arq', action='store_true', dest='arq',
                         default=False,
                         help='enable ARQ')
+    parser.add_argument('--aloha', action='store_true', dest='aloha',
+                        default=False,
+                        help='use slotted ALOHA MAC')
 
     try:
         args = parser.parse_args()
@@ -223,17 +226,24 @@ def main():
     slot_size = .035
     guard_size = .01
 
-    mac = dragonradio.TDMA(usrp, phy, modulator, demodulator,
-                           args.bandwidth,
-                           len(net),
-                           slot_size,
-                           guard_size)
+    if args.aloha:
+        mac = dragonradio.SlottedALOHA(usrp, phy, modulator, demodulator,
+                                       args.bandwidth,
+                                       slot_size,
+                                       guard_size,
+                                       0.1)
+    else:
+        mac = dragonradio.TDMA(usrp, phy, modulator, demodulator,
+                               args.bandwidth,
+                               slot_size,
+                               guard_size,
+                               len(net))
+
+        mac[net.my_node_id - 1] = True
 
     if args.logfile:
         logger.setAttribute('tx_bandwidth', usrp.tx_rate)
         logger.setAttribute('rx_bandwidth', usrp.rx_rate)
-
-    mac[net.my_node_id - 1] = True
 
     #
     # Start IPython shell if we are in interactive mode
