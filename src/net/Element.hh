@@ -11,8 +11,8 @@
  * push-pull elements.
  */
 
-class In;
-class Out;
+struct In;
+struct Out;
 
 /** @brief Type tag for input ports */
 struct In { using Flip = Out; };

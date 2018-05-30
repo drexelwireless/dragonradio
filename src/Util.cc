@@ -45,7 +45,7 @@ void dummySignalHandler(int)
 
 void makeThreadWakeable(void)
 {
-    struct sigaction sa = {0};
+    struct sigaction sa = {{0}};
 
     sa.sa_handler = dummySignalHandler;
 

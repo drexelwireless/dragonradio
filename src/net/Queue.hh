@@ -37,7 +37,7 @@ public:
         queue_.push_front(std::move(item));
     }
 
-    void splice_front(std::list<T>& items)
+    void splice_front(std::list<T>& items) override
     {
         queue_.splice_front(items);
     }

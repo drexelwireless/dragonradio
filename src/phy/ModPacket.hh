@@ -9,7 +9,7 @@
 /** A modulated data packet to be sent over the radio */
 struct ModPacket
 {
-    ModPacket() : complete(ATOMIC_FLAG_INIT)
+    ModPacket() : complete ATOMIC_FLAG_INIT
     {
         complete.test_and_set(std::memory_order_acquire);
     };

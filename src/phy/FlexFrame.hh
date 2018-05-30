@@ -63,9 +63,6 @@ public:
                         std::function<void(std::unique_ptr<RadioPacket>)> callback) override;
 
     private:
-        /** @brief Associated FlexFrame PHY. */
-        FlexFrame& phy_;
-
         /** @brief The liquid-dsp flexframesync object */
         flexframesync fs_;
     };
