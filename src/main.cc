@@ -34,6 +34,13 @@ int main(int argc, char** argv)
 
     py::module::import("sys").attr("argv") = args;
 
+    // Add the directory where the script lives to sys.path
+    py::exec(R"(
+        import os
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(sys.argv[0])))
+    )");
+
     // Evaluate the Python script
     int ret;
 
