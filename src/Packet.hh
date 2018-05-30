@@ -97,15 +97,23 @@ struct ExtendedHeader {
     Seq ack;
 };
 
-/** @brief A packet received from the network. */
-struct NetPacket : public buffer<unsigned char>
+/** @brief A packet. */
+struct Packet : public buffer<unsigned char>
 {
-    NetPacket(size_t n) : buffer(n) {};
+    Packet() : buffer() {};
+    Packet(size_t n) : buffer(n) {};
+    Packet(unsigned char* data, size_t n) : buffer(data, n) {}
 
-    /** @brief Current hop (should be this node) */
+    /** @brief Current hop */
+    /** If the packet originated in the network, this should be the current
+     * node.
+     */
     NodeId curhop;
 
     /** @brief Next hop */
+    /** If the packet originated from the radio, this should be the current
+     * node.
+     */
     NodeId nexthop;
 
     /** @brief Packet flags. */
@@ -123,6 +131,66 @@ struct NetPacket : public buffer<unsigned char>
     /** @brief Destination */
     NodeId dest;
 
+    /** @brief Set a flag */
+    void setFlag(unsigned f)
+    {
+        flags |= (1 << f);
+    }
+
+    /** @brief Clear a flag */
+    void clearFlag(unsigned f)
+    {
+        flags &= ~(1 << f);
+    }
+
+    /** @brief Test if a flag is set */
+    bool isFlagSet(unsigned f) const
+    {
+        return flags & (1 << f);
+    }
+
+    /** @brief Get extended header */
+    ExtendedHeader &getExtendedHeader(void)
+    {
+        return *reinterpret_cast<ExtendedHeader*>(data());
+    }
+
+    /** @brief Copy internal values to a PHY header */
+    void toHeader(Header &hdr)
+    {
+        ExtendedHeader &ehdr = getExtendedHeader();
+
+        hdr.curhop = curhop;
+        hdr.nexthop = nexthop;
+        hdr.flags = flags;
+        hdr.seq = seq;
+        hdr.data_len = data_len;
+
+        ehdr.src = src;
+        ehdr.dest = dest;
+    }
+
+    /** @brief Copy values from PHY header to packet */
+    void fromHeader(Header &hdr)
+    {
+        ExtendedHeader &ehdr = getExtendedHeader();
+
+        curhop = hdr.curhop;
+        nexthop = hdr.nexthop;
+        flags = hdr.flags;
+        seq = hdr.seq;
+        data_len = std::min(hdr.data_len, static_cast<uint16_t>(sizeof(ExtendedHeader) + size()));
+
+        src = ehdr.src;
+        dest = ehdr.dest;
+    }
+};
+
+/** @brief A packet received from the network. */
+struct NetPacket : public Packet
+{
+    NetPacket(size_t n) : Packet(n) {};
+
     /** @brief CRC */
     crc_scheme check;
 
@@ -137,41 +205,13 @@ struct NetPacket : public buffer<unsigned char>
 
     /** @brief Soft TX gain */
     float g;
-
-    /** @brief Get extended header */
-    ExtendedHeader &getExtendedHeader(void)
-    {
-        return *reinterpret_cast<ExtendedHeader*>(data());
-    }
 };
 
 /** @brief A packet received from the radio. */
-struct RadioPacket : public buffer<unsigned char>
+struct RadioPacket : public Packet
 {
-    RadioPacket() : buffer(), delivered(false), barrier(false) {};
-
-    RadioPacket(unsigned char* data, size_t n) : buffer(data, n), delivered(false), barrier(false) {}
-
-    /** @brief Current hop */
-    NodeId curhop;
-
-    /** @brief Next hop (should be this node) */
-    NodeId nexthop;
-
-    /** @brief Packet flags. */
-    PacketFlags flags;
-
-    /** @brief Packet sequence number */
-    Seq seq;
-
-    /** @brief Length of data portion of the packet */
-    uint16_t data_len;
-
-    /** @brief Source */
-    NodeId src;
-
-    /** @brief Destination */
-    NodeId dest;
+    RadioPacket() : Packet(), delivered(false), barrier(false) {};
+    RadioPacket(unsigned char* data, size_t n) : Packet(data, n), delivered(false), barrier(false) {}
 
     /** @brief Error vector magnitude [dB] */
     float evm;
@@ -186,12 +226,6 @@ struct RadioPacket : public buffer<unsigned char>
      * be processed or removed from a queue except by its creator.
      */
     bool barrier;
-
-    /** @brief Get extended header */
-    ExtendedHeader &getExtendedHeader(void)
-    {
-        return *reinterpret_cast<ExtendedHeader*>(data());
-    }
 };
 
 #endif /* PACKET_HH_ */
