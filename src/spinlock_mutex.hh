@@ -6,7 +6,7 @@
 class spinlock_mutex
 {
 public:
-    spinlock_mutex() : flag_(ATOMIC_FLAG_INIT) {}
+    spinlock_mutex() : flag_ ATOMIC_FLAG_INIT {}
 
     void lock(void)
     {
