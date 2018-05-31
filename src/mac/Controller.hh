@@ -27,6 +27,11 @@ public:
      */
     virtual void received(std::shared_ptr<RadioPacket>&& pkt) = 0;
 
+    /** @brief Called when net_out is disconnected. By default, this disconnects
+     * net_in so that any pending pulls will terminate.
+     */
+    virtual void disconnect(void);
+
     /** @brief Input port for packets coming from the network. */
     NetIn<Pull> net_in;
 
