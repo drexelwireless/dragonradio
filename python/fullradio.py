@@ -1,16 +1,16 @@
 import argparse
 import IPython
+import os
 import signal
 import sys
 
 import dragonradio
+import dragon.radio
 
 def enumHelp(cls):
     return ', '.join(sorted(cls.__members__.keys()))
 
 def main():
-    global done
-
     parser = argparse.ArgumentParser(description='Run full-radio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v', action='store_true', dest='verbose',
@@ -32,7 +32,7 @@ def main():
                         default='flexframe',
                         help='set PHY')
     parser.add_argument('-i', action='store', type=int, dest='node_id',
-                        default=1,
+                        default=None,
                         help='set node ID')
     parser.add_argument('-n', action='store', type=int, dest='num_nodes',
                         default=2,
@@ -97,153 +97,49 @@ def main():
                         default=False,
                         help='use slotted ALOHA MAC')
 
+    # Parse arguments
     try:
         args = parser.parse_args()
     except SystemExit as ex:
         return ex.code
 
-    # See:
-    #   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
-    # Not applying recommended TX/RX gains yet...
-    # args.tx_gain = 23
-    # args.rx_gain = 8
+    # Create the radio object
+    radio = dragon.radio.Radio()
+    radio.loadArgs(args)
 
-    #dragonradio.rc = dragonradio.RadioConfig()
-    dragonradio.rc.verbose = args.verbose
-    dragonradio.rc.soft_txgain = args.soft_tx_gain
-    dragonradio.rc.ms = args.ms
-    dragonradio.rc.check = args.check
-    dragonradio.rc.fec0 = args.fec0
-    dragonradio.rc.fec1 = args.fec1
+    # Set parameters we don't configure from the command line
+    radio.config.min_packet_size = 512
+    radio.config.num_modulation_threads = 2
+    radio.config.num_demodulation_threads = 10
+    radio.config.arq_window = 1024
+    radio.config.slot_size = .035
+    radio.config.guard_size = .01
+    radio.config.aloha_prob = .1
 
-    usrp = dragonradio.USRP(args.addr,
-                            args.frequency,
-                            args.tx_antenna,
-                            args.rx_antenna,
-                            args.tx_gain,
-                            args.rx_gain)
+    # Set up the radio
+    radio.setup()
 
-    # Create the logger *after* we create the USRP so that we have a global
-    # clock
-    if args.logfile:
-        logger = dragonradio.Logger(args.logfile)
-        logger.setAttribute('node_id', args.node_id)
-        logger.setAttribute('frequency', args.frequency)
-        logger.setAttribute('soft_tx_gain', args.soft_tx_gain)
-        logger.setAttribute('tx_gain', args.tx_gain)
-        logger.setAttribute('rx_gain', args.rx_gain)
-        logger.setAttribute('M', args.M)
-        logger.setAttribute('cp_len', args.cp_len)
-        logger.setAttribute('taper_len', args.taper_len)
-        dragonradio.Logger.singleton = logger
-
-    tuntap = dragonradio.TunTap('tap0', False, 1500, '10.10.10.%d', 'c6:ff:ff:ff:ff:%02x', args.node_id)
-
-    net = dragonradio.Net(tuntap, args.node_id)
-
-    for i in range(0, args.num_nodes):
-        net.addNode(i+1)
-
+    # Enable soft gain
     if args.auto_soft_tx_gain:
-        for node in net:
-            net[node].desired_soft_tx_gain = 0.0
-
-    min_packet_size = 512
-
-    #
-    # Configure the PHY
-    #
-    if args.phy == 'flexframe':
-        phy = dragonradio.FlexFrame(min_packet_size)
-    elif args.phy == 'ofdm':
-        phy = dragonradio.OFDM(args.M, args.cp_len, args.taper_len, min_packet_size)
-    elif args.phy == 'multiofdm':
-        phy = dragonradio.MultiOFDM(args.M, args.cp_len, args.taper_len, min_packet_size)
-    else:
-        print('Bad PHY: {}'.format(args.phy), file=sys.stderr)
-        sys.exit(1)
-
-    #
-    # Configure the modulator and demodulator
-    #
-    num_modulation_threads = 2
-    num_demodulation_threads = 10
-
-    modulator = dragonradio.ParallelPacketModulator(net, phy, num_modulation_threads)
-
-    demodulator = dragonradio.ParallelPacketDemodulator(net, phy, num_demodulation_threads)
+        for node_id in radio.net:
+            radio.net[node_id].desired_soft_tx_gain = 0.0
 
     # Setting the demodulator's ordered property to True forces packets to be
     # demodulated in order. This increases latency.
-    #demodulator.ordered = True
-
-    #
-    # Configure the controller
-    #
-    if args.arq:
-        controller = dragonradio.SmartController(net, 1024, 1024)
-    else:
-        controller = dragonradio.DummyController(net)
-
-    #
-    # Configure packet path from demodulator to tun/tap
-    # Right now, the path is direct:
-    #   demodulator -> controller -> tun/tap
-    #
-    demodulator.source >> controller.radio_in
-
-    controller.radio_out >> tuntap.sink
-
-    #
-    # Configure packet path from tun/tap to the modulator
-    # The path is:
-    #   tun/tap -> NetFilter -> NetQueue -> controller -> modulator
-    #
-    netfilter = dragonradio.NetFilter(net)
-
-    netq = dragonradio.NetQueue()
-
-    tuntap.source >> netfilter.input
-
-    netfilter.output >> netq.push
-
-    netq.pop >> controller.net_in
-
-    controller.net_out >> modulator.sink
-
-    #
-    # If we are using a SmartController, tell it that the network queue is a
-    # splice queue so that it can splice packets at the front of the queue.
-    #
-    if args.arq:
-        controller.splice_queue = netq
+    #radio.demodulator.ordered = True
 
     #
     # Configure the MAC
     #
-
-    # slot size *including* guard (seconds)
-    slot_size = .035
-    guard_size = .01
-
     if args.aloha:
-        mac = dragonradio.SlottedALOHA(usrp, phy, modulator, demodulator,
-                                       args.bandwidth,
-                                       slot_size,
-                                       guard_size,
-                                       0.1)
+        radio.configureALOHA()
     else:
-        mac = dragonradio.TDMA(usrp, phy, modulator, demodulator,
-                               args.bandwidth,
-                               slot_size,
-                               guard_size,
-                               len(net))
+        for i in range(0, args.num_nodes):
+            radio.net.addNode(i+1)
 
-        mac[net.my_node_id - 1] = True
+        radio.configureTDMA(len(radio.net))
 
-    if args.logfile:
-        logger.setAttribute('tx_bandwidth', usrp.tx_rate)
-        logger.setAttribute('rx_bandwidth', usrp.rx_rate)
+        radio.mac[radio.node_id - 1] = True
 
     #
     # Start IPython shell if we are in interactive mode
@@ -255,15 +151,6 @@ def main():
     # Wait for Ctrl-C
     #
     signal.sigwait([signal.SIGINT])
-
-    # We don't need to explicitly destroy these objects
-    if False:
-        del mac
-        del phy
-        del modulator
-        del demodulator
-        del net
-        del usrp
 
     return 0
 
