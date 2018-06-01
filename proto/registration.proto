@@ -1,0 +1,89 @@
+// uses V3.0 of the Protocol Buffer Specification
+syntax = "proto3";
+package sc2.reg;
+
+//=================================================================================================
+//
+// SC2 Phase 2 CIRN Interaction Language Registration Messages
+//
+//=================================================================================================
+
+// ------------------------------------------------------------------------------------------------
+// Client -> Server Messages
+//
+
+/// Top level wrapper message for all Client -> Server messages
+message TalkToServer
+{
+    oneof payload
+    {
+        /// See Register documentation
+        Register register = 1;
+
+        /// See Keepalive documentation
+        Keepalive keepalive = 2;
+
+        /// See Leave documentation
+        Leave leave = 3;
+    }
+}
+
+/// The Register message includes the sender's IP address and is used to inform the server that
+// a new gateway would like to join the Collaboration Channel
+message Register
+{
+    uint32 my_ip_address = 1;
+}
+
+/// The Keepalive message is used to tell the server that a gateway is still active. It includes
+// The client-specific Nonce provided by the server when the client gateway first registered
+message Keepalive
+{
+    int32 my_nonce = 1;
+}
+
+/// The Leave message is used to tell the server that a gateway is leaving the Collaboration 
+// Channel. It includes the client-specific Nonce provided by the server when the client gateway
+// first registered
+message Leave
+{
+    int32 my_nonce = 1;
+}
+
+// ------------------------------------------------------------------------------------------------
+// Server -> Client Messages
+//
+
+/// Top level wrapper message for all Server -> Client messages
+message TellClient
+{
+    oneof payload
+    {
+        /// See Inform documentation
+        Inform inform = 1;
+
+        /// See Notify documentation
+        Notify notify = 2;
+    }
+}
+
+/// Message sent in response to a Register message that tells the client their unique ID, the
+// maximum keepalive count, and the list of known IP addresses in the Collaboration Channel
+message Inform
+{
+    /// unique ID per client
+    int32 client_nonce = 1;
+
+    /// maximum time in seconds between keepalives before a client is considered dead
+    float keepalive_seconds = 2;
+
+    /// list of ip addresses in the collaboration channel
+    repeated uint32 neighbors = 3;
+}
+
+/// Messages sent in response to a node joining or leaving the network
+message Notify
+{
+    /// list of ip addresses in the collaboration channel
+    repeated uint32 neighbors = 1;
+}

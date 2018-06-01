@@ -2,7 +2,7 @@
 # Note: install all dependencies system-wide for this makefile to work
 ##################################################
 
-TARGETS = full-radio flexframedemod
+TARGETS = full-radio flexframedemod $(GENERATED)
 
 RM       = rm -f
 RMRF     = rm -rf
@@ -34,6 +34,11 @@ OBJDIR = obj
 ALLSOURCES := $(shell find $(SRCDIR) -name '*.cc')
 
 ALLINCLUDES := $(shell find  $(SRCDIR) -name '*.hh')
+
+GENERATED += \
+	python/dragon/dragonradio_pb2.py \
+	python/sc2/cil_pb2.py \
+	python/sc2/registration_pb2.py
 
 SOURCES := \
     Clock.cc \
@@ -85,6 +90,12 @@ flexframedemod : util/flexframedemod.cc
 	$(CXX) $< $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LIBS) -o $@
 
 -include $(patsubst %.cc,$(OBJDIR)/%.dep,$(SOURCES))
+
+python/sc2/%_pb2.py : proto/%.proto
+	protoc -I proto --python_out=$(dir $@) $(notdir $<)
+
+python/dragon/%_pb2.py : proto/%.proto
+	protoc -I proto --python_out=$(dir $@) $(notdir $<)
 
 .PHONY : html
 html : docs/html/index.html

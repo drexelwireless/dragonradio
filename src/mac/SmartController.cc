@@ -113,6 +113,9 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     node.is_gateway = it->hello.is_gateway;
 
                     dprintf("Received HELLO from %u\n", (unsigned) pkt->curhop);
+
+                    if (rc->verbose)
+                        printf("Discovered neighbor %u\n", (unsigned) pkt->curhop);
                 }
                 break;
 
