@@ -267,6 +267,12 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("__iter__", [](Net &net) {
             return py::make_key_iterator(net.begin(), net.end());
          }, py::keep_alive<0, 1>())
+        .def("keys", [](Net &net) {
+            return py::make_key_iterator(net.begin(), net.end());
+         }, py::keep_alive<0, 1>())
+        .def("items", [](Net &net) {
+            return py::make_iterator(net.begin(), net.end());
+         }, py::keep_alive<0, 1>(), py::return_value_policy::reference_internal)
         .def_property_readonly("my_node_id", &Net::getMyNodeId)
         .def("addNode", &Net::addNode, py::return_value_policy::reference_internal)
         ;
