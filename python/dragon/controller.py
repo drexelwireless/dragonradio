@@ -1,7 +1,9 @@
 import asyncio
 import logging
 import netifaces
+import os
 import random
+import signal
 import subprocess
 import sys
 
@@ -22,6 +24,7 @@ class Controller(TCPProtoServer):
         self.state = internal.BOOTING
         self.started_discovery = False
         self.nodes = set()
+        self.dumpcap_procs = []
 
     def setupRadio(self, start=False):
         # We cannot do this in __init__ because the controller is created
@@ -38,6 +41,11 @@ class Controller(TCPProtoServer):
         # Create the radio object
         radio = dragon.radio.Radio(self.config)
         self.radio = radio
+
+        # Capture interfaces
+        self.dumpcap('col0')
+        self.dumpcap('tap0')
+        self.dumpcap('tr0')
 
         # Add us as a node
         radio.net.addNode(radio.node_id)
@@ -88,6 +96,12 @@ class Controller(TCPProtoServer):
     def stopRadio(self):
         self.state = internal.STOPPING
 
+        for p in self.dumpcap_procs:
+            try:
+                p.kill()
+            except:
+                logger.exception('Could not kill PID %d', pid)
+
         for node_id in list(self.nodes):
             self.removeNode(node_id)
 
@@ -111,6 +125,13 @@ class Controller(TCPProtoServer):
     async def dummy(self):
         while True:
             await asyncio.sleep(1)
+
+    def dumpcap(self, iface):
+        if iface in netifaces.interfaces():
+            print('dumpcap -i {iface} -w - -q | xz >{logdir}/{iface}.pcapng.xz'.format(iface=iface, logdir=self.config.logdir))
+            p = subprocess.Popen('dumpcap -i {iface} -w - -q | xz >{logdir}/{iface}.pcapng.xz'.format(iface=iface, logdir=self.config.logdir),
+                                 stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
+            self.dumpcap_procs.append(p)
 
     def addNode(self, node_id):
         if node_id != self.radio.node_id and node_id not in self.nodes:
