@@ -3,6 +3,7 @@ from concurrent.futures import CancelledError
 from functools import partial, wraps
 import inspect
 import logging
+from pprint import pformat
 import re
 import struct
 import zmq.asyncio
@@ -90,7 +91,7 @@ class ZMQProtoServer(ProtoServer):
             while True:
                 raw = await listen_sock.recv()
                 msg = cls.FromString(raw)
-                logger.debug('Received message: {}'.format(msg))
+                logger.debug('Received message: {}'.format(pformat(msg)))
 
                 try:
                     f = self.handlers[cls.__name__].message_handlers[msg.WhichOneof('payload')]
@@ -148,7 +149,7 @@ def send(cls):
 
             await f(self, msg, *args, **kwargs)
 
-            logger.debug('Sending message {}'.format(msg))
+            logger.debug('Sending message {}'.format(pformat(msg)))
             self.send(msg)
         return wrapper
 
