@@ -86,6 +86,10 @@ private:
     /** @brief Log worker. */
     void worker(void);
 
+    H5::Attribute createOrOpenAttribute(const std::string &name,
+                                        const H5::DataType &data_type,
+                                        const H5::DataSpace &data_space);
+
     void logSlot_(std::shared_ptr<IQBuf> buf);
     void logRecv_(const Clock::time_point& t,
                   uint32_t start_samples,

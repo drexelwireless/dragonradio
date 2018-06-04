@@ -174,7 +174,7 @@ void Logger::setAttribute(const std::string& name, const std::string& val)
 {
     H5::StrType   h5_type(H5::PredType::C_S1, H5T_VARIABLE);
     H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = file_.createAttribute(name, h5_type, attr_space);
+    H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, val);
 }
@@ -183,7 +183,7 @@ void Logger::setAttribute(const std::string& name, uint8_t val)
 {
     H5::IntType   h5_type(H5::PredType::NATIVE_UINT8);
     H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = file_.createAttribute(name, h5_type, attr_space);
+    H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, &val);
 }
@@ -192,7 +192,7 @@ void Logger::setAttribute(const std::string& name, uint32_t val)
 {
     H5::IntType   h5_type(H5::PredType::NATIVE_UINT32);
     H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = file_.createAttribute(name, h5_type, attr_space);
+    H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, &val);
 }
@@ -201,7 +201,7 @@ void Logger::setAttribute(const std::string& name, double val)
 {
     H5::FloatType h5_type(H5::PredType::NATIVE_DOUBLE);
     H5::DataSpace attr_space(H5S_SCALAR);
-    H5::Attribute att = file_.createAttribute(name, h5_type, attr_space);
+    H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, &val);
 }
@@ -265,6 +265,16 @@ void Logger::worker(void)
 
         entry();
     }
+}
+
+H5::Attribute Logger::createOrOpenAttribute(const std::string &name,
+                                            const H5::DataType &data_type,
+                                            const H5::DataSpace &data_space)
+{
+    if (file_.attrExists(name))
+        return file_.openAttribute(name);
+    else
+        return file_.createAttribute(name, data_type, data_space);
 }
 
 void Logger::logSlot_(std::shared_ptr<IQBuf> buf)
