@@ -12,8 +12,9 @@ ExtensibleDataSet::ExtensibleDataSet(const H5::CommonFG& loc, const std::string&
     capacity_(0)
 {
     hsize_t               dim[] = { GRANULARITY };
+    hsize_t               maxdims[] = { H5S_UNLIMITED };
     hsize_t               chunk_dims[] = { CHUNK_GRANULARITY };
-    H5::DataSpace         space(1, dim);
+    H5::DataSpace         space(1, dim, maxdims);
     H5::DSetCreatPropList plist;
 
     plist.setChunk(1, chunk_dims);
