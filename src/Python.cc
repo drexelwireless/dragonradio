@@ -137,7 +137,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init())
         .def_readwrite("verbose", &RadioConfig::verbose)
         .def_readwrite("is_gateway", &RadioConfig::is_gateway)
-        .def_readwrite("soft_txgain", &RadioConfig::soft_txgain)
+        .def_readwrite("soft_tx_gain", &RadioConfig::soft_tx_gain)
         .def_readwrite("ms", &RadioConfig::ms)
         .def_readwrite("check", &RadioConfig::check)
         .def_readwrite("fec0", &RadioConfig::fec0)

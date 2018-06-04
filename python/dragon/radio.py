@@ -60,7 +60,7 @@ class Radio(object):
 
         # Copy configuration settings to the C++ RadioConfig object
         dragonradio.rc.verbose = self.config.verbose
-        dragonradio.rc.soft_txgain = self.config.soft_tx_gain
+        dragonradio.rc.soft_tx_gain = self.config.soft_tx_gain
         dragonradio.rc.ms = self.config.ms
         dragonradio.rc.check = self.config.check
         dragonradio.rc.fec0 = self.config.fec0

@@ -22,7 +22,7 @@ public:
     bool is_gateway;
 
     /** @brief Default soft TX gain (dB) */
-    double soft_txgain;
+    double soft_tx_gain;
 
     /** @brief Default modulation scheme */
     modulation_scheme ms;

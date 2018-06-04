@@ -27,7 +27,7 @@ Node::Node(NodeId id) :
     ack_delay(100e-3),
     retransmission_delay(500e-3)
 {
-    setSoftTXGain(rc->soft_txgain);
+    setSoftTXGain(rc->soft_tx_gain);
 }
 
 Node::~Node()
