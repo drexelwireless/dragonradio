@@ -1,6 +1,7 @@
 import argparse
 import IPython
 import os
+from pprint import pprint
 import signal
 import sys
 
@@ -8,12 +9,11 @@ import dragonradio
 import dragon.radio
 
 def main():
+    config = dragon.radio.Config()
+
     parser = argparse.ArgumentParser(description='Run full-radio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    dragon.radio.addArguments(parser)
-    parser.add_argument('-l', action='store', dest='logfile',
-                        default=None,
-                        help='log to file')
+    config.addArguments(parser)
     parser.add_argument('-i', action='store', type=int, dest='node_id',
                         default=None,
                         help='set node ID')
@@ -36,21 +36,24 @@ def main():
     except SystemExit as ex:
         return ex.code
 
-    # Create the radio object
-    radio = dragon.radio.Radio()
-    radio.loadArgs(args)
+    if args.log_directory:
+        args.log_sources = ['log_slots',
+                            'log_recv_packets', 'log_recv_data',
+                            'log_sent_packets', 'log_sent_data']
+
+    config.loadArgs(args)
 
     # Set parameters we don't configure from the command line
-    radio.config.min_packet_size = 512
-    radio.config.num_modulation_threads = 2
-    radio.config.num_demodulation_threads = 10
-    radio.config.arq_window = 1024
-    radio.config.slot_size = .035
-    radio.config.guard_size = .01
-    radio.config.aloha_prob = .1
+    config.min_packet_size = 512
+    config.num_modulation_threads = 2
+    config.num_demodulation_threads = 10
+    config.arq_window = 1024
+    config.slot_size = .035
+    config.guard_size = .01
+    config.aloha_prob = .1
 
-    # Set up the radio
-    radio.setup()
+    # Create the radio object
+    radio = dragon.radio.Radio(config)
 
     # Enable soft gain
     if args.auto_soft_tx_gain:

@@ -17,10 +17,8 @@ logger = logging.getLogger('controller')
 
 @handler(internal.Request)
 class Controller(TCPProtoServer):
-    def __init__(self, config_args, config_path, colosseum_ini_path, *args, **kwargs):
-        self.config_args = config_args
-        self.config_path = config_path
-        self.colosseum_ini_path = colosseum_ini_path
+    def __init__(self, config):
+        self.config = config
         self.state = internal.BOOTING
         self.started_discovery = False
         self.nodes = set()
@@ -30,22 +28,16 @@ class Controller(TCPProtoServer):
         # *before* we daemonize, and loop isn't valid after we fork
         self.loop = asyncio.get_event_loop()
 
-        # Create the radio object
-        radio = dragon.radio.Radio()
-        self.radio = radio
-        radio.loadConfig(self.config_path)
-        radio.loadColosseumIni(self.colosseum_ini_path)
-        radio.loadArgs(self.config_args)
-
         # Set center frequency and bandwidth. For now, we just use 5MHz, centered
-        if hasattr(radio.config, 'center_frequency'):
-            radio.config.frequency = radio.config.center_frequency
+        if hasattr(self.config, 'center_frequency'):
+            self.config.frequency = self.config.center_frequency
         else:
-            logger.warning('Center frequency not specified; using %f', radio.config.frequency)
-        radio.config.bandwidth = 5e6
+            logger.warning('Center frequency not specified; using %f', self.config.frequency)
+        self.config.bandwidth = 5e6
 
-        # Set up the radio
-        radio.setup()
+        # Create the radio object
+        radio = dragon.radio.Radio(self.config)
+        self.radio = radio
 
         # Add us as a node
         radio.net.addNode(radio.node_id)
@@ -53,17 +45,17 @@ class Controller(TCPProtoServer):
         # See if we are a gateway, and if so, start the collaboration agent
         self.agent = None
 
-        if radio.config.collab_iface in netifaces.interfaces():
+        if self.config.collab_iface in netifaces.interfaces():
             radio.net[radio.node_id].is_gateway = True
-            collab_ip = netifaces.ifaddresses(radio.config.collab_iface)[netifaces.AF_INET][0]['addr']
+            collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
 
             try:
                 self.agent = CollabAgent(loop=self.loop,
                                          local_ip=collab_ip,
-                                         server_host=radio.config.collab_server_ip,
-                                         server_port=radio.config.collab_server_port,
-                                         client_port=radio.config.collab_client_port,
-                                         peer_port=radio.config.collab_peer_port)
+                                         server_host=self.config.collab_server_ip,
+                                         server_port=self.config.collab_server_port,
+                                         client_port=self.config.collab_client_port,
+                                         peer_port=self.config.collab_peer_port)
             except:
                 logger.exception('Could not create collaboration agent')
 
@@ -157,7 +149,7 @@ class Controller(TCPProtoServer):
         while True:
             delta = random.randint(1, 5)
 
-            if loop.time() + delta > t + radio.config.neighbor_discovery_period:
+            if loop.time() + delta > t + self.config.neighbor_discovery_period:
                 break
 
             await asyncio.sleep(delta)
