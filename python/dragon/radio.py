@@ -134,7 +134,6 @@ class Radio(object):
     def __init__(self):
         self.config = Config()
         self.logger = None
-        self.logger_finished = False
 
     def loadConfig(self, path):
         try:
@@ -291,7 +290,10 @@ class Radio(object):
                                             self.config.slot_size,
                                             self.config.guard_size,
                                             self.config.aloha_prob)
-        self.finishLogger()
+
+        if self.logger:
+            self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)
+            self.logger.setAttribute('rx_bandwidth', self.usrp.rx_rate)
 
     def configureTDMA(self, nslots):
         self.mac = dragonradio.TDMA(self.usrp,
@@ -302,10 +304,7 @@ class Radio(object):
                                     self.config.slot_size,
                                     self.config.guard_size,
                                     nslots)
-        self.finishLogger()
 
-    def finishLogger(self):
-        if self.logger and not self.logger_finished:
+        if self.logger:
             self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)
             self.logger.setAttribute('rx_bandwidth', self.usrp.rx_rate)
-            self.logger_finished = True
