@@ -69,7 +69,7 @@ TunTap::TunTap(const std::string& tapdev,
             fprintf(stderr, "Error configuring mac address.\n");
 
         // Assign IP address
-        if (sys(("ifconfig %s " + ip_fmt).c_str(), tapdev_.c_str(), last_octet) < 0)
+        if (sys(("ifconfig %s " + ip_fmt + " netmask 255.255.255.0").c_str(), tapdev_.c_str(), last_octet) < 0)
             fprintf(stderr, "system() - ifconfig\n");
 
         // Bring up the interface in case it's not up yet
