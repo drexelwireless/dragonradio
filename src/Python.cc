@@ -32,6 +32,13 @@ std::shared_ptr<Logger> mkLogger(const std::string& path)
     return log;
 }
 
+void addLoggerSource(py::class_<Logger, std::shared_ptr<Logger>>& cls, const std::string &name, Logger::Source src)
+{
+    cls.def_property(name.c_str(),
+        [src](std::shared_ptr<Logger> log) { return log->getCollectSource(src); },
+        [src](std::shared_ptr<Logger> log, bool collect) { log->setCollectSource(src, collect); });
+}
+
 template <class D, class P, class T>
 struct PortWrapper
 {
@@ -121,7 +128,9 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     ms.export_values();
 
     // Export class Logger to Python
-    py::class_<Logger, std::shared_ptr<Logger>>(m, "Logger")
+    py::class_<Logger, std::shared_ptr<Logger>> loggerCls(m, "Logger");
+
+    loggerCls
         .def_property_static("singleton",
             [](py::object) { return logger; },
             [](py::object, std::shared_ptr<Logger> log) { return logger = log; })
@@ -131,6 +140,12 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("setAttribute", py::overload_cast<const std::string&, uint32_t>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, double>(&Logger::setAttribute))
         ;
+
+    addLoggerSource(loggerCls, "log_slots", Logger::kSlots);
+    addLoggerSource(loggerCls, "log_recv_packets", Logger::kRecvPackets);
+    addLoggerSource(loggerCls, "log_recv_data", Logger::kRecvData);
+    addLoggerSource(loggerCls, "log_sent_packets", Logger::kSentPackets);
+    addLoggerSource(loggerCls, "log_sent_data", Logger::kSentData);
 
     // Export class RadioConfig to Python
     py::class_<RadioConfig, std::shared_ptr<RadioConfig>>(m, "RadioConfig")

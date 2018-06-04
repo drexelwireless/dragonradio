@@ -76,6 +76,7 @@ struct PacketSendEntry {
 Logger::Logger(Clock::time_point t_start) :
   t_start_(t_start),
   t_last_slot_((time_t) 0),
+  sources_(0),
   done_(false)
 {
 }
@@ -170,6 +171,19 @@ void Logger::open(const std::string& filename)
     worker_thread_ = std::thread(&Logger::worker, this);
 }
 
+bool Logger::getCollectSource(Source src)
+{
+    return sources_ & (1 << src);
+}
+
+void Logger::setCollectSource(Source src, bool collect)
+{
+    if (collect)
+        sources_ |= 1 << src;
+    else
+        sources_ &= ~(1 << src);
+}
+
 void Logger::setAttribute(const std::string& name, const std::string& val)
 {
     H5::StrType   h5_type(H5::PredType::C_S1, H5T_VARIABLE);
@@ -208,11 +222,13 @@ void Logger::setAttribute(const std::string& name, double val)
 
 void Logger::logSlot(std::shared_ptr<IQBuf> buf)
 {
-    // Only log slots we haven't logged before. We should never be asked to log
-    // a slot that is older than the youngest slot we've ever logged.
-    if (buf->timestamp > t_last_slot_) {
-        log_q_.emplace([=](){ logSlot_(buf); });
-        t_last_slot_ = buf->timestamp;
+    if (getCollectSource(kSlots)) {
+        // Only log slots we haven't logged before. We should never be asked to log
+        // a slot that is older than the youngest slot we've ever logged.
+        if (buf->timestamp > t_last_slot_) {
+            log_q_.emplace([=](){ logSlot_(buf); });
+            t_last_slot_ = buf->timestamp;
+        }
     }
 }
 
@@ -232,7 +248,8 @@ void Logger::logRecv(const Clock::time_point& t,
                      float rssi,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
-    log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, buf); });
+    if (getCollectSource(kRecvPackets))
+        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
@@ -241,7 +258,8 @@ void Logger::logSend(const Clock::time_point& t,
                      NodeId dest,
                      std::shared_ptr<IQBuf> buf)
 {
-    log_q_.emplace([=](){ logSend_(t, hdr, src, dest, buf); });
+    if (getCollectSource(kSentPackets))
+        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, buf); });
 }
 
 void Logger::stop(void)
@@ -322,8 +340,13 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.ms = ms;
     entry.evm = evm;
     entry.rssi = rssi;
-    entry.iq_data.p = &(*buf)[0];
-    entry.iq_data.len = buf->size();
+    if (getCollectSource(kRecvData)) {
+        entry.iq_data.p = buf->data();
+        entry.iq_data.len = buf->size();
+    } else {
+        entry.iq_data.p = nullptr;
+        entry.iq_data.len = 0;
+    }
 
     recv_->write(&entry, 1);
 }
@@ -342,8 +365,13 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.seq = hdr.seq;
     entry.src = src;
     entry.dest = dest;
-    entry.iq_data.p = buf->data();
-    entry.iq_data.len = buf->size();
+    if (getCollectSource(kSentData)) {
+        entry.iq_data.p = buf->data();
+        entry.iq_data.len = buf->size();
+    } else {
+        entry.iq_data.p = nullptr;
+        entry.iq_data.len = 0;
+    }
 
     send_->write(&entry, 1);
 }

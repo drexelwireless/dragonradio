@@ -25,6 +25,14 @@ extern std::shared_ptr<Logger> logger;
 
 class Logger {
 public:
+    enum Source {
+        kSlots = 0,
+        kRecvPackets = 1,
+        kRecvData = 2,
+        kSentPackets = 3,
+        kSentData = 4
+    };
+
     Logger(Clock::time_point t_start);
     ~Logger();
 
@@ -37,12 +45,16 @@ public:
 
     void open(const std::string& filename);
 
+    bool getCollectSource(Source src);
+    void setCollectSource(Source src, bool collect);
+
     void setAttribute(const std::string& name, const std::string& val);
     void setAttribute(const std::string& name, uint8_t val);
     void setAttribute(const std::string& name, uint32_t val);
     void setAttribute(const std::string& name, double val);
 
     void logSlot(std::shared_ptr<IQBuf> buf);
+
     void logRecv(const Clock::time_point& t,
                  uint32_t start_samples,
                  uint32_t end_samples,
@@ -58,6 +70,7 @@ public:
                  float evm,
                  float rssi,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
+
      void logSend(const Clock::time_point& t,
                   const Header& hdr,
                   NodeId src,
@@ -73,6 +86,9 @@ private:
     std::unique_ptr<ExtensibleDataSet> send_;
     Clock::time_point t_start_;
     Clock::time_point t_last_slot_;
+
+    /** @brief Data sources we collect. */
+    uint32_t sources_;
 
     /** @brief Flag indicating we should terminate the logger. */
     bool done_;

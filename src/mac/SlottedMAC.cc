@@ -98,7 +98,7 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
 
     if (!modBuf.empty()) {
         for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
-            if (logger) {
+            if (logger && logger->getCollectSource(Logger::kSentPackets)) {
                 Header hdr;
 
                 hdr.curhop = (*it)->pkt->curhop;
