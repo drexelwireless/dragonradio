@@ -40,23 +40,14 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         NodeId src_id = ntohl(ip_src.s_addr) & 0xff;
         NodeId dest_id = ntohl(ip_dst.s_addr) & 0xff;
 
-        Node& nexthop = (*net_)[nexthop_id];
-
+        // NOTE: We are only responsible for setting hop/src/dest information
+        // here. The pkt->data_len field is set in TunTap when the packet is
+        // read from the network, and the sequence number and modulation-related
+        // fields are set by the controller
         pkt->curhop = curhop_id;
         pkt->nexthop = nexthop_id;
-        pkt->flags = 0;
-        pkt->seq = nexthop.seq++;
-        // Nb pkt->data_len is set in TunTap when the packet is read from the
-        // network.
-
         pkt->src = src_id;
         pkt->dest = dest_id;
-
-        pkt->check = nexthop.check;
-        pkt->fec0 = nexthop.fec0;
-        pkt->fec1 = nexthop.fec1;
-        pkt->ms = nexthop.ms;
-        pkt->g = nexthop.g;
 
         return true;
     } else

@@ -417,6 +417,20 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         if (pkt->data_len == 0)
             return true;
 
+        // Set the packet sequence number if it doesn't yet have one.
+        if (!pkt->isInternalFlagSet(kHasSeq)) {
+            Node& nexthop = (*net_)[pkt->nexthop];
+
+            pkt->seq = nexthop.seq++;
+            pkt->check = nexthop.check;
+            pkt->fec0 = nexthop.fec0;
+            pkt->fec1 = nexthop.fec1;
+            pkt->ms = nexthop.ms;
+            pkt->g = nexthop.g;
+
+            pkt->setInternalFlag(kHasSeq);
+        }
+
         // If this packet comes before our window, drop it. It could have snuck
         // in as a retransmission just before the send window moved forward.
         if (pkt->seq < unack)

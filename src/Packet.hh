@@ -31,6 +31,13 @@ enum {
 
 typedef uint16_t PacketFlags;
 
+enum {
+    /** @brief Set if the packet has an assigned sequence number */
+    kHasSeq = 0
+};
+
+typedef uint16_t InternalFlags;
+
 struct Seq {
     using uint_type = uint16_t;
 
@@ -68,6 +75,11 @@ struct Seq {
     Seq operator -(int i) { return seq_ - i; }
 
     operator uint_type() const { return seq_; }
+
+    static uint_type max(void)
+    {
+        return std::numeric_limits<uint_type>::max();
+    }
 
     uint_type seq_;
 };
@@ -156,9 +168,9 @@ struct Packet : public buffer<unsigned char>
         ControlMsg ctrl_;
     };
 
-    Packet() : buffer() {};
-    Packet(size_t n) : buffer(n) {};
-    Packet(unsigned char* data, size_t n) : buffer(data, n) {}
+    Packet() : buffer(), flags(0), seq(Seq::max()), internal_flags(0) {};
+    Packet(size_t n) : buffer(n), flags(0), seq(Seq::max()), internal_flags(0) {};
+    Packet(unsigned char* data, size_t n) : buffer(data, n), flags(0), seq(Seq::max()), internal_flags(0) {}
 
     /** @brief Current hop */
     /** If the packet originated in the network, this should be the current
@@ -203,6 +215,27 @@ struct Packet : public buffer<unsigned char>
     bool isFlagSet(unsigned f) const
     {
         return flags & (1 << f);
+    }
+
+    /** @brief Internal flags. */
+    InternalFlags internal_flags;
+
+    /** @brief Set a flag */
+    void setInternalFlag(unsigned f)
+    {
+        internal_flags |= (1 << f);
+    }
+
+    /** @brief Clear a flag */
+    void clearInternalFlag(unsigned f)
+    {
+        internal_flags &= ~(1 << f);
+    }
+
+    /** @brief Test if a flag is set */
+    bool isInternalFlagSet(unsigned f) const
+    {
+        return internal_flags & (1 << f);
     }
 
     /** @brief Get extended header */
