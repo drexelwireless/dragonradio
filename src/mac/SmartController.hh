@@ -21,6 +21,7 @@ struct SendWindow : public TimerQueue::Timer {
       , controller(controller)
       , unack(0)
       , max(0)
+      , new_window(true)
       , win(1)
       , maxwin(maxwin)
       , pkts(maxwin)
@@ -39,10 +40,13 @@ struct SendWindow : public TimerQueue::Timer {
     /** INVARIANT: max < unack + win */
     std::atomic<Seq> max;
 
+    /** @brief Is this a new window? */
+    bool new_window;
+
     /** @brief Send window size */
     Seq::uint_type win;
 
-    /** @brief Maximumend window size */
+    /** @brief Maximum window size */
     Seq::uint_type maxwin;
 
     /** @brief Pending packets we can't send because our window isn't large enough */
@@ -204,7 +208,7 @@ protected:
     RecvWindow *maybeGetReceiveWindow(NodeId node_id);
 
     /** @brief Get a node's receive window */
-    RecvWindow &getReceiveWindow(NodeId node_id, Seq seq);
+    RecvWindow &getReceiveWindow(NodeId node_id, Seq seq, bool isSYN);
 };
 
 #endif /* SMARTCONTROLLER_H_ */

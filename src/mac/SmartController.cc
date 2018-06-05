@@ -235,7 +235,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 #endif
 
     // Fill our receive window
-    RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq);
+    RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->isFlagSet(kSYN));
     std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
     // Start the ACK timer if it is not already running. Even if this is a
@@ -444,6 +444,13 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             pkt->g = nexthop.g;
 
             pkt->setInternalFlag(kHasSeq);
+
+            // If this is the first packet we are sending to the destination,
+            // set its SYN flag
+            if (sendw.new_window) {
+                pkt->setFlag(kSYN);
+                sendw.new_window = false;
+            }
         }
 
         // If this packet comes before our window, drop it. It could have snuck
@@ -501,20 +508,30 @@ RecvWindow *SmartController::maybeGetReceiveWindow(NodeId node_id)
         return nullptr;
 }
 
-RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq)
+RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSYN)
 {
     std::lock_guard<spinlock_mutex> lock(recv_mutex_);
     auto                            it = recv_.find(node_id);
 
-    if (it != recv_.end())
-        return it->second;
-    else {
-        RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
-                                          std::forward_as_tuple(node_id),
-                                          std::forward_as_tuple(node_id, *this, recvwin_)).first->second;
+    // XXX If we have a receive window for this source use it. The exception is
+    // when we see a SYN packet that is outside the receive window. In that
+    // case, assume the sender restarted and re-create the receive window. This
+    // could cause an issue if we see a re-transmission of the first packet
+    // after the sender has advanced its window. This should not happen because
+    // the sender will only open up its window if it has seen its SYN packet
+    // ACK'ed.
+    if (it != recv_.end()) {
+        RecvWindow &recvw = it->second;
 
-        recvw.ack = recvw.max = seq;
-
-        return recvw;
+        if (!isSYN || (seq < recvw.max - recvw.win || seq >= recvw.ack + recvw.win))
+            return recvw;
     }
+
+    RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
+                                      std::forward_as_tuple(node_id),
+                                      std::forward_as_tuple(node_id, *this, recvwin_)).first->second;
+
+    recvw.ack = recvw.max = seq;
+
+    return recvw;
 }

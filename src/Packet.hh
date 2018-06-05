@@ -16,8 +16,11 @@
 typedef uint8_t NodeId;
 
 enum {
+    /** @brief Set if the packet is the first in a new connection */
+    kSYN = 0,
+
     /** @brief Set if the packet is ACKing */
-    kACK = 0,
+    kACK,
 
     /** @brief Set if the packet is NAKing */
     kNAK,
