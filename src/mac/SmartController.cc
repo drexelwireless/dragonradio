@@ -51,7 +51,7 @@ bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
         ExtendedHeader                  &ehdr = pkt->getExtendedHeader();
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
-        // The poacket we are ACK'ing had better be no more than 1 more than the
+        // The packet we are ACK'ing had better be no more than 1 more than the
         // max sequence number we've received.
         assert(recvw.ack <= recvw.max + 1);
 
@@ -148,7 +148,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // data! We protected against this case in the following loop.
                 //assert(ehdr.ack <= sendw.max + 1);
 
-                // Move the send window along. It's possibl the sender sends an
+                // Move the send window along. It's possible the sender sends an
                 // ACK for something we haven't sent, so we must guard against
                 // that here as well
                 for (; sendw.unack < ehdr.ack && sendw.unack <= sendw.max; ++sendw.unack)
