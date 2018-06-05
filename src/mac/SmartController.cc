@@ -36,6 +36,7 @@ SmartController::~SmartController()
 
 bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
 {
+get_packet:
     // Get a packet to send. We look for a packet on our internal queue first.
     if (!getPacket(pkt))
         return false;
@@ -77,6 +78,13 @@ bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
     if (pkt->data_len != 0) {
         SendWindow                      &sendw = getSendWindow(nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        // It is possible that the send window shifts after we pull a packet
+        // but before we get to this point. For example, an ACK could be
+        // received in between the time we release the lock on the receive
+        // window and this point. If that happens, we get another packet
+        if (pkt->seq < sendw.unack)
+            goto get_packet;
 
         // This asserts that the sequence number of the packet we are sending is
         // in our send window.
