@@ -122,6 +122,10 @@ class ZMQProtoClient(object):
         self.ctx = zmq.asyncio.Context()
         self.server_sock = self.ctx.socket(zmq.PUSH)
         self.server_sock.connect('tcp://{}:{}'.format(self.server_host, self.server_port))
+        # See:
+        #   https://github.com/zeromq/pyzmq/issues/102
+        #   http://api.zeromq.org/2-1:zmq-setsockopt
+        self.server_sock.setsockopt(zmq.LINGER, 2500)
 
     def close(self):
         if self.server_sock:
