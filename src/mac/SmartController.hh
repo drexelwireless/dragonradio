@@ -33,11 +33,11 @@ struct SendWindow : public TimerQueue::Timer {
     SmartController &controller;
 
     /** @brief First un-ACKed sequence number. */
-    Seq unack;
+    std::atomic<Seq> unack;
 
     /** @brief Maximum sequence number we have sent. */
     /** INVARIANT: max < unack + win */
-    Seq max;
+    std::atomic<Seq> max;
 
     /** @brief Send window size */
     Seq::uint_type win;
