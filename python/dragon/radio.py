@@ -164,7 +164,7 @@ class Config(object):
                      dest='phy',
                      help='set PHY')
         add_argument('-f', '--frequency', action='store', type=float,
-                     default=3e9,
+                     default=1e9,
                      dest='frequency',
                      help='set center frequency (Hz)')
         add_argument('-b', '--bandwidth', action='store', type=float,
