@@ -58,6 +58,7 @@ bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
         pkt->setFlag(kACK);
         ehdr.ack = recvw.ack;
 
+#if DEBUG
         if (pkt->data_len == 0)
             dprintf("Sending ACK %u\n",
                 (unsigned) recvw.ack);
@@ -65,6 +66,7 @@ bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
             dprintf("Sending %u with ACK %u\n",
                 (unsigned) pkt->seq,
                 (unsigned) recvw.ack);
+#endif
 
         // We're sending an ACK, so cancel the ACK timer
         timer_queue_.cancel(recvw);
@@ -142,7 +144,9 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
         if (pkt->isFlagSet(kACK)) {
             if (ehdr.ack > sendw.unack) {
-                dprintf("Got ACK %d\n", (int) ehdr.ack);
+                dprintf("Got ACK %u (unack = %u)\n",
+                    (unsigned) ehdr.ack,
+                    (unsigned) sendw.unack);
 
                 // Don't assert this because the sender could crash us with bad
                 // data! We protected against this case in the following loop.
@@ -208,9 +212,15 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         return;
     }
 
-    dprintf("Received %u with ACK %u\n",
-        (unsigned) pkt->seq,
-        (unsigned) ehdr.ack);
+#if DEBUG
+    if (pkt->isFlagSet(kACK))
+        dprintf("Received %u with ACK %u\n",
+            (unsigned) pkt->seq,
+            (unsigned) ehdr.ack);
+    else
+        dprintf("Received %u \n",
+            (unsigned) pkt->seq);
+#endif
 
     // Fill our receive window
     RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq);
@@ -272,8 +282,9 @@ void SmartController::retransmit(SendWindow &sendw)
 
     // We may have received an ACK, in which case we don't need to re-transmit
     if (sendw.unack <= sendw.max) {
-        dprintf("Retransmitting %u\n",
-            (unsigned) sendw.unack);
+        dprintf("Retransmitting %u (max %u)\n",
+            (unsigned) sendw.unack,
+            (unsigned) sendw.max);
 
         // We need to make an explicit new reference to the shared_ptr because
         // push takes ownership of its argument.
