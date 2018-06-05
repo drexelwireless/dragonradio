@@ -179,6 +179,12 @@ protected:
     /** @brief Timer queue */
     TimerQueue timer_queue_;
 
+    /** @brief Start the re-transmission timer if it is not set. */
+    void startRetransmissionTimer(SendWindow &sendw);
+
+    /** @brief Start the ACK timer if it is not set. */
+    void startACKTimer(RecvWindow &recvw);
+
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);
 

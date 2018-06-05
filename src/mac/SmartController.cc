@@ -94,10 +94,7 @@ get_packet:
         sendw[pkt->seq] = pkt;
 
         // Start the retransmit timer if it is not already running.
-        if (!timer_queue_.running(sendw)) {
-            dprintf("Starting retransmission timer\n");
-            timer_queue_.run_in(sendw, (*net_)[nexthop].retransmission_delay);
-        }
+        startRetransmissionTimer(sendw);
 
         // Update send window metrics
         if (pkt->seq > sendw.max)
@@ -237,10 +234,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     // Start the ACK timer if it is not already running. Even if this is a
     // duplicate packet, we need to send an ACK because the duplicate may be a
     // retransmission, i.e., our previous ACK could have been lost.
-    if (!timer_queue_.running(recvw)) {
-        dprintf("Starting ACK delay timer\n");
-        timer_queue_.run_in(recvw, (*net_)[prevhop].ack_delay);
-    }
+    startACKTimer(recvw);
 
     // Drop this packet if we have already received it
     if (pkt->seq < recvw.ack) {
@@ -306,6 +300,9 @@ void SmartController::retransmit(SendWindow &sendw)
         if (spliceq_)
             spliceq_->push_front(std::move(pkt));
     }
+
+    // Re-start the retransmit timer
+    startRetransmissionTimer(sendw);
 }
 
 void SmartController::ack(RecvWindow &recvw)
@@ -373,6 +370,24 @@ void SmartController::broadcastHello(void)
     pkt->appendControl(msg);
 
     spliceq_->push_front(std::move(pkt));
+}
+
+void SmartController::startRetransmissionTimer(SendWindow &sendw)
+{
+    // Start the retransmit timer if it is not already running.
+    if (!timer_queue_.running(sendw)) {
+        dprintf("Starting retransmission timer\n");
+        timer_queue_.run_in(sendw, (*net_)[sendw.node_id].retransmission_delay);
+    }
+}
+
+void SmartController::startACKTimer(RecvWindow &recvw)
+{
+    // Start the ACK timer if it is not already running.
+    if (!timer_queue_.running(recvw)) {
+        dprintf("Starting ACK delay timer\n");
+        timer_queue_.run_in(recvw, (*net_)[recvw.node_id].ack_delay);
+    }
 }
 
 bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
