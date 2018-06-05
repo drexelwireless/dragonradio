@@ -421,6 +421,21 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         if (!pkt->isInternalFlagSet(kHasSeq)) {
             Node& nexthop = (*net_)[pkt->nexthop];
 
+            // XXX If the sequence number would wrap around, drop the packet.
+            //
+            // We could delay assigning sequence numbers until we know a packet
+            // can be sent, but then it's possible for sequence numbers to NOT
+            // reflect the order in which we actually received packets from the
+            // network. For example, we could read a fresh packet from the
+            // network just before our window opens and the receive thread dumps
+            // a bunch of packets in a destination's pending queue back onto the
+            // network queue.
+            //
+            // This shouldn't happen---we need to do proper admission control at
+            // the network layer.
+            if (nexthop.seq + 1 < unack)
+                continue;
+
             pkt->seq = nexthop.seq++;
             pkt->check = nexthop.check;
             pkt->fec0 = nexthop.fec0;
