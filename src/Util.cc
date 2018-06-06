@@ -21,7 +21,7 @@ int sys(const char *fmt, ...)
 
     res = system(cmd);
 
-    if (rc->verbose)
+    if (rc.verbose)
         printf("%s\n", cmd);
     return res;
 }

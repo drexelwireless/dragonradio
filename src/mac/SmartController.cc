@@ -123,7 +123,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
                     dprintf("Received HELLO from %u\n", (unsigned) pkt->curhop);
 
-                    if (rc->verbose)
+                    if (rc.verbose)
                         printf("Discovered neighbor %u\n", (unsigned) pkt->curhop);
                 }
                 break;
@@ -387,7 +387,7 @@ void SmartController::broadcastHello(void)
     ControlMsg msg;
 
     msg.type = ControlMsg::Type::kHello;
-    msg.hello.is_gateway = rc->is_gateway;
+    msg.hello.is_gateway = rc.is_gateway;
 
     pkt->appendControl(msg);
 

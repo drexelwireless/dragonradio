@@ -8,12 +8,18 @@
 class RadioConfig;
 
 /** @brief The global radio config. */
-extern std::shared_ptr<RadioConfig> rc;
+extern RadioConfig rc;
 
 class RadioConfig {
 public:
     RadioConfig();
-    ~RadioConfig();
+    RadioConfig(const RadioConfig&) = default;
+    RadioConfig(RadioConfig&&) = default;
+
+    ~RadioConfig() = default;
+
+    RadioConfig& operator=(const RadioConfig&) = default;
+    RadioConfig& operator=(RadioConfig&&) = default;
 
     /** @brief Give verbose debug messages on the console */
     bool verbose;

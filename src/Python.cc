@@ -164,7 +164,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         ;
 
     // Export our global RadioConfig
-    m.attr("rc") = rc;
+    m.attr("rc") = py::cast(rc, py::return_value_policy::reference);
 
     // Export class WorkQueue to Python
     py::class_<WorkQueue, std::shared_ptr<WorkQueue>>(m, "WorkQueue")

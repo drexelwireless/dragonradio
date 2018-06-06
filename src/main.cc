@@ -15,9 +15,6 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    // Create RadioConfig
-    rc = std::make_shared<RadioConfig>();
-
     // Start the interpreter and keep it alive
     py::scoped_interpreter guard{};
 

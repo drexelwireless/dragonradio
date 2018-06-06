@@ -47,7 +47,7 @@ TunTap::TunTap(const std::string& tapdev,
     mac_fmt_(mac_fmt),
     done_(true)
 {
-    if (rc->verbose)
+    if (rc.verbose)
         printf("Creating tap interface %s\n", tapdev.c_str());
 
     if (!persistent_) {
@@ -138,7 +138,7 @@ void TunTap::openTap(std::string& dev, int flags)
 
 void TunTap::closeTap(void)
 {
-    if (rc->verbose)
+    if (rc.verbose)
         printf("Closing tap interface\n");
 
     // Detach Tap Interface
@@ -162,7 +162,7 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
     if ((size_t) nwrite != pkt->data_len)
         fprintf(stderr, "Couldn't write full packet to tun/tap!\n");
 
-    if (rc->verbose)
+    if (rc.verbose)
         printf("Written %lu bytes (seq# %u) from %u (evm = %.2f; rssi = %.2f)\n",
             (unsigned long) nwrite,
             (unsigned int) pkt->seq,
