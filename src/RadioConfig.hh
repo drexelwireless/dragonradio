@@ -26,6 +26,12 @@ public:
 
     /** @brief Flag indicating whether or not this node is the gateway */
     bool is_gateway;
+
+    /** @brief Number of packets we use to calculate short-term PER  */
+    unsigned short_per_npackets;
+
+    /** @brief Number of packets we use to calculate long-term PER  */
+    unsigned long_per_npackets;
 };
 
 #endif /* RADIOCONFIG_H_ */

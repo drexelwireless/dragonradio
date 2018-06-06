@@ -133,7 +133,9 @@ class SmartController : public Controller
 public:
     SmartController(std::shared_ptr<Net> net,
                     Seq::uint_type max_sendwin,
-                    Seq::uint_type recvwin);
+                    Seq::uint_type recvwin,
+                    double modidx_up_per_threshold,
+                    double modidx_down_per_threshold);
     virtual ~SmartController();
 
     bool pull(std::shared_ptr<NetPacket>& pkt) override;
@@ -156,6 +158,30 @@ public:
     void setSpliceQueue(std::shared_ptr<NetSpliceQueue> q)
     {
         spliceq_ = q;
+    }
+
+    /** @brief Get PER threshold for increasing modulation level */
+    double getUpPERThreshold(void)
+    {
+        return modidx_up_per_threshold_;
+    }
+
+    /** @brief Set PER threshold for increasing modulation level */
+    void setUpPERThreshold(double thresh)
+    {
+        modidx_up_per_threshold_ = thresh;
+    }
+
+    /** @brief Get PER threshold for decreasing modulation level */
+    double getDownPERThreshold(void)
+    {
+        return modidx_down_per_threshold_;
+    }
+
+    /** @brief Set PER threshold for decreasing modulation level */
+    void setDownPERThreshold(double thresh)
+    {
+        modidx_down_per_threshold_ = thresh;
     }
 
     /** @brief Broadcast TX params */
@@ -186,11 +212,23 @@ protected:
     /** @brief Timer queue */
     TimerQueue timer_queue_;
 
+    /** @brief PER threshold for increasing modulation level */
+    double modidx_up_per_threshold_;
+
+    /** @brief PER threshold for decreasing modulation level */
+    double modidx_down_per_threshold_;
+
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow &sendw);
 
     /** @brief Start the ACK timer if it is not set. */
     void startACKTimer(RecvWindow &recvw);
+
+    /** @brief Handle a successful packet transmission. */
+    void txSuccess(Node &node);
+
+    /** @brief Handle an unsuccessful packet transmission. */
+    void txFailure(Node &node);
 
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);

@@ -21,10 +21,14 @@ void RecvWindow::operator()()
 
 SmartController::SmartController(std::shared_ptr<Net> net,
                                  Seq::uint_type max_sendwin,
-                                 Seq::uint_type recvwin)
+                                 Seq::uint_type recvwin,
+                                 double modidx_up_per_threshold,
+                                 double modidx_down_per_threshold)
   : Controller(net)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
+  , modidx_up_per_threshold_(modidx_up_per_threshold)
+  , modidx_down_per_threshold_(modidx_down_per_threshold)
 {
     timer_queue_.start();
 }
@@ -170,7 +174,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     sendw[unack].reset();
 
                     // Update our packet error rate to reflect successful TX
-                    dest.per.update(0.0);
+                    txSuccess(dest);
                 }
 
                 // If the max packet we sent was ACK'ed, cancel the retransmit
@@ -215,7 +219,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     std::shared_ptr<NetPacket> pkt = sendw[ehdr.ack];
 
                     // Record the packet error
-                    dest.per.update(1.0);
+                    txFailure(dest);
 
                     // Re-apply most recent TX params in case they have changed
                     dest.updateNetPacketTXParams(*pkt);
@@ -320,7 +324,7 @@ void SmartController::retransmit(SendWindow &sendw)
         assert(pkt);
 
         // Record the packet error
-        dest.per.update(1.0);
+        txFailure(dest);
 
         // Re-apply most recent TX params in case they have changed
         dest.updateNetPacketTXParams(*pkt);
@@ -409,6 +413,41 @@ void SmartController::startACKTimer(RecvWindow &recvw)
     if (!timer_queue_.running(recvw)) {
         dprintf("Starting ACK delay timer\n");
         timer_queue_.run_in(recvw, (*net_)[recvw.node_id].ack_delay);
+    }
+}
+
+
+void SmartController::txSuccess(Node &node)
+{
+    node.short_per.update(0.0);
+    node.long_per.update(0.0);
+
+    if (   node.long_per.getNSamples() >= rc.long_per_npackets
+        && node.long_per.getValue() < modidx_up_per_threshold_
+        && node.modidx < net_->tx_params.size() - 1) {
+        if (rc.verbose)
+            fprintf(stderr, "Moving up modulation scheme\n");
+        ++node.modidx;
+        node.tx_params = &net_->tx_params[node.modidx];
+        node.short_per.reset(node.short_per.getValue());
+        node.long_per.reset(node.long_per.getValue());
+    }
+}
+
+void SmartController::txFailure(Node &node)
+{
+    node.short_per.update(1.0);
+    node.long_per.update(1.0);
+
+    if (   node.short_per.getNSamples() > rc.short_per_npackets
+        && node.short_per.getValue() > modidx_down_per_threshold_
+        && node.modidx > 0) {
+        if (rc.verbose)
+            fprintf(stderr, "Moving down modulation scheme\n");
+        --node.modidx;
+        node.tx_params = &net_->tx_params[node.modidx];
+        node.short_per.reset(node.short_per.getValue());
+        node.long_per.reset(node.long_per.getValue());
     }
 }
 

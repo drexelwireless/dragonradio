@@ -13,6 +13,12 @@
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
 
+/** @brief Number of packets we care about for short-term PER */
+const int kNumShortPER = 50;
+
+/** @brief Number of packets we care about for long-term PER */
+const int kNumLongPER = 100;
+
 struct Node {
     Node(NodeId id, TXParams *tx_params);
     ~Node();
@@ -25,6 +31,9 @@ struct Node {
 
     /** @brief Current packet sequence number for this destination */
     Seq seq;
+
+    /** @brief Modulation index */
+    size_t modidx;
 
     /** @brief TX parameters */
     /** This points to the TX params used to modulate data sent to this node.
@@ -41,8 +50,11 @@ struct Node {
     /** @brief Packet re-transmit delay in seconds */
     double retransmission_delay;
 
-    /** @brief Packet error rate */
-    EMA<double> per;
+    /** @brief Short-term packet error rate */
+    EMA<double> short_per;
+
+    /** @brief Long-term packet error rate */
+    EMA<double> long_per;
 
     /** @brief Set soft TX gain.
      * @param dB The soft gain (dBFS).
@@ -102,8 +114,8 @@ public:
     /** @brief Add a node to the network */
     Node &addNode(NodeId nodeId);
 
-    /** @brief Default TX params */
-    TXParams default_tx_params;
+    /** @brief TX params */
+    std::vector<TXParams> tx_params;
 
 private:
     /** @brief Our tun/tap interface */

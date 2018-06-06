@@ -17,12 +17,16 @@ Node::Node(NodeId id, TXParams *tx_params)
   : id(id)
   , is_gateway(false)
   , seq(0)
+  , modidx(0)
   , tx_params(tx_params)
   , g(1.0)
   , ack_delay(100e-3)
   , retransmission_delay(500e-3)
-  // We want the last 10 entries to account for 86% of the EMA
-  , per(2.0/11.0)
+  // We want the last rc.short_per_npackets entries to account for 86% of the
+  // EMA
+  , short_per(2.0/(rc.short_per_npackets + 1.0))
+  // We want the last rc.long_per_npackets entries to account for 86% of the EMA
+  , long_per(2.0/(rc.long_per_npackets + 1.0))
 {
 }
 
@@ -32,7 +36,8 @@ Node::~Node()
 
 Net::Net(std::shared_ptr<TunTap> tuntap,
          NodeId nodeId)
-  : tuntap_(tuntap)
+  : tx_params(1)
+  , tuntap_(tuntap)
   , my_node_id_(nodeId)
 {
 }
@@ -81,7 +86,7 @@ Node &Net::addNode(NodeId nodeId)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
 
-    auto entry = nodes_.emplace(nodeId, Node(nodeId, &default_tx_params));
+    auto entry = nodes_.emplace(nodeId, Node(nodeId, &tx_params[0]));
 
     // If the entry is new, add an ARP entry for it
     if (entry.second && nodeId != my_node_id_)

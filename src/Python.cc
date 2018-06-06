@@ -1,4 +1,5 @@
 #include <pybind11/embed.h>
+#include <pybind11/stl_bind.h>
 
 namespace py = pybind11;
 
@@ -23,6 +24,8 @@ namespace py = pybind11;
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
 #include "net/Queue.hh"
+
+PYBIND11_MAKE_OPAQUE(std::vector<TXParams>)
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
 {
@@ -159,8 +162,14 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     // Export class RadioConfig to Python
     py::class_<RadioConfig, std::shared_ptr<RadioConfig>>(m, "RadioConfig")
         .def(py::init())
-        .def_readwrite("verbose", &RadioConfig::verbose)
-        .def_readwrite("is_gateway", &RadioConfig::is_gateway)
+        .def_readwrite("verbose", &RadioConfig::verbose,
+            "Give verbose debug messages on the console")
+        .def_readwrite("is_gateway", &RadioConfig::is_gateway,
+            "Flag indicating whether or not this node is the gateway")
+        .def_readwrite("short_per_npackets", &RadioConfig::short_per_npackets,
+            "Number of packets we use to calculate short-term PER")
+        .def_readwrite("long_per_npackets", &RadioConfig::long_per_npackets,
+            "Number of packets we use to calculate long-term PER")
         ;
 
     // Export our global RadioConfig
@@ -295,6 +304,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("recalc0dBFSEstimate", &TXParams::recalc0dBFSEstimate, "Reset the 0dBFS estimate")
         ;
 
+    py::bind_vector<std::vector<TXParams>>(m, "TXParamsList");
+
     // Export class Node to Python
     py::class_<Node, std::shared_ptr<Node>>(m, "Node")
         .def_readonly("id", &Node::id, "Node ID")
@@ -307,7 +318,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("soft_tx_gain", &Node::getSoftTXGain, &Node::setSoftTXGain, "Soft TX gain (dBFS)")
         .def_readwrite("ack_delay", &Node::ack_delay, "ACK delay (in seconds)")
         .def_readwrite("retransmission_delay", &Node::retransmission_delay, "Packet retransmission delay (in seconds)")
-        .def_property_readonly("per", [](Node &node) { return node.per.getValue(); }, "Packet error rate (unitless)")
+        .def_property_readonly("short_per", [](Node &node) { return node.short_per.getValue(); }, "Short-term packet error rate (unitless)")
+        .def_property_readonly("long_per", [](Node &node) { return node.long_per.getValue(); }, "Long-term packet error rate (unitless)")
         ;
 
     // Export class Net to Python
@@ -332,8 +344,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             return py::make_iterator(net.begin(), net.end());
          }, py::keep_alive<0, 1>(), py::return_value_policy::reference_internal)
         .def_property_readonly("my_node_id", &Net::getMyNodeId)
-        .def_readwrite("default_tx_params", &Net::default_tx_params, "Default TX parameters",
-             py::return_value_policy::reference_internal)
+        .def_readwrite("tx_params", &Net::tx_params, "TX parameters")
         .def("addNode", &Net::addNode, py::return_value_policy::reference_internal)
         ;
 
@@ -407,10 +418,20 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<SmartController, Controller, std::shared_ptr<SmartController>>(m, "SmartController")
         .def(py::init<std::shared_ptr<Net>,
                       Seq::uint_type,
-                      Seq::uint_type>())
+                      Seq::uint_type,
+                      double,
+                      double>())
         .def_property("splice_queue", &SmartController::getSpliceQueue, &SmartController::setSpliceQueue)
         .def_readwrite("broadcast_tx_params", &SmartController::broadcast_tx_params, "Broadcast TX parameters",
              py::return_value_policy::reference_internal)
+        .def_property("modidx_up_per_threshold",
+            &SmartController::getUpPERThreshold,
+            &SmartController::setUpPERThreshold,
+            "PER threshold for increasing modulation level")
+        .def_property("modidx_down_per_threshold",
+            &SmartController::getDownPERThreshold,
+            &SmartController::setDownPERThreshold,
+            "PER threshold for decreasing modulation level")
         .def("broadcastHello", &SmartController::broadcastHello)
         ;
 

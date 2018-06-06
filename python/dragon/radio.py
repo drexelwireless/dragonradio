@@ -139,6 +139,7 @@ class Config(object):
                      default=5e6,
                      dest='bandwidth',
                      help='set bandwidth (Hz)')
+        # Gain-related options
         add_argument('-g', '--soft-tx-gain', action='store', type=float,
                      default=-12,
                      dest='soft_tx_gain',
@@ -155,6 +156,7 @@ class Config(object):
                      default=None,
                      dest='auto_soft_tx_gain',
                      help='automatically choose soft TX gain to attain 0dBFS')
+        # OFDM-specific options
         add_argument('-M', '--subcarriers', action='store', type=int,
                      default=48,
                      dest='M',
@@ -167,11 +169,12 @@ class Config(object):
                      default=4,
                      dest='taper_len',
                      help='set OFDM taper length')
-        add_argument('-m', '--mod',
-                     action='store', type=dragonradio.ModulationScheme,
-                     default='qpsk',
-                     dest='ms',
-                     help='set modulation scheme: ' + enumHelp(dragonradio.ModulationScheme))
+        # General modulation options
+        add_argument('-r', '--check',
+                     action='store', type=dragonradio.CRCScheme,
+                     default='crc32',
+                     dest='check',
+                     help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
         add_argument('-c', '--fec0',
                      action='store', type=dragonradio.FECScheme,
                      default='v29',
@@ -182,15 +185,45 @@ class Config(object):
                      default='rs8',
                      dest='fec1',
                      help='set outer FEC: ' + enumHelp(dragonradio.FECScheme))
-        add_argument('-r', '--check',
-                     action='store', type=dragonradio.CRCScheme,
-                     default='crc32',
-                     dest='check',
-                     help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
+        add_argument('-m', '--mod',
+                     action='store', type=dragonradio.ModulationScheme,
+                     default='qpsk',
+                     dest='ms',
+                     help='set modulation scheme: ' + enumHelp(dragonradio.ModulationScheme))
+        # ARQ options
         add_argument('--arq', action='store_const', const=True,
                      default=False,
                      dest='arq',
                      help='enable ARQ')
+        add_argument('--no-arq', action='store_const', const=False,
+                     default=False,
+                     dest='arq',
+                     help='disable ARQ')
+        # AMC options
+        add_argument('--amc', action='store_const', const=True,
+                     default=False,
+                     dest='amc',
+                     help='enable AMC')
+        add_argument('--no-amc', action='store_const', const=False,
+                     default=False,
+                     dest='amc',
+                     help='disable AMC')
+        add_argument('--short-per-npackets', action='store', type=int,
+                     default=50,
+                     dest='short_per_npackets',
+                     help='set number of packets we use to calculate short-term PER')
+        add_argument('--long-per-npackets', action='store', type=int,
+                     default=200,
+                     dest='long_per_npackets',
+                     help='set number of packets we use to calculate long-term PER')
+        add_argument('--modidx-up-per-threshold', action='store', type=float,
+                     default=0.02,
+                     dest='modidx_up_per_threshold',
+                     help='set PER threshold for increasing modulation level')
+        add_argument('--modidx-down-per-threshold', action='store', type=float,
+                     default=0.10,
+                     dest='modidx_down_per_threshold',
+                     help='set PER threshold for decreasing modulation level')
 
 class Radio(object):
     def __init__(self, config):
@@ -199,7 +232,7 @@ class Radio(object):
         self.logger = None
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose']:
+        for attr in ['verbose', 'short_per_npackets', 'long_per_npackets']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
 
@@ -264,12 +297,19 @@ class Radio(object):
         #
         # Set up TX params for network
         #
-        tx_params = dragonradio.TXParams(config.check, config.fec0, config.fec1, config.ms)
-        self.net.default_tx_params = tx_params
+        if config.amc and hasattr(config, 'amc_table') and config.amc_table:
+            tx_params = []
+            for (crc, fec0, fec1, ms) in config.amc_table:
+                tx_params.append(dragonradio.TXParams(crc, fec0, fec1, ms))
+        else:
+            tx_params = [dragonradio.TXParams(config.check, config.fec0, config.fec1, config.ms)]
 
-        self.net.default_tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
-        if hasattr(config, 'auto_soft_tx_gain'):
-            self.net.default_tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
+        for p in tx_params:
+            p.soft_tx_gain_0dBFS = config.soft_tx_gain
+            if hasattr(config, 'auto_soft_tx_gain'):
+                p.recalc0dBFSEstimate(config.auto_soft_tx_gain)
+
+        self.net.tx_params = dragonradio.TXParamsList(tx_params)
 
         #
         # Configure the modulator and demodulator
@@ -288,7 +328,9 @@ class Radio(object):
         if config.arq:
             self.controller = dragonradio.SmartController(self.net,
                                                           config.arq_window,
-                                                          config.arq_window)
+                                                          config.arq_window,
+                                                          config.modidx_up_per_threshold,
+                                                          config.modidx_down_per_threshold)
         else:
             self.controller = dragonradio.DummyController(self.net)
 
