@@ -77,11 +77,11 @@ def main():
     #
     if args.interactive:
         IPython.embed()
-
-    #
-    # Wait for Ctrl-C
-    #
-    signal.sigwait([signal.SIGINT])
+    else:
+        #
+        # Wait for Ctrl-C
+        #
+        signal.sigwait([signal.SIGINT])
 
     return 0
 
