@@ -8,6 +8,7 @@
 #include <thread>
 #include <stdio.h>
 
+#include "Estimator.hh"
 #include "Packet.hh"
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
@@ -39,6 +40,9 @@ struct Node {
 
     /** @brief Packet re-transmit delay in seconds */
     double retransmission_delay;
+
+    /** @brief Packet error rate */
+    EMA<double> per;
 
     /** @brief Set soft TX gain.
      * @param dB The soft gain (dBFS).

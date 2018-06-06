@@ -147,6 +147,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
     if (sendwptr) {
         SendWindow                      &sendw = *sendwptr;
+        Node                            &dest = (*net_)[sendw.node_id];
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
         Seq                             unack = sendw.unack.load(std::memory_order_acquire);
         Seq                             max = sendw.max.load(std::memory_order_acquire);
@@ -164,8 +165,13 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // Move the send window along. It's possible the sender sends an
                 // ACK for something we haven't sent, so we must guard against
                 // that here as well
-                for (; unack < ehdr.ack && unack <= max; ++unack)
+                for (; unack < ehdr.ack && unack <= max; ++unack) {
+                    // Release the packet since it's been ACK'ed
                     sendw[unack].reset();
+
+                    // Update our packet error rate to reflect successful TX
+                    dest.per.update(0.0);
+                }
 
                 // If the max packet we sent was ACK'ed, cancel the retransmit
                 // timer.
@@ -207,7 +213,9 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     // We need to make an explicit new reference to the
                     // shared_ptr because push takes ownership of its argument.
                     std::shared_ptr<NetPacket> pkt = sendw[ehdr.ack];
-                    Node                       &dest = (*net_)[sendw.node_id];
+
+                    // Record the packet error
+                    dest.per.update(1.0);
 
                     // Re-apply most recent TX params in case they have changed
                     dest.updateNetPacketTXParams(*pkt);
@@ -310,6 +318,9 @@ void SmartController::retransmit(SendWindow &sendw)
         // invariant holds, then we will never have a "hole" in our send window,
         // and this assertion must hold.
         assert(pkt);
+
+        // Record the packet error
+        dest.per.update(1.0);
 
         // Re-apply most recent TX params in case they have changed
         dest.updateNetPacketTXParams(*pkt);

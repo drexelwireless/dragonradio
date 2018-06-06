@@ -301,6 +301,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("soft_tx_gain", &Node::getSoftTXGain, &Node::setSoftTXGain, "Soft TX gain (dBFS)")
         .def_readwrite("ack_delay", &Node::ack_delay, "ACK delay (in seconds)")
         .def_readwrite("retransmission_delay", &Node::retransmission_delay, "Packet retransmission delay (in seconds)")
+        .def_property_readonly("per", [](Node &node) { return node.per.getValue(); }, "Packet error rate (unitless)")
         ;
 
     // Export class Net to Python

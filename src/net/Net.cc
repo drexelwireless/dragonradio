@@ -21,6 +21,8 @@ Node::Node(NodeId id, TXParams *tx_params)
   , g(1.0)
   , ack_delay(100e-3)
   , retransmission_delay(500e-3)
+  // We want the last 10 entries to account for 86% of the EMA
+  , per(2.0/11.0)
 {
 }
 
