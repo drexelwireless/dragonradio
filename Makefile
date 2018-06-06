@@ -99,9 +99,9 @@ python/dragon/%_pb2.py : proto/%.proto
 	protoc -I proto --python_out=$(dir $@) $(notdir $<)
 
 .PHONY : html
-html : docs/html/index.html
+html : docs/doxygen/html/index.html
 
-docs/html/index.html : docs/Doxyfile $(ALLSOURCES) $(ALLINCLUDES)
+docs/doxygen/html/index.html : docs/doxygen/Doxyfile $(ALLSOURCES) $(ALLINCLUDES)
 	doxygen $<
 
 #
