@@ -20,21 +20,6 @@ public:
 
     /** @brief Flag indicating whether or not this node is the gateway */
     bool is_gateway;
-
-    /** @brief Default soft TX gain (dB) */
-    double soft_tx_gain;
-
-    /** @brief Default modulation scheme */
-    modulation_scheme ms;
-
-    /** @brief Default data validity check */
-    crc_scheme check;
-
-    /** @brief Default inner FEC */
-    fec_scheme fec0;
-
-    /** @brief Default outer FEC */
-    fec_scheme fec1;
 };
 
 #endif /* RADIOCONFIG_H_ */

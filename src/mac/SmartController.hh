@@ -158,6 +158,9 @@ public:
         spliceq_ = q;
     }
 
+    /** @brief Broadcast TX params */
+    TXParams broadcast_tx_params;
+
 protected:
     /** @brief Splice queue used to insert packets */
     std::shared_ptr<NetSpliceQueue> spliceq_;

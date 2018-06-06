@@ -4,12 +4,7 @@ std::shared_ptr<RadioConfig> rc;
 
 RadioConfig::RadioConfig() :
     verbose(false),
-    is_gateway(false),
-    soft_tx_gain(-12.0f),
-    ms(LIQUID_MODEM_QPSK),
-    check(LIQUID_CRC_32),
-    fec0(LIQUID_FEC_CONV_V29),
-    fec1(LIQUID_FEC_RS_M8)
+    is_gateway(false)
 {
 }
 

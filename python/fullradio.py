@@ -55,11 +55,6 @@ def main():
     # Create the radio object
     radio = dragon.radio.Radio(config)
 
-    # Enable soft gain
-    if args.auto_soft_tx_gain:
-        for node_id in radio.net:
-            radio.net[node_id].desired_soft_tx_gain = 0.0
-
     # Setting the demodulator's ordered property to True forces packets to be
     # demodulated in order. This increases latency.
     #radio.demodulator.ordered = True

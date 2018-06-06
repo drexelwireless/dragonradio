@@ -51,8 +51,9 @@ SOURCES := \
     TimerQueue.cc \
     USRP.cc \
     Util.cc \
+    WorkQueue.cc \
     phy/FlexFrame.cc \
-    phy/Gain.cc \
+    phy/TXParams.cc \
     phy/Liquid.cc \
     phy/MultiOFDM.cc \
     phy/OFDM.cc \

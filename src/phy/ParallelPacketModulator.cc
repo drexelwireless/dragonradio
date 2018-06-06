@@ -1,7 +1,8 @@
 #include "RadioConfig.hh"
-#include "phy/Gain.hh"
+#include "WorkQueue.hh"
 #include "phy/PHY.hh"
 #include "phy/ParallelPacketModulator.hh"
+#include "phy/TXParams.hh"
 #include "net/Net.hh"
 
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
@@ -117,40 +118,12 @@ void ParallelPacketModulator::modWorker(void)
             mpkt = pkt_q_.back().get();
         }
 
-        bool recalc = false;
-        Node *nexthop = nullptr;
-
-        if (net_->contains(pkt->nexthop)) {
-            nexthop = &(*net_)[pkt->nexthop];
-
-            // XXX Mostly-benign race condition here. More than one modulator could
-            // end up re-calculating the soft TX gain.
-            if (nexthop->recalc_soft_tx_gain) {
-                nexthop->recalc_soft_tx_gain = false;
-                pkt->g = 1.0;
-                recalc = true;
-            }
-        }
+        // Save packet's TXParams and gain multiplier
+        TXParams *tx_params = pkt->tx_params;
+        float g = pkt->g;
 
         // Modulate the packet
         modulator->modulate(*mpkt, std::move(pkt));
-
-        if (recalc) {
-            float g = autoSoftGain0dBFS(*mpkt->samples, nexthop->desired_soft_tx_gain_clip_frac);
-
-            nexthop->g = g;
-            nexthop->setSoftTXGain(nexthop->getSoftTXGain() + nexthop->desired_soft_tx_gain);
-            nexthop->recalc_soft_tx_gain = false;
-
-            if (rc->verbose)
-                fprintf(stderr, "%u: new soft TX gain (dB): %f\n", nexthop->id, nexthop->getSoftTXGain());
-
-            // Apply the new soft gain
-            g = nexthop->g;
-
-            for (size_t i = 0; i < mpkt->samples->size(); ++i)
-                (*mpkt->samples)[i] *= g;
-        }
 
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();
@@ -159,6 +132,12 @@ void ParallelPacketModulator::modWorker(void)
         // by a consumer immediately after we mark it complete, so we cannot use
         // the mpkt pointer after this statement!
         mpkt->complete.clear(std::memory_order_release);
+
+        // Pass the modulated packet to the 0dBFS estimator if requested
+        if (tx_params->nestimates_0dBFS > 0) {
+            --tx_params->nestimates_0dBFS;
+            work_queue.submit(&TXParams::autoSoftGain0dBFS, tx_params, g, mpkt->samples);
+        }
 
         // Add the number of modulated samples to the total in the queue. Note
         // that the packet may already have been removed from the queue and the

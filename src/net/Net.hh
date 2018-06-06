@@ -13,7 +13,7 @@
 #include "net/TunTap.hh"
 
 struct Node {
-    Node(NodeId id);
+    Node(NodeId id, TXParams *tx_params);
     ~Node();
 
     /** @brief Node ID */
@@ -25,73 +25,41 @@ struct Node {
     /** @brief Current packet sequence number for this destination */
     Seq seq;
 
-    /** @brief Modulation scheme */
-    modulation_scheme ms;
+    /** @brief TX parameters */
+    /** This points to the TX params used to modulate data sent to this node.
+     * It is non-const because we are allowed to update the g_0dBFS field.
+     */
+    TXParams *tx_params;
 
-    /** @brief Data validity check */
-    crc_scheme check;
-
-    /** @brief Inner FEC */
-    fec_scheme fec0;
-
-    /** @brief Outer FEC */
-    fec_scheme fec1;
-
-    /** @brief Soft TX gain (multiplicative factor) */
+    /** @brief Multiplicative TX gain as measured against 0 dBFS. */
     float g;
-
-    /** @brief Get soft TX gain (dB). */
-    float getSoftTXGain(void)
-    {
-        return 20.0*logf(g)/logf(10.0);
-    }
-
-    /** @brief Set soft TX gain.
-     * @param dB The soft gain (dB).
-     */
-    void setSoftTXGain(float dB)
-    {
-        g = powf(10.0f, dB/20.0f);
-    }
-
-    /** @brief Desired soft gain in dBFS. Defaults to 0.0. */
-    /** This is our soft TX gain goal, in dBFS. Note well the units! We use this
-     * value to dynamically set the multiplicative soft gain based on generated
-     * IQ values.
-     */
-    float desired_soft_tx_gain;
-
-    /** @brief Fraction of unclipped IQ values. Defaults to 0.999. */
-    /** This sets the fraction of values guaranteed to be unclipped when the
-     * soft TX gain is automatically determined.
-     */
-    float desired_soft_tx_gain_clip_frac;
-
-    /** @brief Set to force recalculation of soft TX gain based on
-     * desired_soft_tx_gain next time a packet to this node is modulated.
-     */
-    bool recalc_soft_tx_gain;
-
-    /** @brief Get desired soft TX gain (dBFS). */
-    float getDesiredSoftTXGain(void)
-    {
-        return desired_soft_tx_gain;
-    }
-
-    /** @brief Set desired soft TX gain.
-     * @param dBFs The soft gain (dBFS).
-     */
-    void setDesiredSoftTXGain(float dBFS)
-    {
-        desired_soft_tx_gain = dBFS;
-        recalc_soft_tx_gain = true;
-    }
 
     /** @brief ACK delay in seconds */
     double ack_delay;
 
     /** @brief Packet re-transmit delay in seconds */
     double retransmission_delay;
+
+    /** @brief Set soft TX gain.
+     * @param dB The soft gain (dBFS).
+     */
+    void setSoftTXGain(float dB)
+    {
+        g = powf(10.0f, dB/20.0f);
+    }
+
+    /** @brief Get soft TX gain (dBFS). */
+    float getSoftTXGain(void) const
+    {
+        return 20.0*logf(g)/logf(10.0);
+    }
+
+    /** @brief Update a NetPacket with our TXParams. */
+    void updateNetPacketTXParams(NetPacket &pkt)
+    {
+        pkt.tx_params = tx_params;
+        pkt.g = tx_params->g_0dBFS.getValue() * g;
+    }
 };
 
 class Net : public Element
@@ -129,6 +97,9 @@ public:
 
     /** @brief Add a node to the network */
     Node &addNode(NodeId nodeId);
+
+    /** @brief Default TX params */
+    TXParams default_tx_params;
 
 private:
     /** @brief Our tun/tap interface */

@@ -2,14 +2,17 @@
 
 namespace py = pybind11;
 
+#include "Estimator.hh"
 #include "Logger.hh"
 #include "RadioConfig.hh"
 #include "USRP.hh"
+#include "WorkQueue.hh"
 #include "phy/FlexFrame.hh"
 #include "phy/MultiOFDM.hh"
 #include "phy/OFDM.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
+#include "phy/TXParams.hh"
 #include "mac/Controller.hh"
 #include "mac/DummyController.hh"
 #include "mac/SmartController.hh"
@@ -152,15 +155,19 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init())
         .def_readwrite("verbose", &RadioConfig::verbose)
         .def_readwrite("is_gateway", &RadioConfig::is_gateway)
-        .def_readwrite("soft_tx_gain", &RadioConfig::soft_tx_gain)
-        .def_readwrite("ms", &RadioConfig::ms)
-        .def_readwrite("check", &RadioConfig::check)
-        .def_readwrite("fec0", &RadioConfig::fec0)
-        .def_readwrite("fec1", &RadioConfig::fec1)
         ;
 
     // Export our global RadioConfig
     m.attr("rc") = rc;
+
+    // Export class WorkQueue to Python
+    py::class_<WorkQueue, std::shared_ptr<WorkQueue>>(m, "WorkQueue")
+        .def("addThreads", &WorkQueue::addThreads,
+            "Add workers")
+        ;
+
+    // Export our global WorkQueue
+    m.attr("work_queue") = py::cast(work_queue, py::return_value_policy::reference);
 
     // Export class USRP to Python
     py::enum_<USRP::DeviceType>(m, "DeviceType")
@@ -251,18 +258,47 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property_readonly("sink", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->sink); } )
         ;
 
+    // Export estimator classes to Python
+    py::class_<Estimator<float>, std::shared_ptr<Estimator<float>>>(m, "Estimator")
+        .def_property_readonly("value", &Estimator<float>::getValue, "The value of the estimator")
+        .def_property_readonly("nsamples", &Estimator<float>::getNSamples, "The number of samples used in the estimate")
+        .def("reset", &Estimator<float>::reset, "Reset the estimate")
+        .def("update", &Estimator<float>::update, "Update the estimate")
+        ;
+
+    py::class_<Mean<float>, Estimator<float>, std::shared_ptr<Mean<float>>>(m, "Mean")
+        .def(py::init<>())
+        .def(py::init<float>())
+        .def("remove", &Mean<float>::remove, "Remove a value used to estimate the mean")
+        ;
+
+    // Export class TXParams to Python
+    py::class_<TXParams, std::shared_ptr<TXParams>>(m, "TXParams")
+        .def(py::init<>())
+        .def(py::init<crc_scheme,
+                      fec_scheme,
+                      fec_scheme,
+                      modulation_scheme>())
+        .def_readwrite("check", &TXParams::check, "Data validity check")
+        .def_readwrite("fec0", &TXParams::fec0, "Inner FEC")
+        .def_readwrite("fec1", &TXParams::fec1, "Outer FEC")
+        .def_readwrite("ms", &TXParams::ms, "Modulation scheme")
+        .def_readwrite("g_0dBFS", &TXParams::g_0dBFS, "Soft TX gain (multiplicative factor)")
+        .def_property("soft_tx_gain_0dBFS", &TXParams::getSoftTXGain0dBFS, &TXParams::setSoftTXGain0dBFS, "Soft TX gain (dBFS)")
+        .def_readwrite("soft_tx_gain_clip_frac", &TXParams::soft_tx_gain_clip_frac, "Clipping threshold for automatic TX soft gain")
+        .def("recalc0dBFSEstimate", &TXParams::recalc0dBFSEstimate, "Reset the 0dBFS estimate")
+        ;
+
     // Export class Node to Python
     py::class_<Node, std::shared_ptr<Node>>(m, "Node")
         .def_readonly("id", &Node::id, "Node ID")
         .def_readwrite("is_gateway", &Node::is_gateway, "Flag indicating whether or not this node is the gateway")
-        .def_readwrite("g", &Node::g, "Soft TX gain (multiplicative factor)")
-        .def_readwrite("ms", &Node::ms, "Modulation scheme")
-        .def_readwrite("check", &Node::check, "Data validity check")
-        .def_readwrite("fec0", &Node::fec0, "Inner FEC")
-        .def_readwrite("fec1", &Node::fec1, "Outer FEC")
-        .def_property("soft_tx_gain", &Node::getSoftTXGain, &Node::setSoftTXGain, "Soft TX gain (dB)")
-        .def_property("desired_soft_tx_gain", &Node::getDesiredSoftTXGain, &Node::setDesiredSoftTXGain, "Desired soft TX gain (dBFS)")
-        .def_readwrite("desired_soft_tx_gain_clip_frac", &Node::desired_soft_tx_gain_clip_frac, "Clipping threshold for automatic TX soft gain")
+        // Make a copy of the Node's TXParams because it shouldn't be modified
+        // directly since it is NOT owned by the node.
+        .def_property_readonly("tx_params", [](Node &node) { return *node.tx_params; }, "TX parameters",
+            py::return_value_policy::copy)
+        .def_readwrite("g", &Node::g, "Soft TX gain (multiplicative)")
+        .def_property("soft_tx_gain", &Node::getSoftTXGain, &Node::setSoftTXGain, "Soft TX gain (dBFS)")
         .def_readwrite("ack_delay", &Node::ack_delay, "ACK delay (in seconds)")
         .def_readwrite("retransmission_delay", &Node::retransmission_delay, "Packet retransmission delay (in seconds)")
         ;
@@ -289,6 +325,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             return py::make_iterator(net.begin(), net.end());
          }, py::keep_alive<0, 1>(), py::return_value_policy::reference_internal)
         .def_property_readonly("my_node_id", &Net::getMyNodeId)
+        .def_readwrite("default_tx_params", &Net::default_tx_params, "Default TX parameters",
+             py::return_value_policy::reference_internal)
         .def("addNode", &Net::addNode, py::return_value_policy::reference_internal)
         ;
 
@@ -364,6 +402,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       Seq::uint_type,
                       Seq::uint_type>())
         .def_property("splice_queue", &SmartController::getSpliceQueue, &SmartController::setSpliceQueue)
+        .def_readwrite("broadcast_tx_params", &SmartController::broadcast_tx_params, "Broadcast TX parameters",
+             py::return_value_policy::reference_internal)
         .def("broadcastHello", &SmartController::broadcastHello)
         ;
 

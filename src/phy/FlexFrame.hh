@@ -37,7 +37,7 @@ public:
         flexframegenprops_s fgprops_;
 
         /** Update frame properties to match fgprops_. */
-        void update_props(NetPacket& pkt);
+        void update_props(const TXParams &params);
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */

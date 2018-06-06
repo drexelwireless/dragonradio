@@ -13,21 +13,15 @@
 
 using namespace std::placeholders;
 
-Node::Node(NodeId id) :
-    id(id),
-    is_gateway(false),
-    seq(0),
-    ms(rc->ms),
-    check(rc->check),
-    fec0(rc->fec0),
-    fec1(rc->fec1),
-    desired_soft_tx_gain(0.0),
-    desired_soft_tx_gain_clip_frac(0.999),
-    recalc_soft_tx_gain(false),
-    ack_delay(100e-3),
-    retransmission_delay(500e-3)
+Node::Node(NodeId id, TXParams *tx_params)
+  : id(id)
+  , is_gateway(false)
+  , seq(0)
+  , tx_params(tx_params)
+  , g(1.0)
+  , ack_delay(100e-3)
+  , retransmission_delay(500e-3)
 {
-    setSoftTXGain(rc->soft_tx_gain);
 }
 
 Node::~Node()
@@ -35,9 +29,9 @@ Node::~Node()
 }
 
 Net::Net(std::shared_ptr<TunTap> tuntap,
-         NodeId nodeId) :
-    tuntap_(tuntap),
-    my_node_id_(nodeId)
+         NodeId nodeId)
+  : tuntap_(tuntap)
+  , my_node_id_(nodeId)
 {
 }
 
@@ -85,7 +79,7 @@ Node &Net::addNode(NodeId nodeId)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
 
-    auto entry = nodes_.emplace(nodeId, Node(nodeId));
+    auto entry = nodes_.emplace(nodeId, Node(nodeId, &default_tx_params));
 
     // If the entry is new, add an ARP entry for it
     if (entry.second && nodeId != my_node_id_)

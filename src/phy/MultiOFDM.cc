@@ -51,9 +51,9 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> 
                       header.bytes,
                       pkt->data(),
                       pkt->size(),
-                      pkt->ms,
-                      pkt->fec0,
-                      pkt->fec1);
+                      pkt->tx_params->ms,
+                      pkt->tx_params->fec0,
+                      pkt->tx_params->fec1);
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);

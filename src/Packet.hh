@@ -12,6 +12,7 @@
 #include <liquid/liquid.h>
 
 #include "buffer.hh"
+#include "phy/TXParams.hh"
 
 typedef uint8_t NodeId;
 
@@ -296,21 +297,12 @@ struct Packet : public buffer<unsigned char>
 /** @brief A packet received from the network. */
 struct NetPacket : public Packet
 {
-    NetPacket(size_t n) : Packet(n) {};
+    NetPacket(size_t n) : Packet(n), tx_params(nullptr) {};
 
-    /** @brief CRC */
-    crc_scheme check;
+    /** @brief TX parameters */
+    TXParams *tx_params;
 
-    /** @brief FEC0 (inner FEC) */
-    fec_scheme fec0;
-
-    /** @brief FEC1 (outer FEC) */
-    fec_scheme fec1;
-
-    /** @brief Modulation scheme */
-    modulation_scheme ms;
-
-    /** @brief Soft TX gain */
+    /** @brief Multiplicative TX gain. */
     float g;
 };
 

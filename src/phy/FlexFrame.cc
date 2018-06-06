@@ -28,16 +28,16 @@ void FlexFrame::Modulator::print(void)
     flexframegen_print(fg_);
 }
 
-void FlexFrame::Modulator::update_props(NetPacket& pkt)
+void FlexFrame::Modulator::update_props(const TXParams &params)
 {
-    if (fgprops_.check != pkt.check ||
-        fgprops_.fec0 != pkt.fec0 ||
-        fgprops_.fec1 != pkt.fec1 ||
-        fgprops_.mod_scheme != pkt.ms) {
-        fgprops_.check = pkt.check;
-        fgprops_.fec0 = pkt.fec0;
-        fgprops_.fec1 = pkt.fec1;
-        fgprops_.mod_scheme = pkt.ms;
+    if (fgprops_.check != params.check ||
+        fgprops_.fec0 != params.fec0 ||
+        fgprops_.fec1 != params.fec1 ||
+        fgprops_.mod_scheme != params.ms) {
+        fgprops_.check = params.check;
+        fgprops_.fec0 = params.fec0;
+        fgprops_.fec1 = params.fec1;
+        fgprops_.mod_scheme = params.ms;
 
         flexframegen_setprops(fg_, &fgprops_);
     }
@@ -59,7 +59,7 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> 
 
     pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
 
-    update_props(*pkt);
+    update_props(*(pkt->tx_params));
     flexframegen_reset(fg_);
     flexframegen_assemble(fg_, header.bytes, pkt->data(), pkt->size());
 

@@ -183,10 +183,10 @@ class Config(object):
                      default=25,
                      dest='rx_gain',
                      help='set UHD RX gain (dB)')
-        add_argument('--auto-soft-tx-gain', action='store_const', const=True,
-                     default=False,
+        add_argument('--auto-soft-tx-gain', action='store', type=int,
+                     default=None,
                      dest='auto_soft_tx_gain',
-                     help='automatically choose soft TX gain')
+                     help='automatically choose soft TX gain to attain 0dBFS')
         add_argument('-M', '--subcarriers', action='store', type=int,
                      default=48,
                      dest='M',
@@ -231,9 +231,12 @@ class Radio(object):
         self.logger = None
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose', 'soft_tx_gain', 'ms' ,'check', 'fec0', 'fec1']:
+        for attr in ['verbose']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
+
+        # Add global work queue workers
+        dragonradio.work_queue.addThreads(1)
 
         # Create the USRP
         self.usrp = dragonradio.USRP(config.addr,
@@ -291,6 +294,16 @@ class Radio(object):
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 
         #
+        # Set up TX params for network
+        #
+        tx_params = dragonradio.TXParams(config.check, config.fec0, config.fec1, config.ms)
+        self.net.default_tx_params = tx_params
+
+        self.net.default_tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
+        if hasattr(config, 'auto_soft_tx_gain'):
+            self.net.default_tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
+
+        #
         # Configure the modulator and demodulator
         #
         self.modulator = dragonradio.ParallelPacketModulator(self.net,
@@ -343,6 +356,10 @@ class Radio(object):
         #
         if config.arq:
             self.controller.splice_queue = self.netq
+
+            self.controller.broadcast_tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
+            if hasattr(config, 'auto_soft_tx_gain'):
+                self.controller.broadcast_tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
 
     def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,

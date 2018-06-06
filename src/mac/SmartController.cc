@@ -207,6 +207,10 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     // We need to make an explicit new reference to the
                     // shared_ptr because push takes ownership of its argument.
                     std::shared_ptr<NetPacket> pkt = sendw[ehdr.ack];
+                    Node                       &dest = (*net_)[sendw.node_id];
+
+                    // Re-apply most recent TX params in case they have changed
+                    dest.updateNetPacketTXParams(*pkt);
 
                     if (spliceq_)
                         spliceq_->push_front(std::move(pkt));
@@ -300,11 +304,15 @@ void SmartController::retransmit(SendWindow &sendw)
         // We need to make an explicit new reference to the shared_ptr because
         // push takes ownership of its argument.
         std::shared_ptr<NetPacket> pkt = sendw[unack];
+        Node                       &dest = (*net_)[sendw.node_id];
 
         // INVARIANT: packets come from the network in sequence order. If this
         // invariant holds, then we will never have a "hole" in our send window,
         // and this assertion must hold.
         assert(pkt);
+
+        // Re-apply most recent TX params in case they have changed
+        dest.updateNetPacketTXParams(*pkt);
 
         if (spliceq_)
             spliceq_->push_front(std::move(pkt));
@@ -338,11 +346,8 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
     pkt->dest = recvw.node_id;
-    pkt->check = dest.check;
-    pkt->fec0 = dest.fec0;
-    pkt->fec1 = dest.fec1;
-    pkt->ms = dest.ms;
-    pkt->g = dest.g;
+
+    dest.updateNetPacketTXParams(*pkt);
 
     spliceq_->push_front(std::move(pkt));
 }
@@ -363,11 +368,8 @@ void SmartController::broadcastHello(void)
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
     pkt->dest = 0;
-    pkt->check = LIQUID_CRC_32;
-    pkt->fec0 = LIQUID_FEC_CONV_V27;
-    pkt->fec1 = LIQUID_FEC_NONE;
-    pkt->ms = LIQUID_MODEM_QPSK;
-    pkt->g = 1.0;
+    pkt->tx_params = &broadcast_tx_params;
+    pkt->g = broadcast_tx_params.g_0dBFS.getValue();
 
     pkt->setFlag(kBroadcast);
 
@@ -437,11 +439,8 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
                 continue;
 
             pkt->seq = nexthop.seq++;
-            pkt->check = nexthop.check;
-            pkt->fec0 = nexthop.fec0;
-            pkt->fec1 = nexthop.fec1;
-            pkt->ms = nexthop.ms;
-            pkt->g = nexthop.g;
+
+            nexthop.updateNetPacketTXParams(*pkt);
 
             pkt->setInternalFlag(kHasSeq);
 
