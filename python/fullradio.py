@@ -14,6 +14,9 @@ def main():
     parser = argparse.ArgumentParser(description='Run full-radio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config.addArguments(parser)
+    parser.add_argument('--config', action='store', dest='config_path',
+                        default=None,
+                        help='specify configuration file')
     parser.add_argument('-i', action='store', type=int, dest='node_id',
                         default=None,
                         help='set node ID')
@@ -42,6 +45,8 @@ def main():
                             'log_sent_packets', 'log_sent_data']
 
     config.loadArgs(args)
+    if hasattr(args, 'config_path'):
+        config.loadConfig(args.config_path)
 
     # Set parameters we don't configure from the command line
     config.min_packet_size = 512
