@@ -63,7 +63,7 @@ def run(config):
     if config.foreground:
         signal.signal(signal.SIGINT, partial(shutdown, controller))
 
-        controller.setupRadio(start=config.start)
+        controller.setupRadio(bootstrap=config.bootstrap)
     else:
         # See:
         #   https://www.python.org/dev/peps/pep-3143/
@@ -75,7 +75,7 @@ def run(config):
                                   pidfile=daemon.pidfile.TimeoutPIDLockFile(config.pidfile),
                                   signal_map={signal.SIGTERM: partial(shutdown, controller),
                                               signal.SIGTSTP: partial(shutdown, controller)}):
-            controller.setupRadio(start=config.start)
+            controller.setupRadio(bootstrap=config.bootstrap)
 
     return 0
 
@@ -136,8 +136,8 @@ def main():
     parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
                         dest='loglevel',
                         help='be verbose')
-    parser.add_argument('--start', action='store_true', default=False,
-                        help='immediately start the radio')
+    parser.add_argument('--bootstrap', action='store_true', default=False,
+                        help='immediately bootstrap the radio')
     parser.add_argument('action', choices=['start', 'stop', 'restart', 'status'])
 
     try:

@@ -26,7 +26,7 @@ class Controller(TCPProtoServer):
         self.nodes = set()
         self.dumpcap_procs = []
 
-    def setupRadio(self, start=False):
+    def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
         # *before* we daemonize, and loop isn't valid after we fork
         self.loop = asyncio.get_event_loop()
@@ -75,9 +75,9 @@ class Controller(TCPProtoServer):
         self.radio_api_server = self.startServer(internal.Request, radio_api.RADIO_API_HOST, radio_api.RADIO_API_PORT)
         self.loop.create_task(self.radio_api_server)
 
-        # Start the radio if we've been asked to. Otherwise, we will start it up
-        # later.
-        if start:
+        # Bootstrap the radio if we've been asked to. Otherwise, we will not
+        # bootstrap until a radio API client tells us to.
+        if bootstrap:
             self.startRadio()
 
         self.state = internal.READY
