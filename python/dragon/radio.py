@@ -34,38 +34,6 @@ class Config(object):
         self.collab_client_port = 5557
         self.collab_peer_port = 5558
 
-    def get_ms(self):
-        return self.ms_
-
-    def set_ms(self, ms):
-        self.ms_ = dragonradio.ModulationScheme(ms)
-
-    ms = property(get_ms, set_ms)
-
-    def get_check(self):
-        return self.check_
-
-    def set_check(self, check):
-        self.check_ = dragonradio.CRCScheme(check)
-
-    check = property(get_check, set_check)
-
-    def get_fec0(self):
-        return self.fec0_
-
-    def set_fec0(self, fec0):
-        self.fec0_ = dragonradio.FECScheme(fec0)
-
-    fec0 = property(get_fec0, set_fec0)
-
-    def get_fec1(self):
-        return self.fec1_
-
-    def set_fec1(self, fec1):
-        self.fec1_ = dragonradio.FECScheme(fec1)
-
-    fec1 = property(get_fec1, set_fec1)
-
     @property
     def logdir(self):
         if self.logdir_:

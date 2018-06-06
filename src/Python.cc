@@ -95,6 +95,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             return crc;
         }));
 
+    py::implicitly_convertible<py::str, crc_scheme>();
+
     for (unsigned int i = 0; i < LIQUID_CRC_NUM_SCHEMES; ++i)
         crc.value(crc_scheme_str[i][0], static_cast<crc_scheme>(i));
 
@@ -110,6 +112,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             return fec;
         }));
 
+    py::implicitly_convertible<py::str, fec_scheme>();
+
     for (unsigned int i = 0; i < LIQUID_FEC_NUM_SCHEMES; ++i)
         fec.value(fec_scheme_str[i][0], static_cast<fec_scheme>(i));
 
@@ -124,6 +128,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                throw py::value_error("\"" + value + "\" is not a valid value for enum type ModulationScheme");
            return ms;
        }));
+
+    py::implicitly_convertible<py::str, modulation_scheme>();
 
     for (unsigned int i = 0; i < LIQUID_MODEM_NUM_SCHEMES; ++i)
         ms.value(modulation_types[i].name, static_cast<modulation_scheme>(i));
