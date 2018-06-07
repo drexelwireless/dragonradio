@@ -1,4 +1,5 @@
 #include "Logger.hh"
+#include "RadioConfig.hh"
 #include "phy/Liquid.hh"
 
 std::mutex liquid_mutex;
@@ -45,10 +46,12 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     demod_off_ += stats_.end_counter;
 
     if (!header_valid_) {
-        printf("HEADER INVALID\n");
+        if (rc.verbose)
+            fprintf(stderr, "HEADER INVALID\n");
         incomplete = true;
     } else if (!payload_valid_) {
-        printf("PAYLOAD INVALID\n");
+        if (rc.verbose)
+            fprintf(stderr, "PAYLOAD INVALID\n");
         incomplete = true;
     }
 
