@@ -69,6 +69,7 @@ public:
                  modulation_scheme ms,
                  float evm,
                  float rssi,
+                 float cfo,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
 
      void logSend(const Clock::time_point& t,
@@ -121,6 +122,7 @@ private:
                   modulation_scheme ms,
                   float evm,
                   float rssi,
+                  float cfo,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
     void logSend_(const Clock::time_point& t,
                   const Header& hdr,

@@ -121,7 +121,7 @@ LIQUID_MS = [ 'unknown'
             , 'arb' ]
 
 class RecvPacket:
-    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, curhop, nexthop, seq, src, dest, crc, fec0, fec1, ms, evm, rssi, iqdata):
+    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, curhop, nexthop, seq, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, iqdata):
         self._timestamp = timestamp
         self._start = start
         self._end = end
@@ -138,6 +138,7 @@ class RecvPacket:
         self._ms = ms
         self._evm = evm
         self._rssi = rssi
+        self._cfo = cfo
         self._iqdata = iqdata
 
     def __str__(self):
@@ -224,6 +225,11 @@ class RecvPacket:
     def rssi(self):
         """RSSI (dB)"""
         return self._rssi
+
+    @property
+    def cfo(self):
+        """CFO (f/Fs)"""
+        return self._cfo
 
     @property
     def data(self):

@@ -318,6 +318,9 @@ struct RadioPacket : public Packet
     /** @brief Received signal strength indicator [dB] */
     float rssi;
 
+    /** @brief Carrier frequency offset (f/Fs) */
+    float cfo;
+
     /** @brief This flag is set if the packet has been delivered. */
     bool delivered;
 

@@ -50,6 +50,8 @@ struct PacketRecvEntry {
     float evm;
     /** @brief RSSI [dB]. */
     float rssi;
+    /** @brief CFO [f/Fs]. */
+    float cfo;
     /** @brief Raw IQ data. */
     hvl_t iq_data;
 };
@@ -147,6 +149,7 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("ms", HOFFSET(PacketRecvEntry, ms), h5_modulation_scheme);
     h5_packet_recv.insertMember("evm", HOFFSET(PacketRecvEntry, evm), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("rssi", HOFFSET(PacketRecvEntry, rssi), H5::PredType::NATIVE_FLOAT);
+    h5_packet_recv.insertMember("cfo", HOFFSET(PacketRecvEntry, cfo), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("iq_data", HOFFSET(PacketRecvEntry, iq_data), h5_iqdata);
 
     // H5 type for sent packets
@@ -246,10 +249,11 @@ void Logger::logRecv(const Clock::time_point& t,
                      modulation_scheme ms,
                      float evm,
                      float rssi,
+                     float cfo,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
     if (getCollectSource(kRecvPackets))
-        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, buf); });
+        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
@@ -320,6 +324,7 @@ void Logger::logRecv_(const Clock::time_point& t,
                       modulation_scheme ms,
                       float evm,
                       float rssi,
+                      float cfo,
                       std::shared_ptr<buffer<std::complex<float>>> buf)
 {
     PacketRecvEntry entry;
@@ -340,6 +345,7 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.ms = ms;
     entry.evm = evm;
     entry.rssi = rssi;
+    entry.cfo = cfo;
     if (getCollectSource(kRecvData)) {
         entry.iq_data.p = buf->data();
         entry.iq_data.len = buf->size();

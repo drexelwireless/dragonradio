@@ -64,6 +64,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 
         pkt->evm = stats_.evm;
         pkt->rssi = stats_.rssi;
+        pkt->cfo = stats_.cfo;
 
         callback_(std::move(pkt));
     }
@@ -85,6 +86,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
                         static_cast<modulation_scheme>(stats_.mod_scheme),
                         stats_.evm,
                         stats_.rssi,
+                        stats_.cfo,
                         std::move(buf));
     }
 
