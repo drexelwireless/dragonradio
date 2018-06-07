@@ -70,8 +70,13 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     }
 
     if (logger && logger->getCollectSource(Logger::kRecvPackets)) {
-        auto buf = std::make_shared<buffer<std::complex<float>>>(stats_.num_framesyms);
-        memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
+        std::shared_ptr<buffer<std::complex<float>>> buf = nullptr;
+
+        if (logger->getCollectSource(Logger::kRecvData)) {
+            buf = std::make_shared<buffer<std::complex<float>>>(stats_.num_framesyms);
+            memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
+        }
+
         logger->logRecv(demod_start_,
                         off + stats_.start_counter,
                         off + stats_.end_counter,
