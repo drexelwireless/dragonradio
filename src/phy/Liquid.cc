@@ -92,6 +92,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
                         stats_.evm,
                         stats_.rssi,
                         stats_.cfo,
+                        payload_len_,
                         std::move(buf));
     }
 

@@ -121,7 +121,7 @@ LIQUID_MS = [ 'unknown'
             , 'arb' ]
 
 class RecvPacket:
-    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, curhop, nexthop, seq, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, iqdata):
+    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, curhop, nexthop, seq, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, size, iqdata):
         self._timestamp = timestamp
         self._start = start
         self._end = end
@@ -139,6 +139,7 @@ class RecvPacket:
         self._evm = evm
         self._rssi = rssi
         self._cfo = cfo
+        self._size = size
         self._iqdata = iqdata
 
     def __str__(self):
@@ -232,18 +233,24 @@ class RecvPacket:
         return self._cfo
 
     @property
+    def size(self):
+        """packet size (bytes)"""
+        return self._size
+
+    @property
     def data(self):
         """Demodulated IQ data"""
         return self._iqdata
 
 class SendPacket:
-    def __init__(self, timestamp, curhop, nexthop, seq, src, dest, iqdata):
+    def __init__(self, timestamp, curhop, nexthop, seq, src, dest, size, iqdata):
         self._timestamp = timestamp
         self._curhop = curhop
         self._nexthop = nexthop
         self._seq = seq
         self._src = src
         self._dest = dest
+        self._size = size
         self._iqdata = iqdata
 
     @property
@@ -275,6 +282,11 @@ class SendPacket:
     def dest(self):
         """Destination node ID"""
         return self._dest
+
+    @property
+    def size(self):
+        """packet size (bytes)"""
+        return self._size
 
     @property
     def data(self):

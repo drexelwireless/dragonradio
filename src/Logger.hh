@@ -70,12 +70,14 @@ public:
                  float evm,
                  float rssi,
                  float cfo,
+                 uint32_t size,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
 
      void logSend(const Clock::time_point& t,
                   const Header& hdr,
                   NodeId src,
                   NodeId dest,
+                  uint32_t size,
                   std::shared_ptr<IQBuf> buf);
 
     void stop(void);
@@ -123,11 +125,13 @@ private:
                   float evm,
                   float rssi,
                   float cfo,
+                  uint32_t size,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
     void logSend_(const Clock::time_point& t,
                   const Header& hdr,
                   NodeId src,
                   NodeId dest,
+                  uint32_t size,
                   std::shared_ptr<IQBuf> buf);
 };
 #endif /* LOGGER_H_ */
