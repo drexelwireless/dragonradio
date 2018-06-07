@@ -30,8 +30,12 @@ protected:
     /** @brief Callback for received packets. */
     std::function<void(std::unique_ptr<RadioPacket>)> callback_;
 
-    /** @brief Resampling factor. This is used to adjust demod_off_. */
-    unsigned int resamp_fact_;
+    /** @brief Internal resampling factor. */
+    /** This is the factor by which the PHY internally oversamples, i.e., the
+     * samples seen by the Liquid demodulator are decimated by this amount. We
+     * need this quantity in order to properly track demod_off_ and friends.
+     */
+    unsigned int internal_oversample_fact_;
 
     /** @brief The timestamp of the slot we are demodulating. */
     Clock::time_point demod_start_;

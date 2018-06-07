@@ -86,7 +86,7 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> 
 MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
     phy_(phy)
 {
-    resamp_fact_ = 2;
+    internal_oversample_fact_ = 2;
 
     std::lock_guard<std::mutex> lck(liquid_mutex);
 

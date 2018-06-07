@@ -5,7 +5,7 @@
 std::mutex liquid_mutex;
 
 LiquidDemodulator::LiquidDemodulator() :
-    resamp_fact_(1)
+    internal_oversample_fact_(1)
 {
 }
 
@@ -43,7 +43,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
-    demod_off_ += stats_.end_counter;
+    demod_off_ += internal_oversample_fact_*stats_.end_counter;
 
     if (!header_valid_) {
         if (rc.verbose)
@@ -78,8 +78,8 @@ int LiquidDemodulator::callback(unsigned char *  header_,
         }
 
         logger->logRecv(demod_start_,
-                        off + stats_.start_counter,
-                        off + stats_.end_counter,
+                        off + internal_oversample_fact_*stats_.start_counter,
+                        off + internal_oversample_fact_*stats_.end_counter,
                         header_valid_,
                         payload_valid_,
                         *h,
