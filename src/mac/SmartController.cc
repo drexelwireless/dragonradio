@@ -107,6 +107,16 @@ get_packet:
             sendw.max.store(pkt->seq, std::memory_order_release);
     }
 
+    // Apply TX params
+    if (pkt->isFlagSet(kBroadcast)) {
+        pkt->tx_params = &broadcast_tx_params;
+        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
+    } else {
+        Node &dest = (*net_)[nexthop];
+
+        dest.updateNetPacketTXParams(*pkt);
+    }
+
     return true;
 }
 
@@ -220,9 +230,6 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     // Record the packet error
                     txFailure(dest);
 
-                    // Re-apply most recent TX params in case they have changed
-                    dest.updateNetPacketTXParams(*pkt);
-
                     if (netq_)
                         netq_->push_hi(std::move(pkt));
 
@@ -325,9 +332,6 @@ void SmartController::retransmit(SendWindow &sendw)
         // Record the packet error
         txFailure(dest);
 
-        // Re-apply most recent TX params in case they have changed
-        dest.updateNetPacketTXParams(*pkt);
-
         if (netq_)
             netq_->push_hi(std::move(pkt));
     }
@@ -351,7 +355,6 @@ void SmartController::ack(RecvWindow &recvw)
     // ACK by injecting a packet without a data payload at the head of the
     // queue.
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
-    Node &dest = (*net_)[recvw.node_id];
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = recvw.node_id;
@@ -360,8 +363,6 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
     pkt->dest = recvw.node_id;
-
-    dest.updateNetPacketTXParams(*pkt);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -382,8 +383,6 @@ void SmartController::broadcastHello(void)
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
     pkt->dest = 0;
-    pkt->tx_params = &broadcast_tx_params;
-    pkt->g = broadcast_tx_params.g_0dBFS.getValue();
 
     pkt->setFlag(kBroadcast);
 
