@@ -189,19 +189,18 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // time...
                 sendw.win = sendw.maxwin;
 
-                // Now that our window is open, try to send packets from this
-                // node again. We calculate the number of free slots in our
-                // window and splice at most that many packets onto the front
-                // of the network queue.
-                //
-                // INVARIANT: We assume packets come from the network in
-                // sequence order!
-                if (netq_) {
-                    size_t nslots = std::min(sendw.pending.size(), (size_t) (unack + sendw.win - max - 1));
-                    auto   first  = sendw.pending.cbegin();
-                    auto   last   = std::next(sendw.pending.cbegin(), nslots);
+                // Now that our window is open, pending packets in our window
+                // are eligible to be sent, so add them to the high-priority
+                // network queue.
+                if (netq_ && !sendw.pending.empty()) {
+                    auto begin = sendw.pending.cbegin();
+                    auto end = sendw.pending.cend();
+                    auto it = sendw.pending.cbegin();
 
-                    netq_->splice_hi(sendw.pending, first, last);
+                    while (it != end && (*it)->seq < unack + sendw.win)
+                        ++it;
+
+                    netq_->splice_hi(sendw.pending, begin, it);
                 }
 
                 // Update unack
@@ -500,21 +499,28 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
                 pkt->setFlag(kSYN);
                 sendw.new_window = false;
             }
-        }
 
-        // If this packet comes before our window, drop it. It could have snuck
-        // in as a retransmission just before the send window moved forward.
-        if (pkt->seq < unack)
-            continue;
+            // If this packet is in our send window, send it.
+            if (pkt->seq < unack + sendw.win)
+                return true;
 
-        // If this packet is in our send window, send it.
-        if (pkt->seq < unack + sendw.win)
+            // Otherwise, we need to save it for later
+            dprintf("Postponing send of out-of-window packet %u\n",
+                (unsigned) pkt->seq);
+            sendw.pending.emplace_back(std::move(pkt));
+        } else {
+            // If this packet comes before our window, drop it. It could have
+            // snuck in as a retransmission just before the send window moved
+            // forward. Try again!
+            if (pkt->seq < unack)
+                continue;
+
+            // Otherwise it had better be in our window becasue we added it back
+            // when our window expanded due to an ACK!
+            assert(pkt->seq < unack + sendw.win);
+
             return true;
-
-        // Otherwise, we need to save it for later
-        dprintf("Postponing send of out-of-window packet %u\n",
-            (unsigned) pkt->seq);
-        sendw.pending.emplace_back(std::move(pkt));
+        }
     }
 }
 
