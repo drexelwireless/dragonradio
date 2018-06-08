@@ -207,8 +207,11 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     auto end = sendw.pending.cend();
                     auto it = sendw.pending.cbegin();
 
-                    while (it != end && (*it)->seq < unack + sendw.win)
+                    while (it != end && dest.seq < unack + sendw.win) {
+                        (*it)->seq = dest.seq++;
+                        (*it)->setInternalFlag(kHasSeq);
                         ++it;
+                    }
 
                     netq_->splice_hi(sendw.pending, begin, it);
                 }
@@ -471,42 +474,45 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         if (!pkt->isInternalFlagSet(kHasSeq)) {
             Node& nexthop = (*net_)[pkt->nexthop];
 
-            // XXX If the sequence number would wrap around, drop the packet.
+            // If we can fit this packet in our window, do so. Otherwise, we
+            // add it to the send window's pending queue.
             //
-            // We could delay assigning sequence numbers until we know a packet
-            // can be sent, but then it's possible for sequence numbers to NOT
-            // reflect the order in which we actually received packets from the
-            // network. For example, we could read a fresh packet from the
-            // network just before our window opens and the receive thread dumps
-            // a bunch of packets in a destination's pending queue back onto the
-            // network queue.
+            // NOTE: The pending queue can grow indefinitely! This is not good,
+            // so it is the responsibility of the network layer to perform
+            // admission control.
             //
-            // This shouldn't happen---we need to do proper admission control at
-            // the network layer.
-            if (nexthop.seq + 1 < unack)
-                continue;
+            // NOTE: The receiver thread can ALSO assign sequence numbers. We
+            // want to make sure packets we get from the network aren't ever
+            // reordered. The reason there isn't a race condition between the
+            // receiver thread and us, the sender thread, is slightly subtle.
+            // Only the receiver can open the window, at which time it will hold
+            // the lock on the send window and attempt to drain the pending
+            // queue. There are two possibilities:
+            //
+            // 1) If the receiver doesn't drain the queue, it will fill the
+            // window, in which case we will add packets to the pending queue,
+            // so order will be maintained.
+            //
+            // 2) If the receiver does drain the queue, we are free to add more
+            // packets to the send window.
 
-            pkt->seq = nexthop.seq++;
+            if (nexthop.seq < unack + sendw.win) {
+                pkt->seq = nexthop.seq++;
+                pkt->setInternalFlag(kHasSeq);
 
-            nexthop.updateNetPacketTXParams(*pkt);
+                // If this is the first packet we are sending to the destination,
+                // set its SYN flag
+                if (sendw.new_window) {
+                    pkt->setFlag(kSYN);
+                    sendw.new_window = false;
+                }
 
-            pkt->setInternalFlag(kHasSeq);
-
-            // If this is the first packet we are sending to the destination,
-            // set its SYN flag
-            if (sendw.new_window) {
-                pkt->setFlag(kSYN);
-                sendw.new_window = false;
-            }
-
-            // If this packet is in our send window, send it.
-            if (pkt->seq < unack + sendw.win)
                 return true;
-
-            // Otherwise, we need to save it for later
-            dprintf("Postponing send of out-of-window packet %u\n",
-                (unsigned) pkt->seq);
-            sendw.pending.emplace_back(std::move(pkt));
+            } else {
+                dprintf("Postponing send of out-of-window packet %u\n",
+                    (unsigned) pkt->seq);
+                sendw.pending.emplace_back(std::move(pkt));
+            }
         } else {
             // If this packet comes before our window, drop it. It could have
             // snuck in as a retransmission just before the send window moved
