@@ -361,11 +361,11 @@ class Radio(object):
         self.controller.net_out >> self.modulator.sink
 
         #
-        # If we are using a SmartController, tell it that the network queue is a
-        # splice queue so that it can splice packets at the front of the queue.
+        # If we are using a SmartController, tell it about the network queue is
+        # so that it can add high-priority packets.
         #
         if config.arq:
-            self.controller.splice_queue = self.netq
+            self.controller.net_queue = self.netq
 
             self.controller.broadcast_tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
             if hasattr(config, 'auto_soft_tx_gain'):

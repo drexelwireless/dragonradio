@@ -196,12 +196,12 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 //
                 // INVARIANT: We assume packets come from the network in
                 // sequence order!
-                if (spliceq_) {
+                if (netq_) {
                     size_t nslots = std::min(sendw.pending.size(), (size_t) (unack + sendw.win - max - 1));
                     auto   first  = sendw.pending.cbegin();
                     auto   last   = std::next(sendw.pending.cbegin(), nslots);
 
-                    spliceq_->splice_front(sendw.pending, first, last);
+                    netq_->splice_hi(sendw.pending, first, last);
                 }
 
                 // Update unack
@@ -224,8 +224,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     // Re-apply most recent TX params in case they have changed
                     dest.updateNetPacketTXParams(*pkt);
 
-                    if (spliceq_)
-                        spliceq_->push_front(std::move(pkt));
+                    if (netq_)
+                        netq_->push_hi(std::move(pkt));
 
                     dprintf("Got NAK %d\n", (int) ehdr.ack);
                 }
@@ -329,8 +329,8 @@ void SmartController::retransmit(SendWindow &sendw)
         // Re-apply most recent TX params in case they have changed
         dest.updateNetPacketTXParams(*pkt);
 
-        if (spliceq_)
-            spliceq_->push_front(std::move(pkt));
+        if (netq_)
+            netq_->push_hi(std::move(pkt));
     }
 
     // Re-start the retransmit timer
@@ -339,7 +339,7 @@ void SmartController::retransmit(SendWindow &sendw)
 
 void SmartController::ack(RecvWindow &recvw)
 {
-    if (!spliceq_)
+    if (!netq_)
         return;
 
     std::lock_guard<spinlock_mutex> lock(recvw.mutex);
@@ -364,12 +364,12 @@ void SmartController::ack(RecvWindow &recvw)
 
     dest.updateNetPacketTXParams(*pkt);
 
-    spliceq_->push_front(std::move(pkt));
+    netq_->push_hi(std::move(pkt));
 }
 
 void SmartController::broadcastHello(void)
 {
-    if (!spliceq_)
+    if (!netq_)
         return;
 
     dprintf("Sending HELLO\n");
@@ -395,7 +395,7 @@ void SmartController::broadcastHello(void)
 
     pkt->appendControl(msg);
 
-    spliceq_->push_front(std::move(pkt));
+    netq_->push_hi(std::move(pkt));
 }
 
 void SmartController::startRetransmissionTimer(SendWindow &sendw)

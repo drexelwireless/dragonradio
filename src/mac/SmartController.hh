@@ -8,7 +8,7 @@
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "TimerQueue.hh"
-#include "net/SpliceQueue.hh"
+#include "net/Queue.hh"
 #include "mac/Controller.hh"
 
 class SmartController;
@@ -148,16 +148,16 @@ public:
 
     void broadcastHello(void);
 
-    /** @brief Get the controller's splice queue. */
-    std::shared_ptr<NetSpliceQueue> getSpliceQueue(void)
+    /** @brief Get the controller's network queue. */
+    std::shared_ptr<NetQueue> getNetQueue(void)
     {
-        return spliceq_;
+        return netq_;
     }
 
-    /** @brief Set the controller's splice queue. */
-    void setSpliceQueue(std::shared_ptr<NetSpliceQueue> q)
+    /** @brief Set the controller's network queue. */
+    void setNetQueue(std::shared_ptr<NetQueue> q)
     {
-        spliceq_ = q;
+        netq_ = q;
     }
 
     /** @brief Get PER threshold for increasing modulation level */
@@ -188,8 +188,8 @@ public:
     TXParams broadcast_tx_params;
 
 protected:
-    /** @brief Splice queue used to insert packets */
-    std::shared_ptr<NetSpliceQueue> spliceq_;
+    /** @brief Network queue with high-priority sub-queue. */
+    std::shared_ptr<NetQueue> netq_;
 
     /** @brief Maximum size of a send window */
     Seq::uint_type max_sendwin_;

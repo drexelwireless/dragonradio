@@ -242,12 +242,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("disconnect", [](RadioOutPush *out) { out->port->disconnect(); } )
         ;
 
-    // Export class NetSpliceQueue to Python
-    py::class_<NetSpliceQueue, std::shared_ptr<NetSpliceQueue>>(m, "NetSpliceQueue")
-        ;
-
     // Export class NetQueue to Python
-    py::class_<NetQueue, NetSpliceQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
+    py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
         .def(py::init())
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
@@ -421,7 +417,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       Seq::uint_type,
                       double,
                       double>())
-        .def_property("splice_queue", &SmartController::getSpliceQueue, &SmartController::setSpliceQueue)
+        .def_property("net_queue", &SmartController::getNetQueue, &SmartController::setNetQueue)
         .def_readwrite("broadcast_tx_params", &SmartController::broadcast_tx_params, "Broadcast TX parameters",
              py::return_value_policy::reference_internal)
         .def_property("modidx_up_per_threshold",
