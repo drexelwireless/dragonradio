@@ -32,7 +32,7 @@ public:
     /** @brief Return true if the queue is empty. */
     bool empty(void) const;
 
-    /** @brief Push an element on the end of the queue .*/
+    /** @brief Push an element on the end of the queue. */
     void push(const T& val);
 
     /** @brief Push an element on the end of the queue. */
