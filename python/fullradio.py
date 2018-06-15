@@ -26,6 +26,9 @@ def main():
     parser.add_argument('--aloha', action='store_true', dest='aloha',
                         default=False,
                         help='use slotted ALOHA MAC')
+    parser.add_argument('--log-iq',
+                        action='store_true', dest='log_iq',
+                        help='log IQ data')
     parser.add_argument('--interactive',
                         action='store_true', dest='interactive',
                         help='enter interactive shell after radio is configured')
@@ -40,9 +43,10 @@ def main():
         return ex.code
 
     if args.log_directory:
-        args.log_sources = ['log_slots',
-                            'log_recv_packets', 'log_recv_data',
-                            'log_sent_packets', 'log_sent_data']
+        args.log_sources = ['log_recv_packets', 'log_sent_packets']
+
+        if args.log_iq:
+            args.log_sources += ['log_slots', 'log_recv_data', 'log_sent_data']
 
     config.loadArgs(args)
     if hasattr(args, 'config_path'):
