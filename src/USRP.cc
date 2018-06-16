@@ -4,6 +4,8 @@
 #include <atomic>
 
 #include "Clock.hh"
+#include "Logger.hh"
+#include "RadioConfig.hh"
 #include "USRP.hh"
 
 USRP::USRP(const std::string& addr,
@@ -212,8 +214,10 @@ void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
 
         n = rx_stream_->recv(&buf[ndelivered], rx_max_samps_, rx_md, 0.1, false);
 
-        if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
+            logEvent("RX error: %s", rx_md.strerror().c_str());
+        }
 
         if (ndelivered == 0) {
             buf.timestamp = rx_md.time_spec;
@@ -269,37 +273,46 @@ void USRP::determineDeviceType(void)
 void USRP::txErrorWorker(void)
 {
     uhd::async_metadata_t async_md;
+    const char *msg;
 
     while (!done_) {
+        msg = nullptr;
+
         if (tx_stream_->recv_async_msg(async_md, 0.1)) {
             switch(async_md.event_code){
                 case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
-                    fprintf(stderr, "TX error: an internal send buffer has emptied\n");
+                    msg = "TX error: an internal send buffer has emptied";
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
-                    fprintf(stderr, "TX error: packet loss between host and device\n");
+                    msg = "TX error: packet loss between host and device";
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
-                    fprintf(stderr, "TX error: packet had time that was late\n");
+                    msg = "TX error: packet had time that was late";
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
-                    fprintf(stderr, "TX error: underflow occurred inside a packet\n");
+                    msg = "TX error: underflow occurred inside a packet";
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:
-                    fprintf(stderr, "TX error: packet loss within a burst\n");
+                    msg = "TX error: packet loss within a burst";
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_USER_PAYLOAD:
-                    fprintf(stderr, "TX error: some kind of custom user payload\n");
+                    msg = "TX error: some kind of custom user payload";
                     break;
             }
+        }
+
+        if (msg) {
+            if (rc.verbose)
+                fprintf(stderr, "%s\n", msg);
+            logEvent("%s", msg);
         }
     }
 }

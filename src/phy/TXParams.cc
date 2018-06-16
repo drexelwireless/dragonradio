@@ -1,4 +1,5 @@
 #include "RadioConfig.hh"
+#include "Logger.hh"
 #include "phy/TXParams.hh"
 
 void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
@@ -32,4 +33,5 @@ void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
 
     if (rc.verbose)
         fprintf(stderr, "Updated auto-gain: %0.1f\n", (double) getSoftTXGain0dBFS());
+    logEvent("AMC: updated auto-gain %0.1f", (double) getSoftTXGain0dBFS());
 }

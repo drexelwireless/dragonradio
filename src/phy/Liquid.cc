@@ -48,10 +48,12 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     if (!header_valid_) {
         if (rc.verbose)
             fprintf(stderr, "HEADER INVALID\n");
+        logEvent("PHY: invalid header");
         incomplete = true;
     } else if (!payload_valid_) {
         if (rc.verbose)
             fprintf(stderr, "PAYLOAD INVALID\n");
+        logEvent("PHY: invalid payload");
         incomplete = true;
     }
 
