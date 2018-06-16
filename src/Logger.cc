@@ -6,6 +6,7 @@
 
 #include "Clock.hh"
 #include "Logger.hh"
+#include "RadioConfig.hh"
 
 std::shared_ptr<Logger> logger;
 
@@ -311,6 +312,9 @@ void Logger::logEvent(const char *fmt, va_list ap0)
         }
 
         std::string s { buf.get() };
+
+        if (rc.verbose)
+            fprintf(stderr, "%s\n", s.c_str());
 
         log_q_.emplace([=](){ logEvent_(Clock::now(), s); });
     }
