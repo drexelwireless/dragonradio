@@ -186,7 +186,7 @@ class Controller(TCPProtoServer):
         #
         # Now delete the ALOHA MAC and switch to TDMA
         #
-        logger.info('Switching to TDMA MAC.')
+        logger.info('Switching to TDMA MAC, %d nodes discovered.', len(radio.net))
 
         del radio.mac
 
