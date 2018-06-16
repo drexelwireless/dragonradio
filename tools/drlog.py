@@ -293,6 +293,22 @@ class SendPacket:
         """Modulated IQ data"""
         return self._iqdata
 
+
+class Event:
+    def __init__(self, timestamp, event):
+        self._timestamp = timestamp
+        self._event = event.decode()
+
+    @property
+    def timestamp(self):
+        """Packet timestamp (in seconds since the logging node's start timestamp)"""
+        return self._timestamp
+
+    @property
+    def event(self):
+        """Event"""
+        return self._event
+
 class Node:
     def __init__(self):
         self.log_attrs = {}
@@ -367,6 +383,7 @@ class Log:
         self._recv = {}
         self._send = {}
         self._slots = {}
+        self._events = {}
         self._files = []
 
     def __del__(self):
@@ -385,7 +402,8 @@ class Log:
         self._recv[node.node_id] = Proxy(RecvPacket, f['recv'])
         self._send[node.node_id] = Proxy(SendPacket, f['send'])
 
-        self._recv[node.node_id].sort(key=lambda x: x.seq)
+        if 'event' in f:
+            self._events[node.node_id] = Proxy(Event, f['event'])
 
         return node
 

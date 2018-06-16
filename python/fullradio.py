@@ -43,7 +43,7 @@ def main():
         return ex.code
 
     if args.log_directory:
-        args.log_sources = ['log_recv_packets', 'log_sent_packets']
+        args.log_sources = ['log_recv_packets', 'log_sent_packets', 'log_events']
 
         if args.log_iq:
             args.log_sources += ['log_slots', 'log_recv_data', 'log_sent_data']

@@ -158,6 +158,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     addLoggerSource(loggerCls, "log_recv_data", Logger::kRecvData);
     addLoggerSource(loggerCls, "log_sent_packets", Logger::kSentPackets);
     addLoggerSource(loggerCls, "log_sent_data", Logger::kSentData);
+    addLoggerSource(loggerCls, "log_events", Logger::kEvents);
 
     // Export class RadioConfig to Python
     py::class_<RadioConfig, std::shared_ptr<RadioConfig>>(m, "RadioConfig")

@@ -79,6 +79,12 @@ struct PacketSendEntry {
     hvl_t iq_data;
 };
 
+/** @brief Generic event */
+struct EventEntry {
+    double timestamp;
+    const char *event;
+};
+
 Logger::Logger(Clock::time_point t_start) :
   t_start_(t_start),
   t_last_slot_((time_t) 0),
@@ -95,6 +101,9 @@ Logger::~Logger()
 
 void Logger::open(const std::string& filename)
 {
+    // H5 type for strings
+    H5::StrType h5_string(H5::PredType::C_S1, H5T_VARIABLE);
+
     // H5 compound type for complex floats
     // This matches numpy's format
     // See:
@@ -169,12 +178,19 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("size", HOFFSET(PacketSendEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
 
+    // H5 type for events
+    H5::CompType h5_event(sizeof(EventEntry));
+
+    h5_event.insertMember("timestamp", HOFFSET(EventEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_event.insertMember("event", HOFFSET(EventEntry, event), h5_string);
+
     // Create H5 groups
     file_ = H5::H5File(filename, H5F_ACC_TRUNC);
 
     slots_ = std::make_unique<ExtensibleDataSet>(file_, "slots", h5_slot);
     recv_ = std::make_unique<ExtensibleDataSet>(file_, "recv", h5_packet_recv);
     send_ = std::make_unique<ExtensibleDataSet>(file_, "send", h5_packet_send);
+    event_ = std::make_unique<ExtensibleDataSet>(file_, "event", h5_event);
 
     // Start worker thread
     worker_thread_ = std::thread(&Logger::worker, this);
@@ -272,6 +288,32 @@ void Logger::logSend(const Clock::time_point& t,
 {
     if (getCollectSource(kSentPackets))
         log_q_.emplace([=](){ logSend_(t, hdr, src, dest, size, buf); });
+}
+
+void Logger::logEvent(const char *fmt, va_list ap0)
+{
+    if (getCollectSource(kEvents)) {
+        int                     n = 2 * strlen(fmt);
+        std::unique_ptr<char[]> buf;
+        va_list                 ap;
+
+        for (;;) {
+            buf.reset(new char[n]);
+
+            va_copy(ap, ap0);
+            int count = vsnprintf(&buf[0], n, fmt, ap);
+            va_end(ap);
+
+            if (count < 0 || count >= n)
+                n *= 2;
+            else
+                break;
+        }
+
+        std::string s { buf.get() };
+
+        log_q_.emplace([=](){ logEvent_(Clock::now(), s); });
+    }
 }
 
 void Logger::stop(void)
@@ -392,4 +434,15 @@ void Logger::logSend_(const Clock::time_point& t,
     }
 
     send_->write(&entry, 1);
+}
+
+void Logger::logEvent_(const Clock::time_point& t,
+                       const std::string& s)
+{
+    EventEntry entry;
+
+    entry.timestamp = (t - t_start_).get_real_secs();
+    entry.event = s.c_str();
+
+    event_->write(&entry, 1);
 }

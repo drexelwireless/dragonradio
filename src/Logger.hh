@@ -1,6 +1,7 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
+#include <stdarg.h>
 #include <time.h>
 
 #include <memory>
@@ -30,7 +31,8 @@ public:
         kRecvPackets = 1,
         kRecvData = 2,
         kSentPackets = 3,
-        kSentData = 4
+        kSentData = 4,
+        kEvents = 5
     };
 
     Logger(Clock::time_point t_start);
@@ -80,6 +82,8 @@ public:
                  uint32_t size,
                  std::shared_ptr<IQBuf> buf);
 
+    void logEvent(const char *fmt, va_list ap);
+
     void stop(void);
 
 private:
@@ -87,6 +91,7 @@ private:
     std::unique_ptr<ExtensibleDataSet> slots_;
     std::unique_ptr<ExtensibleDataSet> recv_;
     std::unique_ptr<ExtensibleDataSet> send_;
+    std::unique_ptr<ExtensibleDataSet> event_;
     Clock::time_point t_start_;
     Clock::time_point t_last_slot_;
 
@@ -133,5 +138,21 @@ private:
                   NodeId dest,
                   uint32_t size,
                   std::shared_ptr<IQBuf> buf);
+    void logEvent_(const Clock::time_point& t,
+                   const std::string& event);
 };
+
+void logEvent(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
+inline void logEvent(const char *fmt, ...)
+{
+    if (logger) {
+        va_list ap;
+
+        va_start(ap, fmt);
+        logger->logEvent(fmt, ap);
+        va_end(ap);
+    }
+}
+
 #endif /* LOGGER_H_ */

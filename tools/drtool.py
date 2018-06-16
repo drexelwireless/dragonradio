@@ -23,6 +23,8 @@ def main():
                         help='specify node')
     parser.add_argument('--header', action='store_true',
                         help='show log header')
+    parser.add_argument('--events', action='store_true',
+                        help='show events')
     parser.add_argument('--bad', action='store_true',
                         help='list bad packets')
     parser.add_argument('--dump-slot', action='store', type=float,
@@ -42,6 +44,13 @@ def main():
             print("\t{}".format(time.strftime('%Y-%m-%d - %H:%m:%S %p', time.localtime(node.start))))
             for attr in node.log_attrs:
                 print("\t{}: {}".format(attr, node.log_attrs[attr]))
+
+    if args.events:
+        for node_id in log.nodes:
+            node = log.nodes[node_id]
+            print("Node {}:".format(node_id))
+            for e in log.events[node.node_id]:
+                print("\t{}: {}".format(e.timestamp, e.event))
 
     if args.bad:
         for node_id in log.nodes:
