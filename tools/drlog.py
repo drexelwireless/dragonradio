@@ -305,7 +305,7 @@ class Node:
     @property
     def start(self):
         """Time at which logging began (in seconds since the Epoch)"""
-        return time.localtime(self.log_attrs['start'])
+        return self.log_attrs['start']
 
     @property
     def tx_bandwidth(self):

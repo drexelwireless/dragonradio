@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
 import sys
+import time
 
 import drlog
 import drgui
@@ -38,7 +39,7 @@ def main():
         for node_id in log.nodes:
             node = log.nodes[node_id]
             print("Node {}:".format(node_id))
-            print("\t{}".format(node.start))
+            print("\t{}".format(time.strftime('%Y-%m-%d - %H:%m:%S %p', time.localtime(node.start))))
             for attr in node.log_attrs:
                 print("\t{}: {}".format(attr, node.log_attrs[attr]))
 
