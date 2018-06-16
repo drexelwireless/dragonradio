@@ -337,6 +337,29 @@ class Node:
         """Liquid DSP modulation scheme"""
         return self.log_attrs['modulation_scheme'].decode()
 
+class Proxy(object):
+    def __init__(self, cls, items):
+        self.cls = cls
+        self.items = items
+        self.idx = 0
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, i):
+        return self.cls(*(self.items[i]))
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.idx >= len(self):
+            raise StopIteration
+        else:
+            x = self[self.idx]
+            self.idx += 1
+            return x
+
 class Log:
     def __init__(self):
         self._nodes = {}
@@ -344,21 +367,27 @@ class Log:
         self._recv = {}
         self._send = {}
         self._slots = {}
+        self._files = []
+
+    def __del__(self):
+        for f in self._files:
+            f.close()
 
     def load(self, filename):
-        with h5py.File(filename, 'r') as f:
-            node = Node()
-            for attr in f.attrs:
-                node.log_attrs[attr] = f.attrs[attr]
+        f = h5py.File(filename, 'r')
+        self._files.append(f)
+        node = Node()
+        for attr in f.attrs:
+            node.log_attrs[attr] = f.attrs[attr]
 
-            self._nodes[node.node_id] = node
-            self._slots[node.node_id] = [Slot(*x) for x in f['slots']]
-            self._recv[node.node_id] = [RecvPacket(*x) for x in f['recv']]
-            self._send[node.node_id]= [SendPacket(*x) for x in f['send']]
+        self._nodes[node.node_id] = node
+        self._slots[node.node_id] = Proxy(Slot, f['slots'])
+        self._recv[node.node_id] = Proxy(RecvPacket, f['recv'])
+        self._send[node.node_id] = Proxy(SendPacket, f['send'])
 
-            self._recv[node.node_id].sort(key=lambda x: x.seq)
+        self._recv[node.node_id].sort(key=lambda x: x.seq)
 
-            return node
+        return node
 
     def findReceivedPackets(self, node, t_start, t_end):
         """
@@ -459,3 +488,7 @@ class Log:
     @property
     def sent(self):
         return self._send
+
+    @property
+    def events(self):
+        return self._events
