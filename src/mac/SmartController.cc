@@ -66,10 +66,12 @@ get_packet:
 
 #if DEBUG
         if (pkt->data_len == 0)
-            dprintf("ARQ: Sending ACK %u",
+            dprintf("ARQ: send to %u: ack=%u",
+                (unsigned) nexthop,
                 (unsigned) recvw.ack);
         else
-            dprintf("ARQ: Sending %u with ACK %u",
+            dprintf("ARQ: send to %u: seq=%u; ack=%u",
+                (unsigned) nexthop,
                 (unsigned) pkt->seq,
                 (unsigned) recvw.ack);
 #endif
@@ -77,7 +79,9 @@ get_packet:
         // We're sending an ACK, so cancel the ACK timer
         timer_queue_.cancel(recvw);
     } else if (pkt->data_len != 0)
-        dprintf("ARQ: Sending %u", (unsigned) pkt->seq);
+        dprintf("ARQ: send to %u: seq=%u",
+            (unsigned) nexthop,
+            (unsigned) pkt->seq);
 
     // Update our send window if this packet has data
     if (pkt->data_len != 0) {
@@ -136,10 +140,12 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
                     node.is_gateway = it->hello.is_gateway;
 
-                    dprintf("ARQ: Received HELLO from %u", (unsigned) pkt->curhop);
+                    dprintf("ARQ: recv from %u: HELLO",
+                        (unsigned) pkt->curhop);
 
                     if (rc.verbose)
-                        printf("ARQ: Discovered neighbor %u", (unsigned) pkt->curhop);
+                        fprintf(stderr, "ARQ: Discovered neighbor %u\n",
+                            (unsigned) pkt->curhop);
                 }
                 break;
 
@@ -169,7 +175,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
         if (pkt->isFlagSet(kACK)) {
             if (ehdr.ack > unack) {
-                dprintf("ARQ: Got ACK %u (unack = %u)",
+                dprintf("ARQ: recv from %u: ack=%u; unack=%u",
+                    (unsigned) prevhop,
                     (unsigned) ehdr.ack,
                     (unsigned) unack);
 
@@ -191,7 +198,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // If the max packet we sent was ACK'ed, cancel the retransmit
                 // timer.
                 if (unack == max + 1) {
-                    dprintf("ARQ: Canceling retransmission timer");
+                    dprintf("ARQ: recv from %u: canceling retransmission timer",
+                        (unsigned) prevhop);
                     timer_queue_.cancel(sendw);
                 }
 
@@ -237,7 +245,9 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     if (netq_)
                         netq_->push_hi(std::move(pkt));
 
-                    dprintf("ARQ: Got NAK %d", (int) ehdr.ack);
+                    dprintf("ARQ: recv from %u: nak=%u",
+                        (unsigned) prevhop,
+                        (unsigned) ehdr.ack);
                 }
             }
         }
@@ -245,18 +255,21 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
     // If this packet doesn't contain any data, we are done
     if (pkt->data_len == 0) {
-        dprintf("ARQ: Received ACK %u",
+        dprintf("ARQ: recv from %u: ack=%u",
+            (unsigned) prevhop,
             (unsigned) ehdr.ack);
         return;
     }
 
 #if DEBUG
     if (pkt->isFlagSet(kACK))
-        dprintf("ARQ: Received %u with ACK %u",
+        dprintf("ARQ: recv from %u: seq=%u; ack=%u",
+            (unsigned) prevhop,
             (unsigned) pkt->seq,
             (unsigned) ehdr.ack);
     else
-        dprintf("ARQ: Received %u",
+        dprintf("ARQ: recv from %u: seq=%u",
+            (unsigned) prevhop,
             (unsigned) pkt->seq);
 #endif
 
@@ -271,14 +284,16 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
     // Drop this packet if we have already received it
     if (pkt->seq < recvw.ack) {
-        dprintf("ARQ: Received DUP %u",
+        dprintf("ARQ: recv from %u: DUP seq=%u",
+            (unsigned) prevhop,
             (unsigned) pkt->seq);
         return;
     }
 
     // Drop this packet if it is outside our receive window
     if (pkt->seq > recvw.ack + recvw.win) {
-        dprintf("ARQ: Received OUTSIDE receive window %u",
+        dprintf("ARQ: recv from %u: OUTSIDE WINDOW seq=%u",
+            (unsigned) prevhop,
             (unsigned) pkt->seq);
         return;
     }
@@ -319,7 +334,8 @@ void SmartController::retransmit(SendWindow &sendw)
 
     // We may have received an ACK, in which case we don't need to re-transmit
     if (unack <= max) {
-        dprintf("ARQ: Retransmitting %u (max %u)",
+        dprintf("ARQ: send to %u: retransmit seq=%u; max=%u",
+            (unsigned) sendw.node_id,
             (unsigned) unack,
             (unsigned) max);
 
@@ -351,7 +367,9 @@ void SmartController::ack(RecvWindow &recvw)
 
     std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
-    dprintf("ARQ: Sending delayed ACK %u", (unsigned) recvw.ack);
+    dprintf("ARQ: send to %u: DELAYED ack=%u",
+        (unsigned) recvw.node_id,
+        (unsigned) recvw.ack);
 
     // Create an ACK-only packet. Why don't we set the ACK field here!? Because
     // it will be filled out when the packet flows back through the controller
@@ -376,7 +394,7 @@ void SmartController::broadcastHello(void)
     if (!netq_)
         return;
 
-    dprintf("ARQ: Sending HELLO");
+    dprintf("ARQ: broadcast HELLO");
 
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
@@ -404,7 +422,8 @@ void SmartController::startRetransmissionTimer(SendWindow &sendw)
 {
     // Start the retransmit timer if it is not already running.
     if (!timer_queue_.running(sendw)) {
-        dprintf("ARQ: Starting retransmission timer");
+        dprintf("ARQ: send to %u: starting retransmission timer",
+            (unsigned) sendw.node_id);
         timer_queue_.run_in(sendw, (*net_)[sendw.node_id].retransmission_delay);
     }
 }
@@ -413,7 +432,8 @@ void SmartController::startACKTimer(RecvWindow &recvw)
 {
     // Start the ACK timer if it is not already running.
     if (!timer_queue_.running(recvw)) {
-        dprintf("ARQ: Starting ACK delay timer");
+        dprintf("ARQ: send to %u: starting ACK delay timer",
+            (unsigned) recvw.node_id);
         timer_queue_.run_in(recvw, (*net_)[recvw.node_id].ack_delay);
     }
 }
@@ -512,8 +532,8 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
                 return true;
             } else {
-                dprintf("ARQ: Postponing send of out-of-window packet %u",
-                    (unsigned) pkt->seq);
+                dprintf("ARQ: send to %u: POSTPONE",
+                    (unsigned) pkt->nexthop);
                 sendw.pending.emplace_back(std::move(pkt));
             }
         } else {
