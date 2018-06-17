@@ -3,6 +3,7 @@ import io
 import libconf
 import logging
 import os
+from pprint import pformat
 import platform
 import re
 import sys
@@ -33,6 +34,9 @@ class Config(object):
         self.collab_server_port = 5556
         self.collab_client_port = 5557
         self.collab_peer_port = 5558
+
+    def __str__(self):
+        return pformat(self.__dict__)
 
     @property
     def logdir(self):
