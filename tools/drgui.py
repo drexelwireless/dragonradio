@@ -178,7 +178,7 @@ class ReceivePlot:
 
         # Add packet position slider
         self.axpos = self.fig.add_axes([0.1, 0.02, 0.4, 0.03])
-        self.spos = Slider(self.axpos, 'Packet Index', 0, len(self.log.received[self.node.node_id]), valfmt='%1.0f', valinit=0, valstep=1)
+        self.spos = Slider(self.axpos, 'Packet Index', 0, len(self.log.received[self.node.node_id])-1, valfmt='%1.0f', valinit=0, valstep=1)
         self.spos.on_changed(self.update_slider)
 
     def plot(self, idx):
