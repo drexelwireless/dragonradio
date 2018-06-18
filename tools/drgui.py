@@ -320,7 +320,7 @@ class SendPlot:
 
         # Add received packet button.
         self.axrx = self.fig.add_axes([0.6, 0.02, 0.1, 0.03])
-        self.brx = Button(self.axrx, 'Link to TX')
+        self.brx = Button(self.axrx, 'Link to RX')
         self.brx.on_clicked(self.link_to_rx)
 
         # Add packet position slider
