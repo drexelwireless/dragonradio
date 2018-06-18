@@ -235,6 +235,8 @@ class Radio(object):
         self.node_id = config.node_id
         self.logger = None
 
+        logger.info('Radio configuration:\n' + str(config))
+
         # Copy configuration settings to the C++ RadioConfig object
         for attr in ['verbose', 'short_per_npackets', 'long_per_npackets']:
             if hasattr(config, attr):
