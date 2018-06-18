@@ -148,6 +148,7 @@ void USRP::setRXGain(float db)
 
 void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs)
 {
+    const double       txRate = usrp_->get_tx_rate(); // TX rate in Hz
     uhd::tx_metadata_t tx_md; // TX metadata for UHD
     size_t             n;     // Size of next send
 
@@ -161,6 +162,8 @@ void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bu
     // have a very large buffer to send.
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
         IQBuf& iqbuf = **it; // Current buffer we are sending
+
+        iqbuf.timestamp = when;
 
         for (size_t off = 0; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
@@ -180,6 +183,8 @@ void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bu
             tx_md.has_time_spec = false;
             tx_md.start_of_burst = false;
         }
+
+        when += static_cast<double>(iqbuf.size())/txRate;
     }
 }
 
