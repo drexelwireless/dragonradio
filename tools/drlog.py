@@ -363,13 +363,26 @@ class Proxy(object):
     def __init__(self, cls, items):
         self.cls = cls
         self.items = items
-        self.idx = 0
 
     def __len__(self):
         return len(self.items)
 
     def __getitem__(self, i):
         return self.cls(*(self.items[i]))
+
+    def __iter__(self):
+        return ProxyIter(self)
+
+class ProxyIter(object):
+    def __init__(self, proxy):
+        self.proxy = proxy
+        self.idx = 0
+
+    def __len__(self):
+        return len(self.proxy)
+
+    def __getitem__(self, i):
+        return self.proxy[i]
 
     def __iter__(self):
         return self
