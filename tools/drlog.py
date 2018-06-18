@@ -293,7 +293,6 @@ class SendPacket:
         """Modulated IQ data"""
         return self._iqdata
 
-
 class Event:
     def __init__(self, timestamp, event):
         self._timestamp = timestamp
