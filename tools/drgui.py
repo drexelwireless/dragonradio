@@ -40,7 +40,7 @@ def zoom_factory(fig, ax, base_scale = 2.0):
             else:
                 # deal with something that should never happen
                 scale_factor = 1
-                print(event.button)
+
             # set new limits
             ax.set_xlim([xdata - (xdata-cur_xlim[0]) / scale_factor,
                          xdata + (cur_xlim[1]-xdata) / scale_factor])
