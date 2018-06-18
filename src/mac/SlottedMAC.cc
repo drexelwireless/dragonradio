@@ -97,25 +97,34 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
     modulator_->pop(modBuf, maxSamples);
 
     if (!modBuf.empty()) {
-        for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
-            if (logger && logger->getCollectSource(Logger::kSentPackets)) {
+        if (logger && logger->getCollectSource(Logger::kSentPackets)) {
+            for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
+                txBuf.emplace_back((*it)->samples);
+
+            usrp_->burstTX(when, txBuf);
+
+            for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
                 Header hdr;
 
                 hdr.curhop = (*it)->pkt->curhop;
                 hdr.nexthop = (*it)->pkt->nexthop;
                 hdr.seq = (*it)->pkt->seq;
 
-                logger->logSend(when,
+                logger->logSend((*it)->samples->timestamp,
                                 hdr,
                                 (*it)->pkt->src,
                                 (*it)->pkt->dest,
                                 (*it)->pkt->size(),
                                 (*it)->samples);
             }
+        } else {
+            // When we aren't logging, use std::move to hand the samples over
+            // without retaining a reference. This avoids a shared_ptr refcount
+            // operation. Do we care?
+            for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
+                txBuf.emplace_back(std::move((*it)->samples));
 
-            txBuf.emplace_back(std::move((*it)->samples));
+            usrp_->burstTX(when, txBuf);
         }
-
-        usrp_->burstTX(when, txBuf);
     }
 }
