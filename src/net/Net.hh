@@ -13,12 +13,6 @@
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
 
-/** @brief Number of packets we care about for short-term PER */
-const int kNumShortPER = 50;
-
-/** @brief Number of packets we care about for long-term PER */
-const int kNumLongPER = 100;
-
 struct Node {
     Node(NodeId id, TXParams *tx_params);
     ~Node();
