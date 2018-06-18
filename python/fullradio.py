@@ -52,15 +52,6 @@ def main():
     if hasattr(args, 'config_path'):
         config.loadConfig(args.config_path)
 
-    # Set parameters we don't configure from the command line
-    config.min_packet_size = 512
-    config.num_modulation_threads = 2
-    config.num_demodulation_threads = 10
-    config.arq_window = 1024
-    config.slot_size = .035
-    config.guard_size = .01
-    config.aloha_prob = .1
-
     # Create the radio object
     radio = dragon.radio.Radio(config)
 

@@ -28,9 +28,64 @@ class Config(object):
     def __init__(self):
         # Set some default values
         self.node_id = getNodeIdFromHostname()
+
+        # Log parameters
+        self.log_directory = None
+        # This is the actual path to the log directory
         self.logdir_ = None
-        # This is the default frequency in the Colosseum
+
+        # USRP settings
+        self.addr = ''
+        self.rx_antenna = 'RX2'
+        self.tx_antenna = 'TX/RX'
+
+        # Frequency and bandwidth
+        # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
+        self.bandwidth = 5e6
+
+        # TX/RX gain parameters
+        self.tx_gain = 25
+        self.rx_gain = 25
+        self.soft_tx_gain = -12
+        self.auto_soft_tx_gain = None
+
+        # PHY parameters
+        self.phy = 'flexframe'
+        self.min_packet_size = 512
+        self.num_modulation_threads = 2
+        self.num_demodulation_threads = 10
+
+        # General liquid modulation options
+        self.check = 'crc32'
+        self.fec0 = 'v29'
+        self.fec1 = 'rs8'
+        self.ms = 'qpsk'
+
+        # OFDM parameters
+        self.M = 48
+        self.cp_len = 6
+        self.taper_len = 4
+
+        # MAC parameters
+        self.slot_size = .035
+        self.guard_size = .01
+        self.aloha_prob = .1
+
+        # ARQ options
+        self.arq = False
+        self.arq_window = 1024
+
+        # AMC options
+        self.amc = False
+        self.amc_table = None
+
+        self.short_per_npackets = 50
+        self.long_per_npackets = 200
+        self.modidx_up_per_threshold = 0.02
+        self.modidx_down_per_threshold = 0.10
+
+        # Default collab server settings
         self.collab_server_port = 5556
         self.collab_client_port = 5557
         self.collab_peer_port = 5558
@@ -43,7 +98,7 @@ class Config(object):
         if self.logdir_:
             return self.logdir_
 
-        if not hasattr(self, 'log_directory'):
+        if self.log_directory == None:
             return None
 
         logdir = os.path.join(self.log_directory, 'node-{:03d}'.format(self.node_id))
@@ -110,122 +165,108 @@ class Config(object):
 
         def add_argument(*args, default=None, **kwargs):
             if allow_defaults:
-                parser.add_argument(*args, default=default, **kwargs)
+                parser.add_argument(*args, default=getattr(self, kwargs['dest']), **kwargs)
             else:
                 parser.add_argument(*args, **kwargs)
 
+        # Log parameters
         add_argument('-l', action='store',
-                     default=None,
                      dest='log_directory',
                      help='specify directory for log files')
+
+        # USRP settings
         add_argument('--addr', action='store',
-                     default='',
                      dest='addr',
                      help='specify device address')
         add_argument('--rx-antenna', action='store',
-                     default='RX2',
                      dest='rx_antenna',
                      help='set RX antenna')
         add_argument('--tx-antenna', action='store',
-                     default='TX/RX',
                      dest='tx_antenna',
                      help='set TX antenna')
-        add_argument('--phy', action='store',
-                     choices=['flexframe', 'ofdm', 'multiofdm'],
-                     default='flexframe',
-                     dest='phy',
-                     help='set PHY')
+
+        # Frequency and bandwidth
         add_argument('-f', '--frequency', action='store', type=float,
-                     default=1e9,
                      dest='frequency',
                      help='set center frequency (Hz)')
         add_argument('-b', '--bandwidth', action='store', type=float,
-                     default=5e6,
                      dest='bandwidth',
                      help='set bandwidth (Hz)')
+
         # Gain-related options
-        add_argument('-g', '--soft-tx-gain', action='store', type=float,
-                     default=-12,
-                     dest='soft_tx_gain',
-                     help='set soft TX gain (dB)')
         add_argument('-G', '--tx-gain', action='store', type=float,
-                     default=25,
                      dest='tx_gain',
                      help='set UHD TX gain (dB)')
         add_argument('-R', '--rx-gain', action='store', type=float,
-                     default=25,
                      dest='rx_gain',
                      help='set UHD RX gain (dB)')
+        add_argument('-g', '--soft-tx-gain', action='store', type=float,
+                     dest='soft_tx_gain',
+                     help='set soft TX gain (dB)')
         add_argument('--auto-soft-tx-gain', action='store', type=int,
-                     default=None,
                      dest='auto_soft_tx_gain',
                      help='automatically choose soft TX gain to attain 0dBFS')
-        # OFDM-specific options
-        add_argument('-M', '--subcarriers', action='store', type=int,
-                     default=48,
-                     dest='M',
-                     help='set number of OFDM subcarriers')
-        add_argument('-C', '--cp', action='store', type=int,
-                     default=6,
-                     dest='cp_len',
-                     help='set OFDM cyclic prefix length')
-        add_argument('-T', '--taper', action='store', type=int,
-                     default=4,
-                     dest='taper_len',
-                     help='set OFDM taper length')
-        # General modulation options
+
+        # PHY parameters
+        add_argument('--phy', action='store',
+                     choices=['flexframe', 'ofdm', 'multiofdm'],
+                     dest='phy',
+                     help='set PHY')
+
+        # General liquid modulation options
         add_argument('-r', '--check',
                      action='store', type=dragonradio.CRCScheme,
-                     default='crc32',
                      dest='check',
                      help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
         add_argument('-c', '--fec0',
                      action='store', type=dragonradio.FECScheme,
-                     default='v29',
                      dest='fec0',
                      help='set inner FEC: ' + enumHelp(dragonradio.FECScheme))
         add_argument('-k', '--fec1',
                      action='store', type=dragonradio.FECScheme,
-                     default='rs8',
                      dest='fec1',
                      help='set outer FEC: ' + enumHelp(dragonradio.FECScheme))
         add_argument('-m', '--mod',
                      action='store', type=dragonradio.ModulationScheme,
-                     default='qpsk',
                      dest='ms',
                      help='set modulation scheme: ' + enumHelp(dragonradio.ModulationScheme))
+
+        # OFDM-specific options
+        add_argument('-M', '--subcarriers', action='store', type=int,
+                     dest='M',
+                     help='set number of OFDM subcarriers')
+        add_argument('-C', '--cp', action='store', type=int,
+                     dest='cp_len',
+                     help='set OFDM cyclic prefix length')
+        add_argument('-T', '--taper', action='store', type=int,
+                     dest='taper_len',
+                     help='set OFDM taper length')
+
         # ARQ options
         add_argument('--arq', action='store_const', const=True,
-                     default=False,
                      dest='arq',
                      help='enable ARQ')
         add_argument('--no-arq', action='store_const', const=False,
-                     default=False,
                      dest='arq',
                      help='disable ARQ')
+
         # AMC options
         add_argument('--amc', action='store_const', const=True,
-                     default=False,
                      dest='amc',
                      help='enable AMC')
         add_argument('--no-amc', action='store_const', const=False,
-                     default=False,
                      dest='amc',
                      help='disable AMC')
         add_argument('--short-per-npackets', action='store', type=int,
-                     default=50,
                      dest='short_per_npackets',
                      help='set number of packets we use to calculate short-term PER')
         add_argument('--long-per-npackets', action='store', type=int,
-                     default=200,
                      dest='long_per_npackets',
                      help='set number of packets we use to calculate long-term PER')
         add_argument('--modidx-up-per-threshold', action='store', type=float,
-                     default=0.02,
                      dest='modidx_up_per_threshold',
                      help='set PER threshold for increasing modulation level')
         add_argument('--modidx-down-per-threshold', action='store', type=float,
-                     default=0.10,
                      dest='modidx_down_per_threshold',
                      help='set PER threshold for decreasing modulation level')
 
@@ -303,7 +344,7 @@ class Radio(object):
         #
         # Set up TX params for network
         #
-        if config.amc and hasattr(config, 'amc_table') and config.amc_table:
+        if config.amc and config.amc_table:
             tx_params = []
             for (crc, fec0, fec1, ms) in config.amc_table:
                 tx_params.append(dragonradio.TXParams(crc, fec0, fec1, ms))
@@ -312,7 +353,7 @@ class Radio(object):
 
         for p in tx_params:
             p.soft_tx_gain_0dBFS = config.soft_tx_gain
-            if hasattr(config, 'auto_soft_tx_gain'):
+            if config.auto_soft_tx_gain != None:
                 p.recalc0dBFSEstimate(config.auto_soft_tx_gain)
 
         self.net.tx_params = dragonradio.TXParamsList(tx_params)
@@ -374,7 +415,7 @@ class Radio(object):
             self.controller.net_queue = self.netq
 
             self.controller.broadcast_tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
-            if hasattr(config, 'auto_soft_tx_gain'):
+            if config.auto_soft_tx_gain != None:
                 self.controller.broadcast_tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
 
     def configureALOHA(self):
