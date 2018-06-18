@@ -207,8 +207,8 @@ void USRP::stopRXStream(void)
 
 void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
-    const double      txRate = usrp_->get_rx_rate(); // TX rate in Hz
-    Clock::time_point t_end = t_start + static_cast<double>(nsamps)/txRate;
+    const double      rxRate = usrp_->get_rx_rate(); // RX rate in Hz
+    Clock::time_point t_end = t_start + static_cast<double>(nsamps)/rxRate;
     size_t            ndelivered = 0;
 
     buf.resize(nsamps + rx_max_samps_);
@@ -226,14 +226,14 @@ void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
 
         if (ndelivered == 0) {
             buf.timestamp = rx_md.time_spec;
-            buf.undersample = (buf.timestamp - t_start).get_real_secs() * txRate;
+            buf.undersample = (buf.timestamp - t_start).get_real_secs() * rxRate;
         }
 
         ndelivered += n;
 
         // If we have received enough samples to move us past t_end, stop
         // receiving.
-        if (rx_md.time_spec + static_cast<double>(n)/txRate >= t_end) {
+        if (rx_md.time_spec + static_cast<double>(n)/rxRate >= t_end) {
             // Set proper buffer size
             buf.resize(ndelivered);
 
