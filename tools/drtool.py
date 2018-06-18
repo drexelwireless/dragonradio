@@ -50,7 +50,7 @@ def main():
             node = log.nodes[node_id]
             print("Node {}:".format(node_id))
             for e in log.events[node.node_id]:
-                print("\t{}: {}".format(e.timestamp, e.event))
+                print("\t{}\t{}".format(e.timestamp, e.event))
 
     if args.bad:
         for node_id in log.nodes:
