@@ -446,8 +446,12 @@ class Log:
         for pkt in recv:
             t1 = pkt.timestamp + t_start/Fs
             t2 = pkt.timestamp + t_end/Fs
+
             if t1 >= t_start and t1 < t_end:
                 result.append(pkt)
+
+            if t1 > t_end:
+                break
 
         return result
 
