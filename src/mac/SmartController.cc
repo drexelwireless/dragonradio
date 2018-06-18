@@ -17,6 +17,8 @@ void SendWindow::operator()()
 
 void RecvWindow::operator()()
 {
+    std::lock_guard<spinlock_mutex> lock(this->mutex);
+
     controller.ack(*this);
 }
 
@@ -277,10 +279,15 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->isFlagSet(kSYN));
     std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
-    // Start the ACK timer if it is not already running. Even if this is a
-    // duplicate packet, we need to send an ACK because the duplicate may be a
-    // retransmission, i.e., our previous ACK could have been lost.
-    startACKTimer(recvw);
+    // If this is a SYN packet, ACK immediately to open up the window.
+    //
+    // Otherwise, start the ACK timer if it is not already running. Even if this
+    // is a duplicate packet, we need to send an ACK because the duplicate may
+    // be a retransmission, i.e., our previous ACK could have been lost.
+    if (pkt->isFlagSet(kSYN))
+        ack(recvw);
+    else
+        startACKTimer(recvw);
 
     // Drop this packet if we have already received it
     if (pkt->seq < recvw.ack) {
@@ -364,8 +371,6 @@ void SmartController::ack(RecvWindow &recvw)
 {
     if (!netq_)
         return;
-
-    std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
     dprintf("ARQ: send to %u: DELAYED ack=%u",
         (unsigned) recvw.node_id,

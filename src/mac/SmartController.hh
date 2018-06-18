@@ -144,6 +144,9 @@ public:
 
     void retransmit(SendWindow &sendw);
 
+    /** @brief Send an ACK to the given receiver. The caller MUST hold the lock
+     * on recvw.
+     */
     void ack(RecvWindow &recvw);
 
     void broadcastHello(void);
