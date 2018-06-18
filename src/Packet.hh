@@ -133,7 +133,7 @@ struct Header {
     uint16_t data_len;
 };
 
-/** @brief Extened header that appears in radio payload. */
+/** @brief Extended header that appears in radio payload. */
 struct ExtendedHeader {
     /** @brief Source */
     NodeId src;
