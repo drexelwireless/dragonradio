@@ -143,9 +143,9 @@ class RecvPacket:
         self._iqdata = iqdata
 
     def __str__(self):
-        return "Packet(seq={seq}, src={src}, dest={dest}, ms={ms}, fec0={fec0}, fec1={fec1})".\
-        format(seq=self.seq, src=self.src,  dest=self.dest, \
-               ms=self.ms, fec0=self.fec0,  fec1=self.fec1)
+        return "Packet(seq={seq}, curhop={curhop}, nexthop={nexthop}, ms={ms}, fec0={fec0}, fec1={fec1}, size={size})".\
+        format(seq=self.seq, curhop=self.curhop,  nexthop=self.nexthop, \
+               ms=self.ms, fec0=self.fec0,  fec1=self.fec1, size=self.size)
 
     @property
     def timestamp(self):
@@ -253,6 +253,10 @@ class SendPacket:
         self._size = size
         self._iqdata = iqdata
 
+    def __str__(self):
+        return "Packet(seq={seq}, curhop={curhop}, nexthop={nexthop}, size={size})".\
+        format(seq=self.seq, curhop=self.curhop,  nexthop=self.nexthop, size=self.size)
+
     @property
     def timestamp(self):
         """Packet timestamp (in seconds since the logging node's start timestamp)"""
@@ -297,6 +301,9 @@ class Event:
     def __init__(self, timestamp, event):
         self._timestamp = timestamp
         self._event = event.decode()
+
+    def __str__(self):
+        return self.event
 
     @property
     def timestamp(self):
