@@ -212,6 +212,9 @@ class Config(object):
                      choices=['flexframe', 'ofdm', 'multiofdm'],
                      dest='phy',
                      help='set PHY')
+        add_argument('--min-packet-size', action='store', type=int,
+                     dest='min_packet_size',
+                     help='set minimum packet size (in bytes)')
 
         # General liquid modulation options
         add_argument('-r', '--check',
