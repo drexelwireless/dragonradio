@@ -336,8 +336,8 @@ struct NetPacket : public Packet
 /** @brief A packet received from the radio. */
 struct RadioPacket : public Packet
 {
-    RadioPacket() : Packet(), delivered(false), barrier(false) {};
-    RadioPacket(unsigned char* data, size_t n) : Packet(data, n), delivered(false), barrier(false) {}
+    RadioPacket() : Packet(), barrier(false) {};
+    RadioPacket(unsigned char* data, size_t n) : Packet(data, n), barrier(false) {}
 
     /** @brief Error vector magnitude [dB] */
     float evm;
@@ -347,9 +347,6 @@ struct RadioPacket : public Packet
 
     /** @brief Carrier frequency offset (f/Fs) */
     float cfo;
-
-    /** @brief This flag is set if the packet has been delivered. */
-    bool delivered;
 
     /** @brief This Boolean is true if this packet is a barrier and should not
      * be processed or removed from a queue except by its creator.

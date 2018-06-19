@@ -70,7 +70,40 @@ private:
 };
 
 struct RecvWindow : public TimerQueue::Timer  {
-    using vector_type = std::vector<std::shared_ptr<RadioPacket>>;
+    struct Entry {
+        Entry() : received(false), delivered(false), pkt(nullptr) {};
+
+        void operator =(std::shared_ptr<RadioPacket>&& p)
+        {
+            received = true;
+            delivered = false;
+            pkt = std::move(p);
+        }
+
+        void alreadyDelivered(void)
+        {
+            received = true;
+            delivered = true;
+        }
+
+        void reset(void)
+        {
+            received = false;
+            delivered = false;
+            pkt.reset();
+        }
+
+        /** @brief Was this entry in the window received? */
+        bool received;
+
+        /** @brief Was this entry in the window delivered? */
+        bool delivered;
+
+        /** @brief The packet received in this window entry. */
+        std::shared_ptr<RadioPacket> pkt;
+    };
+
+    using vector_type = std::vector<Entry>;
 
     RecvWindow(NodeId node_id, SmartController &controller, Seq::uint_type win)
       : node_id(node_id)
@@ -78,7 +111,7 @@ struct RecvWindow : public TimerQueue::Timer  {
       , ack(0)
       , max(0)
       , win(win)
-      , pkts(win)
+      , entries(win)
     {}
 
     /** @brief Node ID of destination. */
@@ -112,10 +145,9 @@ struct RecvWindow : public TimerQueue::Timer  {
     spinlock_mutex mutex;
 
     /** @brief Return the packet with the given sequence number in the window */
-    std::shared_ptr<RadioPacket>& operator[](Seq seq)
+    Entry& operator[](Seq seq)
     {
-        assert(pkts[seq % pkts.size()].use_count() >= 0);
-        return pkts[seq % pkts.size()];
+        return entries[seq % entries.size()];
     }
 
     void operator()() override;
@@ -124,7 +156,7 @@ private:
     /** @brief All packets with sequence numbers N such that
      * ack <= N <= max < ack + win
      */
-    vector_type pkts;
+    vector_type entries;
 };
 
 /** @brief A MAC controller that implements ARQ. */
