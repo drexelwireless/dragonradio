@@ -423,12 +423,11 @@ void SmartController::broadcastHello(void)
 
     pkt->setFlag(kBroadcast);
 
-    ControlMsg msg;
+    ControlMsg::Hello msg;
 
-    msg.type = ControlMsg::Type::kHello;
-    msg.hello.is_gateway = rc.is_gateway;
+    msg.is_gateway = rc.is_gateway;
 
-    pkt->appendControl(msg);
+    pkt->appendHello(msg);
 
     netq_->push_hi(std::move(pkt));
 }

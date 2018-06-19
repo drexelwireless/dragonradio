@@ -101,6 +101,16 @@ void Packet::appendControl(ControlMsg &ctrl)
     memcpy(&(*this)[sizeof(ExtendedHeader) + data_len], &ctrl_len, sizeof(uint16_t));
 }
 
+void Packet::appendHello(const ControlMsg::Hello &hello)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kHello;
+    msg.hello = hello;
+
+    appendControl(msg);
+}
+
 bool Packet::isIP(void)
 {
     struct ether_header* eth = reinterpret_cast<struct ether_header*>(data() + sizeof(ExtendedHeader));
