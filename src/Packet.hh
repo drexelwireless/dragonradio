@@ -210,6 +210,9 @@ struct Packet : public buffer<unsigned char>
     /** @brief Destination */
     NodeId dest;
 
+    /** @brief Packet timestamp */
+    Clock::time_point timestamp;
+
     /** @brief Set a flag */
     void setFlag(unsigned f)
     {

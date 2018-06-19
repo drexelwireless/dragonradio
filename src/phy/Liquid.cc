@@ -69,6 +69,8 @@ int LiquidDemodulator::callback(unsigned char *  header_,
         pkt->rssi = stats_.rssi;
         pkt->cfo = stats_.cfo;
 
+        pkt->timestamp = demod_start_ + (off + internal_oversample_fact_*stats_.start_counter) / phy_.getRXRate();
+
         callback_(std::move(pkt));
     }
 
