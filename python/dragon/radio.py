@@ -340,7 +340,7 @@ class Radio(object):
         #
         # Create tun/tap interface and net neighborhood
         #
-        self.tuntap = dragonradio.TunTap('tap0', False, 1500, '10.10.10.%d', 'c6:ff:ff:ff:ff:%02x', self.node_id)
+        self.tuntap = dragonradio.TunTap('tap0', False, 1500, self.node_id)
 
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 

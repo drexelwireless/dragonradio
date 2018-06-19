@@ -13,6 +13,14 @@
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
 
+/** @brief A sprintf-style format string for internal network tun/tap IP
+ * addresses.
+ */
+const std::string kIntIPFmt = "10.10.10.%d";
+
+/** @brief A sprintf-style format string for tun/tap MAC addresses */
+const std::string kMACFmt = "c6:ff:ff:ff:ff:%02x";
+
 struct Node {
     Node(NodeId id, TXParams *tx_params);
     ~Node();

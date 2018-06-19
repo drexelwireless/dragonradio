@@ -262,8 +262,6 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init<const std::string&,
                       bool,
                       size_t,
-                      const std::string,
-                      const std::string,
                       uint8_t>())
         .def_property_readonly("mtu", &TunTap::getMTU)
         .def_property_readonly("source", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->source); } )

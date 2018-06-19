@@ -18,6 +18,7 @@
 
 #include "RadioConfig.hh"
 #include "Util.hh"
+#include "net/Net.hh"
 #include "net/TunTap.hh"
 
 using namespace std::placeholders;
@@ -32,9 +33,7 @@ using namespace std::placeholders;
 TunTap::TunTap(const std::string& tapdev,
                bool persistent,
                size_t mtu,
-               const std::string ip_fmt,
-               const std::string mac_fmt,
-               uint8_t last_octet) :
+               uint8_t node_id) :
     sink(*this,
          std::bind(&TunTap::start, this),
          std::bind(&TunTap::stop, this),
@@ -43,8 +42,6 @@ TunTap::TunTap(const std::string& tapdev,
     persistent_(persistent),
     tapdev_(tapdev),
     mtu_(mtu),
-    ip_fmt_(ip_fmt),
-    mac_fmt_(mac_fmt),
     done_(true)
 {
     if (rc.verbose)
@@ -65,11 +62,11 @@ TunTap::TunTap(const std::string& tapdev,
             fprintf(stderr, "system() - ifconfig mtu\n");
 
         // Assign mac address
-        if (sys(("ifconfig %s hw ether " + mac_fmt).c_str(), tapdev_.c_str(), last_octet) < 0)
+        if (sys(("ifconfig %s hw ether " + kMACFmt).c_str(), tapdev_.c_str(), node_id) < 0)
             fprintf(stderr, "Error configuring mac address.\n");
 
         // Assign IP address
-        if (sys(("ifconfig %s " + ip_fmt + " netmask 255.255.255.0").c_str(), tapdev_.c_str(), last_octet) < 0)
+        if (sys(("ifconfig %s " + kIntIPFmt + " netmask 255.255.255.0").c_str(), tapdev_.c_str(), node_id) < 0)
             fprintf(stderr, "system() - ifconfig\n");
 
         // Bring up the interface in case it's not up yet
@@ -91,16 +88,16 @@ size_t TunTap::getMTU(void)
     return mtu_;
 }
 
-void TunTap::addARPEntry(uint8_t last_octet)
+void TunTap::addARPEntry(uint8_t node_id)
 {
-    if (sys(("arp -i %s -s " + ip_fmt_ + " " + mac_fmt_).c_str(), tapdev_.c_str(), last_octet, last_octet) < 0)
-        fprintf(stderr, "Error adding ARP entry for last octet %d.\n", last_octet);
+    if (sys(("arp -i %s -s " + kIntIPFmt + " " + kMACFmt).c_str(), tapdev_.c_str(), node_id, node_id) < 0)
+        fprintf(stderr, "Error adding ARP entry for last octet %d.\n", node_id);
 }
 
-void TunTap::deleteARPEntry(uint8_t last_octet)
+void TunTap::deleteARPEntry(uint8_t node_id)
 {
-    if (sys(("arp -d " + ip_fmt_).c_str(), last_octet) < 0)
-        fprintf(stderr, "Error deleting ARP entry for last octet %d.\n", last_octet);
+    if (sys(("arp -d " + kIntIPFmt).c_str(), node_id) < 0)
+        fprintf(stderr, "Error deleting ARP entry for last octet %d.\n", node_id);
 }
 
 const char *clonedev = "/dev/net/tun";

@@ -20,16 +20,12 @@ public:
      * @param persistent Is this device persistent, or should we create it now and
      * destroy it when we are destructed?
      * @param mtu MTU size for interface.
-     * @param ip_fmt sprintf-style format string for tun/tap IP address
-     * @param mac_fmt sprintf-style format string for tun/tap MAC address
-     * @param last_octet Last octet of IP and MAC addresses
+     * @param node_id Node ID
      */
     TunTap(const std::string& tapdev,
            bool persistent,
            size_t mtu,
-           const std::string ip_fmt,
-           const std::string mac_fmt,
-           uint8_t last_octet);
+           uint8_t node_id);
     virtual ~TunTap();
 
     /** @brief Return the MTU of this interface */
@@ -60,12 +56,6 @@ private:
 
     /** @brief MTU of the interface */
     size_t mtu_;
-
-    /** @brief A sprintf-style format string for tun/tap IP address */
-    const std::string ip_fmt_;
-
-    /** @brief A sprintf-style format string for tun/tap MAC addresses */
-    const std::string mac_fmt_;
 
     /** @brief File descriptor for tun/tap device */
     int fd_;
