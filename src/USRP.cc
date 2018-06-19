@@ -146,13 +146,13 @@ void USRP::setRXGain(float db)
     return usrp_->set_rx_gain(db);
 }
 
-void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs)
+void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs)
 {
     const double       txRate = usrp_->get_tx_rate(); // TX rate in Hz
     uhd::tx_metadata_t tx_md; // TX metadata for UHD
     size_t             n;     // Size of next send
 
-    tx_md.time_spec = when;
+    tx_md.time_spec = when.t;
     tx_md.has_time_spec = true;
     tx_md.start_of_burst = true;
 
@@ -163,7 +163,7 @@ void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bu
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
         IQBuf& iqbuf = **it; // Current buffer we are sending
 
-        iqbuf.timestamp = when;
+        iqbuf.timestamp = Clock::to_wall_time(when);
 
         for (size_t off = 0; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
@@ -188,13 +188,13 @@ void USRP::burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bu
     }
 }
 
-void USRP::startRXStream(Clock::time_point when)
+void USRP::startRXStream(MonoClock::time_point when)
 {
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 
     stream_cmd.stream_now = false;
     stream_cmd.num_samps = 0;
-    stream_cmd.time_spec = when;
+    stream_cmd.time_spec = when.t;
     rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
@@ -205,11 +205,11 @@ void USRP::stopRXStream(void)
     rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
-void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
+void USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
-    const double      rxRate = usrp_->get_rx_rate(); // RX rate in Hz
-    Clock::time_point t_end = t_start + static_cast<double>(nsamps)/rxRate;
-    size_t            ndelivered = 0;
+    const double     rxRate = usrp_->get_rx_rate(); // RX rate in Hz
+    uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rxRate;
+    size_t           ndelivered = 0;
 
     buf.resize(nsamps + rx_max_samps_);
 
@@ -225,8 +225,8 @@ void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
         }
 
         if (ndelivered == 0) {
-            buf.timestamp = rx_md.time_spec;
-            buf.undersample = (buf.timestamp - t_start).get_real_secs() * rxRate;
+            buf.timestamp = Clock::to_wall_time(MonoClock::time_point { rx_md.time_spec });
+            buf.undersample = (rx_md.time_spec - t_start.t).get_real_secs() * rxRate;
         }
 
         ndelivered += n;

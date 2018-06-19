@@ -6,29 +6,156 @@
 
 #include <uhd/usrp/multi_usrp.hpp>
 
-class Clock
+#include "Seq.hh"
+
+template <class T>
+struct time_point_t {
+    uhd::time_spec_t t;
+
+    time_point_t() : t(0.0) {};
+    explicit time_point_t(double t0) : t(t0) {};
+    explicit time_point_t(uhd::time_spec_t t0) : t(t0) {};
+
+    time_point_t(const time_point_t&) = default;
+    time_point_t(time_point_t&&) = default;
+
+    time_point_t& operator=(const time_point_t&) = default;
+    time_point_t& operator=(time_point_t&&) = default;
+
+    time_point_t operator +(const time_point_t &other) const
+    {
+        return time_point_t { t + other.t };
+    }
+
+    time_point_t operator +(double delta) const
+    {
+        return time_point_t { t + delta };
+    }
+
+    time_point_t operator -(const time_point_t &other) const
+    {
+        return time_point_t { t - other.t };
+    }
+
+    time_point_t operator -(double delta) const
+    {
+        return time_point_t { t - delta };
+    }
+
+    time_point_t &operator +=(double delta)
+    {
+        t += delta;
+        return *this;
+    }
+
+    bool operator >(const time_point_t &other) const
+    {
+        return t > other.t;
+    }
+
+    bool operator <(const time_point_t &other) const
+    {
+        return t < other.t;
+    }
+
+    double get_real_secs(void) const
+    {
+        return t.get_real_secs();
+    }
+
+    double get_full_secs(void) const
+    {
+        return t.get_full_secs();
+    }
+};
+
+/** @brief A monotonic clock */
+class MonoClock
 {
+private:
+    struct mono_tag;
+
 public:
     using duration   = std::chrono::seconds;
     using rep        = duration::rep;
     using period     = duration::period;
-    using time_point = uhd::time_spec_t;
+    using time_point = time_point_t<mono_tag>;
 
     static const bool is_steady = true;
 
+    /** @brief Get the current time. Guaranteed to be monotonic. */
     static time_point now() noexcept
     {
-        if (usrp_)
-            return usrp_->get_time_now();
-        else
-            return uhd::time_spec_t(0.0);
+        return time_point { usrp_->get_time_now() };
     }
 
+protected:
+    /** @brief The USRP used for clock operations. */
+    static uhd::usrp::multi_usrp::sptr usrp_;
+};
+
+/** @brief A wall-clock clock */
+class Clock : public MonoClock
+{
+private:
+    struct wall_tag;
+
+public:
+    using duration   = std::chrono::seconds;
+    using rep        = duration::rep;
+    using period     = duration::period;
+    using time_point = time_point_t<wall_tag>;
+
+    static const bool is_steady = false;
+
+    /** @brief Get the current wall-clock time. */
+    static time_point now() noexcept
+    {
+        return time_point { usrp_->get_time_now() + offset_ };
+    }
+
+    /** @brief Return the monotonic time corresponding to wall-clock time. */
+    static MonoClock::time_point to_mono_time(const time_point &t) noexcept
+    {
+        return MonoClock::time_point { t.t - offset_ };
+    }
+
+    /** @brief Return the wall-clock time corresponding to monotonic time. */
+    static time_point to_wall_time(const MonoClock::time_point &t) noexcept
+    {
+        return time_point { t.t + offset_ };
+    }
+
+    /** @brief Return the current clock epoch.
+     */
+    static Seq epoch(void)
+    {
+        return epoch_;
+    }
+
+    /** @brief Adjust the current wall-clock time by the given offset.
+     * @param off Adjustment offset.
+     */
+    static void adjust(const time_point &off)
+    {
+        offset_ += off.t;
+        ++epoch_;
+    }
+
+    /** @brief Set the USRP used for clock operations.
+     * @param usrp The USRP.
+     */
     static void setUSRP(uhd::usrp::multi_usrp::sptr usrp);
+
+    /** @brief Release the USRP used for clock operations. */
     static void releaseUSRP(void);
 
 private:
-    static uhd::usrp::multi_usrp::sptr usrp_;
+    /** @brief The current clock epoch. */
+    static Seq epoch_;
+
+    /** @brief The offset between the USRP's clock and wall-clock time. */
+    static uhd::time_spec_t offset_;
 };
 
 #endif /* CLOCK_H_ */

@@ -70,7 +70,7 @@ void SlottedMAC::rxWorker(void)
         t_slot_pos = fmod(t_now.get_real_secs(), slot_size_);
         t_next_slot = t_now + slot_size_ - t_slot_pos;
 
-        usrp_->startRXStream(t_next_slot);
+        usrp_->startRXStream(Clock::to_mono_time(t_next_slot));
 
         while (!done_) {
             // Update times
@@ -83,7 +83,7 @@ void SlottedMAC::rxWorker(void)
 
             demodulator_->push(curSlot);
 
-            usrp_->burstRX(t_cur_slot, rx_slot_samps_, *curSlot);
+            usrp_->burstRX(Clock::to_mono_time(t_cur_slot), rx_slot_samps_, *curSlot);
         }
 
         usrp_->stopRXStream();
@@ -102,7 +102,7 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
                 txBuf.emplace_back((*it)->samples);
 
-            usrp_->burstTX(when, txBuf);
+            usrp_->burstTX(Clock::to_mono_time(when), txBuf);
 
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
                 Header hdr;
@@ -125,7 +125,7 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
                 txBuf.emplace_back(std::move((*it)->samples));
 
-            usrp_->burstTX(when, txBuf);
+            usrp_->burstTX(Clock::to_mono_time(when), txBuf);
         }
     }
 }

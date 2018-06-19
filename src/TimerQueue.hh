@@ -12,11 +12,11 @@
 class TimerQueue
 {
 public:
-    using time_type = Clock::time_point;
+    using time_type = MonoClock::time_point;
 
     struct Timer : public heap<Timer>::element
     {
-        Clock::time_point deadline;
+        time_type deadline;
 
         virtual void operator()() = 0;
 
