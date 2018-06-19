@@ -19,7 +19,7 @@ public:
     class Modulator : public PHY::Modulator
     {
     public:
-        Modulator(MultiOFDM& phy);
+        Modulator(MultiOFDM &phy);
         ~Modulator();
 
         Modulator(const Modulator&) = delete;
@@ -32,7 +32,7 @@ public:
 
     private:
         /** @brief Our associated PHY. */
-        MultiOFDM& phy_;
+        MultiOFDM &myphy_;
 
         /** @brief Our liquid-usrp multichanneltx object. */
         std::unique_ptr<multichanneltx> mctx_;
@@ -44,7 +44,7 @@ public:
     class Demodulator : public LiquidDemodulator
     {
     public:
-        Demodulator(MultiOFDM& phy);
+        Demodulator(MultiOFDM &phy);
         ~Demodulator();
 
         Demodulator(const Demodulator&) = delete;
@@ -61,7 +61,7 @@ public:
 
     private:
         /** @brief Our associated PHY. */
-        MultiOFDM& phy_;
+        MultiOFDM &myphy_;
 
         /** @brief Our liquid-usrp multichannelrx object. */
         std::unique_ptr<multichannelrx> mcrx_;

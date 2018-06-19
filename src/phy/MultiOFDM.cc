@@ -14,17 +14,18 @@ union PHYHeader {
     unsigned char bytes[8];
 };
 
-MultiOFDM::Modulator::Modulator(MultiOFDM& phy) :
-    phy_(phy)
+MultiOFDM::Modulator::Modulator(MultiOFDM& phy)
+  : PHY::Modulator(phy)
+  , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     // modem setup (list is for parallel demodulation)
     mctx_ = std::make_unique<multichanneltx>(NUM_CHANNELS,
-                                             phy_.M_,
-                                             phy_.cp_len_,
-                                             phy_.taper_len_,
-                                             phy_.p_);
+                                             myphy_.M_,
+                                             myphy_.cp_len_,
+                                             myphy_.taper_len_,
+                                             myphy_.p_);
 }
 
 MultiOFDM::Modulator::~Modulator()
@@ -45,7 +46,7 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> 
 
     pkt->toHeader(header.h);
 
-    pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
+    pkt->resize(std::max((size_t) pkt->size(), myphy_.min_pkt_size_));
 
     mctx_->UpdateData(0,
                       header.bytes,
@@ -83,8 +84,9 @@ void MultiOFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> 
     mpkt.pkt = std::move(pkt);
 }
 
-MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
-    phy_(phy)
+MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy)
+  : LiquidDemodulator(phy)
+  , myphy_(phy)
 {
     internal_oversample_fact_ = 2;
 
@@ -95,10 +97,10 @@ MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy) :
     void               *userdata[1] = { this };
 
     mcrx_ = std::make_unique<multichannelrx>(NUM_CHANNELS,
-                                             phy_.M_,
-                                             phy_.cp_len_,
-                                             phy_.taper_len_,
-                                             phy_.p_,
+                                             myphy_.M_,
+                                             myphy_.cp_len_,
+                                             myphy_.taper_len_,
+                                             myphy_.p_,
                                              userdata,
                                              callback);
 }

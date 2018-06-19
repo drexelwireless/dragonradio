@@ -9,8 +9,9 @@ union PHYHeader {
     unsigned char bytes[14];
 };
 
-FlexFrame::Modulator::Modulator(FlexFrame& phy) :
-    phy_(phy)
+FlexFrame::Modulator::Modulator(FlexFrame &phy)
+  : PHY::Modulator(phy)
+  , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
@@ -57,7 +58,7 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> 
 
     pkt->toHeader(header.h);
 
-    pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
+    pkt->resize(std::max((size_t) pkt->size(), myphy_.min_pkt_size_));
 
     update_props(*(pkt->tx_params));
     flexframegen_reset(fg_);
@@ -94,7 +95,8 @@ void FlexFrame::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> 
     mpkt.pkt = std::move(pkt);
 }
 
-FlexFrame::Demodulator::Demodulator(FlexFrame& phy)
+FlexFrame::Demodulator::Demodulator(FlexFrame &phy)
+  : LiquidDemodulator(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 

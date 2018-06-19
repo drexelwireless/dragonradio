@@ -26,7 +26,7 @@ public:
 
     private:
         /** @brief Associated FlexFrame PHY. */
-        FlexFrame& phy_;
+        FlexFrame &myphy_;
 
         /** @brief The liquid-dsp flexframegen object */
         flexframegen fg_;
@@ -44,7 +44,7 @@ public:
     class Demodulator : public LiquidDemodulator
     {
     public:
-        Demodulator(FlexFrame& phy);
+        Demodulator(FlexFrame &phy);
         ~Demodulator();
 
         Demodulator(const Demodulator&) = delete;

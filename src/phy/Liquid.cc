@@ -4,8 +4,9 @@
 
 std::mutex liquid_mutex;
 
-LiquidDemodulator::LiquidDemodulator() :
-    internal_oversample_fact_(1)
+LiquidDemodulator::LiquidDemodulator(PHY &phy)
+  : Demodulator(phy)
+  , internal_oversample_fact_(1)
 {
 }
 

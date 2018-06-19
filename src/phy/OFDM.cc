@@ -10,16 +10,17 @@ union PHYHeader {
     unsigned char bytes[8];
 };
 
-OFDM::Modulator::Modulator(OFDM& phy) :
-    phy_(phy)
+OFDM::Modulator::Modulator(OFDM& phy)
+  : PHY::Modulator(phy)
+  , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     ofdmflexframegenprops_init_default(&fgprops_);
-    fg_ = ofdmflexframegen_create(phy_.M_,
-                                  phy_.cp_len_,
-                                  phy_.taper_len_,
-                                  phy_.p_,
+    fg_ = ofdmflexframegen_create(myphy_.M_,
+                                  myphy_.cp_len_,
+                                  myphy_.taper_len_,
+                                  myphy_.p_,
                                   &fgprops_);
 }
 
@@ -59,7 +60,7 @@ void OFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt)
 
     pkt->toHeader(header.h);
 
-    pkt->resize(std::max((size_t) pkt->size(), phy_.min_pkt_size_));
+    pkt->resize(std::max((size_t) pkt->size(), myphy_.min_pkt_size_));
 
     update_props(*(pkt->tx_params));
     ofdmflexframegen_reset(fg_);
@@ -68,7 +69,7 @@ void OFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt)
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);
     // Number of symbols generated
-    const size_t NGEN = phy_.M_ + phy_.cp_len_;
+    const size_t NGEN = myphy_.M_ + myphy_.cp_len_;
     // Number of generated samples in the buffer
     size_t nsamples = 0;
     // Local copy of gain
@@ -98,15 +99,16 @@ void OFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt)
     mpkt.pkt = std::move(pkt);
 }
 
-OFDM::Demodulator::Demodulator(OFDM& phy) :
-    phy_(phy)
+OFDM::Demodulator::Demodulator(OFDM& phy)
+  : LiquidDemodulator(phy)
+  , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
-    fs_ = ofdmflexframesync_create(phy_.M_,
-                                   phy_.cp_len_,
-                                   phy_.taper_len_,
-                                   phy_.p_,
+    fs_ = ofdmflexframesync_create(myphy_.M_,
+                                   myphy_.cp_len_,
+                                   myphy_.taper_len_,
+                                   myphy_.p_,
                                    &LiquidDemodulator::liquid_callback,
                                    this);
 }

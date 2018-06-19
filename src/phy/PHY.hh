@@ -18,7 +18,7 @@ public:
     class Modulator
     {
     public:
-        Modulator() {};
+        Modulator(PHY &phy) : phy_(phy) {};
         virtual ~Modulator() {};
 
         /** @brief Modulate a packet to produce IQ samples.
@@ -26,6 +26,9 @@ public:
          *  @param pkt The NetPacket to modulate.
          */
         virtual void modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt) = 0;
+
+    protected:
+        PHY &phy_;
     };
 
     /** @brief Demodulate IQ data.
@@ -33,7 +36,7 @@ public:
     class Demodulator
     {
     public:
-        Demodulator() {};
+        Demodulator(PHY &phy) : phy_(phy) {};
         virtual ~Demodulator() {};
 
         /** @brief Reset the internal state of the demodulator.
@@ -52,6 +55,9 @@ public:
         virtual void demodulate(std::complex<float>* data,
                                 size_t count,
                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
+
+    protected:
+        PHY &phy_;
     };
 
     PHY() {}

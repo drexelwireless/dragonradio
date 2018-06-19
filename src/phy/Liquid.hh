@@ -17,7 +17,7 @@ extern std::mutex liquid_mutex;
 
 class LiquidDemodulator : public PHY::Demodulator {
 public:
-    LiquidDemodulator();
+    LiquidDemodulator(PHY &phy);
     virtual ~LiquidDemodulator();
 
     LiquidDemodulator(const LiquidDemodulator&) = delete;

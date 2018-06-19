@@ -10,7 +10,7 @@ public:
     class Modulator : public PHY::Modulator
     {
     public:
-        Modulator(OFDM& phy);
+        Modulator(OFDM &phy);
         ~Modulator();
 
         Modulator(const Modulator&) = delete;
@@ -26,7 +26,7 @@ public:
 
     private:
         /** @brief Associated OFDM PHY. */
-        OFDM& phy_;
+        OFDM &myphy_;
 
         /** @brief The liquid-dsp flexframegen object */
         ofdmflexframegen fg_;
@@ -44,7 +44,7 @@ public:
     class Demodulator : public LiquidDemodulator
     {
     public:
-        Demodulator(OFDM& phy);
+        Demodulator(OFDM &phy);
         ~Demodulator();
 
         Demodulator(const Demodulator&) = delete;
@@ -64,7 +64,7 @@ public:
 
     private:
         /** @brief Associated OFDM PHY. */
-        OFDM& phy_;
+        OFDM &myphy_;
 
         /** @brief The liquid-dsp flexframesync object */
         ofdmflexframesync fs_;
