@@ -317,8 +317,15 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (pkt->seq == recvw.ack) {
         recvw.ack++;
         radio_out.push(std::move(pkt));
+    } else if (!pkt->isTCP()) {
+        // If this is not a TCP packet, insert it into our receive window, but
+        // also go ahead and send it.
+        recvw[pkt->seq] = pkt;
+
+        radio_out.push(std::move(pkt));
+        pkt->delivered = true;
     } else {
-        // Otherwise insert the packet into our receive window
+        // Insert the packet into our receive window
         recvw[pkt->seq] = std::move(pkt);
     }
 
@@ -327,7 +334,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         if (!recvw[seq])
             break;
 
-        radio_out.push(std::move(recvw[seq]));
+        if (!recvw[seq]->delivered)
+            radio_out.push(std::move(recvw[seq]));
         recvw[seq].reset();
         ++recvw.ack;
     }
