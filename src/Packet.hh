@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <string.h>
+#include <netinet/in.h>
 
 #include <cstddef>
 #include <iterator>
@@ -297,6 +298,26 @@ struct Packet : public buffer<unsigned char>
     iterator end() const
     {
         return iterator(*this, 0);
+    }
+
+    /** @brief Return true if this is an IP packet, false otherwise */
+    bool isIP(void);
+
+    /** @brief Return true if this is an IP packet of the specified IP protocol,
+     * false otherwise
+     */
+    bool isIPProto(uint8_t proto);
+
+    /** @brief Return true if this is a TCP packet, false otherwise */
+    bool isTCP(void)
+    {
+        return isIPProto(IPPROTO_TCP);
+    }
+
+    /** @brief Return true if this is a UDP packet, false otherwise */
+    bool isUDP(void)
+    {
+        return isIPProto(IPPROTO_UDP);
     }
 };
 
