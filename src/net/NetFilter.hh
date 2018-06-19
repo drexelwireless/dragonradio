@@ -20,6 +20,18 @@ protected:
 private:
     /* @brief The Net we use to filter packets */
     std::shared_ptr<Net> net_;
+
+    /** @brief Internal IP network */
+    uint32_t int_net_;
+
+    /** @brief Internal IP network mask */
+    uint32_t int_netmask_;
+
+    /** @brief External IP network */
+    uint32_t ext_net_;
+
+    /** @brief External IP network mask */
+    uint32_t ext_netmask_;
 };
 
 #endif /* NETFILTER_HH_ */

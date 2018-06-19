@@ -37,7 +37,13 @@ typedef uint16_t PacketFlags;
 
 enum {
     /** @brief Set if the packet has an assigned sequence number */
-    kHasSeq = 0
+    kHasSeq = 0,
+
+    /** @brief Set if the packet belongs to the internal IP network (10.*) */
+    kIntNet,
+
+    /** @brief Set if the packet belongs to the external IP network (192.168.*) */
+    kExtNet
 };
 
 typedef uint16_t InternalFlags;

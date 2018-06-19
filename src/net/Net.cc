@@ -13,6 +13,14 @@
 
 using namespace std::placeholders;
 
+const char *kIntIPNet = "10.10.10.0";
+
+const char *kIntIPNetmask = "255.255.255.0";
+
+const char *kExtIPNet = "192.168.0.0";
+
+const char *kExtIPNetmask = "255.255.0.0";
+
 Node::Node(NodeId id, TXParams *tx_params)
   : id(id)
   , is_gateway(false)
