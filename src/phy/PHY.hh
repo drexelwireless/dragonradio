@@ -77,12 +77,26 @@ public:
         rx_rate_ = rate;
     }
 
+    /** @brief Get the PHY's RX sample rate.
+     */
+    virtual double getRXRate(void)
+    {
+        return rx_rate_;
+    }
+
     /** @brief Tell the PHY what TX sample rate we are running at.
      * @param rate The rate.
      */
     virtual void setTXRate(double rate)
     {
         tx_rate_ = rate;
+    }
+
+    /** @brief Get the PHY's TX sample rate.
+     */
+    virtual double getTXRate(void)
+    {
+        return tx_rate_;
     }
 
     /** @brief Create a Modulator for this %PHY */
