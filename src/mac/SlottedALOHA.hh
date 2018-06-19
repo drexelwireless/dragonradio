@@ -54,9 +54,6 @@ private:
     /** @brief Probability of transmission */
     double p_;
 
-    /** @brief Random devicer */
-    std::random_device rd_;
-
     /** @brief Random number generator */
     std::mt19937 gen_;
 

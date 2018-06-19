@@ -15,8 +15,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            double p)
   : SlottedMAC(usrp, phy, modulator, demodulator, bandwidth, slot_size, guard_size)
   , p_(p)
-  , rd_()
-  , gen_(rd_())
+  , gen_(std::random_device()())
   , dist_(0, 1.0)
 {
     reconfigure();
