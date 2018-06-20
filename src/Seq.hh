@@ -5,6 +5,7 @@
 
 struct Seq {
     using uint_type = uint16_t;
+    using int_type = int16_t;
 
     Seq() = default;
     Seq(uint_type seq) : seq_(seq) {};
@@ -19,16 +20,16 @@ struct Seq {
     bool operator !=(const Seq& other) { return seq_ != other.seq_; }
 
     bool operator <(const Seq& other)
-      { return static_cast<int16_t>(seq_ - other.seq_) < 0; }
+      { return static_cast<int_type>(seq_ - other.seq_) < 0; }
 
     bool operator <=(const Seq& other)
-      { return static_cast<int16_t>(seq_ - other.seq_) <= 0; }
+      { return static_cast<int_type>(seq_ - other.seq_) <= 0; }
 
     bool operator >(const Seq& other)
-      { return static_cast<int16_t>(seq_ - other.seq_) > 0; }
+      { return static_cast<int_type>(seq_ - other.seq_) > 0; }
 
     bool operator >=(const Seq& other)
-      { return static_cast<int16_t>(seq_ - other.seq_) >= 0; }
+      { return static_cast<int_type>(seq_ - other.seq_) >= 0; }
 
     Seq operator ++() { seq_++; return *this; }
     Seq operator ++(int) { seq_++; return seq_ - 1; }
