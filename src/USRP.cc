@@ -250,8 +250,15 @@ void USRP::burstRX(Clock::time_point t_start, size_t nsamps, IQBuf& buf)
             // ordering.
             buf.nsamples.store(ndelivered, std::memory_order_release);
             break;
-        } else
+        } else {
             buf.nsamples.store(ndelivered, std::memory_order_release);
+
+            // It's possible that we don't have enough buffer space to hold
+            // upcoming samples if RX started before we expected it to, so
+            // resize our buffer if needed.
+            if (buf.size() < ndelivered + rx_max_samps_)
+                buf.resize(buf.size() + rx_max_samps_);
+        }
     }
 }
 
