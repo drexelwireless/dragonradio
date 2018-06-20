@@ -67,6 +67,9 @@ class Config(object):
         self.cp_len = 6
         self.taper_len = 4
 
+        # Demodulator parameters
+        self.demodulator_enforce_ordering = False
+
         # MAC parameters
         self.slot_size = .035
         self.guard_size = .01
@@ -245,6 +248,11 @@ class Config(object):
                      dest='taper_len',
                      help='set OFDM taper length')
 
+        # Demodulator parameters
+        add_argument('--demodulator-enforce-ordering', action='store_const', const=True,
+                     dest='demodulator_enforce_ordering',
+                     help='enforce packet order when demodulating')
+
         # ARQ options
         add_argument('--arq', action='store_const', const=True,
                      dest='arq',
@@ -371,6 +379,9 @@ class Radio(object):
         self.demodulator = dragonradio.ParallelPacketDemodulator(self.net,
                                                                  self.phy,
                                                                  config.num_demodulation_threads)
+
+        if config.demodulator_enforce_ordering:
+            self.demodulator.enforce_ordering = True
 
         #
         # Configure the controller

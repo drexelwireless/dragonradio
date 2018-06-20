@@ -13,7 +13,7 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
     source(*this, nullptr, nullptr),
     net_(net),
     phy_(phy),
-    ordered_(false),
+    enforce_ordering_(false),
     prev_samps_(0),
     cur_samps_(0),
     done_(false),
@@ -59,14 +59,14 @@ void ParallelPacketDemodulator::stop(void)
 }
 
 
-bool ParallelPacketDemodulator::getOrdered(void)
+bool ParallelPacketDemodulator::getEnforceOrdering(void)
 {
-    return ordered_;
+    return enforce_ordering_;
 }
 
-void ParallelPacketDemodulator::setOrdered(bool ordered)
+void ParallelPacketDemodulator::setEnforceOrdering(bool enforce)
 {
-    ordered_ = ordered;
+    enforce_ordering_ = enforce;
 }
 
 void ParallelPacketDemodulator::demodWorker(void)
@@ -80,7 +80,7 @@ void ParallelPacketDemodulator::demodWorker(void)
     auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
         received = true;
         if (pkt) {
-            if (ordered_)
+            if (enforce_ordering_)
                 radio_q_.push(b, std::move(pkt));
             else
                 source.push(std::move(pkt));

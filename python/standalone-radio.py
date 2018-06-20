@@ -55,10 +55,6 @@ def main():
     # Create the radio object
     radio = dragon.radio.Radio(config)
 
-    # Setting the demodulator's ordered property to True forces packets to be
-    # demodulated in order. This increases latency.
-    #radio.demodulator.ordered = True
-
     #
     # Configure the MAC
     #

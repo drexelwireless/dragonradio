@@ -87,10 +87,10 @@ public:
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
-    bool getOrdered(void);
+    bool getEnforceOrdering(void);
 
     /** @brief Set whether or not demodulation queue enforces packet order. */
-    void setOrdered(bool ordered);
+    void setEnforceOrdering(bool enforce);
 
     /** @brief Demodulated packets */
     RadioOut<Push> source;
@@ -108,7 +108,7 @@ private:
     /** @brief Should packets be output in the order they were actually
      * received? Setting this to true increases latency!
      */
-    bool ordered_;
+    bool enforce_ordering_;
 
     /** @brief Number of samples to demod from tail of previous slot. */
     size_t prev_samps_;

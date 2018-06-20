@@ -392,7 +392,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
                       unsigned int>())
-        .def_property("ordered", &ParallelPacketDemodulator::getOrdered, &ParallelPacketDemodulator::setOrdered)
+        .def_property("enforce_ordering", &ParallelPacketDemodulator::getEnforceOrdering, &ParallelPacketDemodulator::setEnforceOrdering)
         .def_property_readonly("source", [](std::shared_ptr<ParallelPacketDemodulator> e) { return exposePort(e, &e->source); } )
         ;
 
