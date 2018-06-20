@@ -427,6 +427,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             &SmartController::getDownPERThreshold,
             &SmartController::setDownPERThreshold,
             "PER threshold for decreasing modulation level")
+        .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
         .def("broadcastHello", &SmartController::broadcastHello)
         ;
 

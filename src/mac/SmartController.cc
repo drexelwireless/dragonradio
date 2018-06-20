@@ -32,6 +32,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , recvwin_(recvwin)
   , modidx_up_per_threshold_(modidx_up_per_threshold)
   , modidx_down_per_threshold_(modidx_down_per_threshold)
+  , enforce_ordering_(false)
 {
     timer_queue_.start();
 }
@@ -317,7 +318,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (pkt->seq == recvw.ack) {
         recvw.ack++;
         radio_out.push(std::move(pkt));
-    } else if (!pkt->isTCP()) {
+    } else if (!enforce_ordering_ && !pkt->isTCP()) {
         // If this is not a TCP packet, insert it into our receive window, but
         // also go ahead and send it.
         radio_out.push(std::move(pkt));

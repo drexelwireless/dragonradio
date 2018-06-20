@@ -219,6 +219,20 @@ public:
         modidx_down_per_threshold_ = thresh;
     }
 
+    /** @brief Return flag indicating whether or not demodulation queue enforces
+     * packet order.
+     */
+    bool getEnforceOrdering(void)
+    {
+        return enforce_ordering_;
+    }
+
+    /** @brief Set whether or not demodulation queue enforces packet order. */
+    void setEnforceOrdering(bool enforce)
+    {
+        enforce_ordering_ = enforce;
+    }
+
     /** @brief Broadcast TX params */
     TXParams broadcast_tx_params;
 
@@ -252,6 +266,11 @@ protected:
 
     /** @brief PER threshold for decreasing modulation level */
     double modidx_down_per_threshold_;
+
+    /** @brief Should packets always be output in the order they were actually
+     * received?
+     */
+    bool enforce_ordering_;
 
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow &sendw);

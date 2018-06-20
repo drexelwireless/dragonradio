@@ -78,6 +78,7 @@ class Config(object):
         # ARQ options
         self.arq = False
         self.arq_window = 1024
+        self.arq_enforce_ordering = False
 
         # AMC options
         self.amc = False
@@ -260,6 +261,9 @@ class Config(object):
         add_argument('--no-arq', action='store_const', const=False,
                      dest='arq',
                      help='disable ARQ')
+        add_argument('--arq-enforce-ordering', action='store_const', const=True,
+                     dest='arq_enforce_ordering',
+                     help='enforce packet order when performing ARQ')
 
         # AMC options
         add_argument('--amc', action='store_const', const=True,
@@ -392,6 +396,9 @@ class Radio(object):
                                                           config.arq_window,
                                                           config.modidx_up_per_threshold,
                                                           config.modidx_down_per_threshold)
+
+            if config.arq_enforce_ordering:
+                self.controller.enforce_ordering = True
         else:
             self.controller = dragonradio.DummyController(self.net)
 
