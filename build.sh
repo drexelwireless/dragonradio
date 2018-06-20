@@ -23,5 +23,5 @@ sudo apt install -y python3 python3-pip python3-h5py
 sudo pip3 install --upgrade pip
 sudo pip3 install -r python/requirements.txt
 
-# Build full-radio
+# Build dragonradio
 make

@@ -11,7 +11,7 @@ import dragon.radio
 def main():
     config = dragon.radio.Config()
 
-    parser = argparse.ArgumentParser(description='Run full-radio.',
+    parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config.addArguments(parser)
     parser.add_argument('--config', action='store', dest='config_path',

@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /root/full-radio/python/radio-client.py stop "$@"
+exec /root/dragonradio/python/radio-client.py stop "$@"

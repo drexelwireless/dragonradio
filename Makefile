@@ -2,7 +2,7 @@
 # Note: install all dependencies system-wide for this makefile to work
 ##################################################
 
-TARGETS = full-radio flexframedemod
+TARGETS = dragonradio flexframedemod
 
 RM       = rm -f
 RMRF     = rm -rf
@@ -88,7 +88,7 @@ clean :
 distclean : clean
 	$(RM) $(GENERATED)
 
-full-radio : $(OBJECTS)
+dragonradio : $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
 
 flexframedemod : util/flexframedemod.cc

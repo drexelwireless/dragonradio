@@ -10,7 +10,7 @@ import dragon.dragonradio_pb2 as internal
 import dragon.radio_api as radio_api
 
 def main():
-    parser = argparse.ArgumentParser(description='Interact full-radio.',
+    parser = argparse.ArgumentParser(description='Interact with dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-d', '--debug', action='store_const', const=logging.DEBUG,
                         dest='loglevel',

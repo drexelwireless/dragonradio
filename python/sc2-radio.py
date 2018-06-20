@@ -114,7 +114,7 @@ def stop(config):
 def main():
     config = dragon.radio.Config()
 
-    parser = argparse.ArgumentParser(description='Run full-radio.',
+    parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config.addArguments(parser, allow_defaults=False)
     parser.add_argument('--foreground', action='store_true', dest='foreground',

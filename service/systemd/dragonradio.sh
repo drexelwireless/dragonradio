@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /root/full-radio/full-radio /root/full-radio/python/dragonradio.py "$@"
+exec /root/dragonradio/dragonradio /root/dragonradio/python/sc2-radio.py "$@"

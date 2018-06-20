@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /root/full-radio/python/radio-client.py update-outcomes "$@"
+exec /root/dragonradio/python/radio-client.py update-outcomes "$@"

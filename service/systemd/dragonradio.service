@@ -3,8 +3,8 @@ Description=DragonRadio
 
 [Service]
 Type=forking
-ExecStart=/root/full-radio/service/systemd/dragonradio.sh start
-ExecStop=/root/full-radio/service/systemd/dragonradio.sh stop
+ExecStart=/root/dragonradio/service/systemd/dragonradio.sh start
+ExecStop=/root/dragonradio/service/systemd/dragonradio.sh stop
 RestartSec=5
 TimeoutStartSec=10
 TimeoutSec=60
