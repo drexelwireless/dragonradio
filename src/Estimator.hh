@@ -7,6 +7,8 @@
 template<class T>
 class Estimator {
 public:
+    virtual ~Estimator() = default;
+    
     /** @brief Return the value of the estimator */
     virtual T getValue(void) const = 0;
 
