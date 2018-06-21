@@ -61,7 +61,7 @@ This starts a radio with the following features:
 
 Notable flags supported by the `standalone-radio.py` include:
 
- * `--i NODEID` Set the node's ID. By default, this is determined from the hostname.
+ * `-i NODEID` Set the node's ID. By default, this is determined from the hostname.
  * `--phy PHY` Choose the physical layer used by the radio. Options are the flexframe-based PHY (`--phy flexframe`), ofdmflexframe-based PHY (`--phy ofdm`), and the multichannel ofdmflexframe-based PHY (`--phy multi-ofdm`). The default is `flexframe`.
  * `--rx-antenna` Set the RX antenna. Defaults to `RX2`. **You must change this to `TX/RX` if you are running on the Grid**.
  * `--interactive` Drop into an [IPython](https://ipython.org/) shell once the radio has started up. You can then manipulate the radio components in the shell.
@@ -93,7 +93,7 @@ This invocation does the following:
  * Reads radio configuration settings from `config/radio.conf`
  * Read Colosseum configuration settings from `onfig/colosseum_config.ini`
  * Start the competition radio daemon, running it in the foreground.
- * Starts the radio itself. Note that the `start` arguments initializes the radio, but the ALOHA-based bootstrap process is initiated by the `--bootstrap` argument.
+ * Starts the radio itself. Note that the `start` argument initializes the radio, but the ALOHA-based bootstrap process is initiated by the `--bootstrap` argument.
 
 ## Networking
 
