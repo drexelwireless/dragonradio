@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import h5py
+import pandas as pd
 import numpy as np
 import time
 
@@ -16,304 +17,109 @@ class Slot:
     def data(self):
         return self._iqdata
 
-LIQUID_CRC = [ 'unknown'
-             , 'none'
-             , 'checksum'
-             , 'crc8'
-             , 'crc16'
-             , 'crc24'
-             , 'crc32' ]
+LIQUID_CRC = pd.Series([ 'unknown'
+                       , 'none'
+                       , 'checksum'
+                       , 'crc8'
+                       , 'crc16'
+                       , 'crc24'
+                       , 'crc32' ])
 
-LIQUID_FEC = [ 'unknown'
-             , 'none'
-             , 'rep3'
-             , 'rep5'
-             , 'h74'
-             , 'h84'
-             , 'h128'
-             , 'g2412'
-             , 'secded2216'
-             , 'secded3932'
-             , 'secded7264'
-             , 'v27'
-             , 'v29'
-             , 'v39'
-             , 'v615'
-             , 'v27p23'
-             , 'v27p34'
-             , 'v27p45'
-             , 'v27p56'
-             , 'v27p67'
-             , 'v27p78'
-             , 'v29p23'
-             , 'v29p34'
-             , 'v29p45'
-             , 'v29p56'
-             , 'v29p67'
-             , 'v29p78'
-             , 'rs8' ]
+LIQUID_FEC = pd.Series([ 'unknown'
+                       , 'none'
+                       , 'rep3'
+                       , 'rep5'
+                       , 'h74'
+                       , 'h84'
+                       , 'h128'
+                       , 'g2412'
+                       , 'secded2216'
+                       , 'secded3932'
+                       , 'secded7264'
+                       , 'v27'
+                       , 'v29'
+                       , 'v39'
+                       , 'v615'
+                       , 'v27p23'
+                       , 'v27p34'
+                       , 'v27p45'
+                       , 'v27p56'
+                       , 'v27p67'
+                       , 'v27p78'
+                       , 'v29p23'
+                       , 'v29p34'
+                       , 'v29p45'
+                       , 'v29p56'
+                       , 'v29p67'
+                       , 'v29p78'
+                       , 'rs8' ])
 
-LIQUID_MS = [ 'unknown'
+LIQUID_MS = pd.Series([ 'unknown'
 
-              # phase-shift keying
-            , 'psk2'
-            , 'psk4'
-            , 'psk8'
-            , 'psk16'
-            , 'psk32'
-            , 'psk64'
-            , 'psk128'
-            , 'psk256'
+                        # phase-shift keying
+                      , 'psk2'
+                      , 'psk4'
+                      , 'psk8'
+                      , 'psk16'
+                      , 'psk32'
+                      , 'psk64'
+                      , 'psk128'
+                      , 'psk256'
 
-              # differential phase-shift keying
-            , 'dpsk2'
-            , 'dpsk4'
-            , 'dpsk8'
-            , 'dpsk16'
-            , 'dpsk32'
-            , 'dpsk64'
-            , 'dpsk128'
-            , 'dpsk256'
+                        # differential phase-shift keying
+                      , 'dpsk2'
+                      , 'dpsk4'
+                      , 'dpsk8'
+                      , 'dpsk16'
+                      , 'dpsk32'
+                      , 'dpsk64'
+                      , 'dpsk128'
+                      , 'dpsk256'
 
-              # amplitude-shift keying
-            , 'ask2'
-            , 'ask4'
-            , 'ask8'
-            , 'ask16'
-            , 'ask32'
-            , 'ask64'
-            , 'ask128'
-            , 'ask256'
+                      # amplitude-shift keying
+                      , 'ask2'
+                      , 'ask4'
+                      , 'ask8'
+                      , 'ask16'
+                      , 'ask32'
+                      , 'ask64'
+                      , 'ask128'
+                      , 'ask256'
 
-              # quadrature amplitude-shift keying
-            , 'qam4'
-            , 'qam8'
-            , 'qam16'
-            , 'qam32'
-            , 'qam64'
-            , 'qam128'
-            , 'qam256'
+                        # quadrature amplitude-shift keying
+                      , 'qam4'
+                      , 'qam8'
+                      , 'qam16'
+                      , 'qam32'
+                      , 'qam64'
+                      , 'qam128'
+                      , 'qam256'
 
-              # amplitude/phase-shift keying
-            , 'apsk4'
-            , 'apsk8'
-            , 'apsk16'
-            , 'apsk32'
-            , 'apsk64'
-            , 'apsk128'
-            , 'apsk256'
+                        # amplitude/phase-shift keying
+                      , 'apsk4'
+                      , 'apsk8'
+                      , 'apsk16'
+                      , 'apsk32'
+                      , 'apsk64'
+                      , 'apsk128'
+                      , 'apsk256'
 
-              # specific modem types
-            , 'bpsk'
-            , 'qpsk'
-            , 'ook'
-            , 'sqam32'
-            , 'sqam128'
-            , 'V29'
-            , 'arb16opt'
-            , 'arb32opt'
-            , 'arb64opt'
-            , 'arb128opt'
-            , 'arb256opt'
-            , 'arb64vt'
+                        # specific modem types
+                      , 'bpsk'
+                      , 'qpsk'
+                      , 'ook'
+                      , 'sqam32'
+                      , 'sqam128'
+                      , 'V29'
+                      , 'arb16opt'
+                      , 'arb32opt'
+                      , 'arb64opt'
+                      , 'arb128opt'
+                      , 'arb256opt'
+                      , 'arb64vt'
 
-              # arbitrary modem type
-            , 'arb' ]
-
-class RecvPacket:
-    def __init__(self, timestamp, start, end, hdr_valid, payload_valid, curhop, nexthop, seq, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, size, iqdata):
-        self._timestamp = timestamp
-        self._start = start
-        self._end = end
-        self._hdr_valid = hdr_valid
-        self._payload_valid = payload_valid
-        self._curhop = curhop
-        self._nexthop = nexthop
-        self._seq = seq
-        self._src = src
-        self._dest = dest
-        self._crc = crc
-        self._fec0 = fec0
-        self._fec1 = fec1
-        self._ms = ms
-        self._evm = evm
-        self._rssi = rssi
-        self._cfo = cfo
-        self._size = size
-        self._iqdata = iqdata
-
-    def __str__(self):
-        return "Packet(seq={seq}, curhop={curhop}, nexthop={nexthop}, ms={ms}, fec0={fec0}, fec1={fec1}, size={size})".\
-        format(seq=self.seq, curhop=self.curhop,  nexthop=self.nexthop, \
-               ms=self.ms, fec0=self.fec0,  fec1=self.fec1, size=self.size)
-
-    @property
-    def timestamp(self):
-        """Receive slot timestamp (in seconds since the logging node's start timestamp)"""
-        return self._timestamp
-
-    @property
-    def start(self):
-        """Packet start (in samples since the beginning of the receive slot)"""
-        return self._start
-
-    @property
-    def end(self):
-        """Packet end (in samples since the beginning of the receive slot)"""
-        return self._end
-
-    @property
-    def hdr_valid(self):
-        """Flag indicating whther or not the header is valid"""
-        return self._hdr_valid
-
-    @property
-    def payload_valid(self):
-        """Flag indicating whther or not the payload is valid"""
-        return self._payload_valid
-
-    @property
-    def curhop(self):
-        """Currrent hop node ID"""
-        return self._src
-
-    @property
-    def nexthop(self):
-        """Next hop node ID"""
-        return self._dest
-
-    @property
-    def seq(self):
-        """Sequence number"""
-        return self._seq
-
-    @property
-    def src(self):
-        """Source node ID"""
-        return self._src
-
-    @property
-    def dest(self):
-        """Destination node ID"""
-        return self._dest
-
-    @property
-    def crc(self):
-        """Liquid CRC"""
-        return LIQUID_CRC[self._crc]
-
-    @property
-    def fec0(self):
-        """Liquid FEC0"""
-        return LIQUID_FEC[self._fec0]
-
-    @property
-    def fec1(self):
-        """Liquid FEC1"""
-        return LIQUID_FEC[self._fec1]
-
-    @property
-    def ms(self):
-        """Liquid modulation scheme"""
-        return LIQUID_MS[self._ms]
-
-    @property
-    def evm(self):
-        """EVM (dB)"""
-        return self._evm
-
-    @property
-    def rssi(self):
-        """RSSI (dB)"""
-        return self._rssi
-
-    @property
-    def cfo(self):
-        """CFO (f/Fs)"""
-        return self._cfo
-
-    @property
-    def size(self):
-        """packet size (bytes)"""
-        return self._size
-
-    @property
-    def data(self):
-        """Demodulated IQ data"""
-        return self._iqdata
-
-class SendPacket:
-    def __init__(self, timestamp, curhop, nexthop, seq, src, dest, size, iqdata):
-        self._timestamp = timestamp
-        self._curhop = curhop
-        self._nexthop = nexthop
-        self._seq = seq
-        self._src = src
-        self._dest = dest
-        self._size = size
-        self._iqdata = iqdata
-
-    def __str__(self):
-        return "Packet(seq={seq}, curhop={curhop}, nexthop={nexthop}, size={size})".\
-        format(seq=self.seq, curhop=self.curhop,  nexthop=self.nexthop, size=self.size)
-
-    @property
-    def timestamp(self):
-        """Packet timestamp (in seconds since the logging node's start timestamp)"""
-        return self._timestamp
-
-    @property
-    def curhop(self):
-        """Currrent hop node ID"""
-        return self._src
-
-    @property
-    def nexthop(self):
-        """Next hop node ID"""
-        return self._dest
-
-    @property
-    def seq(self):
-        """Sequence number"""
-        return self._seq
-
-    @property
-    def src(self):
-        """Source node ID"""
-        return self._src
-
-    @property
-    def dest(self):
-        """Destination node ID"""
-        return self._dest
-
-    @property
-    def size(self):
-        """packet size (bytes)"""
-        return self._size
-
-    @property
-    def data(self):
-        """Modulated IQ data"""
-        return self._iqdata
-
-class Event:
-    def __init__(self, timestamp, event):
-        self._timestamp = timestamp
-        self._event = event.decode()
-
-    def __str__(self):
-        return self.event
-
-    @property
-    def timestamp(self):
-        """Packet timestamp (in seconds since the logging node's start timestamp)"""
-        return self._timestamp
-
-    @property
-    def event(self):
-        """Event"""
-        return self._event
+                        # arbitrary modem type
+                      , 'arb' ])
 
 class Node:
     def __init__(self):
@@ -359,41 +165,12 @@ class Node:
         """Liquid DSP modulation scheme"""
         return self.log_attrs['modulation_scheme'].decode()
 
-class Proxy(object):
-    def __init__(self, cls, items):
-        self.cls = cls
-        self.items = items
-
-    def __len__(self):
-        return len(self.items)
-
-    def __getitem__(self, i):
-        return self.cls(*(self.items[i]))
-
-    def __iter__(self):
-        return ProxyIter(self)
-
-class ProxyIter(object):
-    def __init__(self, proxy):
-        self.proxy = proxy
-        self.idx = 0
-
-    def __len__(self):
-        return len(self.proxy)
-
-    def __getitem__(self, i):
-        return self.proxy[i]
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.idx >= len(self):
-            raise StopIteration
-        else:
-            x = self[self.idx]
-            self.idx += 1
-            return x
+def loadDataSet(ds):
+    """Load an h5py data set into a pandas DataFrame"""
+    data = np.empty(len(ds), dtype=ds.dtype)
+    if len(ds) != 0:
+        ds.read_direct(data)
+    return pd.DataFrame(data)
 
 class Log:
     def __init__(self):
@@ -403,28 +180,45 @@ class Log:
         self._send = {}
         self._slots = {}
         self._events = {}
-        self._files = []
-
-    def __del__(self):
-        for f in self._files:
-            f.close()
 
     def load(self, filename):
-        f = h5py.File(filename, 'r')
-        self._files.append(f)
-        node = Node()
-        for attr in f.attrs:
-            node.log_attrs[attr] = f.attrs[attr]
+        with h5py.File(filename, 'r') as f:
+            node = Node()
+            for attr in f.attrs:
+                node.log_attrs[attr] = f.attrs[attr]
 
-        self._nodes[node.node_id] = node
-        self._slots[node.node_id] = Proxy(Slot, f['slots'])
-        self._recv[node.node_id] = Proxy(RecvPacket, f['recv'])
-        self._send[node.node_id] = Proxy(SendPacket, f['send'])
+            self._nodes[node.node_id] = node
 
-        if 'event' in f:
-            self._events[node.node_id] = Proxy(Event, f['event'])
+            Fs = node.rx_bandwidth
 
-        return node
+            # Load IQ data for slots
+            df = loadDataSet(f['slots'])
+            df['start'] = df.timestamp
+            df['end'] = df.timestamp + df.iq_data.apply(len) / node.rx_bandwidth
+
+            self._slots[node.node_id] = df
+
+            # Load received packets
+            df = loadDataSet(f['recv'])
+            df.crc = LIQUID_CRC.get(df.crc, 'unknown').values
+            df.fec0 = LIQUID_FEC.get(df.fec0, 'unknown').values
+            df.fec1 = LIQUID_FEC.get(df.fec1, 'unknown').values
+            df.ms = LIQUID_MS.get(df.ms, 'unknown').values
+            df['start'] = df.timestamp + df.start_samples/Fs
+            df['end'] = df.timestamp + df.end_samples/Fs
+
+            self._recv[node.node_id] = df
+
+            # Load sent packets
+            self._send[node.node_id] = loadDataSet(f['send'])
+
+            # Load events
+            df = loadDataSet(f['event'])
+            df.event = df.event.str.decode('utf-8')
+
+            self._events[node.node_id] = df
+
+            return node
 
     def findReceivedPackets(self, node, t_start, t_end):
         """
@@ -443,38 +237,32 @@ class Log:
         Fs = node.rx_bandwidth
         recv = self.received[node.node_id]
 
-        for pkt in recv:
-            t1 = pkt.timestamp + t_start/Fs
-            t2 = pkt.timestamp + t_end/Fs
-
-            if t1 >= t_start and t1 < t_end:
-                result.append(pkt)
-
-            if t1 > t_end:
-                break
-
-        return result
+        return recv[(recv.start >= t_start) & (recv.start < t_end)]
 
     def findSlot(self, node, t):
-        for slot in self._slots[node.node_id]:
-            t_start = slot.timestamp
-            t_end = slot.timestamp + len(slot.data) / node.rx_bandwidth
+        slots = self._slots[node.node_id]
 
-            if t >= t_start and t < t_end:
-                return slot
-
-        return None
+        idx = (slots.start <= t) & (t < slots.end)
+        if idx.any():
+            return slots[idx].iloc[0]
+        else:
+            return None
 
     def findSlots(self, node, pkt):
         slots = self._slots[node.node_id]
 
-        for i in range(0, len(slots)):
-            if slots[i].timestamp == pkt.timestamp:
-                ts = [slots[i].timestamp, slots[i+1].timestamp]
-                data = np.concatenate((slots[i].data, slots[i+1].data))
-                return (ts, data)
+        idx = slots['timestamp'] == pkt.timestamp
 
-        return None
+        if not idx.any():
+            return None
+
+        i = slots.index[idx].tolist()[0]
+
+        slot1 = slots.loc[idx].iloc[0]
+        slot2 = slots.iloc[i+1]
+        ts = [slot1.timestamp, slot2.timestamp]
+        data = np.concatenate((slot1.iq_data, slot2.iq_data))
+        return (ts, data)
 
     def findReceivedPacketIndex(self, node, seq):
         """
@@ -489,13 +277,12 @@ class Log:
         """
         recv = self.received[node.node_id]
 
-        for i in range(0, len(recv)):
-            if recv[i].seq == seq:
-                return i
-            elif recv[i].seq > seq:
-                return None
+        idx = recv.seq == seq
 
-        return None
+        if idx.any():
+            return recv.index[idx].tolist()[0]
+        else:
+            return None
 
     def findSentPacketIndex(self, node, seq):
         """
@@ -510,13 +297,12 @@ class Log:
         """
         send = self.sent[node.node_id]
 
-        for i in range(0, len(send)):
-            if send[i].seq == seq:
-                return i
-            elif send[i].seq > seq:
-                return None
+        idx = send.seq == seq
 
-        return None
+        if idx.any():
+            return send.index[idx].tolist()[0]
+        else:
+            return None
 
     @property
     def nodes(self):

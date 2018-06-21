@@ -51,14 +51,14 @@ def main():
         for node_id in log.nodes:
             node = log.nodes[node_id]
             print("Node {}:".format(node_id))
-            for e in log.events[node.node_id]:
+            for (_, e) in log.events[node.node_id].iterrows():
                 print("\t{}\t{}".format(e.timestamp, e.event))
 
     if args.bad:
         for node_id in log.nodes:
             node = log.nodes[node_id]
-            for pkt in log.received[node.node_id]:
-                if not pkt.hdr_valid:
+            for (_, pkt) in log.received[node.node_id].iterrows():
+                if not pkt.header_valid:
                     print("HEADER INVALID: {}".format(pkt))
                 elif not pkt.payload_valid:
                     print("PAYLOAD INVALID: {}".format(pkt))
@@ -66,8 +66,10 @@ def main():
     if args.received:
         for node_id in log.nodes:
             node = log.nodes[node_id]
-            for pkt in log.received[node.node_id]:
-                print(pkt)
+            for (_, pkt) in log.received[node.node_id].iterrows():
+                print("Packet(seq={seq}, curhop={curhop}, nexthop={nexthop}, ms={ms}, fec0={fec0}, fec1={fec1}, size={size})".\
+                      format(seq=pkt.seq, pkt=pkt.curhop, curhop=pkt.curhop, nexthop=pkt.nexthop, \
+                             ms=pkt.ms, fec0=pkt.fec0, fec1=pkt.fec1, size=pkt.size))
 
     if args.dump_slot:
         if not args.node_id:
@@ -76,10 +78,10 @@ def main():
 
         node = log.nodes[args.node_id]
         slot = log.findSlot(node, args.dump_slot)
-        if slot:
+        if slot is not None:
             if not args.output:
                 args.output = 'slot.fc64'
-            slot.data.tofile(args.output)
+            slot.iq_data.tofile(args.output)
         else:
             print("Slot not found at time {}.".format(args.dump_slot), file=sys.stderr)
 

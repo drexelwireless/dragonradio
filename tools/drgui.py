@@ -186,14 +186,14 @@ class ReceivePlot:
 
         if idx >= 0 and idx < len(recv):
             self.pktidx = idx
-            self.pkt = recv[idx]
+            self.pkt = recv.iloc[idx]
             self.spos.set_val(idx)
 
             (self.ts, self.w) = self.log.findSlots(self.node, self.pkt)
 
-            self.sig = self.w[self.pkt.start:self.pkt.end]
+            self.sig = self.w[self.pkt.start_samples:self.pkt.end_samples]
 
-            if not self.pkt.hdr_valid:
+            if not self.pkt.header_valid:
                 msg = 'INVALID HEADER'
             elif not self.pkt.payload_valid:
                 msg = 'INVALID PAYLOAD'
@@ -209,15 +209,15 @@ class ReceivePlot:
 
             # Mark all packets in the current specgram
             #self.markPacket(self.pkt, self.specgram.ax)
-            pkts = self.log.findReceivedPackets(self.node, self.ts[0], self.ts[0]+len(self.sig)/self.Fs)
-            for pkt in pkts:
+            pkts = self.log.findReceivedPackets(self.node, self.ts[0], self.ts[0]+len(self.w)/self.Fs)
+            for (_, pkt) in pkts.iterrows():
                 self.bracketPacket(pkt, self.specgram.ax)
 
             # Mark all slots in the current specgram
             for t in self.ts:
                 self.markSlot(self.specgram.ax, t-t0)
 
-            self.constellation.plot(self.pkt.data)
+            self.constellation.plot(self.pkt.iq_data)
             self.waveform.plot(self.sig)
             self.psd.plot(self.Fs, self.sig)
             self.papr.plot(self.sig)
@@ -251,8 +251,8 @@ class ReceivePlot:
         ax.axvline(t, color='r')
 
     def bracketPacket(self, pkt, ax):
-        t_start = pkt.start/self.Fs
-        t_end = pkt.end/self.Fs
+        t_start = pkt.start - pkt.timestamp
+        t_end = pkt.end - pkt.timestamp
 
         (ymin, ymax) = ax.get_ylim()
 
@@ -333,16 +333,16 @@ class SendPlot:
 
         if idx >= 0 and idx < len(send):
             self.pktidx = idx
-            self.pkt = send[idx]
+            self.pkt = send.iloc[idx]
             self.spos.set_val(idx)
 
             self.fig.canvas.set_window_title('Node {} Sent Packets'.format(self.node.node_id))
             self.fig.suptitle('Packet {} to node {}'.format(self.pkt.seq, self.pkt.dest))
 
-            self.constellation.plot(self.pkt.data)
-            self.waveform.plot(self.pkt.data)
-            self.psd.plot(self.Fs, self.pkt.data)
-            self.papr.plot(self.pkt.data)
+            self.constellation.plot(self.pkt.iq_data)
+            self.waveform.plot(self.pkt.iq_data)
+            self.psd.plot(self.Fs, self.pkt.iq_data)
+            self.papr.plot(self.pkt.iq_data)
 
             self.fig.canvas.draw()
 
