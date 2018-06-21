@@ -261,6 +261,9 @@ class Config(object):
         add_argument('--no-arq', action='store_const', const=False,
                      dest='arq',
                      help='disable ARQ')
+        add_argument('--arq-window', action='store', type=int,
+                     dest='arq_window',
+                     help='set ARQ window size')
         add_argument('--arq-enforce-ordering', action='store_const', const=True,
                      dest='arq_enforce_ordering',
                      help='enforce packet order when performing ARQ')
