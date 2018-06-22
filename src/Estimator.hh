@@ -90,7 +90,7 @@ private:
 /** The EMA estimator updates an exponetially weighted moving average with a
  * weight alpha. Optionally, it can make an estimate using an average until
  * mean_until samples have been collected. As a guideline, choosing alpha to be
- * 2/(n+1) means the first n data points "will represent about 86% of teh total
+ * 2/(n+1) means the first n data points "will represent about 86% of the total
  * weight in the calculation EMA."
  *
  * See: https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
