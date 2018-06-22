@@ -452,7 +452,6 @@ void SmartController::startACKTimer(RecvWindow &recvw)
     }
 }
 
-
 void SmartController::txSuccess(Node &node)
 {
     node.short_per.update(0.0);
