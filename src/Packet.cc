@@ -83,7 +83,7 @@ const ControlMsg *Packet::iterator::operator ->()
     return &ctrl_;
 }
 
-void Packet::appendControl(ControlMsg &ctrl)
+void Packet::appendControl(const ControlMsg &ctrl)
 {
     uint16_t ctrl_len = 0;
 

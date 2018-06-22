@@ -244,7 +244,7 @@ struct Packet : public buffer<unsigned char>
     }
 
     /** @brief Append a control message to a packet */
-    void appendControl(ControlMsg &ctrl);
+    void appendControl(const ControlMsg &ctrl);
 
     /** @brief Append a Hello control message to a packet */
     void appendHello(const ControlMsg::Hello &hello);
