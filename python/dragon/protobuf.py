@@ -50,7 +50,7 @@ def handler(message_type):
 
                 if cname == message_type.__name__:
                     if fname not in table.message_types:
-                        raise Exception("Illegal message type '{}' for class {}".format(name, message_type.__name__))
+                        raise Exception("Illegal message type '{}' for class {}".format(fname, message_type.__name__))
                     else:
                         table.message_handlers[fname] = f
                         table.handled_message_types.append(table.message_types[fname])
