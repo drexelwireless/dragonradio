@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='dragonradio.remote',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x11\x64ragonradio.proto\x12\x12\x64ragonradio.remote\"c\n\x04Goal\x12\x11\n\tgoal_type\x18\x01 \x01(\t\x12\x10\n\x08\x66low_uid\x18\x02 \x01(\x05\x12\x36\n\x0crequirements\x18\x03 \x01(\x0b\x32 .dragonradio.remote.Requirements\"\x9a\x01\n\x0cRequirements\x12\x15\n\rmax_latency_s\x18\x01 \x01(\x02\x12\x1a\n\x12min_throughput_bps\x18\x02 \x01(\x02\x12\x1c\n\x14max_packet_drop_rate\x18\x03 \x01(\x02\x12 \n\x18\x66ile_transfer_deadline_s\x18\x04 \x01(\x02\x12\x17\n\x0f\x66ile_size_bytes\x18\x05 \x01(\x02\"@\n\x06Status\x12(\n\x05state\x18\x01 \x01(\x0e\x32\x19.dragonradio.remote.State\x12\x0c\n\x04info\x18\x02 \x01(\t\";\n\x10MandatedOutcomes\x12\'\n\x05goals\x18\x01 \x03(\x0b\x32\x18.dragonradio.remote.Goal\"\x90\x01\n\x07Request\x12\x39\n\rradio_command\x18\x01 \x01(\x0e\x32 .dragonradio.remote.RadioCommandH\x00\x12?\n\x0fupdate_outcomes\x18\x02 \x01(\x0b\x32$.dragonradio.remote.MandatedOutcomesH\x00\x42\t\n\x07payload\"C\n\x08Response\x12,\n\x06status\x18\x01 \x01(\x0b\x32\x1a.dragonradio.remote.StatusH\x00\x42\t\n\x07payload*[\n\x05State\x12\x07\n\x03OFF\x10\x00\x12\x0b\n\x07\x42OOTING\x10\x01\x12\t\n\x05READY\x10\x02\x12\n\n\x06\x41\x43TIVE\x10\x03\x12\x0c\n\x08STOPPING\x10\x04\x12\x0c\n\x08\x46INISHED\x10\x05\x12\t\n\x05\x45RROR\x10\x06*/\n\x0cRadioCommand\x12\t\n\x05START\x10\x00\x12\x08\n\x04STOP\x10\x01\x12\n\n\x06STATUS\x10\x02\x62\x06proto3')
+  serialized_pb=_b('\n\x11\x64ragonradio.proto\x12\x12\x64ragonradio.remote\"c\n\x04Goal\x12\x11\n\tgoal_type\x18\x01 \x01(\t\x12\x10\n\x08\x66low_uid\x18\x02 \x01(\x05\x12\x36\n\x0crequirements\x18\x03 \x01(\x0b\x32 .dragonradio.remote.Requirements\"\x9a\x01\n\x0cRequirements\x12\x15\n\rmax_latency_s\x18\x01 \x01(\x02\x12\x1a\n\x12min_throughput_bps\x18\x02 \x01(\x02\x12\x1c\n\x14max_packet_drop_rate\x18\x03 \x01(\x02\x12 \n\x18\x66ile_transfer_deadline_s\x18\x04 \x01(\x02\x12\x17\n\x0f\x66ile_size_bytes\x18\x05 \x01(\x02\"@\n\x06Status\x12(\n\x05state\x18\x01 \x01(\x0e\x32\x19.dragonradio.remote.State\x12\x0c\n\x04info\x18\x02 \x01(\t\";\n\x10MandatedOutcomes\x12\'\n\x05goals\x18\x01 \x03(\x0b\x32\x18.dragonradio.remote.Goal\"%\n\x14MandatedOutcomesJson\x12\r\n\x05goals\x18\x01 \x01(\t\"&\n\x0f\x45nvironmentJson\x12\x13\n\x0b\x65nvironment\x18\x01 \x01(\t\"\xb4\x02\n\x07Request\x12\x39\n\rradio_command\x18\x01 \x01(\x0e\x32 .dragonradio.remote.RadioCommandH\x00\x12H\n\x18update_mandated_outcomes\x18\x02 \x01(\x0b\x32$.dragonradio.remote.MandatedOutcomesH\x00\x12Q\n\x1dupdate_mandated_outcomes_json\x18\x03 \x01(\x0b\x32(.dragonradio.remote.MandatedOutcomesJsonH\x00\x12\x46\n\x17update_environment_json\x18\x04 \x01(\x0b\x32#.dragonradio.remote.EnvironmentJsonH\x00\x42\t\n\x07payload\"C\n\x08Response\x12,\n\x06status\x18\x01 \x01(\x0b\x32\x1a.dragonradio.remote.StatusH\x00\x42\t\n\x07payload*[\n\x05State\x12\x07\n\x03OFF\x10\x00\x12\x0b\n\x07\x42OOTING\x10\x01\x12\t\n\x05READY\x10\x02\x12\n\n\x06\x41\x43TIVE\x10\x03\x12\x0c\n\x08STOPPING\x10\x04\x12\x0c\n\x08\x46INISHED\x10\x05\x12\t\n\x05\x45RROR\x10\x06*/\n\x0cRadioCommand\x12\t\n\x05START\x10\x00\x12\x08\n\x04STOP\x10\x01\x12\n\n\x06STATUS\x10\x02\x62\x06proto3')
 )
 
 _STATE = _descriptor.EnumDescriptor(
@@ -60,8 +60,8 @@ _STATE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=642,
-  serialized_end=733,
+  serialized_start=885,
+  serialized_end=976,
 )
 _sym_db.RegisterEnumDescriptor(_STATE)
 
@@ -87,8 +87,8 @@ _RADIOCOMMAND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=735,
-  serialized_end=782,
+  serialized_start=978,
+  serialized_end=1025,
 )
 _sym_db.RegisterEnumDescriptor(_RADIOCOMMAND)
 
@@ -279,6 +279,68 @@ _MANDATEDOUTCOMES = _descriptor.Descriptor(
 )
 
 
+_MANDATEDOUTCOMESJSON = _descriptor.Descriptor(
+  name='MandatedOutcomesJson',
+  full_name='dragonradio.remote.MandatedOutcomesJson',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='goals', full_name='dragonradio.remote.MandatedOutcomesJson.goals', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=426,
+  serialized_end=463,
+)
+
+
+_ENVIRONMENTJSON = _descriptor.Descriptor(
+  name='EnvironmentJson',
+  full_name='dragonradio.remote.EnvironmentJson',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='environment', full_name='dragonradio.remote.EnvironmentJson.environment', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=465,
+  serialized_end=503,
+)
+
+
 _REQUEST = _descriptor.Descriptor(
   name='Request',
   full_name='dragonradio.remote.Request',
@@ -294,8 +356,22 @@ _REQUEST = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='update_outcomes', full_name='dragonradio.remote.Request.update_outcomes', index=1,
+      name='update_mandated_outcomes', full_name='dragonradio.remote.Request.update_mandated_outcomes', index=1,
       number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='update_mandated_outcomes_json', full_name='dragonradio.remote.Request.update_mandated_outcomes_json', index=2,
+      number=3, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='update_environment_json', full_name='dragonradio.remote.Request.update_environment_json', index=3,
+      number=4, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -315,8 +391,8 @@ _REQUEST = _descriptor.Descriptor(
       name='payload', full_name='dragonradio.remote.Request.payload',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=427,
-  serialized_end=571,
+  serialized_start=506,
+  serialized_end=814,
 )
 
 
@@ -349,21 +425,29 @@ _RESPONSE = _descriptor.Descriptor(
       name='payload', full_name='dragonradio.remote.Response.payload',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=573,
-  serialized_end=640,
+  serialized_start=816,
+  serialized_end=883,
 )
 
 _GOAL.fields_by_name['requirements'].message_type = _REQUIREMENTS
 _STATUS.fields_by_name['state'].enum_type = _STATE
 _MANDATEDOUTCOMES.fields_by_name['goals'].message_type = _GOAL
 _REQUEST.fields_by_name['radio_command'].enum_type = _RADIOCOMMAND
-_REQUEST.fields_by_name['update_outcomes'].message_type = _MANDATEDOUTCOMES
+_REQUEST.fields_by_name['update_mandated_outcomes'].message_type = _MANDATEDOUTCOMES
+_REQUEST.fields_by_name['update_mandated_outcomes_json'].message_type = _MANDATEDOUTCOMESJSON
+_REQUEST.fields_by_name['update_environment_json'].message_type = _ENVIRONMENTJSON
 _REQUEST.oneofs_by_name['payload'].fields.append(
   _REQUEST.fields_by_name['radio_command'])
 _REQUEST.fields_by_name['radio_command'].containing_oneof = _REQUEST.oneofs_by_name['payload']
 _REQUEST.oneofs_by_name['payload'].fields.append(
-  _REQUEST.fields_by_name['update_outcomes'])
-_REQUEST.fields_by_name['update_outcomes'].containing_oneof = _REQUEST.oneofs_by_name['payload']
+  _REQUEST.fields_by_name['update_mandated_outcomes'])
+_REQUEST.fields_by_name['update_mandated_outcomes'].containing_oneof = _REQUEST.oneofs_by_name['payload']
+_REQUEST.oneofs_by_name['payload'].fields.append(
+  _REQUEST.fields_by_name['update_mandated_outcomes_json'])
+_REQUEST.fields_by_name['update_mandated_outcomes_json'].containing_oneof = _REQUEST.oneofs_by_name['payload']
+_REQUEST.oneofs_by_name['payload'].fields.append(
+  _REQUEST.fields_by_name['update_environment_json'])
+_REQUEST.fields_by_name['update_environment_json'].containing_oneof = _REQUEST.oneofs_by_name['payload']
 _RESPONSE.fields_by_name['status'].message_type = _STATUS
 _RESPONSE.oneofs_by_name['payload'].fields.append(
   _RESPONSE.fields_by_name['status'])
@@ -372,6 +456,8 @@ DESCRIPTOR.message_types_by_name['Goal'] = _GOAL
 DESCRIPTOR.message_types_by_name['Requirements'] = _REQUIREMENTS
 DESCRIPTOR.message_types_by_name['Status'] = _STATUS
 DESCRIPTOR.message_types_by_name['MandatedOutcomes'] = _MANDATEDOUTCOMES
+DESCRIPTOR.message_types_by_name['MandatedOutcomesJson'] = _MANDATEDOUTCOMESJSON
+DESCRIPTOR.message_types_by_name['EnvironmentJson'] = _ENVIRONMENTJSON
 DESCRIPTOR.message_types_by_name['Request'] = _REQUEST
 DESCRIPTOR.message_types_by_name['Response'] = _RESPONSE
 DESCRIPTOR.enum_types_by_name['State'] = _STATE
@@ -405,6 +491,20 @@ MandatedOutcomes = _reflection.GeneratedProtocolMessageType('MandatedOutcomes', 
   # @@protoc_insertion_point(class_scope:dragonradio.remote.MandatedOutcomes)
   ))
 _sym_db.RegisterMessage(MandatedOutcomes)
+
+MandatedOutcomesJson = _reflection.GeneratedProtocolMessageType('MandatedOutcomesJson', (_message.Message,), dict(
+  DESCRIPTOR = _MANDATEDOUTCOMESJSON,
+  __module__ = 'dragonradio_pb2'
+  # @@protoc_insertion_point(class_scope:dragonradio.remote.MandatedOutcomesJson)
+  ))
+_sym_db.RegisterMessage(MandatedOutcomesJson)
+
+EnvironmentJson = _reflection.GeneratedProtocolMessageType('EnvironmentJson', (_message.Message,), dict(
+  DESCRIPTOR = _ENVIRONMENTJSON,
+  __module__ = 'dragonradio_pb2'
+  # @@protoc_insertion_point(class_scope:dragonradio.remote.EnvironmentJson)
+  ))
+_sym_db.RegisterMessage(EnvironmentJson)
 
 Request = _reflection.GeneratedProtocolMessageType('Request', (_message.Message,), dict(
   DESCRIPTOR = _REQUEST,

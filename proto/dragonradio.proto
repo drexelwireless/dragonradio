@@ -72,10 +72,20 @@ message MandatedOutcomes {
     repeated Goal goals = 1;
 }
 
+message MandatedOutcomesJson {
+    string goals = 1;
+}
+
+message EnvironmentJson {
+    string environment = 1;
+}
+
 message Request {
     oneof payload {
         RadioCommand radio_command = 1;
-        MandatedOutcomes update_outcomes = 2;
+        MandatedOutcomes update_mandated_outcomes = 2;
+        MandatedOutcomesJson update_mandated_outcomes_json = 3;
+        EnvironmentJson update_environment_json = 4;
     }
 }
 

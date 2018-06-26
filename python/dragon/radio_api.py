@@ -24,8 +24,16 @@ class RadioAPIClient(TCPProtoClient):
         req.radio_command = internal.STATUS
 
     @rpc(internal.Request, internal.Response)
-    def updateOutcomes(self, req, goals):
-        req.update_outcomes.goals.extend(goals)
+    def updateMandatedOutcomes(self, req, goals):
+        req.update_mandated_outcomes.goals.extend(goals)
+
+    @rpc(internal.Request, internal.Response)
+    def updateMandatedOutcomesJson(self, req, goals):
+        req.update_mandated_outcomes_json.goals = goals
+
+    @rpc(internal.Request, internal.Response)
+    def updateEnvironmentJson(self, req, env):
+        req.update_environment_json.environment = env
 
 state_map = { internal.OFF: 'OFF'
             , internal.BOOTING: 'BOOTING'

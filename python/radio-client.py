@@ -19,10 +19,9 @@ def main():
     parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
                         dest='loglevel',
                         help='be verbose')
-    parser.add_argument('--mandated-outcomes', action='store',
-                        default='/root/radio_api/mandated_outcomes.json',
-                        help='set path of mandated outcomes JSON file')
-    parser.add_argument('action', choices=['start', 'stop', 'status', 'update-outcomes'])
+    parser.add_argument('action', choices=['start', 'stop', 'status', 'update-outcomes', 'update-environment'])
+    parser.add_argument('paths', type=str, nargs='*',
+                        help='path to JSON file')
 
     try:
         args = parser.parse_args()
@@ -57,10 +56,27 @@ def main():
 
         print(json.dumps(data))
     elif args.action == 'update-outcomes':
-        with open(args.mandated_outcomes) as f:
-            goals = radio_api.parseMandatedOutcomes(json.load(f))
-            with client:
-                client.updateOutcomes(goals)
+        if len(args.paths) == 0:
+            path = "/root/radio_api/mandated_outcomes.json"
+        else:
+            path = args.paths[0]
+
+        with open(path) as f:
+            goals = f.read()
+
+        with client:
+            client.updateMandatedOutcomesJson(goals)
+    elif args.action == 'update-environment':
+        if len(args.paths) == 0:
+            path = "/root/radio_api/environment.json"
+        else:
+            path = args.paths[0]
+
+        with open(path) as f:
+            goals = f.read()
+
+        with client:
+            client.updateEnvironmentJson(goals)
 
     loop.close()
     return 0
