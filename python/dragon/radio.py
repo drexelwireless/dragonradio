@@ -442,6 +442,18 @@ class Radio(object):
             if config.auto_soft_tx_gain != None:
                 self.controller.broadcast_tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
 
+    def setTXParams(self, crc, fec0, fec1, ms, g, clip=0.999):
+        tx_params = dragonradio.TXParams(crc, fec0, fec1, ms)
+
+        if g == 'auto':
+            tx_params.soft_tx_gain_0dBFS = -12.
+            tx_params.recalc0dBFSEstimate(100)
+            tx_params.soft_tx_gain_clip_frac = clip
+        else:
+            tx_params.soft_tx_gain_0dBFS = g
+
+        self.net.tx_params = dragonradio.TXParamsList([tx_params])
+
     def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
