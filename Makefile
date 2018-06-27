@@ -28,6 +28,15 @@ CPPFLAGS += -I/usr/include/python3.5 -Idependencies/pybind11/include
 
 LIBS += -lpython3.5m
 
+# Version information
+GIT_HASH=$(shell git rev-parse HEAD^{} | cut -c1-8)
+
+GIT_REVNAME=$(shell git name-rev --name-only HEAD | grep -v "~")
+
+DATE=$(shell date +%Y%m%d)
+
+CPPFLAGS += -DVERSION=$(GIT_REVNAME)-$(DATE)-$(GIT_HASH)
+
 SRCDIR = src
 OBJDIR = obj
 

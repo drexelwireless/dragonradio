@@ -87,7 +87,16 @@ using RadioInPull = RadioInWrapper<Pull>;
 using RadioOutPush = RadioOutWrapper<Push>;
 using RadioOutPull = RadioOutWrapper<Pull>;
 
+// UGH. See:
+//   https://stackoverflow.com/questions/240353/convert-a-preprocessor-token-to-a-string
+
+#define TOSTRING2(s) #s
+#define TOSTRING(s) TOSTRING2(s)
+
 PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
+    // Export DragonRadio version
+    m.attr("version") = TOSTRING(VERSION);
+
     // Create enum type CRCScheme for liquid CRC schemes
     py::enum_<crc_scheme> crc(m, "CRCScheme");
 
