@@ -23,6 +23,8 @@ def main():
                         help='specify node')
     parser.add_argument('--header', action='store_true',
                         help='show log header')
+    parser.add_argument('--received', action='store_true',
+                        help='show received packets')
     parser.add_argument('--events', action='store_true',
                         help='show events')
     parser.add_argument('--bad', action='store_true',
@@ -60,6 +62,12 @@ def main():
                     print("HEADER INVALID: {}".format(pkt))
                 elif not pkt.payload_valid:
                     print("PAYLOAD INVALID: {}".format(pkt))
+
+    if args.received:
+        for node_id in log.nodes:
+            node = log.nodes[node_id]
+            for pkt in log.received[node.node_id]:
+                print(pkt)
 
     if args.dump_slot:
         if not args.node_id:
