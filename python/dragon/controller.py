@@ -168,7 +168,7 @@ class Controller(TCPProtoServer):
         t = loop.time();
 
         while True:
-            delta = random.randint(1, 5)
+            delta = random.uniform(0.0, 1.0)
 
             if loop.time() + delta > t + self.config.neighbor_discovery_period:
                 break
@@ -186,7 +186,7 @@ class Controller(TCPProtoServer):
         #
         # Now delete the ALOHA MAC and switch to TDMA
         #
-        logger.info('Switching to TDMA MAC, %d nodes discovered.', len(radio.net))
+        logger.info('Switching to TDMA MAC, nodes: %s', list(radio.net.keys()))
 
         del radio.mac
 
