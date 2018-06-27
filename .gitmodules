@@ -1,6 +1,3 @@
-[submodule "dependencies/libfec"]
-	path = dependencies/libfec
-	url = git@github.com:Opendigitalradio/ka9q-fec.git
 [submodule "dependencies/liquid-dsp"]
 	path = dependencies/liquid-dsp
 	url = git@github.com:mainland/liquid-dsp.git
@@ -16,3 +13,6 @@
 [submodule "dependencies/pybind11"]
 	path = dependencies/pybind11
 	url = git@github.com:pybind/pybind11.git
+[submodule "dependencies/libcorrect"]
+	path = dependencies/libcorrect
+	url = git@github.com:mainland/libcorrect.git

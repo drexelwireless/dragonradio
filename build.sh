@@ -7,8 +7,8 @@ sudo apt install -y libfftw3-dev
 sudo apt install -y libhdf5-dev libhdf5-doc libhdf5-cpp-11 libhdf5-cpp-11-dbg
 sudo apt install -y python3 python3-pip python3-h5py
 
-# Build and install libfec
-(cd dependencies/libfec && ./bootstrap && ./configure && make && sudo make install && sudo ldconfig && make clean)
+# Build and install libcorrect
+(cd dependencies/libcorrect && mkdir build && cd build && cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
 
 # Build and install UHD
 (cd dependencies/uhd/host && mkdir -p build && cd build && cmake ../ && make -j4 && sudo make install && sudo ldconfig && make clean)
