@@ -52,7 +52,7 @@ void SlottedALOHA::txWorker(void)
     while (!done_) {
         // Figure out when our next send slot is.
         t_now = Clock::now();
-        t_slot_pos = fmod(t_now.get_real_secs(), slot_size_);
+        t_slot_pos = fmod(t_now, slot_size_);
         t_next_slot = t_now + slot_size_ - t_slot_pos;
 
         // Transmit in this slot with probability p_

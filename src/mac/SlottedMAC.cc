@@ -67,7 +67,7 @@ void SlottedMAC::rxWorker(void)
     while (!done_) {
         // Set up streaming starting at *next* slot
         t_now = Clock::now();
-        t_slot_pos = fmod(t_now.get_real_secs(), slot_size_);
+        t_slot_pos = fmod(t_now, slot_size_);
         t_next_slot = t_now + slot_size_ - t_slot_pos;
 
         usrp_->startRXStream(Clock::to_mono_time(t_next_slot));

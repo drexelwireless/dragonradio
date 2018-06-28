@@ -69,6 +69,12 @@ struct time_point_t {
     }
 };
 
+template<class T>
+double fmod(const time_point_t<T> &t, double x)
+{
+    return fmod(fmod(t.t.get_full_secs(), x) + fmod(t.t.get_frac_secs(), x), x);
+}
+
 /** @brief A monotonic clock */
 class MonoClock
 {

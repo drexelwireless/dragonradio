@@ -92,13 +92,12 @@ void TDMA::txWorker(void)
 
 bool TDMA::findNextSlot(Clock::time_point t, Clock::time_point &t_next)
 {
-    double t_secs = t.get_real_secs(); // Time t in seconds
-    double t_slot_pos;                 // Offset into the current slot (sec)
-    size_t cur_slot;                   // Current slot index
-    size_t tx_slot;                    // Slots before we can TX
+    double t_slot_pos; // Offset into the current slot (sec)
+    size_t cur_slot;   // Current slot index
+    size_t tx_slot;    // Slots before we can TX
 
-    t_slot_pos = fmod(t_secs, slot_size_);
-    cur_slot = fmod(t_secs, frame_size_) / slot_size_;
+    t_slot_pos = fmod(t, slot_size_);
+    cur_slot = fmod(t, frame_size_) / slot_size_;
 
     for (tx_slot = 1; tx_slot <= slots_.size(); ++tx_slot) {
         if (slots_[(cur_slot + tx_slot) % slots_.size()]) {
