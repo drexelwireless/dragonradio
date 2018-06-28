@@ -67,8 +67,9 @@ void TDMA::stop(void)
 
 void TDMA::txWorker(void)
 {
-    Clock::time_point t_now;       // Current time
-    Clock::time_point t_next_slot; // Time at which our next slot starts
+    Clock::time_point t_now;            // Current time
+    Clock::time_point t_next_slot;      // Time at which our next slot starts
+    Clock::time_point t_following_slot; // Time at which our following slot starts
 
     uhd::set_thread_priority_safe();
 
@@ -82,11 +83,14 @@ void TDMA::txWorker(void)
             continue;
         }
 
-        // Schedule transmission for start of our slot
+        // Schedule transmission for start of our next slot
         txSlot(t_next_slot, tx_slot_samps_);
 
-        // Sleep until the end of our transmission
-        doze((t_next_slot - t_now).get_real_secs() + slot_size_);
+        // Find following slot
+        findNextSlot(t_next_slot + slot_size_, t_following_slot);
+
+        // Sleep until one slot before our following slot
+        doze((t_following_slot - t_now - slot_size_).get_real_secs());
     }
 }
 
