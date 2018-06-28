@@ -43,9 +43,8 @@ void SlottedALOHA::stop(void)
 void SlottedALOHA::txWorker(void)
 {
     Clock::time_point t_now;       // Current time
-    Clock::time_point t_cur_slot;  // Time at which current slot starts
     Clock::time_point t_next_slot; // Time at which our next slot starts
-    double            t_slot_pos;   // Offset into the current slot (sec)
+    double            t_slot_pos;  // Offset into the current slot (sec)
 
     uhd::set_thread_priority_safe();
 
@@ -53,13 +52,13 @@ void SlottedALOHA::txWorker(void)
         // Figure out when our next send slot is.
         t_now = Clock::now();
         t_slot_pos = fmod(t_now, slot_size_);
-        t_next_slot = t_now + slot_size_ - t_slot_pos;
+        t_next_slot = t_now + (slot_size_ - t_slot_pos);
 
-        // Transmit in this slot with probability p_
+        // Transmit in the next slot with probability p_
         if (dist_(gen_) < p_)
             txSlot(t_next_slot, tx_slot_samps_);
 
         // Sleep until the next slot
-        doze((t_next_slot - t_now).get_real_secs() + slot_size_);
+        doze((t_next_slot - t_now).get_real_secs());
     }
 }
