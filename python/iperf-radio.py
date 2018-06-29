@@ -49,6 +49,10 @@ class IperfClientProtocol:
         else:
             self.completed.set_exception(exc)
 
+    def npackets(self):
+        """Return the number of packets sent during a test"""
+        return int(math.ceil(self.args.duration * self.args.bw/self.args.len))
+
     async def iperf(self, testnum, whiten):
         if whiten:
             bs = bytearray(np.random.bytes(self.args.len-UDP_OVERHEAD))
@@ -57,7 +61,7 @@ class IperfClientProtocol:
 
         t_sleep = self.args.len/self.args.bw
 
-        n = int(math.ceil(self.args.duration * self.args.bw/self.args.len))
+        n = self.npackets()
 
         for seq in range (0, n):
             struct.pack_into('!hh', bs, 0, testnum, seq)
@@ -68,7 +72,7 @@ def runSweep(writer, radio, args, client):
     testnum = 0
 
     # Write header
-    writer.writerow(('test', 'whiten', 'crc', 'fec0', 'fec1', 'ms', 'gain', 'auto gain', 'clip threshold'))
+    writer.writerow(('test', 'npackets', 'whiten', 'crc', 'fec0', 'fec1', 'ms', 'gain', 'auto gain', 'clip threshold'))
 
     # Load test configuration
     with open(args.test_config, 'r') as f:
@@ -108,7 +112,7 @@ def runSweep(writer, radio, args, client):
                         else:
                             realg = g
 
-                        writer.writerow((testnum, w, crc, fec0, fec1, ms, realg, g == 'auto', c))
+                        writer.writerow((testnum, client.npackets(), w, crc, fec0, fec1, ms, realg, g == 'auto', c))
                         testnum += 1
 
 SUFFIX = { 'k': 1000, 'm': 1000000 }

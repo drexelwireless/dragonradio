@@ -5,14 +5,14 @@ import pandas
 import re
 import sys
 
-def packetLoss(recv):
+def packetLoss(recv, send):
     """Calculate packet loss"""
     if len(recv.seq) == 0:
         return 1.
     else:
-        return 1. - len(recv.seq)/(max(recv.seq) + 1)
+        return 1. - len(recv.seq)/send.npackets
 
-def throughput(recv):
+def throughput(recv, send):
     """Calculate throughput in bps"""
     if len(recv.seq) == 0:
         return 0.
@@ -21,7 +21,7 @@ def throughput(recv):
     else:
         return 8.*recv.datalen.sum()/(max(recv.timestamp) - min(recv.timestamp))
 
-def outOfOrderPacket(recv):
+def outOfOrderPacket(recv, send):
     """Calculate how many packets were received out-of-order"""
     # Number of out of order packets
     if len(recv.seq) == 0:
@@ -181,7 +181,7 @@ def main():
     tests = pandas.read_csv(args.client_log, comment='#')
 
     def applyToReceived(f, row):
-        return f(recv.loc[recv['test'] == row.test])
+        return f(recv.loc[recv['test'] == row.test], row)
 
     tests['loss'] = tests.apply(lambda row: applyToReceived(packetLoss, row), axis=1)
     tests['throughput'] = tests.apply(lambda row: applyToReceived(throughput, row), axis=1)
