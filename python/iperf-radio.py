@@ -82,38 +82,23 @@ def runSweep(writer, radio, args, client):
 
     exec(config, globals(), ldict)
 
-    whiten = ldict.get('whiten', [True])
-    clip = ldict.get('soft_tx_gain_clip_frac', [0.999])
-    crc_schemes = ldict.get('crc_schemes', ['crc32'])
-    fec_schemes = ldict.get('fec_schemes', [('none', 'rs8')])
-    mod_schemes = ldict.get('mod_schemes', ['qpsk'])
+    params = ldict['params']
 
     # Run the tests
-    for w in whiten:
-        for crc in crc_schemes:
-            for (fec0, fec1) in fec_schemes:
-                for (ms, g) in mod_schemes:
-                    # Only iterate over clipping parameter when using auto soft
-                    # TX gain
-                    if g == 'auto':
-                        real_clip = clip
-                    else:
-                        real_clip = [1.]
+    for (w, crc, fec0, fec1, ms, g, c) in params:
+        print('Running test:', (testnum, w, crc, fec0, fec1, ms, g, c), '...', end='', flush=True)
 
-                    for c in real_clip:
-                        print('Running test:', (testnum, w, crc, fec0, fec1, ms, g, c), '...', end='', flush=True)
+        radio.setTXParams(crc, fec0, fec1, ms, g, c)
 
-                        radio.setTXParams(crc, fec0, fec1, ms, g, c)
+        client.loop.run_until_complete(client.iperf(testnum, w))
+        print('done')
+        if g == 'auto':
+            realg = radio.net.tx_params[0].soft_tx_gain_0dBFS
+        else:
+            realg = g
 
-                        client.loop.run_until_complete(client.iperf(testnum, w))
-                        print('done')
-                        if g == 'auto':
-                            realg = radio.net.tx_params[0].soft_tx_gain_0dBFS
-                        else:
-                            realg = g
-
-                        writer.writerow((testnum, client.npackets(), w, crc, fec0, fec1, ms, realg, g == 'auto', c))
-                        testnum += 1
+        writer.writerow((testnum, client.npackets(), w, crc, fec0, fec1, ms, realg, g == 'auto', c))
+        testnum += 1
 
 SUFFIX = { 'k': 1000, 'm': 1000000 }
 
