@@ -188,6 +188,7 @@ def main():
     tests['oop'] = tests.apply(lambda row: applyToReceived(outOfOrderPacket, row), axis=1)
     tests['rate'] = tests.apply(rate, axis=1)
     tests['bps'] = tests.apply(bps, axis=1)
+    tests['theoretical bps'] = tests.apply(lambda row: bps(row)*rate(row), axis=1)
     tests['effective bps'] = tests.apply(lambda row: bps(row)*rate(row)*(1.0 - row.loss), axis=1)
     tests.sort_values('effective bps', inplace=True)
 
