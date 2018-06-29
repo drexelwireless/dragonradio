@@ -1,37 +1,21 @@
 def paramgen():
     whiten = [True]
 
-    clip = [0.99]
+    clip = [0.999]
 
-    crc_schemes = ['crc32']
+    amc_table = [ ("crc32", "v29", "none", "qpsk")
+                , ("crc32", "none", "rs8", "qpsk")
+                , ("crc32", "none", "rs8", "qam8")
+                , ("crc32", "none", "rs8", "qam16")
+                , ("crc32", "none", "rs8", "qam32")
+                , ("crc32", "none", "rs8", "qam64")
+                , ("crc32", "none", "rs8", "qam128")
+                , ("crc32", "none", "rs8", "qam256")
+                ]
 
-    fec_schemes = [ ('none', 'rs8')
-                  , ('v27',    'none')
-                  , ('v27p34', 'none')
-                  , ('v27p78', 'none')
-                  ]
-
-    mod_schemes = [ ('qpsk', 'auto')
-                  , ('qam8', 'auto')
-                  , ('qam16', 'auto')
-                  , ('qam32', 'auto')
-                  , ('qam64', 'auto')
-                  , ('qam128', 'auto')
-                  , ('qam256', 'auto')
-                  ]
-
-    for w in whiten:
-        for crc in crc_schemes:
-            for (fec0, fec1) in fec_schemes:
-                for (ms, g) in mod_schemes:
-                    # Only iterate over clipping parameter when using auto soft
-                    # TX gain
-                    if g == 'auto':
-                        real_clip = clip
-                    else:
-                        real_clip = [1.]
-
-                    for c in real_clip:
-                        yield (w, crc, fec0, fec1, ms, g, c)
+    for (crc, fec0, fec1, ms) in amc_table:
+        for w in whiten:
+            for c in clip:
+                yield (w, crc, fec0, fec1, ms, 'auto', c)
 
 params = paramgen()
