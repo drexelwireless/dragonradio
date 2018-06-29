@@ -75,6 +75,12 @@ double fmod(const time_point_t<T> &t, double x)
     return fmod(fmod(t.t.get_full_secs(), x) + fmod(t.t.get_frac_secs(), x), x);
 }
 
+template<class T>
+bool approx(const time_point_t<T> &t1, const time_point_t<T> &t2)
+{
+    return fabs((t1 - t2).get_real_secs()) < 1e-6;
+}
+
 /** @brief A monotonic clock */
 class MonoClock
 {
