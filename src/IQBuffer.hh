@@ -15,7 +15,10 @@
 /** @brief A buffer of IQ samples */
 struct IQBuf : buffer<std::complex<float>> {
 public:
-    IQBuf(size_t sz) : buffer(sz), nsamples(0), complete(false) {}
+    IQBuf(size_t sz) : buffer(sz)
+    {
+        nsamples.store(0, std::memory_order_release);
+    }
 
     ~IQBuf() noexcept {}
 
@@ -31,9 +34,6 @@ public:
     /** @brief Number of samples received so far. */
     /** This value is valid untile the buffer is marked complete. */
     std::atomic<size_t> nsamples;
-
-    /** @brief Flag that is true when receive is completed. */
-    bool complete;
 
     /** @brief Number of undersamples at the beginning of the buffer. That is,
      * this is how many samples we missed at the beginning of the receive.

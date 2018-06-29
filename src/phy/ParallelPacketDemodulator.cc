@@ -122,7 +122,7 @@ void ParallelPacketDemodulator::demodWorker(void)
             ndemodulated += n;
             nwanted -= n;
 
-            if (buf2->complete)
+            if (nwanted == 0)
                 break;
         }
 
