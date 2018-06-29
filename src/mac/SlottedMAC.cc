@@ -92,9 +92,29 @@ void SlottedMAC::rxWorker(void)
 
 void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
 {
-    std::list<std::shared_ptr<IQBuf>>     txBuf;
-    std::list<std::unique_ptr<ModPacket>> modBuf;
+    std::list<std::shared_ptr<IQBuf>>     txBuf;  // IQ buffers to transmit
+    std::list<std::unique_ptr<ModPacket>> modBuf; // Modulated packets
 
+    // Put the timestamped packet on the front of the TX queue if it is due to
+    // be sent this slot.
+    {
+        std::lock_guard<spinlock_mutex> lock(timestamped_mutex_);
+
+        if (timestamped_mpkt_) {
+            if (approx(timestamped_deadline_, when)) {
+                maxSamples -= timestamped_mpkt_->samples->size();
+                modBuf.emplace_back(std::move(timestamped_mpkt_));
+            } else if (timestamped_deadline_ < when) {
+                logEvent("TIMESYNC: MISSED TIMESTAMPED PACKET: timestamp=%f; slot=%f",
+                    (double) timestamped_deadline_.get_real_secs(),
+                    (double) when.get_real_secs());
+
+                timestamped_mpkt_.reset();
+            }
+        }
+    }
+
+    // Fill the rest of the slot with modulated packets
     modulator_->pop(modBuf, maxSamples);
 
     if (!modBuf.empty()) {

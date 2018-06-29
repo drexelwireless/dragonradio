@@ -111,6 +111,31 @@ void Packet::appendHello(const ControlMsg::Hello &hello)
     appendControl(msg);
 }
 
+void Packet::appendTimestamp(const Seq &epoch, const Clock::time_point &t)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kTimestamp;
+    msg.timestamp.epoch = epoch;
+    msg.timestamp.t.from_wall_time(t);
+
+    appendControl(msg);
+}
+
+void Packet::appendTimestampDelta(NodeId node_id,
+                                  const Seq &epoch,
+                                  const Clock::time_point &delta)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kTimestampDelta;
+    msg.timestamp_delta.node = node_id;
+    msg.timestamp_delta.epoch = epoch;
+    msg.timestamp_delta.delta.from_wall_time(delta);
+
+    appendControl(msg);
+}
+
 bool Packet::isIP(void)
 {
     struct ether_header* eth = reinterpret_cast<struct ether_header*>(data() + sizeof(ExtendedHeader));

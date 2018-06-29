@@ -13,6 +13,7 @@
 #include <liquid/liquid.h>
 
 #include "buffer.hh"
+#include "Clock.hh"
 #include "Seq.hh"
 #include "phy/TXParams.hh"
 
@@ -50,11 +51,29 @@ enum {
 
 typedef uint16_t InternalFlags;
 
+/** @brief A time */
+struct Time {
+    uint64_t secs;
+    double frac_secs;
+
+    void from_wall_time(Clock::time_point t)
+    {
+        secs = t.t.get_full_secs();
+        frac_secs = t.t.get_frac_secs();
+    }
+
+    Clock::time_point to_wall_time(void) const
+    {
+        return Clock::time_point { uhd::time_spec_t { static_cast<time_t>(secs), frac_secs } };
+    }
+};
+
 /** @brief A Control message */
 struct ControlMsg {
     enum Type {
         kHello,
-        kTimestamp
+        kTimestamp,
+        kTimestampDelta
     };
 
     struct Hello {
@@ -62,8 +81,17 @@ struct ControlMsg {
     };
 
     struct Timestamp {
-        uint64_t secs;
-        double frac_secs;
+        Seq epoch;
+        Time t;
+    };
+
+    struct TimestampDelta {
+        /** @brief Node ID of sender */
+        NodeId node;
+        /** @brief Epoch of sender */
+        Seq epoch;
+        /** @brief Delta between receiver and sender */
+        Time delta;
     };
 
     Type type;
@@ -71,6 +99,7 @@ struct ControlMsg {
     union {
         Hello hello;
         Timestamp timestamp;
+        TimestampDelta timestamp_delta;
     };
 };
 
@@ -249,6 +278,14 @@ struct Packet : public buffer<unsigned char>
     /** @brief Append a Hello control message to a packet */
     void appendHello(const ControlMsg::Hello &hello);
 
+    /** @brief Append a Timestamp control message to a packet */
+    void appendTimestamp(const Seq &epoch, const Clock::time_point &t);
+
+    /** @brief Append a timestamp delta control message to a packet */
+    void appendTimestampDelta(NodeId node_id,
+                              const Seq &epoch,
+                              const Clock::time_point &delta);
+
     /** @brief Return iterator to beginning control data. */
     iterator begin() const
     {
@@ -324,6 +361,9 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
 
         case ControlMsg::kTimestamp:
             return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);
+
+        case ControlMsg::kTimestampDelta:
+            return offsetof(ControlMsg, timestamp_delta) + sizeof(ControlMsg::TimestampDelta);
 
         default:
             return 0;

@@ -65,6 +65,15 @@ void TDMA::stop(void)
         tx_thread_.join();
 }
 
+void TDMA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt)
+{
+    Clock::time_point t_next_slot;
+
+    findNextSlot(t, t_next_slot);
+
+    timestampPacket(t_next_slot, std::move(pkt));
+}
+
 void TDMA::txWorker(void)
 {
     Clock::time_point t_now;            // Current time

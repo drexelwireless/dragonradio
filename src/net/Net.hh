@@ -11,6 +11,7 @@
 #include "Estimator.hh"
 #include "Packet.hh"
 #include "SafeQueue.hh"
+#include "TimeSync.hh"
 #include "net/TunTap.hh"
 
 /** @brief A sprintf-style format string for internal network tun/tap IP
@@ -69,6 +70,9 @@ struct Node {
 
     /** @brief Long-term packet error rate */
     EMA<double> long_per;
+
+    /** @brief Time information for this node */
+    TimeInfo time_info;
 
     /** @brief Set soft TX gain.
      * @param dB The soft gain (dBFS).

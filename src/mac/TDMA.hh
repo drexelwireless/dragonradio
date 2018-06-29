@@ -54,6 +54,8 @@ public:
     /** @brief Stop processing packets */
     void stop(void) override;
 
+    void sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt) override;
+
 private:
     /** @brief Length of TDMA frame (sec) */
     double frame_size_;

@@ -58,6 +58,7 @@ SOURCES := \
     Python.cc \
     RadioConfig.cc \
     TimerQueue.cc \
+    TimeSync.cc \
     USRP.cc \
     Util.cc \
     WorkQueue.cc \

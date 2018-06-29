@@ -50,6 +50,8 @@ public:
     /** @brief Stop processing packets */
     void stop(void) override;
 
+    void sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt) override;
+
 private:
     /** @brief Probability of transmission */
     double p_;
@@ -60,11 +62,16 @@ private:
     /** @brief Uniform 0-1 real distribution */
     std::uniform_real_distribution<double> dist_;
 
+    /** @brief Exponential distribution for inter-arrival times */
+    std::exponential_distribution<double> arrival_dist_;
+
     /** @brief Thread running rxWorker */
     std::thread rx_thread_;
 
     /** @brief Thread running txWorker */
     std::thread tx_thread_;
+
+    virtual void reconfigure(void) override;
 
     /** @brief Worker transmitting packets */
     void txWorker(void);

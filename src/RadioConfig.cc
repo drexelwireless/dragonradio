@@ -7,5 +7,6 @@ RadioConfig::RadioConfig()
   , is_gateway(false)
   , short_per_npackets(50)
   , long_per_npackets(200)
+  , timestamp_delay(100e-3)
 {
 }

@@ -17,6 +17,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
   , p_(p)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
+  , arrival_dist_(p)
 {
     reconfigure();
 
@@ -40,6 +41,29 @@ void SlottedALOHA::stop(void)
         tx_thread_.join();
 }
 
+void SlottedALOHA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt)
+{
+    size_t tx_slot;
+
+    tx_slot = t.get_real_secs() / slot_size_ + arrival_dist_(gen_);
+
+    timestampPacket(Clock::time_point { tx_slot * slot_size_ }, std::move(pkt));
+}
+
+void SlottedALOHA::reconfigure(void)
+{
+    rx_slot_samps_ = rx_rate_*slot_size_;
+    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
+
+    modulator_->setLowWaterMark(tx_slot_samps_);
+
+    // For ALOHA, we demodulate the whole slot, including the guard interval.
+    // This may lead to duplicate packets, but we may also not be
+    // time-synchronized yet, so our slots may be mis-aligned.
+    demodulator_->setWindowParameters(0.5*guard_size_*rx_rate_,
+                                      slot_size_*tx_rate_);
+}
+
 void SlottedALOHA::txWorker(void)
 {
     Clock::time_point t_now;       // Current time
@@ -54,8 +78,18 @@ void SlottedALOHA::txWorker(void)
         t_slot_pos = fmod(t_now, slot_size_);
         t_next_slot = t_now + (slot_size_ - t_slot_pos);
 
-        // Transmit in the next slot with probability p_
-        if (dist_(gen_) < p_)
+        // Transmit in the next slot with probability p_...
+        bool transmit = dist_(gen_) < p_;
+
+        // ...or if we have a timestamped packet to send.
+        {
+            std::lock_guard<spinlock_mutex> lock(timestamped_mutex_);
+
+            if (timestamped_mpkt_ && approx(timestamped_deadline_, t_next_slot))
+                transmit = true;
+        }
+
+        if (transmit)
             txSlot(t_next_slot, tx_slot_samps_);
 
         // Sleep until the next slot
