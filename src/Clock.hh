@@ -123,7 +123,9 @@ public:
     /** @brief Get the current wall-clock time. */
     static time_point now() noexcept
     {
-        return time_point { usrp_->get_time_now() + offset_ };
+        uhd::time_spec_t now = usrp_->get_time_now();
+
+        return time_point { offset_ + (now + skew_*(now - last_adjustment_.t).get_real_secs()) };
     }
 
     /** @brief Return the monotonic time corresponding to wall-clock time. */
@@ -148,9 +150,11 @@ public:
     /** @brief Adjust the current wall-clock time by the given offset.
      * @param off Adjustment offset.
      */
-    static void adjust(const time_point &off)
+    static void adjust(const time_point &off, double skew)
     {
         offset_ += off.t;
+        skew_ = skew;
+        last_adjustment_ = time_point { usrp_->get_time_now() };
         ++epoch_;
     }
 
@@ -166,8 +170,14 @@ private:
     /** @brief The current clock epoch. */
     static Seq epoch_;
 
+    /** @brief Clock skew. */
+    static double skew_;
+
     /** @brief The offset between the USRP's clock and wall-clock time. */
     static uhd::time_spec_t offset_;
+
+    /** @brief The time of the last adjustment. */
+    static time_point last_adjustment_;
 };
 
 #endif /* CLOCK_H_ */

@@ -6,7 +6,11 @@ uhd::usrp::multi_usrp::sptr MonoClock::usrp_;
 
 Seq Clock::epoch_(0);
 
+double Clock::skew_ = 0.;
+
 uhd::time_spec_t Clock::offset_;
+
+Clock::time_point Clock::last_adjustment_;
 
 void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 {
