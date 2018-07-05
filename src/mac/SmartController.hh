@@ -26,6 +26,7 @@ struct SendWindow : public TimerQueue::Timer {
       , new_window(true)
       , win(1)
       , maxwin(maxwin)
+      , modidx(0)
       , pkts(maxwin)
     {}
 
@@ -50,6 +51,9 @@ struct SendWindow : public TimerQueue::Timer {
 
     /** @brief Maximum window size */
     Seq::uint_type maxwin;
+
+    /** @brief Modulation index */
+    size_t modidx;
 
     /** @brief Pending packets we can't send because our window isn't large enough */
     std::list<std::shared_ptr<NetPacket>> pending;
@@ -299,10 +303,10 @@ protected:
     void startACKTimer(RecvWindow &recvw);
 
     /** @brief Handle a successful packet transmission. */
-    void txSuccess(Node &node);
+    void txSuccess(SendWindow &sendw, Node &node);
 
     /** @brief Handle an unsuccessful packet transmission. */
-    void txFailure(Node &node);
+    void txFailure(SendWindow &sendw, Node &node);
 
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);

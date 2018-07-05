@@ -282,7 +282,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     sendw[unack].reset();
 
                     // Update our packet error rate to reflect successful TX
-                    txSuccess(dest);
+                    txSuccess(sendw, dest);
                 }
 
                 // If the max packet we sent was ACK'ed, cancel the retransmit
@@ -330,7 +330,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     std::shared_ptr<NetPacket> pkt = sendw[ehdr.ack];
 
                     // Record the packet error
-                    txFailure(dest);
+                    txFailure(sendw, dest);
 
                     if (netq_)
                         netq_->push_hi(std::move(pkt));
@@ -454,7 +454,7 @@ void SmartController::retransmit(SendWindow &sendw)
         assert(pkt);
 
         // Record the packet error
-        txFailure(dest);
+        txFailure(sendw, dest);
 
         if (netq_)
             netq_->push_hi(std::move(pkt));
@@ -554,37 +554,37 @@ void SmartController::startACKTimer(RecvWindow &recvw)
     }
 }
 
-void SmartController::txSuccess(Node &node)
+void SmartController::txSuccess(SendWindow &sendw, Node &node)
 {
     node.short_per.update(0.0);
     node.long_per.update(0.0);
 
     if (   node.long_per.getNSamples() >= rc.long_per_npackets
         && node.long_per.getValue() < modidx_up_per_threshold_
-        && node.modidx < net_->tx_params.size() - 1) {
+        && sendw.modidx < net_->tx_params.size() - 1) {
         if (rc.verbose)
             fprintf(stderr, "Moving up modulation scheme\n");
         logEvent("AMC: Moving up modulation scheme");
-        ++node.modidx;
-        node.tx_params = &net_->tx_params[node.modidx];
+        ++sendw.modidx;
+        node.tx_params = &net_->tx_params[sendw.modidx];
         node.short_per.reset(node.short_per.getValue());
         node.long_per.reset(node.long_per.getValue());
     }
 }
 
-void SmartController::txFailure(Node &node)
+void SmartController::txFailure(SendWindow &sendw, Node &node)
 {
     node.short_per.update(1.0);
     node.long_per.update(1.0);
 
     if (   node.short_per.getNSamples() > rc.short_per_npackets
         && node.short_per.getValue() > modidx_down_per_threshold_
-        && node.modidx > 0) {
+        && sendw.modidx > 0) {
         if (rc.verbose)
             fprintf(stderr, "Moving down modulation scheme\n");
         logEvent("AMC: Moving down modulation scheme");
-        --node.modidx;
-        node.tx_params = &net_->tx_params[node.modidx];
+        --sendw.modidx;
+        node.tx_params = &net_->tx_params[sendw.modidx];
         node.short_per.reset(node.short_per.getValue());
         node.long_per.reset(node.long_per.getValue());
     }
