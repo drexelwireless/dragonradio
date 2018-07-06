@@ -305,7 +305,7 @@ class Radio(object):
         logger.info('Radio configuration:\n' + str(config))
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose', 'short_per_npackets', 'long_per_npackets', 'timestamp_delay']:
+        for attr in ['verbose', 'short_per_npackets', 'long_per_npackets', 'timestamp_delay', 'max_packet_size']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
 

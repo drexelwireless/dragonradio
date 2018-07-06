@@ -35,6 +35,9 @@ public:
 
     /** @brief Timestamp delay, in seconds */
     double timestamp_delay;
+
+    /** @brief Maximum size of a packet, in bytes */
+    unsigned max_packet_size;
 };
 
 #endif /* RADIOCONFIG_H_ */

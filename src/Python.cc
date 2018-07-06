@@ -182,6 +182,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             "Number of packets we use to calculate long-term PER")
         .def_readwrite("timestamp_delay", &RadioConfig::timestamp_delay,
             "Timestamp delay, in seconds")
+        .def_readwrite("max_packet_size", &RadioConfig::max_packet_size,
+            "Maximum size of a packet, in bytes")
         ;
 
     // Export our global RadioConfig
