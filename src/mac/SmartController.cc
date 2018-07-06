@@ -52,10 +52,11 @@ get_packet:
     // Get node ID of destination
     NodeId nexthop = pkt->nexthop;
 
-    // If we have received a packet from the destination, ACK.
+    // If we have received a packet from the destination and this is not an
+    // explicit NAK, add an ACK.
     RecvWindow *recvwptr = maybeGetReceiveWindow(nexthop);
 
-    if (recvwptr) {
+    if (recvwptr && !pkt->isFlagSet(kNAK)) {
         RecvWindow                      &recvw = *recvwptr;
         ExtendedHeader                  &ehdr = pkt->getExtendedHeader();
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
@@ -320,27 +321,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 sendw.unack.store(unack, std::memory_order_release);
             }
         } else if (pkt->isFlagSet(kNAK)) {
-            if (ehdr.ack >= unack) {
-                if (!sendw[ehdr.ack])
-                    fprintf(stderr, "Received NAK from node %d for seq %d, but can't find that packet!\n",
-                        (int) prevhop,
-                        (int) ehdr.ack);
-                else {
-                    // We need to make an explicit new reference to the
-                    // shared_ptr because push takes ownership of its argument.
-                    std::shared_ptr<NetPacket> pkt = sendw[ehdr.ack];
-
-                    // Record the packet error
-                    txFailure(sendw, dest);
-
-                    if (netq_)
-                        netq_->push_hi(std::move(pkt));
-
-                    dprintf("ARQ: recv from %u: nak=%u",
-                        (unsigned) prevhop,
-                        (unsigned) ehdr.ack);
-                }
-            }
+            if (ehdr.ack >= unack)
+                handleNak(sendw, dest, ehdr.ack);
         }
     }
 
@@ -492,6 +474,32 @@ void SmartController::ack(RecvWindow &recvw)
     netq_->push_hi(std::move(pkt));
 }
 
+void SmartController::nak(NodeId node_id, Seq seq)
+{
+    if (!netq_)
+        return;
+
+    dprintf("ARQ: send to %u: nak=%u",
+        (unsigned) node_id,
+        (unsigned) seq);
+
+    auto           pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
+    ExtendedHeader &ehdr = pkt->getExtendedHeader();
+
+    pkt->curhop = net_->getMyNodeId();
+    pkt->nexthop = node_id;
+    pkt->flags = 0;
+    pkt->seq = 0;
+    pkt->data_len = 0;
+    pkt->src = net_->getMyNodeId();
+    pkt->dest = node_id;
+
+    pkt->setFlag(kNAK);
+    ehdr.ack = seq;
+
+    netq_->push_hi(std::move(pkt));
+}
+
 void SmartController::broadcastHello(void)
 {
     if (!netq_)
@@ -552,6 +560,33 @@ void SmartController::startACKTimer(RecvWindow &recvw)
         dprintf("ARQ: send to %u: starting ACK delay timer",
             (unsigned) recvw.node_id);
         timer_queue_.run_in(recvw, (*net_)[recvw.node_id].ack_delay);
+    }
+}
+
+void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq)
+{
+    dprintf("ARQ: nak from %u: seq=%u",
+        (unsigned) sendw.node_id,
+        (unsigned) seq);
+
+    if (!sendw[seq])
+        fprintf(stderr, "Received NAK from node %d for seq %d, but can't find that packet!\n",
+            (int) sendw.node_id,
+            (int) seq);
+    else {
+        // We need to make an explicit new reference to the
+        // shared_ptr because push takes ownership of its argument.
+        std::shared_ptr<NetPacket> pkt = sendw[seq];
+
+        // Record the packet error
+        txFailure(sendw, dest);
+
+        if (netq_)
+            netq_->push_hi(std::move(pkt));
+
+        dprintf("ARQ: recv from %u: nak=%u",
+            (unsigned) sendw.node_id,
+            (unsigned) seq);
     }
 }
 

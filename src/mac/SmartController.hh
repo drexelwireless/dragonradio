@@ -190,6 +190,11 @@ public:
      */
     void ack(RecvWindow &recvw);
 
+    /** @brief Send a NAK to the given receiver. The caller MUST hold the lock
+     * on recvw.
+     */
+    void nak(NodeId node_id, Seq seq);
+
     void broadcastHello(void);
 
     /** @brief Get the controller's network queue. */
@@ -304,6 +309,9 @@ protected:
 
     /** @brief Start the ACK timer if it is not set. */
     void startACKTimer(RecvWindow &recvw);
+
+    /** @brief Handle a NAK. */
+    void handleNak(SendWindow &sendw, Node &dest, const Seq &seq);
 
     /** @brief Handle a successful packet transmission. */
     void txSuccess(SendWindow &sendw, Node &node);
