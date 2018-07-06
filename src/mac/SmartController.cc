@@ -619,7 +619,8 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
     // the sender will only open up its window if it has seen its SYN packet
     // ACK'ed.
     if (it != recv_.end()) {
-        RecvWindow &recvw = it->second;
+        RecvWindow                      &recvw = it->second;
+        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
         if (!isSYN || (seq < recvw.max - recvw.win || seq >= recvw.ack + recvw.win))
             return recvw;
