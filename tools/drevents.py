@@ -154,6 +154,12 @@ def main():
     parser = argparse.ArgumentParser(description='Display DragonRadio events.')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='debug')
+    parser.add_argument('--send', action='store_true',
+                        default=False,
+                        help='show sent packets')
+    parser.add_argument('--recv', action='store_true',
+                        default=False,
+                        help='show received packets')
     parser.add_argument('--phy', action='store_true',
                         default=False,
                         help='show PHY events')
@@ -174,8 +180,12 @@ def main():
     for node_id in e.log.nodes:
         node = e.log.nodes[node_id]
         e.parseEvents(node)
-        e.parseSent(node)
-        e.parseReceived(node)
+
+        if args.send:
+            e.parseSent(node)
+
+        if args.recv:
+            e.parseReceived(node)
 
     node_ids = sorted(e.log.nodes)
 
@@ -191,8 +201,11 @@ def main():
         if args.amc:
             e.addSeriesCategory(node, 'AMC')
 
-        e.addSeriesCategory(node, 'sent')
-        e.addSeriesCategory(node, 'recv')
+        if args.send:
+            e.addSeriesCategory(node, 'sent')
+
+        if args.recv:
+            e.addSeriesCategory(node, 'recv')
 
     e.plot()
 
