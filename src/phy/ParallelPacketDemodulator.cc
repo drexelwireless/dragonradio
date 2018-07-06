@@ -107,23 +107,27 @@ void ParallelPacketDemodulator::demodWorker(void)
         // Demodulate the last part of the guard interval of the previous slots
         demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, callback);
 
-        // Calculate how many samples from the current slot we want to
-        // demodulate. We do not demodulate the tail end of the guard interval.
-        size_t ndemodulated = 0; // How many samples we've already demodulated
-        size_t nwanted;          // How many samples we still want to demodulate.
-        size_t n = 0;
+        if (cur_samps_ > buf2->undersample) {
+            // Calculate how many samples from the current slot we want to
+            // demodulate. We do not demodulate the tail end of the guard interval.
+            size_t ndemodulated = 0; // How many samples we've already demodulated
+            size_t nwanted;          // How many samples we still want to demodulate.
+            size_t n = 0;
 
-        nwanted = cur_samps_ - buf2->undersample;
+            nwanted = cur_samps_ - buf2->undersample;
 
-        for (;;) {
-            n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
+            for (;;) {
+                n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
 
-            demod->demodulate(&(*buf2)[ndemodulated], n, callback);
-            ndemodulated += n;
-            nwanted -= n;
+                if (n != 0) {
+                    demod->demodulate(&(*buf2)[ndemodulated], n, callback);
+                    ndemodulated += n;
+                    nwanted -= n;
 
-            if (nwanted == 0)
-                break;
+                    if (nwanted == 0)
+                        break;
+                }
+            }
         }
 
         // Remove the barrier since we are done producing packets
