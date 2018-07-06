@@ -131,6 +131,20 @@ get_packet:
 
 void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 {
+    // Skip packets with invalid header
+    if (pkt->isInternalFlagSet(kInvalidHeader))
+        return;
+
+    // Immediately NAK data packets with a bad payload if they contain data.
+    // We can't do anything else with the packet.
+    if (pkt->isInternalFlagSet(kInvalidPayload)) {
+        if (net_->contains(pkt->curhop) && pkt->data_len != 0)
+            nak(pkt->curhop, pkt->seq);
+
+        return;
+    }
+
+    // Skip packets that aren't for us
     if (!pkt->isFlagSet(kBroadcast) && pkt->nexthop != net_->getMyNodeId())
         return;
 

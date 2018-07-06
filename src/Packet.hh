@@ -46,7 +46,13 @@ enum {
     kIntNet,
 
     /** @brief Set if the packet belongs to the external IP network (192.168.*) */
-    kExtNet
+    kExtNet,
+
+    /** @brief Set if the packet had invalid header */
+    kInvalidHeader,
+
+    /** @brief Set if the packet had invalid payload */
+    kInvalidPayload
 };
 
 typedef uint16_t InternalFlags;
@@ -260,13 +266,17 @@ struct Packet : public buffer<unsigned char>
     /** @brief Copy values from PHY header to packet */
     void fromHeader(Header &hdr)
     {
-        ExtendedHeader &ehdr = getExtendedHeader();
-
         curhop = hdr.curhop;
         nexthop = hdr.nexthop;
         flags = hdr.flags;
         seq = hdr.seq;
         data_len = std::min(hdr.data_len, static_cast<uint16_t>(sizeof(ExtendedHeader) + size()));
+    }
+
+    /** @brief Copy values from PHY header to packet */
+    void fromExtendedHeader(void)
+    {
+        ExtendedHeader &ehdr = getExtendedHeader();
 
         src = ehdr.src;
         dest = ehdr.dest;

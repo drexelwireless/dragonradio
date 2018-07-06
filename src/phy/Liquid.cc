@@ -40,39 +40,45 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 {
     Header* h = reinterpret_cast<Header*>(header_);
     size_t  off = demod_off_;   // Save demodulation offset for use when we log.
-    bool    incomplete = false; // Is this an incomplete packet?
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
     demod_off_ += internal_oversample_fact_*stats_.end_counter;
 
+    // Create the packet and fill it out
+    std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(payload_, payload_len_);
+
     if (!header_valid_) {
         if (rc.verbose)
             fprintf(stderr, "HEADER INVALID\n");
         logEvent("PHY: invalid header");
-        incomplete = true;
+
+        pkt = std::make_unique<RadioPacket>();
+
+        pkt->setInternalFlag(kInvalidHeader);
     } else if (!payload_valid_) {
         if (rc.verbose)
             fprintf(stderr, "PAYLOAD INVALID\n");
         logEvent("PHY: invalid payload");
-        incomplete = true;
-    }
 
-    if (incomplete)
-        callback_(nullptr);
-    else {
-        auto pkt = std::make_unique<RadioPacket>(payload_, payload_len_);
+        pkt = std::make_unique<RadioPacket>();
+
+        pkt->setInternalFlag(kInvalidPayload);
+        pkt->fromHeader(*h);
+    } else {
+        pkt = std::make_unique<RadioPacket>(payload_, payload_len_);
 
         pkt->fromHeader(*h);
-
-        pkt->evm = stats_.evm;
-        pkt->rssi = stats_.rssi;
-        pkt->cfo = stats_.cfo;
-
-        pkt->timestamp = demod_start_ + (off + internal_oversample_fact_*stats_.start_counter) / phy_.getRXRate();
-
-        callback_(std::move(pkt));
+        pkt->fromExtendedHeader();
     }
+
+    pkt->evm = stats_.evm;
+    pkt->rssi = stats_.rssi;
+    pkt->cfo = stats_.cfo;
+
+    pkt->timestamp = demod_start_ + (off + internal_oversample_fact_*stats_.start_counter) / phy_.getRXRate();
+
+    callback_(std::move(pkt));
 
     if (logger && logger->getCollectSource(Logger::kRecvPackets)) {
         std::shared_ptr<buffer<std::complex<float>>> buf = nullptr;
