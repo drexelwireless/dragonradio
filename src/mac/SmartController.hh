@@ -311,7 +311,7 @@ protected:
     void startACKTimer(RecvWindow &recvw);
 
     /** @brief Handle a NAK. */
-    void handleNak(SendWindow &sendw, Node &dest, const Seq &seq);
+    void handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
 
     /** @brief Handle a successful packet transmission. */
     void txSuccess(SendWindow &sendw, Node &node);

@@ -270,7 +270,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 switch (it->type) {
                     case ControlMsg::Type::kNak:
                     {
-                        handleNak(sendw, node, it->nak.seq);
+                        handleNak(sendw, node, it->nak.seq, false);
                     }
                     break;
 
@@ -357,7 +357,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             }
         } else if (pkt->isFlagSet(kNAK)) {
             if (ehdr.ack >= unack)
-                handleNak(sendw, dest, ehdr.ack);
+                handleNak(sendw, dest, ehdr.ack, true);
         }
     }
 
@@ -609,7 +609,7 @@ void SmartController::startACKTimer(RecvWindow &recvw)
     }
 }
 
-void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq)
+void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak)
 {
     dprintf("ARQ: nak from %u: seq=%u",
         (unsigned) sendw.node_id,
@@ -624,8 +624,11 @@ void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq)
         // shared_ptr because push takes ownership of its argument.
         std::shared_ptr<NetPacket> pkt = sendw[seq];
 
-        // Record the packet error
-        txFailure(sendw, dest);
+        // Record the packet error only if this sequence number was an explicit
+        // Nak, i.e., it resulted from an invalid payload, or if the sequence
+        // number was sent with the current modulation scheme.
+        if (explicitNak || seq >= sendw.modidx_init_seq)
+            txFailure(sendw, dest);
 
         if (netq_)
             netq_->push_hi(std::move(pkt));
