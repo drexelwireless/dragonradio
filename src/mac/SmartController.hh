@@ -55,6 +55,9 @@ struct SendWindow : public TimerQueue::Timer {
     /** @brief Modulation index */
     size_t modidx;
 
+    /** @brief First sequence number at this modulation index */
+    Seq modidx_init_seq;
+
     /** @brief Pending packets we can't send because our window isn't large enough */
     std::list<std::shared_ptr<NetPacket>> pending;
 

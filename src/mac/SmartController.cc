@@ -282,7 +282,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     sendw[unack].reset();
 
                     // Update our packet error rate to reflect successful TX
-                    txSuccess(sendw, dest);
+                    if (unack >= sendw.modidx_init_seq)
+                        txSuccess(sendw, dest);
                 }
 
                 // If the max packet we sent was ACK'ed, cancel the retransmit
@@ -565,6 +566,7 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
         if (rc.verbose)
             fprintf(stderr, "Moving up modulation scheme\n");
         ++sendw.modidx;
+        sendw.modidx_init_seq = node.seq;
         node.tx_params = &net_->tx_params[sendw.modidx];
 
         logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f",
@@ -589,6 +591,7 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
         if (rc.verbose)
             fprintf(stderr, "Moving down modulation scheme\n");
         --sendw.modidx;
+        sendw.modidx_init_seq = node.seq;
         node.tx_params = &net_->tx_params[sendw.modidx];
 
         logEvent("AMC: Moving down modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f",
@@ -699,9 +702,12 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
     if (it != send_.end())
         return it->second;
     else {
+        Node       &dest = (*net_)[node_id];
         SendWindow &sendw = send_.emplace(std::piecewise_construct,
                                           std::forward_as_tuple(node_id),
                                           std::forward_as_tuple(node_id, *this, max_sendwin_)).first->second;
+
+        sendw.modidx_init_seq = dest.seq;
 
         return sendw;
     }
