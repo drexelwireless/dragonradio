@@ -111,6 +111,16 @@ void Packet::appendHello(const ControlMsg::Hello &hello)
     appendControl(msg);
 }
 
+void Packet::appendNak(const Seq &seq)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kNak;
+    msg.nak.seq = seq;
+
+    appendControl(msg);
+}
+
 void Packet::appendTimestamp(const Seq &epoch, const Clock::time_point &t)
 {
     ControlMsg msg;

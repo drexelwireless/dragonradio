@@ -258,6 +258,27 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 }
             }
         }
+
+        // Process NAKs
+        SendWindow *sendwptr = maybeGetSendWindow(pkt->curhop);
+
+        if (sendwptr) {
+            SendWindow                      &sendw = *sendwptr;
+            std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+            for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+                switch (it->type) {
+                    case ControlMsg::Type::kNak:
+                    {
+                        handleNak(sendw, node, it->nak.seq);
+                    }
+                    break;
+
+                    default:
+                        break;
+                }
+            }
+        }
     }
 
     // If this packet was not destined for us, we are done
@@ -484,6 +505,17 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
     pkt->dest = recvw.node_id;
+
+    ControlMsg::Nak nak;
+
+    for (size_t seq = recvw.ack + 1; seq < recvw.max && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.max_packet_size; ++seq) {
+        if (!recvw[seq].pkt) {
+            dprintf("ARQ: nak to %u: seq=%u",
+                (unsigned) recvw.node_id,
+                (unsigned) seq);
+            pkt->appendNak(seq);
+        }
+    }
 
     netq_->push_hi(std::move(pkt));
 }
