@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import matplotlib as mp
 import matplotlib.pyplot as plt
 import numpy as np
@@ -175,7 +176,10 @@ def main():
     e = EventLog()
 
     for path in args.paths:
-        e.loadLog(path)
+        try:
+            e.loadLog(path)
+        except:
+            logging.exception("Could not load '%s'", path)
 
     for node_id in e.log.nodes:
         node = e.log.nodes[node_id]

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import matplotlib as mp
 from matplotlib.text import OffsetFrom
 from matplotlib.widgets import Button, Slider
@@ -37,7 +38,10 @@ def main():
     log = drlog.Log()
 
     for path in args.paths:
-        log.load(path)
+        try:
+            log.load(path)
+        except:
+            logging.exception("Could not load '%s'", path)
 
     if args.header:
         for node_id in log.nodes:
