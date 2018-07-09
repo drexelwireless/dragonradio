@@ -474,6 +474,10 @@ void SmartController::retransmit(SendWindow &sendw)
         // Record the packet error
         txFailure(sendw, dest);
 
+        logEvent("AMC: txFailure retransmission: unack=%u; per=%f",
+            (unsigned) unack,
+            dest.short_per.getValue());
+
         if (netq_)
             netq_->push_hi(std::move(pkt));
     }
@@ -627,8 +631,12 @@ void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq, b
         // Record the packet error only if this sequence number was an explicit
         // Nak, i.e., it resulted from an invalid payload, or if the sequence
         // number was sent with the current modulation scheme.
-        if (explicitNak || seq >= sendw.modidx_init_seq)
+        if (explicitNak || seq >= sendw.modidx_init_seq) {
             txFailure(sendw, dest);
+
+            logEvent("AMC: txFailure nak: per=%f",
+                dest.short_per.getValue());
+        }
 
         if (netq_)
             netq_->push_hi(std::move(pkt));

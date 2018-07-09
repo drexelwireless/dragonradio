@@ -13,6 +13,7 @@ import drlog
 
 EVENTS = [ [r'^AMC: Moving up modulation scheme', 'AMC', 'g']
          , [r'^AMC: Moving down modulation scheme', 'AMC', 'r']
+         , [r'^AMC: txFailure', 'AMC', 'y']
          , [r'^ARQ: nak from', 'ARQ', 'r']
          , [r'^ARQ: nak to', 'ARQ', 'r']
          , [r'^ARQ: recv from', 'ARQ', 'g']
