@@ -322,13 +322,15 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                         txSuccess(sendw, dest);
                 }
 
-                // If the max packet we sent was ACK'ed, cancel the retransmit
-                // timer.
-                if (unack == max + 1) {
-                    dprintf("ARQ: recv from %u: canceling retransmission timer",
-                        (unsigned) prevhop);
-                    timer_queue_.cancel(sendw);
-                }
+                // Cancel the retransmit timer.
+                dprintf("ARQ: recv from %u: canceling retransmission timer",
+                    (unsigned) prevhop);
+                timer_queue_.cancel(sendw);
+
+                // Restart the retransmit timer if we still have un-ACK'ed
+                // packets
+                if (unack <= max)
+                    startRetransmissionTimer(sendw);
 
                 // Increase the send window. We really only need to do this
                 // after the initial ACK, but it doesn't hurt to do it every
