@@ -17,6 +17,7 @@ EVENTS = [ [r'^AMC: Moving up modulation scheme', 'AMC', 'g']
          , [r'^ARQ: send to', 'ARQ', 'k']
          , [r'^PHY: invalid header', 'PHY', 'r']
          , [r'^PHY: invalid payload', 'PHY', 'y']
+         , [r'^TIMESYNC:', 'TIMESYNC', 'k']
          ]
 
 for i in range(0, len(EVENTS)):
@@ -170,6 +171,9 @@ def main():
     parser.add_argument('--arq', action='store_true',
                         default=False,
                         help='show ARQ events')
+    parser.add_argument('--timesync', action='store_true',
+                        default=False,
+                        help='show time snchronization events')
     parser.add_argument('paths', nargs='*')
     args = parser.parse_args()
 
@@ -204,6 +208,9 @@ def main():
 
         if args.amc:
             e.addSeriesCategory(node, 'AMC')
+
+        if args.timesync:
+            e.addSeriesCategory(node, 'TIMESYNC')
 
         if args.send:
             e.addSeriesCategory(node, 'sent')
