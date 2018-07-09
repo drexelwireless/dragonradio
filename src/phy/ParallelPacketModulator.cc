@@ -66,6 +66,15 @@ void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, s
 
             size_t n = mpkt.samples->size();
 
+            if (n > maxPacketSize_ && maxPacketSize_ != 0) {
+                fprintf(stderr, "Dropping modulated packet that is too long to send: n=%u, max=%u\n",
+                        (unsigned) n,
+                        (unsigned) maxSamples);
+                pkt_q_.pop();
+                nsamples_ -= n;
+                continue;
+            }
+
             if (n > maxSamples) {
                 mpkt.complete.clear(std::memory_order_release);
                 break;

@@ -7,7 +7,7 @@
 class PacketModulator
 {
 public:
-    PacketModulator() {};
+    PacketModulator(void) : maxPacketSize_(0) {};
     virtual ~PacketModulator() {};
 
     /** @brief Get the low-water mark. */
@@ -25,6 +25,22 @@ public:
      * @param maxSample The maximum number of samples to pop.
      */
     virtual void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples) = 0;
+
+    /** @brief Set maximum packet size. */
+    void setMaxPacketSize(size_t maxPacketSize)
+    {
+        maxPacketSize_ = maxPacketSize;
+    }
+
+    /** @brief Get maximum packet size. */
+    size_t getMaxPacketSize(void)
+    {
+        return maxPacketSize_;
+    }
+
+protected:
+    /** @brief Maximum number of possible samples in a modulated packet. */
+    size_t maxPacketSize_;
 };
 
 #endif /* PACKETMODULATOR_H_ */

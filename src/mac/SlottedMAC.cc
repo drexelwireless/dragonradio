@@ -49,6 +49,7 @@ void SlottedMAC::reconfigure(void)
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
 
     modulator_->setLowWaterMark(tx_slot_samps_);
+    modulator_->setMaxPacketSize(tx_slot_samps_);
 
     demodulator_->setWindowParameters(0.5*guard_size_*rx_rate_,
                                       (slot_size_ - 0.5*guard_size_)*tx_rate_);
