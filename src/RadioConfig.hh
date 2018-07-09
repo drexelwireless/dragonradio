@@ -38,6 +38,12 @@ public:
 
     /** @brief Maximum size of a packet, in bytes */
     unsigned max_packet_size;
+
+    /** @brief ACK delay in seconds */
+    double ack_delay;
+
+    /** @brief Retransmission delay in seconds */
+    double retransmission_delay;
 };
 
 #endif /* RADIOCONFIG_H_ */

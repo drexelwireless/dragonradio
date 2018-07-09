@@ -184,6 +184,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             "Timestamp delay, in seconds")
         .def_readwrite("max_packet_size", &RadioConfig::max_packet_size,
             "Maximum size of a packet, in bytes")
+        .def_readwrite("ack_delay", &RadioConfig::ack_delay,
+            "ACK delay, in seconds")
+        .def_readwrite("retransmission_delay", &RadioConfig::retransmission_delay,
+            "Retransmission delay, in seconds")
         ;
 
     // Export our global RadioConfig

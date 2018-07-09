@@ -79,6 +79,8 @@ class Config(object):
         self.arq = False
         self.arq_window = 1024
         self.arq_enforce_ordering = False
+        self.ack_delay = 100e-3
+        self.retransmission_delay = 500e-3
 
         # AMC options
         self.amc = False
@@ -305,7 +307,7 @@ class Radio(object):
         logger.info('Radio configuration:\n' + str(config))
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose', 'short_per_npackets', 'long_per_npackets', 'timestamp_delay', 'max_packet_size']:
+        for attr in ['verbose', 'short_per_npackets', 'long_per_npackets', 'timestamp_delay', 'max_packet_size', 'ack_delay', 'retransmission_delay']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
 
