@@ -162,9 +162,9 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     dprintf("ARQ: recv from %u: HELLO",
                         (unsigned) pkt->curhop);
 
-                    if (rc.verbose)
-                        fprintf(stderr, "ARQ: Discovered neighbor %u\n",
-                            (unsigned) pkt->curhop);
+                    logEvent("ARQ: Discovered neighbor %u; gateway=%s",
+                        (unsigned) pkt->curhop,
+                        node.is_gateway ? "true" : "false");
                 }
                 break;
 
