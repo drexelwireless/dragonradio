@@ -144,6 +144,9 @@ private:
 
     /** @brief Mutex protecting nodes in the network */
     std::mutex nodes_mutex_;
+
+    /** @brief Add a node to the network assumign the Net mutex is held */
+    Node &addNode_(NodeId nodeId);
 };
 
 #endif /* NET_HH_ */

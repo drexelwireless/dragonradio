@@ -148,6 +148,13 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (!pkt->isFlagSet(kBroadcast) && pkt->nexthop != net_->getMyNodeId())
         return;
 
+    // Add the sending node if we haven't seen it before
+    if (!net_->contains(pkt->curhop))
+        net_->addNode(pkt->curhop);
+
+    // Get a reference to the sending node
+    Node &node = (*net_)[pkt->curhop];
+
     // Process control info
     if (pkt->isFlagSet(kControl)) {
         // Process hello's and timestamps
@@ -155,8 +162,6 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             switch (it->type) {
                 case ControlMsg::Type::kHello:
                 {
-                    Node &node = net_->addNode(pkt->curhop);
-
                     node.is_gateway = it->hello.is_gateway;
 
                     dprintf("ARQ: recv from %u: HELLO",
@@ -170,8 +175,6 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
                 case ControlMsg::Type::kTimestamp:
                 {
-                    Node &node = (*net_)[pkt->curhop];
-
                     node.time_info.updateTimestamp(it->timestamp, pkt->timestamp);
 
                     logEvent("TIMESYNC: Timestamp: node=%u; delta=%g",
@@ -185,9 +188,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             }
         }
 
-        // Process timestamp deltas
-        Node &node = (*net_)[pkt->curhop];
-
+        // Process timestamp deltas.
         // If this node is a gateway AND we have seen a timestamp from it AND
         // eiether it is our time master or we have no master, synchronize with
         // it.
