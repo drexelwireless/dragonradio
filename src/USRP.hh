@@ -94,8 +94,10 @@ public:
      * @param when The time at which to start receiving.
      * @param The number of samples to receive.
      * @param buf The IQBuf to hold received IQ samples.
+     * @returns Returns true if the burst was successfully received, false
+     * otherwise.
      */
-    void burstRX(MonoClock::time_point when, size_t nsamps, IQBuf& buf);
+    bool burstRX(MonoClock::time_point when, size_t nsamps, IQBuf& buf);
 
     /** @brief Return the Maximum number of samples we will read at a time
      * during burstRX. */

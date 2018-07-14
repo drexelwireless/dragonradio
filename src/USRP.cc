@@ -205,7 +205,7 @@ void USRP::stopRXStream(void)
     rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
-void USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
+bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
     const double     rxRate = usrp_->get_rx_rate(); // RX rate in Hz
     uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rxRate;
@@ -222,6 +222,9 @@ void USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
             logEvent("RX error: %s", rx_md.strerror().c_str());
+
+            if (rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+                return false;
         }
 
         if (ndelivered == 0) {
@@ -257,6 +260,8 @@ void USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
             buf.nsamples.store(ndelivered, std::memory_order_release);
         }
     }
+
+    return true;
 }
 
 void USRP::stop(void)

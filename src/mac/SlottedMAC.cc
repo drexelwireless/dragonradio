@@ -83,7 +83,8 @@ void SlottedMAC::rxWorker(void)
 
             demodulator_->push(curSlot);
 
-            usrp_->burstRX(Clock::to_mono_time(t_cur_slot), rx_slot_samps_, *curSlot);
+            if (!usrp_->burstRX(Clock::to_mono_time(t_cur_slot), rx_slot_samps_, *curSlot))
+                break;
         }
 
         usrp_->stopRXStream();
