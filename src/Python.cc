@@ -174,8 +174,6 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init())
         .def_readwrite("verbose", &RadioConfig::verbose,
             "Give verbose debug messages on the console")
-        .def_readwrite("is_gateway", &RadioConfig::is_gateway,
-            "Flag indicating whether or not this node is the gateway")
         .def_readwrite("short_per_npackets", &RadioConfig::short_per_npackets,
             "Number of packets we use to calculate short-term PER")
         .def_readwrite("long_per_npackets", &RadioConfig::long_per_npackets,
