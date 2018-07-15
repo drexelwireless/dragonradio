@@ -82,6 +82,13 @@ Net::map_type::iterator Net::end(void)
     return nodes_.end();
 }
 
+Node& Net::me(void)
+{
+    std::lock_guard<std::mutex> lock(nodes_mutex_);
+
+    return nodes_.at(getMyNodeId());
+}
+
 Node& Net::operator[](NodeId nodeid)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);

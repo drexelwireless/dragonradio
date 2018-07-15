@@ -123,6 +123,9 @@ public:
     /** @brief Return an iterator to the end of nodes. */
     map_type::iterator end(void);
 
+    /** @brief Get the entry for this node */
+    Node& me(void);
+
     /** @brief Get the entry for a particular node in the network */
     Node& operator[](NodeId nodeid);
 
