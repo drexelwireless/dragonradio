@@ -574,8 +574,9 @@ void SmartController::broadcastHello(void)
 
     // Append hello message
     ControlMsg::Hello msg;
+    Node              &me = net_->me();
 
-    msg.is_gateway = rc.is_gateway;
+    msg.is_gateway = me.is_gateway;
 
     pkt->appendHello(msg);
 
