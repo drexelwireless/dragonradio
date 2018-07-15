@@ -60,7 +60,7 @@ void SlottedALOHA::reconfigure(void)
     // For ALOHA, we demodulate the whole slot, including the guard interval.
     // This may lead to duplicate packets, but we may also not be
     // time-synchronized yet, so our slots may be mis-aligned.
-    demodulator_->setWindowParameters(0.5*guard_size_*rx_rate_,
+    demodulator_->setWindowParameters(0.5*slot_size_*rx_rate_,
                                       slot_size_*tx_rate_);
 }
 
