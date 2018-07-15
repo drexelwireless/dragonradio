@@ -793,7 +793,6 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
     std::lock_guard<spinlock_mutex> lock(send_mutex_);
     auto                            it = send_.find(node_id);
 
-
     if (it != send_.end())
         return it->second;
     else {
