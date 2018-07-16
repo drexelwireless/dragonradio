@@ -106,7 +106,12 @@ void TDMA::txWorker(void)
         findNextSlot(t_next_slot + slot_size_, t_following_slot);
 
         // Sleep until one slot before our following slot
-        doze((t_following_slot - t_now - slot_size_).get_real_secs());
+        t_now = Clock::now();
+
+        double delta = (t_following_slot - t_now - slot_size_).get_real_secs();
+
+        if (delta > 0.0)
+            doze(delta);
     }
 }
 
