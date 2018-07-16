@@ -77,10 +77,13 @@ void TDMA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<Net
 void TDMA::txWorker(void)
 {
     Clock::time_point t_now;            // Current time
+    Clock::time_point t_prev_slot;      // Previous, completed slot
     Clock::time_point t_next_slot;      // Time at which our next slot starts
     Clock::time_point t_following_slot; // Time at which our following slot starts
 
     uhd::set_thread_priority_safe();
+
+    t_prev_slot = Clock::time_point { 0.0 };
 
     while (!done_) {
         // Figure out when our next send slot is.
@@ -92,8 +95,12 @@ void TDMA::txWorker(void)
             continue;
         }
 
-        // Schedule transmission for start of our next slot
-        txSlot(t_next_slot, tx_slot_samps_);
+        // Schedule transmission for start of our next slot if we haven't
+        // already transmitted for that slot
+        if (!approx(t_next_slot, t_prev_slot)) {
+            txSlot(t_next_slot, tx_slot_samps_);
+            t_prev_slot = t_next_slot;
+        }
 
         // Find following slot
         findNextSlot(t_next_slot + slot_size_, t_following_slot);
