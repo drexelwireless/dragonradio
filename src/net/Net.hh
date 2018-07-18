@@ -47,9 +47,6 @@ struct Node {
     /** @brief Current packet sequence number for this destination */
     Seq seq;
 
-    /** @brief Modulation index */
-    size_t modidx;
-
     /** @brief TX parameters */
     /** This points to the TX params used to modulate data sent to this node.
      * It is non-const because we are allowed to update the g_0dBFS field.

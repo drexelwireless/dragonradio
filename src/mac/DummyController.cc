@@ -25,6 +25,9 @@ bool DummyController::pull(std::shared_ptr<NetPacket>& pkt)
 
 void DummyController::received(std::shared_ptr<RadioPacket>&& pkt)
 {
+    if (pkt->isInternalFlagSet(kInvalidHeader) || pkt->isInternalFlagSet(kInvalidPayload))
+        return;
+
     if (pkt->data_len != 0 && pkt->nexthop == net_->getMyNodeId())
         radio_out.push(std::move(pkt));
 }

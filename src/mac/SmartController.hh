@@ -26,6 +26,7 @@ struct SendWindow : public TimerQueue::Timer {
       , new_window(true)
       , win(1)
       , maxwin(maxwin)
+      , modidx(0)
       , pkts(maxwin)
     {}
 
@@ -50,6 +51,12 @@ struct SendWindow : public TimerQueue::Timer {
 
     /** @brief Maximum window size */
     Seq::uint_type maxwin;
+
+    /** @brief Modulation index */
+    size_t modidx;
+
+    /** @brief First sequence number at this modulation index */
+    Seq modidx_init_seq;
 
     /** @brief Pending packets we can't send because our window isn't large enough */
     std::list<std::shared_ptr<NetPacket>> pending;
@@ -183,6 +190,11 @@ public:
      */
     void ack(RecvWindow &recvw);
 
+    /** @brief Send a NAK to the given receiver. The caller MUST hold the lock
+     * on recvw.
+     */
+    void nak(NodeId node_id, Seq seq);
+
     void broadcastHello(void);
 
     /** @brief Get the controller's network queue. */
@@ -298,11 +310,14 @@ protected:
     /** @brief Start the ACK timer if it is not set. */
     void startACKTimer(RecvWindow &recvw);
 
+    /** @brief Handle a NAK. */
+    void handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
+
     /** @brief Handle a successful packet transmission. */
-    void txSuccess(Node &node);
+    void txSuccess(SendWindow &sendw, Node &node);
 
     /** @brief Handle an unsuccessful packet transmission. */
-    void txFailure(Node &node);
+    void txFailure(SendWindow &sendw, Node &node);
 
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);

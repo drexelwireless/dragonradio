@@ -46,7 +46,13 @@ enum {
     kIntNet,
 
     /** @brief Set if the packet belongs to the external IP network (192.168.*) */
-    kExtNet
+    kExtNet,
+
+    /** @brief Set if the packet had invalid header */
+    kInvalidHeader,
+
+    /** @brief Set if the packet had invalid payload */
+    kInvalidPayload
 };
 
 typedef uint16_t InternalFlags;
@@ -72,12 +78,17 @@ struct Time {
 struct ControlMsg {
     enum Type {
         kHello,
+        kNak,
         kTimestamp,
         kTimestampDelta
     };
 
     struct Hello {
         bool is_gateway;
+    };
+
+    struct Nak {
+        Seq seq;
     };
 
     struct Timestamp {
@@ -98,6 +109,7 @@ struct ControlMsg {
 
     union {
         Hello hello;
+        Nak nak;
         Timestamp timestamp;
         TimestampDelta timestamp_delta;
     };
@@ -260,13 +272,17 @@ struct Packet : public buffer<unsigned char>
     /** @brief Copy values from PHY header to packet */
     void fromHeader(Header &hdr)
     {
-        ExtendedHeader &ehdr = getExtendedHeader();
-
         curhop = hdr.curhop;
         nexthop = hdr.nexthop;
         flags = hdr.flags;
         seq = hdr.seq;
         data_len = std::min(hdr.data_len, static_cast<uint16_t>(sizeof(ExtendedHeader) + size()));
+    }
+
+    /** @brief Copy values from PHY header to packet */
+    void fromExtendedHeader(void)
+    {
+        ExtendedHeader &ehdr = getExtendedHeader();
 
         src = ehdr.src;
         dest = ehdr.dest;
@@ -277,6 +293,9 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Append a Hello control message to a packet */
     void appendHello(const ControlMsg::Hello &hello);
+
+    /** @brief Append a Nal control message to a packet */
+    void appendNak(const Seq &seq);
 
     /** @brief Append a Timestamp control message to a packet */
     void appendTimestamp(const Seq &epoch, const Clock::time_point &t);
@@ -358,6 +377,9 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
     switch (ty) {
         case ControlMsg::kHello:
             return offsetof(ControlMsg, hello) + sizeof(ControlMsg::Hello);
+
+        case ControlMsg::kNak:
+            return offsetof(ControlMsg, nak) + sizeof(ControlMsg::Nak);
 
         case ControlMsg::kTimestamp:
             return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);
