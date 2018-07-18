@@ -8,8 +8,10 @@
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "TimerQueue.hh"
+#include "TimeSync.hh"
 #include "net/Queue.hh"
 #include "mac/Controller.hh"
+#include "mac/MAC.hh"
 
 class SmartController;
 
@@ -195,6 +197,18 @@ public:
         netq_ = q;
     }
 
+    /** @brief Get the controller's MAC. */
+    std::shared_ptr<MAC> getMAC(void)
+    {
+        return mac_;
+    }
+
+    /** @brief Set the controller's MAC. */
+    void setMAC(std::shared_ptr<MAC> mac)
+    {
+        mac_ = mac;
+    }
+
     /** @brief Get PER threshold for increasing modulation level */
     double getUpPERThreshold(void)
     {
@@ -237,6 +251,9 @@ public:
     TXParams broadcast_tx_params;
 
 protected:
+    /** @brief Our MAC. */
+    std::shared_ptr<MAC> mac_;
+
     /** @brief Network queue with high-priority sub-queue. */
     std::shared_ptr<NetQueue> netq_;
 
@@ -271,6 +288,9 @@ protected:
      * received?
      */
     bool enforce_ordering_;
+
+    /** @brief Time sync information */
+    struct TimeSync time_sync_;
 
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow &sendw);

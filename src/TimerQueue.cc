@@ -16,7 +16,7 @@ TimerQueue::~TimerQueue()
 
 void TimerQueue::run_in(Timer &t, const double &delta)
 {
-    run_at(t, Clock::now() + delta);
+    run_at(t, MonoClock::now() + delta);
 }
 
 void TimerQueue::run_at(Timer &t, const time_type &when)
@@ -54,7 +54,7 @@ void TimerQueue::cancel(Timer &t)
 
 void TimerQueue::run(void)
 {
-    time_type now = Clock::now();
+    time_type now = MonoClock::now();
 
     std::unique_lock<spinlock_mutex> lock(mutex_);
 
@@ -95,7 +95,7 @@ void TimerQueue::timer_worker(void)
     makeThreadWakeable();
 
     while (!done_) {
-        time_type now = Clock::now();
+        time_type now = MonoClock::now();
 
         // Run all pending timers
         std::unique_lock<spinlock_mutex> lock(mutex_);

@@ -67,10 +67,10 @@ void SlottedMAC::rxWorker(void)
     while (!done_) {
         // Set up streaming starting at *next* slot
         t_now = Clock::now();
-        t_slot_pos = fmod(t_now.get_real_secs(), slot_size_);
+        t_slot_pos = fmod(t_now, slot_size_);
         t_next_slot = t_now + slot_size_ - t_slot_pos;
 
-        usrp_->startRXStream(t_next_slot);
+        usrp_->startRXStream(Clock::to_mono_time(t_next_slot));
 
         while (!done_) {
             // Update times
@@ -83,7 +83,7 @@ void SlottedMAC::rxWorker(void)
 
             demodulator_->push(curSlot);
 
-            usrp_->burstRX(t_cur_slot, rx_slot_samps_, *curSlot);
+            usrp_->burstRX(Clock::to_mono_time(t_cur_slot), rx_slot_samps_, *curSlot);
         }
 
         usrp_->stopRXStream();
@@ -92,9 +92,29 @@ void SlottedMAC::rxWorker(void)
 
 void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
 {
-    std::list<std::shared_ptr<IQBuf>>     txBuf;
-    std::list<std::unique_ptr<ModPacket>> modBuf;
+    std::list<std::shared_ptr<IQBuf>>     txBuf;  // IQ buffers to transmit
+    std::list<std::unique_ptr<ModPacket>> modBuf; // Modulated packets
 
+    // Put the timestamped packet on the front of the TX queue if it is due to
+    // be sent this slot.
+    {
+        std::lock_guard<spinlock_mutex> lock(timestamped_mutex_);
+
+        if (timestamped_mpkt_) {
+            if (approx(timestamped_deadline_, when)) {
+                maxSamples -= timestamped_mpkt_->samples->size();
+                modBuf.emplace_back(std::move(timestamped_mpkt_));
+            } else if (timestamped_deadline_ < when) {
+                logEvent("TIMESYNC: MISSED TIMESTAMPED PACKET: timestamp=%f; slot=%f",
+                    (double) timestamped_deadline_.get_real_secs(),
+                    (double) when.get_real_secs());
+
+                timestamped_mpkt_.reset();
+            }
+        }
+    }
+
+    // Fill the rest of the slot with modulated packets
     modulator_->pop(modBuf, maxSamples);
 
     if (!modBuf.empty()) {
@@ -102,7 +122,7 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
                 txBuf.emplace_back((*it)->samples);
 
-            usrp_->burstTX(when, txBuf);
+            usrp_->burstTX(Clock::to_mono_time(when), txBuf);
 
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
                 Header hdr;
@@ -125,7 +145,7 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
                 txBuf.emplace_back(std::move((*it)->samples));
 
-            usrp_->burstTX(when, txBuf);
+            usrp_->burstTX(Clock::to_mono_time(when), txBuf);
         }
     }
 }

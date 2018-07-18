@@ -91,7 +91,12 @@ class Controller(TCPProtoServer):
     def startRadio(self):
         if not self.started_discovery:
             self.started_discovery = True
+
+            # Create ALOHA MAC for HELLO messages
+            self.radio.configureALOHA()
+
             self.loop.create_task(self.discoverNeighbors())
+            self.loop.create_task(self.switchToTDMA())
 
     def stopRadio(self):
         self.state = internal.STOPPING
@@ -154,27 +159,11 @@ class Controller(TCPProtoServer):
 
             self.nodes.remove(node_id)
 
-    async def discoverNeighbors(self):
-        loop = self.loop
+    async def switchToTDMA(self):
         radio = self.radio
 
-        # Create ALOHA MAC for HELLO messages
-        radio.configureALOHA()
-
-        #
-        # Perform neighbor discovery by periodically broadcasting HELLO messages for
-        # neighbor_discovery_period seconds
-        #
-        t = loop.time();
-
-        while True:
-            delta = random.uniform(0.0, 1.0)
-
-            if loop.time() + delta > t + self.config.neighbor_discovery_period:
-                break
-
-            await asyncio.sleep(delta)
-            radio.controller.broadcastHello()
+        # Wait for initial discovery period to pass
+        await asyncio.sleep(self.config.neighbor_discovery_period)
 
         # Get a sorted list of discovered nodes
         nodes = list(radio.net.keys())
@@ -199,6 +188,38 @@ class Controller(TCPProtoServer):
 
         # We are now ready to transmit data
         self.state = internal.ACTIVE
+
+    async def discoverNeighbors(self):
+        loop = self.loop
+        radio = self.radio
+
+        #
+        # Perform neighbor discovery by periodically broadcasting HELLO messages
+        # for neighbor_discovery_period seconds
+        #
+        PERIOD = self.config.discovery_hello_interval
+
+        t0 = loop.time();
+
+        while True:
+            delta = random.uniform(0.0, PERIOD)
+
+            await asyncio.sleep(delta)
+            radio.controller.broadcastHello()
+            await asyncio.sleep(PERIOD - delta)
+
+            if loop.time() > t0 + self.config.neighbor_discovery_period:
+                break
+
+        # Now change the period of our broadcasts and broadcast indefinitely
+        PERIOD = self.config.standard_hello_interval
+
+        while True:
+            delta = random.uniform(0.0, PERIOD)
+
+            await asyncio.sleep(delta)
+            radio.controller.broadcastHello()
+            await asyncio.sleep(PERIOD - delta)
 
     @handle('Request.radio_command')
     def radioCommand(self, req):

@@ -83,7 +83,7 @@ const ControlMsg *Packet::iterator::operator ->()
     return &ctrl_;
 }
 
-void Packet::appendControl(ControlMsg &ctrl)
+void Packet::appendControl(const ControlMsg &ctrl)
 {
     uint16_t ctrl_len = 0;
 
@@ -99,6 +99,41 @@ void Packet::appendControl(ControlMsg &ctrl)
 
     ctrl_len += ctrlsize(ctrl.type);
     memcpy(&(*this)[sizeof(ExtendedHeader) + data_len], &ctrl_len, sizeof(uint16_t));
+}
+
+void Packet::appendHello(const ControlMsg::Hello &hello)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kHello;
+    msg.hello = hello;
+
+    appendControl(msg);
+}
+
+void Packet::appendTimestamp(const Seq &epoch, const Clock::time_point &t)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kTimestamp;
+    msg.timestamp.epoch = epoch;
+    msg.timestamp.t.from_wall_time(t);
+
+    appendControl(msg);
+}
+
+void Packet::appendTimestampDelta(NodeId node_id,
+                                  const Seq &epoch,
+                                  const Clock::time_point &delta)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kTimestampDelta;
+    msg.timestamp_delta.node = node_id;
+    msg.timestamp_delta.epoch = epoch;
+    msg.timestamp_delta.delta.from_wall_time(delta);
+
+    appendControl(msg);
 }
 
 bool Packet::isIP(void)

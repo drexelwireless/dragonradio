@@ -82,10 +82,10 @@ public:
      * @param when Time at which to start the burst.
      * @param bufs A list of IQBuf%s to transmit.
      */
-    void burstTX(Clock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs);
+    void burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs);
 
     /** @brief Start streaming read */
-    void startRXStream(Clock::time_point when);
+    void startRXStream(MonoClock::time_point when);
 
     /** @brief Stop streaming read */
     void stopRXStream(void);
@@ -95,7 +95,7 @@ public:
      * @param The number of samples to receive.
      * @param buf The IQBuf to hold received IQ samples.
      */
-    void burstRX(Clock::time_point when, size_t nsamps, IQBuf& buf);
+    void burstRX(MonoClock::time_point when, size_t nsamps, IQBuf& buf);
 
     /** @brief Return the Maximum number of samples we will read at a time
      * during burstRX. */

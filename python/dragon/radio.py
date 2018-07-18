@@ -89,6 +89,14 @@ class Config(object):
         self.modidx_up_per_threshold = 0.02
         self.modidx_down_per_threshold = 0.10
 
+        # Neighbor discover options
+        # discovery_hello_interval is how often we send HELLO packets during
+        # discovery, and standard_hello_interval is how often we send HELLO
+        # packets during the rest of the run
+        self.discovery_hello_interval = 1.0
+        self.standard_hello_interval = 60.0
+        self.timestamp_delay = 100e-3
+
         # Default collab server settings
         self.collab_server_port = 5556
         self.collab_client_port = 5557
@@ -297,7 +305,7 @@ class Radio(object):
         logger.info('Radio configuration:\n' + str(config))
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose', 'short_per_npackets', 'long_per_npackets']:
+        for attr in ['verbose', 'short_per_npackets', 'long_per_npackets', 'timestamp_delay']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
 
@@ -455,6 +463,9 @@ class Radio(object):
         self.net.tx_params = dragonradio.TXParamsList([tx_params])
 
     def configureALOHA(self):
+        if self.config.arq:
+            self.controller.mac = None
+
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
                                             self.modulator,
@@ -468,7 +479,13 @@ class Radio(object):
             self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)
             self.logger.setAttribute('rx_bandwidth', self.usrp.rx_rate)
 
+        if self.config.arq:
+            self.controller.mac = self.mac
+
     def configureTDMA(self, nslots):
+        if self.config.arq:
+            self.controller.mac = None
+
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
                                     self.modulator,
@@ -481,6 +498,9 @@ class Radio(object):
         if self.logger:
             self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)
             self.logger.setAttribute('rx_bandwidth', self.usrp.rx_rate)
+
+        if self.config.arq:
+            self.controller.mac = self.mac
 
     def getRadioLogPath(self):
         """

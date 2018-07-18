@@ -180,6 +180,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             "Number of packets we use to calculate short-term PER")
         .def_readwrite("long_per_npackets", &RadioConfig::long_per_npackets,
             "Number of packets we use to calculate long-term PER")
+        .def_readwrite("timestamp_delay", &RadioConfig::timestamp_delay,
+            "Timestamp delay, in seconds")
         ;
 
     // Export our global RadioConfig
@@ -426,6 +428,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       double,
                       double>())
         .def_property("net_queue", &SmartController::getNetQueue, &SmartController::setNetQueue)
+        .def_property("mac", &SmartController::getMAC, &SmartController::setMAC)
         .def_readwrite("broadcast_tx_params", &SmartController::broadcast_tx_params, "Broadcast TX parameters",
              py::return_value_policy::reference_internal)
         .def_property("modidx_up_per_threshold",

@@ -32,6 +32,9 @@ public:
 
     /** @brief Number of packets we use to calculate long-term PER  */
     unsigned long_per_npackets;
+
+    /** @brief Timestamp delay, in seconds */
+    double timestamp_delay;
 };
 
 #endif /* RADIOCONFIG_H_ */

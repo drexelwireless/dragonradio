@@ -13,6 +13,8 @@
 #include <liquid/liquid.h>
 
 #include "buffer.hh"
+#include "Clock.hh"
+#include "Seq.hh"
 #include "phy/TXParams.hh"
 
 typedef uint8_t NodeId;
@@ -49,57 +51,29 @@ enum {
 
 typedef uint16_t InternalFlags;
 
-struct Seq {
-    using uint_type = uint16_t;
+/** @brief A time */
+struct Time {
+    uint64_t secs;
+    double frac_secs;
 
-    Seq() = default;
-    Seq(uint_type seq) : seq_(seq) {};
-
-    Seq(const Seq&) = default;
-    Seq(Seq&&) = default;
-
-    Seq& operator=(const Seq&) = default;
-    Seq& operator=(Seq&&) = default;
-
-    bool operator ==(const Seq& other) { return seq_ == other.seq_; }
-    bool operator !=(const Seq& other) { return seq_ != other.seq_; }
-
-    bool operator <(const Seq& other)
-      { return static_cast<int16_t>(seq_ - other.seq_) < 0; }
-
-    bool operator <=(const Seq& other)
-      { return static_cast<int16_t>(seq_ - other.seq_) <= 0; }
-
-    bool operator >(const Seq& other)
-      { return static_cast<int16_t>(seq_ - other.seq_) > 0; }
-
-    bool operator >=(const Seq& other)
-      { return static_cast<int16_t>(seq_ - other.seq_) >= 0; }
-
-    Seq operator ++() { seq_++; return *this; }
-    Seq operator ++(int) { seq_++; return seq_ - 1; }
-
-    Seq operator --() { seq_--; return *this; }
-    Seq operator --(int) { seq_--; return seq_ + 1; }
-
-    Seq operator +(int i) { return seq_ + i; }
-    Seq operator -(int i) { return seq_ - i; }
-
-    operator uint_type() const { return seq_; }
-
-    static uint_type max(void)
+    void from_wall_time(Clock::time_point t)
     {
-        return std::numeric_limits<uint_type>::max();
+        secs = t.t.get_full_secs();
+        frac_secs = t.t.get_frac_secs();
     }
 
-    uint_type seq_;
+    Clock::time_point to_wall_time(void) const
+    {
+        return Clock::time_point { uhd::time_spec_t { static_cast<time_t>(secs), frac_secs } };
+    }
 };
 
 /** @brief A Control message */
 struct ControlMsg {
     enum Type {
         kHello,
-        kTimestamp
+        kTimestamp,
+        kTimestampDelta
     };
 
     struct Hello {
@@ -107,8 +81,17 @@ struct ControlMsg {
     };
 
     struct Timestamp {
-        uint64_t secs;
-        double frac_secs;
+        Seq epoch;
+        Time t;
+    };
+
+    struct TimestampDelta {
+        /** @brief Node ID of sender */
+        NodeId node;
+        /** @brief Epoch of sender */
+        Seq epoch;
+        /** @brief Delta between receiver and sender */
+        Time delta;
     };
 
     Type type;
@@ -116,6 +99,7 @@ struct ControlMsg {
     union {
         Hello hello;
         Timestamp timestamp;
+        TimestampDelta timestamp_delta;
     };
 };
 
@@ -289,7 +273,18 @@ struct Packet : public buffer<unsigned char>
     }
 
     /** @brief Append a control message to a packet */
-    void appendControl(ControlMsg &ctrl);
+    void appendControl(const ControlMsg &ctrl);
+
+    /** @brief Append a Hello control message to a packet */
+    void appendHello(const ControlMsg::Hello &hello);
+
+    /** @brief Append a Timestamp control message to a packet */
+    void appendTimestamp(const Seq &epoch, const Clock::time_point &t);
+
+    /** @brief Append a timestamp delta control message to a packet */
+    void appendTimestampDelta(NodeId node_id,
+                              const Seq &epoch,
+                              const Clock::time_point &delta);
 
     /** @brief Return iterator to beginning control data. */
     iterator begin() const
@@ -366,6 +361,9 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
 
         case ControlMsg::kTimestamp:
             return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);
+
+        case ControlMsg::kTimestampDelta:
+            return offsetof(ControlMsg, timestamp_delta) + sizeof(ControlMsg::TimestampDelta);
 
         default:
             return 0;
