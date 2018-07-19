@@ -16,7 +16,7 @@ void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
 
     std::sort(power.get(), power.get() + n);
 
-    size_t max_n = soft_tx_gain_clip_frac*n;
+    size_t max_n = auto_soft_tx_gain_clip_frac*n;
 
     if (max_n < 0)
         max_n = 0;

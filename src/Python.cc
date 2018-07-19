@@ -310,7 +310,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_readwrite("ms", &TXParams::ms, "Modulation scheme")
         .def_readwrite("g_0dBFS", &TXParams::g_0dBFS, "Soft TX gain (multiplicative factor)")
         .def_property("soft_tx_gain_0dBFS", &TXParams::getSoftTXGain0dBFS, &TXParams::setSoftTXGain0dBFS, "Soft TX gain (dBFS)")
-        .def_readwrite("soft_tx_gain_clip_frac", &TXParams::soft_tx_gain_clip_frac, "Clipping threshold for automatic TX soft gain")
+        .def_readwrite("auto_soft_tx_gain_clip_frac", &TXParams::auto_soft_tx_gain_clip_frac, "Clipping threshold for automatic TX soft gain")
         .def("recalc0dBFSEstimate", &TXParams::recalc0dBFSEstimate, "Reset the 0dBFS estimate")
         ;
 

@@ -17,7 +17,7 @@ struct TXParams {
       , fec1(fec1)
       , ms(ms)
       , g_0dBFS(1.0f)
-      , soft_tx_gain_clip_frac(0.999f)
+      , auto_soft_tx_gain_clip_frac(0.999f)
       , nestimates_0dBFS(0)
     {
     }
@@ -28,7 +28,7 @@ struct TXParams {
       , fec1(LIQUID_FEC_NONE)
       , ms(LIQUID_MODEM_QPSK)
       , g_0dBFS(1.0f)
-      , soft_tx_gain_clip_frac(0.999f)
+      , auto_soft_tx_gain_clip_frac(0.999f)
       , nestimates_0dBFS(0)
     {
     }
@@ -54,7 +54,7 @@ struct TXParams {
      * 0.99 ensures that 99% of the values will fall below 1, i.e., the
      * 99th percentile is unclipped.
      */
-    float soft_tx_gain_clip_frac;
+    float auto_soft_tx_gain_clip_frac;
 
     /** @brief Number of samples to take to estimate g_0dBFS. */
     unsigned nestimates_0dBFS;

@@ -49,6 +49,7 @@ class Config(object):
         self.rx_gain = 25
         self.soft_tx_gain = -12
         self.auto_soft_tx_gain = None
+        self.auto_soft_tx_gain_clip_frac = 0.999
 
         # PHY parameters
         self.phy = 'flexframe'
@@ -220,6 +221,9 @@ class Config(object):
         add_argument('--auto-soft-tx-gain', action='store', type=int,
                      dest='auto_soft_tx_gain',
                      help='automatically choose soft TX gain to attain 0dBFS')
+        add_argument('--auto-soft-tx-gain-clip-frac', action='store', type=float,
+                     dest='auto_soft_tx_gain_clip_frac',
+                     help='clip fraction for automatic soft TX gain')
 
         # PHY parameters
         add_argument('--phy', action='store',
@@ -383,6 +387,7 @@ class Radio(object):
             p.soft_tx_gain_0dBFS = config.soft_tx_gain
             if config.auto_soft_tx_gain != None:
                 p.recalc0dBFSEstimate(config.auto_soft_tx_gain)
+                p.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
 
         self.net.tx_params = dragonradio.TXParamsList(tx_params)
 
@@ -458,7 +463,7 @@ class Radio(object):
         if g == 'auto':
             tx_params.soft_tx_gain_0dBFS = -12.
             tx_params.recalc0dBFSEstimate(100)
-            tx_params.soft_tx_gain_clip_frac = clip
+            tx_params.auto_soft_tx_gain_clip_frac = clip
         else:
             tx_params.soft_tx_gain_0dBFS = g
 
