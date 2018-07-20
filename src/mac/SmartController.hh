@@ -310,6 +310,15 @@ protected:
     /** @brief Start the ACK timer if it is not set. */
     void startACKTimer(RecvWindow &recvw);
 
+    /** @brief Handle HELLO and timestamp control messages. */
+    void handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& pkt);
+
+    /** @brief Handle timestamp delta control messages. */
+    void handleCtrlTimestampDeltas(Node &node, std::shared_ptr<RadioPacket>& pkt);
+
+    /** @brief Handle NAK control messages. */
+    void handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pkt);
+
     /** @brief Handle a NAK. */
     void handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
 

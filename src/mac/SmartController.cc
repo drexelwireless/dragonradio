@@ -157,129 +157,9 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
     // Process control info
     if (pkt->isFlagSet(kControl)) {
-        // Process hello's and timestamps
-        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
-            switch (it->type) {
-                case ControlMsg::Type::kHello:
-                {
-                    node.is_gateway = it->hello.is_gateway;
-
-                    dprintf("ARQ: recv from %u: HELLO",
-                        (unsigned) pkt->curhop);
-
-                    logEvent("ARQ: Discovered neighbor %u; gateway=%s",
-                        (unsigned) pkt->curhop,
-                        node.is_gateway ? "true" : "false");
-                }
-                break;
-
-                case ControlMsg::Type::kTimestamp:
-                {
-                    node.time_info.updateTimestamp(it->timestamp, pkt->timestamp);
-
-                    logEvent("TIMESYNC: Timestamp: node=%u; delta=%g",
-                        (unsigned) pkt->curhop,
-                        (double) node.time_info.last_timestamp_delta.t.get_real_secs());
-                }
-                break;
-
-                default:
-                    break;
-            }
-        }
-
-        // Process timestamp deltas.
-        // If this node is a gateway AND we have seen a timestamp from it AND
-        // eiether it is our time master or we have no master, synchronize with
-        // it.
-        if ((node.is_gateway || node.id == 1) &&
-             node.time_info.saw_timestamp &&
-             (time_sync_.time_master == 0 || time_sync_.time_master == node.id)) {
-            for(auto it = pkt->begin(); it != pkt->end(); ++it) {
-                switch (it->type) {
-                    case ControlMsg::Type::kTimestampDelta:
-                    {
-                        if (it->timestamp_delta.node == net_->getMyNodeId()) {
-                            double            epsilon; // TX delay
-                            double            delta;   // Clock difference
-                            double            sigma;   // Clock skew
-
-                            double our_delta   = node.time_info.last_timestamp_delta.get_real_secs();
-                            double their_delta = it->timestamp_delta.delta.to_wall_time().get_real_secs();
-
-                            epsilon = 0.5*(our_delta + their_delta);
-                            delta = 0.5*(our_delta - their_delta);
-
-                            sigma = delta/(node.time_info.last_timestamp_our_time - time_sync_.last_adjustment).get_real_secs();
-
-                            logEvent("TIMESYNC: Time stamp delta between us and node %u is %g",
-                                (unsigned) pkt->curhop,
-                                (double) our_delta);
-
-                            logEvent("TIMESYNC: Time stamp delta between node %u and us is %g",
-                                (unsigned) pkt->curhop,
-                                (double) their_delta);
-
-                            if (it->timestamp_delta.epoch == Clock::epoch()) {
-                                logEvent("TIMESYNC: Estimated clock delta between us and node %u is %g (epsilon=%g)",
-                                    (unsigned) pkt->curhop,
-                                    (double) delta,
-                                    (double) epsilon);
-
-                                if (time_sync_.time_master == node.id) {
-                                    time_sync_.skew.update(sigma);
-
-                                    logEvent("TIMESYNC: Estimated skew between us and node %u is %g (sample=%g)",
-                                        (unsigned) pkt->curhop,
-                                        (double) time_sync_.skew.getValue(),
-                                        (double) sigma);
-                                }
-
-                                if (time_sync_.time_master == 0)
-                                    Clock::adjust(Clock::time_point { -delta }, 0.);
-                                else {
-                                    Clock::adjust(Clock::time_point { -delta }, -time_sync_.skew.getValue());
-                                    logEvent("TIMESYNC: Setting skew to %g",
-                                        (double) -time_sync_.skew.getValue());
-                                }
-
-                                time_sync_.time_master = node.id;
-                                time_sync_.last_adjustment = Clock::now();
-
-                                // Timestamp deltas are no longer valid since we've adjusted our clock
-                                for (auto it = net_->begin(); it != net_->end(); ++it)
-                                    it->second.time_info.saw_timestamp = false;
-                            }
-                        }
-                    }
-                    break;
-
-                    default:
-                        break;
-                }
-            }
-        }
-
-        // Process NAKs
-        SendWindow *sendwptr = maybeGetSendWindow(pkt->curhop);
-
-        if (sendwptr) {
-            SendWindow                      &sendw = *sendwptr;
-            std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-
-            for(auto it = pkt->begin(); it != pkt->end(); ++it) {
-                switch (it->type) {
-                    case ControlMsg::Type::kNak:
-                    {
-                        handleNak(sendw, node, it->nak.seq, false);
-                    }
-                    break;
-
-                    default:
-                        break;
-                }
-            }
-        }
+        handleCtrlHello(node, pkt);
+        handleCtrlTimestampDeltas(node, pkt);
+        handleCtrlNAK(node, pkt);
     }
 
     // If this packet was not destined for us, we are done
@@ -614,6 +494,137 @@ void SmartController::startACKTimer(RecvWindow &recvw)
         dprintf("ARQ: send to %u: starting ACK delay timer",
             (unsigned) recvw.node_id);
         timer_queue_.run_in(recvw, (*net_)[recvw.node_id].ack_delay);
+    }
+}
+
+void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& pkt)
+{
+    for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kHello:
+            {
+                node.is_gateway = it->hello.is_gateway;
+
+                dprintf("ARQ: recv from %u: HELLO",
+                    (unsigned) pkt->curhop);
+
+                logEvent("ARQ: Discovered neighbor %u; gateway=%s",
+                    (unsigned) pkt->curhop,
+                    node.is_gateway ? "true" : "false");
+            }
+            break;
+
+            case ControlMsg::Type::kTimestamp:
+            {
+                node.time_info.updateTimestamp(it->timestamp, pkt->timestamp);
+
+                logEvent("TIMESYNC: Timestamp: node=%u; delta=%g",
+                    (unsigned) pkt->curhop,
+                    (double) node.time_info.last_timestamp_delta.t.get_real_secs());
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
+}
+
+void SmartController::handleCtrlTimestampDeltas(Node &node, std::shared_ptr<RadioPacket>& pkt)
+{
+    // Process timestamp deltas.
+    // If this node is a gateway AND we have seen a timestamp from it AND
+    // eiether it is our time master or we have no master, synchronize with it.
+    if ((node.is_gateway || node.id == 1) &&
+         node.time_info.saw_timestamp &&
+         (time_sync_.time_master == 0 || time_sync_.time_master == node.id)) {
+        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+            switch (it->type) {
+                case ControlMsg::Type::kTimestampDelta:
+                {
+                    if (it->timestamp_delta.node == net_->getMyNodeId()) {
+                        double            epsilon; // TX delay
+                        double            delta;   // Clock difference
+                        double            sigma;   // Clock skew
+
+                        double our_delta   = node.time_info.last_timestamp_delta.get_real_secs();
+                        double their_delta = it->timestamp_delta.delta.to_wall_time().get_real_secs();
+
+                        epsilon = 0.5*(our_delta + their_delta);
+                        delta = 0.5*(our_delta - their_delta);
+
+                        sigma = delta/(node.time_info.last_timestamp_our_time - time_sync_.last_adjustment).get_real_secs();
+
+                        logEvent("TIMESYNC: Time stamp delta between us and node %u is %g",
+                            (unsigned) pkt->curhop,
+                            (double) our_delta);
+
+                        logEvent("TIMESYNC: Time stamp delta between node %u and us is %g",
+                            (unsigned) pkt->curhop,
+                            (double) their_delta);
+
+                        if (it->timestamp_delta.epoch == Clock::epoch()) {
+                            logEvent("TIMESYNC: Estimated clock delta between us and node %u is %g (epsilon=%g)",
+                                (unsigned) pkt->curhop,
+                                (double) delta,
+                                (double) epsilon);
+
+                            if (time_sync_.time_master == node.id) {
+                                time_sync_.skew.update(sigma);
+
+                                logEvent("TIMESYNC: Estimated skew between us and node %u is %g (sample=%g)",
+                                    (unsigned) pkt->curhop,
+                                    (double) time_sync_.skew.getValue(),
+                                    (double) sigma);
+                            }
+
+                            if (time_sync_.time_master == 0)
+                                Clock::adjust(Clock::time_point { -delta }, 0.);
+                            else {
+                                Clock::adjust(Clock::time_point { -delta }, -time_sync_.skew.getValue());
+                                logEvent("TIMESYNC: Setting skew to %g",
+                                    (double) -time_sync_.skew.getValue());
+                            }
+
+                            time_sync_.time_master = node.id;
+                            time_sync_.last_adjustment = Clock::now();
+
+                            // Timestamp deltas are no longer valid since we've adjusted our clock
+                            for (auto it = net_->begin(); it != net_->end(); ++it)
+                                it->second.time_info.saw_timestamp = false;
+                        }
+                    }
+                }
+                break;
+
+                default:
+                    break;
+            }
+        }
+    }
+}
+
+void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pkt)
+{
+    // Process NAKs
+    SendWindow *sendwptr = maybeGetSendWindow(pkt->curhop);
+
+    if (sendwptr) {
+        SendWindow                      &sendw = *sendwptr;
+        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+            switch (it->type) {
+                case ControlMsg::Type::kNak:
+                {
+                    handleNak(sendw, node, it->nak.seq, false);
+                }
+                break;
+
+                default:
+                    break;
+            }
+        }
     }
 }
 
