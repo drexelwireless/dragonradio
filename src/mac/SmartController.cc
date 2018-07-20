@@ -393,16 +393,8 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->src = net_->getMyNodeId();
     pkt->dest = recvw.node_id;
 
-    ControlMsg::Nak nak;
-
-    for (size_t seq = recvw.ack + 1; seq < recvw.max && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.max_packet_size; ++seq) {
-        if (!recvw[seq].pkt) {
-            dprintf("ARQ: nak to %u: seq=%u",
-                (unsigned) recvw.node_id,
-                (unsigned) seq);
-            pkt->appendNak(seq);
-        }
-    }
+    // Append NAK control messages
+    appendCtrlNAK(recvw, pkt);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -624,6 +616,20 @@ void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pk
                 default:
                     break;
             }
+        }
+    }
+}
+
+void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt)
+{
+    ControlMsg::Nak nak;
+
+    for (size_t seq = recvw.ack + 1; seq < recvw.max && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.max_packet_size; ++seq) {
+        if (!recvw[seq].pkt) {
+            dprintf("ARQ: nak to %u: seq=%u",
+                (unsigned) recvw.node_id,
+                (unsigned) seq);
+            pkt->appendNak(seq);
         }
     }
 }

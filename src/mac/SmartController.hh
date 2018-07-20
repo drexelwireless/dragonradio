@@ -319,6 +319,9 @@ protected:
     /** @brief Handle NAK control messages. */
     void handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pkt);
 
+    /** @brief Append NAK control messages. */
+    void appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);
+
     /** @brief Handle a NAK. */
     void handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
 
