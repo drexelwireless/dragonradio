@@ -10,5 +10,6 @@ RadioConfig::RadioConfig()
   , max_packet_size(1500)
   , ack_delay(100e-3)
   , retransmission_delay(500e-3)
+  , max_reorder_delay(100e-3)
 {
 }

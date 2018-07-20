@@ -41,6 +41,9 @@ public:
 
     /** @brief Retransmission delay in seconds */
     double retransmission_delay;
+
+    /** @brief (Estimated) maximum packet reordering delay in seconds */
+    double max_reorder_delay;
 };
 
 #endif /* RADIOCONFIG_H_ */

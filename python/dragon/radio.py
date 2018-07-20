@@ -82,6 +82,7 @@ class Config(object):
         self.arq_enforce_ordering = False
         self.ack_delay = 100e-3
         self.retransmission_delay = 500e-3
+        self.max_reorder_delay = 100e-3
 
         # AMC options
         self.amc = False

@@ -298,8 +298,10 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
 
     // Update the max seq number we've received
-    if (pkt->seq > recvw.max)
+    if (pkt->seq > recvw.max) {
         recvw.max = pkt->seq;
+        recvw.max_timestamp = pkt->timestamp;
+    }
 
     // If this is the next packet we expected, send it now and update the
     // receive window
@@ -623,8 +625,14 @@ void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pk
 void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt)
 {
     ControlMsg::Nak nak;
+    int             delta;
 
-    for (size_t seq = recvw.ack + 1; seq < recvw.max && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.max_packet_size; ++seq) {
+    if ((Clock::now() - recvw.max_timestamp).get_real_secs() < rc.max_reorder_delay)
+        delta = rc.short_per_npackets;
+    else
+        delta = 0;
+
+    for (Seq seq = recvw.ack + 1; seq < recvw.max - delta && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.max_packet_size; ++seq) {
         if (!recvw[seq].pkt) {
             dprintf("ARQ: nak to %u: seq=%u",
                 (unsigned) recvw.node_id,
