@@ -1,7 +1,7 @@
 #include "phy/Liquid.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp flexframegen code. */
-class FlexFrame : public PHY {
+class FlexFrame : public LiquidPHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp flexframe. */
     class Modulator : public LiquidModulator

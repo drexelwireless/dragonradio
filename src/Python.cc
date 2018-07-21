@@ -365,18 +365,22 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("getTXRateOversample", &PHY::getTXRateOversample)
         ;
 
+    // Export class LiquidPHY to Python
+    py::class_<LiquidPHY, PHY, std::shared_ptr<LiquidPHY>>(m, "LiquidPHY")
+        ;
+
     // Export class FlexFrame to Python
-    py::class_<FlexFrame, PHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
+    py::class_<FlexFrame, LiquidPHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
         .def(py::init<size_t>())
         ;
 
     // Export class NewFlexFrame to Python
-    py::class_<NewFlexFrame, PHY, std::shared_ptr<NewFlexFrame>>(m, "NewFlexFrame")
+    py::class_<NewFlexFrame, LiquidPHY, std::shared_ptr<NewFlexFrame>>(m, "NewFlexFrame")
         .def(py::init<size_t>())
         ;
 
     // Export class OFDM to Python
-    py::class_<OFDM, PHY, std::shared_ptr<OFDM>>(m, "OFDM")
+    py::class_<OFDM, LiquidPHY, std::shared_ptr<OFDM>>(m, "OFDM")
         .def(py::init<unsigned int,
                       unsigned int,
                       unsigned int,
@@ -384,7 +388,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         ;
 
     // Export class MultiOFDM to Python
-    py::class_<MultiOFDM, PHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
+    py::class_<MultiOFDM, LiquidPHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
         .def(py::init<unsigned int,
                       unsigned int,
                       unsigned int,

@@ -10,7 +10,7 @@
 #include "phy/Liquid.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp multi-channel OFDM %PHY code. */
-class MultiOFDM : public PHY
+class MultiOFDM : public LiquidPHY
 {
 public:
     /** @brief Modulate IQ data using the liquid-usrp multi-channel OFDM %PHY

@@ -4,7 +4,7 @@
 #include "phy/Liquid.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp ofdmflexframegen code. */
-class OFDM : public PHY {
+class OFDM : public LiquidPHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp ofdmflexframegen. */
     class Modulator : public LiquidModulator
