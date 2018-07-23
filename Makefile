@@ -66,6 +66,7 @@ SOURCES := \
     phy/TXParams.cc \
     phy/Liquid.cc \
     phy/MultiOFDM.cc \
+    phy/NewFlexFrame.cc \
     phy/OFDM.cc \
     phy/ParallelPacketDemodulator.cc \
     phy/ParallelPacketModulator.cc \

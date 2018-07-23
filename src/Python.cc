@@ -10,6 +10,7 @@ namespace py = pybind11;
 #include "WorkQueue.hh"
 #include "phy/FlexFrame.hh"
 #include "phy/MultiOFDM.hh"
+#include "phy/NewFlexFrame.hh"
 #include "phy/OFDM.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
@@ -366,6 +367,11 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class FlexFrame to Python
     py::class_<FlexFrame, PHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
+        .def(py::init<size_t>())
+        ;
+
+    // Export class NewFlexFrame to Python
+    py::class_<NewFlexFrame, PHY, std::shared_ptr<NewFlexFrame>>(m, "NewFlexFrame")
         .def(py::init<size_t>())
         ;
 

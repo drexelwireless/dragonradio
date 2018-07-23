@@ -228,7 +228,7 @@ class Config(object):
 
         # PHY parameters
         add_argument('--phy', action='store',
-                     choices=['flexframe', 'ofdm', 'multiofdm'],
+                     choices=['flexframe', 'newflexframe', 'ofdm', 'multiofdm'],
                      dest='phy',
                      help='set PHY')
         add_argument('--min-packet-size', action='store', type=int,
@@ -354,6 +354,8 @@ class Radio(object):
         #
         if config.phy == 'flexframe':
             self.phy = dragonradio.FlexFrame(config.min_packet_size)
+        elif config.phy == 'newflexframe':
+            self.phy = dragonradio.NewFlexFrame(config.min_packet_size)
         elif config.phy == 'ofdm':
             self.phy = dragonradio.OFDM(config.M,
                                         config.cp_len,
