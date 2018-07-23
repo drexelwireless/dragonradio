@@ -15,7 +15,7 @@ union PHYHeader {
 };
 
 MultiOFDM::Modulator::Modulator(MultiOFDM& phy)
-  : PHY::Modulator(phy)
+  : LiquidModulator(phy)
   , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);

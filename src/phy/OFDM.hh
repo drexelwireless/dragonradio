@@ -7,7 +7,7 @@
 class OFDM : public PHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp ofdmflexframegen. */
-    class Modulator : public PHY::Modulator
+    class Modulator : public LiquidModulator
     {
     public:
         Modulator(OFDM &phy);

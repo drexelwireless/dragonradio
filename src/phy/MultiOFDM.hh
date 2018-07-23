@@ -16,7 +16,7 @@ public:
     /** @brief Modulate IQ data using the liquid-usrp multi-channel OFDM %PHY
       * code.
       */
-    class Modulator : public PHY::Modulator
+    class Modulator : public LiquidModulator
     {
     public:
         Modulator(MultiOFDM &phy);

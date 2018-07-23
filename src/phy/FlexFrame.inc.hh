@@ -4,7 +4,7 @@
 class FlexFrame : public PHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp flexframe. */
-    class Modulator : public PHY::Modulator
+    class Modulator : public LiquidModulator
     {
     public:
         Modulator(FlexFrame& phy);

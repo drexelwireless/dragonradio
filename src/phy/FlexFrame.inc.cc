@@ -8,7 +8,7 @@ union PHYHeader {
 };
 
 FlexFrame::Modulator::Modulator(FlexFrame &phy)
-  : PHY::Modulator(phy)
+  : LiquidModulator(phy)
   , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(liquid_mutex);

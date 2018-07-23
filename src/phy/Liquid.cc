@@ -4,6 +4,15 @@
 
 std::mutex liquid_mutex;
 
+LiquidModulator::LiquidModulator(PHY &phy)
+    : Modulator(phy)
+{
+}
+
+LiquidModulator::~LiquidModulator()
+{
+}
+
 LiquidDemodulator::LiquidDemodulator(PHY &phy)
   : Demodulator(phy)
   , internal_oversample_fact_(1)
