@@ -298,17 +298,24 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("remove", &Mean<float>::remove, "Remove a value used to estimate the mean")
         ;
 
-    // Export class TXParams to Python
-    py::class_<TXParams, std::shared_ptr<TXParams>>(m, "TXParams")
+    // Export class MCS to Python
+    py::class_<MCS, std::shared_ptr<MCS>>(m, "MCS")
         .def(py::init<>())
         .def(py::init<crc_scheme,
                       fec_scheme,
                       fec_scheme,
                       modulation_scheme>())
-        .def_readwrite("check", &TXParams::check, "Data validity check")
-        .def_readwrite("fec0", &TXParams::fec0, "Inner FEC")
-        .def_readwrite("fec1", &TXParams::fec1, "Outer FEC")
-        .def_readwrite("ms", &TXParams::ms, "Modulation scheme")
+        .def_readwrite("check", &MCS::check, "Data validity check")
+        .def_readwrite("fec0", &MCS::fec0, "Inner FEC")
+        .def_readwrite("fec1", &MCS::fec1, "Outer FEC")
+        .def_readwrite("ms", &MCS::ms, "Modulation scheme")
+        ;
+
+    // Export class TXParams to Python
+    py::class_<TXParams, std::shared_ptr<TXParams>>(m, "TXParams")
+        .def(py::init<>())
+        .def(py::init<MCS>())
+        .def_readwrite("mcs", &TXParams::mcs, "Modulation and coding scheme")
         .def_readwrite("g_0dBFS", &TXParams::g_0dBFS, "Soft TX gain (multiplicative factor)")
         .def_property("soft_tx_gain_0dBFS", &TXParams::getSoftTXGain0dBFS, &TXParams::setSoftTXGain0dBFS, "Soft TX gain (dBFS)")
         .def_readwrite("auto_soft_tx_gain_clip_frac", &TXParams::auto_soft_tx_gain_clip_frac, "Clipping threshold for automatic TX soft gain")

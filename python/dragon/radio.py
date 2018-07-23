@@ -9,6 +9,7 @@ import re
 import sys
 
 import dragonradio
+from dragonradio import MCS, TXParams, TXParamsList
 
 logger = logging.getLogger('radio')
 
@@ -382,9 +383,9 @@ class Radio(object):
         if config.amc and config.amc_table:
             tx_params = []
             for (crc, fec0, fec1, ms) in config.amc_table:
-                tx_params.append(dragonradio.TXParams(crc, fec0, fec1, ms))
+                tx_params.append(TXParams(MCS(crc, fec0, fec1, ms)))
         else:
-            tx_params = [dragonradio.TXParams(config.check, config.fec0, config.fec1, config.ms)]
+            tx_params = [TXParams(MCS(config.check, config.fec0, config.fec1, config.ms))]
 
         for p in tx_params:
             p.soft_tx_gain_0dBFS = config.soft_tx_gain
@@ -392,7 +393,7 @@ class Radio(object):
                 p.recalc0dBFSEstimate(config.auto_soft_tx_gain)
                 p.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
 
-        self.net.tx_params = dragonradio.TXParamsList(tx_params)
+        self.net.tx_params = TXParamsList(tx_params)
 
         #
         # Configure the modulator and demodulator
@@ -461,7 +462,7 @@ class Radio(object):
                 self.controller.broadcast_tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
 
     def setTXParams(self, crc, fec0, fec1, ms, g, clip=0.999):
-        tx_params = dragonradio.TXParams(crc, fec0, fec1, ms)
+        tx_params = TXParams(MCS(crc, fec0, fec1, ms))
 
         if g == 'auto':
             tx_params.soft_tx_gain_0dBFS = -12.
@@ -470,7 +471,7 @@ class Radio(object):
         else:
             tx_params.soft_tx_gain_0dBFS = g
 
-        self.net.tx_params = dragonradio.TXParamsList([tx_params])
+        self.net.tx_params = TXParamsList([tx_params])
 
     def configureALOHA(self):
         if self.config.arq:

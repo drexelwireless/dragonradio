@@ -6,30 +6,24 @@
 #include "Estimator.hh"
 #include "IQBuffer.hh"
 
-/** @brief PHY TX parameters. */
-struct TXParams {
-    TXParams(crc_scheme check,
-             fec_scheme fec0,
-             fec_scheme fec1,
-             modulation_scheme ms)
+/** @brief A liquid modulation and coding scheme. */
+struct MCS {
+    MCS(crc_scheme check,
+        fec_scheme fec0,
+        fec_scheme fec1,
+        modulation_scheme ms)
       : check(check)
       , fec0(fec0)
       , fec1(fec1)
       , ms(ms)
-      , g_0dBFS(1.0f)
-      , auto_soft_tx_gain_clip_frac(0.999f)
-      , nestimates_0dBFS(0)
     {
     }
 
-    TXParams()
+    MCS()
       : check(LIQUID_CRC_32)
-      , fec0(LIQUID_FEC_CONV_V27)
-      , fec1(LIQUID_FEC_NONE)
-      , ms(LIQUID_MODEM_QPSK)
-      , g_0dBFS(1.0f)
-      , auto_soft_tx_gain_clip_frac(0.999f)
-      , nestimates_0dBFS(0)
+      , fec0(LIQUID_FEC_NONE)
+      , fec1(LIQUID_FEC_CONV_V27)
+      , ms(LIQUID_MODEM_BPSK)
     {
     }
 
@@ -44,6 +38,36 @@ struct TXParams {
 
     /** @brief Modulation scheme */
     modulation_scheme ms;
+
+    /** @brief CRC name as string */
+    const char *check_name() const { return crc_scheme_str[check][0]; }
+
+    /** @brief FEC0 (inner FEC) name as string */
+    const char *fec0_name() const { return fec_scheme_str[fec0][0]; }
+
+    /** @brief FEC1 (outer FEC) name as string */
+    const char *fec1_name() const { return fec_scheme_str[fec1][0]; }
+
+    /** @brief Modulation scheme name as string */
+    const char *ms_name() const { return modulation_types[ms].name; }
+};
+
+/** @brief PHY TX parameters. */
+struct TXParams {
+    TXParams(const MCS &mcs)
+      : mcs(mcs)
+      , g_0dBFS(1.0f)
+      , auto_soft_tx_gain_clip_frac(0.999f)
+      , nestimates_0dBFS(0)
+    {
+    }
+
+    TXParams()
+    {
+    }
+
+    /** @brief Modulation and coding scheme */
+    MCS mcs;
 
     /** @brief Multiplicative TX gain necessary for 0dBFS. */
     Mean<float> g_0dBFS;

@@ -29,14 +29,14 @@ void FlexFrame::Modulator::print(void)
 
 void FlexFrame::Modulator::update_props(const TXParams &params)
 {
-    if (fgprops_.check != params.check ||
-        fgprops_.fec0 != params.fec0 ||
-        fgprops_.fec1 != params.fec1 ||
-        fgprops_.mod_scheme != params.ms) {
-        fgprops_.check = params.check;
-        fgprops_.fec0 = params.fec0;
-        fgprops_.fec1 = params.fec1;
-        fgprops_.mod_scheme = params.ms;
+    if (fgprops_.check != params.mcs.check ||
+        fgprops_.fec0 != params.mcs.fec0 ||
+        fgprops_.fec1 != params.mcs.fec1 ||
+        fgprops_.mod_scheme != params.mcs.ms) {
+        fgprops_.check = params.mcs.check;
+        fgprops_.fec0 = params.mcs.fec0;
+        fgprops_.fec1 = params.mcs.fec1;
+        fgprops_.mod_scheme = params.mcs.ms;
 
         flexframe(gen_setprops)(fg_, &fgprops_);
     }
