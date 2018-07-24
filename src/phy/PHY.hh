@@ -105,6 +105,36 @@ public:
         return tx_rate_;
     }
 
+    /** @brief Get PHY RX oversample rate.
+     */
+    virtual double getRXRateOversample(void)
+    {
+        return rx_rate_oversample_;
+    }
+
+    /** @brief Set PHY RX oversample rate.
+     * @param rate The rate.
+     */
+    virtual void setRXRateOversample(double rate)
+    {
+        rx_rate_oversample_ = rate;
+    }
+
+    /** @brief Get PHY TX oversample rate.
+     */
+    virtual double getTXRateOversample(void)
+    {
+        return tx_rate_oversample_;
+    }
+
+    /** @brief Set PHY TX oversample rate.
+     * @param rate The rate.
+     */
+    virtual void setTXRateOversample(double rate)
+    {
+        tx_rate_oversample_ = rate;
+    }
+
     /** @brief Create a Modulator for this %PHY */
     virtual std::unique_ptr<Modulator> make_modulator(void) = 0;
 
@@ -117,6 +147,12 @@ protected:
 
     /** @brief TX sample rate */
     double tx_rate_;
+
+    /** @brief RX oversample rate */
+    double rx_rate_oversample_;
+
+    /** @brief TX oversample rate */
+    double tx_rate_oversample_;
 };
 
 #endif /* PHY_H_ */

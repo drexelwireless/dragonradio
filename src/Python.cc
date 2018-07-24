@@ -372,6 +372,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property_readonly("min_tx_rate_oversample", &PHY::getMinTXRateOversample)
         .def_property("rx_rate", &PHY::getRXRate, &PHY::setRXRate)
         .def_property("tx_rate", &PHY::getTXRate, &PHY::setTXRate)
+        .def_property("rx_rate_oversample", &PHY::getRXRateOversample, &PHY::setRXRateOversample)
+        .def_property("tx_rate_oversample", &PHY::getTXRateOversample, &PHY::setTXRateOversample)
         ;
 
     // Export class LiquidPHY to Python

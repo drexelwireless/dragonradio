@@ -446,6 +446,9 @@ class Radio(object):
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
 
+        self.phy.rx_rate_oversample = rx_rate/bandwidth
+        self.phy.tx_rate_oversample = tx_rate/bandwidth
+
         #
         # Configure the modulator and demodulator
         #
