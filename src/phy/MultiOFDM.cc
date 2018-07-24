@@ -73,21 +73,14 @@ MultiOFDM::Demodulator::~Demodulator()
 {
 }
 
-void MultiOFDM::Demodulator::reset(Clock::time_point timestamp, size_t off)
+void MultiOFDM::Demodulator::liquidReset(void)
 {
     mcrx_->Reset();
-
-    demod_start_ = timestamp;
-    demod_off_ = off;
 }
 
-void MultiOFDM::Demodulator::demodulate(std::complex<float>* data,
-                                        size_t count,
-                                        std::function<void(std::unique_ptr<RadioPacket>)> callback)
+void MultiOFDM::Demodulator::demodulateSamples(std::complex<float> *buf, const size_t n)
 {
-    callback_ = callback;
-
-    mcrx_->Execute(data, count);
+    mcrx_->Execute(buf, n);
 }
 
 std::unique_ptr<PHY::Demodulator> MultiOFDM::make_demodulator(void)

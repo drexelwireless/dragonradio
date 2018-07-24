@@ -55,15 +55,13 @@ public:
         /** @brief Print internals of the associated flexframesync. */
         void print(void);
 
-        void reset(Clock::time_point timestamp, size_t off) override;
-
-        void demodulate(std::complex<float>* data,
-                        size_t count,
-                        std::function<void(std::unique_ptr<RadioPacket>)> callback) override;
-
     private:
         /** @brief The liquid-dsp flexframesync object */
         flexframe(sync) fs_;
+
+        void liquidReset(void) override final;
+
+        void demodulateSamples(std::complex<float> *buf, const size_t n) override final;
     };
 
     FlexFrame(const MCS &mcs,

@@ -195,3 +195,20 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 
     return 0;
 }
+
+void LiquidDemodulator::reset(Clock::time_point timestamp, size_t off)
+{
+    liquidReset();
+
+    demod_start_ = timestamp;
+    demod_off_ = off;
+}
+
+void LiquidDemodulator::demodulate(std::complex<float>* data,
+                                   size_t count,
+                                   std::function<void(std::unique_ptr<RadioPacket>)> callback)
+{
+    callback_ = callback;
+
+    demodulateSamples(reinterpret_cast<liquid_float_complex*>(data), count);
+}

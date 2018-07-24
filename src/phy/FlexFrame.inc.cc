@@ -99,21 +99,14 @@ void FlexFrame::Demodulator::print(void)
     flexframe(sync_print)(fs_);
 }
 
-void FlexFrame::Demodulator::reset(Clock::time_point timestamp, size_t off)
+void FlexFrame::Demodulator::liquidReset(void)
 {
     flexframe(sync_reset)(fs_);
-
-    demod_start_ = timestamp;
-    demod_off_ = off;
 }
 
-void FlexFrame::Demodulator::demodulate(std::complex<float>* data,
-                                        size_t count,
-                                        std::function<void(std::unique_ptr<RadioPacket>)> callback)
+void FlexFrame::Demodulator::demodulateSamples(std::complex<float> *buf, const size_t n)
 {
-    callback_ = callback;
-
-    flexframe(sync_execute)(fs_, reinterpret_cast<liquid_float_complex*>(data), count);
+    flexframe(sync_execute)(fs_, reinterpret_cast<liquid_float_complex*>(buf), n);
 }
 
 std::unique_ptr<PHY::Demodulator> FlexFrame::make_demodulator(void)

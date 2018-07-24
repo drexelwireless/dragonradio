@@ -115,21 +115,14 @@ void OFDM::Demodulator::print(void)
     ofdmflexframesync_print(fs_);
 }
 
-void OFDM::Demodulator::reset(Clock::time_point timestamp, size_t off)
+void OFDM::Demodulator::liquidReset(void)
 {
     ofdmflexframesync_reset(fs_);
-
-    demod_start_ = timestamp;
-    demod_off_ = off;
 }
 
-void OFDM::Demodulator::demodulate(std::complex<float>* data,
-                                   size_t count,
-                                   std::function<void(std::unique_ptr<RadioPacket>)> callback)
+void OFDM::Demodulator::demodulateSamples(std::complex<float> *buf, const size_t n)
 {
-    callback_ = callback;
-
-    ofdmflexframesync_execute(fs_, reinterpret_cast<liquid_float_complex*>(data), count);
+    ofdmflexframesync_execute(fs_, reinterpret_cast<liquid_float_complex*>(buf), n);
 }
 
 std::unique_ptr<PHY::Demodulator> OFDM::make_demodulator(void)

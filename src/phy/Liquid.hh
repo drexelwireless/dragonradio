@@ -110,6 +110,12 @@ public:
     LiquidDemodulator& operator=(const LiquidDemodulator&) = delete;
     LiquidDemodulator& operator=(LiquidDemodulator&&) = delete;
 
+    void reset(Clock::time_point timestamp, size_t off) override final;
+
+    void demodulate(std::complex<float>* data,
+                    size_t count,
+                    std::function<void(std::unique_ptr<RadioPacket>)> callback) override final;
+
 protected:
     /** Our Liquid PHY */
     LiquidPHY &liquid_phy_;
@@ -146,6 +152,16 @@ protected:
                          unsigned int     payload_len_,
                          int              payload_valid_,
                          framesyncstats_s stats_);
+
+
+    /** @brief Reset the internal state of the liquid demodulator. */
+    virtual void liquidReset(void) = 0;
+
+    /** @brief Demodulate samples.
+     * @param buf The samples to demodulate
+     * @param n The number of samples to demodulate
+     */
+    virtual void demodulateSamples(std::complex<float> *buf, const size_t n) = 0;
 };
 
 #endif /* LIQUID_H_ */

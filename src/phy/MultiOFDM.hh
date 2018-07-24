@@ -55,18 +55,16 @@ public:
         Demodulator& operator=(const Demodulator&) = delete;
         Demodulator& operator=(Demodulator&&) = delete;
 
-        void reset(Clock::time_point timestamp, size_t off) override;
-
-        void demodulate(std::complex<float>* data,
-                        size_t count,
-                        std::function<void(std::unique_ptr<RadioPacket>)> callback) override;
-
     private:
         /** @brief Our associated PHY. */
         MultiOFDM &myphy_;
 
         /** @brief Our liquid-usrp multichannelrx object. */
         std::unique_ptr<multichannelrx> mcrx_;
+
+        void liquidReset(void) override final;
+
+        void demodulateSamples(std::complex<float> *buf, const size_t n) override final;
     };
 
     /** @brief Construct a multichannel OFDM PHY.
