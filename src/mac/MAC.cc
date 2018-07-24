@@ -9,7 +9,6 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , phy_(phy)
   , modulator_(modulator)
   , demodulator_(demodulator)
-  , bandwidth_(bandwidth)
   , timestamped_modulator_(phy->make_modulator())
 {
     rx_rate_ = usrp->getRXRate();

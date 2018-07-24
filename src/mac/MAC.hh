@@ -57,9 +57,6 @@ protected:
     /** @brief Our packet demodulator. */
     std::shared_ptr<PacketDemodulator> demodulator_;
 
-    /** @brief Bandwidth */
-    double bandwidth_;
-
     /** @brief RX rate */
     double rx_rate_;
 
