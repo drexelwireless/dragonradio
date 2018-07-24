@@ -16,7 +16,10 @@ extern std::mutex liquid_mutex;
 
 class LiquidPHY : public PHY {
 public:
-    LiquidPHY(const MCS &header_mcs, bool soft_header, bool soft_payload);
+    LiquidPHY(const MCS &header_mcs,
+              bool soft_header,
+              bool soft_payload,
+              size_t min_packet_size);
     LiquidPHY();
     virtual ~LiquidPHY();
 
@@ -48,6 +51,10 @@ public:
         return soft_payload_;
     }
 
+    /** @brief Minimum packet size. */
+    /** Packets will be padded to at least this many bytes */
+    const size_t min_packet_size = 0;
+
 protected:
     /** @brief Modulation and coding scheme for headers. */
     const MCS header_mcs_;
@@ -71,6 +78,25 @@ public:
 
     LiquidModulator& operator=(const LiquidModulator&) = delete;
     LiquidModulator& operator=(LiquidModulator&&) = delete;
+
+    void modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt) override final;
+
+protected:
+    /** Our Liquid PHY */
+    LiquidPHY &liquid_phy_;
+
+    /** @brief Assemble a packet for modulation.
+     * @param hdr Packet header
+     * @param pkt The NetPacket to assemble.
+     */
+    virtual void assemble(unsigned char *hdr, NetPacket& pkt) = 0;
+
+    /** @brief Modulate samples.
+     * @param buf The destination for modulated samples
+     * @param nw The number of samples written
+     * @return A flag indicating whether or not the last sample was written.
+     */
+    virtual bool modulateSamples(std::complex<float> *buf, size_t &nw) = 0;
 };
 
 class LiquidDemodulator : public PHY::Demodulator {
@@ -85,6 +111,9 @@ public:
     LiquidDemodulator& operator=(LiquidDemodulator&&) = delete;
 
 protected:
+    /** Our Liquid PHY */
+    LiquidPHY &liquid_phy_;
+
     /** @brief Callback for received packets. */
     std::function<void(std::unique_ptr<RadioPacket>)> callback_;
 

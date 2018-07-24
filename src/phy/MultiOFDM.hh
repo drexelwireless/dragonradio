@@ -28,14 +28,16 @@ public:
         Modulator& operator=(const Modulator&) = delete;
         Modulator& operator=(Modulator&&) = delete;
 
-        void modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt) override;
-
     private:
         /** @brief Our associated PHY. */
         MultiOFDM &myphy_;
 
         /** @brief Our liquid-usrp multichanneltx object. */
         std::unique_ptr<multichanneltx> mctx_;
+
+        void assemble(unsigned char *hdr, NetPacket& pkt) override final;
+
+        bool modulateSamples(std::complex<float> *buf, size_t &nw) override final;
     };
 
     /** @brief Demodulate IQ data using the liquid-usrp multi-channel OFDM %PHY
@@ -68,46 +70,46 @@ public:
     };
 
     /** @brief Construct a multichannel OFDM PHY.
+     * @param minPacketSize The minimum number of bytes we will send in a
+     * packet.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
-     * @param minPacketSize The minimum number of bytes we will send in a
-     * packet.
      */
-    MultiOFDM(unsigned int M,
+    MultiOFDM(size_t min_packet_size,
+              unsigned int M,
               unsigned int cp_len,
-              unsigned int taper_len,
-              size_t minPacketSize) :
-              M_(M),
-              cp_len_(cp_len),
-              taper_len_(taper_len),
-              p_(NULL),
-              min_pkt_size_(minPacketSize)
+              unsigned int taper_len)
+       : M_(M)
+       , cp_len_(cp_len)
+       , taper_len_(taper_len)
+       , p_(NULL)
     {
+        min_packet_size = min_packet_size;
     }
 
     /** @brief Construct a multichannel OFDM PHY.
+     * @param minPacketSize The minimum number of bytes we will send in a
+     * packet.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
-     * @param minPacketSize The minimum number of bytes we will send in a
-     * packet.
      */
-    MultiOFDM(unsigned int M,
+    MultiOFDM(size_t min_packet_size,
+              unsigned int M,
               unsigned int cp_len,
               unsigned int taper_len,
-              unsigned char *p,
-              size_t minPacketSize) :
-              M_(M),
-              cp_len_(cp_len),
-              taper_len_(taper_len),
-              p_(p),
-              min_pkt_size_(minPacketSize)
+              unsigned char *p)
+       : M_(M)
+       , cp_len_(cp_len)
+       , taper_len_(taper_len)
+       , p_(p)
     {
+        min_packet_size = min_packet_size;
     }
 
     ~MultiOFDM()
@@ -141,10 +143,6 @@ private:
     unsigned int cp_len_;
     unsigned int taper_len_;
     unsigned char *p_;
-
-    /** @brief Minimum packet size. */
-    /** Packets will be padded to at least this many bytes */
-    size_t min_pkt_size_;
 };
 
 #endif /* MULTIOFDM_H_ */

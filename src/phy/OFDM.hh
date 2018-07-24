@@ -22,8 +22,6 @@ public:
         /** @brief Print internals of the associated flexframegen. */
         void print(void);
 
-        void modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt) override;
-
     private:
         /** @brief Associated OFDM PHY. */
         OFDM &myphy_;
@@ -38,6 +36,10 @@ public:
 
         /** Update frame properties to match fgprops_. */
         void update_props(const TXParams &params);
+
+        void assemble(unsigned char *hdr, NetPacket& pkt) override final;
+
+        bool modulateSamples(std::complex<float> *buf, size_t &nw) override final;
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
@@ -71,47 +73,49 @@ public:
     };
 
     /** @brief Construct an OFDM PHY.
+     * @param min_packet_size The minimum number of bytes we will send in a
+     * packet.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
-     * @param minPacketSize The minimum number of bytes we will send in a
-     * packet.
      */
     OFDM(const MCS &mcs,
          bool soft_header,
          bool soft_payload,
+         size_t min_packet_size,
          unsigned int M,
          unsigned int cp_len,
-         unsigned int taper_len,
-         size_t minPacketSize)
-      : LiquidPHY(mcs, soft_header, soft_payload)
+         unsigned int taper_len)
+      : LiquidPHY(mcs, soft_header, soft_payload, min_packet_size)
       , M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)
       , p_(NULL)
-      , min_pkt_size_(minPacketSize)
     {
     }
 
     /** @brief Construct an OFDM PHY.
+     * @param min_packet_size The minimum number of bytes we will send in a
+     * packet.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
-     * @param minPacketSize The minimum number of bytes we will send in a
-     * packet.
      */
-    OFDM(unsigned int M,
+    OFDM(const MCS &mcs,
+         bool soft_header,
+         bool soft_payload,
+         size_t min_packet_size,
+         unsigned int M,
          unsigned int cp_len,
          unsigned int taper_len,
-         unsigned char *p,
-         size_t minPacketSize) :
-         M_(M),
-         cp_len_(cp_len),
-         taper_len_(taper_len),
-         p_(p),
-         min_pkt_size_(minPacketSize)
+         unsigned char *p)
+      : LiquidPHY(mcs, soft_header, soft_payload, min_packet_size)
+      , M_(M)
+      , cp_len_(cp_len)
+      , taper_len_(taper_len)
+      , p_(p)
     {
     }
 
@@ -145,10 +149,6 @@ private:
     unsigned int cp_len_;
     unsigned int taper_len_;
     unsigned char *p_;
-
-    /** @brief Minimum packet size. */
-    /** Packets will be padded to at least this many bytes */
-    size_t min_pkt_size_;
 };
 
 #endif /* OFDM_H_ */

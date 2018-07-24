@@ -381,6 +381,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property_readonly("header_mcs", &LiquidPHY::getHeaderMCS)
         .def_property_readonly("soft_header", &LiquidPHY::getSoftHeader)
         .def_property_readonly("soft_payload", &LiquidPHY::getSoftPayload)
+        .def_readonly("min_packet_size", &LiquidPHY::min_packet_size)
         ;
 
     // Export class FlexFrame to Python
@@ -404,18 +405,18 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init<const MCS&,
                       bool,
                       bool,
+                      size_t,
                       unsigned int,
                       unsigned int,
-                      unsigned int,
-                      size_t>())
+                      unsigned int>())
         ;
 
     // Export class MultiOFDM to Python
     py::class_<MultiOFDM, LiquidPHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
-        .def(py::init<unsigned int,
+        .def(py::init<size_t,
                       unsigned int,
                       unsigned int,
-                      size_t>())
+                      unsigned int>())
         ;
 
     // Export class PacketModulator to Python

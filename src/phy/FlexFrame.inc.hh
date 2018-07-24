@@ -19,8 +19,6 @@ public:
         /** @brief Print internals of the associated flexframegen. */
         void print(void);
 
-        void modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt) override;
-
     private:
         /** @brief Associated FlexFrame PHY. */
         FlexFrame &myphy_;
@@ -35,6 +33,10 @@ public:
 
         /** Update frame properties to match fgprops_. */
         void update_props(const TXParams &params);
+
+        void assemble(unsigned char *hdr, NetPacket& pkt) override final;
+
+        bool modulateSamples(std::complex<float> *buf, size_t &nw) override final;
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
@@ -67,9 +69,8 @@ public:
     FlexFrame(const MCS &mcs,
               bool soft_header,
               bool soft_payload,
-              size_t minPacketSize)
-      : LiquidPHY(mcs, soft_header, soft_payload)
-      , min_pkt_size_(minPacketSize)
+              size_t min_packet_size)
+      : LiquidPHY(mcs, soft_header, soft_payload, min_packet_size)
     {
     }
 
@@ -96,9 +97,4 @@ public:
     std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
 
     std::unique_ptr<PHY::Modulator> make_modulator(void) override;
-
-private:
-    /** @brief Minimum packet size. */
-    /** Packets will be padded to at least this many bytes */
-    size_t min_pkt_size_;
 };

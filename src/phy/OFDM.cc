@@ -60,59 +60,22 @@ void OFDM::Modulator::update_props(const TXParams &params)
     }
 }
 
-// Initial sample buffer size
-const size_t MODBUF_SIZE = 16384;
-
-void OFDM::Modulator::modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt)
+void OFDM::Modulator::assemble(unsigned char *hdr, NetPacket& pkt)
 {
-    PHYHeader header;
-
-    memset(&header, 0, sizeof(header));
-
-    pkt->toHeader(header.h);
-
-    pkt->resize(std::max((size_t) pkt->size(), myphy_.min_pkt_size_));
-
-    update_props(*(pkt->tx_params));
+    update_props(*(pkt.tx_params));
     ofdmflexframegen_reset(fg_);
-    ofdmflexframegen_assemble(fg_, header.bytes, pkt->data(), pkt->size());
+    ofdmflexframegen_assemble(fg_, hdr, pkt.data(), pkt.size());
+}
 
-    // Buffer holding generated IQ samples
-    auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);
-    // Number of symbols generated
-    const size_t NGEN = myphy_.M_ + myphy_.cp_len_;
-    // Number of generated samples in the buffer
-    size_t nsamples = 0;
-    // Local copy of gain
-    const float g = pkt->g;
-    // Flag indicating when we've reached the last symbol
-    bool last_symbol = false;
+bool OFDM::Modulator::modulateSamples(std::complex<float> *buf, size_t &nw)
+{
+    nw = myphy_.M_ + myphy_.cp_len_;
 
-    while (!last_symbol) {
 #if LIQUID_VERSION_NUMBER >= 1003000
-        last_symbol = ofdmflexframegen_write(fg_,
-          reinterpret_cast<liquid_float_complex*>(&(*iqbuf)[nsamples]), NGEN);
+    return ofdmflexframegen_write(fg_, reinterpret_cast<liquid_float_complex*>(buf), nw);
 #else /* LIQUID_VERSION_NUMBER < 1003000 */
-        last_symbol = ofdmflexframegen_writesymbol(fg_,
-          reinterpret_cast<liquid_float_complex*>(&(*iqbuf)[nsamples]));
+    return ofdmflexframegen_writesymbol(fg_, reinterpret_cast<liquid_float_complex*>(buf));
 #endif /* LIQUID_VERSION_NUMBER < 1003000 */
-
-        // Apply soft gain. Note that this is where nsamples is incremented.
-        for (unsigned int i = 0; i < NGEN; i++)
-            (*iqbuf)[nsamples++] *= g;
-
-        // If we can't add another NGEN samples to the current IQ buffer, resize
-        // it.
-        if (nsamples + NGEN > iqbuf->size())
-            iqbuf->resize(2*iqbuf->size());
-    }
-
-    // Resize the final buffer to the number of samples generated.
-    iqbuf->resize(nsamples);
-
-    // Fill in the ModPacket
-    mpkt.samples = std::move(iqbuf);
-    mpkt.pkt = std::move(pkt);
 }
 
 OFDM::Demodulator::Demodulator(OFDM& phy)
