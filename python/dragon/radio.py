@@ -428,6 +428,25 @@ class Radio(object):
         self.net.tx_params = TXParamsList(tx_params)
 
         #
+        # Configure bandwidth and sampling rate. We MUST do this before creating
+        # the modulator and demodulator so we know at what rate we must
+        # resample.
+        #
+        bandwidth = config.bandwidth
+
+        rx_rate_oversample = self.phy.min_rx_rate_oversample
+        tx_rate_oversample = self.phy.min_tx_rate_oversample
+
+        self.usrp.rx_rate = bandwidth*rx_rate_oversample
+        self.usrp.tx_rate = bandwidth*tx_rate_oversample
+
+        rx_rate = self.usrp.rx_rate
+        tx_rate = self.usrp.tx_rate
+
+        self.phy.rx_rate = rx_rate
+        self.phy.tx_rate = tx_rate
+
+        #
         # Configure the modulator and demodulator
         #
         self.modulator = dragonradio.ParallelPacketModulator(self.net,

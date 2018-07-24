@@ -12,14 +12,8 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , bandwidth_(bandwidth)
   , timestamped_modulator_(phy->make_modulator())
 {
-    rx_rate_ = bandwidth_*phy->getMinRXRateOversample();
-    tx_rate_ = bandwidth_*phy->getMinTXRateOversample();
-
-    usrp->setRXRate(rx_rate_);
-    usrp->setTXRate(tx_rate_);
-
-    phy->setRXRate(rx_rate_);
-    phy->setTXRate(tx_rate_);
+    rx_rate_ = usrp->getRXRate();
+    tx_rate_ = usrp->getTXRate();
 }
 
 void MAC::timestampPacket(const Clock::time_point &deadline, std::shared_ptr<NetPacket> &&pkt)
