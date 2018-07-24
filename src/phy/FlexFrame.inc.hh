@@ -64,8 +64,12 @@ public:
         flexframe(sync) fs_;
     };
 
-    FlexFrame(size_t minPacketSize) :
-        min_pkt_size_(minPacketSize)
+    FlexFrame(const MCS &mcs,
+              bool soft_header,
+              bool soft_payload,
+              size_t minPacketSize)
+      : LiquidPHY(mcs, soft_header, soft_payload)
+      , min_pkt_size_(minPacketSize)
     {
     }
 

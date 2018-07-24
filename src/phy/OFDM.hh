@@ -77,15 +77,19 @@ public:
      * @param minPacketSize The minimum number of bytes we will send in a
      * packet.
      */
-    OFDM(unsigned int M,
+    OFDM(const MCS &mcs,
+         bool soft_header,
+         bool soft_payload,
+         unsigned int M,
          unsigned int cp_len,
          unsigned int taper_len,
-         size_t minPacketSize) :
-         M_(M),
-         cp_len_(cp_len),
-         taper_len_(taper_len),
-         p_(NULL),
-         min_pkt_size_(minPacketSize)
+         size_t minPacketSize)
+      : LiquidPHY(mcs, soft_header, soft_payload)
+      , M_(M)
+      , cp_len_(cp_len)
+      , taper_len_(taper_len)
+      , p_(NULL)
+      , min_pkt_size_(minPacketSize)
     {
     }
 

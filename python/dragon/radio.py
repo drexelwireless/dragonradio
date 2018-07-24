@@ -64,6 +64,16 @@ class Config(object):
         self.fec1 = 'rs8'
         self.ms = 'qpsk'
 
+        # Header liquid modulation options
+        self.header_check = 'crc32'
+        self.header_fec0 = 'secded7264'
+        self.header_fec1 = 'h84'
+        self.header_ms = 'bpsk'
+
+        # Soft decoding options
+        self.soft_header = True
+        self.soft_payload = False
+
         # OFDM parameters
         self.M = 48
         self.cp_len = 6
@@ -254,6 +264,14 @@ class Config(object):
                      dest='ms',
                      help='set modulation scheme: ' + enumHelp(dragonradio.ModulationScheme))
 
+        # Soft decoding options
+        add_argument('--soft-header', action='store_const', const=True,
+                dest='soft_header',
+                help='use soft decoding for header')
+        add_argument('--soft-payload', action='store_const', const=True,
+                dest='soft_payload',
+                help='use soft decoding for payload')
+
         # OFDM-specific options
         add_argument('-M', '--subcarriers', action='store', type=int,
                      dest='M',
@@ -353,12 +371,26 @@ class Radio(object):
         #
         # Configure the PHY
         #
+        header_mcs = MCS(config.header_check,
+                         config.header_fec0,
+                         config.header_fec1,
+                         config.header_ms)
+
         if config.phy == 'flexframe':
-            self.phy = dragonradio.FlexFrame(config.min_packet_size)
+            self.phy = dragonradio.FlexFrame(header_mcs,
+                                             config.soft_header,
+                                             config.soft_payload,
+                                             config.min_packet_size)
         elif config.phy == 'newflexframe':
-            self.phy = dragonradio.NewFlexFrame(config.min_packet_size)
+            self.phy = dragonradio.NewFlexFrame(header_mcs,
+                                                config.soft_header,
+                                                config.soft_payload,
+                                                config.min_packet_size)
         elif config.phy == 'ofdm':
-            self.phy = dragonradio.OFDM(config.M,
+            self.phy = dragonradio.OFDM(header_mcs,
+                                        config.soft_header,
+                                        config.soft_payload,
+                                        config.M,
                                         config.cp_len,
                                         config.taper_len,
                                         config.min_packet_size)

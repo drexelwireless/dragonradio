@@ -15,6 +15,17 @@ FlexFrame::Modulator::Modulator(FlexFrame &phy)
 
     flexframe(genprops_init_default)(&fgprops_);
     fg_ = flexframe(gen_create)(&fgprops_);
+
+#if LIQUID_VERSION_NUMBER >= 1003001
+    flexframe(genprops_s) header_props { phy.header_mcs_.check
+                                       , phy.header_mcs_.fec0
+                                       , phy.header_mcs_.fec1
+                                       , phy.header_mcs_.ms
+                                       };
+
+    flexframe(gen_set_header_props)(fg_, &header_props);
+    flexframe(gen_set_header_len)(fg_, sizeof(Header));
+#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
 }
 
 FlexFrame::Modulator::~Modulator()
@@ -104,6 +115,19 @@ FlexFrame::Demodulator::Demodulator(FlexFrame &phy)
     std::lock_guard<std::mutex> lck(liquid_mutex);
 
     fs_ = flexframe(sync_create)(&LiquidDemodulator::liquid_callback, this);
+
+#if LIQUID_VERSION_NUMBER >= 1003001
+    flexframe(genprops_s) header_props { phy.header_mcs_.check
+                                       , phy.header_mcs_.fec0
+                                       , phy.header_mcs_.fec1
+                                       , phy.header_mcs_.ms
+                                       };
+
+    flexframe(sync_set_header_props)(fs_, &header_props);
+    flexframe(sync_set_header_len)(fs_, sizeof(Header));
+    flexframe(sync_decode_header_soft)(fs_, phy.soft_header_);
+    flexframe(sync_decode_payload_soft)(fs_, phy.soft_payload_);
+#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
 }
 
 FlexFrame::Demodulator::~Demodulator()

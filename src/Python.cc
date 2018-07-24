@@ -374,21 +374,33 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class LiquidPHY to Python
     py::class_<LiquidPHY, PHY, std::shared_ptr<LiquidPHY>>(m, "LiquidPHY")
+        .def_property_readonly("header_mcs", &LiquidPHY::getHeaderMCS)
+        .def_property_readonly("soft_header", &LiquidPHY::getSoftHeader)
+        .def_property_readonly("soft_payload", &LiquidPHY::getSoftPayload)
         ;
 
     // Export class FlexFrame to Python
     py::class_<FlexFrame, LiquidPHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
-        .def(py::init<size_t>())
+        .def(py::init<const MCS&,
+                      bool,
+                      bool,
+                      size_t>())
         ;
 
     // Export class NewFlexFrame to Python
     py::class_<NewFlexFrame, LiquidPHY, std::shared_ptr<NewFlexFrame>>(m, "NewFlexFrame")
-        .def(py::init<size_t>())
+        .def(py::init<const MCS&,
+                      bool,
+                      bool,
+                      size_t>())
         ;
 
     // Export class OFDM to Python
-    py::class_<OFDM, LiquidPHY, std::shared_ptr<OFDM>>(m, "OFDM")
-        .def(py::init<unsigned int,
+    py::class_<OFDM, PHY, std::shared_ptr<OFDM>>(m, "OFDM")
+        .def(py::init<const MCS&,
+                      bool,
+                      bool,
+                      unsigned int,
                       unsigned int,
                       unsigned int,
                       size_t>())

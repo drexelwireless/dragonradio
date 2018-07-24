@@ -22,6 +22,17 @@ OFDM::Modulator::Modulator(OFDM& phy)
                                   myphy_.taper_len_,
                                   myphy_.p_,
                                   &fgprops_);
+
+#if LIQUID_VERSION_NUMBER >= 1003001
+    ofdmflexframegenprops_s header_props { phy.header_mcs_.check
+                                         , phy.header_mcs_.fec0
+                                         , phy.header_mcs_.fec1
+                                         , phy.header_mcs_.ms
+                                         };
+
+    ofdmflexframegen_set_header_props(fg_, &header_props);
+    ofdmflexframegen_set_header_len(fg_, sizeof(Header));
+#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
 }
 
 OFDM::Modulator::~Modulator()
@@ -116,6 +127,19 @@ OFDM::Demodulator::Demodulator(OFDM& phy)
                                    myphy_.p_,
                                    &LiquidDemodulator::liquid_callback,
                                    this);
+
+#if LIQUID_VERSION_NUMBER >= 1003001
+    ofdmflexframegenprops_s header_props { phy.header_mcs_.check
+                                         , phy.header_mcs_.fec0
+                                         , phy.header_mcs_.fec1
+                                         , phy.header_mcs_.ms
+                                         };
+
+    ofdmflexframesync_set_header_props(fs_, &header_props);
+    ofdmflexframesync_set_header_len(fs_, sizeof(Header));
+    ofdmflexframesync_decode_header_soft(fs_, phy.soft_header_);
+    ofdmflexframesync_decode_payload_soft(fs_, phy.soft_payload_);
+#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
 }
 
 OFDM::Demodulator::~Demodulator()

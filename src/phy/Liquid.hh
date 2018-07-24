@@ -16,6 +16,7 @@ extern std::mutex liquid_mutex;
 
 class LiquidPHY : public PHY {
 public:
+    LiquidPHY(const MCS &header_mcs, bool soft_header, bool soft_payload);
     LiquidPHY();
     virtual ~LiquidPHY();
 
@@ -24,6 +25,40 @@ public:
 
     LiquidPHY& operator=(const LiquidPHY&) = delete;
     LiquidPHY& operator=(LiquidPHY&&) = delete;
+
+    /** @brief Return modulation and coding scheme used for headers. */
+    const MCS &getHeaderMCS() const
+    {
+        return header_mcs_;
+    }
+
+    /** @brief Return flag indicating whether or not to use soft-decoding for
+      * headers.
+      */
+    bool getSoftHeader() const
+    {
+        return soft_header_;
+    }
+
+    /** @brief Return flag indicating whether or not to use soft-decoding for
+      * payload.
+      */
+    bool getSoftPayload() const
+    {
+        return soft_payload_;
+    }
+
+protected:
+    /** @brief Modulation and coding scheme for headers. */
+    const MCS header_mcs_;
+
+    /** @brief Flag indicating whether or not to use soft-decoding for headers.
+      */
+    const bool soft_header_;
+
+    /** @brief Flag indicating whether or not to use soft-decoding for payload.
+      */
+    const bool soft_payload_;
 };
 
 class LiquidModulator : public PHY::Modulator {

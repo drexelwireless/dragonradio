@@ -4,7 +4,16 @@
 
 std::mutex liquid_mutex;
 
+LiquidPHY::LiquidPHY(const MCS &header_mcs, bool soft_header, bool soft_payload)
+  : header_mcs_(header_mcs)
+  , soft_header_(soft_header)
+  , soft_payload_(soft_payload)
+{
+}
+
 LiquidPHY::LiquidPHY()
+  : soft_header_(false)
+  , soft_payload_(false)
 {
 }
 
