@@ -125,12 +125,12 @@ public:
     OFDM& operator=(const OFDM&) = delete;
     OFDM& operator=(OFDM&&) = delete;
 
-    double getRXRateOversample(void) const override
+    double getMinRXRateOversample(void) const override
     {
         return 1.0;
     }
 
-    double getTXRateOversample(void) const override
+    double getMinTXRateOversample(void) const override
     {
         return 1.0;
     }

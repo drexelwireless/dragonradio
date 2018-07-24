@@ -83,12 +83,12 @@ public:
     FlexFrame& operator=(const FlexFrame&) = delete;
     FlexFrame& operator=(FlexFrame&&) = delete;
 
-    double getRXRateOversample(void) const override
+    double getMinRXRateOversample(void) const override
     {
         return 2.0;
     }
 
-    double getTXRateOversample(void) const override
+    double getMinTXRateOversample(void) const override
     {
         return 2.0;
     }

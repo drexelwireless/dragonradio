@@ -63,17 +63,17 @@ public:
     PHY() {}
     virtual ~PHY() {}
 
-    /** @brief Return the IQ oversample rate (with respect to PHY bandwidth)
-     * needed for demodulation
+    /** @brief Return the minimum oversample rate (with respect to PHY
+     * bandwidth) needed for demodulation
      * @return The RX oversample rate
      */
-    virtual double getRXRateOversample(void) const = 0;
+    virtual double getMinRXRateOversample(void) const = 0;
 
-    /** @brief Return the IQ oversample rate (with respect to PHY bandwidth)
-      * needed for modulation
-      * @return The TX oversample rate
-      */
-    virtual double getTXRateOversample(void) const = 0;
+    /** @brief Return the minimum oversample rate (with respect to PHY
+     * bandwidth) needed for modulation
+     * @return The TX oversample rate
+     */
+    virtual double getMinTXRateOversample(void) const = 0;
 
     /** @brief Tell the PHY what RX sample rate we are running at.
      * @param rate The rate.

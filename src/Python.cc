@@ -368,8 +368,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class PHY to Python
     py::class_<PHY, std::shared_ptr<PHY>>(m, "PHY")
-        .def("getRXRateOversample", &PHY::getRXRateOversample)
-        .def("getTXRateOversample", &PHY::getTXRateOversample)
+        .def_property_readonly("min_rx_rate_oversample", &PHY::getMinRXRateOversample)
+        .def_property_readonly("min_tx_rate_oversample", &PHY::getMinTXRateOversample)
         ;
 
     // Export class LiquidPHY to Python

@@ -12,8 +12,8 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , bandwidth_(bandwidth)
   , timestamped_modulator_(phy->make_modulator())
 {
-    rx_rate_ = bandwidth_*phy->getRXRateOversample();
-    tx_rate_ = bandwidth_*phy->getTXRateOversample();
+    rx_rate_ = bandwidth_*phy->getMinRXRateOversample();
+    tx_rate_ = bandwidth_*phy->getMinTXRateOversample();
 
     usrp->setRXRate(rx_rate_);
     usrp->setTXRate(tx_rate_);

@@ -121,14 +121,14 @@ public:
     MultiOFDM& operator=(MultiOFDM&&) = delete;
 
     // MultiChannel TX/RX requires oversampling by a factor of 2
-    double getRXRateOversample(void) const override
+    double getMinRXRateOversample(void) const override
     {
-        return 2;
+        return 2.0;
     }
 
-    double getTXRateOversample(void) const override
+    double getMinTXRateOversample(void) const override
     {
-        return 2;
+        return 2.0;
     }
 
     std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
