@@ -663,7 +663,9 @@ void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq, b
         if (explicitNak || seq >= sendw.modidx_init_seq) {
             txFailure(sendw, dest);
 
-            logEvent("AMC: txFailure nak: per=%f",
+            logEvent("AMC: txFailure nak: seq=%u; explicit=%s; per=%f",
+                (unsigned) seq,
+                explicitNak ? "true" : "false",
                 dest.short_per.getValue());
         }
 
