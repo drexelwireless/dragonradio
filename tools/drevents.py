@@ -21,6 +21,7 @@ EVENTS = [ [r'^AMC: Moving up modulation scheme', 'AMC', 'g']
          , [r'^PHY: invalid header', 'PHY', 'r']
          , [r'^PHY: invalid payload', 'PHY', 'y']
          , [r'^TIMESYNC:', 'TIMESYNC', 'k']
+         , [r'^(RX|TX) error:', 'USRP', 'r']
          ]
 
 for i in range(0, len(EVENTS)):
@@ -177,6 +178,9 @@ def main():
     parser.add_argument('--timesync', action='store_true',
                         default=False,
                         help='show time snchronization events')
+    parser.add_argument('--usrp', action='store_true',
+                        default=False,
+                        help='show USRP error events')
     parser.add_argument('paths', nargs='*')
     args = parser.parse_args()
 
@@ -214,6 +218,9 @@ def main():
 
         if args.timesync:
             e.addSeriesCategory(node, 'TIMESYNC')
+
+        if args.usrp:
+            e.addSeriesCategory(node, 'USRP')
 
         if args.send:
             e.addSeriesCategory(node, 'sent')
