@@ -221,7 +221,11 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
             fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
-            logEvent("RX error: %s", rx_md.strerror().c_str());
+
+            if (rx_md.has_time_spec)
+                logEventAt(Clock::to_wall_time(MonoClock::time_point { rx_md.time_spec }), "RX error: %s", rx_md.strerror().c_str());
+            else
+                logEvent("RX error: %s", rx_md.strerror().c_str());
 
             if (rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
                 return false;
@@ -326,7 +330,10 @@ void USRP::txErrorWorker(void)
         if (msg) {
             if (rc.verbose)
                 fprintf(stderr, "%s\n", msg);
-            logEvent("%s", msg);
+            if (async_md.has_time_spec)
+                logEventAt(Clock::to_wall_time(MonoClock::time_point { async_md.time_spec }), "%s", msg);
+            else
+                logEvent("%s", msg);
         }
     }
 }
