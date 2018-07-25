@@ -82,7 +82,7 @@ public:
                  uint32_t size,
                  std::shared_ptr<IQBuf> buf);
 
-    void logEvent(const char *fmt, va_list ap);
+    void logEvent(const Clock::time_point& t, const char *fmt, va_list ap);
 
     void stop(void);
 
@@ -142,6 +142,19 @@ private:
                    const std::string& event);
 };
 
+void logEventAt(const Clock::time_point& t, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+
+inline void logEventAt(const Clock::time_point& t, const char *fmt, ...)
+{
+    if (logger) {
+        va_list ap;
+
+        va_start(ap, fmt);
+        logger->logEvent(t, fmt, ap);
+        va_end(ap);
+    }
+}
+
 void logEvent(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 inline void logEvent(const char *fmt, ...)
@@ -150,7 +163,7 @@ inline void logEvent(const char *fmt, ...)
         va_list ap;
 
         va_start(ap, fmt);
-        logger->logEvent(fmt, ap);
+        logger->logEvent(Clock::now(), fmt, ap);
         va_end(ap);
     }
 }

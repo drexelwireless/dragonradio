@@ -291,7 +291,7 @@ void Logger::logSend(const Clock::time_point& t,
         log_q_.emplace([=](){ logSend_(t, hdr, src, dest, size, buf); });
 }
 
-void Logger::logEvent(const char *fmt, va_list ap0)
+void Logger::logEvent(const Clock::time_point& t, const char *fmt, va_list ap0)
 {
     if (getCollectSource(kEvents)) {
         int                     n = 2 * strlen(fmt);
@@ -316,7 +316,7 @@ void Logger::logEvent(const char *fmt, va_list ap0)
         if (rc.verbose)
             fprintf(stderr, "%s\n", s.c_str());
 
-        log_q_.emplace([=](){ logEvent_(Clock::now(), s); });
+        log_q_.emplace([=](){ logEvent_(t, s); });
     }
 }
 
