@@ -99,11 +99,36 @@ public:
      */
     bool burstRX(MonoClock::time_point when, size_t nsamps, IQBuf& buf);
 
-    /** @brief Return the Maximum number of samples we will read at a time
-     * during burstRX. */
+    /** @brief Return the maximum number of samples we will read at a time
+     * during burstRX.
+     */
     size_t getMaxRXSamps(void)
     {
         return rx_max_samps_;
+    }
+
+    /** @brief Set the maximum number of samples we will read at a time
+     * during burstRX.
+     */
+    void setMaxRXSamps(size_t count)
+    {
+        rx_max_samps_ = count;
+    }
+
+    /** @brief Return the maximum number of samples we will write at a time
+     * during burstTX.
+     */
+    size_t getMaxTXSamps(void)
+    {
+        return tx_max_samps_;
+    }
+
+    /** @brief Set the maximum number of samples we will write at a time
+     * during burstTX.
+     */
+    void setMaxTXSamps(size_t count)
+    {
+        tx_max_samps_ = count;
     }
 
     /** @brief Stop processing data. */

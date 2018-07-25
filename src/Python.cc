@@ -222,6 +222,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("rx_rate", &USRP::getRXRate, &USRP::setRXRate)
         .def_property("tx_gain", &USRP::getTXGain, &USRP::setTXGain)
         .def_property("rx_gain", &USRP::getRXGain, &USRP::setRXGain)
+        .def_property("tx_max_samps", &USRP::getMaxTXSamps, &USRP::setMaxTXSamps)
+        .def_property("rx_max_samps", &USRP::getMaxRXSamps, &USRP::setMaxRXSamps)
         ;
 
     // Export port wrapper classes to Python
