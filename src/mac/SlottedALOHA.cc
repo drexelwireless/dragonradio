@@ -61,7 +61,7 @@ void SlottedALOHA::reconfigure(void)
     // This may lead to duplicate packets, but we may also not be
     // time-synchronized yet, so our slots may be mis-aligned.
     demodulator_->setWindowParameters(0.5*slot_size_*rx_rate_,
-                                      slot_size_*tx_rate_);
+                                      slot_size_*rx_rate_);
 }
 
 void SlottedALOHA::txWorker(void)

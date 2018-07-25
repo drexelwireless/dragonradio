@@ -52,7 +52,7 @@ void SlottedMAC::reconfigure(void)
     modulator_->setMaxPacketSize(tx_slot_samps_);
 
     demodulator_->setWindowParameters(0.5*guard_size_*rx_rate_,
-                                      (slot_size_ - 0.5*guard_size_)*tx_rate_);
+                                      (slot_size_ - 0.5*guard_size_)*rx_rate_);
 }
 
 void SlottedMAC::rxWorker(void)
