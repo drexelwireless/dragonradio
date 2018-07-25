@@ -231,6 +231,9 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
                 return false;
         }
 
+        if (n == 0 || rx_md.time_spec < t_start.t)
+            continue;
+
         if (ndelivered == 0) {
             buf.timestamp = Clock::to_wall_time(MonoClock::time_point { rx_md.time_spec });
             buf.undersample = (rx_md.time_spec - t_start.t).get_real_secs() * rxRate;
