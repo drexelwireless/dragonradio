@@ -58,7 +58,6 @@ void ParallelPacketDemodulator::stop(void)
     }
 }
 
-
 bool ParallelPacketDemodulator::getEnforceOrdering(void)
 {
     return enforce_ordering_;
