@@ -2,6 +2,19 @@
 #include "RadioConfig.hh"
 #include "phy/Liquid.hh"
 
+// Initial modulation buffer size
+const size_t kInitialModbufSize = 16384;
+
+// Stop-band attenuation for resamplers
+const float kStopBandAttenuationDb = 60.0f;
+
+// Maximum number of samples in upsample buffer. All current liquid modulation
+// schemes produce 2 samples at a time, and we normally upsample by at most 8.
+// The difficulty is that different modulation schemes operate at different
+// "chunk" sizes, i.e., flexframe outputs 2 samples at a time, whereas OFDM
+// outputs one frame at a time.
+const size_t kMaxUpsampleSize = 1024;
+
 std::mutex liquid_mutex;
 
 union PHYHeader {
@@ -36,14 +49,14 @@ LiquidModulator::LiquidModulator(LiquidPHY &phy)
     : Modulator(phy)
     , liquid_phy_(phy)
 {
+    upsamp_rate_ = phy.getTXRateOversample()/phy.getMinTXRateOversample();
+    upsamp_ = msresamp_crcf_create(upsamp_rate_, kStopBandAttenuationDb);
 }
 
 LiquidModulator::~LiquidModulator()
 {
+    msresamp_crcf_destroy(upsamp_);
 }
-
-// Initial sample buffer size
-const size_t MODBUF_SIZE = 16384;
 
 void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
 {
@@ -58,18 +71,33 @@ void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
     assemble(header.bytes, *pkt);
 
     // Buffer holding generated IQ samples
-    auto iqbuf = std::make_unique<IQBuf>(MODBUF_SIZE);
+    auto iqbuf = std::make_unique<IQBuf>(kInitialModbufSize);
     // Number of generated samples in the buffer
     size_t nsamples = 0;
     // Local copy of gain
     const float g = pkt->g;
+    // Number of samples written pre-upsampling
+    size_t nw_preup;
     // Number of samples written
-    size_t nw;
+    unsigned int nw;
     // Flag indicating when we've reached the last symbol
     bool last_symbol = false;
+    // Modulated output buffer
+    liquid_float_complex modbuf[kMaxUpsampleSize];
 
     while (!last_symbol) {
-        last_symbol = modulateSamples(&(*iqbuf)[nsamples], nw);
+        if (upsamp_rate_ == 1.0) {
+            last_symbol = modulateSamples(&(*iqbuf)[nsamples], nw_preup);
+            nw = nw_preup;
+        } else {
+            last_symbol = modulateSamples(modbuf, nw_preup);
+
+            msresamp_crcf_execute(upsamp_,
+                                  modbuf,
+                                  nw_preup,
+                                  reinterpret_cast<liquid_float_complex*>(&(*iqbuf)[nsamples]),
+                                  &nw);
+        }
 
         // Apply soft gain. Note that this is where nsamples is incremented.
         for (unsigned int i = 0; i < nw; i++)
@@ -77,7 +105,7 @@ void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
 
         // If we can't add another nw samples to the current IQ buffer, resize
         // it.
-        if (nsamples + nw > iqbuf->size())
+        if (nsamples + kMaxUpsampleSize > iqbuf->size())
             iqbuf->resize(2*iqbuf->size());
     }
 
@@ -94,10 +122,13 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
   , liquid_phy_(phy)
   , internal_oversample_fact_(1)
 {
+    downsamp_rate_ = phy.getRXRateOversample()/phy.getMinRXRateOversample();
+    downsamp_ = msresamp_crcf_create(1.0/downsamp_rate_, kStopBandAttenuationDb);
 }
 
 LiquidDemodulator::~LiquidDemodulator()
 {
+    msresamp_crcf_destroy(downsamp_);
 }
 
 int LiquidDemodulator::liquid_callback(unsigned char *  header_,
@@ -126,10 +157,11 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 {
     Header* h = reinterpret_cast<Header*>(header_);
     size_t  off = demod_off_;   // Save demodulation offset for use when we log.
+    double  resamp_fact = internal_oversample_fact_*liquid_phy_.getRXRateOversample()/liquid_phy_.getMinRXRateOversample();
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
-    demod_off_ += internal_oversample_fact_*stats_.end_counter;
+    demod_off_ += resamp_fact*stats_.end_counter;
 
     // Create the packet and fill it out
     std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(payload_, payload_len_);
@@ -162,7 +194,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     pkt->rssi = stats_.rssi;
     pkt->cfo = stats_.cfo;
 
-    pkt->timestamp = demod_start_ + (off + internal_oversample_fact_*stats_.start_counter) / phy_.getRXRate();
+    pkt->timestamp = demod_start_ + (off + resamp_fact*stats_.start_counter) / phy_.getRXRate();
 
     callback_(std::move(pkt));
 
@@ -175,8 +207,8 @@ int LiquidDemodulator::callback(unsigned char *  header_,
         }
 
         logger->logRecv(demod_start_,
-                        off + internal_oversample_fact_*stats_.start_counter,
-                        off + internal_oversample_fact_*stats_.end_counter,
+                        off + resamp_fact*stats_.start_counter,
+                        off + resamp_fact*stats_.end_counter,
                         header_valid_,
                         payload_valid_,
                         *h,
@@ -202,6 +234,8 @@ void LiquidDemodulator::reset(Clock::time_point timestamp, size_t off)
 
     demod_start_ = timestamp;
     demod_off_ = off;
+
+    msresamp_crcf_reset(downsamp_);
 }
 
 void LiquidDemodulator::demodulate(std::complex<float>* data,
@@ -210,5 +244,14 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
 {
     callback_ = callback;
 
-    demodulateSamples(reinterpret_cast<liquid_float_complex*>(data), count);
+    if (downsamp_rate_ == 1.0) {
+        demodulateSamples(reinterpret_cast<liquid_float_complex*>(data), count);
+    } else {
+        std::unique_ptr<liquid_float_complex[]> downsampbuf(new liquid_float_complex[count]);
+        unsigned int                            nw;
+
+        msresamp_crcf_execute(downsamp_, reinterpret_cast<liquid_float_complex*>(data), count, downsampbuf.get(), &nw);
+
+        demodulateSamples(downsampbuf.get(), nw);
+    }
 }

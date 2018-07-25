@@ -85,6 +85,12 @@ protected:
     /** Our Liquid PHY */
     LiquidPHY &liquid_phy_;
 
+    /** @brief Upsampler. */
+    msresamp_crcf upsamp_;
+
+    /** @brief Upsampler rate. */
+    double upsamp_rate_;
+
     /** @brief Assemble a packet for modulation.
      * @param hdr Packet header
      * @param pkt The NetPacket to assemble.
@@ -119,6 +125,12 @@ public:
 protected:
     /** Our Liquid PHY */
     LiquidPHY &liquid_phy_;
+
+    /** @brief Downsampler. */
+    msresamp_crcf downsamp_;
+
+    /** @brief Downsampler rate. */
+    double downsamp_rate_;
 
     /** @brief Callback for received packets. */
     std::function<void(std::unique_ptr<RadioPacket>)> callback_;

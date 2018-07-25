@@ -434,8 +434,10 @@ class Radio(object):
         #
         bandwidth = config.bandwidth
 
-        rx_rate_oversample = self.phy.min_rx_rate_oversample
-        tx_rate_oversample = self.phy.min_tx_rate_oversample
+        oversample_factor = 1.0
+
+        rx_rate_oversample = oversample_factor*self.phy.min_rx_rate_oversample
+        tx_rate_oversample = oversample_factor*self.phy.min_tx_rate_oversample
 
         self.usrp.rx_rate = bandwidth*rx_rate_oversample
         self.usrp.tx_rate = bandwidth*tx_rate_oversample
