@@ -187,6 +187,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             "ACK delay, in seconds")
         .def_readwrite("retransmission_delay", &RadioConfig::retransmission_delay,
             "Retransmission delay, in seconds")
+        .def_readwrite("slot_modulate_time", &RadioConfig::slot_modulate_time,
+            "Time needed to modulate a slot's worth of data, in seconds")
+        .def_readwrite("slot_send_time", &RadioConfig::slot_send_time,
+            "Time needed to send a slot's worth of data, in seconds")
         ;
 
     // Export our global RadioConfig
@@ -423,7 +427,6 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class PacketModulator to Python
     py::class_<PacketModulator, std::shared_ptr<PacketModulator>>(m, "PacketModulator")
-        .def_property("low_water_mark", &PacketModulator::getLowWaterMark, &PacketModulator::setLowWaterMark)
         ;
 
     // Export class ParallelPacketModulator to Python

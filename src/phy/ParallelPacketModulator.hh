@@ -18,9 +18,7 @@ public:
                             size_t nthreads);
     virtual ~ParallelPacketModulator();
 
-    size_t getLowWaterMark(void) override;
-
-    void setLowWaterMark(size_t mark) override;
+    void modulate(size_t n) override;
 
     void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples) override;
 
@@ -43,8 +41,8 @@ private:
     /** @brief Thread running modWorker */
     std::vector<std::thread> mod_threads_;
 
-    /** @brief Number of modulated samples we want to have on-hand at all times. */
-    size_t low_water_mark_;
+    /** @brief Number of modulated samples we want. */
+    size_t nwanted_;
 
     /** @brief Number of modulated samples we have */
     size_t nsamples_;

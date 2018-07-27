@@ -10,13 +10,10 @@ public:
     PacketModulator(void) : maxPacketSize_(0) {};
     virtual ~PacketModulator() {};
 
-    /** @brief Get the low-water mark. */
-    virtual size_t getLowWaterMark(void) = 0;
-
-    /** @brief Set the low-water mark, i.e., the minimum number of samples we
-     * want to have available at all times.
+    /** @brief Modulate samples.
+     * @param n The number of samples to produce.
      */
-    virtual void setLowWaterMark(size_t mark) = 0;
+    virtual void modulate(size_t n) = 0;
 
     /** @brief Pop a list of modulated packet such that the total number of
      * modulated samples is maxSamples or fewer.

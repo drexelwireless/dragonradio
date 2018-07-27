@@ -2,6 +2,7 @@
 
 #include "Clock.hh"
 #include "USRP.hh"
+#include "RadioConfig.hh"
 #include "Util.hh"
 #include "mac/TDMA.hh"
 
@@ -80,6 +81,7 @@ void TDMA::txWorker(void)
     Clock::time_point t_prev_slot;      // Previous, completed slot
     Clock::time_point t_next_slot;      // Time at which our next slot starts
     Clock::time_point t_following_slot; // Time at which our following slot starts
+    double            delta;
 
     uhd::set_thread_priority_safe();
 
@@ -105,10 +107,21 @@ void TDMA::txWorker(void)
         // Find following slot
         findNextSlot(t_next_slot + slot_size_, t_following_slot);
 
-        // Sleep until one slot before our following slot
+        // Sleep until it's time to modulate the next slot
         t_now = Clock::now();
 
-        double delta = (t_following_slot - t_now - slot_size_).get_real_secs();
+        delta = (t_following_slot - t_now - rc.slot_modulate_time).get_real_secs();
+
+        if (delta > 0.0)
+            doze(delta);
+
+        // Modulate samples for next slot
+        modulator_->modulate(tx_slot_samps_);
+
+        // Sleep until it's time to send the slot's modulated data
+        t_now = Clock::now();
+
+        delta = (t_following_slot - t_now - rc.slot_send_time).get_real_secs();
 
         if (delta > 0.0)
             doze(delta);

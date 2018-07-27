@@ -11,5 +11,7 @@ RadioConfig::RadioConfig()
   , ack_delay(100e-3)
   , retransmission_delay(500e-3)
   , max_reorder_delay(100e-3)
+  , slot_modulate_time(35e-3)
+  , slot_send_time(20e-3)
 {
 }

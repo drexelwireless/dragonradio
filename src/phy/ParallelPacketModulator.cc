@@ -7,13 +7,13 @@
 
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
-                                                 size_t nthreads) :
-    sink(*this, nullptr, nullptr),
-    net_(net),
-    phy_(phy),
-    done_(false),
-    low_water_mark_(0),
-    nsamples_(0)
+                                                 size_t nthreads)
+  : sink(*this, nullptr, nullptr)
+  , net_(net)
+  , phy_(phy)
+  , done_(false)
+  , nwanted_(0)
+  , nsamples_(0)
 {
     for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&ParallelPacketModulator::modWorker, this));
@@ -38,19 +38,14 @@ void ParallelPacketModulator::stop(void)
     }
 }
 
-size_t ParallelPacketModulator::getLowWaterMark(void)
+void ParallelPacketModulator::modulate(size_t n)
 {
-    return low_water_mark_;
-}
+    std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-void ParallelPacketModulator::setLowWaterMark(size_t mark)
-{
-    size_t old_low_water_mark = low_water_mark_;
-
-    low_water_mark_ = mark;
-
-    if (mark > old_low_water_mark)
+    if (n > nsamples_) {
+        nwanted_ = n - nsamples_;
         producer_cond_.notify_all();
+    }
 }
 
 void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples)
@@ -101,7 +96,7 @@ void ParallelPacketModulator::modWorker(void)
         {
             std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-            producer_cond_.wait(lock, [this]{ return done_ || nsamples_ < low_water_mark_; });
+            producer_cond_.wait(lock, [this]{ return done_ || nwanted_ > 0; });
         }
 
         // Exit if we are done
@@ -157,6 +152,7 @@ void ParallelPacketModulator::modWorker(void)
             std::lock_guard<std::mutex> lock(pkt_mutex_);
 
             nsamples_ += n;
+            nwanted_ -= n;
         }
     }
 }

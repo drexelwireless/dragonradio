@@ -55,7 +55,6 @@ void SlottedALOHA::reconfigure(void)
     rx_slot_samps_ = rx_rate_*slot_size_;
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
 
-    modulator_->setLowWaterMark(tx_slot_samps_);
     modulator_->setMaxPacketSize(tx_slot_samps_);
 
     // For ALOHA, we demodulate the whole slot, including the guard interval.
@@ -90,8 +89,12 @@ void SlottedALOHA::txWorker(void)
                 transmit = true;
         }
 
-        if (transmit)
+        if (transmit) {
             txSlot(t_next_slot, tx_slot_samps_);
+
+            // Modulate samples for next slot
+            modulator_->modulate(tx_slot_samps_);
+        }
 
         // Sleep until the next slot
         doze((t_next_slot - t_now).get_real_secs());

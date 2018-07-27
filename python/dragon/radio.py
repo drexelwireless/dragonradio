@@ -86,6 +86,8 @@ class Config(object):
         self.slot_size = .035
         self.guard_size = .01
         self.aloha_prob = .1
+        self.slot_modulate_time = 30e-3
+        self.slot_send_time = 10e-3
 
         # ARQ options
         self.arq = False
@@ -331,7 +333,12 @@ class Radio(object):
         logger.info('Radio configuration:\n' + str(config))
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose', 'short_per_npackets', 'long_per_npackets', 'timestamp_delay', 'max_packet_size', 'ack_delay', 'retransmission_delay']:
+        for attr in ['verbose',
+                     'short_per_npackets', 'long_per_npackets',
+                     'timestamp_delay',
+                     'max_packet_size',
+                     'ack_delay', 'retransmission_delay',
+                     'slot_modulate_time', 'slot_send_time']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
 
