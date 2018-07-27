@@ -25,6 +25,16 @@ public:
     /** @brief Stop modulating. */
     void stop(void);
 
+    double getFreqShift(void) override
+    {
+        return shift_;
+    }
+
+    void setFreqShift(double shift) override
+    {
+        shift_ = shift;
+    }
+
     /** @brief Input port for packets. */
     NetIn<Pull> sink;
 
@@ -46,6 +56,9 @@ private:
 
     /** @brief Number of modulated samples we have */
     size_t nsamples_;
+
+    /** @brief Frequency shift */
+    double shift_;
 
     /** @brief Mutex to serialize access to the network */
     std::mutex net_mutex_;

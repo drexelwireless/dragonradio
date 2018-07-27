@@ -7,6 +7,7 @@
 #include <liquid/liquid.h>
 
 #include "Clock.hh"
+#include "NCO.hh"
 #include "Packet.hh"
 #include "phy/PHY.hh"
 
@@ -121,6 +122,7 @@ public:
 
     void demodulate(std::complex<float>* data,
                     size_t count,
+                    double shift,
                     std::function<void(std::unique_ptr<RadioPacket>)> callback) override final;
 
 protected:
@@ -150,6 +152,12 @@ protected:
      * which we started demodulating.
      */
     size_t demod_off_;
+
+    /** @brief Frequency for mixing down */
+    double shift_;
+
+    /** @brief NCO for mixing down */
+    TableNCO nco_;
 
     static int liquid_callback(unsigned char *  header_,
                                int              header_valid_,

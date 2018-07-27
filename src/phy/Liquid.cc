@@ -1,4 +1,5 @@
 #include "Logger.hh"
+#include "NCO.hh"
 #include "RadioConfig.hh"
 #include "WorkQueue.hh"
 #include "phy/Liquid.hh"
@@ -128,6 +129,8 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
   : Demodulator(phy)
   , liquid_phy_(phy)
   , internal_oversample_fact_(1)
+  , shift_(0.0)
+  , nco_(0.0)
 {
     downsamp_rate_ = phy.getRXRateOversample()/phy.getMinRXRateOversample();
     downsamp_ = msresamp_crcf_create(1.0/downsamp_rate_, kStopBandAttenuationDb);
@@ -247,18 +250,33 @@ void LiquidDemodulator::reset(Clock::time_point timestamp, size_t off)
 
 void LiquidDemodulator::demodulate(std::complex<float>* data,
                                    size_t count,
+                                   double shift,
                                    std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
     callback_ = callback;
 
-    if (downsamp_rate_ == 1.0) {
+    if (downsamp_rate_ == 1.0 && shift == 0.0) {
         demodulateSamples(data, count);
     } else {
-        std::unique_ptr<std::complex<float>[]> downsampbuf(new std::complex<float>[count]);
-        unsigned int                           nw;
+        std::unique_ptr<std::complex<float>[]> mixbuf(new std::complex<float>[count]);
 
-        msresamp_crcf_execute(downsamp_, data, count, downsampbuf.get(), &nw);
+        memcpy(mixbuf.get(), data, sizeof(std::complex<float>)*count);
 
-        demodulateSamples(downsampbuf.get(), nw);
+        if (shift != 0.0) {
+            // We don't reset the NCO unless we have to so as to avoid phase
+            // discontinuities during demodulation.
+            if (shift_ != shift) {
+                shift_ = shift;
+                nco_.reset(2*M_PI*shift/liquid_phy_.getRXRate());
+            }
+
+            nco_.mix_down(mixbuf.get(), count);
+        }
+
+        unsigned int nw;
+
+        msresamp_crcf_execute(downsamp_, mixbuf.get(), count, mixbuf.get(), &nw);
+
+        demodulateSamples(mixbuf.get(), nw);
     }
 }

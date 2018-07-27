@@ -9,15 +9,16 @@ using namespace std::placeholders;
 
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
                                                      std::shared_ptr<PHY> phy,
-                                                     unsigned int nthreads) :
-    source(*this, nullptr, nullptr),
-    net_(net),
-    phy_(phy),
-    enforce_ordering_(false),
-    prev_samps_(0),
-    cur_samps_(0),
-    done_(false),
-    demod_q_(radio_q_)
+                                                     unsigned int nthreads)
+  : source(*this, nullptr, nullptr)
+  , net_(net)
+  , phy_(phy)
+  , shift_(0.0)
+  , enforce_ordering_(false)
+  , prev_samps_(0)
+  , cur_samps_(0)
+  , done_(false)
+  , demod_q_(radio_q_)
 {
     net_thread_ = std::thread(&ParallelPacketDemodulator::netWorker, this);
 
@@ -110,7 +111,7 @@ void ParallelPacketDemodulator::demodWorker(void)
             ;
 
         // Demodulate the last part of the guard interval of the previous slots
-        demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, callback);
+        demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, shift_, callback);
 
         if (cur_samps_ > buf2->undersample) {
             // Calculate how many samples from the current slot we want to
@@ -125,7 +126,7 @@ void ParallelPacketDemodulator::demodWorker(void)
                 n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
 
                 if (n != 0) {
-                    demod->demodulate(&(*buf2)[ndemodulated], n, callback);
+                    demod->demodulate(&(*buf2)[ndemodulated], n, shift_, callback);
                     ndemodulated += n;
                     nwanted -= n;
 

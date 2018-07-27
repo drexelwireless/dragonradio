@@ -49,11 +49,14 @@ public:
         /** @brief Demodulate IQ samples.
          * @param data IQ samples to demodulate.
          * @param count The number of samples to demodulate
+         * @param shift Samples should be shifted my this frequency (Hz) before
+         * demodulation
          * @param callback The function to call with any demodulated packets. If
          * a bad packet is received, the argument will be nullptr.
          */
         virtual void demodulate(std::complex<float>* data,
                                 size_t count,
+                                double shift,
                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
 
     protected:

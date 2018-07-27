@@ -44,6 +44,8 @@ class Config(object):
         # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
         self.bandwidth = 5e6
+        self.oversample_factor = 1.0
+        self.shift = 0.0
 
         # TX/RX gain parameters
         self.tx_gain = 25
@@ -221,6 +223,12 @@ class Config(object):
         add_argument('-b', '--bandwidth', action='store', type=float,
                      dest='bandwidth',
                      help='set bandwidth (Hz)')
+        add_argument('--oversample', action='store', type=float,
+                     dest='oversample_factor',
+                     help='set oversample factor')
+        add_argument('--shift', action='store', type=float,
+                     dest='shift',
+                     help='set frequency shift (Hz)')
 
         # Gain-related options
         add_argument('-G', '--tx-gain', action='store', type=float,
@@ -437,8 +445,7 @@ class Radio(object):
         # resample.
         #
         bandwidth = config.bandwidth
-
-        oversample_factor = 1.0
+        oversample_factor = config.oversample_factor
 
         rx_rate_oversample = oversample_factor*self.phy.min_rx_rate_oversample
         tx_rate_oversample = oversample_factor*self.phy.min_tx_rate_oversample
@@ -553,6 +560,8 @@ class Radio(object):
                                             self.config.guard_size,
                                             self.config.aloha_prob)
 
+        self.mac.shift = self.config.shift
+
         if self.logger:
             self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)
             self.logger.setAttribute('rx_bandwidth', self.usrp.rx_rate)
@@ -571,6 +580,8 @@ class Radio(object):
                                     self.config.slot_size,
                                     self.config.guard_size,
                                     nslots)
+
+        self.mac.shift = self.config.shift
 
         if self.logger:
             self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)

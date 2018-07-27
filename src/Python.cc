@@ -493,6 +493,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
+        .def_property("shift", &MAC::getFreqShift, &MAC::setFreqShift)
         ;
 
     // Export class SlottedMAC to Python

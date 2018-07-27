@@ -1,4 +1,5 @@
 #include "Estimator.hh"
+#include "NCO.hh"
 #include "RadioConfig.hh"
 #include "phy/PHY.hh"
 #include "phy/ParallelPacketModulator.hh"
@@ -14,6 +15,7 @@ ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
   , done_(false)
   , nwanted_(0)
   , nsamples_(0)
+  , shift_(0.0)
 {
     for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&ParallelPacketModulator::modWorker, this));
@@ -92,6 +94,8 @@ void ParallelPacketModulator::modWorker(void)
     ModPacket                       *mpkt;
     // We want the last 10 packets to account for 86% of the EMA
     EMA<double>                     samples_per_packet(2.0/(10.0 + 1.0));
+    double                          shift = shift_;
+    TableNCO                        nco(2*M_PI*shift/phy_->getTXRate());
 
     for (;;) {
         size_t estimated_samples = samples_per_packet.getValue();
@@ -139,6 +143,16 @@ void ParallelPacketModulator::modWorker(void)
 
         // Modulate the packet
         modulator->modulate(*mpkt, std::move(pkt));
+
+        // Mix frequency up
+        if (shift_ != 0.0) {
+            if (shift != shift_) {
+                shift = shift_;
+                nco.reset(2*M_PI*shift/phy_->getTXRate());
+            }
+
+            nco.mix_up(mpkt->samples->data(), mpkt->samples->size());
+        }
 
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();

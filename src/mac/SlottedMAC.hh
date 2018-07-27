@@ -66,7 +66,10 @@ protected:
     /** @brief Worker receiving packets */
     void rxWorker(void);
 
-    /** @brief Transmit one slot's worth of samples */
+    /** @brief Transmit one slot's worth of samples
+     * @param when Start time of slot
+     * @param maxSamples The maximum number of samples to transmits
+     */
     virtual void txSlot(Clock::time_point when, size_t maxSamples);
 
     /** @brief Reconfigure the MAC when slot parameters change */

@@ -25,6 +25,16 @@ public:
     MAC& operator =(const MAC&) = delete;
     MAC& operator =(MAC&&) = delete;
 
+    /** @brief Get the frequency shift to use during demodulation
+     * @param shift The frequency shift (Hz)
+     */
+    virtual double getFreqShift(void);
+
+    /** @brief Set the frequency shift to use during demodulation
+     * @param shift The frequency shift (Hz)
+     */
+    virtual void setFreqShift(double shift);
+
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
 
@@ -61,6 +71,9 @@ protected:
 
     /** @brief TX rate */
     double tx_rate_;
+
+    /** @brief Frequency shift */
+    double shift_;
 
     /** @brief Modulator for timestamped packet */
     std::unique_ptr<PHY::Modulator> timestamped_modulator_;

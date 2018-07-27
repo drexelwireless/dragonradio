@@ -10,6 +10,16 @@ public:
     PacketModulator(void) : maxPacketSize_(0) {};
     virtual ~PacketModulator() {};
 
+    /** @brief Get the frequency shift to use during demodulation
+     * @param shift The frequency shift (Hz)
+     */
+    virtual double getFreqShift(void) = 0;
+
+    /** @brief Set the frequency shift to use during demodulation
+     * @param shift The frequency shift (Hz)
+     */
+    virtual void setFreqShift(double shift) = 0;
+
     /** @brief Modulate samples.
      * @param n The number of samples to produce.
      */

@@ -23,7 +23,9 @@ public:
     IQBufQueue& operator=(const IQBufQueue&) = delete;
     IQBufQueue& operator=(IQBufQueue&&) = delete;
 
-    /** @brief Add an IQ buffer to the queue. */
+    /** @brief Add an IQ buffer to the queue.
+     * @param buf The IQ samples to demodulate
+     */
     void push(std::shared_ptr<IQBuf> buf);
 
     /** @brief Get two slot's worth of IQ data.
@@ -72,12 +74,16 @@ public:
                               unsigned int nthreads);
     virtual ~ParallelPacketDemodulator();
 
-    /** @brief Set window parameters for demodulation.
-     * @brief prev_samps The number of samples from the end of the previous slot
-     * to demodulate.
-     * @brief cur_samps The number of samples from the current slot to
-     * demodulate.
-     */
+    double getFreqShift(void) override
+    {
+        return shift_;
+    }
+
+    void setFreqShift(double shift) override
+    {
+        shift_ = shift;
+    }
+
     void setWindowParameters(const size_t prev_samps,
                              const size_t cur_samps) override;
 
@@ -104,6 +110,9 @@ private:
 
     /** @brief PHY we use for demodulation. */
     std::shared_ptr<PHY> phy_;
+
+    /** @brief Frequency shift */
+    double shift_;
 
     /** @brief Should packets be output in the order they were actually
      * received? Setting this to true increases latency!
