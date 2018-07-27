@@ -56,6 +56,7 @@ void SlottedALOHA::reconfigure(void)
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
 
     modulator_->setLowWaterMark(tx_slot_samps_);
+    modulator_->setMaxPacketSize(tx_slot_samps_);
 
     // For ALOHA, we demodulate the whole slot, including the guard interval.
     // This may lead to duplicate packets, but we may also not be
