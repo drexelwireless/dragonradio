@@ -137,16 +137,16 @@ void ParallelPacketModulator::modWorker(void)
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();
 
-        // Mark the modulated packet as complete. The packet may be invalidated
-        // by a consumer immediately after we mark it complete, so we cannot use
-        // the mpkt pointer after this statement!
-        mpkt->complete.clear(std::memory_order_release);
-
         // Pass the modulated packet to the 0dBFS estimator if requested
         if (tx_params->nestimates_0dBFS > 0) {
             --tx_params->nestimates_0dBFS;
             work_queue.submit(&TXParams::autoSoftGain0dBFS, tx_params, g, mpkt->samples);
         }
+
+        // Mark the modulated packet as complete. The packet may be invalidated
+        // by a consumer immediately after we mark it complete, so we cannot use
+        // the mpkt pointer after this statement!
+        mpkt->complete.clear(std::memory_order_release);
 
         // Add the number of modulated samples to the total in the queue. Note
         // that the packet may already have been removed from the queue and the
