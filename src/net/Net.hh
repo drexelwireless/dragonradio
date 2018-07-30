@@ -93,7 +93,7 @@ struct Node {
     }
 };
 
-class Net : public Element
+class Net
 {
 public:
     using map_type = std::map<NodeId, Node>;
