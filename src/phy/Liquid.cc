@@ -164,7 +164,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     demod_off_ += resamp_fact*stats_.end_counter;
 
     // Create the packet and fill it out
-    std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(payload_, payload_len_);
+    std::unique_ptr<RadioPacket> pkt;
 
     if (!header_valid_) {
         if (rc.verbose)
