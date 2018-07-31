@@ -126,6 +126,9 @@ public:
     /** @brief Get the entry for this node */
     Node& me(void);
 
+    /** @brief Get the node that is the time master */
+    NodeId getTimeMaster(void);
+
     /** @brief Get the entry for a particular node in the network */
     Node& operator[](NodeId nodeid);
 

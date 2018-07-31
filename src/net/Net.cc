@@ -89,6 +89,19 @@ Node& Net::me(void)
     return nodes_.at(getMyNodeId());
 }
 
+NodeId Net::getTimeMaster(void)
+{
+    std::lock_guard<std::mutex> lock(nodes_mutex_);
+    NodeId                      master = 0;
+
+    for (auto it = nodes_.begin(); it != nodes_.end(); ++it) {
+        if (it->second.is_gateway && (master == 0 || it->first < master))
+            master = it->first;
+    }
+
+    return master;
+}
+
 Node& Net::operator[](NodeId nodeid)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);

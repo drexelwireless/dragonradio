@@ -527,11 +527,9 @@ void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& 
 void SmartController::handleCtrlTimestampDeltas(Node &node, std::shared_ptr<RadioPacket>& pkt)
 {
     // Process timestamp deltas.
-    // If this node is a gateway AND we have seen a timestamp from it AND
-    // eiether it is our time master or we have no master, synchronize with it.
-    if ((node.is_gateway || node.id == 1) &&
-         node.time_info.saw_timestamp &&
-         (time_sync_.time_master == 0 || time_sync_.time_master == node.id)) {
+    // If we have seen a timestamp from this node and it is the time master,
+    // synchronize with it.
+    if (node.time_info.saw_timestamp && node.id != net_->getMyNodeId() && node.id == net_->getTimeMaster()) {
         for(auto it = pkt->begin(); it != pkt->end(); ++it) {
             switch (it->type) {
                 case ControlMsg::Type::kTimestampDelta:
