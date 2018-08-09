@@ -20,7 +20,6 @@ public:
                  std::shared_ptr<PHY> phy,
                  std::shared_ptr<PacketModulator> modulator,
                  std::shared_ptr<PacketDemodulator> demodulator,
-                 double bandwidth,
                  double slot_size,
                  double guard_size,
                  double p);

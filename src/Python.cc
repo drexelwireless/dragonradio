@@ -504,7 +504,6 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       std::shared_ptr<PacketDemodulator>,
                       double,
                       double,
-                      double,
                       size_t>())
         .def("__getitem__", [](TDMA &mac, TDMA::slots_type::size_type i) {
             try {
@@ -533,7 +532,6 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       std::shared_ptr<PHY>,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
-                      double,
                       double,
                       double,
                       double>())

@@ -544,7 +544,6 @@ class Radio(object):
                                             self.phy,
                                             self.modulator,
                                             self.demodulator,
-                                            self.config.bandwidth,
                                             self.config.slot_size,
                                             self.config.guard_size,
                                             self.config.aloha_prob)
@@ -564,7 +563,6 @@ class Radio(object):
                                     self.phy,
                                     self.modulator,
                                     self.demodulator,
-                                    self.config.bandwidth,
                                     self.config.slot_size,
                                     self.config.guard_size,
                                     nslots)

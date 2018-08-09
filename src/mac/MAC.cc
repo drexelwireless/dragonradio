@@ -3,8 +3,7 @@
 MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
          std::shared_ptr<PacketModulator> modulator,
-         std::shared_ptr<PacketDemodulator> demodulator,
-         double bandwidth)
+         std::shared_ptr<PacketDemodulator> demodulator)
   : usrp_(usrp)
   , phy_(phy)
   , modulator_(modulator)

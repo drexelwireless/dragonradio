@@ -9,11 +9,10 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            std::shared_ptr<PHY> phy,
                            std::shared_ptr<PacketModulator> modulator,
                            std::shared_ptr<PacketDemodulator> demodulator,
-                           double bandwidth,
                            double slot_size,
                            double guard_size,
                            double p)
-  : SlottedMAC(usrp, phy, modulator, demodulator, bandwidth, slot_size, guard_size)
+  : SlottedMAC(usrp, phy, modulator, demodulator, slot_size, guard_size)
   , p_(p)
   , gen_(std::random_device()())
   , dist_(0, 1.0)

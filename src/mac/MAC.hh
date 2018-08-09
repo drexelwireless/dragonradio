@@ -17,8 +17,7 @@ public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<PHY> phy,
         std::shared_ptr<PacketModulator> modulator,
-        std::shared_ptr<PacketDemodulator> demodulator,
-        double bandwidth);
+        std::shared_ptr<PacketDemodulator> demodulator);
     virtual ~MAC() = default;
 
     MAC() = delete;
