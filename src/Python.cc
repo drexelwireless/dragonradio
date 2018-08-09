@@ -328,7 +328,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("recalc0dBFSEstimate", &TXParams::recalc0dBFSEstimate, "Reset the 0dBFS estimate")
         ;
 
-    py::bind_vector<std::vector<TXParams>>(m, "TXParamsList");
+    py::bind_vector<std::vector<TXParams>>(m, "TXParamsVector");
 
     // Export class Node to Python
     py::class_<Node, std::shared_ptr<Node>>(m, "Node")

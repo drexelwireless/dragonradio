@@ -9,7 +9,7 @@ import re
 import sys
 
 import dragonradio
-from dragonradio import MCS, TXParams, TXParamsList
+from dragonradio import MCS, TXParams, TXParamsVector
 
 logger = logging.getLogger('radio')
 
@@ -432,7 +432,7 @@ class Radio(object):
                 p.recalc0dBFSEstimate(config.auto_soft_tx_gain)
                 p.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
 
-        self.net.tx_params = TXParamsList(tx_params)
+        self.net.tx_params = TXParamsVector(tx_params)
 
         #
         # Configure bandwidth and sampling rate. We MUST do this before creating
@@ -534,7 +534,7 @@ class Radio(object):
         else:
             tx_params.soft_tx_gain_0dBFS = g
 
-        self.net.tx_params = TXParamsList([tx_params])
+        self.net.tx_params = TXParamsVector([tx_params])
 
     def configureALOHA(self):
         if self.config.arq:
