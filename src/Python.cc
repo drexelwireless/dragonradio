@@ -496,6 +496,29 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("guard_size", &SlottedMAC::getGuardSize, &SlottedMAC::setGuardSize)
         ;
 
+    // Export class TDMA::Slots to Python
+    py::class_<TDMA::Slots, std::shared_ptr<TDMA::Slots>>(m, "Slots")
+        .def("__getitem__", [](TDMA::Slots &slots, TDMA::Slots::slots_type::size_type i) {
+            try {
+                return slots[i];
+            } catch (const std::out_of_range&) {
+                throw py::index_error();
+            }
+        })
+        .def("__setitem__", [](TDMA::Slots &slots, TDMA::Slots::slots_type::size_type i, bool v) {
+            try {
+                slots[i] = v;
+            } catch (const std::out_of_range&) {
+              throw py::index_error();
+            }
+        })
+        .def("__len__", &TDMA::Slots::size)
+        .def("__iter__", [](TDMA::Slots &slots) {
+            return py::make_iterator(slots.begin(), slots.end());
+         }, py::keep_alive<0, 1>())
+        .def("resize", &TDMA::Slots::resize)
+        ;
+
     // Export class TDMA to Python
     py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<USRP>,
@@ -505,25 +528,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       double,
                       double,
                       size_t>())
-        .def("__getitem__", [](TDMA &mac, TDMA::slots_type::size_type i) {
-            try {
-                return mac[i];
-            } catch (const std::out_of_range&) {
-                throw py::index_error();
-            }
-        })
-        .def("__setitem__", [](TDMA &mac, TDMA::slots_type::size_type i, bool v) {
-            try {
-                mac[i] = v;
-            } catch (const std::out_of_range&) {
-              throw py::index_error();
-            }
-        })
-        .def("__len__", &TDMA::size)
-        .def("__iter__", [](TDMA &mac) {
-            return py::make_iterator(mac.begin(), mac.end());
-         }, py::keep_alive<0, 1>())
-        .def("resize", &TDMA::resize)
+        .def_property_readonly("slots", &TDMA::getSlots,
+            py::return_value_policy::reference_internal);
         ;
 
     // Export class SlottedALOHA to Python

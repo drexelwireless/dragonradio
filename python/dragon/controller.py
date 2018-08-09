@@ -184,7 +184,7 @@ class Controller(TCPProtoServer):
         # Sort nodes and pick our TDMA slot based on our position in the node
         # list
         nodes.sort()
-        radio.mac[nodes.index(radio.node_id)] = True
+        radio.mac.slots[nodes.index(radio.node_id)] = True
 
         # We are now ready to transmit data
         self.state = internal.ACTIVE

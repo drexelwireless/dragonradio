@@ -66,7 +66,7 @@ def main():
 
         radio.configureTDMA(len(radio.net))
 
-        radio.mac[radio.node_id - 1] = True
+        radio.mac.slots[radio.node_id - 1] = True
 
     #
     # Start IPython shell if we are in interactive mode

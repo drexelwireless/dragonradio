@@ -14,11 +14,8 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            double guard_size,
            size_t nslots)
   : SlottedMAC(usrp, phy, modulator, demodulator, slot_size, guard_size)
+  , slots_(*this, nslots)
 {
-    slots_.resize(nslots, false);
-
-    reconfigure();
-
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
     tx_thread_ = std::thread(&TDMA::txWorker, this);
 }
@@ -26,32 +23,6 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
 TDMA::~TDMA()
 {
     stop();
-}
-
-TDMA::slots_type::size_type TDMA::size(void)
-{
-    return slots_.size();
-}
-
-void TDMA::resize(TDMA::slots_type::size_type n)
-{
-    slots_.resize(n, false);
-    reconfigure();
-}
-
-TDMA::slots_type::reference TDMA::operator [](TDMA::slots_type::size_type i)
-{
-    return slots_.at(i);
-}
-
-TDMA::slots_type::iterator TDMA::begin(void)
-{
-    return slots_.begin();
-}
-
-TDMA::slots_type::iterator TDMA::end(void)
-{
-    return slots_.end();
 }
 
 void TDMA::stop(void)

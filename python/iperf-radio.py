@@ -199,7 +199,7 @@ def main():
 
     radio.configureTDMA(len(radio.net))
 
-    radio.mac[radio.node_id - 1] = True
+    radio.mac.slots[radio.node_id - 1] = True
 
     #
     # Output parameters

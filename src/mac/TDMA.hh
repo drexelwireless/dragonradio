@@ -15,7 +15,66 @@
 class TDMA : public SlottedMAC
 {
 public:
-    using slots_type = std::vector<bool>;
+    class Slots
+    {
+    public:
+        using slots_type = std::vector<bool>;
+
+        explicit Slots(TDMA &mac, size_t nslots)
+          : mac_(mac)
+          , slots_(nslots, false)
+        {
+            mac.reconfigure();
+        }
+
+        Slots() = delete;
+        Slots(const Slots&) = delete;
+        Slots(Slots&&) = delete;
+
+        Slots& operator=(const Slots&) = delete;
+        Slots& operator=(Slots&&) = delete;
+
+        /** @brief Get number of slots
+         */
+        slots_type::size_type size(void)
+        {
+            return slots_.size();
+        }
+
+        /** @brief Set number of slots
+         * @param n The number of slots
+         */
+        void resize(slots_type::size_type n)
+        {
+            slots_.resize(n, false);
+            mac_.reconfigure();
+        }
+
+        /** @brief Access a slot */
+        slots_type::reference operator [](size_t i)
+        {
+            return slots_.at(i);
+        }
+
+        /** @brief Return an iterator to the beginning of slots. */
+        slots_type::iterator begin(void)
+        {
+            return slots_.begin();
+        }
+
+        /** @brief Return an iterator to the end of slots. */
+        slots_type::iterator end(void)
+        {
+            return slots_.end();
+        }
+
+    private:
+        /** @brief The TDMA MAC for this slot schedule */
+        TDMA &mac_;
+
+        /** @brief The slot schedule */
+        slots_type slots_;
+    };
 
     TDMA(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
@@ -32,26 +91,14 @@ public:
     TDMA& operator=(const TDMA&) = delete;
     TDMA& operator=(TDMA&&) = delete;
 
-    /** @brief Get number of slots
-     */
-    slots_type::size_type size(void);
-
-    /** @brief Set number of slots
-     * @param n The number of slots
-     */
-    void resize(slots_type::size_type n);
-
-    /** @brief Access a slot */
-    slots_type::reference operator [](size_t i);
-
-    /** @brief Return an iterator to the beginning of slots. */
-    slots_type::iterator begin(void);
-
-    /** @brief Return an iterator to the end of slots. */
-    slots_type::iterator end(void);
-
     /** @brief Stop processing packets */
     void stop(void) override;
+
+    /** @brief TDMA slots */
+    Slots &getSlots(void)
+    {
+        return slots_;
+    }
 
     void sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt) override;
 
@@ -60,7 +107,7 @@ private:
     double frame_size_;
 
     /** @brief The slot schedule */
-    slots_type slots_;
+    Slots slots_;
 
     /** @brief Thread running rxWorker */
     std::thread rx_thread_;
