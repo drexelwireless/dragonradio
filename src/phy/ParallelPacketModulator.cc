@@ -8,14 +8,15 @@
 
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
+                                                 std::shared_ptr<Channels> channels,
                                                  size_t nthreads)
-  : sink(*this, nullptr, nullptr)
+  : PacketModulator(channels)
+  , sink(*this, nullptr, nullptr)
   , net_(net)
   , phy_(phy)
   , done_(false)
   , nwanted_(0)
   , nsamples_(0)
-  , shift_(0.0)
 {
     for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&ParallelPacketModulator::modWorker, this));
@@ -94,7 +95,7 @@ void ParallelPacketModulator::modWorker(void)
     ModPacket                       *mpkt;
     // We want the last 10 packets to account for 86% of the EMA
     EMA<double>                     samples_per_packet(2.0/(10.0 + 1.0));
-    double                          shift = shift_;
+    double                          shift = 0.0;
     TableNCO                        nco(2*M_PI*shift/phy_->getTXRate());
 
     for (;;) {
@@ -145,9 +146,11 @@ void ParallelPacketModulator::modWorker(void)
         modulator->modulate(*mpkt, std::move(pkt));
 
         // Mix frequency up
-        if (shift_ != 0.0) {
-            if (shift != shift_) {
-                shift = shift_;
+        double cur_shift = channels_ ? (*channels_)[tx_channel_] : 0.0;
+
+        if (cur_shift != 0.0) {
+            if (shift != cur_shift) {
+                shift = cur_shift;
                 nco.reset(2*M_PI*shift/phy_->getTXRate());
             }
 

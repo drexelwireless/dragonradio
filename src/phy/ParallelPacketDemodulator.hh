@@ -8,13 +8,15 @@
 
 #include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
+#include "phy/Channels.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
 /** @brief A thread-safe queue of IQ buffers that need to be demodulated. */
 class IQBufQueue {
 public:
-    IQBufQueue(RadioPacketQueue& radio_q);
+    IQBufQueue(RadioPacketQueue& radio_q,
+               std::shared_ptr<Channels> channels);
     ~IQBufQueue();
 
     IQBufQueue(const IQBufQueue&) = delete;
@@ -30,6 +32,7 @@ public:
 
     /** @brief Get two slot's worth of IQ data.
      * @param b The barrier before which network packets should be inserted.
+     * @param shift The frequency IQ samples should be shifted before demodulation.
      * @param buf1 The buffer holding the previous slot's IQ data.
      * @param buf2 The buffer holding the current slot's IQ data.
      * @return Return true if pop was successful, false otherwise.
@@ -39,6 +42,7 @@ public:
      * slot is kept in the queue because it becomes the new "previous" slot.
      */
     bool pop(RadioPacketQueue::barrier& b,
+             double &shift,
              std::shared_ptr<IQBuf>& buf1,
              std::shared_ptr<IQBuf>& buf2);
 
@@ -48,6 +52,9 @@ public:
 private:
     /** @brief The queue on which demodulated packets should be placed. */
     RadioPacketQueue& radio_q_;
+
+    /** @brief Radio channels, given as shift from center frequency */
+    std::shared_ptr<Channels> channels_;
 
     /** @brief Flag that is true when we should finish processing. */
     bool done_;
@@ -61,6 +68,9 @@ private:
     /** @brief The number of items in the queue of IQ buffers. */
     size_t size_;
 
+    /** @brief The next channel to demodulate. */
+    Channels::size_type next_channel_;
+
     /** @brief The queue of IQ buffers. */
     std::list<std::shared_ptr<IQBuf>> q_;
 };
@@ -71,18 +81,9 @@ class ParallelPacketDemodulator : public PacketDemodulator, public Element
 public:
     ParallelPacketDemodulator(std::shared_ptr<Net> net,
                               std::shared_ptr<PHY> phy,
+                              std::shared_ptr<Channels> channels,
                               unsigned int nthreads);
     virtual ~ParallelPacketDemodulator();
-
-    double getFreqShift(void) override
-    {
-        return shift_;
-    }
-
-    void setFreqShift(double shift) override
-    {
-        shift_ = shift;
-    }
 
     void setWindowParameters(const size_t prev_samps,
                              const size_t cur_samps) override;
@@ -110,9 +111,6 @@ private:
 
     /** @brief PHY we use for demodulation. */
     std::shared_ptr<PHY> phy_;
-
-    /** @brief Frequency shift */
-    double shift_;
 
     /** @brief Should packets be output in the order they were actually
      * received? Setting this to true increases latency!

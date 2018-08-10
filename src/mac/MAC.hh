@@ -5,6 +5,7 @@
 
 #include "spinlock_mutex.hh"
 #include "USRP.hh"
+#include "phy/Channels.hh"
 #include "phy/PHY.hh"
 #include "phy/PacketDemodulator.hh"
 #include "phy/PacketModulator.hh"
@@ -16,6 +17,7 @@ class MAC
 public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<PHY> phy,
+        std::shared_ptr<Channels> channels,
         std::shared_ptr<PacketModulator> modulator,
         std::shared_ptr<PacketDemodulator> demodulator);
     virtual ~MAC() = default;
@@ -25,15 +27,22 @@ public:
     MAC& operator =(const MAC&) = delete;
     MAC& operator =(MAC&&) = delete;
 
-    /** @brief Get the frequency shift to use during demodulation
-     * @param shift The frequency shift (Hz)
+    /** @brief Get the frequency channel to use during transmission
+     * @return The frequency channel
      */
-    virtual double getFreqShift(void);
+    virtual Channels::size_type getTXChannel(void) const
+    {
+        return tx_channel_;
+    }
 
-    /** @brief Set the frequency shift to use during demodulation
-     * @param shift The frequency shift (Hz)
+    /** @brief Set the frequency channel to use during transmission
+     * @param The frequency channel
      */
-    virtual void setFreqShift(double shift);
+    virtual void setTXChannel(Channels::size_type channel)
+    {
+        tx_channel_ = channel;
+        modulator_->setTXChannel(channel);
+    }
 
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
@@ -60,6 +69,9 @@ protected:
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
 
+    /** @brief Radio channels, given as shift from center frequency */
+    std::shared_ptr<Channels> channels_;
+
     /** @brief Our packet modulator. */
     std::shared_ptr<PacketModulator> modulator_;
 
@@ -72,8 +84,8 @@ protected:
     /** @brief TX rate */
     double tx_rate_;
 
-    /** @brief Frequency shift */
-    double shift_;
+    /** @brief Transmission channel, given hift from center frequency */
+    Channels::size_type tx_channel_;
 
     /** @brief Modulator for timestamped packet */
     std::unique_ptr<PHY::Modulator> timestamped_modulator_;

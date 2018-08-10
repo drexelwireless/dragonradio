@@ -2,23 +2,18 @@
 #define PACKETDEMODULATOR_H_
 
 #include "IQBuffer.hh"
+#include "phy/Channels.hh"
 
 /** @brief A packet demodulator. */
 class PacketDemodulator
 {
 public:
-    PacketDemodulator() {};
+    PacketDemodulator(std::shared_ptr<Channels> channels)
+        : channels_(channels)
+    {
+    }
+
     virtual ~PacketDemodulator() {};
-
-    /** @brief Get the frequency shift to use during demodulation
-     * @param shift The frequency shift (Hz)
-     */
-    virtual double getFreqShift(void) = 0;
-
-    /** @brief Set the frequency shift to use during demodulation
-     * @param shift The frequency shift (Hz)
-     */
-    virtual void setFreqShift(double shift) = 0;
 
     /** @brief Set demodulation parameters.
      * @brief prev_samps The number of samples from the end of the previous slot
@@ -33,6 +28,10 @@ public:
      * @param buf The IQ samples to demodulate
      */
     virtual void push(std::shared_ptr<IQBuf> buf) = 0;
+
+protected:
+    /** @brief Radio channels, given as shift from center frequency */
+    std::shared_ptr<Channels> channels_;
 };
 
 #endif /* PACKETDEMODULATOR_H_ */

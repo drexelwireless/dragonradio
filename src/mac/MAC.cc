@@ -2,29 +2,19 @@
 
 MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
+         std::shared_ptr<Channels> channels,
          std::shared_ptr<PacketModulator> modulator,
          std::shared_ptr<PacketDemodulator> demodulator)
   : usrp_(usrp)
   , phy_(phy)
+  , channels_(channels)
   , modulator_(modulator)
   , demodulator_(demodulator)
-  , shift_(0.0)
+  , tx_channel_(0)
   , timestamped_modulator_(phy->make_modulator())
 {
     rx_rate_ = usrp->getRXRate();
     tx_rate_ = usrp->getTXRate();
-}
-
-double MAC::getFreqShift(void)
-{
-    return shift_;
-}
-
-void MAC::setFreqShift(double shift)
-{
-    shift_ = shift;
-    modulator_->setFreqShift(shift);
-    demodulator_->setFreqShift(shift);
 }
 
 void MAC::timestampPacket(const Clock::time_point &deadline, std::shared_ptr<NetPacket> &&pkt)

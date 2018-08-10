@@ -1,24 +1,37 @@
 #ifndef PACKETMODULATOR_H_
 #define PACKETMODULATOR_H_
 
+#include "phy/Channels.hh"
 #include "phy/ModPacket.hh"
 
 /** @brief A packet modulator. */
 class PacketModulator
 {
 public:
-    PacketModulator(void) : maxPacketSize_(0) {};
+    PacketModulator(std::shared_ptr<Channels> channels)
+        : channels_(channels)
+        , maxPacketSize_(0)
+        , tx_channel_(0)
+    {
+    }
+
     virtual ~PacketModulator() {};
 
-    /** @brief Get the frequency shift to use during demodulation
-     * @param shift The frequency shift (Hz)
+    /** @brief Get the frequency channel to use during transmission
+     * @return The frequency channel
      */
-    virtual double getFreqShift(void) = 0;
+    virtual Channels::size_type getTXChannel(void) const
+    {
+        return tx_channel_;
+    }
 
-    /** @brief Set the frequency shift to use during demodulation
-     * @param shift The frequency shift (Hz)
+    /** @brief Set the frequency channel to use during transmission
+     * @param The frequency channel
      */
-    virtual void setFreqShift(double shift) = 0;
+    virtual void setTXChannel(Channels::size_type channel)
+    {
+        tx_channel_ = channel;
+    }
 
     /** @brief Modulate samples.
      * @param n The number of samples to produce.
@@ -46,8 +59,14 @@ public:
     }
 
 protected:
+    /** @brief Radio channels, given as shift from center frequency */
+    std::shared_ptr<Channels> channels_;
+
     /** @brief Maximum number of possible samples in a modulated packet. */
     size_t maxPacketSize_;
+
+    /** @brief Transmission channel, given hift from center frequency */
+    Channels::size_type tx_channel_;
 };
 
 #endif /* PACKETMODULATOR_H_ */
