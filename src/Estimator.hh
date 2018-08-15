@@ -3,6 +3,8 @@
 
 #include <assert.h>
 
+#include <vector>
+
 /** @brief A statistical estimator */
 template<class T>
 class Estimator {
@@ -84,6 +86,71 @@ public:
 private:
     T value_;
     unsigned nsamples_;
+};
+
+
+
+/** @brief Estimate a value by calculating a mean over a window of values */
+template<class T>
+class WindowedMean : public Estimator<T> {
+public:
+    using size_type = typename std::vector<T>::size_type;
+
+    explicit WindowedMean(size_type n)
+      : window_(n, 0)
+      , sum_(0)
+      , nsamples_(0)
+    {
+        assert(n > 0);
+    }
+
+    size_type getWindowSize(void)
+    {
+        return window_.size();
+    }
+
+    void setWindowSize(size_type n)
+    {
+        sum_ = 0;
+        nsamples_ = 0;
+        window_.resize(n, 0);
+    }
+
+    T getValue(void) const override
+    {
+        if (nsamples_ == 0)
+            return sum_;
+        else
+            return sum_/nsamples_;
+    }
+
+    unsigned getNSamples(void) const override
+    {
+        return nsamples_;
+    }
+
+    void reset(T x) override
+    {
+        sum_ = x;
+        nsamples_ = 0;
+    }
+
+    void update(T x) override
+    {
+        if (nsamples_ == 0)
+            sum_ = x;
+        else if (nsamples_ > window_.size())
+            sum_ = sum_ - window_[nsamples_ % window_.size()] + x;
+        else
+            sum_ += x;
+
+        window_[nsamples_++ % window_.size()] = x;
+    }
+
+private:
+    std::vector<T> window_;
+    T              sum_;
+    unsigned       nsamples_;
 };
 
 /** @brief Estimate a value by calculating an exponential moving average */
