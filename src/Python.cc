@@ -315,6 +315,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_readwrite("fec0", &MCS::fec0, "Inner FEC")
         .def_readwrite("fec1", &MCS::fec1, "Outer FEC")
         .def_readwrite("ms", &MCS::ms, "Modulation scheme")
+        .def_property_readonly("rate", &MCS::getRate, "Approximate rate (bps)")
         ;
 
     // Export class TXParams to Python

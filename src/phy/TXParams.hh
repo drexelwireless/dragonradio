@@ -39,6 +39,12 @@ struct MCS {
     /** @brief Modulation scheme */
     modulation_scheme ms;
 
+    /** @brief Get approximate rate in bps */
+    float getRate(void) const
+    {
+        return fec_get_rate(fec0)*fec_get_rate(fec1)*modulation_types[ms].bps;
+    }
+
     /** @brief CRC name as string */
     const char *check_name() const { return crc_scheme_str[check][0]; }
 
