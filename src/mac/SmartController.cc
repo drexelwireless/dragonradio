@@ -860,7 +860,7 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
         RecvWindow                      &recvw = it->second;
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
-        if (!isSYN || (seq < recvw.max - recvw.win || seq >= recvw.ack + recvw.win))
+        if (!isSYN || (seq >= recvw.max - recvw.win && seq < recvw.ack + recvw.win))
             return recvw;
     }
 
