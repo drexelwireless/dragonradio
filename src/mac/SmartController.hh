@@ -225,6 +225,18 @@ public:
         mac_ = mac;
     }
 
+    /** @brief Get number of samples in a trnsmission slot */
+    size_t getSlotSize(void)
+    {
+        return slot_size_;
+    }
+
+    /** @brief Set number of samples in a trnsmission slot */
+    void setSlotSize(size_t size)
+    {
+        slot_size_ = size;
+    }
+
     /** @brief Get PER threshold for increasing modulation level */
     double getUpPERThreshold(void)
     {
@@ -293,6 +305,9 @@ protected:
 
     /** @brief Timer queue */
     TimerQueue timer_queue_;
+
+    /** @brief Number of samples in a transmission slot */
+    size_t slot_size_;
 
     /** @brief PER threshold for increasing modulation level */
     double modidx_up_per_threshold_;

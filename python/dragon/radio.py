@@ -482,6 +482,8 @@ class Radio(object):
                                                           config.modidx_up_per_threshold,
                                                           config.modidx_down_per_threshold)
 
+            self.controller.slot_size = int(bandwidth*(self.config.slot_size - self.config.guard_size))
+
             if config.arq_enforce_ordering:
                 self.controller.enforce_ordering = True
         else:

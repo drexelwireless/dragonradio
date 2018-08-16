@@ -30,6 +30,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   : Controller(net)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
+  , slot_size_(0)
   , modidx_up_per_threshold_(modidx_up_per_threshold)
   , modidx_down_per_threshold_(modidx_down_per_threshold)
   , enforce_ordering_(false)
