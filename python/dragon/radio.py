@@ -50,12 +50,12 @@ class Config(object):
         # TX/RX gain parameters
         self.tx_gain = 25
         self.rx_gain = 25
-        self.soft_tx_gain = -12
+        self.soft_tx_gain = -8
         self.auto_soft_tx_gain = None
-        self.auto_soft_tx_gain_clip_frac = 0.999
+        self.auto_soft_tx_gain_clip_frac = 1.0
 
         # PHY parameters
-        self.phy = 'flexframe'
+        self.phy = 'ofdm'
         self.min_packet_size = 512
         self.num_modulation_threads = 4
         self.num_demodulation_threads = 16
