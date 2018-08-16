@@ -353,6 +353,9 @@ protected:
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);
 
+    /** @brief Reconfigure a node's PER estimates */
+    void resetPEREstimates(Node &node);
+
     /** @brief Get a node's send window.
      * @param node_id The node whose window to get
      * @returns A pointer to the window or nullptr if one doesn't exist.

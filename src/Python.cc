@@ -175,10 +175,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init())
         .def_readwrite("verbose", &RadioConfig::verbose,
             "Give verbose debug messages on the console")
-        .def_readwrite("short_per_npackets", &RadioConfig::short_per_npackets,
-            "Number of packets we use to calculate short-term PER")
-        .def_readwrite("long_per_npackets", &RadioConfig::long_per_npackets,
-            "Number of packets we use to calculate long-term PER")
+        .def_readwrite("short_per_nslots", &RadioConfig::short_per_nslots,
+            "Number of slots worth of packets we use to calculate short-term PER")
+        .def_readwrite("long_per_nslots", &RadioConfig::long_per_nslots,
+            "Number of lots worth of packets we use to calculate long-term PER")
         .def_readwrite("timestamp_delay", &RadioConfig::timestamp_delay,
             "Timestamp delay, in seconds")
         .def_readwrite("max_packet_size", &RadioConfig::max_packet_size,

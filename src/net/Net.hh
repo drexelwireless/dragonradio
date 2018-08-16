@@ -63,10 +63,10 @@ struct Node {
     double retransmission_delay;
 
     /** @brief Short-term packet error rate */
-    EMA<double> short_per;
+    WindowedMean<double> short_per;
 
     /** @brief Long-term packet error rate */
-    EMA<double> long_per;
+    WindowedMean<double> long_per;
 
     /** @brief Time information for this node */
     TimeInfo time_info;

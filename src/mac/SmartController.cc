@@ -625,9 +625,10 @@ void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket
 {
     ControlMsg::Nak nak;
     int             delta;
+    Node            &node = (*net_)[recvw.node_id];
 
     if ((Clock::now() - recvw.max_timestamp).get_real_secs() < rc.max_reorder_delay)
-        delta = rc.short_per_npackets;
+        delta = node.short_per.getWindowSize();
     else
         delta = 0;
 
@@ -682,7 +683,7 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
     node.short_per.update(0.0);
     node.long_per.update(0.0);
 
-    if (   node.long_per.getNSamples() >= rc.long_per_npackets
+    if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
         && node.long_per.getValue() < modidx_up_per_threshold_
         && sendw.modidx < net_->tx_params.size() - 1) {
         if (rc.verbose)
@@ -697,8 +698,7 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
             node.tx_params->mcs.ms_name(),
             node.long_per.getValue());
 
-        node.short_per.reset(node.short_per.getValue());
-        node.long_per.reset(node.long_per.getValue());
+        resetPEREstimates(node);
     }
 }
 
@@ -707,7 +707,7 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
     node.short_per.update(1.0);
     node.long_per.update(1.0);
 
-    if (   node.short_per.getNSamples() > rc.short_per_npackets
+    if (   node.short_per.getNSamples() > node.short_per.getWindowSize()
         && node.short_per.getValue() > modidx_down_per_threshold_
         && sendw.modidx > 0) {
         if (rc.verbose)
@@ -722,8 +722,7 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
             node.tx_params->mcs.ms_name(),
             node.short_per.getValue());
 
-        node.short_per.reset(node.short_per.getValue());
-        node.long_per.reset(node.long_per.getValue());
+        resetPEREstimates(node);
     }
 }
 
@@ -804,6 +803,14 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
     }
 }
 
+void SmartController::resetPEREstimates(Node &node)
+{
+    double max_packets_per_slot = slot_size_/(rc.max_packet_size*8/node.tx_params->mcs.getRate());
+
+    node.short_per.setWindowSize(rc.short_per_nslots*max_packets_per_slot);
+    node.long_per.setWindowSize(rc.long_per_nslots*max_packets_per_slot);
+}
+
 SendWindow *SmartController::maybeGetSendWindow(NodeId node_id)
 {
     std::lock_guard<spinlock_mutex> lock(send_mutex_);
@@ -829,6 +836,8 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
                                           std::forward_as_tuple(node_id, *this, max_sendwin_)).first->second;
 
         sendw.modidx_init_seq = dest.seq;
+
+        resetPEREstimates(dest);
 
         return sendw;
     }

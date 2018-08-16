@@ -101,8 +101,8 @@ class Config(object):
         self.amc = False
         self.amc_table = None
 
-        self.short_per_npackets = 50
-        self.long_per_npackets = 200
+        self.short_per_nslots = 2
+        self.long_per_nslots = 8
         self.modidx_up_per_threshold = 0.02
         self.modidx_down_per_threshold = 0.10
 
@@ -311,12 +311,12 @@ class Config(object):
         add_argument('--no-amc', action='store_const', const=False,
                      dest='amc',
                      help='disable AMC')
-        add_argument('--short-per-npackets', action='store', type=int,
-                     dest='short_per_npackets',
-                     help='set number of packets we use to calculate short-term PER')
-        add_argument('--long-per-npackets', action='store', type=int,
-                     dest='long_per_npackets',
-                     help='set number of packets we use to calculate long-term PER')
+        add_argument('--short-per-nslots', action='store', type=int,
+                     dest='short_per_nslots',
+                     help='set number of TX slots worth of packets we use to calculate short-term PER')
+        add_argument('--long-per-nslots', action='store', type=int,
+                     dest='long_per_nslots',
+                     help='set number of TX slots worth of packets we use to calculate long-term PER')
         add_argument('--modidx-up-per-threshold', action='store', type=float,
                      dest='modidx_up_per_threshold',
                      help='set PER threshold for increasing modulation level')
@@ -334,7 +334,7 @@ class Radio(object):
 
         # Copy configuration settings to the C++ RadioConfig object
         for attr in ['verbose',
-                     'short_per_npackets', 'long_per_npackets',
+                     'short_per_nslots', 'long_per_nslots',
                      'timestamp_delay',
                      'max_packet_size',
                      'ack_delay', 'retransmission_delay',

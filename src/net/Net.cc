@@ -29,11 +29,8 @@ Node::Node(NodeId id, TXParams *tx_params)
   , g(1.0)
   , ack_delay(rc.ack_delay)
   , retransmission_delay(rc.retransmission_delay)
-  // We want the last rc.short_per_npackets entries to account for 86% of the
-  // EMA
-  , short_per(2.0/(rc.short_per_npackets + 1.0))
-  // We want the last rc.long_per_npackets entries to account for 86% of the EMA
-  , long_per(2.0/(rc.long_per_npackets + 1.0))
+  , short_per(1)
+  , long_per(1)
 {
 }
 

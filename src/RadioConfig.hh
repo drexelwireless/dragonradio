@@ -24,11 +24,11 @@ public:
     /** @brief Give verbose debug messages on the console */
     bool verbose;
 
-    /** @brief Number of packets we use to calculate short-term PER  */
-    unsigned short_per_npackets;
+    /** @brief Number of slots worth of packets we use to calculate short-term PER  */
+    unsigned short_per_nslots;
 
-    /** @brief Number of packets we use to calculate long-term PER  */
-    unsigned long_per_npackets;
+    /** @brief Number of slots worth of packets we use to calculate long-term PER  */
+    unsigned long_per_nslots;
 
     /** @brief Timestamp delay, in seconds */
     double timestamp_delay;
