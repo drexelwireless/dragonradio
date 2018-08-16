@@ -12,6 +12,8 @@ import sc2.registration_pb2 as registration
 
 logger = logging.getLogger('collab')
 
+CIL_VERSION = (2, 5, 2)
+
 def ip_int_to_string(ip_int):
     """
     Convert integer formatted IP to IP string
@@ -25,9 +27,8 @@ def ip_string_to_int(ip_string):
     return struct.unpack('!L',socket.inet_aton(ip_string))[0]
 
 class CilClient(ZMQProtoClient):
-    def __init__(self, local_ip=None, supported_messages=None, *args, **kwargs):
+    def __init__(self, local_ip=None, *args, **kwargs):
         super(CilClient, self).__init__(*args, **kwargs)
-        self.supported_messages = supported_messages
         self.local_ip = local_ip
         self.msg_count = 0
 
@@ -38,13 +39,14 @@ class CilClient(ZMQProtoClient):
         msg.timestamp.seconds = 0
         msg.timestamp.picoseconds = 0
         self.msg_count += 1
-        msg.hello.listening.extend(self.supported_messages)
+        msg.hello.version.major = CIL_VERSION[0]
+        msg.hello.version.minor = CIL_VERSION[1]
+        msg.hello.version.patch = CIL_VERSION[2]
 
 class Peer(object):
     def __init__(self, agent, peer_host, peer_port):
         self.ip = peer_host
         self.cil_client = CilClient(local_ip=agent.local_ip,
-                                    supported_messages=agent.getHandledMessageTypes(cil.CilMessage),
                                     loop=agent.loop,
                                     server_host=peer_host,
                                     server_port=peer_port)

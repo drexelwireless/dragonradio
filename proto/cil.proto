@@ -105,28 +105,21 @@ message SpectrumVoxel
 //=================================================================================================
 
 /*
- * Enumeration of all top level messages that can be sent through the CIL.
- * For an automata formalism these would correspond to actions/edges.
- * This enumeration should match the tag numbers used within the CilMessage
- * payload. If a top level message is removed, then that tag number and this
- * enum number should not be reused.
+ * Each released CIL specification has a version defined as <major>.<minor>.<patch>. The <major>
+ * version corresponds to the tournament phase. The <minor> version corresponds to the next 
+ * upcoming scrimmage number, or previous scrimmage + 1 for the PE/SCE round. The <patch> version
+ * begins at zero and is incremented after each merge to the master branch, resetting to zero after
+ * each scrimmage event. The CIL version will be available as a tag on the master branch. The
+ * version sent over the wire must match the CIL specification version used, which, for scrimmage
+ * events, should be the newest available version.
  */
-enum CilProtocol
+message CilVersion
 {
-  UNKNOWN = 0;
-  HELLO = 10;
-  SCALAR_PERFORMANCE = 11;
-  SPECTRUM_USAGE = 12;
-  LOCATION_UPDATE = 13;
-  RELAY_CAPABILITY_REQUEST = 20;
-  RELAY_CAPABILITY_RESPONSE = 21;
-  RELAY_CONTRACT_REQUEST = 22;
-  RELAY_CONTRACT_RESPONSE = 23;
-  RELAY_COMPLETION_REPORT = 24;
-  DETAILED_PERFORMANCE = 30;
-  INCUMBENT_NOTIFY = 200; // expecting to deprecate and move to registration.proto
+  uint32 major = 1; // mandatory, <major> = tournament phase
+  uint32 minor = 2; // mandatory, <minor> = upcoming scrimmage, or previous scrimmage + 1
+  uint32 patch = 3; // mandatory, <patch> = monotonically increasing, reset after each scrimmage
 }
-  
+
 /*
  * A Hello message is an initial peer-to-peer handshake between networks.
  * The handshake is considered complete if a Hello message has been sent
@@ -138,14 +131,8 @@ enum CilProtocol
  */
 message Hello
 {
-  /*
-   * The listening dialect lists all top level messages that this network
-   * can utilize or respond to if necessary in order to change its
-   * behavior. It is possible that a network can utilize information from
-   * a certain message type but cannot itself generate such messages.
-   */
-   repeated CilProtocol listening = 1;
-  }
+   CilVersion version = 2; // mandatory, the version of the CIL spoken and understood by the CIRN
+}
 
 //=================================================================================================
 // SCALAR_PERFORMANCE Protocol
@@ -177,38 +164,51 @@ message ScalarPerformance
 //=================================================================================================
 
 /*
- * Mandated outcomes are assigned to traffic streams that originate and
- * terminate at different nodes within a network. The radio_ids list indicates
- * which radios play a part in delivering the mandate. The first in the list
- * is the originator of the traffic flow, and the last in the list is the
- * destination. The scalar_performance is a value between 0 and 1 that
- * indicates how close the CIRN came to meeting the particular mandate
- * throughout the time interval. A value close to 1.0 means the mandate is 
- * almost met. The desired_voxels is an optional list of SpectrumVoxels that
- * would improve the performance of the mandate, if other teams reduced their
- * usage of them.
+* Mandated outcomes are assigned to traffic streams that originate and
+* terminate at different nodes within a network. The radio ids list indicates
+* which radios play a part in delivering the mandate. The first in the list is
+* the originator of the traffic flow, and the last in the list is the
+* destination. The scalar performance is a non-negative value that indicates
+* how close the CIRN came to meeting the particular mandate by the end of the
+* measurement period. A value less than 1.0 means that the mandate was not met
+* in the measurement period. The mandate must be met for the steady state hold
+* period in order to count as achieved. The achieved duration field counts the
+* number of consecutive measurement periods (1 second) for which the mandate
+* was met. This value must be zero if scalar performance is less than 1.0 and
+* must be positive if scalar performance is at least 1.0. The desired voxels is
+* an optional list of SpectrumVoxels that would improve the performance of the
+* mandate, if other teams reduced their usage of them.
 */
 message MandatePerformance
 {
-  double scalar_performance = 1; // mandatory, the progress toward meeting the mandate
-  repeated uint32 radio_ids = 2; // mandatory, the ids of the radios in the path of the mandate's traffic flow
-  repeated SpectrumVoxel desired_voxels = 3; // optional, the voxels that are needed in order to improve this mandate's performance
+  double scalar_performance = 1; // mandatory, the progress at measurement time
+  repeated uint32 radio_ids = 2; // mandatory, the radios in the traffic flow
+  repeated SpectrumVoxel desired_voxels = 3; // optional, the required voxels
+  uint32 flow_id = 4; // optional, the mandate flow id (destination port)
+  uint32 hold_period = 5; // mandatory, the length of the steady state period
+  uint32 achieved_duration = 6; // mandatory, number of periods it was met
 }
+
 /*
- * The time intervals of consecutive DetailedPerformance messages cannot overlap. 
- * The list of failing_mandates gives details about where in the network 
- * the mandates are not being met. Mandates being met during the time interval
- * should not be included in the list of failing_mandates. This message must be
- * sent at least once every 60 seconds, and at most once every 10 seconds. This 
- * message is intended to be a detailed report of mandate performance, sent with
- * a longer period than the ScalarPerformance message.
- */
+* The mandate count field must indicate the total number of assigned mandates.
+* The timestamp indicates the end of the measurement period (1 second) to which
+* this performance message belongs to. The mandates achived value must contain
+* the number of mandates whose achieved duration is greater than or equal to
+* the hold period. The list of mandates gives details about where in the
+* network the mandates are succeeding or failing, and it must contain one entry
+* for each tracked flow. The reported mandates should not contain stale
+* information. This list may contain fewer entries than the total mandate count
+* if the network is partitioned (so accurate statistics is not available), or
+* there are mandates that the CIRN cannot achieve or decided not to pursue.
+* This message must be sent at least once every 10 seconds, and at most once
+* every 1 second.
+*/
 message DetailedPerformance
 {
   uint32 mandate_count = 1; // mandatory, total number of mandates assigned
-  TimeStamp time_start = 2; // mandatory, the start time of its validity
-  TimeStamp time_end = 3; // mandatory, the end time of its validity
-  repeated MandatePerformance failing_mandates = 4; // mandatory, the mandates that are not yet met
+  TimeStamp timestamp = 3; // mandatory, the end of the measurement period
+  repeated MandatePerformance mandates = 4; // mandatory, all known mandates
+  uint32 mandates_achieved = 5; // mandatory, number of achieved mandates 
 }
 
 //=================================================================================================
@@ -261,6 +261,11 @@ message ReceiverInfo
  * spectrum voxels with utilities 1.7 and 2.1 have the same utility as a single
  * voxel with utility 3.9. Other than this, the meaning of the utility is 
  * undefined. If the utility is not specified, then it defaults to 1.
+ * If the reported spectrum usage is based on actual measurements (the start
+ * and end times, the frequency, the duty cycle, the power levels, etc.), then 
+ * the measured_data field must be set to true. Otherwise the report is either
+ * just a prediction or plan that might not occur precisely (e.g. the duty 
+ * cycle, power levels might be different than indicated).
  */
 message SpectrumVoxelUsage
 {
@@ -268,6 +273,7 @@ message SpectrumVoxelUsage
   TransmitterInfo transmitter_info = 2; // mandatory, the transmitter
   repeated ReceiverInfo receiver_info = 3; // mandatory, one or more receivers
   google.protobuf.DoubleValue utility = 4; // optional, the utility
+  bool measured_data = 5; // mandatory, all data are based on measurements
 }
 
 /*
@@ -313,135 +319,6 @@ message LocationInfo
 message LocationUpdate
 {
   repeated LocationInfo locations = 1;
-}
-
-//=================================================================================================
-// RELAY protocol
-//=================================================================================================
-
-/**
- * The RelayInfo describes a requested or offered relay service. The spectrum
- * voxel times should be in the future. The expected implementation should
- * record the defined spectrum voxel and replay it with a time shift,
- * frequency shift and power gain. If the time shift is 0, then it
- * means "as soon as possible", possibly overlapping with the recording phase.
- * It is expected that implementations always support the 0 Hz frequency
- * shift. The gain, in dB (which includes both rx and tx gain), is the power
- * gain of the repeated signal vs. original signal, up to a maximum power
- * (at which point clipping may occur). The maximum power must be specified as 
- * the maximum requested or offered instantaneous transmit power for the voxel
- * which ensures no clipping will occur, accounting for tx gain. For example,
- * if the relay node is capable of transmitting a pure sinusoid wave within the
- * voxel with an amplitude 1.0 at baseband, and tx gain is 20 dB, max power
- * should be specified as 20 dB. The maximum requested power could be the
- * maximum tx gain (35) which would be lowered within the response to the
- * maximum supported power. A lower maximum requested power would, however, 
- * enable the relay node to use a lower clipping level to avoid overdriving
- * other transmissions.
- *
- * If the maximum requested power is negative infinity, then the
- * signal retransmission should not be performed -- only the reception,
- * filtering and the reporting of the received signal statistics in a
- * completion report.
- *
- *
- * There are two parties in the negotiation of a relay service: the requester
- * CIRN that issues capability and schedule requests, and the relaying CIRN
- * that will perform the relaying service for the requester. The node id
- * always identifies the (IPv4) address of one of the nodes of the relaying
- * CIRN.
- */
-message RelayInfo
-{
-  SpectrumVoxel spectrum_voxel = 1; // mandatory, the voxel to be recorded
-  uint32 radio_id = 2; // mandatory, the node performing the relay
-  double time_shift = 3; // mandatory, time shift in seconds
-  double freq_shift = 4; // mandatory, frequency shift in Hz
-  double gain_db = 5; // mandatory, adjusted gain in dB
-  double max_power_db = 6; // mandatory, max instantaneous power in gain adjusted dBFS
-}
-
-/**
- * The RelayCapabilityRequest lists all spectrum voxels in the future that the
- * relaying CIRN should perform for the requester CIRN. This message does not
- * change any ongoing relay contracts, it just starts a negotiating round for
- * a completely new set of relay services that should replace the currently
- * running relay contracts. The order of the relay infos indicates preferences.
- */
-message RelayCapabilityRequest
-{
-  repeated RelayInfo relays = 1; // optional, the set of requested relays
-}
-
-/**
- * This is the response to the RelayCapabilityRequest and should be issued
- * within 1 second of receiving that message. The relaying CIRN can modify all
- * parameters of the requested relays, and can completely eliminate some
- * relays that it cannot service. If a relay is modified, then it must be
- * modified according to the following rules: The spectrum voxel has to be
- * same or enlarged, so the frequency range must include the original
- * frequency range, the time range must include the original time range, the
- * period and slot times must be changed so they overlap with the original
- * request. Only the duty cycle can be arbitrary, indicating what percentage
- * of the voxel will be forwarded. This field could be used by the requester
- * to arbitrate between capability responses from two different CIRNs. The
- * returned time shift should be a time shift that is closest to the requested
- * time shift. The frequency shift should be to the closest supported
- * frequency shift or 0. Gain must exactly match the requested gain. The maximum
- * power could be lower than the requested value. The response always indicates
- * a full set of relays that can be performed simultaneously. The requester has
- * no obligation to accept the response, it can initiate a new independent 
- * capability request or start a contract with a subset of the response.
- */
-message RelayCapabilityResponse
-{
-  repeated RelayInfo relays = 1; // optional, the set of offered relays
-  uint32 in_response_to = 2; // mandatory, the msg_count of the request
-}
-
-/**
- * The RelayContractRequest lists all spectrum voxels in the future that the
- * relaying CIRN should perform for the requester CIRN. This message completely
- * overwrites all previous contract requests, so you can stop any relaying
- * service by sending this message with an empty list of relays. The specified
- * relays must match exactly those relays that were reported in the (last)
- * capability response. Again, the order of the relays indicates preference.
- */
-message RelayContractRequest
-{
-  repeated RelayInfo relays = 1; // optional, the set of requested relays
-}
-
-/**
- * This message is a response to the RelayContractRequest message and should
- * be sent within 1 second of receiving that message. The relaying CIRN must
- * completely replace the set of relays performed for the requester CIRN with
- * a subset of the relays from the contract request that it can actually
- * service now. The contract response should contain all those relays that
- * will be performed for the requester. The relaying CIRN has no obligation to
- * accept any requested relays, so the accepted set can be empty. The accepted
- * and returned relay infos must match exactly one of the requested ones.
- */
-message RelayContractResponse
-{
-  repeated RelayInfo relays = 1; // optional, the set of serviced relays
-  uint32 in_response_to = 2; // mandatory, the msg_count of the request
-}
-
-/**
- * This message is sent from the relaying CIRN to the requester CIRN when a
- * relay contract item has completed. The reported receive power should be
- * reported in gain adjusted dBFS assuming zero gain filtering. For example
- * assuming negligible noise level, if a pure sinusoid wave is in the
- * frequency band and its amplitude is 0.1 in baseband, and we have used 5 dB
- * receiver gain, then the rx_power_db should be -15 regardless of the
- * bandwidth of the frequency band.
- */
-message RelayCompletionReport
-{
-  RelayInfo relay = 1; // mandatory, the completed relay
-  uint32 in_response_to = 2; // optional, the RelayContractRequest msg_count
-  float rx_power_db = 3; // mandatory, rx power in gain adjusted dBFS
 }
 
 //=================================================================================================
@@ -523,11 +400,6 @@ message CilMessage
     ScalarPerformance scalar_performance = 11;
     SpectrumUsage spectrum_usage = 12;
     LocationUpdate location_update = 13;
-    RelayCapabilityRequest relay_capability_request = 20;
-    RelayCapabilityResponse relay_capability_response = 21;
-    RelayContractRequest relay_contract_request = 22;
-    RelayContractResponse relay_contract_response = 23;
-    RelayCompletionReport relay_completion_report = 24;
 
     DetailedPerformance detailed_performance = 30;
 
