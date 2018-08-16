@@ -1,3 +1,4 @@
+#include "Estimator.hh"
 #include "RadioConfig.hh"
 #include "WorkQueue.hh"
 #include "phy/PHY.hh"
@@ -90,13 +91,28 @@ void ParallelPacketModulator::modWorker(void)
     std::unique_ptr<PHY::Modulator> modulator = phy_->make_modulator();
     std::shared_ptr<NetPacket>      pkt;
     ModPacket                       *mpkt;
+    // We want the last 10 packets to account for 86% of the EMA
+    EMA<double>                     samples_per_packet(2.0/(10.0 + 1.0));
 
     for (;;) {
-        // Wait for queue to be below low-water mark
+        size_t estimated_samples = samples_per_packet.getValue();
+
+        // Wait for there to be room for us to add another packet
         {
             std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-            producer_cond_.wait(lock, [this]{ return done_ || nwanted_ > 0; });
+            producer_cond_.wait(lock, [this, estimated_samples]
+                {
+                    if (done_)
+                        return true;
+
+                    if (nwanted_ >= estimated_samples) {
+                        nwanted_ -= estimated_samples;
+                        return true;
+                    }
+
+                    return false;
+                });
         }
 
         // Exit if we are done
@@ -132,6 +148,9 @@ void ParallelPacketModulator::modWorker(void)
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();
 
+        // Update estimate of samples-per-packet
+        samples_per_packet.update(n);
+
         // Pass the modulated packet to the 0dBFS estimator if requested
         if (tx_params->nestimates_0dBFS > 0) {
             --tx_params->nestimates_0dBFS;
@@ -152,7 +171,12 @@ void ParallelPacketModulator::modWorker(void)
             std::lock_guard<std::mutex> lock(pkt_mutex_);
 
             nsamples_ += n;
-            nwanted_ -= n;
+
+            // If we underproduced, kick off another producer
+            if (estimated_samples > n) {
+                nwanted_ += estimated_samples - n;
+                producer_cond_.notify_one();
+            }
         }
     }
 }
