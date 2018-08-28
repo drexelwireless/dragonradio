@@ -1,5 +1,5 @@
-#ifndef GAIN_HH_
-#define GAIN_HH_
+#ifndef TXPARAMS_HH_
+#define TXPARAMS_HH_
 
 #include <liquid/liquid.h>
 
@@ -119,4 +119,4 @@ struct TXParams {
     void autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf);
 };
 
-#endif /* GAIN_HH_ */
+#endif /* TXPARAMS_HH_ */
