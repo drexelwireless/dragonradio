@@ -1,6 +1,7 @@
 #ifndef LIQUID_H_
 #define LIQUID_H_
 
+#include <complex>
 #include <mutex>
 
 #include <liquid/liquid.h>

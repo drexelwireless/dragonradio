@@ -1,3 +1,5 @@
+#include <complex>
+
 #include <liquid/liquid.h>
 
 #include "Logger.hh"

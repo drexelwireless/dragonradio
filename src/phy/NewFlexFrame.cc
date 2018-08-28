@@ -1,3 +1,5 @@
+#include <complex>
+
 #include <liquid/liquid.h>
 
 #if LIQUID_VERSION_NUMBER >= 1003001

@@ -1,6 +1,8 @@
 #ifndef TXPARAMS_HH_
 #define TXPARAMS_HH_
 
+#include <complex>
+
 #include <liquid/liquid.h>
 
 #include "Estimator.hh"

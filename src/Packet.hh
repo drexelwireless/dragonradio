@@ -6,6 +6,7 @@
 #include <string.h>
 #include <netinet/in.h>
 
+#include <complex>
 #include <cstddef>
 #include <iterator>
 #include <vector>

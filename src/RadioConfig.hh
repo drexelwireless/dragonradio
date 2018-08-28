@@ -1,6 +1,7 @@
 #ifndef RADIOCONFIG_H_
 #define RADIOCONFIG_H_
 
+#include <complex>
 #include <memory>
 
 #include <liquid/liquid.h>
