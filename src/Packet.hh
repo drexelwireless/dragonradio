@@ -366,6 +366,9 @@ struct RadioPacket : public Packet
     /** @brief Carrier frequency offset (f/Fs) */
     float cfo;
 
+    /** @brief Center frequency packet was received on (Hz) */
+    float fc;
+
     /** @brief This Boolean is true if this packet is a barrier and should not
      * be processed or removed from a queue except by its creator.
      */

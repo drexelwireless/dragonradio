@@ -222,6 +222,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     pkt->evm = stats_.evm;
     pkt->rssi = stats_.rssi;
     pkt->cfo = stats_.cfo;
+    pkt->fc = shift_;
 
     pkt->timestamp = demod_start_ + (off + resamp_fact*stats_.start_counter) / phy_.getRXRate();
 
@@ -250,6 +251,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
                         stats_.evm,
                         stats_.rssi,
                         stats_.cfo,
+                        shift_,
                         payload_len_,
                         std::move(buf));
     }

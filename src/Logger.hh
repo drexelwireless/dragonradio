@@ -72,6 +72,7 @@ public:
                  float evm,
                  float rssi,
                  float cfo,
+                 float fc,
                  uint32_t size,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
 
@@ -130,6 +131,7 @@ private:
                   float evm,
                   float rssi,
                   float cfo,
+                  float fc,
                   uint32_t size,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
     void logSend_(const Clock::time_point& t,
