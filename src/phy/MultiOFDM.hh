@@ -37,6 +37,8 @@ public:
 
         void assemble(unsigned char *hdr, NetPacket& pkt) override final;
 
+        size_t maxModulatedSamples(void) override final;
+
         bool modulateSamples(std::complex<float> *buf, size_t &nw) override final;
     };
 

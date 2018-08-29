@@ -112,6 +112,11 @@ protected:
      */
     virtual void assemble(unsigned char *hdr, NetPacket& pkt) = 0;
 
+    /** @brief Return maximum number of samples modulateSamples will generate.
+     * @return Maximum number of samples modulateSamples will generate.
+     */
+    virtual size_t maxModulatedSamples(void) = 0;
+
     /** @brief Modulate samples.
      * @param buf The destination for modulated samples
      * @param nw The number of samples written
