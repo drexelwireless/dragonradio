@@ -62,9 +62,9 @@ bool FlexFrame::Modulator::modulateSamples(std::complex<float> *buf, size_t &nw)
     nw = NGEN;
 
 #if LIQUID_VERSION_NUMBER >= 1003000 && defined(NEWFLEXFRAME)
-    return flexframe(gen_write_samples)(fg_, reinterpret_cast<liquid_float_complex*>(buf), NGEN);
+    return flexframe(gen_write_samples)(fg_, buf, NGEN);
 #else /* LIQUID_VERSION_NUMBER < 1003000 */
-    return flexframe(gen_write_samples)(fg_, reinterpret_cast<liquid_float_complex*>(buf));
+    return flexframe(gen_write_samples)(fg_, buf);
 #endif /* LIQUID_VERSION_NUMBER < 1003000 */
 }
 
@@ -106,7 +106,7 @@ void FlexFrame::Demodulator::liquidReset(void)
 
 void FlexFrame::Demodulator::demodulateSamples(std::complex<float> *buf, const size_t n)
 {
-    flexframe(sync_execute)(fs_, reinterpret_cast<liquid_float_complex*>(buf), n);
+    flexframe(sync_execute)(fs_, buf, n);
 }
 
 std::unique_ptr<PHY::Demodulator> FlexFrame::make_demodulator(void)

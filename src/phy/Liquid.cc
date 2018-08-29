@@ -83,7 +83,7 @@ void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
     // Flag indicating when we've reached the last symbol
     bool last_symbol = false;
     // Modulated output buffer
-    liquid_float_complex modbuf[kMaxUpsampleSize];
+    std::complex<float> modbuf[kMaxUpsampleSize];
 
     while (!last_symbol) {
         if (upsamp_rate_ == 1.0) {
@@ -95,7 +95,7 @@ void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
             msresamp_crcf_execute(upsamp_,
                                   modbuf,
                                   nw_preup,
-                                  reinterpret_cast<liquid_float_complex*>(&(*iqbuf)[nsamples]),
+                                  &(*iqbuf)[nsamples],
                                   &nw);
         }
 
@@ -245,12 +245,12 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
     callback_ = callback;
 
     if (downsamp_rate_ == 1.0) {
-        demodulateSamples(reinterpret_cast<liquid_float_complex*>(data), count);
+        demodulateSamples(data, count);
     } else {
-        std::unique_ptr<liquid_float_complex[]> downsampbuf(new liquid_float_complex[count]);
-        unsigned int                            nw;
+        std::unique_ptr<std::complex<float>[]> downsampbuf(new std::complex<float>[count]);
+        unsigned int                           nw;
 
-        msresamp_crcf_execute(downsamp_, reinterpret_cast<liquid_float_complex*>(data), count, downsampbuf.get(), &nw);
+        msresamp_crcf_execute(downsamp_, data, count, downsampbuf.get(), &nw);
 
         demodulateSamples(downsampbuf.get(), nw);
     }

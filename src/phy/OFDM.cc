@@ -74,9 +74,9 @@ bool OFDM::Modulator::modulateSamples(std::complex<float> *buf, size_t &nw)
     nw = myphy_.M_ + myphy_.cp_len_;
 
 #if LIQUID_VERSION_NUMBER >= 1003000
-    return ofdmflexframegen_write(fg_, reinterpret_cast<liquid_float_complex*>(buf), nw);
+    return ofdmflexframegen_write(fg_, buf, nw);
 #else /* LIQUID_VERSION_NUMBER < 1003000 */
-    return ofdmflexframegen_writesymbol(fg_, reinterpret_cast<liquid_float_complex*>(buf));
+    return ofdmflexframegen_writesymbol(fg_, buf);
 #endif /* LIQUID_VERSION_NUMBER < 1003000 */
 }
 
@@ -124,7 +124,7 @@ void OFDM::Demodulator::liquidReset(void)
 
 void OFDM::Demodulator::demodulateSamples(std::complex<float> *buf, const size_t n)
 {
-    ofdmflexframesync_execute(fs_, reinterpret_cast<liquid_float_complex*>(buf), n);
+    ofdmflexframesync_execute(fs_, buf, n);
 }
 
 std::unique_ptr<PHY::Demodulator> OFDM::make_demodulator(void)
