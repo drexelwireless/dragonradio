@@ -24,7 +24,7 @@ void MAC::timestampPacket(const Clock::time_point &deadline, std::shared_ptr<Net
     pkt->appendTimestamp(Clock::epoch(), deadline);
 
     mpkt = std::make_unique<ModPacket>();
-    timestamped_modulator_->modulate(*mpkt, pkt);
+    timestamped_modulator_->modulate(pkt, getTXShift(), *mpkt);
 
     // We modulate the packet before we check to see if we can actually send it
     // becuase we don't want to hold the spinlock for too long. This can result

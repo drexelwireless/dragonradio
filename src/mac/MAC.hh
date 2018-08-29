@@ -44,6 +44,14 @@ public:
         modulator_->setTXChannel(channel);
     }
 
+    /** @brief Get the frequency shift to use during transmission
+     * @return The frequency shift (Hz) from center frequency
+     */
+    virtual double getTXShift(void) const
+    {
+        return channels_ ? (*channels_)[tx_channel_] : 0.0;
+    }
+
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
 

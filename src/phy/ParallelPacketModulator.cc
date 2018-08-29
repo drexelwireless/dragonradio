@@ -95,8 +95,6 @@ void ParallelPacketModulator::modWorker(void)
     ModPacket                       *mpkt;
     // We want the last 10 packets to account for 86% of the EMA
     EMA<double>                     samples_per_packet(2.0/(10.0 + 1.0));
-    double                          shift = 0.0;
-    TableNCO                        nco(2*M_PI*shift/phy_->getTXRate());
 
     for (;;) {
         size_t estimated_samples = samples_per_packet.getValue();
@@ -143,19 +141,7 @@ void ParallelPacketModulator::modWorker(void)
         }
 
         // Modulate the packet
-        modulator->modulate(*mpkt, std::move(pkt));
-
-        // Mix frequency up
-        double cur_shift = channels_ ? (*channels_)[tx_channel_] : 0.0;
-
-        if (cur_shift != 0.0) {
-            if (shift != cur_shift) {
-                shift = cur_shift;
-                nco.reset(2*M_PI*shift/phy_->getTXRate());
-            }
-
-            nco.mix_up(mpkt->samples->data(), mpkt->samples->size());
-        }
+        modulator->modulate(std::move(pkt), getTXShift(), *mpkt);
 
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();

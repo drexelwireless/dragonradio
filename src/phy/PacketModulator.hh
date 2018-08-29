@@ -33,6 +33,14 @@ public:
         tx_channel_ = channel;
     }
 
+    /** @brief Get the frequency shift to use during transmission
+     * @return The frequency shift (Hz) from center frequency
+     */
+    virtual double getTXShift(void) const
+    {
+        return channels_ ? (*channels_)[tx_channel_] : 0.0;
+    }
+
     /** @brief Modulate samples.
      * @param n The number of samples to produce.
      */

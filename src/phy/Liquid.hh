@@ -81,7 +81,9 @@ public:
     LiquidModulator& operator=(const LiquidModulator&) = delete;
     LiquidModulator& operator=(LiquidModulator&&) = delete;
 
-    void modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt) override final;
+    void modulate(std::shared_ptr<NetPacket> pkt,
+                  double shift,
+                  ModPacket &mpkt) override final;
 
 protected:
     /** Our Liquid PHY */
@@ -92,6 +94,17 @@ protected:
 
     /** @brief Upsampler rate. */
     double upsamp_rate_;
+
+    /** @brief Frequency for mixing up */
+    double shift_;
+
+    /** @brief NCO for mixing up */
+    TableNCO nco_;
+
+    /** @brief Set frequency shift for mixing up
+     * @param shift The frequency shift (Hz)
+     */
+    virtual void setFreqShift(double shift);
 
     /** @brief Assemble a packet for modulation.
      * @param hdr Packet header
@@ -174,6 +187,10 @@ protected:
                          int              payload_valid_,
                          framesyncstats_s stats_);
 
+    /** @brief Set frequency shift for mixing down
+     * @param shift The frequency shift (Hz)
+     */
+    virtual void setFreqShift(double shift);
 
     /** @brief Reset the internal state of the liquid demodulator. */
     virtual void liquidReset(void) = 0;

@@ -50,6 +50,8 @@ LiquidPHY::~LiquidPHY()
 LiquidModulator::LiquidModulator(LiquidPHY &phy)
     : Modulator(phy)
     , liquid_phy_(phy)
+    , shift_(0.0)
+    , nco_(0.0)
 {
     upsamp_rate_ = phy.getTXRateOversample()/phy.getMinTXRateOversample();
     upsamp_ = msresamp_crcf_create(upsamp_rate_, kStopBandAttenuationDb);
@@ -60,7 +62,9 @@ LiquidModulator::~LiquidModulator()
     msresamp_crcf_destroy(upsamp_);
 }
 
-void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
+void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
+                               double shift,
+                               ModPacket &mpkt)
 {
     PHYHeader header;
 
@@ -114,6 +118,12 @@ void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
     // Resize the final buffer to the number of samples generated.
     iqbuf->resize(nsamples);
 
+    // Mix up
+    if (shift != 0.0) {
+        setFreqShift(shift);
+        nco_.mix_up(iqbuf->data(), iqbuf->size());
+    }
+
     // Pass the modulated packet to the 0dBFS estimator if requested
     if (pkt->tx_params->nestimates_0dBFS > 0) {
         --pkt->tx_params->nestimates_0dBFS;
@@ -123,6 +133,17 @@ void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
     // Fill in the ModPacket
     mpkt.samples = std::move(iqbuf);
     mpkt.pkt = std::move(pkt);
+}
+
+void LiquidModulator::setFreqShift(double shift)
+{
+    if (shift_ != shift) {
+        double rad = 2*M_PI*shift/phy_.getTXRate(); // Frequency shift in radians
+
+        nco_.reset(rad);
+
+        shift_ = shift;
+    }
 }
 
 LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
@@ -263,13 +284,7 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
         memcpy(mixbuf.get(), data, sizeof(std::complex<float>)*count);
 
         if (shift != 0.0) {
-            // We don't reset the NCO unless we have to so as to avoid phase
-            // discontinuities during demodulation.
-            if (shift_ != shift) {
-                shift_ = shift;
-                nco_.reset(2*M_PI*shift/liquid_phy_.getRXRate());
-            }
-
+            setFreqShift(shift);
             nco_.mix_down(mixbuf.get(), count);
         }
 
@@ -278,5 +293,18 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
         msresamp_crcf_execute(downsamp_, mixbuf.get(), count, mixbuf.get(), &nw);
 
         demodulateSamples(mixbuf.get(), nw);
+    }
+}
+
+void LiquidDemodulator::setFreqShift(double shift)
+{
+    // We don't reset the NCO unless we have to so as to avoid phase
+    // discontinuities during demodulation.
+    if (shift_ != shift) {
+        double rad = 2*M_PI*shift/phy_.getRXRate(); // Frequency shift in radians
+
+        nco_.reset(rad);
+
+        shift_ = shift;
     }
 }
