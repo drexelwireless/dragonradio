@@ -143,7 +143,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         try:
             while True:
                 if self.nonce:
-                    self.loop.create_task(self.keepalive())
+                    await self.keepalive()
 
                 await asyncio.sleep(self.max_keepalive / 2)
         except CancelledError:
