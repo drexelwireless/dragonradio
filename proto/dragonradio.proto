@@ -20,63 +20,16 @@ enum RadioCommand {
     STATUS = 2;
 }
 
-message Goal {
-  	// This defines the type of outcome specified. The only valid goal_type is
-  	// currently "Traffic"
-    string goal_type = 1;
-
-    // The Flow Unique Identifier (Flow UID) is an integer than can be used to
-    // map between the individual objectives in mandated_outcomes. By policy,
-    // flow_uid will be used for both the flow_id and destination port number
-    // for all MGEN flows.
-    int32 flow_uid = 2;
-
-    // A mapping between requirement name and the value specified for that
-    // requirement. One or more requirements will be specified for each goal
-    // type. If a particular requirement is not specified then traffic
-    // associated with the flow will not be scored against that requirement. See
-    // below for descriptions of all of the potential requirements fields
-    Requirements requirements = 3;
-}
-
-message Requirements {
-    // The maximum allowed latency in seconds for a packet to be counted by the
-    // scoring engine.
-    float max_latency_s = 1;
-
-    // The minimum throughput in bits per second that must be achieved for a
-    // flow to be considered to be meeting its goal over a scoring interval.
-    float min_throughput_bps = 2;
-
-    // The maximum allowed packet drop rate in terms of (number of dropped
-    // packets) / ( total sourced packets in the flow )
-    float max_packet_drop_rate = 3;
-
-    // The maximum time allowed for a file transfer. The start time of the file
-    // transfer is defined as the time at which the traffic generator (source)
-    // delivers the first message segment to the source node of the competitor
-    // CIRN. The completion time is defined as the time at which the last
-    // message is delivered by the CIRN to the destination traffic sink.
-    float file_transfer_deadline_s = 4;
-
-    // The size of the file to be transferred, in bytes.
-    float file_size_bytes = 5;
-}
-
 message Status {
     State state = 1;
     string info = 2;
 }
 
 message MandatedOutcomes {
-    repeated Goal goals = 1;
-}
-
-message MandatedOutcomesJson {
     string goals = 1;
 }
 
-message EnvironmentJson {
+message Environment {
     string environment = 1;
 }
 
@@ -84,8 +37,7 @@ message Request {
     oneof payload {
         RadioCommand radio_command = 1;
         MandatedOutcomes update_mandated_outcomes = 2;
-        MandatedOutcomesJson update_mandated_outcomes_json = 3;
-        EnvironmentJson update_environment_json = 4;
+        Environment update_environment = 3;
     }
 }
 

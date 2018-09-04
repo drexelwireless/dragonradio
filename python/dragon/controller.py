@@ -241,22 +241,15 @@ class Controller(TCPProtoServer):
 
     @handle('Request.update_mandated_outcomes')
     def updateMandatedOutcomes(self, req):
+        logger.info('Mandated outcomes:\n%s', req.update_mandated_outcomes.goals)
         resp = internal.Response()
         resp.status.state = self.state
         resp.status.info = 'Mandated outcomes updated'
         return resp
 
-    @handle('Request.update_mandated_outcomes_json')
-    def updateMandatedOutcomesJson(self, req):
-        logger.info('Mandated outcomes:\n%s', req.update_mandated_outcomes_json.goals)
-        resp = internal.Response()
-        resp.status.state = self.state
-        resp.status.info = 'Mandated outcomes updated'
-        return resp
-
-    @handle('Request.update_environment_json')
-    def updateEnvironmentJson(self, req):
-        logger.info('Environment:\n%s', req.update_environment_json.environment)
+    @handle('Request.update_environment')
+    def updateEnvironment(self, req):
+        logger.info('Environment:\n%s', req.update_environment.environment)
         resp = internal.Response()
         resp.status.state = self.state
         resp.status.info = 'Environment updated'

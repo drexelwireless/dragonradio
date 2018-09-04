@@ -65,7 +65,7 @@ def main():
             goals = f.read()
 
         with client:
-            client.updateMandatedOutcomesJson(goals)
+            client.updateMandatedOutcomes(goals)
     elif args.action == 'update-environment':
         if len(args.paths) == 0:
             path = "/root/radio_api/environment.json"
@@ -76,7 +76,7 @@ def main():
             goals = f.read()
 
         with client:
-            client.updateEnvironmentJson(goals)
+            client.updateEnvironment(goals)
 
     loop.close()
     return 0
