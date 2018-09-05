@@ -11,17 +11,16 @@ import dragonradio
 
 from dragon.collab import CollabAgent
 from dragon.protobuf import *
-import dragon.dragonradio_pb2 as internal
 import dragon.radio
-import dragon.radio_api as radio_api
+import dragon.remote as remote
 
 logger = logging.getLogger('controller')
 
-@handler(internal.Request)
+@handler(remote.Request)
 class Controller(TCPProtoServer):
     def __init__(self, config):
         self.config = config
-        self.state = internal.BOOTING
+        self.state = remote.BOOTING
         self.started_discovery = False
         self.nodes = set()
         self.dumpcap_procs = []
@@ -72,15 +71,15 @@ class Controller(TCPProtoServer):
         self.loop.create_task(self.dummy())
 
         # Start the RPC server
-        self.radio_api_server = self.startServer(internal.Request, radio_api.RADIO_API_HOST, radio_api.RADIO_API_PORT)
-        self.loop.create_task(self.radio_api_server)
+        self.remote_server = self.startServer(remote.Request, remote.REMOTE_HOST, remote.REMOTE_PORT)
+        self.loop.create_task(self.remote_server)
 
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
         if bootstrap:
             self.startRadio()
 
-        self.state = internal.READY
+        self.state = remote.READY
 
         try:
             self.loop.run_forever()
@@ -99,7 +98,7 @@ class Controller(TCPProtoServer):
             self.loop.create_task(self.switchToTDMA())
 
     def stopRadio(self):
-        self.state = internal.STOPPING
+        self.state = remote.STOPPING
 
         for p in self.dumpcap_procs:
             try:
@@ -119,7 +118,7 @@ class Controller(TCPProtoServer):
                     logger.exception('Could not gracefully terminate collaboration agent')
             logger.info('Shutting down...')
             self.loop.stop()
-            self.state = internal.FINISHED
+            self.state = remote.FINISHED
 
         logger.info('Cancelling tasks...')
         for task in asyncio.Task.all_tasks():
@@ -187,7 +186,7 @@ class Controller(TCPProtoServer):
         radio.mac.slots[nodes.index(radio.node_id)] = True
 
         # We are now ready to transmit data
-        self.state = internal.ACTIVE
+        self.state = remote.ACTIVE
 
     async def discoverNeighbors(self):
         loop = self.loop
@@ -225,16 +224,16 @@ class Controller(TCPProtoServer):
     def radioCommand(self, req):
         info = ''
 
-        if req.radio_command == internal.START:
-            if self.state == internal.READY:
+        if req.radio_command == remote.START:
+            if self.state == remote.READY:
                 self.startRadio()
                 info = 'Radio started'
-        elif req.radio_command == internal.STOP:
-            if self.state == internal.READY or self.state == internal.ACTIVE:
+        elif req.radio_command == remote.STOP:
+            if self.state == remote.READY or self.state == remote.ACTIVE:
                 self.stopRadio()
                 info = 'Radio stopping'
 
-        resp = internal.Response()
+        resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = info
         return resp
@@ -242,7 +241,7 @@ class Controller(TCPProtoServer):
     @handle('Request.update_mandated_outcomes')
     def updateMandatedOutcomes(self, req):
         logger.info('Mandated outcomes:\n%s', req.update_mandated_outcomes.goals)
-        resp = internal.Response()
+        resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Mandated outcomes updated'
         return resp
@@ -250,7 +249,7 @@ class Controller(TCPProtoServer):
     @handle('Request.update_environment')
     def updateEnvironment(self, req):
         logger.info('Environment:\n%s', req.update_environment.environment)
-        resp = internal.Response()
+        resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Environment updated'
         return resp

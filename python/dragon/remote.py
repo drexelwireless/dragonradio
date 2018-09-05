@@ -2,42 +2,43 @@ import functools
 import struct
 
 from dragon.protobuf import *
-import dragon.dragonradio_pb2 as internal
+from dragon.remote_pb2 import *
+import dragon.remote_pb2 as remote
 
-RADIO_API_HOST = '127.0.0.1'
-RADIO_API_PORT = 8888
+REMOTE_HOST = '127.0.0.1'
+REMOTE_PORT = 8888
 
-class RadioAPIClient(TCPProtoClient):
-    def __init__(self, *args, server_host=RADIO_API_HOST, server_port=RADIO_API_PORT, **kwargs):
-        super(RadioAPIClient, self).__init__(*args, server_host=server_host, server_port=server_port, **kwargs)
+class RemoteClient(TCPProtoClient):
+    def __init__(self, *args, server_host=REMOTE_HOST, server_port=REMOTE_PORT, **kwargs):
+        super(RemoteClient, self).__init__(*args, server_host=server_host, server_port=server_port, **kwargs)
 
-    @rpc(internal.Request, internal.Response)
+    @rpc(remote.Request, remote.Response)
     def start(self, req):
-        req.radio_command = internal.START
+        req.radio_command = remote.START
 
-    @rpc(internal.Request, internal.Response)
+    @rpc(remote.Request, remote.Response)
     def stop(self, req):
-        req.radio_command = internal.STOP
+        req.radio_command = remote.STOP
 
-    @rpc(internal.Request, internal.Response)
+    @rpc(remote.Request, remote.Response)
     def status(self, req):
-        req.radio_command = internal.STATUS
+        req.radio_command = remote.STATUS
 
-    @rpc(internal.Request, internal.Response)
+    @rpc(remote.Request, remote.Response)
     def updateMandatedOutcomes(self, req, goals):
         req.update_mandated_outcomes.goals = goals
 
-    @rpc(internal.Request, internal.Response)
+    @rpc(remote.Request, remote.Response)
     def updateEnvironment(self, req, env):
         req.update_environment.environment = env
 
-state_map = { internal.OFF: 'OFF'
-            , internal.BOOTING: 'BOOTING'
-            , internal.READY: 'READY'
-            , internal.ACTIVE: 'ACTIVE'
-            , internal.STOPPING: 'STOPPING'
-            , internal.FINISHED: 'FINISHED'
-            , internal.ERROR: 'ERROR'
+state_map = { remote.OFF: 'OFF'
+            , remote.BOOTING: 'BOOTING'
+            , remote.READY: 'READY'
+            , remote.ACTIVE: 'ACTIVE'
+            , remote.STOPPING: 'STOPPING'
+            , remote.FINISHED: 'FINISHED'
+            , remote.ERROR: 'ERROR'
             }
 
 def stateToString(state):
@@ -51,13 +52,13 @@ def parseMandatedOutcomes(data):
         data (str): The JSON mandated goals
 
     Returns:
-        internal.Goal: A protobuf Goal
+        remote.Goal: A protobuf Goal
     """
     return [parseGoal(g) for g in data]
 
 def parseGoal(data):
     """Parse JSON data representing a mandated outcome goal."""
-    goal = internal.Goal()
+    goal = remote.Goal()
 
     goal.goal_type = data['goal_type']
     goal.flow_uid = data['flow_uid']
