@@ -50,19 +50,19 @@ class Controller(TCPProtoServer):
         radio.net.addNode(radio.node_id)
 
         # See if we are a gateway, and if so, start the collaboration agent
-        self.agent = None
+        self.collab_agent = None
 
         if self.config.collab_iface in netifaces.interfaces():
             radio.net[radio.node_id].is_gateway = True
             collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
 
             try:
-                self.agent = CollabAgent(loop=self.loop,
-                                         local_ip=collab_ip,
-                                         server_host=self.config.collab_server_ip,
-                                         server_port=self.config.collab_server_port,
-                                         client_port=self.config.collab_client_port,
-                                         peer_port=self.config.collab_peer_port)
+                self.collab_agent = CollabAgent(loop=self.loop,
+                                                local_ip=collab_ip,
+                                                server_host=self.config.collab_server_ip,
+                                                server_port=self.config.collab_server_port,
+                                                client_port=self.config.collab_client_port,
+                                                peer_port=self.config.collab_peer_port)
             except:
                 logger.exception('Could not create collaboration agent')
 
@@ -110,10 +110,10 @@ class Controller(TCPProtoServer):
             self.removeNode(node_id)
 
         async def shutdownGracefully():
-            if self.agent:
+            if self.collab_agent:
                 logger.info('Leaving collaboration network...')
                 try:
-                    await self.agent.shutdown()
+                    await self.collab_agent.shutdown()
                 except:
                     logger.exception('Could not gracefully terminate collaboration agent')
             logger.info('Shutting down...')

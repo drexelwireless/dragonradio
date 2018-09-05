@@ -66,13 +66,13 @@ def sendCIL(f):
     return wrapper
 
 class Peer(ZMQProtoClient):
-    def __init__(self, agent, peer_host, peer_port):
+    def __init__(self, collab_agent, peer_host, peer_port):
         ZMQProtoClient.__init__(self,
-                                loop=agent.loop,
+                                loop=collab_agent.loop,
                                 server_host=peer_host,
                                 server_port=peer_port)
-        self.agent = agent
-        self.local_ip = agent.local_ip
+        self.collab_agent = collab_agent
+        self.local_ip = collab_agent.local_ip
         self.msg_count = 1
         self.open()
         self.loop.create_task(self.hello())
