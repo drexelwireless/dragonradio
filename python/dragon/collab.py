@@ -41,6 +41,24 @@ def ip_string_to_int(ip_string):
     """
     return struct.unpack('!L',socket.inet_aton(ip_string))[0]
 
+class GPSLocation(object):
+    def __init__(self):
+        self.lat = 0
+        self.lon = 0
+        self.alt = 0
+        self.timestamp = 0
+
+    def __str__(self):
+        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.format(self.lat, self.lon, self.alt, self.timestamp)
+
+class Node(object):
+    def __init__(self, id):
+        self.id = id
+        self.loc = GPSLocation()
+
+    def __str__(self):
+        return 'Node(loc={})'.format(self.loc)
+
 def sendCIL(f):
     """
     Automatically add support to a function for constructing and sending a
@@ -83,10 +101,24 @@ class Peer(ZMQProtoClient):
         msg.hello.version.minor = CIL_VERSION[1]
         msg.hello.version.patch = CIL_VERSION[2]
 
+    @sendCIL
+    async def location_update(self, msg, nodes):
+        for id, n in nodes.items():
+            if n.loc.timestamp != 0:
+                info = cil.LocationInfo()
+                info.radio_id = n.id
+                info.location.latitude = n.loc.lat
+                info.location.longitude = n.loc.lon
+                info.location.elevation = n.loc.alt
+                info.timestamp.set_timestamp(n.loc.timestamp)
+
+                msg.location_update.locations.extend([info])
+
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
 class CollabAgent(ZMQProtoServer, ZMQProtoClient):
     def __init__(self,
+                 nodes,
                  loop=None,
                  local_ip=None,
                  server_host=None,
@@ -95,6 +127,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                  peer_port=None):
         ZMQProtoServer.__init__(self, loop=loop)
         ZMQProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=server_port)
+
+        self.nodes = nodes
 
         self.loop = loop
         self.local_ip = local_ip
@@ -107,12 +141,15 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.nonce = None
         self.max_keepalive = 30
 
+        self.location_update_period = 20
+
         self.startServer(cil.CilMessage, local_ip, peer_port)
         self.startServer(registration.TellClient, local_ip, client_port)
         self.open()
 
         loop.create_task(self.register())
         loop.create_task(self.heartbeat())
+        loop.create_task(self.location_update())
 
     def addPeer(self, peer_ip):
         self.peers[peer_ip] = Peer(self, peer_ip, self.peer_port)
@@ -146,6 +183,16 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                     await self.keepalive()
 
                 await asyncio.sleep(self.max_keepalive / 2)
+        except CancelledError:
+            pass
+
+    async def location_update(self):
+        try:
+            while True:
+                for ip, p in self.peers.items():
+                    await p.location_update(self.nodes)
+
+                await asyncio.sleep(self.location_update_period)
         except CancelledError:
             pass
 

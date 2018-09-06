@@ -9,7 +9,8 @@ import sys
 
 import dragonradio
 
-from dragon.collab import CollabAgent
+from dragon.collab import CollabAgent, Node
+from dragon.gpsd import GPSDClient
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
@@ -22,7 +23,7 @@ class Controller(TCPProtoServer):
         self.config = config
         self.state = remote.BOOTING
         self.started_discovery = False
-        self.nodes = set()
+        self.nodes = {}
         self.dumpcap_procs = []
 
     def setupRadio(self, bootstrap=False):
@@ -47,7 +48,11 @@ class Controller(TCPProtoServer):
         self.dumpcap('tr0')
 
         # Add us as a node
+        self.nodes[radio.node_id] = Node(radio.node_id)
         radio.net.addNode(radio.node_id)
+
+        # Start reading GPS info and attach it to this node
+        self.gpsd_client = GPSDClient(self.nodes[radio.node_id].loc, loop=self.loop)
 
         # See if we are a gateway, and if so, start the collaboration agent
         self.collab_agent = None
@@ -57,7 +62,8 @@ class Controller(TCPProtoServer):
             collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
 
             try:
-                self.collab_agent = CollabAgent(loop=self.loop,
+                self.collab_agent = CollabAgent(self.nodes,
+                                                loop=self.loop,
                                                 local_ip=collab_ip,
                                                 server_host=self.config.collab_server_ip,
                                                 server_port=self.config.collab_server_port,
@@ -140,7 +146,7 @@ class Controller(TCPProtoServer):
     def addNode(self, node_id):
         if node_id != self.radio.node_id and node_id not in self.nodes:
             logger.info('Adding node %d', node_id)
-            self.nodes.add(node_id)
+            self.nodes[node_id] = Node(node_id)
 
             try:
                 subprocess.check_call('ip route add 192.168.{:d}.0/24 via 10.10.10.{:d}'.format(node_id+100, node_id), shell=True)
@@ -156,7 +162,7 @@ class Controller(TCPProtoServer):
             except:
                 logger.exception('Could not remove route to node {}'.format(node_id))
 
-            self.nodes.remove(node_id)
+            del self.nodes[node_id]
 
     async def switchToTDMA(self):
         radio = self.radio
