@@ -220,7 +220,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     @handle('CilMessage.location_update')
     async def handle_location_update(self, msg):
-        pass
+        logger.info('Received location update: %s', msg)
 
     @handle('CilMessage.detailed_performance')
     async def handle_detailed_performance(self, msg):

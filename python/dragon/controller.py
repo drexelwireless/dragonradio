@@ -11,11 +11,24 @@ import dragonradio
 
 from dragon.collab import CollabAgent, Node
 from dragon.gpsd import GPSDClient
+from dragon.internal import InternalAgent
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
 
 logger = logging.getLogger('controller')
+
+def internalNodeIP(node_id):
+    """
+    Return IP address of radio node on internal network
+    """
+    return '10.10.10.{:d}'.format(node_id)
+
+def darpaNodeNet(node_id):
+    """
+    Return IP subnet of radio node on DARPA's network.
+    """
+    return '192.168.{:d}.0/24'.format(node_id+100)
 
 @handler(remote.Request)
 class Controller(TCPProtoServer):
@@ -71,6 +84,12 @@ class Controller(TCPProtoServer):
                                                 peer_port=self.config.collab_peer_port)
             except:
                 logger.exception('Could not create collaboration agent')
+
+        # Start the internal agent
+        self.internal_agent = InternalAgent(self.nodes[radio.node_id],
+                                            self.nodes,
+                                            loop=self.loop,
+                                            local_ip=internalNodeIP(radio.node_id))
 
         # XXX we need *some* task to be running or else we run_forever can't be
         # stopped!
@@ -148,8 +167,11 @@ class Controller(TCPProtoServer):
             logger.info('Adding node %d', node_id)
             self.nodes[node_id] = Node(node_id)
 
+            if self.internal_agent and self.radio.net[node_id].is_gateway:
+                self.internal_agent.startClient(internalNodeIP(node_id))
+
             try:
-                subprocess.check_call('ip route add 192.168.{:d}.0/24 via 10.10.10.{:d}'.format(node_id+100, node_id), shell=True)
+                subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
             except:
                 logger.exception('Could not add route to node {}'.format(node_id))
 
@@ -158,7 +180,7 @@ class Controller(TCPProtoServer):
             logger.info('Removing node %d', node_id)
 
             try:
-                subprocess.check_call('ip route del 192.168.{:d}.0/24'.format(node_id+100), shell=True)
+                subprocess.check_call('ip route del {}'.format(darpaNodeNet(node_id)), shell=True)
             except:
                 logger.exception('Could not remove route to node {}'.format(node_id))
 

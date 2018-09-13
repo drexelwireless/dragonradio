@@ -1,0 +1,25 @@
+syntax = "proto3";
+package dragonradio.internal;
+
+message TimeStamp {
+    int32 seconds = 1; // seconds since 1970
+    int64 picoseconds = 2; // fractional portion of the time, in picoseconds
+}
+
+message Location {
+    double latitude = 1; // latitude in degrees
+    double longitude = 2; // longitude in degrees
+    double elevation = 3; // meters above sea level
+}
+
+message LocationInfo {
+    uint32 radio_id = 1; // mandatory, unique identifier of node
+    Location location = 2; // mandatory, location of the node
+    TimeStamp timestamp = 3; // mandatory, the time of measurement
+}
+
+message Message {
+    oneof payload {
+        LocationInfo location_info = 1;
+    }
+}
