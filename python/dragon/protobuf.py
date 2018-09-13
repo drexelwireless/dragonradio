@@ -5,6 +5,7 @@ import inspect
 import logging
 from pprint import pformat
 import re
+import socket
 import struct
 import zmq.asyncio
 
@@ -255,3 +256,61 @@ def rpc(req_cls, resp_cls):
         return wrapper
 
     return rpc_decorator
+
+class UDPProtoServer(object):
+    def __init__(self, loop=None):
+        self.loop = loop
+
+    def startServer(self, cls, listen_ip, listen_port):
+        self.cls = cls
+        task = self.loop.create_datagram_endpoint(lambda: self,
+                                                  local_addr=(listen_ip, listen_port),
+                                                  reuse_address=True,
+                                                  allow_broadcast=True)
+        (self.server_transport, self.protocol) = self.loop.run_until_complete(task)
+
+    def connection_made(self, transport):
+        pass
+
+    def connection_lost(self, exc):
+        pass
+
+    def datagram_received(self, data, addr):
+        try:
+            msg = self.cls.FromString(data)
+            logger.debug('Received message: {}'.format(pformat(msg)))
+
+            f = self.handlers[self.cls.__name__].message_handlers[msg.WhichOneof('payload')]
+            f(self, msg)
+        except KeyError as err:
+            logger.error('Received unsupported message type: {}', err)
+
+class UDPProtoClient(object):
+    def __init__(self, loop=None, server_host=None, server_port=None):
+        self.loop = loop
+        self.server_host = server_host
+        self.server_port = server_port
+        self.transport = None
+
+    def __enter__(self):
+        self.open()
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def open(self):
+        async def open_():
+            task = self.loop.create_datagram_endpoint(lambda: self,
+                                                      remote_addr=(self.server_host, self.server_port),
+                                                      reuse_address=True,
+                                                      allow_broadcast=True)
+            (self.transport, _) = await task
+
+        self.loop.create_task(open_())
+
+    def close(self):
+        self.transport.close()
+
+    async def send(self, msg):
+        if self.transport:
+            self.transport.sendto(msg.SerializeToString(), addr=None)
