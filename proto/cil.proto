@@ -178,8 +178,11 @@ message ScalarPerformance
 * must be positive if scalar performance is at least 1.0. The desired voxels is
 * an optional list of SpectrumVoxels that would improve the performance of the
 * mandate, if other teams reduced their usage of them.
+*
+* The ContinuousMandate message describes continuous mandates, which are
+* the mandates that need to be continuously met in each measurement period.
 */
-message MandatePerformance
+message ContinuousMandate
 {
   double scalar_performance = 1; // mandatory, the progress at measurement time
   repeated uint32 radio_ids = 2; // mandatory, the radios in the traffic flow
@@ -187,6 +190,39 @@ message MandatePerformance
   uint32 flow_id = 4; // optional, the mandate flow id (destination port)
   uint32 hold_period = 5; // mandatory, the length of the steady state period
   uint32 achieved_duration = 6; // mandatory, number of periods it was met
+}
+
+/*
+* The DiscreteMandate message is analogous to ContinuousMandate, but
+* describes discrete mandates, which are the mandates where a task must be
+* completed by a deadline. In this message, the scalar performance is a
+* value between 0.0 and 1.0, inclusive, which indicates the progress towards
+* completing the particular mandate at the end of the measurement period.
+* For example, if the mandate requires a file transfer of a given size,
+* scalar performance should be set to the number of bytes successfully
+* transferred divided by the total file bytes. After the deadline, the
+* scalar performance must remain at the last known value before the deadline
+* occurred, which, if less than 1.0, indicates the mandate was not met.
+* Maximum latency describes the number of measurement periods allowed for
+* the mandate to be achieved, from the time the first packet in the flow
+* is received from the traffic generator (i.e. "max_file_latency_s").
+* Current latency is set to the number of measurement periods elapsed
+* since that first packet was received from the traffic generator, and must
+* not exceed maximum latency. If current latency and maximum latency are
+* equal, this indicates that no more time remains to complete the mandate,
+* and mandate completion status can be found by looking at scalar 
+* performance. Note that completed/failed discrete mandates may be left
+* out of the list of mandates at the discretion of the sender. The remaining
+* fields in this message are identical to those in ContinuousMandate.
+*/
+message DiscreteMandate
+{
+  double scalar_performance = 1; // mandatory, the progress at measurement time
+  repeated uint32 radio_ids = 2; // mandatory, the radios in the traffic flow
+  repeated SpectrumVoxel desired_voxels = 3; // optional, the required voxels
+  uint32 flow_id = 4; // optional, the mandate flow id (destination port)
+  uint32 max_latency = 5; // mandatory, the maximum latency in measurement periods
+  uint32 current_latency = 6; // mandatory, the current latency in measurment periods
 }
 
 /*
@@ -200,6 +236,8 @@ message MandatePerformance
 * information. This list may contain fewer entries than the total mandate count
 * if the network is partitioned (so accurate statistics is not available), or
 * there are mandates that the CIRN cannot achieve or decided not to pursue.
+* Mandates are listed for both continuous mandates, which need to be met
+* continuously, and discrete mandates, which need to be completed by a deadline.
 * This message must be sent at least once every 10 seconds, and at most once
 * every 1 second.
 */
@@ -207,8 +245,10 @@ message DetailedPerformance
 {
   uint32 mandate_count = 1; // mandatory, total number of mandates assigned
   TimeStamp timestamp = 3; // mandatory, the end of the measurement period
-  repeated MandatePerformance mandates = 4; // mandatory, all known mandates
-  uint32 mandates_achieved = 5; // mandatory, number of achieved mandates 
+  repeated ContinuousMandate continuous_mandates = 4; // mandatory, all known continuous mandates
+  uint32 continuous_mandates_achieved = 5; // mandatory, number of achieved continuous mandates
+  repeated DiscreteMandate discrete_mandates = 6; // mandatory, all known discrete mandates
+  uint32 discrete_mandates_achieved = 7; // mandatory, number of achieved discrete mandates
 }
 
 //=================================================================================================
@@ -280,7 +320,7 @@ message SpectrumVoxelUsage
  * The SpectrumUsage message contains complete spectrum information that a
  * network is using. If a new  SpectrumUsage message is received, then it 
  * completely invalidates all previous SpectrumUsage messages. This message 
- * should be sent at least once per every 30 seconds, but not more often 
+ * should be sent at least once per every 10.0 seconds, but not more often 
  * than once per every second. The set of nodes and voxels within the network
  * can change. The set of spectrum voxels can overlap, either because of
  * different duty cycles or otherwise. This message can contain future

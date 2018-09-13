@@ -13,7 +13,7 @@ import sc2.registration_pb2 as registration
 
 logger = logging.getLogger('collab')
 
-CIL_VERSION = (2, 5, 2)
+CIL_VERSION = (2, 6, 0)
 
 #
 # Monkey patch Timestamp class to support setting timestamps using
