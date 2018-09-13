@@ -148,8 +148,32 @@ def send(cls):
 
     return sender_decorator
 
-class TCPProtoServer(object):
+class TCPProto(object):
+    def __init__(self):
+        pass
+
+    async def sendMessage(self, writer, msg):
+        """Serialize and send a protobuf message with its length prepended"""
+        logger.debug('Sending message {}'.format(msg))
+        data = msg.SerializeToString()
+        writer.write(struct.pack('!H', len(data)))
+        writer.write(data)
+
+    async def recvMessage(self, reader, cls):
+        """Receive and deserialize a protobuf message with its length prepended"""
+        datalen = await reader.read(2)
+        if len(datalen) != 2:
+            return None
+        datalen = struct.unpack('!H', datalen)[0]
+        data = await reader.read(datalen)
+
+        msg = cls.FromString(data)
+        logger.debug('Received message: {}'.format(msg))
+        return msg
+
+class TCPProtoServer(TCPProto):
     def __init__(self, loop=None):
+        super(TCPProtoServer, self).__init__()
         self.loop = loop
 
     def startServer(self, cls, listen_ip, listen_port):
@@ -160,19 +184,20 @@ class TCPProtoServer(object):
     async def handle_request(self, cls, reader, writer):
         while True:
             try:
-                req = await recvMessage(reader, cls)
+                req = await self.recvMessage(reader, cls)
                 if not req:
                     break
 
                 f = self.handlers[cls.__name__].message_handlers[req.WhichOneof('payload')]
                 resp = f(self, req)
                 if resp:
-                    await sendMessage(writer, resp)
+                    await self.sendMessage(writer, resp)
             except KeyError as err:
                 logger.error('Received unsupported message type: {}', err)
 
-class TCPProtoClient(object):
+class TCPProtoClient(TCPProto):
     def __init__(self, loop=None, server_host=None, server_port=None):
+        super(TCPProtoClient, self).__init__()
         self.loop = loop
         self.server_host = server_host
         self.server_port = server_port
@@ -199,10 +224,10 @@ class TCPProtoClient(object):
             self.writer = None
 
     async def send(self, msg):
-        await sendMessage(self.writer, msg)
+        await self.sendMessage(self.writer, msg)
 
     async def recv(self, cls):
-        return await recvMessage(self.reader, cls)
+        return await self.recvMessage(self.reader, cls)
 
 def rpc(req_cls, resp_cls):
     """
@@ -230,22 +255,3 @@ def rpc(req_cls, resp_cls):
         return wrapper
 
     return rpc_decorator
-
-async def sendMessage(writer, msg):
-    """Serialize and send a protobuf message with its length prepended"""
-    logger.debug('Sending message {}'.format(msg))
-    data = msg.SerializeToString()
-    writer.write(struct.pack('!H', len(data)))
-    writer.write(data)
-
-async def recvMessage(reader, cls):
-    """Receive and deserialize a protobuf message with its length prepended"""
-    datalen = await reader.read(2)
-    if len(datalen) != 2:
-        return None
-    datalen = struct.unpack('!H', datalen)[0]
-    data = await reader.read(datalen)
-
-    msg = cls.FromString(data)
-    logger.debug('Received message: {}'.format(msg))
-    return msg
