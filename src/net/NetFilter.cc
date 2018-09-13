@@ -9,6 +9,12 @@
 
 #include "NetFilter.hh"
 
+/** @brief Compute broadcast address from address and netmask  */
+uint32_t mkBroadcastAddress(uint32_t addr, uint32_t netmask)
+{
+    return (addr & netmask) | (0xffffffff & ~netmask);
+}
+
 NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
 {
     struct in_addr in;
@@ -19,15 +25,24 @@ NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
     assert(inet_aton(kIntIPNetmask, &in) != 0);
     int_netmask_ = ntohl(in.s_addr);
 
+    int_broadcast_ = mkBroadcastAddress(int_net_, int_netmask_);
+
     assert(inet_aton(kExtIPNet, &in) != 0);
     ext_net_ = ntohl(in.s_addr);
 
     assert(inet_aton(kExtIPNetmask, &in) != 0);
     ext_netmask_ = ntohl(in.s_addr);
+
+    ext_broadcast_ = mkBroadcastAddress(ext_net_, ext_netmask_);
 }
 
 NetFilter::~NetFilter()
 {
+}
+
+bool isEthernetBroadcast(const u_char *host)
+{
+    return memcmp(host, "\xff\xff\xff\xff\xff\xff", 6) == 0;
 }
 
 bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
@@ -41,9 +56,10 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
     NodeId curhop_id = eth->ether_shost[5];
     NodeId nexthop_id = eth->ether_dhost[5];
 
-    // Only transmit IP packets where we are the source and we know
-    // of the destination.
-    if (ntohs(eth->ether_type) == ETHERTYPE_IP && curhop_id == net_->getMyNodeId() && net_->contains(nexthop_id)) {
+    // Only transmit IP packets that are either broadcast packets or where we
+    // are the source and we know of the destination.
+    if (ntohs(eth->ether_type) == ETHERTYPE_IP &&
+        (isEthernetBroadcast(eth->ether_dhost) || (curhop_id == net_->getMyNodeId() && net_->contains(nexthop_id)))) {
         struct ip* ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
         in_addr    ip_src;
         in_addr    ip_dst;
@@ -61,6 +77,9 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 
             src_id = ntohl(ip_src.s_addr) & 0xff;
             dest_id = ntohl(ip_dst.s_addr) & 0xff;
+
+            if (ntohl(ip_dst.s_addr) == int_broadcast_)
+                pkt->setFlag(kBroadcast);
         } else if ((ntohl(ip_src.s_addr) & ext_netmask_) == ext_net_) {
             // Traffic on the external network has IP addresses of the form
             // 192.168.<SRN+100>.0/24
@@ -68,6 +87,9 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 
             src_id = ((ntohl(ip_src.s_addr) >> 8) & 0xff) - 100;
             dest_id = ((ntohl(ip_dst.s_addr) >> 8) & 0xff) - 100;
+
+            if (ntohl(ip_dst.s_addr) == ext_broadcast_)
+                pkt->setFlag(kBroadcast);
         } else
             return false;
 

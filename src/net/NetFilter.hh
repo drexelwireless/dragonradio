@@ -27,11 +27,17 @@ private:
     /** @brief Internal IP network mask */
     uint32_t int_netmask_;
 
+    /** @brief Internal IP broadcast address */
+    uint32_t int_broadcast_;
+
     /** @brief External IP network */
     uint32_t ext_net_;
 
     /** @brief External IP network mask */
     uint32_t ext_netmask_;
+
+    /** @brief External IP broadcast address */
+    uint32_t ext_broadcast_;
 };
 
 #endif /* NETFILTER_HH_ */

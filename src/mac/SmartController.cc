@@ -50,6 +50,14 @@ get_packet:
     if (!getPacket(pkt))
         return false;
 
+    // Handle broadcast packets
+    if (pkt->isFlagSet(kBroadcast)) {
+        pkt->tx_params = &broadcast_tx_params;
+        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
+
+        return true;
+    }
+
     // Get node ID of destination
     NodeId nexthop = pkt->nexthop;
 
@@ -118,14 +126,9 @@ get_packet:
     }
 
     // Apply TX params
-    if (pkt->isFlagSet(kBroadcast)) {
-        pkt->tx_params = &broadcast_tx_params;
-        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
-    } else {
-        Node &dest = (*net_)[nexthop];
+    Node &dest = (*net_)[nexthop];
 
-        dest.updateNetPacketTXParams(*pkt);
-    }
+    dest.updateNetPacketTXParams(*pkt);
 
     return true;
 }
@@ -161,6 +164,15 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         handleCtrlHello(node, pkt);
         handleCtrlTimestampDeltas(node, pkt);
         handleCtrlNAK(node, pkt);
+    }
+
+    // Resize the packet to truncate non-data bytes
+    pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
+
+    // Handle broadcast packets
+    if (pkt->isFlagSet(kBroadcast) && pkt->data_len != 0) {
+        radio_out.push(std::move(pkt));
+        return;
     }
 
     // If this packet was not destined for us, we are done
@@ -294,9 +306,6 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             (unsigned) pkt->seq);
         return;
     }
-
-    // Resize the packet to truncate non-data bytes
-    pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
 
     // Update the max seq number we've received
     if (pkt->seq > recvw.max) {
@@ -734,6 +743,10 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             return false;
 
         assert(pkt);
+
+        // We can always send a broadcast packet
+        if (pkt->isFlagSet(kBroadcast))
+            return true;
 
         SendWindow                      &sendw = getSendWindow(pkt->nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
