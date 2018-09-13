@@ -427,10 +427,7 @@ class Radio(object):
             tx_params = [TXParams(MCS(config.check, config.fec0, config.fec1, config.ms))]
 
         for p in tx_params:
-            p.soft_tx_gain_0dBFS = config.soft_tx_gain
-            if config.auto_soft_tx_gain != None:
-                p.recalc0dBFSEstimate(config.auto_soft_tx_gain)
-                p.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
+            self.configTXParamsSoftGain(p)
 
         self.net.tx_params = TXParamsVector(tx_params)
 
@@ -522,9 +519,15 @@ class Radio(object):
         if config.arq:
             self.controller.net_queue = self.netq
 
-            self.controller.broadcast_tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
-            if config.auto_soft_tx_gain != None:
-                self.controller.broadcast_tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
+            self.configTXParamsSoftGain(self.controller.broadcast_tx_params)
+
+    def configTXParamsSoftGain(self, tx_params):
+        config = self.config
+
+        tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
+        if config.auto_soft_tx_gain != None:
+            tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
+            tx_params.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
 
     def setTXParams(self, crc, fec0, fec1, ms, g, clip=0.999):
         tx_params = TXParams(MCS(crc, fec0, fec1, ms))
