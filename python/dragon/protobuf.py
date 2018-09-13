@@ -13,23 +13,15 @@ import sc2.registration_pb2 as registration
 
 logger = logging.getLogger('protobuf')
 
-class ProtoServer(object):
-    def __init__(self):
-        pass
-
-    def getHandledMessageTypes(self, cls):
-        return self.handlers[cls.__name__].handled_message_types
-
 class HandlerTable(object):
     def __init__(self):
         self.message_types = {}
         self.message_handlers = {}
-        self.handled_message_types = []
 
 def handler(message_type):
     """
     Add automatic support for handling ptotobuf messages with a payload
-    structure. Should be used to decorate a ProtoServer subclass.
+    structure. Should be used to decorate a class hanlding protobuf messages.
 
     Args:
         cls (class): The protobuf message class handled
@@ -53,9 +45,6 @@ def handler(message_type):
                         raise Exception("Illegal message type '{}' for class {}".format(fname, message_type.__name__))
                     else:
                         table.message_handlers[fname] = f
-                        table.handled_message_types.append(table.message_types[fname])
-
-                table.handled_message_types.sort()
 
         return cls
 
@@ -64,7 +53,7 @@ def handler(message_type):
 def handle(name):
     """
     Indicate that a method handles a specific message. Should be used to
-    decorate the methods of a ProtoServer subclass.
+    decorate a method of a class that handles protobuf messages.
 
     Args:
         name (str): The name of the message the function handles.
@@ -75,7 +64,7 @@ def handle(name):
 
     return handle_decorator
 
-class ZMQProtoServer(ProtoServer):
+class ZMQProtoServer(object):
     def __init__(self, loop=None):
         self.loop = loop
 
@@ -159,7 +148,7 @@ def send(cls):
 
     return sender_decorator
 
-class TCPProtoServer(ProtoServer):
+class TCPProtoServer(object):
     def __init__(self, loop=None):
         self.loop = loop
 
