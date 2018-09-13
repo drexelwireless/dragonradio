@@ -3,6 +3,7 @@ import logging
 import socket
 import struct
 import sys
+import time
 import zmq.asyncio
 
 from dragon.protobuf import *
@@ -40,18 +41,38 @@ def ip_string_to_int(ip_string):
     """
     return struct.unpack('!L',socket.inet_aton(ip_string))[0]
 
+def sendCIL(f):
+    """
+    Automatically add support to a function for constructing and sending a
+    CIL protobuf message. Should be used to decorate the methods of a
+    ZMQProtoClient subclass.
+
+    Args:
+        cls (class): The message class to send.
+    """
+    @wraps(f)
+    async def wrapper(self, *args, **kwargs):
+        msg = cil.CilMessage()
+        msg.sender_network_id = ip_string_to_int(self.local_ip)
+        msg.msg_count = self.msg_count
+        msg.timestamp.set_timestamp(time.time())
+
+        self.msg_count += 1
+
+        await f(self, msg, *args, **kwargs)
+
+        logger.debug('Sending message {}'.format(str(msg)))
+        self.send(msg)
+    return wrapper
+
 class CilClient(ZMQProtoClient):
     def __init__(self, local_ip=None, *args, **kwargs):
         super(CilClient, self).__init__(*args, **kwargs)
         self.local_ip = local_ip
-        self.msg_count = 0
+        self.msg_count = 1
 
-    @send(cil.CilMessage)
+    @sendCIL
     async def hello(self, msg):
-        msg.sender_network_id = ip_string_to_int(self.local_ip)
-        msg.msg_count = self.msg_count
-        msg.timestamp.set_timestamp(0)
-        self.msg_count += 1
         msg.hello.version.major = CIL_VERSION[0]
         msg.hello.version.minor = CIL_VERSION[1]
         msg.hello.version.patch = CIL_VERSION[2]
