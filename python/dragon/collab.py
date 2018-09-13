@@ -14,6 +14,20 @@ logger = logging.getLogger('collab')
 
 CIL_VERSION = (2, 5, 2)
 
+#
+# Monkey patch Timestamp class to support setting timestamps using
+# floating-point seconds.
+#
+def set_timestamp(self, ts):
+    self.seconds = int(ts)
+    self.picoseconds = int(ts % 1 * 1e12)
+
+def get_timestamp(self):
+    return self.seconds + self.picoseconds*1e-12
+
+cil.TimeStamp.set_timestamp = set_timestamp
+cil.TimeStamp.get_timestamp = get_timestamp
+
 def ip_int_to_string(ip_int):
     """
     Convert integer formatted IP to IP string
@@ -36,8 +50,7 @@ class CilClient(ZMQProtoClient):
     async def hello(self, msg):
         msg.sender_network_id = ip_string_to_int(self.local_ip)
         msg.msg_count = self.msg_count
-        msg.timestamp.seconds = 0
-        msg.timestamp.picoseconds = 0
+        msg.timestamp.set_timestamp(0)
         self.msg_count += 1
         msg.hello.version.major = CIL_VERSION[0]
         msg.hello.version.minor = CIL_VERSION[1]
