@@ -65,31 +65,23 @@ def sendCIL(f):
         self.send(msg)
     return wrapper
 
-class CilClient(ZMQProtoClient):
-    def __init__(self, local_ip=None, *args, **kwargs):
-        super(CilClient, self).__init__(*args, **kwargs)
-        self.local_ip = local_ip
+class Peer(ZMQProtoClient):
+    def __init__(self, agent, peer_host, peer_port):
+        ZMQProtoClient.__init__(self,
+                                loop=agent.loop,
+                                server_host=peer_host,
+                                server_port=peer_port)
+        self.agent = agent
+        self.local_ip = agent.local_ip
         self.msg_count = 1
+        self.open()
+        self.loop.create_task(self.hello())
 
     @sendCIL
     async def hello(self, msg):
         msg.hello.version.major = CIL_VERSION[0]
         msg.hello.version.minor = CIL_VERSION[1]
         msg.hello.version.patch = CIL_VERSION[2]
-
-class Peer(object):
-    def __init__(self, agent, peer_host, peer_port):
-        self.ip = peer_host
-        self.cil_client = CilClient(local_ip=agent.local_ip,
-                                    loop=agent.loop,
-                                    server_host=peer_host,
-                                    server_port=peer_port)
-        self.cil_client.open()
-        agent.loop.create_task(self.cil_client.hello())
-
-    @property
-    def msg_count(self):
-        return self.cil_client.msg_count
 
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
