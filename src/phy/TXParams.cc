@@ -4,7 +4,12 @@
 
 void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
 {
-    size_t               n = buf->size();
+    size_t n = buf->size();
+
+    // This should never happen, but just in case...
+    if (n == 0)
+        return;
+
     std::complex<float>* f = buf->data();
     auto                 power = std::unique_ptr<float[]>(new float[n]);
 
@@ -24,6 +29,10 @@ void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
         max_n = n - 1;
 
     float max_amp2 = power[max_n];
+
+    // Avoid division by 0!
+    if (max_amp2 == 0.0)
+        return;
 
     // XXX Should I^2 + Q^2 = 1.0 or 2.0?
     float g_estimate = sqrtf(1.0/max_amp2);
