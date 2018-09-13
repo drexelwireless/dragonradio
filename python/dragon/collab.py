@@ -80,7 +80,7 @@ def sendCIL(f):
         await f(self, msg, *args, **kwargs)
 
         logger.debug('Sending message {}'.format(str(msg)))
-        self.send(msg)
+        await self.send(msg)
     return wrapper
 
 class Peer(ZMQProtoClient):

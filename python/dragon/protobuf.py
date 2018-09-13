@@ -123,8 +123,8 @@ class ZMQProtoClient(object):
             self.server_sock = None
             self.ctx = None
 
-    def send(self, msg):
-        self.server_sock.send(msg.SerializeToString())
+    async def send(self, msg):
+        await self.server_sock.send(msg.SerializeToString())
 
 def send(cls):
     """
@@ -143,7 +143,7 @@ def send(cls):
             await f(self, msg, *args, **kwargs)
 
             logger.debug('Sending message {}'.format(pformat(msg)))
-            self.send(msg)
+            await self.send(msg)
         return wrapper
 
     return sender_decorator
