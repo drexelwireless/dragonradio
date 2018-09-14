@@ -1,6 +1,5 @@
 #include "Estimator.hh"
 #include "RadioConfig.hh"
-#include "WorkQueue.hh"
 #include "phy/PHY.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/TXParams.hh"
@@ -138,10 +137,6 @@ void ParallelPacketModulator::modWorker(void)
             mpkt = pkt_q_.back().get();
         }
 
-        // Save packet's TXParams and gain multiplier
-        TXParams *tx_params = pkt->tx_params;
-        float g = pkt->g;
-
         // Modulate the packet
         modulator->modulate(*mpkt, std::move(pkt));
 
@@ -150,12 +145,6 @@ void ParallelPacketModulator::modWorker(void)
 
         // Update estimate of samples-per-packet
         samples_per_packet.update(n);
-
-        // Pass the modulated packet to the 0dBFS estimator if requested
-        if (tx_params->nestimates_0dBFS > 0) {
-            --tx_params->nestimates_0dBFS;
-            work_queue.submit(&TXParams::autoSoftGain0dBFS, tx_params, g, mpkt->samples);
-        }
 
         // Mark the modulated packet as complete. The packet may be invalidated
         // by a consumer immediately after we mark it complete, so we cannot use

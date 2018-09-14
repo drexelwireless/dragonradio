@@ -1,5 +1,6 @@
 #include "Logger.hh"
 #include "RadioConfig.hh"
+#include "WorkQueue.hh"
 #include "phy/Liquid.hh"
 
 // Initial modulation buffer size
@@ -71,7 +72,7 @@ void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
     assemble(header.bytes, *pkt);
 
     // Buffer holding generated IQ samples
-    auto iqbuf = std::make_unique<IQBuf>(kInitialModbufSize);
+    auto iqbuf = std::make_shared<IQBuf>(kInitialModbufSize);
     // Number of generated samples in the buffer
     size_t nsamples = 0;
     // Local copy of gain
@@ -111,6 +112,12 @@ void LiquidModulator::modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt)
 
     // Resize the final buffer to the number of samples generated.
     iqbuf->resize(nsamples);
+
+    // Pass the modulated packet to the 0dBFS estimator if requested
+    if (pkt->tx_params->nestimates_0dBFS > 0) {
+        --pkt->tx_params->nestimates_0dBFS;
+        work_queue.submit(&TXParams::autoSoftGain0dBFS, pkt->tx_params, g, iqbuf);
+    }
 
     // Fill in the ModPacket
     mpkt.samples = std::move(iqbuf);
