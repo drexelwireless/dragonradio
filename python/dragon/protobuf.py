@@ -87,7 +87,7 @@ class ZMQProtoServer(object):
                     f = self.handlers[cls.__name__].message_handlers[msg.WhichOneof('payload')]
                     self.loop.create_task(f(self, msg))
                 except KeyError as err:
-                    logger.error('Received unsupported message type: {}', err)
+                    logger.error('Received unsupported message type: %s', err)
         except CancelledError:
             listen_sock.close()
             ctx.term()
