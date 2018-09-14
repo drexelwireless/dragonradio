@@ -164,7 +164,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 {
     Header* h = reinterpret_cast<Header*>(header_);
     size_t  off = demod_off_;   // Save demodulation offset for use when we log.
-    double  resamp_fact = internal_oversample_fact_*liquid_phy_.getRXRateOversample()/liquid_phy_.getMinRXRateOversample();
+    double  resamp_fact = internal_oversample_fact_*downsamp_rate_;
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
