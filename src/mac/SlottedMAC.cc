@@ -5,11 +5,12 @@
 
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
+                       std::shared_ptr<Channels> channels,
                        std::shared_ptr<PacketModulator> modulator,
                        std::shared_ptr<PacketDemodulator> demodulator,
                        double slot_size,
                        double guard_size)
-  : MAC(usrp, phy, modulator, demodulator)
+  : MAC(usrp, phy, channels, modulator, demodulator)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , done_(false)

@@ -22,10 +22,14 @@ public:
         virtual ~Modulator() {};
 
         /** @brief Modulate a packet to produce IQ samples.
-         *  @param mpkt The ModPacket in which to place modulated samples.
-         *  @param pkt The NetPacket to modulate.
+         * @param pkt The NetPacket to modulate.
+         * @param shift Samples should be shifted by this frequency (Hz) during
+         * modulation
+         * @param mpkt The ModPacket in which to place modulated samples.
          */
-        virtual void modulate(ModPacket& mpkt, std::shared_ptr<NetPacket> pkt) = 0;
+        virtual void modulate(std::shared_ptr<NetPacket> pkt,
+                              double shift,
+                              ModPacket &mpkt) = 0;
 
     protected:
         PHY &phy_;
@@ -49,11 +53,14 @@ public:
         /** @brief Demodulate IQ samples.
          * @param data IQ samples to demodulate.
          * @param count The number of samples to demodulate
+         * @param shift Samples should be shifted by this frequency (Hz) before
+         * demodulation
          * @param callback The function to call with any demodulated packets. If
          * a bad packet is received, the argument will be nullptr.
          */
         virtual void demodulate(std::complex<float>* data,
                                 size_t count,
+                                double shift,
                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
 
     protected:

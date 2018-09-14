@@ -54,6 +54,7 @@ SOURCES := \
     ExtensibleDataSet.cc \
     Logger.cc \
     main.cc \
+    NCO.cc \
     Packet.cc \
     Python.cc \
     RadioConfig.cc \

@@ -9,15 +9,17 @@ using namespace std::placeholders;
 
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
                                                      std::shared_ptr<PHY> phy,
-                                                     unsigned int nthreads) :
-    source(*this, nullptr, nullptr),
-    net_(net),
-    phy_(phy),
-    enforce_ordering_(false),
-    prev_samps_(0),
-    cur_samps_(0),
-    done_(false),
-    demod_q_(radio_q_)
+                                                     std::shared_ptr<Channels> channels,
+                                                     unsigned int nthreads)
+  : PacketDemodulator(channels)
+  , source(*this, nullptr, nullptr)
+  , net_(net)
+  , phy_(phy)
+  , enforce_ordering_(false)
+  , prev_samps_(0)
+  , cur_samps_(0)
+  , done_(false)
+  , demod_q_(radio_q_, channels)
 {
     net_thread_ = std::thread(&ParallelPacketDemodulator::netWorker, this);
 
@@ -72,6 +74,7 @@ void ParallelPacketDemodulator::demodWorker(void)
 {
     auto                      demod = phy_->make_demodulator();
     RadioPacketQueue::barrier b;
+    double                    shift;
     std::shared_ptr<IQBuf>    buf1;
     std::shared_ptr<IQBuf>    buf2;
     bool                      received;
@@ -87,7 +90,7 @@ void ParallelPacketDemodulator::demodWorker(void)
     };
 
     while (!done_) {
-        if (!demod_q_.pop(b, buf1, buf2))
+        if (!demod_q_.pop(b, shift, buf1, buf2))
             break;
 
         received = false;
@@ -110,7 +113,7 @@ void ParallelPacketDemodulator::demodWorker(void)
             ;
 
         // Demodulate the last part of the guard interval of the previous slots
-        demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, callback);
+        demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, shift, callback);
 
         if (cur_samps_ > buf2->undersample) {
             // Calculate how many samples from the current slot we want to
@@ -125,7 +128,7 @@ void ParallelPacketDemodulator::demodWorker(void)
                 n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
 
                 if (n != 0) {
-                    demod->demodulate(&(*buf2)[ndemodulated], n, callback);
+                    demod->demodulate(&(*buf2)[ndemodulated], n, shift, callback);
                     ndemodulated += n;
                     nwanted -= n;
 
@@ -156,10 +159,13 @@ void ParallelPacketDemodulator::netWorker(void)
     }
 }
 
-IQBufQueue::IQBufQueue(RadioPacketQueue& radio_q) :
-    radio_q_(radio_q),
-    done_(false),
-    size_(0)
+IQBufQueue::IQBufQueue(RadioPacketQueue& radio_q,
+                       std::shared_ptr<Channels> channels)
+  : radio_q_(radio_q)
+  , channels_(channels)
+  , done_(false)
+  , size_(0)
+  , next_channel_(0)
 {
 }
 
@@ -182,6 +188,7 @@ void IQBufQueue::push(std::shared_ptr<IQBuf> buf)
 }
 
 bool IQBufQueue::pop(RadioPacketQueue::barrier& b,
+                     double &shift,
                      std::shared_ptr<IQBuf>& buf1,
                      std::shared_ptr<IQBuf>& buf2)
 {
@@ -193,11 +200,19 @@ bool IQBufQueue::pop(RadioPacketQueue::barrier& b,
     if (done_)
         return false;
 
+    auto it = q_.begin();
+
     b = radio_q_.pushBarrier();
-    buf1 = std::move(q_.front());
-    q_.pop_front();
-    --size_;
-    buf2 = q_.front();
+    assert(next_channel_ < channels_->size());
+    shift = (*channels_)[next_channel_++];
+    buf1 = *it++;
+    buf2 = *it;
+
+    if (next_channel_ == channels_->size()) {
+        q_.pop_front();
+        --size_;
+        next_channel_ = 0;
+    }
 
     return true;
 }

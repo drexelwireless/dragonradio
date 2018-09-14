@@ -8,12 +8,13 @@
 
 TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PHY> phy,
+           std::shared_ptr<Channels> channels,
            std::shared_ptr<PacketModulator> modulator,
            std::shared_ptr<PacketDemodulator> demodulator,
            double slot_size,
            double guard_size,
            size_t nslots)
-  : SlottedMAC(usrp, phy, modulator, demodulator, slot_size, guard_size)
+  : SlottedMAC(usrp, phy, channels, modulator, demodulator, slot_size, guard_size)
   , slots_(*this, nslots)
 {
     rx_thread_ = std::thread(&TDMA::rxWorker, this);

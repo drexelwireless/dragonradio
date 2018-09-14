@@ -5,6 +5,7 @@
 
 #include "spinlock_mutex.hh"
 #include "USRP.hh"
+#include "phy/Channels.hh"
 #include "phy/PHY.hh"
 #include "phy/PacketDemodulator.hh"
 #include "phy/PacketModulator.hh"
@@ -16,6 +17,7 @@ class MAC
 public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<PHY> phy,
+        std::shared_ptr<Channels> channels,
         std::shared_ptr<PacketModulator> modulator,
         std::shared_ptr<PacketDemodulator> demodulator);
     virtual ~MAC() = default;
@@ -24,6 +26,31 @@ public:
     MAC(const MAC&) = delete;
     MAC& operator =(const MAC&) = delete;
     MAC& operator =(MAC&&) = delete;
+
+    /** @brief Get the frequency channel to use during transmission
+     * @return The frequency channel
+     */
+    virtual Channels::size_type getTXChannel(void) const
+    {
+        return tx_channel_;
+    }
+
+    /** @brief Set the frequency channel to use during transmission
+     * @param The frequency channel
+     */
+    virtual void setTXChannel(Channels::size_type channel)
+    {
+        tx_channel_ = channel;
+        modulator_->setTXChannel(channel);
+    }
+
+    /** @brief Get the frequency shift to use during transmission
+     * @return The frequency shift (Hz) from center frequency
+     */
+    virtual double getTXShift(void) const
+    {
+        return channels_ ? (*channels_)[tx_channel_] : 0.0;
+    }
 
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
@@ -50,6 +77,9 @@ protected:
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
 
+    /** @brief Radio channels, given as shift from center frequency */
+    std::shared_ptr<Channels> channels_;
+
     /** @brief Our packet modulator. */
     std::shared_ptr<PacketModulator> modulator_;
 
@@ -61,6 +91,9 @@ protected:
 
     /** @brief TX rate */
     double tx_rate_;
+
+    /** @brief Transmission channel, given hift from center frequency */
+    Channels::size_type tx_channel_;
 
     /** @brief Modulator for timestamped packet */
     std::unique_ptr<PHY::Modulator> timestamped_modulator_;

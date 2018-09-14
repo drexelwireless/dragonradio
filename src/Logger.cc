@@ -53,6 +53,8 @@ struct PacketRecvEntry {
     float rssi;
     /** @brief CFO [f/Fs]. */
     float cfo;
+    /** @brief Center frequency [Hz] */
+    float fc;
     /** @brief Data size (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
@@ -164,6 +166,7 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("evm", HOFFSET(PacketRecvEntry, evm), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("rssi", HOFFSET(PacketRecvEntry, rssi), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("cfo", HOFFSET(PacketRecvEntry, cfo), H5::PredType::NATIVE_FLOAT);
+    h5_packet_recv.insertMember("fc", HOFFSET(PacketRecvEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("size", HOFFSET(PacketRecvEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("iq_data", HOFFSET(PacketRecvEntry, iq_data), h5_iqdata);
 
@@ -273,11 +276,12 @@ void Logger::logRecv(const Clock::time_point& t,
                      float evm,
                      float rssi,
                      float cfo,
+                     float fc,
                      uint32_t size,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
     if (getCollectSource(kRecvPackets))
-        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, size, buf); });
+        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, fc, size, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
@@ -379,6 +383,7 @@ void Logger::logRecv_(const Clock::time_point& t,
                       float evm,
                       float rssi,
                       float cfo,
+                      float fc,
                       uint32_t size,
                       std::shared_ptr<buffer<std::complex<float>>> buf)
 {
@@ -401,6 +406,7 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.evm = evm;
     entry.rssi = rssi;
     entry.cfo = cfo;
+    entry.fc = fc;
     entry.size = size;
     if (getCollectSource(kRecvData)) {
         entry.iq_data.p = buf->data();

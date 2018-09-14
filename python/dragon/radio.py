@@ -9,7 +9,7 @@ import re
 import sys
 
 import dragonradio
-from dragonradio import MCS, TXParams, TXParamsVector
+from dragonradio import Channels, MCS, TXParams, TXParamsVector
 
 logger = logging.getLogger('radio')
 
@@ -44,19 +44,21 @@ class Config(object):
         # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
         self.bandwidth = 5e6
+        self.oversample_factor = 1.0
+        self.channel_bandwidth = 1e6
 
         # TX/RX gain parameters
         self.tx_gain = 25
         self.rx_gain = 25
-        self.soft_tx_gain = -12
+        self.soft_tx_gain = -8
         self.auto_soft_tx_gain = None
-        self.auto_soft_tx_gain_clip_frac = 0.999
+        self.auto_soft_tx_gain_clip_frac = 1.0
 
         # PHY parameters
-        self.phy = 'flexframe'
+        self.phy = 'ofdm'
         self.min_packet_size = 512
-        self.num_modulation_threads = 2
-        self.num_demodulation_threads = 10
+        self.num_modulation_threads = 4
+        self.num_demodulation_threads = 16
 
         # General liquid modulation options
         self.check = 'crc32'
@@ -221,6 +223,12 @@ class Config(object):
         add_argument('-b', '--bandwidth', action='store', type=float,
                      dest='bandwidth',
                      help='set bandwidth (Hz)')
+        add_argument('--oversample', action='store', type=float,
+                     dest='oversample_factor',
+                     help='set oversample factor')
+        add_argument('--channel-bandwidth', action='store', type=float,
+                     dest='channel_bandwidth',
+                     help='set channel bandwidth (Hz)')
 
         # Gain-related options
         add_argument('-G', '--tx-gain', action='store', type=float,
@@ -432,13 +440,16 @@ class Radio(object):
         self.net.tx_params = TXParamsVector(tx_params)
 
         #
-        # Configure bandwidth and sampling rate. We MUST do this before creating
-        # the modulator and demodulator so we know at what rate we must
-        # resample.
+        # Configure bandwidth, channels, and sampling rate. We MUST do this
+        # before creating the modulator and demodulator so we know at what rate
+        # we must resample.
         #
         bandwidth = config.bandwidth
+        oversample_factor = config.oversample_factor
+        channel_bandwidth = config.channel_bandwidth
 
-        oversample_factor = 1.0
+        nchannels = int(bandwidth/channel_bandwidth)
+        self.channels = Channels([i*channel_bandwidth + channel_bandwidth/2. - bandwidth/2. for i in range(0,nchannels)])
 
         rx_rate_oversample = oversample_factor*self.phy.min_rx_rate_oversample
         tx_rate_oversample = oversample_factor*self.phy.min_tx_rate_oversample
@@ -452,18 +463,20 @@ class Radio(object):
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
 
-        self.phy.rx_rate_oversample = rx_rate/bandwidth
-        self.phy.tx_rate_oversample = tx_rate/bandwidth
+        self.phy.rx_rate_oversample = rx_rate/channel_bandwidth
+        self.phy.tx_rate_oversample = tx_rate/channel_bandwidth
 
         #
         # Configure the modulator and demodulator
         #
         self.modulator = dragonradio.ParallelPacketModulator(self.net,
                                                              self.phy,
+                                                             self.channels,
                                                              config.num_modulation_threads)
 
         self.demodulator = dragonradio.ParallelPacketDemodulator(self.net,
                                                                  self.phy,
+                                                                 self.channels,
                                                                  config.num_demodulation_threads)
 
         if config.demodulator_enforce_ordering:
@@ -547,6 +560,7 @@ class Radio(object):
 
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
+                                            self.channels,
                                             self.modulator,
                                             self.demodulator,
                                             self.config.slot_size,
@@ -566,6 +580,7 @@ class Radio(object):
 
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
+                                    self.channels,
                                     self.modulator,
                                     self.demodulator,
                                     self.config.slot_size,

@@ -8,6 +8,7 @@ namespace py = pybind11;
 #include "RadioConfig.hh"
 #include "USRP.hh"
 #include "WorkQueue.hh"
+#include "phy/Channels.hh"
 #include "phy/FlexFrame.hh"
 #include "phy/MultiOFDM.hh"
 #include "phy/NewFlexFrame.hh"
@@ -26,6 +27,7 @@ namespace py = pybind11;
 #include "net/NetFilter.hh"
 #include "net/Queue.hh"
 
+PYBIND11_MAKE_OPAQUE(std::vector<double>)
 PYBIND11_MAKE_OPAQUE(std::vector<TXParams>)
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
@@ -428,12 +430,14 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class PacketModulator to Python
     py::class_<PacketModulator, std::shared_ptr<PacketModulator>>(m, "PacketModulator")
+        .def_property("tx_channel", &PacketModulator::getTXChannel, &PacketModulator::setTXChannel)
         ;
 
     // Export class ParallelPacketModulator to Python
     py::class_<ParallelPacketModulator, PacketModulator, std::shared_ptr<ParallelPacketModulator>>(m, "ParallelPacketModulator")
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
+                      std::shared_ptr<Channels>,
                       unsigned int>())
         .def_property_readonly("sink", [](std::shared_ptr<ParallelPacketModulator> element) { return exposePort(element, &element->sink); } )
         ;
@@ -446,6 +450,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<ParallelPacketDemodulator, PacketDemodulator, std::shared_ptr<ParallelPacketDemodulator>>(m, "ParallelPacketDemodulator")
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
+                      std::shared_ptr<Channels>,
                       unsigned int>())
         .def_property("enforce_ordering", &ParallelPacketDemodulator::getEnforceOrdering, &ParallelPacketDemodulator::setEnforceOrdering)
         .def_property_readonly("source", [](std::shared_ptr<ParallelPacketDemodulator> e) { return exposePort(e, &e->source); } )
@@ -491,8 +496,12 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def("broadcastHello", &SmartController::broadcastHello)
         ;
 
+    // Export class Channels to Python
+    py::bind_vector<std::vector<double>, std::shared_ptr<std::vector<double>>>(m, "Channels");
+
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
+        .def_property("tx_channel", &MAC::getTXChannel, &MAC::setTXChannel)
         ;
 
     // Export class SlottedMAC to Python
@@ -528,6 +537,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<USRP>,
                       std::shared_ptr<PHY>,
+                      std::shared_ptr<Channels>,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
                       double,
@@ -541,6 +551,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
         .def(py::init<std::shared_ptr<USRP>,
                       std::shared_ptr<PHY>,
+                      std::shared_ptr<Channels>,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
                       double,

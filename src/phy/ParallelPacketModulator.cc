@@ -1,4 +1,5 @@
 #include "Estimator.hh"
+#include "NCO.hh"
 #include "RadioConfig.hh"
 #include "phy/PHY.hh"
 #include "phy/ParallelPacketModulator.hh"
@@ -7,8 +8,10 @@
 
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
+                                                 std::shared_ptr<Channels> channels,
                                                  size_t nthreads)
-  : sink(*this, nullptr, nullptr)
+  : PacketModulator(channels)
+  , sink(*this, nullptr, nullptr)
   , net_(net)
   , phy_(phy)
   , done_(false)
@@ -138,7 +141,7 @@ void ParallelPacketModulator::modWorker(void)
         }
 
         // Modulate the packet
-        modulator->modulate(*mpkt, std::move(pkt));
+        modulator->modulate(std::move(pkt), getTXShift(), *mpkt);
 
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();

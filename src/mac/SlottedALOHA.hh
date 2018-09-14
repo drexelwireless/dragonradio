@@ -18,6 +18,7 @@ class SlottedALOHA : public SlottedMAC
 public:
     SlottedALOHA(std::shared_ptr<USRP> usrp,
                  std::shared_ptr<PHY> phy,
+                 std::shared_ptr<Channels> channels,
                  std::shared_ptr<PacketModulator> modulator,
                  std::shared_ptr<PacketDemodulator> demodulator,
                  double slot_size,

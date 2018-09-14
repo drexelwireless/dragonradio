@@ -201,7 +201,7 @@ class ReceivePlot:
                 msg = ''
 
             self.fig.canvas.set_window_title('Node {} Received Packets'.format(self.node.node_id))
-            self.fig.suptitle('Packet {} from node {} (evm {:03.1f}dB, rssi {:03.1f}dB) {}'.format(self.pkt.seq, self.pkt.src, self.pkt.evm, self.pkt.rssi, msg))
+            self.fig.suptitle('Packet {} from node {} (evm {:03.1f}dB, rssi {:03.1f}dB, fc {:03.1f}MHz) {}'.format(self.pkt.seq, self.pkt.src, self.pkt.evm, self.pkt.rssi, self.pkt.fc/1e6, msg))
 
             t0 = self.ts[0]
 

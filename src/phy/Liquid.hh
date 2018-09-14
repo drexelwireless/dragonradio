@@ -7,6 +7,7 @@
 #include <liquid/liquid.h>
 
 #include "Clock.hh"
+#include "NCO.hh"
 #include "Packet.hh"
 #include "phy/PHY.hh"
 
@@ -80,7 +81,9 @@ public:
     LiquidModulator& operator=(const LiquidModulator&) = delete;
     LiquidModulator& operator=(LiquidModulator&&) = delete;
 
-    void modulate(ModPacket &mpkt, std::shared_ptr<NetPacket> pkt) override final;
+    void modulate(std::shared_ptr<NetPacket> pkt,
+                  double shift,
+                  ModPacket &mpkt) override final;
 
 protected:
     /** Our Liquid PHY */
@@ -92,11 +95,27 @@ protected:
     /** @brief Upsampler rate. */
     double upsamp_rate_;
 
+    /** @brief Frequency for mixing up */
+    double shift_;
+
+    /** @brief NCO for mixing up */
+    TableNCO nco_;
+
+    /** @brief Set frequency shift for mixing up
+     * @param shift The frequency shift (Hz)
+     */
+    virtual void setFreqShift(double shift);
+
     /** @brief Assemble a packet for modulation.
      * @param hdr Packet header
      * @param pkt The NetPacket to assemble.
      */
     virtual void assemble(unsigned char *hdr, NetPacket& pkt) = 0;
+
+    /** @brief Return maximum number of samples modulateSamples will generate.
+     * @return Maximum number of samples modulateSamples will generate.
+     */
+    virtual size_t maxModulatedSamples(void) = 0;
 
     /** @brief Modulate samples.
      * @param buf The destination for modulated samples
@@ -121,6 +140,7 @@ public:
 
     void demodulate(std::complex<float>* data,
                     size_t count,
+                    double shift,
                     std::function<void(std::unique_ptr<RadioPacket>)> callback) override final;
 
 protected:
@@ -151,6 +171,12 @@ protected:
      */
     size_t demod_off_;
 
+    /** @brief Frequency for mixing down */
+    double shift_;
+
+    /** @brief NCO for mixing down */
+    TableNCO nco_;
+
     static int liquid_callback(unsigned char *  header_,
                                int              header_valid_,
                                unsigned char *  payload_,
@@ -166,6 +192,10 @@ protected:
                          int              payload_valid_,
                          framesyncstats_s stats_);
 
+    /** @brief Set frequency shift for mixing down
+     * @param shift The frequency shift (Hz)
+     */
+    virtual void setFreqShift(double shift);
 
     /** @brief Reset the internal state of the liquid demodulator. */
     virtual void liquidReset(void) = 0;

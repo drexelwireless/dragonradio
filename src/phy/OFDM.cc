@@ -69,6 +69,11 @@ void OFDM::Modulator::assemble(unsigned char *hdr, NetPacket& pkt)
     ofdmflexframegen_assemble(fg_, hdr, pkt.data(), pkt.size());
 }
 
+size_t OFDM::Modulator::maxModulatedSamples(void)
+{
+    return myphy_.M_ + myphy_.cp_len_;
+}
+
 bool OFDM::Modulator::modulateSamples(std::complex<float> *buf, size_t &nw)
 {
     nw = myphy_.M_ + myphy_.cp_len_;
