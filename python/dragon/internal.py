@@ -24,16 +24,15 @@ internal.TimeStamp.get_timestamp = get_timestamp
 @handler(internal.Message)
 class InternalAgent(UDPProtoServer, UDPProtoClient):
     def __init__(self,
-                 node,
-                 nodes,
+                 controller,
                  loop=None,
                  local_ip=None,
                  server_host=None):
         UDPProtoServer.__init__(self, loop=loop)
         UDPProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=INTERNAL_PORT)
 
-        self.node = node
-        self.nodes = nodes
+        self.controller = controller
+
         self.loop = loop
 
         self.location_info_period = 30
@@ -59,8 +58,8 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
     @handle('Message.location_info')
     def handle_location_info(self, msg):
         id = msg.location_info.radio_id
-        if id in self.nodes:
-            n = self.nodes[id]
+        if id in self.controller.nodes:
+            n = self.controller.nodes[id]
             n.loc.lat = msg.location_info.location.latitude
             n.loc.lon = msg.location_info.location.longitude
             n.loc.alt = msg.location_info.location.elevation
@@ -68,8 +67,10 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
 
     @send(internal.Message)
     async def location_info(self, msg):
-        msg.location_info.radio_id = self.node.id
-        msg.location_info.location.latitude = self.node.loc.lat
-        msg.location_info.location.longitude = self.node.loc.lon
-        msg.location_info.location.elevation = self.node.loc.alt
-        msg.location_info.timestamp.set_timestamp(self.node.loc.timestamp)
+        me = self.controller.thisNode()
+
+        msg.location_info.radio_id = me.id
+        msg.location_info.location.latitude = me.loc.lat
+        msg.location_info.location.longitude = me.loc.lon
+        msg.location_info.location.elevation = me.loc.alt
+        msg.location_info.timestamp.set_timestamp(me.loc.timestamp)

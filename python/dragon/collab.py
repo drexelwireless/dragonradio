@@ -118,7 +118,7 @@ class Peer(ZMQProtoClient):
 @handler(cil.CilMessage)
 class CollabAgent(ZMQProtoServer, ZMQProtoClient):
     def __init__(self,
-                 nodes,
+                 controller,
                  loop=None,
                  local_ip=None,
                  server_host=None,
@@ -128,7 +128,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         ZMQProtoServer.__init__(self, loop=loop)
         ZMQProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=server_port)
 
-        self.nodes = nodes
+        self.controller = controller
 
         self.loop = loop
         self.local_ip = local_ip
@@ -190,7 +190,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         try:
             while True:
                 for ip, p in self.peers.items():
-                    await p.location_update(self.nodes)
+                    await p.location_update(self.controller.nodes)
 
                 await asyncio.sleep(self.location_update_period)
         except CancelledError:

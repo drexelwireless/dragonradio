@@ -17,6 +17,13 @@ from dragon.protobuf import *
 from dragon.collab import CollabAgent, Node
 from dragon.gpsd import GPSDClient
 
+class DummyController(object):
+    def __init__(self, node_id, loop):
+        node = Node(node_id)
+
+        self.nodes = {node.id : node}
+        self.gpsd = GPSDClient(node.loc, loop=loop)
+
 def shutdown(loop, agent):
     async def shutdownGracefully():
         logging.info('Leaving collaboration network...')
@@ -63,11 +70,9 @@ def main():
 
     myip = netifaces.ifaddresses(args.iface)[netifaces.AF_INET][0]['addr']
 
-    node = Node(args.id)
+    controller = DummyController(args.id, loop)
 
-    gpsd = GPSDClient(node.loc, loop=loop)
-
-    agent = CollabAgent({node.id : node},
+    agent = CollabAgent(controller,
                         loop=loop,
                         local_ip=myip,
                         server_host=args.server_ip,

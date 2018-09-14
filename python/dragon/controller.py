@@ -36,8 +36,9 @@ class Controller(TCPProtoServer):
         self.config = config
         self.state = remote.BOOTING
         self.started_discovery = False
-        self.nodes = {}
         self.dumpcap_procs = []
+
+        self.nodes = {}
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -75,7 +76,7 @@ class Controller(TCPProtoServer):
             collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
 
             try:
-                self.collab_agent = CollabAgent(self.nodes,
+                self.collab_agent = CollabAgent(self,
                                                 loop=self.loop,
                                                 local_ip=collab_ip,
                                                 server_host=self.config.collab_server_ip,
@@ -86,8 +87,7 @@ class Controller(TCPProtoServer):
                 logger.exception('Could not create collaboration agent')
 
         # Start the internal agent
-        self.internal_agent = InternalAgent(self.nodes[radio.node_id],
-                                            self.nodes,
+        self.internal_agent = InternalAgent(self,
                                             loop=self.loop,
                                             local_ip=internalNodeIP(radio.node_id))
 
@@ -161,6 +161,9 @@ class Controller(TCPProtoServer):
             p = subprocess.Popen('dumpcap -i {iface} -w - -q | xz >{logdir}/{iface}.pcapng.xz'.format(iface=iface, logdir=self.config.logdir),
                                  stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
             self.dumpcap_procs.append(p)
+
+    def thisNode(self):
+        return self.nodes[self.radio.node_id]
 
     def addNode(self, node_id):
         if node_id != self.radio.node_id and node_id not in self.nodes:
