@@ -114,6 +114,28 @@ class Peer(ZMQProtoClient):
 
                 msg.location_update.locations.extend([info])
 
+    @sendCIL
+    async def spectrum_usage(self, msg, controller):
+        msg.spectrum_usage.voxels.extend([])
+
+        rx = cil.ReceiverInfo()
+        rx.radio_id = controller.radio.node_id
+        rx.power_db.value = controller.radio.usrp.rx_gain
+
+        for (f1, f2) in controller.voxels:
+            usage = cil.SpectrumVoxelUsage()
+
+            usage.spectrum_voxel.freq_start = f1
+            usage.spectrum_voxel.freq_end = f2
+            usage.spectrum_voxel.time_start.set_timestamp(time.time())
+            usage.transmitter_info.radio_id = controller.radio.node_id
+            usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
+            usage.transmitter_info.mac_cca = False
+            usage.receiver_info.extend([rx])
+            usage.measured_data = False
+
+            msg.spectrum_usage.voxels.extend([usage])
+
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
 class CollabAgent(ZMQProtoServer, ZMQProtoClient):
@@ -142,6 +164,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.max_keepalive = 30
 
         self.location_update_period = 20
+        self.spectrum_usage_update_period = 5
 
         self.startServer(cil.CilMessage, local_ip, peer_port)
         self.startServer(registration.TellClient, local_ip, client_port)
@@ -150,6 +173,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         loop.create_task(self.register())
         loop.create_task(self.heartbeat())
         loop.create_task(self.location_update())
+        loop.create_task(self.spectrum_usage())
 
     def addPeer(self, peer_ip):
         self.peers[peer_ip] = Peer(self, peer_ip, self.peer_port)
@@ -196,6 +220,16 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         except CancelledError:
             pass
 
+    async def spectrum_usage(self):
+        try:
+            while True:
+                for ip, p in self.peers.items():
+                    await p.spectrum_usage(self.controller)
+
+                await asyncio.sleep(self.spectrum_usage_update_period)
+        except CancelledError:
+            pass
+
     @handle('TellClient.inform')
     async def handle_inform(self, msg):
         self.nonce = msg.inform.client_nonce
@@ -216,7 +250,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     @handle('CilMessage.spectrum_usage')
     async def handle_spectrum_usage(self, msg):
-        pass
+        logger.info('Received spectrum usage: %s', msg)
 
     @handle('CilMessage.location_update')
     async def handle_location_update(self, msg):

@@ -39,6 +39,7 @@ class Controller(TCPProtoServer):
         self.dumpcap_procs = []
 
         self.nodes = {}
+        self.voxels = []
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -190,6 +191,7 @@ class Controller(TCPProtoServer):
             del self.nodes[node_id]
 
     async def switchToTDMA(self):
+        config = self.config
         radio = self.radio
 
         # Wait for initial discovery period to pass
@@ -214,7 +216,18 @@ class Controller(TCPProtoServer):
         # Sort nodes and pick our TDMA slot based on our position in the node
         # list
         nodes.sort()
+        radio.mac.tx_channel = 0
         radio.mac.slots[nodes.index(radio.node_id)] = True
+
+        #
+        # Specify voxels
+        #
+
+        # Calculate center frequency and bandwidth
+        bw = config.channel_bandwidth
+        cf = radio.usrp.tx_frequency + radio.channels[radio.mac.tx_channel]
+
+        self.voxels = [(cf-bw/2, cf+bw/2)]
 
         # We are now ready to transmit data
         self.state = remote.ACTIVE
