@@ -41,6 +41,37 @@ def ip_string_to_int(ip_string):
     """
     return struct.unpack('!L',socket.inet_aton(ip_string))[0]
 
+class MandatedOutcome(object):
+    def __init__(self, json=None):
+        self.start = time.time()
+        self.scalar_performance = 0
+
+        if json:
+            fields = [ 'goal_type'
+                     , 'flow_uid'
+                     , 'goal_set'
+                     , 'hold_period']
+
+            for f in fields:
+                if f in json:
+                    setattr(self, f, json[f])
+
+            fields = [ 'max_latency_s'
+                     , 'min_throughput_bps'
+                     , 'max_packet_drop_rate'
+                     , 'file_transfer_deadline_s'
+                     , 'file_size_bytes']
+
+            for f in fields:
+                if f in json['requirements']:
+                    setattr(self, f, json['requirements'][f])
+
+    def is_discrete(self):
+        return hasattr(self, 'file_transfer_deadline_s')
+
+    def __repr__(self):
+        return 'MandatedOutcome({})'.format(self.__dict__)
+
 class GPSLocation(object):
     def __init__(self):
         self.lat = 0
@@ -136,6 +167,25 @@ class Peer(ZMQProtoClient):
 
             msg.spectrum_usage.voxels.extend([usage])
 
+    @sendCIL
+    async def scalar_performance(self, msg, controller):
+        goals = controller.mandated_outcomes.items()
+        min_goal = min([g.scalar_performance for g in goals])
+
+        msg.scalar_performance.scalar_performance = min_goal
+        msg.scalar_performance.time_start.set_timestamp(time.time())
+        msg.scalar_performance.time_end.set_timestamp(time.time())
+
+    @sendCIL
+    async def detailed_performance(self, msg, controller):
+        goals = controller.mandated_outcomes.items()
+
+        msg.detailed_performance.mandate_count = len(controller.mandated_outcomes)
+        # Pretend this performance metric is from 5 secondss ago
+        msg.detailed_performance.timestamp.set_timestamp(time.time() - 5)
+        msg.detailed_performance.continuous_mandates_achieved = 0
+        msg.detailed_performance.discrete_mandates_achieved = 0
+
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
 class CollabAgent(ZMQProtoServer, ZMQProtoClient):
@@ -165,6 +215,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
         self.location_update_period = 20
         self.spectrum_usage_update_period = 5
+        self.scalar_performance_update_period = 15
+        self.detailed_performance_update_period = 5
 
         self.startServer(cil.CilMessage, local_ip, peer_port)
         self.startServer(registration.TellClient, local_ip, client_port)
@@ -174,6 +226,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         loop.create_task(self.heartbeat())
         loop.create_task(self.location_update())
         loop.create_task(self.spectrum_usage())
+        loop.create_task(self.scalar_performance())
+        loop.create_task(self.detailed_performance())
 
     def addPeer(self, peer_ip):
         self.peers[peer_ip] = Peer(self, peer_ip, self.peer_port)
@@ -230,6 +284,26 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         except CancelledError:
             pass
 
+    async def scalar_performance(self):
+        try:
+            while True:
+                for ip, p in self.peers.items():
+                    await p.scalar_performance(self.controller)
+
+                await asyncio.sleep(self.spectrum_usage_update_period)
+        except CancelledError:
+            pass
+
+    async def detailed_performance(self):
+        try:
+            while True:
+                for ip, p in self.peers.items():
+                    await p.detailed_performance(self.controller)
+
+                await asyncio.sleep(self.spectrum_usage_update_period)
+        except CancelledError:
+            pass
+
     @handle('TellClient.inform')
     async def handle_inform(self, msg):
         self.nonce = msg.inform.client_nonce
@@ -246,7 +320,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     @handle('CilMessage.scalar_performance')
     async def handle_scalar_performance(self, msg):
-        pass
+        logger.info('Received scalar performance: %s', msg)
 
     @handle('CilMessage.spectrum_usage')
     async def handle_spectrum_usage(self, msg):
@@ -258,7 +332,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     @handle('CilMessage.detailed_performance')
     async def handle_detailed_performance(self, msg):
-        pass
+        logger.info('Received detailed performance: %s', msg)
 
     @handle('CilMessage.incumbent_notify')
     async def handle_incumbent_notify(self, msg):

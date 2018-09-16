@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import netifaces
 import os
@@ -9,7 +10,7 @@ import sys
 
 import dragonradio
 
-from dragon.collab import CollabAgent, Node
+from dragon.collab import CollabAgent, MandatedOutcome, Node
 from dragon.gpsd import GPSDClient
 from dragon.internal import InternalAgent
 from dragon.protobuf import *
@@ -40,6 +41,7 @@ class Controller(TCPProtoServer):
 
         self.nodes = {}
         self.voxels = []
+        self.mandated_outcomes = {}
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -285,6 +287,13 @@ class Controller(TCPProtoServer):
     @handle('Request.update_mandated_outcomes')
     def updateMandatedOutcomes(self, req):
         logger.info('Mandated outcomes:\n%s', req.update_mandated_outcomes.goals)
+
+        self.mandated_outcomes = {}
+
+        for goal in json.loads(req.update_mandated_outcomes.goals):
+            outcome = MandatedOutcome(json=goal)
+            self.mandated_outcomes[outcome.flow_uid] = outcome
+
         resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Mandated outcomes updated'
