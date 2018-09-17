@@ -122,12 +122,6 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
         nco_.mix_up(iqbuf->data(), iqbuf->size());
     }
 
-    // Pass the modulated packet to the 0dBFS estimator if requested
-    if (pkt->tx_params->nestimates_0dBFS > 0) {
-        --pkt->tx_params->nestimates_0dBFS;
-        work_queue.submit(&TXParams::autoSoftGain0dBFS, pkt->tx_params, g, iqbuf);
-    }
-
     // Fill in the ModPacket
     mpkt.samples = std::move(iqbuf);
     mpkt.pkt = std::move(pkt);
