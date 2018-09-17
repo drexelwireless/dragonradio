@@ -71,6 +71,9 @@ struct TXParams {
     }
 
     TXParams()
+      : g_0dBFS(1.0f)
+      , auto_soft_tx_gain_clip_frac(0.999f)
+      , nestimates_0dBFS(0)
     {
     }
 
