@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import netifaces
 import os
@@ -9,22 +10,38 @@ import sys
 
 import dragonradio
 
-from dragon.collab import CollabAgent
+from dragon.collab import CollabAgent, MandatedOutcome, Node
+from dragon.gpsd import GPSDClient
+from dragon.internal import InternalAgent
 from dragon.protobuf import *
-import dragon.dragonradio_pb2 as internal
 import dragon.radio
-import dragon.radio_api as radio_api
+import dragon.remote as remote
 
 logger = logging.getLogger('controller')
 
-@handler(internal.Request)
+def internalNodeIP(node_id):
+    """
+    Return IP address of radio node on internal network
+    """
+    return '10.10.10.{:d}'.format(node_id)
+
+def darpaNodeNet(node_id):
+    """
+    Return IP subnet of radio node on DARPA's network.
+    """
+    return '192.168.{:d}.0/24'.format(node_id+100)
+
+@handler(remote.Request)
 class Controller(TCPProtoServer):
     def __init__(self, config):
         self.config = config
-        self.state = internal.BOOTING
+        self.state = remote.BOOTING
         self.started_discovery = False
-        self.nodes = set()
         self.dumpcap_procs = []
+
+        self.nodes = {}
+        self.voxels = []
+        self.mandated_outcomes = {}
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -48,39 +65,49 @@ class Controller(TCPProtoServer):
         self.dumpcap('tr0')
 
         # Add us as a node
+        self.nodes[radio.node_id] = Node(radio.node_id)
         radio.net.addNode(radio.node_id)
 
+        # Start reading GPS info and attach it to this node
+        self.gpsd_client = GPSDClient(self.nodes[radio.node_id].loc, loop=self.loop)
+
         # See if we are a gateway, and if so, start the collaboration agent
-        self.agent = None
+        self.collab_agent = None
 
         if self.config.collab_iface in netifaces.interfaces():
             radio.net[radio.node_id].is_gateway = True
             collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
 
             try:
-                self.agent = CollabAgent(loop=self.loop,
-                                         local_ip=collab_ip,
-                                         server_host=self.config.collab_server_ip,
-                                         server_port=self.config.collab_server_port,
-                                         client_port=self.config.collab_client_port,
-                                         peer_port=self.config.collab_peer_port)
+                self.collab_agent = CollabAgent(self,
+                                                loop=self.loop,
+                                                local_ip=collab_ip,
+                                                server_host=self.config.collab_server_ip,
+                                                server_port=self.config.collab_server_port,
+                                                client_port=self.config.collab_client_port,
+                                                peer_port=self.config.collab_peer_port)
             except:
                 logger.exception('Could not create collaboration agent')
+
+        # Start the internal agent
+        self.internal_agent = InternalAgent(self,
+                                            loop=self.loop,
+                                            local_ip=internalNodeIP(radio.node_id))
 
         # XXX we need *some* task to be running or else we run_forever can't be
         # stopped!
         self.loop.create_task(self.dummy())
 
         # Start the RPC server
-        self.radio_api_server = self.startServer(internal.Request, radio_api.RADIO_API_HOST, radio_api.RADIO_API_PORT)
-        self.loop.create_task(self.radio_api_server)
+        self.remote_server = self.startServer(remote.Request, remote.REMOTE_HOST, remote.REMOTE_PORT)
+        self.loop.create_task(self.remote_server)
 
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
         if bootstrap:
             self.startRadio()
 
-        self.state = internal.READY
+        self.state = remote.READY
 
         try:
             self.loop.run_forever()
@@ -99,7 +126,7 @@ class Controller(TCPProtoServer):
             self.loop.create_task(self.switchToTDMA())
 
     def stopRadio(self):
-        self.state = internal.STOPPING
+        self.state = remote.STOPPING
 
         for p in self.dumpcap_procs:
             try:
@@ -111,15 +138,15 @@ class Controller(TCPProtoServer):
             self.removeNode(node_id)
 
         async def shutdownGracefully():
-            if self.agent:
+            if self.collab_agent:
                 logger.info('Leaving collaboration network...')
                 try:
-                    await self.agent.shutdown()
+                    await self.collab_agent.shutdown()
                 except:
                     logger.exception('Could not gracefully terminate collaboration agent')
             logger.info('Shutting down...')
             self.loop.stop()
-            self.state = internal.FINISHED
+            self.state = remote.FINISHED
 
         logger.info('Cancelling tasks...')
         for task in asyncio.Task.all_tasks():
@@ -138,13 +165,19 @@ class Controller(TCPProtoServer):
                                  stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
             self.dumpcap_procs.append(p)
 
+    def thisNode(self):
+        return self.nodes[self.radio.node_id]
+
     def addNode(self, node_id):
         if node_id != self.radio.node_id and node_id not in self.nodes:
             logger.info('Adding node %d', node_id)
-            self.nodes.add(node_id)
+            self.nodes[node_id] = Node(node_id)
+
+            if self.internal_agent and self.radio.net[node_id].is_gateway:
+                self.internal_agent.startClient(internalNodeIP(node_id))
 
             try:
-                subprocess.check_call('ip route add 192.168.{:d}.0/24 via 10.10.10.{:d}'.format(node_id+100, node_id), shell=True)
+                subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
             except:
                 logger.exception('Could not add route to node {}'.format(node_id))
 
@@ -153,13 +186,14 @@ class Controller(TCPProtoServer):
             logger.info('Removing node %d', node_id)
 
             try:
-                subprocess.check_call('ip route del 192.168.{:d}.0/24'.format(node_id+100), shell=True)
+                subprocess.check_call('ip route del {}'.format(darpaNodeNet(node_id)), shell=True)
             except:
                 logger.exception('Could not remove route to node {}'.format(node_id))
 
-            self.nodes.remove(node_id)
+            del self.nodes[node_id]
 
     async def switchToTDMA(self):
+        config = self.config
         radio = self.radio
 
         # Wait for initial discovery period to pass
@@ -184,10 +218,21 @@ class Controller(TCPProtoServer):
         # Sort nodes and pick our TDMA slot based on our position in the node
         # list
         nodes.sort()
+        radio.mac.tx_channel = 0
         radio.mac.slots[nodes.index(radio.node_id)] = True
 
+        #
+        # Specify voxels
+        #
+
+        # Calculate center frequency and bandwidth
+        bw = config.channel_bandwidth
+        cf = radio.usrp.tx_frequency + radio.channels[radio.mac.tx_channel]
+
+        self.voxels = [(cf-bw/2, cf+bw/2)]
+
         # We are now ready to transmit data
-        self.state = internal.ACTIVE
+        self.state = remote.ACTIVE
 
     async def discoverNeighbors(self):
         loop = self.loop
@@ -225,39 +270,39 @@ class Controller(TCPProtoServer):
     def radioCommand(self, req):
         info = ''
 
-        if req.radio_command == internal.START:
-            if self.state == internal.READY:
+        if req.radio_command == remote.START:
+            if self.state == remote.READY:
                 self.startRadio()
                 info = 'Radio started'
-        elif req.radio_command == internal.STOP:
-            if self.state == internal.READY or self.state == internal.ACTIVE:
+        elif req.radio_command == remote.STOP:
+            if self.state == remote.READY or self.state == remote.ACTIVE:
                 self.stopRadio()
                 info = 'Radio stopping'
 
-        resp = internal.Response()
+        resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = info
         return resp
 
     @handle('Request.update_mandated_outcomes')
     def updateMandatedOutcomes(self, req):
-        resp = internal.Response()
+        logger.info('Mandated outcomes:\n%s', req.update_mandated_outcomes.goals)
+
+        self.mandated_outcomes = {}
+
+        for goal in json.loads(req.update_mandated_outcomes.goals):
+            outcome = MandatedOutcome(json=goal)
+            self.mandated_outcomes[outcome.flow_uid] = outcome
+
+        resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Mandated outcomes updated'
         return resp
 
-    @handle('Request.update_mandated_outcomes_json')
-    def updateMandatedOutcomesJson(self, req):
-        logger.info('Mandated outcomes:\n%s', req.update_mandated_outcomes_json.goals)
-        resp = internal.Response()
-        resp.status.state = self.state
-        resp.status.info = 'Mandated outcomes updated'
-        return resp
-
-    @handle('Request.update_environment_json')
-    def updateEnvironmentJson(self, req):
-        logger.info('Environment:\n%s', req.update_environment_json.environment)
-        resp = internal.Response()
+    @handle('Request.update_environment')
+    def updateEnvironment(self, req):
+        logger.info('Environment:\n%s', req.update_environment.environment)
+        resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Environment updated'
         return resp

@@ -47,3 +47,25 @@ The results of the tests can be displayed using the following command:
 ```
 ./tools/driperf-summary.py server.log client.log
 ```
+
+## Running the collaboration server and stand-alone collaboration client 
+
+The collaboration server is run by specifying a single argument, which is the server's IP address:
+
+```
+./collab_server.py --server-ip IP
+```
+
+The collaboration client can be run in stand-alone mode by specifying a node ID and the IP address of the collaboration server.
+
+```
+./collab_client.py -i NODEID --server-ip IP
+```
+
+If `gpsd` is running, the collaboration client will use it to set its GPS location. You can run a fake `gpsd` data source as follows:
+
+```
+gpsfake -P 6000 -c 0.1 logfile_20140914_365495765_can.log.chk
+```
+
+The file `logfile_20140914_365495765_can.log.chk` is in the `test/nmea2000` of the `gpsd` source distribution. You can also obtain this file directly from the `git` repository [here](http://git.savannah.nongnu.org/cgit/gpsd.git/plain/test/nmea2000/logfile_20140914_365495765_can.log.chk).

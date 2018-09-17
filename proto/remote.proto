@@ -1,0 +1,48 @@
+syntax = "proto3";
+package dragonradio.remote;
+
+// See:
+//   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220460-radio-command-and-control-c2-api
+
+enum State {
+    OFF = 0;
+    BOOTING = 1;
+    READY = 2;
+    ACTIVE = 3;
+    STOPPING = 4;
+    FINISHED = 5;
+    ERROR = 6;
+}
+
+enum RadioCommand {
+    START = 0;
+    STOP = 1;
+    STATUS = 2;
+}
+
+message Status {
+    State state = 1;
+    string info = 2;
+}
+
+message MandatedOutcomes {
+    string goals = 1;
+}
+
+message Environment {
+    string environment = 1;
+}
+
+message Request {
+    oneof payload {
+        RadioCommand radio_command = 1;
+        MandatedOutcomes update_mandated_outcomes = 2;
+        Environment update_environment = 3;
+    }
+}
+
+message Response {
+    oneof payload {
+        Status status = 1;
+    }
+}

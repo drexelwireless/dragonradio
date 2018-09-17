@@ -5,6 +5,7 @@ import inspect
 import logging
 from pprint import pformat
 import re
+import socket
 import struct
 import zmq.asyncio
 
@@ -13,23 +14,15 @@ import sc2.registration_pb2 as registration
 
 logger = logging.getLogger('protobuf')
 
-class ProtoServer(object):
-    def __init__(self):
-        pass
-
-    def getHandledMessageTypes(self, cls):
-        return self.handlers[cls.__name__].handled_message_types
-
 class HandlerTable(object):
     def __init__(self):
         self.message_types = {}
         self.message_handlers = {}
-        self.handled_message_types = []
 
 def handler(message_type):
     """
     Add automatic support for handling ptotobuf messages with a payload
-    structure. Should be used to decorate a ProtoServer subclass.
+    structure. Should be used to decorate a class hanlding protobuf messages.
 
     Args:
         cls (class): The protobuf message class handled
@@ -53,9 +46,6 @@ def handler(message_type):
                         raise Exception("Illegal message type '{}' for class {}".format(fname, message_type.__name__))
                     else:
                         table.message_handlers[fname] = f
-                        table.handled_message_types.append(table.message_types[fname])
-
-                table.handled_message_types.sort()
 
         return cls
 
@@ -64,7 +54,7 @@ def handler(message_type):
 def handle(name):
     """
     Indicate that a method handles a specific message. Should be used to
-    decorate the methods of a ProtoServer subclass.
+    decorate a method of a class that handles protobuf messages.
 
     Args:
         name (str): The name of the message the function handles.
@@ -75,7 +65,7 @@ def handle(name):
 
     return handle_decorator
 
-class ZMQProtoServer(ProtoServer):
+class ZMQProtoServer(object):
     def __init__(self, loop=None):
         self.loop = loop
 
@@ -97,7 +87,7 @@ class ZMQProtoServer(ProtoServer):
                     f = self.handlers[cls.__name__].message_handlers[msg.WhichOneof('payload')]
                     self.loop.create_task(f(self, msg))
                 except KeyError as err:
-                    logger.error('Received unsupported message type: {}', err)
+                    logger.error('Received unsupported message type: %s', err)
         except CancelledError:
             listen_sock.close()
             ctx.term()
@@ -134,8 +124,8 @@ class ZMQProtoClient(object):
             self.server_sock = None
             self.ctx = None
 
-    def send(self, msg):
-        self.server_sock.send(msg.SerializeToString())
+    async def send(self, msg):
+        await self.server_sock.send(msg.SerializeToString())
 
 def send(cls):
     """
@@ -154,13 +144,37 @@ def send(cls):
             await f(self, msg, *args, **kwargs)
 
             logger.debug('Sending message {}'.format(pformat(msg)))
-            self.send(msg)
+            await self.send(msg)
         return wrapper
 
     return sender_decorator
 
-class TCPProtoServer(ProtoServer):
+class TCPProto(object):
+    def __init__(self):
+        pass
+
+    async def sendMessage(self, writer, msg):
+        """Serialize and send a protobuf message with its length prepended"""
+        logger.debug('Sending message {}'.format(msg))
+        data = msg.SerializeToString()
+        writer.write(struct.pack('!H', len(data)))
+        writer.write(data)
+
+    async def recvMessage(self, reader, cls):
+        """Receive and deserialize a protobuf message with its length prepended"""
+        datalen = await reader.read(2)
+        if len(datalen) != 2:
+            return None
+        datalen = struct.unpack('!H', datalen)[0]
+        data = await reader.read(datalen)
+
+        msg = cls.FromString(data)
+        logger.debug('Received message: {}'.format(msg))
+        return msg
+
+class TCPProtoServer(TCPProto):
     def __init__(self, loop=None):
+        super(TCPProtoServer, self).__init__()
         self.loop = loop
 
     def startServer(self, cls, listen_ip, listen_port):
@@ -171,19 +185,20 @@ class TCPProtoServer(ProtoServer):
     async def handle_request(self, cls, reader, writer):
         while True:
             try:
-                req = await recvMessage(reader, cls)
+                req = await self.recvMessage(reader, cls)
                 if not req:
                     break
 
                 f = self.handlers[cls.__name__].message_handlers[req.WhichOneof('payload')]
                 resp = f(self, req)
                 if resp:
-                    await sendMessage(writer, resp)
+                    await self.sendMessage(writer, resp)
             except KeyError as err:
                 logger.error('Received unsupported message type: {}', err)
 
-class TCPProtoClient(object):
+class TCPProtoClient(TCPProto):
     def __init__(self, loop=None, server_host=None, server_port=None):
+        super(TCPProtoClient, self).__init__()
         self.loop = loop
         self.server_host = server_host
         self.server_port = server_port
@@ -210,10 +225,10 @@ class TCPProtoClient(object):
             self.writer = None
 
     async def send(self, msg):
-        await sendMessage(self.writer, msg)
+        await self.sendMessage(self.writer, msg)
 
     async def recv(self, cls):
-        return await recvMessage(self.reader, cls)
+        return await self.recvMessage(self.reader, cls)
 
 def rpc(req_cls, resp_cls):
     """
@@ -242,21 +257,60 @@ def rpc(req_cls, resp_cls):
 
     return rpc_decorator
 
-async def sendMessage(writer, msg):
-    """Serialize and send a protobuf message with its length prepended"""
-    logger.debug('Sending message {}'.format(msg))
-    data = msg.SerializeToString()
-    writer.write(struct.pack('!H', len(data)))
-    writer.write(data)
+class UDPProtoServer(object):
+    def __init__(self, loop=None):
+        self.loop = loop
 
-async def recvMessage(reader, cls):
-    """Receive and deserialize a protobuf message with its length prepended"""
-    datalen = await reader.read(2)
-    if len(datalen) != 2:
-        return None
-    datalen = struct.unpack('!H', datalen)[0]
-    data = await reader.read(datalen)
+    def startServer(self, cls, listen_ip, listen_port):
+        self.cls = cls
+        task = self.loop.create_datagram_endpoint(lambda: self,
+                                                  local_addr=(listen_ip, listen_port),
+                                                  reuse_address=True,
+                                                  allow_broadcast=True)
+        (self.server_transport, self.protocol) = self.loop.run_until_complete(task)
 
-    msg = cls.FromString(data)
-    logger.debug('Received message: {}'.format(msg))
-    return msg
+    def connection_made(self, transport):
+        pass
+
+    def connection_lost(self, exc):
+        pass
+
+    def datagram_received(self, data, addr):
+        try:
+            msg = self.cls.FromString(data)
+            logger.debug('Received message: {}'.format(pformat(msg)))
+
+            f = self.handlers[self.cls.__name__].message_handlers[msg.WhichOneof('payload')]
+            f(self, msg)
+        except KeyError as err:
+            logger.error('Received unsupported message type: {}', err)
+
+class UDPProtoClient(object):
+    def __init__(self, loop=None, server_host=None, server_port=None):
+        self.loop = loop
+        self.server_host = server_host
+        self.server_port = server_port
+        self.transport = None
+
+    def __enter__(self):
+        self.open()
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def open(self):
+        async def open_():
+            task = self.loop.create_datagram_endpoint(lambda: self,
+                                                      remote_addr=(self.server_host, self.server_port),
+                                                      reuse_address=True,
+                                                      allow_broadcast=True)
+            (self.transport, _) = await task
+
+        self.loop.create_task(open_())
+
+    def close(self):
+        self.transport.close()
+
+    async def send(self, msg):
+        if self.transport:
+            self.transport.sendto(msg.SerializeToString(), addr=None)

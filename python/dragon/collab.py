@@ -3,6 +3,7 @@ import logging
 import socket
 import struct
 import sys
+import time
 import zmq.asyncio
 
 from dragon.protobuf import *
@@ -11,6 +12,22 @@ import sc2.cil_pb2 as cil
 import sc2.registration_pb2 as registration
 
 logger = logging.getLogger('collab')
+
+CIL_VERSION = (2, 6, 0)
+
+#
+# Monkey patch Timestamp class to support setting timestamps using
+# floating-point seconds.
+#
+def set_timestamp(self, ts):
+    self.seconds = int(ts)
+    self.picoseconds = int(ts % 1 * 1e12)
+
+def get_timestamp(self):
+    return self.seconds + self.picoseconds*1e-12
+
+cil.TimeStamp.set_timestamp = set_timestamp
+cil.TimeStamp.get_timestamp = get_timestamp
 
 def ip_int_to_string(ip_int):
     """
@@ -24,41 +41,156 @@ def ip_string_to_int(ip_string):
     """
     return struct.unpack('!L',socket.inet_aton(ip_string))[0]
 
-class CilClient(ZMQProtoClient):
-    def __init__(self, local_ip=None, supported_messages=None, *args, **kwargs):
-        super(CilClient, self).__init__(*args, **kwargs)
-        self.supported_messages = supported_messages
-        self.local_ip = local_ip
-        self.msg_count = 0
+class MandatedOutcome(object):
+    def __init__(self, json=None):
+        self.start = time.time()
+        self.scalar_performance = 0
 
-    @send(cil.CilMessage)
-    async def hello(self, msg):
+        if json:
+            fields = [ 'goal_type'
+                     , 'flow_uid'
+                     , 'goal_set'
+                     , 'hold_period']
+
+            for f in fields:
+                if f in json:
+                    setattr(self, f, json[f])
+
+            fields = [ 'max_latency_s'
+                     , 'min_throughput_bps'
+                     , 'max_packet_drop_rate'
+                     , 'file_transfer_deadline_s'
+                     , 'file_size_bytes']
+
+            for f in fields:
+                if f in json['requirements']:
+                    setattr(self, f, json['requirements'][f])
+
+    def is_discrete(self):
+        return hasattr(self, 'file_transfer_deadline_s')
+
+    def __repr__(self):
+        return 'MandatedOutcome({})'.format(self.__dict__)
+
+class GPSLocation(object):
+    def __init__(self):
+        self.lat = 0
+        self.lon = 0
+        self.alt = 0
+        self.timestamp = 0
+
+    def __str__(self):
+        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.format(self.lat, self.lon, self.alt, self.timestamp)
+
+class Node(object):
+    def __init__(self, id):
+        self.id = id
+        self.loc = GPSLocation()
+
+    def __str__(self):
+        return 'Node(loc={})'.format(self.loc)
+
+def sendCIL(f):
+    """
+    Automatically add support to a function for constructing and sending a
+    CIL protobuf message. Should be used to decorate the methods of a
+    ZMQProtoClient subclass.
+
+    Args:
+        cls (class): The message class to send.
+    """
+    @wraps(f)
+    async def wrapper(self, *args, **kwargs):
+        msg = cil.CilMessage()
         msg.sender_network_id = ip_string_to_int(self.local_ip)
         msg.msg_count = self.msg_count
-        msg.timestamp.seconds = 0
-        msg.timestamp.picoseconds = 0
+        msg.timestamp.set_timestamp(time.time())
+
         self.msg_count += 1
-        msg.hello.listening.extend(self.supported_messages)
 
-class Peer(object):
-    def __init__(self, agent, peer_host, peer_port):
-        self.ip = peer_host
-        self.cil_client = CilClient(local_ip=agent.local_ip,
-                                    supported_messages=agent.getHandledMessageTypes(cil.CilMessage),
-                                    loop=agent.loop,
-                                    server_host=peer_host,
-                                    server_port=peer_port)
-        self.cil_client.open()
-        agent.loop.create_task(self.cil_client.hello())
+        await f(self, msg, *args, **kwargs)
 
-    @property
-    def msg_count(self):
-        return self.cil_client.msg_count
+        logger.debug('Sending message {}'.format(str(msg)))
+        await self.send(msg)
+    return wrapper
+
+class Peer(ZMQProtoClient):
+    def __init__(self, collab_agent, peer_host, peer_port):
+        ZMQProtoClient.__init__(self,
+                                loop=collab_agent.loop,
+                                server_host=peer_host,
+                                server_port=peer_port)
+        self.collab_agent = collab_agent
+        self.local_ip = collab_agent.local_ip
+        self.msg_count = 1
+        self.open()
+        self.loop.create_task(self.hello())
+
+    @sendCIL
+    async def hello(self, msg):
+        msg.hello.version.major = CIL_VERSION[0]
+        msg.hello.version.minor = CIL_VERSION[1]
+        msg.hello.version.patch = CIL_VERSION[2]
+
+    @sendCIL
+    async def location_update(self, msg, nodes):
+        for id, n in nodes.items():
+            if n.loc.timestamp != 0:
+                info = cil.LocationInfo()
+                info.radio_id = n.id
+                info.location.latitude = n.loc.lat
+                info.location.longitude = n.loc.lon
+                info.location.elevation = n.loc.alt
+                info.timestamp.set_timestamp(n.loc.timestamp)
+
+                msg.location_update.locations.extend([info])
+
+    @sendCIL
+    async def spectrum_usage(self, msg, controller):
+        msg.spectrum_usage.voxels.extend([])
+
+        rx = cil.ReceiverInfo()
+        rx.radio_id = controller.radio.node_id
+        rx.power_db.value = controller.radio.usrp.rx_gain
+
+        for (f1, f2) in controller.voxels:
+            usage = cil.SpectrumVoxelUsage()
+
+            usage.spectrum_voxel.freq_start = f1
+            usage.spectrum_voxel.freq_end = f2
+            usage.spectrum_voxel.time_start.set_timestamp(time.time())
+            usage.transmitter_info.radio_id = controller.radio.node_id
+            usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
+            usage.transmitter_info.mac_cca = False
+            usage.receiver_info.extend([rx])
+            usage.measured_data = False
+
+            msg.spectrum_usage.voxels.extend([usage])
+
+    @sendCIL
+    async def scalar_performance(self, msg, controller):
+        goals = controller.mandated_outcomes.items()
+        min_goal = min([g.scalar_performance for g in goals])
+
+        msg.scalar_performance.scalar_performance = min_goal
+        msg.scalar_performance.time_start.set_timestamp(time.time())
+        msg.scalar_performance.time_end.set_timestamp(time.time())
+
+    @sendCIL
+    async def detailed_performance(self, msg, controller):
+        goals = controller.mandated_outcomes.items()
+
+        msg.detailed_performance.mandate_count = len(controller.mandated_outcomes)
+        # Pretend this performance metric is from 5 secondss ago
+        msg.detailed_performance.timestamp.set_timestamp(time.time() - 5)
+        msg.detailed_performance.continuous_mandates_achieved = 0
+        msg.detailed_performance.discrete_mandates_achieved = 0
 
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
 class CollabAgent(ZMQProtoServer, ZMQProtoClient):
     def __init__(self,
+                 controller,
                  loop=None,
                  local_ip=None,
                  server_host=None,
@@ -67,6 +199,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                  peer_port=None):
         ZMQProtoServer.__init__(self, loop=loop)
         ZMQProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=server_port)
+
+        self.controller = controller
 
         self.loop = loop
         self.local_ip = local_ip
@@ -79,12 +213,21 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.nonce = None
         self.max_keepalive = 30
 
+        self.location_update_period = 20
+        self.spectrum_usage_update_period = 5
+        self.scalar_performance_update_period = 15
+        self.detailed_performance_update_period = 5
+
         self.startServer(cil.CilMessage, local_ip, peer_port)
         self.startServer(registration.TellClient, local_ip, client_port)
         self.open()
 
         loop.create_task(self.register())
         loop.create_task(self.heartbeat())
+        loop.create_task(self.location_update())
+        loop.create_task(self.spectrum_usage())
+        loop.create_task(self.scalar_performance())
+        loop.create_task(self.detailed_performance())
 
     def addPeer(self, peer_ip):
         self.peers[peer_ip] = Peer(self, peer_ip, self.peer_port)
@@ -115,9 +258,49 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         try:
             while True:
                 if self.nonce:
-                    self.loop.create_task(self.keepalive())
+                    await self.keepalive()
 
                 await asyncio.sleep(self.max_keepalive / 2)
+        except CancelledError:
+            pass
+
+    async def location_update(self):
+        try:
+            while True:
+                for ip, p in self.peers.items():
+                    await p.location_update(self.controller.nodes)
+
+                await asyncio.sleep(self.location_update_period)
+        except CancelledError:
+            pass
+
+    async def spectrum_usage(self):
+        try:
+            while True:
+                for ip, p in self.peers.items():
+                    await p.spectrum_usage(self.controller)
+
+                await asyncio.sleep(self.spectrum_usage_update_period)
+        except CancelledError:
+            pass
+
+    async def scalar_performance(self):
+        try:
+            while True:
+                for ip, p in self.peers.items():
+                    await p.scalar_performance(self.controller)
+
+                await asyncio.sleep(self.spectrum_usage_update_period)
+        except CancelledError:
+            pass
+
+    async def detailed_performance(self):
+        try:
+            while True:
+                for ip, p in self.peers.items():
+                    await p.detailed_performance(self.controller)
+
+                await asyncio.sleep(self.spectrum_usage_update_period)
         except CancelledError:
             pass
 
@@ -137,19 +320,19 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     @handle('CilMessage.scalar_performance')
     async def handle_scalar_performance(self, msg):
-        pass
+        logger.info('Received scalar performance: %s', msg)
 
     @handle('CilMessage.spectrum_usage')
     async def handle_spectrum_usage(self, msg):
-        pass
+        logger.info('Received spectrum usage: %s', msg)
 
     @handle('CilMessage.location_update')
     async def handle_location_update(self, msg):
-        pass
+        logger.info('Received location update: %s', msg)
 
     @handle('CilMessage.detailed_performance')
     async def handle_detailed_performance(self, msg):
-        pass
+        logger.info('Received detailed performance: %s', msg)
 
     @handle('CilMessage.incumbent_notify')
     async def handle_incumbent_notify(self, msg):

@@ -45,7 +45,8 @@ ALLSOURCES := $(shell find $(SRCDIR) -name '*.cc')
 ALLINCLUDES := $(shell find  $(SRCDIR) -name '*.hh')
 
 GENERATED += \
-	python/dragon/dragonradio_pb2.py \
+	python/dragon/internal_pb2.py \
+	python/dragon/remote_pb2.py \
 	python/sc2/cil_pb2.py \
 	python/sc2/registration_pb2.py
 

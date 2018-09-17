@@ -6,8 +6,7 @@ from pprint import pprint
 import sys
 
 from dragon.protobuf import *
-import dragon.dragonradio_pb2 as internal
-import dragon.radio_api as radio_api
+import dragon.remote as remote
 
 def main():
     parser = argparse.ArgumentParser(description='Interact with dragonradio.',
@@ -33,7 +32,7 @@ def main():
 
     loop=asyncio.get_event_loop()
 
-    client = radio_api.RadioAPIClient(loop=loop)
+    client = remote.RemoteClient(loop=loop)
 
     if args.action == 'start':
         with client:
@@ -48,7 +47,7 @@ def main():
             with client:
                 resp = client.status()
 
-            data['STATE'] = radio_api.stateToString(resp.status.state)
+            data['STATE'] = remote.stateToString(resp.status.state)
             data['INFO'] = resp.status.info
         except:
             data['STATE'] = 'OFF'
@@ -65,7 +64,7 @@ def main():
             goals = f.read()
 
         with client:
-            client.updateMandatedOutcomesJson(goals)
+            client.updateMandatedOutcomes(goals)
     elif args.action == 'update-environment':
         if len(args.paths) == 0:
             path = "/root/radio_api/environment.json"
@@ -76,7 +75,7 @@ def main():
             goals = f.read()
 
         with client:
-            client.updateEnvironmentJson(goals)
+            client.updateEnvironment(goals)
 
     loop.close()
     return 0

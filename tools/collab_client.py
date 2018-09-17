@@ -14,7 +14,15 @@ import zmq.asyncio
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), '../python'))
 
 from dragon.protobuf import *
-from dragon.collab import CollabAgent
+from dragon.collab import CollabAgent, Node
+from dragon.gpsd import GPSDClient
+
+class DummyController(object):
+    def __init__(self, node_id, loop):
+        node = Node(node_id)
+
+        self.nodes = {node.id : node}
+        self.gpsd = GPSDClient(node.loc, loop=loop)
 
 def shutdown(loop, agent):
     async def shutdownGracefully():
@@ -39,9 +47,15 @@ def main():
     parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
                         dest='loglevel',
                         help='be verbose')
-    parser.add_argument('--server-host', action='store',
+    parser.add_argument('--server-ip', action='store',
                         default='127.0.0.1',
-                        help='set IP address for bind')
+                        help='specify IP address of collab server')
+    parser.add_argument('-i', '--id', action='store', type=int,
+                        default=1,
+                        help='set node ID')
+    parser.add_argument('--iface', action='store',
+                        default='eth0',
+                        help='set ethernet interface')
 
     # Parse arguments
     try:
@@ -54,11 +68,14 @@ def main():
 
     loop = asyncio.get_event_loop()
 
-    myip = netifaces.ifaddresses('eth0')[netifaces.AF_INET][0]['addr']
+    myip = netifaces.ifaddresses(args.iface)[netifaces.AF_INET][0]['addr']
 
-    agent = CollabAgent(loop=loop,
+    controller = DummyController(args.id, loop)
+
+    agent = CollabAgent(controller,
+                        loop=loop,
                         local_ip=myip,
-                        server_host=args.server_host,
+                        server_host=args.server_ip,
                         server_port=5556,
                         client_port=5557,
                         peer_port=5558)
