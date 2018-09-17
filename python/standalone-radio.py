@@ -1,5 +1,6 @@
 import argparse
 import IPython
+import logging
 import os
 from pprint import pprint
 import signal
@@ -14,6 +15,13 @@ def main():
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config.addArguments(parser)
+    parser.add_argument('-d', '--debug', action='store_const', const=logging.DEBUG,
+                        dest='loglevel',
+                        default=logging.WARNING,
+                        help='print debugging information')
+    parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
+                        dest='loglevel',
+                        help='be verbose')
     parser.add_argument('--config', action='store', dest='config_path',
                         default=None,
                         help='specify configuration file')
@@ -32,15 +40,19 @@ def main():
     parser.add_argument('--interactive',
                         action='store_true', dest='interactive',
                         help='enter interactive shell after radio is configured')
-    parser.add_argument('-v', action='store_true', dest='verbose',
-                        default=False,
-                        help='set verbose mode')
 
     # Parse arguments
     try:
         args = parser.parse_args()
     except SystemExit as ex:
         return ex.code
+
+    # Set up logging
+    logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
+                        level=args.loglevel)
+
+    if args.loglevel <= logging.INFO:
+        args.verbose = True
 
     if args.log_directory:
         args.log_sources = ['log_recv_packets', 'log_sent_packets', 'log_events']

@@ -117,6 +117,13 @@ def main():
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config.addArguments(parser, allow_defaults=False)
+    parser.add_argument('-d', '--debug', action='store_const', const=logging.DEBUG,
+                        dest='loglevel',
+                        default=logging.WARNING,
+                        help='print debugging information')
+    parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
+                        dest='loglevel',
+                        help='be verbose')
     parser.add_argument('--foreground', action='store_true', dest='foreground',
                         default=False,
                         help='run as a foreground process')
@@ -129,13 +136,6 @@ def main():
     parser.add_argument('--pidfile', action='store', dest='pidfile',
                         default='/var/run/dragonradio.pid',
                         help='specify PID file')
-    parser.add_argument('-d', '--debug', action='store_const', const=logging.DEBUG,
-                        dest='loglevel',
-                        default=logging.WARNING,
-                        help='print debugging information')
-    parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
-                        dest='loglevel',
-                        help='be verbose')
     parser.add_argument('--bootstrap', action='store_true', default=False,
                         help='immediately bootstrap the radio')
     parser.add_argument('action', choices=['start', 'stop', 'restart', 'status'])
@@ -144,6 +144,10 @@ def main():
         args = parser.parse_args()
     except SystemExit as ex:
         return ex.code
+
+    # Set up logging
+    if args.loglevel <= logging.INFO:
+        args.verbose = True
 
     config.loadConfig(args.config_path)
     config.loadColosseumIni(args.colosseum_ini_path)

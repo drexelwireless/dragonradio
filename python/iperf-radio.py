@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import csv
+import logging
 import math
 import numpy as np
 import os
@@ -116,6 +117,13 @@ def main():
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config.addArguments(parser)
+    parser.add_argument('-d', '--debug', action='store_const', const=logging.DEBUG,
+                        dest='loglevel',
+                        default=logging.WARNING,
+                        help='print debugging information')
+    parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
+                        dest='loglevel',
+                        help='be verbose')
     parser.add_argument('--config', action='store', dest='config_path',
                         default=None,
                         help='specify configuration file')
@@ -128,9 +136,6 @@ def main():
     parser.add_argument('--log-iq',
                         action='store_true', dest='log_iq',
                         help='log IQ data')
-    parser.add_argument('-v', action='store_true', dest='verbose',
-                        default=False,
-                        help='set verbose mode')
     parser.add_argument('--len', action='store', type=int, dest='len',
                         default=1500,
                         help='set default payload size')
@@ -159,6 +164,13 @@ def main():
         args = parser.parse_args()
     except SystemExit as ex:
         return ex.code
+
+    # Set up logging
+    logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
+                        level=args.loglevel)
+
+    if args.loglevel <= logging.INFO:
+        args.verbose = True
 
     # Validate client/server arguments
     if not args.server and not args.client:
