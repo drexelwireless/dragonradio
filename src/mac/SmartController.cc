@@ -720,7 +720,7 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
     node.short_per.update(1.0);
     node.long_per.update(1.0);
 
-    if (   node.short_per.getNSamples() > node.short_per.getWindowSize()
+    if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
         && node.short_per.getValue() > modidx_down_per_threshold_
         && sendw.modidx > 0) {
         if (rc.verbose && ! rc.debug)
