@@ -1,4 +1,6 @@
 import argparse
+import asyncio
+from concurrent.futures import CancelledError
 import IPython
 import logging
 import os
@@ -8,6 +10,22 @@ import sys
 
 import dragonradio
 import dragon.radio
+
+async def cycle_snr(radio, period):
+    gains = [25, 20, 15, 10, 5, 0]
+    i = 0
+
+    while True:
+        radio.usrp.tx_gain = gains[i % len(gains)]
+        i += 1
+        print("Gain: ", radio.usrp.tx_gain)
+        await asyncio.sleep(period)
+
+def cancel_loop():
+    loop = asyncio.get_event_loop()
+    for task in asyncio.Task.all_tasks():
+        task.cancel()
+    loop.stop()
 
 def main():
     config = dragon.radio.Config()
@@ -40,6 +58,9 @@ def main():
     parser.add_argument('--interactive',
                         action='store_true', dest='interactive',
                         help='enter interactive shell after radio is configured')
+    parser.add_argument('--simulate-cycle-snr', type=float, dest='cycle_snr',
+                        default=0,
+                        help='simulate cycling between SNR levels')
 
     # Parse arguments
     try:
@@ -84,15 +105,24 @@ def main():
         radio.mac.slots[radio.node_id - 1] = True
 
     #
-    # Start IPython shell if we are in interactive mode
+    # Start IPython shell if we are in interactive mode. Otherwise, run the
+    # event loop.
     #
     if args.interactive:
         IPython.embed()
     else:
-        #
-        # Wait for Ctrl-C
-        #
-        signal.sigwait([signal.SIGINT])
+        loop = asyncio.get_event_loop()
+
+        if args.cycle_snr != 0:
+            loop.create_task(cycle_snr(radio, args.cycle_snr))
+
+        for sig in [signal.SIGINT, signal.SIGTERM]:
+            loop.add_signal_handler(sig, cancel_loop)
+
+        try:
+            loop.run_forever()
+        finally:
+            loop.close()
 
     return 0
 
