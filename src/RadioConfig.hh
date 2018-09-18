@@ -41,13 +41,13 @@ public:
     unsigned max_packet_size;
 
     /** @brief ACK delay in seconds */
-    double ack_delay;
+    double arq_ack_delay;
 
     /** @brief Retransmission delay in seconds */
-    double retransmission_delay;
+    double arq_retransmission_delay;
 
     /** @brief (Estimated) maximum packet reordering delay in seconds */
-    double max_reorder_delay;
+    double arq_max_reorder_delay;
 
     /** @brief Time needed to modulate a slot's worth of data. */
     double slot_modulate_time;

@@ -99,9 +99,9 @@ class Config(object):
         self.arq = False
         self.arq_window = 1024
         self.arq_enforce_ordering = False
-        self.ack_delay = 100e-3
-        self.retransmission_delay = 500e-3
-        self.max_reorder_delay = 100e-3
+        self.arq_ack_delay = 100e-3
+        self.arq_retransmission_delay = 500e-3
+        self.arq_max_reorder_delay = 100e-3
 
         # AMC options
         self.amc = False
@@ -369,7 +369,7 @@ class Radio(object):
                      'short_per_nslots', 'long_per_nslots',
                      'timestamp_delay',
                      'max_packet_size',
-                     'ack_delay', 'retransmission_delay',
+                     'arq_ack_delay', 'arq_retransmission_delay',
                      'slot_modulate_time', 'slot_send_time']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))

@@ -638,7 +638,7 @@ void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket
     int             delta;
     Node            &node = (*net_)[recvw.node_id];
 
-    if ((Clock::now() - recvw.max_timestamp).get_real_secs() < rc.max_reorder_delay)
+    if ((Clock::now() - recvw.max_timestamp).get_real_secs() < rc.arq_max_reorder_delay)
         delta = node.short_per.getWindowSize();
     else
         delta = 0;
