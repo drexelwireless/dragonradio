@@ -826,8 +826,8 @@ void SmartController::resetPEREstimates(Node &node)
 {
     double max_packets_per_slot = slot_size_/(rc.max_packet_size*8/node.tx_params->mcs.getRate());
 
-    node.short_per.setWindowSize(rc.short_per_nslots*max_packets_per_slot);
-    node.long_per.setWindowSize(rc.long_per_nslots*max_packets_per_slot);
+    node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
+    node.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
 }
 
 SendWindow *SmartController::maybeGetSendWindow(NodeId node_id)

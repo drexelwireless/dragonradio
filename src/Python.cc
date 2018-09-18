@@ -179,9 +179,9 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             "Output verbose messages to the console")
         .def_readwrite("debug", &RadioConfig::debug,
             "Output debug messages to the console")
-        .def_readwrite("short_per_nslots", &RadioConfig::short_per_nslots,
+        .def_readwrite("amc_short_per_nslots", &RadioConfig::amc_short_per_nslots,
             "Number of slots worth of packets we use to calculate short-term PER")
-        .def_readwrite("long_per_nslots", &RadioConfig::long_per_nslots,
+        .def_readwrite("amc_long_per_nslots", &RadioConfig::amc_long_per_nslots,
             "Number of lots worth of packets we use to calculate long-term PER")
         .def_readwrite("timestamp_delay", &RadioConfig::timestamp_delay,
             "Timestamp delay, in seconds")
