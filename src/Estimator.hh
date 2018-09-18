@@ -104,7 +104,7 @@ public:
         assert(n > 0);
     }
 
-    size_type getWindowSize(void)
+    size_type getWindowSize(void) const
     {
         return window_.size();
     }
