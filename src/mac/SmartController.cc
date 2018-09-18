@@ -28,6 +28,8 @@ SmartController::SmartController(std::shared_ptr<Net> net,
                                  double modidx_up_per_threshold,
                                  double modidx_down_per_threshold)
   : Controller(net)
+  , mac_(nullptr)
+  , netq_(nullptr)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , slot_size_(0)
