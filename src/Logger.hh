@@ -83,7 +83,8 @@ public:
                  uint32_t size,
                  std::shared_ptr<IQBuf> buf);
 
-    void logEvent(const Clock::time_point& t, const char *fmt, va_list ap);
+    void logEvent(const Clock::time_point& t,
+                  const std::string& event);
 
     void stop(void);
 
@@ -140,34 +141,33 @@ private:
                   NodeId dest,
                   uint32_t size,
                   std::shared_ptr<IQBuf> buf);
-    void logEvent_(const Clock::time_point& t,
-                   const std::string& event);
+
+     void logEvent_(const Clock::time_point& t,
+                    const std::string& event);
 };
+
+void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap);
 
 void logEventAt(const Clock::time_point& t, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
 inline void logEventAt(const Clock::time_point& t, const char *fmt, ...)
 {
-    if (logger) {
-        va_list ap;
+    va_list ap;
 
-        va_start(ap, fmt);
-        logger->logEvent(t, fmt, ap);
-        va_end(ap);
-    }
+    va_start(ap, fmt);
+    vlogEvent(t, fmt, ap);
+    va_end(ap);
 }
 
 void logEvent(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 inline void logEvent(const char *fmt, ...)
 {
-    if (logger) {
-        va_list ap;
+    va_list ap;
 
-        va_start(ap, fmt);
-        logger->logEvent(Clock::now(), fmt, ap);
-        va_end(ap);
-    }
+    va_start(ap, fmt);
+    vlogEvent(Clock::now(), fmt, ap);
+    va_end(ap);
 }
 
 #endif /* LOGGER_H_ */

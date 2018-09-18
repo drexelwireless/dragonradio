@@ -176,7 +176,9 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<RadioConfig, std::shared_ptr<RadioConfig>>(m, "RadioConfig")
         .def(py::init())
         .def_readwrite("verbose", &RadioConfig::verbose,
-            "Give verbose debug messages on the console")
+            "Output verbose messages to the console")
+        .def_readwrite("debug", &RadioConfig::debug,
+            "Output debug messages to the console")
         .def_readwrite("short_per_nslots", &RadioConfig::short_per_nslots,
             "Number of slots worth of packets we use to calculate short-term PER")
         .def_readwrite("long_per_nslots", &RadioConfig::long_per_nslots,

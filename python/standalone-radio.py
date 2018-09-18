@@ -54,6 +54,9 @@ def main():
     if args.loglevel <= logging.INFO:
         args.verbose = True
 
+    if args.loglevel <= logging.DEBUG:
+        args.debug = True
+
     if args.log_directory:
         args.log_sources = ['log_recv_packets', 'log_sent_packets', 'log_events']
 

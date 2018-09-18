@@ -172,6 +172,9 @@ def main():
     if args.loglevel <= logging.INFO:
         args.verbose = True
 
+    if args.loglevel <= logging.DEBUG:
+        args.debug = True
+
     # Validate client/server arguments
     if not args.server and not args.client:
         parser.error('One of --client or --server must be specified')

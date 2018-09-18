@@ -149,6 +149,9 @@ def main():
     if args.loglevel <= logging.INFO:
         args.verbose = True
 
+    if args.loglevel <= logging.DEBUG:
+        args.debug = True
+
     config.loadConfig(args.config_path)
     config.loadColosseumIni(args.colosseum_ini_path)
     config.loadArgs(args)

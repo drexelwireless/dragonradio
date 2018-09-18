@@ -4,6 +4,7 @@ RadioConfig rc;
 
 RadioConfig::RadioConfig()
   : verbose(false)
+  , debug(false)
   , short_per_nslots(2)
   , long_per_nslots(8)
   , timestamp_delay(100e-3)

@@ -341,7 +341,7 @@ class Radio(object):
         logger.info('Radio configuration:\n' + str(config))
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose',
+        for attr in ['verbose', 'debug',
                      'short_per_nslots', 'long_per_nslots',
                      'timestamp_delay',
                      'max_packet_size',

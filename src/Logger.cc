@@ -295,33 +295,15 @@ void Logger::logSend(const Clock::time_point& t,
         log_q_.emplace([=](){ logSend_(t, hdr, src, dest, size, buf); });
 }
 
-void Logger::logEvent(const Clock::time_point& t, const char *fmt, va_list ap0)
+void Logger::logEvent(const Clock::time_point& t,
+                      const std::string& s)
 {
-    if (getCollectSource(kEvents)) {
-        int                     n = 2 * strlen(fmt);
-        std::unique_ptr<char[]> buf;
-        va_list                 ap;
+    EventEntry entry;
 
-        for (;;) {
-            buf.reset(new char[n]);
+    entry.timestamp = (t - t_start_).get_real_secs();
+    entry.event = s.c_str();
 
-            va_copy(ap, ap0);
-            int count = vsnprintf(&buf[0], n, fmt, ap);
-            va_end(ap);
-
-            if (count < 0 || count >= n)
-                n *= 2;
-            else
-                break;
-        }
-
-        std::string s { buf.get() };
-
-        if (rc.verbose)
-            fprintf(stderr, "%s\n", s.c_str());
-
-        log_q_.emplace([=](){ logEvent_(t, s); });
-    }
+    event_->write(&entry, 1);
 }
 
 void Logger::stop(void)
@@ -449,10 +431,36 @@ void Logger::logSend_(const Clock::time_point& t,
 void Logger::logEvent_(const Clock::time_point& t,
                        const std::string& s)
 {
-    EventEntry entry;
+    if (getCollectSource(kEvents))
+        log_q_.emplace([=](){ logEvent_(t, s); });
+}
 
-    entry.timestamp = (t - t_start_).get_real_secs();
-    entry.event = s.c_str();
+void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap0)
+{
+    if (rc.debug || (logger && logger->getCollectSource(Logger::kEvents))) {
+        int                     n = 2 * strlen(fmt);
+        std::unique_ptr<char[]> buf;
+        va_list                 ap;
 
-    event_->write(&entry, 1);
+        for (;;) {
+            buf.reset(new char[n]);
+
+            va_copy(ap, ap0);
+            int count = vsnprintf(&buf[0], n, fmt, ap);
+            va_end(ap);
+
+            if (count < 0 || count >= n)
+                n *= 2;
+            else
+                break;
+        }
+
+        std::string s { buf.get() };
+
+        if (rc.debug)
+            fprintf(stderr, "%s\n", s.c_str());
+
+        if (logger && logger->getCollectSource(Logger::kEvents))
+            logger->logEvent(t, s);
+    }
 }

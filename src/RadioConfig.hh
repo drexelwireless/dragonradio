@@ -22,8 +22,11 @@ public:
     RadioConfig& operator=(const RadioConfig&) = default;
     RadioConfig& operator=(RadioConfig&&) = default;
 
-    /** @brief Give verbose debug messages on the console */
+    /** @brief Output verbose messages to the console */
     bool verbose;
+
+    /** @brief Output debug messages to the console */
+    bool debug;
 
     /** @brief Number of slots worth of packets we use to calculate short-term PER  */
     unsigned short_per_nslots;
