@@ -88,8 +88,6 @@ private:
     unsigned nsamples_;
 };
 
-
-
 /** @brief Estimate a value by calculating a mean over a window of values */
 template<class T>
 class WindowedMean : public Estimator<T> {
@@ -98,8 +96,8 @@ public:
 
     explicit WindowedMean(size_type n)
       : window_(n, 0)
+      , i_(0)
       , sum_(0)
-      , nsamples_(0)
     {
         assert(n > 0);
     }
@@ -111,46 +109,46 @@ public:
 
     void setWindowSize(size_type n)
     {
+        window_.resize(n);
+        std::fill(window_.begin(), window_.end(), 0);
+        i_ = 0;
         sum_ = 0;
-        nsamples_ = 0;
-        window_.resize(n, 0);
     }
 
     T getValue(void) const override
     {
-        if (nsamples_ == 0)
+        if (i_ == 0 || window_.size() == 0)
             return sum_;
         else
-            return sum_/nsamples_;
+            return sum_/std::min(i_, window_.size());
     }
 
     unsigned getNSamples(void) const override
     {
-        return nsamples_;
+        return std::min(i_, window_.size());
     }
 
     void reset(T x) override
     {
+        std::fill(window_.begin(), window_.end(), 0);
+        i_ = 0;
         sum_ = x;
-        nsamples_ = 0;
     }
 
     void update(T x) override
     {
-        if (nsamples_ == 0)
+        if (i_ == 0)
             sum_ = x;
-        else if (nsamples_ > window_.size())
-            sum_ = sum_ - window_[nsamples_ % window_.size()] + x;
         else
-            sum_ += x;
+            sum_ = sum_ - window_[i_ % window_.size()] + x;
 
-        window_[nsamples_++ % window_.size()] = x;
+        window_[i_++ % window_.size()] = x;
     }
 
 private:
     std::vector<T> window_;
+    size_type      i_;
     T              sum_;
-    unsigned       nsamples_;
 };
 
 /** @brief Estimate a value by calculating an exponential moving average */
