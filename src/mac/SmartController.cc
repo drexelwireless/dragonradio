@@ -703,13 +703,15 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
         sendw.modidx_init_seq = node.seq;
         node.tx_params = &net_->tx_params[sendw.modidx];
 
-        logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f",
+        resetPEREstimates(node);
+
+        logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; swin=%lu; lwin=%lu",
             node.tx_params->mcs.fec0_name(),
             node.tx_params->mcs.fec1_name(),
             node.tx_params->mcs.ms_name(),
-            node.long_per.getValue());
-
-        resetPEREstimates(node);
+            node.long_per.getValue(),
+            node.short_per.getWindowSize(),
+            node.long_per.getWindowSize());
     }
 }
 
@@ -727,13 +729,15 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
         sendw.modidx_init_seq = node.seq;
         node.tx_params = &net_->tx_params[sendw.modidx];
 
-        logEvent("AMC: Moving down modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f",
+        resetPEREstimates(node);
+
+        logEvent("AMC: Moving down modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; swin=%lu; lwin=%lu",
             node.tx_params->mcs.fec0_name(),
             node.tx_params->mcs.fec1_name(),
             node.tx_params->mcs.ms_name(),
-            node.short_per.getValue());
-
-        resetPEREstimates(node);
+            node.short_per.getValue(),
+            node.short_per.getWindowSize(),
+            node.long_per.getWindowSize());
     }
 }
 
