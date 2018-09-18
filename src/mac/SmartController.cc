@@ -25,16 +25,16 @@ void RecvWindow::operator()()
 SmartController::SmartController(std::shared_ptr<Net> net,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
-                                 double modidx_up_per_threshold,
-                                 double modidx_down_per_threshold)
+                                 double mcsidx_up_per_threshold,
+                                 double mcsidx_down_per_threshold)
   : Controller(net)
   , mac_(nullptr)
   , netq_(nullptr)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , slot_size_(0)
-  , modidx_up_per_threshold_(modidx_up_per_threshold)
-  , modidx_down_per_threshold_(modidx_down_per_threshold)
+  , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
+  , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
   , enforce_ordering_(false)
 {
     timer_queue_.start();
@@ -214,7 +214,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     sendw[unack].reset();
 
                     // Update our packet error rate to reflect successful TX
-                    if (unack >= sendw.modidx_init_seq)
+                    if (unack >= sendw.mcsidx_init_seq)
                         txSuccess(sendw, dest);
                 }
 
@@ -671,7 +671,7 @@ void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq, b
         // Record the packet error only if this sequence number was an explicit
         // Nak, i.e., it resulted from an invalid payload, or if the sequence
         // number was sent with the current modulation scheme.
-        if (explicitNak || seq >= sendw.modidx_init_seq) {
+        if (explicitNak || seq >= sendw.mcsidx_init_seq) {
             txFailure(sendw, dest);
 
             logEvent("AMC: txFailure nak: seq=%u; explicit=%s; per=%f",
@@ -695,13 +695,13 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
     node.long_per.update(0.0);
 
     if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
-        && node.long_per.getValue() < modidx_up_per_threshold_
-        && sendw.modidx < net_->tx_params.size() - 1) {
+        && node.long_per.getValue() < mcsidx_up_per_threshold_
+        && sendw.mcsidx < net_->tx_params.size() - 1) {
         if (rc.verbose && ! rc.debug)
             fprintf(stderr, "Moving up modulation scheme\n");
-        ++sendw.modidx;
-        sendw.modidx_init_seq = node.seq;
-        node.tx_params = &net_->tx_params[sendw.modidx];
+        ++sendw.mcsidx;
+        sendw.mcsidx_init_seq = node.seq;
+        node.tx_params = &net_->tx_params[sendw.mcsidx];
 
         resetPEREstimates(node);
 
@@ -721,13 +721,13 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
     node.long_per.update(1.0);
 
     if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
-        && node.short_per.getValue() > modidx_down_per_threshold_
-        && sendw.modidx > 0) {
+        && node.short_per.getValue() > mcsidx_down_per_threshold_
+        && sendw.mcsidx > 0) {
         if (rc.verbose && ! rc.debug)
             fprintf(stderr, "Moving down modulation scheme\n");
-        --sendw.modidx;
-        sendw.modidx_init_seq = node.seq;
-        node.tx_params = &net_->tx_params[sendw.modidx];
+        --sendw.mcsidx;
+        sendw.mcsidx_init_seq = node.seq;
+        node.tx_params = &net_->tx_params[sendw.mcsidx];
 
         resetPEREstimates(node);
 
@@ -854,7 +854,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
                                           std::forward_as_tuple(node_id),
                                           std::forward_as_tuple(node_id, *this, max_sendwin_)).first->second;
 
-        sendw.modidx_init_seq = dest.seq;
+        sendw.mcsidx_init_seq = dest.seq;
 
         resetPEREstimates(dest);
 

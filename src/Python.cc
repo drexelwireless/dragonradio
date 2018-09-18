@@ -487,11 +487,11 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             &SmartController::getSlotSize,
             &SmartController::setSlotSize,
             "Number of samples in a transmission slot")
-        .def_property("modidx_up_per_threshold",
+        .def_property("mcsidx_up_per_threshold",
             &SmartController::getUpPERThreshold,
             &SmartController::setUpPERThreshold,
             "PER threshold for increasing modulation level")
-        .def_property("modidx_down_per_threshold",
+        .def_property("mcsidx_down_per_threshold",
             &SmartController::getDownPERThreshold,
             &SmartController::setDownPERThreshold,
             "PER threshold for decreasing modulation level")

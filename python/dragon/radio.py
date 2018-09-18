@@ -109,8 +109,8 @@ class Config(object):
 
         self.amc_short_per_nslots = 2
         self.amc_long_per_nslots = 8
-        self.amc_modidx_up_per_threshold = 0.02
-        self.amc_modidx_down_per_threshold = 0.10
+        self.amc_mcsidx_up_per_threshold = 0.02
+        self.amc_mcsidx_down_per_threshold = 0.10
 
         # Neighbor discover options
         # discovery_hello_interval is how often we send HELLO packets during
@@ -349,11 +349,11 @@ class Config(object):
         add_argument('--long-per-nslots', action='store', type=int,
                      dest='amc_long_per_nslots',
                      help='set number of TX slots worth of packets we use to calculate long-term PER')
-        add_argument('--modidx-up-per-threshold', action='store', type=float,
-                     dest='amc_modidx_up_per_threshold',
+        add_argument('--mcsidx-up-per-threshold', action='store', type=float,
+                     dest='amc_mcsidx_up_per_threshold',
                      help='set PER threshold for increasing modulation level')
-        add_argument('--modidx-down-per-threshold', action='store', type=float,
-                     dest='amc_modidx_down_per_threshold',
+        add_argument('--mcsidx-down-per-threshold', action='store', type=float,
+                     dest='amc_mcsidx_down_per_threshold',
                      help='set PER threshold for decreasing modulation level')
 
 class Radio(object):
@@ -515,8 +515,8 @@ class Radio(object):
             self.controller = dragonradio.SmartController(self.net,
                                                           config.arq_window,
                                                           config.arq_window,
-                                                          config.amc_modidx_up_per_threshold,
-                                                          config.amc_modidx_down_per_threshold)
+                                                          config.amc_mcsidx_up_per_threshold,
+                                                          config.amc_mcsidx_down_per_threshold)
 
             self.controller.slot_size = int(bandwidth*(self.config.slot_size - self.config.guard_size))
 

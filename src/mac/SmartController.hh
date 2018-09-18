@@ -26,7 +26,7 @@ struct SendWindow : public TimerQueue::Timer {
       , new_window(true)
       , win(1)
       , maxwin(maxwin)
-      , modidx(0)
+      , mcsidx(0)
       , pkts(maxwin)
     {}
 
@@ -53,10 +53,10 @@ struct SendWindow : public TimerQueue::Timer {
     Seq::uint_type maxwin;
 
     /** @brief Modulation index */
-    size_t modidx;
+    size_t mcsidx;
 
     /** @brief First sequence number at this modulation index */
-    Seq modidx_init_seq;
+    Seq mcsidx_init_seq;
 
     /** @brief Pending packets we can't send because our window isn't large enough */
     std::list<std::shared_ptr<NetPacket>> pending;
@@ -179,8 +179,8 @@ public:
     SmartController(std::shared_ptr<Net> net,
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
-                    double modidx_up_per_threshold,
-                    double modidx_down_per_threshold);
+                    double mcsidx_up_per_threshold,
+                    double mcsidx_down_per_threshold);
     virtual ~SmartController();
 
     bool pull(std::shared_ptr<NetPacket>& pkt) override;
@@ -240,25 +240,25 @@ public:
     /** @brief Get PER threshold for increasing modulation level */
     double getUpPERThreshold(void)
     {
-        return modidx_up_per_threshold_;
+        return mcsidx_up_per_threshold_;
     }
 
     /** @brief Set PER threshold for increasing modulation level */
     void setUpPERThreshold(double thresh)
     {
-        modidx_up_per_threshold_ = thresh;
+        mcsidx_up_per_threshold_ = thresh;
     }
 
     /** @brief Get PER threshold for decreasing modulation level */
     double getDownPERThreshold(void)
     {
-        return modidx_down_per_threshold_;
+        return mcsidx_down_per_threshold_;
     }
 
     /** @brief Set PER threshold for decreasing modulation level */
     void setDownPERThreshold(double thresh)
     {
-        modidx_down_per_threshold_ = thresh;
+        mcsidx_down_per_threshold_ = thresh;
     }
 
     /** @brief Return flag indicating whether or not demodulation queue enforces
@@ -310,10 +310,10 @@ protected:
     size_t slot_size_;
 
     /** @brief PER threshold for increasing modulation level */
-    double modidx_up_per_threshold_;
+    double mcsidx_up_per_threshold_;
 
     /** @brief PER threshold for decreasing modulation level */
-    double modidx_down_per_threshold_;
+    double mcsidx_down_per_threshold_;
 
     /** @brief Should packets always be output in the order they were actually
      * received?
