@@ -1,3 +1,4 @@
+from concurrent.futures import CancelledError
 import functools
 import struct
 

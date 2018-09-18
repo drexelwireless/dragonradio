@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import CancelledError
 import logging
 import socket
 import struct
