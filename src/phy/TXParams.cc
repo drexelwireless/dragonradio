@@ -40,7 +40,5 @@ void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
     // g is the gain multiplier used to produce the IQ samples
     g_0dBFS.update(g*g_estimate);
 
-    if (rc.verbose)
-        fprintf(stderr, "Updated auto-gain: %0.1f\n", (double) getSoftTXGain0dBFS());
     logEvent("AMC: updated auto-gain %0.1f", (double) getSoftTXGain0dBFS());
 }
