@@ -695,7 +695,7 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
     if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
         && node.long_per.getValue() < modidx_up_per_threshold_
         && sendw.modidx < net_->tx_params.size() - 1) {
-        if (rc.verbose)
+        if (rc.verbose && ! rc.debug)
             fprintf(stderr, "Moving up modulation scheme\n");
         ++sendw.modidx;
         sendw.modidx_init_seq = node.seq;
@@ -719,7 +719,7 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
     if (   node.short_per.getNSamples() > node.short_per.getWindowSize()
         && node.short_per.getValue() > modidx_down_per_threshold_
         && sendw.modidx > 0) {
-        if (rc.verbose)
+        if (rc.verbose && ! rc.debug)
             fprintf(stderr, "Moving down modulation scheme\n");
         --sendw.modidx;
         sendw.modidx_init_seq = node.seq;

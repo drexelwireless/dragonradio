@@ -196,7 +196,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     std::unique_ptr<RadioPacket> pkt;
 
     if (!header_valid_) {
-        if (rc.verbose)
+        if (rc.verbose && !rc.debug)
             fprintf(stderr, "HEADER INVALID\n");
         logEvent("PHY: invalid header");
 
@@ -204,7 +204,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 
         pkt->setInternalFlag(kInvalidHeader);
     } else if (!payload_valid_) {
-        if (rc.verbose)
+        if (rc.verbose && !rc.debug)
             fprintf(stderr, "PAYLOAD INVALID\n");
         logEvent("PHY: invalid payload");
 
