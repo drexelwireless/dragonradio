@@ -46,6 +46,7 @@ class Config(object):
         self.bandwidth = 5e6
         self.oversample_factor = 1.0
         self.channel_bandwidth = 1e6
+        self.channel_guard_bandwidth = 0
 
         # TX/RX gain parameters
         self.tx_gain = 25
@@ -231,6 +232,9 @@ class Config(object):
         add_argument('--channel-bandwidth', action='store', type=float,
                      dest='channel_bandwidth',
                      help='set channel bandwidth (Hz)')
+        add_argument('--channel-guard-bandwidth', action='store', type=float,
+                     dest='channel_guard_bandwidth',
+                     help='set channel guard bandwidth (Hz)')
 
         # Gain-related options
         add_argument('-G', '--tx-gain', action='store', type=float,
@@ -457,6 +461,7 @@ class Radio(object):
         bandwidth = config.bandwidth
         oversample_factor = config.oversample_factor
         channel_bandwidth = config.channel_bandwidth
+        channel_guard_bandwidth = config.channel_guard_bandwidth
 
         nchannels = int(bandwidth/channel_bandwidth)
         self.channels = Channels([i*channel_bandwidth + channel_bandwidth/2. - bandwidth/2. for i in range(0,nchannels)])
@@ -473,8 +478,9 @@ class Radio(object):
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
 
-        self.phy.rx_rate_oversample = rx_rate/channel_bandwidth
-        self.phy.tx_rate_oversample = tx_rate/channel_bandwidth
+        actual_channel_bandwidth = channel_bandwidth - 2.0*channel_guard_bandwidth
+        self.phy.rx_rate_oversample = rx_rate/actual_channel_bandwidth
+        self.phy.tx_rate_oversample = tx_rate/actual_channel_bandwidth
 
         #
         # Configure the modulator and demodulator
