@@ -25,6 +25,7 @@ void RecvWindow::operator()()
 SmartController::SmartController(std::shared_ptr<Net> net,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
+                                 unsigned mcsidx_init,
                                  double mcsidx_up_per_threshold,
                                  double mcsidx_down_per_threshold)
   : Controller(net)
@@ -33,6 +34,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , slot_size_(0)
+  , mcsidx_init_(std::min(mcsidx_init, (unsigned) net_->tx_params.size()))
   , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
   , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
   , enforce_ordering_(false)
@@ -854,6 +856,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
                                           std::forward_as_tuple(node_id),
                                           std::forward_as_tuple(node_id, *this, max_sendwin_)).first->second;
 
+        sendw.mcsidx = mcsidx_init_;
         sendw.mcsidx_init_seq = dest.seq;
 
         resetPEREstimates(dest);

@@ -179,6 +179,7 @@ public:
     SmartController(std::shared_ptr<Net> net,
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
+                    unsigned mcsidx_init,
                     double mcsidx_up_per_threshold,
                     double mcsidx_down_per_threshold);
     virtual ~SmartController();
@@ -308,6 +309,9 @@ protected:
 
     /** @brief Number of samples in a transmission slot */
     size_t slot_size_;
+
+    /** @brief Initial MCS index */
+    unsigned mcsidx_init_;
 
     /** @brief PER threshold for increasing modulation level */
     double mcsidx_up_per_threshold_;

@@ -477,6 +477,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def(py::init<std::shared_ptr<Net>,
                       Seq::uint_type,
                       Seq::uint_type,
+                      unsigned,
                       double,
                       double>())
         .def_property("net_queue", &SmartController::getNetQueue, &SmartController::setNetQueue)

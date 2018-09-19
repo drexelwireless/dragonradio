@@ -109,6 +109,7 @@ class Config(object):
 
         self.amc_short_per_nslots = 2
         self.amc_long_per_nslots = 8
+        self.amc_mcsidx_init = 0
         self.amc_mcsidx_up_per_threshold = 0.02
         self.amc_mcsidx_down_per_threshold = 0.10
 
@@ -515,6 +516,7 @@ class Radio(object):
             self.controller = dragonradio.SmartController(self.net,
                                                           config.arq_window,
                                                           config.arq_window,
+                                                          config.amc_mcsidx_init,
                                                           config.amc_mcsidx_up_per_threshold,
                                                           config.amc_mcsidx_down_per_threshold)
 
