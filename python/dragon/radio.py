@@ -305,6 +305,12 @@ class Config(object):
                      help='enforce packet order when demodulating')
 
         # MAC parameters
+        add_argument('--slot-size', action='store', type=float,
+                     dest='slot_size',
+                     help='set MAC slot size (sec)')
+        add_argument('--guard-size', action='store', type=float,
+                     dest='guard_size',
+                     help='set MAC guard interval (sec)')
         add_argument('--fdma', action='store_const', const=True,
                      dest='fdma',
                      help='use FDMA instead of TDMA')
