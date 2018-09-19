@@ -511,6 +511,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::class_<SlottedMAC, MAC, std::shared_ptr<SlottedMAC>>(m, "SlottedMAC")
         .def_property("slot_size", &SlottedMAC::getSlotSize, &SlottedMAC::setSlotSize)
         .def_property("guard_size", &SlottedMAC::getGuardSize, &SlottedMAC::setGuardSize)
+        .def_property("demod_overlap_size", &SlottedMAC::getDemodOverlapSize, &SlottedMAC::setDemodOverlapSize)
         ;
 
     // Export class TDMA::Slots to Python
@@ -545,6 +546,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       std::shared_ptr<PacketDemodulator>,
                       double,
                       double,
+                      double,
                       size_t>())
         .def_property_readonly("slots", &TDMA::getSlots,
             py::return_value_policy::reference_internal);
@@ -557,6 +559,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       std::shared_ptr<Channels>,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
+                      double,
                       double,
                       double,
                       double>())

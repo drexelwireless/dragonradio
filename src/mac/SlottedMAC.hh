@@ -18,7 +18,8 @@ public:
                std::shared_ptr<PacketModulator> modulator,
                std::shared_ptr<PacketDemodulator> demodulator,
                double slot_size,
-               double guard_size);
+               double guard_size,
+               double demod_overlap_size);
     virtual ~SlottedMAC();
 
     SlottedMAC(const SlottedMAC&) = delete;
@@ -45,6 +46,15 @@ public:
      */
     virtual void setGuardSize(double t);
 
+    /** @brief Get demodulation overlap size
+     */
+    virtual double getDemodOverlapSize(void);
+
+    /** @brief Set demodulation overlap size
+     * @param t Overlap size in seconds
+     */
+    virtual void setDemodOverlapSize(double t);
+
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
 
@@ -54,6 +64,9 @@ protected:
 
     /** @brief Length of inter-slot guard (sec) */
     double guard_size_;
+
+    /** @brief Size of demodulation overlap (sec) */
+    double demod_overlap_size_;
 
     /** @brief Number of RX samples in a full slot */
     size_t rx_slot_samps_;

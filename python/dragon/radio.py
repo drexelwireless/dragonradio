@@ -88,6 +88,7 @@ class Config(object):
         # MAC parameters
         self.slot_size = .035
         self.guard_size = .01
+        self.demod_overlap_size = .005
         self.aloha_prob = .1
         self.slot_modulate_time = 30e-3
         self.slot_send_time = 10e-3
@@ -311,6 +312,9 @@ class Config(object):
         add_argument('--guard-size', action='store', type=float,
                      dest='guard_size',
                      help='set MAC guard interval (sec)')
+        add_argument('--demod-overlap-size', action='store', type=float,
+                     dest='demod_overlap_size',
+                     help='set demodulation overlap interval (sec)')
         add_argument('--fdma', action='store_const', const=True,
                      dest='fdma',
                      help='use FDMA instead of TDMA')
@@ -587,6 +591,7 @@ class Radio(object):
                                             self.demodulator,
                                             self.config.slot_size,
                                             self.config.guard_size,
+                                            self.config.demod_overlap_size,
                                             self.config.aloha_prob)
 
         if self.logger:
@@ -607,6 +612,7 @@ class Radio(object):
                                     self.demodulator,
                                     self.config.slot_size,
                                     self.config.guard_size,
+                                    self.config.demod_overlap_size,
                                     nslots)
 
         if self.logger:
