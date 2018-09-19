@@ -446,6 +446,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class PacketDemodulator to Python
     py::class_<PacketDemodulator, std::shared_ptr<PacketDemodulator>>(m, "PacketDemodulator")
+        .def("setWindowParameters", &PacketDemodulator::setWindowParameters)
         ;
 
     // Export class ParallelPacketDemodulator to Python
