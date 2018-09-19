@@ -27,7 +27,9 @@ SmartController::SmartController(std::shared_ptr<Net> net,
                                  Seq::uint_type recvwin,
                                  unsigned mcsidx_init,
                                  double mcsidx_up_per_threshold,
-                                 double mcsidx_down_per_threshold)
+                                 double mcsidx_down_per_threshold,
+                                 double mcsidx_alpha,
+                                 double mcsidx_prob_floor)
   : Controller(net)
   , mac_(nullptr)
   , netq_(nullptr)
@@ -37,7 +39,11 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , mcsidx_init_(std::min(mcsidx_init, (unsigned) net_->tx_params.size()))
   , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
   , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
+  , mcsidx_alpha_(mcsidx_alpha)
+  , mcsidx_prob_floor_(mcsidx_prob_floor)
   , enforce_ordering_(false)
+  , gen_(std::random_device()())
+  , dist_(0, 1.0)
 {
     timer_queue_.start();
 }
@@ -697,23 +703,32 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
     node.long_per.update(0.0);
 
     if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
-        && node.long_per.getValue() < mcsidx_up_per_threshold_
-        && sendw.mcsidx < net_->tx_params.size() - 1) {
-        if (rc.verbose && ! rc.debug)
-            fprintf(stderr, "Moving up modulation scheme\n");
-        ++sendw.mcsidx;
-        sendw.mcsidx_init_seq = node.seq;
-        node.tx_params = &net_->tx_params[sendw.mcsidx];
+        && node.long_per.getValue() < mcsidx_up_per_threshold_) {
+        // Set transition probability of current MCS index to 1.0 since we
+        // successfully passed the long PER test
+        sendw.mcsidx_prob[sendw.mcsidx] = 1.0;
 
-        resetPEREstimates(node);
+        // Now we see if we can actually increase the MCS index. Not only must
+        // there be a higher entry in the MCS table, but we must pass the
+        // probabilistic transition test.
+        if (   sendw.mcsidx < net_->tx_params.size() - 1
+            && dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1]) {
+            if (rc.verbose && ! rc.debug)
+                fprintf(stderr, "Moving up modulation scheme\n");
+            ++sendw.mcsidx;
+            sendw.mcsidx_init_seq = node.seq;
+            node.tx_params = &net_->tx_params[sendw.mcsidx];
 
-        logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; swin=%lu; lwin=%lu",
-            node.tx_params->mcs.fec0_name(),
-            node.tx_params->mcs.fec1_name(),
-            node.tx_params->mcs.ms_name(),
-            node.long_per.getValue(),
-            node.short_per.getWindowSize(),
-            node.long_per.getWindowSize());
+            resetPEREstimates(node);
+
+            logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; swin=%lu; lwin=%lu",
+                node.tx_params->mcs.fec0_name(),
+                node.tx_params->mcs.fec1_name(),
+                node.tx_params->mcs.ms_name(),
+                node.long_per.getValue(),
+                node.short_per.getWindowSize(),
+                node.long_per.getWindowSize());
+        }
     }
 }
 
@@ -725,6 +740,12 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
     if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
         && node.short_per.getValue() > mcsidx_down_per_threshold_
         && sendw.mcsidx > 0) {
+        // Decrease the probability that we will transition to this MCS index
+        sendw.mcsidx_prob[sendw.mcsidx] =
+            std::max(sendw.mcsidx_prob[sendw.mcsidx]*mcsidx_alpha_,
+                     mcsidx_prob_floor_);
+
+        // Move down modulation scheme
         if (rc.verbose && ! rc.debug)
             fprintf(stderr, "Moving down modulation scheme\n");
         --sendw.mcsidx;
@@ -858,6 +879,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
 
         sendw.mcsidx = mcsidx_init_;
         sendw.mcsidx_init_seq = dest.seq;
+        sendw.mcsidx_prob.resize(net_->tx_params.size(), 1.0);
 
         resetPEREstimates(dest);
 

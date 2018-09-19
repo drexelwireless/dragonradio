@@ -479,6 +479,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
                       Seq::uint_type,
                       unsigned,
                       double,
+                      double,
+                      double,
                       double>())
         .def_property("net_queue", &SmartController::getNetQueue, &SmartController::setNetQueue)
         .def_property("mac", &SmartController::getMAC, &SmartController::setMAC)
@@ -496,6 +498,14 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             &SmartController::getDownPERThreshold,
             &SmartController::setDownPERThreshold,
             "PER threshold for decreasing modulation level")
+        .def_property("mcsidx_alpha",
+            &SmartController::getMCSLearningAlpha,
+            &SmartController::setMCSLearningAlpha,
+            "MCS index learning alpha")
+        .def_property("mcsidx_prob_floor",
+            &SmartController::getMCSProbFloor,
+            &SmartController::setMCSProbFloor,
+            "MCS transition probability floor")
         .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
         .def("broadcastHello", &SmartController::broadcastHello)
         ;

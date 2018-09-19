@@ -3,6 +3,7 @@
 
 #include <list>
 #include <map>
+#include <random>
 
 #include "heap.hh"
 #include "spinlock_mutex.hh"
@@ -27,8 +28,10 @@ struct SendWindow : public TimerQueue::Timer {
       , win(1)
       , maxwin(maxwin)
       , mcsidx(0)
+      , mcsidx_prob(0)
       , pkts(maxwin)
-    {}
+    {
+    }
 
     /** @brief Node ID of destination. */
     NodeId node_id;
@@ -57,6 +60,9 @@ struct SendWindow : public TimerQueue::Timer {
 
     /** @brief First sequence number at this modulation index */
     Seq mcsidx_init_seq;
+
+    /** @brief The probability of moving to a given MCS */
+    std::vector<double> mcsidx_prob;
 
     /** @brief Pending packets we can't send because our window isn't large enough */
     std::list<std::shared_ptr<NetPacket>> pending;
@@ -181,7 +187,9 @@ public:
                     Seq::uint_type recvwin,
                     unsigned mcsidx_init,
                     double mcsidx_up_per_threshold,
-                    double mcsidx_down_per_threshold);
+                    double mcsidx_down_per_threshold,
+                    double mcsidx_alpha,
+                    double mcsidx_prob_floor);
     virtual ~SmartController();
 
     bool pull(std::shared_ptr<NetPacket>& pkt) override;
@@ -262,6 +270,30 @@ public:
         mcsidx_down_per_threshold_ = thresh;
     }
 
+    /** @brief Get MCS index learning alpha */
+    double getMCSLearningAlpha(void)
+    {
+        return mcsidx_alpha_;
+    }
+
+    /** @brief Set MCS index learning alpha */
+    void setMCSLearningAlpha(double alpha)
+    {
+        mcsidx_alpha_ = alpha;
+    }
+
+    /** @brief Get MCS transition probability floor */
+    double getMCSProbFloor(void)
+    {
+        return mcsidx_prob_floor_;
+    }
+
+    /** @brief Set MCS transition probability floor */
+    void setMCSProbFloor(double p)
+    {
+        mcsidx_prob_floor_ = p;
+    }
+
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
@@ -319,6 +351,14 @@ protected:
     /** @brief PER threshold for decreasing modulation level */
     double mcsidx_down_per_threshold_;
 
+    /** @brief Multiplicative factor used when learning MCS transition
+     * probabilities
+     */
+    double mcsidx_alpha_;
+
+    /** @brief Minimum MCS transition probability */
+    double mcsidx_prob_floor_;
+
     /** @brief Should packets always be output in the order they were actually
      * received?
      */
@@ -326,6 +366,12 @@ protected:
 
     /** @brief Time sync information */
     struct TimeSync time_sync_;
+
+    /** @brief Random number generator */
+    std::mt19937 gen_;
+
+    /** @brief Uniform 0-1 real distribution */
+    std::uniform_real_distribution<double> dist_;
 
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow &sendw);

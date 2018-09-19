@@ -112,6 +112,8 @@ class Config(object):
         self.amc_mcsidx_init = 0
         self.amc_mcsidx_up_per_threshold = 0.02
         self.amc_mcsidx_down_per_threshold = 0.10
+        self.amc_mcsidx_alpha = 0.5
+        self.amc_mcsidx_prob_floor = 0.1
 
         # Neighbor discover options
         # discovery_hello_interval is how often we send HELLO packets during
@@ -356,6 +358,12 @@ class Config(object):
         add_argument('--mcsidx-down-per-threshold', action='store', type=float,
                      dest='amc_mcsidx_down_per_threshold',
                      help='set PER threshold for decreasing modulation level')
+        add_argument('--mcsidx-alpha', action='store', type=float,
+                     dest='amc_mcsidx_alpha',
+                     help='set decay factor for learning MCS transition probabilities')
+        add_argument('--mcsidx-prob-floor', action='store', type=float,
+                     dest='amc_mcsidx_prob_floor',
+                     help='set minimum MCS transition probability')
 
 class Radio(object):
     def __init__(self, config):
@@ -518,7 +526,9 @@ class Radio(object):
                                                           config.arq_window,
                                                           config.amc_mcsidx_init,
                                                           config.amc_mcsidx_up_per_threshold,
-                                                          config.amc_mcsidx_down_per_threshold)
+                                                          config.amc_mcsidx_down_per_threshold,
+                                                          config.amc_mcsidx_alpha,
+                                                          config.amc_mcsidx_prob_floor)
 
             self.controller.slot_size = int(bandwidth*(self.config.slot_size - self.config.guard_size))
 
