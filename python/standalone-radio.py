@@ -100,9 +100,19 @@ def main():
         for i in range(0, args.num_nodes):
             radio.net.addNode(i+1)
 
-        radio.configureTDMA(len(radio.net))
+        if config.fdma or config.spaced_fdma:
+            radio.configureTDMA(1)
+            radio.mac.slots[0] = True
 
-        radio.mac.slots[radio.node_id - 1] = True
+            if config.spaced_fdma:
+                radio.mac.tx_channel = 2*(radio.node_id - 1)
+            else:
+                radio.mac.tx_channel = radio.node_id - 1
+        else:
+            radio.configureTDMA(len(radio.net))
+            radio.mac.slots[radio.node_id - 1] = True
+
+            radio.mac.tx_channel = 0
 
     #
     # Start IPython shell if we are in interactive mode. Otherwise, run the

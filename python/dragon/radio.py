@@ -90,6 +90,8 @@ class Config(object):
         self.aloha_prob = .1
         self.slot_modulate_time = 30e-3
         self.slot_send_time = 10e-3
+        self.fdma = False
+        self.spaced_fdma = False
 
         # ARQ options
         self.arq = False
@@ -297,6 +299,14 @@ class Config(object):
         add_argument('--demodulator-enforce-ordering', action='store_const', const=True,
                      dest='demodulator_enforce_ordering',
                      help='enforce packet order when demodulating')
+
+        # MAC parameters
+        add_argument('--fdma', action='store_const', const=True,
+                     dest='fdma',
+                     help='use FDMA instead of TDMA')
+        add_argument('--spaced-fdma', action='store_const', const=True,
+                     dest='spaced_fdma',
+                     help='use FDMA instead of TDMA, but only use every other channel')
 
         # ARQ options
         add_argument('--arq', action='store_const', const=True,
