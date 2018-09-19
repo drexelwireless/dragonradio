@@ -68,15 +68,16 @@ void TDMA::txWorker(void)
             continue;
         }
 
+        // Find following slot. We divide slot_size_ by two to avoid possible
+        // rounding issues where we mights end up skipping a slot.
+        findNextSlot(t_next_slot + slot_size_/2.0, t_following_slot);
+
         // Schedule transmission for start of our next slot if we haven't
         // already transmitted for that slot
         if (!approx(t_next_slot, t_prev_slot)) {
             txSlot(t_next_slot, tx_slot_samps_);
             t_prev_slot = t_next_slot;
         }
-
-        // Find following slot
-        findNextSlot(t_next_slot + slot_size_, t_following_slot);
 
         // Sleep until it's time to modulate the next slot
         t_now = Clock::now();
