@@ -15,7 +15,7 @@
 /** @brief A buffer of IQ samples */
 struct IQBuf : buffer<std::complex<float>> {
 public:
-    IQBuf(size_t sz) : buffer(sz), complete(false)
+    IQBuf(size_t sz) : buffer(sz), delay(0), complete(false)
     {
         nsamples.store(0, std::memory_order_release);
     }
@@ -30,6 +30,9 @@ public:
 
     /** @brief Timestamp of the first sample */
     Clock::time_point timestamp;
+
+    /** @brief Signal delay */
+    size_t delay;
 
     /** @brief Number of samples received so far. */
     /** This value is valid untile the buffer is marked complete. */
