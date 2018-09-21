@@ -412,7 +412,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         ;
 
     // Export class OFDM to Python
-    py::class_<OFDM, PHY, std::shared_ptr<OFDM>>(m, "OFDM")
+    py::class_<OFDM, LiquidPHY, std::shared_ptr<OFDM>>(m, "OFDM")
         .def(py::init<const MCS&,
                       bool,
                       bool,
