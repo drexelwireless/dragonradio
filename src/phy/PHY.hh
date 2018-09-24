@@ -154,6 +154,9 @@ public:
         return getRXRateOversample()/getMinRXRateOversample();
     }
 
+    /** @brief Calculate size of modulated data */
+    virtual size_t modulated_size(const TXParams &params, size_t n) = 0;
+
     /** @brief Create a Modulator for this %PHY */
     virtual std::unique_ptr<Modulator> make_modulator(void) = 0;
 

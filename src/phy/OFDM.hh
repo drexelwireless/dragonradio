@@ -40,7 +40,7 @@ public:
         void assemble(unsigned char *hdr, NetPacket& pkt) override final;
 
         size_t maxModulatedSamples(void) override final;
-        
+
         bool modulateSamples(std::complex<float> *buf, size_t &nw) override final;
     };
 
@@ -138,6 +138,8 @@ public:
     {
         return 1.0;
     }
+
+    size_t modulated_size(const TXParams &params, size_t n) override;
 
     std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
 

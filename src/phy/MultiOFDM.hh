@@ -133,6 +133,8 @@ public:
         return 2.0;
     }
 
+    size_t modulated_size(const TXParams &params, size_t n) override;
+
     std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
 
     std::unique_ptr<PHY::Modulator> make_modulator(void) override;
