@@ -682,7 +682,10 @@ void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq, b
         (unsigned) sendw.node_id,
         (unsigned) seq);
 
-    if (!sendw[seq])
+    // If we received a NAK for a packet that was already ACK'ed, nevermind
+    if (seq < sendw.unack)
+        return;
+    else if (!sendw[seq])
         fprintf(stderr, "Received NAK from node %d for seq %d, but can't find that packet!\n",
             (int) sendw.node_id,
             (int) seq);
