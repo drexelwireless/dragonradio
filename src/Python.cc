@@ -475,6 +475,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     // Export class SmartController to Python
     py::class_<SmartController, Controller, std::shared_ptr<SmartController>>(m, "SmartController")
         .def(py::init<std::shared_ptr<Net>,
+                      std::shared_ptr<PHY>,
                       Seq::uint_type,
                       Seq::uint_type,
                       unsigned,

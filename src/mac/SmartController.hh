@@ -13,6 +13,7 @@
 #include "net/Queue.hh"
 #include "mac/Controller.hh"
 #include "mac/MAC.hh"
+#include "phy/PHY.hh"
 
 class SmartController;
 
@@ -183,6 +184,7 @@ class SmartController : public Controller
 {
 public:
     SmartController(std::shared_ptr<Net> net,
+                    std::shared_ptr<PHY> phy,
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
                     unsigned mcsidx_init,
@@ -312,6 +314,9 @@ public:
     TXParams broadcast_tx_params;
 
 protected:
+    /** @brief Our PHY. */
+    std::shared_ptr<PHY> phy_;
+
     /** @brief Our MAC. */
     std::shared_ptr<MAC> mac_;
 

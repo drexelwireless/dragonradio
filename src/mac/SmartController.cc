@@ -23,6 +23,7 @@ void RecvWindow::operator()()
 }
 
 SmartController::SmartController(std::shared_ptr<Net> net,
+                                 std::shared_ptr<PHY> phy,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
                                  unsigned mcsidx_init,
@@ -31,6 +32,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
                                  double mcsidx_alpha,
                                  double mcsidx_prob_floor)
   : Controller(net)
+  , phy_(phy)
   , mac_(nullptr)
   , netq_(nullptr)
   , max_sendwin_(max_sendwin)
@@ -847,7 +849,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
 void SmartController::resetPEREstimates(Node &node)
 {
-    double max_packets_per_slot = slot_size_/(rc.max_packet_size*8/node.tx_params->mcs.getRate());
+    double max_packets_per_slot = floor(slot_size_/phy_->modulated_size(*node.tx_params, rc.max_packet_size));
 
     node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
     node.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
