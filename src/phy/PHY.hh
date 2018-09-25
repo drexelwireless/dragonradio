@@ -142,6 +142,18 @@ public:
         tx_rate_oversample_ = rate;
     }
 
+    /** @brief Get TX upsample rate. */
+    virtual double getTXUpsampleRate(void)
+    {
+        return getTXRateOversample()/getMinTXRateOversample();;
+    }
+
+    /** @brief Get RX downsample rate. */
+    virtual double getRXDownsampleRate(void)
+    {
+        return getRXRateOversample()/getMinRXRateOversample();
+    }
+
     /** @brief Create a Modulator for this %PHY */
     virtual std::unique_ptr<Modulator> make_modulator(void) = 0;
 
