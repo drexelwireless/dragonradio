@@ -84,13 +84,6 @@ struct Node {
     {
         return 20.0*logf(g)/logf(10.0);
     }
-
-    /** @brief Update a NetPacket with our TXParams. */
-    void updateNetPacketTXParams(NetPacket &pkt)
-    {
-        pkt.tx_params = tx_params;
-        pkt.g = tx_params->g_0dBFS.getValue() * g;
-    }
 };
 
 class Net

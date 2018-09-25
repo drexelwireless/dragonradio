@@ -10,6 +10,12 @@
 #define dprintf(...)
 #endif /* !DEBUG */
 
+void applyTXParams(NetPacket &pkt, TXParams *p, float g)
+{
+    pkt.tx_params = p;
+    pkt.g = p->g_0dBFS.getValue() * g;
+}
+
 void SendWindow::operator()()
 {
     controller.retransmit(*this);
@@ -64,8 +70,7 @@ get_packet:
 
     // Handle broadcast packets
     if (pkt->isFlagSet(kBroadcast)) {
-        pkt->tx_params = &broadcast_tx_params;
-        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
+        applyTXParams(*pkt, &broadcast_tx_params, 1.0f);
 
         return true;
     }
@@ -111,6 +116,7 @@ get_packet:
     // Update our send window if this packet has data
     if (pkt->data_len != 0) {
         SendWindow                      &sendw = getSendWindow(nexthop);
+        Node                            &dest = (*net_)[nexthop];
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
         Seq                             unack = sendw.unack.load(std::memory_order_acquire);
         Seq                             max = sendw.max.load(std::memory_order_acquire);
@@ -135,17 +141,12 @@ get_packet:
         // Update send window metrics
         if (pkt->seq > max)
             sendw.max.store(pkt->seq, std::memory_order_release);
-    }
 
-    // Apply TX params
-    if (pkt->data_len != 0) {
-        Node &dest = (*net_)[nexthop];
-
-        dest.updateNetPacketTXParams(*pkt);
-    } else {
-        pkt->tx_params = &broadcast_tx_params;
-        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
-    }
+        // Apply TX params
+        applyTXParams(*pkt, dest.tx_params, dest.g);
+    } else
+        // Apply broadcast TX params
+        applyTXParams(*pkt, &broadcast_tx_params, 1.0f);
 
     return true;
 }
