@@ -390,11 +390,13 @@ void SmartController::retransmit(SendWindow &sendw)
         assert(pkt);
 
         // Record the packet error
-        txFailure(sendw, dest);
+        if (unack >= sendw.mcsidx_init_seq) {
+            txFailure(sendw, dest);
 
-        logEvent("AMC: txFailure retransmission: unack=%u; per=%f",
-            (unsigned) unack,
-            dest.short_per.getValue());
+            logEvent("AMC: txFailure retransmission: unack=%u; per=%f",
+                (unsigned) unack,
+                dest.short_per.getValue());
+        }
 
         if (netq_)
             netq_->push_hi(std::move(pkt));
