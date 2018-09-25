@@ -16,19 +16,19 @@ struct Seq {
     Seq& operator=(const Seq&) = default;
     Seq& operator=(Seq&&) = default;
 
-    bool operator ==(const Seq& other) { return seq_ == other.seq_; }
-    bool operator !=(const Seq& other) { return seq_ != other.seq_; }
+    bool operator ==(const Seq& other) const { return seq_ == other.seq_; }
+    bool operator !=(const Seq& other) const { return seq_ != other.seq_; }
 
-    bool operator <(const Seq& other)
+    bool operator <(const Seq& other) const
       { return static_cast<int_type>(seq_ - other.seq_) < 0; }
 
-    bool operator <=(const Seq& other)
+    bool operator <=(const Seq& other) const
       { return static_cast<int_type>(seq_ - other.seq_) <= 0; }
 
-    bool operator >(const Seq& other)
+    bool operator >(const Seq& other) const
       { return static_cast<int_type>(seq_ - other.seq_) > 0; }
 
-    bool operator >=(const Seq& other)
+    bool operator >=(const Seq& other) const
       { return static_cast<int_type>(seq_ - other.seq_) >= 0; }
 
     Seq operator ++() { seq_++; return *this; }
