@@ -746,7 +746,8 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
                 node.long_per.getValue(),
                 node.short_per.getWindowSize(),
                 node.long_per.getWindowSize());
-        }
+        } else
+            resetPEREstimates(node);
     }
 }
 
