@@ -233,6 +233,12 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                         txSuccess(sendw, dest);
                 }
 
+                // If the initial sequence number corresponding to the current
+                // MCS is so old that the sequence numbers have wrapped around,
+                // update it
+                if (sendw.mcsidx_init_seq > unack + sendw.win)
+                    sendw.mcsidx_init_seq = unack - 1;
+
                 // Cancel the retransmit timer.
                 dprintf("ARQ: recv from %u: canceling retransmission timer",
                     (unsigned) prevhop);
