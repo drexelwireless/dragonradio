@@ -138,9 +138,14 @@ get_packet:
     }
 
     // Apply TX params
-    Node &dest = (*net_)[nexthop];
+    if (pkt->data_len != 0) {
+        Node &dest = (*net_)[nexthop];
 
-    dest.updateNetPacketTXParams(*pkt);
+        dest.updateNetPacketTXParams(*pkt);
+    } else {
+        pkt->tx_params = &broadcast_tx_params;
+        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
+    }
 
     return true;
 }
