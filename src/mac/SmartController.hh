@@ -396,8 +396,11 @@ protected:
     /** @brief Append NAK control messages. */
     void appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);
 
-    /** @brief Handle a NAK. */
-    void handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
+    /** @brief Revise PER estimate based on NAK. */
+    void nakUpdatePER(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
+
+    /** @brief Retransmit a NAK'ed packet. */
+    void nakRetransmit(SendWindow &sendw, const Seq &seq);
 
     /** @brief Handle a successful packet transmission. */
     void txSuccess(SendWindow &sendw, Node &node);

@@ -276,8 +276,10 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 sendw.unack.store(unack, std::memory_order_release);
             }
         } else if (pkt->isFlagSet(kNAK)) {
-            if (ehdr.ack >= unack)
-                handleNak(sendw, dest, ehdr.ack, true);
+            if (ehdr.ack >= unack) {
+                nakUpdatePER(sendw, dest, ehdr.ack, true);
+                nakRetransmit(sendw, ehdr.ack);
+            }
         }
     }
 
@@ -641,11 +643,34 @@ void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pk
         SendWindow                      &sendw = *sendwptr;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
+        // First revise PER, which can potentially change MCS. Once the MCS has
+        // changed, we stop revising PER to prevent dropping multiple MCS
+        // levels based on a single round of NAK's.
+        size_t old_mcsidx = sendw.mcsidx;
+
         for(auto it = pkt->begin(); it != pkt->end(); ++it) {
             switch (it->type) {
                 case ControlMsg::Type::kNak:
                 {
-                    handleNak(sendw, node, it->nak.seq, false);
+                    nakUpdatePER(sendw, node, it->nak.seq, false);
+
+                    if (sendw.mcsidx != old_mcsidx)
+                        goto resend;
+                }
+                break;
+
+                default:
+                    break;
+            }
+        }
+
+        // Then re-send NAK'ed packets.
+  resend:
+        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+            switch (it->type) {
+                case ControlMsg::Type::kNak:
+                {
+                    nakRetransmit(sendw, it->nak.seq);
                 }
                 break;
 
@@ -677,7 +702,25 @@ void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket
     }
 }
 
-void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak)
+void SmartController::nakUpdatePER(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak)
+{
+    // If we received a NAK for a packet that was already ACK'ed, nevermind
+    if (seq < sendw.unack)
+        return;
+    // Record the packet error only if this sequence number was an explicit Nak,
+    // i.e., it resulted from an invalid payload, or if the sequence number was
+    // sent with the current modulation scheme.
+    else if (explicitNak || seq >= sendw.mcsidx_init_seq) {
+        txFailure(sendw, dest);
+
+        logEvent("AMC: txFailure nak: seq=%u; explicit=%s; per=%f",
+            (unsigned) seq,
+            explicitNak ? "true" : "false",
+            dest.short_per.getValue());
+    }
+}
+
+void SmartController::nakRetransmit(SendWindow &sendw, const Seq &seq)
 {
     dprintf("ARQ: nak from %u: seq=%u",
         (unsigned) sendw.node_id,
@@ -691,21 +734,9 @@ void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq, b
             (int) sendw.node_id,
             (int) seq);
     else {
-        // We need to make an explicit new reference to the
-        // shared_ptr because push takes ownership of its argument.
+        // We need to make an explicit new reference to the shared_ptr because
+        // push takes ownership of its argument.
         std::shared_ptr<NetPacket> pkt = sendw[seq];
-
-        // Record the packet error only if this sequence number was an explicit
-        // Nak, i.e., it resulted from an invalid payload, or if the sequence
-        // number was sent with the current modulation scheme.
-        if (explicitNak || seq >= sendw.mcsidx_init_seq) {
-            txFailure(sendw, dest);
-
-            logEvent("AMC: txFailure nak: seq=%u; explicit=%s; per=%f",
-                (unsigned) seq,
-                explicitNak ? "true" : "false",
-                dest.short_per.getValue());
-        }
 
         if (netq_)
             netq_->push_hi(std::move(pkt));
