@@ -901,6 +901,8 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
         sendw.mcsidx_init_seq = dest.seq;
         sendw.mcsidx_prob.resize(net_->tx_params.size(), 1.0);
 
+        dest.tx_params = &net_->tx_params[mcsidx_init_];
+
         resetPEREstimates(dest);
 
         return sendw;
