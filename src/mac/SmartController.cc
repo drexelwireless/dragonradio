@@ -693,7 +693,7 @@ void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket
         delta = 0;
 
     for (Seq seq = recvw.ack + 1; seq < recvw.max - delta && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.max_packet_size; ++seq) {
-        if (!recvw[seq].pkt) {
+        if (!recvw[seq].received) {
             dprintf("ARQ: nak to %u: seq=%u",
                 (unsigned) recvw.node_id,
                 (unsigned) seq);
