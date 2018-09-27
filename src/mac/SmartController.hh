@@ -18,7 +18,36 @@
 class SmartController;
 
 struct SendWindow : public TimerQueue::Timer {
-    using vector_type = std::vector<std::shared_ptr<NetPacket>>;
+    struct Entry {
+        Entry() : pkt(nullptr) {};
+
+        virtual ~Entry() = default;
+
+        void operator =(std::shared_ptr<NetPacket>& p)
+        {
+            pkt = p;
+        }
+
+        operator bool()
+        {
+            return (bool) pkt;
+        }
+
+        operator std::shared_ptr<NetPacket>()
+        {
+            return pkt;
+        }
+
+        void reset(void)
+        {
+            pkt.reset();
+        }
+
+        /** @brief The packet received in this window entry. */
+        std::shared_ptr<NetPacket> pkt;
+    };
+
+    using vector_type = std::vector<Entry>;
 
     SendWindow(NodeId node_id, SmartController &controller, Seq::uint_type maxwin)
       : node_id(node_id)
@@ -30,7 +59,7 @@ struct SendWindow : public TimerQueue::Timer {
       , maxwin(maxwin)
       , mcsidx(0)
       , mcsidx_prob(0)
-      , pkts(maxwin)
+      , entries_(maxwin)
     {
     }
 
@@ -72,9 +101,9 @@ struct SendWindow : public TimerQueue::Timer {
     spinlock_mutex mutex;
 
     /** @brief Return the packet with the given sequence number in the window */
-    std::shared_ptr<NetPacket>& operator[](Seq seq)
+    Entry& operator[](Seq seq)
     {
-        return pkts[seq % pkts.size()];
+        return entries_[seq % entries_.size()];
     }
 
     void operator()() override;
@@ -82,7 +111,7 @@ struct SendWindow : public TimerQueue::Timer {
 private:
     /** @brief Unacknowledged packets in our send window. */
     /** INVARIANT: unack <= N <= max < unack + win */
-    vector_type pkts;
+    vector_type entries_;
 };
 
 struct RecvWindow : public TimerQueue::Timer  {
@@ -127,7 +156,7 @@ struct RecvWindow : public TimerQueue::Timer  {
       , ack(0)
       , max(0)
       , win(win)
-      , entries(win)
+      , entries_(win)
     {}
 
     /** @brief Node ID of destination. */
@@ -167,7 +196,7 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
-        return entries[seq % entries.size()];
+        return entries_[seq % entries_.size()];
     }
 
     void operator()() override;
@@ -176,7 +205,7 @@ private:
     /** @brief All packets with sequence numbers N such that
      * ack <= N <= max < ack + win
      */
-    vector_type entries;
+    vector_type entries_;
 };
 
 /** @brief A MAC controller that implements ARQ. */
