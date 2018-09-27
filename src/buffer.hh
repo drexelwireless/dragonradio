@@ -206,17 +206,21 @@ public:
     void reserve(size_type new_cap)
     {
         if (new_cap > capacity_) {
-            size_type new_capacity_ = capacity_;
+            size_type new_capacity = capacity_;
 
-            while (new_capacity_ < new_cap)
-                new_capacity_ *= 2;
+            if (new_capacity == 0) {
+                new_capacity = new_cap;
+            } else {
+                while (new_capacity < new_cap)
+                    new_capacity *= 2;
+            }
 
-            T* new_data = reinterpret_cast<T*>(std::realloc(data_, new_capacity_*sizeof(T)));
+            T* new_data = reinterpret_cast<T*>(std::realloc(data_, new_capacity*sizeof(T)));
             if (!new_data)
                 throw std::bad_alloc();
 
             data_ = new_data;
-            capacity_ = new_capacity_;
+            capacity_ = new_capacity;
         }
     }
 
