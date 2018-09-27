@@ -67,8 +67,21 @@ public:
         PHY &phy_;
     };
 
-    PHY() {}
+    PHY(NodeId node_id)
+      : node_id_(node_id)
+    {
+    }
+
     virtual ~PHY() {}
+
+    PHY() = delete;
+
+    /** @brief Get this node's ID.
+     */
+    NodeId getNodeId(void)
+    {
+        return node_id_;
+    }
 
     /** @brief Return the minimum oversample rate (with respect to PHY
      * bandwidth) needed for demodulation
@@ -164,6 +177,9 @@ public:
     virtual std::unique_ptr<Demodulator> make_demodulator(void) = 0;
 
 protected:
+    /** @brief Node ID */
+    double node_id_;
+
     /** @brief RX sample rate */
     double rx_rate_;
 

@@ -425,17 +425,20 @@ class Radio(object):
                          config.header_ms)
 
         if config.phy == 'flexframe':
-            self.phy = dragonradio.FlexFrame(header_mcs,
+            self.phy = dragonradio.FlexFrame(self.node_id,
+                                             header_mcs,
                                              config.soft_header,
                                              config.soft_payload,
                                              config.min_packet_size)
         elif config.phy == 'newflexframe':
-            self.phy = dragonradio.NewFlexFrame(header_mcs,
+            self.phy = dragonradio.NewFlexFrame(self.node_id,
+                                                header_mcs,
                                                 config.soft_header,
                                                 config.soft_payload,
                                                 config.min_packet_size)
         elif config.phy == 'ofdm':
-            self.phy = dragonradio.OFDM(header_mcs,
+            self.phy = dragonradio.OFDM(self.node_id,
+                                        header_mcs,
                                         config.soft_header,
                                         config.soft_payload,
                                         config.min_packet_size,
@@ -443,7 +446,8 @@ class Radio(object):
                                         config.cp_len,
                                         config.taper_len)
         elif config.phy == 'multiofdm':
-            self.phy = dragonradio.MultiOFDM(header_mcs,
+            self.phy = dragonradio.MultiOFDM(self.node_id,
+                                             header_mcs,
                                              config.soft_header,
                                              config.soft_payload,
                                              config.min_packet_size,

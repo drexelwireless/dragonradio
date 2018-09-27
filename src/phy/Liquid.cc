@@ -19,11 +19,13 @@ union PHYHeader {
     unsigned char bytes[14];
 };
 
-LiquidPHY::LiquidPHY(const MCS &header_mcs,
+LiquidPHY::LiquidPHY(NodeId node_id,
+                     const MCS &header_mcs,
                      bool soft_header,
                      bool soft_payload,
                      size_t min_packet_size)
-  : min_packet_size(min_packet_size)
+  : PHY(node_id)
+  , min_packet_size(min_packet_size)
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)

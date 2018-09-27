@@ -79,14 +79,15 @@ public:
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
      */
-    OFDM(const MCS &mcs,
+    OFDM(NodeId node_id,
+         const MCS &mcs,
          bool soft_header,
          bool soft_payload,
          size_t min_packet_size,
          unsigned int M,
          unsigned int cp_len,
          unsigned int taper_len)
-      : LiquidPHY(mcs, soft_header, soft_payload, min_packet_size)
+      : LiquidPHY(node_id, mcs, soft_header, soft_payload, min_packet_size)
       , M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)
@@ -103,7 +104,8 @@ public:
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
      */
-    OFDM(const MCS &mcs,
+    OFDM(NodeId node_id,
+         const MCS &mcs,
          bool soft_header,
          bool soft_payload,
          size_t min_packet_size,
@@ -111,7 +113,7 @@ public:
          unsigned int cp_len,
          unsigned int taper_len,
          unsigned char *p)
-      : LiquidPHY(mcs, soft_header, soft_payload, min_packet_size)
+      : LiquidPHY(node_id, mcs, soft_header, soft_payload, min_packet_size)
       , M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)
