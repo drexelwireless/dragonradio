@@ -16,6 +16,7 @@
 
 #include <functional>
 
+#include "Logger.hh"
 #include "RadioConfig.hh"
 #include "Util.hh"
 #include "net/Net.hh"
@@ -152,12 +153,24 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
     ssize_t nwrite;
 
     if ((nwrite = write(fd_, pkt->data() + sizeof(ExtendedHeader), pkt->data_len)) < 0) {
-        perror("Writing data");
-        exit(1);
+        logEvent("NET: tun/tap write failure: errno=%s (%d); nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
+            strerror(errno),
+            errno,
+            nwrite,
+            (unsigned) pkt->size(),
+            (unsigned) pkt->seq,
+            (unsigned) pkt->data_len);
+        return;
     }
 
-    if ((size_t) nwrite != pkt->data_len)
-        fprintf(stderr, "Couldn't write full packet to tun/tap!\n");
+    if ((size_t) nwrite != pkt->data_len) {
+        logEvent("NET: tun/tap incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
+            nwrite,
+            (unsigned) pkt->size(),
+            (unsigned) pkt->seq,
+            (unsigned) pkt->data_len);
+        return;
+    }
 
     if (rc.verbose)
         printf("Written %lu bytes (seq# %u) from %u (evm = %.2f; rssi = %.2f)\n",
