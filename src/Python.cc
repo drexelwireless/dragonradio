@@ -424,7 +424,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class MultiOFDM to Python
     py::class_<MultiOFDM, LiquidPHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
-        .def(py::init<size_t,
+        .def(py::init<const MCS&,
+                      bool,
+                      bool,
+                      size_t,
                       unsigned int,
                       unsigned int,
                       unsigned int>())

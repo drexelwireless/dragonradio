@@ -443,7 +443,10 @@ class Radio(object):
                                         config.cp_len,
                                         config.taper_len)
         elif config.phy == 'multiofdm':
-            self.phy = dragonradio.MultiOFDM(config.min_packet_size,
+            self.phy = dragonradio.MultiOFDM(header_mcs,
+                                             config.soft_header,
+                                             config.soft_payload,
+                                             config.min_packet_size,
                                              config.M,
                                              config.cp_len,
                                              config.taper_len)

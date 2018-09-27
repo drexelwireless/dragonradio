@@ -30,12 +30,6 @@ LiquidPHY::LiquidPHY(const MCS &header_mcs,
 {
 }
 
-LiquidPHY::LiquidPHY()
-  : soft_header_(false)
-  , soft_payload_(false)
-{
-}
-
 LiquidPHY::~LiquidPHY()
 {
 }

@@ -78,16 +78,19 @@ public:
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
      */
-    MultiOFDM(size_t min_packet_size,
+    MultiOFDM(const MCS &mcs,
+              bool soft_header,
+              bool soft_payload,
+              size_t min_packet_size,
               unsigned int M,
               unsigned int cp_len,
               unsigned int taper_len)
-       : M_(M)
+       : LiquidPHY(mcs, soft_header, soft_payload, min_packet_size)
+       , M_(M)
        , cp_len_(cp_len)
        , taper_len_(taper_len)
        , p_(NULL)
     {
-        min_packet_size = min_packet_size;
     }
 
     /** @brief Construct a multichannel OFDM PHY.
@@ -99,17 +102,20 @@ public:
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
      */
-    MultiOFDM(size_t min_packet_size,
+    MultiOFDM(const MCS &mcs,
+              bool soft_header,
+              bool soft_payload,
+              size_t min_packet_size,
               unsigned int M,
               unsigned int cp_len,
               unsigned int taper_len,
               unsigned char *p)
-       : M_(M)
+       : LiquidPHY(mcs, soft_header, soft_payload, min_packet_size)
+       , M_(M)
        , cp_len_(cp_len)
        , taper_len_(taper_len)
        , p_(p)
     {
-        min_packet_size = min_packet_size;
     }
 
     ~MultiOFDM()

@@ -22,9 +22,9 @@ public:
               bool soft_header,
               bool soft_payload,
               size_t min_packet_size);
-    LiquidPHY();
     virtual ~LiquidPHY();
 
+    LiquidPHY() = delete;
     LiquidPHY(const LiquidPHY&) = delete;
     LiquidPHY(LiquidPHY&&) = delete;
 
