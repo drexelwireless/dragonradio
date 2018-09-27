@@ -110,7 +110,7 @@ class Config(object):
         self.amc_short_per_nslots = 2
         self.amc_long_per_nslots = 8
         self.amc_mcsidx_init = 0
-        self.amc_mcsidx_up_per_threshold = 0.02
+        self.amc_mcsidx_up_per_threshold = 0.04
         self.amc_mcsidx_down_per_threshold = 0.10
         self.amc_mcsidx_alpha = 0.5
         self.amc_mcsidx_prob_floor = 0.1
