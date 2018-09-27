@@ -18,7 +18,7 @@ void applyTXParams(NetPacket &pkt, TXParams *p, float g)
 
 void SendWindow::Entry::operator()()
 {
-    sendw.controller.retransmit(*this);
+    sendw.controller.retransmitOnTimeout(*this);
 }
 
 void RecvWindow::operator()()
@@ -362,47 +362,27 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     }
 }
 
-void SmartController::retransmit(SendWindow::Entry &entry)
+void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 {
     SendWindow                      &sendw = entry.sendw;
     std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+    Node                            &dest = (*net_)[sendw.node_id];
 
     dprintf("ARQ: send to %u: retransmit seq=%u",
         (unsigned) sendw.node_id,
         (unsigned) entry->seq);
 
-    // We need to make an explicit new reference to the shared_ptr because
-    // push takes ownership of its argument.
-    std::shared_ptr<NetPacket> pkt = entry;
-    Node                       &dest = (*net_)[sendw.node_id];
-
-    // INVARIANT: packets come from the network in sequence order. If this
-    // invariant holds, then we will never have a "hole" in our send window,
-    // and this assertion must hold.
-    assert(pkt);
-
     // Record the packet error
-    if (pkt->seq >= sendw.mcsidx_init_seq) {
+    if (entry.pkt->seq >= sendw.mcsidx_init_seq) {
         txFailure(sendw, dest);
 
         logEvent("AMC: txFailure retransmission: seq=%u; per=%f",
-            (unsigned) pkt->seq,
+            (unsigned) entry.pkt->seq,
             dest.short_per.getValue());
     }
 
-    // Update ACK if we can
-    if (pkt->isFlagSet(kACK)) {
-        RecvWindow     &recvw = *maybeGetReceiveWindow(pkt->nexthop);
-        ExtendedHeader &ehdr = pkt->getExtendedHeader();
-
-        ehdr.ack = recvw.ack;
-    }
-
-    if (netq_)
-        netq_->push_hi(std::move(pkt));
-
-    // Re-start the retransmit timer
-    startRetransmissionTimer(entry);
+    // Actually retransmit the packet
+    retransmit(entry);
 }
 
 void SmartController::ack(RecvWindow &recvw)
@@ -503,6 +483,38 @@ void SmartController::broadcastHello(void)
         mac_->sendTimestampedPacket(Clock::now() + rc.timestamp_delay, std::move(pkt));
     } else
         netq_->push_hi(std::move(pkt));
+}
+
+/** NOTE: The lock on the send window to which entry belongs MUST be held before
+ * calling retransmit.
+ */
+void SmartController::retransmit(SendWindow::Entry &entry)
+{
+    dprintf("ARQ: send to %u: retransmit seq=%u",
+        (unsigned) sendw.node_id,
+        (unsigned) entry->seq);
+
+    // We need to make an explicit new reference to the shared_ptr because push
+    // takes ownership of its argument.
+    std::shared_ptr<NetPacket> pkt = entry;
+
+    assert(pkt);
+
+    // Update ACK if we can
+    if (pkt->isFlagSet(kACK)) {
+        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt->nexthop);
+        //std::lock_guard<spinlock_mutex> lock(recv_mutex_);
+        ExtendedHeader                  &ehdr = pkt->getExtendedHeader();
+
+        ehdr.ack = recvw.ack;
+    }
+
+    // Put the packet on the high-priority network queue
+    if (netq_)
+        netq_->push_hi(std::move(pkt));
+
+    // Re-start the retransmit timer
+    startRetransmissionTimer(entry);
 }
 
 void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
@@ -731,16 +743,11 @@ void SmartController::nakRetransmit(SendWindow &sendw, const Seq &seq)
             (int) sendw.node_id,
             (int) seq);
     else {
-        // We need to make an explicit new reference to the shared_ptr because
-        // push takes ownership of its argument.
-        std::shared_ptr<NetPacket> pkt = sendw[seq];
-
-        if (netq_)
-            netq_->push_hi(std::move(pkt));
-
         dprintf("ARQ: recv from %u: nak=%u",
             (unsigned) sendw.node_id,
             (unsigned) seq);
+
+        retransmit(sendw[seq]);
     }
 }
 

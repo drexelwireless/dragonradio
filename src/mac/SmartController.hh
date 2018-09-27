@@ -230,7 +230,7 @@ public:
 
     void received(std::shared_ptr<RadioPacket>&& pkt) override;
 
-    void retransmit(SendWindow::Entry &entry);
+    void retransmitOnTimeout(SendWindow::Entry &entry);
 
     /** @brief Send an ACK to the given receiver. The caller MUST hold the lock
      * on recvw.
@@ -409,6 +409,9 @@ protected:
 
     /** @brief Uniform 0-1 real distribution */
     std::uniform_real_distribution<double> dist_;
+
+    /** @brief Re-transmit a send window entry. */
+    void retransmit(SendWindow::Entry &entry);
 
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow::Entry &entry);
