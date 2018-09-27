@@ -84,6 +84,23 @@ message SpectrumVoxel
   google.protobuf.DoubleValue slot_time = 7; // optional, slot duration in seconds
 }
 
+/*
+ * The NetworkType message advertises the type of node this is.
+ */
+message NetworkType
+{
+    enum Type
+    {
+      UNKNOWN = 0;
+      COMPETITOR = 1;
+      INCUMBENT_PASSIVE = 10;
+      INCUMBENT_DSRC = 11;
+      INCUMBENT_JAMMER = 12;
+    }
+
+    Type network_type = 100;  // type of network
+}
+
 //=================================================================================================
 // The following section contains composite types of the data model
 //=================================================================================================
@@ -121,43 +138,21 @@ message CilVersion
 }
 
 /*
- * A Hello message is an initial peer-to-peer handshake between networks.
- * The handshake is considered complete if a Hello message has been sent
- * and received in some order, and no other message should be sent before 
- * the handshake is complete. Hello messages should be sent within 10
- * seconds to all neighbors in response to receiving the Inform message 
- * from the collaboration server, and to all new neighbors (and only new 
- * ones) in response to the Notify message.
+ * A Hello message is the initial announcement of a connecting peer. This
+ * should be the first message sent after a new connection is created to
+ * another neighbor. Connections should be created and the Hello messages
+ * should be sent within 10 seconds to all neighbors in response to receiving
+ * the Inform message from the collaboration server, and to all new neighbors
+ * (and only new ones) in response to the Notify message. Hello should be sent
+ * as the first message every time a peer needs to reconnect to its neighbors
+ * due to crashes or other disconnects. No other time should the CIRN send
+ * this  message. Note, that a Hello message may reset the msg_count field as
+ * desicrbed in CilMessage.
  */
 message Hello
 {
    CilVersion version = 2; // mandatory, the version of the CIL spoken and understood by the CIRN
 }
-
-//=================================================================================================
-// SCALAR_PERFORMANCE Protocol
-//=================================================================================================
-
-/*
- * The scalar performance is a non-negative number which represents the
- * mandated outcome performance of the network. If there are multiple of
- * mandated outcome goals, then this number must be the minimum of the
- * individual performance metrics. If this number is below 1.0, then this
- * network is not meeting its goals. The scalar performance can be higher 
- * than 1.0, which means that this network is meeting its mandated outcome 
- * with some (non-realized) margin. The time intervals of consecutive 
- * scalar performance messages cannot overlap. This message must be sent
- * at least once every 30 seconds, and at most once every 1 second. This message
- * is intended to be a brief report of performance sent with a short period.
- */
-message ScalarPerformance
-{
-  double scalar_performance = 1; // mandatory, worst performance
-  TimeStamp time_start = 2; // mandatory, the start time of its validity
-  TimeStamp time_end = 3; // mandatory, the end time of its validity
-}
-
-
 
 //=================================================================================================
 // DETAILED_PERFORMANCE Protocol
@@ -178,11 +173,8 @@ message ScalarPerformance
 * must be positive if scalar performance is at least 1.0. The desired voxels is
 * an optional list of SpectrumVoxels that would improve the performance of the
 * mandate, if other teams reduced their usage of them.
-*
-* The ContinuousMandate message describes continuous mandates, which are
-* the mandates that need to be continuously met in each measurement period.
 */
-message ContinuousMandate
+message MandatePerformance
 {
   double scalar_performance = 1; // mandatory, the progress at measurement time
   repeated uint32 radio_ids = 2; // mandatory, the radios in the traffic flow
@@ -193,62 +185,27 @@ message ContinuousMandate
 }
 
 /*
-* The DiscreteMandate message is analogous to ContinuousMandate, but
-* describes discrete mandates, which are the mandates where a task must be
-* completed by a deadline. In this message, the scalar performance is a
-* value between 0.0 and 1.0, inclusive, which indicates the progress towards
-* completing the particular mandate at the end of the measurement period.
-* For example, if the mandate requires a file transfer of a given size,
-* scalar performance should be set to the number of bytes successfully
-* transferred divided by the total file bytes. After the deadline, the
-* scalar performance must remain at the last known value before the deadline
-* occurred, which, if less than 1.0, indicates the mandate was not met.
-* Maximum latency describes the number of measurement periods allowed for
-* the mandate to be achieved, from the time the first packet in the flow
-* is received from the traffic generator (i.e. "max_file_latency_s").
-* Current latency is set to the number of measurement periods elapsed
-* since that first packet was received from the traffic generator, and must
-* not exceed maximum latency. If current latency and maximum latency are
-* equal, this indicates that no more time remains to complete the mandate,
-* and mandate completion status can be found by looking at scalar 
-* performance. Note that completed/failed discrete mandates may be left
-* out of the list of mandates at the discretion of the sender. The remaining
-* fields in this message are identical to those in ContinuousMandate.
-*/
-message DiscreteMandate
-{
-  double scalar_performance = 1; // mandatory, the progress at measurement time
-  repeated uint32 radio_ids = 2; // mandatory, the radios in the traffic flow
-  repeated SpectrumVoxel desired_voxels = 3; // optional, the required voxels
-  uint32 flow_id = 4; // optional, the mandate flow id (destination port)
-  uint32 max_latency = 5; // mandatory, the maximum latency in measurement periods
-  uint32 current_latency = 6; // mandatory, the current latency in measurment periods
-}
-
-/*
-* The mandate count field must indicate the total number of assigned mandates.
-* The timestamp indicates the end of the measurement period (1 second) to which
-* this performance message belongs to. The mandates achived value must contain
-* the number of mandates whose achieved duration is greater than or equal to
-* the hold period. The list of mandates gives details about where in the
-* network the mandates are succeeding or failing, and it must contain one entry
-* for each tracked flow. The reported mandates should not contain stale
-* information. This list may contain fewer entries than the total mandate count
-* if the network is partitioned (so accurate statistics is not available), or
-* there are mandates that the CIRN cannot achieve or decided not to pursue.
-* Mandates are listed for both continuous mandates, which need to be met
-* continuously, and discrete mandates, which need to be completed by a deadline.
-* This message must be sent at least once every 10 seconds, and at most once
-* every 1 second.
+* The mandate_count field must indicate the total number of assigned mandates.
+* Assigned mandates are defined to as those listed in the mandated_outcomes.json
+* file created at the start of each match and updated at each stage. The timestamp indicates
+* the end of the measurement period (1 second) to which this performance message
+* belongs to. The timestamp must be in the past and within 10 seconds of the
+* current time. The mandates achived value must contain the number of mandates
+* whose achieved duration is greater than or equal to the hold period. The list
+* of mandates gives details about where in the network the mandates are
+* succeeding or failing, and it must contain one entry for each tracked flow.
+* The reported mandates should not contain stale information. This list may
+* contain fewer entries than the total mandate count if the network is
+* partitioned (so accurate statistics is not available), or there are mandates
+* that the CIRN cannot achieve or decided not to pursue. This message must be sent
+* at least once every 10 seconds, and at most once every 1 second.
 */
 message DetailedPerformance
 {
   uint32 mandate_count = 1; // mandatory, total number of mandates assigned
   TimeStamp timestamp = 3; // mandatory, the end of the measurement period
-  repeated ContinuousMandate continuous_mandates = 4; // mandatory, all known continuous mandates
-  uint32 continuous_mandates_achieved = 5; // mandatory, number of achieved continuous mandates
-  repeated DiscreteMandate discrete_mandates = 6; // mandatory, all known discrete mandates
-  uint32 discrete_mandates_achieved = 7; // mandatory, number of achieved discrete mandates
+  repeated MandatePerformance mandates = 4; // mandatory, all known mandates
+  uint32 mandates_achieved = 5; // mandatory, number of achieved mandates 
 }
 
 //=================================================================================================
@@ -414,33 +371,31 @@ message LocationUpdate
    }
  }
 
-
 //=================================================================================================
 // Top level wrapper message
 //=================================================================================================
 
 /*
- * The CilMessage type is a simple wrapper that provides the headers 
- * supporting protocol checking, and allows users to determine the type of 
- * message they just received. Every message to be sent to another network 
- * must be encapsulated in an CilMessage structure. The msg_count field
- * must be unique (per sender) and monotonically increasing (per sender)
- * to trace requests/responses. The time stamp should contain the time
- * just before the message was sent.
+ * The CilMessage type is a simple wrapper that provides the headers
+ * supporting protocol checking, and allows users to determine the type of
+ * message they just received. Every message to be sent to another network
+ * must be encapsulated in an CilMessage structure. The msg_count field must
+ * be unique (per sender) and monotonically increasing (per sender) since the
+ * last Hello message (sent by the sender) to trace requests/responses. The
+ * time stamp should contain the time just before the message was sent.
  */
 message CilMessage
 {
-  uint32 sender_network_id = 1; // mandatory, IPv4 address of the col0 interface
-  uint32 msg_count = 2; // mandatory, unique and monotonically increasing id
-  TimeStamp timestamp = 3; // optional, time when message was sent
+  uint32 sender_network_id = 1;     // mandatory, IPv4 address of the col0 interface
+  uint32 msg_count = 2;             // mandatory, unique and monotonically increasing id
+  TimeStamp timestamp = 3;          // mandatory, time when message was sent
+  NetworkType network_type = 4;     // optional, network type identifier
 
   oneof payload
   {
     Hello hello = 10;
-    ScalarPerformance scalar_performance = 11;
     SpectrumUsage spectrum_usage = 12;
     LocationUpdate location_update = 13;
-
     DetailedPerformance detailed_performance = 30;
 
     /// See IncumbentNotify documentation. Expect this to be deprecated and moved to
@@ -448,3 +403,4 @@ message CilMessage
     IncumbentNotify incumbent_notify = 200;
   }
 }
+
