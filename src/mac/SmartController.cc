@@ -779,11 +779,13 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
 
             resetPEREstimates(node);
 
-            logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; swin=%lu; lwin=%lu",
+            logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
                 node.tx_params->mcs.fec0_name(),
                 node.tx_params->mcs.fec1_name(),
                 node.tx_params->mcs.ms_name(),
                 node.long_per.getValue(),
+                (unsigned) sendw.unack.load(std::memory_order_release),
+                (unsigned) sendw.mcsidx_init_seq,
                 node.short_per.getWindowSize(),
                 node.long_per.getWindowSize());
         } else
@@ -813,11 +815,13 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
 
         resetPEREstimates(node);
 
-        logEvent("AMC: Moving down modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; swin=%lu; lwin=%lu",
+        logEvent("AMC: Moving down modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
             node.tx_params->mcs.fec0_name(),
             node.tx_params->mcs.fec1_name(),
             node.tx_params->mcs.ms_name(),
             node.short_per.getValue(),
+            (unsigned) sendw.unack.load(std::memory_order_release),
+            (unsigned) sendw.mcsidx_init_seq,
             node.short_per.getWindowSize(),
             node.long_per.getWindowSize());
     }
