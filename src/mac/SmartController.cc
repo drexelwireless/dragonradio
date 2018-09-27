@@ -762,9 +762,16 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
 
     if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
         && node.long_per.getValue() < mcsidx_up_per_threshold_) {
+        double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
+
         // Set transition probability of current MCS index to 1.0 since we
         // successfully passed the long PER test
         sendw.mcsidx_prob[sendw.mcsidx] = 1.0;
+
+        if (sendw.mcsidx_prob[sendw.mcsidx] != old_prob)
+            logEvent("AMC: Transition probability for MCS index %u = %f",
+                (unsigned) sendw.mcsidx,
+                sendw.mcsidx_prob[sendw.mcsidx]);
 
         // Now we see if we can actually increase the MCS index. Not only must
         // there be a higher entry in the MCS table, but we must pass the
@@ -805,6 +812,10 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
         sendw.mcsidx_prob[sendw.mcsidx] =
             std::max(sendw.mcsidx_prob[sendw.mcsidx]*mcsidx_alpha_,
                      mcsidx_prob_floor_);
+
+        logEvent("AMC: Transition probability for MCS index %u = %f",
+            (unsigned) sendw.mcsidx,
+            sendw.mcsidx_prob[sendw.mcsidx]);
 
         // Move down modulation scheme
         if (rc.verbose && ! rc.debug)
