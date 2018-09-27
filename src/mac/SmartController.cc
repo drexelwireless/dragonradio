@@ -16,9 +16,9 @@ void applyTXParams(NetPacket &pkt, TXParams *p, float g)
     pkt.g = p->g_0dBFS.getValue() * g;
 }
 
-void SendWindow::operator()()
+void SendWindow::Entry::operator()()
 {
-    controller.retransmit(*this);
+    sendw.controller.retransmit(*this);
 }
 
 void RecvWindow::operator()()
@@ -136,7 +136,7 @@ get_packet:
         sendw[pkt->seq] = pkt;
 
         // Start the retransmit timer if it is not already running.
-        startRetransmissionTimer(sendw);
+        startRetransmissionTimer(sendw[pkt->seq]);
 
         // Update send window metrics
         if (pkt->seq > max)
@@ -226,6 +226,9 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // ACK for something we haven't sent, so we must guard against
                 // that here as well
                 for (; unack < ehdr.ack && unack <= max; ++unack) {
+                    // Cancel retransmission timer for ACK'ed packet
+                    timer_queue_.cancel(sendw[unack]);
+
                     // Release the packet since it's been ACK'ed
                     sendw[unack].reset();
 
@@ -239,16 +242,6 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // update it
                 if (sendw.mcsidx_init_seq > unack + sendw.win)
                     sendw.mcsidx_init_seq = unack - 1;
-
-                // Cancel the retransmit timer.
-                dprintf("ARQ: recv from %u: canceling retransmission timer",
-                    (unsigned) prevhop);
-                timer_queue_.cancel(sendw);
-
-                // Restart the retransmit timer if we still have un-ACK'ed
-                // packets
-                if (unack <= max)
-                    startRetransmissionTimer(sendw);
 
                 // Increase the send window. We really only need to do this
                 // after the initial ACK, but it doesn't hurt to do it every
@@ -369,52 +362,47 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     }
 }
 
-void SmartController::retransmit(SendWindow &sendw)
+void SmartController::retransmit(SendWindow::Entry &entry)
 {
+    SendWindow                      &sendw = entry.sendw;
     std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-    Seq                             unack = sendw.unack.load(std::memory_order_acquire);
-    Seq                             max = sendw.max.load(std::memory_order_acquire);
 
-    // We may have received an ACK, in which case we don't need to re-transmit
-    if (unack <= max) {
-        dprintf("ARQ: send to %u: retransmit seq=%u; max=%u",
-            (unsigned) sendw.node_id,
-            (unsigned) unack,
-            (unsigned) max);
+    dprintf("ARQ: send to %u: retransmit seq=%u",
+        (unsigned) sendw.node_id,
+        (unsigned) entry->seq);
 
-        // We need to make an explicit new reference to the shared_ptr because
-        // push takes ownership of its argument.
-        std::shared_ptr<NetPacket> pkt = sendw[unack];
-        Node                       &dest = (*net_)[sendw.node_id];
+    // We need to make an explicit new reference to the shared_ptr because
+    // push takes ownership of its argument.
+    std::shared_ptr<NetPacket> pkt = entry;
+    Node                       &dest = (*net_)[sendw.node_id];
 
-        // INVARIANT: packets come from the network in sequence order. If this
-        // invariant holds, then we will never have a "hole" in our send window,
-        // and this assertion must hold.
-        assert(pkt);
+    // INVARIANT: packets come from the network in sequence order. If this
+    // invariant holds, then we will never have a "hole" in our send window,
+    // and this assertion must hold.
+    assert(pkt);
 
-        // Record the packet error
-        if (unack >= sendw.mcsidx_init_seq) {
-            txFailure(sendw, dest);
+    // Record the packet error
+    if (pkt->seq >= sendw.mcsidx_init_seq) {
+        txFailure(sendw, dest);
 
-            logEvent("AMC: txFailure retransmission: unack=%u; per=%f",
-                (unsigned) unack,
-                dest.short_per.getValue());
-        }
-
-        // Update ACK if we can
-        if (pkt->isFlagSet(kACK)) {
-            RecvWindow     &recvw = *maybeGetReceiveWindow(pkt->nexthop);
-            ExtendedHeader &ehdr = pkt->getExtendedHeader();
-
-            ehdr.ack = recvw.ack;
-        }
-
-        if (netq_)
-            netq_->push_hi(std::move(pkt));
+        logEvent("AMC: txFailure retransmission: seq=%u; per=%f",
+            (unsigned) pkt->seq,
+            dest.short_per.getValue());
     }
 
+    // Update ACK if we can
+    if (pkt->isFlagSet(kACK)) {
+        RecvWindow     &recvw = *maybeGetReceiveWindow(pkt->nexthop);
+        ExtendedHeader &ehdr = pkt->getExtendedHeader();
+
+        ehdr.ack = recvw.ack;
+    }
+
+    if (netq_)
+        netq_->push_hi(std::move(pkt));
+
     // Re-start the retransmit timer
-    startRetransmissionTimer(sendw);
+    startRetransmissionTimer(entry);
 }
 
 void SmartController::ack(RecvWindow &recvw)
@@ -517,13 +505,14 @@ void SmartController::broadcastHello(void)
         netq_->push_hi(std::move(pkt));
 }
 
-void SmartController::startRetransmissionTimer(SendWindow &sendw)
+void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
 {
     // Start the retransmit timer if it is not already running.
-    if (!timer_queue_.running(sendw)) {
-        dprintf("ARQ: send to %u: starting retransmission timer",
-            (unsigned) sendw.node_id);
-        timer_queue_.run_in(sendw, (*net_)[sendw.node_id].retransmission_delay);
+    if (!timer_queue_.running(entry)) {
+        dprintf("ARQ: send to %u seq %u: starting retransmission timer",
+            (unsigned) entry.sendw.node_id,
+            (unsigned) entry->seq);
+        timer_queue_.run_in(entry, (*net_)[entry.sendw.node_id].retransmission_delay);
     }
 }
 

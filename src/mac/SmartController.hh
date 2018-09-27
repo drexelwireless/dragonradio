@@ -17,9 +17,9 @@
 
 class SmartController;
 
-struct SendWindow : public TimerQueue::Timer {
-    struct Entry {
-        Entry() : pkt(nullptr) {};
+struct SendWindow {
+    struct Entry : public TimerQueue::Timer {
+        Entry(SendWindow &sendw) : sendw(sendw), pkt(nullptr) {};
 
         virtual ~Entry() = default;
 
@@ -43,6 +43,11 @@ struct SendWindow : public TimerQueue::Timer {
             pkt.reset();
         }
 
+        void operator()() override;
+
+        /** @brief The send window. */
+        SendWindow &sendw;
+
         /** @brief The packet received in this window entry. */
         std::shared_ptr<NetPacket> pkt;
     };
@@ -59,7 +64,7 @@ struct SendWindow : public TimerQueue::Timer {
       , maxwin(maxwin)
       , mcsidx(0)
       , mcsidx_prob(0)
-      , entries_(maxwin)
+      , entries_(maxwin, *this)
     {
     }
 
@@ -105,8 +110,6 @@ struct SendWindow : public TimerQueue::Timer {
     {
         return entries_[seq % entries_.size()];
     }
-
-    void operator()() override;
 
 private:
     /** @brief Unacknowledged packets in our send window. */
@@ -227,7 +230,7 @@ public:
 
     void received(std::shared_ptr<RadioPacket>&& pkt) override;
 
-    void retransmit(SendWindow &sendw);
+    void retransmit(SendWindow::Entry &entry);
 
     /** @brief Send an ACK to the given receiver. The caller MUST hold the lock
      * on recvw.
@@ -408,7 +411,7 @@ protected:
     std::uniform_real_distribution<double> dist_;
 
     /** @brief Start the re-transmission timer if it is not set. */
-    void startRetransmissionTimer(SendWindow &sendw);
+    void startRetransmissionTimer(SendWindow::Entry &entry);
 
     /** @brief Start the ACK timer if it is not set. */
     void startACKTimer(RecvWindow &recvw);
