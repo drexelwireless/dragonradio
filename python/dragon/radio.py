@@ -57,7 +57,7 @@ class Config(object):
 
         # PHY parameters
         self.phy = 'ofdm'
-        self.min_packet_size = 512
+        self.min_packet_size = 0
         self.num_modulation_threads = 4
         self.num_demodulation_threads = 16
 
