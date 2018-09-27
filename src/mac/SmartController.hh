@@ -230,6 +230,7 @@ public:
 
     void received(std::shared_ptr<RadioPacket>&& pkt) override;
 
+    /** @brief Retransmit a send window entry on timeout. */
     void retransmitOnTimeout(SendWindow::Entry &entry);
 
     /** @brief Send an ACK to the given receiver. The caller MUST hold the lock
@@ -237,11 +238,10 @@ public:
      */
     void ack(RecvWindow &recvw);
 
-    /** @brief Send a NAK to the given receiver. The caller MUST hold the lock
-     * on recvw.
-     */
+    /** @brief Send a NAK to the given receiver. */
     void nak(NodeId node_id, Seq seq);
 
+    /** @brief Broadcast a HELLO packet. */
     void broadcastHello(void);
 
     /** @brief Get the controller's network queue. */
