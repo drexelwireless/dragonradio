@@ -401,6 +401,14 @@ void SmartController::retransmit(SendWindow &sendw)
                 dest.short_per.getValue());
         }
 
+        // Update ACK if we can
+        if (pkt->isFlagSet(kACK)) {
+            RecvWindow     &recvw = *maybeGetReceiveWindow(pkt->nexthop);
+            ExtendedHeader &ehdr = pkt->getExtendedHeader();
+
+            ehdr.ack = recvw.ack;
+        }
+
         if (netq_)
             netq_->push_hi(std::move(pkt));
     }
