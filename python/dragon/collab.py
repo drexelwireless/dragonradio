@@ -15,6 +15,8 @@ logger = logging.getLogger('collab')
 
 CIL_VERSION = (2, 6, 3)
 
+MAX_LOCATION_AGE = 45
+
 #
 # Monkey patch Timestamp class to support setting timestamps using
 # floating-point seconds.
@@ -136,7 +138,7 @@ class Peer(ZMQProtoClient):
     @sendCIL
     async def location_update(self, msg, nodes):
         for id, n in nodes.items():
-            if n.loc.timestamp != 0:
+            if n.loc.timestamp > time.time() - MAX_LOCATION_AGE:
                 info = cil.LocationInfo()
                 info.radio_id = n.id
                 info.location.latitude = n.loc.lat
