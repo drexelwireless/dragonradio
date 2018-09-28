@@ -170,12 +170,24 @@ class Peer(ZMQProtoClient):
 
     @sendCIL
     async def detailed_performance(self, msg, controller):
-        goals = controller.mandated_outcomes.items()
+        goals = controller.mandated_outcomes.values()
 
         msg.detailed_performance.mandate_count = len(goals)
         # Pretend this performance metric is from 5 seconds ago
         msg.detailed_performance.timestamp.set_timestamp(time.time() - 5)
-        msg.detailed_performance.mandates.extend([])
+
+        for g in goals:
+            mandate = cil.MandatePerformance()
+            mandate.scalar_performance = g.scalar_performance
+            mandate.radio_ids.extend([])
+            if hasattr(g, 'flow_uid'):
+                mandate.flow_id = g.flow_uid
+            if hasattr(g, 'hold_period'):
+                mandate.hold_period = g.hold_period
+            mandate.achieved_duration = 0
+
+            msg.detailed_performance.mandates.extend([mandate])
+
         msg.detailed_performance.mandates_achieved = 0
 
 @handler(registration.TellClient)
