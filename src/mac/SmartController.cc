@@ -368,6 +368,11 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     std::lock_guard<spinlock_mutex> lock(sendw.mutex);
     Node                            &dest = (*net_)[sendw.node_id];
 
+    if (!entry.pkt) {
+        logEvent("AMC: attempted to retransmit ACK'ed packet on timeout");
+        return;
+    }
+
     dprintf("ARQ: send to %u: retransmit seq=%u",
         (unsigned) sendw.node_id,
         (unsigned) entry->seq);
@@ -490,6 +495,11 @@ void SmartController::broadcastHello(void)
  */
 void SmartController::retransmit(SendWindow::Entry &entry)
 {
+    if (!entry.pkt) {
+        logEvent("AMC: attempted to retransmit ACK'ed packet");
+        return;
+    }
+
     dprintf("ARQ: send to %u: retransmit seq=%u",
         (unsigned) sendw.node_id,
         (unsigned) entry->seq);
@@ -497,8 +507,6 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // We need to make an explicit new reference to the shared_ptr because push
     // takes ownership of its argument.
     std::shared_ptr<NetPacket> pkt = entry;
-
-    assert(pkt);
 
     // Update ACK if we can
     if (pkt->isFlagSet(kACK)) {
