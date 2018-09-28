@@ -73,6 +73,12 @@ class Config(object):
         self.header_fec1 = 'h84'
         self.header_ms = 'bpsk'
 
+        # Broadcast liquid modulation options
+        self.broadcast_check = 'crc32'
+        self.broadcast_fec0 = 'none'
+        self.broadcast_fec1 = 'v27'
+        self.broadcast_ms = 'bpsk'
+
         # Soft decoding options
         self.soft_header = True
         self.soft_payload = False
@@ -542,6 +548,17 @@ class Radio(object):
 
             if config.arq_enforce_ordering:
                 self.controller.enforce_ordering = True
+
+            #
+            # Configure broadcast MCS
+            #
+            mcs = self.controller.broadcast_tx_params.mcs
+            mcs.check = config.broadcast_check
+            mcs.fec0 = config.broadcast_fec0
+            mcs.fec1 = config.broadcast_fec1
+            mcs.ms = config.broadcast_ms
+
+            self.configTXParamsSoftGain(self.controller.broadcast_tx_params)
         else:
             self.controller = dragonradio.DummyController(self.net)
 
@@ -577,8 +594,6 @@ class Radio(object):
         #
         if config.arq:
             self.controller.net_queue = self.netq
-
-            self.configTXParamsSoftGain(self.controller.broadcast_tx_params)
 
     def configTXParamsSoftGain(self, tx_params):
         config = self.config
