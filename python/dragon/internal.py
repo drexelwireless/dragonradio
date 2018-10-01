@@ -49,7 +49,9 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
     async def location_update(self):
         try:
             while True:
-                if self.server_host:
+                me = self.controller.thisNode()
+
+                if self.server_host and me.loc.timestamp > 0:
                     await self.location_info()
 
                 await asyncio.sleep(self.location_info_period)
