@@ -185,8 +185,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             "Number of lots worth of packets we use to calculate long-term PER")
         .def_readwrite("timestamp_delay", &RadioConfig::timestamp_delay,
             "Timestamp delay, in seconds")
-        .def_readwrite("max_packet_size", &RadioConfig::max_packet_size,
-            "Maximum size of a packet, in bytes")
+        .def_readwrite("mtu", &RadioConfig::mtu,
+            "Maximum Transmission Unit (bytes)")
         .def_readwrite("arq_ack_delay", &RadioConfig::arq_ack_delay,
             "ACK delay, in seconds")
         .def_readwrite("arq_retransmission_delay", &RadioConfig::arq_retransmission_delay,

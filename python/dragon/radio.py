@@ -121,6 +121,9 @@ class Config(object):
         self.amc_mcsidx_alpha = 0.5
         self.amc_mcsidx_prob_floor = 0.1
 
+        # Network options
+        self.mtu = 1500
+
         # Neighbor discover options
         # discovery_hello_interval is how often we send HELLO packets during
         # discovery, and standard_hello_interval is how often we send HELLO
@@ -371,6 +374,11 @@ class Config(object):
                      dest='amc_mcsidx_prob_floor',
                      help='set minimum MCS transition probability')
 
+        # Network options
+        add_argument('--mtu', action='store', type=int,
+                     dest='mtu',
+                     help='set Maximum Transmission Unit (bytes)')
+
 class Radio(object):
     def __init__(self, config):
         self.config = config
@@ -383,7 +391,7 @@ class Radio(object):
         for attr in ['verbose', 'debug',
                      'amc_short_per_nslots', 'amc_long_per_nslots',
                      'timestamp_delay',
-                     'max_packet_size',
+                     'mtu',
                      'arq_ack_delay', 'arq_retransmission_delay',
                      'slot_modulate_time', 'slot_send_time']:
             if hasattr(config, attr):
@@ -466,7 +474,7 @@ class Radio(object):
         #
         # Create tun/tap interface and net neighborhood
         #
-        self.tuntap = dragonradio.TunTap('tap0', False, 1500, self.node_id)
+        self.tuntap = dragonradio.TunTap('tap0', False, self.config.mtu, self.node_id)
 
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 

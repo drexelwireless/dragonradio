@@ -37,8 +37,8 @@ public:
     /** @brief Timestamp delay, in seconds */
     double timestamp_delay;
 
-    /** @brief Maximum size of a packet, in bytes */
-    unsigned max_packet_size;
+    /** @brief Maximum Transmission Unit (bytes) */
+    unsigned mtu;
 
     /** @brief ACK delay in seconds */
     double arq_ack_delay;

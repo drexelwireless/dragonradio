@@ -709,7 +709,7 @@ void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket
     else
         delta = 0;
 
-    for (Seq seq = recvw.ack + 1; seq < recvw.max - delta && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.max_packet_size; ++seq) {
+    for (Seq seq = recvw.ack + 1; seq < recvw.max - delta && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.mtu; ++seq) {
         if (!recvw[seq].received) {
             dprintf("ARQ: nak to %u: seq=%u",
                 (unsigned) recvw.node_id,
@@ -925,7 +925,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
 void SmartController::resetPEREstimates(Node &node)
 {
-    double max_packets_per_slot = floor(slot_size_/phy_->modulated_size(*node.tx_params, rc.max_packet_size));
+    double max_packets_per_slot = floor(slot_size_/phy_->modulated_size(*node.tx_params, rc.mtu));
 
     node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
     node.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
