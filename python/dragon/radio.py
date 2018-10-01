@@ -63,8 +63,8 @@ class Config(object):
 
         # General liquid modulation options
         self.check = 'crc32'
-        self.fec0 = 'v29'
-        self.fec1 = 'rs8'
+        self.fec0 = 'rs8'
+        self.fec1 = 'none'
         self.ms = 'qpsk'
 
         # Header liquid modulation options
