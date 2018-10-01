@@ -812,6 +812,10 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
     if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
         && node.short_per.getValue() > mcsidx_down_per_threshold_
         && sendw.mcsidx > 0) {
+        // Don't decrease MCS if largest possible packet won't fit in slot.
+        if (getMaxPacketsPerSlot(net_->tx_params[sendw.mcsidx-1]) < 1)
+            return;
+
         // Decrease the probability that we will transition to this MCS index
         sendw.mcsidx_prob[sendw.mcsidx] =
             std::max(sendw.mcsidx_prob[sendw.mcsidx]*mcsidx_alpha_,
