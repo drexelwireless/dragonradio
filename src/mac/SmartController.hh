@@ -1,6 +1,9 @@
 #ifndef SMARTCONTROLLER_H_
 #define SMARTCONTROLLER_H_
 
+#include <sys/types.h>
+#include <netinet/if_ether.h>
+
 #include <list>
 #include <map>
 #include <random>
@@ -340,6 +343,16 @@ public:
     void setEnforceOrdering(bool enforce)
     {
         enforce_ordering_ = enforce;
+    }
+
+    /** @brief Return maximum number of packets per slot.
+     * @param p The TXParams uses for modulation
+     * @returns The number of packets of maximum size that can fit in one slot
+     *          with the given modulation scheme.
+     */
+    size_t getMaxPacketsPerSlot(const TXParams &p)
+    {
+        return slot_size_/phy_->modulated_size(p, rc.mtu + sizeof(struct ether_header));
     }
 
     /** @brief Broadcast TX params */

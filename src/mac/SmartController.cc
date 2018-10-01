@@ -925,7 +925,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
 void SmartController::resetPEREstimates(Node &node)
 {
-    double max_packets_per_slot = floor(slot_size_/phy_->modulated_size(*node.tx_params, rc.mtu));
+    double max_packets_per_slot = getMaxPacketsPerSlot(*node.tx_params);
 
     node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
     node.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
