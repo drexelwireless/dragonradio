@@ -796,8 +796,10 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
     node.short_per.update(0.0);
     node.long_per.update(0.0);
 
+    double long_per = node.long_per.getValue();
+
     if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
-        && node.long_per.getValue() < mcsidx_up_per_threshold_) {
+        && long_per < mcsidx_up_per_threshold_) {
         double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
 
         // Set transition probability of current MCS index to 1.0 since we
@@ -826,7 +828,7 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
                 node.tx_params->mcs.fec0_name(),
                 node.tx_params->mcs.fec1_name(),
                 node.tx_params->mcs.ms_name(),
-                node.long_per.getValue(),
+                long_per,
                 (unsigned) sendw.unack.load(std::memory_order_release),
                 (unsigned) sendw.mcsidx_init_seq,
                 node.short_per.getWindowSize(),
@@ -841,8 +843,10 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
     node.short_per.update(1.0);
     node.long_per.update(1.0);
 
+    double short_per = node.short_per.getValue();
+
     if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
-        && node.short_per.getValue() > mcsidx_down_per_threshold_
+        && short_per > mcsidx_down_per_threshold_
         && sendw.mcsidx > 0) {
         // Don't decrease MCS if largest possible packet won't fit in slot.
         if (getMaxPacketsPerSlot(net_->tx_params[sendw.mcsidx-1]) < 1)
@@ -870,7 +874,7 @@ void SmartController::txFailure(SendWindow &sendw, Node &node)
             node.tx_params->mcs.fec0_name(),
             node.tx_params->mcs.fec1_name(),
             node.tx_params->mcs.ms_name(),
-            node.short_per.getValue(),
+            short_per,
             (unsigned) sendw.unack.load(std::memory_order_release),
             (unsigned) sendw.mcsidx_init_seq,
             node.short_per.getWindowSize(),
