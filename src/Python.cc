@@ -271,9 +271,18 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class NetQueue to Python
     py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
-        .def(py::init())
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
+        ;
+
+    // Export class NetFIFO to Python
+    py::class_<NetFIFO, NetQueue, std::shared_ptr<NetFIFO>>(m, "NetFIFO")
+        .def(py::init())
+        ;
+
+    // Export class NetLIFO to Python
+    py::class_<NetLIFO, NetQueue, std::shared_ptr<NetLIFO>>(m, "NetLIFO")
+        .def(py::init())
         ;
 
     // Export class NetFilter to Python

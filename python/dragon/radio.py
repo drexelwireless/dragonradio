@@ -127,6 +127,7 @@ class Config(object):
 
         # Network options
         self.mtu = 1500
+        self.queue = 'fifo'
 
         # Neighbor discover options
         # discovery_hello_interval is how often we send HELLO packets during
@@ -397,6 +398,16 @@ class Config(object):
         add_argument('--mtu', action='store', type=int,
                      dest='mtu',
                      help='set Maximum Transmission Unit (bytes)')
+        add_argument('--queue', action='store',
+                     choices=['fifo', 'lifo'],
+                     dest='queue',
+                     help='set network queuing algorithm')
+        add_argument('--fifo', action='store_const', const='fifo',
+                     dest='queue',
+                     help='use FIFO network queue')
+        add_argument('--lifo', action='store_const', const='lifo',
+                     dest='queue',
+                     help='use LIFO network queue ')
 
 class Radio(object):
     def __init__(self, config):
@@ -612,7 +623,10 @@ class Radio(object):
         #
         self.netfilter = dragonradio.NetFilter(self.net)
 
-        self.netq = dragonradio.NetQueue()
+        if config.queue == 'lifo':
+            self.netq = dragonradio.NetLIFO()
+        else:
+            self.netq = dragonradio.NetFIFO()
 
         self.tuntap.source >> self.netfilter.input
 
