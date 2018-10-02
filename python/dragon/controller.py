@@ -213,13 +213,24 @@ class Controller(TCPProtoServer):
 
         del radio.mac
 
-        radio.configureTDMA(len(radio.net))
-
-        # Sort nodes and pick our TDMA slot based on our position in the node
+        # Sort nodes and pick our slot/channel based on our position in the node
         # list
         nodes.sort()
-        radio.mac.tx_channel = 0
-        radio.mac.slots[nodes.index(radio.node_id)] = True
+        idx = nodes.index(radio.node_id)
+
+        if config.fdma or config.spaced_fdma:
+            radio.configureTDMA(1)
+            radio.mac.slots[0] = True
+
+            if config.spaced_fdma:
+                radio.mac.tx_channel = 2*idx
+            else:
+                radio.mac.tx_channel = idx
+        else:
+            radio.configureTDMA(len(radio.net))
+            radio.mac.slots[idx] = True
+
+            radio.mac.tx_channel = 0
 
         #
         # Specify voxels

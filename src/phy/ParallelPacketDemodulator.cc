@@ -99,8 +99,8 @@ void ParallelPacketDemodulator::demodWorker(void)
         // the previous slot
         size_t buf1_nsamples = buf1->oversample + prev_samps_;
 
+        // This can happen when the user has set a large demodulation overlap
         if (buf1_nsamples > buf1->size())
-            // Should never happen!
             buf1_nsamples = buf1->size();
 
         // Reset the state of the demodulator
@@ -134,7 +134,8 @@ void ParallelPacketDemodulator::demodWorker(void)
 
                     if (nwanted == 0)
                         break;
-                }
+                } else if (buf2->complete)
+                    break;
             }
         }
 

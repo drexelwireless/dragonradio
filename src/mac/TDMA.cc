@@ -13,8 +13,9 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PacketDemodulator> demodulator,
            double slot_size,
            double guard_size,
+           double demod_overlap_size,
            size_t nslots)
-  : SlottedMAC(usrp, phy, channels, modulator, demodulator, slot_size, guard_size)
+  : SlottedMAC(usrp, phy, channels, modulator, demodulator, slot_size, guard_size, demod_overlap_size)
   , slots_(*this, nslots)
 {
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
@@ -68,15 +69,16 @@ void TDMA::txWorker(void)
             continue;
         }
 
+        // Find following slot. We divide slot_size_ by two to avoid possible
+        // rounding issues where we mights end up skipping a slot.
+        findNextSlot(t_next_slot + slot_size_/2.0, t_following_slot);
+
         // Schedule transmission for start of our next slot if we haven't
         // already transmitted for that slot
         if (!approx(t_next_slot, t_prev_slot)) {
             txSlot(t_next_slot, tx_slot_samps_);
             t_prev_slot = t_next_slot;
         }
-
-        // Find following slot
-        findNextSlot(t_next_slot + slot_size_, t_following_slot);
 
         // Sleep until it's time to modulate the next slot
         t_now = Clock::now();

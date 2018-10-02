@@ -46,6 +46,7 @@ class Config(object):
         self.bandwidth = 5e6
         self.oversample_factor = 1.0
         self.channel_bandwidth = 1e6
+        self.channel_guard_bandwidth = 0
 
         # TX/RX gain parameters
         self.tx_gain = 25
@@ -87,9 +88,12 @@ class Config(object):
         # MAC parameters
         self.slot_size = .035
         self.guard_size = .01
+        self.demod_overlap_size = .005
         self.aloha_prob = .1
         self.slot_modulate_time = 30e-3
         self.slot_send_time = 10e-3
+        self.fdma = False
+        self.spaced_fdma = False
 
         # ARQ options
         self.arq = False
@@ -229,6 +233,9 @@ class Config(object):
         add_argument('--channel-bandwidth', action='store', type=float,
                      dest='channel_bandwidth',
                      help='set channel bandwidth (Hz)')
+        add_argument('--channel-guard-bandwidth', action='store', type=float,
+                     dest='channel_guard_bandwidth',
+                     help='set channel guard bandwidth (Hz)')
 
         # Gain-related options
         add_argument('-G', '--tx-gain', action='store', type=float,
@@ -297,6 +304,23 @@ class Config(object):
         add_argument('--demodulator-enforce-ordering', action='store_const', const=True,
                      dest='demodulator_enforce_ordering',
                      help='enforce packet order when demodulating')
+
+        # MAC parameters
+        add_argument('--slot-size', action='store', type=float,
+                     dest='slot_size',
+                     help='set MAC slot size (sec)')
+        add_argument('--guard-size', action='store', type=float,
+                     dest='guard_size',
+                     help='set MAC guard interval (sec)')
+        add_argument('--demod-overlap-size', action='store', type=float,
+                     dest='demod_overlap_size',
+                     help='set demodulation overlap interval (sec)')
+        add_argument('--fdma', action='store_const', const=True,
+                     dest='fdma',
+                     help='use FDMA instead of TDMA')
+        add_argument('--spaced-fdma', action='store_const', const=True,
+                     dest='spaced_fdma',
+                     help='use FDMA instead of TDMA, but only use every other channel')
 
         # ARQ options
         add_argument('--arq', action='store_const', const=True,
@@ -447,6 +471,7 @@ class Radio(object):
         bandwidth = config.bandwidth
         oversample_factor = config.oversample_factor
         channel_bandwidth = config.channel_bandwidth
+        channel_guard_bandwidth = config.channel_guard_bandwidth
 
         nchannels = int(bandwidth/channel_bandwidth)
         self.channels = Channels([i*channel_bandwidth + channel_bandwidth/2. - bandwidth/2. for i in range(0,nchannels)])
@@ -463,8 +488,9 @@ class Radio(object):
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
 
-        self.phy.rx_rate_oversample = rx_rate/channel_bandwidth
-        self.phy.tx_rate_oversample = tx_rate/channel_bandwidth
+        actual_channel_bandwidth = channel_bandwidth - 2.0*channel_guard_bandwidth
+        self.phy.rx_rate_oversample = rx_rate/actual_channel_bandwidth
+        self.phy.tx_rate_oversample = tx_rate/actual_channel_bandwidth
 
         #
         # Configure the modulator and demodulator
@@ -565,6 +591,7 @@ class Radio(object):
                                             self.demodulator,
                                             self.config.slot_size,
                                             self.config.guard_size,
+                                            self.config.demod_overlap_size,
                                             self.config.aloha_prob)
 
         if self.logger:
@@ -585,6 +612,7 @@ class Radio(object):
                                     self.demodulator,
                                     self.config.slot_size,
                                     self.config.guard_size,
+                                    self.config.demod_overlap_size,
                                     nslots)
 
         if self.logger:
