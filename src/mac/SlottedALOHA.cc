@@ -55,6 +55,7 @@ void SlottedALOHA::reconfigure(void)
 {
     rx_slot_samps_ = rx_rate_*slot_size_;
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
+    premod_samps_ = premod_slots_*tx_slot_samps_;
 
     modulator_->setMaxPacketSize(tx_slot_samps_);
 
@@ -94,7 +95,7 @@ void SlottedALOHA::txWorker(void)
             txSlot(t_next_slot, tx_slot_samps_);
 
             // Modulate samples for next slot
-            modulator_->modulate(tx_slot_samps_);
+            modulator_->modulate(premod_samps_);
         }
 
         // Sleep until the next slot

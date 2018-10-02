@@ -55,6 +55,14 @@ public:
      */
     virtual void setDemodOverlapSize(double t);
 
+    /** @brief Get number of slots to pre-modulate */
+    virtual double getPreModulateSlots(void);
+
+    /** @brief Set demodulation overlap size
+     * @param n Number of slots to pre-modulate
+     */
+    virtual void setPreModulateSlots(double n);
+
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
 
@@ -73,6 +81,12 @@ protected:
 
     /** @brief Number of TX samples in the non-guard portion of a slot */
     size_t tx_slot_samps_;
+
+    /** @brief Number of slots to pre-modulate */
+    double premod_slots_;
+
+    /** @brief Number of samples to pre-modulate */
+    size_t premod_samps_;
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;

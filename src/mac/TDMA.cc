@@ -89,7 +89,7 @@ void TDMA::txWorker(void)
             doze(delta);
 
         // Modulate samples for next slot
-        modulator_->modulate(tx_slot_samps_);
+        modulator_->modulate(premod_samps_);
 
         // Sleep until it's time to send the slot's modulated data
         t_now = Clock::now();

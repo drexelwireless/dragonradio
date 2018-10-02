@@ -15,6 +15,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , demod_overlap_size_(demod_overlap_size)
+  , premod_slots_(1.0)
   , done_(false)
 {
 }
@@ -56,10 +57,22 @@ void SlottedMAC::setDemodOverlapSize(double t)
     reconfigure();
 }
 
+double SlottedMAC::getPreModulateSlots(void)
+{
+    return premod_slots_;
+}
+
+void SlottedMAC::setPreModulateSlots(double n)
+{
+    premod_slots_ = n;
+    reconfigure();
+}
+
 void SlottedMAC::reconfigure(void)
 {
     rx_slot_samps_ = rx_rate_*slot_size_;
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
+    premod_samps_ = premod_slots_*tx_slot_samps_;
 
     modulator_->setMaxPacketSize(tx_slot_samps_);
 

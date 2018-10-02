@@ -95,6 +95,7 @@ class Config(object):
         self.slot_size = .035
         self.guard_size = .01
         self.demod_overlap_size = .005
+        self.premod_slots = 2.0
         self.aloha_prob = .1
         self.slot_modulate_time = 30e-3
         self.slot_send_time = 10e-3
@@ -330,6 +331,9 @@ class Config(object):
         add_argument('--demod-overlap-size', action='store', type=float,
                      dest='demod_overlap_size',
                      help='set demodulation overlap interval (sec)')
+        add_argument('--premod-slots', action='store', type=float,
+                     dest='premod_slots',
+                     help='set number of slots to pre-modulate')
         add_argument('--fdma', action='store_const', const=True,
                      dest='fdma',
                      help='use FDMA instead of TDMA')
@@ -658,13 +662,7 @@ class Radio(object):
                                             self.config.guard_size,
                                             self.config.demod_overlap_size,
                                             self.config.aloha_prob)
-
-        if self.logger:
-            self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)
-            self.logger.setAttribute('rx_bandwidth', self.usrp.rx_rate)
-
-        if self.config.arq:
-            self.controller.mac = self.mac
+        self.finishConfiguringMAC()
 
     def configureTDMA(self, nslots):
         if self.config.arq:
@@ -679,6 +677,10 @@ class Radio(object):
                                     self.config.guard_size,
                                     self.config.demod_overlap_size,
                                     nslots)
+        self.finishConfiguringMAC()
+
+    def finishConfiguringMAC(self):
+        self.mac.premod_slots = self.config.premod_slots
 
         if self.logger:
             self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)

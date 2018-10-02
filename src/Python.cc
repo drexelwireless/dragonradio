@@ -543,6 +543,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
         .def_property("slot_size", &SlottedMAC::getSlotSize, &SlottedMAC::setSlotSize)
         .def_property("guard_size", &SlottedMAC::getGuardSize, &SlottedMAC::setGuardSize)
         .def_property("demod_overlap_size", &SlottedMAC::getDemodOverlapSize, &SlottedMAC::setDemodOverlapSize)
+        .def_property("premod_slots", &SlottedMAC::getPreModulateSlots, &SlottedMAC::setPreModulateSlots)
         ;
 
     // Export class TDMA::Slots to Python
