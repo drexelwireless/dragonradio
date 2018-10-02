@@ -49,6 +49,9 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
   , mcsidx_alpha_(mcsidx_alpha)
   , mcsidx_prob_floor_(mcsidx_prob_floor)
+  , explicit_nak_win_(0)
+  , explicit_nak_win_duration_(0.0)
+  , selective_nak_(false)
   , enforce_ordering_(false)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
@@ -432,6 +435,25 @@ void SmartController::nak(NodeId node_id, Seq seq)
     if (!netq_)
         return;
 
+    // Get the receive window
+    RecvWindow *recvwptr = maybeGetReceiveWindow(node_id);
+
+    if (!recvwptr)
+        return;
+
+    RecvWindow                      &recvw = *recvwptr;
+    std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+    // Limit number of explicit NAK's we send
+    auto now = MonoClock::now();
+
+    if (recvw.explicit_nak_win[recvw.explicit_nak_idx] + explicit_nak_win_duration_ > now)
+        return;
+
+    recvw.explicit_nak_win[recvw.explicit_nak_idx] = now;
+    recvw.explicit_nak_idx = (recvw.explicit_nak_idx + 1) % explicit_nak_win_;
+
+    // Send the explicit NAK
     dprintf("ARQ: send to %u: nak=%u",
         (unsigned) node_id,
         (unsigned) seq);
@@ -707,6 +729,9 @@ void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pk
 
 void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt)
 {
+    if (!selective_nak_)
+        return;
+
     ControlMsg::Nak nak;
     int             delta;
     Node            &node = (*net_)[recvw.node_id];
@@ -1011,7 +1036,7 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
 
     RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
                                       std::forward_as_tuple(node_id),
-                                      std::forward_as_tuple(node_id, *this, recvwin_)).first->second;
+                                      std::forward_as_tuple(node_id, *this, recvwin_, explicit_nak_win_)).first->second;
 
     recvw.ack = recvw.max = seq;
 

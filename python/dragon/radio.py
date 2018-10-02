@@ -108,6 +108,9 @@ class Config(object):
         self.arq_ack_delay = 100e-3
         self.arq_retransmission_delay = 500e-3
         self.arq_max_reorder_delay = 100e-3
+        self.arq_explicit_nak_win = 10
+        self.arq_explicit_nak_win_duration = 0.1
+        self.arq_selective_nak = True
 
         # AMC options
         self.amc = False
@@ -347,6 +350,18 @@ class Config(object):
         add_argument('--arq-enforce-ordering', action='store_const', const=True,
                      dest='arq_enforce_ordering',
                      help='enforce packet order when performing ARQ')
+        add_argument('--explicit-nak-window', action='store', type=int,
+                     dest='arq_explicit_nak_win',
+                     help='set explicit NAK window size')
+        add_argument('--explicit-nak-window-duration', action='store', type=float,
+                     dest='arq_explicit_nak_win_duration',
+                     help='set explicit NAK window duration (sec)')
+        add_argument('--selective-nak', action='store_const', const=True,
+                     dest='arq_selective_nak',
+                     help='send selective NAK\'s')
+        add_argument('--no-selective-nak', action='store_const', const=False,
+                     dest='arq_selective_nak',
+                     help='do not send selective NAK\'s')
 
         # AMC options
         add_argument('--amc', action='store_const', const=True,
@@ -567,6 +582,13 @@ class Radio(object):
             mcs.ms = config.broadcast_ms
 
             self.configTXParamsSoftGain(self.controller.broadcast_tx_params)
+
+            #
+            # Configure NAK's
+            #
+            self.controller.explicit_nak_window = config.arq_explicit_nak_win
+            self.controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
+            self.controller.selective_nak = config.arq_selective_nak
         else:
             self.controller = dragonradio.DummyController(self.net)
 

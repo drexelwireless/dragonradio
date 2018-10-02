@@ -514,6 +514,18 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             &SmartController::getMCSProbFloor,
             &SmartController::setMCSProbFloor,
             "MCS transition probability floor")
+        .def_property("explicit_nak_window",
+            &SmartController::getExplicitNAKWindow,
+            &SmartController::setExplicitNAKWindow,
+            "Explicit NAK window size")
+        .def_property("explicit_nak_window_duration",
+            &SmartController::getExplicitNAKWindowDuration,
+            &SmartController::setExplicitNAKWindowDuration,
+            "Explicit NAK window duration")
+        .def_property("selective_nak",
+            &SmartController::getSelectiveNAK,
+            &SmartController::setSelectiveNAK,
+            "Send selective NAK's?")
         .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
         .def("broadcastHello", &SmartController::broadcastHello)
         ;

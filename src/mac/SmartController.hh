@@ -156,12 +156,17 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     using vector_type = std::vector<Entry>;
 
-    RecvWindow(NodeId node_id, SmartController &controller, Seq::uint_type win)
+    RecvWindow(NodeId node_id,
+               SmartController &controller,
+               Seq::uint_type win,
+               size_t nak_win)
       : node_id(node_id)
       , controller(controller)
       , ack(0)
       , max(0)
       , win(win)
+      , explicit_nak_win(nak_win)
+      , explicit_nak_idx(0)
       , entries_(win)
     {}
 
@@ -195,6 +200,12 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     /** @brief Receive window size */
     Seq::uint_type win;
+
+    /** @brief Explicit NAK window */
+    std::vector<MonoClock::time_point> explicit_nak_win;
+
+    /** @brief Explicit NAK window index */
+    size_t explicit_nak_idx;
 
     /** @brief Mutex for the receive window */
     spinlock_mutex mutex;
@@ -331,6 +342,42 @@ public:
         mcsidx_prob_floor_ = p;
     }
 
+    /** @brief Return explicit NAK window size. */
+    bool getExplicitNAKWindow(void)
+    {
+        return explicit_nak_win_;
+    }
+
+    /** @brief Set explicit NAK window size. */
+    void setExplicitNAKWindow(size_t n)
+    {
+        explicit_nak_win_ = n;
+    }
+
+    /** @brief Return explicit NAK window duration. */
+    double getExplicitNAKWindowDuration(void)
+    {
+        return explicit_nak_win_duration_;
+    }
+
+    /** @brief Set explicit NAK window duration. */
+    void setExplicitNAKWindowDuration(double t)
+    {
+        explicit_nak_win_duration_ = t;
+    }
+
+    /** @brief Return whether or not we should send selective NAKs. */
+    bool getSelectiveNAK(void)
+    {
+        return selective_nak_;
+    }
+
+    /** @brief Set whether or not we should send selective NAKs. */
+    void setSelectiveNAK(bool nak)
+    {
+        selective_nak_ = nak;
+    }
+
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
@@ -408,6 +455,15 @@ protected:
 
     /** @brief Minimum MCS transition probability */
     double mcsidx_prob_floor_;
+
+    /** @brief Explicit NAK window */
+    size_t explicit_nak_win_;
+
+    /** @brief Explicit NAK window duration */
+    double explicit_nak_win_duration_;
+
+    /** @brief Should we send selective NAK packets? */
+    bool selective_nak_;
 
     /** @brief Should packets always be output in the order they were actually
      * received?
