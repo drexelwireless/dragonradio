@@ -310,17 +310,24 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     else
         startACKTimer(recvw);
 
-    // Drop this packet if we have already received it
+    // Drop this packet if it is outside our receive window
     if (pkt->seq < recvw.ack) {
-        dprintf("ARQ: recv from %u: DUP seq=%u",
+        dprintf("ARQ: recv from %u: OUTSIDE WINDOW (DUP) seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->seq);
         return;
     }
 
-    // Drop this packet if it is outside our receive window
     if (pkt->seq > recvw.ack + recvw.win) {
         dprintf("ARQ: recv from %u: OUTSIDE WINDOW seq=%u",
+            (unsigned) prevhop,
+            (unsigned) pkt->seq);
+        return;
+    }
+
+    // Drop this packet if we have already received it
+    if (recvw[pkt->seq].received) {
+        dprintf("ARQ: recv from %u: DUP seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->seq);
         return;
