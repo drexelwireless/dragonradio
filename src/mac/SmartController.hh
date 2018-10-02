@@ -509,7 +509,10 @@ protected:
     /** @brief Handle a successful packet transmission. */
     void txSuccess(SendWindow &sendw, Node &node);
 
-    /** @brief Handle an unsuccessful packet transmission. */
+    /** @brief Update PER as a result of unsuccessful packet transmission. */
+    void txFailureUpdatePER(Node &node);
+
+    /** @brief Handle an unsuccessful packet transmission based on updated PER. */
     void txFailure(SendWindow &sendw, Node &node);
 
     /** @brief Get a packet that is elligible to be sent. */

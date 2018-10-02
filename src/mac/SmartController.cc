@@ -389,11 +389,13 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 
     // Record the packet error
     if (entry.pkt->seq >= sendw.mcsidx_init_seq) {
-        txFailure(sendw, dest);
+        txFailureUpdatePER(dest);
 
         logEvent("AMC: txFailure retransmission: seq=%u; per=%f",
             (unsigned) entry.pkt->seq,
             dest.short_per.getValue());
+
+        txFailure(sendw, dest);
     }
 
     // Actually retransmit the packet
@@ -760,12 +762,14 @@ void SmartController::nakUpdatePER(SendWindow &sendw, Node &dest, const Seq &seq
     // i.e., it resulted from an invalid payload, or if the sequence number was
     // sent with the current modulation scheme.
     else if (explicitNak || seq >= sendw.mcsidx_init_seq) {
-        txFailure(sendw, dest);
+        txFailureUpdatePER(dest);
 
         logEvent("AMC: txFailure nak: seq=%u; explicit=%s; per=%f",
             (unsigned) seq,
             explicitNak ? "true" : "false",
             dest.short_per.getValue());
+
+        txFailure(sendw, dest);
     }
 }
 
@@ -838,11 +842,14 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
     }
 }
 
-void SmartController::txFailure(SendWindow &sendw, Node &node)
+void SmartController::txFailureUpdatePER(Node &node)
 {
     node.short_per.update(1.0);
     node.long_per.update(1.0);
+}
 
+void SmartController::txFailure(SendWindow &sendw, Node &node)
+{
     double short_per = node.short_per.getValue();
 
     if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
