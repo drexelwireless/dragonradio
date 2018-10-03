@@ -122,6 +122,7 @@ class Controller(TCPProtoServer):
             # Create ALOHA MAC for HELLO messages
             self.radio.configureALOHA()
 
+            self.switched_macs = False
             self.loop.create_task(self.discoverNeighbors())
             self.loop.create_task(self.switchToTDMA())
 
@@ -210,6 +211,7 @@ class Controller(TCPProtoServer):
         # Now delete the ALOHA MAC and switch to TDMA
         #
         logger.info('Switching to TDMA MAC, nodes: %s', list(radio.net.keys()))
+        self.switched_macs = True
 
         del radio.mac
 
@@ -261,7 +263,12 @@ class Controller(TCPProtoServer):
             delta = random.uniform(0.0, PERIOD)
 
             await asyncio.sleep(delta)
+
+            if not self.switched_macs:
+                radio.mac.tx_channel = random.randint(0, len(radio.channels)-1)
+
             radio.controller.broadcastHello()
+
             await asyncio.sleep(PERIOD - delta)
 
             if loop.time() > t0 + self.config.neighbor_discovery_period:
