@@ -53,7 +53,11 @@ class Controller(TCPProtoServer):
             self.config.frequency = self.config.center_frequency
         else:
             logger.warning('Center frequency not specified; using %f', self.config.frequency)
-        self.config.bandwidth = 5e6
+
+        if hasattr(self.config, 'rf_bandwidth'):
+            self.config.frequency = self.config.rf_bandwidth
+        else:
+            logger.warning('Bandwidth not specified; using %f', self.config.bandwidth)
 
         # Create the radio object
         radio = dragon.radio.Radio(self.config)
