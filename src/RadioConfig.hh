@@ -46,9 +46,6 @@ public:
     /** @brief Retransmission delay in seconds */
     double arq_retransmission_delay;
 
-    /** @brief (Estimated) maximum packet reordering delay in seconds */
-    double arq_max_reorder_delay;
-
     /** @brief Time needed to modulate a slot's worth of data. */
     double slot_modulate_time;
 

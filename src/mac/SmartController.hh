@@ -366,16 +366,16 @@ public:
         explicit_nak_win_duration_ = t;
     }
 
-    /** @brief Return whether or not we should send selective NAKs. */
-    bool getSelectiveNAK(void)
+    /** @brief Return whether or not we should send selective ACKs. */
+    bool getSelectiveACK(void)
     {
-        return selective_nak_;
+        return selective_ack_;
     }
 
-    /** @brief Set whether or not we should send selective NAKs. */
-    void setSelectiveNAK(bool nak)
+    /** @brief Set whether or not we should send selective ACKs. */
+    void setSelectiveACK(bool ack)
     {
-        selective_nak_ = nak;
+        selective_ack_ = ack;
     }
 
     /** @brief Return flag indicating whether or not demodulation queue enforces
@@ -462,8 +462,8 @@ protected:
     /** @brief Explicit NAK window duration */
     double explicit_nak_win_duration_;
 
-    /** @brief Should we send selective NAK packets? */
-    bool selective_nak_;
+    /** @brief Should we send selective ACK packets? */
+    bool selective_ack_;
 
     /** @brief Should packets always be output in the order they were actually
      * received?
@@ -494,17 +494,17 @@ protected:
     /** @brief Handle timestamp delta control messages. */
     void handleCtrlTimestampDeltas(Node &node, std::shared_ptr<RadioPacket>& pkt);
 
-    /** @brief Handle NAK control messages. */
-    void handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pkt);
+    /** @brief Handle ACK control messages. */
+    void handleCtrlACK(Node &node, std::shared_ptr<RadioPacket>& pkt);
 
-    /** @brief Append NAK control messages. */
-    void appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);
+    /** @brief Append ACK control messages. */
+    void appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);
 
-    /** @brief Revise PER estimate based on NAK. */
-    void nakUpdatePER(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
+    /** @brief Handle an ACK. */
+    void handleACK(SendWindow &sendw, const Seq &seq);
 
-    /** @brief Retransmit a NAK'ed packet. */
-    void nakRetransmit(SendWindow &sendw, const Seq &seq);
+    /** @brief Handle a NAK. */
+    void handleNAK(SendWindow &sendw, Node &dest, const Seq &seq);
 
     /** @brief Handle a successful packet transmission. */
     void txSuccess(SendWindow &sendw, Node &node);

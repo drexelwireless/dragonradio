@@ -79,7 +79,7 @@ struct Time {
 struct ControlMsg {
     enum Type {
         kHello,
-        kNak,
+        kAck,
         kTimestamp,
         kTimestampDelta
     };
@@ -88,7 +88,7 @@ struct ControlMsg {
         bool is_gateway;
     };
 
-    struct Nak {
+    struct Ack {
         Seq seq;
     };
 
@@ -110,7 +110,7 @@ struct ControlMsg {
 
     union {
         Hello hello;
-        Nak nak;
+        Ack ack;
         Timestamp timestamp;
         TimestampDelta timestamp_delta;
     };
@@ -295,8 +295,8 @@ struct Packet : public buffer<unsigned char>
     /** @brief Append a Hello control message to a packet */
     void appendHello(const ControlMsg::Hello &hello);
 
-    /** @brief Append a Nal control message to a packet */
-    void appendNak(const Seq &seq);
+    /** @brief Append an Ack control message to a packet */
+    void appendAck(const Seq &seq);
 
     /** @brief Append a Timestamp control message to a packet */
     void appendTimestamp(const Seq &epoch, const Clock::time_point &t);
@@ -382,8 +382,8 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
         case ControlMsg::kHello:
             return offsetof(ControlMsg, hello) + sizeof(ControlMsg::Hello);
 
-        case ControlMsg::kNak:
-            return offsetof(ControlMsg, nak) + sizeof(ControlMsg::Nak);
+        case ControlMsg::kAck:
+            return offsetof(ControlMsg, ack) + sizeof(ControlMsg::Ack);
 
         case ControlMsg::kTimestamp:
             return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);

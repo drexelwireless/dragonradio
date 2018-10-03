@@ -149,10 +149,9 @@ class Config(object):
         self.arq_enforce_ordering = False
         self.arq_ack_delay = 100e-3
         self.arq_retransmission_delay = 500e-3
-        self.arq_max_reorder_delay = 100e-3
         self.arq_explicit_nak_win = 10
         self.arq_explicit_nak_win_duration = 0.1
-        self.arq_selective_nak = True
+        self.arq_selective_ack = True
 
         # AMC options
         self.amc = False
@@ -414,12 +413,12 @@ class Config(object):
         parser.add_argument('--explicit-nak-window-duration', action='store', type=float,
                             dest='arq_explicit_nak_win_duration',
                             help='set explicit NAK window duration (sec)')
-        parser.add_argument('--selective-nak', action='store_const', const=True,
-                            dest='arq_selective_nak',
-                            help='send selective NAK\'s')
-        parser.add_argument('--no-selective-nak', action='store_const', const=False,
-                            dest='arq_selective_nak',
-                            help='do not send selective NAK\'s')
+        parser.add_argument('--selective-ack', action='store_const', const=True,
+                            dest='arq_selective_ack',
+                            help='send selective ACK\'s')
+        parser.add_argument('--no-selective-ack', action='store_const', const=False,
+                            dest='arq_selective_ack',
+                            help='do not send selective ACK\'s')
 
         # AMC options
         parser.add_argument('--amc', action='store_const', const=True,
@@ -688,7 +687,7 @@ class Radio(object):
             #
             self.controller.explicit_nak_window = config.arq_explicit_nak_win
             self.controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
-            self.controller.selective_nak = config.arq_selective_nak
+            self.controller.selective_ack = config.arq_selective_ack
         else:
             self.controller = dragonradio.DummyController(self.net)
 

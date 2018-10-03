@@ -51,7 +51,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , mcsidx_prob_floor_(mcsidx_prob_floor)
   , explicit_nak_win_(0)
   , explicit_nak_win_duration_(0.0)
-  , selective_nak_(false)
+  , selective_ack_(false)
   , enforce_ordering_(false)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
@@ -184,7 +184,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (pkt->isFlagSet(kControl)) {
         handleCtrlHello(node, pkt);
         handleCtrlTimestampDeltas(node, pkt);
-        handleCtrlNAK(node, pkt);
+        handleCtrlACK(node, pkt);
     }
 
     // Resize the packet to truncate non-data bytes
@@ -229,11 +229,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // ACK for something we haven't sent, so we must guard against
                 // that here as well
                 for (; unack < ehdr.ack && unack <= max; ++unack) {
-                    // Cancel retransmission timer for ACK'ed packet
-                    timer_queue_.cancel(sendw[unack]);
-
-                    // Release the packet since it's been ACK'ed
-                    sendw[unack].reset();
+                    // Handle the ACK
+                    handleACK(sendw, unack);
 
                     // Update our packet error rate to reflect successful TX
                     if (unack >= sendw.mcsidx_init_seq)
@@ -272,10 +269,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 sendw.unack.store(unack, std::memory_order_release);
             }
         } else if (pkt->isFlagSet(kNAK)) {
-            if (ehdr.ack >= unack) {
-                nakUpdatePER(sendw, dest, ehdr.ack, true);
-                nakRetransmit(sendw, ehdr.ack);
-            }
+            if (ehdr.ack >= unack)
+                handleNAK(sendw, dest, ehdr.ack);
         }
     }
 
@@ -426,8 +421,8 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->src = net_->getMyNodeId();
     pkt->dest = recvw.node_id;
 
-    // Append NAK control messages
-    appendCtrlNAK(recvw, pkt);
+    // Append selective ACK control messages
+    appendCtrlACK(recvw, pkt);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -682,43 +677,20 @@ void SmartController::handleCtrlTimestampDeltas(Node &node, std::shared_ptr<Radi
     }
 }
 
-void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pkt)
+void SmartController::handleCtrlACK(Node &node, std::shared_ptr<RadioPacket>& pkt)
 {
-    // Process NAKs
+    // Process selective ACKs
     SendWindow *sendwptr = maybeGetSendWindow(pkt->curhop);
 
     if (sendwptr) {
         SendWindow                      &sendw = *sendwptr;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
-        // First revise PER, which can potentially change MCS. Once the MCS has
-        // changed, we stop revising PER to prevent dropping multiple MCS
-        // levels based on a single round of NAK's.
-        size_t old_mcsidx = sendw.mcsidx;
-
         for(auto it = pkt->begin(); it != pkt->end(); ++it) {
             switch (it->type) {
-                case ControlMsg::Type::kNak:
+                case ControlMsg::Type::kAck:
                 {
-                    nakUpdatePER(sendw, node, it->nak.seq, false);
-
-                    if (sendw.mcsidx != old_mcsidx)
-                        goto resend;
-                }
-                break;
-
-                default:
-                    break;
-            }
-        }
-
-        // Then re-send NAK'ed packets.
-  resend:
-        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
-            switch (it->type) {
-                case ControlMsg::Type::kNak:
-                {
-                    nakRetransmit(sendw, it->nak.seq);
+                    handleACK(sendw, it->ack.seq);
                 }
                 break;
 
@@ -729,70 +701,58 @@ void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pk
     }
 }
 
-void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt)
+void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt)
 {
-    if (!selective_nak_)
+    if (!selective_ack_)
         return;
 
-    ControlMsg::Nak nak;
-    int             delta;
-    Node            &node = (*net_)[recvw.node_id];
-
-    if ((Clock::now() - recvw.max_timestamp).get_real_secs() < rc.arq_max_reorder_delay)
-        delta = node.short_per.getWindowSize();
-    else
-        delta = 0;
-
-    for (Seq seq = recvw.ack + 1; seq < recvw.max - delta && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.mtu; ++seq) {
-        if (!recvw[seq].received) {
-            dprintf("ARQ: nak to %u: seq=%u",
+    for (Seq seq = recvw.ack + 1; seq < recvw.max && pkt->size() + ctrlsize(ControlMsg::Type::kAck) < rc.mtu; ++seq) {
+        if (recvw[seq].received) {
+            dprintf("ARQ: selective ack to %u: seq=%u",
                 (unsigned) recvw.node_id,
                 (unsigned) seq);
-            pkt->appendNak(seq);
+            pkt->appendAck(seq);
         }
     }
 }
 
-void SmartController::nakUpdatePER(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak)
+void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
 {
-    // If we received a NAK for a packet that was already ACK'ed, nevermind
-    if (seq < sendw.unack)
-        return;
-    // Record the packet error only if this sequence number was an explicit Nak,
-    // i.e., it resulted from an invalid payload, or if the sequence number was
-    // sent with the current modulation scheme.
-    else if (explicitNak || seq >= sendw.mcsidx_init_seq) {
-        txFailureUpdatePER(dest);
+    SendWindow::Entry &entry = sendw[seq];
 
-        logEvent("AMC: txFailure nak: seq=%u; explicit=%s; per=%f",
-            (unsigned) seq,
-            explicitNak ? "true" : "false",
-            dest.short_per.getValue());
+    // Cancel retransmission timer for ACK'ed packet
+    timer_queue_.cancel(entry);
 
-        txFailure(sendw, dest);
-    }
+    // Release the packet since it's been ACK'ed
+    entry.reset();
 }
 
-void SmartController::nakRetransmit(SendWindow &sendw, const Seq &seq)
+void SmartController::handleNAK(SendWindow &sendw, Node &dest, const Seq &seq)
 {
-    dprintf("ARQ: nak from %u: seq=%u",
-        (unsigned) sendw.node_id,
-        (unsigned) seq);
-
     // If we received a NAK for a packet that was already ACK'ed, nevermind
     if (seq < sendw.unack)
         return;
-    else if (!sendw[seq])
-        fprintf(stderr, "Received NAK from node %d for seq %d, but can't find that packet!\n",
-            (int) sendw.node_id,
-            (int) seq);
-    else {
-        dprintf("ARQ: recv from %u: nak=%u",
+
+    if (!sendw[seq])
+        logEvent("ARQ: nak from %u for already ACK'ed packet: seq=%u",
             (unsigned) sendw.node_id,
             (unsigned) seq);
 
-        retransmit(sendw[seq]);
-    }
+    // Record the packet error
+    txFailureUpdatePER(dest);
+
+    logEvent("AMC: txFailure nak: seq=%u; per=%f",
+        (unsigned) seq,
+        dest.short_per.getValue());
+
+    txFailure(sendw, dest);
+
+    // Retransmit the packet
+    dprintf("ARQ: recv from %u: nak=%u",
+        (unsigned) sendw.node_id,
+        (unsigned) seq);
+
+    retransmit(sendw[seq]);
 }
 
 void SmartController::txSuccess(SendWindow &sendw, Node &node)

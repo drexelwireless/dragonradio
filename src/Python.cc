@@ -531,10 +531,10 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             &SmartController::getExplicitNAKWindowDuration,
             &SmartController::setExplicitNAKWindowDuration,
             "Explicit NAK window duration")
-        .def_property("selective_nak",
-            &SmartController::getSelectiveNAK,
-            &SmartController::setSelectiveNAK,
-            "Send selective NAK's?")
+        .def_property("selective_ack",
+            &SmartController::getSelectiveACK,
+            &SmartController::setSelectiveACK,
+            "Send selective ACK's?")
         .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
         .def("broadcastHello", &SmartController::broadcastHello)
         ;
