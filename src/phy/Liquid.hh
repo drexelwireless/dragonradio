@@ -18,13 +18,14 @@ extern std::mutex liquid_mutex;
 
 class LiquidPHY : public PHY {
 public:
-    LiquidPHY(const MCS &header_mcs,
+    LiquidPHY(NodeId node_id,
+              const MCS &header_mcs,
               bool soft_header,
               bool soft_payload,
               size_t min_packet_size);
-    LiquidPHY();
     virtual ~LiquidPHY();
 
+    LiquidPHY() = delete;
     LiquidPHY(const LiquidPHY&) = delete;
     LiquidPHY(LiquidPHY&&) = delete;
 

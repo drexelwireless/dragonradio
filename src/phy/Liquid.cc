@@ -19,20 +19,16 @@ union PHYHeader {
     unsigned char bytes[14];
 };
 
-LiquidPHY::LiquidPHY(const MCS &header_mcs,
+LiquidPHY::LiquidPHY(NodeId node_id,
+                     const MCS &header_mcs,
                      bool soft_header,
                      bool soft_payload,
                      size_t min_packet_size)
-  : min_packet_size(min_packet_size)
+  : PHY(node_id)
+  , min_packet_size(min_packet_size)
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
-{
-}
-
-LiquidPHY::LiquidPHY()
-  : soft_header_(false)
-  , soft_payload_(false)
 {
 }
 
@@ -185,6 +181,9 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
     demod_off_ += resamp_fact*stats_.end_counter;
+
+    if (header_valid_ && h->curhop == liquid_phy_.getNodeId())
+        return 0;
 
     // Create the packet and fill it out
     std::unique_ptr<RadioPacket> pkt;

@@ -29,25 +29,25 @@ public:
     bool debug;
 
     /** @brief Number of slots worth of packets we use to calculate short-term PER  */
-    unsigned short_per_nslots;
+    unsigned amc_short_per_nslots;
 
     /** @brief Number of slots worth of packets we use to calculate long-term PER  */
-    unsigned long_per_nslots;
+    unsigned amc_long_per_nslots;
 
     /** @brief Timestamp delay, in seconds */
     double timestamp_delay;
 
-    /** @brief Maximum size of a packet, in bytes */
-    unsigned max_packet_size;
+    /** @brief Maximum Transmission Unit (bytes) */
+    unsigned mtu;
 
     /** @brief ACK delay in seconds */
-    double ack_delay;
+    double arq_ack_delay;
 
     /** @brief Retransmission delay in seconds */
-    double retransmission_delay;
+    double arq_retransmission_delay;
 
     /** @brief (Estimated) maximum packet reordering delay in seconds */
-    double max_reorder_delay;
+    double arq_max_reorder_delay;
 
     /** @brief Time needed to modulate a slot's worth of data. */
     double slot_modulate_time;

@@ -67,8 +67,21 @@ public:
         PHY &phy_;
     };
 
-    PHY() {}
+    PHY(NodeId node_id)
+      : node_id_(node_id)
+    {
+    }
+
     virtual ~PHY() {}
+
+    PHY() = delete;
+
+    /** @brief Get this node's ID.
+     */
+    NodeId getNodeId(void)
+    {
+        return node_id_;
+    }
 
     /** @brief Return the minimum oversample rate (with respect to PHY
      * bandwidth) needed for demodulation
@@ -154,6 +167,9 @@ public:
         return getRXRateOversample()/getMinRXRateOversample();
     }
 
+    /** @brief Calculate size of modulated data */
+    virtual size_t modulated_size(const TXParams &params, size_t n) = 0;
+
     /** @brief Create a Modulator for this %PHY */
     virtual std::unique_ptr<Modulator> make_modulator(void) = 0;
 
@@ -161,6 +177,9 @@ public:
     virtual std::unique_ptr<Demodulator> make_demodulator(void) = 0;
 
 protected:
+    /** @brief Node ID */
+    double node_id_;
+
     /** @brief RX sample rate */
     double rx_rate_;
 

@@ -66,11 +66,12 @@ public:
         void demodulateSamples(std::complex<float> *buf, const size_t n) override final;
     };
 
-    FlexFrame(const MCS &mcs,
+    FlexFrame(NodeId node_id,
+              const MCS &mcs,
               bool soft_header,
               bool soft_payload,
               size_t min_packet_size)
-      : LiquidPHY(mcs, soft_header, soft_payload, min_packet_size)
+      : LiquidPHY(node_id, mcs, soft_header, soft_payload, min_packet_size)
     {
     }
 
@@ -93,6 +94,8 @@ public:
     {
         return 2.0;
     }
+
+    virtual size_t modulated_size(const TXParams &params, size_t n) override;
 
     std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
 

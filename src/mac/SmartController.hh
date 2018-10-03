@@ -1,8 +1,12 @@
 #ifndef SMARTCONTROLLER_H_
 #define SMARTCONTROLLER_H_
 
+#include <sys/types.h>
+#include <netinet/if_ether.h>
+
 #include <list>
 #include <map>
+#include <random>
 
 #include "heap.hh"
 #include "spinlock_mutex.hh"
@@ -12,11 +16,46 @@
 #include "net/Queue.hh"
 #include "mac/Controller.hh"
 #include "mac/MAC.hh"
+#include "phy/PHY.hh"
 
 class SmartController;
 
-struct SendWindow : public TimerQueue::Timer {
-    using vector_type = std::vector<std::shared_ptr<NetPacket>>;
+struct SendWindow {
+    struct Entry : public TimerQueue::Timer {
+        Entry(SendWindow &sendw) : sendw(sendw), pkt(nullptr) {};
+
+        virtual ~Entry() = default;
+
+        void operator =(std::shared_ptr<NetPacket>& p)
+        {
+            pkt = p;
+        }
+
+        operator bool()
+        {
+            return (bool) pkt;
+        }
+
+        operator std::shared_ptr<NetPacket>()
+        {
+            return pkt;
+        }
+
+        void reset(void)
+        {
+            pkt.reset();
+        }
+
+        void operator()() override;
+
+        /** @brief The send window. */
+        SendWindow &sendw;
+
+        /** @brief The packet received in this window entry. */
+        std::shared_ptr<NetPacket> pkt;
+    };
+
+    using vector_type = std::vector<Entry>;
 
     SendWindow(NodeId node_id, SmartController &controller, Seq::uint_type maxwin)
       : node_id(node_id)
@@ -26,9 +65,11 @@ struct SendWindow : public TimerQueue::Timer {
       , new_window(true)
       , win(1)
       , maxwin(maxwin)
-      , modidx(0)
-      , pkts(maxwin)
-    {}
+      , mcsidx(0)
+      , mcsidx_prob(0)
+      , entries_(maxwin, *this)
+    {
+    }
 
     /** @brief Node ID of destination. */
     NodeId node_id;
@@ -53,10 +94,13 @@ struct SendWindow : public TimerQueue::Timer {
     Seq::uint_type maxwin;
 
     /** @brief Modulation index */
-    size_t modidx;
+    size_t mcsidx;
 
     /** @brief First sequence number at this modulation index */
-    Seq modidx_init_seq;
+    Seq mcsidx_init_seq;
+
+    /** @brief The probability of moving to a given MCS */
+    std::vector<double> mcsidx_prob;
 
     /** @brief Pending packets we can't send because our window isn't large enough */
     std::list<std::shared_ptr<NetPacket>> pending;
@@ -65,17 +109,15 @@ struct SendWindow : public TimerQueue::Timer {
     spinlock_mutex mutex;
 
     /** @brief Return the packet with the given sequence number in the window */
-    std::shared_ptr<NetPacket>& operator[](Seq seq)
+    Entry& operator[](Seq seq)
     {
-        return pkts[seq % pkts.size()];
+        return entries_[seq % entries_.size()];
     }
-
-    void operator()() override;
 
 private:
     /** @brief Unacknowledged packets in our send window. */
     /** INVARIANT: unack <= N <= max < unack + win */
-    vector_type pkts;
+    vector_type entries_;
 };
 
 struct RecvWindow : public TimerQueue::Timer  {
@@ -114,13 +156,18 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     using vector_type = std::vector<Entry>;
 
-    RecvWindow(NodeId node_id, SmartController &controller, Seq::uint_type win)
+    RecvWindow(NodeId node_id,
+               SmartController &controller,
+               Seq::uint_type win,
+               size_t nak_win)
       : node_id(node_id)
       , controller(controller)
       , ack(0)
       , max(0)
       , win(win)
-      , entries(win)
+      , explicit_nak_win(nak_win)
+      , explicit_nak_idx(0)
+      , entries_(win)
     {}
 
     /** @brief Node ID of destination. */
@@ -154,13 +201,19 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Receive window size */
     Seq::uint_type win;
 
+    /** @brief Explicit NAK window */
+    std::vector<MonoClock::time_point> explicit_nak_win;
+
+    /** @brief Explicit NAK window index */
+    size_t explicit_nak_idx;
+
     /** @brief Mutex for the receive window */
     spinlock_mutex mutex;
 
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
-        return entries[seq % entries.size()];
+        return entries_[seq % entries_.size()];
     }
 
     void operator()() override;
@@ -169,7 +222,7 @@ private:
     /** @brief All packets with sequence numbers N such that
      * ack <= N <= max < ack + win
      */
-    vector_type entries;
+    vector_type entries_;
 };
 
 /** @brief A MAC controller that implements ARQ. */
@@ -177,28 +230,32 @@ class SmartController : public Controller
 {
 public:
     SmartController(std::shared_ptr<Net> net,
+                    std::shared_ptr<PHY> phy,
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
-                    double modidx_up_per_threshold,
-                    double modidx_down_per_threshold);
+                    unsigned mcsidx_init,
+                    double mcsidx_up_per_threshold,
+                    double mcsidx_down_per_threshold,
+                    double mcsidx_alpha,
+                    double mcsidx_prob_floor);
     virtual ~SmartController();
 
     bool pull(std::shared_ptr<NetPacket>& pkt) override;
 
     void received(std::shared_ptr<RadioPacket>&& pkt) override;
 
-    void retransmit(SendWindow &sendw);
+    /** @brief Retransmit a send window entry on timeout. */
+    void retransmitOnTimeout(SendWindow::Entry &entry);
 
     /** @brief Send an ACK to the given receiver. The caller MUST hold the lock
      * on recvw.
      */
     void ack(RecvWindow &recvw);
 
-    /** @brief Send a NAK to the given receiver. The caller MUST hold the lock
-     * on recvw.
-     */
+    /** @brief Send a NAK to the given receiver. */
     void nak(NodeId node_id, Seq seq);
 
+    /** @brief Broadcast a HELLO packet. */
     void broadcastHello(void);
 
     /** @brief Get the controller's network queue. */
@@ -240,25 +297,85 @@ public:
     /** @brief Get PER threshold for increasing modulation level */
     double getUpPERThreshold(void)
     {
-        return modidx_up_per_threshold_;
+        return mcsidx_up_per_threshold_;
     }
 
     /** @brief Set PER threshold for increasing modulation level */
     void setUpPERThreshold(double thresh)
     {
-        modidx_up_per_threshold_ = thresh;
+        mcsidx_up_per_threshold_ = thresh;
     }
 
     /** @brief Get PER threshold for decreasing modulation level */
     double getDownPERThreshold(void)
     {
-        return modidx_down_per_threshold_;
+        return mcsidx_down_per_threshold_;
     }
 
     /** @brief Set PER threshold for decreasing modulation level */
     void setDownPERThreshold(double thresh)
     {
-        modidx_down_per_threshold_ = thresh;
+        mcsidx_down_per_threshold_ = thresh;
+    }
+
+    /** @brief Get MCS index learning alpha */
+    double getMCSLearningAlpha(void)
+    {
+        return mcsidx_alpha_;
+    }
+
+    /** @brief Set MCS index learning alpha */
+    void setMCSLearningAlpha(double alpha)
+    {
+        mcsidx_alpha_ = alpha;
+    }
+
+    /** @brief Get MCS transition probability floor */
+    double getMCSProbFloor(void)
+    {
+        return mcsidx_prob_floor_;
+    }
+
+    /** @brief Set MCS transition probability floor */
+    void setMCSProbFloor(double p)
+    {
+        mcsidx_prob_floor_ = p;
+    }
+
+    /** @brief Return explicit NAK window size. */
+    bool getExplicitNAKWindow(void)
+    {
+        return explicit_nak_win_;
+    }
+
+    /** @brief Set explicit NAK window size. */
+    void setExplicitNAKWindow(size_t n)
+    {
+        explicit_nak_win_ = n;
+    }
+
+    /** @brief Return explicit NAK window duration. */
+    double getExplicitNAKWindowDuration(void)
+    {
+        return explicit_nak_win_duration_;
+    }
+
+    /** @brief Set explicit NAK window duration. */
+    void setExplicitNAKWindowDuration(double t)
+    {
+        explicit_nak_win_duration_ = t;
+    }
+
+    /** @brief Return whether or not we should send selective NAKs. */
+    bool getSelectiveNAK(void)
+    {
+        return selective_nak_;
+    }
+
+    /** @brief Set whether or not we should send selective NAKs. */
+    void setSelectiveNAK(bool nak)
+    {
+        selective_nak_ = nak;
     }
 
     /** @brief Return flag indicating whether or not demodulation queue enforces
@@ -275,10 +392,23 @@ public:
         enforce_ordering_ = enforce;
     }
 
+    /** @brief Return maximum number of packets per slot.
+     * @param p The TXParams uses for modulation
+     * @returns The number of packets of maximum size that can fit in one slot
+     *          with the given modulation scheme.
+     */
+    size_t getMaxPacketsPerSlot(const TXParams &p)
+    {
+        return slot_size_/phy_->modulated_size(p, rc.mtu + sizeof(struct ether_header));
+    }
+
     /** @brief Broadcast TX params */
     TXParams broadcast_tx_params;
 
 protected:
+    /** @brief Our PHY. */
+    std::shared_ptr<PHY> phy_;
+
     /** @brief Our MAC. */
     std::shared_ptr<MAC> mac_;
 
@@ -309,11 +439,31 @@ protected:
     /** @brief Number of samples in a transmission slot */
     size_t slot_size_;
 
+    /** @brief Initial MCS index */
+    unsigned mcsidx_init_;
+
     /** @brief PER threshold for increasing modulation level */
-    double modidx_up_per_threshold_;
+    double mcsidx_up_per_threshold_;
 
     /** @brief PER threshold for decreasing modulation level */
-    double modidx_down_per_threshold_;
+    double mcsidx_down_per_threshold_;
+
+    /** @brief Multiplicative factor used when learning MCS transition
+     * probabilities
+     */
+    double mcsidx_alpha_;
+
+    /** @brief Minimum MCS transition probability */
+    double mcsidx_prob_floor_;
+
+    /** @brief Explicit NAK window */
+    size_t explicit_nak_win_;
+
+    /** @brief Explicit NAK window duration */
+    double explicit_nak_win_duration_;
+
+    /** @brief Should we send selective NAK packets? */
+    bool selective_nak_;
 
     /** @brief Should packets always be output in the order they were actually
      * received?
@@ -323,8 +473,17 @@ protected:
     /** @brief Time sync information */
     struct TimeSync time_sync_;
 
+    /** @brief Random number generator */
+    std::mt19937 gen_;
+
+    /** @brief Uniform 0-1 real distribution */
+    std::uniform_real_distribution<double> dist_;
+
+    /** @brief Re-transmit a send window entry. */
+    void retransmit(SendWindow::Entry &entry);
+
     /** @brief Start the re-transmission timer if it is not set. */
-    void startRetransmissionTimer(SendWindow &sendw);
+    void startRetransmissionTimer(SendWindow::Entry &entry);
 
     /** @brief Start the ACK timer if it is not set. */
     void startACKTimer(RecvWindow &recvw);
@@ -341,13 +500,19 @@ protected:
     /** @brief Append NAK control messages. */
     void appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);
 
-    /** @brief Handle a NAK. */
-    void handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
+    /** @brief Revise PER estimate based on NAK. */
+    void nakUpdatePER(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak);
+
+    /** @brief Retransmit a NAK'ed packet. */
+    void nakRetransmit(SendWindow &sendw, const Seq &seq);
 
     /** @brief Handle a successful packet transmission. */
     void txSuccess(SendWindow &sendw, Node &node);
 
-    /** @brief Handle an unsuccessful packet transmission. */
+    /** @brief Update PER as a result of unsuccessful packet transmission. */
+    void txFailureUpdatePER(Node &node);
+
+    /** @brief Handle an unsuccessful packet transmission based on updated PER. */
     void txFailure(SendWindow &sendw, Node &node);
 
     /** @brief Get a packet that is elligible to be sent. */

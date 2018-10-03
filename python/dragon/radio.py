@@ -63,8 +63,8 @@ class Config(object):
 
         # General liquid modulation options
         self.check = 'crc32'
-        self.fec0 = 'v29'
-        self.fec1 = 'rs8'
+        self.fec0 = 'rs8'
+        self.fec1 = 'none'
         self.ms = 'qpsk'
 
         # Header liquid modulation options
@@ -72,6 +72,12 @@ class Config(object):
         self.header_fec0 = 'secded7264'
         self.header_fec1 = 'h84'
         self.header_ms = 'bpsk'
+
+        # Broadcast liquid modulation options
+        self.broadcast_check = 'crc32'
+        self.broadcast_fec0 = 'none'
+        self.broadcast_fec1 = 'v27'
+        self.broadcast_ms = 'bpsk'
 
         # Soft decoding options
         self.soft_header = True
@@ -99,18 +105,27 @@ class Config(object):
         self.arq = False
         self.arq_window = 1024
         self.arq_enforce_ordering = False
-        self.ack_delay = 100e-3
-        self.retransmission_delay = 500e-3
-        self.max_reorder_delay = 100e-3
+        self.arq_ack_delay = 100e-3
+        self.arq_retransmission_delay = 500e-3
+        self.arq_max_reorder_delay = 100e-3
+        self.arq_explicit_nak_win = 10
+        self.arq_explicit_nak_win_duration = 0.1
+        self.arq_selective_nak = True
 
         # AMC options
         self.amc = False
         self.amc_table = None
 
-        self.short_per_nslots = 2
-        self.long_per_nslots = 8
-        self.modidx_up_per_threshold = 0.02
-        self.modidx_down_per_threshold = 0.10
+        self.amc_short_per_nslots = 2
+        self.amc_long_per_nslots = 8
+        self.amc_mcsidx_init = 0
+        self.amc_mcsidx_up_per_threshold = 0.04
+        self.amc_mcsidx_down_per_threshold = 0.10
+        self.amc_mcsidx_alpha = 0.5
+        self.amc_mcsidx_prob_floor = 0.1
+
+        # Network options
+        self.mtu = 1500
 
         # Neighbor discover options
         # discovery_hello_interval is how often we send HELLO packets during
@@ -335,6 +350,18 @@ class Config(object):
         add_argument('--arq-enforce-ordering', action='store_const', const=True,
                      dest='arq_enforce_ordering',
                      help='enforce packet order when performing ARQ')
+        add_argument('--explicit-nak-window', action='store', type=int,
+                     dest='arq_explicit_nak_win',
+                     help='set explicit NAK window size')
+        add_argument('--explicit-nak-window-duration', action='store', type=float,
+                     dest='arq_explicit_nak_win_duration',
+                     help='set explicit NAK window duration (sec)')
+        add_argument('--selective-nak', action='store_const', const=True,
+                     dest='arq_selective_nak',
+                     help='send selective NAK\'s')
+        add_argument('--no-selective-nak', action='store_const', const=False,
+                     dest='arq_selective_nak',
+                     help='do not send selective NAK\'s')
 
         # AMC options
         add_argument('--amc', action='store_const', const=True,
@@ -344,17 +371,28 @@ class Config(object):
                      dest='amc',
                      help='disable AMC')
         add_argument('--short-per-nslots', action='store', type=int,
-                     dest='short_per_nslots',
+                     dest='amc_short_per_nslots',
                      help='set number of TX slots worth of packets we use to calculate short-term PER')
         add_argument('--long-per-nslots', action='store', type=int,
-                     dest='long_per_nslots',
+                     dest='amc_long_per_nslots',
                      help='set number of TX slots worth of packets we use to calculate long-term PER')
-        add_argument('--modidx-up-per-threshold', action='store', type=float,
-                     dest='modidx_up_per_threshold',
+        add_argument('--mcsidx-up-per-threshold', action='store', type=float,
+                     dest='amc_mcsidx_up_per_threshold',
                      help='set PER threshold for increasing modulation level')
-        add_argument('--modidx-down-per-threshold', action='store', type=float,
-                     dest='modidx_down_per_threshold',
+        add_argument('--mcsidx-down-per-threshold', action='store', type=float,
+                     dest='amc_mcsidx_down_per_threshold',
                      help='set PER threshold for decreasing modulation level')
+        add_argument('--mcsidx-alpha', action='store', type=float,
+                     dest='amc_mcsidx_alpha',
+                     help='set decay factor for learning MCS transition probabilities')
+        add_argument('--mcsidx-prob-floor', action='store', type=float,
+                     dest='amc_mcsidx_prob_floor',
+                     help='set minimum MCS transition probability')
+
+        # Network options
+        add_argument('--mtu', action='store', type=int,
+                     dest='mtu',
+                     help='set Maximum Transmission Unit (bytes)')
 
 class Radio(object):
     def __init__(self, config):
@@ -366,10 +404,10 @@ class Radio(object):
 
         # Copy configuration settings to the C++ RadioConfig object
         for attr in ['verbose', 'debug',
-                     'short_per_nslots', 'long_per_nslots',
+                     'amc_short_per_nslots', 'amc_long_per_nslots',
                      'timestamp_delay',
-                     'max_packet_size',
-                     'ack_delay', 'retransmission_delay',
+                     'mtu',
+                     'arq_ack_delay', 'arq_retransmission_delay',
                      'slot_modulate_time', 'slot_send_time']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
@@ -416,17 +454,20 @@ class Radio(object):
                          config.header_ms)
 
         if config.phy == 'flexframe':
-            self.phy = dragonradio.FlexFrame(header_mcs,
+            self.phy = dragonradio.FlexFrame(self.node_id,
+                                             header_mcs,
                                              config.soft_header,
                                              config.soft_payload,
                                              config.min_packet_size)
         elif config.phy == 'newflexframe':
-            self.phy = dragonradio.NewFlexFrame(header_mcs,
+            self.phy = dragonradio.NewFlexFrame(self.node_id,
+                                                header_mcs,
                                                 config.soft_header,
                                                 config.soft_payload,
                                                 config.min_packet_size)
         elif config.phy == 'ofdm':
-            self.phy = dragonradio.OFDM(header_mcs,
+            self.phy = dragonradio.OFDM(self.node_id,
+                                        header_mcs,
                                         config.soft_header,
                                         config.soft_payload,
                                         config.min_packet_size,
@@ -434,7 +475,11 @@ class Radio(object):
                                         config.cp_len,
                                         config.taper_len)
         elif config.phy == 'multiofdm':
-            self.phy = dragonradio.MultiOFDM(config.min_packet_size,
+            self.phy = dragonradio.MultiOFDM(self.node_id,
+                                             header_mcs,
+                                             config.soft_header,
+                                             config.soft_payload,
+                                             config.min_packet_size,
                                              config.M,
                                              config.cp_len,
                                              config.taper_len)
@@ -444,7 +489,7 @@ class Radio(object):
         #
         # Create tun/tap interface and net neighborhood
         #
-        self.tuntap = dragonradio.TunTap('tap0', False, 1500, self.node_id)
+        self.tuntap = dragonradio.TunTap('tap0', False, self.config.mtu, self.node_id)
 
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 
@@ -513,15 +558,37 @@ class Radio(object):
         #
         if config.arq:
             self.controller = dragonradio.SmartController(self.net,
+                                                          self.phy,
                                                           config.arq_window,
                                                           config.arq_window,
-                                                          config.modidx_up_per_threshold,
-                                                          config.modidx_down_per_threshold)
+                                                          config.amc_mcsidx_init,
+                                                          config.amc_mcsidx_up_per_threshold,
+                                                          config.amc_mcsidx_down_per_threshold,
+                                                          config.amc_mcsidx_alpha,
+                                                          config.amc_mcsidx_prob_floor)
 
             self.controller.slot_size = int(bandwidth*(self.config.slot_size - self.config.guard_size))
 
             if config.arq_enforce_ordering:
                 self.controller.enforce_ordering = True
+
+            #
+            # Configure broadcast MCS
+            #
+            mcs = self.controller.broadcast_tx_params.mcs
+            mcs.check = config.broadcast_check
+            mcs.fec0 = config.broadcast_fec0
+            mcs.fec1 = config.broadcast_fec1
+            mcs.ms = config.broadcast_ms
+
+            self.configTXParamsSoftGain(self.controller.broadcast_tx_params)
+
+            #
+            # Configure NAK's
+            #
+            self.controller.explicit_nak_window = config.arq_explicit_nak_win
+            self.controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
+            self.controller.selective_nak = config.arq_selective_nak
         else:
             self.controller = dragonradio.DummyController(self.net)
 
@@ -557,8 +624,6 @@ class Radio(object):
         #
         if config.arq:
             self.controller.net_queue = self.netq
-
-            self.configTXParamsSoftGain(self.controller.broadcast_tx_params)
 
     def configTXParamsSoftGain(self, tx_params):
         config = self.config

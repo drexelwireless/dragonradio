@@ -114,6 +114,53 @@ void FlexFrame::Demodulator::demodulateSamples(std::complex<float> *buf, const s
     flexframe(sync_execute)(fs_, buf, n);
 }
 
+size_t FlexFrame::modulated_size(const TXParams &params, size_t n)
+{
+    flexframe(gen)        fg;
+    flexframe(genprops_s) fgprops;
+    size_t                nsymbols;
+
+    // Copy TXParams to framegen props
+    fgprops.check = params.mcs.check;
+    fgprops.fec0 = params.mcs.fec0;
+    fgprops.fec1 = params.mcs.fec1;
+    fgprops.mod_scheme = params.mcs.ms;
+
+    // Create framegen object
+    {
+        std::lock_guard<std::mutex> lck(liquid_mutex);
+
+        fg = flexframe(gen_create)(&fgprops);
+    }
+
+    // Set framegen header props
+#if LIQUID_VERSION_NUMBER >= 1003001
+    flexframe(genprops_s) header_props { header_mcs_.check
+                                       , header_mcs_.fec0
+                                       , header_mcs_.fec1
+                                       , header_mcs_.ms
+                                       };
+
+    flexframe(gen_set_header_props)(fg, &header_props);
+    flexframe(gen_set_header_len)(fg, sizeof(Header));
+#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
+
+    // Create dummy data and assemble frame
+    std::vector<unsigned char> hdr(sizeof(Header));
+    std::vector<unsigned char> body(n);
+
+    flexframe(gen_reset)(fg);
+    flexframe(gen_assemble)(fg, hdr.data(), body.data(), body.size());
+
+    // Get size of assembled frame
+    nsymbols = NGEN*flexframe(gen_getframelen)(fg);
+
+    // Destroy framegen object
+    flexframe(gen_destroy)(fg);
+
+    return getTXUpsampleRate()*nsymbols;
+}
+
 std::unique_ptr<PHY::Demodulator> FlexFrame::make_demodulator(void)
 {
     return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this)));

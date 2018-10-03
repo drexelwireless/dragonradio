@@ -10,9 +10,15 @@
 #define dprintf(...)
 #endif /* !DEBUG */
 
-void SendWindow::operator()()
+void applyTXParams(NetPacket &pkt, TXParams *p, float g)
 {
-    controller.retransmit(*this);
+    pkt.tx_params = p;
+    pkt.g = p->g_0dBFS.getValue() * g;
+}
+
+void SendWindow::Entry::operator()()
+{
+    sendw.controller.retransmitOnTimeout(*this);
 }
 
 void RecvWindow::operator()()
@@ -23,19 +29,32 @@ void RecvWindow::operator()()
 }
 
 SmartController::SmartController(std::shared_ptr<Net> net,
+                                 std::shared_ptr<PHY> phy,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
-                                 double modidx_up_per_threshold,
-                                 double modidx_down_per_threshold)
+                                 unsigned mcsidx_init,
+                                 double mcsidx_up_per_threshold,
+                                 double mcsidx_down_per_threshold,
+                                 double mcsidx_alpha,
+                                 double mcsidx_prob_floor)
   : Controller(net)
+  , phy_(phy)
   , mac_(nullptr)
   , netq_(nullptr)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , slot_size_(0)
-  , modidx_up_per_threshold_(modidx_up_per_threshold)
-  , modidx_down_per_threshold_(modidx_down_per_threshold)
+  , mcsidx_init_(std::min(mcsidx_init, (unsigned) net_->tx_params.size()))
+  , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
+  , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
+  , mcsidx_alpha_(mcsidx_alpha)
+  , mcsidx_prob_floor_(mcsidx_prob_floor)
+  , explicit_nak_win_(0)
+  , explicit_nak_win_duration_(0.0)
+  , selective_nak_(false)
   , enforce_ordering_(false)
+  , gen_(std::random_device()())
+  , dist_(0, 1.0)
 {
     timer_queue_.start();
 }
@@ -54,8 +73,7 @@ get_packet:
 
     // Handle broadcast packets
     if (pkt->isFlagSet(kBroadcast)) {
-        pkt->tx_params = &broadcast_tx_params;
-        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
+        applyTXParams(*pkt, &broadcast_tx_params, 1.0f);
 
         return true;
     }
@@ -101,6 +119,7 @@ get_packet:
     // Update our send window if this packet has data
     if (pkt->data_len != 0) {
         SendWindow                      &sendw = getSendWindow(nexthop);
+        Node                            &dest = (*net_)[nexthop];
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
         Seq                             unack = sendw.unack.load(std::memory_order_acquire);
         Seq                             max = sendw.max.load(std::memory_order_acquire);
@@ -120,17 +139,17 @@ get_packet:
         sendw[pkt->seq] = pkt;
 
         // Start the retransmit timer if it is not already running.
-        startRetransmissionTimer(sendw);
+        startRetransmissionTimer(sendw[pkt->seq]);
 
         // Update send window metrics
         if (pkt->seq > max)
             sendw.max.store(pkt->seq, std::memory_order_release);
-    }
 
-    // Apply TX params
-    Node &dest = (*net_)[nexthop];
-
-    dest.updateNetPacketTXParams(*pkt);
+        // Apply TX params
+        applyTXParams(*pkt, dest.tx_params, dest.g);
+    } else
+        // Apply broadcast TX params
+        applyTXParams(*pkt, &broadcast_tx_params, 1.0f);
 
     return true;
 }
@@ -210,23 +229,22 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // ACK for something we haven't sent, so we must guard against
                 // that here as well
                 for (; unack < ehdr.ack && unack <= max; ++unack) {
+                    // Cancel retransmission timer for ACK'ed packet
+                    timer_queue_.cancel(sendw[unack]);
+
                     // Release the packet since it's been ACK'ed
                     sendw[unack].reset();
 
                     // Update our packet error rate to reflect successful TX
-                    if (unack >= sendw.modidx_init_seq)
+                    if (unack >= sendw.mcsidx_init_seq)
                         txSuccess(sendw, dest);
                 }
 
-                // Cancel the retransmit timer.
-                dprintf("ARQ: recv from %u: canceling retransmission timer",
-                    (unsigned) prevhop);
-                timer_queue_.cancel(sendw);
-
-                // Restart the retransmit timer if we still have un-ACK'ed
-                // packets
-                if (unack <= max)
-                    startRetransmissionTimer(sendw);
+                // If the initial sequence number corresponding to the current
+                // MCS is so old that the sequence numbers have wrapped around,
+                // update it
+                if (sendw.mcsidx_init_seq > unack + sendw.win)
+                    sendw.mcsidx_init_seq = unack - 1;
 
                 // Increase the send window. We really only need to do this
                 // after the initial ACK, but it doesn't hurt to do it every
@@ -254,8 +272,10 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 sendw.unack.store(unack, std::memory_order_release);
             }
         } else if (pkt->isFlagSet(kNAK)) {
-            if (ehdr.ack >= unack)
-                handleNak(sendw, dest, ehdr.ack, true);
+            if (ehdr.ack >= unack) {
+                nakUpdatePER(sendw, dest, ehdr.ack, true);
+                nakRetransmit(sendw, ehdr.ack);
+            }
         }
     }
 
@@ -293,17 +313,24 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     else
         startACKTimer(recvw);
 
-    // Drop this packet if we have already received it
+    // Drop this packet if it is outside our receive window
     if (pkt->seq < recvw.ack) {
-        dprintf("ARQ: recv from %u: DUP seq=%u",
+        dprintf("ARQ: recv from %u: OUTSIDE WINDOW (DUP) seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->seq);
         return;
     }
 
-    // Drop this packet if it is outside our receive window
     if (pkt->seq > recvw.ack + recvw.win) {
         dprintf("ARQ: recv from %u: OUTSIDE WINDOW seq=%u",
+            (unsigned) prevhop,
+            (unsigned) pkt->seq);
+        return;
+    }
+
+    // Drop this packet if we have already received it
+    if (recvw[pkt->seq].received) {
+        dprintf("ARQ: recv from %u: DUP seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->seq);
         return;
@@ -345,42 +372,34 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     }
 }
 
-void SmartController::retransmit(SendWindow &sendw)
+void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 {
+    SendWindow                      &sendw = entry.sendw;
     std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-    Seq                             unack = sendw.unack.load(std::memory_order_acquire);
-    Seq                             max = sendw.max.load(std::memory_order_acquire);
+    Node                            &dest = (*net_)[sendw.node_id];
 
-    // We may have received an ACK, in which case we don't need to re-transmit
-    if (unack <= max) {
-        dprintf("ARQ: send to %u: retransmit seq=%u; max=%u",
-            (unsigned) sendw.node_id,
-            (unsigned) unack,
-            (unsigned) max);
-
-        // We need to make an explicit new reference to the shared_ptr because
-        // push takes ownership of its argument.
-        std::shared_ptr<NetPacket> pkt = sendw[unack];
-        Node                       &dest = (*net_)[sendw.node_id];
-
-        // INVARIANT: packets come from the network in sequence order. If this
-        // invariant holds, then we will never have a "hole" in our send window,
-        // and this assertion must hold.
-        assert(pkt);
-
-        // Record the packet error
-        txFailure(sendw, dest);
-
-        logEvent("AMC: txFailure retransmission: unack=%u; per=%f",
-            (unsigned) unack,
-            dest.short_per.getValue());
-
-        if (netq_)
-            netq_->push_hi(std::move(pkt));
+    if (!entry.pkt) {
+        logEvent("AMC: attempted to retransmit ACK'ed packet on timeout");
+        return;
     }
 
-    // Re-start the retransmit timer
-    startRetransmissionTimer(sendw);
+    dprintf("ARQ: send to %u: retransmit seq=%u",
+        (unsigned) sendw.node_id,
+        (unsigned) entry->seq);
+
+    // Record the packet error
+    if (entry.pkt->seq >= sendw.mcsidx_init_seq) {
+        txFailureUpdatePER(dest);
+
+        logEvent("AMC: txFailure retransmission: seq=%u; per=%f",
+            (unsigned) entry.pkt->seq,
+            dest.short_per.getValue());
+
+        txFailure(sendw, dest);
+    }
+
+    // Actually retransmit the packet
+    retransmit(entry);
 }
 
 void SmartController::ack(RecvWindow &recvw)
@@ -418,6 +437,25 @@ void SmartController::nak(NodeId node_id, Seq seq)
     if (!netq_)
         return;
 
+    // Get the receive window
+    RecvWindow *recvwptr = maybeGetReceiveWindow(node_id);
+
+    if (!recvwptr)
+        return;
+
+    RecvWindow                      &recvw = *recvwptr;
+    std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+    // Limit number of explicit NAK's we send
+    auto now = MonoClock::now();
+
+    if (recvw.explicit_nak_win[recvw.explicit_nak_idx] + explicit_nak_win_duration_ > now)
+        return;
+
+    recvw.explicit_nak_win[recvw.explicit_nak_idx] = now;
+    recvw.explicit_nak_idx = (recvw.explicit_nak_idx + 1) % explicit_nak_win_;
+
+    // Send the explicit NAK
     dprintf("ARQ: send to %u: nak=%u",
         (unsigned) node_id,
         (unsigned) seq);
@@ -483,13 +521,49 @@ void SmartController::broadcastHello(void)
         netq_->push_hi(std::move(pkt));
 }
 
-void SmartController::startRetransmissionTimer(SendWindow &sendw)
+/** NOTE: The lock on the send window to which entry belongs MUST be held before
+ * calling retransmit.
+ */
+void SmartController::retransmit(SendWindow::Entry &entry)
+{
+    if (!entry.pkt) {
+        logEvent("AMC: attempted to retransmit ACK'ed packet");
+        return;
+    }
+
+    dprintf("ARQ: send to %u: retransmit seq=%u",
+        (unsigned) sendw.node_id,
+        (unsigned) entry->seq);
+
+    // We need to make an explicit new reference to the shared_ptr because push
+    // takes ownership of its argument.
+    std::shared_ptr<NetPacket> pkt = entry;
+
+    // Update ACK if we can
+    if (pkt->isFlagSet(kACK)) {
+        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt->nexthop);
+        //std::lock_guard<spinlock_mutex> lock(recv_mutex_);
+        ExtendedHeader                  &ehdr = pkt->getExtendedHeader();
+
+        ehdr.ack = recvw.ack;
+    }
+
+    // Put the packet on the high-priority network queue
+    if (netq_)
+        netq_->push_hi(std::move(pkt));
+
+    // Re-start the retransmit timer
+    startRetransmissionTimer(entry);
+}
+
+void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
 {
     // Start the retransmit timer if it is not already running.
-    if (!timer_queue_.running(sendw)) {
-        dprintf("ARQ: send to %u: starting retransmission timer",
-            (unsigned) sendw.node_id);
-        timer_queue_.run_in(sendw, (*net_)[sendw.node_id].retransmission_delay);
+    if (!timer_queue_.running(entry)) {
+        dprintf("ARQ: send to %u seq %u: starting retransmission timer",
+            (unsigned) entry.sendw.node_id,
+            (unsigned) entry->seq);
+        timer_queue_.run_in(entry, (*net_)[entry.sendw.node_id].retransmission_delay);
     }
 }
 
@@ -617,11 +691,34 @@ void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pk
         SendWindow                      &sendw = *sendwptr;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
+        // First revise PER, which can potentially change MCS. Once the MCS has
+        // changed, we stop revising PER to prevent dropping multiple MCS
+        // levels based on a single round of NAK's.
+        size_t old_mcsidx = sendw.mcsidx;
+
         for(auto it = pkt->begin(); it != pkt->end(); ++it) {
             switch (it->type) {
                 case ControlMsg::Type::kNak:
                 {
-                    handleNak(sendw, node, it->nak.seq, false);
+                    nakUpdatePER(sendw, node, it->nak.seq, false);
+
+                    if (sendw.mcsidx != old_mcsidx)
+                        goto resend;
+                }
+                break;
+
+                default:
+                    break;
+            }
+        }
+
+        // Then re-send NAK'ed packets.
+  resend:
+        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+            switch (it->type) {
+                case ControlMsg::Type::kNak:
+                {
+                    nakRetransmit(sendw, it->nak.seq);
                 }
                 break;
 
@@ -634,17 +731,20 @@ void SmartController::handleCtrlNAK(Node &node, std::shared_ptr<RadioPacket>& pk
 
 void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt)
 {
+    if (!selective_nak_)
+        return;
+
     ControlMsg::Nak nak;
     int             delta;
     Node            &node = (*net_)[recvw.node_id];
 
-    if ((Clock::now() - recvw.max_timestamp).get_real_secs() < rc.max_reorder_delay)
+    if ((Clock::now() - recvw.max_timestamp).get_real_secs() < rc.arq_max_reorder_delay)
         delta = node.short_per.getWindowSize();
     else
         delta = 0;
 
-    for (Seq seq = recvw.ack + 1; seq < recvw.max - delta && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.max_packet_size; ++seq) {
-        if (!recvw[seq].pkt) {
+    for (Seq seq = recvw.ack + 1; seq < recvw.max - delta && pkt->size() + ctrlsize(ControlMsg::Type::kNak) < rc.mtu; ++seq) {
+        if (!recvw[seq].received) {
             dprintf("ARQ: nak to %u: seq=%u",
                 (unsigned) recvw.node_id,
                 (unsigned) seq);
@@ -653,39 +753,45 @@ void SmartController::appendCtrlNAK(RecvWindow &recvw, std::shared_ptr<NetPacket
     }
 }
 
-void SmartController::handleNak(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak)
+void SmartController::nakUpdatePER(SendWindow &sendw, Node &dest, const Seq &seq, bool explicitNak)
+{
+    // If we received a NAK for a packet that was already ACK'ed, nevermind
+    if (seq < sendw.unack)
+        return;
+    // Record the packet error only if this sequence number was an explicit Nak,
+    // i.e., it resulted from an invalid payload, or if the sequence number was
+    // sent with the current modulation scheme.
+    else if (explicitNak || seq >= sendw.mcsidx_init_seq) {
+        txFailureUpdatePER(dest);
+
+        logEvent("AMC: txFailure nak: seq=%u; explicit=%s; per=%f",
+            (unsigned) seq,
+            explicitNak ? "true" : "false",
+            dest.short_per.getValue());
+
+        txFailure(sendw, dest);
+    }
+}
+
+void SmartController::nakRetransmit(SendWindow &sendw, const Seq &seq)
 {
     dprintf("ARQ: nak from %u: seq=%u",
         (unsigned) sendw.node_id,
         (unsigned) seq);
 
-    if (!sendw[seq])
+    // If we received a NAK for a packet that was already ACK'ed, nevermind
+    if (seq < sendw.unack)
+        return;
+    else if (!sendw[seq])
         fprintf(stderr, "Received NAK from node %d for seq %d, but can't find that packet!\n",
             (int) sendw.node_id,
             (int) seq);
     else {
-        // We need to make an explicit new reference to the
-        // shared_ptr because push takes ownership of its argument.
-        std::shared_ptr<NetPacket> pkt = sendw[seq];
-
-        // Record the packet error only if this sequence number was an explicit
-        // Nak, i.e., it resulted from an invalid payload, or if the sequence
-        // number was sent with the current modulation scheme.
-        if (explicitNak || seq >= sendw.modidx_init_seq) {
-            txFailure(sendw, dest);
-
-            logEvent("AMC: txFailure nak: seq=%u; explicit=%s; per=%f",
-                (unsigned) seq,
-                explicitNak ? "true" : "false",
-                dest.short_per.getValue());
-        }
-
-        if (netq_)
-            netq_->push_hi(std::move(pkt));
-
         dprintf("ARQ: recv from %u: nak=%u",
             (unsigned) sendw.node_id,
             (unsigned) seq);
+
+        retransmit(sendw[seq]);
     }
 }
 
@@ -694,46 +800,92 @@ void SmartController::txSuccess(SendWindow &sendw, Node &node)
     node.short_per.update(0.0);
     node.long_per.update(0.0);
 
+    double long_per = node.long_per.getValue();
+
     if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
-        && node.long_per.getValue() < modidx_up_per_threshold_
-        && sendw.modidx < net_->tx_params.size() - 1) {
-        if (rc.verbose && ! rc.debug)
-            fprintf(stderr, "Moving up modulation scheme\n");
-        ++sendw.modidx;
-        sendw.modidx_init_seq = node.seq;
-        node.tx_params = &net_->tx_params[sendw.modidx];
+        && long_per < mcsidx_up_per_threshold_) {
+        double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
 
-        logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f",
-            node.tx_params->mcs.fec0_name(),
-            node.tx_params->mcs.fec1_name(),
-            node.tx_params->mcs.ms_name(),
-            node.long_per.getValue());
+        // Set transition probability of current MCS index to 1.0 since we
+        // successfully passed the long PER test
+        sendw.mcsidx_prob[sendw.mcsidx] = 1.0;
 
-        resetPEREstimates(node);
+        if (sendw.mcsidx_prob[sendw.mcsidx] != old_prob)
+            logEvent("AMC: Transition probability for MCS index %u = %f",
+                (unsigned) sendw.mcsidx,
+                sendw.mcsidx_prob[sendw.mcsidx]);
+
+        // Now we see if we can actually increase the MCS index. Not only must
+        // there be a higher entry in the MCS table, but we must pass the
+        // probabilistic transition test.
+        if (   sendw.mcsidx < net_->tx_params.size() - 1
+            && dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1]) {
+            if (rc.verbose && ! rc.debug)
+                fprintf(stderr, "Moving up modulation scheme\n");
+            ++sendw.mcsidx;
+            sendw.mcsidx_init_seq = node.seq;
+            node.tx_params = &net_->tx_params[sendw.mcsidx];
+
+            resetPEREstimates(node);
+
+            logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+                node.tx_params->mcs.fec0_name(),
+                node.tx_params->mcs.fec1_name(),
+                node.tx_params->mcs.ms_name(),
+                long_per,
+                (unsigned) sendw.unack.load(std::memory_order_release),
+                (unsigned) sendw.mcsidx_init_seq,
+                node.short_per.getWindowSize(),
+                node.long_per.getWindowSize());
+        } else
+            resetPEREstimates(node);
     }
+}
+
+void SmartController::txFailureUpdatePER(Node &node)
+{
+    node.short_per.update(1.0);
+    node.long_per.update(1.0);
 }
 
 void SmartController::txFailure(SendWindow &sendw, Node &node)
 {
-    node.short_per.update(1.0);
-    node.long_per.update(1.0);
+    double short_per = node.short_per.getValue();
 
-    if (   node.short_per.getNSamples() > node.short_per.getWindowSize()
-        && node.short_per.getValue() > modidx_down_per_threshold_
-        && sendw.modidx > 0) {
+    if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
+        && short_per > mcsidx_down_per_threshold_
+        && sendw.mcsidx > 0) {
+        // Don't decrease MCS if largest possible packet won't fit in slot.
+        if (getMaxPacketsPerSlot(net_->tx_params[sendw.mcsidx-1]) < 1)
+            return;
+
+        // Decrease the probability that we will transition to this MCS index
+        sendw.mcsidx_prob[sendw.mcsidx] =
+            std::max(sendw.mcsidx_prob[sendw.mcsidx]*mcsidx_alpha_,
+                     mcsidx_prob_floor_);
+
+        logEvent("AMC: Transition probability for MCS index %u = %f",
+            (unsigned) sendw.mcsidx,
+            sendw.mcsidx_prob[sendw.mcsidx]);
+
+        // Move down modulation scheme
         if (rc.verbose && ! rc.debug)
             fprintf(stderr, "Moving down modulation scheme\n");
-        --sendw.modidx;
-        sendw.modidx_init_seq = node.seq;
-        node.tx_params = &net_->tx_params[sendw.modidx];
+        --sendw.mcsidx;
+        sendw.mcsidx_init_seq = node.seq;
+        node.tx_params = &net_->tx_params[sendw.mcsidx];
 
-        logEvent("AMC: Moving down modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f",
+        resetPEREstimates(node);
+
+        logEvent("AMC: Moving down modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
             node.tx_params->mcs.fec0_name(),
             node.tx_params->mcs.fec1_name(),
             node.tx_params->mcs.ms_name(),
-            node.short_per.getValue());
-
-        resetPEREstimates(node);
+            short_per,
+            (unsigned) sendw.unack.load(std::memory_order_release),
+            (unsigned) sendw.mcsidx_init_seq,
+            node.short_per.getWindowSize(),
+            node.long_per.getWindowSize());
     }
 }
 
@@ -820,10 +972,10 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
 void SmartController::resetPEREstimates(Node &node)
 {
-    double max_packets_per_slot = slot_size_/(rc.max_packet_size*8/node.tx_params->mcs.getRate());
+    double max_packets_per_slot = getMaxPacketsPerSlot(*node.tx_params);
 
-    node.short_per.setWindowSize(rc.short_per_nslots*max_packets_per_slot);
-    node.long_per.setWindowSize(rc.long_per_nslots*max_packets_per_slot);
+    node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
+    node.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
 }
 
 SendWindow *SmartController::maybeGetSendWindow(NodeId node_id)
@@ -850,7 +1002,11 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
                                           std::forward_as_tuple(node_id),
                                           std::forward_as_tuple(node_id, *this, max_sendwin_)).first->second;
 
-        sendw.modidx_init_seq = dest.seq;
+        sendw.mcsidx = mcsidx_init_;
+        sendw.mcsidx_init_seq = dest.seq;
+        sendw.mcsidx_prob.resize(net_->tx_params.size(), 1.0);
+
+        dest.tx_params = &net_->tx_params[mcsidx_init_];
 
         resetPEREstimates(dest);
 
@@ -891,7 +1047,7 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
 
     RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
                                       std::forward_as_tuple(node_id),
-                                      std::forward_as_tuple(node_id, *this, recvwin_)).first->second;
+                                      std::forward_as_tuple(node_id, *this, recvwin_, explicit_nak_win_)).first->second;
 
     recvw.ack = recvw.max = seq;
 

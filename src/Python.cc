@@ -179,17 +179,17 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             "Output verbose messages to the console")
         .def_readwrite("debug", &RadioConfig::debug,
             "Output debug messages to the console")
-        .def_readwrite("short_per_nslots", &RadioConfig::short_per_nslots,
+        .def_readwrite("amc_short_per_nslots", &RadioConfig::amc_short_per_nslots,
             "Number of slots worth of packets we use to calculate short-term PER")
-        .def_readwrite("long_per_nslots", &RadioConfig::long_per_nslots,
+        .def_readwrite("amc_long_per_nslots", &RadioConfig::amc_long_per_nslots,
             "Number of lots worth of packets we use to calculate long-term PER")
         .def_readwrite("timestamp_delay", &RadioConfig::timestamp_delay,
             "Timestamp delay, in seconds")
-        .def_readwrite("max_packet_size", &RadioConfig::max_packet_size,
-            "Maximum size of a packet, in bytes")
-        .def_readwrite("ack_delay", &RadioConfig::ack_delay,
+        .def_readwrite("mtu", &RadioConfig::mtu,
+            "Maximum Transmission Unit (bytes)")
+        .def_readwrite("arq_ack_delay", &RadioConfig::arq_ack_delay,
             "ACK delay, in seconds")
-        .def_readwrite("retransmission_delay", &RadioConfig::retransmission_delay,
+        .def_readwrite("arq_retransmission_delay", &RadioConfig::arq_retransmission_delay,
             "Retransmission delay, in seconds")
         .def_readwrite("slot_modulate_time", &RadioConfig::slot_modulate_time,
             "Time needed to modulate a slot's worth of data, in seconds")
@@ -397,7 +397,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class FlexFrame to Python
     py::class_<FlexFrame, LiquidPHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
-        .def(py::init<const MCS&,
+        .def(py::init<NodeId,
+                      const MCS&,
                       bool,
                       bool,
                       size_t>())
@@ -405,7 +406,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class NewFlexFrame to Python
     py::class_<NewFlexFrame, LiquidPHY, std::shared_ptr<NewFlexFrame>>(m, "NewFlexFrame")
-        .def(py::init<const MCS&,
+        .def(py::init<NodeId,
+                      const MCS&,
                       bool,
                       bool,
                       size_t>())
@@ -413,7 +415,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class OFDM to Python
     py::class_<OFDM, LiquidPHY, std::shared_ptr<OFDM>>(m, "OFDM")
-        .def(py::init<const MCS&,
+        .def(py::init<NodeId,
+                      const MCS&,
                       bool,
                       bool,
                       size_t,
@@ -424,7 +427,11 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
 
     // Export class MultiOFDM to Python
     py::class_<MultiOFDM, LiquidPHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
-        .def(py::init<size_t,
+        .def(py::init<NodeId,
+                      const MCS&,
+                      bool,
+                      bool,
+                      size_t,
                       unsigned int,
                       unsigned int,
                       unsigned int>())
@@ -475,8 +482,12 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     // Export class SmartController to Python
     py::class_<SmartController, Controller, std::shared_ptr<SmartController>>(m, "SmartController")
         .def(py::init<std::shared_ptr<Net>,
+                      std::shared_ptr<PHY>,
                       Seq::uint_type,
                       Seq::uint_type,
+                      unsigned,
+                      double,
+                      double,
                       double,
                       double>())
         .def_property("net_queue", &SmartController::getNetQueue, &SmartController::setNetQueue)
@@ -487,14 +498,34 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
             &SmartController::getSlotSize,
             &SmartController::setSlotSize,
             "Number of samples in a transmission slot")
-        .def_property("modidx_up_per_threshold",
+        .def_property("mcsidx_up_per_threshold",
             &SmartController::getUpPERThreshold,
             &SmartController::setUpPERThreshold,
             "PER threshold for increasing modulation level")
-        .def_property("modidx_down_per_threshold",
+        .def_property("mcsidx_down_per_threshold",
             &SmartController::getDownPERThreshold,
             &SmartController::setDownPERThreshold,
             "PER threshold for decreasing modulation level")
+        .def_property("mcsidx_alpha",
+            &SmartController::getMCSLearningAlpha,
+            &SmartController::setMCSLearningAlpha,
+            "MCS index learning alpha")
+        .def_property("mcsidx_prob_floor",
+            &SmartController::getMCSProbFloor,
+            &SmartController::setMCSProbFloor,
+            "MCS transition probability floor")
+        .def_property("explicit_nak_window",
+            &SmartController::getExplicitNAKWindow,
+            &SmartController::setExplicitNAKWindow,
+            "Explicit NAK window size")
+        .def_property("explicit_nak_window_duration",
+            &SmartController::getExplicitNAKWindowDuration,
+            &SmartController::setExplicitNAKWindowDuration,
+            "Explicit NAK window duration")
+        .def_property("selective_nak",
+            &SmartController::getSelectiveNAK,
+            &SmartController::setSelectiveNAK,
+            "Send selective NAK's?")
         .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
         .def("broadcastHello", &SmartController::broadcastHello)
         ;
