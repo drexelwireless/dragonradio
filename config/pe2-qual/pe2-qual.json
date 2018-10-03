@@ -1,5 +1,5 @@
 {
- "BatchName" : " {{name}} (PE2 Qualification)",
+ "BatchName" : "{{name}}",
  "Duration": 495,
  "RFScenario" : "9904",
  "TrafficScenario" : "99041",
