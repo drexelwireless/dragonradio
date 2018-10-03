@@ -1,3 +1,4 @@
+import argparse
 import configparser
 import io
 import libconf
@@ -25,13 +26,53 @@ def getNodeIdFromHostname():
         logger.warning('Cannot determine node id from hostname')
         return None
 
+class ExtendAction(argparse.Action):
+    def __init__(self, option_strings, *args, **kwargs):
+        super(ExtendAction, self).__init__(option_strings=option_strings,
+                                           nargs=0,
+                                           *args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = getattr(namespace, self.dest) or []
+        items.extend(self.const)
+        setattr(namespace, self.dest, items)
+
+class LogLevelAction(argparse.Action):
+    def __init__(self, option_strings, *args, **kwargs):
+        super(LogLevelAction, self).__init__(option_strings=option_strings,
+                                             nargs=0,
+                                             *args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, self.const)
+
+        if self.const <= logging.INFO:
+            namespace.verbose = True
+        else:
+            namespace.verbose = False
+
+        if self.const <= logging.DEBUG:
+            namespace.debug = True
+        else:
+            namespace.debug = False
+
+class LoadConfigAction(argparse.Action):
+    def __init__(self, option_strings, *args, **kwargs):
+        super(LoadConfigAction, self).__init__(option_strings=option_strings,
+                                               *args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        namespace.loadConfig(values)
+
 class Config(object):
     def __init__(self):
         # Set some default values
+        self.loglevel = logging.WARNING
         self.node_id = getNodeIdFromHostname()
 
         # Log parameters
         self.log_directory = None
+        self.log_sources = []
         # This is the actual path to the log directory
         self.logdir_ = None
 
@@ -160,6 +201,14 @@ class Config(object):
         self.logdir_ = os.path.abspath(logdir)
         return self.logdir_
 
+    def get_log_level(self):
+        return logging.getLevelName(self.loglevel)
+
+    def set_log_level(self, level):
+        self.loglevel = getattr(logging, level)
+
+    log_level = property(get_log_level, set_log_level)
+
     def mergeConfig(self, dict):
         for key in dict:
             setattr(self, key, dict[key])
@@ -171,23 +220,9 @@ class Config(object):
         try:
             with io.open(path) as f:
                 self.mergeConfig(libconf.load(f))
+            logger.info("Loaded radio config '%s'", path)
         except:
             logger.exception("Cannot load radio config '%s'", path)
-
-    def loadArgs(self, args):
-        """
-        Load configuration parameters from command-line arguments.
-        """
-        # Forget arguments that aren't set so that they don't override existing
-        # settings
-        dict = args.__dict__
-        keys = list(dict.keys())
-
-        for key in keys:
-            if dict[key] == None:
-                del dict[key]
-
-        self.mergeConfig(dict)
 
     def loadColosseumIni(self, path):
         """
@@ -204,6 +239,8 @@ class Config(object):
             if 'RF' in config:
                 for key in config['RF']:
                     setattr(self, key, float(config['COLLABORATION'][key]))
+
+            logger.info("Loaded colosseum_config.ini '%s'", path)
         except:
             logger.exception('Cannot load colosseum_config.ini')
 
@@ -215,202 +252,225 @@ class Config(object):
         def enumHelp(cls):
             return ', '.join(sorted(cls.__members__.keys()))
 
-        def add_argument(*args, default=None, **kwargs):
-            if allow_defaults:
-                parser.add_argument(*args, default=getattr(self, kwargs['dest']), **kwargs)
-            else:
-                parser.add_argument(*args, **kwargs)
+        # Debugging
+        parser.add_argument('-d', '--debug', action=LogLevelAction, const=logging.DEBUG,
+                            dest='loglevel',
+                            help='print debugging information')
+        parser.add_argument('-v', '--verbose', action=LogLevelAction, const=logging.INFO,
+                            dest='loglevel',
+                            help='be verbose')
+
+        # Node ID
+        parser.add_argument('-i', action='store', type=int, dest='node_id',
+                            help='set node ID')
+
+        # Load configuration file
+        parser.add_argument('--config', action=LoadConfigAction,
+                            help='specify configuration file')
 
         # Log parameters
-        add_argument('-l', action='store',
-                     dest='log_directory',
-                     help='specify directory for log files')
+        parser.add_argument('-l', action='store',
+                            dest='log_directory',
+                            help='specify directory for log files')
+        parser.add_argument('--log-iq', action=ExtendAction, const=['log_slots', 'log_recv_data', 'log_sent_data'],
+                            dest='log_sources',
+                            help='log IQ data')
 
         # USRP settings
-        add_argument('--addr', action='store',
-                     dest='addr',
-                     help='specify device address')
-        add_argument('--rx-antenna', action='store',
-                     dest='rx_antenna',
-                     help='set RX antenna')
-        add_argument('--tx-antenna', action='store',
-                     dest='tx_antenna',
-                     help='set TX antenna')
+        parser.add_argument('--addr', action='store',
+                            dest='addr',
+                            help='specify device address')
+        parser.add_argument('--rx-antenna', action='store',
+                            dest='rx_antenna',
+                            help='set RX antenna')
+        parser.add_argument('--tx-antenna', action='store',
+                            dest='tx_antenna',
+                            help='set TX antenna')
 
         # Frequency and bandwidth
-        add_argument('-f', '--frequency', action='store', type=float,
-                     dest='frequency',
-                     help='set center frequency (Hz)')
-        add_argument('-b', '--bandwidth', action='store', type=float,
-                     dest='bandwidth',
-                     help='set bandwidth (Hz)')
-        add_argument('--oversample', action='store', type=float,
-                     dest='oversample_factor',
-                     help='set oversample factor')
-        add_argument('--channel-bandwidth', action='store', type=float,
-                     dest='channel_bandwidth',
-                     help='set channel bandwidth (Hz)')
-        add_argument('--channel-guard-bandwidth', action='store', type=float,
-                     dest='channel_guard_bandwidth',
-                     help='set channel guard bandwidth (Hz)')
-        add_argument('--maximize-channel-guard-bandwidth', action='store_const', const=True,
-                     dest='maximize_channel_guard_bandwidth',
-                     help='maximize channel guard bandwidth')
-        add_argument('--no-maximize-channel-guard-bandwidth', action='store_const', const=False,
-                     dest='maximize_channel_guard_bandwidth',
-                     help='don\'t maximize channel guard bandwidth')
+        parser.add_argument('-f', '--frequency', action='store', type=float,
+                            dest='frequency',
+                            help='set center frequency (Hz)')
+        parser.add_argument('-b', '--bandwidth', action='store', type=float,
+                            dest='bandwidth',
+                            help='set bandwidth (Hz)')
+        parser.add_argument('--oversample', action='store', type=float,
+                            dest='oversample_factor',
+                            help='set oversample factor')
+        parser.add_argument('--channel-bandwidth', action='store', type=float,
+                            dest='channel_bandwidth',
+                            help='set channel bandwidth (Hz)')
+        parser.add_argument('--channel-guard-bandwidth', action='store', type=float,
+                            dest='channel_guard_bandwidth',
+                            help='set channel guard bandwidth (Hz)')
+        parser.add_argument('--maximize-channel-guard-bandwidth', action='store_const', const=True,
+                            dest='maximize_channel_guard_bandwidth',
+                            help='maximize channel guard bandwidth')
+        parser.add_argument('--no-maximize-channel-guard-bandwidth', action='store_const', const=False,
+                            dest='maximize_channel_guard_bandwidth',
+                            help='don\'t maximize channel guard bandwidth')
 
         # Gain-related options
-        add_argument('-G', '--tx-gain', action='store', type=float,
-                     dest='tx_gain',
-                     help='set UHD TX gain (dB)')
-        add_argument('-R', '--rx-gain', action='store', type=float,
-                     dest='rx_gain',
-                     help='set UHD RX gain (dB)')
-        add_argument('-g', '--soft-tx-gain', action='store', type=float,
-                     dest='soft_tx_gain',
-                     help='set soft TX gain (dB)')
-        add_argument('--auto-soft-tx-gain', action='store', type=int,
-                     dest='auto_soft_tx_gain',
-                     help='automatically choose soft TX gain to attain 0dBFS')
-        add_argument('--auto-soft-tx-gain-clip-frac', action='store', type=float,
-                     dest='auto_soft_tx_gain_clip_frac',
-                     help='clip fraction for automatic soft TX gain')
+        parser.add_argument('-G', '--tx-gain', action='store', type=float,
+                            dest='tx_gain',
+                            help='set UHD TX gain (dB)')
+        parser.add_argument('-R', '--rx-gain', action='store', type=float,
+                            dest='rx_gain',
+                            help='set UHD RX gain (dB)')
+        parser.add_argument('-g', '--soft-tx-gain', action='store', type=float,
+                            dest='soft_tx_gain',
+                            help='set soft TX gain (dB)')
+        parser.add_argument('--auto-soft-tx-gain', action='store', type=int,
+                            dest='auto_soft_tx_gain',
+                            help='automatically choose soft TX gain to attain 0dBFS')
+        parser.add_argument('--auto-soft-tx-gain-clip-frac', action='store', type=float,
+                            dest='auto_soft_tx_gain_clip_frac',
+                            help='clip fraction for automatic soft TX gain')
 
         # PHY parameters
-        add_argument('--phy', action='store',
-                     choices=['flexframe', 'newflexframe', 'ofdm', 'multiofdm'],
-                     dest='phy',
-                     help='set PHY')
-        add_argument('--min-packet-size', action='store', type=int,
-                     dest='min_packet_size',
-                     help='set minimum packet size (in bytes)')
+        parser.add_argument('--phy', action='store',
+                            choices=['flexframe', 'newflexframe', 'ofdm', 'multiofdm'],
+                            dest='phy',
+                            help='set PHY')
+        parser.add_argument('--min-packet-size', action='store', type=int,
+                            dest='min_packet_size',
+                            help='set minimum packet size (in bytes)')
 
         # General liquid modulation options
-        add_argument('-r', '--check',
-                     action='store', type=dragonradio.CRCScheme,
-                     dest='check',
-                     help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
-        add_argument('-c', '--fec0',
-                     action='store', type=dragonradio.FECScheme,
-                     dest='fec0',
-                     help='set inner FEC: ' + enumHelp(dragonradio.FECScheme))
-        add_argument('-k', '--fec1',
-                     action='store', type=dragonradio.FECScheme,
-                     dest='fec1',
-                     help='set outer FEC: ' + enumHelp(dragonradio.FECScheme))
-        add_argument('-m', '--mod',
-                     action='store', type=dragonradio.ModulationScheme,
-                     dest='ms',
-                     help='set modulation scheme: ' + enumHelp(dragonradio.ModulationScheme))
+        parser.add_argument('-r', '--check',
+                            action='store', type=dragonradio.CRCScheme,
+                            dest='check',
+                            help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
+        parser.add_argument('-c', '--fec0',
+                            action='store', type=dragonradio.FECScheme,
+                            dest='fec0',
+                            help='set inner FEC: ' + enumHelp(dragonradio.FECScheme))
+        parser.add_argument('-k', '--fec1',
+                            action='store', type=dragonradio.FECScheme,
+                            dest='fec1',
+                            help='set outer FEC: ' + enumHelp(dragonradio.FECScheme))
+        parser.add_argument('-m', '--mod',
+                            action='store', type=dragonradio.ModulationScheme,
+                            dest='ms',
+                            help='set modulation scheme: ' + enumHelp(dragonradio.ModulationScheme))
 
         # Soft decoding options
-        add_argument('--soft-header', action='store_const', const=True,
-                dest='soft_header',
-                help='use soft decoding for header')
-        add_argument('--soft-payload', action='store_const', const=True,
-                dest='soft_payload',
-                help='use soft decoding for payload')
+        parser.add_argument('--soft-header', action='store_const', const=True,
+                            dest='soft_header',
+                            help='use soft decoding for header')
+        parser.add_argument('--soft-payload', action='store_const', const=True,
+                            dest='soft_payload',
+                            help='use soft decoding for payload')
 
         # OFDM-specific options
-        add_argument('-M', '--subcarriers', action='store', type=int,
-                     dest='M',
-                     help='set number of OFDM subcarriers')
-        add_argument('-C', '--cp', action='store', type=int,
-                     dest='cp_len',
-                     help='set OFDM cyclic prefix length')
-        add_argument('-T', '--taper', action='store', type=int,
-                     dest='taper_len',
-                     help='set OFDM taper length')
+        parser.add_argument('-M', '--subcarriers', action='store', type=int,
+                            dest='M',
+                            help='set number of OFDM subcarriers')
+        parser.add_argument('-C', '--cp', action='store', type=int,
+                            dest='cp_len',
+                            help='set OFDM cyclic prefix length')
+        parser.add_argument('-T', '--taper', action='store', type=int,
+                            dest='taper_len',
+                            help='set OFDM taper length')
 
         # Demodulator parameters
-        add_argument('--demodulator-enforce-ordering', action='store_const', const=True,
-                     dest='demodulator_enforce_ordering',
-                     help='enforce packet order when demodulating')
+        parser.add_argument('--demodulator-enforce-ordering', action='store_const', const=True,
+                            dest='demodulator_enforce_ordering',
+                            help='enforce packet order when demodulating')
 
         # MAC parameters
-        add_argument('--slot-size', action='store', type=float,
-                     dest='slot_size',
-                     help='set MAC slot size (sec)')
-        add_argument('--guard-size', action='store', type=float,
-                     dest='guard_size',
-                     help='set MAC guard interval (sec)')
-        add_argument('--demod-overlap-size', action='store', type=float,
-                     dest='demod_overlap_size',
-                     help='set demodulation overlap interval (sec)')
-        add_argument('--premod-slots', action='store', type=float,
-                     dest='premod_slots',
-                     help='set number of slots to pre-modulate')
-        add_argument('--fdma', action='store_const', const=True,
-                     dest='fdma',
-                     help='use FDMA instead of TDMA')
+        parser.add_argument('--slot-size', action='store', type=float,
+                            dest='slot_size',
+                            help='set MAC slot size (sec)')
+        parser.add_argument('--guard-size', action='store', type=float,
+                            dest='guard_size',
+                            help='set MAC guard interval (sec)')
+        parser.add_argument('--demod-overlap-size', action='store', type=float,
+                            dest='demod_overlap_size',
+                            help='set demodulation overlap interval (sec)')
+        parser.add_argument('--premod-slots', action='store', type=float,
+                            dest='premod_slots',
+                            help='set number of slots to pre-modulate')
+        parser.add_argument('--fdma', action='store_const', const=True,
+                            dest='fdma',
+                            help='use FDMA instead of TDMA')
 
         # ARQ options
-        add_argument('--arq', action='store_const', const=True,
-                     dest='arq',
-                     help='enable ARQ')
-        add_argument('--no-arq', action='store_const', const=False,
-                     dest='arq',
-                     help='disable ARQ')
-        add_argument('--arq-window', action='store', type=int,
-                     dest='arq_window',
-                     help='set ARQ window size')
-        add_argument('--arq-enforce-ordering', action='store_const', const=True,
-                     dest='arq_enforce_ordering',
-                     help='enforce packet order when performing ARQ')
-        add_argument('--explicit-nak-window', action='store', type=int,
-                     dest='arq_explicit_nak_win',
-                     help='set explicit NAK window size')
-        add_argument('--explicit-nak-window-duration', action='store', type=float,
-                     dest='arq_explicit_nak_win_duration',
-                     help='set explicit NAK window duration (sec)')
-        add_argument('--selective-nak', action='store_const', const=True,
-                     dest='arq_selective_nak',
-                     help='send selective NAK\'s')
-        add_argument('--no-selective-nak', action='store_const', const=False,
-                     dest='arq_selective_nak',
-                     help='do not send selective NAK\'s')
+        parser.add_argument('--arq', action='store_const', const=True,
+                            dest='arq',
+                            help='enable ARQ')
+        parser.add_argument('--no-arq', action='store_const', const=False,
+                            dest='arq',
+                            help='disable ARQ')
+        parser.add_argument('--arq-window', action='store', type=int,
+                            dest='arq_window',
+                            help='set ARQ window size')
+        parser.add_argument('--arq-enforce-ordering', action='store_const', const=True,
+                            dest='arq_enforce_ordering',
+                            help='enforce packet order when performing ARQ')
+        parser.add_argument('--explicit-nak-window', action='store', type=int,
+                            dest='arq_explicit_nak_win',
+                            help='set explicit NAK window size')
+        parser.add_argument('--explicit-nak-window-duration', action='store', type=float,
+                            dest='arq_explicit_nak_win_duration',
+                            help='set explicit NAK window duration (sec)')
+        parser.add_argument('--selective-nak', action='store_const', const=True,
+                            dest='arq_selective_nak',
+                            help='send selective NAK\'s')
+        parser.add_argument('--no-selective-nak', action='store_const', const=False,
+                            dest='arq_selective_nak',
+                            help='do not send selective NAK\'s')
 
         # AMC options
-        add_argument('--amc', action='store_const', const=True,
-                     dest='amc',
-                     help='enable AMC')
-        add_argument('--no-amc', action='store_const', const=False,
-                     dest='amc',
-                     help='disable AMC')
-        add_argument('--short-per-nslots', action='store', type=int,
-                     dest='amc_short_per_nslots',
-                     help='set number of TX slots worth of packets we use to calculate short-term PER')
-        add_argument('--long-per-nslots', action='store', type=int,
-                     dest='amc_long_per_nslots',
-                     help='set number of TX slots worth of packets we use to calculate long-term PER')
-        add_argument('--mcsidx-up-per-threshold', action='store', type=float,
-                     dest='amc_mcsidx_up_per_threshold',
-                     help='set PER threshold for increasing modulation level')
-        add_argument('--mcsidx-down-per-threshold', action='store', type=float,
-                     dest='amc_mcsidx_down_per_threshold',
-                     help='set PER threshold for decreasing modulation level')
-        add_argument('--mcsidx-alpha', action='store', type=float,
-                     dest='amc_mcsidx_alpha',
-                     help='set decay factor for learning MCS transition probabilities')
-        add_argument('--mcsidx-prob-floor', action='store', type=float,
-                     dest='amc_mcsidx_prob_floor',
-                     help='set minimum MCS transition probability')
+        parser.add_argument('--amc', action='store_const', const=True,
+                            dest='amc',
+                            help='enable AMC')
+        parser.add_argument('--no-amc', action='store_const', const=False,
+                            dest='amc',
+                            help='disable AMC')
+        parser.add_argument('--short-per-nslots', action='store', type=int,
+                            dest='amc_short_per_nslots',
+                            help='set number of TX slots worth of packets we use to calculate short-term PER')
+        parser.add_argument('--long-per-nslots', action='store', type=int,
+                            dest='amc_long_per_nslots',
+                            help='set number of TX slots worth of packets we use to calculate long-term PER')
+        parser.add_argument('--mcsidx-up-per-threshold', action='store', type=float,
+                            dest='amc_mcsidx_up_per_threshold',
+                            help='set PER threshold for increasing modulation level')
+        parser.add_argument('--mcsidx-down-per-threshold', action='store', type=float,
+                            dest='amc_mcsidx_down_per_threshold',
+                            help='set PER threshold for decreasing modulation level')
+        parser.add_argument('--mcsidx-alpha', action='store', type=float,
+                            dest='amc_mcsidx_alpha',
+                            help='set decay factor for learning MCS transition probabilities')
+        parser.add_argument('--mcsidx-prob-floor', action='store', type=float,
+                            dest='amc_mcsidx_prob_floor',
+                            help='set minimum MCS transition probability')
 
         # Network options
-        add_argument('--mtu', action='store', type=int,
-                     dest='mtu',
-                     help='set Maximum Transmission Unit (bytes)')
-        add_argument('--queue', action='store',
-                     choices=['fifo', 'lifo'],
-                     dest='queue',
-                     help='set network queuing algorithm')
-        add_argument('--fifo', action='store_const', const='fifo',
-                     dest='queue',
-                     help='use FIFO network queue')
-        add_argument('--lifo', action='store_const', const='lifo',
-                     dest='queue',
-                     help='use LIFO network queue ')
+        parser.add_argument('--mtu', action='store', type=int,
+                            dest='mtu',
+                            help='set Maximum Transmission Unit (bytes)')
+        parser.add_argument('--queue', action='store',
+                            choices=['fifo', 'lifo'],
+                            dest='queue',
+                            help='set network queuing algorithm')
+        parser.add_argument('--fifo', action='store_const', const='fifo',
+                            dest='queue',
+                            help='use FIFO network queue algorithm')
+        parser.add_argument('--lifo', action='store_const', const='lifo',
+                            dest='queue',
+                            help='use LIFO network queue algorithm')
+
+        # Set defaults
+        defaults = {}
+
+        for act in parser._actions:
+            dest = act.dest
+            if hasattr(self, dest):
+                defaults[dest] = getattr(self, dest)
+
+        parser.set_defaults(**defaults)
 
 class Radio(object):
     def __init__(self, config):

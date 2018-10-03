@@ -28,12 +28,7 @@ The first, `standalone-radio.py`, is meant for command-line use and experimentat
 
 The second, `sc2-radio.py`, is the SC2 competition radio. It is meant to be run as a background daemon, but it can also be forced to run in the foreground (with the `--foreground` flag). This version of the radio starts several background components that enable cognitive control.
 
-Both radios can be configured either via the command line or via a configuration file (or both); they take the same command-line arguments for radio configuration and the same configuration file format and parameters. The configuration file is in [libconfig](http://www.hyperrealm.com/libconfig/libconfig_manual.html#Configuration-Files) format. They key configuration differences are as follows:
-
- * `standalone-radio.py` expects to be configured primarily on the command line, so it applies options from a configuration file after applying all command-line options, including command-line defaults. If you want to see the command-line defaults, pass the `-h` command-line flag to `standalone-radio.py`.
- * `sc2-radio.py` expects to be configured primarily via a configuration file, so it applies options specified on the command-line after applying options from the command-line—the opposite order from `standalone-radio.py`! This means you **must** use a complete configuration file because defaults from the command-line arguments **will not** be used.
-
-Why the ordering difference? Because when running the competition radio, we often want to use a configuration file and tweak one or two parameters. When running `standalone-radio.py`, we usually only want to use a configuration file to specify one or two things, like the AMC table, that are a pain to configure on the command line.
+Both radios can be configured either via the command line or via configuration files (or both); they take the same command-line arguments for radio configuration and the same configuration file format and parameters. The configuration file is in [libconfig](http://www.hyperrealm.com/libconfig/libconfig_manual.html#Configuration-Files) format. Each `--config` command-line option will load a configuration file, overriding previously-specified options. Regardless of how options are specified (configuration file or and individual command-line options), later options override earlier options. Multiple `--config` options can be specified.
 
 ### Running the radio with `standalone-radio.py`
 

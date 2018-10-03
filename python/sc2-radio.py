@@ -23,25 +23,20 @@ def configureLogging(config):
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')
 
     if config.foreground:
-        # Use the log level specified on the command line
-        loglevel = config.loglevel
-
+        # Set up python logger
         sh = logging.StreamHandler()
         sh.setFormatter(formatter)
-        sh.setLevel(loglevel)
+        sh.setLevel(config.loglevel)
         logger.addHandler(sh)
 
         return (None, None, None)
     else:
-        # Use the log level specified in the config file
-        loglevel = getattr(logging, config.log_level)
-
         logdir = config.logdir
 
         # Set up python logger
         fh = logging.FileHandler(os.path.join(logdir, 'dragonradio.log'), mode='a')
         fh.setFormatter(formatter)
-        fh.setLevel(loglevel)
+        fh.setLevel(config.loglevel)
         logger.addHandler(fh)
 
         # Open files to log stdout and stderr
@@ -111,25 +106,17 @@ def stop(config):
 
     return 0
 
+RADIOCONF_PATH = '/root/radio_api/radio.conf'
+
 def main():
     config = dragon.radio.Config()
 
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config.addArguments(parser, allow_defaults=False)
-    parser.add_argument('-d', '--debug', action='store_const', const=logging.DEBUG,
-                        dest='loglevel',
-                        default=logging.WARNING,
-                        help='print debugging information')
-    parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
-                        dest='loglevel',
-                        help='be verbose')
     parser.add_argument('--foreground', action='store_true', dest='foreground',
                         default=False,
                         help='run as a foreground process')
-    parser.add_argument('--config', action='store', dest='config_path',
-                        default='/root/radio_api/radio.conf',
-                        help='specify configuration file')
     parser.add_argument('--colosseum-ini', action='store', dest='colosseum_ini_path',
                         default='/root/radio_api/colosseum_config.ini',
                         help='specify Colosseum ini file')
@@ -140,25 +127,19 @@ def main():
                         help='immediately bootstrap the radio')
     parser.add_argument('action', choices=['start', 'stop', 'restart', 'status'])
 
+    if os.path.exists(RADIOCONF_PATH):
+        config.loadConfig(RADIOCONF_PATH)
+
     try:
-        args = parser.parse_args()
+        parser.parse_args(namespace=config)
     except SystemExit as ex:
         return ex.code
 
-    # Set up logging
-    if args.loglevel <= logging.INFO:
-        args.verbose = True
+    config.loadColosseumIni(config.colosseum_ini_path)
 
-    if args.loglevel <= logging.DEBUG:
-        args.debug = True
-
-    config.loadConfig(args.config_path)
-    config.loadColosseumIni(args.colosseum_ini_path)
-    config.loadArgs(args)
-
-    if args.action == 'start':
+    if config.action == 'start':
         return start(config)
-    elif args.action == 'stop':
+    elif config.action == 'stop':
         return stop(config)
 
 if __name__ == '__main__':

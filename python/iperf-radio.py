@@ -117,25 +117,9 @@ def main():
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config.addArguments(parser)
-    parser.add_argument('-d', '--debug', action='store_const', const=logging.DEBUG,
-                        dest='loglevel',
-                        default=logging.WARNING,
-                        help='print debugging information')
-    parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
-                        dest='loglevel',
-                        help='be verbose')
-    parser.add_argument('--config', action='store', dest='config_path',
-                        default=None,
-                        help='specify configuration file')
-    parser.add_argument('-i', action='store', type=int, dest='node_id',
-                        default=None,
-                        help='set node ID')
     parser.add_argument('-n', action='store', type=int, dest='num_nodes',
                         default=2,
                         help='set number of nodes in network')
-    parser.add_argument('--log-iq',
-                        action='store_true', dest='log_iq',
-                        help='log IQ data')
     parser.add_argument('--len', action='store', type=int, dest='len',
                         default=1500,
                         help='set default payload size')
@@ -161,43 +145,30 @@ def main():
 
     # Parse arguments
     try:
-        args = parser.parse_args()
+        parser.parse_args(namespace=config)
     except SystemExit as ex:
         return ex.code
 
     # Set up logging
     logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
-                        level=args.loglevel)
-
-    if args.loglevel <= logging.INFO:
-        args.verbose = True
-
-    if args.loglevel <= logging.DEBUG:
-        args.debug = True
+                        level=config.loglevel)
 
     # Validate client/server arguments
-    if not args.server and not args.client:
+    if not config.server and not config.client:
         parser.error('One of --client or --server must be specified')
 
-    if args.client and not hasattr(args, 'test_config'):
+    if config.client and not hasattr(config, 'test_config'):
         parser.error('the following arguments are required: --test-config')
 
-    if args.log_directory:
-        args.log_sources = ['log_recv_packets', 'log_sent_packets', 'log_events']
-
-        if args.log_iq:
-            args.log_sources += ['log_slots', 'log_recv_data', 'log_sent_data']
-
-    config.loadArgs(args)
-    if hasattr(args, 'config_path'):
-        config.loadConfig(args.config_path)
+    if config.log_directory:
+        config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events']
 
     # Parse human-readable bandwidth in bps and convert to Bps
-    args.bw = parseHuman(args.bw)/8.0
+    config.bw = parseHuman(config.bw)/8.0
 
     # Open output file
-    if hasattr(args, 'output'):
-        f = open(args.output, 'w')
+    if hasattr(config, 'output'):
+        f = open(config.output, 'w')
         writer = csv.writer(f)
     else:
         f = None
@@ -209,7 +180,7 @@ def main():
     #
     # Configure the MAC
     #
-    for i in range(0, args.num_nodes):
+    for i in range(0, config.num_nodes):
         radio.net.addNode(i+1)
 
     radio.configureTDMA(len(radio.net))
@@ -222,7 +193,7 @@ def main():
     writer.writerow(('# version %s' % dragonradio.version,))
 
     for attr in ['len', 'bw', 'duration']:
-        writer.writerow(('# %s %s' % (attr, getattr(args, attr)),))
+        writer.writerow(('# %s %s' % (attr, getattr(config, attr)),))
 
     for attr in ['rx_gain', 'tx_gain', 'phy', 'M', 'cp_len', 'taper_len']:
         writer.writerow(('# %s %s' % (attr, getattr(radio.config, attr)),))
@@ -232,7 +203,7 @@ def main():
     #
     loop = asyncio.get_event_loop()
 
-    if args.server:
+    if config.server:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('', IPERF_PORT))
         listen = loop.create_datagram_endpoint(lambda : IperfServerProtocol(writer), sock=sock)
@@ -245,13 +216,13 @@ def main():
 
         transport.close()
         loop.close()
-    elif args.client:
-        client = IperfClientProtocol(args, loop)
+    elif config.client:
+        client = IperfClientProtocol(config, loop)
         connect = loop.create_datagram_endpoint(lambda : client,
-                                                remote_addr=(args.client, IPERF_PORT))
+                                                remote_addr=(config.client, IPERF_PORT))
         transport, protocol = loop.run_until_complete(connect)
 
-        runSweep(writer, radio, args, client)
+        runSweep(writer, radio, config, client)
 
         transport.close()
         loop.run_until_complete(client.completed)
