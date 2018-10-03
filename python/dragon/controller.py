@@ -220,14 +220,11 @@ class Controller(TCPProtoServer):
         nodes.sort()
         idx = nodes.index(radio.node_id)
 
-        if config.fdma or config.spaced_fdma:
+        if config.fdma :
             radio.configureTDMA(1)
             radio.mac.slots[0] = True
 
-            if config.spaced_fdma:
-                radio.mac.tx_channel = 2*idx
-            else:
-                radio.mac.tx_channel = idx
+            radio.mac.tx_channel = idx
         else:
             radio.configureTDMA(len(radio.net))
             radio.mac.slots[idx] = True

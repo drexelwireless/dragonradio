@@ -100,14 +100,11 @@ def main():
         for i in range(0, args.num_nodes):
             radio.net.addNode(i+1)
 
-        if config.fdma or config.spaced_fdma:
+        if config.fdma:
             radio.configureTDMA(1)
             radio.mac.slots[0] = True
 
-            if config.spaced_fdma:
-                radio.mac.tx_channel = 2*(radio.node_id - 1)
-            else:
-                radio.mac.tx_channel = radio.node_id - 1
+            radio.mac.tx_channel = radio.node_id - 1
         else:
             radio.configureTDMA(len(radio.net))
             radio.mac.slots[radio.node_id - 1] = True
