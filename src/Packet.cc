@@ -111,12 +111,13 @@ void Packet::appendHello(const ControlMsg::Hello &hello)
     appendControl(msg);
 }
 
-void Packet::appendAck(const Seq &seq)
+void Packet::appendAck(const Seq &begin, const Seq &end)
 {
     ControlMsg msg;
 
     msg.type = ControlMsg::Type::kAck;
-    msg.ack.seq = seq;
+    msg.ack.begin = begin;
+    msg.ack.end = end;
 
     appendControl(msg);
 }

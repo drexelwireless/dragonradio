@@ -690,7 +690,13 @@ void SmartController::handleCtrlACK(Node &node, std::shared_ptr<RadioPacket>& pk
             switch (it->type) {
                 case ControlMsg::Type::kAck:
                 {
-                    handleACK(sendw, it->ack.seq);
+                    dprintf("ARQ: selective ack from %u: seq=%u-%u",
+                        (unsigned) node.id,
+                        (unsigned) it->ack.begin,
+                        (unsigned) it->ack.end);
+
+                    for (Seq seq = it->ack.begin; seq <= it->ack.end; ++seq)
+                        handleACK(sendw, seq);
                 }
                 break;
 
@@ -706,13 +712,36 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
     if (!selective_ack_)
         return;
 
+    bool in_run = false; // Are we in the middle of a run of ACK's?
+    Seq  begin, end;
+
     for (Seq seq = recvw.ack + 1; seq < recvw.max && pkt->size() + ctrlsize(ControlMsg::Type::kAck) < rc.mtu; ++seq) {
         if (recvw[seq].received) {
-            dprintf("ARQ: selective ack to %u: seq=%u",
-                (unsigned) recvw.node_id,
-                (unsigned) seq);
-            pkt->appendAck(seq);
+            if (!in_run) {
+                in_run = true;
+                begin = seq;
+            }
+
+            end = seq;
+        } else {
+            if (in_run) {
+                dprintf("ARQ: selective ack to %u: seq=%u-%u",
+                    (unsigned) recvw.node_id,
+                    (unsigned) begin,
+                    (unsigned) end);
+                pkt->appendAck(begin, end);
+
+                in_run = false;
+            }
         }
+    }
+
+    if (in_run) {
+        dprintf("ARQ: selective ack to %u: seq=%u-%u",
+            (unsigned) recvw.node_id,
+            (unsigned) begin,
+            (unsigned) end);
+        pkt->appendAck(begin, end);
     }
 }
 

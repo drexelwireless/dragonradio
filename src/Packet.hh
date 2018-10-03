@@ -89,7 +89,8 @@ struct ControlMsg {
     };
 
     struct Ack {
-        Seq seq;
+        Seq begin;
+        Seq end;
     };
 
     struct Timestamp {
@@ -296,7 +297,7 @@ struct Packet : public buffer<unsigned char>
     void appendHello(const ControlMsg::Hello &hello);
 
     /** @brief Append an Ack control message to a packet */
-    void appendAck(const Seq &seq);
+    void appendAck(const Seq &begin, const Seq &end);
 
     /** @brief Append a Timestamp control message to a packet */
     void appendTimestamp(const Seq &epoch, const Clock::time_point &t);
