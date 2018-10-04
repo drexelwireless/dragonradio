@@ -334,7 +334,7 @@ void USRP::txErrorWorker(void)
         }
 
         if (msg) {
-            if (rc.verbose)
+            if (rc.verbose && !rc.debug)
                 fprintf(stderr, "%s\n", msg);
             if (async_md.has_time_spec)
                 logEventAt(Clock::to_wall_time(MonoClock::time_point { async_md.time_spec }), "%s", msg);
