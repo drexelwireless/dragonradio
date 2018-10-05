@@ -593,6 +593,8 @@ class Radio(object):
         bandwidth = config.bandwidth
         oversample_factor = config.oversample_factor
         channel_bandwidth = config.channel_bandwidth
+        if channel_bandwidth == 0:
+            channel_bandwidth = bandwidth
         channel_guard_bandwidth = config.channel_guard_bandwidth
 
         # We space channels so that there is channel_guard_bandwidth on each end
