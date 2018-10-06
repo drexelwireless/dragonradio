@@ -228,6 +228,12 @@ class Config(object):
         Load configuration parameters from a colosseum_config.ini file.
         """
         try:
+            with open(path, 'r') as f:
+                logging.debug("Read colosseum.ini '%s':\n%s", path, f.read())
+        except:
+            logging.exception("Cannot open colosseum_config.ini '%s'", path)
+
+        try:
             config = configparser.ConfigParser()
             config.read(path)
 
@@ -237,7 +243,7 @@ class Config(object):
 
             if 'RF' in config:
                 for key in config['RF']:
-                    setattr(self, key, float(config['COLLABORATION'][key]))
+                    setattr(self, key, float(config['RF'][key]))
 
             logger.info("Loaded colosseum_config.ini '%s'", path)
         except:

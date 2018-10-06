@@ -55,7 +55,7 @@ class Controller(TCPProtoServer):
             logger.warning('Center frequency not specified; using %f', self.config.frequency)
 
         if hasattr(self.config, 'rf_bandwidth'):
-            self.config.frequency = self.config.rf_bandwidth
+            self.config.bandwidth = self.config.rf_bandwidth
         else:
             logger.warning('Bandwidth not specified; using %f', self.config.bandwidth)
 
