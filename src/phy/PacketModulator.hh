@@ -1,6 +1,7 @@
 #ifndef PACKETMODULATOR_H_
 #define PACKETMODULATOR_H_
 
+#include "Logger.hh"
 #include "phy/Channels.hh"
 #include "phy/ModPacket.hh"
 
@@ -30,6 +31,13 @@ public:
      */
     virtual void setTXChannel(Channels::size_type channel)
     {
+        if (channel >= channels_->size()) {
+            logEvent("PHY: illegal channel: channel=%lu, nchannels=%lu",
+                channel,
+                channels_->size());
+            channel = 0;
+        }
+
         tx_channel_ = channel;
     }
 

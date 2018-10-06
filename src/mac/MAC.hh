@@ -40,7 +40,17 @@ public:
      */
     virtual void setTXChannel(Channels::size_type channel)
     {
+        if (channel >= channels_->size()) {
+            logEvent("MAC: illegal channel: channel=%lu, nchannels=%lu",
+                channel,
+                channels_->size());
+            channel = 0;
+        }
+
         tx_channel_ = channel;
+        logEvent("MAC: tx_channel=%lu",
+            channel);
+
         modulator_->setTXChannel(channel);
     }
 
