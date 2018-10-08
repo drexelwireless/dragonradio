@@ -284,6 +284,14 @@ public:
         std::swap(capacity_, other.capacity_);
     }
 
+    void append(size_type count)
+    {
+        size_t n = size_;
+
+        resize(n + count);
+        memset(reinterpret_cast<void*>(&data_[n]), 0, count*sizeof(T));
+    }
+
 private:
     T* data_;
     size_t size_;
