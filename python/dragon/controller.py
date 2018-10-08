@@ -226,9 +226,12 @@ class Controller(TCPProtoServer):
 
         if config.fdma :
             radio.configureTDMA(1)
-            radio.mac.slots[0] = True
+            if idx < len(radio.channels):
+                radio.mac.slots[0] = True
 
-            radio.mac.tx_channel = idx
+                radio.mac.tx_channel = idx
+            else:
+                logging.error('No TX channel for radio %d (channels=%s)', idx, config.channels)
         else:
             radio.configureTDMA(len(radio.net))
             radio.mac.slots[idx] = True

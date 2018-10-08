@@ -71,14 +71,19 @@ def main():
         for i in range(0, config.num_nodes):
             radio.net.addNode(i+1)
 
+        idx = radio.node_id - 1
+
         if config.fdma:
             radio.configureTDMA(1)
-            radio.mac.slots[0] = True
+            if idx < len(radio.channels):
+                radio.mac.slots[0] = True
 
-            radio.mac.tx_channel = radio.node_id - 1
+                radio.mac.tx_channel = idx
+            else:
+                logging.error('No TX channel for radio %d (channels=%s)', idx, config.channels)
         else:
             radio.configureTDMA(len(radio.net))
-            radio.mac.slots[radio.node_id - 1] = True
+            radio.mac.slots[idx] = True
 
             radio.mac.tx_channel = 0
 
