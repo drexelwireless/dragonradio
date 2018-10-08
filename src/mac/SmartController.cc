@@ -997,6 +997,11 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
 
         dest.tx_params = &net_->tx_params[mcsidx_init_];
 
+        while (getMaxPacketsPerSlot(*dest.tx_params) == 0) {
+            ++sendw.mcsidx;
+            dest.tx_params = &net_->tx_params[sendw.mcsidx];
+        }
+
         resetPEREstimates(dest);
 
         return sendw;
