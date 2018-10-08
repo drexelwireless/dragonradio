@@ -88,6 +88,7 @@ class Config(object):
         self.oversample_factor = 1.0
         self.channel_bandwidth = 1e6
         self.channel_guard_bandwidth = 0
+        self.edge_guard_bandwidth = None
         self.maximize_channel_guard_bandwidth = True
 
         # TX/RX gain parameters
@@ -308,6 +309,9 @@ class Config(object):
         parser.add_argument('--channel-guard-bandwidth', action='store', type=float,
                             dest='channel_guard_bandwidth',
                             help='set channel guard bandwidth (Hz)')
+        parser.add_argument('--edge-guard-bandwidth', action='store', type=float,
+                            dest='edge_guard_bandwidth',
+                            help='set spectrum edge guard bandwidth (Hz)')
         parser.add_argument('--maximize-channel-guard-bandwidth', action='store_const', const=True,
                             dest='maximize_channel_guard_bandwidth',
                             help='maximize channel guard bandwidth')
@@ -598,36 +602,39 @@ class Radio(object):
         #
         bandwidth = config.bandwidth
         oversample_factor = config.oversample_factor
-        channel_bandwidth = config.channel_bandwidth
-        if channel_bandwidth == 0:
-            channel_bandwidth = bandwidth
-        channel_guard_bandwidth = config.channel_guard_bandwidth
 
-        # We space channels so that there is channel_guard_bandwidth on each end
+        cbw = config.channel_bandwidth
+        if cbw == 0:
+            cbw = bandwidth
+
+        cgbw = config.channel_guard_bandwidth
+        egbw = config.edge_guard_bandwidth
+        if egbw == None:
+            egbw = cgbw
+
+        # We space channels so that there is edge_guard_bandwidth on each end
         # and at least channel_guard_bandwidth between channels. For n channels,
         # we therefore have n+1 guards, so:
-        #    n*channel_bandwidth + (n+1)*channel_guard_bandwidth <= bandwidth
-        # => n <= (bandwidth - channel_guard_bandwidth) / (channel_bandwidth+channel_guard_bandwidth)
-        n = int((bandwidth-channel_guard_bandwidth)/(channel_bandwidth+channel_guard_bandwidth))
+        #    n*cbw + 2*egbw + (n-1)*cgbw <= bandwidth
+        # => n <= 1 + (bandwidth - cbw - 2*egbw) / (cbw + cgbw)
+        n = 1 + int((bandwidth-cbw-2*egbw)/(cbw+cgbw))
 
-        if n == 0:
-            print("No channels (bandwidth={:g}; channel bandwidth={:g}; guard bandwidth={:g})".format(bandwidth, channel_bandwidth, channel_guard_bandwidth),
+        if n < 1:
+            print("No channels (bandwidth={:g}; channel bandwidth={:g}; channel guard={:g}; edge guard={:g})".format(bandwidth, cbw, cgbw, egbw),
                   file=sys.stderr)
             sys.exit(1)
 
         # We use the leftover space to space channels as far apart as possible.
         # The variable gbw is the actualy guard bandwidth
-        #    (n-1)*gbw + 2*channel_guard_bandwidth + n*channel_bandwidth = bandwidth
-        # => gbw = (bandwidth - 2*channel_guard_bandwidth - n*channel_bandwidth)/(n-1)
+        #    (n-1)*cgbw + 2*egbw + n*cbw = bandwidth
+        # => cgbw = (bandwidth - 2*egbw - n*cbw)/(n-1)
         if config.maximize_channel_guard_bandwidth and n > 1:
-            gbw = (bandwidth-2*channel_guard_bandwidth-n*channel_bandwidth)/(n-1)
-        else:
-            gbw = channel_guard_bandwidth
+            cgbw = (bandwidth-2*egbw-n*cbw)/(n-1)
 
-        self.channels = Channels([channel_guard_bandwidth + i*(channel_bandwidth + gbw) + channel_bandwidth/2. - bandwidth/2. for i in range(0,n)])
+        self.channels = Channels([egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2. for i in range(0,n)])
 
-        logging.debug("Channels: %s (bandwidth=%g; channel bandwidth=%g; guard bandwidth=%g; inter-channel guard bandwidth=%g)",
-            self.channels, bandwidth, channel_bandwidth, channel_guard_bandwidth, gbw)
+        logging.debug("Channels: %s (bandwidth=%g; oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
+            self.channels, bandwidth, oversample_factor, cbw, cgbw, egbw)
 
         rx_rate_oversample = oversample_factor*self.phy.min_rx_rate_oversample
         tx_rate_oversample = oversample_factor*self.phy.min_tx_rate_oversample
@@ -641,8 +648,8 @@ class Radio(object):
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
 
-        self.phy.rx_rate_oversample = rx_rate/channel_bandwidth
-        self.phy.tx_rate_oversample = tx_rate/channel_bandwidth
+        self.phy.rx_rate_oversample = rx_rate/cbw
+        self.phy.tx_rate_oversample = tx_rate/cbw
 
         #
         # Configure the modulator and demodulator
