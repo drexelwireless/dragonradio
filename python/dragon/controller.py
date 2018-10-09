@@ -64,9 +64,8 @@ class Controller(TCPProtoServer):
         self.radio = radio
 
         # Capture interfaces
-        self.dumpcap('col0')
-        self.dumpcap('tap0')
-        self.dumpcap('tr0')
+        for iface in self.config.log_interfaces:
+            self.dumpcap(iface)
 
         # Add us as a node
         self.nodes[radio.node_id] = Node(radio.node_id)
@@ -135,9 +134,13 @@ class Controller(TCPProtoServer):
 
         for p in self.dumpcap_procs:
             try:
-                p.kill()
+                p.terminate()
             except:
-                logger.exception('Could not kill PID %d', pid)
+                logger.exception('Could not terminate PID %d', p.pid)
+
+        for iface in self.config.log_interfaces:
+            subprocess.Popen('xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                             stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
 
         for node_id in list(self.nodes):
             self.removeNode(node_id)
@@ -165,8 +168,7 @@ class Controller(TCPProtoServer):
 
     def dumpcap(self, iface):
         if iface in netifaces.interfaces():
-            print('dumpcap -i {iface} -w - -q | xz >{logdir}/{iface}.pcapng.xz'.format(iface=iface, logdir=self.config.logdir))
-            p = subprocess.Popen('dumpcap -i {iface} -w - -q | xz >{logdir}/{iface}.pcapng.xz'.format(iface=iface, logdir=self.config.logdir),
+            p = subprocess.Popen('dumpcap -i {iface} -q -w {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
                                  stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
             self.dumpcap_procs.append(p)
 

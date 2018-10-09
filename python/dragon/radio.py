@@ -73,6 +73,7 @@ class Config(object):
         # Log parameters
         self.log_directory = None
         self.log_sources = []
+        self.log_interfaces = []
         # This is the actual path to the log directory
         self.logdir_ = None
 
