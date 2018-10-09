@@ -1,0 +1,48 @@
+{
+  "BatchName": "{{ name }}",
+  "Duration": 600,
+  "RFScenario": "8981",
+  "TrafficScenario": "12690",
+  "NodeData": [
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 1,
+      "TrafficNode_ID": 1,
+      "isGateway": true,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 2,
+      "TrafficNode_ID": 2,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 3,
+      "TrafficNode_ID": 3,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 4,
+      "TrafficNode_ID": 4,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 5,
+      "TrafficNode_ID": 5,
+      "isGateway": false,
+      "node_type": "competitor"
+    }
+  ]
+}
