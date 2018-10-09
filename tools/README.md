@@ -6,7 +6,12 @@ The file `drlog.py` is a module for loading radio log files into a `Log` object.
 
 ## Building
 
-The tools here target python 3.5. The `install-dependencies.sh` script will install the necessary Ubuntu packages using `apt` and install necessary Python packages using `pip`. Python packages are installed using a [pip user install](https://pip.pypa.io/en/stable/user_guide/#user-installs).
+The tools here target python 3.5. The `install.sh` script will perform all steps
+necessary to create a Python virtualenv at `tools/env` and install the `liquid`
+Python module there. The `liquid` module allows portions of the `liquid-dsp`
+library to be used in python.
+
+A full installation requires compiling and installing the `libcorrect` and `liquid-dsp` libraries, which the `install.sh` script does. If you don't like this, if you don't want the liquid module, or if you don't want to use a virtualenv, look at the `install.sh` script and see how it operates.
 
 ## Tools and examples
 
@@ -69,3 +74,23 @@ gpsfake -P 6000 -c 0.1 logfile_20140914_365495765_can.log.chk
 ```
 
 The file `logfile_20140914_365495765_can.log.chk` is in the `test/nmea2000` of the `gpsd` source distribution. You can also obtain this file directly from the `git` repository [here](http://git.savannah.nongnu.org/cgit/gpsd.git/plain/test/nmea2000/logfile_20140914_365495765_can.log.chk).
+
+## Python `liquid` module
+
+The `liquid` module allows portions of the `liquid-dsp` library to be used in python. To install it, you must first install `libcorrect` and `liquid-dsp`. The easiest way to to that is to run the `build.sh` script in the root `dragonradio` directory.
+
+The module requires full C++17 support. The easiest way to get such a compiler on Ubuntu is to install `gcc-7` as follows:
+
+```
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt-get update
+sudo apt-get install gcc-7 g++-7
+```
+
+Finally, build and install the python module.
+
+```
+cd modules/liquid
+CC=gcc-7 python3 setup.py build
+python3 setup.py install
+```
