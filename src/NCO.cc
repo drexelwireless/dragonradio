@@ -4,46 +4,6 @@
 
 using namespace std::complex_literals;
 
-NCO::NCO()
-{
-}
-
-NCO::~NCO()
-{
-}
-
-LiquidNCO::LiquidNCO(liquid_ncotype type, double dtheta)
-{
-    nco_ = nco_crcf_create(type);
-    nco_crcf_set_phase(nco_, 0.0f);
-    nco_crcf_set_frequency(nco_, dtheta);
-}
-
-LiquidNCO::~LiquidNCO()
-{
-    nco_crcf_destroy(nco_);
-}
-
-void LiquidNCO::reset(double dtheta)
-{
-    nco_crcf_set_phase(nco_, 0.0f);
-    nco_crcf_set_frequency(nco_, dtheta);
-}
-
-void LiquidNCO::mix_up(const std::complex<float> *in,
-                       std::complex<float> *out,
-                       size_t count)
-{
-    nco_crcf_mix_block_up(nco_, const_cast<std::complex<float>*>(in), out, count);
-}
-
-void LiquidNCO::mix_down(const std::complex<float> *in,
-                         std::complex<float> *out,
-                         size_t count)
-{
-    nco_crcf_mix_block_down(nco_, const_cast<std::complex<float>*>(in), out, count);
-}
-
 // These constants determine the number of bits we use to represent numbers in
 // the range [0, 2*pi)
 const int INTBITS = 12;
