@@ -8,6 +8,8 @@
 
 #include <liquid/liquid.h>
 
+#include "sintab.hh"
+
 class NCO {
 public:
     NCO() = default;
@@ -70,6 +72,8 @@ private:
     nco_crcf nco_;
 };
 
+constexpr int INTBITS = 12;
+
 class TableNCO : public NCO
 {
 public:
@@ -94,8 +98,8 @@ public:
                   size_t count) override final;
 
 private:
-    uint32_t theta_;
-    uint32_t dtheta_;
+    sintab<INTBITS>::brad_t theta_;
+    sintab<INTBITS>::brad_t dtheta_;
 };
 
 #endif /* NCO_HH_ */
