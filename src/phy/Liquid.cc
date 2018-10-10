@@ -102,14 +102,15 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     if (shift != 0.0 || upsamp_rate_ != 1.0) {
         // Up-sample
-        auto         iqbuf_up = std::make_shared<IQBuf>(upsamp_rate_*iqbuf->size() + 64);
-        unsigned int nw;
+        auto     iqbuf_up = std::make_shared<IQBuf>(upsamp_rate_*iqbuf->size() + 64);
+        unsigned nw;
 
         msresamp_crcf_execute(upsamp_,
                               iqbuf->data(),
                               iqbuf->size(),
                               iqbuf_up->data(),
                               &nw);
+        assert(nw <= iqbuf_up->size());
         iqbuf_up->resize(nw);
         iqbuf = iqbuf_up;
 
@@ -272,20 +273,28 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
     if (downsamp_rate_ == 1.0 && shift == 0.0) {
         demodulateSamples(data, count);
     } else {
-        std::unique_ptr<std::complex<float>[]> mixbuf(new std::complex<float>[count]);
-
-        memcpy(mixbuf.get(), data, sizeof(std::complex<float>)*count);
+        // Mix down
+        IQBuf iqbuf_shift(count);
 
         if (shift != 0.0) {
             setFreqShift(shift);
-            nco_.mix_down(mixbuf.get(), mixbuf.get(), count);
-        }
+            nco_.mix_down(data, iqbuf_shift.data(), count);
+        } else
+            memcpy(iqbuf_shift.data(), data, sizeof(std::complex<float>)*count);
 
-        unsigned int nw;
+        // Downsample
+        IQBuf    iqbuf_down(iqbuf_shift.size());
+        unsigned nw;
 
-        msresamp_crcf_execute(downsamp_, mixbuf.get(), count, mixbuf.get(), &nw);
+        msresamp_crcf_execute(downsamp_,
+                              iqbuf_shift.data(),
+                              count,
+                              iqbuf_down.data(),
+                              &nw);
+        assert(nw <= iqbuf_down.size());
 
-        demodulateSamples(mixbuf.get(), nw);
+        // Demodulate
+        demodulateSamples(iqbuf_down.data(), nw);
     }
 }
 
