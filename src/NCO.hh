@@ -15,9 +15,13 @@ public:
 
     virtual void reset(double dtheta) = 0;
 
-    virtual void mix_up(std::complex<float> *data, size_t count) = 0;
+    virtual void mix_up(const std::complex<float> *in,
+                        std::complex<float> *out,
+                        size_t count) = 0;
 
-    virtual void mix_down(std::complex<float> *data, size_t count) = 0;
+    virtual void mix_down(const std::complex<float> *in,
+                          std::complex<float> *out,
+                          size_t count) = 0;
 };
 
 class LiquidNCO : public NCO
@@ -35,9 +39,13 @@ public:
 
     void reset(double dtheta) override final;
 
-    void mix_up(std::complex<float> *data, size_t count) override final;
+    void mix_up(const std::complex<float> *in,
+                std::complex<float> *out,
+                size_t count) override final;
 
-    void mix_down(std::complex<float> *data, size_t count) override final;
+    void mix_down(const std::complex<float> *in,
+                  std::complex<float> *out,
+                  size_t count) override final;
 
 private:
     nco_crcf nco_;
@@ -58,9 +66,13 @@ public:
 
     void reset(double dtheta) override final;
 
-    void mix_up(std::complex<float> *data, size_t count) override final;
+    void mix_up(const std::complex<float> *in,
+                std::complex<float> *out,
+                size_t count) override final;
 
-    void mix_down(std::complex<float> *data, size_t count) override final;
+    void mix_down(const std::complex<float> *in,
+                  std::complex<float> *out,
+                  size_t count) override final;
 
 private:
     uint32_t theta_;
