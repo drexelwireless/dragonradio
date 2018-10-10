@@ -27,6 +27,9 @@ public:
     /** @brief Binary radian representation of pi/2 */
     static constexpr brad_t PIDIV2 = static_cast<brad_t>(1) << (BRADBITS-2);
 
+    /** @brief Reciprocal of dx between two entries in the table */
+    static constexpr float DTHETA = 1.0f/static_cast<float>(ONE);
+
     sintab()
     {
         for (unsigned i = 0; i < N; ++i)
@@ -48,7 +51,10 @@ public:
 
     float operator [](brad_t pos)
     {
-        return sintab_[pos >> FRACBITS];
+        float y1 = sintab_[pos >> FRACBITS];
+        float y2 = sintab_[(pos + ONE) >> FRACBITS];
+
+        return sintab_[pos >> FRACBITS] + (pos & (ONE - 1))*DTHETA*(y2-y1);
     }
 
     float sin(brad_t theta)
