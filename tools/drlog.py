@@ -240,6 +240,16 @@ class Log:
         return recv[((recv.start >= t_start) & (recv.start < t_end)) | ((recv.end >= t_start) & (recv.end < t_end))]
 
     def findSlot(self, node, t):
+        """
+        Find a node's time slot.
+
+        Args:
+            node: The node.
+            t: A time in the slot.
+
+        Returns:
+            Either a slot or None.
+        """
         slots = self._slots[node.node_id]
 
         idx = (slots.start <= t) & (t < slots.end)
@@ -249,6 +259,16 @@ class Log:
             return None
 
     def findSlots(self, node, pkt):
+        """
+        Find the time slots during which a packet ocurred.
+
+        Args:
+            node: The node.
+            pkt: A packet.
+
+        Returns:
+            A pair consisting of a list of slot timestamps and slot IQ data.
+        """
         slots = self._slots[node.node_id]
 
         idx = slots['timestamp'] == pkt.timestamp
