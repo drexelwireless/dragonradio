@@ -392,11 +392,11 @@ class LogViewer:
         self.rxFigs = {}
         self.txFigs = {}
 
-    def rxFig(self, node, nfft=256):
+    def rxFig(self, node, nfft=256, show_header_invalid=False):
         if node.node_id in self.rxFigs:
             return self.rxFigs[node.node_id]
         else:
-            fig = ReceivePlot(self.log, node, nfft=nfft)
+            fig = ReceivePlot(self.log, node, nfft=nfft, show_header_invalid=show_header_invalid)
             self.rxFigs[node.node_id] = fig
             fig.fig.show()
             return fig
@@ -422,6 +422,8 @@ def main():
                         help='view RX log for given node')
     parser.add_argument('--nfft', action='store', type=int, default=256, dest='nfft',
                         help='set number of FFT points')
+    parser.add_argument('--show-invalid-headers', action='store_true', default=False, dest='show_invalid_headers',
+                        help='set number of FFT points')
     parser.add_argument('paths', nargs='*')
     args = parser.parse_args()
 
@@ -444,7 +446,7 @@ def main():
         if not node:
             print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
         else:
-            rx = viewer.rxFig(node, nfft=args.nfft)
+            rx = viewer.rxFig(node, nfft=args.nfft, show_header_invalid=args.show_invalid_headers)
             rx.plot(0)
 
     plt.show()
