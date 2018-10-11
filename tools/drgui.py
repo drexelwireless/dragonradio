@@ -222,7 +222,7 @@ class ReceivePlot:
                 pkts = pkts[pkts.header_valid == True]
 
             for (_, pkt) in pkts.iterrows():
-                self.bracketPacket(pkt, self.specgram.ax)
+                self.bracketPacket(pkt, t0, self.specgram.ax)
 
             # Mark all slots in the current specgram
             for t in self.ts:
@@ -261,9 +261,9 @@ class ReceivePlot:
     def markSlot(self, ax, t, **kwargs):
         ax.axvline(t, color='r')
 
-    def bracketPacket(self, pkt, ax):
-        t_start = pkt.start - pkt.timestamp
-        t_end = pkt.end - pkt.timestamp
+    def bracketPacket(self, pkt, t0, ax):
+        t_start = pkt.start - t0
+        t_end = pkt.end - t0
 
         (ymin, ymax) = ax.get_ylim()
 
