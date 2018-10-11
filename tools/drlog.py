@@ -237,7 +237,7 @@ class Log:
         Fs = node.rx_bandwidth
         recv = self.received[node.node_id]
 
-        return recv[(recv.start >= t_start) & (recv.end < t_end)]
+        return recv[((recv.start >= t_start) & (recv.start < t_end)) | ((recv.end >= t_start) & (recv.end < t_end))]
 
     def findSlot(self, node, t):
         slots = self._slots[node.node_id]
