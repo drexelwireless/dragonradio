@@ -138,7 +138,7 @@ class PAPRPlot:
         plot_ccdf(self.ax, PdB)
         self.ax.set_title('CCDF of PAPR')
         self.ax.set_xlabel('$PAPR_0$ (dB)')
-        self.ax.set_xlim(xmin=-5)
+        self.ax.set_xlim(left=-5)
         self.ax.set_ylabel('$Pr(PAPR \geq PAPR_0)$')
         self.ax.set_yscale('log')
         #self.ax.grid(True)
