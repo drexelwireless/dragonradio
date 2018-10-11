@@ -147,10 +147,11 @@ class PAPRPlot:
         self.fig.canvas.mpl_connect('scroll_event', zoom_factory(self.fig, self.ax, base_scale=2.0))
 
 class ReceivePlot:
-    def __init__(self, log, node):
+    def __init__(self, log, node, show_header_invalid=False):
         self.log = log
         self.node = node
         self.Fs = self.node.rx_bandwidth
+        self.show_header_invalid = show_header_invalid
 
         self.pktidx = 0
 
@@ -178,11 +179,18 @@ class ReceivePlot:
 
         # Add packet position slider
         self.axpos = self.fig.add_axes([0.1, 0.02, 0.4, 0.03])
-        self.spos = Slider(self.axpos, 'Packet Index', 0, len(self.log.received[self.node.node_id])-1, valfmt='%1.0f', valinit=0, valstep=1)
+        self.spos = Slider(self.axpos, 'Packet Index', 0, len(self.received(self.node.node_id))-1, valfmt='%1.0f', valinit=0, valstep=1)
         self.spos.on_changed(self.update_slider)
 
+    def received(self, node_id):
+        recv = self.log.received[node_id]
+        if self.show_header_invalid:
+            return recv
+        else:
+            return recv[recv.header_valid == True]
+
     def plot(self, idx):
-        recv = self.log.received[self.node.node_id]
+        recv = self.received(self.node.node_id)
 
         if idx >= 0 and idx < len(recv):
             self.pktidx = idx
@@ -210,6 +218,9 @@ class ReceivePlot:
             # Mark all packets in the current specgram
             #self.markPacket(self.pkt, self.specgram.ax)
             pkts = self.log.findReceivedPackets(self.node, self.ts[0], self.ts[0]+len(self.w)/self.Fs)
+            if not self.show_header_invalid:
+                pkts = pkts[pkts.header_valid == True]
+
             for (_, pkt) in pkts.iterrows():
                 self.bracketPacket(pkt, self.specgram.ax)
 
