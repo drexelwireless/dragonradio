@@ -147,7 +147,7 @@ class PAPRPlot:
         self.fig.canvas.mpl_connect('scroll_event', zoom_factory(self.fig, self.ax, base_scale=2.0))
 
 class ReceivePlot:
-    def __init__(self, log, node, show_header_invalid=False):
+    def __init__(self, log, node, show_header_invalid=False, nfft=256):
         self.log = log
         self.node = node
         self.Fs = self.node.rx_bandwidth
@@ -156,10 +156,10 @@ class ReceivePlot:
         self.pktidx = 0
 
         self.fig = plt.figure()
-        self.specgram = SpecgramPlot(self.fig, self.fig.add_subplot(2,1,1))
+        self.specgram = SpecgramPlot(self.fig, self.fig.add_subplot(2,1,1), nfft=nfft)
         self.constellation = ConstellationPlot(self.fig, self.fig.add_subplot(2,4,5))
         self.waveform = WaveformPlot(self.fig, self.fig.add_subplot(2,4,6))
-        self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,4,7))
+        self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,4,7), nfft=nfft)
         self.papr = PAPRPlot(self.fig, self.fig.add_subplot(2,4,8))
 
         # Add next and prev buttons. Coordinates are:
@@ -306,7 +306,7 @@ class ReceivePlot:
                     **kwargs)
 
 class SendPlot:
-    def __init__(self, log, node):
+    def __init__(self, log, node, nfft=256):
         self.log = log
         self.node = node
         self.Fs = self.node.tx_bandwidth
@@ -316,7 +316,7 @@ class SendPlot:
         self.fig = plt.figure()
         self.constellation = ConstellationPlot(self.fig, self.fig.add_subplot(2,2,1))
         self.waveform = WaveformPlot(self.fig, self.fig.add_subplot(2,2,2))
-        self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,2,3))
+        self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,2,3), nfft=nfft)
         self.papr = PAPRPlot(self.fig, self.fig.add_subplot(2,2,4))
 
         # Add next and prev buttons. Coordinates are:
@@ -386,20 +386,20 @@ class LogViewer:
         self.rxFigs = {}
         self.txFigs = {}
 
-    def rxFig(self, node):
+    def rxFig(self, node, nfft=256):
         if node.node_id in self.rxFigs:
             return self.rxFigs[node.node_id]
         else:
-            fig = ReceivePlot(self.log, node)
+            fig = ReceivePlot(self.log, node, nfft=nfft)
             self.rxFigs[node.node_id] = fig
             fig.fig.show()
             return fig
 
-    def txFig(self, node):
+    def txFig(self, node, nfft=256):
         if node.node_id in self.txFigs:
             return self.txFigs[node.node_id]
         else:
-            fig = SendPlot(self.log, node)
+            fig = SendPlot(self.log, node, nfft=nfft)
             self.txFigs[node.node_id] = fig
             fig.fig.show()
             return fig
@@ -414,6 +414,8 @@ def main():
                         help='view TX log for given node')
     parser.add_argument('--rx', action='append', type=int, default=[], dest='rx',
                         help='view RX log for given node')
+    parser.add_argument('--nfft', action='store', type=int, default=256, dest='nfft',
+                        help='set number of FFT points')
     parser.add_argument('paths', nargs='*')
     args = parser.parse_args()
 
@@ -428,7 +430,7 @@ def main():
         if not node:
             print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
         else:
-            tx = viewer.txFig(node)
+            tx = viewer.txFig(node, nfft=args.nfft)
             tx.plot(0)
 
     for node_id in args.rx:
@@ -436,7 +438,7 @@ def main():
         if not node:
             print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
         else:
-            rx = viewer.rxFig(node)
+            rx = viewer.rxFig(node, nfft=args.nfft)
             rx.plot(0)
 
     plt.show()
