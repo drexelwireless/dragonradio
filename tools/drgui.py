@@ -270,9 +270,14 @@ class ReceivePlot:
         # If the packet we are marking is the current packet, its label appears
         # in red. Otherwise, its label appears in black.
         if pkt.seq == self.pkt.seq:
-            color = 'r'
+            weight = 'bold'
         else:
+            weight = 'normal'
+
+        if pkt.payload_valid:
             color = 'k'
+        else:
+            color = 'r'
 
         ax.annotate('',
                     xy=(t_start, ymax),
@@ -283,7 +288,8 @@ class ReceivePlot:
         ax.text((t_start + t_end) / 2, ymax + 0.1*(ymax - ymin), str(pkt.seq),
                 ha='center',
                 va='bottom',
-                weight='bold',
+                weight=weight,
+                rotation=45,
                 color=color)
 
     def markPacket(self, pkt, ax):
