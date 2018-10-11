@@ -42,8 +42,10 @@ LiquidModulator::LiquidModulator(LiquidPHY &phy)
     , shift_(0.0)
     , nco_(0.0)
 {
-    upsamp_rate_ = phy.getTXRateOversample()/phy.getMinTXRateOversample();
-    upsamp_ = msresamp_crcf_create(upsamp_rate_, kStopBandAttenuationDb);
+    double rate = phy.getTXRateOversample()/phy.getMinTXRateOversample();
+
+    upsamp_ = msresamp_crcf_create(rate, kStopBandAttenuationDb);
+    upsamp_rate_ = msresamp_crcf_get_rate(upsamp_);
 }
 
 LiquidModulator::~LiquidModulator()
@@ -102,7 +104,7 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     if (shift != 0.0 || upsamp_rate_ != 1.0) {
         // Up-sample
-        auto     iqbuf_up = std::make_shared<IQBuf>(upsamp_rate_*iqbuf->size() + 64);
+        auto     iqbuf_up = std::make_shared<IQBuf>(1 + 2*upsamp_rate_*iqbuf->size());
         unsigned nw;
 
         msresamp_crcf_execute(upsamp_,
@@ -142,8 +144,10 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
   , shift_(0.0)
   , nco_(0.0)
 {
-    downsamp_rate_ = phy.getRXRateOversample()/phy.getMinRXRateOversample();
-    downsamp_ = msresamp_crcf_create(1.0/downsamp_rate_, kStopBandAttenuationDb);
+    double rate = phy.getMinRXRateOversample()/phy.getRXRateOversample();
+
+    downsamp_ = msresamp_crcf_create(rate, kStopBandAttenuationDb);
+    downsamp_rate_ = msresamp_crcf_get_rate(downsamp_);
 }
 
 LiquidDemodulator::~LiquidDemodulator()
@@ -177,7 +181,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 {
     Header* h = reinterpret_cast<Header*>(header_);
     size_t  off = demod_off_;   // Save demodulation offset for use when we log.
-    double  resamp_fact = internal_oversample_fact_*downsamp_rate_;
+    double  resamp_fact = internal_oversample_fact_/downsamp_rate_;
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
@@ -283,7 +287,7 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
             memcpy(iqbuf_shift.data(), data, sizeof(std::complex<float>)*count);
 
         // Downsample
-        IQBuf    iqbuf_down(iqbuf_shift.size());
+        IQBuf    iqbuf_down(1 + 2*downsamp_rate_*iqbuf_shift.size());
         unsigned nw;
 
         msresamp_crcf_execute(downsamp_,
