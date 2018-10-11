@@ -80,6 +80,7 @@ public:
                  const Header& hdr,
                  NodeId src,
                  NodeId dest,
+                 float fc,
                  uint32_t size,
                  std::shared_ptr<IQBuf> buf);
 
@@ -139,6 +140,7 @@ private:
                   const Header& hdr,
                   NodeId src,
                   NodeId dest,
+                  float fc,
                   uint32_t size,
                   std::shared_ptr<IQBuf> buf);
 

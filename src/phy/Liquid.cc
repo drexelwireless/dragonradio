@@ -139,6 +139,7 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
     }
 
     // Fill in the ModPacket
+    mpkt.fc = shift;
     mpkt.samples = std::move(iqbuf);
     mpkt.pkt = std::move(pkt);
 }

@@ -9,10 +9,13 @@
 /** A modulated data packet to be sent over the radio */
 struct ModPacket
 {
-    ModPacket() : complete ATOMIC_FLAG_INIT
+    ModPacket() : fc(0), complete ATOMIC_FLAG_INIT
     {
         complete.test_and_set(std::memory_order_acquire);
     };
+
+    /** @brief Center frequency. */
+    float fc;
 
     /** @brief Buffer containing the modulated samples. */
     std::shared_ptr<IQBuf> samples;

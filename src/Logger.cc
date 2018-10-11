@@ -76,6 +76,8 @@ struct PacketSendEntry {
     uint8_t src;
     /** @brief Packet destination. */
     uint8_t dest;
+    /** @brief Center frequency [Hz] */
+    float fc;
     /** @brief Data size (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
@@ -179,6 +181,7 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("seq", HOFFSET(PacketSendEntry, seq), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("src", HOFFSET(PacketSendEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("dest", HOFFSET(PacketSendEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("size", HOFFSET(PacketSendEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
 
@@ -288,11 +291,12 @@ void Logger::logSend(const Clock::time_point& t,
                      const Header& hdr,
                      NodeId src,
                      NodeId dest,
+                     float fc,
                      uint32_t size,
                      std::shared_ptr<IQBuf> buf)
 {
     if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, size, buf); });
+        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, fc, size, buf); });
 }
 
 void Logger::logEvent(const Clock::time_point& t,
@@ -405,6 +409,7 @@ void Logger::logSend_(const Clock::time_point& t,
                       const Header& hdr,
                       NodeId src,
                       NodeId dest,
+                      float fc,
                       uint32_t size,
                       std::shared_ptr<IQBuf> buf)
 {
@@ -416,6 +421,7 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.seq = hdr.seq;
     entry.src = src;
     entry.dest = dest;
+    entry.fc = fc;
     entry.size = size;
     if (getCollectSource(kSentData)) {
         entry.iq_data.p = buf->data();

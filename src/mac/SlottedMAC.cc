@@ -161,6 +161,7 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
                                 hdr,
                                 (*it)->pkt->src,
                                 (*it)->pkt->dest,
+                                (*it)->fc,
                                 (*it)->pkt->size(),
                                 (*it)->samples);
             }
