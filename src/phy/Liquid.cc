@@ -7,8 +7,17 @@
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;
 
+// Prototype filter semi-length
+const unsigned int kFilterLength = 7;
+
+// Prototype filter cutoff frequency
+const float kFilterCutoff = 0.4f;
+
 // Stop-band attenuation for resamplers
 const float kStopBandAttenuationDb = 60.0f;
+
+// Nnumber of filters in polyphase filterbank
+const unsigned kNumPolyphaseFilters = 64;
 
 std::mutex liquid_mutex;
 
@@ -44,7 +53,11 @@ LiquidModulator::LiquidModulator(LiquidPHY &phy)
 {
     double rate = phy.getTXRateOversample()/phy.getMinTXRateOversample();
 
-    upsamp_ = msresamp_crcf_create(rate, kStopBandAttenuationDb);
+    upsamp_ = msresamp_crcf_create(rate,
+                                   kFilterLength,
+                                   kFilterCutoff,
+                                   kStopBandAttenuationDb,
+                                   kNumPolyphaseFilters);
     upsamp_rate_ = msresamp_crcf_get_rate(upsamp_);
     upsamp_delay_ = msresamp_crcf_get_delay(upsamp_);
 }
@@ -150,7 +163,11 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
 {
     double rate = phy.getMinRXRateOversample()/phy.getRXRateOversample();
 
-    downsamp_ = msresamp_crcf_create(rate, kStopBandAttenuationDb);
+    downsamp_ = msresamp_crcf_create(rate,
+                                     kFilterLength,
+                                     kFilterCutoff,
+                                     kStopBandAttenuationDb,
+                                     kNumPolyphaseFilters);
     downsamp_rate_ = msresamp_crcf_get_rate(downsamp_);
     downsamp_delay_ = msresamp_crcf_get_delay(downsamp_);
 }
