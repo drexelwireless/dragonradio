@@ -9,6 +9,7 @@
 #include "Clock.hh"
 #include "Packet.hh"
 #include "dsp/NCO.hh"
+#include "liquid/Resample.hh"
 #include "phy/PHY.hh"
 
 /** @brief Creation of liquid objects is not re-rentrant, so we need to protect
@@ -91,13 +92,7 @@ protected:
     LiquidPHY &liquid_phy_;
 
     /** @brief Upsampler. */
-    msresamp_crcf upsamp_;
-
-    /** @brief Upsampler rate. */
-    double upsamp_rate_;
-
-    /** @brief Upsampler delay. */
-    double upsamp_delay_;
+    Liquid::MultiStageResampler upsamp_;
 
     /** @brief Frequency for mixing up */
     double shift_;
@@ -152,13 +147,7 @@ protected:
     LiquidPHY &liquid_phy_;
 
     /** @brief Downsampler. */
-    msresamp_crcf downsamp_;
-
-    /** @brief Downsampler rate. */
-    double downsamp_rate_;
-
-    /** @brief Downsampler delay. */
-    double downsamp_delay_;
+    Liquid::MultiStageResampler downsamp_;
 
     /** @brief Callback for received packets. */
     std::function<void(std::unique_ptr<RadioPacket>)> callback_;
