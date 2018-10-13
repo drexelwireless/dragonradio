@@ -115,7 +115,7 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
 
         // Mix up
         setFreqShift(shift);
-        nco_.mix_up(iqbuf->data(), iqbuf->size());
+        nco_.mix_up(iqbuf->data(), iqbuf->data(), iqbuf->size());
     }
 
     // Fill in the ModPacket
@@ -278,7 +278,7 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
 
         if (shift != 0.0) {
             setFreqShift(shift);
-            nco_.mix_down(mixbuf.get(), count);
+            nco_.mix_down(mixbuf.get(), mixbuf.get(), count);
         }
 
         unsigned int nw;
