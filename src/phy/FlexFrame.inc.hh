@@ -1,4 +1,4 @@
-#include "phy/Liquid.hh"
+#include "phy/LiquidPHY.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp flexframegen code. */
 class FlexFrame : public LiquidPHY {

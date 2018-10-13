@@ -66,7 +66,7 @@ SOURCES := \
     WorkQueue.cc \
     phy/FlexFrame.cc \
     phy/TXParams.cc \
-    phy/Liquid.cc \
+    phy/LiquidPHY.cc \
     phy/MultiOFDM.cc \
     phy/NewFlexFrame.cc \
     phy/OFDM.cc \

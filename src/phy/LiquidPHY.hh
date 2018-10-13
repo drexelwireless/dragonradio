@@ -1,5 +1,5 @@
-#ifndef LIQUID_H_
-#define LIQUID_H_
+#ifndef LIQUIDPHY_H_
+#define LIQUIDPHY_H_
 
 #include <complex>
 #include <mutex>
@@ -214,4 +214,4 @@ protected:
     virtual void demodulateSamples(std::complex<float> *buf, const size_t n) = 0;
 };
 
-#endif /* LIQUID_H_ */
+#endif /* LIQUIDPHY_H_ */

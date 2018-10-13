@@ -2,7 +2,7 @@
 #include "NCO.hh"
 #include "RadioConfig.hh"
 #include "WorkQueue.hh"
-#include "phy/Liquid.hh"
+#include "phy/LiquidPHY.hh"
 
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;

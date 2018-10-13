@@ -3,7 +3,7 @@
 #include <liquid/liquid.h>
 
 #include "Logger.hh"
-#include "phy/Liquid.hh"
+#include "phy/LiquidPHY.hh"
 #include "phy/OFDM.hh"
 
 union PHYHeader {

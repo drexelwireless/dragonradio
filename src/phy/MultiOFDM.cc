@@ -1,5 +1,5 @@
 #include "Logger.hh"
-#include "phy/Liquid.hh"
+#include "phy/LiquidPHY.hh"
 #include "phy/MultiOFDM.hh"
 
 // Number of channels. We only use 1!

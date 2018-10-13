@@ -1,7 +1,7 @@
 #ifndef OFDM_H_
 #define OFDM_H_
 
-#include "phy/Liquid.hh"
+#include "phy/LiquidPHY.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp ofdmflexframegen code. */
 class OFDM : public LiquidPHY {
