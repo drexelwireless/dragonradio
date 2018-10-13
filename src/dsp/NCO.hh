@@ -26,52 +26,6 @@ public:
                           size_t count) = 0;
 };
 
-class LiquidNCO : public NCO
-{
-public:
-    LiquidNCO(liquid_ncotype type, double dtheta)
-    {
-        nco_ = nco_crcf_create(type);
-        nco_crcf_set_phase(nco_, 0.0f);
-        nco_crcf_set_frequency(nco_, dtheta);
-    }
-
-    virtual ~LiquidNCO()
-    {
-        nco_crcf_destroy(nco_);
-    }
-
-    LiquidNCO() = delete;
-    LiquidNCO(const LiquidNCO&) = delete;
-    LiquidNCO(LiquidNCO&&) = delete;
-
-    LiquidNCO& operator=(const LiquidNCO&) = delete;
-    LiquidNCO& operator=(LiquidNCO&&) = delete;
-
-    void reset(double dtheta) override final
-    {
-        nco_crcf_set_phase(nco_, 0.0f);
-        nco_crcf_set_frequency(nco_, dtheta);
-    }
-
-    void mix_up(const std::complex<float> *in,
-                std::complex<float> *out,
-                size_t count) override final
-    {
-        nco_crcf_mix_block_up(nco_, const_cast<std::complex<float>*>(in), out, count);
-    }
-
-    void mix_down(const std::complex<float> *in,
-                  std::complex<float> *out,
-                  size_t count) override final
-    {
-        nco_crcf_mix_block_down(nco_, const_cast<std::complex<float>*>(in), out, count);
-    }
-
-private:
-    nco_crcf nco_;
-};
-
 constexpr int INTBITS = 12;
 
 class TableNCO : public NCO

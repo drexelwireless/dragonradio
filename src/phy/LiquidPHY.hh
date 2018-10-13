@@ -7,8 +7,8 @@
 #include <liquid/liquid.h>
 
 #include "Clock.hh"
-#include "NCO.hh"
 #include "Packet.hh"
+#include "dsp/NCO.hh"
 #include "phy/PHY.hh"
 
 /** @brief Creation of liquid objects is not re-rentrant, so we need to protect

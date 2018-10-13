@@ -55,7 +55,6 @@ SOURCES := \
     ExtensibleDataSet.cc \
     Logger.cc \
     main.cc \
-    NCO.cc \
     Packet.cc \
     Python.cc \
     RadioConfig.cc \
@@ -64,6 +63,8 @@ SOURCES := \
     USRP.cc \
     Util.cc \
     WorkQueue.cc \
+    dsp/NCO.cc \
+    liquid/Resample.cc \
     phy/FlexFrame.cc \
     phy/TXParams.cc \
     phy/LiquidPHY.cc \

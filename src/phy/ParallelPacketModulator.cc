@@ -1,6 +1,6 @@
 #include "Estimator.hh"
-#include "NCO.hh"
 #include "RadioConfig.hh"
+#include "dsp/NCO.hh"
 #include "phy/PHY.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/TXParams.hh"

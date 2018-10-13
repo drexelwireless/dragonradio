@@ -1,6 +1,6 @@
 #include <math.h>
 
-#include "NCO.hh"
+#include "dsp/NCO.hh"
 
 using namespace std::complex_literals;
 

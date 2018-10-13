@@ -1,7 +1,7 @@
 #include "Logger.hh"
-#include "NCO.hh"
 #include "RadioConfig.hh"
 #include "WorkQueue.hh"
+#include "dsp/NCO.hh"
 #include "phy/LiquidPHY.hh"
 
 // Initial modulation buffer size
