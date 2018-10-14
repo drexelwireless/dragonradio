@@ -56,7 +56,6 @@ SOURCES := \
     Logger.cc \
     main.cc \
     Packet.cc \
-    Python.cc \
     RadioConfig.cc \
     TimerQueue.cc \
     TimeSync.cc \
@@ -83,7 +82,21 @@ SOURCES := \
     mac/TDMA.cc \
     net/Net.cc \
     net/NetFilter.cc \
-    net/TunTap.cc
+    net/TunTap.cc \
+    python/Controller.cc \
+    python/Estimator.cc \
+    python/LiquidEnum.cc \
+    python/Logger.cc \
+    python/MAC.cc \
+    python/MCS.cc \
+    python/Net.cc \
+    python/PHY.cc \
+    python/PacketModulator.cc \
+    python/Python.cc \
+    python/RadioConfig.cc \
+    python/RadioNet.cc \
+    python/USRP.cc \
+    python/WorkQueue.cc
 
 OBJECTS := $(patsubst %.cc,$(OBJDIR)/%.o,$(SOURCES))
 

@@ -11,6 +11,7 @@
 #include "heap.hh"
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
+#include "RadioConfig.hh"
 #include "TimerQueue.hh"
 #include "TimeSync.hh"
 #include "net/Queue.hh"
