@@ -7,10 +7,15 @@
 #include <memory>
 #include <vector>
 
+#if !defined(NOUHD)
 #include <uhd/types/time_spec.hpp>
+#endif /* !defined(NOUHD) */
 
 #include "buffer.hh"
+
+#if !defined(NOUHD)
 #include "Clock.hh"
+#endif /* !defined(NOUHD) */
 
 /** @brief A buffer of IQ samples */
 struct IQBuf : buffer<std::complex<float>> {
@@ -28,8 +33,10 @@ public:
     IQBuf& operator=(const IQBuf&) = delete;
     IQBuf& operator=(IQBuf&&) = delete;
 
+#if !defined(NOUHD)
     /** @brief Timestamp of the first sample */
     Clock::time_point timestamp;
+#endif /* !defined(NOUHD) */
 
     /** @brief Signal delay */
     size_t delay;
