@@ -34,4 +34,5 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     exportMACs(m);
     exportResamplers(m);
     exportNCOs(m);
+    exportFilters(m);
 }

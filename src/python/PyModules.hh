@@ -70,5 +70,6 @@ void exportControllers(py::module &m);
 void exportMACs(py::module &m);
 void exportResamplers(py::module &m);
 void exportNCOs(py::module &m);
+void exportFilters(py::module &m);
 
 #endif /* PYMODULES_H_ */

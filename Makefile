@@ -63,6 +63,7 @@ SOURCES := \
     Util.cc \
     WorkQueue.cc \
     dsp/NCO.cc \
+    liquid/Filter.cc \
     liquid/Resample.cc \
     phy/FlexFrame.cc \
     phy/TXParams.cc \
@@ -85,6 +86,7 @@ SOURCES := \
     net/TunTap.cc \
     python/Controller.cc \
     python/Estimator.cc \
+    python/Filter.cc \
     python/LiquidEnum.cc \
     python/Logger.cc \
     python/MAC.cc \
