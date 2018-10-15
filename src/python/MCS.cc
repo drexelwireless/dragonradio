@@ -15,5 +15,8 @@ void exportMCS(py::module &m)
     .def_readwrite("fec1", &MCS::fec1, "Outer FEC")
     .def_readwrite("ms", &MCS::ms, "Modulation scheme")
     .def_property_readonly("rate", &MCS::getRate, "Approximate rate (bps)")
+    .def("__repr__", [](const MCS& self) {
+        return py::str("MCS({}, {}, {}, {})").format(self.check, self.fec0, self.fec1, self.ms);
+     })
     ;
 }
