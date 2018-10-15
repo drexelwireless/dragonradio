@@ -68,5 +68,6 @@ void exportPHYs(py::module &m);
 void exportPacketModulators(py::module &m);
 void exportControllers(py::module &m);
 void exportMACs(py::module &m);
+void exportResamplers(py::module &m);
 
 #endif /* PYMODULES_H_ */

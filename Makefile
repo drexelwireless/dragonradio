@@ -95,6 +95,7 @@ SOURCES := \
     python/Python.cc \
     python/RadioConfig.cc \
     python/RadioNet.cc \
+    python/Resample.cc \
     python/USRP.cc \
     python/WorkQueue.cc
 
