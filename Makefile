@@ -89,6 +89,7 @@ SOURCES := \
     python/Logger.cc \
     python/MAC.cc \
     python/MCS.cc \
+    python/NCO.cc \
     python/Net.cc \
     python/PHY.cc \
     python/PacketModulator.cc \
