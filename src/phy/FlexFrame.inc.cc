@@ -11,12 +11,9 @@ FlexFrame::Modulator::Modulator(FlexFrame &phy)
     fg_ = flexframe(gen_create)(&fgprops_);
 
 #if LIQUID_VERSION_NUMBER >= 1003001
-    flexframe(genprops_s) header_props { phy.header_mcs_.check
-                                       , phy.header_mcs_.fec0
-                                       , phy.header_mcs_.fec1
-                                       , phy.header_mcs_.ms
-                                       };
+    flexframe(genprops_s) header_props;
 
+    mcs2flexframegenprops(phy.header_mcs_, header_props);
     flexframe(gen_set_header_props)(fg_, &header_props);
     flexframe(gen_set_header_len)(fg_, sizeof(Header));
 #endif /* LIQUID_VERSION_NUMBER >= 1003001 */
@@ -34,15 +31,8 @@ void FlexFrame::Modulator::print(void)
 
 void FlexFrame::Modulator::update_props(const TXParams &params)
 {
-    if (fgprops_.check != params.mcs.check ||
-        fgprops_.fec0 != params.mcs.fec0 ||
-        fgprops_.fec1 != params.mcs.fec1 ||
-        fgprops_.mod_scheme != params.mcs.ms) {
-        fgprops_.check = params.mcs.check;
-        fgprops_.fec0 = params.mcs.fec0;
-        fgprops_.fec1 = params.mcs.fec1;
-        fgprops_.mod_scheme = params.mcs.ms;
-
+    if (fgprops_ != params.mcs) {
+        mcs2flexframegenprops(params.mcs, fgprops_);
         flexframe(gen_setprops)(fg_, &fgprops_);
     }
 }
@@ -81,12 +71,9 @@ FlexFrame::Demodulator::Demodulator(FlexFrame &phy)
     fs_ = flexframe(sync_create)(&LiquidDemodulator::liquid_callback, this);
 
 #if LIQUID_VERSION_NUMBER >= 1003001
-    flexframe(genprops_s) header_props { phy.header_mcs_.check
-                                       , phy.header_mcs_.fec0
-                                       , phy.header_mcs_.fec1
-                                       , phy.header_mcs_.ms
-                                       };
+    flexframe(genprops_s) header_props;
 
+    mcs2flexframegenprops(phy.header_mcs_, header_props);
     flexframe(sync_set_header_props)(fs_, &header_props);
     flexframe(sync_set_header_len)(fs_, sizeof(Header));
     flexframe(sync_decode_header_soft)(fs_, phy.soft_header_);
@@ -121,10 +108,7 @@ size_t FlexFrame::modulated_size(const TXParams &params, size_t n)
     size_t                nsymbols;
 
     // Copy TXParams to framegen props
-    fgprops.check = params.mcs.check;
-    fgprops.fec0 = params.mcs.fec0;
-    fgprops.fec1 = params.mcs.fec1;
-    fgprops.mod_scheme = params.mcs.ms;
+    mcs2flexframegenprops(params.mcs, fgprops);
 
     // Create framegen object
     {
@@ -135,12 +119,9 @@ size_t FlexFrame::modulated_size(const TXParams &params, size_t n)
 
     // Set framegen header props
 #if LIQUID_VERSION_NUMBER >= 1003001
-    flexframe(genprops_s) header_props { header_mcs_.check
-                                       , header_mcs_.fec0
-                                       , header_mcs_.fec1
-                                       , header_mcs_.ms
-                                       };
+    flexframe(genprops_s) header_props;
 
+    mcs2flexframegenprops(header_mcs_, header_props);
     flexframe(gen_set_header_props)(fg, &header_props);
     flexframe(gen_set_header_len)(fg, sizeof(Header));
 #endif /* LIQUID_VERSION_NUMBER >= 1003001 */

@@ -26,12 +26,9 @@ OFDM::Modulator::Modulator(OFDM& phy)
                                   &fgprops_);
 
 #if LIQUID_VERSION_NUMBER >= 1003001
-    ofdmflexframegenprops_s header_props { phy.header_mcs_.check
-                                         , phy.header_mcs_.fec0
-                                         , phy.header_mcs_.fec1
-                                         , phy.header_mcs_.ms
-                                         };
+    ofdmflexframegenprops_s header_props;
 
+    mcs2flexframegenprops(phy.header_mcs_, header_props);
     ofdmflexframegen_set_header_props(fg_, &header_props);
     ofdmflexframegen_set_header_len(fg_, sizeof(Header));
 #endif /* LIQUID_VERSION_NUMBER >= 1003001 */
@@ -49,15 +46,8 @@ void OFDM::Modulator::print(void)
 
 void OFDM::Modulator::update_props(const TXParams &params)
 {
-    if (fgprops_.check != params.mcs.check ||
-        fgprops_.fec0 != params.mcs.fec0 ||
-        fgprops_.fec1 != params.mcs.fec1 ||
-        fgprops_.mod_scheme != params.mcs.ms) {
-        fgprops_.check = params.mcs.check;
-        fgprops_.fec0 = params.mcs.fec0;
-        fgprops_.fec1 = params.mcs.fec1;
-        fgprops_.mod_scheme = params.mcs.ms;
-
+    if (fgprops_ != params.mcs) {
+        mcs2flexframegenprops(params.mcs, fgprops_);
         ofdmflexframegen_setprops(fg_, &fgprops_);
     }
 }
@@ -99,12 +89,9 @@ OFDM::Demodulator::Demodulator(OFDM& phy)
                                    this);
 
 #if LIQUID_VERSION_NUMBER >= 1003001
-    ofdmflexframegenprops_s header_props { phy.header_mcs_.check
-                                         , phy.header_mcs_.fec0
-                                         , phy.header_mcs_.fec1
-                                         , phy.header_mcs_.ms
-                                         };
+    ofdmflexframegenprops_s header_props;
 
+    mcs2flexframegenprops(phy.header_mcs_, header_props);
     ofdmflexframesync_set_header_props(fs_, &header_props);
     ofdmflexframesync_set_header_len(fs_, sizeof(Header));
     ofdmflexframesync_decode_header_soft(fs_, phy.soft_header_);
@@ -139,10 +126,7 @@ size_t OFDM::modulated_size(const TXParams &params, size_t n)
     size_t                  nsymbols;
 
     // Copy TXParams to framegen props
-    fgprops.check = params.mcs.check;
-    fgprops.fec0 = params.mcs.fec0;
-    fgprops.fec1 = params.mcs.fec1;
-    fgprops.mod_scheme = params.mcs.ms;
+    mcs2flexframegenprops(params.mcs, fgprops);
 
     // Create framegen object
     {
@@ -153,12 +137,9 @@ size_t OFDM::modulated_size(const TXParams &params, size_t n)
 
     // Set framegen header props
 #if LIQUID_VERSION_NUMBER >= 1003001
-    ofdmflexframegenprops_s header_props { header_mcs_.check
-                                         , header_mcs_.fec0
-                                         , header_mcs_.fec1
-                                         , header_mcs_.ms
-                                         };
+    ofdmflexframegenprops_s header_props;
 
+    mcs2flexframegenprops(params.mcs, header_props);
     ofdmflexframegen_set_header_props(fg, &header_props);
     ofdmflexframegen_set_header_len(fg, sizeof(Header));
 #endif /* LIQUID_VERSION_NUMBER >= 1003001 */
