@@ -86,6 +86,7 @@ class Config(object):
         # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
         self.bandwidth = 5e6
+        self.max_bandwidth = 10e6
         self.rx_oversample_factor = 1.0
         self.tx_oversample_factor = 1.0
         self.channel_bandwidth = 1e6
@@ -319,6 +320,9 @@ class Config(object):
         parser.add_argument('-b', '--bandwidth', action='store', type=float,
                             dest='bandwidth',
                             help='set bandwidth (Hz)')
+        parser.add_argument('--max-bandwidth', action='store', type=float,
+                            dest='max_bandwidth',
+                            help='set maximum bandwidth (Hz)')
         parser.add_argument('--rx-oversample', action='store', type=float,
                             dest='rx_oversample_factor',
                             help='set RX oversample factor')
@@ -789,7 +793,7 @@ class Radio(object):
         # before creating the modulator and demodulator so we know at what rate
         # we must resample.
         #
-        bandwidth = config.bandwidth
+        bandwidth = min(config.bandwidth, config.max_bandwidth)
         if config.fdma:
             cbw = config.channel_bandwidth
         else:
@@ -854,6 +858,7 @@ class Radio(object):
         config = self.config
 
         bandwidth = config.bandwidth
+        bandwidth = min(config.bandwidth, config.max_bandwidth)
         if config.fdma:
             cbw = config.channel_bandwidth
         else:
