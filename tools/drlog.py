@@ -189,8 +189,6 @@ class Log:
 
             self._nodes[node.node_id] = node
 
-            Fs = node.rx_bandwidth
-
             # Load IQ data for slots
             df = loadDataSet(f['slots'])
             df['start'] = df.timestamp
@@ -199,6 +197,8 @@ class Log:
             self._slots[node.node_id] = df
 
             # Load received packets
+            Fs = node.rx_bandwidth
+
             df = loadDataSet(f['recv'])
             df.crc = LIQUID_CRC.get(df.crc, 'unknown').values
             df.fec0 = LIQUID_FEC.get(df.fec0, 'unknown').values
@@ -210,7 +210,13 @@ class Log:
             self._recv[node.node_id] = df
 
             # Load sent packets
-            self._send[node.node_id] = loadDataSet(f['send'])
+            Fs = node.tx_bandwidth
+
+            df = loadDataSet(f['send'])
+            df['start'] = df.timestamp
+            df['end'] = df.timestamp + df.iq_data.str.len()/Fs
+
+            self._send[node.node_id] = df
 
             # Load events
             df = loadDataSet(f['event'])
