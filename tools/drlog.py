@@ -241,7 +241,7 @@ class Log:
 
     def findSlot(self, node, t):
         """
-        Find a node's time slot.
+        Find a node's receive slot corresponding to a given time.
 
         Args:
             node: The node.
@@ -252,11 +252,7 @@ class Log:
         """
         slots = self._slots[node.node_id]
 
-        idx = (slots.start <= t) & (t < slots.end)
-        if idx.any():
-            return slots[idx].iloc[0]
-        else:
-            return None
+        return slots[(slots.start <= t) & (t < slots.end)]
 
     def findSlots(self, node, pkt):
         """

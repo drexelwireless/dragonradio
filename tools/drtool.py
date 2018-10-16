@@ -81,13 +81,13 @@ def main():
             sys.exit(1)
 
         node = log.nodes[args.node_id]
-        slot = log.findSlot(node, args.dump_slot)
-        if slot is not None:
+        slots = log.findSlot(node, args.dump_slot)
+        if len(slots) == 0:
+            print("Slot not found at time {}.".format(args.dump_slot), file=sys.stderr)
+        else:
             if not args.output:
                 args.output = 'slot.fc64'
-            slot.iq_data.tofile(args.output)
-        else:
-            print("Slot not found at time {}.".format(args.dump_slot), file=sys.stderr)
+            slots.iloc[0].iq_data.tofile(args.output)
 
 if __name__ == '__main__':
     main()
