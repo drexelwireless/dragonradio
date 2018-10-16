@@ -350,6 +350,46 @@ class Log:
         else:
             return None
 
+    def findReceivedPacketsAt(self, node, t1, t2):
+        """
+        Find packets received by a node within given time.
+
+        Args:
+            node: The node.
+            t1: Beginning of time interval.
+            t2: End of time interval.
+
+        Returns:
+            A data frame of packets.
+        """
+        recv = self.received[node.node_id]
+
+        idx = ((t1 >= recv.start) & (t1 < recv.end)) | \
+              ((t2 >= recv.start) & (t2 < recv.end)) | \
+              ((t1 < recv.start) & (t2 > recv.end))
+
+        return recv[idx]
+
+    def findSentPacketsAt(self, node, t1, t2):
+        """
+        Find packets send by a node within given time.
+
+        Args:
+            node: The node.
+            t1: Beginning of time interval.
+            t2: End of time interval.
+
+        Returns:
+            A data frame of packets.
+        """
+        send = self.sent[node.node_id]
+
+        idx = ((t1 >= send.start) & (t1 < send.end)) | \
+              ((t2 >= send.start) & (t2 < send.end)) | \
+              ((t1 < send.start) & (t2 > send.end))
+
+        return send[idx]
+
     @property
     def nodes(self):
         return self._nodes
