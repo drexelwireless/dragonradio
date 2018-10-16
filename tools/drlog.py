@@ -226,6 +226,30 @@ class Log:
 
             return node
 
+    def getReceivedPacketIQData(self, node, pkt):
+        """
+        Get the IQ data corresponding to a received packet
+
+        Args:
+            node: The node.
+            pkt: The packet.
+
+        Returns:
+            The packet's IQ data.
+        """
+        # Sampling frequency
+        Fs = node.rx_bandwidth
+
+        # Find the packet's slot
+        (ts, w) = self.findSlots(node, pkt)
+
+        # Extract the received IQ data corresponding to the packet. We add
+        # 1ms worth of samples to account for slight inaccuracy on the part of
+        # the packet start/end calculation
+        slop = int(Fs*0.001)
+
+        return w[pkt.start_samples-slop:pkt.end_samples+slop]
+
     def findReceivedPackets(self, node, t_start, t_end):
         """
         Find all packets received by a node in a given time period.
