@@ -104,6 +104,7 @@ class Config(object):
         self.min_packet_size = 0
         self.num_modulation_threads = 4
         self.num_demodulation_threads = 16
+        self.max_channels = 10
 
         # General liquid modulation options
         self.check = 'crc32'
@@ -345,6 +346,9 @@ class Config(object):
         parser.add_argument('--min-packet-size', action='store', type=int,
                             dest='min_packet_size',
                             help='set minimum packet size (in bytes)')
+        parser.add_argument('--max-channels', action='store', type=int,
+                            dest='max_channels',
+                            help='set maximum number of channels')
 
         # General liquid modulation options
         parser.add_argument('-r', '--check',
@@ -632,7 +636,9 @@ class Radio(object):
         if config.maximize_channel_guard_bandwidth and n > 1:
             cgbw = (bandwidth-2*egbw-n*cbw)/(n-1)
 
-        self.channels = Channels([egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2. for i in range(0,n)])
+        channels = [egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2. for i in range(0,n)]
+
+        self.channels = Channels(channels[:config.max_channels])
 
         logging.debug("Channels: %s (bandwidth=%g; oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
             self.channels, bandwidth, oversample_factor, cbw, cgbw, egbw)
