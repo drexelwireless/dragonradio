@@ -75,22 +75,20 @@ gpsfake -P 6000 -c 0.1 logfile_20140914_365495765_can.log.chk
 
 The file `logfile_20140914_365495765_can.log.chk` is in the `test/nmea2000` of the `gpsd` source distribution. You can also obtain this file directly from the `git` repository [here](http://git.savannah.nongnu.org/cgit/gpsd.git/plain/test/nmea2000/logfile_20140914_365495765_can.log.chk).
 
-## Python `liquid` module
+## Jupyter notebooks
 
-The `liquid` module allows portions of the `liquid-dsp` library to be used in python. To install it, you must first install `libcorrect` and `liquid-dsp`. The easiest way to to that is to run the `build.sh` script in the root `dragonradio` directory.
+The `notebooks` directory contains [Jupyter](https://jupyter.org/) notebooks. You will need to install the `liquid` module to use most of them.
 
-The module requires full C++17 support. The easiest way to get such a compiler on Ubuntu is to install `gcc-7` as follows:
-
-```
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-sudo apt-get update
-sudo apt-get install gcc-7 g++-7
-```
-
-Finally, build and install the python module.
+To start the jupyter server, execute the following command **in the virtualenv created by `install.sh`**:
 
 ```
-cd modules/liquid
-CC=gcc-7 python3 setup.py build
-python3 setup.py install
+jupyter notebook --no-browser
+```
+
+This will give you a URL to a local jupyter server that you must open with a browser of your choice.
+
+It is possible that `jupyter` does not find the correct python interpreter. If you are sure you installed everythign properly and you still can't import the `liquid` python module, try executing the following command:
+
+```
+python3 -m ipykernel install --user
 ```
