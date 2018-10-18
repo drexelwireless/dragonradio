@@ -7,18 +7,6 @@
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;
 
-// Prototype filter semi-length
-const unsigned int kFilterLength = 7;
-
-// Prototype filter cutoff frequency
-const float kFilterCutoff = 0.4f;
-
-// Stop-band attenuation for resamplers
-const float kStopBandAttenuationDb = 60.0f;
-
-// Nnumber of filters in polyphase filterbank
-const unsigned kNumPolyphaseFilters = 64;
-
 std::mutex liquid_mutex;
 
 union PHYHeader {
@@ -49,10 +37,10 @@ LiquidModulator::LiquidModulator(LiquidPHY &phy)
     : Modulator(phy)
     , liquid_phy_(phy)
     , upsamp_(phy.getTXRateOversample()/phy.getMinTXRateOversample(),
-              kFilterLength,
-              kFilterCutoff,
-              kStopBandAttenuationDb,
-              kNumPolyphaseFilters)
+              phy.upsamp_resamp_params.m,
+              phy.upsamp_resamp_params.fc,
+              phy.upsamp_resamp_params.As,
+              phy.upsamp_resamp_params.npfb)
     , shift_(0.0)
     , nco_(0.0)
 {
@@ -147,10 +135,10 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
   : Demodulator(phy)
   , liquid_phy_(phy)
   , downsamp_(phy.getMinRXRateOversample()/phy.getRXRateOversample(),
-              kFilterLength,
-              kFilterCutoff,
-              kStopBandAttenuationDb,
-              kNumPolyphaseFilters)
+              phy.downsamp_resamp_params.m,
+              phy.downsamp_resamp_params.fc,
+              phy.downsamp_resamp_params.As,
+              phy.downsamp_resamp_params.npfb)
   , internal_oversample_fact_(1)
   , shift_(0.0)
   , nco_(0.0)

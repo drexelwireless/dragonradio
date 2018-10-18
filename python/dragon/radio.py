@@ -106,6 +106,17 @@ class Config(object):
         self.num_demodulation_threads = 16
         self.max_channels = 10
 
+        # PHY resampling parameters
+        self.phy_upsamp_m = 7;
+        self.phy_upsamp_fc = 0.4;
+        self.phy_upsamp_As = 60.0;
+        self.phy_upsamp_npfb = 64;
+
+        self.phy_downsamp_m = 7;
+        self.phy_downsamp_fc = 0.4;
+        self.phy_downsamp_As = 60.0;
+        self.phy_downsamp_npfb = 64;
+
         # General liquid modulation options
         self.check = 'crc32'
         self.fec0 = 'rs8'
@@ -577,6 +588,19 @@ class Radio(object):
                                              config.taper_len)
         else:
             fail('Bad PHY: {}'.format(config.phy))
+
+        #
+        # Set PHY resampling parameters
+        #
+        self.phy.upsamp_resamp_params.m = config.phy_upsamp_m;
+        self.phy.upsamp_resamp_params.fc = config.phy_upsamp_fc;
+        self.phy.upsamp_resamp_params.As = config.phy_upsamp_As;
+        self.phy.upsamp_resamp_params.npfb = config.phy_upsamp_npfb;
+
+        self.phy.downsamp_resamp_params.m = config.phy_downsamp_m;
+        self.phy.downsamp_resamp_params.fc = config.phy_downsamp_fc;
+        self.phy.downsamp_resamp_params.As = config.phy_downsamp_As;
+        self.phy.downsamp_resamp_params.npfb = config.phy_downsamp_npfb;
 
         #
         # Create tun/tap interface and net neighborhood

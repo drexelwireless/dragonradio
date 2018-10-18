@@ -17,6 +17,30 @@
  */
 extern std::mutex liquid_mutex;
 
+struct ResamplerParams {
+    ResamplerParams(void)
+      : m(7)
+      , fc(0.4f)
+      , As(60.0f)
+      , npfb(64)
+    {
+    }
+
+    ~ResamplerParams() = default;
+
+    /** @brief Prototype filter semi-length */
+    unsigned int m;
+
+    /** @brief Prototype filter cutoff frequency */
+    float fc;
+
+    /** @brief Stop-band attenuation for resamplers */
+    float As;
+
+    /** @brief  Number of filters in polyphase filterbank */
+    unsigned npfb;
+};
+
 class LiquidPHY : public PHY {
 public:
     LiquidPHY(NodeId node_id,
@@ -58,6 +82,12 @@ public:
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */
     const size_t min_packet_size = 0;
+
+    /** @brief Resampler parameters for modulator */
+    ResamplerParams upsamp_resamp_params;
+
+    /** @brief Resampler parameters for demodulator */
+    ResamplerParams downsamp_resamp_params;
 
 protected:
     /** @brief Modulation and coding scheme for headers. */

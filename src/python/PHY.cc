@@ -16,12 +16,24 @@ void exportPHYs(py::module &m)
         .def_property("tx_rate_oversample", &PHY::getTXRateOversample, &PHY::setTXRateOversample)
         ;
 
+    // Export class ResamplerParams to Python
+    py::class_<ResamplerParams, std::shared_ptr<ResamplerParams>>(m, "ResamplerParams")
+        .def_readwrite("m", &ResamplerParams::m)
+        .def_readwrite("fc", &ResamplerParams::fc)
+        .def_readwrite("As", &ResamplerParams::As)
+        .def_readwrite("npfb", &ResamplerParams::npfb)
+        ;
+
     // Export class LiquidPHY to Python
     py::class_<LiquidPHY, PHY, std::shared_ptr<LiquidPHY>>(m, "LiquidPHY")
         .def_property_readonly("header_mcs", &LiquidPHY::getHeaderMCS)
         .def_property_readonly("soft_header", &LiquidPHY::getSoftHeader)
         .def_property_readonly("soft_payload", &LiquidPHY::getSoftPayload)
         .def_readonly("min_packet_size", &LiquidPHY::min_packet_size)
+        .def_readwrite("upsamp_resamp_params", &LiquidPHY::upsamp_resamp_params,
+            py::return_value_policy::reference_internal)
+        .def_readwrite("downsamp_resamp_params", &LiquidPHY::downsamp_resamp_params,
+            py::return_value_policy::reference_internal)
         ;
 
     // Export class FlexFrame to Python
