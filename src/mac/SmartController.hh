@@ -17,6 +17,7 @@
 #include "net/Queue.hh"
 #include "mac/Controller.hh"
 #include "mac/MAC.hh"
+#include "phy/Gain.hh"
 #include "phy/PHY.hh"
 
 class SmartController;
@@ -405,6 +406,12 @@ public:
 
     /** @brief Broadcast TX params */
     TXParams broadcast_tx_params;
+
+    /** @brief Broadcast gain */
+    Gain broadcast_gain;
+
+    /** @brief ACK gain */
+    Gain ack_gain;
 
 protected:
     /** @brief Our PHY. */

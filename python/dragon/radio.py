@@ -166,6 +166,8 @@ class Config(object):
         self.arq_explicit_nak_win = 10
         self.arq_explicit_nak_win_duration = 0.1
         self.arq_selective_ack = True
+        self.arq_broadcast_gain_db = 0.0
+        self.arq_ack_gain_db = 0.0
 
         # AMC options
         self.amc = False
@@ -716,6 +718,9 @@ class Radio(object):
 
             if config.arq_enforce_ordering:
                 self.controller.enforce_ordering = True
+
+            self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
+            self.controller.ack_gain.dB = config.arq_ack_gain_db
 
             #
             # Configure broadcast MCS

@@ -73,7 +73,7 @@ get_packet:
 
     // Handle broadcast packets
     if (pkt->isFlagSet(kBroadcast)) {
-        applyTXParams(*pkt, &broadcast_tx_params, 1.0f);
+        applyTXParams(*pkt, &broadcast_tx_params, broadcast_gain.getLinearGain());
 
         return true;
     }
@@ -149,7 +149,7 @@ get_packet:
         applyTXParams(*pkt, dest.tx_params, dest.g);
     } else
         // Apply broadcast TX params
-        applyTXParams(*pkt, &broadcast_tx_params, 1.0f);
+        applyTXParams(*pkt, &broadcast_tx_params, ack_gain.getLinearGain());
 
     return true;
 }

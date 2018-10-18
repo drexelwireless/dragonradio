@@ -1,4 +1,5 @@
 #include "phy/FlexFrame.hh"
+#include "phy/Gain.hh"
 #include "phy/MultiOFDM.hh"
 #include "phy/NewFlexFrame.hh"
 #include "phy/OFDM.hh"
@@ -6,6 +7,12 @@
 
 void exportPHYs(py::module &m)
 {
+    // Export class Gain to Python
+    py::class_<Gain, std::shared_ptr<Gain>>(m, "Gain")
+        .def_property("lin", &Gain::getLinearGain, &Gain::setLinearGain)
+        .def_property("dB", &Gain::getDbGain, &Gain::setDbGain)
+        ;
+
     // Export class PHY to Python
     py::class_<PHY, std::shared_ptr<PHY>>(m, "PHY")
         .def_property_readonly("min_rx_rate_oversample", &PHY::getMinRXRateOversample)
