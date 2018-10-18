@@ -103,6 +103,18 @@ public:
         return slots_;
     }
 
+    /** @brief Get superslots flag */
+    bool getSuperslots(void)
+    {
+        return superslots_;
+    }
+
+    /** @brief Set superslots flag */
+    void setSuperslots(bool superslots)
+    {
+        superslots_ = superslots;
+    }
+
     void sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt) override;
 
 private:
@@ -111,6 +123,9 @@ private:
 
     /** @brief The slot schedule */
     Slots slots_;
+
+    /** @brief Use superslots */
+    bool superslots_;
 
     /** @brief Thread running rxWorker */
     std::thread rx_thread_;
@@ -124,9 +139,12 @@ private:
     /** @brief Find next TX slot
      * @param t Time at which to start looking for a TX slot
      * @param t_next The beginning of the next TX slot
+     * @param owns_next_slot Will contain true if the next slow is also owned
      * @returns True if a slot was found, false otherwise
      */
-    bool findNextSlot(Clock::time_point t, Clock::time_point &t_next);
+    bool findNextSlot(Clock::time_point t,
+                      Clock::time_point &t_next,
+                      bool &owns_next_slot);
 
     /** @brief Reconfigure the MAC when TDMA parameters change */
     void reconfigure(void) override;

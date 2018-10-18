@@ -21,7 +21,9 @@ public:
 
     void modulate(size_t n) override;
 
-    void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples) override;
+    size_t pop(std::list<std::unique_ptr<ModPacket>>& pkts,
+               size_t maxSamples,
+               bool overfill) override;
 
     /** @brief Stop modulating. */
     void stop(void);

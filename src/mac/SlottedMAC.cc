@@ -73,7 +73,8 @@ void SlottedMAC::reconfigure(void)
 {
     rx_slot_samps_ = rx_rate_*slot_size_;
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
-    premod_samps_ = premod_slots_*tx_slot_samps_;
+    tx_full_slot_samps_ = tx_rate_*slot_size_;
+    premod_samps_ = premod_slots_*tx_full_slot_samps_;
 
     modulator_->setMaxPacketSize(tx_slot_samps_);
 
@@ -117,7 +118,7 @@ void SlottedMAC::rxWorker(void)
     }
 }
 
-void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
+size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfill)
 {
     std::list<std::shared_ptr<IQBuf>>     txBuf;  // IQ buffers to transmit
     std::list<std::unique_ptr<ModPacket>> modBuf; // Modulated packets
@@ -142,7 +143,9 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
     }
 
     // Fill the rest of the slot with modulated packets
-    modulator_->pop(modBuf, maxSamples);
+    size_t nsamples;
+
+    nsamples = modulator_->pop(modBuf, maxSamples, overfill);
 
     if (!modBuf.empty()) {
         if (logger && logger->getCollectSource(Logger::kSentPackets)) {
@@ -176,4 +179,6 @@ void SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples)
             usrp_->burstTX(Clock::to_mono_time(when), txBuf);
         }
     }
+
+    return (nsamples > maxSamples) ? (nsamples - maxSamples) : 0;
 }

@@ -51,8 +51,12 @@ void ParallelPacketModulator::modulate(size_t n)
     }
 }
 
-void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples)
+size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
+                                    size_t maxSamples,
+                                    bool overfill)
 {
+    size_t nsamples = 0;
+
     {
         std::unique_lock<std::mutex> lock(pkt_mutex_);
 
@@ -64,6 +68,7 @@ void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, s
 
             size_t n = mpkt.samples->size();
 
+            // Drop packets that won't fit in a slot
             if (n > maxPacketSize_ && maxPacketSize_ != 0) {
                 fprintf(stderr, "Dropping modulated packet that is too long to send: n=%u, max=%u\n",
                         (unsigned) n,
@@ -73,19 +78,33 @@ void ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts, s
                 continue;
             }
 
-            if (n > maxSamples) {
+            // If we don't have enough room to pop this packet and we're not
+            // overfilling, break out of the loop.
+            if (n > maxSamples && !overfill) {
                 mpkt.complete.clear(std::memory_order_release);
                 break;
             }
 
+            // Pop the packet
             pkts.emplace_back(std::move(pkt_q_.front()));
             pkt_q_.pop();
             nsamples_ -= n;
+            nsamples += n;
+
+            // If we just overfilled, break out of the loop. We can't subtract n
+            // from maxSamples here because n > maxSamples and maxSamples is
+            // unsigned!
+            if (n > maxSamples)
+                break;
+
+            // Update maximum number of samples that remain to pop
             maxSamples -= n;
         }
     }
 
     producer_cond_.notify_all();
+
+    return nsamples;
 }
 
 void ParallelPacketModulator::modWorker(void)
