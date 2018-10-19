@@ -380,7 +380,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 
     dprintf("ARQ: send to %u: retransmit seq=%u",
         (unsigned) sendw.node_id,
-        (unsigned) entry->seq);
+        (unsigned) entry.pkt->seq);
 
     // Record the packet error
     if (entry.pkt->seq >= sendw.mcsidx_init_seq) {
@@ -543,8 +543,8 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     }
 
     dprintf("ARQ: send to %u: retransmit seq=%u",
-        (unsigned) sendw.node_id,
-        (unsigned) entry->seq);
+        (unsigned) entry.pkt->nexthop,
+        (unsigned) entry.pkt->seq);
 
     // We need to make an explicit new reference to the shared_ptr because push
     // takes ownership of its argument.
@@ -573,7 +573,7 @@ void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
     if (!timer_queue_.running(entry)) {
         dprintf("ARQ: send to %u seq %u: starting retransmission timer",
             (unsigned) entry.sendw.node_id,
-            (unsigned) entry->seq);
+            (unsigned) entry.pkt->seq);
         timer_queue_.run_in(entry, (*net_)[entry.sendw.node_id].retransmission_delay);
     }
 }
