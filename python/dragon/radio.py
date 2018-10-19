@@ -715,8 +715,7 @@ class Radio(object):
                                                                  self.rx_channels,
                                                                  config.num_demodulation_threads)
 
-        if config.demodulator_enforce_ordering:
-            self.demodulator.enforce_ordering = True
+        self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
 
         #
         # Configure the controller
@@ -739,8 +738,7 @@ class Radio(object):
 
             self.controller.slot_size = int(slot_bw*(self.config.slot_size - self.config.guard_size))
 
-            if config.arq_enforce_ordering:
-                self.controller.enforce_ordering = True
+            self.controller.enforce_ordering = config.arq_enforce_ordering
 
             self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
             self.controller.ack_gain.dB = config.arq_ack_gain_db
