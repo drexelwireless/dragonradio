@@ -441,6 +441,10 @@ void SmartController::nak(NodeId node_id, Seq seq)
     RecvWindow                      &recvw = *recvwptr;
     std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
+    // If we have a zero-sized NAK window, don't send any NAK's.
+    if (recvw.explicit_nak_win.size() == 0)
+        return;
+
     // Limit number of explicit NAK's we send
     auto now = MonoClock::now();
 
