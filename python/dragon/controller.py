@@ -224,17 +224,22 @@ class Controller(TCPProtoServer):
         # Sort nodes and pick our slot/channel based on our position in the node
         # list
         nodes.sort()
-        idx = nodes.index(radio.node_id)
 
         if config.fdma :
             radio.configureTDMA(1)
-            if idx < len(radio.channels):
+            sched = radio.defaultFDMASchedule(len(radio.channels), 3, nodes)
+
+            if radio.node_id in sched:
+                idx = sched.index(radio.node_id)
+
                 radio.mac.slots[0] = True
 
                 radio.mac.tx_channel = idx
             else:
                 logging.error('No TX channel for radio %d (channels=%s)', idx, config.channels)
         else:
+            idx = nodes.index(radio.node_id)
+
             radio.configureTDMA(len(radio.net))
             radio.mac.slots[idx] = True
 

@@ -809,6 +809,36 @@ class Radio(object):
         if self.config.arq:
             self.controller.mac = self.mac
 
+    def defaultFDMASchedule(self, n, k, nodes):
+        """
+        Determine the default FDMA schedule.
+
+        Args:
+            n: The number of channels.
+            k: Desired channel separation.
+            nodes: The nodes to schedule.
+
+        Returns:
+            A channel assignment.
+        """
+        nodes = nodes[:n]
+
+        sched = [None] * n
+
+        i = 0
+        while len(nodes) != 0:
+            if sched[i] == None:
+                sched[i] = nodes[0]
+                nodes = nodes[1:]
+                i += k
+            else:
+                i += 1
+
+            if i >= len(sched):
+                i = 0
+
+        return sched
+
     def getRadioLogPath(self):
         """
         Determine where the HDF5 log file created by the low-level radio will
