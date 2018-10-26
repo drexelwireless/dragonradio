@@ -46,6 +46,7 @@ LiquidModulator::LiquidModulator(LiquidPHY &phy)
 
     upsamp_ = msresamp_crcf_create(rate, kStopBandAttenuationDb);
     upsamp_rate_ = msresamp_crcf_get_rate(upsamp_);
+    upsamp_delay_ = msresamp_crcf_get_delay(upsamp_);
 }
 
 LiquidModulator::~LiquidModulator()
@@ -148,6 +149,7 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
 
     downsamp_ = msresamp_crcf_create(rate, kStopBandAttenuationDb);
     downsamp_rate_ = msresamp_crcf_get_rate(downsamp_);
+    downsamp_delay_ = msresamp_crcf_get_delay(downsamp_);
 }
 
 LiquidDemodulator::~LiquidDemodulator()

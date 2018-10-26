@@ -96,6 +96,9 @@ protected:
     /** @brief Upsampler rate. */
     double upsamp_rate_;
 
+    /** @brief Upsampler delay. */
+    double upsamp_delay_;
+
     /** @brief Frequency for mixing up */
     double shift_;
 
@@ -153,6 +156,9 @@ protected:
 
     /** @brief Downsampler rate. */
     double downsamp_rate_;
+
+    /** @brief Downsampler delay. */
+    double downsamp_delay_;
 
     /** @brief Callback for received packets. */
     std::function<void(std::unique_ptr<RadioPacket>)> callback_;
