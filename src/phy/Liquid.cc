@@ -42,8 +42,11 @@ LiquidModulator::LiquidModulator(LiquidPHY &phy)
     , shift_(0.0)
     , nco_(0.0)
 {
-    upsamp_rate_ = phy.getTXRateOversample()/phy.getMinTXRateOversample();
-    upsamp_ = msresamp_crcf_create(upsamp_rate_, kStopBandAttenuationDb);
+    double rate = phy.getTXRateOversample()/phy.getMinTXRateOversample();
+
+    upsamp_ = msresamp_crcf_create(rate, kStopBandAttenuationDb);
+    upsamp_rate_ = msresamp_crcf_get_rate(upsamp_);
+    upsamp_delay_ = msresamp_crcf_get_delay(upsamp_);
 }
 
 LiquidModulator::~LiquidModulator()
@@ -102,15 +105,19 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     if (shift != 0.0 || upsamp_rate_ != 1.0) {
         // Up-sample
-        auto         iqbuf_up = std::make_shared<IQBuf>(upsamp_rate_*iqbuf->size() + 64);
-        unsigned int nw;
+        iqbuf->append(ceil(upsamp_delay_));
+
+        auto     iqbuf_up = std::make_shared<IQBuf>(1 + 2*upsamp_rate_*iqbuf->size());
+        unsigned nw;
 
         msresamp_crcf_execute(upsamp_,
                               iqbuf->data(),
                               iqbuf->size(),
                               iqbuf_up->data(),
                               &nw);
+        assert(nw <= iqbuf_up->size());
         iqbuf_up->resize(nw);
+        iqbuf_up->delay = floor(upsamp_rate_*upsamp_delay_);
         iqbuf = iqbuf_up;
 
         // Mix up
@@ -141,8 +148,11 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
   , shift_(0.0)
   , nco_(0.0)
 {
-    downsamp_rate_ = phy.getRXRateOversample()/phy.getMinRXRateOversample();
-    downsamp_ = msresamp_crcf_create(1.0/downsamp_rate_, kStopBandAttenuationDb);
+    double rate = phy.getMinRXRateOversample()/phy.getRXRateOversample();
+
+    downsamp_ = msresamp_crcf_create(rate, kStopBandAttenuationDb);
+    downsamp_rate_ = msresamp_crcf_get_rate(downsamp_);
+    downsamp_delay_ = msresamp_crcf_get_delay(downsamp_);
 }
 
 LiquidDemodulator::~LiquidDemodulator()
@@ -176,7 +186,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
 {
     Header* h = reinterpret_cast<Header*>(header_);
     size_t  off = demod_off_;   // Save demodulation offset for use when we log.
-    double  resamp_fact = internal_oversample_fact_*downsamp_rate_;
+    double  resamp_fact = internal_oversample_fact_/downsamp_rate_;
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
@@ -272,20 +282,28 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
     if (downsamp_rate_ == 1.0 && shift == 0.0) {
         demodulateSamples(data, count);
     } else {
-        std::unique_ptr<std::complex<float>[]> mixbuf(new std::complex<float>[count]);
-
-        memcpy(mixbuf.get(), data, sizeof(std::complex<float>)*count);
+        // Mix down
+        IQBuf iqbuf_shift(count);
 
         if (shift != 0.0) {
             setFreqShift(shift);
-            nco_.mix_down(mixbuf.get(), mixbuf.get(), count);
-        }
+            nco_.mix_down(data, iqbuf_shift.data(), count);
+        } else
+            memcpy(iqbuf_shift.data(), data, sizeof(std::complex<float>)*count);
 
-        unsigned int nw;
+        // Downsample
+        IQBuf    iqbuf_down(1 + 2*downsamp_rate_*iqbuf_shift.size());
+        unsigned nw;
 
-        msresamp_crcf_execute(downsamp_, mixbuf.get(), count, mixbuf.get(), &nw);
+        msresamp_crcf_execute(downsamp_,
+                              iqbuf_shift.data(),
+                              count,
+                              iqbuf_down.data(),
+                              &nw);
+        assert(nw <= iqbuf_down.size());
 
-        demodulateSamples(mixbuf.get(), nw);
+        // Demodulate
+        demodulateSamples(iqbuf_down.data(), nw);
     }
 }
 

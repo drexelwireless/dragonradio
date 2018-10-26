@@ -165,7 +165,7 @@ void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>
 
         iqbuf.timestamp = Clock::to_wall_time(when);
 
-        for (size_t off = 0; off < iqbuf.size(); off += n) {
+        for (size_t off = iqbuf.delay; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
             n = std::min(tx_max_samps_, iqbuf.size() - off);
 
