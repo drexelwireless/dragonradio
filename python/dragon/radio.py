@@ -842,6 +842,38 @@ class Radio(object):
         if self.config.arq:
             self.controller.mac = self.mac
 
+    def configureFDMATDMASchedule(self, nodes):
+        """
+        Set the TDMA/FDMA schedule based on configuration parameters and the
+        given set of nodes.
+        """
+        config = self.config
+
+        if config.fdma :
+            self.configureTDMA(1)
+
+            if config.tx_channel != None:
+                self.mac.slots[0] = True
+                self.mac.tx_channel = config.tx_channel
+            else:
+                sched = self.defaultFDMASchedule(len(self.channels), 3, nodes)
+
+                if self.node_id in sched:
+                    idx = sched.index(self.node_id)
+
+                    self.mac.slots[0] = True
+
+                    self.mac.tx_channel = idx
+                else:
+                    logging.error('No TX channel for radio %d (channels=%s)', idx, config.channels)
+        else:
+            idx = nodes.index(self.node_id)
+
+            self.configureTDMA(len(self.net))
+            self.mac.slots[idx] = True
+
+            self.mac.tx_channel = 0
+
     def defaultFDMASchedule(self, n, k, nodes):
         """
         Determine the default FDMA schedule.
