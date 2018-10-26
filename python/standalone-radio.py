@@ -73,17 +73,22 @@ def main():
 
         if config.fdma:
             radio.configureTDMA(1)
-            nodes = list(radio.net)
-            sched = radio.defaultFDMASchedule(len(radio.channels), 3, nodes)
 
-            if radio.node_id in sched:
-                idx = sched.index(radio.node_id)
-
+            if config.tx_channel != None:
                 radio.mac.slots[0] = True
-
-                radio.mac.tx_channel = idx
+                radio.mac.tx_channel = config.tx_channel
             else:
-                logging.error('No TX channel for radio %d (channels=%s)', idx, config.channels)
+                nodes = list(radio.net)
+                sched = radio.defaultFDMASchedule(len(radio.channels), 3, nodes)
+
+                if radio.node_id in sched:
+                    idx = sched.index(radio.node_id)
+
+                    radio.mac.slots[0] = True
+
+                    radio.mac.tx_channel = idx
+                else:
+                    logging.error('No TX channel for radio %d (channels=%s)', idx, config.channels)
         else:
             idx = radio.node_id - 1
 

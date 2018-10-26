@@ -156,6 +156,7 @@ class Config(object):
         self.slot_modulate_time = 30e-3
         self.slot_send_time = 10e-3
         self.fdma = False
+        self.tx_channel = None
 
         # ARQ options
         self.arq = False
@@ -421,6 +422,9 @@ class Config(object):
         parser.add_argument('--fdma', action='store_const', const=True,
                             dest='fdma',
                             help='use FDMA instead of TDMA')
+        parser.add_argument('--tx-channel', action='store', type=int,
+                            dest='tx_channel',
+                            help='set explicit channel to use with FDMA')
 
         # ARQ options
         parser.add_argument('--arq', action='store_const', const=True,
