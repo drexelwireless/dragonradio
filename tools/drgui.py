@@ -81,10 +81,10 @@ class ConstellationPlot:
         self.fig = fig
         self.ax = ax
 
-    def plot(self, data):
+    def plot(self, data, title='Constellation'):
         self.ax.clear()
         self.ax.scatter(np.real(data), np.imag(data))
-        self.ax.set_title('Constellation')
+        self.ax.set_title(title)
         self.ax.set_xlabel('I')
         self.ax.set_ylabel('Q')
         #self.constellation.axis('tight')
@@ -94,11 +94,11 @@ class WaveformPlot:
         self.fig = fig
         self.ax = ax
 
-    def plot(self, sig):
+    def plot(self, sig, title='Waveform'):
         self.ax.clear()
         self.ax.plot(np.real(sig))
         self.ax.plot(np.imag(sig))
-        self.ax.set_title('Waveform')
+        self.ax.set_title(title)
         self.ax.set_xlabel('Time (samples)')
         #self.ax.axis('tight')
 
@@ -111,12 +111,12 @@ class PSDPlot:
         self.scale = scale # kHz
         self.nfft = nfft
 
-    def plot(self, Fs, sig):
+    def plot(self, Fs, sig, title='PSD'):
         xticks = mp.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x/self.scale))
 
         self.ax.clear()
         self.ax.psd(sig, NFFT=self.nfft, Fs=Fs)
-        self.ax.set_title('PSD')
+        self.ax.set_title(title)
         self.ax.set_xlabel('Frequency (kHz)')
         self.ax.xaxis.set_major_formatter(xticks)
         #self.ax.axis('tight')
@@ -129,14 +129,14 @@ class PAPRPlot:
     # See:
     #   https://www.dsprelated.com/showcode/238.php
     #   https://www.dsprelated.com/showarticle/962.php
-    def plot(self, sig):
+    def plot(self, sig, title='CCDF of PAPR'):
         P = sig.real**2 + sig.imag**2
         Pratio = P/np.mean(P)
         PdB = 10*np.log10(Pratio)
 
         self.ax.clear()
         plot_ccdf(self.ax, PdB)
-        self.ax.set_title('CCDF of PAPR')
+        self.ax.set_title(title)
         self.ax.set_xlabel('$PAPR_0$ (dB)')
         self.ax.set_xlim(left=-5)
         self.ax.set_ylabel('$Pr(PAPR \geq PAPR_0)$')
