@@ -105,6 +105,8 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     if (shift != 0.0 || upsamp_rate_ != 1.0) {
         // Up-sample
+        iqbuf->append(ceil(upsamp_delay_));
+
         auto     iqbuf_up = std::make_shared<IQBuf>(1 + 2*upsamp_rate_*iqbuf->size());
         unsigned nw;
 
@@ -115,6 +117,7 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
                               &nw);
         assert(nw <= iqbuf_up->size());
         iqbuf_up->resize(nw);
+        iqbuf_up->delay = floor(upsamp_rate_*upsamp_delay_);
         iqbuf = iqbuf_up;
 
         // Mix up
