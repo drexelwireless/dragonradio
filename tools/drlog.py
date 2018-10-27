@@ -189,8 +189,6 @@ class Log:
 
             self._nodes[node.node_id] = node
 
-            Fs = node.rx_bandwidth
-
             # Load IQ data for slots
             df = loadDataSet(f['slots'])
             df['start'] = df.timestamp
@@ -199,6 +197,8 @@ class Log:
             self._slots[node.node_id] = df
 
             # Load received packets
+            Fs = node.rx_bandwidth
+
             df = loadDataSet(f['recv'])
             df.crc = LIQUID_CRC.get(df.crc, 'unknown').values
             df.fec0 = LIQUID_FEC.get(df.fec0, 'unknown').values
@@ -210,7 +210,13 @@ class Log:
             self._recv[node.node_id] = df
 
             # Load sent packets
-            self._send[node.node_id] = loadDataSet(f['send'])
+            Fs = node.tx_bandwidth
+
+            df = loadDataSet(f['send'])
+            df['start'] = df.timestamp
+            df['end'] = df.timestamp + df.iq_data.str.len()/Fs
+
+            self._send[node.node_id] = df
 
             # Load events
             df = loadDataSet(f['event'])
@@ -219,6 +225,30 @@ class Log:
             self._events[node.node_id] = df
 
             return node
+
+    def getReceivedPacketIQData(self, node, pkt):
+        """
+        Get the IQ data corresponding to a received packet
+
+        Args:
+            node: The node.
+            pkt: The packet.
+
+        Returns:
+            The packet's IQ data.
+        """
+        # Sampling frequency
+        Fs = node.rx_bandwidth
+
+        # Find the packet's slot
+        (ts, w) = self.findSlots(node, pkt)
+
+        # Extract the received IQ data corresponding to the packet. We add
+        # 1ms worth of samples to account for slight inaccuracy on the part of
+        # the packet start/end calculation
+        slop = int(Fs*0.001)
+
+        return w[pkt.start_samples-slop:pkt.end_samples+slop]
 
     def findReceivedPackets(self, node, t_start, t_end):
         """
@@ -237,18 +267,34 @@ class Log:
         Fs = node.rx_bandwidth
         recv = self.received[node.node_id]
 
-        return recv[(recv.start >= t_start) & (recv.start < t_end)]
+        return recv[((recv.start >= t_start) & (recv.start < t_end)) | ((recv.end >= t_start) & (recv.end < t_end))]
 
     def findSlot(self, node, t):
+        """
+        Find a node's receive slot corresponding to a given time.
+
+        Args:
+            node: The node.
+            t: A time in the slot.
+
+        Returns:
+            Either a slot or None.
+        """
         slots = self._slots[node.node_id]
 
-        idx = (slots.start <= t) & (t < slots.end)
-        if idx.any():
-            return slots[idx].iloc[0]
-        else:
-            return None
+        return slots[(slots.start <= t) & (t < slots.end)]
 
     def findSlots(self, node, pkt):
+        """
+        Find the time slots during which a packet ocurred.
+
+        Args:
+            node: The node.
+            pkt: A packet.
+
+        Returns:
+            A pair consisting of a list of slot timestamps and slot IQ data.
+        """
         slots = self._slots[node.node_id]
 
         idx = slots['timestamp'] == pkt.timestamp
@@ -303,6 +349,46 @@ class Log:
             return send.index[idx].tolist()[0]
         else:
             return None
+
+    def findReceivedPacketsAt(self, node, t1, t2):
+        """
+        Find packets received by a node within given time.
+
+        Args:
+            node: The node.
+            t1: Beginning of time interval.
+            t2: End of time interval.
+
+        Returns:
+            A data frame of packets.
+        """
+        recv = self.received[node.node_id]
+
+        idx = ((t1 >= recv.start) & (t1 < recv.end)) | \
+              ((t2 >= recv.start) & (t2 < recv.end)) | \
+              ((t1 < recv.start) & (t2 > recv.end))
+
+        return recv[idx]
+
+    def findSentPacketsAt(self, node, t1, t2):
+        """
+        Find packets send by a node within given time.
+
+        Args:
+            node: The node.
+            t1: Beginning of time interval.
+            t2: End of time interval.
+
+        Returns:
+            A data frame of packets.
+        """
+        send = self.sent[node.node_id]
+
+        idx = ((t1 >= send.start) & (t1 < send.end)) | \
+              ((t2 >= send.start) & (t2 < send.end)) | \
+              ((t1 < send.start) & (t2 > send.end))
+
+        return send[idx]
 
     @property
     def nodes(self):
