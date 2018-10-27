@@ -44,7 +44,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , slot_size_(0)
-  , mcsidx_init_(std::min(mcsidx_init, (unsigned) net_->tx_params.size()))
+  , mcsidx_init_(std::min(mcsidx_init, (unsigned) net_->tx_params.size() - 1))
   , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
   , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
   , mcsidx_alpha_(mcsidx_alpha)
