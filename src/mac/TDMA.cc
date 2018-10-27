@@ -85,6 +85,12 @@ void TDMA::txWorker(void)
                 noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_full_slot_samps_ - noverfill, true);
             else
                 noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_slot_samps_ - noverfill, false);
+
+            // XXX For some reason this is necessary to please USRP. Otherwise
+            // we get late TX errors.
+            if (noverfill != 0)
+                noverfill += 1;
+
             t_prev_slot = t_next_slot;
         }
 
