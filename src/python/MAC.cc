@@ -7,6 +7,8 @@ void exportMACs(py::module &m)
 {
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
+        .def_property("rx_channels", &MAC::getRXChannels, &MAC::setRXChannels)
+        .def_property("tx_channels", &MAC::getTXChannels, &MAC::setTXChannels)
         .def_property("tx_channel", &MAC::getTXChannel, &MAC::setTXChannel)
         ;
 
@@ -45,7 +47,8 @@ void exportMACs(py::module &m)
     py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<USRP>,
                       std::shared_ptr<PHY>,
-                      std::shared_ptr<Channels>,
+                      const Channels&,
+                      const Channels&,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
                       double,
@@ -60,7 +63,8 @@ void exportMACs(py::module &m)
     py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
         .def(py::init<std::shared_ptr<USRP>,
                       std::shared_ptr<PHY>,
-                      std::shared_ptr<Channels>,
+                      const Channels&,
+                      const Channels&,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
                       double,

@@ -105,6 +105,7 @@ class Config(object):
         self.num_modulation_threads = 4
         self.num_demodulation_threads = 16
         self.max_channels = 10
+        self.tx_upsample = True
 
         # PHY resampling parameters
         self.phy_upsamp_m = 7;
@@ -363,6 +364,12 @@ class Config(object):
         parser.add_argument('--max-channels', action='store', type=int,
                             dest='max_channels',
                             help='set maximum number of channels')
+        parser.add_argument('--tx-upsample', action='store_const', const=True,
+                            dest='tx_upsample',
+                            help='use software upsampler on TX')
+        parser.add_argument('--no-tx-upsample', action='store_const', const=False,
+                            dest='tx_upsample',
+                            help='use USRP\'s hardware upsampler on TX')
 
         # General liquid modulation options
         parser.add_argument('-r', '--check',
@@ -677,7 +684,10 @@ class Radio(object):
         tx_rate_oversample = oversample_factor*self.phy.min_tx_rate_oversample
 
         self.usrp.rx_rate = bandwidth*rx_rate_oversample
-        self.usrp.tx_rate = bandwidth*tx_rate_oversample
+        if config.tx_upsample:
+            self.usrp.tx_rate = bandwidth*tx_rate_oversample
+        else:
+            self.usrp.tx_rate = cbw*tx_rate_oversample
 
         rx_rate = self.usrp.rx_rate
         tx_rate = self.usrp.tx_rate
@@ -693,12 +703,12 @@ class Radio(object):
         #
         self.modulator = dragonradio.ParallelPacketModulator(self.net,
                                                              self.phy,
-                                                             self.channels,
+                                                             self.tx_channels,
                                                              config.num_modulation_threads)
 
         self.demodulator = dragonradio.ParallelPacketDemodulator(self.net,
                                                                  self.phy,
-                                                                 self.channels,
+                                                                 self.rx_channels,
                                                                  config.num_demodulation_threads)
 
         if config.demodulator_enforce_ordering:
@@ -718,7 +728,12 @@ class Radio(object):
                                                           config.amc_mcsidx_alpha,
                                                           config.amc_mcsidx_prob_floor)
 
-            self.controller.slot_size = int(bandwidth*(self.config.slot_size - self.config.guard_size))
+            if config.tx_upsample:
+                slot_bw = bandwidth
+            else:
+                slot_bw = cbw
+
+            self.controller.slot_size = int(slot_bw*(self.config.slot_size - self.config.guard_size))
 
             if config.arq_enforce_ordering:
                 self.controller.enforce_ordering = True
@@ -782,6 +797,17 @@ class Radio(object):
         if config.arq:
             self.controller.net_queue = self.netq
 
+    @property
+    def rx_channels(self):
+        return self.channels
+
+    @property
+    def tx_channels(self):
+        if self.config.tx_upsample:
+            return self.channels
+        else:
+            return Channels([0.0])
+
     def configTXParamsSoftGain(self, tx_params):
         config = self.config
 
@@ -808,7 +834,8 @@ class Radio(object):
 
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
-                                            self.channels,
+                                            self.rx_channels,
+                                            self.tx_channels,
                                             self.modulator,
                                             self.demodulator,
                                             self.config.slot_size,
@@ -823,7 +850,8 @@ class Radio(object):
 
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
-                                    self.channels,
+                                    self.rx_channels,
+                                    self.tx_channels,
                                     self.modulator,
                                     self.demodulator,
                                     self.config.slot_size,
@@ -842,6 +870,17 @@ class Radio(object):
         if self.config.arq:
             self.controller.mac = self.mac
 
+    def setTXChannel(self, channel):
+        config = self.config
+
+        if config.tx_upsample:
+            self.mac.tx_channel = channel
+        else:
+            fc = self.channels[channel]
+            logging.info("Setting TX frequency offset to %g", fc)
+
+            self.usrp.tx_frequency = config.frequency + fc
+
     def configureFDMATDMASchedule(self, nodes):
         """
         Set the TDMA/FDMA schedule based on configuration parameters and the
@@ -854,7 +893,7 @@ class Radio(object):
 
             if config.tx_channel != None:
                 self.mac.slots[0] = True
-                self.mac.tx_channel = config.tx_channel
+                self.setTXChannel(config.tx_channel)
             else:
                 sched = self.defaultFDMASchedule(len(self.channels), 3, nodes)
 
@@ -863,7 +902,7 @@ class Radio(object):
 
                     self.mac.slots[0] = True
 
-                    self.mac.tx_channel = idx
+                    self.setTXChannel(idx)
                 else:
                     logging.error('No TX channel for radio %d (channels=%s)', idx, config.channels)
         else:
@@ -872,7 +911,7 @@ class Radio(object):
             self.configureTDMA(len(self.net))
             self.mac.slots[idx] = True
 
-            self.mac.tx_channel = 0
+            self.setTXChannel(0)
 
     def defaultFDMASchedule(self, n, k, nodes):
         """

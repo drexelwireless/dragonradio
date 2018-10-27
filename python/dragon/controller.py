@@ -257,7 +257,7 @@ class Controller(TCPProtoServer):
             await asyncio.sleep(delta)
 
             if not self.switched_macs:
-                radio.mac.tx_channel = random.randint(0, len(radio.channels)-1)
+                radio.setTXChannel(random.randint(0, len(radio.channels)-1))
 
             radio.controller.broadcastHello()
 

@@ -17,7 +17,8 @@ class MAC
 public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<PHY> phy,
-        std::shared_ptr<Channels> channels,
+        const Channels &rx_channels,
+        const Channels &tx_channels,
         std::shared_ptr<PacketModulator> modulator,
         std::shared_ptr<PacketDemodulator> demodulator);
     virtual ~MAC() = default;
@@ -26,6 +27,40 @@ public:
     MAC(const MAC&) = delete;
     MAC& operator =(const MAC&) = delete;
     MAC& operator =(MAC&&) = delete;
+
+    /** @brief Get the RX channels
+     * @return The RX channels
+     */
+    virtual const Channels &getRXChannels(void) const
+    {
+        return rx_channels_;
+    }
+
+    /** @brief Set the RX channels
+     * @param channels The RX channels
+     */
+    virtual void setRXChannels(const Channels &channels)
+    {
+        rx_channels_ = channels;
+    }
+
+    /** @brief Get the TX channels
+     * @return The TX channels
+     */
+    virtual const Channels &getTXChannels(void) const
+    {
+        return tx_channels_;
+    }
+
+    /** @brief Set the TX channels
+     * @param channels The TX channels
+     */
+    virtual void setTXChannels(const Channels &channels)
+    {
+        tx_channels_ = channels;
+        // Ensure that the current TX channel still exists
+        setTXChannel(tx_channel_);
+    }
 
     /** @brief Get the frequency channel to use during transmission
      * @return The frequency channel
@@ -40,16 +75,17 @@ public:
      */
     virtual void setTXChannel(Channels::size_type channel)
     {
-        if (channel >= channels_->size()) {
+        if (channel >= tx_channels_.size()) {
             logEvent("MAC: illegal channel: channel=%lu, nchannels=%lu",
                 channel,
-                channels_->size());
+                tx_channels_.size());
             channel = 0;
         }
 
         tx_channel_ = channel;
-        logEvent("MAC: tx_channel=%lu",
-            channel);
+        logEvent("MAC: tx_channel=%lu (freq offset = %f)",
+            channel,
+            getTXShift());
 
         modulator_->setTXChannel(channel);
     }
@@ -59,7 +95,7 @@ public:
      */
     virtual double getTXShift(void) const
     {
-        return channels_ ? (*channels_)[tx_channel_] : 0.0;
+        return tx_channels_[tx_channel_];
     }
 
     /** @brief Stop processing packets. */
@@ -87,8 +123,11 @@ protected:
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
 
-    /** @brief Radio channels, given as shift from center frequency */
-    std::shared_ptr<Channels> channels_;
+    /** @brief RX channels, given as shift from center frequency */
+    Channels rx_channels_;
+
+    /** @brief TX channels, given as shift from center frequency */
+    Channels tx_channels_;
 
     /** @brief Our packet modulator. */
     std::shared_ptr<PacketModulator> modulator_;
