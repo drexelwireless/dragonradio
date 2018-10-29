@@ -521,20 +521,20 @@ protected:
     /** @brief Handle a NAK. */
     void handleNAK(SendWindow &sendw, Node &dest, const Seq &seq);
 
-    /** @brief Handle a successful packet transmission. */
-    void txSuccess(SendWindow &sendw, Node &node);
+    /** @brief Update PER as a result of successful packet transmission. */
+    void txSuccess(Node &node);
 
     /** @brief Update PER as a result of unsuccessful packet transmission. */
-    void txFailureUpdatePER(Node &node);
+    void txFailure(Node &node);
 
-    /** @brief Handle an unsuccessful packet transmission based on updated PER. */
-    void txFailure(SendWindow &sendw, Node &node);
-
-    /** @brief Get a packet that is elligible to be sent. */
-    bool getPacket(std::shared_ptr<NetPacket>& pkt);
+    /** @brief Update MCS based on current PER */
+    void updateMCS(SendWindow &sendw, Node &node);
 
     /** @brief Reconfigure a node's PER estimates */
     void resetPEREstimates(Node &node);
+
+    /** @brief Get a packet that is elligible to be sent. */
+    bool getPacket(std::shared_ptr<NetPacket>& pkt);
 
     /** @brief Get a node's send window.
      * @param node_id The node whose window to get
