@@ -777,13 +777,13 @@ void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
 void SmartController::handleNAK(SendWindow &sendw, Node &dest, const Seq &seq)
 {
     // If we received a NAK for a packet that was already ACK'ed, nevermind
-    if (seq < sendw.unack)
-        return;
-
-    if (!sendw[seq])
+    if (seq < sendw.unack || !sendw[seq]) {
         logEvent("ARQ: nak from %u for already ACK'ed packet: seq=%u",
             (unsigned) sendw.node_id,
             (unsigned) seq);
+
+        return;
+    }
 
     // Record the packet error
     txFailure(dest);
