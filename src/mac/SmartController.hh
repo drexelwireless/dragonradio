@@ -160,12 +160,13 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     RecvWindow(NodeId node_id,
                SmartController &controller,
+               Seq seq,
                Seq::uint_type win,
                size_t nak_win)
       : node_id(node_id)
       , controller(controller)
-      , ack(0)
-      , max(0)
+      , ack(seq)
+      , max(seq-1)
       , win(win)
       , explicit_nak_win(nak_win)
       , explicit_nak_idx(0)
@@ -215,6 +216,9 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
+#if defined(DEBUG)
+        assert(seq >= ack && seq <= ack + win && max <= ack + win);
+#endif /* defined(DEBUG) */
         return entries_[seq % entries_.size()];
     }
 

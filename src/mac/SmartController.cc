@@ -1057,9 +1057,7 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
 
     RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
                                       std::forward_as_tuple(node_id),
-                                      std::forward_as_tuple(node_id, *this, recvwin_, explicit_nak_win_)).first->second;
-
-    recvw.ack = recvw.max = seq;
+                                      std::forward_as_tuple(node_id, *this, seq, recvwin_, explicit_nak_win_)).first->second;
 
     return recvw;
 }
