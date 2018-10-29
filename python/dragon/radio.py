@@ -86,7 +86,8 @@ class Config(object):
         # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
         self.bandwidth = 5e6
-        self.oversample_factor = 1.0
+        self.rx_oversample_factor = 1.0
+        self.tx_oversample_factor = 1.0
         self.channel_bandwidth = 1e6
         self.channel_guard_bandwidth = 0
         self.edge_guard_bandwidth = None
@@ -318,9 +319,12 @@ class Config(object):
         parser.add_argument('-b', '--bandwidth', action='store', type=float,
                             dest='bandwidth',
                             help='set bandwidth (Hz)')
-        parser.add_argument('--oversample', action='store', type=float,
-                            dest='oversample_factor',
-                            help='set oversample factor')
+        parser.add_argument('--rx-oversample', action='store', type=float,
+                            dest='rx_oversample_factor',
+                            help='set RX oversample factor')
+        parser.add_argument('--tx-oversample', action='store', type=float,
+                            dest='tx_oversample_factor',
+                            help='set TX oversample factor')
         parser.add_argument('--channel-bandwidth', action='store', type=float,
                             dest='channel_bandwidth',
                             help='set channel bandwidth (Hz)')
@@ -647,7 +651,6 @@ class Radio(object):
         # we must resample.
         #
         bandwidth = config.bandwidth
-        oversample_factor = config.oversample_factor
 
         cbw = config.channel_bandwidth
         if cbw == 0:
@@ -681,11 +684,11 @@ class Radio(object):
 
         self.channels = Channels(channels[:config.max_channels])
 
-        logging.debug("Channels: %s (bandwidth=%g; oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
-            self.channels, bandwidth, oversample_factor, cbw, cgbw, egbw)
+        logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
+            self.channels, bandwidth, config.rx_oversample_factor, config.tx_oversample_factor, cbw, cgbw, egbw)
 
-        rx_rate_oversample = oversample_factor*self.phy.min_rx_rate_oversample
-        tx_rate_oversample = oversample_factor*self.phy.min_tx_rate_oversample
+        rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+        tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
 
         self.usrp.rx_rate = bandwidth*rx_rate_oversample
         if config.tx_upsample:
