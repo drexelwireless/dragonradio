@@ -46,6 +46,11 @@ public:
         return delay_;
     }
 
+    size_t neededOut(size_t count) const override final
+    {
+        return 1 + 2*rate_*count;
+    }
+
     virtual void reset(void) override final
     {
         return msresamp_crcf_reset(resamp_);
@@ -53,7 +58,7 @@ public:
 
     virtual size_t resample(const std::complex<float> *in, size_t count, std::complex<float> *out) override final;
 
-    virtual std::shared_ptr<IQBuf> resample(IQBuf &in) override final;
+    using Resampler::resample; 
 
     void print(void)
     {
