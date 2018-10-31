@@ -12,7 +12,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(liquid, m) {
+PYBIND11_MODULE(dragonradio, m) {
     exportLiquidEnums(m);
     exportMCS(m);
     exportResamplers(m);

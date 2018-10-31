@@ -21,7 +21,7 @@ class get_pybind_include(object):
 
 ext_modules = [
     Extension(
-        'liquid',
+        'dragonradio',
         ['src/main.cpp',
          '../../../src/dsp/NCO.cc',
          '../../../src/liquid/Filter.cc',
@@ -97,12 +97,12 @@ class BuildExt(build_ext):
         build_ext.build_extensions(self)
 
 setup(
-    name='liquid',
+    name='dragonradio',
     version=__version__,
     author='Geoffrey Mainland',
     author_email='mainland@drexel.edu',
     url='https://github.com/mainland/dragonradio',
-    description='Provide access to the liquid-dsp from Python',
+    description='Provide access to DragonRadio primitives from Python',
     long_description='',
     ext_modules=ext_modules,
     setup_requires=['pybind11>=2.2'],
