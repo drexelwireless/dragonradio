@@ -158,6 +158,7 @@ class Config(object):
         self.slot_send_time = 10e-3
         self.fdma = False
         self.tx_channel = None
+        self.superslots = False
 
         # ARQ options
         self.arq = False
@@ -432,6 +433,9 @@ class Config(object):
         parser.add_argument('--tx-channel', action='store', type=int,
                             dest='tx_channel',
                             help='set explicit channel to use with FDMA')
+        parser.add_argument('--superslots', action='store_const', const=True,
+                            dest='superslots',
+                            help='use TDMA superslots')
 
         # ARQ options
         parser.add_argument('--arq', action='store_const', const=True,
@@ -858,6 +862,14 @@ class Radio(object):
                                     self.config.guard_size,
                                     self.config.demod_overlap_size,
                                     nslots)
+
+        if self.config.superslots:
+            self.mac.superslots = True
+            # When we using superslots, we need to enlarge the demodulation
+            # overlap size since a sender could start transmitting a packet
+            # halfway into a slot + epsilon.
+            self.mac.demod_overlap_size = 0.5*self.config.slot_size
+
         self.finishConfiguringMAC()
 
     def finishConfiguringMAC(self):

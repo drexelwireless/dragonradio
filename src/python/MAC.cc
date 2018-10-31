@@ -56,7 +56,9 @@ void exportMACs(py::module &m)
                       double,
                       size_t>())
         .def_property_readonly("slots", &TDMA::getSlots,
-            py::return_value_policy::reference_internal);
+            py::return_value_policy::reference_internal)
+        .def_property("superslots", &TDMA::getSuperslots, &TDMA::setSuperslots,
+            "Flag indicating whether or not to use superslots.");
         ;
 
     // Export class SlottedALOHA to Python

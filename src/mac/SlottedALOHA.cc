@@ -93,7 +93,7 @@ void SlottedALOHA::txWorker(void)
         }
 
         if (transmit) {
-            txSlot(t_next_slot, tx_slot_samps_);
+            txSlot(t_next_slot, tx_slot_samps_, false);
 
             // Modulate samples for next slot
             modulator_->modulate(premod_samps_);

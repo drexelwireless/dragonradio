@@ -59,8 +59,12 @@ public:
      * @param pkts A reference to a list to which the popped packets will be
      * appended.
      * @param maxSample The maximum number of samples to pop.
+     * @param overfill Completely fill the slot, even if it means overfilling it
+     * @return The number of samples popped
      */
-    virtual void pop(std::list<std::unique_ptr<ModPacket>>& pkts, size_t maxSamples) = 0;
+    virtual size_t pop(std::list<std::unique_ptr<ModPacket>>& pkts,
+                       size_t maxSamples,
+                       bool overfill) = 0;
 
     /** @brief Set maximum packet size. */
     void setMaxPacketSize(size_t maxPacketSize)

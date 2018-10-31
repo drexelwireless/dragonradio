@@ -18,6 +18,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            size_t nslots)
   : SlottedMAC(usrp, phy, rx_channels, tx_channels, modulator, demodulator, slot_size, guard_size, demod_overlap_size)
   , slots_(*this, nslots)
+  , superslots_(false)
 {
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
     tx_thread_ = std::thread(&TDMA::txWorker, this);
@@ -42,8 +43,9 @@ void TDMA::stop(void)
 void TDMA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt)
 {
     Clock::time_point t_next_slot;
+    bool              own_next_slot;
 
-    findNextSlot(t, t_next_slot);
+    findNextSlot(t, t_next_slot, own_next_slot);
 
     timestampPacket(t_next_slot, std::move(pkt));
 }
@@ -54,7 +56,9 @@ void TDMA::txWorker(void)
     Clock::time_point t_prev_slot;      // Previous, completed slot
     Clock::time_point t_next_slot;      // Time at which our next slot starts
     Clock::time_point t_following_slot; // Time at which our following slot starts
-    double            delta;
+    bool              own_next_slot;    // Do we own the next slot too?
+    size_t            noverfill = 0;    // Number of overfilled samples;
+    double            delta;            // Time until we need to wake up to modulate more packets
 
     uhd::set_thread_priority_safe();
 
@@ -64,7 +68,7 @@ void TDMA::txWorker(void)
         // Figure out when our next send slot is.
         t_now = Clock::now();
 
-        if (!findNextSlot(t_now, t_next_slot)) {
+        if (!findNextSlot(t_now, t_next_slot, own_next_slot)) {
             // Sleep for 100ms if we don't yet have a slot
             doze(100e-3);
             continue;
@@ -72,12 +76,21 @@ void TDMA::txWorker(void)
 
         // Find following slot. We divide slot_size_ by two to avoid possible
         // rounding issues where we mights end up skipping a slot.
-        findNextSlot(t_next_slot + slot_size_/2.0, t_following_slot);
+        findNextSlot(t_next_slot + slot_size_/2.0, t_following_slot, own_next_slot);
 
         // Schedule transmission for start of our next slot if we haven't
         // already transmitted for that slot
         if (!approx(t_next_slot, t_prev_slot)) {
-            txSlot(t_next_slot, tx_slot_samps_);
+            if (superslots_ && own_next_slot)
+                noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_full_slot_samps_ - noverfill, true);
+            else
+                noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_slot_samps_ - noverfill, false);
+
+            // XXX For some reason this is necessary to please USRP. Otherwise
+            // we get late TX errors.
+            if (noverfill != 0)
+                noverfill += 1;
+
             t_prev_slot = t_next_slot;
         }
 
@@ -102,7 +115,9 @@ void TDMA::txWorker(void)
     }
 }
 
-bool TDMA::findNextSlot(Clock::time_point t, Clock::time_point &t_next)
+bool TDMA::findNextSlot(Clock::time_point t,
+                        Clock::time_point &t_next,
+                        bool &owns_next_slot)
 {
     double t_slot_pos; // Offset into the current slot (sec)
     size_t cur_slot;   // Current slot index
@@ -114,6 +129,7 @@ bool TDMA::findNextSlot(Clock::time_point t, Clock::time_point &t_next)
     for (tx_slot = 1; tx_slot <= slots_.size(); ++tx_slot) {
         if (slots_[(cur_slot + tx_slot) % slots_.size()]) {
             t_next = t + (tx_slot*slot_size_ - t_slot_pos);
+            owns_next_slot = slots_[(cur_slot + tx_slot + 1) % slots_.size()];
             return true;
         }
     }

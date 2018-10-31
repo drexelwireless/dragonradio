@@ -83,6 +83,9 @@ protected:
     /** @brief Number of TX samples in the non-guard portion of a slot */
     size_t tx_slot_samps_;
 
+    /** @brief Number of TX samples in the entire slot, including the guard */
+    size_t tx_full_slot_samps_;
+
     /** @brief Number of slots to pre-modulate */
     double premod_slots_;
 
@@ -98,8 +101,10 @@ protected:
     /** @brief Transmit one slot's worth of samples
      * @param when Start time of slot
      * @param maxSamples The maximum number of samples to transmits
+     * @param overfill Flag that is true if we are allowed to overfill the slot
+     * @return The number of samples overfilled
      */
-    virtual void txSlot(Clock::time_point when, size_t maxSamples);
+    virtual size_t txSlot(Clock::time_point when, size_t maxSamples, bool overfill);
 
     /** @brief Reconfigure the MAC when slot parameters change */
     virtual void reconfigure(void);
