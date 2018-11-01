@@ -7,8 +7,6 @@
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;
 
-std::mutex liquid_mutex;
-
 union PHYHeader {
     Header h;
     // FLEXFRAME_H_USER in liquid.internal.h. This is the largest header of any

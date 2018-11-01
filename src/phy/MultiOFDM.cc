@@ -1,4 +1,5 @@
 #include "Logger.hh"
+#include "liquid/Mutex.hh"
 #include "phy/LiquidPHY.hh"
 #include "phy/MultiOFDM.hh"
 
@@ -12,7 +13,7 @@ MultiOFDM::Modulator::Modulator(MultiOFDM& phy)
   : LiquidModulator(phy)
   , myphy_(phy)
 {
-    std::lock_guard<std::mutex> lck(liquid_mutex);
+    std::lock_guard<std::mutex> lck(Liquid::mutex);
 
     // modem setup (list is for parallel demodulation)
     mctx_ = std::make_unique<multichanneltx>(NUM_CHANNELS,
@@ -59,7 +60,7 @@ MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy)
 {
     internal_oversample_fact_ = 2;
 
-    std::lock_guard<std::mutex> lck(liquid_mutex);
+    std::lock_guard<std::mutex> lck(Liquid::mutex);
 
     // modem setup (list is for parallel demodulation)
     framesync_callback callback[1] = { &LiquidDemodulator::liquid_callback };
@@ -102,7 +103,7 @@ size_t MultiOFDM::modulated_size(const TXParams &params, size_t n)
 
     // Create framegen object
     {
-        std::lock_guard<std::mutex> lck(liquid_mutex);
+        std::lock_guard<std::mutex> lck(Liquid::mutex);
 
         fg = ofdmflexframegen_create(M_, cp_len_, taper_len_, p_, &fgprops);
     }

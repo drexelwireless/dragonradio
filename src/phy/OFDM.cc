@@ -3,6 +3,7 @@
 #include <liquid/liquid.h>
 
 #include "Logger.hh"
+#include "liquid/Mutex.hh"
 #include "phy/LiquidPHY.hh"
 #include "phy/OFDM.hh"
 
@@ -16,7 +17,7 @@ OFDM::Modulator::Modulator(OFDM& phy)
   : LiquidModulator(phy)
   , myphy_(phy)
 {
-    std::lock_guard<std::mutex> lck(liquid_mutex);
+    std::lock_guard<std::mutex> lck(Liquid::mutex);
 
     ofdmflexframegenprops_init_default(&fgprops_);
     fg_ = ofdmflexframegen_create(myphy_.M_,
@@ -79,7 +80,7 @@ OFDM::Demodulator::Demodulator(OFDM& phy)
   : LiquidDemodulator(phy)
   , myphy_(phy)
 {
-    std::lock_guard<std::mutex> lck(liquid_mutex);
+    std::lock_guard<std::mutex> lck(Liquid::mutex);
 
     fs_ = ofdmflexframesync_create(myphy_.M_,
                                    myphy_.cp_len_,
@@ -130,7 +131,7 @@ size_t OFDM::modulated_size(const TXParams &params, size_t n)
 
     // Create framegen object
     {
-        std::lock_guard<std::mutex> lck(liquid_mutex);
+        std::lock_guard<std::mutex> lck(Liquid::mutex);
 
         fg = ofdmflexframegen_create(M_, cp_len_, taper_len_, p_, &fgprops);
     }

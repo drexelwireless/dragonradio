@@ -2,7 +2,6 @@
 #define LIQUIDPHY_H_
 
 #include <complex>
-#include <mutex>
 
 #include <liquid/liquid.h>
 
@@ -11,11 +10,6 @@
 #include "dsp/NCO.hh"
 #include "liquid/Resample.hh"
 #include "phy/PHY.hh"
-
-/** @brief Creation of liquid objects is not re-rentrant, so we need to protect
- * access with a mutex.
- */
-extern std::mutex liquid_mutex;
 
 struct ResamplerParams {
     ResamplerParams(void)

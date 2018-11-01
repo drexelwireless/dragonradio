@@ -64,6 +64,7 @@ SOURCES := \
     WorkQueue.cc \
     dsp/NCO.cc \
     liquid/Filter.cc \
+    liquid/Mutex.cc \
     liquid/Resample.cc \
     phy/FlexFrame.cc \
     phy/TXParams.cc \

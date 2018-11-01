@@ -1,11 +1,12 @@
 #include "Logger.hh"
+#include "liquid/Mutex.hh"
 #include "phy/FlexFrame.inc.hh"
 
 FlexFrame::Modulator::Modulator(FlexFrame &phy)
   : LiquidModulator(phy)
   , myphy_(phy)
 {
-    std::lock_guard<std::mutex> lck(liquid_mutex);
+    std::lock_guard<std::mutex> lck(Liquid::mutex);
 
     flexframe(genprops_init_default)(&fgprops_);
     fg_ = flexframe(gen_create)(&fgprops_);
@@ -66,7 +67,7 @@ bool FlexFrame::Modulator::modulateSamples(std::complex<float> *buf, size_t &nw)
 FlexFrame::Demodulator::Demodulator(FlexFrame &phy)
   : LiquidDemodulator(phy)
 {
-    std::lock_guard<std::mutex> lck(liquid_mutex);
+    std::lock_guard<std::mutex> lck(Liquid::mutex);
 
     fs_ = flexframe(sync_create)(&LiquidDemodulator::liquid_callback, this);
 
@@ -112,7 +113,7 @@ size_t FlexFrame::modulated_size(const TXParams &params, size_t n)
 
     // Create framegen object
     {
-        std::lock_guard<std::mutex> lck(liquid_mutex);
+        std::lock_guard<std::mutex> lck(Liquid::mutex);
 
         fg = flexframe(gen_create)(&fgprops);
     }
