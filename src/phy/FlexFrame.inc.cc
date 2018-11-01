@@ -3,7 +3,7 @@
 #include "phy/FlexFrame.inc.hh"
 
 FlexFrame::Modulator::Modulator(FlexFrame &phy)
-  : LiquidModulator(phy)
+  : LiquidPHY::Modulator(phy)
   , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(Liquid::mutex);
@@ -65,11 +65,11 @@ bool FlexFrame::Modulator::modulateSamples(std::complex<float> *buf, size_t &nw)
 }
 
 FlexFrame::Demodulator::Demodulator(FlexFrame &phy)
-  : LiquidDemodulator(phy)
+  : LiquidPHY::Demodulator(phy)
 {
     std::lock_guard<std::mutex> lck(Liquid::mutex);
 
-    fs_ = flexframe(sync_create)(&LiquidDemodulator::liquid_callback, this);
+    fs_ = flexframe(sync_create)(&LiquidPHY::Demodulator::liquid_callback, this);
 
 #if LIQUID_VERSION_NUMBER >= 1003001
     flexframe(genprops_s) header_props;

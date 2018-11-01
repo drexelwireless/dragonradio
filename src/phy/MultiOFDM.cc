@@ -10,7 +10,7 @@ const unsigned int NUM_CHANNELS = 1;
 static_assert(sizeof(Header) <= 8, "sizeof(Header) must be no more than 8 bytes");
 
 MultiOFDM::Modulator::Modulator(MultiOFDM& phy)
-  : LiquidModulator(phy)
+  : LiquidPHY::Modulator(phy)
   , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(Liquid::mutex);
@@ -55,7 +55,7 @@ bool MultiOFDM::Modulator::modulateSamples(std::complex<float> *buf, size_t &nw)
 }
 
 MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy)
-  : LiquidDemodulator(phy)
+  : LiquidPHY::Demodulator(phy)
   , myphy_(phy)
 {
     internal_oversample_fact_ = 2;
@@ -63,7 +63,7 @@ MultiOFDM::Demodulator::Demodulator(MultiOFDM& phy)
     std::lock_guard<std::mutex> lck(Liquid::mutex);
 
     // modem setup (list is for parallel demodulation)
-    framesync_callback callback[1] = { &LiquidDemodulator::liquid_callback };
+    framesync_callback callback[1] = { &LiquidPHY::Demodulator::liquid_callback };
     void               *userdata[1] = { this };
 
     mcrx_ = std::make_unique<multichannelrx>(NUM_CHANNELS,

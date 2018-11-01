@@ -31,8 +31,8 @@ LiquidPHY::~LiquidPHY()
 {
 }
 
-LiquidModulator::LiquidModulator(LiquidPHY &phy)
-    : Modulator(phy)
+LiquidPHY::Modulator::Modulator(LiquidPHY &phy)
+    : PHY::Modulator(phy)
     , liquid_phy_(phy)
     , upsamp_(phy.getTXRateOversample()/phy.getMinTXRateOversample(),
               phy.upsamp_resamp_params.m,
@@ -44,13 +44,13 @@ LiquidModulator::LiquidModulator(LiquidPHY &phy)
 {
 }
 
-LiquidModulator::~LiquidModulator()
+LiquidPHY::Modulator::~Modulator()
 {
 }
 
-void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
-                               double shift,
-                               ModPacket &mpkt)
+void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
+                                    double shift,
+                                    ModPacket &mpkt)
 {
     PHYHeader header;
 
@@ -118,7 +118,7 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
     mpkt.pkt = std::move(pkt);
 }
 
-void LiquidModulator::setFreqShift(double shift)
+void LiquidPHY::Modulator::setFreqShift(double shift)
 {
     if (shift_ != shift) {
         double rad = 2*M_PI*shift/phy_.getTXRate(); // Frequency shift in radians
@@ -129,8 +129,8 @@ void LiquidModulator::setFreqShift(double shift)
     }
 }
 
-LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
-  : Demodulator(phy)
+LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
+  : PHY::Demodulator(phy)
   , liquid_phy_(phy)
   , downsamp_(phy.getMinRXRateOversample()/phy.getRXRateOversample(),
               phy.downsamp_resamp_params.m,
@@ -143,19 +143,19 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
 {
 }
 
-LiquidDemodulator::~LiquidDemodulator()
+LiquidPHY::Demodulator::~Demodulator()
 {
 }
 
-int LiquidDemodulator::liquid_callback(unsigned char *  header_,
-                                       int              header_valid_,
-                                       unsigned char *  payload_,
-                                       unsigned int     payload_len_,
-                                       int              payload_valid_,
-                                       framesyncstats_s stats_,
-                                       void *           userdata_)
+int LiquidPHY::Demodulator::liquid_callback(unsigned char *  header_,
+                                            int              header_valid_,
+                                            unsigned char *  payload_,
+                                            unsigned int     payload_len_,
+                                            int              payload_valid_,
+                                            framesyncstats_s stats_,
+                                            void *           userdata_)
 {
-    return reinterpret_cast<LiquidDemodulator*>(userdata_)->
+    return reinterpret_cast<LiquidPHY::Demodulator*>(userdata_)->
         callback(header_,
                  header_valid_,
                  payload_,
@@ -164,12 +164,12 @@ int LiquidDemodulator::liquid_callback(unsigned char *  header_,
                  stats_);
 }
 
-int LiquidDemodulator::callback(unsigned char *  header_,
-                                int              header_valid_,
-                                unsigned char *  payload_,
-                                unsigned int     payload_len_,
-                                int              payload_valid_,
-                                framesyncstats_s stats_)
+int LiquidPHY::Demodulator::callback(unsigned char *  header_,
+                                     int              header_valid_,
+                                     unsigned char *  payload_,
+                                     unsigned int     payload_len_,
+                                     int              payload_valid_,
+                                     framesyncstats_s stats_)
 {
     Header* h = reinterpret_cast<Header*>(header_);
     size_t  off = demod_off_;   // Save demodulation offset for use when we log.
@@ -249,7 +249,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void LiquidDemodulator::reset(Clock::time_point timestamp, size_t off)
+void LiquidPHY::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
     liquidReset();
 
@@ -259,10 +259,10 @@ void LiquidDemodulator::reset(Clock::time_point timestamp, size_t off)
     downsamp_.reset();
 }
 
-void LiquidDemodulator::demodulate(std::complex<float>* data,
-                                   size_t count,
-                                   double shift,
-                                   std::function<void(std::unique_ptr<RadioPacket>)> callback)
+void LiquidPHY::Demodulator::demodulate(std::complex<float>* data,
+                                        size_t count,
+                                        double shift,
+                                        std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
     callback_ = callback;
 
@@ -286,7 +286,7 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
     }
 }
 
-void LiquidDemodulator::setFreqShift(double shift)
+void LiquidPHY::Demodulator::setFreqShift(double shift)
 {
     // We don't reset the NCO unless we have to so as to avoid phase
     // discontinuities during demodulation.

@@ -14,7 +14,7 @@ union PHYHeader {
 };
 
 OFDM::Modulator::Modulator(OFDM& phy)
-  : LiquidModulator(phy)
+  : LiquidPHY::Modulator(phy)
   , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(Liquid::mutex);
@@ -77,7 +77,7 @@ bool OFDM::Modulator::modulateSamples(std::complex<float> *buf, size_t &nw)
 }
 
 OFDM::Demodulator::Demodulator(OFDM& phy)
-  : LiquidDemodulator(phy)
+  : LiquidPHY::Demodulator(phy)
   , myphy_(phy)
 {
     std::lock_guard<std::mutex> lck(Liquid::mutex);
@@ -86,7 +86,7 @@ OFDM::Demodulator::Demodulator(OFDM& phy)
                                    myphy_.cp_len_,
                                    myphy_.taper_len_,
                                    myphy_.p_,
-                                   &LiquidDemodulator::liquid_callback,
+                                   &LiquidPHY::Demodulator::liquid_callback,
                                    this);
 
 #if LIQUID_VERSION_NUMBER >= 1003001

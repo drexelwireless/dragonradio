@@ -7,7 +7,7 @@
 class OFDM : public LiquidPHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp ofdmflexframegen. */
-    class Modulator : public LiquidModulator
+    class Modulator : public LiquidPHY::Modulator
     {
     public:
         Modulator(OFDM &phy);
@@ -45,7 +45,7 @@ public:
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
-    class Demodulator : public LiquidDemodulator
+    class Demodulator : public LiquidPHY::Demodulator
     {
     public:
         Demodulator(OFDM &phy);

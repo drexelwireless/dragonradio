@@ -16,7 +16,7 @@ public:
     /** @brief Modulate IQ data using the liquid-usrp multi-channel OFDM %PHY
       * code.
       */
-    class Modulator : public LiquidModulator
+    class Modulator : public LiquidPHY::Modulator
     {
     public:
         Modulator(MultiOFDM &phy);
@@ -45,7 +45,7 @@ public:
     /** @brief Demodulate IQ data using the liquid-usrp multi-channel OFDM %PHY
       * code.
       */
-    class Demodulator : public LiquidDemodulator
+    class Demodulator : public LiquidPHY::Demodulator
     {
     public:
         Demodulator(MultiOFDM &phy);
