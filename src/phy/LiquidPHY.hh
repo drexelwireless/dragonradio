@@ -7,7 +7,7 @@
 
 #include "Clock.hh"
 #include "Packet.hh"
-#include "dsp/NCO.hh"
+#include "dsp/TableNCO.hh"
 #include "liquid/Resample.hh"
 #include "phy/PHY.hh"
 

@@ -16,6 +16,7 @@ public:
 
     FIRFilter(FIRFilter &&f)
     {
+        firfilt_cccf_destroy(q_);
         q_ = f.q_;
         f.q_ = nullptr;
     }
@@ -40,8 +41,16 @@ public:
         return *this;
     }
 
+    FIRFilter& operator=(FIRFilter &&f)
+    {
+        firfilt_cccf_destroy(q_);
+        q_ = f.q_;
+        f.q_ = nullptr;
+
+        return *this;
+    }
+
     FIRFilter& operator=(const FIRFilter &) = delete;
-    FIRFilter& operator=(FIRFilter &&) = delete;
 
     float getGroupDelay(float fc) override final
     {

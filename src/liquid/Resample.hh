@@ -31,10 +31,35 @@ public:
         delay_ = msresamp_crcf_get_delay(resamp_);
     }
 
-    virtual ~MultiStageResampler()
+    MultiStageResampler(MultiStageResampler &&resamp)
     {
         msresamp_crcf_destroy(resamp_);
+        resamp_ = resamp.resamp_;
+        resamp.resamp_ = nullptr;
+
+        rate_ = resamp.rate_;
+        delay_ = resamp.delay_;
     }
+
+    virtual ~MultiStageResampler()
+    {
+        if (resamp_)
+            msresamp_crcf_destroy(resamp_);
+    }
+
+    MultiStageResampler &operator =(MultiStageResampler &&resamp)
+    {
+        msresamp_crcf_destroy(resamp_);
+        resamp_ = resamp.resamp_;
+        resamp.resamp_ = nullptr;
+
+        rate_ = resamp.rate_;
+        delay_ = resamp.delay_;
+
+        return *this;
+    }
+
+    MultiStageResampler& operator=(const MultiStageResampler&) = delete;
 
     double getRate(void) const override final
     {
@@ -58,7 +83,7 @@ public:
 
     virtual size_t resample(const std::complex<float> *in, size_t count, std::complex<float> *out) override final;
 
-    using Resampler::resample; 
+    using Resampler::resample;
 
     void print(void)
     {

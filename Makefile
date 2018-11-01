@@ -62,7 +62,7 @@ SOURCES := \
     USRP.cc \
     Util.cc \
     WorkQueue.cc \
-    dsp/NCO.cc \
+    dsp/TableNCO.cc \
     liquid/Filter.cc \
     liquid/Mutex.cc \
     liquid/PHY.cc \

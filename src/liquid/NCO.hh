@@ -19,17 +19,30 @@ public:
         nco_crcf_set_frequency(nco_, dtheta);
     }
 
+    BaseNCO(BaseNCO &&nco)
+    {
+        nco_ = nco.nco_;
+        nco.nco_ = nullptr;
+    }
+
     BaseNCO() = delete;
     BaseNCO(const BaseNCO&) = delete;
-    BaseNCO(BaseNCO&&) = delete;
 
     virtual ~BaseNCO()
     {
-        nco_crcf_destroy(nco_);
+        if (nco_)
+            nco_crcf_destroy(nco_);
+    }
+
+    BaseNCO& operator=(BaseNCO &&nco)
+    {
+        nco_ = nco.nco_;
+        nco.nco_ = nullptr;
+
+        return *this;
     }
 
     BaseNCO& operator=(const BaseNCO&) = delete;
-    BaseNCO& operator=(BaseNCO&&) = delete;
 
     void reset(double dtheta) override final
     {
@@ -66,14 +79,14 @@ public:
 
     NCO() = delete;
     NCO(const NCO&) = delete;
-    NCO(NCO&&) = delete;
+    NCO(NCO &&) = default;
 
     virtual ~NCO()
     {
     }
 
     NCO& operator=(const NCO&) = delete;
-    NCO& operator=(NCO&&) = delete;
+    NCO& operator=(NCO&&) = default;
 };
 
 /** @brief A "voltage"-controlled oscillator (precise) */
@@ -87,14 +100,14 @@ public:
 
     VCO() = delete;
     VCO(const VCO&) = delete;
-    VCO(VCO&&) = delete;
+    VCO(VCO &&) = default;
 
     virtual ~VCO()
     {
     }
 
     VCO& operator=(const VCO&) = delete;
-    VCO& operator=(VCO&&) = delete;
+    VCO& operator=(VCO&&) = default;
 };
 
 }

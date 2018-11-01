@@ -28,7 +28,7 @@ ext_modules = [
     Extension(
         'dragonradio',
         ['src/main.cpp',
-         'main_src/dsp/NCO.cc',
+         'main_src/dsp/TableNCO.cc',
          'main_src/liquid/Filter.cc',
          'main_src/liquid/Mutex.cc',
          'main_src/liquid/PHY.cc',

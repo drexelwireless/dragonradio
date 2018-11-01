@@ -1,6 +1,6 @@
 #include <math.h>
 
-#include "dsp/NCO.hh"
+#include "dsp/TableNCO.hh"
 
 using namespace std::complex_literals;
 
@@ -10,10 +10,6 @@ TableNCO::TableNCO(double dtheta)
 {
     theta_ = 0;
     dtheta_ = sintab<INTBITS>::to_brad(dtheta);
-}
-
-TableNCO::~TableNCO()
-{
 }
 
 void TableNCO::reset(double dtheta)
