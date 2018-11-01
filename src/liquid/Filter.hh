@@ -1,5 +1,5 @@
-#ifndef LIQUID_NCO_HH_
-#define LIQUID_NCO_HH_
+#ifndef LIQUID_FILTER_HH_
+#define LIQUID_FILTER_HH_
 
 #include <complex>
 
@@ -194,4 +194,4 @@ butter_lowpass(unsigned int N,
                float As);
 }
 
-#endif /* LIQUID_NCO_HH_ */
+#endif /* LIQUID_FILTER_HH_ */
