@@ -3,6 +3,8 @@
 
 #include <sys/types.h>
 
+#include <limits>
+
 struct Seq {
     using uint_type = uint16_t;
     using int_type = int16_t;
