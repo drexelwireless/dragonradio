@@ -1,6 +1,6 @@
 *.pyc
 __pycache__/
-flexframedemod
-dragonradio
+/flexframedemod
+/dragonradio
 docs/doxygen/html/
 obj/
