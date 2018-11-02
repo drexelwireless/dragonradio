@@ -6,6 +6,7 @@
 namespace py = pybind11;
 
 void exportLiquidEnums(py::module &m);
+void exportLiquidModDemod(py::module &m);
 void exportMCS(py::module &m);
 void exportResamplers(py::module &m);
 void exportNCOs(py::module &m);

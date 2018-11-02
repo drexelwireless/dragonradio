@@ -65,6 +65,7 @@ SOURCES := \
     dsp/NCO.cc \
     liquid/Filter.cc \
     liquid/Mutex.cc \
+    liquid/PHY.cc \
     liquid/Resample.cc \
     phy/FlexFrame.cc \
     phy/TXParams.cc \

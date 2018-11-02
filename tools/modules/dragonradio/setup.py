@@ -5,6 +5,11 @@ import setuptools
 
 __version__ = '0.0.1'
 
+#
+# This is taken from:
+#   https://github.com/pybind/python_example
+#
+
 class get_pybind_include(object):
     """Helper class to determine the pybind11 include path
 
@@ -23,24 +28,24 @@ ext_modules = [
     Extension(
         'dragonradio',
         ['src/main.cpp',
-         '../../../src/dsp/NCO.cc',
-         '../../../src/liquid/Filter.cc',
-         '../../../src/liquid/Resample.cc',
-         '../../../src/python/Filter.cc',
-         '../../../src/python/LiquidEnum.cc',
-         '../../../src/python/MCS.cc',
-         '../../../src/python/NCO.cc',
-         '../../../src/python/Resample.cc',
-         'src/PHY.cc',
-         'src/FlexFrame.cc',
-         'src/OFDM.cc'],
+         'main_src/dsp/NCO.cc',
+         'main_src/liquid/Filter.cc',
+         'main_src/liquid/Mutex.cc',
+         'main_src/liquid/PHY.cc',
+         'main_src/liquid/Resample.cc',
+         'main_src/python/Filter.cc',
+         'main_src/python/LiquidEnum.cc',
+         'main_src/python/LiquidModDemod.cc',
+         'main_src/python/MCS.cc',
+         'main_src/python/NCO.cc',
+         'main_src/python/Resample.cc'],
         define_macros=[('NOUHD', '1')],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
             get_pybind_include(user=True),
             'src',
-            '../../../src',
+            'main_src',
         ],
         libraries = ['liquid'],
         library_dirs = ['/usr/local/lib'],
