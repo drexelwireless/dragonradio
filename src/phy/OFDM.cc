@@ -139,7 +139,7 @@ size_t OFDM::modulated_size(const TXParams &params, size_t n)
 #if LIQUID_VERSION_NUMBER >= 1003001
     ofdmflexframegenprops_s header_props;
 
-    mcs2flexframegenprops(params.mcs, header_props);
+    mcs2flexframegenprops(header_mcs_, header_props);
     ofdmflexframegen_set_header_props(fg, &header_props);
     ofdmflexframegen_set_header_len(fg, sizeof(Header));
 #endif /* LIQUID_VERSION_NUMBER >= 1003001 */
