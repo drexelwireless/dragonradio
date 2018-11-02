@@ -26,6 +26,19 @@ struct MCS {
     {
     }
 
+    bool operator ==(const MCS &other) const
+    {
+        return check == other.check &&
+               fec0 == other.fec0 &&
+               fec1 == other.fec1 &&
+               ms == other.ms;
+    }
+
+    bool operator !=(const MCS &other) const
+    {
+        return !(*this == other);
+    }
+
     /** @brief CRC */
     crc_scheme check;
 
