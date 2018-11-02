@@ -179,7 +179,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     // callback is called, which sets its internal counters to 0.
     demod_off_ += resamp_fact*stats_.end_counter;
 
-    if (header_valid_ && h->curhop == liquid_phy_.getNodeId())
+    if (header_valid_ && h->curhop == phy_.getNodeId())
         return 0;
 
     // Create the packet and fill it out
