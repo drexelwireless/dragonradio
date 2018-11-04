@@ -31,7 +31,7 @@ struct ResamplerParams {
     /** @brief Stop-band attenuation for resamplers */
     float As;
 
-    /** @brief  Number of filters in polyphase filterbank */
+    /** @brief Number of filters in polyphase filterbank */
     unsigned npfb;
 };
 
