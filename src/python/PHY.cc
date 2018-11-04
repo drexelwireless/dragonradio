@@ -11,6 +11,9 @@ void exportPHYs(py::module &m)
     py::class_<Gain, std::shared_ptr<Gain>>(m, "Gain")
         .def_property("lin", &Gain::getLinearGain, &Gain::setLinearGain)
         .def_property("dB", &Gain::getDbGain, &Gain::setDbGain)
+        .def("__repr__", [](const Gain& self) {
+            return py::str("Gain(lin={}, dB={})").format(self.getLinearGain(), self.getDbGain());
+         })
         ;
 
     // Export class PHY to Python
@@ -29,6 +32,9 @@ void exportPHYs(py::module &m)
         .def_readwrite("fc", &ResamplerParams::fc)
         .def_readwrite("As", &ResamplerParams::As)
         .def_readwrite("npfb", &ResamplerParams::npfb)
+        .def("__repr__", [](const ResamplerParams& self) {
+            return py::str("ResamplerParams(m={}, fc={}, As={}, npfb={})").format(self.m, self.fc, self.As, self.npfb);
+         })
         ;
 
     // Export class LiquidPHY to Python
