@@ -72,7 +72,7 @@ void ParallelPacketDemodulator::setEnforceOrdering(bool enforce)
 
 void ParallelPacketDemodulator::demodWorker(void)
 {
-    auto                      demod = phy_->make_demodulator();
+    auto                      demod = phy_->mkDemodulator();
     RadioPacketQueue::barrier b;
     double                    shift;
     std::shared_ptr<IQBuf>    buf1;

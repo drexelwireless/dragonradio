@@ -401,7 +401,7 @@ public:
      */
     size_t getMaxPacketsPerSlot(const TXParams &p)
     {
-        return slot_size_/phy_->modulated_size(p, rc.mtu + sizeof(struct ether_header));
+        return slot_size_/phy_->getModulatedSize(p, rc.mtu + sizeof(struct ether_header));
     }
 
     /** @brief Broadcast TX params */

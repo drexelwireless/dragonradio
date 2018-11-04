@@ -95,9 +95,9 @@ public:
         return 2.0;
     }
 
-    virtual size_t modulated_size(const TXParams &params, size_t n) override;
+    virtual size_t getModulatedSize(const TXParams &params, size_t n) override;
 
-    std::unique_ptr<PHY::Demodulator> make_demodulator(void) override;
+    std::unique_ptr<PHY::Demodulator> mkDemodulator(void) override;
 
-    std::unique_ptr<PHY::Modulator> make_modulator(void) override;
+    std::unique_ptr<PHY::Modulator> mkModulator(void) override;
 };

@@ -120,7 +120,7 @@ void OFDM::Demodulator::demodulateSamples(std::complex<float> *buf, const size_t
     ofdmflexframesync_execute(fs_, buf, n);
 }
 
-size_t OFDM::modulated_size(const TXParams &params, size_t n)
+size_t OFDM::getModulatedSize(const TXParams &params, size_t n)
 {
     ofdmflexframegen        fg;
     ofdmflexframegenprops_s fgprops;
@@ -161,12 +161,12 @@ size_t OFDM::modulated_size(const TXParams &params, size_t n)
     return getTXUpsampleRate()*nsymbols;
 }
 
-std::unique_ptr<PHY::Demodulator> OFDM::make_demodulator(void)
+std::unique_ptr<PHY::Demodulator> OFDM::mkDemodulator(void)
 {
     return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this)));
 }
 
-std::unique_ptr<PHY::Modulator> OFDM::make_modulator(void)
+std::unique_ptr<PHY::Modulator> OFDM::mkModulator(void)
 {
     return std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(new Modulator(*this)));
 }

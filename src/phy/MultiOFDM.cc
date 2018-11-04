@@ -89,7 +89,7 @@ void MultiOFDM::Demodulator::demodulateSamples(std::complex<float> *buf, const s
     mcrx_->Execute(buf, n);
 }
 
-size_t MultiOFDM::modulated_size(const TXParams &params, size_t n)
+size_t MultiOFDM::getModulatedSize(const TXParams &params, size_t n)
 {
     ofdmflexframegen        fg;
     ofdmflexframegenprops_s fgprops;
@@ -136,12 +136,12 @@ size_t MultiOFDM::modulated_size(const TXParams &params, size_t n)
     return getTXUpsampleRate()*nsymbols;
 }
 
-std::unique_ptr<PHY::Demodulator> MultiOFDM::make_demodulator(void)
+std::unique_ptr<PHY::Demodulator> MultiOFDM::mkDemodulator(void)
 {
     return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this)));
 }
 
-std::unique_ptr<PHY::Modulator> MultiOFDM::make_modulator(void)
+std::unique_ptr<PHY::Modulator> MultiOFDM::mkModulator(void)
 {
     return std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(new Modulator(*this)));
 }

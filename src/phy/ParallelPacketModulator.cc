@@ -109,7 +109,7 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
 
 void ParallelPacketModulator::modWorker(void)
 {
-    std::unique_ptr<PHY::Modulator> modulator = phy_->make_modulator();
+    std::unique_ptr<PHY::Modulator> modulator = phy_->mkModulator();
     std::shared_ptr<NetPacket>      pkt;
     ModPacket                       *mpkt;
     // We want the last 10 packets to account for 86% of the EMA

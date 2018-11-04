@@ -168,13 +168,13 @@ public:
     }
 
     /** @brief Calculate size of modulated data */
-    virtual size_t modulated_size(const TXParams &params, size_t n) = 0;
+    virtual size_t getModulatedSize(const TXParams &params, size_t n) = 0;
 
     /** @brief Create a Modulator for this %PHY */
-    virtual std::unique_ptr<Modulator> make_modulator(void) = 0;
+    virtual std::unique_ptr<Modulator> mkModulator(void) = 0;
 
     /** @brief Create a Demodulator for this %PHY */
-    virtual std::unique_ptr<Demodulator> make_demodulator(void) = 0;
+    virtual std::unique_ptr<Demodulator> mkDemodulator(void) = 0;
 
 protected:
     /** @brief Node ID */

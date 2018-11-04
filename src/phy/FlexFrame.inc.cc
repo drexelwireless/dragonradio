@@ -102,7 +102,7 @@ void FlexFrame::Demodulator::demodulateSamples(std::complex<float> *buf, const s
     flexframe(sync_execute)(fs_, buf, n);
 }
 
-size_t FlexFrame::modulated_size(const TXParams &params, size_t n)
+size_t FlexFrame::getModulatedSize(const TXParams &params, size_t n)
 {
     flexframe(gen)        fg;
     flexframe(genprops_s) fgprops;
@@ -143,12 +143,12 @@ size_t FlexFrame::modulated_size(const TXParams &params, size_t n)
     return getTXUpsampleRate()*nsymbols;
 }
 
-std::unique_ptr<PHY::Demodulator> FlexFrame::make_demodulator(void)
+std::unique_ptr<PHY::Demodulator> FlexFrame::mkDemodulator(void)
 {
     return std::unique_ptr<PHY::Demodulator>(static_cast<PHY::Demodulator*>(new Demodulator(*this)));
 }
 
-std::unique_ptr<PHY::Modulator> FlexFrame::make_modulator(void)
+std::unique_ptr<PHY::Modulator> FlexFrame::mkModulator(void)
 {
     return std::unique_ptr<PHY::Modulator>(static_cast<PHY::Modulator*>(new Modulator(*this)));
 }

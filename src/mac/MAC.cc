@@ -13,7 +13,7 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , modulator_(modulator)
   , demodulator_(demodulator)
   , tx_channel_(0)
-  , timestamped_modulator_(phy->make_modulator())
+  , timestamped_modulator_(phy->mkModulator())
 {
     rx_rate_ = usrp->getRXRate();
     tx_rate_ = usrp->getTXRate();
