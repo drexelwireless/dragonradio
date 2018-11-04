@@ -11,7 +11,7 @@ public:
 
     ~Gain() = default;
 
-    float getLinearGain(void)
+    float getLinearGain(void) const
     {
         return g_;
     }
@@ -21,7 +21,7 @@ public:
         g_ = g;
     }
 
-    float getDbGain(void)
+    float getDbGain(void) const
     {
         return 20.0*logf(g_)/logf(10.0);
     }
