@@ -42,7 +42,9 @@ void exportPHYs(py::module &m)
         .def_property_readonly("header_mcs", &LiquidPHY::getHeaderMCS)
         .def_property_readonly("soft_header", &LiquidPHY::getSoftHeader)
         .def_property_readonly("soft_payload", &LiquidPHY::getSoftPayload)
-        .def_readonly("min_packet_size", &LiquidPHY::min_packet_size)
+        .def_property("min_packet_size",
+            &LiquidPHY::getMinPacketSize,
+            &LiquidPHY::setMinPacketSize)
         .def_readwrite("upsamp_resamp_params", &LiquidPHY::upsamp_resamp_params,
             py::return_value_policy::reference_internal)
         .def_readwrite("downsamp_resamp_params", &LiquidPHY::downsamp_resamp_params,

@@ -204,9 +204,17 @@ public:
         return soft_payload_;
     }
 
-    /** @brief Minimum packet size. */
-    /** Packets will be padded to at least this many bytes */
-    const size_t min_packet_size = 0;
+    /** @brief Get minimum packet size. */
+    size_t getMinPacketSize() const
+    {
+        return min_packet_size_;
+    }
+
+    /** @brief Set minimum packet size. */
+    void setMinPacketSize(size_t size)
+    {
+        min_packet_size_ = size;
+    }
 
     /** @brief Resampler parameters for modulator */
     ResamplerParams upsamp_resamp_params;
@@ -225,6 +233,10 @@ protected:
     /** @brief Flag indicating whether or not to use soft-decoding for payload.
       */
     const bool soft_payload_;
+
+    /** @brief Minimum packet size. */
+    /** Packets will be padded to at least this many bytes */
+    size_t min_packet_size_;
 };
 
 #endif /* LIQUIDPHY_H_ */

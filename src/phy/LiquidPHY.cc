@@ -20,10 +20,10 @@ LiquidPHY::LiquidPHY(NodeId node_id,
                      bool soft_payload,
                      size_t min_packet_size)
   : PHY(node_id)
-  , min_packet_size(min_packet_size)
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
+  , min_packet_size_(min_packet_size)
 {
 }
 
@@ -58,7 +58,7 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     pkt->toHeader(header.h);
 
-    pkt->resize(std::max((size_t) pkt->size(), liquid_phy_.min_packet_size));
+    pkt->resize(std::max((size_t) pkt->size(), liquid_phy_.min_packet_size_));
 
     assemble(header.bytes, *pkt);
 
