@@ -8,14 +8,14 @@ sudo apt install -y python3 python3-pip python3-tk python3-virtualenv
 
 (
     # Build and install libcorrect
-    (cd dependencies/libcorrect && rm -rf build && mkdir build && cd build && cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
+    (cd ../dependencies/libcorrect && rm -rf build && mkdir build && cd build && cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
 
     # Build and install liquid-dsp
-    (cd dependencies/liquid-dsp && ./bootstrap.sh && ./configure && make && sudo make install && sudo ldconfig && make clean)
+    (cd ../dependencies/liquid-dsp && ./bootstrap.sh && ./configure && make && sudo make install && sudo ldconfig && make clean)
 )
 
 virtualenv -p python3 env
-source env/bin/activate
+. env/bin/activate
 
 pip install -Ur requirements.txt
 
@@ -24,7 +24,7 @@ sudo apt-get update
 sudo apt-get install gcc-7 g++-7
 
 (
-    cd modules/liquid
+    cd modules/dragonradio
     CC=gcc-7 python3 setup.py build
     python3 setup.py install
 )
