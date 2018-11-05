@@ -5,7 +5,7 @@
 This repository uses submodules, so you will need to perform a recursive checkout as follows:
 
 ```
-git clone --recursive -b mainland https://github.com/mainland/dragonradio.git dragonradio
+git clone --recursive git@github.com:mainland/dragonradio.git
 ```
 
 The submodules point to public GitHub repos with SC2-specific changes for `uhd`, `liquid-dsp`, and `liquid-usrp`. There is also a submodule for `libfec`, although it doesn't currently include any patches.
