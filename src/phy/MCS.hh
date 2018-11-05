@@ -78,19 +78,6 @@ inline void mcs2flexframegenprops(const MCS &mcs, ofdmflexframegenprops_s &props
     props.mod_scheme = mcs.ms;
 }
 
-inline bool operator ==(const ofdmflexframegenprops_s &props, const MCS &mcs)
-{
-    return props.check == mcs.check &&
-           props.fec0 == mcs.fec0 &&
-           props.fec1 == mcs.fec1 &&
-           props.mod_scheme == mcs.ms;
-}
-
-inline bool operator !=(const ofdmflexframegenprops_s &props, const MCS &mcs)
-{
-    return !(props == mcs);
-}
-
 inline void mcs2flexframegenprops(const MCS &mcs, origflexframegenprops_s &props)
 {
     props.check = mcs.check;
@@ -99,38 +86,12 @@ inline void mcs2flexframegenprops(const MCS &mcs, origflexframegenprops_s &props
     props.mod_scheme = mcs.ms;
 }
 
-inline bool operator ==(const origflexframegenprops_s &props, const MCS &mcs)
-{
-    return props.check == mcs.check &&
-           props.fec0 == mcs.fec0 &&
-           props.fec1 == mcs.fec1 &&
-           props.mod_scheme == mcs.ms;
-}
-
-inline bool operator !=(const origflexframegenprops_s &props, const MCS &mcs)
-{
-    return !(props == mcs);
-}
-
 inline void mcs2flexframegenprops(const MCS &mcs, flexframegenprops_s &props)
 {
     props.check = mcs.check;
     props.fec0 = mcs.fec0;
     props.fec1 = mcs.fec1;
     props.mod_scheme = mcs.ms;
-}
-
-inline bool operator ==(const flexframegenprops_s &props, const MCS &mcs)
-{
-    return props.check == mcs.check &&
-           props.fec0 == mcs.fec0 &&
-           props.fec1 == mcs.fec1 &&
-           props.mod_scheme == mcs.ms;
-}
-
-inline bool operator !=(const flexframegenprops_s &props, const MCS &mcs)
-{
-    return !(props == mcs);
 }
 
 #endif /* MCS_HH_ */
