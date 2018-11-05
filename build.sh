@@ -11,7 +11,7 @@ sudo apt install -y python3 python3-pip
 (cd dependencies/libcorrect && rm -rf build && mkdir build && cd build && cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
 
 # Build and install UHD
-(cd dependencies/uhd/host && mkdir -p build && cd build && cmake ../ && make -j4 && sudo make install && sudo ldconfig && make clean)
+(cd dependencies/uhd/host && rm -rf build && mkdir build && cd build && cmake ../ && make -j4 && sudo make install && sudo ldconfig && make clean)
 
 # Build and install liquid-dsp
 (cd dependencies/liquid-dsp && ./bootstrap.sh && ./configure && make && sudo make install && sudo ldconfig && make clean)
