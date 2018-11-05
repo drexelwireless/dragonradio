@@ -19,7 +19,7 @@ static_assert(sizeof(Header) <= 8, "sizeof(Header) must be no more than 8 bytes"
 
 namespace Liquid {
 
-class MultiOFDMModulator : public Modulator {
+class MultiOFDMModulator : virtual public Modulator {
 public:
     MultiOFDMModulator(unsigned M,
                        unsigned cp_len,
@@ -122,7 +122,7 @@ protected:
     }
 };
 
-class MultiOFDMDemodulator : public Demodulator {
+class MultiOFDMDemodulator : virtual public Demodulator {
 public:
     MultiOFDMDemodulator(bool soft_header,
                          bool soft_payload,
@@ -140,7 +140,7 @@ public:
 
         // modem setup (list is for parallel demodulation)
         framesync_callback callback[1] = { &Demodulator::liquid_callback };
-        void               *userdata[1] = { this };
+        void               *userdata[1] = { static_cast<Demodulator*>(this) };
 
         mcrx_ = std::make_unique<multichannelrx>(NUM_CHANNELS,
                                                  M_,

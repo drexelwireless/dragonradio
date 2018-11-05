@@ -10,7 +10,7 @@
 
 namespace Liquid {
 
-class OFDMModulator : public Modulator {
+class OFDMModulator : virtual public Modulator {
 public:
     OFDMModulator(unsigned M,
                   unsigned cp_len,
@@ -118,7 +118,7 @@ protected:
     }
 };
 
-class OFDMDemodulator : public Demodulator {
+class OFDMDemodulator : virtual public Demodulator {
 public:
     OFDMDemodulator(bool soft_header,
                     bool soft_payload,

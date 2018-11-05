@@ -1,12 +1,9 @@
 #ifndef MULTIOFDM_H_
 #define MULTIOFDM_H_
 
-#include <vector>
-#include <complex>
+#include <memory>
 
-#include <liquid/multichannelrx.h>
-#include <liquid/multichanneltx.h>
-
+#include "liquid/MultiOFDM.hh"
 #include "phy/LiquidPHY.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp multi-channel OFDM %PHY code. */
@@ -16,61 +13,55 @@ public:
     /** @brief Modulate IQ data using the liquid-usrp multi-channel OFDM %PHY
       * code.
       */
-    class Modulator : public LiquidPHY::Modulator
+    class Modulator : public LiquidPHY::Modulator, protected Liquid::MultiOFDMModulator
     {
     public:
-        Modulator(MultiOFDM &phy);
-        ~Modulator();
+        Modulator(MultiOFDM &phy)
+          : LiquidPHY::Modulator(phy)
+          , Liquid::MultiOFDMModulator(phy.M_,
+                                       phy.cp_len_,
+                                       phy.taper_len_,
+                                       phy.p_)
+          , myphy_(phy)
+        {
+        }
 
-        Modulator(const Modulator&) = delete;
-        Modulator(Modulator&& other) = delete;
-
-        Modulator& operator=(const Modulator&) = delete;
-        Modulator& operator=(Modulator&&) = delete;
+        virtual ~Modulator() = default;
 
     private:
         /** @brief Our associated PHY. */
         MultiOFDM &myphy_;
-
-        /** @brief Our liquid-usrp multichanneltx object. */
-        std::unique_ptr<multichanneltx> mctx_;
-
-        void assemble(unsigned char *hdr, NetPacket& pkt) override final;
-
-        size_t maxModulatedSamples(void) override final;
-
-        bool modulateSamples(std::complex<float> *buf, size_t &nw) override final;
     };
 
     /** @brief Demodulate IQ data using the liquid-usrp multi-channel OFDM %PHY
       * code.
       */
-    class Demodulator : public LiquidPHY::Demodulator
+    class Demodulator : public LiquidPHY::Demodulator, protected Liquid::MultiOFDMDemodulator
     {
     public:
-        Demodulator(MultiOFDM &phy);
-        ~Demodulator();
+        Demodulator(MultiOFDM &phy)
+          : Liquid::Demodulator(phy.soft_header_,
+                                phy.soft_payload_)
+          , LiquidPHY::Demodulator(phy)
+          , Liquid::MultiOFDMDemodulator(phy.soft_header_,
+                                         phy.soft_payload_,
+                                         phy.M_,
+                                         phy.cp_len_,
+                                         phy.taper_len_,
+                                         phy.p_)
+          , myphy_(phy)
+        {
+        }
 
-        Demodulator(const Demodulator&) = delete;
-        Demodulator(Demodulator&& other) = delete;
-
-        Demodulator& operator=(const Demodulator&) = delete;
-        Demodulator& operator=(Demodulator&&) = delete;
+        virtual ~Demodulator() = default;
 
     private:
         /** @brief Our associated PHY. */
         MultiOFDM &myphy_;
-
-        /** @brief Our liquid-usrp multichannelrx object. */
-        std::unique_ptr<multichannelrx> mcrx_;
-
-        void liquidReset(void) override final;
-
-        void demodulateSamples(std::complex<float> *buf, const size_t n) override final;
     };
 
-    /** @brief Construct a multichannel OFDM PHY.
-     * @param minPacketSize The minimum number of bytes we will send in a
+    /** @brief Construct an OFDM PHY.
+     * @param min_packet_size The minimum number of bytes we will send in a
      * packet.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
@@ -79,40 +70,15 @@ public:
      * M entries.
      */
     MultiOFDM(NodeId node_id,
-              const MCS &mcs,
-              bool soft_header,
-              bool soft_payload,
-              size_t min_packet_size,
-              unsigned int M,
-              unsigned int cp_len,
-              unsigned int taper_len)
-       : LiquidPHY(node_id, mcs, soft_header, soft_payload, min_packet_size)
-       , M_(M)
-       , cp_len_(cp_len)
-       , taper_len_(taper_len)
-       , p_(NULL)
-    {
-    }
-
-    /** @brief Construct a multichannel OFDM PHY.
-     * @param minPacketSize The minimum number of bytes we will send in a
-     * packet.
-     * @param M The number of subcarriers.
-     * @param cp_len The cyclic prefix length
-     * @param taper_len The taper length (OFDM symbol overlap)
-     * @param p The subcarrier allocation (null, pilot, data). Should have
-     * M entries.
-     */
-    MultiOFDM(NodeId node_id,
-              const MCS &mcs,
+              const MCS &header_mcs,
               bool soft_header,
               bool soft_payload,
               size_t min_packet_size,
               unsigned int M,
               unsigned int cp_len,
               unsigned int taper_len,
-              unsigned char *p)
-       : LiquidPHY(node_id, mcs, soft_header, soft_payload, min_packet_size)
+              const std::vector<unsigned char> &p = {})
+       : LiquidPHY(node_id, header_mcs, soft_header, soft_payload, min_packet_size)
        , M_(M)
        , cp_len_(cp_len)
        , taper_len_(taper_len)
@@ -120,15 +86,7 @@ public:
     {
     }
 
-    ~MultiOFDM()
-    {
-    }
-
-    MultiOFDM(const MultiOFDM&) = delete;
-    MultiOFDM(MultiOFDM&&) = delete;
-
-    MultiOFDM& operator=(const MultiOFDM&) = delete;
-    MultiOFDM& operator=(MultiOFDM&&) = delete;
+    virtual ~MultiOFDM() = default;
 
     // MultiChannel TX/RX requires oversampling by a factor of 2
     double getMinRXRateOversample(void) const override
@@ -141,18 +99,35 @@ public:
         return 2.0;
     }
 
-    size_t getModulatedSize(const TXParams &params, size_t n) override;
+    std::unique_ptr<PHY::Demodulator> mkDemodulator(void) override
+    {
+        return std::make_unique<Demodulator>(*this);
+    }
 
-    std::unique_ptr<PHY::Demodulator> mkDemodulator(void) override;
+    std::unique_ptr<PHY::Modulator> mkModulator(void) override
+    {
+        return std::make_unique<Modulator>(*this);
+    }
 
-    std::unique_ptr<PHY::Modulator> mkModulator(void) override;
-
-private:
-    // OFDM parameters
+protected:
+    /** @brief The number of subcarriers */
     unsigned int M_;
+
+    /** @brief The cyclic prefix length */
     unsigned int cp_len_;
+
+    /** @brief The taper length (OFDM symbol overlap) */
     unsigned int taper_len_;
-    unsigned char *p_;
+
+    /** @brief The subcarrier allocation (null, pilot, data). Should have M
+     * entries.
+     */
+    std::vector<unsigned char> p_;
+
+    std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) override
+    {
+        return std::make_unique<Liquid::MultiOFDMModulator>(M_, cp_len_, taper_len_, p_);
+    }
 };
 
 #endif /* MULTIOFDM_H_ */

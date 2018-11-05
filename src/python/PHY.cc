@@ -79,6 +79,15 @@ void exportPHYs(py::module &m)
                       unsigned int,
                       unsigned int,
                       unsigned int>())
+        .def(py::init<NodeId,
+                      const MCS&,
+                      bool,
+                      bool,
+                      size_t,
+                      unsigned int,
+                      unsigned int,
+                      unsigned int,
+                      std::vector<unsigned char>&>())
         ;
 
     // Export class MultiOFDM to Python
@@ -91,5 +100,14 @@ void exportPHYs(py::module &m)
                       unsigned int,
                       unsigned int,
                       unsigned int>())
+        .def(py::init<NodeId,
+                      const MCS&,
+                      bool,
+                      bool,
+                      size_t,
+                      unsigned int,
+                      unsigned int,
+                      unsigned int,
+                      std::vector<unsigned char>&>())
         ;
 }

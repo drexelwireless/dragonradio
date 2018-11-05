@@ -8,6 +8,7 @@
 #include "Clock.hh"
 #include "Packet.hh"
 #include "dsp/TableNCO.hh"
+#include "liquid/PHY.hh"
 #include "liquid/Resample.hh"
 #include "phy/PHY.hh"
 
@@ -37,10 +38,10 @@ struct ResamplerParams {
 
 class LiquidPHY : public PHY {
 public:
-    class Modulator : public PHY::Modulator {
+    class Modulator : public PHY::Modulator, virtual protected Liquid::Modulator {
     public:
         Modulator(LiquidPHY &phy);
-        virtual ~Modulator();
+        virtual ~Modulator() = default;
 
         Modulator(const Modulator&) = delete;
         Modulator(Modulator&&) = delete;
@@ -69,30 +70,12 @@ public:
          * @param shift The frequency shift (Hz)
          */
         virtual void setFreqShift(double shift);
-
-        /** @brief Assemble a packet for modulation.
-         * @param hdr Packet header
-         * @param pkt The NetPacket to assemble.
-         */
-        virtual void assemble(unsigned char *hdr, NetPacket& pkt) = 0;
-
-        /** @brief Return maximum number of samples modulateSamples will generate.
-         * @return Maximum number of samples modulateSamples will generate.
-         */
-        virtual size_t maxModulatedSamples(void) = 0;
-
-        /** @brief Modulate samples.
-         * @param buf The destination for modulated samples
-         * @param nw The number of samples written
-         * @return A flag indicating whether or not the last sample was written.
-         */
-        virtual bool modulateSamples(std::complex<float> *buf, size_t &nw) = 0;
     };
 
-    class Demodulator : public PHY::Demodulator {
+    class Demodulator : public PHY::Demodulator, virtual protected Liquid::Demodulator {
     public:
         Demodulator(LiquidPHY &phy);
-        virtual ~Demodulator();
+        virtual ~Demodulator() = default;
 
         Demodulator(const Demodulator&) = delete;
         Demodulator(Demodulator&&) = delete;
@@ -138,34 +121,19 @@ public:
         /** @brief NCO for mixing down */
         TableNCO nco_;
 
-        static int liquid_callback(unsigned char *  header_,
-                                   int              header_valid_,
-                                   unsigned char *  payload_,
-                                   unsigned int     payload_len_,
-                                   int              payload_valid_,
-                                   framesyncstats_s stats_,
-                                   void *           userdata_);
-
-        virtual int callback(unsigned char *  header_,
+        virtual int callback(unsigned char    *header_,
                              int              header_valid_,
-                             unsigned char *  payload_,
+                             unsigned char    *payload_,
                              unsigned int     payload_len_,
                              int              payload_valid_,
-                             framesyncstats_s stats_);
+                             framesyncstats_s stats_) override;
+
+        using Liquid::Demodulator::reset;
 
         /** @brief Set frequency shift for mixing down
          * @param shift The frequency shift (Hz)
          */
         virtual void setFreqShift(double shift);
-
-        /** @brief Reset the internal state of the liquid demodulator. */
-        virtual void liquidReset(void) = 0;
-
-        /** @brief Demodulate samples.
-         * @param buf The samples to demodulate
-         * @param n The number of samples to demodulate
-         */
-        virtual void demodulateSamples(std::complex<float> *buf, const size_t n) = 0;
     };
 
     LiquidPHY(NodeId node_id,
@@ -173,7 +141,7 @@ public:
               bool soft_header,
               bool soft_payload,
               size_t min_packet_size);
-    virtual ~LiquidPHY();
+    virtual ~LiquidPHY() = default;
 
     LiquidPHY() = delete;
     LiquidPHY(const LiquidPHY&) = delete;
@@ -204,17 +172,22 @@ public:
         return soft_payload_;
     }
 
-    /** @brief Get minimum packet size. */
+    /** @brief Return minimum packet size.
+      */
     size_t getMinPacketSize() const
     {
         return min_packet_size_;
     }
 
-    /** @brief Set minimum packet size. */
+    /** @brief Return flag indicating whether or not to use soft-decoding for
+      * payload.
+      */
     void setMinPacketSize(size_t size)
     {
         min_packet_size_ = size;
     }
+
+    size_t getModulatedSize(const TXParams &params, size_t n) override;
 
     /** @brief Resampler parameters for modulator */
     ResamplerParams upsamp_resamp_params;
@@ -224,19 +197,22 @@ public:
 
 protected:
     /** @brief Modulation and coding scheme for headers. */
-    const MCS header_mcs_;
+    MCS header_mcs_;
 
     /** @brief Flag indicating whether or not to use soft-decoding for headers.
       */
-    const bool soft_header_;
+    bool soft_header_;
 
     /** @brief Flag indicating whether or not to use soft-decoding for payload.
       */
-    const bool soft_payload_;
+    bool soft_payload_;
 
     /** @brief Minimum packet size. */
     /** Packets will be padded to at least this many bytes */
     size_t min_packet_size_;
+
+    /** @brief Create underlying liquid modulator object */
+    virtual std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) = 0;
 };
 
 #endif /* LIQUIDPHY_H_ */

@@ -10,7 +10,7 @@
 
 namespace Liquid {
 
-class NewFlexFrameModulator : public Modulator {
+class NewFlexFrameModulator : virtual public Modulator {
 public:
     NewFlexFrameModulator()
     {
@@ -101,7 +101,7 @@ protected:
     }
 };
 
-class NewFlexFrameDemodulator : public Demodulator {
+class NewFlexFrameDemodulator : virtual public Demodulator {
 public:
     NewFlexFrameDemodulator(bool soft_header,
                             bool soft_payload)
@@ -110,7 +110,7 @@ public:
         std::lock_guard<std::mutex> lck(Liquid::mutex);
 
         fs_ = flexframesync_create(&Demodulator::liquid_callback,
-                                       this);
+                                   static_cast<Demodulator*>(this));
 
         setHeaderMCS(header_mcs_);
     }

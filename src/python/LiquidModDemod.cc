@@ -183,10 +183,16 @@ void exportLiquidModDemod(py::module &m)
             "Demodulate a signal")
         ;
 
+    // We need to use the py::multiple_inheritance{} annotaion because these
+    // calsses have a virtual base class.
+    // See:
+    //   https://github.com/pybind/pybind11/issues/1256
+    //   https://github.com/yeganer/pybind11/commit/6a82cfab236302951966b6d39f13c738bafc324d
+
     // Export class OFDMModulator to Python
     py::class_<Liquid::OFDMModulator,
                Liquid::Modulator,
-               std::shared_ptr<Liquid::OFDMModulator>>(m, "OFDMModulator")
+               std::shared_ptr<Liquid::OFDMModulator>>(m, "OFDMModulator", py::multiple_inheritance{})
         .def(py::init<unsigned,
                       unsigned,
                       unsigned>())
@@ -199,7 +205,7 @@ void exportLiquidModDemod(py::module &m)
     // Export class OFDMDemodulator to Python
     py::class_<Liquid::OFDMDemodulator,
                Liquid::Demodulator,
-               std::shared_ptr<Liquid::OFDMDemodulator>>(m, "OFDMDemodulator")
+               std::shared_ptr<Liquid::OFDMDemodulator>>(m, "OFDMDemodulator", py::multiple_inheritance{})
         .def(py::init<bool,
                       bool,
                       unsigned,
@@ -217,7 +223,7 @@ void exportLiquidModDemod(py::module &m)
     // Export class MultiOFDMModulator to Python
     py::class_<Liquid::MultiOFDMModulator,
                Liquid::Modulator,
-               std::shared_ptr<Liquid::MultiOFDMModulator>>(m, "MultiOFDMModulator")
+               std::shared_ptr<Liquid::MultiOFDMModulator>>(m, "MultiOFDMModulator", py::multiple_inheritance{})
         .def(py::init<unsigned,
                       unsigned,
                       unsigned>())
@@ -230,7 +236,7 @@ void exportLiquidModDemod(py::module &m)
     // Export class MultiOFDMDemodulator to Python
     py::class_<Liquid::MultiOFDMDemodulator,
                Liquid::Demodulator,
-               std::shared_ptr<Liquid::MultiOFDMDemodulator>>(m, "MultiOFDMDemodulator")
+               std::shared_ptr<Liquid::MultiOFDMDemodulator>>(m, "MultiOFDMDemodulator", py::multiple_inheritance{})
         .def(py::init<bool,
                       bool,
                       unsigned,
@@ -248,14 +254,14 @@ void exportLiquidModDemod(py::module &m)
     // Export class FlexFrameModulator to Python
     py::class_<Liquid::FlexFrameModulator,
                Liquid::Modulator,
-               std::shared_ptr<Liquid::FlexFrameModulator>>(m, "FlexFrameModulator")
+               std::shared_ptr<Liquid::FlexFrameModulator>>(m, "FlexFrameModulator", py::multiple_inheritance{})
         .def(py::init<>())
         ;
 
     // Export class FlexFrameDemodulator to Python
     py::class_<Liquid::FlexFrameDemodulator,
                Liquid::Demodulator,
-               std::shared_ptr<Liquid::FlexFrameDemodulator>>(m, "FlexFrameDemodulator")
+               std::shared_ptr<Liquid::FlexFrameDemodulator>>(m, "FlexFrameDemodulator", py::multiple_inheritance{})
         .def(py::init<bool,
                       bool>())
         ;
@@ -263,14 +269,14 @@ void exportLiquidModDemod(py::module &m)
     // Export class NewFlexFrameModulator to Python
     py::class_<Liquid::NewFlexFrameModulator,
                Liquid::Modulator,
-               std::shared_ptr<Liquid::NewFlexFrameModulator>>(m, "NewFlexFrameModulator")
+               std::shared_ptr<Liquid::NewFlexFrameModulator>>(m, "NewFlexFrameModulator", py::multiple_inheritance{})
         .def(py::init<>())
         ;
 
     // Export class FlexFrameDemodulator to Python
     py::class_<Liquid::NewFlexFrameDemodulator,
                Liquid::Demodulator,
-               std::shared_ptr<Liquid::NewFlexFrameDemodulator>>(m, "NewFlexFrameDemodulator")
+               std::shared_ptr<Liquid::NewFlexFrameDemodulator>>(m, "NewFlexFrameDemodulator", py::multiple_inheritance{})
         .def(py::init<bool,
                       bool>())
         ;

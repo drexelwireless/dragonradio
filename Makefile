@@ -67,12 +67,8 @@ SOURCES := \
     liquid/Mutex.cc \
     liquid/PHY.cc \
     liquid/Resample.cc \
-    phy/FlexFrame.cc \
     phy/TXParams.cc \
     phy/LiquidPHY.cc \
-    phy/MultiOFDM.cc \
-    phy/NewFlexFrame.cc \
-    phy/OFDM.cc \
     phy/ParallelPacketDemodulator.cc \
     phy/ParallelPacketModulator.cc \
     phy/RadioPacketQueue.cc \

@@ -1,8 +1,9 @@
 #ifndef PHY_H_
 #define PHY_H_
 
+#include <atomic>
 #include <functional>
-#include <queue>
+#include <list>
 
 #include "IQBuffer.hh"
 #include "Packet.hh"
@@ -19,7 +20,7 @@ public:
     {
     public:
         Modulator(PHY &phy) : phy_(phy) {};
-        virtual ~Modulator() {};
+        virtual ~Modulator() = default;
 
         /** @brief Modulate a packet to produce IQ samples.
          * @param pkt The NetPacket to modulate.
@@ -32,6 +33,10 @@ public:
                               ModPacket &mpkt) = 0;
 
     protected:
+        /** @brief Our PHY */
+        /** We keep a reference to our PHY so that we can query it for rate
+         * information.
+         */
         PHY &phy_;
     };
 
@@ -64,6 +69,10 @@ public:
                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
 
     protected:
+        /** @brief Our PHY */
+        /** We keep a reference to our PHY so that we can query it for rate
+         * information.
+         */
         PHY &phy_;
     };
 
@@ -72,28 +81,15 @@ public:
     {
     }
 
-    virtual ~PHY() {}
+    virtual ~PHY() = default;
 
     PHY() = delete;
 
-    /** @brief Get this node's ID.
-     */
+    /** @brief Get this node's ID. */
     NodeId getNodeId(void)
     {
         return node_id_;
     }
-
-    /** @brief Return the minimum oversample rate (with respect to PHY
-     * bandwidth) needed for demodulation
-     * @return The RX oversample rate
-     */
-    virtual double getMinRXRateOversample(void) const = 0;
-
-    /** @brief Return the minimum oversample rate (with respect to PHY
-     * bandwidth) needed for modulation
-     * @return The TX oversample rate
-     */
-    virtual double getMinTXRateOversample(void) const = 0;
 
     /** @brief Tell the PHY what RX sample rate we are running at.
      * @param rate The rate.
@@ -166,6 +162,18 @@ public:
     {
         return getRXRateOversample()/getMinRXRateOversample();
     }
+
+    /** @brief Return the minimum oversample rate (with respect to PHY
+     * bandwidth) needed for demodulation
+     * @return The minimum RX oversample rate
+     */
+    virtual double getMinRXRateOversample(void) const = 0;
+
+    /** @brief Return the minimum oversample rate (with respect to PHY
+     * bandwidth) needed for modulation
+     * @return The minimum TX oversample rate
+     */
+    virtual double getMinTXRateOversample(void) const = 0;
 
     /** @brief Calculate size of modulated data */
     virtual size_t getModulatedSize(const TXParams &params, size_t n) = 0;

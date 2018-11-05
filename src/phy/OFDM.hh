@@ -1,99 +1,57 @@
 #ifndef OFDM_H_
 #define OFDM_H_
 
+#include "liquid/OFDM.hh"
 #include "phy/LiquidPHY.hh"
 
 /** @brief A %PHY thats uses the liquid-usrp ofdmflexframegen code. */
 class OFDM : public LiquidPHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp ofdmflexframegen. */
-    class Modulator : public LiquidPHY::Modulator
+    class Modulator : public LiquidPHY::Modulator, protected Liquid::OFDMModulator
     {
     public:
-        Modulator(OFDM &phy);
-        ~Modulator();
+        Modulator(OFDM &phy)
+          : LiquidPHY::Modulator(phy)
+          , Liquid::OFDMModulator(phy.M_,
+                                  phy.cp_len_,
+                                  phy.taper_len_,
+                                  phy.p_)
+          , myphy_(phy)
+        {
+        }
 
-        Modulator(const Modulator&) = delete;
-        Modulator(Modulator&& other) = delete;
-
-        Modulator& operator=(const Modulator&) = delete;
-        Modulator& operator=(Modulator&&) = delete;
-
-        /** @brief Print internals of the associated flexframegen. */
-        void print(void);
+        virtual ~Modulator() = default;
 
     private:
-        /** @brief Associated OFDM PHY. */
+        /** @brief Our associated PHY. */
         OFDM &myphy_;
-
-        /** @brief The liquid-dsp flexframegen object */
-        ofdmflexframegen fg_;
-
-        /** @brief The liquid-dsp ofdmflexframegenprops object associated with
-         * this ofdmflexframegen.
-         */
-        ofdmflexframegenprops_s fgprops_;
-
-        /** Update frame properties to match fgprops_. */
-        void update_props(const TXParams &params);
-
-        void assemble(unsigned char *hdr, NetPacket& pkt) override final;
-
-        size_t maxModulatedSamples(void) override final;
-
-        bool modulateSamples(std::complex<float> *buf, size_t &nw) override final;
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
-    class Demodulator : public LiquidPHY::Demodulator
+    class Demodulator : public LiquidPHY::Demodulator, protected Liquid::OFDMDemodulator
     {
     public:
-        Demodulator(OFDM &phy);
-        ~Demodulator();
+        Demodulator(OFDM &phy)
+          : Liquid::Demodulator(phy.soft_header_,
+                                phy.soft_payload_)
+          , LiquidPHY::Demodulator(phy)
+          , Liquid::OFDMDemodulator(phy.soft_header_,
+                                    phy.soft_payload_,
+                                    phy.M_,
+                                    phy.cp_len_,
+                                    phy.taper_len_,
+                                    phy.p_)
+          , myphy_(phy)
+        {
+        }
 
-        Demodulator(const Demodulator&) = delete;
-        Demodulator(Demodulator&& other) = delete;
-
-        Demodulator& operator=(const Demodulator&) = delete;
-        Demodulator& operator=(Demodulator&&) = delete;
-
-        /** @brief Print internals of the associated flexframesync. */
-        void print(void);
+        virtual ~Demodulator() = default;
 
     private:
-        /** @brief Associated OFDM PHY. */
+        /** @brief Our associated PHY. */
         OFDM &myphy_;
-
-        /** @brief The liquid-dsp flexframesync object */
-        ofdmflexframesync fs_;
-
-        void liquidReset(void) override final;
-
-        void demodulateSamples(std::complex<float> *buf, const size_t n) override final;
     };
-
-    /** @brief Construct an OFDM PHY.
-     * @param min_packet_size The minimum number of bytes we will send in a
-     * packet.
-     * @param M The number of subcarriers.
-     * @param cp_len The cyclic prefix length
-     * @param taper_len The taper length (OFDM symbol overlap)
-     */
-    OFDM(NodeId node_id,
-         const MCS &mcs,
-         bool soft_header,
-         bool soft_payload,
-         size_t min_packet_size,
-         unsigned int M,
-         unsigned int cp_len,
-         unsigned int taper_len)
-      : LiquidPHY(node_id, mcs, soft_header, soft_payload, min_packet_size)
-      , M_(M)
-      , cp_len_(cp_len)
-      , taper_len_(taper_len)
-      , p_(NULL)
-    {
-    }
 
     /** @brief Construct an OFDM PHY.
      * @param min_packet_size The minimum number of bytes we will send in a
@@ -105,15 +63,15 @@ public:
      * M entries.
      */
     OFDM(NodeId node_id,
-         const MCS &mcs,
+         const MCS &header_mcs,
          bool soft_header,
          bool soft_payload,
          size_t min_packet_size,
          unsigned int M,
          unsigned int cp_len,
          unsigned int taper_len,
-         unsigned char *p)
-      : LiquidPHY(node_id, mcs, soft_header, soft_payload, min_packet_size)
+         const std::vector<unsigned char> &p = {})
+      : LiquidPHY(node_id, header_mcs, soft_header, soft_payload, min_packet_size)
       , M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)
@@ -121,15 +79,7 @@ public:
     {
     }
 
-    ~OFDM()
-    {
-    }
-
-    OFDM(const OFDM&) = delete;
-    OFDM(OFDM&&) = delete;
-
-    OFDM& operator=(const OFDM&) = delete;
-    OFDM& operator=(OFDM&&) = delete;
+    virtual ~OFDM() = default;
 
     double getMinRXRateOversample(void) const override
     {
@@ -141,18 +91,35 @@ public:
         return 1.0;
     }
 
-    size_t getModulatedSize(const TXParams &params, size_t n) override;
+    std::unique_ptr<PHY::Demodulator> mkDemodulator(void) override
+    {
+        return std::make_unique<Demodulator>(*this);
+    }
 
-    std::unique_ptr<PHY::Demodulator> mkDemodulator(void) override;
+    std::unique_ptr<PHY::Modulator> mkModulator(void) override
+    {
+        return std::make_unique<Modulator>(*this);
+    }
 
-    std::unique_ptr<PHY::Modulator> mkModulator(void) override;
-
-private:
-    // OFDM parameters
+protected:
+    /** @brief The number of subcarriers */
     unsigned int M_;
+
+    /** @brief The cyclic prefix length */
     unsigned int cp_len_;
+
+    /** @brief The taper length (OFDM symbol overlap) */
     unsigned int taper_len_;
-    unsigned char *p_;
+
+    /** @brief The subcarrier allocation (null, pilot, data). Should have M
+     * entries.
+     */
+    std::vector<unsigned char> p_;
+
+    std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) override
+    {
+        return std::make_unique<Liquid::OFDMModulator>(M_, cp_len_, taper_len_, p_);
+    }
 };
 
 #endif /* OFDM_H_ */
