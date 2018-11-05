@@ -1,18 +1,18 @@
 [submodule "dependencies/liquid-dsp"]
 	path = dependencies/liquid-dsp
-	url = https://github.com/mainland/liquid-dsp.git
+	url = git@github.com:mainland/liquid-dsp.git
 	branch = sc2
 [submodule "dependencies/liquid-usrp"]
 	path = dependencies/liquid-usrp
-	url = https://github.com/mainland/liquid-usrp.git
+	url = git@github.com:mainland/liquid-usrp.git
 	branch = sc2
 [submodule "dependencies/uhd"]
 	path = dependencies/uhd
-	url = https://github.com/mainland/uhd.git
+	url = git@github.com:mainland/uhd.git
 	branch = sc2
 [submodule "dependencies/pybind11"]
 	path = dependencies/pybind11
-	url = https://github.com/pybind/pybind11.git
+	url = git@github.com:pybind/pybind11.git
 [submodule "dependencies/libcorrect"]
 	path = dependencies/libcorrect
-	url = https://github.com/mainland/libcorrect.git
+	url = git@github.com:mainland/libcorrect.git
