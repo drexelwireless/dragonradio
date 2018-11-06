@@ -894,12 +894,15 @@ class Radio(object):
 
             self.usrp.tx_frequency = config.frequency + fc
 
-    def configureFDMATDMASchedule(self, nodes):
+    def configureFDMATDMASchedule(self):
         """
         Set the TDMA/FDMA schedule based on configuration parameters and the
         given set of nodes.
         """
         config = self.config
+
+        nodes = list(self.net)
+        nodes.sort()
 
         if config.fdma :
             self.configureTDMA(1)

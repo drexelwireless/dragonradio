@@ -227,8 +227,7 @@ class Controller(TCPProtoServer):
 
         # Sort nodes and pick our slot/channel based on our position in the node
         # list
-        nodes.sort()
-        radio.configureFDMATDMASchedule(nodes)
+        radio.configureFDMATDMASchedule()
 
         #
         # Specify voxels
