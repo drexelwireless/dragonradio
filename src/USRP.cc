@@ -13,9 +13,10 @@ USRP::USRP(const std::string& addr,
            const std::string& tx_ant,
            const std::string& rx_ant,
            float tx_gain,
-           float rx_gain) :
-    usrp_(uhd::usrp::multi_usrp::make(addr)),
-    done_(false)
+           float rx_gain)
+  : usrp_(uhd::usrp::multi_usrp::make(addr))
+  , auto_dc_offset_(false)
+  , done_(false)
 {
     determineDeviceType();
 
@@ -36,12 +37,6 @@ USRP::USRP(const std::string& addr,
 
     tx_stream_ = usrp_->get_tx_stream(stream_args);
     rx_stream_ = usrp_->get_rx_stream(stream_args);
-
-    // Turn on DC offset correction on X310
-    if (device_type_ == kUSRPX310) {
-        usrp_->set_tx_dc_offset(true);
-        usrp_->set_rx_dc_offset(true);
-    }
 
     // Set maximum number of samples we attempt to TX/RX.
     if (device_type_ == kUSRPX310) {

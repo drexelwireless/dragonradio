@@ -111,6 +111,20 @@ public:
         return usrp_->set_rx_gain(db);
     }
 
+    /** @brief Get automatic DC offset correction. */
+    bool getAutoDCOffset(bool enable)
+    {
+        return auto_dc_offset_;
+    }
+
+    /** @brief Set automatic DC offset correction. */
+    void setAutoDCOffset(bool enable)
+    {
+        auto_dc_offset_ = enable;
+        usrp_->set_rx_dc_offset(auto_dc_offset_);
+        usrp_->set_tx_dc_offset(auto_dc_offset_);
+    }
+
     /** @brief Transmit a burst of IQ buffers at the given time.
      * @param when Time at which to start the burst.
      * @param bufs A list of IQBuf%s to transmit.
@@ -187,6 +201,11 @@ private:
     /** @brief Maximum number of samples we will read at a time during burstRX.
      */
     size_t rx_max_samps_;
+
+    /** @brief Flag indicating whether or not to enable automatic DC offset
+     * correction.
+     */
+    bool auto_dc_offset_;
 
     /** @brief Flag indicating the we should stop processing data. */
     bool done_;
