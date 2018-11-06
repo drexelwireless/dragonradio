@@ -144,8 +144,8 @@ void ParallelPacketDemodulator::demodWorker(void)
 
         // If we received any packets, log both slots.
         if (logger && received && logger->getCollectSource(Logger::kSlots)) {
-            logger->logSlot(buf1);
-            logger->logSlot(buf2);
+            logger->logSlot(buf1, phy_->getRXRate());
+            logger->logSlot(buf2, phy_->getRXRate());
         }
     }
 }

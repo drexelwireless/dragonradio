@@ -215,6 +215,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
                         stats_.rssi,
                         stats_.cfo,
                         shift_,
+                        phy_.getRXRate(),
                         payload_len_,
                         std::move(buf));
     }

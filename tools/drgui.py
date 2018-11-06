@@ -150,7 +150,6 @@ class ReceivePlot:
     def __init__(self, log, node, show_header_invalid=False, nfft=256):
         self.log = log
         self.node = node
-        self.Fs = self.node.rx_bandwidth
         self.show_header_invalid = show_header_invalid
 
         self.pktidx = 0
@@ -197,9 +196,11 @@ class ReceivePlot:
             self.pkt = recv.iloc[idx]
             self.spos.set_val(idx)
 
-            (self.ts, self.w) = self.log.findSlots(self.node, self.pkt)
+            slots = self.log.findSlots(self.node, self.pkt)
+            if slots == None:
+                logging.error("Cannot find slots for packet at timestamp %f", self.pkt.timestamp)
 
-            self.sig = self.w[self.pkt.start_samples:self.pkt.end_samples]
+            sig = slots.sig[self.pkt.start_samples:self.pkt.end_samples]
 
             if not self.pkt.header_valid:
                 msg = 'INVALID HEADER'
@@ -211,13 +212,13 @@ class ReceivePlot:
             self.fig.canvas.set_window_title('Node {} Received Packets'.format(self.node.node_id))
             self.fig.suptitle('Packet {} from node {} (evm {:03.1f}dB, rssi {:03.1f}dB, fc {:03.1f}MHz) {}'.format(self.pkt.seq, self.pkt.src, self.pkt.evm, self.pkt.rssi, self.pkt.fc/1e6, msg))
 
-            t0 = self.ts[0]
+            t0 = slots.ts[0]
 
-            self.specgram.plot(self.Fs, self.w, t0)
+            self.specgram.plot(slots.bw, slots.sig, t0)
 
             # Mark all packets in the current specgram
             #self.markPacket(self.pkt, self.specgram.ax)
-            pkts = self.log.findReceivedPackets(self.node, self.ts[0], self.ts[0]+len(self.w)/self.Fs)
+            pkts = self.log.findReceivedPackets(self.node, t0, t0+len(slots.sig)/slots.bw)
             if not self.show_header_invalid:
                 pkts = pkts[pkts.header_valid == True]
 
@@ -225,13 +226,13 @@ class ReceivePlot:
                 self.bracketPacket(pkt, t0, self.specgram.ax)
 
             # Mark all slots in the current specgram
-            for t in self.ts:
+            for t in slots.ts:
                 self.markSlot(self.specgram.ax, t-t0)
 
             self.constellation.plot(self.pkt.iq_data)
-            self.waveform.plot(self.sig)
-            self.psd.plot(self.Fs, self.sig)
-            self.papr.plot(self.sig)
+            self.waveform.plot(sig)
+            self.psd.plot(slots.bw, sig)
+            self.papr.plot(sig)
 
             self.fig.canvas.draw()
 
@@ -295,10 +296,10 @@ class ReceivePlot:
     def markPacket(self, pkt, ax):
         # XXX hard-coded constants for y position of labels. Fix this or get rid
         # of this function...
-        self.note(ax, 'packet start', pkt.start/self.Fs, 1e6,
+        self.note(ax, 'packet start', pkt.start/pkt.bw, 1e6,
                   horizontalalignment='right',
                   verticalalignment='bottom')
-        self.note(ax, 'packet end', pkt.end/self.Fs, -1e6,
+        self.note(ax, 'packet end', pkt.end/pkt.bw, -1e6,
                   horizontalalignment='left',
                   verticalalignment='bottom')
 
@@ -315,7 +316,6 @@ class SendPlot:
     def __init__(self, log, node, nfft=256):
         self.log = log
         self.node = node
-        self.Fs = self.node.tx_bandwidth
 
         self.pktidx = 0
 
@@ -358,7 +358,7 @@ class SendPlot:
 
             self.constellation.plot(self.pkt.iq_data)
             self.waveform.plot(self.pkt.iq_data)
-            self.psd.plot(self.Fs, self.pkt.iq_data)
+            self.psd.plot(self.pkt.bw, self.pkt.iq_data)
             self.papr.plot(self.pkt.iq_data)
 
             self.fig.canvas.draw()

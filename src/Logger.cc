@@ -12,7 +12,11 @@ std::shared_ptr<Logger> logger;
 
 /** @brief Log entry for slots */
 struct SlotEntry {
+    /** @brief Receive timestamp. */
     double timestamp;
+    /** @brief Bandwidth [Hz] */
+    float bw;
+    /** @brief Raw IQ data. */
     hvl_t iq_data;
 };
 
@@ -55,6 +59,8 @@ struct PacketRecvEntry {
     float cfo;
     /** @brief Center frequency [Hz] */
     float fc;
+    /** @brief Bandwidth [Hz] */
+    float bw;
     /** @brief Data size (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
@@ -78,6 +84,8 @@ struct PacketSendEntry {
     uint8_t dest;
     /** @brief Center frequency [Hz] */
     float fc;
+    /** @brief Bandwidth [Hz] */
+    float bw;
     /** @brief Data size (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
@@ -146,6 +154,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_slot(sizeof(SlotEntry));
 
     h5_slot.insertMember("timestamp", HOFFSET(SlotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_slot.insertMember("bw", HOFFSET(SlotEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_iqdata);
 
     // H5 type for received packets
@@ -169,6 +178,7 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("rssi", HOFFSET(PacketRecvEntry, rssi), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("cfo", HOFFSET(PacketRecvEntry, cfo), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("fc", HOFFSET(PacketRecvEntry, fc), H5::PredType::NATIVE_FLOAT);
+    h5_packet_recv.insertMember("bw", HOFFSET(PacketRecvEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("size", HOFFSET(PacketRecvEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("iq_data", HOFFSET(PacketRecvEntry, iq_data), h5_iqdata);
 
@@ -182,6 +192,7 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("src", HOFFSET(PacketSendEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("dest", HOFFSET(PacketSendEntry, dest), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
+    h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("size", HOFFSET(PacketSendEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
 
@@ -252,13 +263,14 @@ void Logger::setAttribute(const std::string& name, double val)
     att.write(h5_type, &val);
 }
 
-void Logger::logSlot(std::shared_ptr<IQBuf> buf)
+void Logger::logSlot(std::shared_ptr<IQBuf> buf,
+                     float bw)
 {
     if (getCollectSource(kSlots)) {
         // Only log slots we haven't logged before. We should never be asked to log
         // a slot that is older than the youngest slot we've ever logged.
         if (buf->timestamp > t_last_slot_) {
-            log_q_.emplace([=](){ logSlot_(buf); });
+            log_q_.emplace([=](){ logSlot_(buf, bw); });
             t_last_slot_ = buf->timestamp;
         }
     }
@@ -280,11 +292,12 @@ void Logger::logRecv(const Clock::time_point& t,
                      float rssi,
                      float cfo,
                      float fc,
+                     float bw,
                      uint32_t size,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
     if (getCollectSource(kRecvPackets))
-        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, fc, size, buf); });
+        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, fc, bw, size, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
@@ -292,11 +305,12 @@ void Logger::logSend(const Clock::time_point& t,
                      NodeId src,
                      NodeId dest,
                      float fc,
+                     float bw,
                      uint32_t size,
                      std::shared_ptr<IQBuf> buf)
 {
     if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, fc, size, buf); });
+        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, fc, bw, size, buf); });
 }
 
 void Logger::logEvent(const Clock::time_point& t,
@@ -343,11 +357,13 @@ H5::Attribute Logger::createOrOpenAttribute(const std::string &name,
         return file_.createAttribute(name, data_type, data_space);
 }
 
-void Logger::logSlot_(std::shared_ptr<IQBuf> buf)
+void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
+                      float bw)
 {
     SlotEntry entry;
 
     entry.timestamp = (buf->timestamp - t_start_).get_real_secs();
+    entry.bw = bw;
     entry.iq_data.p = &(*buf)[0];
     entry.iq_data.len = buf->size();
 
@@ -370,6 +386,7 @@ void Logger::logRecv_(const Clock::time_point& t,
                       float rssi,
                       float cfo,
                       float fc,
+                      float bw,
                       uint32_t size,
                       std::shared_ptr<buffer<std::complex<float>>> buf)
 {
@@ -393,6 +410,7 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.rssi = rssi;
     entry.cfo = cfo;
     entry.fc = fc;
+    entry.bw = bw;
     entry.size = size;
     if (getCollectSource(kRecvData)) {
         entry.iq_data.p = buf->data();
@@ -410,6 +428,7 @@ void Logger::logSend_(const Clock::time_point& t,
                       NodeId src,
                       NodeId dest,
                       float fc,
+                      float bw,
                       uint32_t size,
                       std::shared_ptr<IQBuf> buf)
 {
@@ -422,6 +441,7 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.src = src;
     entry.dest = dest;
     entry.fc = fc;
+    entry.bw = bw;
     entry.size = size;
     if (getCollectSource(kSentData)) {
         entry.iq_data.p = buf->data();

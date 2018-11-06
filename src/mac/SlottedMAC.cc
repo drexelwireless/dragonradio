@@ -166,6 +166,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
                                 (*it)->pkt->src,
                                 (*it)->pkt->dest,
                                 (*it)->fc,
+                                tx_rate_,
                                 (*it)->pkt->size(),
                                 (*it)->samples);
             }
