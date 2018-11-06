@@ -36,10 +36,16 @@ public:
     USRP& operator=(USRP&&) = delete;
 
     /** @brief Get type of this device. */
-    DeviceType getDeviceType(void);
+    DeviceType getDeviceType(void)
+    {
+        return device_type_;
+    }
 
     /** @brief Get TX frequency. */
-    double getTXFrequency(void);
+    double getTXFrequency(void)
+    {
+        return usrp_->get_tx_freq();
+    }
 
     /** @brief Set TX frequency.
      * @param freq The center frequency
@@ -47,7 +53,10 @@ public:
     void setTXFrequency(double freq);
 
     /** @brief Get RX frequency. */
-    double getRXFrequency(void);
+    double getRXFrequency(void)
+    {
+        return usrp_->get_rx_freq();
+    }
 
     /** @brief Set RX frequency.
      * @param freq The center frequency
@@ -55,28 +64,66 @@ public:
     void setRXFrequency(double freq);
 
     /** @brief Get TX rate. */
-    double getTXRate(void);
+    double getTXRate(void)
+    {
+        return usrp_->get_tx_rate();
+    }
 
     /** @brief Set TX rate. */
-    void setTXRate(double rate);
+    void setTXRate(double rate)
+    {
+        usrp_->set_tx_rate(rate);
+    }
 
     /** @brief Get RX rate. */
-    double getRXRate(void);
+    double getRXRate(void)
+    {
+        return usrp_->get_rx_rate();
+    }
 
     /** @brief Set RX rate. */
-    void setRXRate(double rate);
+    void setRXRate(double rate)
+    {
+        usrp_->set_rx_rate(rate);
+    }
 
     /** @brief Get TX gain (dB). */
-    double getTXGain(void);
+    double getTXGain(void)
+    {
+        return usrp_->get_tx_gain();
+    }
 
     /** @brief Set TX gain (dB). */
-    void setTXGain(float db);
+    void setTXGain(float db)
+    {
+        return usrp_->set_tx_gain(db);
+    }
 
     /** @brief Get RX gain (dB). */
-    double getRXGain(void);
+    double getRXGain(void)
+    {
+        return usrp_->get_rx_gain();
+    }
 
     /** @brief Set RX gain (dB). */
-    void setRXGain(float db);
+    void setRXGain(float db)
+    {
+        return usrp_->set_rx_gain(db);
+    }
+
+    /** @brief Get automatic DC offset correction. */
+    bool getAutoDCOffset(bool enable)
+    {
+        return auto_dc_offset_;
+    }
+
+    /** @brief Set automatic DC offset correction. */
+    void setAutoDCOffset(bool enable)
+    {
+        auto_dc_offset_ = enable;
+        usrp_->set_rx_dc_offset(auto_dc_offset_);
+        usrp_->set_tx_dc_offset(auto_dc_offset_);
+    }
 
     /** @brief Transmit a burst of IQ buffers at the given time.
      * @param when Time at which to start the burst.
@@ -154,6 +201,11 @@ private:
     /** @brief Maximum number of samples we will read at a time during burstRX.
      */
     size_t rx_max_samps_;
+
+    /** @brief Flag indicating whether or not to enable automatic DC offset
+     * correction.
+     */
+    bool auto_dc_offset_;
 
     /** @brief Flag indicating the we should stop processing data. */
     bool done_;
