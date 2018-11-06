@@ -9,7 +9,7 @@ using namespace std::placeholders;
 
 ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
                                                      std::shared_ptr<PHY> phy,
-                                                     std::shared_ptr<Channels> channels,
+                                                     const Channels &channels,
                                                      unsigned int nthreads)
   : PacketDemodulator(channels)
   , source(*this, nullptr, nullptr)
@@ -19,7 +19,7 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
   , prev_samps_(0)
   , cur_samps_(0)
   , done_(false)
-  , demod_q_(radio_q_, channels)
+  , demod_q_(radio_q_, channels_)
 {
     net_thread_ = std::thread(&ParallelPacketDemodulator::netWorker, this);
 
@@ -161,7 +161,7 @@ void ParallelPacketDemodulator::netWorker(void)
 }
 
 IQBufQueue::IQBufQueue(RadioPacketQueue& radio_q,
-                       std::shared_ptr<Channels> channels)
+                       const Channels &channels)
   : radio_q_(radio_q)
   , channels_(channels)
   , done_(false)
@@ -204,12 +204,12 @@ bool IQBufQueue::pop(RadioPacketQueue::barrier& b,
     auto it = q_.begin();
 
     b = radio_q_.pushBarrier();
-    assert(next_channel_ < channels_->size());
-    shift = (*channels_)[next_channel_++];
+    assert(next_channel_ < channels_.size());
+    shift = channels_[next_channel_++];
     buf1 = *it++;
     buf2 = *it;
 
-    if (next_channel_ == channels_->size()) {
+    if (next_channel_ == channels_.size()) {
         q_.pop_front();
         --size_;
         next_channel_ = 0;

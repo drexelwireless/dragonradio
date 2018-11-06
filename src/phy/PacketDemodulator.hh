@@ -8,12 +8,24 @@
 class PacketDemodulator
 {
 public:
-    PacketDemodulator(std::shared_ptr<Channels> channels)
+    PacketDemodulator(const Channels &channels)
         : channels_(channels)
     {
     }
 
     virtual ~PacketDemodulator() {};
+
+    /** @brief Get channels. */
+    const Channels &getChannels(void) const
+    {
+        return channels_;
+    }
+
+    /** @brief Set channels */
+    void setChannels(const Channels &channels)
+    {
+        channels_ = channels;
+    }
 
     /** @brief Set demodulation parameters.
      * @brief prev_samps The number of samples from the end of the previous slot
@@ -31,7 +43,7 @@ public:
 
 protected:
     /** @brief Radio channels, given as shift from center frequency */
-    std::shared_ptr<Channels> channels_;
+    Channels channels_;
 };
 
 #endif /* PACKETDEMODULATOR_H_ */

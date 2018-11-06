@@ -8,7 +8,7 @@
 
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
-                                                 std::shared_ptr<Channels> channels,
+                                                 const Channels &channels,
                                                  size_t nthreads)
   : PacketModulator(channels)
   , sink(*this, nullptr, nullptr)

@@ -16,7 +16,7 @@
 class IQBufQueue {
 public:
     IQBufQueue(RadioPacketQueue& radio_q,
-               std::shared_ptr<Channels> channels);
+               const Channels &channels);
     ~IQBufQueue();
 
     IQBufQueue(const IQBufQueue&) = delete;
@@ -54,7 +54,7 @@ private:
     RadioPacketQueue& radio_q_;
 
     /** @brief Radio channels, given as shift from center frequency */
-    std::shared_ptr<Channels> channels_;
+    const Channels &channels_;
 
     /** @brief Flag that is true when we should finish processing. */
     bool done_;
@@ -81,7 +81,7 @@ class ParallelPacketDemodulator : public PacketDemodulator, public Element
 public:
     ParallelPacketDemodulator(std::shared_ptr<Net> net,
                               std::shared_ptr<PHY> phy,
-                              std::shared_ptr<Channels> channels,
+                              const Channels &channels,
                               unsigned int nthreads);
     virtual ~ParallelPacketDemodulator();
 

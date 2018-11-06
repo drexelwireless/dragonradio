@@ -15,7 +15,7 @@ class ParallelPacketModulator : public PacketModulator, public Element
 public:
     ParallelPacketModulator(std::shared_ptr<Net> net,
                             std::shared_ptr<PHY> phy,
-                            std::shared_ptr<Channels>,
+                            const Channels &channels,
                             size_t nthreads);
     virtual ~ParallelPacketModulator();
 

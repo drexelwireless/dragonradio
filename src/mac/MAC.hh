@@ -95,7 +95,7 @@ public:
      */
     virtual double getTXShift(void) const
     {
-        return tx_channels_[tx_channel_];
+        return tx_channels_.size() > 0 ? tx_channels_[tx_channel_] : 0.0;
     }
 
     /** @brief Stop processing packets. */
