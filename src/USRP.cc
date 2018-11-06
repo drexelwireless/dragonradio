@@ -61,21 +61,11 @@ USRP::~USRP()
     stop();
 }
 
-USRP::DeviceType USRP::getDeviceType(void)
-{
-    return device_type_;
-}
-
 // See the following for X310 LO offset advice:
 //   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
 //
 // See the following for instructions of waitign for LO to settle:
 //   https://files.ettus.com/manual/page_general.html
-
-double USRP::getTXFrequency(void)
-{
-    return usrp_->get_tx_freq();
-}
 
 void USRP::setTXFrequency(double freq)
 {
@@ -89,11 +79,6 @@ void USRP::setTXFrequency(double freq)
         usleep(10);
 }
 
-double USRP::getRXFrequency(void)
-{
-    return usrp_->get_rx_freq();
-}
-
 void USRP::setRXFrequency(double freq)
 {
     if (device_type_ == kUSRPX310) {
@@ -104,46 +89,6 @@ void USRP::setRXFrequency(double freq)
 
     while (!usrp_->get_rx_sensor("lo_locked").to_bool())
         usleep(10);
-}
-
-double USRP::getTXRate(void)
-{
-    return usrp_->get_tx_rate();
-}
-
-void USRP::setTXRate(double rate)
-{
-    usrp_->set_tx_rate(rate);
-}
-
-double USRP::getRXRate(void)
-{
-    return usrp_->get_rx_rate();
-}
-
-void USRP::setRXRate(double rate)
-{
-    usrp_->set_rx_rate(rate);
-}
-
-double USRP::getTXGain(void)
-{
-    return usrp_->get_tx_gain();
-}
-
-void USRP::setTXGain(float db)
-{
-    return usrp_->set_tx_gain(db);
-}
-
-double USRP::getRXGain(void)
-{
-    return usrp_->get_rx_gain();
-}
-
-void USRP::setRXGain(float db)
-{
-    return usrp_->set_rx_gain(db);
 }
 
 void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs)
