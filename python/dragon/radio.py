@@ -790,7 +790,10 @@ class Radio(object):
         # we must resample.
         #
         bandwidth = config.bandwidth
-        cbw = config.channel_bandwidth
+        if config.fdma:
+            cbw = config.channel_bandwidth
+        else:
+            cbw = config.bandwidth
 
         cgbw = config.channel_guard_bandwidth
         egbw = config.edge_guard_bandwidth
@@ -851,7 +854,10 @@ class Radio(object):
         config = self.config
 
         bandwidth = config.bandwidth
-        cbw = config.channel_bandwidth
+        if config.fdma:
+            cbw = config.channel_bandwidth
+        else:
+            cbw = config.bandwidth
 
         if config.arq:
             if config.tx_upsample:
