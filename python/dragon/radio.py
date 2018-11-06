@@ -646,64 +646,9 @@ class Radio(object):
         self.net.tx_params = TXParamsVector(tx_params)
 
         #
-        # Configure bandwidth, channels, and sampling rate. We MUST do this
-        # before creating the modulator and demodulator so we know at what rate
-        # we must resample.
+        # Configure TX/RX rates and channels
         #
-        bandwidth = config.bandwidth
-
-        cbw = config.channel_bandwidth
-        if cbw == 0:
-            cbw = bandwidth
-
-        cgbw = config.channel_guard_bandwidth
-        egbw = config.edge_guard_bandwidth
-        if egbw == None:
-            egbw = cgbw
-
-        # We space channels so that there is edge_guard_bandwidth on each end
-        # and at least channel_guard_bandwidth between channels. For n channels,
-        # we therefore have n+1 guards, so:
-        #    n*cbw + 2*egbw + (n-1)*cgbw <= bandwidth
-        # => n <= 1 + (bandwidth - cbw - 2*egbw) / (cbw + cgbw)
-        n = 1 + int((bandwidth-cbw-2*egbw)/(cbw+cgbw))
-
-        if n < 1:
-            print("No channels (bandwidth={:g}; channel bandwidth={:g}; channel guard={:g}; edge guard={:g})".format(bandwidth, cbw, cgbw, egbw),
-                  file=sys.stderr)
-            sys.exit(1)
-
-        # We use the leftover space to space channels as far apart as possible.
-        # The variable gbw is the actualy guard bandwidth
-        #    (n-1)*cgbw + 2*egbw + n*cbw = bandwidth
-        # => cgbw = (bandwidth - 2*egbw - n*cbw)/(n-1)
-        if config.maximize_channel_guard_bandwidth and n > 1:
-            cgbw = (bandwidth-2*egbw-n*cbw)/(n-1)
-
-        channels = [egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2. for i in range(0,n)]
-
-        self.channels = Channels(channels[:config.max_channels])
-
-        logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
-            self.channels, bandwidth, config.rx_oversample_factor, config.tx_oversample_factor, cbw, cgbw, egbw)
-
-        rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
-        tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
-
-        self.usrp.rx_rate = bandwidth*rx_rate_oversample
-        if config.tx_upsample:
-            self.usrp.tx_rate = bandwidth*tx_rate_oversample
-        else:
-            self.usrp.tx_rate = cbw*tx_rate_oversample
-
-        rx_rate = self.usrp.rx_rate
-        tx_rate = self.usrp.tx_rate
-
-        self.phy.rx_rate = rx_rate
-        self.phy.tx_rate = tx_rate
-
-        self.phy.rx_rate_oversample = rx_rate/cbw
-        self.phy.tx_rate_oversample = tx_rate/cbw
+        self.configRatesAndChannels()
 
         #
         # Configure the modulator and demodulator
@@ -734,12 +679,7 @@ class Radio(object):
                                                           config.amc_mcsidx_alpha,
                                                           config.amc_mcsidx_prob_floor)
 
-            if config.tx_upsample:
-                slot_bw = bandwidth
-            else:
-                slot_bw = cbw
-
-            self.controller.slot_size = int(slot_bw*(self.config.slot_size - self.config.guard_size))
+            self.configSmartControllerSlotSize()
 
             self.controller.enforce_ordering = config.arq_enforce_ordering
 
@@ -832,6 +772,94 @@ class Radio(object):
             tx_params.soft_tx_gain_0dBFS = g
 
         self.net.tx_params = TXParamsVector([tx_params])
+
+    def configRatesAndChannels(self):
+        """
+        Configure USRP and PHY rates as well as channels.
+
+        This will set our channels member variable as well as set rates on the
+        USRP and PHY based on the current configuration's bandwidth and center
+        frequency. It *will not* update the modulator/demodulator, MAC, or
+        controller.
+        """
+        config = self.config
+
+        #
+        # Configure bandwidth, channels, and sampling rate. We MUST do this
+        # before creating the modulator and demodulator so we know at what rate
+        # we must resample.
+        #
+        bandwidth = config.bandwidth
+        cbw = config.channel_bandwidth
+
+        cgbw = config.channel_guard_bandwidth
+        egbw = config.edge_guard_bandwidth
+        if egbw == None:
+            egbw = cgbw
+
+        # We space channels so that there is edge_guard_bandwidth on each end
+        # and at least channel_guard_bandwidth between channels. For n channels,
+        # we therefore have n+1 guards, so:
+        #    n*cbw + 2*egbw + (n-1)*cgbw <= bandwidth
+        # => n <= 1 + (bandwidth - cbw - 2*egbw) / (cbw + cgbw)
+        n = 1 + int((bandwidth-cbw-2*egbw)/(cbw+cgbw))
+
+        if n < 1:
+            print("No channels (bandwidth={:g}; channel bandwidth={:g}; channel guard={:g}; edge guard={:g})".format(bandwidth, cbw, cgbw, egbw),
+                  file=sys.stderr)
+            sys.exit(1)
+
+        # We use the leftover space to space channels as far apart as possible.
+        # The variable gbw is the actualy guard bandwidth
+        #    (n-1)*cgbw + 2*egbw + n*cbw = bandwidth
+        # => cgbw = (bandwidth - 2*egbw - n*cbw)/(n-1)
+        if config.maximize_channel_guard_bandwidth and n > 1:
+            cgbw = (bandwidth-2*egbw-n*cbw)/(n-1)
+
+        channels = [egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2. for i in range(0,n)]
+
+        self.channels = Channels(channels[:config.max_channels])
+
+        logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
+            self.channels, bandwidth, config.rx_oversample_factor, config.tx_oversample_factor, cbw, cgbw, egbw)
+
+        #
+        # Set RX and TX rates
+        #
+        rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+        tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
+
+        self.usrp.rx_rate = bandwidth*rx_rate_oversample
+        if config.tx_upsample:
+            self.usrp.tx_rate = bandwidth*tx_rate_oversample
+        else:
+            self.usrp.tx_rate = cbw*tx_rate_oversample
+
+        rx_rate = self.usrp.rx_rate
+        tx_rate = self.usrp.tx_rate
+
+        self.phy.rx_rate = rx_rate
+        self.phy.tx_rate = tx_rate
+
+        self.phy.rx_rate_oversample = rx_rate/cbw
+        self.phy.tx_rate_oversample = tx_rate/cbw
+
+    def configSmartControllerSlotSize(self):
+        """
+        Configure the SmartController's slot size
+        """
+        config = self.config
+
+        bandwidth = config.bandwidth
+        cbw = config.channel_bandwidth
+
+        if config.arq:
+            if config.tx_upsample:
+                slot_bw = bandwidth
+            else:
+                slot_bw = cbw
+
+            self.controller.slot_size = int(slot_bw*(self.config.slot_size - self.config.guard_size))
 
     def configureALOHA(self):
         if self.config.arq:
