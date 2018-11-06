@@ -71,6 +71,8 @@ void SlottedMAC::setPreModulateSlots(double n)
 
 void SlottedMAC::reconfigure(void)
 {
+    MAC::reconfigure();
+
     rx_slot_samps_ = rx_rate_*slot_size_;
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
     tx_full_slot_samps_ = tx_rate_*slot_size_;

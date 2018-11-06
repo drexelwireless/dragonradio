@@ -52,6 +52,8 @@ public:
     /** @brief Stop processing packets */
     void stop(void) override;
 
+    void reconfigure(void) override;
+
     void sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt) override;
 
 private:
@@ -72,8 +74,6 @@ private:
 
     /** @brief Thread running txWorker */
     std::thread tx_thread_;
-
-    virtual void reconfigure(void) override;
 
     /** @brief Worker transmitting packets */
     void txWorker(void);

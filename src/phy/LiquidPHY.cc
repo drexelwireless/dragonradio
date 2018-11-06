@@ -20,6 +20,8 @@ LiquidPHY::LiquidPHY(NodeId node_id,
                      bool soft_payload,
                      size_t min_packet_size)
   : PHY(node_id)
+  , upsamp_resamp_params(std::bind(&LiquidPHY::reconfigureTX, this))
+  , downsamp_resamp_params(std::bind(&LiquidPHY::reconfigureRX, this))
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
@@ -44,6 +46,9 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
                                     double shift,
                                     ModPacket &mpkt)
 {
+    if (pending_reconfigure_.load(std::memory_order_relaxed))
+        reconfigure();
+
     PHYHeader header;
 
     memset(&header, 0, sizeof(header));
@@ -120,6 +125,20 @@ void LiquidPHY::Modulator::setFreqShift(double shift)
 
         shift_ = shift;
     }
+}
+
+void LiquidPHY::Modulator::reconfigure(void)
+{
+    upsamp_ = Liquid::MultiStageResampler(phy_.getTXRateOversample()/phy_.getMinTXRateOversample(),
+                                          liquid_phy_.upsamp_resamp_params.m,
+                                          liquid_phy_.upsamp_resamp_params.fc,
+                                          liquid_phy_.upsamp_resamp_params.As,
+                                          liquid_phy_.upsamp_resamp_params.npfb);
+
+    double shift = shift_;
+
+    shift_ = 0.0;
+    setFreqShift(shift);
 }
 
 LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
@@ -225,6 +244,9 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
 void LiquidPHY::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
+    if (pending_reconfigure_.load(std::memory_order_relaxed))
+        reconfigure();
+
     reset();
 
     demod_start_ = timestamp;
@@ -271,6 +293,20 @@ void LiquidPHY::Demodulator::setFreqShift(double shift)
 
         shift_ = shift;
     }
+}
+
+void LiquidPHY::Demodulator::reconfigure(void)
+{
+    downsamp_ = Liquid::MultiStageResampler(phy_.getMinRXRateOversample()/phy_.getRXRateOversample(),
+                                            liquid_phy_.upsamp_resamp_params.m,
+                                            liquid_phy_.upsamp_resamp_params.fc,
+                                            liquid_phy_.upsamp_resamp_params.As,
+                                            liquid_phy_.upsamp_resamp_params.npfb);
+
+    double shift = shift_;
+
+    shift_ = 0.0;
+    setFreqShift(shift);
 }
 
 size_t LiquidPHY::getModulatedSize(const TXParams &params, size_t n)

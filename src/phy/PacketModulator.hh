@@ -16,16 +16,16 @@ public:
     {
     }
 
-    virtual ~PacketModulator() {};
+    virtual ~PacketModulator() = default;
 
     /** @brief Get channels. */
-    const Channels &getChannels(void) const
+    virtual const Channels &getChannels(void) const
     {
         return channels_;
     }
 
     /** @brief Set channels */
-    void setChannels(const Channels &channels)
+    virtual void setChannels(const Channels &channels)
     {
         channels_ = channels;
         setTXChannel(tx_channel_);

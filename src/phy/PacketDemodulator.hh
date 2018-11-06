@@ -13,16 +13,16 @@ public:
     {
     }
 
-    virtual ~PacketDemodulator() {};
+    virtual ~PacketDemodulator() = default;
 
     /** @brief Get channels. */
-    const Channels &getChannels(void) const
+    virtual const Channels &getChannels(void) const
     {
         return channels_;
     }
 
     /** @brief Set channels */
-    void setChannels(const Channels &channels)
+    virtual void setChannels(const Channels &channels)
     {
         channels_ = channels;
     }

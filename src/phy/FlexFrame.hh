@@ -56,17 +56,17 @@ public:
         return 2.0;
     }
 
-    std::unique_ptr<PHY::Demodulator> mkDemodulator(void) override
-    {
-        return std::make_unique<Demodulator>(*this);
-    }
-
-    std::unique_ptr<PHY::Modulator> mkModulator(void) override
-    {
-        return std::make_unique<Modulator>(*this);
-    }
-
 protected:
+    std::shared_ptr<PHY::Demodulator> mkDemodulatorInternal(void) override
+    {
+        return std::make_shared<Demodulator>(*this);
+    }
+
+    std::shared_ptr<PHY::Modulator> mkModulatorInternal(void) override
+    {
+        return std::make_shared<Modulator>(*this);
+    }
+
     std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) override
     {
         return std::make_unique<Liquid::FlexFrameModulator>();

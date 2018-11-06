@@ -6,6 +6,7 @@
 #include <list>
 #include <mutex>
 
+#include "spinlock_mutex.hh"
 #include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
 #include "phy/Channels.hh"
@@ -24,6 +25,17 @@ public:
 
     IQBufQueue& operator=(const IQBufQueue&) = delete;
     IQBufQueue& operator=(IQBufQueue&&) = delete;
+
+    /** @brief Set channels */
+    void setChannels(const Channels &channels)
+    {
+        std::lock_guard<spinlock_mutex> lock(channels_mutex_);
+
+        channels_ = channels;
+
+        if (next_channel_ >= channels_.size())
+            nextWindow();
+    }
 
     /** @brief Add an IQ buffer to the queue.
      * @param buf The IQ samples to demodulate
@@ -49,12 +61,23 @@ public:
     /** @brief Stop processing this queue. */
     void stop(void);
 
+    /** @brief Move to the next demodulation window. */
+    void nextWindow(void)
+    {
+        q_.pop_front();
+        --size_;
+        next_channel_ = 0;
+    }
+
 private:
     /** @brief The queue on which demodulated packets should be placed. */
     RadioPacketQueue& radio_q_;
 
+    /** @brief Mutex for radio channels */
+    spinlock_mutex channels_mutex_;
+
     /** @brief Radio channels, given as shift from center frequency */
-    const Channels &channels_;
+    Channels channels_;
 
     /** @brief Flag that is true when we should finish processing. */
     bool done_;
@@ -87,6 +110,12 @@ public:
 
     void setWindowParameters(const size_t prev_samps,
                              const size_t cur_samps) override;
+
+    void setChannels(const Channels &channels) override
+    {
+        PacketDemodulator::setChannels(channels);
+        demod_q_.setChannels(channels);
+    }
 
     /** @brief Add an IQ buffer to demodulate. */
     void push(std::shared_ptr<IQBuf> buf) override;

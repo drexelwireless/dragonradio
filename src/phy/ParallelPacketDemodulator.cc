@@ -204,16 +204,17 @@ bool IQBufQueue::pop(RadioPacketQueue::barrier& b,
     auto it = q_.begin();
 
     b = radio_q_.pushBarrier();
+
+    std::lock_guard<spinlock_mutex> chan_lock(channels_mutex_);
+
     assert(next_channel_ < channels_.size());
     shift = channels_[next_channel_++];
+
     buf1 = *it++;
     buf2 = *it;
 
-    if (next_channel_ == channels_.size()) {
-        q_.pop_front();
-        --size_;
-        next_channel_ = 0;
-    }
+    if (next_channel_ == channels_.size())
+        nextWindow();
 
     return true;
 }

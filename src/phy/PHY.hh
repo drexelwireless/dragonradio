@@ -15,11 +15,46 @@
  */
 class PHY {
 public:
-    /** @brief Modulate IQ data. */
-    class Modulator
+    /** @brief A modulator or demodulator, a.k.a a *ulator. */
+    class Ulator
     {
     public:
-        Modulator(PHY &phy) : phy_(phy) {};
+        Ulator(PHY &phy)
+          : phy_(phy)
+          , pending_reconfigure_(false)
+          {
+          }
+
+        virtual ~Ulator() = default;
+
+        virtual void scheduleReconfigure(void)
+        {
+            pending_reconfigure_.store(true, std::memory_order_relaxed);
+        }
+
+    protected:
+        /** @brief Our PHY */
+        /** We keep a reference to our PHY so that we can query it for rate
+         * information.
+         */
+        PHY &phy_;
+
+        /** @brief A flag indicating that our configuration has changed, so we
+         * should update it
+         */
+        std::atomic<bool> pending_reconfigure_;
+
+        /** @brief Reconfigure the modulator/demodulator based on new PHY
+         * parameters.
+         */
+        virtual void reconfigure(void) = 0;
+    };
+
+    /** @brief Modulate IQ data. */
+    class Modulator : public Ulator
+    {
+    public:
+        Modulator(PHY &phy) : Ulator(phy) {};
         virtual ~Modulator() = default;
 
         /** @brief Modulate a packet to produce IQ samples.
@@ -31,22 +66,15 @@ public:
         virtual void modulate(std::shared_ptr<NetPacket> pkt,
                               double shift,
                               ModPacket &mpkt) = 0;
-
-    protected:
-        /** @brief Our PHY */
-        /** We keep a reference to our PHY so that we can query it for rate
-         * information.
-         */
-        PHY &phy_;
     };
 
     /** @brief Demodulate IQ data.
      */
-    class Demodulator
+    class Demodulator : public Ulator
     {
     public:
-        Demodulator(PHY &phy) : phy_(phy) {};
-        virtual ~Demodulator() {};
+        Demodulator(PHY &phy) : Ulator(phy) {};
+        virtual ~Demodulator() = default;
 
         /** @brief Reset the internal state of the demodulator.
          * @brief timestamp The timestamp of IQ buffer from which the first
@@ -67,13 +95,6 @@ public:
                                 size_t count,
                                 double shift,
                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
-
-    protected:
-        /** @brief Our PHY */
-        /** We keep a reference to our PHY so that we can query it for rate
-         * information.
-         */
-        PHY &phy_;
     };
 
     PHY(NodeId node_id)
@@ -97,6 +118,7 @@ public:
     virtual void setRXRate(double rate)
     {
         rx_rate_ = rate;
+        reconfigureRX();
     }
 
     /** @brief Get the PHY's RX sample rate.
@@ -112,6 +134,7 @@ public:
     virtual void setTXRate(double rate)
     {
         tx_rate_ = rate;
+        reconfigureTX();
     }
 
     /** @brief Get the PHY's TX sample rate.
@@ -134,6 +157,7 @@ public:
     virtual void setRXRateOversample(double rate)
     {
         rx_rate_oversample_ = rate;
+        reconfigureRX();
     }
 
     /** @brief Get PHY TX oversample rate.
@@ -149,6 +173,7 @@ public:
     virtual void setTXRateOversample(double rate)
     {
         tx_rate_oversample_ = rate;
+        reconfigureTX();
     }
 
     /** @brief Get TX upsample rate. */
@@ -179,10 +204,22 @@ public:
     virtual size_t getModulatedSize(const TXParams &params, size_t n) = 0;
 
     /** @brief Create a Modulator for this %PHY */
-    virtual std::unique_ptr<Modulator> mkModulator(void) = 0;
+    virtual std::shared_ptr<Modulator> mkModulator(void)
+    {
+        auto p = mkModulatorInternal();
+
+        modulators_.push_back(p);
+        return p;
+    }
 
     /** @brief Create a Demodulator for this %PHY */
-    virtual std::unique_ptr<Demodulator> mkDemodulator(void) = 0;
+    virtual std::shared_ptr<Demodulator> mkDemodulator(void)
+    {
+        auto p = mkDemodulatorInternal();
+
+        demodulators_.push_back(p);
+        return p;
+    }
 
 protected:
     /** @brief Node ID */
@@ -199,6 +236,40 @@ protected:
 
     /** @brief TX oversample rate */
     double tx_rate_oversample_;
+
+    /** @brief Modulators */
+    std::list<std::weak_ptr<Modulator>> modulators_;
+
+    /** @brief Demodulators */
+    std::list<std::weak_ptr<Demodulator>> demodulators_;
+
+    /** @brief Create a Modulator for this %PHY */
+    virtual std::shared_ptr<Modulator> mkModulatorInternal(void) = 0;
+
+    /** @brief Create a Demodulator for this %PHY */
+    virtual std::shared_ptr<Demodulator> mkDemodulatorInternal(void) = 0;
+
+    /** @brief Reconfigure for new RX parameters */
+    virtual void reconfigureRX(void)
+    {
+        for(auto demod : demodulators_) {
+            auto p = demod.lock();
+
+            if (p)
+                p->scheduleReconfigure();
+        }
+    }
+
+    /** @brief Reconfigure for new TX parameters */
+    virtual void reconfigureTX(void)
+    {
+        for(auto mod : modulators_) {
+            auto p = mod.lock();
+
+            if (p)
+                p->scheduleReconfigure();
+        }
+    }
 };
 
 #endif /* PHY_H_ */

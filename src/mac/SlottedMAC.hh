@@ -29,8 +29,7 @@ public:
     SlottedMAC& operator=(const SlottedMAC&) = delete;
     SlottedMAC& operator=(SlottedMAC&&) = delete;
 
-    /** @brief Get slot size, including guard interval
-     */
+    /** @brief Get slot size, including guard interval */
     virtual double getSlotSize(void);
 
     /** @brief Set slot size, including guard interval
@@ -38,8 +37,7 @@ public:
      */
     virtual void setSlotSize(double t);
 
-    /** @brief Get guard interval size
-     */
+    /** @brief Get guard interval size */
     virtual double getGuardSize(void);
 
     /** @brief Set guard interval size
@@ -47,8 +45,7 @@ public:
      */
     virtual void setGuardSize(double t);
 
-    /** @brief Get demodulation overlap size
-     */
+    /** @brief Get demodulation overlap size */
     virtual double getDemodOverlapSize(void);
 
     /** @brief Set demodulation overlap size
@@ -64,8 +61,7 @@ public:
      */
     virtual void setPreModulateSlots(double n);
 
-    /** @brief Stop processing packets. */
-    virtual void stop(void) = 0;
+    virtual void reconfigure(void) override;
 
 protected:
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
@@ -105,9 +101,6 @@ protected:
      * @return The number of samples overfilled
      */
     virtual size_t txSlot(Clock::time_point when, size_t maxSamples, bool overfill);
-
-    /** @brief Reconfigure the MAC when slot parameters change */
-    virtual void reconfigure(void);
 };
 
 #endif /* SLOTTEDMAC_H_ */

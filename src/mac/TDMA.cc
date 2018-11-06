@@ -40,6 +40,13 @@ void TDMA::stop(void)
         tx_thread_.join();
 }
 
+void TDMA::reconfigure(void)
+{
+    SlottedMAC::reconfigure();
+
+    frame_size_ = slot_size_*slots_.size();
+}
+
 void TDMA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt)
 {
     Clock::time_point t_next_slot;
@@ -135,11 +142,4 @@ bool TDMA::findNextSlot(Clock::time_point t,
     }
 
     return false;
-}
-
-void TDMA::reconfigure(void)
-{
-    frame_size_ = slot_size_*slots_.size();
-
-    SlottedMAC::reconfigure();
 }

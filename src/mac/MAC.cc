@@ -19,6 +19,12 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
     tx_rate_ = usrp->getTXRate();
 }
 
+void MAC::reconfigure(void)
+{
+    rx_rate_ = usrp_->getRXRate();
+    tx_rate_ = usrp_->getTXRate();
+}
+
 void MAC::timestampPacket(const Clock::time_point &deadline, std::shared_ptr<NetPacket> &&pkt)
 {
     std::unique_ptr<ModPacket> mpkt;

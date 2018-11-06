@@ -98,6 +98,9 @@ public:
         return tx_channels_.size() > 0 ? tx_channels_[tx_channel_] : 0.0;
     }
 
+    /** @brief Reconfigure the MAC when after parameters change */
+    virtual void reconfigure(void);
+
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
 
@@ -145,7 +148,7 @@ protected:
     Channels::size_type tx_channel_;
 
     /** @brief Modulator for timestamped packet */
-    std::unique_ptr<PHY::Modulator> timestamped_modulator_;
+    std::shared_ptr<PHY::Modulator> timestamped_modulator_;
 
     /** @brief Mutex for timestamped packet */
     spinlock_mutex timestamped_mutex_;
