@@ -2,6 +2,7 @@
 #include <pybind11/numpy.h>
 
 #include "dsp/NCO.hh"
+#include "dsp/TableNCO.hh"
 #include "liquid/NCO.hh"
 #include "python/PyModules.hh"
 

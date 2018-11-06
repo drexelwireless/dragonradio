@@ -8,7 +8,7 @@
 
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
-                                                 std::shared_ptr<Channels> channels,
+                                                 const Channels &channels,
                                                  size_t nthreads)
   : PacketModulator(channels)
   , sink(*this, nullptr, nullptr)
@@ -109,11 +109,11 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
 
 void ParallelPacketModulator::modWorker(void)
 {
-    std::unique_ptr<PHY::Modulator> modulator = phy_->make_modulator();
-    std::shared_ptr<NetPacket>      pkt;
-    ModPacket                       *mpkt;
+    auto                       modulator = phy_->mkModulator();
+    std::shared_ptr<NetPacket> pkt;
+    ModPacket                  *mpkt;
     // We want the last 10 packets to account for 86% of the EMA
-    EMA<double>                     samples_per_packet(2.0/(10.0 + 1.0));
+    EMA<double>                samples_per_packet(2.0/(10.0 + 1.0));
 
     for (;;) {
         size_t estimated_samples = samples_per_packet.getValue();

@@ -1,5 +1,5 @@
-#ifndef LIQUID_NCO_HH_
-#define LIQUID_NCO_HH_
+#ifndef LIQUID_FILTER_HH_
+#define LIQUID_FILTER_HH_
 
 #include <complex>
 
@@ -16,6 +16,7 @@ public:
 
     FIRFilter(FIRFilter &&f)
     {
+        firfilt_cccf_destroy(q_);
         q_ = f.q_;
         f.q_ = nullptr;
     }
@@ -40,8 +41,16 @@ public:
         return *this;
     }
 
+    FIRFilter& operator=(FIRFilter &&f)
+    {
+        firfilt_cccf_destroy(q_);
+        q_ = f.q_;
+        f.q_ = nullptr;
+
+        return *this;
+    }
+
     FIRFilter& operator=(const FIRFilter &) = delete;
-    FIRFilter& operator=(FIRFilter &&) = delete;
 
     float getGroupDelay(float fc) override final
     {
@@ -194,4 +203,4 @@ butter_lowpass(unsigned int N,
                float As);
 }
 
-#endif /* LIQUID_NCO_HH_ */
+#endif /* LIQUID_FILTER_HH_ */

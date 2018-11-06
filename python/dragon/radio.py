@@ -867,6 +867,30 @@ class Radio(object):
 
             self.controller.slot_size = int(slot_bw*(self.config.slot_size - self.config.guard_size))
 
+    def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
+        """
+        Reconfigure the radio for the given bandwidth and frequency
+        """
+        config = self.config
+
+        config.bandwidth = bandwidth
+        config.frequency = frequency
+
+        logger.info("Reconfiguring radio: bandwidth=%f, frequency=%f", bandwidth, frequency)
+
+        self.usrp.rx_frequency = config.frequency
+        self.usrp.tx_frequency = config.frequency
+
+        self.configRatesAndChannels()
+
+        self.modulator.channels = self.tx_channels
+        self.demodulator.channels = self.rx_channels
+
+        self.mac.rx_channels = self.rx_channels
+        self.mac.tx_channels = self.tx_channels
+
+        self.configSmartControllerSlotSize()
+
     def configureALOHA(self):
         if self.config.arq:
             self.controller.mac = None
@@ -938,7 +962,7 @@ class Radio(object):
         nodes = list(self.net)
         nodes.sort()
 
-        if config.fdma :
+        if config.fdma:
             self.configureTDMA(1)
 
             if config.tx_channel != None:

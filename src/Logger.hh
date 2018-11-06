@@ -55,7 +55,8 @@ public:
     void setAttribute(const std::string& name, uint32_t val);
     void setAttribute(const std::string& name, double val);
 
-    void logSlot(std::shared_ptr<IQBuf> buf);
+    void logSlot(std::shared_ptr<IQBuf> buf,
+                 float bw);
 
     void logRecv(const Clock::time_point& t,
                  uint32_t start_samples,
@@ -73,6 +74,7 @@ public:
                  float rssi,
                  float cfo,
                  float fc,
+                 float bw,
                  uint32_t size,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
 
@@ -81,6 +83,7 @@ public:
                  NodeId src,
                  NodeId dest,
                  float fc,
+                 float bw,
                  uint32_t size,
                  std::shared_ptr<IQBuf> buf);
 
@@ -117,7 +120,8 @@ private:
                                         const H5::DataType &data_type,
                                         const H5::DataSpace &data_space);
 
-    void logSlot_(std::shared_ptr<IQBuf> buf);
+    void logSlot_(std::shared_ptr<IQBuf> buf,
+                  float bw);
     void logRecv_(const Clock::time_point& t,
                   uint32_t start_samples,
                   uint32_t end_samples,
@@ -134,6 +138,7 @@ private:
                   float rssi,
                   float cfo,
                   float fc,
+                  float bw,
                   uint32_t size,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
     void logSend_(const Clock::time_point& t,
@@ -141,6 +146,7 @@ private:
                   NodeId src,
                   NodeId dest,
                   float fc,
+                  float bw,
                   uint32_t size,
                   std::shared_ptr<IQBuf> buf);
 

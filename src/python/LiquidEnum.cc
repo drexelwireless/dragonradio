@@ -54,4 +54,9 @@ void exportLiquidEnums(py::module &m)
         ms.value(modulation_types[i].name, static_cast<modulation_scheme>(i));
 
     ms.export_values();
+
+    // Create export OFDM frame subcarrier types
+    m.attr("kSCTypeNull") = py::int_(OFDMFRAME_SCTYPE_NULL);
+    m.attr("kSCTypePilot") = py::int_(OFDMFRAME_SCTYPE_PILOT);
+    m.attr("kSCTypeData") = py::int_(OFDMFRAME_SCTYPE_DATA);
 }

@@ -136,16 +136,6 @@ class Node:
         return self.log_attrs['start']
 
     @property
-    def tx_bandwidth(self):
-        """TX bandwidth (in Hz)"""
-        return self.log_attrs['tx_bandwidth']
-
-    @property
-    def rx_bandwidth(self):
-        """RX bandwidth (in Hz)"""
-        return self.log_attrs['rx_bandwidth']
-
-    @property
     def crc_scheme(self):
         """Liquid DSP CRC scheme"""
         return self.log_attrs['crc_scheme'].decode()
@@ -172,6 +162,12 @@ def loadDataSet(ds):
         ds.read_direct(data)
     return pd.DataFrame(data)
 
+class Slots:
+    def __init__(self, ts, sig, bw):
+        self.ts = ts
+        self.sig = sig
+        self.bw = bw
+
 class Log:
     def __init__(self):
         self._nodes = {}
@@ -192,29 +188,25 @@ class Log:
             # Load IQ data for slots
             df = loadDataSet(f['slots'])
             df['start'] = df.timestamp
-            df['end'] = df.timestamp + df.iq_data.apply(len) / node.rx_bandwidth
+            df['end'] = df.timestamp + df.iq_data.apply(len) / df.bw
 
             self._slots[node.node_id] = df
 
             # Load received packets
-            Fs = node.rx_bandwidth
-
             df = loadDataSet(f['recv'])
             df.crc = LIQUID_CRC.get(df.crc, 'unknown').values
             df.fec0 = LIQUID_FEC.get(df.fec0, 'unknown').values
             df.fec1 = LIQUID_FEC.get(df.fec1, 'unknown').values
             df.ms = LIQUID_MS.get(df.ms, 'unknown').values
-            df['start'] = df.timestamp + df.start_samples/Fs
-            df['end'] = df.timestamp + df.end_samples/Fs
+            df['start'] = df.timestamp + df.start_samples/df.bw
+            df['end'] = df.timestamp + df.end_samples/df.bw
 
             self._recv[node.node_id] = df
 
             # Load sent packets
-            Fs = node.tx_bandwidth
-
             df = loadDataSet(f['send'])
             df['start'] = df.timestamp
-            df['end'] = df.timestamp + df.iq_data.str.len()/Fs
+            df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
 
             self._send[node.node_id] = df
 
@@ -237,16 +229,15 @@ class Log:
         Returns:
             The packet's IQ data.
         """
-        # Sampling frequency
-        Fs = node.rx_bandwidth
-
         # Find the packet's slot
-        (ts, w) = self.findSlots(node, pkt)
+        slots = self.findSlots(node, pkt)
+        if slots == None:
+            return None
 
         # Extract the received IQ data corresponding to the packet. We add
         # 1ms worth of samples to account for slight inaccuracy on the part of
         # the packet start/end calculation
-        slop = int(Fs*0.001)
+        slop = int(slots.bw*0.001)
 
         return w[pkt.start_samples-slop:pkt.end_samples+slop]
 
@@ -264,7 +255,6 @@ class Log:
         """
         result = []
 
-        Fs = node.rx_bandwidth
         recv = self.received[node.node_id]
 
         return recv[((recv.start >= t_start) & (recv.start < t_end)) | ((recv.end >= t_start) & (recv.end < t_end))]
@@ -308,7 +298,8 @@ class Log:
         slot2 = slots.iloc[i+1]
         ts = [slot1.timestamp, slot2.timestamp]
         data = np.concatenate((slot1.iq_data, slot2.iq_data))
-        return (ts, data)
+
+        return Slots(ts, data, slot1.bw)
 
     def findReceivedPacketIndex(self, node, seq):
         """

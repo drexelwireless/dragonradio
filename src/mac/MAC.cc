@@ -13,10 +13,16 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , modulator_(modulator)
   , demodulator_(demodulator)
   , tx_channel_(0)
-  , timestamped_modulator_(phy->make_modulator())
+  , timestamped_modulator_(phy->mkModulator())
 {
     rx_rate_ = usrp->getRXRate();
     tx_rate_ = usrp->getTXRate();
+}
+
+void MAC::reconfigure(void)
+{
+    rx_rate_ = usrp_->getRXRate();
+    tx_rate_ = usrp_->getTXRate();
 }
 
 void MAC::timestampPacket(const Clock::time_point &deadline, std::shared_ptr<NetPacket> &&pkt)

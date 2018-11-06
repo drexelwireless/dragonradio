@@ -9,14 +9,27 @@
 class PacketModulator
 {
 public:
-    PacketModulator(std::shared_ptr<Channels> channels)
+    PacketModulator(const Channels &channels)
         : channels_(channels)
-        , maxPacketSize_(0)
         , tx_channel_(0)
+        , maxPacketSize_(0)
     {
     }
 
-    virtual ~PacketModulator() {};
+    virtual ~PacketModulator() = default;
+
+    /** @brief Get channels. */
+    virtual const Channels &getChannels(void) const
+    {
+        return channels_;
+    }
+
+    /** @brief Set channels */
+    virtual void setChannels(const Channels &channels)
+    {
+        channels_ = channels;
+        setTXChannel(tx_channel_);
+    }
 
     /** @brief Get the frequency channel to use during transmission
      * @return The frequency channel
@@ -31,10 +44,10 @@ public:
      */
     virtual void setTXChannel(Channels::size_type channel)
     {
-        if (channel >= channels_->size()) {
+        if (channel >= channels_.size()) {
             logEvent("PHY: illegal channel: channel=%lu, nchannels=%lu",
                 channel,
-                channels_->size());
+                channels_.size());
             channel = 0;
         }
 
@@ -46,7 +59,19 @@ public:
      */
     virtual double getTXShift(void) const
     {
-        return channels_ ? (*channels_)[tx_channel_] : 0.0;
+        return channels_.size() > 0 ? channels_[tx_channel_] : 0.0;
+    }
+
+    /** @brief Set maximum packet size. */
+    void setMaxPacketSize(size_t maxPacketSize)
+    {
+        maxPacketSize_ = maxPacketSize;
+    }
+
+    /** @brief Get maximum packet size. */
+    size_t getMaxPacketSize(void)
+    {
+        return maxPacketSize_;
     }
 
     /** @brief Modulate samples.
@@ -66,27 +91,15 @@ public:
                        size_t maxSamples,
                        bool overfill) = 0;
 
-    /** @brief Set maximum packet size. */
-    void setMaxPacketSize(size_t maxPacketSize)
-    {
-        maxPacketSize_ = maxPacketSize;
-    }
-
-    /** @brief Get maximum packet size. */
-    size_t getMaxPacketSize(void)
-    {
-        return maxPacketSize_;
-    }
-
 protected:
     /** @brief Radio channels, given as shift from center frequency */
-    std::shared_ptr<Channels> channels_;
-
-    /** @brief Maximum number of possible samples in a modulated packet. */
-    size_t maxPacketSize_;
+    Channels channels_;
 
     /** @brief Transmission channel, given hift from center frequency */
     Channels::size_type tx_channel_;
+
+    /** @brief Maximum number of possible samples in a modulated packet. */
+    size_t maxPacketSize_;
 };
 
 #endif /* PACKETMODULATOR_H_ */

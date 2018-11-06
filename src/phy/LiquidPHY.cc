@@ -7,8 +7,6 @@
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;
 
-std::mutex liquid_mutex;
-
 union PHYHeader {
     Header h;
     // FLEXFRAME_H_USER in liquid.internal.h. This is the largest header of any
@@ -22,19 +20,17 @@ LiquidPHY::LiquidPHY(NodeId node_id,
                      bool soft_payload,
                      size_t min_packet_size)
   : PHY(node_id)
-  , min_packet_size(min_packet_size)
+  , upsamp_resamp_params(std::bind(&LiquidPHY::reconfigureTX, this))
+  , downsamp_resamp_params(std::bind(&LiquidPHY::reconfigureRX, this))
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
+  , min_packet_size_(min_packet_size)
 {
 }
 
-LiquidPHY::~LiquidPHY()
-{
-}
-
-LiquidModulator::LiquidModulator(LiquidPHY &phy)
-    : Modulator(phy)
+LiquidPHY::Modulator::Modulator(LiquidPHY &phy)
+    : PHY::Modulator(phy)
     , liquid_phy_(phy)
     , upsamp_(phy.getTXRateOversample()/phy.getMinTXRateOversample(),
               phy.upsamp_resamp_params.m,
@@ -46,23 +42,23 @@ LiquidModulator::LiquidModulator(LiquidPHY &phy)
 {
 }
 
-LiquidModulator::~LiquidModulator()
+void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
+                                    double shift,
+                                    ModPacket &mpkt)
 {
-}
+    if (pending_reconfigure_.load(std::memory_order_relaxed))
+        reconfigure();
 
-void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
-                               double shift,
-                               ModPacket &mpkt)
-{
     PHYHeader header;
 
     memset(&header, 0, sizeof(header));
 
     pkt->toHeader(header.h);
 
-    pkt->resize(std::max((size_t) pkt->size(), liquid_phy_.min_packet_size));
+    pkt->resize(std::max((size_t) pkt->size(), liquid_phy_.min_packet_size_));
 
-    assemble(header.bytes, *pkt);
+    setPayloadMCS(pkt->tx_params->mcs);
+    assemble(header.bytes, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_shared<IQBuf>(kInitialModbufSize);
@@ -120,7 +116,7 @@ void LiquidModulator::modulate(std::shared_ptr<NetPacket> pkt,
     mpkt.pkt = std::move(pkt);
 }
 
-void LiquidModulator::setFreqShift(double shift)
+void LiquidPHY::Modulator::setFreqShift(double shift)
 {
     if (shift_ != shift) {
         double rad = 2*M_PI*shift/phy_.getTXRate(); // Frequency shift in radians
@@ -131,8 +127,23 @@ void LiquidModulator::setFreqShift(double shift)
     }
 }
 
-LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
-  : Demodulator(phy)
+void LiquidPHY::Modulator::reconfigure(void)
+{
+    upsamp_ = Liquid::MultiStageResampler(phy_.getTXRateOversample()/phy_.getMinTXRateOversample(),
+                                          liquid_phy_.upsamp_resamp_params.m,
+                                          liquid_phy_.upsamp_resamp_params.fc,
+                                          liquid_phy_.upsamp_resamp_params.As,
+                                          liquid_phy_.upsamp_resamp_params.npfb);
+
+    double shift = shift_;
+
+    shift_ = 0.0;
+    setFreqShift(shift);
+}
+
+LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
+  : Liquid::Demodulator(phy.soft_header_, phy.soft_payload_)
+  , PHY::Demodulator(phy)
   , liquid_phy_(phy)
   , downsamp_(phy.getMinRXRateOversample()/phy.getRXRateOversample(),
               phy.downsamp_resamp_params.m,
@@ -145,33 +156,12 @@ LiquidDemodulator::LiquidDemodulator(LiquidPHY &phy)
 {
 }
 
-LiquidDemodulator::~LiquidDemodulator()
-{
-}
-
-int LiquidDemodulator::liquid_callback(unsigned char *  header_,
-                                       int              header_valid_,
-                                       unsigned char *  payload_,
-                                       unsigned int     payload_len_,
-                                       int              payload_valid_,
-                                       framesyncstats_s stats_,
-                                       void *           userdata_)
-{
-    return reinterpret_cast<LiquidDemodulator*>(userdata_)->
-        callback(header_,
-                 header_valid_,
-                 payload_,
-                 payload_len_,
-                 payload_valid_,
-                 stats_);
-}
-
-int LiquidDemodulator::callback(unsigned char *  header_,
-                                int              header_valid_,
-                                unsigned char *  payload_,
-                                unsigned int     payload_len_,
-                                int              payload_valid_,
-                                framesyncstats_s stats_)
+int LiquidPHY::Demodulator::callback(unsigned char *  header_,
+                                     int              header_valid_,
+                                     unsigned char *  payload_,
+                                     unsigned int     payload_len_,
+                                     int              payload_valid_,
+                                     framesyncstats_s stats_)
 {
     Header* h = reinterpret_cast<Header*>(header_);
     size_t  off = demod_off_;   // Save demodulation offset for use when we log.
@@ -181,7 +171,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     // callback is called, which sets its internal counters to 0.
     demod_off_ += resamp_fact*stats_.end_counter;
 
-    if (header_valid_ && h->curhop == liquid_phy_.getNodeId())
+    if (header_valid_ && h->curhop == phy_.getNodeId())
         return 0;
 
     // Create the packet and fill it out
@@ -244,6 +234,7 @@ int LiquidDemodulator::callback(unsigned char *  header_,
                         stats_.rssi,
                         stats_.cfo,
                         shift_,
+                        phy_.getRXRate(),
                         payload_len_,
                         std::move(buf));
     }
@@ -251,9 +242,12 @@ int LiquidDemodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void LiquidDemodulator::reset(Clock::time_point timestamp, size_t off)
+void LiquidPHY::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
-    liquidReset();
+    if (pending_reconfigure_.load(std::memory_order_relaxed))
+        reconfigure();
+
+    reset();
 
     demod_start_ = timestamp;
     demod_off_ = off;
@@ -261,10 +255,10 @@ void LiquidDemodulator::reset(Clock::time_point timestamp, size_t off)
     downsamp_.reset();
 }
 
-void LiquidDemodulator::demodulate(std::complex<float>* data,
-                                   size_t count,
-                                   double shift,
-                                   std::function<void(std::unique_ptr<RadioPacket>)> callback)
+void LiquidPHY::Demodulator::demodulate(std::complex<float>* data,
+                                        size_t count,
+                                        double shift,
+                                        std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
     callback_ = callback;
 
@@ -288,7 +282,7 @@ void LiquidDemodulator::demodulate(std::complex<float>* data,
     }
 }
 
-void LiquidDemodulator::setFreqShift(double shift)
+void LiquidPHY::Demodulator::setFreqShift(double shift)
 {
     // We don't reset the NCO unless we have to so as to avoid phase
     // discontinuities during demodulation.
@@ -299,4 +293,35 @@ void LiquidDemodulator::setFreqShift(double shift)
 
         shift_ = shift;
     }
+}
+
+void LiquidPHY::Demodulator::reconfigure(void)
+{
+    downsamp_ = Liquid::MultiStageResampler(phy_.getMinRXRateOversample()/phy_.getRXRateOversample(),
+                                            liquid_phy_.upsamp_resamp_params.m,
+                                            liquid_phy_.upsamp_resamp_params.fc,
+                                            liquid_phy_.upsamp_resamp_params.As,
+                                            liquid_phy_.upsamp_resamp_params.npfb);
+
+    double shift = shift_;
+
+    shift_ = 0.0;
+    setFreqShift(shift);
+}
+
+size_t LiquidPHY::getModulatedSize(const TXParams &params, size_t n)
+{
+    std::unique_ptr<Liquid::Modulator> mod = mkLiquidModulator();
+
+    mod->setHeaderMCS(header_mcs_);
+    mod->setPayloadMCS(params.mcs);
+
+    PHYHeader                  header;
+    std::vector<unsigned char> body(n);
+
+    memset(&header, 0, sizeof(header));
+
+    mod->assemble(header.bytes, body.data(), body.size());
+
+    return getTXUpsampleRate()*mod->assembledSize();
 }

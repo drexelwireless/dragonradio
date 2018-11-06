@@ -315,6 +315,15 @@ class Controller(TCPProtoServer):
     @handle('Request.update_environment')
     def updateEnvironment(self, req):
         logger.info('Environment:\n%s', req.update_environment.environment)
+
+        env = json.loads(req.update_environment.environment)
+        bandwidth = env.get('scenario_rf_bandwidth', self.config.bandwidth)
+        frequency = env.get('scenario_center_frequency', self.config.frequency)
+
+        if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
+            self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
+            self.radio.configureFDMATDMASchedule()
+
         resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Environment updated'

@@ -11,6 +11,9 @@ void exportPHYs(py::module &m)
     py::class_<Gain, std::shared_ptr<Gain>>(m, "Gain")
         .def_property("lin", &Gain::getLinearGain, &Gain::setLinearGain)
         .def_property("dB", &Gain::getDbGain, &Gain::setDbGain)
+        .def("__repr__", [](const Gain& self) {
+            return py::str("Gain(lin={}, dB={})").format(self.getLinearGain(), self.getDbGain());
+         })
         ;
 
     // Export class PHY to Python
@@ -25,10 +28,13 @@ void exportPHYs(py::module &m)
 
     // Export class ResamplerParams to Python
     py::class_<ResamplerParams, std::shared_ptr<ResamplerParams>>(m, "ResamplerParams")
-        .def_readwrite("m", &ResamplerParams::m)
-        .def_readwrite("fc", &ResamplerParams::fc)
-        .def_readwrite("As", &ResamplerParams::As)
-        .def_readwrite("npfb", &ResamplerParams::npfb)
+        .def_property("m", &ResamplerParams::get_m, &ResamplerParams::set_m)
+        .def_property("fc", &ResamplerParams::get_fc, &ResamplerParams::set_fc)
+        .def_property("As", &ResamplerParams::get_As, &ResamplerParams::set_As)
+        .def_property("npfb", &ResamplerParams::get_npfb, &ResamplerParams::set_npfb)
+        .def("__repr__", [](const ResamplerParams& self) {
+            return py::str("ResamplerParams(m={}, fc={}, As={}, npfb={})").format(self.m, self.fc, self.As, self.npfb);
+         })
         ;
 
     // Export class LiquidPHY to Python
@@ -36,7 +42,9 @@ void exportPHYs(py::module &m)
         .def_property_readonly("header_mcs", &LiquidPHY::getHeaderMCS)
         .def_property_readonly("soft_header", &LiquidPHY::getSoftHeader)
         .def_property_readonly("soft_payload", &LiquidPHY::getSoftPayload)
-        .def_readonly("min_packet_size", &LiquidPHY::min_packet_size)
+        .def_property("min_packet_size",
+            &LiquidPHY::getMinPacketSize,
+            &LiquidPHY::setMinPacketSize)
         .def_readwrite("upsamp_resamp_params", &LiquidPHY::upsamp_resamp_params,
             py::return_value_policy::reference_internal)
         .def_readwrite("downsamp_resamp_params", &LiquidPHY::downsamp_resamp_params,
@@ -71,6 +79,15 @@ void exportPHYs(py::module &m)
                       unsigned int,
                       unsigned int,
                       unsigned int>())
+        .def(py::init<NodeId,
+                      const MCS&,
+                      bool,
+                      bool,
+                      size_t,
+                      unsigned int,
+                      unsigned int,
+                      unsigned int,
+                      std::vector<unsigned char>&>())
         ;
 
     // Export class MultiOFDM to Python
@@ -83,5 +100,14 @@ void exportPHYs(py::module &m)
                       unsigned int,
                       unsigned int,
                       unsigned int>())
+        .def(py::init<NodeId,
+                      const MCS&,
+                      bool,
+                      bool,
+                      size_t,
+                      unsigned int,
+                      unsigned int,
+                      unsigned int,
+                      std::vector<unsigned char>&>())
         ;
 }

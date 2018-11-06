@@ -15,7 +15,7 @@ void exportResamplers(py::module &m)
         .def("resample", [](Resampler &resamp, py::array_t<std::complex<float>> sig) -> py::array_t<std::complex<float>> {
             auto inbuf = sig.request();
 
-            py::array_t<std::complex<float>> outarr(1 + 2*resamp.getRate()*inbuf.size);
+            py::array_t<std::complex<float>> outarr(resamp.neededOut(inbuf.size));
             auto                             outbuf = outarr.request();
             unsigned                         nw;
 

@@ -115,6 +115,8 @@ public:
         superslots_ = superslots;
     }
 
+    void reconfigure(void) override;
+
     void sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt) override;
 
 private:
@@ -145,9 +147,6 @@ private:
     bool findNextSlot(Clock::time_point t,
                       Clock::time_point &t_next,
                       bool &owns_next_slot);
-
-    /** @brief Reconfigure the MAC when TDMA parameters change */
-    void reconfigure(void) override;
 };
 
 #endif /* TDMA_H_ */

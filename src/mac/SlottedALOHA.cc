@@ -54,11 +54,7 @@ void SlottedALOHA::sendTimestampedPacket(const Clock::time_point &t, std::shared
 
 void SlottedALOHA::reconfigure(void)
 {
-    rx_slot_samps_ = rx_rate_*slot_size_;
-    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
-    premod_samps_ = premod_slots_*tx_slot_samps_;
-
-    modulator_->setMaxPacketSize(tx_slot_samps_);
+    SlottedMAC::reconfigure();
 
     // For ALOHA, we demodulate the whole slot, including the guard interval.
     // This may lead to duplicate packets, but we may also not be
