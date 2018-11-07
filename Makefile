@@ -6,8 +6,8 @@ TARGETS = dragonradio flexframedemod
 
 RM       = rm -f
 RMRF     = rm -rf
-CXX      = g++
-LINKER   = g++
+CXX      = g++-8
+LINKER   = g++-8
 CPPFLAGS = -Isrc -I/usr/local/include/
 CXXFLAGS = -Ofast -march=native -g3 -Wall -pedantic -ansi -std=c++17
 LDFLAGS  =

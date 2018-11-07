@@ -7,6 +7,10 @@ sudo apt install -y libfftw3-dev
 sudo apt install -y libhdf5-dev libhdf5-doc libhdf5-cpp-11 libhdf5-cpp-11-dbg
 sudo apt install -y python3 python3-pip
 
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt-get update
+sudo apt-get install gcc-8 g++-8
+
 # Build and install libcorrect
 (cd dependencies/libcorrect && rm -rf build && mkdir build && cd build && cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
 

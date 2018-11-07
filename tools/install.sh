@@ -21,10 +21,10 @@ pip install -Ur requirements.txt
 
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
-sudo apt-get install gcc-7 g++-7
+sudo apt-get install gcc-8 g++-8
 
 (
     cd modules/dragonradio
-    CC=gcc-7 python3 setup.py build
+    CC=gcc-8 python3 setup.py build
     python3 setup.py install
 )
