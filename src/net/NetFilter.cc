@@ -7,13 +7,8 @@
 
 #include <cstddef>
 
-#include "NetFilter.hh"
-
-/** @brief Compute broadcast address from address and netmask  */
-uint32_t mkBroadcastAddress(uint32_t addr, uint32_t netmask)
-{
-    return (addr & netmask) | (0xffffffff & ~netmask);
-}
+#include "net/NetFilter.hh"
+#include "net/NetUtil.hh"
 
 NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
 {
@@ -34,11 +29,6 @@ NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
     ext_netmask_ = ntohl(in.s_addr);
 
     ext_broadcast_ = mkBroadcastAddress(ext_net_, ext_netmask_);
-}
-
-bool isEthernetBroadcast(const u_char *host)
-{
-    return memcmp(host, "\xff\xff\xff\xff\xff\xff", 6) == 0;
 }
 
 bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
