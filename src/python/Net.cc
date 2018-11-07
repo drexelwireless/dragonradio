@@ -1,5 +1,6 @@
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
+#include "net/Noop.hh"
 #include "net/Queue.hh"
 #include "python/PyModules.hh"
 
@@ -82,5 +83,15 @@ void exportNet(py::module &m)
     // Export class NetFilter to Python
     py::class_<NetFilter, NetProcessor, std::shared_ptr<NetFilter>>(m, "NetFilter")
         .def(py::init<std::shared_ptr<Net>>())
+        ;
+
+    // Export class NetNoop to Python
+    py::class_<NetNoop, NetProcessor, std::shared_ptr<NetNoop>>(m, "NetNoop")
+        .def(py::init<>())
+        ;
+
+    // Export class NetNoop to Python
+    py::class_<RadioNoop, RadioProcessor, std::shared_ptr<RadioNoop>>(m, "RadioNoop")
+        .def(py::init<>())
         ;
 }
