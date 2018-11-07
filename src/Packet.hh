@@ -10,6 +10,7 @@
 #include <complex>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <vector>
 
 #include <liquid/liquid.h>
@@ -83,6 +84,9 @@ struct ControlMsg {
     };
 };
 
+/** @brief A flow UID. */
+typedef uint16_t FlowUID;
+
 /** @brief A packet. */
 struct Packet : public buffer<unsigned char>
 {
@@ -140,6 +144,9 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Destination */
     NodeId dest;
+
+    /** @brief Flow UID */
+    std::optional<FlowUID> flow_uid;
 
     /** @brief Packet timestamp */
     Clock::time_point timestamp;
