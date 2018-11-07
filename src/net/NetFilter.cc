@@ -36,10 +36,6 @@ NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
     ext_broadcast_ = mkBroadcastAddress(ext_net_, ext_netmask_);
 }
 
-NetFilter::~NetFilter()
-{
-}
-
 bool isEthernetBroadcast(const u_char *host)
 {
     return memcmp(host, "\xff\xff\xff\xff\xff\xff", 6) == 0;
