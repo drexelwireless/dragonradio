@@ -1,5 +1,5 @@
-#include "Estimator.hh"
 #include "python/PyModules.hh"
+#include "stats/Estimator.hh"
 
 void exportEstimators(py::module &m)
 {

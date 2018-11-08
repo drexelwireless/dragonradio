@@ -1,8 +1,8 @@
 #ifndef TIMESYNC_HH_
 #define TIMESYNC_HH_
 
-#include "Estimator.hh"
 #include "Packet.hh"
+#include "stats/Estimator.hh"
 
 /** @brief Contains time information for a particular node */
 struct TimeInfo {
