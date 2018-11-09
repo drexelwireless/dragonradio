@@ -12,9 +12,9 @@ template <class T>
 struct time_point_t {
     uhd::time_spec_t t;
 
-    time_point_t() : t(0.0) {};
-    explicit time_point_t(double t0) : t(t0) {};
-    explicit time_point_t(uhd::time_spec_t t0) : t(t0) {};
+    explicit time_point_t(double secs=0) : t(secs) {};
+    explicit time_point_t(int64_t full_secs, double frac_secs=0) : t(full_secs, frac_secs) {};
+    explicit time_point_t(const uhd::time_spec_t &t0) : t(t0) {};
 
     time_point_t(const time_point_t&) = default;
     time_point_t(time_point_t&&) = default;
