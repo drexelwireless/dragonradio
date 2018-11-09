@@ -1,8 +1,3 @@
-#include <sys/socket.h>
-#include <netinet/if_ether.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-
 #include "Packet.hh"
 
 Packet::iterator::iterator(const Packet &pkt)
@@ -161,26 +156,4 @@ void Packet::appendSelectiveAck(const Seq &begin, const Seq &end)
     msg.ack.end = end;
 
     appendControl(msg);
-}
-
-bool Packet::isIP(void)
-{
-    struct ether_header* eth = reinterpret_cast<struct ether_header*>(data() + sizeof(ExtendedHeader));
-
-    return ntohs(eth->ether_type) == ETHERTYPE_IP;
-}
-
-bool Packet::isIPProto(uint8_t proto)
-{
-    struct ether_header *eth = reinterpret_cast<struct ether_header*>(data() + sizeof(ExtendedHeader));
-
-    if (ntohs(eth->ether_type) != ETHERTYPE_IP)
-        return false;
-
-    struct ip *ip = reinterpret_cast<struct ip*>(data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
-    uint8_t   ip_p;
-
-    std::memcpy(&ip_p, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_p), sizeof(ip_p));
-
-    return ip_p == proto;
 }
