@@ -17,6 +17,7 @@
 #include "buffer.hh"
 #include "Clock.hh"
 #include "Header.hh"
+#include "net/mgen.h"
 #include "phy/TXParams.hh"
 
 /** @brief A time */
@@ -335,6 +336,12 @@ struct Packet : public buffer<unsigned char>
 
         return reinterpret_cast<struct tcphdr*>(reinterpret_cast<char*>(iph) + ip_hl);
     }
+
+    /** @brief Get MGEN header
+     * @return A pointer to the MGEN header or nullptr if this is not a MGEN
+     * packet
+     */
+    struct mgenhdr *getMGENHdr(void);
 
     /** @brief Get payload size
      * @return The size of the data portion of a UDP or TCP packet.
