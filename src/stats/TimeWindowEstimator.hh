@@ -128,4 +128,27 @@ protected:
     }
 };
 
+/** @brief Compute mean value *per second* over a time window */
+template<class Clock, class T>
+class TimeWindowMeanRate : public TimeWindowMean<Clock, T> {
+public:
+    using TimeWindowEstimator<Clock, T>::twindow_;
+    using TimeWindowEstimator<Clock, T>::window_;
+    using TimeWindowMean<Clock, T>::sum_;
+    using TimeWindowMean<Clock, T>::purge;
+
+    explicit TimeWindowMeanRate(double twindow=1.0)
+      : TimeWindowMean<Clock, T>(twindow)
+    {
+    }
+
+    virtual ~TimeWindowMeanRate() = default;
+
+    virtual T getValue(void) const override
+    {
+        purge(Clock::now());
+        return sum_/twindow_;
+    }
+};
+
 #endif /* TIMEWINDOWESTIMATOR_HH_ */
