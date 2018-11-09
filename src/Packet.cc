@@ -157,3 +157,42 @@ void Packet::appendSelectiveAck(const Seq &begin, const Seq &end)
 
     appendControl(msg);
 }
+
+size_t Packet::getPayloadSize(void)
+{
+    struct ip *iph;
+    uint8_t   ip_p;
+
+    iph = getIPHdr(&ip_p);
+    if (!iph)
+       return 0;
+
+    size_t ip_hl = iph->ip_hl*4;
+
+    switch (ip_p) {
+        case IPPROTO_UDP:
+        {
+            if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + sizeof(struct udphdr))
+               return 0;
+
+            struct udphdr *udph = reinterpret_cast<struct udphdr*>(reinterpret_cast<char*>(iph) + ip_hl);
+
+            return ntohs(udph->uh_ulen) - sizeof(struct udphdr);
+        }
+        break;
+
+        case IPPROTO_TCP:
+        {
+           if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + sizeof(struct tcphdr))
+               return 0;
+
+           struct tcphdr *tcph = reinterpret_cast<struct tcphdr*>(reinterpret_cast<char*>(iph) + ip_hl);
+           size_t tcp_hl = tcph->th_off*4;
+
+           return size() - (sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + tcp_hl);
+        }
+        break;
+    }
+
+    return 0;
+}

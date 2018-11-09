@@ -336,6 +336,11 @@ struct Packet : public buffer<unsigned char>
         return reinterpret_cast<struct tcphdr*>(reinterpret_cast<char*>(iph) + ip_hl);
     }
 
+    /** @brief Get payload size
+     * @return The size of the data portion of a UDP or TCP packet.
+     */
+    size_t getPayloadSize(void);
+
     /** @brief Return true if this is an IP packet, false otherwise */
     bool isIP(void)
     {
