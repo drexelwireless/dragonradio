@@ -82,6 +82,20 @@ void exportTimeWindowMeanRateEstimator(py::module &m, const char *name)
         ;
 }
 
+template <class T>
+void exportTimeWindowMinEstimator(py::module &m, const char *name)
+{
+    py::class_<TimeWindowMin<Clock, T>, TimeWindowEstimator<Clock, T>, std::shared_ptr<TimeWindowMin<Clock, T>>>(m, name)
+        ;
+}
+
+template <class T>
+void exportTimeWindowMaxEstimator(py::module &m, const char *name)
+{
+    py::class_<TimeWindowMax<Clock, T>, TimeWindowEstimator<Clock, T>, std::shared_ptr<TimeWindowMax<Clock, T>>>(m, name)
+        ;
+}
+
 void exportEstimators(py::module &m)
 {
     exportEstimator<float>(m, "FloatEstimator");
@@ -96,4 +110,6 @@ void exportEstimators(py::module &m)
     exportTimeWindowEstimator<double>(m, "TimeWindowEstimator");
     exportTimeWindowMeanEstimator<double>(m, "TimeWindowMean");
     exportTimeWindowMeanRateEstimator<double>(m, "TimeWindowMeanRate");
+    exportTimeWindowMinEstimator<double>(m, "TimeWindowMin");
+    exportTimeWindowMaxEstimator<double>(m, "TimeWindowMax");
 }

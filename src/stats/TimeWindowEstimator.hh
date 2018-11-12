@@ -151,4 +151,158 @@ public:
     }
 };
 
+/** @brief Compute minimum over a time window */
+template<class Clock, class T>
+class TimeWindowMin : public TimeWindowEstimator<Clock, T> {
+public:
+    using TimeWindowEstimator<Clock, T>::twindow_;
+    using TimeWindowEstimator<Clock, T>::window_;
+
+    explicit TimeWindowMin(double twindow=1.0)
+      : TimeWindowEstimator<Clock, T>(twindow)
+      , min_(0)
+    {
+    }
+
+    virtual ~TimeWindowMin() = default;
+
+    virtual T getValue(void) const override
+    {
+        purge(Clock::now());
+
+        if (window_.size() == 0)
+            return std::numeric_limits<double>::quiet_NaN();
+        else
+            return min_;
+    }
+
+    virtual void reset(T x) override
+    {
+        TimeWindowEstimator<Clock, T>::reset(x);
+        min_ = x;
+    }
+
+    void update(typename Clock::time_point t, T x) override
+    {
+        purge(t);
+
+        if (x <= min_) {
+            min_ = x;
+            window_.clear();
+        }
+
+        window_.push_back(std::make_pair(t, x));
+    }
+
+protected:
+    /** @brief Minimum value in our window */
+    mutable T min_;
+
+    /** @brief Remove elements outside the time window */
+    void purge(typename Clock::time_point t) const
+    {
+        bool recalc = false;
+
+        // Pop first element of buffer as long as it falls before our window.
+        for (auto it = window_.begin(); it != window_.end() && it->first + twindow_ < t; it = window_.begin()) {
+            recalc = true;
+            window_.pop_front();
+        }
+
+        // Recalculate minimum
+        auto it = window_.begin();
+
+        if (recalc && it != window_.end()) {
+            min_ = it->second;
+
+            ++it;
+
+            for (; it != window_.end(); ++it) {
+                if (it->second <= min_)
+                    min_ = it->second;
+            }
+
+            for (auto it = window_.begin(); it != window_.end() && it->second > min_; it = window_.begin())
+                window_.pop_front();
+        }
+    }
+};
+
+/** @brief Compute maximum over a time window */
+template<class Clock, class T>
+class TimeWindowMax : public TimeWindowEstimator<Clock, T> {
+public:
+    using TimeWindowEstimator<Clock, T>::twindow_;
+    using TimeWindowEstimator<Clock, T>::window_;
+
+    explicit TimeWindowMax(double twindow=1.0)
+      : TimeWindowEstimator<Clock, T>(twindow)
+      , max_(0)
+    {
+    }
+
+    virtual ~TimeWindowMax() = default;
+
+    virtual T getValue(void) const override
+    {
+        purge(Clock::now());
+
+        if (window_.size() == 0)
+            return std::numeric_limits<double>::quiet_NaN();
+        else
+            return max_;
+    }
+
+    virtual void reset(T x) override
+    {
+        TimeWindowEstimator<Clock, T>::reset(x);
+        max_ = x;
+    }
+
+    void update(typename Clock::time_point t, T x) override
+    {
+        purge(t);
+
+        if (x >= max_) {
+            max_ = x;
+            window_.clear();
+        }
+
+        window_.push_back(std::make_pair(t, x));
+    }
+
+protected:
+    /** @brief Maximum value in our window */
+    mutable T max_;
+
+    /** @brief Remove elements outside the time window */
+    void purge(typename Clock::time_point t) const
+    {
+        bool recalc = false;
+
+        // Pop first element of buffer as long as it falls before our window.
+        for (auto it = window_.begin(); it != window_.end() && it->first + twindow_ < t; it = window_.begin()) {
+            recalc = true;
+            window_.pop_front();
+        }
+
+        // Recalculate maximum
+        auto it = window_.begin();
+
+        if (recalc && it != window_.end()) {
+            max_ = it->second;
+
+            ++it;
+
+            for (; it != window_.end(); ++it) {
+                if (it->second >= max_)
+                    max_ = it->second;
+            }
+
+            for (auto it = window_.begin(); it != window_.end() && it->second < max_; it = window_.begin())
+                window_.pop_front();
+        }
+    }
+};
+
 #endif /* TIMEWINDOWESTIMATOR_HH_ */
