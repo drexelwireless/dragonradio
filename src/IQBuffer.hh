@@ -24,6 +24,7 @@ public:
       : buffer(sz)
       , delay(0)
       , complete(false)
+      , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
@@ -34,6 +35,7 @@ public:
       : buffer(other)
       , delay(other.delay)
       , complete(other.complete)
+      , snapshot_off(other.snapshot_off)
       , undersample(other.undersample)
       , oversample(other.oversample)
     {
@@ -44,6 +46,7 @@ public:
       : buffer(std::move(other))
       , delay(other.delay)
       , complete(other.complete)
+      , snapshot_off(other.snapshot_off)
       , undersample(other.undersample)
       , oversample(other.oversample)
     {
@@ -54,6 +57,7 @@ public:
       : buffer(other)
       , delay(0)
       , complete(false)
+      , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
@@ -64,6 +68,7 @@ public:
       : buffer(std::move(other))
       , delay(0)
       , complete(true)
+      , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
@@ -74,6 +79,7 @@ public:
       : buffer(data, n)
       , delay(0)
       , complete(true)
+      , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
@@ -105,6 +111,9 @@ public:
 
     /** @brief Flag that is true when receive is completed. */
     bool complete;
+
+    /** @brief Offset from beginning of the current snapshot. */
+    size_t snapshot_off;
 
     /** @brief Number of undersamples at the beginning of the buffer. That is,
      * this is how many samples we missed at the beginning of the receive.

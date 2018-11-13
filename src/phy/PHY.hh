@@ -80,8 +80,11 @@ public:
          * @brief timestamp The timestamp of IQ buffer from which the first
          * provided sample willcome.
          * @brief off The offset of the first provided sample.
+         * @brief snapshot_off The current snapshot offset.
          */
-        virtual void reset(Clock::time_point timestamp, size_t off) = 0;
+        virtual void reset(Clock::time_point timestamp,
+                           size_t off,
+                           size_t snapshot_off) = 0;
 
         /** @brief Demodulate IQ samples.
          * @param data IQ samples to demodulate.

@@ -139,7 +139,9 @@ public:
         Demodulator& operator=(const Demodulator&) = delete;
         Demodulator& operator=(Demodulator&&) = delete;
 
-        void reset(Clock::time_point timestamp, size_t off) override final;
+        void reset(Clock::time_point timestamp,
+                   size_t off,
+                   size_t snapshot_off) override final;
 
         void demodulate(std::complex<float>* data,
                         size_t count,
@@ -170,6 +172,9 @@ public:
          * which we started demodulating.
          */
         size_t demod_off_;
+
+        /** @brief The snapshot offset. */
+        size_t snapshot_off_;
 
         /** @brief Frequency for mixing down */
         double shift_;

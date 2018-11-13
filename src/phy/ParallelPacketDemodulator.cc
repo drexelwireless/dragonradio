@@ -104,7 +104,9 @@ void ParallelPacketDemodulator::demodWorker(void)
             buf1_nsamples = buf1->size();
 
         // Reset the state of the demodulator
-        demod->reset(buf1->timestamp, buf1->size() - buf1_nsamples);
+        demod->reset(buf1->timestamp,
+                     buf1->size() - buf1_nsamples,
+                     buf1->snapshot_off);
 
         // Demodulate the last part of the guard interval of the previous slots
         demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, shift, callback);

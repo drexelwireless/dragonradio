@@ -253,7 +253,9 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void LiquidPHY::Demodulator::reset(Clock::time_point timestamp, size_t off)
+void LiquidPHY::Demodulator::reset(Clock::time_point timestamp,
+                                   size_t off,
+                                   size_t snapshot_off)
 {
     if (pending_reconfigure_.load(std::memory_order_relaxed)) {
         pending_reconfigure_.store(false, std::memory_order_relaxed);
@@ -264,6 +266,7 @@ void LiquidPHY::Demodulator::reset(Clock::time_point timestamp, size_t off)
 
     demod_start_ = timestamp;
     demod_off_ = off;
+    snapshot_off_ = snapshot_off;
 
     downsamp_.reset();
 }
