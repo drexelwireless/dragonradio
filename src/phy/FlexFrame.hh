@@ -35,12 +35,13 @@ public:
         virtual ~Demodulator() = default;
     };
 
-    FlexFrame(NodeId node_id,
+    FlexFrame(std::shared_ptr<SnapshotCollector> collector,
+              NodeId node_id,
               const MCS &header_mcs,
               bool soft_header,
               bool soft_payload,
               size_t min_packet_size)
-      : LiquidPHY(node_id, header_mcs, soft_header, soft_payload, min_packet_size)
+      : LiquidPHY(collector, node_id, header_mcs, soft_header, soft_payload, min_packet_size)
     {
     }
 

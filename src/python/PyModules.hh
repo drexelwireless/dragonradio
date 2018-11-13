@@ -75,5 +75,6 @@ void exportNCOs(py::module &m);
 void exportFilters(py::module &m);
 void exportIQBuffer(py::module &m);
 void exportIQCompression(py::module &m);
+void exportSnapshot(py::module &m);
 
 #endif /* PYMODULES_H_ */

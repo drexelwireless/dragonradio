@@ -38,4 +38,5 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     exportFilters(m);
     exportIQBuffer(m);
     exportIQCompression(m);
+    exportSnapshot(m);
 }

@@ -11,6 +11,7 @@
 #include "dsp/TableNCO.hh"
 #include "liquid/PHY.hh"
 #include "liquid/Resample.hh"
+#include "mac/Snapshot.hh"
 #include "phy/PHY.hh"
 
 struct ResamplerParams {
@@ -140,8 +141,9 @@ public:
         Demodulator& operator=(Demodulator&&) = delete;
 
         void reset(Clock::time_point timestamp,
-                   size_t off,
-                   size_t snapshot_off) override final;
+                   size_t off) override final;
+
+        void setSnapshotOffset(ssize_t snapshot_off) override final;
 
         void demodulate(std::complex<float>* data,
                         size_t count,
@@ -173,6 +175,9 @@ public:
          */
         size_t demod_off_;
 
+        /** @brief Are we snapshotting? */
+        bool in_snapshot_;
+
         /** @brief The snapshot offset. */
         size_t snapshot_off_;
 
@@ -199,7 +204,8 @@ public:
         virtual void reconfigure(void) override;
     };
 
-    LiquidPHY(NodeId node_id,
+    LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
+              NodeId node_id,
               const MCS &header_mcs,
               bool soft_header,
               bool soft_payload,
@@ -259,6 +265,9 @@ public:
     ResamplerParams downsamp_resamp_params;
 
 protected:
+    /** @brief Our snapshot collector */
+    std::shared_ptr<SnapshotCollector> snapshot_collector_;
+
     /** @brief Modulation and coding scheme for headers. */
     MCS header_mcs_;
 

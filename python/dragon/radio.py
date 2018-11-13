@@ -591,19 +591,22 @@ class Radio(object):
                          config.header_ms)
 
         if config.phy == 'flexframe':
-            self.phy = dragonradio.FlexFrame(self.node_id,
+            self.phy = dragonradio.FlexFrame(None,
+                                             self.node_id,
                                              header_mcs,
                                              config.soft_header,
                                              config.soft_payload,
                                              config.min_packet_size)
         elif config.phy == 'newflexframe':
-            self.phy = dragonradio.NewFlexFrame(self.node_id,
+            self.phy = dragonradio.NewFlexFrame(None,
+                                                self.node_id,
                                                 header_mcs,
                                                 config.soft_header,
                                                 config.soft_payload,
                                                 config.min_packet_size)
         elif config.phy == 'ofdm':
-            self.phy = dragonradio.OFDM(self.node_id,
+            self.phy = dragonradio.OFDM(None,
+                                        self.node_id,
                                         header_mcs,
                                         config.soft_header,
                                         config.soft_payload,
@@ -612,7 +615,8 @@ class Radio(object):
                                         config.cp_len,
                                         config.taper_len)
         elif config.phy == 'multiofdm':
-            self.phy = dragonradio.MultiOFDM(self.node_id,
+            self.phy = dragonradio.MultiOFDM(None,
+                                             self.node_id,
                                              header_mcs,
                                              config.soft_header,
                                              config.soft_payload,
@@ -919,6 +923,7 @@ class Radio(object):
     def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
+                                            None,
                                             self.rx_channels,
                                             self.tx_channels,
                                             self.modulator,
@@ -932,6 +937,7 @@ class Radio(object):
     def configureTDMA(self, nslots):
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
+                                    None,
                                     self.rx_channels,
                                     self.tx_channels,
                                     self.modulator,

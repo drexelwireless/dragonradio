@@ -24,6 +24,7 @@ public:
       : buffer(sz)
       , delay(0)
       , complete(false)
+      , in_snapshot(false)
       , snapshot_off(0)
       , undersample(0)
       , oversample(0)
@@ -35,6 +36,7 @@ public:
       : buffer(other)
       , delay(other.delay)
       , complete(other.complete)
+      , in_snapshot(other.in_snapshot)
       , snapshot_off(other.snapshot_off)
       , undersample(other.undersample)
       , oversample(other.oversample)
@@ -46,6 +48,7 @@ public:
       : buffer(std::move(other))
       , delay(other.delay)
       , complete(other.complete)
+      , in_snapshot(other.in_snapshot)
       , snapshot_off(other.snapshot_off)
       , undersample(other.undersample)
       , oversample(other.oversample)
@@ -57,6 +60,7 @@ public:
       : buffer(other)
       , delay(0)
       , complete(false)
+      , in_snapshot(false)
       , snapshot_off(0)
       , undersample(0)
       , oversample(0)
@@ -68,6 +72,7 @@ public:
       : buffer(std::move(other))
       , delay(0)
       , complete(true)
+      , in_snapshot(false)
       , snapshot_off(0)
       , undersample(0)
       , oversample(0)
@@ -79,6 +84,7 @@ public:
       : buffer(data, n)
       , delay(0)
       , complete(true)
+      , in_snapshot(false)
       , snapshot_off(0)
       , undersample(0)
       , oversample(0)
@@ -111,6 +117,9 @@ public:
 
     /** @brief Flag that is true when receive is completed. */
     bool complete;
+
+    /** @brief Is this buffer part of a snapshot?. */
+    bool in_snapshot;
 
     /** @brief Offset from beginning of the current snapshot. */
     size_t snapshot_off;

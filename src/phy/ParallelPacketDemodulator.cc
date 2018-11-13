@@ -103,19 +103,26 @@ void ParallelPacketDemodulator::demodWorker(void)
         if (buf1_nsamples > buf1->size())
             buf1_nsamples = buf1->size();
 
+        // Calculate offset into buf1 at which we begin demodulation
+        size_t buf1_off = buf1->size() - buf1_nsamples;
+
         // Reset the state of the demodulator
-        demod->reset(buf1->timestamp,
-                     buf1->size() - buf1_nsamples,
-                     buf1->snapshot_off);
+        demod->reset(buf1->timestamp, buf1_off);
+
+        if (buf1->in_snapshot)
+            demod->setSnapshotOffset(buf1->snapshot_off);
 
         // Demodulate the last part of the guard interval of the previous slots
-        demod->demodulate(buf1->data() + buf1->size() - buf1_nsamples, buf1_nsamples, shift, callback);
+        demod->demodulate(buf1->data() + buf1_off, buf1_nsamples, shift, callback);
 
         // Wait for the second buffer to start to fill. If demodulation is very
         // fast, it is possible for us to finish demodulating the first buffer
         // before the second begins to fill! This actually happens with OFDM.
         while (buf2->nsamples.load(std::memory_order_acquire) == 0)
             ;
+
+        if (buf2->in_snapshot)
+            demod->setSnapshotOffset(buf2->snapshot_off - buf1->size());
 
         if (cur_samps_ > buf2->undersample) {
             // Calculate how many samples from the current slot we want to

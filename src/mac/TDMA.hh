@@ -78,6 +78,7 @@ public:
 
     TDMA(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
+         std::shared_ptr<SnapshotCollector> collector,
          const Channels &rx_channels,
          const Channels &tx_channels,
          std::shared_ptr<PacketModulator> modulator,

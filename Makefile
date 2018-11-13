@@ -83,6 +83,7 @@ SOURCES := \
     mac/SmartController.cc \
     mac/SlottedALOHA.cc \
     mac/SlottedMAC.cc \
+    mac/Snapshot.cc \
     mac/TDMA.cc \
     net/Net.cc \
     net/NetFilter.cc \
@@ -105,6 +106,7 @@ SOURCES := \
     python/RadioConfig.cc \
     python/RadioNet.cc \
     python/Resample.cc \
+    python/Snapshot.cc \
     python/USRP.cc \
     python/WorkQueue.cc
 

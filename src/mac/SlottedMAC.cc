@@ -5,6 +5,7 @@
 
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
+                       std::shared_ptr<SnapshotCollector> collector,
                        const Channels &rx_channels,
                        const Channels &tx_channels,
                        std::shared_ptr<PacketModulator> modulator,
@@ -12,7 +13,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        double slot_size,
                        double guard_size,
                        double demod_overlap_size)
-  : MAC(usrp, phy, rx_channels, tx_channels, modulator, demodulator)
+  : MAC(usrp, phy, collector, rx_channels, tx_channels, modulator, demodulator)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , demod_overlap_size_(demod_overlap_size)
@@ -107,12 +108,31 @@ void SlottedMAC::rxWorker(void)
             t_cur_slot = t_next_slot;
             t_next_slot += slot_size_;
 
-            // Read samples for current slot
+            // Create buffer for slot
             auto curSlot = std::make_shared<IQBuf>(rx_slot_samps_ + usrp_->getMaxRXSamps());
 
+            // Push the buffer if we're snapshotting
+            bool do_snapshot;
+
+            if (snapshot_collector_)
+                do_snapshot = snapshot_collector_->push(curSlot);
+            else
+                do_snapshot = false;
+
+            // Put the buffer into the demodulator's queue so it can start
+            // working now
             demodulator_->push(curSlot);
 
-            if (!usrp_->burstRX(Clock::to_mono_time(t_cur_slot), rx_slot_samps_, *curSlot))
+            // Read samples for current slot. The demodulator will do its thing
+            // as we continue to read samples.
+            bool ok = usrp_->burstRX(Clock::to_mono_time(t_cur_slot), rx_slot_samps_, *curSlot);
+
+            // Update snapshot offset by finalizing this snapshot slot
+            if (do_snapshot)
+                snapshot_collector_->finalizePush();
+
+            // If there was an RX error, break and set up the RX stream again.
+            if (!ok)
                 break;
         }
 
@@ -180,6 +200,17 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
                 txBuf.emplace_back(std::move((*it)->samples));
 
             usrp_->burstTX(Clock::to_mono_time(when), txBuf);
+        }
+
+        if (snapshot_collector_) {
+            float tx_freq = usrp_->getTXFrequency();
+            float rx_freq = usrp_->getRXFrequency();
+
+            snapshot_collector_->selfTX(when,
+                                        rx_rate_,
+                                        tx_rate_,
+                                        nsamples,
+                                        tx_freq - rx_freq);
         }
     }
 
