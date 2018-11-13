@@ -30,10 +30,27 @@ public:
         nsamples.store(0, std::memory_order_release);
     }
 
-    ~IQBuf() noexcept {}
+    IQBuf(const IQBuf &other)
+      : buffer(other)
+      , delay(other.delay)
+      , complete(other.complete)
+      , undersample(other.undersample)
+      , oversample(other.oversample)
+    {
+        nsamples.store(other.nsamples.load());
+    }
 
-    IQBuf(const IQBuf&) = delete;
-    IQBuf(IQBuf&&) = delete;
+    IQBuf(IQBuf &&other)
+      : buffer(std::move(other))
+      , delay(other.delay)
+      , complete(other.complete)
+      , undersample(other.undersample)
+      , oversample(other.oversample)
+    {
+        nsamples.store(other.nsamples.load());
+    }
+
+    ~IQBuf() noexcept {}
 
     IQBuf& operator=(const IQBuf&) = delete;
     IQBuf& operator=(IQBuf&&) = delete;
