@@ -11,5 +11,6 @@ void exportMCS(py::module &m);
 void exportResamplers(py::module &m);
 void exportNCOs(py::module &m);
 void exportFilters(py::module &m);
+void exportIQCompression(py::module &m);
 
 #endif /* PYMODULES_H_ */

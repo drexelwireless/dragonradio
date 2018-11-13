@@ -28,6 +28,9 @@ CPPFLAGS += -I/usr/include/python3.5 -Idependencies/pybind11/include
 
 LIBS += -lpython3.5m
 
+# Needed for FLAC
+LIBS += -lFLAC++ -lFLAC
+
 # Version information
 GIT_HASH=$(shell git rev-parse HEAD^{} | cut -c1-8)
 
@@ -53,6 +56,8 @@ GENERATED += \
 SOURCES := \
     Clock.cc \
     ExtensibleDataSet.cc \
+    IQCompression.cc \
+    IQCompression/FLAC.cc \
     Logger.cc \
     main.cc \
     Packet.cc \
@@ -85,6 +90,7 @@ SOURCES := \
     python/Controller.cc \
     python/Estimator.cc \
     python/Filter.cc \
+    python/IQCompression.cc \
     python/LiquidEnum.cc \
     python/Logger.cc \
     python/MAC.cc \
