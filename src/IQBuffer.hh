@@ -90,6 +90,12 @@ public:
     Clock::time_point timestamp;
 #endif /* !defined(NOUHD) */
 
+    /** @brief Sample center frequency */
+    float fc;
+
+    /** @brief Sample rate */
+    float fs;
+
     /** @brief Signal delay */
     size_t delay;
 

@@ -151,6 +151,9 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
     uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rxRate;
     size_t           ndelivered = 0;
 
+    buf.fc = usrp_->get_rx_freq();
+    buf.fs = rxRate;
+
     buf.resize(nsamps + rx_max_samps_);
 
     for (;;) {
