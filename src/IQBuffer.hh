@@ -20,7 +20,12 @@
 /** @brief A buffer of IQ samples */
 struct IQBuf : buffer<std::complex<float>> {
 public:
-    IQBuf(size_t sz) : buffer(sz), delay(0), complete(false)
+    IQBuf(size_t sz)
+      : buffer(sz)
+      , delay(0)
+      , complete(false)
+      , undersample(0)
+      , oversample(0)
     {
         nsamples.store(0, std::memory_order_release);
     }
