@@ -101,7 +101,7 @@ public:
     Net& operator=(const Net&) = delete;
     Net& operator=(Net&&) = delete;
 
-    /** @breif Get this node's ID */
+    /** @brief Get this node's ID */
     NodeId getMyNodeId(void);
 
     /** @brief Get the number of nodes in the network */
