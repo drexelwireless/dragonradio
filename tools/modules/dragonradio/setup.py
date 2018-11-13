@@ -36,6 +36,7 @@ ext_modules = [
          'main_src/liquid/PHY.cc',
          'main_src/liquid/Resample.cc',
          'main_src/python/Filter.cc',
+         'main_src/python/IQBuffer.cc',
          'main_src/python/IQCompression.cc',
          'main_src/python/LiquidEnum.cc',
          'main_src/python/LiquidModDemod.cc',

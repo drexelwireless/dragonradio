@@ -91,6 +91,7 @@ SOURCES := \
     python/Controller.cc \
     python/Estimator.cc \
     python/Filter.cc \
+    python/IQBuffer.cc \
     python/IQCompression.cc \
     python/LiquidEnum.cc \
     python/Logger.cc \
