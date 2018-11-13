@@ -50,6 +50,36 @@ public:
         nsamples.store(other.nsamples.load());
     }
 
+    IQBuf(const buffer<std::complex<float>> &other)
+      : buffer(other)
+      , delay(0)
+      , complete(false)
+      , undersample(0)
+      , oversample(0)
+    {
+        nsamples.store(0, std::memory_order_release);
+    }
+
+    IQBuf(buffer<std::complex<float>> &&other)
+      : buffer(std::move(other))
+      , delay(0)
+      , complete(true)
+      , undersample(0)
+      , oversample(0)
+    {
+        nsamples.store(0, std::memory_order_release);
+    }
+
+    IQBuf(const std::complex<float> *data, size_t n)
+      : buffer(data, n)
+      , delay(0)
+      , complete(true)
+      , undersample(0)
+      , oversample(0)
+    {
+        nsamples.store(0, std::memory_order_release);
+    }
+
     ~IQBuf() noexcept {}
 
     IQBuf& operator=(const IQBuf&) = delete;
