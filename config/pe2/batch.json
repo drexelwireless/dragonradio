@@ -1,0 +1,88 @@
+{
+ "BatchName" : "PE2 Validation",
+ "Duration": 495,
+ "RFScenario" : "9977",
+ "TrafficScenario" : "99771",
+ "NodeData": [
+ {
+ "RFNode_ID" : 1,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : true,
+ "TrafficNode_ID" : 1,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 2,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 2,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 3,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 3,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 4,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 4,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 5,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 5,
+ "node_type" : "competitor"
+ }, 
+ {
+ "RFNode_ID" : 6,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 6,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 7,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 7,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 8,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 8,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 9,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 9,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 10,
+ "ImageName" : "pe2",
+ "ModemConfig" : "pe2.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 10,
+ "node_type" : "competitor"
+ }
+ ]
+}
