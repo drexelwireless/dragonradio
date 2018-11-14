@@ -891,10 +891,15 @@ class Radio(object):
 
         self.configSmartControllerSlotSize()
 
-    def configureALOHA(self):
+    def deleteMAC(self):
+        """Delete the current MAC"""
         if self.config.arq:
             self.controller.mac = None
 
+        self.mac.stop()
+        del self.mac
+
+    def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
                                             self.rx_channels,
@@ -908,9 +913,6 @@ class Radio(object):
         self.finishConfiguringMAC()
 
     def configureTDMA(self, nslots):
-        if self.config.arq:
-            self.controller.mac = None
-
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
                                     self.rx_channels,

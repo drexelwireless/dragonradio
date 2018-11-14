@@ -223,7 +223,7 @@ class Controller(TCPProtoServer):
         logger.info('Switching to TDMA MAC, nodes: %s', list(radio.net.keys()))
         self.switched_macs = True
 
-        del radio.mac
+        radio.deleteMAC()
 
         # Sort nodes and pick our slot/channel based on our position in the node
         # list
@@ -324,6 +324,10 @@ class Controller(TCPProtoServer):
 
             if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
                 self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
+
+                # Delete old MAC since we are about to create a new MAC
+                self.radio.deleteMAC()
+
                 self.radio.configureFDMATDMASchedule()
 
         resp = remote.Response()
