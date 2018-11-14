@@ -188,6 +188,10 @@ class Config(object):
         self.amc_mcsidx_alpha = 0.5
         self.amc_mcsidx_prob_floor = 0.1
 
+        # Snapshot options
+        self.snapshot_period = 0
+        self.snapshot_duration = 0.5
+
         # Network options
         self.mtu = 1500
         self.queue = 'fifo'
@@ -505,6 +509,14 @@ class Config(object):
                             dest='amc_mcsidx_prob_floor',
                             help='set minimum MCS transition probability')
 
+        # Snapshot options
+        parser.add_argument('--snapshot-period', action='store', type=float,
+                dest='snapshot_period',
+                help='set snapshot period (sec)')
+        parser.add_argument('--snapshot-duration', action='store', type=float,
+                dest='snapshot_duration',
+                help='set snapshot duration (sec)')
+
         # Network options
         parser.add_argument('--mtu', action='store', type=int,
                             dest='mtu',
@@ -583,6 +595,14 @@ class Radio(object):
             dragonradio.Logger.singleton = self.logger
 
         #
+        # Configure snapshots
+        #
+        if config.snapshot_period != 0:
+            self.snapshot_collector = dragonradio.SnapshotCollector()
+        else:
+            self.snapshot_collector = None
+
+        #
         # Configure the PHY
         #
         header_mcs = MCS(config.header_check,
@@ -591,21 +611,21 @@ class Radio(object):
                          config.header_ms)
 
         if config.phy == 'flexframe':
-            self.phy = dragonradio.FlexFrame(None,
+            self.phy = dragonradio.FlexFrame(self.snapshot_collector,
                                              self.node_id,
                                              header_mcs,
                                              config.soft_header,
                                              config.soft_payload,
                                              config.min_packet_size)
         elif config.phy == 'newflexframe':
-            self.phy = dragonradio.NewFlexFrame(None,
+            self.phy = dragonradio.NewFlexFrame(self.snapshot_collector,
                                                 self.node_id,
                                                 header_mcs,
                                                 config.soft_header,
                                                 config.soft_payload,
                                                 config.min_packet_size)
         elif config.phy == 'ofdm':
-            self.phy = dragonradio.OFDM(None,
+            self.phy = dragonradio.OFDM(self.snapshot_collector,
                                         self.node_id,
                                         header_mcs,
                                         config.soft_header,
@@ -615,7 +635,7 @@ class Radio(object):
                                         config.cp_len,
                                         config.taper_len)
         elif config.phy == 'multiofdm':
-            self.phy = dragonradio.MultiOFDM(None,
+            self.phy = dragonradio.MultiOFDM(self.snapshot_collector,
                                              self.node_id,
                                              header_mcs,
                                              config.soft_header,
@@ -923,7 +943,7 @@ class Radio(object):
     def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
-                                            None,
+                                            self.snapshot_collector,
                                             self.rx_channels,
                                             self.tx_channels,
                                             self.modulator,
@@ -937,7 +957,7 @@ class Radio(object):
     def configureTDMA(self, nslots):
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
-                                    None,
+                                    self.snapshot_collector,
                                     self.rx_channels,
                                     self.tx_channels,
                                     self.modulator,
