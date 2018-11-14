@@ -316,13 +316,15 @@ class Controller(TCPProtoServer):
     def updateEnvironment(self, req):
         logger.info('Environment:\n%s', req.update_environment.environment)
 
-        env = json.loads(req.update_environment.environment)
-        bandwidth = env.get('scenario_rf_bandwidth', self.config.bandwidth)
-        frequency = env.get('scenario_center_frequency', self.config.frequency)
+        envs = json.loads(req.update_environment.environment)
+        # Environment messages contain a *list* of updates...
+        for env in envs:
+            bandwidth = env.get('scenario_rf_bandwidth', self.config.bandwidth)
+            frequency = env.get('scenario_center_frequency', self.config.frequency)
 
-        if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
-            self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
-            self.radio.configureFDMATDMASchedule()
+            if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
+                self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
+                self.radio.configureFDMATDMASchedule()
 
         resp = remote.Response()
         resp.status.state = self.state
