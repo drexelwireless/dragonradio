@@ -2,12 +2,14 @@
 import argparse
 import matplotlib as mp
 from matplotlib.text import OffsetFrom
+import matplotlib.patches as patches
 from matplotlib.widgets import Button, Slider
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
 import sys
 
+import dragonradio
 import drlog
 
 # See:
@@ -389,11 +391,88 @@ class SendPlot:
         fig = viewer.rxFig(node)
         fig.plot(idx)
 
+class SnapshotPlot:
+    def __init__(self, log, node, nfft=256):
+        self.log = log
+        self.node = node
+
+        self.snapshotidx = 0
+
+        self.fig = plt.figure()
+        self.specgram = SpecgramPlot(self.fig, self.fig.add_subplot(2,1,1), nfft=nfft)
+        self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,1,2), nfft=nfft)
+
+        # Add next and prev buttons. Coordinates are:
+        #   posx, posy, width, height
+        self.axprev = self.fig.add_axes([0.71, 0.02, 0.1, 0.03])
+        self.bprev = Button(self.axprev, 'Previous')
+        self.bprev.on_clicked(self.prev_snapshot)
+
+        self.axnext = self.fig.add_axes([0.82, 0.02, 0.1, 0.03])
+        self.bnext = Button(self.axnext, 'Next')
+        self.bnext.on_clicked(self.next_snapshot)
+
+        # Add packet position slider
+        self.axpos = self.fig.add_axes([0.1, 0.02, 0.4, 0.03])
+        self.spos = Slider(self.axpos, 'Snapshot Index', 0, len(self.snapshots)-1, valfmt='%1.0f', valinit=0, valstep=1)
+        self.spos.on_changed(self.update_slider)
+
+    @property
+    def snapshots(self):
+        return self.log.snapshots[self.node.node_id]
+
+    def plot(self, idx):
+        if idx >= 0 and idx < len(self.snapshots):
+            self.snapshotidx = idx
+
+            snapshot = self.snapshots.iloc[idx]
+            self.spos.set_val(idx)
+
+            sig = dragonradio.decompressFLAC(snapshot.iq_data)
+
+            self.fig.canvas.set_window_title('Snapshot at {}'.format(str(snapshot.timestamp)))
+
+            self.specgram.plot(snapshot.fs, sig, snapshot.timestamp)
+            self.psd.plot(snapshot.fs, sig, title=None)
+
+            # Plot self-transmissions
+            df = self.log.selftx[self.node.node_id]
+            selftx = df[df.timestamp == snapshot.timestamp]
+            fs = snapshot.fs
+
+            for _, e in selftx.iterrows():
+                start = e.start/fs
+                end = e.end/fs
+                f_bot = e.fc-0.5*e.fs
+                f_height = e.fs
+
+                if e.is_local:
+                    color = 'b'
+                else:
+                    color = 'r'
+
+                rect = patches.Rectangle((start, f_bot), end-start, f_height, linewidth=0.4, edgecolor=color, facecolor='none')
+                self.specgram.ax.add_patch(rect)
+
+            self.fig.canvas.draw()
+
+    def update_slider(self, val):
+        idx = int(val)
+        if idx != self.snapshotidx:
+            self.plot(idx)
+
+    def next_snapshot(self, event):
+        self.plot(self.snapshotidx+1)
+
+    def prev_snapshot(self, event):
+        self.plot(self.snapshotidx-1)
+
 class LogViewer:
     def __init__(self, log):
         self.log = log
         self.rxFigs = {}
         self.txFigs = {}
+        self.snapshotFigs = {}
 
     def rxFig(self, node, nfft=256, show_header_invalid=False):
         if node.node_id in self.rxFigs:
@@ -413,6 +492,15 @@ class LogViewer:
             fig.fig.show()
             return fig
 
+    def snapshotFig(self, node, nfft=256):
+        if node.node_id in self.snapshotFigs:
+            return self.snapshotFigs[node.node_id]
+        else:
+            fig = SnapshotPlot(self.log, node, nfft=nfft)
+            self.snapshotFigs[node.node_id] = fig
+            fig.fig.show()
+            return fig
+
 def main():
     global viewer
 
@@ -423,6 +511,8 @@ def main():
                         help='view TX log for given node')
     parser.add_argument('--rx', action='append', type=int, default=[], dest='rx',
                         help='view RX log for given node')
+    parser.add_argument('--snapshots', action='append', type=int, default=[], dest='snapshots',
+                        help='view snapshot log for given node')
     parser.add_argument('--nfft', action='store', type=int, default=256, dest='nfft',
                         help='set number of FFT points')
     parser.add_argument('--show-invalid-headers', action='store_true', default=False, dest='show_invalid_headers',
@@ -451,6 +541,14 @@ def main():
         else:
             rx = viewer.rxFig(node, nfft=args.nfft, show_header_invalid=args.show_invalid_headers)
             rx.plot(0)
+
+    for node_id in args.snapshots:
+        node = log.nodes[node_id]
+        if not node:
+            print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
+        else:
+            tx = viewer.snapshotFig(node, nfft=args.nfft)
+            tx.plot(0)
 
     plt.show()
 
