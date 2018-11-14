@@ -57,6 +57,7 @@ using RadioOutPull = RadioOutWrapper<Pull>;
 
 void exportLiquidEnums(py::module &m);
 void exportLiquidModDemod(py::module &m);
+void exportClock(py::module &m);
 void exportLogger(py::module &m);
 void exportRadioConfig(py::module &m);
 void exportWorkQueue(py::module &m);

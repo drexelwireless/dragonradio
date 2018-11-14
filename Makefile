@@ -87,6 +87,7 @@ SOURCES := \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
+    python/Clock.cc \
     python/Controller.cc \
     python/Estimator.cc \
     python/Filter.cc \
