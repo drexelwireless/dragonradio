@@ -82,6 +82,9 @@ def main():
     else:
         loop = asyncio.get_event_loop()
 
+        if config.log_snapshots != 0:
+            loop.create_task(radio.snapshotLogger())
+
         if config.cycle_snr != 0:
             loop.create_task(cycle_snr(radio, config.cycle_snr))
 

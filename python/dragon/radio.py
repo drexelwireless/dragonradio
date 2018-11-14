@@ -1,8 +1,10 @@
 import argparse
+import asyncio
 import configparser
 import io
 import libconf
 import logging
+import numpy as np
 import os
 from pprint import pformat
 import platform
@@ -75,6 +77,7 @@ class Config(object):
         self.log_sources = []
         self.log_interfaces = []
         self.log_invalid_headers = False
+        self.log_snapshots = False
         self.compress_interface_logs = False
         # This is the actual path to the log directory
         self.logdir_ = None
@@ -313,6 +316,9 @@ class Config(object):
         parser.add_argument('--log-invalid-headers', action='store_const', const=True,
                             dest='log_invalid_headers',
                             help='log packets with invalid headers')
+        parser.add_argument('--log-snapshots', action='store_const', const=True,
+                            dest='log_snapshots',
+                            help='log snapshots')
 
         # USRP settings
         parser.add_argument('--addr', action='store',
@@ -1078,3 +1084,43 @@ class Radio(object):
             if not os.path.exists(path):
                 return path
             i += 1
+
+    async def snapshotLogger(self):
+        if not self.logger:
+            return
+
+        config = self.config
+        collector = self.snapshot_collector
+
+        while True:
+            await asyncio.sleep(config.snapshot_period)
+
+            # Collecting snapshot for config.snapshot_duration
+            collector.start()
+            await asyncio.sleep(config.snapshot_duration)
+
+            # Stop collecting slots
+            collector.stop()
+
+            # Wait 200ms for remaining packets in snapshot to be demodulated and get
+            # the snapshot
+            await asyncio.sleep(0.2)
+            snapshot = collector.finish()
+
+            # Log the snapshot
+            slots = snapshot.slots
+            if len(slots) != 0:
+                t = slots[0].timestamp
+                fc = slots[0].fc
+                fs = slots[0].fs
+
+                if all([slot.fc == fc for slot in slots]) and all([slot.fs == fs for slot in slots]):
+                    # Get concatenated IQ buffer for all slots
+                    iqbuf = dragonradio.IQBuf(np.concatenate([slot.data for slot in slots]))
+                    iqbuf.timestamp = t
+                    iqbuf.fc = fc
+                    iqbuf.fs = fs
+
+                    self.logger.logSnapshot(iqbuf)
+                    for e in snapshot.selftx:
+                        self.logger.logSelfTX(t, e)
