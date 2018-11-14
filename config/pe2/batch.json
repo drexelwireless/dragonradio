@@ -1,8 +1,8 @@
 {
  "BatchName" : "PE2 Validation",
- "Duration": 495,
- "RFScenario" : "9977",
- "TrafficScenario" : "99771",
+ "Duration": 630,
+ "RFScenario" : "9980",
+ "TrafficScenario" : "99801",
  "NodeData": [
  {
  "RFNode_ID" : 1,
