@@ -5,6 +5,7 @@
 #include <H5Cpp.h>
 
 #include "Clock.hh"
+#include "IQCompression.hh"
 #include "Logger.hh"
 #include "RadioConfig.hh"
 
@@ -18,6 +19,32 @@ struct SlotEntry {
     float bw;
     /** @brief Raw IQ data. */
     hvl_t iq_data;
+};
+
+/** @brief Log entry for snapshots */
+struct SnapshotEntry {
+    /** @brief Receive timestamp. */
+    double timestamp;
+    /** @brief Sampling frequency [Hz] */
+    float fs;
+    /** @brief Compressed IQ data. */
+    hvl_t iq_data;
+};
+
+/** @brief Log entry for self-transmission events */
+struct SelfTXEntry {
+    /** @brief Timestamp of snapshot this self-transmission belongs to. */
+    double timestamp;
+    /** @brief Is this TX local, i.e., produced by this node? */
+    uint8_t is_local;
+    /** @brief Offset of start of packet. */
+    int32_t start;
+    /** @brief Offset of end of packet. */
+    int32_t end;
+    /** @brief Center frequency [Hz] */
+    float fc;
+    /** @brief Sampling frequency [Hz] */
+    float fs;
 };
 
 /** @brief Log entry for received packets */
@@ -129,6 +156,9 @@ void Logger::open(const std::string& filename)
     // H5 type for variable-length IQ data
     H5::VarLenType h5_iqdata(&h5_complex32);
 
+    // H5 type for variable-length compressed IQ data
+    H5::VarLenType h5_compressed_iqdata(&H5::PredType::NATIVE_CHAR);
+
     // H5 type for Liquid CRC scheme
     H5::EnumType h5_crc_scheme(sizeof(crc_scheme));
     crc_scheme crc;
@@ -156,6 +186,23 @@ void Logger::open(const std::string& filename)
     h5_slot.insertMember("timestamp", HOFFSET(SlotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_slot.insertMember("bw", HOFFSET(SlotEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_iqdata);
+
+    // H5 type for snapshots
+    H5::CompType h5_snapshot(sizeof(SnapshotEntry));
+
+    h5_snapshot.insertMember("timestamp", HOFFSET(SnapshotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_snapshot.insertMember("fs", HOFFSET(SnapshotEntry, fs), H5::PredType::NATIVE_FLOAT);
+    h5_snapshot.insertMember("iq_data", HOFFSET(SnapshotEntry, iq_data), h5_compressed_iqdata);
+
+    // H5 type for snapshot self-transmission events
+    H5::CompType h5_selftx(sizeof(SelfTXEntry));
+
+    h5_selftx.insertMember("timestamp", HOFFSET(SelfTXEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_selftx.insertMember("is_local", HOFFSET(SelfTXEntry, is_local), H5::PredType::NATIVE_UINT8);
+    h5_selftx.insertMember("start", HOFFSET(SelfTXEntry, start), H5::PredType::NATIVE_INT32);
+    h5_selftx.insertMember("end", HOFFSET(SelfTXEntry, end), H5::PredType::NATIVE_INT32);
+    h5_selftx.insertMember("fc", HOFFSET(SelfTXEntry, fc), H5::PredType::NATIVE_FLOAT);
+    h5_selftx.insertMember("fs", HOFFSET(SelfTXEntry, fs), H5::PredType::NATIVE_FLOAT);
 
     // H5 type for received packets
     H5::CompType h5_packet_recv(sizeof(PacketRecvEntry));
@@ -206,6 +253,8 @@ void Logger::open(const std::string& filename)
     file_ = H5::H5File(filename, H5F_ACC_TRUNC);
 
     slots_ = std::make_unique<ExtensibleDataSet>(file_, "slots", h5_slot);
+    snapshots_ = std::make_unique<ExtensibleDataSet>(file_, "snapshots", h5_snapshot);
+    selftx_ = std::make_unique<ExtensibleDataSet>(file_, "selftx", h5_selftx);
     recv_ = std::make_unique<ExtensibleDataSet>(file_, "recv", h5_packet_recv);
     send_ = std::make_unique<ExtensibleDataSet>(file_, "send", h5_packet_send);
     event_ = std::make_unique<ExtensibleDataSet>(file_, "event", h5_event);
@@ -274,6 +323,17 @@ void Logger::logSlot(std::shared_ptr<IQBuf> buf,
             t_last_slot_ = buf->timestamp;
         }
     }
+}
+
+void Logger::logSnapshot(std::shared_ptr<IQBuf> buf)
+{
+    log_q_.emplace([=](){ logSnapshot_(buf); });
+}
+
+void Logger::logSelfTX(Clock::time_point t,
+                       SelfTX selftx)
+{
+    log_q_.emplace([=](){ logSelfTX_(t, selftx); });
 }
 
 void Logger::logRecv(const Clock::time_point& t,
@@ -368,6 +428,37 @@ void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
     entry.iq_data.len = buf->size();
 
     slots_->write(&entry, 1);
+}
+
+void Logger::logSnapshot_(std::shared_ptr<IQBuf> buf)
+{
+    SnapshotEntry entry;
+    buffer<char>  data;
+
+    data = compressFLAC(8, buf->data(), buf->size());
+
+    entry.timestamp = (buf->timestamp - t_start_).get_real_secs();
+    entry.fs = buf->fs;
+
+    entry.iq_data.p = data.data();
+    entry.iq_data.len = data.size();
+
+    snapshots_->write(&entry, 1);
+}
+
+void Logger::logSelfTX_(Clock::time_point timestamp,
+                        SelfTX selftx)
+{
+    SelfTXEntry entry;
+
+    entry.timestamp = (timestamp - t_start_).get_real_secs();
+    entry.is_local = selftx.is_local;
+    entry.start = selftx.start;
+    entry.end = selftx.end;
+    entry.fc = selftx.fc;
+    entry.fs = selftx.fs;
+
+    selftx_->write(&entry, 1);
 }
 
 void Logger::logRecv_(const Clock::time_point& t,

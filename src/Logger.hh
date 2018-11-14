@@ -18,6 +18,7 @@
 #include "IQBuffer.hh"
 #include "Packet.hh"
 #include "SafeQueue.hh"
+#include "mac/Snapshot.hh"
 
 class Logger;
 
@@ -58,6 +59,11 @@ public:
     void logSlot(std::shared_ptr<IQBuf> buf,
                  float bw);
 
+    void logSnapshot(std::shared_ptr<IQBuf> buf);
+
+    void logSelfTX(Clock::time_point timestamp,
+                   SelfTX pkt);
+
     void logRecv(const Clock::time_point& t,
                  uint32_t start_samples,
                  uint32_t end_samples,
@@ -95,6 +101,8 @@ public:
 private:
     H5::H5File file_;
     std::unique_ptr<ExtensibleDataSet> slots_;
+    std::unique_ptr<ExtensibleDataSet> snapshots_;
+    std::unique_ptr<ExtensibleDataSet> selftx_;
     std::unique_ptr<ExtensibleDataSet> recv_;
     std::unique_ptr<ExtensibleDataSet> send_;
     std::unique_ptr<ExtensibleDataSet> event_;
@@ -122,6 +130,12 @@ private:
 
     void logSlot_(std::shared_ptr<IQBuf> buf,
                   float bw);
+
+    void logSnapshot_(std::shared_ptr<IQBuf> buf);
+
+    void logSelfTX_(Clock::time_point timestamp,
+                    SelfTX pkt);
+
     void logRecv_(const Clock::time_point& t,
                   uint32_t start_samples,
                   uint32_t end_samples,
@@ -141,6 +155,7 @@ private:
                   float bw,
                   uint32_t size,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
+
     void logSend_(const Clock::time_point& t,
                   const Header& hdr,
                   NodeId src,
