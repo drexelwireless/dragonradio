@@ -13,6 +13,9 @@ void exportMACs(py::module &m)
         .def("stop",
             &MAC::stop,
             "Tell MAC to stop processing packets.")
+        .def("reconfigure",
+            &MAC::reconfigure,
+            "Force the MAC to reconfigure after PHY parameters, e.g., TX rate, change.")
         ;
 
     // Export class SlottedMAC to Python
