@@ -888,6 +888,7 @@ class Radio(object):
 
         self.mac.rx_channels = self.rx_channels
         self.mac.tx_channels = self.tx_channels
+        self.mac.reconfigure()
 
         self.configSmartControllerSlotSize()
 
