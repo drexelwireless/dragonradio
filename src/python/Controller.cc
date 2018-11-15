@@ -71,5 +71,8 @@ void exportControllers(py::module &m)
             "Send selective ACK's?")
         .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
         .def("broadcastHello", &SmartController::broadcastHello)
+        .def("resetMCSTransitionProbabilities",
+            &SmartController::resetMCSTransitionProbabilities,
+            "Reset all AMC transition probabilties to 1.0")
         ;
 }

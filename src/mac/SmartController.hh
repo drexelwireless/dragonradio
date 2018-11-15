@@ -344,6 +344,9 @@ public:
         mcsidx_prob_floor_ = p;
     }
 
+    /** @brief Reset all MCS transition probabilities to 1.0 */
+    void resetMCSTransitionProbabilities(void);
+
     /** @brief Return explicit NAK window size. */
     bool getExplicitNAKWindow(void)
     {

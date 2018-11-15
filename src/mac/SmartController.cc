@@ -516,6 +516,18 @@ void SmartController::broadcastHello(void)
         netq_->push_hi(std::move(pkt));
 }
 
+void SmartController::resetMCSTransitionProbabilities(void)
+{
+    for (auto it = send_.begin(); it != send_.end(); ++it) {
+        SendWindow                      &sendw = it->second;
+        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        std::vector<double>&v = sendw.mcsidx_prob;
+
+        std::fill(v.begin(), v.end(), 1.0);
+    }
+}
+
 /** NOTE: The lock on the send window to which entry belongs MUST be held before
  * calling retransmit.
  */
