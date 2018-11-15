@@ -179,7 +179,7 @@ public:
     /** @brief Get TX upsample rate. */
     virtual double getTXUpsampleRate(void)
     {
-        return getTXRateOversample()/getMinTXRateOversample();;
+        return getTXRateOversample()/getMinTXRateOversample();
     }
 
     /** @brief Get RX downsample rate. */
