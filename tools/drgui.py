@@ -84,7 +84,8 @@ class ConstellationPlot:
     def plot(self, data, title='Constellation'):
         self.ax.clear()
         self.ax.scatter(np.real(data), np.imag(data))
-        self.ax.set_title(title)
+        if title:
+            self.ax.set_title(title)
         self.ax.set_xlabel('I')
         self.ax.set_ylabel('Q')
         #self.constellation.axis('tight')
@@ -98,7 +99,8 @@ class WaveformPlot:
         self.ax.clear()
         self.ax.plot(np.real(sig))
         self.ax.plot(np.imag(sig))
-        self.ax.set_title(title)
+        if title:
+            self.ax.set_title(title)
         self.ax.set_xlabel('Time (samples)')
         #self.ax.axis('tight')
 
@@ -116,7 +118,8 @@ class PSDPlot:
 
         self.ax.clear()
         self.ax.psd(sig, NFFT=self.nfft, Fs=Fs)
-        self.ax.set_title(title)
+        if title:
+            self.ax.set_title(title)
         self.ax.set_xlabel('Frequency (kHz)')
         self.ax.xaxis.set_major_formatter(xticks)
         #self.ax.axis('tight')
