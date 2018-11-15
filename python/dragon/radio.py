@@ -895,7 +895,9 @@ class Radio(object):
         self.mac.tx_channels = self.tx_channels
         self.mac.reconfigure()
 
-        self.configSmartControllerSlotSize()
+        if config.arq:
+            self.controller.resetMCSTransitionProbabilities()
+            self.configSmartControllerSlotSize()
 
     def deleteMAC(self):
         """Delete the current MAC"""
