@@ -10,6 +10,9 @@ void exportMACs(py::module &m)
         .def_property("rx_channels", &MAC::getRXChannels, &MAC::setRXChannels)
         .def_property("tx_channels", &MAC::getTXChannels, &MAC::setTXChannels)
         .def_property("tx_channel", &MAC::getTXChannel, &MAC::setTXChannel)
+        .def("stop",
+            &MAC::stop,
+            "Tell MAC to stop processing packets.")
         ;
 
     // Export class SlottedMAC to Python
