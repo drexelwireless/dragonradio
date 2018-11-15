@@ -139,7 +139,7 @@ void LiquidPHY::Modulator::reconfigure(void)
 
     double shift = shift_;
 
-    shift_ = 0.0;
+    setFreqShift(0.0);
     setFreqShift(shift);
 }
 
@@ -309,7 +309,7 @@ void LiquidPHY::Demodulator::reconfigure(void)
 
     double shift = shift_;
 
-    shift_ = 0.0;
+    setFreqShift(0.0);
     setFreqShift(shift);
 }
 
