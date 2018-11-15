@@ -46,8 +46,10 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
                                     double shift,
                                     ModPacket &mpkt)
 {
-    if (pending_reconfigure_.load(std::memory_order_relaxed))
+    if (pending_reconfigure_.load(std::memory_order_relaxed)) {
+        pending_reconfigure_.store(false, std::memory_order_relaxed);
         reconfigure();
+    }
 
     PHYHeader header;
 
@@ -244,8 +246,10 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
 void LiquidPHY::Demodulator::reset(Clock::time_point timestamp, size_t off)
 {
-    if (pending_reconfigure_.load(std::memory_order_relaxed))
+    if (pending_reconfigure_.load(std::memory_order_relaxed)) {
+        pending_reconfigure_.store(false, std::memory_order_relaxed);
         reconfigure();
+    }
 
     reset();
 
