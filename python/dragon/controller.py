@@ -135,6 +135,7 @@ class Controller(TCPProtoServer):
         for p in self.dumpcap_procs:
             try:
                 p.terminate()
+                p.wait()
             except:
                 logger.exception('Could not terminate PID %d', p.pid)
 
