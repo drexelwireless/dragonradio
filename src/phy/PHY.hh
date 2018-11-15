@@ -99,6 +99,10 @@ public:
 
     PHY(NodeId node_id)
       : node_id_(node_id)
+      , rx_rate_(0.0)
+      , tx_rate_(0.0)
+      , rx_rate_oversample_(0.0)
+      , tx_rate_oversample_(0.0)
     {
     }
 
