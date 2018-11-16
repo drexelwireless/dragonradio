@@ -74,6 +74,7 @@ class Config(object):
         self.log_directory = None
         self.log_sources = []
         self.log_interfaces = []
+        self.log_invalid_headers = False
         self.compress_interface_logs = False
         # This is the actual path to the log directory
         self.logdir_ = None
@@ -302,6 +303,9 @@ class Config(object):
         parser.add_argument('--log-iq', action=ExtendAction, const=['log_slots', 'log_recv_data', 'log_sent_data'],
                             dest='log_sources',
                             help='log IQ data')
+        parser.add_argument('--log-invalid-headers', action='store_const', const=True,
+                            dest='log_invalid_headers',
+                            help='log packets with invalid headers')
 
         # USRP settings
         parser.add_argument('--addr', action='store',

@@ -5,6 +5,7 @@ RadioConfig rc;
 RadioConfig::RadioConfig()
   : verbose(false)
   , debug(false)
+  , log_invalid_headers(false)
   , amc_short_per_nslots(2)
   , amc_long_per_nslots(8)
   , timestamp_delay(100e-3)

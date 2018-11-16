@@ -12,6 +12,8 @@ void exportRadioConfig(py::module &m)
             "Output verbose messages to the console")
         .def_readwrite("debug", &RadioConfig::debug,
             "Output debug messages to the console")
+        .def_readwrite("log_invalid_headers", &RadioConfig::log_invalid_headers,
+            "Log invalid headers?")
         .def_readwrite("amc_short_per_nslots", &RadioConfig::amc_short_per_nslots,
             "Number of slots worth of packets we use to calculate short-term PER")
         .def_readwrite("amc_long_per_nslots", &RadioConfig::amc_long_per_nslots,

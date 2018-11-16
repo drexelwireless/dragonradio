@@ -28,6 +28,9 @@ public:
     /** @brief Output debug messages to the console */
     bool debug;
 
+    /** @brief Log invalid headers? */
+    bool log_invalid_headers;
+
     /** @brief Number of slots worth of packets we use to calculate short-term PER  */
     unsigned amc_short_per_nslots;
 

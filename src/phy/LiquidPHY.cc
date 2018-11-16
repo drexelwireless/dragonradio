@@ -180,9 +180,11 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     std::unique_ptr<RadioPacket> pkt;
 
     if (!header_valid_) {
-        if (rc.verbose && !rc.debug)
-            fprintf(stderr, "HEADER INVALID\n");
-        logEvent("PHY: invalid header");
+        if (rc.log_invalid_headers) {
+            if (rc.verbose && !rc.debug)
+                fprintf(stderr, "HEADER INVALID\n");
+            logEvent("PHY: invalid header");
+        }
 
         pkt = std::make_unique<RadioPacket>();
 
@@ -212,7 +214,9 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
     callback_(std::move(pkt));
 
-    if (logger && logger->getCollectSource(Logger::kRecvPackets)) {
+    if (logger &&
+        logger->getCollectSource(Logger::kRecvPackets) &&
+        (header_valid_ || rc.log_invalid_headers)) {
         std::shared_ptr<buffer<std::complex<float>>> buf = nullptr;
 
         if (logger->getCollectSource(Logger::kRecvData)) {
