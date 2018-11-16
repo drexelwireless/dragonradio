@@ -60,13 +60,11 @@ class GPSDClient:
                             t = time.mktime(dt.timetuple())
                         else:
                             t = time.time()
-                            logger.debug("No time field: %s", data)
 
                         for attr in ['lat', 'lon', 'alt']:
                             if attr in data:
                                 setattr(self.loc, attr, data[attr])
                                 self.loc.timestamp = t
-                        logger.debug("Location: %s", self.loc)
             except ConnectionError:
                 #logger.debug('Connection error')
                 await asyncio.sleep(1)
