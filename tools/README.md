@@ -67,10 +67,10 @@ The collaboration client can be run in stand-alone mode by specifying a node ID 
 If `gpsd` is running, the collaboration client will use it to set its GPS location. You can run a fake `gpsd` data source as follows:
 
 ```
-gpsfake -P 6000 -c 0.1 logfile_20140914_365495765_can.log.chk
+gpsfake -P 6000 -c 0.1 gps/data/logfile_20140914_365495765_can.log.chk
 ```
 
-The file `logfile_20140914_365495765_can.log.chk` is in the `test/nmea2000` of the `gpsd` source distribution. You can also obtain this file directly from the `git` repository [here](http://git.savannah.nongnu.org/cgit/gpsd.git/plain/test/nmea2000/logfile_20140914_365495765_can.log.chk).
+The file `gps/data/logfile_20140914_365495765_can.log.chk` is a copy of that found in the `test/nmea2000` directory of the `gpsd` source distribution. You can also obtain this file directly from the `git` repository [here](http://git.savannah.nongnu.org/cgit/gpsd.git/plain/test/nmea2000/logfile_20140914_365495765_can.log.chk).
 
 ## Jupyter notebooks
 
