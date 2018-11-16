@@ -13,13 +13,31 @@ message Location {
 }
 
 message LocationInfo {
-    uint32 radio_id = 1; // mandatory, unique identifier of node
-    Location location = 2; // mandatory, location of the node
-    TimeStamp timestamp = 3; // mandatory, the time of measurement
+    Location location = 1;   // Location of the node
+    TimeStamp timestamp = 2; // Time of measurement
+}
+
+// Flow info
+message FlowInfo {
+    uint32 flow_uid = 1;   // Flow identifier
+    uint32 src = 2;        // Node id of the source
+    uint32 dest = 3;       // Node id of the destination
+    double window = 4;     // Statistics measurement window (sec)
+    double latency = 5;    // Mean latency (sec)
+    double throughput = 6; // Throughpout (bps)
+    uint64 bytes = 7;      // Total bytes
+}
+
+message Status {
+    uint32 radio_id = 1;                // Node id
+    TimeStamp timestamp = 2;            // Time of measurement
+    LocationInfo loc = 3;               // Node location
+    repeated FlowInfo source_flows = 4; // Flows for which node is source
+    repeated FlowInfo sink_flows = 5;   // Flows for which node is source
 }
 
 message Message {
     oneof payload {
-        LocationInfo location_info = 1;
+        Status status = 1;
     }
 }

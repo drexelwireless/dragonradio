@@ -17,9 +17,21 @@ from dragon.protobuf import *
 from dragon.collab import CollabAgent, Node
 from dragon.gpsd import GPSDClient
 
+class DummyUSRP(object):
+    def __init__(self):
+        self.rx_gain = 0
+
+class DummyRadio(object):
+    def __init__(self, node_id):
+        self.node_id = node_id
+        self.usrp = DummyUSRP()
+
 class DummyController(object):
     def __init__(self, node_id, loop):
         node = Node(node_id)
+        self.radio = DummyRadio(node_id)
+        self.voxels = []
+        self.mandated_outcomes = {}
 
         self.nodes = {node.id : node}
         self.gpsd = GPSDClient(node.loc, loop=loop)

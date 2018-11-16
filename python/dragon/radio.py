@@ -215,6 +215,9 @@ class Config(object):
         # Measurement options
         self.measurement_period = 1.0
 
+        # Internal agent options
+        self.status_update_period = 30
+
         # Collaboration server options
         self.force_gateway = False
         self.collab_server_ip = None
@@ -1096,6 +1099,21 @@ class Radio(object):
                 i = 0
 
         return sched
+
+    def setMandatedOutcomes(self, mandates):
+        config = self.config
+
+        mandateMap = dragonradio.MandatedOutcomeMap()
+
+        for (flow, m) in mandates.items():
+            mandateMap[flow] = dragonradio.MandatedOutcome(config.measurement_period,
+                                                           0.0,
+                                                           m.min_throughput_bps,
+                                                           m.max_latency_s,
+                                                           m.file_transfer_deadline_s)
+
+        self.flowsink.mandates = mandateMap
+        self.flowsource.mandates = mandateMap
 
     def getRadioLogPath(self):
         """

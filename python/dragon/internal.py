@@ -1,6 +1,7 @@
 from concurrent.futures import CancelledError
 import functools
 import struct
+import time
 
 from dragon.protobuf import *
 from dragon.internal_pb2 import *
@@ -36,44 +37,80 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
 
         self.loop = loop
 
-        self.location_info_period = 30
-
         self.startServer(internal.Message, local_ip, INTERNAL_PORT)
-
-        loop.create_task(self.location_update())
 
     def startClient(self, server_host):
         self.server_host = server_host
         self.open()
 
-    async def location_update(self):
+    async def status_update(self):
+        config = self.controller.config
+
         try:
             while True:
                 me = self.controller.thisNode()
 
-                if self.server_host and me.loc.timestamp > 0:
-                    await self.location_info()
+                if self.server_host:
+                    await self.sendStatus()
 
-                await asyncio.sleep(self.location_info_period)
+                await asyncio.sleep(config.status_update_period)
         except CancelledError:
             pass
 
-    @handle('Message.location_info')
-    def handle_location_info(self, msg):
-        id = msg.location_info.radio_id
-        if id in self.controller.nodes:
-            n = self.controller.nodes[id]
-            n.loc.lat = msg.location_info.location.latitude
-            n.loc.lon = msg.location_info.location.longitude
-            n.loc.alt = msg.location_info.location.elevation
-            n.loc.timestamp = msg.location_info.timestamp.get_timestamp()
+    @handle('Message.status')
+    def handle_status(self, msg):
+        node_id = msg.status.radio_id
+
+        # Update node location
+        if node_id in self.controller.nodes:
+            n = self.controller.nodes[node_id]
+            loc = msg.status.loc
+
+            n.loc.lat = loc.location.latitude
+            n.loc.lon = loc.location.longitude
+            n.loc.alt = loc.location.elevation
+            n.loc.timestamp = loc.timestamp.get_timestamp()
+
+        # Update set of active flows
+        for flow in msg.status.source_flows:
+            self.controller.addLink(node_id, flow.dest, flow.flow_uid)
+
+        # Update flow statistics
+        for flow in msg.status.sink_flows:
+            self.controller.addLink(flow.src, node_id, flow.flow_uid)
+            self.controller.updateMandateStats(flow.flow_uid,
+                                               flow.latency,
+                                               flow.throughput,
+                                               flow.bytes)
 
     @send(internal.Message)
-    async def location_info(self, msg):
+    async def sendStatus(self, msg):
         me = self.controller.thisNode()
 
-        msg.location_info.radio_id = me.id
-        msg.location_info.location.latitude = me.loc.lat
-        msg.location_info.location.longitude = me.loc.lon
-        msg.location_info.location.elevation = me.loc.alt
-        msg.location_info.timestamp.set_timestamp(me.loc.timestamp)
+        radio = self.controller.radio
+
+        msg.status.radio_id = me.id
+        msg.status.timestamp.set_timestamp(time.time())
+        msg.status.loc.location.latitude = me.loc.lat
+        msg.status.loc.location.longitude = me.loc.lon
+        msg.status.loc.location.elevation = me.loc.alt
+        msg.status.loc.timestamp.set_timestamp(me.loc.timestamp)
+        msg.status.source_flows.extend(copyFlowInfo(radio.flowsource.flows))
+        msg.status.sink_flows.extend(copyFlowInfo(radio.flowsink.flows))
+
+def copyFlowInfo(flows):
+    internal_flows = []
+
+    for flow_uid, flow_info in flows.items():
+        info = internal.FlowInfo()
+        info.flow_uid = flow_uid
+        info.src = flow_info.src
+        info.dest = flow_info.dest
+        info.window = flow_info.latency.time_window
+        info.latency = flow_info.latency.value
+        info.throughput = flow_info.throughput.value
+        info.bytes = flow_info.bytes
+
+        internal_flows.append(info)
+
+    return internal_flows
