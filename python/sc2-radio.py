@@ -21,6 +21,7 @@ def configureLogging(config):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')
+    logger.handlers = []
 
     if config.foreground:
         # Set up python logger
