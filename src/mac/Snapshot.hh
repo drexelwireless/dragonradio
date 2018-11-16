@@ -103,10 +103,7 @@ protected:
     /** @brief Should we collect new slots? */
     bool snapshot_collect_;
 
-    /** @brief Is the snapshot timestamp valid? */
-    bool snapshot_timestamp_valid_;
-
-    /** @brief The current snapshot offset */
+    /** @brief Current offset from the beginning of the first collected slot */
     size_t snapshot_off_;
 };
 

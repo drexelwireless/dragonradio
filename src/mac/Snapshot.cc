@@ -7,8 +7,10 @@ void SnapshotCollector::start(void)
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
     snapshot_ = std::make_shared<Snapshot>();
+    // Set *provisional* snapshot timestamp. Eventually, we will set this to the
+    // timestamp of the first collected slot.
+    snapshot_->timestamp = Clock::now();
     snapshot_collect_ = true;
-    snapshot_timestamp_valid_ = false;
     snapshot_off_ = 0;
 }
 
@@ -22,7 +24,28 @@ void SnapshotCollector::stop(void)
 std::shared_ptr<Snapshot> SnapshotCollector::finish(void)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
-    std::shared_ptr<Snapshot>       result = std::move(snapshot_);
+
+    if (!snapshot_->slots.empty()) {
+        float             fs = snapshot_->slots[0]->fs;
+        Clock::time_point provisional_timestamp = snapshot_->timestamp;
+        Clock::time_point actual_timestamp = snapshot_->slots[0]->timestamp;
+        ssize_t           delta = (actual_timestamp - provisional_timestamp).get_real_secs()*fs;
+
+        // Make snapshot timestamp the timestamp of the first collected slot
+        snapshot_->timestamp = actual_timestamp;
+
+        // Update all offsets of local self-tranmissions, i.e., transmissions
+        // *this* node has made during snapshot collection. Before we fix them
+        // up here, they are relative to the *provisional* snapshot timestamp.
+        for (auto &selftx : snapshot_->selftx) {
+            if (selftx.is_local) {
+                selftx.start -= delta;
+                selftx.end -= delta;
+            }
+        }
+    }
+
+    std::shared_ptr<Snapshot> result = std::move(snapshot_);
 
     return result;
 }
@@ -47,11 +70,6 @@ void SnapshotCollector::finalizePush(void)
     if (snapshot_) {
         auto it = snapshot_->slots.rbegin();
 
-        if (!snapshot_timestamp_valid_) {
-            snapshot_->timestamp = (*it)->timestamp;
-            snapshot_timestamp_valid_ = true;
-        }
-
         snapshot_off_ += (*it)->size();
     }
 }
@@ -72,7 +90,7 @@ void SnapshotCollector::selfTX(Clock::time_point when,
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
-    if (snapshot_ && snapshot_timestamp_valid_) {
+    if (snapshot_) {
         ssize_t start = (when - snapshot_->timestamp).get_real_secs()*fs_rx;
 
         snapshot_->selftx.emplace_back(SelfTX{true,
