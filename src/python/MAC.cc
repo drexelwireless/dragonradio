@@ -48,7 +48,10 @@ void exportMACs(py::module &m)
         })
         .def("__len__", &TDMA::Slots::size)
         .def("__iter__", [](TDMA::Slots &slots) {
-            return py::make_iterator(slots.begin(), slots.end());
+            return py::make_iterator<py::return_value_policy::copy,
+                                     TDMA::Slots::slots_type::iterator,
+                                     TDMA::Slots::slots_type::iterator,
+                                     TDMA::Slots::slots_type::value_type>(slots.begin(), slots.end());
          }, py::keep_alive<0, 1>())
         .def("resize", &TDMA::Slots::resize)
         ;
