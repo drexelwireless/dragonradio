@@ -1044,10 +1044,10 @@ class Radio(object):
 
             self.usrp.tx_frequency = self.frequency + fc
 
-    def configureFDMATDMASchedule(self):
+    def configureSimpleMACSchedule(self):
         """
-        Set the TDMA/FDMA schedule based on configuration parameters and the
-        given set of nodes.
+        Set a simple, static TDMA/FDMA schedule based on configuration
+        parameters and the given set of nodes.
         """
         config = self.config
 

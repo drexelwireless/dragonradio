@@ -291,7 +291,7 @@ class Controller(TCPProtoServer):
 
         # Sort nodes and pick our slot/channel based on our position in the node
         # list
-        radio.configureFDMATDMASchedule()
+        radio.configureSimpleMACSchedule()
 
         #
         # Specify voxels
@@ -406,7 +406,7 @@ class Controller(TCPProtoServer):
                 # Delete old MAC since we are about to create a new MAC
                 self.radio.deleteMAC()
 
-                self.radio.configureFDMATDMASchedule()
+                self.radio.configureSimpleMACSchedule()
 
         resp = remote.Response()
         resp.status.state = self.state
