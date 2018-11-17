@@ -39,7 +39,7 @@ void exportMACs(py::module &m)
             try {
                 slots[i] = v;
             } catch (const std::out_of_range&) {
-              throw py::index_error();
+                throw py::index_error();
             }
         })
         .def("__len__", &TDMA::Slots::size)
