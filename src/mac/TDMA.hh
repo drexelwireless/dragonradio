@@ -34,6 +34,14 @@ public:
         Slots& operator=(const Slots&) = delete;
         Slots& operator=(Slots&&) = delete;
 
+        Slots& operator=(const slots_type& slots)
+        {
+            slots_ = slots;
+            mac_.reconfigure();
+
+            return *this;
+        }
+
         /** @brief Get number of slots
          */
         slots_type::size_type size(void)
