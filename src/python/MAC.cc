@@ -1,3 +1,7 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+
 #include "mac/SlottedALOHA.hh"
 #include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
@@ -63,7 +67,12 @@ void exportMACs(py::module &m)
                       double,
                       double,
                       size_t>())
-        .def_property_readonly("slots", &TDMA::getSlots,
+        .def_property("slots",
+            &TDMA::getSlots,
+            [](TDMA &self, const TDMA::Slots::slots_type &slots)
+            {
+                self.getSlots() = slots;
+            },
             py::return_value_policy::reference_internal)
         .def_property("superslots", &TDMA::getSuperslots, &TDMA::setSuperslots,
             "Flag indicating whether or not to use superslots.");
