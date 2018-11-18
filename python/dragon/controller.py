@@ -19,6 +19,8 @@ import dragon.remote as remote
 
 logger = logging.getLogger('controller')
 
+INTERNAL_BCAST_ADDR = '10.10.10.255'
+
 def internalNodeIP(node_id):
     """
     Return IP address of radio node on internal network
@@ -104,7 +106,12 @@ class Controller(TCPProtoServer):
         # Start the internal agent
         self.internal_agent = InternalAgent(self,
                                             loop=self.loop,
-                                            local_ip=internalNodeIP(radio.node_id))
+                                            local_ip='0.0.0.0')
+
+        # If we are the gateway, connect the internal agent to the broadcast
+        # address
+        if self.is_gateway:
+            self.internal_agent.startClient(INTERNAL_BCAST_ADDR)
 
         # Start our local status update
         self.loop.create_task(self.localStatusUpdate())
