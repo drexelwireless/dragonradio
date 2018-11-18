@@ -353,3 +353,9 @@ class Controller(TCPProtoServer):
         resp.status.state = self.state
         resp.status.info = 'Environment updated'
         return resp
+
+    @property
+    def is_gateway(self):
+        radio = self.radio
+
+        return radio.net[radio.node_id].is_gateway
