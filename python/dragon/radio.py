@@ -216,6 +216,7 @@ class Config(object):
         self.measurement_period = 1.0
 
         # Collaboration server options
+        self.force_gateway = False
         self.collab_server_ip = None
         self.collab_server_port = 5556
         self.collab_client_port = 5557
@@ -551,6 +552,9 @@ class Config(object):
                             help='use LIFO network queue algorithm')
 
         # Collaboration server options
+        parser.add_argument('--force-gateway', action='store_const', const=True,
+                            dest='force_gateway',
+                            help='force this node to act as a gateway')
         parser.add_argument('--collab-server-ip', action='store', type=str,
                             dest='collab_server_ip',
                             help='set collaboration server IP address')

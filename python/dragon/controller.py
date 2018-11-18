@@ -96,6 +96,10 @@ class Controller(TCPProtoServer):
             except:
                 logger.exception('Could not create collaboration agent')
 
+        # We might also be forced to be the gateway...
+        if self.config.force_gateway:
+            radio.net[radio.node_id].is_gateway = True
+
         # Start the internal agent
         self.internal_agent = InternalAgent(self,
                                             loop=self.loop,
