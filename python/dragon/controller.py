@@ -139,13 +139,21 @@ class Controller(TCPProtoServer):
             except:
                 logger.exception('Could not terminate PID %d', p.pid)
 
+        xzprocs = []
         for iface in self.config.log_interfaces:
             if iface in netifaces.interfaces():
                 try:
-                    subprocess.Popen('xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
-                                    stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
+                    p = subprocess.Popen('xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                                         stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
+                    xzprocs.append(p)
                 except:
                     logging.exception('Could not xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir))
+
+        for p in xzprocs:
+            try:
+                p.wait()
+            except:
+                logger.exception('Failed to wait on xz PID %d', p.pid)
 
         for node_id in list(self.nodes):
             self.removeNode(node_id)
