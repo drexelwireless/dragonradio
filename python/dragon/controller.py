@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import netifaces
+import numpy as np
 import os
 import random
 import signal
@@ -10,7 +11,7 @@ import sys
 
 import dragonradio
 
-from dragon.collab import CollabAgent, MandatedOutcome, Node
+from dragon.collab import CollabAgent, MandatedOutcome, Node, Voxel
 from dragon.gpsd import GPSDClient
 from dragon.internal import InternalAgent
 from dragon.protobuf import *
@@ -37,19 +38,53 @@ def darpaNodeNet(node_id):
 class Controller(TCPProtoServer):
     def __init__(self, config):
         self.config = config
-        self.state = remote.BOOTING
-        self.started_discovery = False
+        """Our Config"""
+
         self.dumpcap_procs = []
+        """dumpcap procs we've started"""
+
+        self.state = remote.BOOTING
+        """Current radio state"""
+
+        self.started = False
+        """Has the radio been started?"""
+
+        self.done = False
+        """Is the radio done?"""
+
+        self.bootstrapped = False
+        """Has the radio already been bootstrapped?"""
 
         self.nodes = {}
-        self.voxels = []
+        """Nodes in our network"""
+
         self.links = {}
+        """Flows for each link, i.e., source destination pair, in the network"""
+
+        self.schedule = None
+        """Current TDMA schedule"""
+
+        self.schedule_seq = 0
+        """Current TDMA schedule sequence number."""
+
+        self.schedule_nodes = []
+        """Nodes in the TDMA schedule"""
+
+        self.voxels = []
+        """Voxels used"""
+
         self.mandated_outcomes = {}
+        """Current mandated outcomes"""
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
         # *before* we daemonize, and loop isn't valid after we fork
         self.loop = asyncio.get_event_loop()
+
+        #
+        # Create Event we can use to trigger TDMA scheduler
+        #
+        self.tdma_reschedule = asyncio.Event()
 
         # Set center frequency and bandwidth. For now, we just use 5MHz, centered
         if hasattr(self.config, 'center_frequency'):
@@ -138,18 +173,23 @@ class Controller(TCPProtoServer):
             self.loop.close()
 
     def startRadio(self):
-        if not self.started_discovery:
-            self.started_discovery = True
+        if not self.started:
+            self.started = True
 
             # Create ALOHA MAC for HELLO messages
             self.radio.configureALOHA()
 
-            self.switched_macs = False
             self.loop.create_task(self.discoverNeighbors())
+            self.loop.create_task(self.addDiscoveredNeighbors())
             self.loop.create_task(self.synchronizeClock())
-            self.loop.create_task(self.switchToTDMA())
+
+            if self.is_gateway:
+                self.loop.create_task(self.bootstrapNetwork())
+
+            self.state = remote.ACTIVE
 
     def stopRadio(self):
+        self.done = True
         self.state = remote.STOPPING
 
         for p in self.dumpcap_procs:
@@ -192,6 +232,7 @@ class Controller(TCPProtoServer):
             self.state = remote.FINISHED
 
         logger.info('Cancelling tasks...')
+        self.tdma_reschedule.set()
         for task in asyncio.Task.all_tasks():
             task.cancel()
 
@@ -226,6 +267,10 @@ class Controller(TCPProtoServer):
             except:
                 logger.exception('Could not add route to node {}'.format(node_id))
 
+            # If we are the gateway, update the schedule
+            if self.is_gateway:
+                self.tdma_reschedule.set()
+
     def removeNode(self, node_id):
         if node_id != self.radio.node_id and node_id in self.nodes:
             logger.info('Removing node %d', node_id)
@@ -236,6 +281,18 @@ class Controller(TCPProtoServer):
                 logger.exception('Could not remove route to node {}'.format(node_id))
 
             del self.nodes[node_id]
+
+    def addRadioNodes(self):
+        """Add nodes discovered by the radio to our local list of nodes"""
+        config = self.config
+        radio = self.radio
+
+        # Get a sorted list of discovered nodes
+        nodes = list(radio.net.keys())
+
+        # Add discovered nodes
+        for n in nodes:
+            self.addNode(n)
 
     def addLink(self, src, dest, flow_uid):
         """Record a link between nodes"""
@@ -274,44 +331,119 @@ class Controller(TCPProtoServer):
         except CancelledError:
             pass
 
-    async def switchToTDMA(self):
+    def installMACSchedule(self, sched):
+        """Install a new MAC schedule"""
         config = self.config
         radio = self.radio
 
-        # Wait for initial discovery period to pass
-        await asyncio.sleep(self.config.neighbor_discovery_period)
+        if not np.array_equal(sched, self.schedule):
+            (nchannels, nslots) = sched.shape
 
-        # Get a sorted list of discovered nodes
-        nodes = list(radio.net.keys())
+            if not self.bootstrapped:
+                logger.info('Switching to TDMA MAC with %s slots', nslots)
+                self.bootstrapped = True
+                radio.deleteMAC()
+                radio.configureTDMA(nslots)
 
-        # Add discovered nodes
-        for n in nodes:
-            self.addNode(n)
+            radio.installMACSchedule(sched)
+            self.schedule = sched
 
-        #
-        # Now delete the ALOHA MAC and switch to TDMA
-        #
-        logger.info('Switching to TDMA MAC, nodes: %s', list(radio.net.keys()))
-        self.switched_macs = True
+    def scheduleToVoxels(self, sched):
+        """Determine voxel usage from schedule"""
+        config = self.config
+        radio = self.radio
 
-        radio.deleteMAC()
+        (nchannels, nslots) = sched.shape
+        cbw = radio.channel_bandwidth
 
-        # Sort nodes and pick our slot/channel based on our position in the node
-        # list
-        radio.configureSimpleMACSchedule()
+        voxels = []
 
-        #
-        # Specify voxels
-        #
+        for chan in range(0, nchannels):
+            transmitters = set(sched[chan])
+            if 0 in transmitters:
+                transmitters.remove(0)
 
-        # Calculate center frequency and bandwidth
-        bw = config.channel_bandwidth
-        cf = radio.usrp.tx_frequency + radio.channels[radio.mac.tx_channel]
+            if transmitters != set():
+                f_start = config.frequency + radio.channels[chan]-cbw/2
+                f_end = config.frequency + radio.channels[chan]+cbw/2
 
-        self.voxels = [(cf-bw/2, cf+bw/2)]
+                rx = radio.node_id
 
-        # We are now ready to transmit data
-        self.state = remote.ACTIVE
+                for tx in transmitters:
+                    v = Voxel()
+                    v.f_start = f_start
+                    v.f_end = f_end
+                    v.tx = tx
+                    v.rx = [rx]
+
+                    voxels.append(v)
+
+        return voxels
+
+    async def createSchedule(self):
+        """Create a new TDMA schedule"""
+        NSLOTS = 10
+
+        config = self.config
+        radio = self.radio
+
+        while not self.done:
+            await self.tdma_reschedule.wait()
+            self.tdma_reschedule.clear()
+
+            logging.debug('Creating schedule')
+
+            # Get all nodes we know about
+            self.schedule_nodes = list(radio.net)
+            self.schedule_nodes.sort()
+
+            # Make sure we are first in the list so we always get the same
+            # channel
+            self.schedule_nodes.remove(radio.node_id)
+            self.schedule_nodes = [radio.node_id] + self.schedule_nodes
+
+            # Create the schedule
+            sched = radio.mkGreedyMACSchedule(NSLOTS, self.schedule_nodes, 3)
+            if not np.array_equal(sched, self.schedule):
+                self.schedule_seq += 1
+                self.installMACSchedule(sched)
+                self.voxels = self.scheduleToVoxels(sched)
+                await self.broadcastSchedule()
+
+    async def distributeSchedule(self):
+        """Distribute the TDMA schedule"""
+        config = self.config
+        radio = self.radio
+
+        while not self.done:
+            await asyncio.sleep(10)
+
+            await self.broadcastSchedule()
+
+    async def broadcastSchedule(self):
+        """Brodcast the TDMA schedule"""
+        if type(self.schedule) != type(None):
+            logging.debug('Broadcasting schedule')
+            await self.internal_agent.broadcastSchedule(self.schedule_seq,
+                                                        self.schedule_nodes,
+                                                        self.schedule)
+        else:
+            logging.debug('No schedule!')
+
+    async def bootstrapNetwork(self):
+        loop = self.loop
+        config = self.config
+        radio = self.radio
+
+        # Sleep for the discovery interval
+        await asyncio.sleep(config.neighbor_discovery_period)
+
+        # Start the schedule distribution loop
+        self.loop.create_task(self.createSchedule())
+        self.loop.create_task(self.distributeSchedule())
+
+        # Trigger TDMA scheduler
+        self.tdma_reschedule.set()
 
     async def discoverNeighbors(self):
         loop = self.loop
@@ -319,42 +451,35 @@ class Controller(TCPProtoServer):
 
         #
         # Perform neighbor discovery by periodically broadcasting HELLO messages
-        # for neighbor_discovery_period seconds
         #
-        PERIOD = self.config.discovery_hello_interval
+        while not self.done:
+            if self.bootstrapped:
+                period = self.config.standard_hello_interval
+            else:
+                period = self.config.discovery_hello_interval
 
-        t0 = loop.time();
-
-        while True:
-            delta = random.uniform(0.0, PERIOD)
+            delta = random.uniform(0.0, period)
 
             await asyncio.sleep(delta)
 
-            if not self.switched_macs:
+            if not self.bootstrapped:
                 radio.setTXChannel(random.randint(0, len(radio.channels)-1))
 
             radio.controller.broadcastHello()
 
-            await asyncio.sleep(PERIOD - delta)
+            await asyncio.sleep(period - delta)
 
-            if loop.time() > t0 + self.config.neighbor_discovery_period:
-                break
-
-        # Now change the period of our broadcasts and broadcast indefinitely
-        PERIOD = self.config.standard_hello_interval
-
-        while True:
-            delta = random.uniform(0.0, PERIOD)
-
-            await asyncio.sleep(delta)
-            radio.controller.broadcastHello()
-            await asyncio.sleep(PERIOD - delta)
+    async def addDiscoveredNeighbors(self):
+        """Periodically add nodes discovered by the radio to our local list of nodes"""
+        while not self.done:
+            await asyncio.sleep(1)
+            self.addRadioNodes()
 
     async def synchronizeClock(self):
         radio = self.radio
         config = self.config
 
-        while True:
+        while not self.done:
             await asyncio.sleep(config.clock_sync_interval)
 
             radio.synchronizeClock()
@@ -408,12 +533,17 @@ class Controller(TCPProtoServer):
             frequency = env.get('scenario_center_frequency', self.config.frequency)
 
             if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
+                old_bandwidth = self.bandwidth
+
                 self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
 
-                # Delete old MAC since we are about to create a new MAC
-                self.radio.deleteMAC()
-
-                self.radio.configureSimpleMACSchedule()
+                # If only the center frequency has changed, keep the old
+                # schedule. Otherwise create a new schedule.
+                if self.bandwidth != old_bandwidth:
+                    if is_gateway:
+                        self.tdma_reschedule.set()
+                    else:
+                        self.radio.mac.slots = []
 
         resp = remote.Response()
         resp.status.state = self.state

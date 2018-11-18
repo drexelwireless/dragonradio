@@ -137,6 +137,16 @@ class Node(object):
     def __str__(self):
         return 'Node(loc={})'.format(self.loc)
 
+class Voxel(object):
+    def __init__(self):
+        self.f_start = 0
+        self.f_end = 0
+        self.tx = None
+        self.rx = []
+
+    def __str__(self):
+        return 'Voxel(f_start={}, f_end={}, tx={}, rx={})'.format(self.f_start, self.f_end, self.tx, self.rx)
+
 def sendCIL(f):
     """
     Automatically add support to a function for constructing and sending a
@@ -195,25 +205,32 @@ class Peer(ZMQProtoClient):
 
     @sendCIL
     async def spectrum_usage(self, msg, controller):
-        msg.spectrum_usage.voxels.extend([])
+        voxels = []
 
-        rx = cil.ReceiverInfo()
-        rx.radio_id = controller.radio.node_id
-        rx.power_db.value = controller.radio.usrp.rx_gain
-
-        for (f1, f2) in controller.voxels:
+        for vox in controller.voxels:
             usage = cil.SpectrumVoxelUsage()
 
-            usage.spectrum_voxel.freq_start = f1
-            usage.spectrum_voxel.freq_end = f2
+            usage.spectrum_voxel.freq_start = vox.f_start
+            usage.spectrum_voxel.freq_end = vox.f_end
             usage.spectrum_voxel.time_start.set_timestamp(time.time())
-            usage.transmitter_info.radio_id = controller.radio.node_id
+            usage.transmitter_info.radio_id = vox.tx
             usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
             usage.transmitter_info.mac_cca = False
-            usage.receiver_info.extend([rx])
+
+            receivers = []
+            for rx in vox.rx:
+                rx_info = cil.ReceiverInfo()
+                rx_info.radio_id = rx
+                rx_info.power_db.value = controller.radio.usrp.rx_gain
+
+                receivers.append(rx_info)
+
+            usage.receiver_info.extend(receivers)
             usage.measured_data = False
 
-            msg.spectrum_usage.voxels.extend([usage])
+            voxels.append(usage)
+
+        msg.spectrum_usage.voxels.extend(voxels)
 
     @sendCIL
     async def detailed_performance(self, msg, controller):

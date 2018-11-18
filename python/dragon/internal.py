@@ -51,7 +51,7 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
             while True:
                 me = self.controller.thisNode()
 
-                if self.server_host:
+                if self.server_host and self.controller.bootstrapped:
                     await self.sendStatus()
 
                 await asyncio.sleep(config.status_update_period)

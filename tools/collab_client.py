@@ -32,6 +32,7 @@ class DummyController(object):
         self.radio = DummyRadio(node_id)
         self.voxels = []
         self.mandated_outcomes = {}
+        self.voxels = []
 
         self.nodes = {node.id : node}
         self.gpsd = GPSDClient(node.loc, loop=loop)
