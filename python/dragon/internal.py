@@ -1,5 +1,6 @@
 from concurrent.futures import CancelledError
 import functools
+import numpy as np
 import struct
 import time
 
@@ -83,6 +84,18 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
                                                flow.throughput,
                                                flow.bytes)
 
+    @handle('Message.schedule')
+    def handle_schedule(self, msg):
+        radio = self.controller.radio
+
+        if radio.node_id in msg.schedule.nodes:
+            nchannels = msg.schedule.nchannels
+            nslots = msg.schedule.nslots
+
+            sched = np.array(msg.schedule.schedule).reshape((nchannels, nslots))
+
+            self.controller.installMACSchedule(sched)
+
     @send(internal.Message)
     async def sendStatus(self, msg):
         me = self.controller.thisNode()
@@ -97,6 +110,16 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
         msg.status.loc.timestamp.set_timestamp(me.loc.timestamp)
         msg.status.source_flows.extend(copyFlowInfo(radio.flowsource.flows))
         msg.status.sink_flows.extend(copyFlowInfo(radio.flowsink.flows))
+
+    @send(internal.Message)
+    async def broadcastSchedule(self, msg, seq, nodes, sched):
+        (nchannels, nslots) = sched.shape
+
+        msg.schedule.seq = seq
+        msg.schedule.nchannels = nchannels
+        msg.schedule.nslots = nslots
+        msg.schedule.nodes.extend(nodes)
+        msg.schedule.schedule.extend(sched.reshape(nchannels*nslots))
 
 def copyFlowInfo(flows):
     internal_flows = []

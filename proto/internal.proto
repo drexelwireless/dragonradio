@@ -36,8 +36,17 @@ message Status {
     repeated FlowInfo sink_flows = 5;   // Flows for which node is source
 }
 
+message Schedule {
+    uint32 seq = 1;                             // Schedule sequence number
+    uint32 nchannels = 2;                       // Number of channels
+    uint32 nslots = 3;                          // Number of time slots
+    repeated uint32 nodes = 4 [packed=true];    // Nodes in schedule
+    repeated uint32 schedule = 5 [packed=true]; // Schedule consisting of nchannels*nslots node ID's
+}
+
 message Message {
     oneof payload {
         Status status = 1;
+        Schedule schedule = 2;
     }
 }
