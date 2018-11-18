@@ -81,7 +81,7 @@ class Controller(TCPProtoServer):
         # See if we are a gateway, and if so, start the collaboration agent
         self.collab_agent = None
 
-        if self.config.collab_iface in netifaces.interfaces():
+        if self.config.collab_iface in netifaces.interfaces() and self.config.collab_server_ip != None:
             radio.net[radio.node_id].is_gateway = True
             collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
 
