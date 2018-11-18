@@ -44,15 +44,19 @@ void ExtensibleDataSet::write(const void *buf, size_t n)
     hsize_t count[] = { n };
     hsize_t off[] = { size_ };
 
-    reserve(size_+n);
+    try {
+        reserve(size_+n);
 
-    // Create a *copy* of the data space.
-    H5::DataSpace space(ds_.getSpace());
-    // The subspace we will modify.
-    H5::DataSpace memspace(1, count, NULL);
+        // Create a *copy* of the data space.
+        H5::DataSpace space(ds_.getSpace());
+        // The subspace we will modify.
+        H5::DataSpace memspace(1, count, NULL);
 
-    space.selectHyperslab(H5S_SELECT_SET, count, off);
-    ds_.write(buf, dt_, memspace, space);
+        space.selectHyperslab(H5S_SELECT_SET, count, off);
+        ds_.write(buf, dt_, memspace, space);
 
-    size_ += n;
+        size_ += n;
+    } catch(std::exception &e) {
+        fprintf(stderr, "HDF5 exception: %s\n", e.what());
+    }
 }
