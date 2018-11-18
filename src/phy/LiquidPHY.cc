@@ -180,24 +180,29 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     std::unique_ptr<RadioPacket> pkt;
 
     if (!header_valid_) {
+        pkt = std::make_unique<RadioPacket>();
+
+        pkt->setInternalFlag(kInvalidHeader);
+
         if (rc.log_invalid_headers) {
             if (rc.verbose && !rc.debug)
                 fprintf(stderr, "HEADER INVALID\n");
             logEvent("PHY: invalid header");
         }
-
-        pkt = std::make_unique<RadioPacket>();
-
-        pkt->setInternalFlag(kInvalidHeader);
     } else if (!payload_valid_) {
-        if (rc.verbose && !rc.debug)
-            fprintf(stderr, "PAYLOAD INVALID\n");
-        logEvent("PHY: invalid payload");
-
         pkt = std::make_unique<RadioPacket>();
 
         pkt->setInternalFlag(kInvalidPayload);
         pkt->fromHeader(*h);
+
+        if (h->nexthop == phy_.getNodeId()) {
+            if (rc.verbose && !rc.debug)
+                fprintf(stderr, "PAYLOAD INVALID\n");
+            logEvent("PHY: invalid payload: curhop=%u; nexthop=%u; seq=%u",
+                pkt->curhop,
+                pkt->nexthop,
+                (unsigned) pkt->seq);
+        }
     } else {
         pkt = std::make_unique<RadioPacket>(payload_, payload_len_);
 
