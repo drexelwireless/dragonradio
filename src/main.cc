@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <execinfo.h>
+#include <signal.h>
 
 #include <pybind11/embed.h>
 
@@ -8,12 +10,41 @@ namespace py = pybind11;
 #include "Logger.hh"
 #include "RadioConfig.hh"
 
+#define MAXFRAMES 25
+
+/** @brief A signal handler that prints a backtrace */
+/** See:
+ * https://stackoverflow.com/questions/77005/how-to-automatically-generate-a-stacktrace-when-my-program-crashes
+ */
+extern "C" void backtraceHandler(int, siginfo_t *si, void *ptr)
+{
+    void   *frames[MAXFRAMES];
+    size_t nframes;
+
+    // Get backtrace
+    nframes = backtrace(frames, MAXFRAMES);
+
+    // Print the backtrace to stderr
+    fprintf(stderr, "CRASH: signal %d:\n", si->si_signo);
+    backtrace_symbols_fd(frames, nframes, STDERR_FILENO);
+
+    exit(1);
+}
+
 int main(int argc, char** argv)
 {
     if (argc == 1) {
         fprintf(stderr, "Must specify Python script to run.\n");
         exit(EXIT_FAILURE);
     }
+
+    // Install backtrace signal handler
+    struct sigaction s;
+
+    s.sa_flags = SA_SIGINFO|SA_RESETHAND;
+    s.sa_sigaction = backtraceHandler;
+    sigemptyset(&s.sa_mask);
+    sigaction(SIGSEGV, &s, 0);
 
     // Start the interpreter and keep it alive
     py::scoped_interpreter guard{};

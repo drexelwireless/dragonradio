@@ -10,7 +10,7 @@ CXX      = g++-8
 LINKER   = g++-8
 CPPFLAGS = -Isrc -I/usr/local/include/
 CXXFLAGS = -Ofast -march=native -g3 -Wall -pedantic -ansi -std=c++17
-LDFLAGS  =
+LDFLAGS  = -rdynamic
 LIBS     = -lc -lfftw3f -lliquid -lliquidusrp -lm -lpthread -luhd
 
 # Needed for HDF5
