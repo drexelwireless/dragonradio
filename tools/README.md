@@ -50,19 +50,23 @@ The results of the tests can be displayed using the following command:
 ./tools/driperf-summary.py server.log client.log
 ```
 
-## Running the collaboration server and stand-alone collaboration client 
+## Testing collaboration locally
+
+### Running the collaboration server and stand-alone collaboration client
 
 The collaboration server is run by specifying a single argument, which is the server's IP address:
 
 ```
-./collab_server.py --server-ip IP
+./collab_server.py --server-ip $IP
 ```
 
 The collaboration client can be run in stand-alone mode by specifying a node ID and the IP address of the collaboration server.
 
 ```
-./collab_client.py -i NODEID --server-ip IP
+./collab_client.py -i $CLIENTID --server-ip $IP
 ```
+
+### Providing fake GPS data to the radio
 
 If `gpsd` is running, the collaboration client will use it to set its GPS location. You can run a fake `gpsd` data source as follows:
 
@@ -71,6 +75,55 @@ gpsfake -P 6000 -c 0.1 gps/data/logfile_20140914_365495765_can.log.chk
 ```
 
 The file `gps/data/logfile_20140914_365495765_can.log.chk` is a copy of that found in the `test/nmea2000` directory of the `gpsd` source distribution. You can also obtain this file directly from the `git` repository [here](http://git.savannah.nongnu.org/cgit/gpsd.git/plain/test/nmea2000/logfile_20140914_365495765_can.log.chk).
+
+### Testing collaboration and mandates
+
+This section gives an example of how to test collaboration and mandated outcomes with two radios. Example files are in `tools/collab`. We make the following assumptions:
+
+  1. The shell variable `IP` contains the IP address of the host that will be use to run the collaboration server.
+  1. The shell variable `CLIENTID` contains an arbitrary node ID used to run the stub collaboration client. Any ID can be used, just don't choose 1 or 2.
+  1. Your working directory is the `tools` subdirectory of your `dragonradio` checkout.
+  1. Radio ID 1 is the gateway, and radio ID 2 is the non-gateway.
+
+Test collaboration and mandated outcomes as follows:
+
+1. Start the collaboration server:
+
+```
+./collab_server.py --server-ip $IP
+```
+
+2. Start the collaboration client. This will be used to observe the collaboration messages that come from the actual radio
+
+```
+./collab_client.py -i $CLIENTID --server-ip $IP
+```
+
+3. Start the copy of the SC2 radio that will serve as the gateway. Give it the extra argument `--collab-server-ip $IP`.
+
+4. Start another copy of the SC2 radio.
+
+5. On both hosts running the SC2 radios, load the mandates file.
+
+```
+../python/radio-client.py update-outcomes collab/scenario1_mandated_outcomes.json
+```
+
+6. On the gateway, start a `mgen` listener:
+
+```
+mgen port 5000-5004 output listen.drc
+```
+
+6. On the non-gateway node, run `mgen`:
+
+```
+mgen input tools/collab/scenario1.mgen
+```
+
+Note that this `.mgen` file assume it should send data to the IP address `10.10.10.1`, which corresponds to the gateway in this setup.
+
+7. Watch the collaboration client started in step 2. It should dump updates from the gateway node, including voxel declarations and detailed performance metrics.
 
 ## Jupyter notebooks
 
