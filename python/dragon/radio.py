@@ -287,6 +287,9 @@ class Config(object):
         parser.add_argument('-v', '--verbose', action=LogLevelAction, const=logging.INFO,
                             dest='loglevel',
                             help='be verbose')
+        parser.add_argument('--verbose-packet-trace', action='store_const', const=True,
+                            dest='verbose_packet_trace',
+                            help='show trace of packets written to network')
 
         # Node ID
         parser.add_argument('-i', action='store', type=int, dest='node_id',
@@ -541,7 +544,8 @@ class Radio(object):
                      'timestamp_delay',
                      'mtu',
                      'arq_ack_delay', 'arq_retransmission_delay',
-                     'slot_modulate_time', 'slot_send_time']:
+                     'slot_modulate_time', 'slot_send_time',
+                     'verbose_packet_trace']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
 

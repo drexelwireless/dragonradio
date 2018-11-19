@@ -30,6 +30,9 @@ void exportRadioConfig(py::module &m)
             "Time needed to modulate a slot's worth of data, in seconds")
         .def_readwrite("slot_send_time", &RadioConfig::slot_send_time,
             "Time needed to send a slot's worth of data, in seconds")
+        .def_readwrite("verbose_packet_trace",
+            &RadioConfig::verbose_packet_trace,
+            "Display packets written to tun/tap device?")
         ;
 
     // Export our global RadioConfig
