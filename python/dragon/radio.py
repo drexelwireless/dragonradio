@@ -74,6 +74,7 @@ class Config(object):
         self.log_directory = None
         self.log_sources = []
         self.log_interfaces = []
+        self.compress_interface_logs = False
         # This is the actual path to the log directory
         self.logdir_ = None
 
