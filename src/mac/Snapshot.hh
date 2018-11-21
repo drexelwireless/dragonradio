@@ -40,7 +40,7 @@ struct Snapshot {
 /** @brief A snapshot collector. */
 class SnapshotCollector {
 public:
-    SnapshotCollector() = default;
+    SnapshotCollector();
     virtual ~SnapshotCollector() = default;
 
     /** @brief Start snapshot collection */
@@ -105,6 +105,15 @@ protected:
 
     /** @brief Current offset from the beginning of the first collected slot */
     size_t snapshot_off_;
+
+    /** @brief Timestamp of ast local TX */
+    Clock::time_point last_local_tx_start_;
+
+    /** @brief RX sampling frequency during last local TX  */
+    float last_local_tx_fs_rx_;
+
+    /** @brief Last local TX */
+    SelfTX last_local_tx_;
 };
 
 #endif /* SNAPSHOT_H_ */

@@ -2,6 +2,11 @@
 
 #include "mac/Snapshot.hh"
 
+SnapshotCollector::SnapshotCollector()
+  : last_local_tx_start_(0.0)
+{
+}
+
 void SnapshotCollector::start(void)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
@@ -12,6 +17,19 @@ void SnapshotCollector::start(void)
     snapshot_->timestamp = Clock::now();
     snapshot_collect_ = true;
     snapshot_off_ = 0;
+
+    // Log last TX if it is in progress
+    float             fs = last_local_tx_fs_rx_;
+    Clock::time_point end = last_local_tx_start_ + last_local_tx_.end/fs;
+
+    if (snapshot_->timestamp < end) {
+        ssize_t actual_start = (snapshot_->timestamp - last_local_tx_start_).get_real_secs()*fs;
+
+        last_local_tx_.start -= actual_start;
+        last_local_tx_.end -= actual_start;
+
+        snapshot_->selftx.emplace_back(last_local_tx_);
+    }
 }
 
 void SnapshotCollector::stop(void)
@@ -89,14 +107,26 @@ void SnapshotCollector::selfTX(Clock::time_point when,
                                float fc)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
+    ssize_t                         scaled_nsamples;
+
+    scaled_nsamples = static_cast<ssize_t>(nsamples*fs_rx/fs_tx);
 
     if (snapshot_) {
         ssize_t start = (when - snapshot_->timestamp).get_real_secs()*fs_rx;
 
         snapshot_->selftx.emplace_back(SelfTX{true,
                                               start,
-                                              start + static_cast<ssize_t>(nsamples*fs_rx/fs_tx),
+                                              start + scaled_nsamples,
                                               fc,
                                               fs_tx});
+    } else {
+        last_local_tx_start_ = when;
+        last_local_tx_fs_rx_ = fs_rx;
+
+        last_local_tx_.is_local = true;
+        last_local_tx_.start = 0;
+        last_local_tx_.end = scaled_nsamples;
+        last_local_tx_.fc = fc;
+        last_local_tx_.fs = fs_tx;
     }
 }
