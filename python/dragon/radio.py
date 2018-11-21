@@ -8,6 +8,7 @@ import numpy as np
 import os
 from pprint import pformat
 import platform
+import random
 import re
 import sys
 
@@ -1090,9 +1091,11 @@ class Radio(object):
         config = self.config
         collector = self.snapshot_collector
 
-        while True:
-            await asyncio.sleep(config.snapshot_period)
+        # Sleep a random amount to de-synchronize with other radios collecting
+        # snapshots.
+        await asyncio.sleep(random.uniform(0, config.snapshot_duration))
 
+        while True:
             # Collecting snapshot for config.snapshot_duration
             collector.start()
             await asyncio.sleep(config.snapshot_duration)
@@ -1122,3 +1125,5 @@ class Radio(object):
                     self.logger.logSnapshot(iqbuf)
                     for e in snapshot.selftx:
                         self.logger.logSelfTX(t, e)
+
+            await asyncio.sleep(config.snapshot_period)
