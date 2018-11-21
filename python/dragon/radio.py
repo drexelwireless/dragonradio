@@ -556,7 +556,8 @@ class Radio(object):
         self.node_id = config.node_id
         self.logger = None
 
-        logger.info('Radio configuration:\n' + str(config))
+        logger.info('Radio version: %s', dragonradio.version)
+        logger.info('Radio configuration:\n%s', str(config))
 
         # Copy configuration settings to the C++ RadioConfig object
         for attr in ['verbose', 'debug',
