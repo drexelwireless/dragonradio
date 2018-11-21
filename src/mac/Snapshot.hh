@@ -94,7 +94,7 @@ public:
     }
 
 protected:
-    /** @brief Mutex protecting access to teh snapshot */
+    /** @brief Mutex protecting access to the snapshot */
     spinlock_mutex mutex_;
 
     /** @brief The current snapshot */
