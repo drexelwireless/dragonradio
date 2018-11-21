@@ -63,6 +63,10 @@ class Controller(TCPProtoServer):
         radio = dragon.radio.Radio(self.config)
         self.radio = radio
 
+        # Log snapshots if requested
+        if self.config.log_snapshots != 0:
+            self.loop.create_task(radio.snapshotLogger())
+
         # Capture interfaces
         for iface in self.config.log_interfaces:
             self.dumpcap(iface)

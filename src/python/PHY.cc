@@ -53,7 +53,8 @@ void exportPHYs(py::module &m)
 
     // Export class FlexFrame to Python
     py::class_<FlexFrame, LiquidPHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
-        .def(py::init<NodeId,
+        .def(py::init<std::shared_ptr<SnapshotCollector>,
+                      NodeId,
                       const MCS&,
                       bool,
                       bool,
@@ -62,7 +63,8 @@ void exportPHYs(py::module &m)
 
     // Export class NewFlexFrame to Python
     py::class_<NewFlexFrame, LiquidPHY, std::shared_ptr<NewFlexFrame>>(m, "NewFlexFrame")
-        .def(py::init<NodeId,
+        .def(py::init<std::shared_ptr<SnapshotCollector>,
+                      NodeId,
                       const MCS&,
                       bool,
                       bool,
@@ -71,7 +73,8 @@ void exportPHYs(py::module &m)
 
     // Export class OFDM to Python
     py::class_<OFDM, LiquidPHY, std::shared_ptr<OFDM>>(m, "OFDM")
-        .def(py::init<NodeId,
+        .def(py::init<std::shared_ptr<SnapshotCollector>,
+                      NodeId,
                       const MCS&,
                       bool,
                       bool,
@@ -79,7 +82,8 @@ void exportPHYs(py::module &m)
                       unsigned int,
                       unsigned int,
                       unsigned int>())
-        .def(py::init<NodeId,
+        .def(py::init<std::shared_ptr<SnapshotCollector>,
+                      NodeId,
                       const MCS&,
                       bool,
                       bool,
@@ -92,7 +96,8 @@ void exportPHYs(py::module &m)
 
     // Export class MultiOFDM to Python
     py::class_<MultiOFDM, LiquidPHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
-        .def(py::init<NodeId,
+        .def(py::init<std::shared_ptr<SnapshotCollector>,
+                      NodeId,
                       const MCS&,
                       bool,
                       bool,
@@ -100,7 +105,8 @@ void exportPHYs(py::module &m)
                       unsigned int,
                       unsigned int,
                       unsigned int>())
-        .def(py::init<NodeId,
+        .def(py::init<std::shared_ptr<SnapshotCollector>,
+                      NodeId,
                       const MCS&,
                       bool,
                       bool,

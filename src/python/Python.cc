@@ -20,6 +20,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     py::bind_vector<std::vector<double>, std::shared_ptr<std::vector<double>>>(m, "Channels");
 
     exportLiquidEnums(m);
+    exportClock(m);
     exportLogger(m);
     exportRadioConfig(m);
     exportWorkQueue(m);
@@ -35,4 +36,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     exportResamplers(m);
     exportNCOs(m);
     exportFilters(m);
+    exportIQBuffer(m);
+    exportIQCompression(m);
+    exportSnapshot(m);
 }

@@ -1,8 +1,10 @@
 import argparse
+import asyncio
 import configparser
 import io
 import libconf
 import logging
+import numpy as np
 import os
 from pprint import pformat
 import platform
@@ -75,6 +77,7 @@ class Config(object):
         self.log_sources = []
         self.log_interfaces = []
         self.log_invalid_headers = False
+        self.log_snapshots = False
         self.compress_interface_logs = False
         # This is the actual path to the log directory
         self.logdir_ = None
@@ -187,6 +190,10 @@ class Config(object):
         self.amc_mcsidx_down_per_threshold = 0.10
         self.amc_mcsidx_alpha = 0.5
         self.amc_mcsidx_prob_floor = 0.1
+
+        # Snapshot options
+        self.snapshot_period = 0
+        self.snapshot_duration = 0.5
 
         # Network options
         self.mtu = 1500
@@ -309,6 +316,9 @@ class Config(object):
         parser.add_argument('--log-invalid-headers', action='store_const', const=True,
                             dest='log_invalid_headers',
                             help='log packets with invalid headers')
+        parser.add_argument('--log-snapshots', action='store_const', const=True,
+                            dest='log_snapshots',
+                            help='log snapshots')
 
         # USRP settings
         parser.add_argument('--addr', action='store',
@@ -505,6 +515,14 @@ class Config(object):
                             dest='amc_mcsidx_prob_floor',
                             help='set minimum MCS transition probability')
 
+        # Snapshot options
+        parser.add_argument('--snapshot-period', action='store', type=float,
+                dest='snapshot_period',
+                help='set snapshot period (sec)')
+        parser.add_argument('--snapshot-duration', action='store', type=float,
+                dest='snapshot_duration',
+                help='set snapshot duration (sec)')
+
         # Network options
         parser.add_argument('--mtu', action='store', type=int,
                             dest='mtu',
@@ -583,6 +601,14 @@ class Radio(object):
             dragonradio.Logger.singleton = self.logger
 
         #
+        # Configure snapshots
+        #
+        if config.snapshot_period != 0:
+            self.snapshot_collector = dragonradio.SnapshotCollector()
+        else:
+            self.snapshot_collector = None
+
+        #
         # Configure the PHY
         #
         header_mcs = MCS(config.header_check,
@@ -591,19 +617,22 @@ class Radio(object):
                          config.header_ms)
 
         if config.phy == 'flexframe':
-            self.phy = dragonradio.FlexFrame(self.node_id,
+            self.phy = dragonradio.FlexFrame(self.snapshot_collector,
+                                             self.node_id,
                                              header_mcs,
                                              config.soft_header,
                                              config.soft_payload,
                                              config.min_packet_size)
         elif config.phy == 'newflexframe':
-            self.phy = dragonradio.NewFlexFrame(self.node_id,
+            self.phy = dragonradio.NewFlexFrame(self.snapshot_collector,
+                                                self.node_id,
                                                 header_mcs,
                                                 config.soft_header,
                                                 config.soft_payload,
                                                 config.min_packet_size)
         elif config.phy == 'ofdm':
-            self.phy = dragonradio.OFDM(self.node_id,
+            self.phy = dragonradio.OFDM(self.snapshot_collector,
+                                        self.node_id,
                                         header_mcs,
                                         config.soft_header,
                                         config.soft_payload,
@@ -612,7 +641,8 @@ class Radio(object):
                                         config.cp_len,
                                         config.taper_len)
         elif config.phy == 'multiofdm':
-            self.phy = dragonradio.MultiOFDM(self.node_id,
+            self.phy = dragonradio.MultiOFDM(self.snapshot_collector,
+                                             self.node_id,
                                              header_mcs,
                                              config.soft_header,
                                              config.soft_payload,
@@ -919,6 +949,7 @@ class Radio(object):
     def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
+                                            self.snapshot_collector,
                                             self.rx_channels,
                                             self.tx_channels,
                                             self.modulator,
@@ -932,6 +963,7 @@ class Radio(object):
     def configureTDMA(self, nslots):
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
+                                    self.snapshot_collector,
                                     self.rx_channels,
                                     self.tx_channels,
                                     self.modulator,
@@ -1052,3 +1084,43 @@ class Radio(object):
             if not os.path.exists(path):
                 return path
             i += 1
+
+    async def snapshotLogger(self):
+        if not self.logger:
+            return
+
+        config = self.config
+        collector = self.snapshot_collector
+
+        while True:
+            await asyncio.sleep(config.snapshot_period)
+
+            # Collecting snapshot for config.snapshot_duration
+            collector.start()
+            await asyncio.sleep(config.snapshot_duration)
+
+            # Stop collecting slots
+            collector.stop()
+
+            # Wait 200ms for remaining packets in snapshot to be demodulated and get
+            # the snapshot
+            await asyncio.sleep(0.2)
+            snapshot = collector.finish()
+
+            # Log the snapshot
+            slots = snapshot.slots
+            if len(slots) != 0:
+                t = slots[0].timestamp
+                fc = slots[0].fc
+                fs = slots[0].fs
+
+                if all([slot.fc == fc for slot in slots]) and all([slot.fs == fs for slot in slots]):
+                    # Get concatenated IQ buffer for all slots
+                    iqbuf = dragonradio.IQBuf(np.concatenate([slot.data for slot in slots]))
+                    iqbuf.timestamp = t
+                    iqbuf.fc = fc
+                    iqbuf.fs = fs
+
+                    self.logger.logSnapshot(iqbuf)
+                    for e in snapshot.selftx:
+                        self.logger.logSelfTX(t, e)

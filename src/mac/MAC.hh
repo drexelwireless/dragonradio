@@ -10,6 +10,7 @@
 #include "phy/PacketDemodulator.hh"
 #include "phy/PacketModulator.hh"
 #include "mac/MAC.hh"
+#include "mac/Snapshot.hh"
 
 /** @brief A MAC protocol. */
 class MAC
@@ -17,6 +18,7 @@ class MAC
 public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<PHY> phy,
+        std::shared_ptr<SnapshotCollector> collector,
         const Channels &rx_channels,
         const Channels &tx_channels,
         std::shared_ptr<PacketModulator> modulator,
@@ -125,6 +127,9 @@ protected:
 
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
+
+    /** @brief Our snapshot collector */
+    std::shared_ptr<SnapshotCollector> snapshot_collector_;
 
     /** @brief RX channels, given as shift from center frequency */
     Channels rx_channels_;

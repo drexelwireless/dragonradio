@@ -28,6 +28,9 @@ CPPFLAGS += -I/usr/include/python3.5 -Idependencies/pybind11/include
 
 LIBS += -lpython3.5m
 
+# Needed for FLAC
+LIBS += -lFLAC++ -lFLAC
+
 # Version information
 GIT_HASH=$(shell git rev-parse HEAD^{} | cut -c1-8)
 
@@ -53,6 +56,8 @@ GENERATED += \
 SOURCES := \
     Clock.cc \
     ExtensibleDataSet.cc \
+    IQCompression.cc \
+    IQCompression/FLAC.cc \
     Logger.cc \
     main.cc \
     Packet.cc \
@@ -78,13 +83,17 @@ SOURCES := \
     mac/SmartController.cc \
     mac/SlottedALOHA.cc \
     mac/SlottedMAC.cc \
+    mac/Snapshot.cc \
     mac/TDMA.cc \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
+    python/Clock.cc \
     python/Controller.cc \
     python/Estimator.cc \
     python/Filter.cc \
+    python/IQBuffer.cc \
+    python/IQCompression.cc \
     python/LiquidEnum.cc \
     python/Logger.cc \
     python/MAC.cc \
@@ -97,6 +106,7 @@ SOURCES := \
     python/RadioConfig.cc \
     python/RadioNet.cc \
     python/Resample.cc \
+    python/Snapshot.cc \
     python/USRP.cc \
     python/WorkQueue.cc
 

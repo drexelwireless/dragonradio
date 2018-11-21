@@ -21,4 +21,5 @@ PYBIND11_MODULE(dragonradio, m) {
     exportResamplers(m);
     exportNCOs(m);
     exportFilters(m);
+    exportIQCompression(m);
 }

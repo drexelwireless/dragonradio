@@ -81,7 +81,13 @@ public:
          * provided sample willcome.
          * @brief off The offset of the first provided sample.
          */
-        virtual void reset(Clock::time_point timestamp, size_t off) = 0;
+        virtual void reset(Clock::time_point timestamp,
+                           size_t off) = 0;
+
+        /** @brief Set the snapshot offset.
+        * @brief snapshot_off The current snapshot offset.
+        */
+        virtual void setSnapshotOffset(ssize_t snapshot_off) = 0;
 
         /** @brief Demodulate IQ samples.
          * @param data IQ samples to demodulate.

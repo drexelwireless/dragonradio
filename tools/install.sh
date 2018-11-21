@@ -5,6 +5,7 @@ sudo apt install -y autoconf automake
 sudo apt install -y libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils cmake build-essential libncurses5-dev
 sudo apt install -y libfftw3-dev
 sudo apt install -y python3 python3-pip python3-tk python3-virtualenv
+sudo apt install -y libflac8 libflac-dev libflac++-dev
 
 (
     # Build and install libcorrect

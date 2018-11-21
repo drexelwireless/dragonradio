@@ -69,7 +69,8 @@ public:
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
      */
-    MultiOFDM(NodeId node_id,
+    MultiOFDM(std::shared_ptr<SnapshotCollector> collector,
+              NodeId node_id,
               const MCS &header_mcs,
               bool soft_header,
               bool soft_payload,
@@ -78,7 +79,7 @@ public:
               unsigned int cp_len,
               unsigned int taper_len,
               const std::vector<unsigned char> &p = {})
-       : LiquidPHY(node_id, header_mcs, soft_header, soft_payload, min_packet_size)
+       : LiquidPHY(collector, node_id, header_mcs, soft_header, soft_payload, min_packet_size)
        , M_(M)
        , cp_len_(cp_len)
        , taper_len_(taper_len)

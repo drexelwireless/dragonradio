@@ -33,6 +33,12 @@ void exportLogger(py::module &m)
         .def("setAttribute", py::overload_cast<const std::string&, uint8_t>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, uint32_t>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, double>(&Logger::setAttribute))
+        .def("logSnapshot",
+            &Logger::logSnapshot,
+            "Log a snapshot")
+        .def("logSelfTX",
+            &Logger::logSelfTX,
+            "Log a self-transmission")
         ;
 
     addLoggerSource(loggerCls, "log_slots", Logger::kSlots);

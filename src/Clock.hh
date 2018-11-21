@@ -63,9 +63,14 @@ struct time_point_t {
         return t.get_real_secs();
     }
 
-    double get_full_secs(void) const
+    int64_t get_full_secs(void) const
     {
         return t.get_full_secs();
+    }
+
+    double get_frac_secs(void) const
+    {
+        return t.get_frac_secs();
     }
 };
 

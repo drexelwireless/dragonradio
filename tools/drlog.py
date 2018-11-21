@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import time
 
+import dragonradio
+
 class Slot:
     def __init__(self, timestamp, iqdata):
         self._timestamp = timestamp
@@ -175,6 +177,8 @@ class Log:
         self._recv = {}
         self._send = {}
         self._slots = {}
+        self._snapshots = {}
+        self._selftx = {}
         self._events = {}
 
     def load(self, filename):
@@ -191,6 +195,19 @@ class Log:
             df['end'] = df.timestamp + df.iq_data.apply(len) / df.bw
 
             self._slots[node.node_id] = df
+
+            # Load snapshots
+            df = loadDataSet(f['snapshots'])
+            #df['iq_data'] = df.iq_data.apply(dragonradio.decompressFLAC)
+            df['start'] = df.timestamp
+            #df['end'] = df.timestamp + df.iq_data.apply(len) / df.fs
+
+            self._snapshots[node.node_id] = df
+
+            # Load snapshot packets
+            df = loadDataSet(f['selftx'])
+
+            self._selftx[node.node_id] = df
 
             # Load received packets
             df = loadDataSet(f['recv'])
@@ -384,6 +401,14 @@ class Log:
     @property
     def nodes(self):
         return self._nodes
+
+    @property
+    def snapshots(self):
+        return self._snapshots
+
+    @property
+    def selftx(self):
+        return self._selftx
 
     @property
     def received(self):

@@ -14,7 +14,8 @@ union PHYHeader {
     unsigned char bytes[14];
 };
 
-LiquidPHY::LiquidPHY(NodeId node_id,
+LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
+                     NodeId node_id,
                      const MCS &header_mcs,
                      bool soft_header,
                      bool soft_payload,
@@ -22,6 +23,7 @@ LiquidPHY::LiquidPHY(NodeId node_id,
   : PHY(node_id)
   , upsamp_resamp_params(std::bind(&LiquidPHY::reconfigureTX, this))
   , downsamp_resamp_params(std::bind(&LiquidPHY::reconfigureRX, this))
+  , snapshot_collector_(collector)
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
@@ -215,7 +217,17 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     pkt->cfo = stats_.cfo;
     pkt->fc = shift_;
 
-    pkt->timestamp = demod_start_ + (off + resamp_fact*stats_.start_counter) / phy_.getRXRate();
+    // Calculate sample offsets
+    size_t start = off + resamp_fact*stats_.start_counter;
+    size_t end = off + resamp_fact*stats_.end_counter;
+
+    pkt->timestamp = demod_start_ + start / phy_.getRXRate();
+
+    if (in_snapshot_)
+        liquid_phy_.snapshot_collector_->selfTX(snapshot_off_ + start,
+                                                snapshot_off_ + end,
+                                                shift_,
+                                                phy_.getRXRate()/resamp_fact);
 
     callback_(std::move(pkt));
 
@@ -230,8 +242,8 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
         }
 
         logger->logRecv(demod_start_,
-                        off + resamp_fact*stats_.start_counter,
-                        off + resamp_fact*stats_.end_counter,
+                        start,
+                        end,
                         header_valid_,
                         payload_valid_,
                         *h,
@@ -253,7 +265,8 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void LiquidPHY::Demodulator::reset(Clock::time_point timestamp, size_t off)
+void LiquidPHY::Demodulator::reset(Clock::time_point timestamp,
+                                   size_t off)
 {
     if (pending_reconfigure_.load(std::memory_order_relaxed)) {
         pending_reconfigure_.store(false, std::memory_order_relaxed);
@@ -264,8 +277,18 @@ void LiquidPHY::Demodulator::reset(Clock::time_point timestamp, size_t off)
 
     demod_start_ = timestamp;
     demod_off_ = off;
+    in_snapshot_ = false;
+    snapshot_off_ = 0;
 
     downsamp_.reset();
+}
+
+void LiquidPHY::Demodulator::setSnapshotOffset(ssize_t snapshot_off)
+{
+    if (liquid_phy_.snapshot_collector_) {
+        in_snapshot_ = liquid_phy_.snapshot_collector_->active();
+        snapshot_off_ = snapshot_off;
+    }
 }
 
 void LiquidPHY::Demodulator::demodulate(std::complex<float>* data,
