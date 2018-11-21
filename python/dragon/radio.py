@@ -589,7 +589,6 @@ class Radio(object):
 
             self.logger = dragonradio.Logger(path)
             self.logger.setAttribute('node_id', self.node_id)
-            self.logger.setAttribute('frequency', config.frequency)
             self.logger.setAttribute('soft_tx_gain', config.soft_tx_gain)
             self.logger.setAttribute('tx_gain', config.tx_gain)
             self.logger.setAttribute('rx_gain', config.rx_gain)
@@ -987,10 +986,6 @@ class Radio(object):
 
     def finishConfiguringMAC(self):
         self.mac.premod_slots = self.config.premod_slots
-
-        if self.logger:
-            self.logger.setAttribute('tx_bandwidth', self.usrp.tx_rate)
-            self.logger.setAttribute('rx_bandwidth', self.usrp.rx_rate)
 
         if self.config.arq:
             self.controller.mac = self.mac
