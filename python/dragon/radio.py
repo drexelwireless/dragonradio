@@ -70,6 +70,8 @@ class Config(object):
     def __init__(self):
         # Set some default values
         self.loglevel = logging.WARNING
+        self.verbose = False
+        self.debug = False
         self.node_id = getNodeIdFromHostname()
 
         # Log parameters
