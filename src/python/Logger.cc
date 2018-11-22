@@ -1,3 +1,4 @@
+#include "Clock.hh"
 #include "Logger.hh"
 #include "python/PyModules.hh"
 
@@ -33,6 +34,12 @@ void exportLogger(py::module &m)
         .def("setAttribute", py::overload_cast<const std::string&, uint8_t>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, uint32_t>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, double>(&Logger::setAttribute))
+        .def("logEvent",
+            [](Logger &self, const std::string &msg)
+            {
+                return self.logEvent(Clock::now(), msg);
+            },
+            "Log an event")
         .def("logSnapshot",
             &Logger::logSnapshot,
             "Log a snapshot")
