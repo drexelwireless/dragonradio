@@ -22,6 +22,7 @@ EVENTS = [ [r'^AMC: Moving up modulation scheme', 'AMC', 'g']
          , [r'^PHY: invalid payload', 'PHY', 'y']
          , [r'^TIMESYNC:', 'TIMESYNC', 'k']
          , [r'^(RX|TX) error:', 'USRP', 'r']
+         , [r'^USRP:', 'USRP', 'k']
          ]
 
 for i in range(0, len(EVENTS)):

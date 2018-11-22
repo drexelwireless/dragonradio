@@ -26,11 +26,12 @@ USRP::USRP(const std::string& addr,
     usrp_->set_tx_gain(tx_gain);
     usrp_->set_rx_gain(rx_gain);
 
-    setRXFrequency(freq);
-
     // Set up clock
-    setTXFrequency(freq);
     Clock::setUSRP(usrp_);
+
+    // Set RX and TX frequencies
+    setRXFrequency(freq);
+    setTXFrequency(freq);
 
     // Set up USRP streaming
     uhd::stream_args_t stream_args("fc32");
@@ -72,6 +73,8 @@ void USRP::setTXFrequency(double freq)
 
     while (!usrp_->get_tx_sensor("lo_locked").to_bool())
         usleep(10);
+
+    logEvent("USRP: TX frequency set to %f", freq);
 }
 
 void USRP::setRXFrequency(double freq)
@@ -84,6 +87,8 @@ void USRP::setRXFrequency(double freq)
 
     while (!usrp_->get_rx_sensor("lo_locked").to_bool())
         usleep(10);
+
+    logEvent("USRP: RX frequency set to %f", freq);
 }
 
 void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs)

@@ -9,6 +9,7 @@
 
 #include "Clock.hh"
 #include "IQBuffer.hh"
+#include "Logger.hh"
 
 /** @brief A USRP. */
 class USRP
@@ -73,6 +74,7 @@ public:
     void setTXRate(double rate)
     {
         usrp_->set_tx_rate(rate);
+        logEvent("USRP: TX rate set to %f", rate);
     }
 
     /** @brief Get RX rate. */
@@ -85,6 +87,7 @@ public:
     void setRXRate(double rate)
     {
         usrp_->set_rx_rate(rate);
+        logEvent("USRP: RX rate set to %f", rate);
     }
 
     /** @brief Get TX gain (dB). */
