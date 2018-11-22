@@ -565,8 +565,17 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     if (netq_)
         netq_->push_hi(std::move(pkt));
 
-    // Re-start the retransmit timer
-    startRetransmissionTimer(entry);
+    // The retransmit timer will be restarted when the packet is actually sent,
+    // so don't re-start it here! Doing so can lead to a cascade of retransmit
+    // timers firing when there are a large number of outstanding transmissions
+    // and we suddenly need to ratchet down the MCS. Instead, we cancel the
+    // timer here and allow it to be restarted upon transmission. We need to
+    // cancel the timer because retransmission could be triggered but something
+    // OTHER than a retransmission time-out, e.g., an explicit NAK, and if we
+    // don't cancel it, we can end up retransmitting the same packet twice,
+    // e.g., once due to the explicit NAK, and again due to a retransmission
+    // timeout.
+    timer_queue_.cancel(entry);
 }
 
 void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
