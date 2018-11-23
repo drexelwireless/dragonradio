@@ -59,8 +59,8 @@ struct SendWindow {
 
     using vector_type = std::vector<Entry>;
 
-    SendWindow(NodeId node_id, SmartController &controller, Seq::uint_type maxwin)
-      : node_id(node_id)
+    SendWindow(Node &n, SmartController &controller, Seq::uint_type maxwin)
+      : node(n)
       , controller(controller)
       , unack(0)
       , max(0)
@@ -73,8 +73,8 @@ struct SendWindow {
     {
     }
 
-    /** @brief Node ID of destination. */
-    NodeId node_id;
+    /** @brief Destination node. */
+    Node &node;
 
     /** @brief Our controller. */
     SmartController &controller;
@@ -525,7 +525,7 @@ protected:
     void handleACK(SendWindow &sendw, const Seq &seq);
 
     /** @brief Handle a NAK. */
-    void handleNAK(SendWindow &sendw, Node &dest, const Seq &seq);
+    void handleNAK(SendWindow &sendw, const Seq &seq);
 
     /** @brief Update PER as a result of successful packet transmission. */
     void txSuccess(Node &node);
@@ -534,7 +534,7 @@ protected:
     void txFailure(Node &node);
 
     /** @brief Update MCS based on current PER */
-    void updateMCS(SendWindow &sendw, Node &node);
+    void updateMCS(SendWindow &sendw);
 
     /** @brief Reconfigure a node's PER estimates */
     void resetPEREstimates(Node &node);

@@ -209,7 +209,6 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
     if (sendwptr) {
         SendWindow                      &sendw = *sendwptr;
-        Node                            &dest = (*net_)[sendw.node_id];
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
         Seq                             unack = sendw.unack.load(std::memory_order_acquire);
         Seq                             max = sendw.max.load(std::memory_order_acquire);
@@ -234,17 +233,17 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
                     // Update our packet error rate to reflect successful TX
                     if (unack >= sendw.mcsidx_init_seq)
-                        txSuccess(dest);
+                        txSuccess(sendw.node);
                 }
 
-                updateMCS(sendw, dest);
+                updateMCS(sendw);
 
                 // Advance the send window
                 advanceSendWindow(sendw, unack);
             }
         } else if (pkt->isFlagSet(kNAK)) {
             if (ehdr.ack >= unack)
-                handleNAK(sendw, dest, ehdr.ack);
+                handleNAK(sendw, ehdr.ack);
         }
     }
 
@@ -345,7 +344,6 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 {
     SendWindow                      &sendw = entry.sendw;
     std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-    Node                            &dest = (*net_)[sendw.node_id];
 
     if (!entry.pkt) {
         logEvent("AMC: attempted to retransmit ACK'ed packet on timeout");
@@ -353,18 +351,18 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     }
 
     dprintf("ARQ: send to %u: retransmit seq=%u",
-        (unsigned) sendw.node_id,
+        (unsigned) sendw.node.id,
         (unsigned) entry.pkt->seq);
 
     // Record the packet error
     if (entry.pkt->seq >= sendw.mcsidx_init_seq) {
-        txFailure(dest);
+        txFailure(sendw.node);
 
         logEvent("AMC: txFailure retransmission: seq=%u; per=%f",
             (unsigned) entry.pkt->seq,
-            dest.short_per.getValue());
+            sendw.node.short_per.getValue());
 
-        updateMCS(sendw, dest);
+        updateMCS(sendw);
     }
 
     // Actually retransmit the packet
@@ -552,8 +550,6 @@ void SmartController::retransmit(SendWindow::Entry &entry)
 
 void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack)
 {
-    Node &dest = (*net_)[sendw.node_id];
-
     // If the initial sequence number corresponding to the current MCS is so old
     // that the sequence numbers have wrapped around, update it
     if (sendw.mcsidx_init_seq > unack + sendw.win)
@@ -570,8 +566,8 @@ void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack)
         auto end = sendw.pending.cend();
         auto it = sendw.pending.cbegin();
 
-        while (it != end && dest.seq < unack + sendw.win) {
-            (*it)->seq = dest.seq++;
+        while (it != end && sendw.node.seq < unack + sendw.win) {
+            (*it)->seq = sendw.node.seq++;
             (*it)->setInternalFlag(kHasSeq);
             ++it;
         }
@@ -588,9 +584,9 @@ void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
     // Start the retransmit timer if it is not already running.
     if (!timer_queue_.running(entry)) {
         dprintf("ARQ: send to %u seq %u: starting retransmission timer",
-            (unsigned) entry.sendw.node_id,
+            (unsigned) entry.sendw.node.id,
             (unsigned) entry.pkt->seq);
-        timer_queue_.run_in(entry, (*net_)[entry.sendw.node_id].retransmission_delay);
+        timer_queue_.run_in(entry, entry.sendw.node.retransmission_delay);
     }
 }
 
@@ -788,29 +784,29 @@ void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
     entry.reset();
 }
 
-void SmartController::handleNAK(SendWindow &sendw, Node &dest, const Seq &seq)
+void SmartController::handleNAK(SendWindow &sendw, const Seq &seq)
 {
     // If we received a NAK for a packet that was already ACK'ed, nevermind
     if (seq < sendw.unack || !sendw[seq]) {
         logEvent("ARQ: nak from %u for already ACK'ed packet: seq=%u",
-            (unsigned) sendw.node_id,
+            (unsigned) sendw.node.id,
             (unsigned) seq);
 
         return;
     }
 
     // Record the packet error
-    txFailure(dest);
+    txFailure(sendw.node);
 
     logEvent("AMC: txFailure nak: seq=%u; per=%f",
         (unsigned) seq,
-        dest.short_per.getValue());
+        sendw.node.short_per.getValue());
 
-    updateMCS(sendw, dest);
+    updateMCS(sendw);
 
     // Retransmit the packet
     dprintf("ARQ: recv from %u: nak=%u",
-        (unsigned) sendw.node_id,
+        (unsigned) sendw.node.id,
         (unsigned) seq);
 
     retransmit(sendw[seq]);
@@ -828,8 +824,9 @@ void SmartController::txFailure(Node &node)
     node.long_per.update(1.0);
 }
 
-void SmartController::updateMCS(SendWindow &sendw, Node &node)
+void SmartController::updateMCS(SendWindow &sendw)
 {
+    Node   &node = sendw.node;
     double short_per = node.short_per.getValue();
     double long_per = node.long_per.getValue();
 
@@ -1019,7 +1016,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
         Node       &dest = (*net_)[node_id];
         SendWindow &sendw = send_.emplace(std::piecewise_construct,
                                           std::forward_as_tuple(node_id),
-                                          std::forward_as_tuple(node_id, *this, max_sendwin_)).first->second;
+                                          std::forward_as_tuple(dest, *this, max_sendwin_)).first->second;
 
         sendw.mcsidx = mcsidx_init_;
         sendw.mcsidx_init_seq = dest.seq;
