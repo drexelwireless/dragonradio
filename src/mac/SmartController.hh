@@ -158,12 +158,12 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     using vector_type = std::vector<Entry>;
 
-    RecvWindow(NodeId node_id,
+    RecvWindow(Node &n,
                SmartController &controller,
                Seq seq,
                Seq::uint_type win,
                size_t nak_win)
-      : node_id(node_id)
+      : node(n)
       , controller(controller)
       , ack(seq)
       , max(seq-1)
@@ -173,8 +173,8 @@ struct RecvWindow : public TimerQueue::Timer  {
       , entries_(win)
     {}
 
-    /** @brief Node ID of destination. */
-    NodeId node_id;
+    /** @brief Sender node. */
+    Node &node;
 
     /** @brief Our controller. */
     SmartController &controller;

@@ -375,7 +375,7 @@ void SmartController::ack(RecvWindow &recvw)
         return;
 
     dprintf("ARQ: send to %u: DELAYED ack=%u",
-        (unsigned) recvw.node_id,
+        (unsigned) recvw.node.id,
         (unsigned) recvw.ack);
 
     // Create an ACK-only packet. Why don't we set the ACK field here!? Because
@@ -386,12 +386,12 @@ void SmartController::ack(RecvWindow &recvw)
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
     pkt->curhop = net_->getMyNodeId();
-    pkt->nexthop = recvw.node_id;
+    pkt->nexthop = recvw.node.id;
     pkt->flags = 0;
     pkt->seq = 0;
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
-    pkt->dest = recvw.node_id;
+    pkt->dest = recvw.node.id;
 
     // Append selective ACK control messages
     appendCtrlACK(recvw, pkt);
@@ -595,8 +595,8 @@ void SmartController::startACKTimer(RecvWindow &recvw)
     // Start the ACK timer if it is not already running.
     if (!timer_queue_.running(recvw)) {
         dprintf("ARQ: send to %u: starting ACK delay timer",
-            (unsigned) recvw.node_id);
-        timer_queue_.run_in(recvw, (*net_)[recvw.node_id].ack_delay);
+            (unsigned) recvw.node.id);
+        timer_queue_.run_in(recvw, recvw.node.ack_delay);
     }
 }
 
@@ -754,7 +754,7 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
         } else {
             if (in_run) {
                 dprintf("ARQ: selective ack to %u: seq=%u-%u",
-                    (unsigned) recvw.node_id,
+                    (unsigned) recvw.node.id,
                     (unsigned) begin,
                     (unsigned) end);
                 pkt->appendAck(begin, end);
@@ -766,7 +766,7 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
 
     if (in_run) {
         dprintf("ARQ: selective ack to %u: seq=%u-%u",
-            (unsigned) recvw.node_id,
+            (unsigned) recvw.node.id,
             (unsigned) begin,
             (unsigned) end);
         pkt->appendAck(begin, end);
@@ -1066,9 +1066,10 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
             return recvw;
     }
 
+    Node       &src = (*net_)[node_id];
     RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
                                       std::forward_as_tuple(node_id),
-                                      std::forward_as_tuple(node_id, *this, seq, recvwin_, explicit_nak_win_)).first->second;
+                                      std::forward_as_tuple(src, *this, seq, recvwin_, explicit_nak_win_)).first->second;
 
     return recvw;
 }
