@@ -497,6 +497,12 @@ protected:
     /** @brief Re-transmit a send window entry. */
     void retransmit(SendWindow::Entry &entry);
 
+    /** @brief Advance the send window.
+     * @param sendw The send window to advance
+     * @param unack The new value of the send window's unack parameter
+     */
+    void advanceSendWindow(SendWindow &sendw, Seq unack);
+
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow::Entry &entry);
 

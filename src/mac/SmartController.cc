@@ -239,36 +239,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
                 updateMCS(sendw, dest);
 
-                // If the initial sequence number corresponding to the current
-                // MCS is so old that the sequence numbers have wrapped around,
-                // update it
-                if (sendw.mcsidx_init_seq > unack + sendw.win)
-                    sendw.mcsidx_init_seq = unack - 1;
-
-                // Increase the send window. We really only need to do this
-                // after the initial ACK, but it doesn't hurt to do it every
-                // time...
-                sendw.win = sendw.maxwin;
-
-                // Now that our window is open, pending packets in our window
-                // are eligible to be sent, so add them to the high-priority
-                // network queue.
-                if (netq_ && !sendw.pending.empty()) {
-                    auto begin = sendw.pending.cbegin();
-                    auto end = sendw.pending.cend();
-                    auto it = sendw.pending.cbegin();
-
-                    while (it != end && dest.seq < unack + sendw.win) {
-                        (*it)->seq = dest.seq++;
-                        (*it)->setInternalFlag(kHasSeq);
-                        ++it;
-                    }
-
-                    netq_->splice_hi(sendw.pending, begin, it);
-                }
-
-                // Update unack
-                sendw.unack.store(unack, std::memory_order_release);
+                // Advance the send window
+                advanceSendWindow(sendw, unack);
             }
         } else if (pkt->isFlagSet(kNAK)) {
             if (ehdr.ack >= unack)
@@ -576,6 +548,39 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // e.g., once due to the explicit NAK, and again due to a retransmission
     // timeout.
     timer_queue_.cancel(entry);
+}
+
+void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack)
+{
+    Node &dest = (*net_)[sendw.node_id];
+
+    // If the initial sequence number corresponding to the current MCS is so old
+    // that the sequence numbers have wrapped around, update it
+    if (sendw.mcsidx_init_seq > unack + sendw.win)
+        sendw.mcsidx_init_seq = unack - 1;
+
+    // Increase the send window. We really only need to do this after the
+    // initial ACK, but it doesn't hurt to do it every time...
+    sendw.win = sendw.maxwin;
+
+    // Now that our window is open, pending packets in our window are eligible
+    // to be sent, so add them to the high-priority network queue.
+    if (netq_ && !sendw.pending.empty()) {
+        auto begin = sendw.pending.cbegin();
+        auto end = sendw.pending.cend();
+        auto it = sendw.pending.cbegin();
+
+        while (it != end && dest.seq < unack + sendw.win) {
+            (*it)->seq = dest.seq++;
+            (*it)->setInternalFlag(kHasSeq);
+            ++it;
+        }
+
+        netq_->splice_hi(sendw.pending, begin, it);
+    }
+
+    // Update unack
+    sendw.unack.store(unack, std::memory_order_release);
 }
 
 void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
