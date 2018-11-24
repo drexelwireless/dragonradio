@@ -69,6 +69,10 @@ void exportControllers(py::module &m)
             &SmartController::getSelectiveACK,
             &SmartController::setSelectiveACK,
             "Send selective ACK's?")
+        .def_property("selective_ack_feedback_delay",
+            &SmartController::getSelectiveACKFeedbackDelay,
+            &SmartController::setSelectiveACKFeedbackDelay,
+            "Selective ACK feedback delay (sec)")
         .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
         .def("broadcastHello", &SmartController::broadcastHello)
         .def("resetMCSTransitionProbabilities",

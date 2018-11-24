@@ -52,6 +52,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , explicit_nak_win_(0)
   , explicit_nak_win_duration_(0.0)
   , selective_ack_(false)
+  , selective_ack_feedback_delay_(0.0)
   , enforce_ordering_(false)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
@@ -81,11 +82,10 @@ get_packet:
     // Get node ID of destination
     NodeId nexthop = pkt->nexthop;
 
-    // If we have received a packet from the destination and this is not an
-    // explicit NAK, add an ACK.
+    // If we have received a packet from the destination, add an ACK.
     RecvWindow *recvwptr = maybeGetReceiveWindow(nexthop);
 
-    if (recvwptr && !pkt->isFlagSet(kNAK)) {
+    if (recvwptr) {
         RecvWindow                      &recvw = *recvwptr;
         ExtendedHeader                  &ehdr = pkt->getExtendedHeader();
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
@@ -137,6 +137,8 @@ get_packet:
 
         // Save the packet in our send window.
         sendw[pkt->seq] = pkt;
+        sendw[pkt->seq].timestamp = Clock::now();
+        sendw[pkt->seq].mcsidx = sendw.mcsidx;
 
         // Start the retransmit timer if it is not already running.
         startRetransmissionTimer(sendw[pkt->seq]);
@@ -184,15 +186,17 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (pkt->isFlagSet(kControl)) {
         handleCtrlHello(node, pkt);
         handleCtrlTimestampDeltas(node, pkt);
-        handleCtrlACK(node, pkt);
     }
 
-    // Resize the packet to truncate non-data bytes
-    pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
-
     // Handle broadcast packets
-    if (pkt->isFlagSet(kBroadcast) && pkt->data_len != 0) {
-        radio_out.push(std::move(pkt));
+    if (pkt->isFlagSet(kBroadcast)) {
+        // Resize the packet to truncate non-data bytes
+        pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
+
+        // Send the packet along if it has data
+        if (pkt->data_len != 0)
+            radio_out.push(std::move(pkt));
+
         return;
     }
 
@@ -212,13 +216,25 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
         Seq                             unack = sendw.unack.load(std::memory_order_acquire);
         Seq                             max = sendw.max.load(std::memory_order_acquire);
+        Clock::time_point               tfeedback = Clock::now() - selective_ack_feedback_delay_;
+        std::optional<Seq>              nak;
 
+        // Handle any NAK
+        nak = handleNAK(sendw, pkt);
+
+        // If we saw a NAK, look at feedback at least up to the sequence number
+        // that was NAK'ed. We add a tiny amount of slop, 0.001 sec, to make
+        // sure we *include* the NAK'ed packet.
+        if (nak)
+            tfeedback = std::max(tfeedback, sendw[*nak].timestamp + 0.001);
+
+        // Handle ACK
         if (pkt->isFlagSet(kACK)) {
             if (ehdr.ack > unack) {
-                dprintf("ARQ: recv from %u: ack=%u; unack=%u",
-                    (unsigned) prevhop,
-                    (unsigned) ehdr.ack,
-                    (unsigned) unack);
+                logEvent("ARQ: ack from %u: seq=[%u,%u)",
+                    (unsigned) node.id,
+                    (unsigned) unack,
+                    (unsigned) ehdr.ack);
 
                 // Don't assert this because the sender could crash us with bad
                 // data! We protected against this case in the following loop.
@@ -232,20 +248,30 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                     handleACK(sendw, unack);
 
                     // Update our packet error rate to reflect successful TX
-                    if (unack >= sendw.mcsidx_init_seq)
+                    if (unack >= sendw.per_end)
                         txSuccess(sendw.node);
                 }
 
-                updateMCS(sendw);
-
-                // Advance the send window
-                advanceSendWindow(sendw, unack);
+                // unack is the NEXT un-ACK'ed packet, i.e., the packet we  are
+                // waiting to hear about next.
+                sendw.per_end = unack;
             }
-        } else if (pkt->isFlagSet(kNAK)) {
-            if (ehdr.ack >= unack)
-                handleNAK(sendw, ehdr.ack);
+
+            // Handle selective ACK. We do this *after* handling the ACK,
+            // because a selective ACK tells us about packets *beyond* that
+            // which was ACK'ed.
+            handleSelectiveACK(sendw, pkt, tfeedback);
+
+            // Update MCS based on new PER
+            updateMCS(sendw);
+
+            // Advance the send window
+            advanceSendWindow(sendw, unack);
         }
     }
+
+    // Resize the packet to truncate non-data bytes
+    pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
 
     // If this packet doesn't contain any data, we are done
     if (pkt->data_len == 0) {
@@ -355,10 +381,10 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
         (unsigned) entry.pkt->seq);
 
     // Record the packet error
-    if (entry.pkt->seq >= sendw.mcsidx_init_seq) {
+    if (sendw.mcsidx >= entry.mcsidx) {
         txFailure(sendw.node);
 
-        logEvent("AMC: txFailure retransmission: seq=%u; per=%f",
+        logEvent("AMC: txFailure retransmission: seq=%u; short per=%f",
             (unsigned) entry.pkt->seq,
             sendw.node.short_per.getValue());
 
@@ -431,8 +457,12 @@ void SmartController::nak(NodeId node_id, Seq seq)
         (unsigned) node_id,
         (unsigned) seq);
 
-    auto           pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
-    ExtendedHeader &ehdr = pkt->getExtendedHeader();
+    // Create an ACK-only packet. Why don't we set the ACK field here!? Because
+    // it will be filled out when the packet flows back through the controller
+    // on its way out the radio. We are just providing the opportunity for an
+    // ACK by injecting a packet without a data payload at the head of the
+    // queue.
+    auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = node_id;
@@ -442,8 +472,11 @@ void SmartController::nak(NodeId node_id, Seq seq)
     pkt->src = net_->getMyNodeId();
     pkt->dest = node_id;
 
-    pkt->setFlag(kNAK);
-    ehdr.ack = seq;
+    // Append NAK control message
+    pkt->appendNak(seq);
+
+    // Append selective ACK control messages
+    appendCtrlACK(recvw, pkt);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -522,16 +555,8 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // takes ownership of its argument.
     std::shared_ptr<NetPacket> pkt = entry;
 
-    // Update ACK if we can
-    if (pkt->isFlagSet(kACK)) {
-        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt->nexthop);
-        //std::lock_guard<spinlock_mutex> lock(recv_mutex_);
-        ExtendedHeader                  &ehdr = pkt->getExtendedHeader();
-
-        ehdr.ack = recvw.ack;
-    }
-
-    // Put the packet on the high-priority network queue
+    // Put the packet on the high-priority network queue. The ACK and MCS will
+    // be set properly upon retransmission.
     if (netq_)
         netq_->push_hi(std::move(pkt));
 
@@ -550,11 +575,6 @@ void SmartController::retransmit(SendWindow::Entry &entry)
 
 void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack)
 {
-    // If the initial sequence number corresponding to the current MCS is so old
-    // that the sequence numbers have wrapped around, update it
-    if (sendw.mcsidx_init_seq > unack + sendw.win)
-        sendw.mcsidx_init_seq = unack - 1;
-
     // Increase the send window. We really only need to do this after the
     // initial ACK, but it doesn't hurt to do it every time...
     sendw.win = sendw.maxwin;
@@ -705,33 +725,23 @@ void SmartController::handleCtrlTimestampDeltas(Node &node, std::shared_ptr<Radi
     }
 }
 
-void SmartController::handleCtrlACK(Node &node, std::shared_ptr<RadioPacket>& pkt)
+inline bool apendSelectiveACK(RecvWindow &recvw,
+                              std::shared_ptr<NetPacket>& pkt,
+                              Seq begin,
+                              Seq end)
 {
-    // Process selective ACKs
-    SendWindow *sendwptr = maybeGetSendWindow(pkt->curhop);
-
-    if (sendwptr) {
-        SendWindow                      &sendw = *sendwptr;
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-
-        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
-            switch (it->type) {
-                case ControlMsg::Type::kAck:
-                {
-                    dprintf("ARQ: selective ack from %u: seq=%u-%u",
-                        (unsigned) node.id,
-                        (unsigned) it->ack.begin,
-                        (unsigned) it->ack.end);
-
-                    for (Seq seq = it->ack.begin; seq <= it->ack.end; ++seq)
-                        handleACK(sendw, seq);
-                }
-                break;
-
-                default:
-                    break;
-            }
-        }
+    if (pkt->size() + ctrlsize(ControlMsg::Type::kSelectiveAck) < rc.mtu) {
+        logEvent("ARQ: selective ack to %u: seq=[%u, %u)",
+            (unsigned) recvw.node.id,
+            (unsigned) begin,
+            (unsigned) end);
+        pkt->appendSelectiveAck(begin, end);
+        return true;
+    } else {
+        logEvent("ARQ: OUT OF SPACE for selective ack to %u (%lu)",
+            (unsigned) recvw.node.id,
+            pkt->size());
+        return false;
     }
 }
 
@@ -741,9 +751,16 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
         return;
 
     bool in_run = false; // Are we in the middle of a run of ACK's?
-    Seq  begin, end;
+    Seq  begin = recvw.ack;
+    Seq  end = recvw.ack;
 
-    for (Seq seq = recvw.ack + 1; seq < recvw.max && pkt->size() + ctrlsize(ControlMsg::Type::kAck) < rc.mtu; ++seq) {
+    // The ACK in the (extended) header will handle ACK'ing recvw.ack, so we
+    // need to start looking for selective ACK's at recvw.ack + 1. Recall that
+    // recvw.ack is the next sequence number we should ACK, meaning we have
+    // successfully received (or given up) on all packets with sequence numbers
+    // <= recvw.ack. In particular, this means that recvw.ack + 1 should NOT be
+    // ACK'ed, because otherwise recvw.ack would be equal to recvw.ack + 1!
+    for (Seq seq = recvw.ack + 1; seq <= recvw.max; ++seq) {
         if (recvw[seq].received) {
             if (!in_run) {
                 in_run = true;
@@ -753,23 +770,26 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
             end = seq;
         } else {
             if (in_run) {
-                dprintf("ARQ: selective ack to %u: seq=%u-%u",
-                    (unsigned) recvw.node.id,
-                    (unsigned) begin,
-                    (unsigned) end);
-                pkt->appendAck(begin, end);
+                if (!apendSelectiveACK(recvw, pkt, begin, end + 1))
+                    return;
 
                 in_run = false;
             }
         }
     }
 
+    // Close out any final run
     if (in_run) {
-        dprintf("ARQ: selective ack to %u: seq=%u-%u",
-            (unsigned) recvw.node.id,
-            (unsigned) begin,
-            (unsigned) end);
-        pkt->appendAck(begin, end);
+        if (!apendSelectiveACK(recvw, pkt, begin, end + 1))
+            return;
+    }
+
+    // If we cannot ACK recvw.max, add an empty selective ACK range marking then
+    // end up our received packets. This will inform the sender that the last
+    // stretch of packets WAS NOT received.
+    if (end < recvw.max) {
+        if (!apendSelectiveACK(recvw, pkt, recvw.max+1, recvw.max+1))
+            return;
     }
 }
 
@@ -784,32 +804,112 @@ void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
     entry.reset();
 }
 
-void SmartController::handleNAK(SendWindow &sendw, const Seq &seq)
+std::optional<Seq> SmartController::handleNAK(SendWindow &sendw,
+                                              std::shared_ptr<RadioPacket>& pkt)
 {
-    // If we received a NAK for a packet that was already ACK'ed, nevermind
-    if (seq < sendw.unack || !sendw[seq]) {
-        logEvent("ARQ: nak from %u for already ACK'ed packet: seq=%u",
-            (unsigned) sendw.node.id,
-            (unsigned) seq);
+    std::optional<Seq> result;
 
-        return;
+    for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kNak:
+            {
+                SendWindow::Entry &entry = sendw[it->nak];
+
+                // If we received a NAK for a packet that was already ACK'ed, nevermind
+                if (it->nak < sendw.unack || !entry.pkt) {
+                    logEvent("ARQ: nak from %u for already ACK'ed packet: seq=%u",
+                        (unsigned) sendw.node.id,
+                        (unsigned) it->nak);
+                } else {
+                    // Log the NAK
+                    logEvent("ARQ: nak from %u: seq=%u",
+                        (unsigned) sendw.node.id,
+                        (unsigned) it->nak);
+
+                    result = it->nak;
+                }
+            }
+            break;
+
+            default:
+                break;
+        }
     }
 
-    // Record the packet error
-    txFailure(sendw.node);
+    return result;
+}
 
-    logEvent("AMC: txFailure nak: seq=%u; per=%f",
-        (unsigned) seq,
-        sendw.node.short_per.getValue());
+void SmartController::handleSelectiveACK(SendWindow &sendw,
+                                         std::shared_ptr<RadioPacket>& pkt,
+                                         Clock::time_point tfeedback)
+{
+    Node &node = sendw.node;
+    Seq  unack = sendw.unack.load(std::memory_order_acquire);
+    Seq  nextSeq = unack;
+    bool sawACKRun = false;
 
-    updateMCS(sendw);
+    for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kSelectiveAck:
+            {
+                if (!sawACKRun)
+                    logEvent("ARQ: selective ack from %u; per_end=%u",
+                        (unsigned) node.id,
+                        (unsigned) sendw.per_end);
 
-    // Retransmit the packet
-    dprintf("ARQ: recv from %u: nak=%u",
-        (unsigned) sendw.node.id,
-        (unsigned) seq);
+                // Record the gap between the last packet in the previous ACK
+                // run and the first packet in this ACK run as failures.
+                if (nextSeq < it->ack.begin) {
+                    logEvent("ARQ: selective nak from %u: seq=[%u,%u)",
+                        (unsigned) node.id,
+                        (unsigned) nextSeq,
+                        (unsigned) it->ack.begin);
 
-    retransmit(sendw[seq]);
+                    for (Seq seq = nextSeq; seq < it->ack.begin; ++seq) {
+                        if (seq >= sendw.per_end) {
+                            sendw.per_end = seq + 1;
+
+                            if (sendw[seq].timestamp < tfeedback && sendw[seq]) {
+                                txFailure(node);
+
+                                logEvent("ARQ: txFailure selective nak: seq=%u",
+                                    (unsigned) seq);
+
+                                // Retransmit the NAK'ed packet
+                                retransmit(sendw[seq]);
+                            }
+                        }
+                    }
+                }
+
+                // Mark every packet in this ACK run as a success.
+                logEvent("ARQ: selective ack from %u: seq=[%u,%u)",
+                    (unsigned) node.id,
+                    (unsigned) it->ack.begin,
+                    (unsigned) it->ack.end);
+
+                for (Seq seq = it->ack.begin; seq < it->ack.end; ++seq) {
+                    // Handle the ACK
+                    if (seq >= unack)
+                        handleACK(sendw, seq);
+
+                    // Update our packet error rate to reflect successful TX
+                    if (seq >= sendw.per_end && sendw[seq].timestamp < tfeedback) {
+                        txSuccess(node);
+                        sendw.per_end = seq + 1;
+                    }
+                }
+
+                // We've now handled at least one ACK run
+                sawACKRun = true;
+                nextSeq = it->ack.end;
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
 }
 
 void SmartController::txSuccess(Node &node)
@@ -829,6 +929,14 @@ void SmartController::updateMCS(SendWindow &sendw)
     Node   &node = sendw.node;
     double short_per = node.short_per.getValue();
     double long_per = node.long_per.getValue();
+
+    if (short_per != 0.0 || long_per != 0.0)
+        logEvent("AMC: updateMCS: node=%u; short per=%f (%u samples); long per=%f (%u samples)",
+            node.id,
+            short_per,
+            node.short_per.getNSamples(),
+            long_per,
+            node.long_per.getNSamples());
 
     // First for high PER, then test for low PER
     if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
@@ -851,18 +959,24 @@ void SmartController::updateMCS(SendWindow &sendw)
         if (rc.verbose && ! rc.debug)
             fprintf(stderr, "Moving down modulation scheme\n");
         --sendw.mcsidx;
-        sendw.mcsidx_init_seq = node.seq;
+        sendw.per_end = node.seq;
         node.tx_params = &net_->tx_params[sendw.mcsidx];
 
-        resetPEREstimates(node);
+        logEvent("AMC: Moving down modulation scheme: node=%u; short per=%f; swin=%lu; lwin=%lu",
+            node.id,
+            short_per,
+            node.short_per.getWindowSize(),
+            node.long_per.getWindowSize());
 
-        logEvent("AMC: Moving down modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+        resetPEREstimates(sendw);
+
+        logEvent("AMC: Moved down modulation scheme: node=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+            node.id,
             node.tx_params->mcs.fec0_name(),
             node.tx_params->mcs.fec1_name(),
             node.tx_params->mcs.ms_name(),
-            short_per,
             (unsigned) sendw.unack.load(std::memory_order_release),
-            (unsigned) sendw.mcsidx_init_seq,
+            (unsigned) sendw.per_end,
             node.short_per.getWindowSize(),
             node.long_per.getWindowSize());
     } else if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
@@ -886,31 +1000,40 @@ void SmartController::updateMCS(SendWindow &sendw)
             if (rc.verbose && ! rc.debug)
                 fprintf(stderr, "Moving up modulation scheme\n");
             ++sendw.mcsidx;
-            sendw.mcsidx_init_seq = node.seq;
+            sendw.per_end = node.seq;
             node.tx_params = &net_->tx_params[sendw.mcsidx];
 
-            resetPEREstimates(node);
+            logEvent("AMC: Moving up modulation scheme: node=%u; long per=%f; swin=%lu; lwin=%lu",
+                node.id,
+                long_per,
+                node.short_per.getWindowSize(),
+                node.long_per.getWindowSize());
 
-            logEvent("AMC: Moving up modulation scheme: fec0=%s; fec1=%s; ms=%s; per=%f; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+            resetPEREstimates(sendw);
+
+            logEvent("AMC: Moved up modulation scheme: node=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+                node.id,
                 node.tx_params->mcs.fec0_name(),
                 node.tx_params->mcs.fec1_name(),
                 node.tx_params->mcs.ms_name(),
-                long_per,
                 (unsigned) sendw.unack.load(std::memory_order_release),
-                (unsigned) sendw.mcsidx_init_seq,
+                (unsigned) sendw.per_end,
                 node.short_per.getWindowSize(),
                 node.long_per.getWindowSize());
         } else
-            resetPEREstimates(node);
+            resetPEREstimates(sendw);
     }
 }
 
-void SmartController::resetPEREstimates(Node &node)
+void SmartController::resetPEREstimates(SendWindow &sendw)
 {
-    double max_packets_per_slot = getMaxPacketsPerSlot(*node.tx_params);
+    double max_packets_per_slot = getMaxPacketsPerSlot(*(sendw.node.tx_params));
 
-    node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
-    node.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
+    sendw.node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
+    sendw.node.short_per.reset(0);
+
+    sendw.node.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
+    sendw.node.long_per.reset(0);
 }
 
 bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
@@ -1019,8 +1142,8 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
                                           std::forward_as_tuple(dest, *this, max_sendwin_)).first->second;
 
         sendw.mcsidx = mcsidx_init_;
-        sendw.mcsidx_init_seq = dest.seq;
         sendw.mcsidx_prob.resize(net_->tx_params.size(), 1.0);
+        sendw.per_end = dest.seq;
 
         dest.tx_params = &net_->tx_params[mcsidx_init_];
 
@@ -1029,7 +1152,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
             dest.tx_params = &net_->tx_params[sendw.mcsidx];
         }
 
-        resetPEREstimates(dest);
+        resetPEREstimates(sendw);
 
         return sendw;
     }

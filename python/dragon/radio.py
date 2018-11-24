@@ -179,6 +179,7 @@ class Config(object):
         self.arq_explicit_nak_win = 10
         self.arq_explicit_nak_win_duration = 0.1
         self.arq_selective_ack = True
+        self.arq_selective_ack_feedback_delay = 0.300
         self.arq_broadcast_gain_db = 0.0
         self.arq_ack_gain_db = 0.0
 
@@ -751,6 +752,7 @@ class Radio(object):
             self.controller.explicit_nak_window = config.arq_explicit_nak_win
             self.controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
             self.controller.selective_ack = config.arq_selective_ack
+            self.controller.selective_ack_feedback_delay = config.arq_selective_ack_feedback_delay
         else:
             self.controller = dragonradio.DummyController(self.net)
 

@@ -55,6 +55,12 @@ struct SendWindow {
 
         /** @brief The packet received in this window entry. */
         std::shared_ptr<NetPacket> pkt;
+
+        /** @brief Timestamp of last transmission of this packet. */
+        Clock::time_point timestamp;
+
+        /** @brief Modulation index used for last transmission of this packet */
+        size_t mcsidx;
     };
 
     using vector_type = std::vector<Entry>;
@@ -98,11 +104,14 @@ struct SendWindow {
     /** @brief Modulation index */
     size_t mcsidx;
 
-    /** @brief First sequence number at this modulation index */
-    Seq mcsidx_init_seq;
-
     /** @brief The probability of moving to a given MCS */
     std::vector<double> mcsidx_prob;
+
+    /** @brief End of the current PER window PER. */
+    /** Every packet up to, but not including, this sequence number has already been
+     * used to calculate the current PER
+     */
+    Seq per_end;
 
     /** @brief Pending packets we can't send because our window isn't large enough */
     std::list<std::shared_ptr<NetPacket>> pending;
@@ -387,6 +396,18 @@ public:
         selective_ack_ = ack;
     }
 
+    /** @brief Return selective ACK feedback delay. */
+    double getSelectiveACKFeedbackDelay(void)
+    {
+        return selective_ack_feedback_delay_;
+    }
+
+    /** @brief Set selective ACK feedback delay. */
+    void setSelectiveACKFeedbackDelay(double delay)
+    {
+        selective_ack_feedback_delay_ = delay;
+    }
+
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
@@ -480,6 +501,11 @@ protected:
     /** @brief Should we send selective ACK packets? */
     bool selective_ack_;
 
+    /** @brief Amount of time we wait to accept selective ACK feedback about a
+     * packet
+     */
+    double selective_ack_feedback_delay_;
+
     /** @brief Should packets always be output in the order they were actually
      * received?
      */
@@ -515,17 +541,24 @@ protected:
     /** @brief Handle timestamp delta control messages. */
     void handleCtrlTimestampDeltas(Node &node, std::shared_ptr<RadioPacket>& pkt);
 
-    /** @brief Handle ACK control messages. */
-    void handleCtrlACK(Node &node, std::shared_ptr<RadioPacket>& pkt);
-
     /** @brief Append ACK control messages. */
     void appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);
 
     /** @brief Handle an ACK. */
     void handleACK(SendWindow &sendw, const Seq &seq);
 
-    /** @brief Handle a NAK. */
-    void handleNAK(SendWindow &sendw, const Seq &seq);
+    /** @brief Handle a NAK.
+     * @param sendw The sender's window
+     * @param pkt The packet potentially containing NAK's
+     * @return The NAK with the highest sequence number, if there is a NAK
+     */
+    std::optional<Seq> handleNAK(SendWindow &sendw,
+                                 std::shared_ptr<RadioPacket>& pkt);
+
+    /** @brief Handle select ACK messages. */
+    void handleSelectiveACK(SendWindow &sendw,
+                            std::shared_ptr<RadioPacket>& pkt,
+                            Clock::time_point tfeedback);
 
     /** @brief Update PER as a result of successful packet transmission. */
     void txSuccess(Node &node);
@@ -537,7 +570,7 @@ protected:
     void updateMCS(SendWindow &sendw);
 
     /** @brief Reconfigure a node's PER estimates */
-    void resetPEREstimates(Node &node);
+    void resetPEREstimates(SendWindow &sendw);
 
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);
