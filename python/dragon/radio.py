@@ -589,6 +589,7 @@ class Radio(object):
             path = self.getRadioLogPath()
 
             self.logger = dragonradio.Logger(path)
+            self.logger.setAttribute('version', dragonradio.version)
             self.logger.setAttribute('node_id', self.node_id)
             self.logger.setAttribute('soft_tx_gain', config.soft_tx_gain)
             self.logger.setAttribute('tx_gain', config.tx_gain)
