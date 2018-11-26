@@ -586,18 +586,6 @@ void SmartController::retransmit(SendWindow::Entry &entry)
         (unsigned) entry.pkt->nexthop,
         (unsigned) entry.pkt->seq);
 
-    // We need to make an explicit new reference to the shared_ptr because push
-    // takes ownership of its argument.
-    std::shared_ptr<NetPacket> pkt = entry;
-
-    // Mark the packet as a retransmission
-    pkt->setInternalFlag(kRetransmission);
-
-    // Put the packet on the high-priority network queue. The ACK and MCS will
-    // be set properly upon retransmission.
-    if (netq_)
-        netq_->push_hi(std::move(pkt));
-
     // The retransmit timer will be restarted when the packet is actually sent,
     // so don't re-start it here! Doing so can lead to a cascade of retransmit
     // timers firing when there are a large number of outstanding transmissions
@@ -609,6 +597,18 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // e.g., once due to the explicit NAK, and again due to a retransmission
     // timeout.
     timer_queue_.cancel(entry);
+
+    // We need to make an explicit new reference to the shared_ptr because push
+    // takes ownership of its argument.
+    std::shared_ptr<NetPacket> pkt = entry;
+
+    // Mark the packet as a retransmission
+    pkt->setInternalFlag(kRetransmission);
+
+    // Put the packet on the high-priority network queue. The ACK and MCS will
+    // be set properly upon retransmission.
+    if (netq_)
+        netq_->push_hi(std::move(pkt));
 }
 
 void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack)
