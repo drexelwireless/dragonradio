@@ -282,6 +282,21 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             // which was ACK'ed.
             handleSelectiveACK(sendw, pkt, tfeedback);
 
+            // If the NAK is for a retransmitted packet, count it as a
+            // transmission failure. We need to check for this case because a
+            // NAK for a retransmitted packet will have already been counted
+            // toward our PER the first time the packet was NAK'ed.
+            if (nak) {
+                SendWindow::Entry &entry = sendw[*nak];
+
+                if (sendw.mcsidx >= entry.mcsidx && entry.nretrans > 0) {
+                    txFailure(node);
+
+                    logEvent("ARQ: txFailure nak on retransmission: seq=%u",
+                        (unsigned) *nak);
+                }
+            }
+
             // Update MCS based on new PER
             updateMCS(sendw);
 
