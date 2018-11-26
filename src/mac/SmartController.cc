@@ -993,30 +993,8 @@ void SmartController::updateMCS(SendWindow &sendw)
             (unsigned) sendw.mcsidx,
             sendw.mcsidx_prob[sendw.mcsidx]);
 
-        // Move down modulation scheme
-        if (rc.verbose && ! rc.debug)
-            fprintf(stderr, "Moving down modulation scheme\n");
-        --sendw.mcsidx;
-        sendw.per_end = node.seq;
-        node.tx_params = &net_->tx_params[sendw.mcsidx];
-
-        logEvent("AMC: Moving down modulation scheme: node=%u; short per=%f; swin=%lu; lwin=%lu",
-            node.id,
-            short_per,
-            node.short_per.getWindowSize(),
-            node.long_per.getWindowSize());
-
-        resetPEREstimates(sendw);
-
-        logEvent("AMC: Moved down modulation scheme: node=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
-            node.id,
-            node.tx_params->mcs.fec0_name(),
-            node.tx_params->mcs.fec1_name(),
-            node.tx_params->mcs.ms_name(),
-            (unsigned) sendw.unack.load(std::memory_order_release),
-            (unsigned) sendw.per_end,
-            node.short_per.getWindowSize(),
-            node.long_per.getWindowSize());
+        // Move down one MCS
+        moveDownMCS(sendw);
     } else if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
                && long_per < mcsidx_up_per_threshold_) {
         double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
@@ -1035,32 +1013,70 @@ void SmartController::updateMCS(SendWindow &sendw)
         // probabilistic transition test.
         if (   sendw.mcsidx < net_->tx_params.size() - 1
             && dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1]) {
-            if (rc.verbose && ! rc.debug)
-                fprintf(stderr, "Moving up modulation scheme\n");
-            ++sendw.mcsidx;
-            sendw.per_end = node.seq;
-            node.tx_params = &net_->tx_params[sendw.mcsidx];
-
-            logEvent("AMC: Moving up modulation scheme: node=%u; long per=%f; swin=%lu; lwin=%lu",
-                node.id,
-                long_per,
-                node.short_per.getWindowSize(),
-                node.long_per.getWindowSize());
-
-            resetPEREstimates(sendw);
-
-            logEvent("AMC: Moved up modulation scheme: node=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
-                node.id,
-                node.tx_params->mcs.fec0_name(),
-                node.tx_params->mcs.fec1_name(),
-                node.tx_params->mcs.ms_name(),
-                (unsigned) sendw.unack.load(std::memory_order_release),
-                (unsigned) sendw.per_end,
-                node.short_per.getWindowSize(),
-                node.long_per.getWindowSize());
+            moveUpMCS(sendw);
         } else
             resetPEREstimates(sendw);
     }
+}
+
+void SmartController::moveDownMCS(SendWindow &sendw)
+{
+    Node &node = sendw.node;
+
+    if (rc.verbose && ! rc.debug)
+        fprintf(stderr, "Moving down modulation scheme\n");
+
+    --sendw.mcsidx;
+    sendw.per_end = node.seq;
+    node.tx_params = &net_->tx_params[sendw.mcsidx];
+
+    logEvent("AMC: Moving down modulation scheme: node=%u; short per=%f; swin=%lu; lwin=%lu",
+        node.id,
+        node.short_per.getValue(),
+        node.short_per.getWindowSize(),
+        node.long_per.getWindowSize());
+
+    resetPEREstimates(sendw);
+
+    logEvent("AMC: Moved down modulation scheme: node=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+        node.id,
+        node.tx_params->mcs.fec0_name(),
+        node.tx_params->mcs.fec1_name(),
+        node.tx_params->mcs.ms_name(),
+        (unsigned) sendw.unack.load(std::memory_order_release),
+        (unsigned) sendw.per_end,
+        node.short_per.getWindowSize(),
+        node.long_per.getWindowSize());
+}
+
+void SmartController::moveUpMCS(SendWindow &sendw)
+{
+    Node &node = sendw.node;
+
+    if (rc.verbose && ! rc.debug)
+        fprintf(stderr, "Moving up modulation scheme\n");
+
+    ++sendw.mcsidx;
+    sendw.per_end = node.seq;
+    node.tx_params = &net_->tx_params[sendw.mcsidx];
+
+    logEvent("AMC: Moving up modulation scheme: node=%u; long per=%f; swin=%lu; lwin=%lu",
+        node.id,
+        node.long_per.getValue(),
+        node.short_per.getWindowSize(),
+        node.long_per.getWindowSize());
+
+    resetPEREstimates(sendw);
+
+    logEvent("AMC: Moved up modulation scheme: node=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+        node.id,
+        node.tx_params->mcs.fec0_name(),
+        node.tx_params->mcs.fec1_name(),
+        node.tx_params->mcs.ms_name(),
+        (unsigned) sendw.unack.load(std::memory_order_release),
+        (unsigned) sendw.per_end,
+        node.short_per.getWindowSize(),
+        node.long_per.getWindowSize());
 }
 
 void SmartController::resetPEREstimates(SendWindow &sendw)

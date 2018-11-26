@@ -580,6 +580,12 @@ protected:
     /** @brief Update MCS based on current PER */
     void updateMCS(SendWindow &sendw);
 
+    /** @brief Move down one MCS level */
+    void moveDownMCS(SendWindow &sendw);
+
+    /** @brief Move up one MCS level */
+    void moveUpMCS(SendWindow &sendw);
+
     /** @brief Reconfigure a node's PER estimates */
     void resetPEREstimates(SendWindow &sendw);
 
