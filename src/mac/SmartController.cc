@@ -170,11 +170,25 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (!net_->contains(pkt->curhop))
         net_->addNode(pkt->curhop);
 
+    // Get node ID of source
+    NodeId prevhop = pkt->curhop;
+
     // Immediately NAK data packets with a bad payload if they contain data.
     // We can't do anything else with the packet.
     if (pkt->isInternalFlagSet(kInvalidPayload)) {
-        if (pkt->data_len != 0)
+        if (pkt->data_len != 0) {
+            RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->isFlagSet(kSYN));
+            //std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+            // Update the max seq number we've received
+            if (pkt->seq > recvw.max) {
+                recvw.max = pkt->seq;
+                recvw.max_timestamp = pkt->timestamp;
+            }
+
+            // Send a NAK
             nak(pkt->curhop, pkt->seq);
+        }
 
         return;
     }
@@ -204,8 +218,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (pkt->nexthop != net_->getMyNodeId())
         return;
 
-    // Get node ID of source and the extended header
-    NodeId         prevhop = pkt->curhop;
+    // Get the extended header
     ExtendedHeader &ehdr = pkt->getExtendedHeader();
 
     // Handle ACK/NAK
