@@ -140,6 +140,13 @@ get_packet:
         sendw[pkt->seq].timestamp = Clock::now();
         sendw[pkt->seq].mcsidx = sendw.mcsidx;
 
+        // If this packet is a retransmission, increment the retransmission
+        // count, otherwise set it to 0.
+        if (pkt->isInternalFlagSet(kRetransmission))
+            ++sendw[pkt->seq].nretrans;
+        else
+            sendw[pkt->seq].nretrans = 0;
+
         // Start the retransmit timer if it is not already running.
         startRetransmissionTimer(sendw[pkt->seq]);
 
@@ -567,6 +574,9 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // We need to make an explicit new reference to the shared_ptr because push
     // takes ownership of its argument.
     std::shared_ptr<NetPacket> pkt = entry;
+
+    // Mark the packet as a retransmission
+    pkt->setInternalFlag(kRetransmission);
 
     // Put the packet on the high-priority network queue. The ACK and MCS will
     // be set properly upon retransmission.

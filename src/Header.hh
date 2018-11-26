@@ -47,7 +47,10 @@ enum {
     kInvalidHeader,
 
     /** @brief Set if the packet had invalid payload */
-    kInvalidPayload
+    kInvalidPayload,
+
+    /** @brief Set if the packet is a retransmission */
+    kRetransmission
 };
 
 typedef uint16_t InternalFlags;

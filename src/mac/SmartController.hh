@@ -24,7 +24,14 @@ class SmartController;
 
 struct SendWindow {
     struct Entry : public TimerQueue::Timer {
-        Entry(SendWindow &sendw) : sendw(sendw), pkt(nullptr) {};
+        Entry(SendWindow &sendw)
+          : sendw(sendw)
+          , pkt(nullptr)
+          , timestamp(0.0)
+          , mcsidx(0)
+          , nretrans(0)
+         {
+         };
 
         virtual ~Entry() = default;
 
@@ -61,6 +68,10 @@ struct SendWindow {
 
         /** @brief Modulation index used for last transmission of this packet */
         size_t mcsidx;
+
+        /** @brief Number of retransmissions for this packet. */
+        /** The retransmission count will be 0 on the first transmission. */
+        size_t nretrans;
     };
 
     using vector_type = std::vector<Entry>;
