@@ -36,8 +36,11 @@ public:
     /** @brief Push an element onto the queue. */
     virtual void push(T&& val) = 0;
 
-    /** @brief Push an element onto the high-priority queue. */
-    virtual void push_hi(T&& item) = 0;
+    /** @brief Push an element onto the front of the high-priority queue. */
+    virtual void push_hi_front(T&& item) = 0;
+
+    /** @brief Push an element onto the back of the high-priority queue. */
+    virtual void push_hi_back(T&& item) = 0;
 
     /** @brief Splice a list of elements onto the the high-priority queue. */
     virtual void splice_hi(std::list<T>& items) = 0;
@@ -97,7 +100,18 @@ public:
         cond_.notify_one();
     }
 
-    virtual void push_hi(T&& item) override
+    virtual void push_hi_front(T&& item) override
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            hiq_.push_front(item);
+        }
+
+        cond_.notify_one();
+    }
+
+    virtual void push_hi_back(T&& item) override
     {
         {
             std::lock_guard<std::mutex> lock(m_);

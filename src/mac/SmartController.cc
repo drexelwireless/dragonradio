@@ -457,7 +457,7 @@ void SmartController::ack(RecvWindow &recvw)
     // Append selective ACK control messages
     appendCtrlACK(recvw, pkt);
 
-    netq_->push_hi(std::move(pkt));
+    netq_->push_hi_front(std::move(pkt));
 }
 
 void SmartController::nak(NodeId node_id, Seq seq)
@@ -513,7 +513,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
     // Append selective ACK control messages
     appendCtrlACK(recvw, pkt);
 
-    netq_->push_hi(std::move(pkt));
+    netq_->push_hi_front(std::move(pkt));
 }
 
 void SmartController::broadcastHello(void)
@@ -557,7 +557,7 @@ void SmartController::broadcastHello(void)
         pkt->g = broadcast_tx_params.g_0dBFS.getValue();
         mac_->sendTimestampedPacket(Clock::now() + rc.timestamp_delay, std::move(pkt));
     } else
-        netq_->push_hi(std::move(pkt));
+        netq_->push_hi_front(std::move(pkt));
 }
 
 void SmartController::resetMCSTransitionProbabilities(void)
@@ -608,7 +608,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // Put the packet on the high-priority network queue. The ACK and MCS will
     // be set properly upon retransmission.
     if (netq_)
-        netq_->push_hi(std::move(pkt));
+        netq_->push_hi_back(std::move(pkt));
 }
 
 void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack)
