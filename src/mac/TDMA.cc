@@ -71,56 +71,67 @@ void TDMA::txWorker(void)
 
     uhd::set_thread_priority_safe();
 
-    t_prev_slot = Clock::time_point { 0.0 };
-
     while (!done_) {
-        // Figure out when our next send slot is.
-        t_now = Clock::now();
+        t_prev_slot = Clock::time_point { 0.0 };
 
-        if (!findNextSlot(t_now, t_next_slot, own_next_slot)) {
-            // Sleep for 100ms if we don't yet have a slot
-            doze(100e-3);
-            continue;
+        usrp_->resetTXErrorCount();
+
+        while (!done_) {
+            // Figure out when our next send slot is.
+            t_now = Clock::now();
+
+            if (!findNextSlot(t_now, t_next_slot, own_next_slot)) {
+                // Sleep for 100ms if we don't yet have a slot
+                doze(100e-3);
+                continue;
+            }
+
+            // Find following slot. We divide slot_size_ by two to avoid possible
+            // rounding issues where we mights end up skipping a slot.
+            findNextSlot(t_next_slot + slot_size_/2.0, t_following_slot, own_next_slot);
+
+            // Schedule transmission for start of our next slot if we haven't
+            // already transmitted for that slot
+            if (!approx(t_next_slot, t_prev_slot)) {
+                if (superslots_ && own_next_slot)
+                    noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_full_slot_samps_ - noverfill, true);
+                else
+                    noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_slot_samps_ - noverfill, false);
+
+                // XXX For some reason this is necessary to please USRP. Otherwise
+                // we get late TX errors.
+                if (noverfill != 0)
+                    noverfill += 1;
+
+                t_prev_slot = t_next_slot;
+            }
+
+            if (usrp_->getTXErrorCount() != 0)
+                break;
+
+            // Sleep until it's time to modulate the next slot
+            t_now = Clock::now();
+
+            delta = (t_following_slot - t_now - rc.slot_modulate_time).get_real_secs();
+
+            if (delta > 0.0)
+                doze(delta);
+
+            // Modulate samples for next slot
+            modulator_->modulate(premod_samps_);
+
+            // Sleep until it's time to send the slot's modulated data
+            t_now = Clock::now();
+
+            delta = (t_following_slot - t_now - rc.slot_send_time).get_real_secs();
+
+            if (delta > 0.0)
+                doze(delta);
         }
 
-        // Find following slot. We divide slot_size_ by two to avoid possible
-        // rounding issues where we mights end up skipping a slot.
-        findNextSlot(t_next_slot + slot_size_/2.0, t_following_slot, own_next_slot);
-
-        // Schedule transmission for start of our next slot if we haven't
-        // already transmitted for that slot
-        if (!approx(t_next_slot, t_prev_slot)) {
-            if (superslots_ && own_next_slot)
-                noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_full_slot_samps_ - noverfill, true);
-            else
-                noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_slot_samps_ - noverfill, false);
-
-            // XXX For some reason this is necessary to please USRP. Otherwise
-            // we get late TX errors.
-            if (noverfill != 0)
-                noverfill += 1;
-
-            t_prev_slot = t_next_slot;
-        }
-
-        // Sleep until it's time to modulate the next slot
-        t_now = Clock::now();
-
-        delta = (t_following_slot - t_now - rc.slot_modulate_time).get_real_secs();
-
-        if (delta > 0.0)
-            doze(delta);
-
-        // Modulate samples for next slot
-        modulator_->modulate(premod_samps_);
-
-        // Sleep until it's time to send the slot's modulated data
-        t_now = Clock::now();
-
-        delta = (t_following_slot - t_now - rc.slot_send_time).get_real_secs();
-
-        if (delta > 0.0)
-            doze(delta);
+        // Attempt to deal with TX errors
+        logEvent("MAC: attempting to reset TX loop");
+        doze(0.100);
     }
 }
 
