@@ -1,10 +1,10 @@
 #include "ExtensibleDataSet.hh"
 
 /** @brief We allocate capacity in multiples of this. */
-const size_t GRANULARITY = 4096;
+constexpr size_t GRANULARITY = 4*1024*1024;
 
 /** @brief We chunk in multiples of this. */
-const size_t CHUNK_GRANULARITY = 4096;
+constexpr size_t CHUNK_GRANULARITY = 4*1024*1024;
 
 ExtensibleDataSet::ExtensibleDataSet(const H5::CommonFG& loc, const std::string& name, const H5::DataType &dt) :
     dt_(dt),
@@ -31,12 +31,13 @@ ExtensibleDataSet::~ExtensibleDataSet()
 
 void ExtensibleDataSet::reserve(size_t capacity)
 {
-    while (capacity_ < capacity)
-        capacity_ += GRANULARITY;
+    if (capacity > capacity_) {
+        capacity_ = GRANULARITY * ((capacity + GRANULARITY - 1) / GRANULARITY);
 
-    hsize_t dim[] = { capacity_ };
+        hsize_t dim[] = { capacity_ };
 
-    ds_.extend(dim);
+        ds_.extend(dim);
+    }
 }
 
 void ExtensibleDataSet::write(const void *buf, size_t n)
