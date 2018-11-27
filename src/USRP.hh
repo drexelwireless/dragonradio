@@ -1,6 +1,7 @@
 #ifndef USRP_H_
 #define USRP_H_
 
+#include <atomic>
 #include <deque>
 #include <string>
 #include <thread>
@@ -181,6 +182,18 @@ public:
         tx_max_samps_ = count;
     }
 
+    /** @brief Get the TX error count. */
+    uint64_t getTXErrorCount(void)
+    {
+        return tx_error_count_.load(std::memory_order_relaxed);
+    }
+
+    /** @brief Reset the TX error count. */
+    void resetTXErrorCount(void)
+    {
+        tx_error_count_.store(0, std::memory_order_relaxed);
+    }
+
     /** @brief Stop processing data. */
     void stop(void);
 
@@ -212,6 +225,9 @@ private:
 
     /** @brief Flag indicating the we should stop processing data. */
     bool done_;
+
+    /** @brief TX error count. */
+    std::atomic<uint64_t> tx_error_count_;
 
     /** @brief Thread that receives TX errors. */
     std::thread tx_error_thread_;
