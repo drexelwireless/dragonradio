@@ -273,8 +273,13 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 }
 
                 // unack is the NEXT un-ACK'ed packet, i.e., the packet we  are
-                // waiting to hear about next.
-                sendw.per_end = unack;
+                // waiting to hear about next. Note that it is possible for the
+                // sender to ACK a packet we've already decided was bad, e.g., a
+                // retranmission, so we must be careful not to "rewind" the PER
+                // window here by blindly setting sendw.per_end = unack without
+                // the test.
+                if (unack > sendw.per_end)
+                    sendw.per_end = unack;
             }
 
             // Handle selective ACK. We do this *after* handling the ACK,
