@@ -20,6 +20,27 @@ int doze(double sec);
 /** @brief The signal we use to wake a thread */
 const int SIGWAKE = SIGUSR1;
 
+/** @brief Atomically block a signal */
+class BlockSignal {
+public:
+    /** @brief Save current signal mask and block a signal
+     * @param sig The signal to block
+     */
+    explicit BlockSignal(int sig);
+
+    BlockSignal() = delete;
+
+    /** @brief Restore original signal mask */
+    ~BlockSignal();
+
+    /** @brief Atomically unblock signal and pause until we receive a signal */
+    void unblockAndPause(void);
+
+protected:
+    /** @brief Original signal mask before we blocked a signal */
+    sigset_t orig_mask_;
+};
+
 /** @brief Make the current thread wakeable. */
 /** This function installs a signal handler for SIGUSR1 so that the thread can
  * be woken from a blocking sycall via wakeThread.

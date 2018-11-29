@@ -39,6 +39,37 @@ int doze(double sec)
     return nanosleep(&ts, NULL);
 }
 
+BlockSignal::BlockSignal(int sig)
+{
+    sigset_t block_mask_;
+
+    // Block sig, saving the current signal mask to orig_mask_
+    sigemptyset(&block_mask_);
+    sigaddset(&block_mask_, sig);
+
+    if (sigprocmask(SIG_BLOCK, &block_mask_, &orig_mask_) == -1) {
+        perror("sigprocmask failed");
+        exit(1);
+    }
+}
+
+BlockSignal::~BlockSignal()
+{
+    // Restore signal mask saved in orig_mask_
+    if (sigprocmask(SIG_SETMASK, &orig_mask_, NULL) == -1) {
+        perror("sigprocmask failed");
+        exit(1);
+    }
+}
+
+void BlockSignal::unblockAndPause(void)
+{
+    if (sigsuspend(&orig_mask_) == -1 && errno != EINTR) {
+        perror("sigsuspend failed");
+        exit(1);
+    }
+}
+
 static void dummySignalHandler(int)
 {
 }

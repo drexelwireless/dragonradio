@@ -1,5 +1,3 @@
-#include <unistd.h>
-
 #include <algorithm>
 
 #include "TimerQueue.hh"
@@ -110,12 +108,13 @@ void TimerQueue::timer_worker(void)
             lock.lock();
         }
 
-        // XXX Sleep until our next timer. There is a potential race condition
-        // here: someone could insert a timer in between the time we unlock the
-        // queue and the time we sleep.
+        // Sleep until our either our next timer fires or we are awoken by a
+        // signal.
         if (timer_queue_.empty()) {
+            BlockSignal block(SIGWAKE);
+
             lock.unlock();
-            pause();
+            block.unblockAndPause();
         } else {
             double delta = (timer_queue_.top().deadline - now).get_real_secs();
 
