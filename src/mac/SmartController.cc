@@ -839,6 +839,27 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
 void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
 {
     SendWindow::Entry &entry = sendw[seq];
+    Seq               unack = sendw.unack.load(std::memory_order_acquire);
+
+    // If this packet is outside our send window, we're done.
+    if (seq < unack || seq >= unack + sendw.win) {
+        logEvent("ARQ: ack from %u for packet outside send window: seq=%u, unack=%u, end=%u",
+            (unsigned) sendw.node.id,
+            (unsigned) seq,
+            (unsigned) unack,
+            (unsigned) unack + sendw.win);
+
+        return;
+    }
+
+    // If this packet has already been ACK'ed, we're done.
+    if (!entry.pkt) {
+        dprintf("ARQ: ack from %u for already ACK'ed packet: seq=%u",
+            (unsigned) sendw.node.id,
+            (unsigned) seq);
+
+        return;
+    }
 
     // Cancel retransmission timer for ACK'ed packet
     timer_queue_.cancel(entry);
@@ -851,6 +872,7 @@ std::optional<Seq> SmartController::handleNAK(SendWindow &sendw,
                                               std::shared_ptr<RadioPacket>& pkt)
 {
     std::optional<Seq> result;
+    Seq                unack = sendw.unack.load(std::memory_order_acquire);
 
     for(auto it = pkt->begin(); it != pkt->end(); ++it) {
         switch (it->type) {
@@ -858,8 +880,15 @@ std::optional<Seq> SmartController::handleNAK(SendWindow &sendw,
             {
                 SendWindow::Entry &entry = sendw[it->nak];
 
-                // If we received a NAK for a packet that was already ACK'ed, nevermind
-                if (it->nak < sendw.unack || !entry.pkt) {
+                // If this packet is outside our send window, ignore the NAK.
+                if (it->nak < unack || it->nak >= unack + sendw.win || !entry.pkt) {
+                    logEvent("ARQ: nak from %u for packet outside send window: seq=%u, unack=%u, end=%u",
+                        (unsigned) sendw.node.id,
+                        (unsigned) it->nak,
+                        (unsigned) unack,
+                        (unsigned) unack + sendw.win);
+                // If this packet has already been ACK'ed, ignore the NAK.
+                } else if (!entry.pkt) {
                     logEvent("ARQ: nak from %u for already ACK'ed packet: seq=%u",
                         (unsigned) sendw.node.id,
                         (unsigned) it->nak);
