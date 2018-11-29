@@ -347,7 +347,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     else
         startACKTimer(recvw);
 
-    // Drop this packet if it is outside our receive window
+    // Drop this packet if it is before our receive window
     if (pkt->seq < recvw.ack) {
         dprintf("ARQ: recv from %u: OUTSIDE WINDOW (DUP) seq=%u",
             (unsigned) prevhop,
@@ -355,15 +355,36 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         return;
     }
 
-    if (pkt->seq > recvw.ack + recvw.win) {
-        dprintf("ARQ: recv from %u: OUTSIDE WINDOW seq=%u",
+    // If the packet is after our receive window, we need to advance the receive
+    // window.
+    if (pkt->seq >= recvw.ack + recvw.win) {
+        logEvent("ARQ: recv from %u: OUTSIDE WINDOW (ADVANCE) seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->seq);
-        return;
-    }
 
-    // Drop this packet if we have already received it
-    if (recvw[pkt->seq].received) {
+        // We want to slide the window forward so pkt->seq is the new max
+        // packet. We therefore need to "forget" all packets in our current
+        // window with sequence numbers less than pkt->seq - recvw.win. It's
+        // possible this number is greater than our max received sequence
+        // number, so we must account for that as well!
+        Seq new_ack = pkt->seq + 1 - recvw.win;
+        Seq forget = new_ack > recvw.max ? recvw.max + 1 : new_ack;
+
+        // Go ahead and deliver packets that will be left outside our window.
+        for (auto seq = recvw.ack; seq < forget; ++seq) {
+            RecvWindow::Entry &entry = recvw[seq];
+
+            // Go ahead and deliver the packet
+            if (entry.pkt && !entry.delivered)
+                radio_out.push(std::move(entry.pkt));
+
+            // Release the packet
+            entry.reset();
+        }
+
+	    recvw.ack = new_ack;
+    } else if (recvw[pkt->seq].received) {
+        // Drop this packet if we have already received it
         dprintf("ARQ: recv from %u: DUP seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->seq);
