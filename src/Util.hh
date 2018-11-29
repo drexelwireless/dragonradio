@@ -1,6 +1,8 @@
 #ifndef UTIL_HH_
 #define UTIL_HH_
 
+#include <signal.h>
+
 #include <thread>
 
 /** @brief Execute a shell command specified with a printf-style format using
@@ -14,6 +16,9 @@ int sys(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
  * @returns -1 if interrupted.
  */
 int doze(double sec);
+
+/** @brief The signal we use to wake a thread */
+const int SIGWAKE = SIGUSR1;
 
 /** @brief Make the current thread wakeable. */
 /** This function installs a signal handler for SIGUSR1 so that the thread can

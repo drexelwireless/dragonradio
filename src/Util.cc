@@ -49,7 +49,7 @@ void makeThreadWakeable(void)
 
     sa.sa_handler = dummySignalHandler;
 
-    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+    if (sigaction(SIGWAKE, &sa, NULL) == -1) {
         perror("makeThreadWakeable() failed");
         exit(1);
     }
@@ -57,5 +57,5 @@ void makeThreadWakeable(void)
 
 void wakeThread(std::thread& t)
 {
-    pthread_kill(t.native_handle(), SIGUSR1);
+    pthread_kill(t.native_handle(), SIGWAKE);
 }
