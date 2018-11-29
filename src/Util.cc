@@ -39,7 +39,7 @@ int doze(double sec)
     return nanosleep(&ts, NULL);
 }
 
-void dummySignalHandler(int)
+static void dummySignalHandler(int)
 {
 }
 
