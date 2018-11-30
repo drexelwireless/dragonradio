@@ -188,6 +188,8 @@ struct RecvWindow : public TimerQueue::Timer  {
       , ack(seq)
       , max(seq-1)
       , win(win)
+      , need_selective_ack(false)
+      , timer_for_ack(false)
       , explicit_nak_win(nak_win)
       , explicit_nak_idx(0)
       , entries_(win)
@@ -221,6 +223,14 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Receive window size */
     Seq::uint_type win;
 
+    /** @brief Flag indicating whether or not we need a selective ACK. */
+    bool need_selective_ack;
+
+    /** @brief Flag indicating whether or not the timer is for an ACK or a
+     * selective ACK.
+     */
+    bool timer_for_ack;
+
     /** @brief Explicit NAK window */
     std::vector<MonoClock::time_point> explicit_nak_win;
 
@@ -251,6 +261,9 @@ private:
 /** @brief A MAC controller that implements ARQ. */
 class SmartController : public Controller
 {
+    friend class SendWindow;
+    friend class RecvWindow;
+
 public:
     SmartController(std::shared_ptr<Net> net,
                     std::shared_ptr<PHY> phy,
@@ -542,8 +555,8 @@ protected:
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow::Entry &entry);
 
-    /** @brief Start the ACK timer if it is not set. */
-    void startACKTimer(RecvWindow &recvw);
+    /** @brief Start the selective ACK timer if it is not set. */
+    void startSACKTimer(RecvWindow &recvw);
 
     /** @brief Handle HELLO and timestamp control messages. */
     void handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& pkt);

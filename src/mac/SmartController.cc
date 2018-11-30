@@ -10,6 +10,10 @@
 #define dprintf(...)
 #endif /* !DEBUG */
 
+/** @brief Amount of time we wait for a regular packet to have a SACK attached.
+ */
+const double kSACKDelay = 0.050;
+
 void applyTXParams(NetPacket &pkt, TXParams *p, float g)
 {
     pkt.tx_params = p;
@@ -25,7 +29,16 @@ void RecvWindow::operator()()
 {
     std::lock_guard<spinlock_mutex> lock(this->mutex);
 
-    controller.ack(*this);
+    if (timer_for_ack) {
+        controller.ack(*this);
+    } else {
+        need_selective_ack = true;
+        timer_for_ack = true;
+
+        dprintf("ARQ: send to %u: starting full ACK timer",
+            (unsigned) node.id);
+        controller.timer_queue_.run_in(*this, kSACKDelay);
+    }
 }
 
 SmartController::SmartController(std::shared_ptr<Net> net,
@@ -109,8 +122,9 @@ get_packet:
                 (unsigned) recvw.ack);
 #endif
 
-        // We're sending an ACK, so cancel the ACK timer
-        timer_queue_.cancel(recvw);
+        // Append selective ACK if needed
+        if (recvw.need_selective_ack)
+            appendCtrlACK(recvw, pkt);
     } else if (pkt->data_len != 0)
         dprintf("ARQ: send to %u: seq=%u",
             (unsigned) nexthop,
@@ -342,7 +356,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (pkt->isFlagSet(kSYN))
         ack(recvw);
     else
-        startACKTimer(recvw);
+        startSACKTimer(recvw);
 
     // Drop this packet if it is before our receive window
     if (pkt->seq < recvw.ack) {
@@ -682,13 +696,16 @@ void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
     }
 }
 
-void SmartController::startACKTimer(RecvWindow &recvw)
+void SmartController::startSACKTimer(RecvWindow &recvw)
 {
-    // Start the ACK timer if it is not already running.
+    // Start the selective ACK timer if it is not already running.
     if (!timer_queue_.running(recvw)) {
-        dprintf("ARQ: send to %u: starting ACK delay timer",
+        dprintf("ARQ: send to %u: starting SACK timer",
             (unsigned) recvw.node.id);
-        timer_queue_.run_in(recvw, recvw.node.ack_delay);
+
+        recvw.need_selective_ack = false;
+        recvw.timer_for_ack = false;
+        timer_queue_.run_in(recvw, recvw.node.ack_delay - kSACKDelay);
     }
 }
 
@@ -863,6 +880,12 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
         if (!apendSelectiveACK(recvw, pkt, recvw.max+1, recvw.max+1))
             return;
     }
+
+    // We no longer need a selective ACK
+    recvw.need_selective_ack = false;
+
+    // Cancel the selective ACK timer
+    timer_queue_.cancel(recvw);
 }
 
 void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
