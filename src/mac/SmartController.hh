@@ -210,10 +210,7 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     /** @brief Maximum sequence number we have received */
     /** INVARIANT: ack <= max < ack + win. When max == ack, we have no holes in
-    * our receive, window, which should therefore be empty, and we should ACK
-    * ack+1. Otherwise we have a hole in our receive window and we should NAK
-    * ack+1. Note than a NAK of sequence number N+1 implicitly ACKs N, since
-    * otherwise we would've NAK'ed N instead.
+    * our receive window, which should therefore be empty.
     */
     Seq max;
 
