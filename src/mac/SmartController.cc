@@ -147,9 +147,6 @@ get_packet:
         else
             sendw[pkt->seq].nretrans = 0;
 
-        // Start the retransmit timer if it is not already running.
-        startRetransmissionTimer(sendw[pkt->seq]);
-
         // Update send window metrics
         if (pkt->seq > max)
             sendw.max.store(pkt->seq, std::memory_order_release);
@@ -425,6 +422,15 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         entry.reset();
         ++recvw.ack;
     }
+}
+
+void SmartController::transmitted(std::shared_ptr<NetPacket>& pkt)
+{
+    SendWindow                      &sendw = getSendWindow(pkt->nexthop);
+    std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+    // Start the retransmit timer if it is not already running.
+    startRetransmissionTimer(sendw[pkt->seq]);
 }
 
 void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)

@@ -951,6 +951,7 @@ class Radio(object):
     def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
+                                            self.controller,
                                             self.snapshot_collector,
                                             self.rx_channels,
                                             self.tx_channels,
@@ -965,6 +966,7 @@ class Radio(object):
     def configureTDMA(self, nslots):
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
+                                    self.controller,
                                     self.snapshot_collector,
                                     self.rx_channels,
                                     self.tx_channels,

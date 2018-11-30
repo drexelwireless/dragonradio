@@ -270,6 +270,8 @@ public:
 
     void received(std::shared_ptr<RadioPacket>&& pkt) override;
 
+    void transmitted(std::shared_ptr<NetPacket>& pkt) override;
+
     /** @brief Retransmit a send window entry on timeout. */
     void retransmitOnTimeout(SendWindow::Entry &entry);
 

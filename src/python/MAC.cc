@@ -53,6 +53,7 @@ void exportMACs(py::module &m)
     py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<USRP>,
                       std::shared_ptr<PHY>,
+                      std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       const Channels&,
                       const Channels&,
@@ -72,6 +73,7 @@ void exportMACs(py::module &m)
     py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
         .def(py::init<std::shared_ptr<USRP>,
                       std::shared_ptr<PHY>,
+                      std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       const Channels&,
                       const Channels&,

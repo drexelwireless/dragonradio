@@ -2,6 +2,7 @@
 
 MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
+         std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          const Channels &rx_channels,
          const Channels &tx_channels,
@@ -9,6 +10,7 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PacketDemodulator> demodulator)
   : usrp_(usrp)
   , phy_(phy)
+  , controller_(controller)
   , snapshot_collector_(collector)
   , rx_channels_(rx_channels)
   , tx_channels_(tx_channels)
