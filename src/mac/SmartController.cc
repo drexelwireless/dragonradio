@@ -736,8 +736,9 @@ void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack, Seq max)
 
 void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
 {
-    // Start the retransmit timer if it is not already running.
-    if (!timer_queue_.running(entry)) {
+    // Start the retransmit timer if the packet has not already been ACK'ed and
+    // the timer is not already running
+    if (entry.pkt && !timer_queue_.running(entry)) {
         dprintf("ARQ: send to %u seq %u: starting retransmission timer",
             (unsigned) entry.sendw.node.id,
             (unsigned) entry.pkt->seq);
