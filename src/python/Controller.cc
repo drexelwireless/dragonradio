@@ -1,3 +1,6 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
 #include "mac/Controller.hh"
 #include "mac/DummyController.hh"
 #include "mac/SmartController.hh"
@@ -73,6 +76,9 @@ void exportControllers(py::module &m)
             &SmartController::getSelectiveACKFeedbackDelay,
             &SmartController::setSelectiveACKFeedbackDelay,
             "Selective ACK feedback delay (sec)")
+        .def_property("max_retransmissions",
+            &SmartController::getMaxRetransmissions,
+            &SmartController::setMaxRetransmissions)
         .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
         .def("broadcastHello", &SmartController::broadcastHello)
         .def("resetMCSTransitionProbabilities",

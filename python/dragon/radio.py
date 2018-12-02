@@ -174,6 +174,7 @@ class Config(object):
         self.arq = False
         self.arq_window = 1024
         self.arq_enforce_ordering = False
+        self.arq_max_retransmissions = None
         self.arq_ack_delay = 100e-3
         self.arq_retransmission_delay = 500e-3
         self.arq_explicit_nak_win = 10
@@ -480,6 +481,9 @@ class Config(object):
         parser.add_argument('--arq-enforce-ordering', action='store_const', const=True,
                             dest='arq_enforce_ordering',
                             help='enforce packet order when performing ARQ')
+        parser.add_argument('--max-retransmissions', action='store', type=int,
+                            dest='arq_max_retransmissions',
+                            help='set maximum number of retransmission attempts')
         parser.add_argument('--explicit-nak-window', action='store', type=int,
                             dest='arq_explicit_nak_win',
                             help='set explicit NAK window size')
@@ -730,6 +734,7 @@ class Radio(object):
 
             self.configSmartControllerSlotSize()
 
+            self.controller.max_retransmissions = config.arq_max_retransmissions
             self.controller.enforce_ordering = config.arq_enforce_ordering
 
             self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db

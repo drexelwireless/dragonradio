@@ -66,6 +66,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , explicit_nak_win_duration_(0.0)
   , selective_ack_(false)
   , selective_ack_feedback_delay_(0.0)
+  , max_retransmissions_({})
   , enforce_ordering_(false)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
@@ -316,8 +317,11 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             // Update MCS based on new PER
             updateMCS(sendw);
 
-            // Advance the send window
-            advanceSendWindow(sendw, unack);
+            // Advance the send window. It is possible that packets immediately
+            // after the packet that the sender just ACK'ed have timed out and
+            // been dropped, so advanceSendWindow must look for dropped packets
+            // and attempt to push the send window up towards max.
+            advanceSendWindow(sendw, unack, max);
         }
     }
 
@@ -474,8 +478,8 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
         updateMCS(sendw);
     }
 
-    // Actually retransmit the packet
-    retransmit(entry);
+    // Actually retransmit (or drop) the packet
+    retransmitOrDrop(entry);
 }
 
 void SmartController::ack(RecvWindow &recvw)
@@ -620,6 +624,21 @@ void SmartController::resetMCSTransitionProbabilities(void)
     }
 }
 
+void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
+{
+    assert(entry.pkt);
+
+    // We always retransmit SYN packets because they are needed to initiate a
+    // connection. Otherwise we only retransmit when we haven't exceeded the
+    // maximum number of allowed retransmissions.
+    if (   !max_retransmissions_
+        || (max_retransmissions_ && entry.nretrans < *max_retransmissions_)
+        || entry.pkt->isFlagSet(kSYN))
+        retransmit(entry);
+    else
+        drop(entry);
+}
+
 /** NOTE: The lock on the send window to which entry belongs MUST be held before
  * calling retransmit.
  */
@@ -659,8 +678,38 @@ void SmartController::retransmit(SendWindow::Entry &entry)
         netq_->push_hi_back(std::move(pkt));
 }
 
-void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack)
+void SmartController::drop(SendWindow::Entry &entry)
 {
+    SendWindow &sendw = entry.sendw;
+
+    // If the packet has already been ACK'd, forget it
+    if (!entry)
+        return;
+
+    // Drop the packet
+    logEvent("ARQ: dropping packet to %u: seq=%u",
+        (unsigned) sendw.node.id,
+        (unsigned) entry.pkt->seq);
+
+    // Cancel retransmission timer
+    timer_queue_.cancel(entry);
+
+    // Release the packet
+    entry.reset();
+
+    // Advance send window if we can
+    Seq unack = sendw.unack.load(std::memory_order_acquire);
+    Seq max = sendw.max.load(std::memory_order_acquire);
+
+    advanceSendWindow(sendw, unack, max);
+}
+
+void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack, Seq max)
+{
+    // Advance send window if we can
+    while (unack <= max && !sendw[unack])
+        ++unack;
+
     // Increase the send window. We really only need to do this after the
     // initial ACK, but it doesn't hurt to do it every time...
     sendw.win = sendw.maxwin;

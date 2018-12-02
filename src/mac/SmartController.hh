@@ -431,6 +431,18 @@ public:
         selective_ack_feedback_delay_ = delay;
     }
 
+    /** @brief Return maximum number of retransmission attempts. */
+    std::optional<size_t> getMaxRetransmissions(void)
+    {
+        return max_retransmissions_;
+    }
+
+    /** @brief Set maximum number of retransmission attempts. */
+    void setMaxRetransmissions(std::optional<size_t> max_retransmissions)
+    {
+        max_retransmissions_ = max_retransmissions;
+    }
+
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
@@ -529,6 +541,10 @@ protected:
      */
     double selective_ack_feedback_delay_;
 
+    /** @brief Maximum number of retransmission attempts
+     */
+    std::optional<size_t> max_retransmissions_;
+
     /** @brief Should packets always be output in the order they were actually
      * received?
      */
@@ -543,14 +559,20 @@ protected:
     /** @brief Uniform 0-1 real distribution */
     std::uniform_real_distribution<double> dist_;
 
+    /** @brief Re-transmit or drop a send window entry. */
+    void retransmitOrDrop(SendWindow::Entry &entry);
+
     /** @brief Re-transmit a send window entry. */
     void retransmit(SendWindow::Entry &entry);
+
+    /** @brief Drop a send window entry. */
+    void drop(SendWindow::Entry &entry);
 
     /** @brief Advance the send window.
      * @param sendw The send window to advance
      * @param unack The new value of the send window's unack parameter
      */
-    void advanceSendWindow(SendWindow &sendw, Seq unack);
+    void advanceSendWindow(SendWindow &sendw, Seq unack, Seq max);
 
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow::Entry &entry);
