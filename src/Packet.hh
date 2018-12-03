@@ -304,6 +304,9 @@ struct RadioPacket : public Packet
     /** @brief Center frequency packet was received on (Hz) */
     float fc;
 
+    /** @brief MCS used for this packet by transmitter */
+    MCS mcs;
+
     /** @brief This Boolean is true if this packet is a barrier and should not
      * be processed or removed from a queue except by its creator.
      */
