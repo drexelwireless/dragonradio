@@ -1,5 +1,7 @@
+#include "Clock.hh"
 #include "python/PyModules.hh"
 #include "stats/Estimator.hh"
+#include "stats/TimeWindowEstimator.hh"
 
 template <class T>
 void exportEstimator(py::module &m, const char *name)
@@ -43,6 +45,36 @@ void exportWindowedMeanEstimator(py::module &m, const char *name)
         ;
 }
 
+template <class T>
+void exportTimeWindowEstimator(py::module &m, const char *name)
+{
+    py::class_<TimeWindowEstimator<Clock, T>, Estimator<T>, std::shared_ptr<TimeWindowEstimator<Clock, T>>>(m, "TimeWindowEstimator")
+        .def_property("time_window",
+            &TimeWindowEstimator<Clock, T>::getTimeWindow,
+            &TimeWindowEstimator<Clock, T>::setTimeWindow,
+            "The time window (sec)")
+        .def_property_readonly("start",
+            [](TimeWindowEstimator<Clock, T> &self)
+            {
+                return self.getTimeWindowStart().get_real_secs();
+            },
+            "The start of the time window (sec)")
+        .def_property_readonly("end",
+            [](TimeWindowEstimator<Clock, T> &self)
+            {
+                return self.getTimeWindowEnd().get_real_secs();
+            },
+            "The end of the time window (sec)")
+        ;
+}
+
+template <class T>
+void exportTimeWindowMeanEstimator(py::module &m, const char *name)
+{
+    py::class_<TimeWindowMean<Clock, T>, TimeWindowEstimator<Clock, T>, std::shared_ptr<TimeWindowMean<Clock, T>>>(m, name)
+        ;
+}
+
 void exportEstimators(py::module &m)
 {
     exportEstimator<float>(m, "FloatEstimator");
@@ -53,4 +85,7 @@ void exportEstimators(py::module &m)
 
     exportWindowedMeanEstimator<float>(m, "FloatWindowedMean");
     exportWindowedMeanEstimator<double>(m, "DoubleWindowedMean");
+
+    exportTimeWindowEstimator<double>(m, "TimeWindowEstimator");
+    exportTimeWindowMeanEstimator<double>(m, "TimeWindowMean");
 }
