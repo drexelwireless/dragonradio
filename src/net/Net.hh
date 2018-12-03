@@ -8,11 +8,11 @@
 #include <thread>
 #include <stdio.h>
 
-#include "Estimator.hh"
 #include "Packet.hh"
 #include "SafeQueue.hh"
 #include "TimeSync.hh"
 #include "net/TunTap.hh"
+#include "stats/Estimator.hh"
 
 /** @brief A sprintf-style format string for internal network tun/tap IP
  * addresses.
