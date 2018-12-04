@@ -195,7 +195,7 @@ public:
     /** @brief Get RX downsample rate. */
     virtual double getRXDownsampleRate(void)
     {
-        return getRXRateOversample()/getMinRXRateOversample();
+        return getMinRXRateOversample()/getRXRateOversample();
     }
 
     /** @brief Return the minimum oversample rate (with respect to PHY

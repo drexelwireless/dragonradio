@@ -34,7 +34,7 @@ LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
 LiquidPHY::Modulator::Modulator(LiquidPHY &phy)
     : PHY::Modulator(phy)
     , liquid_phy_(phy)
-    , upsamp_(phy.getTXRateOversample()/phy.getMinTXRateOversample(),
+    , upsamp_(phy.getTXUpsampleRate(),
               phy.upsamp_resamp_params.m,
               phy.upsamp_resamp_params.fc,
               phy.upsamp_resamp_params.As,
@@ -133,7 +133,7 @@ void LiquidPHY::Modulator::setFreqShift(double shift)
 
 void LiquidPHY::Modulator::reconfigure(void)
 {
-    upsamp_ = Liquid::MultiStageResampler(phy_.getTXRateOversample()/phy_.getMinTXRateOversample(),
+    upsamp_ = Liquid::MultiStageResampler(phy_.getTXUpsampleRate(),
                                           liquid_phy_.upsamp_resamp_params.m,
                                           liquid_phy_.upsamp_resamp_params.fc,
                                           liquid_phy_.upsamp_resamp_params.As,
@@ -149,7 +149,7 @@ LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
   : Liquid::Demodulator(phy.soft_header_, phy.soft_payload_)
   , PHY::Demodulator(phy)
   , liquid_phy_(phy)
-  , downsamp_(phy.getMinRXRateOversample()/phy.getRXRateOversample(),
+  , downsamp_(phy.getRXDownsampleRate(),
               phy.downsamp_resamp_params.m,
               phy.downsamp_resamp_params.fc,
               phy.downsamp_resamp_params.As,
@@ -333,7 +333,7 @@ void LiquidPHY::Demodulator::setFreqShift(double shift)
 
 void LiquidPHY::Demodulator::reconfigure(void)
 {
-    downsamp_ = Liquid::MultiStageResampler(phy_.getMinRXRateOversample()/phy_.getRXRateOversample(),
+    downsamp_ = Liquid::MultiStageResampler(phy_.getRXDownsampleRate(),
                                             liquid_phy_.upsamp_resamp_params.m,
                                             liquid_phy_.upsamp_resamp_params.fc,
                                             liquid_phy_.upsamp_resamp_params.As,
