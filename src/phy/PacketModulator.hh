@@ -62,16 +62,16 @@ public:
         return channels_.size() > 0 ? channels_[tx_channel_] : 0.0;
     }
 
-    /** @brief Set maximum packet size. */
-    void setMaxPacketSize(size_t maxPacketSize)
-    {
-        maxPacketSize_ = maxPacketSize;
-    }
-
     /** @brief Get maximum packet size. */
     size_t getMaxPacketSize(void)
     {
         return maxPacketSize_;
+    }
+
+    /** @brief Set maximum packet size. */
+    void setMaxPacketSize(size_t maxPacketSize)
+    {
+        maxPacketSize_ = maxPacketSize;
     }
 
     /** @brief Modulate samples.
