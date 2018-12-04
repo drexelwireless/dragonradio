@@ -334,10 +334,10 @@ void LiquidPHY::Demodulator::setFreqShift(double shift)
 void LiquidPHY::Demodulator::reconfigure(void)
 {
     downsamp_ = Liquid::MultiStageResampler(phy_.getRXDownsampleRate(),
-                                            liquid_phy_.upsamp_resamp_params.m,
-                                            liquid_phy_.upsamp_resamp_params.fc,
-                                            liquid_phy_.upsamp_resamp_params.As,
-                                            liquid_phy_.upsamp_resamp_params.npfb);
+                                            liquid_phy_.downsamp_resamp_params.m,
+                                            liquid_phy_.downsamp_resamp_params.fc,
+                                            liquid_phy_.downsamp_resamp_params.As,
+                                            liquid_phy_.downsamp_resamp_params.npfb);
 
     double shift = shift_;
 
