@@ -107,8 +107,7 @@ public:
       : node_id_(node_id)
       , rx_rate_(0.0)
       , tx_rate_(0.0)
-      , rx_rate_oversample_(0.0)
-      , tx_rate_oversample_(0.0)
+      , chan_rate_(0.0)
     {
     }
 
@@ -122,6 +121,12 @@ public:
         return node_id_;
     }
 
+    /** @brief Get the PHY's RX sample rate. */
+    virtual double getRXRate(void)
+    {
+        return rx_rate_;
+    }
+
     /** @brief Tell the PHY what RX sample rate we are running at.
      * @param rate The rate.
      */
@@ -131,11 +136,10 @@ public:
         reconfigureRX();
     }
 
-    /** @brief Get the PHY's RX sample rate.
-     */
-    virtual double getRXRate(void)
+    /** @brief Get the PHY's TX sample rate. */
+    virtual double getTXRate(void)
     {
-        return rx_rate_;
+        return tx_rate_;
     }
 
     /** @brief Tell the PHY what TX sample rate we are running at.
@@ -147,55 +151,32 @@ public:
         reconfigureTX();
     }
 
-    /** @brief Get the PHY's TX sample rate.
-     */
-    virtual double getTXRate(void)
+    /** @brief Get the channel sample rate. */
+    virtual double getChannelRate(void)
     {
-        return tx_rate_;
+        return chan_rate_;
     }
 
-    /** @brief Get PHY RX oversample rate.
-     */
-    virtual double getRXRateOversample(void)
-    {
-        return rx_rate_oversample_;
-    }
-
-    /** @brief Set PHY RX oversample rate.
+    /** @brief Set the channel sample rate.
      * @param rate The rate.
      */
-    virtual void setRXRateOversample(double rate)
+    virtual void setChannelRate(double rate)
     {
-        rx_rate_oversample_ = rate;
+        chan_rate_ = rate;
         reconfigureRX();
-    }
-
-    /** @brief Get PHY TX oversample rate.
-     */
-    virtual double getTXRateOversample(void)
-    {
-        return tx_rate_oversample_;
-    }
-
-    /** @brief Set PHY TX oversample rate.
-     * @param rate The rate.
-     */
-    virtual void setTXRateOversample(double rate)
-    {
-        tx_rate_oversample_ = rate;
         reconfigureTX();
     }
 
     /** @brief Get TX upsample rate. */
     virtual double getTXUpsampleRate(void)
     {
-        return getTXRateOversample()/getMinTXRateOversample();
+        return tx_rate_/(getMinTXRateOversample()*chan_rate_);
     }
 
     /** @brief Get RX downsample rate. */
     virtual double getRXDownsampleRate(void)
     {
-        return getMinRXRateOversample()/getRXRateOversample();
+        return (getMinRXRateOversample()*chan_rate_)/rx_rate_;
     }
 
     /** @brief Return the minimum oversample rate (with respect to PHY
@@ -241,11 +222,8 @@ protected:
     /** @brief TX sample rate */
     double tx_rate_;
 
-    /** @brief RX oversample rate */
-    double rx_rate_oversample_;
-
-    /** @brief TX oversample rate */
-    double tx_rate_oversample_;
+    /** @brief Per-channel sample rate */
+    double chan_rate_;
 
     /** @brief Modulators */
     std::list<std::weak_ptr<Modulator>> modulators_;

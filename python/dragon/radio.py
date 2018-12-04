@@ -884,9 +884,7 @@ class Radio(object):
 
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
-
-        self.phy.rx_rate_oversample = rx_rate/cbw
-        self.phy.tx_rate_oversample = tx_rate/cbw
+        self.phy.channel_rate = cbw
 
     def configSmartControllerSlotSize(self):
         """
