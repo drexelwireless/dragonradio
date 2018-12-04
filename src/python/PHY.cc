@@ -18,20 +18,38 @@ void exportPHYs(py::module &m)
 
     // Export class PHY to Python
     py::class_<PHY, std::shared_ptr<PHY>>(m, "PHY")
-        .def_property_readonly("min_rx_rate_oversample", &PHY::getMinRXRateOversample)
-        .def_property_readonly("min_tx_rate_oversample", &PHY::getMinTXRateOversample)
-        .def_property("rx_rate", &PHY::getRXRate, &PHY::setRXRate)
-        .def_property("tx_rate", &PHY::getTXRate, &PHY::setTXRate)
-        .def_property("rx_rate_oversample", &PHY::getRXRateOversample, &PHY::setRXRateOversample)
-        .def_property("tx_rate_oversample", &PHY::getTXRateOversample, &PHY::setTXRateOversample)
+        .def_property_readonly("min_rx_rate_oversample",
+            &PHY::getMinRXRateOversample)
+        .def_property_readonly("min_tx_rate_oversample",
+            &PHY::getMinTXRateOversample)
+        .def_property("rx_rate",
+            &PHY::getRXRate,
+            &PHY::setRXRate)
+        .def_property("tx_rate",
+            &PHY::getTXRate,
+            &PHY::setTXRate)
+        .def_property("rx_rate_oversample",
+            &PHY::getRXRateOversample,
+            &PHY::setRXRateOversample)
+        .def_property("tx_rate_oversample",
+            &PHY::getTXRateOversample,
+            &PHY::setTXRateOversample)
         ;
 
     // Export class ResamplerParams to Python
     py::class_<ResamplerParams, std::shared_ptr<ResamplerParams>>(m, "ResamplerParams")
-        .def_property("m", &ResamplerParams::get_m, &ResamplerParams::set_m)
-        .def_property("fc", &ResamplerParams::get_fc, &ResamplerParams::set_fc)
-        .def_property("As", &ResamplerParams::get_As, &ResamplerParams::set_As)
-        .def_property("npfb", &ResamplerParams::get_npfb, &ResamplerParams::set_npfb)
+        .def_property("m",
+            &ResamplerParams::get_m,
+            &ResamplerParams::set_m)
+        .def_property("fc",
+            &ResamplerParams::get_fc,
+            &ResamplerParams::set_fc)
+        .def_property("As",
+            &ResamplerParams::get_As,
+            &ResamplerParams::set_As)
+        .def_property("npfb",
+            &ResamplerParams::get_npfb,
+            &ResamplerParams::set_npfb)
         .def("__repr__", [](const ResamplerParams& self) {
             return py::str("ResamplerParams(m={}, fc={}, As={}, npfb={})").format(self.m, self.fc, self.As, self.npfb);
          })
@@ -39,15 +57,20 @@ void exportPHYs(py::module &m)
 
     // Export class LiquidPHY to Python
     py::class_<LiquidPHY, PHY, std::shared_ptr<LiquidPHY>>(m, "LiquidPHY")
-        .def_property_readonly("header_mcs", &LiquidPHY::getHeaderMCS)
-        .def_property_readonly("soft_header", &LiquidPHY::getSoftHeader)
-        .def_property_readonly("soft_payload", &LiquidPHY::getSoftPayload)
+        .def_property_readonly("header_mcs",
+            &LiquidPHY::getHeaderMCS)
+        .def_property_readonly("soft_header",
+            &LiquidPHY::getSoftHeader)
+        .def_property_readonly("soft_payload",
+            &LiquidPHY::getSoftPayload)
         .def_property("min_packet_size",
             &LiquidPHY::getMinPacketSize,
             &LiquidPHY::setMinPacketSize)
-        .def_readwrite("upsamp_resamp_params", &LiquidPHY::upsamp_resamp_params,
+        .def_readwrite("upsamp_resamp_params",
+            &LiquidPHY::upsamp_resamp_params,
             py::return_value_policy::reference_internal)
-        .def_readwrite("downsamp_resamp_params", &LiquidPHY::downsamp_resamp_params,
+        .def_readwrite("downsamp_resamp_params",
+            &LiquidPHY::downsamp_resamp_params,
             py::return_value_policy::reference_internal)
         ;
 
