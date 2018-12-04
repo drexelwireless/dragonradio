@@ -27,20 +27,6 @@ ParallelPacketModulator::~ParallelPacketModulator()
     stop();
 }
 
-void ParallelPacketModulator::stop(void)
-{
-    // XXX We must disconnect the sink in order to stop the modulator threads.
-    sink.disconnect();
-
-    done_ = true;
-    producer_cond_.notify_all();
-
-    for (size_t i = 0; i < mod_threads_.size(); ++i) {
-        if (mod_threads_[i].joinable())
-            mod_threads_[i].join();
-    }
-}
-
 void ParallelPacketModulator::modulate(size_t n)
 {
     std::unique_lock<std::mutex> lock(pkt_mutex_);
@@ -105,6 +91,24 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
     producer_cond_.notify_all();
 
     return nsamples;
+}
+
+void ParallelPacketModulator::reconfigure(void)
+{
+}
+
+void ParallelPacketModulator::stop(void)
+{
+    // XXX We must disconnect the sink in order to stop the modulator threads.
+    sink.disconnect();
+
+    done_ = true;
+    producer_cond_.notify_all();
+
+    for (size_t i = 0; i < mod_threads_.size(); ++i) {
+        if (mod_threads_[i].joinable())
+            mod_threads_[i].join();
+    }
 }
 
 void ParallelPacketModulator::modWorker(void)

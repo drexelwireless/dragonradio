@@ -44,6 +44,10 @@ void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
     demod_q_.push(buf);
 }
 
+void ParallelPacketDemodulator::reconfigure(void)
+{
+}
+
 void ParallelPacketDemodulator::stop(void)
 {
     done_ = true;
@@ -153,8 +157,8 @@ void ParallelPacketDemodulator::demodWorker(void)
 
         // If we received any packets, log both slots.
         if (logger && received && logger->getCollectSource(Logger::kSlots)) {
-            logger->logSlot(buf1, phy_->getRXRate());
-            logger->logSlot(buf2, phy_->getRXRate());
+            logger->logSlot(buf1, rx_rate_);
+            logger->logSlot(buf2, rx_rate_);
         }
     }
 }

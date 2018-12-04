@@ -10,13 +10,45 @@ class PacketModulator
 {
 public:
     PacketModulator(const Channels &channels)
-        : channels_(channels)
+        : tx_rate_(0.0)
+        , chan_rate_(0.0)
+        , channels_(channels)
         , tx_channel_(0)
         , maxPacketSize_(0)
     {
     }
 
     virtual ~PacketModulator() = default;
+
+    /** @brief Get the TX sample rate. */
+    virtual double getTXRate(void)
+    {
+        return tx_rate_;
+    }
+
+    /** @brief Set the TX sample rate.
+     * @param rate The rate.
+     */
+    virtual void setTXRate(double rate)
+    {
+        tx_rate_ = rate;
+        reconfigure();
+    }
+
+    /** @brief Get the channel sample rate. */
+    virtual double getChannelRate(void)
+    {
+        return chan_rate_;
+    }
+
+    /** @brief Set the channel sample rate.
+     * @param rate The rate.
+     */
+    virtual void setChannelRate(double rate)
+    {
+        chan_rate_ = rate;
+        reconfigure();
+    }
 
     /** @brief Get channels. */
     virtual const Channels &getChannels(void) const
@@ -91,7 +123,16 @@ public:
                        size_t maxSamples,
                        bool overfill) = 0;
 
+    /** @brief Reconfigure for new TX parameters */
+    virtual void reconfigure(void) = 0;
+
 protected:
+    /** @brief TX sample rate */
+    double tx_rate_;
+
+    /** @brief Per-channel sample rate */
+    double chan_rate_;
+
     /** @brief Radio channels, given as shift from center frequency */
     Channels channels_;
 

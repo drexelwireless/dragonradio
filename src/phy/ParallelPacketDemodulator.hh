@@ -108,17 +108,18 @@ public:
                               unsigned int nthreads);
     virtual ~ParallelPacketDemodulator();
 
-    void setWindowParameters(const size_t prev_samps,
-                             const size_t cur_samps) override;
-
     void setChannels(const Channels &channels) override
     {
         PacketDemodulator::setChannels(channels);
         demod_q_.setChannels(channels);
     }
 
-    /** @brief Add an IQ buffer to demodulate. */
+    void setWindowParameters(const size_t prev_samps,
+                             const size_t cur_samps) override;
+
     void push(std::shared_ptr<IQBuf> buf) override;
+
+    void reconfigure(void) override;
 
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.

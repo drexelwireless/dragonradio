@@ -7,6 +7,12 @@ void exportPacketModulators(py::module &m)
 {
     // Export class PacketModulator to Python
     py::class_<PacketModulator, std::shared_ptr<PacketModulator>>(m, "PacketModulator")
+        .def_property("tx_rate",
+            &PacketModulator::getTXRate,
+            &PacketModulator::setTXRate)
+        .def_property("channel_rate",
+            &PacketModulator::getChannelRate,
+            &PacketModulator::setChannelRate)
         .def_property("channels",
             &PacketModulator::getChannels,
             &PacketModulator::setChannels)
@@ -17,6 +23,12 @@ void exportPacketModulators(py::module &m)
 
     // Export class PacketDemodulator to Python
     py::class_<PacketDemodulator, std::shared_ptr<PacketDemodulator>>(m, "PacketDemodulator")
+        .def_property("rx_rate",
+            &PacketDemodulator::getRXRate,
+            &PacketDemodulator::setRXRate)
+        .def_property("channel_rate",
+            &PacketDemodulator::getChannelRate,
+            &PacketDemodulator::setChannelRate)
         .def_property("channels",
             &PacketDemodulator::getChannels,
             &PacketDemodulator::setChannels)

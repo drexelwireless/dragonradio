@@ -710,6 +710,12 @@ class Radio(object):
                                                                  self.rx_channels,
                                                                  config.num_demodulation_threads)
 
+        self.modulator.tx_rate = self.usrp.tx_rate
+        self.modulator.channel_rate = self.channel_bandwidth
+
+        self.demodulator.rx_rate = self.usrp.rx_rate
+        self.demodulator.channel_rate = self.channel_bandwidth
+
         self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
 
         #
@@ -921,7 +927,12 @@ class Radio(object):
 
         self.configRatesAndChannels()
 
+        self.modulator.tx_rate = self.usrp.tx_rate
+        self.modulator.channel_rate = self.channel_bandwidth
         self.modulator.channels = self.tx_channels
+
+        self.demodulator.rx_rate = self.usrp.rx_rate
+        self.demodulator.channel_rate = self.channel_bandwidth
         self.demodulator.channels = self.rx_channels
 
         self.mac.rx_channels = self.rx_channels

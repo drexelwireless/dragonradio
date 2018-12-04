@@ -25,6 +25,8 @@ public:
                size_t maxSamples,
                bool overfill) override;
 
+    void reconfigure(void) override;
+
     /** @brief Stop modulating. */
     void stop(void);
 
