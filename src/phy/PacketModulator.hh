@@ -95,7 +95,7 @@ protected:
     /** @brief Radio channels, given as shift from center frequency */
     Channels channels_;
 
-    /** @brief Transmission channel, given hift from center frequency */
+    /** @brief Transmission channel, given shift from center frequency */
     Channels::size_type tx_channel_;
 
     /** @brief Maximum number of possible samples in a modulated packet. */
