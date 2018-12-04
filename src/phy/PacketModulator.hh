@@ -84,6 +84,7 @@ public:
         }
 
         tx_channel_ = channel;
+        reconfigure();
     }
 
     /** @brief Get the frequency shift to use during transmission
@@ -105,6 +106,13 @@ public:
     {
         maxPacketSize_ = maxPacketSize;
     }
+
+    /** @brief Modulate one packet.
+     * @param pkt The NetPacket to modulate.
+     * @param mpkt The ModPacket that will hold the modulated packet.
+     */
+    virtual void modulateOne(std::shared_ptr<NetPacket> pkt,
+                             ModPacket &mpkt) = 0;
 
     /** @brief Modulate samples.
      * @param n The number of samples to produce.

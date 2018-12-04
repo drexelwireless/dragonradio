@@ -658,19 +658,6 @@ class Radio(object):
             fail('Bad PHY: {}'.format(config.phy))
 
         #
-        # Set PHY resampling parameters
-        #
-        self.phy.upsamp_resamp_params.m = config.phy_upsamp_m;
-        self.phy.upsamp_resamp_params.fc = config.phy_upsamp_fc;
-        self.phy.upsamp_resamp_params.As = config.phy_upsamp_As;
-        self.phy.upsamp_resamp_params.npfb = config.phy_upsamp_npfb;
-
-        self.phy.downsamp_resamp_params.m = config.phy_downsamp_m;
-        self.phy.downsamp_resamp_params.fc = config.phy_downsamp_fc;
-        self.phy.downsamp_resamp_params.As = config.phy_downsamp_As;
-        self.phy.downsamp_resamp_params.npfb = config.phy_downsamp_npfb;
-
-        #
         # Create tun/tap interface and net neighborhood
         #
         self.tuntap = dragonradio.TunTap('tap0', False, self.config.mtu, self.node_id)
@@ -712,9 +699,17 @@ class Radio(object):
 
         self.modulator.tx_rate = self.usrp.tx_rate
         self.modulator.channel_rate = self.channel_bandwidth
+        self.modulator.upsamp_params.m = config.phy_upsamp_m
+        self.modulator.upsamp_params.fc = config.phy_upsamp_fc
+        self.modulator.upsamp_params.As = config.phy_upsamp_As
+        self.modulator.upsamp_params.npfb = config.phy_upsamp_npfb
 
         self.demodulator.rx_rate = self.usrp.rx_rate
         self.demodulator.channel_rate = self.channel_bandwidth
+        self.demodulator.downsamp_params.m = config.phy_downsamp_m;
+        self.demodulator.downsamp_params.fc = config.phy_downsamp_fc;
+        self.demodulator.downsamp_params.As = config.phy_downsamp_As;
+        self.demodulator.downsamp_params.npfb = config.phy_downsamp_npfb;
 
         self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
 

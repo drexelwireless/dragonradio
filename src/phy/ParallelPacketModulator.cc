@@ -1,5 +1,4 @@
 #include "RadioConfig.hh"
-#include "dsp/NCO.hh"
 #include "phy/PHY.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/TXParams.hh"
@@ -12,19 +11,36 @@ ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  size_t nthreads)
   : PacketModulator(channels)
   , sink(*this, nullptr, nullptr)
+  , upsamp_params(std::bind(&PacketModulator::reconfigure, this))
   , net_(net)
   , phy_(phy)
   , done_(false)
+  , mod_reconfigure_(nthreads)
   , nwanted_(0)
   , nsamples_(0)
+  , one_mod_(phy->mkModulator())
+  , one_modparams_(upsamp_params,
+                   phy_->getTXRate(),
+                   phy_->getTXUpsampleRate(),
+                   getTXShift())
 {
-    for (size_t i = 0; i < nthreads; ++i)
-        mod_threads_.emplace_back(std::thread(&ParallelPacketModulator::modWorker, this));
+    for (size_t i = 0; i < nthreads; ++i) {
+        mod_reconfigure_[i].store(false, std::memory_order_relaxed);
+        mod_threads_.emplace_back(std::thread(&ParallelPacketModulator::modWorker,
+                                              this,
+                                              std::ref(mod_reconfigure_[i])));
+    }
 }
 
 ParallelPacketModulator::~ParallelPacketModulator()
 {
     stop();
+}
+
+void ParallelPacketModulator::modulateOne(std::shared_ptr<NetPacket> pkt,
+                                          ModPacket &mpkt)
+{
+    modulateWithParams(*one_mod_, one_modparams_, std::move(pkt), mpkt);
 }
 
 void ParallelPacketModulator::modulate(size_t n)
@@ -95,6 +111,8 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
 
 void ParallelPacketModulator::reconfigure(void)
 {
+    for (auto &flag : mod_reconfigure_)
+        flag.store(true, std::memory_order_relaxed);
 }
 
 void ParallelPacketModulator::stop(void)
@@ -111,13 +129,50 @@ void ParallelPacketModulator::stop(void)
     }
 }
 
-void ParallelPacketModulator::modWorker(void)
+void ParallelPacketModulator::modulateWithParams(PHY::Modulator &modulator,
+                                                 ModParams &params,
+                                                 std::shared_ptr<NetPacket> pkt,
+                                                 ModPacket &mpkt)
 {
-    auto                       modulator = phy_->mkModulator();
-    std::shared_ptr<NetPacket> pkt;
-    ModPacket                  *mpkt;
+    // Modulate the packet
+    modulator.modulate(std::move(pkt), mpkt);
+
+    // Frequency shift and upsample
+    if (params.shift != 0.0 || params.resamp_rate != 1.0) {
+        // Get samples from ModPacket
+        auto iqbuf = std::move(mpkt.samples);
+
+        // Up-sample
+        iqbuf->append(ceil(params.resamp.getDelay()));
+
+        auto iqbuf_up = params.resamp.resample(*iqbuf);
+
+        iqbuf_up->delay = floor(params.resamp_rate*params.resamp.getDelay());
+
+        iqbuf = iqbuf_up;
+
+        // Mix up
+        params.nco.mix_up(iqbuf->data(), iqbuf->data(), iqbuf->size());
+
+        // Put samples back into ModPacket
+        mpkt.samples = std::move(iqbuf);
+    }
+
+    // Set center frequency
+    mpkt.fc = params.shift;
+}
+
+void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
+{
+    auto                        modulator = phy_->mkModulator();
+    std::shared_ptr<NetPacket>  pkt;
+    ModPacket                   *mpkt;
+    ModParams                   modparams(upsamp_params,
+                                          phy_->getTXRate(),
+                                          phy_->getTXUpsampleRate(),
+                                          getTXShift());
     // We want the last 10 packets to account for 86% of the EMA
-    EMA<double>                samples_per_packet(2.0/(10.0 + 1.0));
+    EMA<double>                 samples_per_packet(2.0/(10.0 + 1.0));
 
     for (;;) {
         size_t estimated_samples = samples_per_packet.getValue();
@@ -163,8 +218,17 @@ void ParallelPacketModulator::modWorker(void)
             mpkt = pkt_q_.back().get();
         }
 
+        // Reconfigure if necessary
+        if (reconfig.load(std::memory_order_relaxed)) {
+            modparams.reconfigure(phy_->getTXRate(),
+                                  phy_->getTXUpsampleRate(),
+                                  getTXShift());
+
+            reconfig.store(false, std::memory_order_relaxed);
+        }
+
         // Modulate the packet
-        modulator->modulate(std::move(pkt), getTXShift(), *mpkt);
+        modulateWithParams(*modulator, modparams, std::move(pkt), *mpkt);
 
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();

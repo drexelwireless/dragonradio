@@ -28,26 +28,11 @@ public:
         Modulator& operator=(Modulator&&) = delete;
 
         void modulate(std::shared_ptr<NetPacket> pkt,
-                      double shift,
                       ModPacket &mpkt) override final;
 
     protected:
         /** Our Liquid PHY */
         LiquidPHY &liquid_phy_;
-
-        /** @brief Upsampler. */
-        Liquid::MultiStageResampler upsamp_;
-
-        /** @brief Frequency for mixing up */
-        double shift_;
-
-        /** @brief NCO for mixing up */
-        TableNCO nco_;
-
-        /** @brief Set frequency shift for mixing up
-         * @param shift The frequency shift (Hz)
-         */
-        virtual void setFreqShift(double shift);
 
         virtual void reconfigure(void) override;
     };
@@ -64,21 +49,19 @@ public:
         Demodulator& operator=(Demodulator&&) = delete;
 
         void reset(Clock::time_point timestamp,
-                   size_t off) override final;
+                   size_t off,
+                   double shift,
+                   double rate) override final;
 
         void setSnapshotOffset(ssize_t snapshot_off) override final;
 
-        void demodulate(std::complex<float>* data,
+        void demodulate(const std::complex<float>* data,
                         size_t count,
-                        double shift,
                         std::function<void(std::unique_ptr<RadioPacket>)> callback) override final;
 
     protected:
-        /** Our Liquid PHY */
+        /** @brief Our Liquid PHY */
         LiquidPHY &liquid_phy_;
-
-        /** @brief Downsampler. */
-        Liquid::MultiStageResampler downsamp_;
 
         /** @brief Callback for received packets. */
         std::function<void(std::unique_ptr<RadioPacket>)> callback_;
@@ -89,6 +72,14 @@ public:
          * need this quantity in order to properly track demod_off_ and friends.
          */
         unsigned int internal_oversample_fact_;
+
+        /** @brief Frequency shift of demodulated data */
+        double shift_;
+
+        /** @brief Resampler rate */
+        /** This is used internally purely to properly timestamp packets.
+         */
+        double rate_;
 
         /** @brief The timestamp of the slot we are demodulating. */
         Clock::time_point demod_start_;
@@ -104,12 +95,6 @@ public:
         /** @brief The snapshot offset. */
         size_t snapshot_off_;
 
-        /** @brief Frequency for mixing down */
-        double shift_;
-
-        /** @brief NCO for mixing down */
-        TableNCO nco_;
-
         virtual int callback(unsigned char    *header_,
                              int              header_valid_,
                              unsigned char    *payload_,
@@ -118,11 +103,6 @@ public:
                              framesyncstats_s stats_) override;
 
         using Liquid::Demodulator::reset;
-
-        /** @brief Set frequency shift for mixing down
-         * @param shift The frequency shift (Hz)
-         */
-        virtual void setFreqShift(double shift);
 
         virtual void reconfigure(void) override;
     };
@@ -180,12 +160,6 @@ public:
     }
 
     size_t getModulatedSize(const TXParams &params, size_t n) override;
-
-    /** @brief Resampler parameters for modulator */
-    Liquid::ResamplerParams upsamp_resamp_params;
-
-    /** @brief Resampler parameters for demodulator */
-    Liquid::ResamplerParams downsamp_resamp_params;
 
 protected:
     /** @brief Our snapshot collector */

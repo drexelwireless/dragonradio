@@ -5,8 +5,6 @@
 #include "phy/OFDM.hh"
 #include "python/PyModules.hh"
 
-using Liquid::ResamplerParams;
-
 void exportPHYs(py::module &m)
 {
     // Export class Gain to Python
@@ -35,25 +33,6 @@ void exportPHYs(py::module &m)
             &PHY::setChannelRate)
         ;
 
-    // Export class ResamplerParams to Python
-    py::class_<ResamplerParams, std::shared_ptr<ResamplerParams>>(m, "ResamplerParams")
-        .def_property("m",
-            &ResamplerParams::get_m,
-            &ResamplerParams::set_m)
-        .def_property("fc",
-            &ResamplerParams::get_fc,
-            &ResamplerParams::set_fc)
-        .def_property("As",
-            &ResamplerParams::get_As,
-            &ResamplerParams::set_As)
-        .def_property("npfb",
-            &ResamplerParams::get_npfb,
-            &ResamplerParams::set_npfb)
-        .def("__repr__", [](const ResamplerParams& self) {
-            return py::str("ResamplerParams(m={}, fc={}, As={}, npfb={})").format(self.m, self.fc, self.As, self.npfb);
-         })
-        ;
-
     // Export class LiquidPHY to Python
     py::class_<LiquidPHY, PHY, std::shared_ptr<LiquidPHY>>(m, "LiquidPHY")
         .def_property_readonly("header_mcs",
@@ -65,12 +44,6 @@ void exportPHYs(py::module &m)
         .def_property("min_packet_size",
             &LiquidPHY::getMinPacketSize,
             &LiquidPHY::setMinPacketSize)
-        .def_readwrite("upsamp_resamp_params",
-            &LiquidPHY::upsamp_resamp_params,
-            py::return_value_policy::reference_internal)
-        .def_readwrite("downsamp_resamp_params",
-            &LiquidPHY::downsamp_resamp_params,
-            py::return_value_policy::reference_internal)
         ;
 
     // Export class FlexFrame to Python

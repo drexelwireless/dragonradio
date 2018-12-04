@@ -21,8 +21,6 @@ LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
                      bool soft_payload,
                      size_t min_packet_size)
   : PHY(node_id)
-  , upsamp_resamp_params(std::bind(&LiquidPHY::reconfigureTX, this))
-  , downsamp_resamp_params(std::bind(&LiquidPHY::reconfigureRX, this))
   , snapshot_collector_(collector)
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
@@ -34,18 +32,10 @@ LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
 LiquidPHY::Modulator::Modulator(LiquidPHY &phy)
     : PHY::Modulator(phy)
     , liquid_phy_(phy)
-    , upsamp_(phy.getTXUpsampleRate(),
-              phy.upsamp_resamp_params.m,
-              phy.upsamp_resamp_params.fc,
-              phy.upsamp_resamp_params.As,
-              phy.upsamp_resamp_params.npfb)
-    , shift_(0.0)
-    , nco_(0.0)
 {
 }
 
 void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
-                                    double shift,
                                     ModPacket &mpkt)
 {
     if (pending_reconfigure_.load(std::memory_order_relaxed)) {
@@ -99,64 +89,20 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
         work_queue.submit(&TXParams::autoSoftGain0dBFS, pkt->tx_params, g, iqbuf);
     }
 
-    if (shift != 0.0 || upsamp_.getRate() != 1.0) {
-        // Up-sample
-        iqbuf->append(ceil(upsamp_.getDelay()));
-
-        auto iqbuf_up = upsamp_.resample(*iqbuf);
-
-        iqbuf_up->delay = floor(upsamp_.getRate()*upsamp_.getDelay());
-
-        iqbuf = iqbuf_up;
-
-        // Mix up
-        setFreqShift(shift);
-        nco_.mix_up(iqbuf->data(), iqbuf->data(), iqbuf->size());
-    }
-
     // Fill in the ModPacket
-    mpkt.fc = shift;
     mpkt.samples = std::move(iqbuf);
     mpkt.pkt = std::move(pkt);
 }
 
-void LiquidPHY::Modulator::setFreqShift(double shift)
-{
-    if (shift_ != shift) {
-        double rad = 2*M_PI*shift/phy_.getTXRate(); // Frequency shift in radians
-
-        nco_.reset(rad);
-
-        shift_ = shift;
-    }
-}
-
 void LiquidPHY::Modulator::reconfigure(void)
 {
-    upsamp_ = Liquid::MultiStageResampler(phy_.getTXUpsampleRate(),
-                                          liquid_phy_.upsamp_resamp_params.m,
-                                          liquid_phy_.upsamp_resamp_params.fc,
-                                          liquid_phy_.upsamp_resamp_params.As,
-                                          liquid_phy_.upsamp_resamp_params.npfb);
-
-    double shift = shift_;
-
-    setFreqShift(0.0);
-    setFreqShift(shift);
 }
 
 LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
   : Liquid::Demodulator(phy.soft_header_, phy.soft_payload_)
   , PHY::Demodulator(phy)
   , liquid_phy_(phy)
-  , downsamp_(phy.getRXDownsampleRate(),
-              phy.downsamp_resamp_params.m,
-              phy.downsamp_resamp_params.fc,
-              phy.downsamp_resamp_params.As,
-              phy.downsamp_resamp_params.npfb)
   , internal_oversample_fact_(1)
-  , shift_(0.0)
-  , nco_(0.0)
 {
 }
 
@@ -169,7 +115,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 {
     Header* h = reinterpret_cast<Header*>(header_);
     size_t  off = demod_off_;   // Save demodulation offset for use when we log.
-    double  resamp_fact = internal_oversample_fact_/downsamp_.getRate();
+    double  resamp_fact = internal_oversample_fact_/rate_;
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
@@ -266,7 +212,9 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 }
 
 void LiquidPHY::Demodulator::reset(Clock::time_point timestamp,
-                                   size_t off)
+                                   size_t off,
+                                   double shift,
+                                   double rate)
 {
     if (pending_reconfigure_.load(std::memory_order_relaxed)) {
         pending_reconfigure_.store(false, std::memory_order_relaxed);
@@ -275,12 +223,12 @@ void LiquidPHY::Demodulator::reset(Clock::time_point timestamp,
 
     reset();
 
+    rate_ = rate;
+    shift_ = shift;
     demod_start_ = timestamp;
     demod_off_ = off;
     in_snapshot_ = false;
     snapshot_off_ = 0;
-
-    downsamp_.reset();
 }
 
 void LiquidPHY::Demodulator::setSnapshotOffset(ssize_t snapshot_off)
@@ -291,58 +239,17 @@ void LiquidPHY::Demodulator::setSnapshotOffset(ssize_t snapshot_off)
     }
 }
 
-void LiquidPHY::Demodulator::demodulate(std::complex<float>* data,
+void LiquidPHY::Demodulator::demodulate(const std::complex<float>* data,
                                         size_t count,
-                                        double shift,
                                         std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
     callback_ = callback;
 
-    if (downsamp_.getRate() == 1.0 && shift == 0.0) {
-        demodulateSamples(data, count);
-    } else {
-        // Mix down
-        IQBuf iqbuf_shift(count);
-
-        if (shift != 0.0) {
-            setFreqShift(shift);
-            nco_.mix_down(data, iqbuf_shift.data(), count);
-        } else
-            memcpy(iqbuf_shift.data(), data, sizeof(std::complex<float>)*count);
-
-        // Downsample
-        auto iqbuf_down = downsamp_.resample(iqbuf_shift);
-
-        // Demodulate
-        demodulateSamples(iqbuf_down->data(), iqbuf_down->size());
-    }
-}
-
-void LiquidPHY::Demodulator::setFreqShift(double shift)
-{
-    // We don't reset the NCO unless we have to so as to avoid phase
-    // discontinuities during demodulation.
-    if (shift_ != shift) {
-        double rad = 2*M_PI*shift/phy_.getRXRate(); // Frequency shift in radians
-
-        nco_.reset(rad);
-
-        shift_ = shift;
-    }
+    demodulateSamples(data, count);
 }
 
 void LiquidPHY::Demodulator::reconfigure(void)
 {
-    downsamp_ = Liquid::MultiStageResampler(phy_.getRXDownsampleRate(),
-                                            liquid_phy_.downsamp_resamp_params.m,
-                                            liquid_phy_.downsamp_resamp_params.fc,
-                                            liquid_phy_.downsamp_resamp_params.As,
-                                            liquid_phy_.downsamp_resamp_params.npfb);
-
-    double shift = shift_;
-
-    setFreqShift(0.0);
-    setFreqShift(shift);
 }
 
 size_t LiquidPHY::getModulatedSize(const TXParams &params, size_t n)

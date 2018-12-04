@@ -59,12 +59,9 @@ public:
 
         /** @brief Modulate a packet to produce IQ samples.
          * @param pkt The NetPacket to modulate.
-         * @param shift Samples should be shifted by this frequency (Hz) during
-         * modulation
          * @param mpkt The ModPacket in which to place modulated samples.
          */
         virtual void modulate(std::shared_ptr<NetPacket> pkt,
-                              double shift,
                               ModPacket &mpkt) = 0;
     };
 
@@ -80,9 +77,14 @@ public:
          * @brief timestamp The timestamp of IQ buffer from which the first
          * provided sample willcome.
          * @brief off The offset of the first provided sample.
+         * @brief shift The center frequency of the demodulated data.
+         * @brief rate The rate of the resampler applied before data is passed
+         * to thedemodulator.
          */
         virtual void reset(Clock::time_point timestamp,
-                           size_t off) = 0;
+                           size_t off,
+                           double shift,
+                           double rate) = 0;
 
         /** @brief Set the snapshot offset.
         * @brief snapshot_off The current snapshot offset.
@@ -92,14 +94,11 @@ public:
         /** @brief Demodulate IQ samples.
          * @param data IQ samples to demodulate.
          * @param count The number of samples to demodulate
-         * @param shift Samples should be shifted by this frequency (Hz) before
-         * demodulation
          * @param callback The function to call with any demodulated packets. If
          * a bad packet is received, the argument will be nullptr.
          */
-        virtual void demodulate(std::complex<float>* data,
+        virtual void demodulate(const std::complex<float>* data,
                                 size_t count,
-                                double shift,
                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
     };
 
