@@ -5,6 +5,8 @@
 #include "phy/OFDM.hh"
 #include "python/PyModules.hh"
 
+using Liquid::ResamplerParams;
+
 void exportPHYs(py::module &m)
 {
     // Export class Gain to Python

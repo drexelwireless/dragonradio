@@ -14,83 +14,6 @@
 #include "mac/Snapshot.hh"
 #include "phy/PHY.hh"
 
-struct ResamplerParams {
-    using update_t = std::function<void(void)>;
-
-    ResamplerParams(update_t update)
-      : m(7)
-      , fc(0.4f)
-      , As(60.0f)
-      , npfb(64)
-      , update_(update)
-    {
-    }
-
-    ~ResamplerParams() = default;
-
-    ResamplerParams() = delete;
-
-    unsigned get_m(void)
-    {
-        return m;
-    }
-
-    void set_m(unsigned m_new)
-    {
-        m = m_new;
-        update_();
-    }
-
-    float get_fc(void)
-    {
-        return fc;
-    }
-
-    void set_fc(float fc_new)
-    {
-        fc = fc_new;
-        update_();
-    }
-
-    float get_As(void)
-    {
-        return fc;
-    }
-
-    void set_As(float As_new)
-    {
-        As = As_new;
-        update_();
-    }
-
-    unsigned get_npfb(void)
-    {
-        return npfb;
-    }
-
-    void set_npfb(unsigned npfb_new)
-    {
-        npfb = npfb_new;
-        update_();
-    }
-
-    /** @brief Prototype filter semi-length */
-    unsigned int m;
-
-    /** @brief Prototype filter cutoff frequency */
-    float fc;
-
-    /** @brief Stop-band attenuation for resamplers */
-    float As;
-
-    /** @brief Number of filters in polyphase filterbank */
-    unsigned npfb;
-
-protected:
-    /** @brief Callback called when variables are modified via set* */
-    update_t update_;
-};
-
 class LiquidPHY : public PHY {
 public:
     class Modulator : public PHY::Modulator, virtual protected Liquid::Modulator {
@@ -259,10 +182,10 @@ public:
     size_t getModulatedSize(const TXParams &params, size_t n) override;
 
     /** @brief Resampler parameters for modulator */
-    ResamplerParams upsamp_resamp_params;
+    Liquid::ResamplerParams upsamp_resamp_params;
 
     /** @brief Resampler parameters for demodulator */
-    ResamplerParams downsamp_resamp_params;
+    Liquid::ResamplerParams downsamp_resamp_params;
 
 protected:
     /** @brief Our snapshot collector */
