@@ -103,6 +103,7 @@ void SnapshotCollector::selfTX(unsigned start, unsigned end, float fc, float fs)
 void SnapshotCollector::selfTX(Clock::time_point when,
                                float fs_rx,
                                float fs_tx,
+                               float fs_chan,
                                unsigned nsamples,
                                float fc)
 {
@@ -118,7 +119,7 @@ void SnapshotCollector::selfTX(Clock::time_point when,
                                               start,
                                               start + scaled_nsamples,
                                               fc,
-                                              fs_tx});
+                                              fs_chan});
     } else {
         last_local_tx_start_ = when;
         last_local_tx_fs_rx_ = fs_rx;
