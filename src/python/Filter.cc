@@ -10,25 +10,30 @@ void exportFilters(py::module &m)
 {
     // Export filter classes to Python
     py::class_<Filter, std::unique_ptr<Filter>>(m, "Filter")
-        .def("groupDelay", &Filter::getGroupDelay)
-        .def("reset", &Filter::reset, "Reset the filter's state")
-        .def("execute", [](Filter &filt, py::array_t<std::complex<float>> in) -> py::array_t<std::complex<float>> {
-            auto inbuf = in.request();
+        .def("groupDelay",
+            &Filter::getGroupDelay)
+        .def("reset",
+            &Filter::reset,
+            "Reset the filter's state")
+        .def("execute",
+            [](Filter &filt, py::array_t<std::complex<float>> in) -> py::array_t<std::complex<float>> {
+                auto inbuf = in.request();
 
-            py::array_t<std::complex<float>> outarr(inbuf.size);
-            auto                             outbuf = outarr.request();
+                py::array_t<std::complex<float>> outarr(inbuf.size);
+                auto                             outbuf = outarr.request();
 
-            filt.execute(reinterpret_cast<std::complex<float>*>(inbuf.ptr),
-                         reinterpret_cast<std::complex<float>*>(outbuf.ptr),
-                         inbuf.size);
+                filt.execute(reinterpret_cast<std::complex<float>*>(inbuf.ptr),
+                             reinterpret_cast<std::complex<float>*>(outbuf.ptr),
+                             inbuf.size);
 
-            return outarr;
-        },
-        "Execute the filter")
+                return outarr;
+            },
+            "Execute the filter")
         ;
 
     py::class_<FIRFilter, Filter, std::unique_ptr<FIRFilter>>(m, "FIRFilter")
-        .def_property_readonly("delay", &FIRFilter::getDelay)
+        .def_property_readonly("delay",
+            &FIRFilter::getDelay)
         ;
 
     py::class_<IIRFilter, Filter, std::unique_ptr<IIRFilter>>(m, "IIRFilter")
