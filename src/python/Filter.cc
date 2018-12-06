@@ -6,46 +6,58 @@
 #include "liquid/Filter.hh"
 #include "python/PyModules.hh"
 
-void exportFilters(py::module &m)
+template <class I, class O>
+void exportFilter(py::module &m, const char *name)
 {
-    // Export filter classes to Python
-    py::class_<Filter, std::unique_ptr<Filter>>(m, "Filter")
+    using pyarray_I = py::array_t<I, py::array::c_style | py::array::forcecast>;
+    using pyarray_O = py::array_t<O>;
+
+    py::class_<Filter<I,O>, std::unique_ptr<Filter<I,O>>>(m, name)
         .def("groupDelay",
-            &Filter::getGroupDelay)
+            &Filter<I,O>::getGroupDelay,
+            "Return filter group delay of given frequency")
         .def("reset",
-            &Filter::reset,
+            &Filter<I,O>::reset,
             "Reset the filter's state")
         .def("execute",
-            [](Filter &filt, py::array_t<std::complex<float>> in) -> py::array_t<std::complex<float>> {
-                auto inbuf = in.request();
+            [](Filter<I,O> &filt, pyarray_I in) -> pyarray_O
+            {
+                auto      inbuf = in.request();
+                pyarray_O outarr(inbuf.size);
+                auto      outbuf = outarr.request();
 
-                py::array_t<std::complex<float>> outarr(inbuf.size);
-                auto                             outbuf = outarr.request();
-
-                filt.execute(reinterpret_cast<std::complex<float>*>(inbuf.ptr),
-                             reinterpret_cast<std::complex<float>*>(outbuf.ptr),
+                filt.execute(reinterpret_cast<I*>(inbuf.ptr),
+                             reinterpret_cast<O*>(outbuf.ptr),
                              inbuf.size);
 
                 return outarr;
             },
             "Execute the filter")
         ;
+}
 
-    py::class_<FIRFilter, Filter, std::unique_ptr<FIRFilter>>(m, "FIRFilter")
+template <class I, class O, class C>
+void exportLiquidFIR(py::module &m, const char *name)
+{
+    py::class_<Liquid::FIR<I,O,C>, Filter<I,O>, std::unique_ptr<Liquid::FIR<I,O,C>>>(m, name)
+        .def(py::init<const std::vector<C>&>())
         .def_property_readonly("delay",
-            &FIRFilter::getDelay)
+            &FIR<I,O,C>::getDelay,
+            "Return filter delay")
+        .def_property("taps",
+            &FIR<I,O,C>::getTaps,
+            &FIR<I,O,C>::setTaps,
+            "Filter taps")
         ;
+}
 
-    py::class_<IIRFilter, Filter, std::unique_ptr<IIRFilter>>(m, "IIRFilter")
-        ;
+template <class I, class O, class C>
+void exportLiquidIIR(py::module &m, const char *name)
+{
+    using pyarray_C = py::array_t<C, py::array::c_style | py::array::forcecast>;
 
-    py::class_<Liquid::FIRFilter, FIRFilter, std::unique_ptr<Liquid::FIRFilter>>(m, "LiquidFIRFilter")
-        .def(py::init<const std::vector<std::complex<float>>&>())
-        ;
-
-    py::class_<Liquid::IIRFilter, IIRFilter, std::unique_ptr<Liquid::IIRFilter>>(m, "LiquidIIRFilter")
-        .def(py::init([](py::array_t<std::complex<float>, py::array::c_style | py::array::forcecast> b,
-                         py::array_t<std::complex<float>, py::array::c_style | py::array::forcecast> a) {
+    py::class_<Liquid::IIR<I,O,C>, Filter<I,O>, std::unique_ptr<Liquid::IIR<I,O,C>>>(m, name)
+        .def(py::init([](pyarray_C b, pyarray_C a) {
             py::buffer_info b_buf = b.request();
             py::buffer_info a_buf = b.request();
 
@@ -55,18 +67,27 @@ void exportFilters(py::module &m)
             if (a_buf.size != b_buf.size)
                 throw std::runtime_error("Input shapes must match");
 
-            return Liquid::IIRFilter(static_cast<std::complex<float>*>(b_buf.ptr), b_buf.size,
-                                     static_cast<std::complex<float>*>(a_buf.ptr), a_buf.size);
+            return Liquid::IIR<I,O,C>(static_cast<C*>(b_buf.ptr), b_buf.size,
+                                      static_cast<C*>(a_buf.ptr), a_buf.size);
         }))
-        .def(py::init([](py::array_t<std::complex<float>, py::array::c_style | py::array::forcecast> sos) {
+        .def(py::init([](pyarray_C sos) {
             py::buffer_info sos_buf = sos.request();
 
             if (sos_buf.ndim != 2 || sos_buf.shape[1] != 6)
                 throw std::runtime_error("SOS array must have shape Nx6");
 
-            return Liquid::IIRFilter(static_cast<std::complex<float>*>(sos_buf.ptr), sos_buf.size/6);
+            return Liquid::IIR<I,O,C>(static_cast<C*>(sos_buf.ptr), sos_buf.size/6);
         }))
         ;
+}
+
+void exportFilters(py::module &m)
+{
+    using C = std::complex<float>;
+
+    exportFilter<C,C>(m, "FilterCC");
+    exportLiquidFIR<C,C,C>(m, "LiquidFIRCCC");
+    exportLiquidIIR<C,C,C>(m, "LiquidIIRCCC");
 
     m.def("parks_mcclellan", &Liquid::parks_mcclellan);
 
