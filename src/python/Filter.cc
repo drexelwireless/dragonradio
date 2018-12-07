@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 
 #include "dsp/Filter.hh"
+#include "dsp/Window.hh"
 #include "liquid/Filter.hh"
 #include "python/PyModules.hh"
 
@@ -81,6 +82,29 @@ void exportLiquidIIR(py::module &m, const char *name)
         ;
 }
 
+template <class T>
+void exportWindow(py::module &m, const char *name)
+{
+    py::class_<Window<T>, std::unique_ptr<Window<T>>>(m, name)
+        .def(py::init<typename Window<T>::size_type>())
+        .def_property_readonly("size",
+            &Window<T>::size,
+            "Window size")
+        .def("resize",
+            &Window<T>::resize,
+            "Resize window")
+        .def("reset",
+            &Window<T>::reset,
+            "Reset window")
+        .def("add",
+            &Window<T>::add,
+            "Add element to window")
+        .def_property_readonly("window",
+            &Window<T>::get,
+            "Get values in the window")
+        ;
+}
+
 void exportFilters(py::module &m)
 {
     using C = std::complex<float>;
@@ -94,4 +118,6 @@ void exportFilters(py::module &m)
     m.def("kaiser", &Liquid::kaiser);
 
     m.def("butter_lowpass", &Liquid::butter_lowpass);
+
+    exportWindow<C>(m, "WindowC");
 }

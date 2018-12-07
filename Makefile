@@ -31,6 +31,9 @@ LIBS += -lpython3.5m
 # Needed for FLAC
 LIBS += -lFLAC++ -lFLAC
 
+# Needed for xsimd
+CPPFLAGS += -Idependencies/xsimd/include
+
 # Version information
 GIT_HASH=$(shell git rev-parse HEAD^{} | cut -c1-8)
 
