@@ -2,6 +2,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#include "dsp/FIR.hh"
 #include "dsp/Filter.hh"
 #include "dsp/Window.hh"
 #include "liquid/Filter.hh"
@@ -82,6 +83,21 @@ void exportLiquidIIR(py::module &m, const char *name)
         ;
 }
 
+template <class T, class C>
+void exportDragonFIR(py::module &m, const char *name)
+{
+    py::class_<Dragon::FIR<T,C>, Filter<T,T>, std::unique_ptr<Dragon::FIR<T,C>>>(m, name)
+        .def(py::init<const std::vector<C>&>())
+        .def_property_readonly("delay",
+            &Dragon::FIR<T,C>::getDelay,
+            "Return filter delay")
+        .def_property("taps",
+            &Dragon::FIR<T,C>::getTaps,
+            &Dragon::FIR<T,C>::setTaps,
+            "Filter taps")
+        ;
+}
+
 template <class T>
 void exportWindow(py::module &m, const char *name)
 {
@@ -108,8 +124,11 @@ void exportWindow(py::module &m, const char *name)
 void exportFilters(py::module &m)
 {
     using C = std::complex<float>;
+    using F = float;
 
     exportFilter<C,C>(m, "FilterCC");
+    exportDragonFIR<C,C>(m, "FIRCCC");
+    exportDragonFIR<C,F>(m, "FIRCCF");
     exportLiquidFIR<C,C,C>(m, "LiquidFIRCCC");
     exportLiquidIIR<C,C,C>(m, "LiquidIIRCCC");
 
