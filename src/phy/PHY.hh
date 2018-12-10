@@ -262,22 +262,32 @@ protected:
     /** @brief Reconfigure for new RX parameters */
     virtual void reconfigureRX(void)
     {
-        for(auto demod : demodulators_) {
-            auto p = demod.lock();
+        auto it = demodulators_.begin();
 
-            if (p)
+        while (it != demodulators_.end()) {
+            auto p = it->lock();
+
+            if (p) {
                 p->scheduleReconfigure();
+                it++;
+            } else
+                it = demodulators_.erase(it);
         }
     }
 
     /** @brief Reconfigure for new TX parameters */
     virtual void reconfigureTX(void)
     {
-        for(auto mod : modulators_) {
-            auto p = mod.lock();
+        auto it = modulators_.begin();
 
-            if (p)
+        while (it != modulators_.end()) {
+            auto p = it->lock();
+
+            if (p) {
                 p->scheduleReconfigure();
+                it++;
+            } else
+                it = modulators_.erase(it);
         }
     }
 };
