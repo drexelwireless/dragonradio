@@ -63,6 +63,7 @@ SOURCES := \
     IQCompression/FLAC.cc \
     Logger.cc \
     main.cc \
+    Math.cc \
     Packet.cc \
     RadioConfig.cc \
     TimerQueue.cc \
