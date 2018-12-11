@@ -101,6 +101,9 @@ void exportDragonRationalResampler(py::module &m, const char *name)
         .def(py::init<unsigned,
                       unsigned,
                       const std::vector<C>&>())
+        .def(py::init<double,
+                      const std::vector<C>&>())
+        .def(py::init<double>())
         .def_property_readonly("up_rate",
             &Dragon::RationalResampler<T,C>::getUpRate,
             "Upsample rate")
