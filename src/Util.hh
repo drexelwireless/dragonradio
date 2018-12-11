@@ -53,4 +53,4 @@ void makeThreadWakeable(void);
  */
 void wakeThread(std::thread& t);
 
-#endif    // UTIL_HH_
+#endif /* UTIL_HH_ */
