@@ -70,6 +70,7 @@ SOURCES := \
     USRP.cc \
     Util.cc \
     WorkQueue.cc \
+    dsp/FFTW.cc \
     dsp/TableNCO.cc \
     liquid/Filter.cc \
     liquid/Mutex.cc \

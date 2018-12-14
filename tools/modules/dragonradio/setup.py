@@ -31,6 +31,7 @@ ext_modules = [
          'main_src/IQCompression.cc',
          'main_src/IQCompression/FLAC.cc',
          'main_src/Math.cc',
+         'main_src/dsp/FFTW.cc',
          'main_src/dsp/TableNCO.cc',
          'main_src/liquid/Filter.cc',
          'main_src/liquid/Mutex.cc',
