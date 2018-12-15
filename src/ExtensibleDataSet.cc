@@ -56,7 +56,9 @@ void ExtensibleDataSet::write(const void *buf, size_t n)
         ds_.write(buf, dt_, memspace, space);
 
         size_ += n;
-    } catch(std::exception &e) {
-        fprintf(stderr, "HDF5 exception: %s\n", e.what());
+    } catch(H5::DataSetIException &e) {
+        fprintf(stderr, "HDF5 exception: %s: %s\n",
+            e.getCFuncName(),
+            e.getCDetailMsg());
     }
 }
