@@ -1034,7 +1034,7 @@ class Radio(object):
 
                     self.setTXChannel(idx)
                 else:
-                    logging.error('No TX channel for radio %d (channels=%s)', self.node_id, config.channels)
+                    logging.error('No TX channel for radio %d (channels=%s)', self.node_id, self.channels)
         else:
             idx = nodes.index(self.node_id)
 
