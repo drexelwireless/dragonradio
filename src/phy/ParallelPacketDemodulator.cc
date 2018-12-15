@@ -22,6 +22,7 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
   , done_(false)
   , demod_q_(radio_q_, channels_)
   , demod_reconfigure_(nthreads)
+  , logger_(logger)
 {
     net_thread_ = std::thread(&ParallelPacketDemodulator::netWorker, this);
 
@@ -197,9 +198,9 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
         radio_q_.eraseBarrier(b);
 
         // If we received any packets, log both slots.
-        if (logger && received && logger->getCollectSource(Logger::kSlots)) {
-            logger->logSlot(buf1, rx_rate_);
-            logger->logSlot(buf2, rx_rate_);
+        if (logger_ && received && logger_->getCollectSource(Logger::kSlots)) {
+            logger_->logSlot(buf1, rx_rate_);
+            logger_->logSlot(buf2, rx_rate_);
         }
     }
 }

@@ -1,6 +1,7 @@
 #ifndef SLOTTEDMAC_H_
 #define SLOTTEDMAC_H_
 
+#include "Logger.hh"
 #include "USRP.hh"
 #include "phy/PHY.hh"
 #include "phy/PacketDemodulator.hh"
@@ -88,6 +89,9 @@ protected:
 
     /** @brief Number of samples to pre-modulate */
     size_t premod_samps_;
+
+    /** @brief A reference to the global logger */
+    std::shared_ptr<Logger> logger_;
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;

@@ -7,6 +7,7 @@
 #include <liquid/liquid.h>
 
 #include "Clock.hh"
+#include "Logger.hh"
 #include "Packet.hh"
 #include "dsp/TableNCO.hh"
 #include "liquid/PHY.hh"
@@ -94,6 +95,9 @@ public:
 
         /** @brief The snapshot offset. */
         size_t snapshot_off_;
+
+        /** @brief A reference to the global logger */
+        std::shared_ptr<Logger> logger_;
 
         virtual int callback(unsigned char    *header_,
                              int              header_valid_,

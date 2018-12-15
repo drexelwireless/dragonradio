@@ -103,6 +103,7 @@ LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
   , PHY::Demodulator(phy)
   , liquid_phy_(phy)
   , internal_oversample_fact_(1)
+  , logger_(logger)
 {
 }
 
@@ -183,35 +184,35 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
     callback_(std::move(pkt));
 
-    if (logger &&
-        logger->getCollectSource(Logger::kRecvPackets) &&
+    if (logger_ &&
+        logger_->getCollectSource(Logger::kRecvPackets) &&
         (header_valid_ || rc.log_invalid_headers)) {
         std::shared_ptr<buffer<std::complex<float>>> buf = nullptr;
 
-        if (logger->getCollectSource(Logger::kRecvData)) {
+        if (logger_->getCollectSource(Logger::kRecvData)) {
             buf = std::make_shared<buffer<std::complex<float>>>(stats_.num_framesyms);
             memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
         }
 
-        logger->logRecv(demod_start_,
-                        start,
-                        end,
-                        header_valid_,
-                        payload_valid_,
-                        *h,
-                        h->curhop,
-                        h->nexthop,
-                        static_cast<crc_scheme>(stats_.check),
-                        static_cast<fec_scheme>(stats_.fec0),
-                        static_cast<fec_scheme>(stats_.fec1),
-                        static_cast<modulation_scheme>(stats_.mod_scheme),
-                        stats_.evm,
-                        stats_.rssi,
-                        stats_.cfo,
-                        shift_,
-                        phy_.getRXRate(),
-                        payload_len_,
-                        std::move(buf));
+        logger_->logRecv(demod_start_,
+                         start,
+                         end,
+                         header_valid_,
+                         payload_valid_,
+                         *h,
+                         h->curhop,
+                         h->nexthop,
+                         static_cast<crc_scheme>(stats_.check),
+                         static_cast<fec_scheme>(stats_.fec0),
+                         static_cast<fec_scheme>(stats_.fec1),
+                         static_cast<modulation_scheme>(stats_.mod_scheme),
+                         stats_.evm,
+                         stats_.rssi,
+                         stats_.cfo,
+                         shift_,
+                         phy_.getRXRate(),
+                         payload_len_,
+                         std::move(buf));
     }
 
     return 0;

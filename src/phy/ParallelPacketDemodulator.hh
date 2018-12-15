@@ -175,6 +175,9 @@ private:
     /** @brief Network send thread. */
     std::thread net_thread_;
 
+    /** @brief A reference to the global logger */
+    std::shared_ptr<Logger> logger_;
+
     /** @brief A demodulation worker. */
     void demodWorker(std::atomic<bool> &reconfig);
 

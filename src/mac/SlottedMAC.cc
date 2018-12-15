@@ -18,6 +18,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
   , guard_size_(guard_size)
   , demod_overlap_size_(demod_overlap_size)
   , premod_slots_(1.0)
+  , logger_(logger)
   , done_(false)
 {
 }
@@ -170,7 +171,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
     nsamples = modulator_->pop(modBuf, maxSamples, overfill);
 
     if (!modBuf.empty()) {
-        if (logger && logger->getCollectSource(Logger::kSentPackets)) {
+        if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
                 txBuf.emplace_back((*it)->samples);
 
@@ -183,14 +184,14 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
                 hdr.nexthop = (*it)->pkt->nexthop;
                 hdr.seq = (*it)->pkt->seq;
 
-                logger->logSend((*it)->samples->timestamp,
-                                hdr,
-                                (*it)->pkt->src,
-                                (*it)->pkt->dest,
-                                (*it)->fc,
-                                tx_rate_,
-                                (*it)->pkt->size(),
-                                (*it)->samples);
+                logger_->logSend((*it)->samples->timestamp,
+                                 hdr,
+                                 (*it)->pkt->src,
+                                 (*it)->pkt->dest,
+                                 (*it)->fc,
+                                 tx_rate_,
+                                 (*it)->pkt->size(),
+                                 (*it)->samples);
             }
         } else {
             // When we aren't logging, use std::move to hand the samples over

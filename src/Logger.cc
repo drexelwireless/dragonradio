@@ -554,7 +554,9 @@ void Logger::logEvent_(const Clock::time_point& t,
 
 void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap0)
 {
-    if (rc.debug || (logger && logger->getCollectSource(Logger::kEvents))) {
+    std::shared_ptr<Logger> l = logger;
+
+    if (rc.debug || (l && l->getCollectSource(Logger::kEvents))) {
         int                     n = 2 * strlen(fmt);
         std::unique_ptr<char[]> buf;
         va_list                 ap;
@@ -577,7 +579,7 @@ void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap0)
         if (rc.debug)
             fprintf(stderr, "%s\n", s.c_str());
 
-        if (logger && logger->getCollectSource(Logger::kEvents))
-            logger->logEvent(t, s);
+        if (l && l->getCollectSource(Logger::kEvents))
+            l->logEvent(t, s);
     }
 }
