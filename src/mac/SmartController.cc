@@ -1373,18 +1373,26 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
     auto                            it = recv_.find(node_id);
 
     // XXX If we have a receive window for this source use it. The exception is
-    // when we see a SYN packet that is outside the receive window. In that
-    // case, assume the sender restarted and re-create the receive window. This
-    // could cause an issue if we see a re-transmission of the first packet
-    // after the sender has advanced its window. This should not happen because
-    // the sender will only open up its window if it has seen its SYN packet
-    // ACK'ed.
+    // when we either see a SYN packet or a sequence number that is outside the
+    // receive window. In that case, assume the sender restarted and re-create
+    // the receive window. This could cause an issue if we see a re-transmission
+    // of the first packet after the sender has advanced its window. This should
+    // not happen because the sender will only open up its window if it has seen
+    // its SYN packet ACK'ed.
     if (it != recv_.end()) {
         RecvWindow                      &recvw = it->second;
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
         if (!isSYN || (seq >= recvw.max - recvw.win && seq < recvw.ack + recvw.win))
             return recvw;
+        else {
+            // This is a new connection, so cancel selective ACK timer for the
+            // old receive window
+            timer_queue_.cancel(recvw);
+
+            // Delete the old receive window
+            recv_.erase(it);
+        }
     }
 
     Node       &src = (*net_)[node_id];
