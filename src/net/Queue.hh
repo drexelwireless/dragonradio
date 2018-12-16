@@ -3,6 +3,8 @@
 
 #include <functional>
 
+#include "spinlock_mutex.hh"
+#include "Header.hh"
 #include "SafeQueue.hh"
 #include "net/Element.hh"
 
@@ -54,11 +56,41 @@ public:
     /** @brief Stop processing queue elements. */
     virtual void stop(void) = 0;
 
+    /** @brief Set whether or not a node's send window is open */
+    void setSendWindowStatus(NodeId id, bool isOpen)
+    {
+        std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
+
+        send_window_status_[id] = isOpen;
+    }
+
     /** @brief The queue's packet input port. */
     Port<In, Push, T> in;
 
     /** @brief The queue's packet output port. */
     Port<Out, Pull, T> out;
+
+protected:
+    /** @brief Mutex protecting the send window status */
+    spinlock_mutex send_window_status_mutex_;
+
+    /** @brief Nodes' send window statuses */
+    std::unordered_map<NodeId, bool> send_window_status_;
+
+    /** @brief Return true if the packet can be popped */
+    bool canPop(const T& pkt)
+    {
+        if (pkt->isFlagSet(kBroadcast))
+            return true;
+
+        std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
+        auto                            it = send_window_status_.find(pkt->nexthop);
+
+        if (it != send_window_status_.end())
+            return it->second;
+        else
+            return true;
+    }
 };
 
 using NetQueue = Queue<std::shared_ptr<NetPacket>>;
@@ -167,6 +199,7 @@ protected:
 template <class T>
 class FIFO : public SimpleQueue<T> {
 public:
+    using SimpleQueue<T>::canPop;
     using SimpleQueue<T>::done_;
     using SimpleQueue<T>::m_;
     using SimpleQueue<T>::cond_;
@@ -187,11 +220,16 @@ public:
             hiq_.pop_front();
             return true;
         } else if (!q_.empty()) {
-            val = std::move(q_.front());
-            q_.pop_front();
-            return true;
-        } else
-            return false;
+            for (auto it = q_.begin(); it != q_.end(); ++it) {
+                if (canPop(*it)) {
+                    val = std::move(*it);
+                    q_.erase(it);
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 };
 
@@ -203,6 +241,7 @@ using RadioFIFO = FIFO<std::shared_ptr<RadioPacket>>;
 template <class T>
 class LIFO : public SimpleQueue<T> {
 public:
+    using SimpleQueue<T>::canPop;
     using SimpleQueue<T>::done_;
     using SimpleQueue<T>::m_;
     using SimpleQueue<T>::cond_;
@@ -223,11 +262,16 @@ public:
             hiq_.pop_front();
             return true;
         } else if (!q_.empty()) {
-            val = std::move(q_.back());
-            q_.pop_back();
-            return true;
-        } else
-            return false;
+            for (auto it = q_.rbegin(); it != q_.rend(); ++it) {
+                if (canPop(*it)) {
+                    val = std::move(*it);
+                    q_.erase(std::next(it).base());
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 };
 

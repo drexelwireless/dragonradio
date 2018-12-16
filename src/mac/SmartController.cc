@@ -717,21 +717,9 @@ void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack, Seq max)
     // initial ACK, but it doesn't hurt to do it every time...
     sendw.win = sendw.maxwin;
 
-    // Now that our window is open, pending packets in our window are eligible
-    // to be sent, so add them to the high-priority network queue.
-    if (netq_ && !sendw.pending.empty()) {
-        auto begin = sendw.pending.cbegin();
-        auto end = sendw.pending.cend();
-        auto it = sendw.pending.cbegin();
-
-        while (it != end && sendw.node.seq < unack + sendw.win) {
-            (*it)->seq = sendw.node.seq++;
-            (*it)->setInternalFlag(kHasSeq);
-            ++it;
-        }
-
-        netq_->splice_hi(sendw.pending, begin, it);
-    }
+    // Indicate that this node's send window is now open
+    if (sendw.node.seq < unack + sendw.win)
+        netq_->setSendWindowStatus(sendw.node.id, true);
 
     // Update unack
     sendw.unack.store(unack, std::memory_order_release);
@@ -1261,27 +1249,8 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             Node& nexthop = (*net_)[pkt->nexthop];
 
             // If we can fit this packet in our window, do so. Otherwise, we
-            // add it to the send window's pending queue.
-            //
-            // NOTE: The pending queue can grow indefinitely! This is not good,
-            // so it is the responsibility of the network layer to perform
-            // admission control.
-            //
-            // NOTE: The receiver thread can ALSO assign sequence numbers. We
-            // want to make sure packets we get from the network aren't ever
-            // reordered. The reason there isn't a race condition between the
-            // receiver thread and us, the sender thread, is slightly subtle.
-            // Only the receiver can open the window, at which time it will hold
-            // the lock on the send window and attempt to drain the pending
-            // queue. There are two possibilities:
-            //
-            // 1) If the receiver doesn't drain the queue, it will fill the
-            // window, in which case we will add packets to the pending queue,
-            // so order will be maintained.
-            //
-            // 2) If the receiver does drain the queue, we are free to add more
-            // packets to the send window.
-
+            // log an error and drop the packet. We should never receive a
+            // packet from the network queue that we can't send.
             if (nexthop.seq < unack + sendw.win) {
                 pkt->seq = nexthop.seq++;
                 pkt->setInternalFlag(kHasSeq);
@@ -1293,11 +1262,14 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
                     sendw.new_window = false;
                 }
 
+                // If the send window is closed, tell the network queue
+                if (nexthop.seq >= unack + sendw.win)
+                    netq_->setSendWindowStatus(nexthop.id, false);
+
                 return true;
             } else {
-                dprintf("ARQ: send POSTPONE: node=%u",
+                logEvent("ARQ: DROPPING DUE TO FULL WINDOW: node=%u",
                     (unsigned) pkt->nexthop);
-                sendw.pending.emplace_back(std::move(pkt));
             }
         } else {
             // If this packet comes before our window, drop it. It could have

@@ -124,9 +124,6 @@ struct SendWindow {
      */
     Seq per_end;
 
-    /** @brief Pending packets we can't send because our window isn't large enough */
-    std::list<std::shared_ptr<NetPacket>> pending;
-
     /** @brief Mutex for the send window */
     spinlock_mutex mutex;
 
