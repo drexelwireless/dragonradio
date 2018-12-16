@@ -276,26 +276,6 @@ public:
                     double mcsidx_prob_floor);
     virtual ~SmartController();
 
-    bool pull(std::shared_ptr<NetPacket>& pkt) override;
-
-    void received(std::shared_ptr<RadioPacket>&& pkt) override;
-
-    void transmitted(std::shared_ptr<NetPacket>& pkt) override;
-
-    /** @brief Retransmit a send window entry on timeout. */
-    void retransmitOnTimeout(SendWindow::Entry &entry);
-
-    /** @brief Send an ACK to the given receiver. The caller MUST hold the lock
-     * on recvw.
-     */
-    void ack(RecvWindow &recvw);
-
-    /** @brief Send a NAK to the given receiver. */
-    void nak(NodeId node_id, Seq seq);
-
-    /** @brief Broadcast a HELLO packet. */
-    void broadcastHello(void);
-
     /** @brief Get the controller's network queue. */
     std::shared_ptr<NetQueue> getNetQueue(void)
     {
@@ -466,6 +446,25 @@ public:
     {
         return slot_size_/phy_->getModulatedSize(p, rc.mtu + sizeof(struct ether_header));
     }
+
+    bool pull(std::shared_ptr<NetPacket>& pkt) override;
+
+    void received(std::shared_ptr<RadioPacket>&& pkt) override;
+
+    void transmitted(std::shared_ptr<NetPacket>& pkt) override;
+
+    /** @brief Retransmit a send window entry on timeout. */
+    void retransmitOnTimeout(SendWindow::Entry &entry);
+
+    /** @brief Send an ACK to the given receiver. */
+    /** The caller MUST hold the lock on recvw. */
+    void ack(RecvWindow &recvw);
+
+    /** @brief Send a NAK to the given receiver. */
+    void nak(NodeId node_id, Seq seq);
+
+    /** @brief Broadcast a HELLO packet. */
+    void broadcastHello(void);
 
     /** @brief Broadcast TX params */
     TXParams broadcast_tx_params;
