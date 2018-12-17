@@ -128,15 +128,13 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     std::unique_ptr<RadioPacket> pkt;
 
     if (!header_valid_) {
-        pkt = std::make_unique<RadioPacket>();
-
-        pkt->setInternalFlag(kInvalidHeader);
-
         if (rc.log_invalid_headers) {
             if (rc.verbose && !rc.debug)
                 fprintf(stderr, "HEADER INVALID\n");
             logEvent("PHY: invalid header");
         }
+
+        return 0;
     } else if (!payload_valid_) {
         pkt = std::make_unique<RadioPacket>();
 
