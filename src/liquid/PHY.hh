@@ -77,12 +77,13 @@ protected:
 class Demodulator {
 public:
     /** @brief The type of demodulation callbacks */
-    using callback_t = std::function<void(bool,
-                                          const Header*,
-                                          bool,
-                                          void*,
-                                          size_t,
-                                          framesyncstats_s)>;
+    using callback_t = std::function<int(const Header*,
+                                         bool,
+                                         bool,
+                                         void*,
+                                         size_t,
+                                         bool,
+                                         framesyncstats_s)>;
 
     Demodulator(bool soft_header,
                 bool soft_payload)
@@ -165,6 +166,7 @@ protected:
     /** @brief Callback function for liquid demodulator */
     static int liquid_callback(unsigned char *  header_,
                                int              header_valid_,
+                               int              header_test_,
                                unsigned char *  payload_,
                                unsigned int     payload_len_,
                                int              payload_valid_,
@@ -174,6 +176,7 @@ protected:
     /** @brief Callback function for liquid demodulator */
     virtual int callback(unsigned char *  header_,
                          int              header_valid_,
+                         int              header_test_,
                          unsigned char *  payload_,
                          unsigned int     payload_len_,
                          int              payload_valid_,

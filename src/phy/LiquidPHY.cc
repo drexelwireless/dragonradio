@@ -108,21 +108,29 @@ LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
 
 int LiquidPHY::Demodulator::callback(unsigned char *  header_,
                                      int              header_valid_,
+                                     int              header_test_,
                                      unsigned char *  payload_,
                                      unsigned int     payload_len_,
                                      int              payload_valid_,
                                      framesyncstats_s stats_)
 {
     Header* h = reinterpret_cast<Header*>(header_);
-    size_t  off = demod_off_;   // Save demodulation offset for use when we log.
-    double  resamp_fact = internal_oversample_fact_/rate_;
+
+    // Perform test to see if we want to continue demodulating this packets
+    if (header_test_) {
+        if (header_valid_ && (h->flags & (1 << kBroadcast) || h->nexthop == phy_.getNodeId()))
+            return 1;
+        else
+            return 0;
+    }
+
+    // Deal with the demodulated packet
+    size_t off = demod_off_;   // Save demodulation offset for use when we log.
+    double resamp_fact = internal_oversample_fact_/rate_;
 
     // Update demodulation offset. The framesync object is reset after the
     // callback is called, which sets its internal counters to 0.
     demod_off_ += resamp_fact*stats_.end_counter;
-
-    if (header_valid_ && h->curhop == phy_.getNodeId())
-        return 0;
 
     // Create the packet and fill it out
     std::unique_ptr<RadioPacket> pkt;

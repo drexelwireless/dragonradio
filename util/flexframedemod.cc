@@ -7,12 +7,16 @@
 
 int callback(unsigned char *  header_,
              int              header_valid_,
+             int              header_test_,
              unsigned char *  payload_,
              unsigned int     payload_len_,
              int              payload_valid_,
              framesyncstats_s stats_,
              void *           userdata_)
 {
+    if (header_test_)
+        return 1;
+
     if (!header_valid_)
         printf("INVALID HEADER: ");
     else if (!payload_valid_)

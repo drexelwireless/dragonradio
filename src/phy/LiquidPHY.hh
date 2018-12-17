@@ -97,6 +97,7 @@ public:
 
         virtual int callback(unsigned char    *header_,
                              int              header_valid_,
+                             int              header_test_,
                              unsigned char    *payload_,
                              unsigned int     payload_len_,
                              int              payload_valid_,

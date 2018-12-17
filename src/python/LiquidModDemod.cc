@@ -74,15 +74,19 @@ demod_vec demodulate(Liquid::Demodulator &demod,
 
     auto buf = sig.request();
 
-    Liquid::Demodulator::callback_t cb = [&](bool header_valid,
-                                             const Header* header,
-                                             bool payload_valid,
+    Liquid::Demodulator::callback_t cb = [&](const Header* header,
+                                             bool header_valid,
+                                             bool header_test,
                                              void *payload,
                                              size_t payload_len,
+                                             bool payload_valid,
                                              framesyncstats_s stats)
     {
         std::optional<Header>    h;
         std::optional<py::bytes> p;
+
+        if (header_test)
+            return 1;
 
         if (header_valid)
             h = *((Header *) header);
@@ -91,6 +95,8 @@ demod_vec demodulate(Liquid::Demodulator &demod,
             p = py::bytes(reinterpret_cast<char*>(payload), payload_len);
 
         packets.push_back(std::make_tuple(h, p, stats));
+
+        return 0;
     };
 
     demod.demodulate(static_cast<std::complex<float>*>(buf.ptr), buf.size, cb);
