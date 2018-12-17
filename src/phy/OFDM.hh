@@ -82,14 +82,14 @@ public:
 
     virtual ~OFDM() = default;
 
-    double getMinRXRateOversample(void) const override
+    unsigned getMinRXRateOversample(void) const override
     {
-        return 1.0;
+        return 1;
     }
 
-    double getMinTXRateOversample(void) const override
+    unsigned getMinTXRateOversample(void) const override
     {
-        return 1.0;
+        return 1;
     }
 
 protected:

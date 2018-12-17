@@ -576,7 +576,7 @@ class Radio(object):
 
         # Create the USRP
         self.usrp = dragonradio.USRP(config.addr,
-                                     config.frequency,
+                                     self.frequency,
                                      config.tx_antenna,
                                      config.rx_antenna,
                                      config.tx_gain,
@@ -658,19 +658,6 @@ class Radio(object):
             fail('Bad PHY: {}'.format(config.phy))
 
         #
-        # Set PHY resampling parameters
-        #
-        self.phy.upsamp_resamp_params.m = config.phy_upsamp_m;
-        self.phy.upsamp_resamp_params.fc = config.phy_upsamp_fc;
-        self.phy.upsamp_resamp_params.As = config.phy_upsamp_As;
-        self.phy.upsamp_resamp_params.npfb = config.phy_upsamp_npfb;
-
-        self.phy.downsamp_resamp_params.m = config.phy_downsamp_m;
-        self.phy.downsamp_resamp_params.fc = config.phy_downsamp_fc;
-        self.phy.downsamp_resamp_params.As = config.phy_downsamp_As;
-        self.phy.downsamp_resamp_params.npfb = config.phy_downsamp_npfb;
-
-        #
         # Create tun/tap interface and net neighborhood
         #
         self.tuntap = dragonradio.TunTap('tap0', False, self.config.mtu, self.node_id)
@@ -709,6 +696,20 @@ class Radio(object):
                                                                  self.phy,
                                                                  self.rx_channels,
                                                                  config.num_demodulation_threads)
+
+        self.modulator.tx_rate = self.usrp.tx_rate
+        self.modulator.channel_rate = self.channel_bandwidth
+        self.modulator.upsamp_params.m = config.phy_upsamp_m
+        self.modulator.upsamp_params.fc = config.phy_upsamp_fc
+        self.modulator.upsamp_params.As = config.phy_upsamp_As
+        self.modulator.upsamp_params.npfb = config.phy_upsamp_npfb
+
+        self.demodulator.rx_rate = self.usrp.rx_rate
+        self.demodulator.channel_rate = self.channel_bandwidth
+        self.demodulator.downsamp_params.m = config.phy_downsamp_m;
+        self.demodulator.downsamp_params.fc = config.phy_downsamp_fc;
+        self.demodulator.downsamp_params.As = config.phy_downsamp_As;
+        self.demodulator.downsamp_params.npfb = config.phy_downsamp_npfb;
 
         self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
 
@@ -836,16 +837,10 @@ class Radio(object):
         # before creating the modulator and demodulator so we know at what rate
         # we must resample.
         #
-        bandwidth = min(config.bandwidth, config.max_bandwidth)
-        if config.fdma:
-            cbw = config.channel_bandwidth
-        else:
-            cbw = config.bandwidth
-
-        cgbw = config.channel_guard_bandwidth
-        egbw = config.edge_guard_bandwidth
-        if egbw == None:
-            egbw = cgbw
+        bandwidth = self.bandwidth
+        cbw = self.channel_bandwidth
+        cgbw = self.channel_guard_bandwidth
+        egbw = self.edge_guard_bandwidth
 
         # We space channels so that there is edge_guard_bandwidth on each end
         # and at least channel_guard_bandwidth between channels. For n channels,
@@ -890,9 +885,7 @@ class Radio(object):
 
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
-
-        self.phy.rx_rate_oversample = rx_rate/cbw
-        self.phy.tx_rate_oversample = tx_rate/cbw
+        self.phy.channel_rate = cbw
 
     def configSmartControllerSlotSize(self):
         """
@@ -900,12 +893,10 @@ class Radio(object):
         """
         config = self.config
 
-        bandwidth = config.bandwidth
-        bandwidth = min(config.bandwidth, config.max_bandwidth)
-        if config.fdma:
-            cbw = config.channel_bandwidth
-        else:
-            cbw = config.bandwidth
+        bandwidth = self.bandwidth
+        cbw = self.channel_bandwidth
+        cgbw = self.channel_guard_bandwidth
+        egbw = self.edge_guard_bandwidth
 
         if config.arq:
             if config.tx_upsample:
@@ -926,12 +917,17 @@ class Radio(object):
 
         logger.info("Reconfiguring radio: bandwidth=%f, frequency=%f", bandwidth, frequency)
 
-        self.usrp.rx_frequency = config.frequency
-        self.usrp.tx_frequency = config.frequency
+        self.usrp.rx_frequency = self.frequency
+        self.usrp.tx_frequency = self.frequency
 
         self.configRatesAndChannels()
 
+        self.modulator.tx_rate = self.usrp.tx_rate
+        self.modulator.channel_rate = self.channel_bandwidth
         self.modulator.channels = self.tx_channels
+
+        self.demodulator.rx_rate = self.usrp.rx_rate
+        self.demodulator.channel_rate = self.channel_bandwidth
         self.demodulator.channels = self.rx_channels
 
         self.mac.rx_channels = self.rx_channels
@@ -1001,7 +997,7 @@ class Radio(object):
             fc = self.channels[channel]
             logging.info("Setting TX frequency offset to %g", fc)
 
-            self.usrp.tx_frequency = config.frequency + fc
+            self.usrp.tx_frequency = self.frequency + fc
 
     def configureFDMATDMASchedule(self):
         """
@@ -1128,3 +1124,39 @@ class Radio(object):
                         self.logger.logSelfTX(t, e)
 
             await asyncio.sleep(config.snapshot_period)
+
+    @property
+    def frequency(self):
+        config = self.config
+
+        # We always use the lower portion of the available bandwidth. This
+        # allows us to avoid the incumbent in the DSRC scenario, which always
+        # uses the top portion of the available bandwidth when sharing spectrum.
+        diff = config.bandwidth - self.bandwidth
+        return config.frequency - diff/2.0
+
+    @property
+    def bandwidth(self):
+        config = self.config
+        return min(config.bandwidth, config.max_bandwidth)
+
+    @property
+    def channel_bandwidth(self):
+        config = self.config
+        if config.fdma:
+            return config.channel_bandwidth
+        else:
+            return config.bandwidth
+
+    @property
+    def channel_guard_bandwidth(self):
+        config = self.config
+        return config.channel_guard_bandwidth
+
+    @property
+    def edge_guard_bandwidth(self):
+        config = self.config
+        if config.edge_guard_bandwidth == None:
+            return self.channel_guard_bandwidth
+        else:
+            return config.edge_guard_bandwidth

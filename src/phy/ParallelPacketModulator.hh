@@ -1,11 +1,14 @@
 #ifndef PARALLELPACKETMODULATOR_H_
 #define PARALLELPACKETMODULATOR_H_
 
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <queue>
 
 #include "PacketModulator.hh"
+#include "liquid/Resample.hh"
+#include "phy/ModParams.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
@@ -19,17 +22,25 @@ public:
                             size_t nthreads);
     virtual ~ParallelPacketModulator();
 
+   virtual void modulateOne(std::shared_ptr<NetPacket> pkt,
+                            ModPacket &mpkt) override;
+
     void modulate(size_t n) override;
 
     size_t pop(std::list<std::unique_ptr<ModPacket>>& pkts,
                size_t maxSamples,
                bool overfill) override;
 
+    void reconfigure(void) override;
+
     /** @brief Stop modulating. */
     void stop(void);
 
     /** @brief Input port for packets. */
     NetIn<Pull> sink;
+
+    /** @brief Resampler parameters for modulator */
+    Liquid::ResamplerParams upsamp_params;
 
 private:
     /** @brief Our network. */
@@ -40,6 +51,9 @@ private:
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
+
+    /** @brief Reconfiguration flags */
+    std::vector<std::atomic<bool>> mod_reconfigure_;
 
     /** @brief Thread running modWorker */
     std::vector<std::thread> mod_threads_;
@@ -62,8 +76,20 @@ private:
     /* @brief Queue of modulated packets */
     std::queue<std::unique_ptr<ModPacket>> pkt_q_;
 
+    /* @brief Modulator for one-off modulation */
+    std::shared_ptr<PHY::Modulator> one_mod_;
+
+    /* @brief Parameters for one-off modulation */
+    ModParams one_modparams_;
+
     /** @brief Thread modulating packets */
-    void modWorker(void);
+    void modWorker(std::atomic<bool> &reconfig);
+
+    /** @brief Modulate one packet with given parameters */
+    void modulateWithParams(PHY::Modulator &modulator,
+                            ModParams &params,
+                            std::shared_ptr<NetPacket> pkt,
+                            ModPacket &mpkt);
 };
 
 #endif /* PARALLELPACKETMODULATOR_H_ */

@@ -47,14 +47,14 @@ public:
 
     virtual ~NewFlexFrame() = default;
 
-    double getMinRXRateOversample(void) const override
+    unsigned getMinRXRateOversample(void) const override
     {
-        return 2.0;
+        return 2;
     }
 
-    double getMinTXRateOversample(void) const override
+    unsigned getMinTXRateOversample(void) const override
     {
-        return 2.0;
+        return 2;
     }
 
 protected:

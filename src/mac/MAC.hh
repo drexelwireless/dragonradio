@@ -152,9 +152,6 @@ protected:
     /** @brief Transmission channel, given hift from center frequency */
     Channels::size_type tx_channel_;
 
-    /** @brief Modulator for timestamped packet */
-    std::shared_ptr<PHY::Modulator> timestamped_modulator_;
-
     /** @brief Mutex for timestamped packet */
     spinlock_mutex timestamped_mutex_;
 

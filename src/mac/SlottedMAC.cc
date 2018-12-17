@@ -202,16 +202,13 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
             usrp_->burstTX(Clock::to_mono_time(when), txBuf);
         }
 
-        if (snapshot_collector_) {
-            float tx_freq = usrp_->getTXFrequency();
-            float rx_freq = usrp_->getRXFrequency();
-
+        if (snapshot_collector_)
             snapshot_collector_->selfTX(when,
                                         rx_rate_,
                                         tx_rate_,
+                                        demodulator_->getChannelRate(),
                                         nsamples,
-                                        tx_freq - rx_freq);
-        }
+                                        getTXShift());
     }
 
     return (nsamples > maxSamples) ? (nsamples - maxSamples) : 0;

@@ -10,13 +10,45 @@ class PacketModulator
 {
 public:
     PacketModulator(const Channels &channels)
-        : channels_(channels)
+        : tx_rate_(0.0)
+        , chan_rate_(0.0)
+        , channels_(channels)
         , tx_channel_(0)
         , maxPacketSize_(0)
     {
     }
 
     virtual ~PacketModulator() = default;
+
+    /** @brief Get the TX sample rate. */
+    virtual double getTXRate(void)
+    {
+        return tx_rate_;
+    }
+
+    /** @brief Set the TX sample rate.
+     * @param rate The rate.
+     */
+    virtual void setTXRate(double rate)
+    {
+        tx_rate_ = rate;
+        reconfigure();
+    }
+
+    /** @brief Get the channel sample rate. */
+    virtual double getChannelRate(void)
+    {
+        return chan_rate_;
+    }
+
+    /** @brief Set the channel sample rate.
+     * @param rate The rate.
+     */
+    virtual void setChannelRate(double rate)
+    {
+        chan_rate_ = rate;
+        reconfigure();
+    }
 
     /** @brief Get channels. */
     virtual const Channels &getChannels(void) const
@@ -52,6 +84,7 @@ public:
         }
 
         tx_channel_ = channel;
+        reconfigure();
     }
 
     /** @brief Get the frequency shift to use during transmission
@@ -62,17 +95,24 @@ public:
         return channels_.size() > 0 ? channels_[tx_channel_] : 0.0;
     }
 
+    /** @brief Get maximum packet size. */
+    size_t getMaxPacketSize(void)
+    {
+        return maxPacketSize_;
+    }
+
     /** @brief Set maximum packet size. */
     void setMaxPacketSize(size_t maxPacketSize)
     {
         maxPacketSize_ = maxPacketSize;
     }
 
-    /** @brief Get maximum packet size. */
-    size_t getMaxPacketSize(void)
-    {
-        return maxPacketSize_;
-    }
+    /** @brief Modulate one packet.
+     * @param pkt The NetPacket to modulate.
+     * @param mpkt The ModPacket that will hold the modulated packet.
+     */
+    virtual void modulateOne(std::shared_ptr<NetPacket> pkt,
+                             ModPacket &mpkt) = 0;
 
     /** @brief Modulate samples.
      * @param n The number of samples to produce.
@@ -91,11 +131,20 @@ public:
                        size_t maxSamples,
                        bool overfill) = 0;
 
+    /** @brief Reconfigure for new TX parameters */
+    virtual void reconfigure(void) = 0;
+
 protected:
+    /** @brief TX sample rate */
+    double tx_rate_;
+
+    /** @brief Per-channel sample rate */
+    double chan_rate_;
+
     /** @brief Radio channels, given as shift from center frequency */
     Channels channels_;
 
-    /** @brief Transmission channel, given hift from center frequency */
+    /** @brief Transmission channel, given shift from center frequency */
     Channels::size_type tx_channel_;
 
     /** @brief Maximum number of possible samples in a modulated packet. */

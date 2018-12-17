@@ -90,14 +90,14 @@ public:
     virtual ~MultiOFDM() = default;
 
     // MultiChannel TX/RX requires oversampling by a factor of 2
-    double getMinRXRateOversample(void) const override
+    unsigned getMinRXRateOversample(void) const override
     {
-        return 2.0;
+        return 2;
     }
 
-    double getMinTXRateOversample(void) const override
+    unsigned getMinTXRateOversample(void) const override
     {
-        return 2.0;
+        return 2;
     }
 
 protected:

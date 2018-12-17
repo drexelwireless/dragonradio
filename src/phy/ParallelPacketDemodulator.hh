@@ -10,6 +10,7 @@
 #include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
 #include "phy/Channels.hh"
+#include "phy/ModParams.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
@@ -108,17 +109,18 @@ public:
                               unsigned int nthreads);
     virtual ~ParallelPacketDemodulator();
 
-    void setWindowParameters(const size_t prev_samps,
-                             const size_t cur_samps) override;
-
     void setChannels(const Channels &channels) override
     {
         PacketDemodulator::setChannels(channels);
         demod_q_.setChannels(channels);
     }
 
-    /** @brief Add an IQ buffer to demodulate. */
+    void setWindowParameters(const size_t prev_samps,
+                             const size_t cur_samps) override;
+
     void push(std::shared_ptr<IQBuf> buf) override;
+
+    void reconfigure(void) override;
 
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
@@ -128,11 +130,14 @@ public:
     /** @brief Set whether or not demodulation queue enforces packet order. */
     void setEnforceOrdering(bool enforce);
 
+    /** @brief Stop demodulating. */
+    void stop(void);
+
     /** @brief Demodulated packets */
     RadioOut<Push> source;
 
-    /** @brief Stop demodulating. */
-    void stop(void);
+    /** @brief Resampler parameters for demodulator */
+    Liquid::ResamplerParams downsamp_params;
 
 private:
     /** @brief Destination for packets. */
@@ -161,6 +166,9 @@ private:
     /** @brief Queue of radio packets. */
     RadioPacketQueue radio_q_;
 
+    /** @brief Reconfiguration flags */
+    std::vector<std::atomic<bool>> demod_reconfigure_;
+
     /** @brief Demodulation worker threads. */
     std::vector<std::thread> demod_threads_;
 
@@ -168,10 +176,19 @@ private:
     std::thread net_thread_;
 
     /** @brief A demodulation worker. */
-    void demodWorker(void);
+    void demodWorker(std::atomic<bool> &reconfig);
 
     /** @brief The network wend worker. */
     void netWorker(void);
+
+    /** @brief Demodulate data with given parameters */
+    void demodulateWithParams(PHY::Demodulator &demodulator,
+                              ModParams &params,
+                              IQBuf &shift_buf,
+                              IQBuf &resamp_buf,
+                              const std::complex<float>* data,
+                              size_t count,
+                              std::function<void(std::unique_ptr<RadioPacket>)> callback);
 };
 
 #endif /* PARALLELPACKETDEMODULATOR_H_ */
