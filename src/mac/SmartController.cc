@@ -115,6 +115,10 @@ get_packet:
             logEvent("ARQ: send delayed ack: node=%u; ack=%u",
                 (unsigned) nexthop,
                 (unsigned) recvw.ack);
+        else
+            logEvent("ARQ: send ack: node=%u; ack=%u",
+                (unsigned) nexthop,
+                (unsigned) recvw.ack);
 
 #if DEBUG
         if (pkt->data_len == 0)
