@@ -50,7 +50,10 @@ enum {
     kInvalidPayload,
 
     /** @brief Set if the packet is a retransmission */
-    kRetransmission
+    kRetransmission,
+
+    /** @brief Set if the packet contains a selective ACK */
+    kHasSelectiveACK
 };
 
 typedef uint16_t InternalFlags;

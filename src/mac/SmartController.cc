@@ -462,6 +462,14 @@ void SmartController::transmitted(std::shared_ptr<NetPacket>& pkt)
         // Start the retransmit timer if it is not already running.
         startRetransmissionTimer(sendw[pkt->seq]);
     }
+
+    // Cancel the selective ACK timer when we actually have sent a selective ACK
+    if (pkt->isInternalFlagSet(kHasSelectiveACK)) {
+        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt->nexthop);
+        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+        timer_queue_.cancel(recvw);
+    }
 }
 
 void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
@@ -926,11 +934,11 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
             return;
     }
 
+    // Mark this packet as containing a selective ACK
+    pkt->setInternalFlag(kHasSelectiveACK);
+
     // We no longer need a selective ACK
     recvw.need_selective_ack = false;
-
-    // Cancel the selective ACK timer
-    timer_queue_.cancel(recvw);
 }
 
 void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
