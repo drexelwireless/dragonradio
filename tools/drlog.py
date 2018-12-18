@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import h5py
 import pandas as pd
+import matplotlib as mp
+import matplotlib.pyplot as plt
 import numpy as np
+import re
 import time
-
-import dragonradio
 
 class Slot:
     def __init__(self, timestamp, iqdata):
@@ -171,7 +172,9 @@ class Slots:
         self.bw = bw
 
 class Log:
-    def __init__(self):
+    def __init__(self, send=True, recv=True):
+        self.load_send = send
+        self.load_recv = recv
         self._nodes = {}
         self._logs = {}
         self._recv = {}
@@ -210,22 +213,24 @@ class Log:
             self._selftx[node.node_id] = df
 
             # Load received packets
-            df = loadDataSet(f['recv'])
-            df.crc = LIQUID_CRC.get(df.crc, 'unknown').values
-            df.fec0 = LIQUID_FEC.get(df.fec0, 'unknown').values
-            df.fec1 = LIQUID_FEC.get(df.fec1, 'unknown').values
-            df.ms = LIQUID_MS.get(df.ms, 'unknown').values
-            df['start'] = df.timestamp + df.start_samples/df.bw
-            df['end'] = df.timestamp + df.end_samples/df.bw
+            if self.load_recv:
+                df = loadDataSet(f['recv'])
+                df.crc = LIQUID_CRC.get(df.crc, 'unknown').values
+                df.fec0 = LIQUID_FEC.get(df.fec0, 'unknown').values
+                df.fec1 = LIQUID_FEC.get(df.fec1, 'unknown').values
+                df.ms = LIQUID_MS.get(df.ms, 'unknown').values
+                df['start'] = df.timestamp + df.start_samples/df.bw
+                df['end'] = df.timestamp + df.end_samples/df.bw
 
-            self._recv[node.node_id] = df
+                self._recv[node.node_id] = df
 
             # Load sent packets
-            df = loadDataSet(f['send'])
-            df['start'] = df.timestamp
-            df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
+            if self.load_send:
+                df = loadDataSet(f['send'])
+                df['start'] = df.timestamp
+                df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
 
-            self._send[node.node_id] = df
+                self._send[node.node_id] = df
 
             # Load events
             df = loadDataSet(f['event'])
@@ -421,3 +426,166 @@ class Log:
     @property
     def events(self):
         return self._events
+
+EVENTS = [ [r'^AMC: Moving up modulation scheme', 'AMC', 'g']
+         , [r'^AMC: Moving down modulation scheme', 'AMC', 'r']
+         , [r'^AMC: txFailure', 'AMC', 'y']
+         , [r'^ARQ: ack', 'ARQ', 'g']
+         , [r'^ARQ: nak', 'ARQ', 'r']
+         , [r'^ARQ: send ack', 'ARQ', 'k']
+         , [r'^ARQ: send delayed ack', 'ARQ', 'k']
+         , [r'^ARQ: send nak', 'ARQ', 'r']
+         , [r'^ARQ: recv OUTSIDE WINDOW', 'ARQ', 'y']
+         , [r'^PHY: invalid payload', 'PHY', 'r']
+         , [r'^TIMESYNC:', 'TIMESYNC', 'k']
+         , [r'^(RX|TX) error:', 'USRP', 'r']
+         , [r'^USRP:', 'USRP', 'k']
+         ]
+
+for i in range(0, len(EVENTS)):
+    EVENTS[i][0] = re.compile(EVENTS[i][0])
+
+class EventLog(object):
+    def __init__(self, recv=False, send=False):
+        self.log = Log(recv=recv, send=send)
+        self.data = {}
+        self.series = []
+
+    @property
+    def start(self):
+        return min([self.log.nodes[n].start for n in self.log.nodes])
+
+    def loadLog(self, path):
+        self.log.load(path)
+        for node_id in self.log.nodes:
+            if node_id not in self.data:
+                self.data[node_id] = {}
+
+    def parse(self, send=False, recv=False, r_filter=None):
+        for node_id in self.log.nodes:
+            node = self.log.nodes[node_id]
+            self.parseEvents(node, r_filter=r_filter)
+
+            if send:
+                self.parseSent(node)
+
+            if recv:
+                self.parseReceived(node)
+
+    def parseEvents(self, node, r_filter=None):
+        delta = node.start - self.start
+
+        events = self.log.events[node.node_id]
+        events['t'] = events.timestamp + delta
+        events['category'] = ''
+        events['color'] = ''
+
+        # Filter events
+        if r_filter != None:
+            idx = events.event.str.match(r_filter)
+            events = events.loc[idx]
+
+        # Parse events
+        for (r, k, c) in EVENTS:
+            idx = events.event.str.match(r)
+            events.category.loc[idx] = k
+            events.color.loc[idx] = c
+
+        def ppr(e):
+            return e.event
+
+        for k in set([k for (r, k, c) in EVENTS]):
+            self.data[node.node_id][k] = (events[events.category == k], ppr)
+
+    def parseSent(self, node):
+        delta = node.start - self.start
+
+        sent = self.log.sent[node.node_id]
+        sent['t'] = sent.timestamp + delta
+        sent['color'] = 'k'
+
+        def ppr(pkt):
+            return "Packet(seq={seq}, curhop={curhop}, nexthop={nexthop}, size={size})".\
+                format(seq=pkt.seq, pkt=pkt.curhop, curhop=pkt.curhop, nexthop=pkt.nexthop, \
+                       size=pkt.size)
+
+        self.data[node.node_id]['sent'] = (sent, ppr)
+
+    def parseReceived(self, node):
+        delta = node.start - self.start
+
+        recv = self.log.received[node.node_id]
+        recv['t'] = recv.start + delta
+
+        def f(p):
+            if not p.header_valid:
+                return 'r'
+            elif not p.payload_valid:
+                return 'y'
+            else:
+                return 'k'
+
+        recv['color'] = recv.apply(f, axis=1)
+
+        def ppr(pkt):
+            return "Packet(seq={seq}, curhop={curhop}, nexthop={nexthop}, ms={ms}, fec0={fec0}, fec1={fec1}, size={size})".\
+                format(seq=pkt.seq, pkt=pkt.curhop, curhop=pkt.curhop, nexthop=pkt.nexthop, \
+                       ms=pkt.ms, fec0=pkt.fec0, fec1=pkt.fec1, size=pkt.size)
+
+        self.data[node.node_id]['recv'] = (recv, ppr)
+
+    def addSeriesCategory(self, node, k):
+        node_id = node.node_id
+
+        (df, ppr) = self.data[node_id][k]
+
+        self.series.append((node.node_id, k, df.t, df.color, df, ppr))
+
+    def plot(self):
+        self.fig = plt.figure(figsize=(14,4))
+        plt.title('Timeline Plot')
+        plt.ylim((-1,len(self.series)))
+        plt.yticks(range(len(self.series)), ["Node {}: {}".format(s[0], s[1]) for s in self.series])
+        self.ax, = self.fig.axes
+
+        self.lines = []
+
+        for y in range(0, len(self.series)):
+            (id, k, x, c, desc, ppr) = self.series[y]
+
+            line = plt.scatter(x, [y]*len(x), color=c.values, alpha=0.85, s=10, label="Node {}: {}".format(id, k))
+            line.desc = desc
+            line.ppr = ppr
+            self.lines.append(line)
+
+        self.annot = self.ax.annotate('',
+                                      xy=(4.42,0),
+                                      xycoords='data',
+                                      xytext=(20,20),
+                                      textcoords='offset pixels',
+                                      bbox=dict(boxstyle='round', fc='w'),
+                                      arrowprops=dict(arrowstyle='->'))
+        self.annot.set_visible(False)
+
+        self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
+
+        plt.show()
+
+    def hover(self, event):
+        if event.inaxes == self.ax:
+            for line in self.lines:
+                cont, ind = line.contains(event)
+                if cont:
+                    self.updateAnnotation(line, ind)
+                    self.annot.set_visible(True)
+                    self.fig.canvas.draw_idle()
+                    return
+
+        if self.annot.get_visible():
+            self.annot.set_visible(False)
+            self.fig.canvas.draw_idle()
+
+    def updateAnnotation(self, line, ind):
+        pos = line.get_offsets()[ind['ind'][0]]
+        self.annot.xy = pos
+        self.annot.set_text(line.ppr(line.desc.iloc[ind['ind'][0]]))
