@@ -224,8 +224,15 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
             // ParallelPacketModulator::pop).
             std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-            pkt_q_.emplace_back(std::make_unique<ModPacket>());
-            mpkt = pkt_q_.back().get();
+            // Packets containing a selective ACK are prioritized over other
+            // packets.
+            if (pkt->isInternalFlagSet(kHasSelectiveACK)) {
+                pkt_q_.emplace_front(std::make_unique<ModPacket>());
+                mpkt = pkt_q_.front().get();
+            } else {
+                pkt_q_.emplace_back(std::make_unique<ModPacket>());
+                mpkt = pkt_q_.back().get();
+            }
         }
 
         // Reconfigure if necessary
