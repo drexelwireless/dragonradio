@@ -65,7 +65,7 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
         while (!pkt_q_.empty()) {
             ModPacket& mpkt = *(pkt_q_.front());
 
-            if (mpkt.complete.test_and_set(std::memory_order_acquire))
+            if (mpkt.incomplete.test_and_set(std::memory_order_acquire))
                 break;
 
             size_t n = mpkt.samples->size();
@@ -83,7 +83,7 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
             // If we don't have enough room to pop this packet and we're not
             // overfilling, break out of the loop.
             if (n > maxSamples && !overfill) {
-                mpkt.complete.clear(std::memory_order_release);
+                mpkt.incomplete.clear(std::memory_order_release);
                 break;
             }
 
@@ -239,7 +239,7 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
         // Mark the modulated packet as complete. The packet may be invalidated
         // by a consumer immediately after we mark it complete, so we cannot use
         // the mpkt pointer after this statement!
-        mpkt->complete.clear(std::memory_order_release);
+        mpkt->incomplete.clear(std::memory_order_release);
 
         // Add the number of modulated samples to the total in the queue. Note
         // that the packet may already have been removed from the queue and the
