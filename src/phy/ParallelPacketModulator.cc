@@ -61,13 +61,18 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
 
     {
         std::unique_lock<std::mutex> lock(pkt_mutex_);
+        auto                         it = pkt_q_.begin();
 
-        while (!pkt_q_.empty()) {
-            ModPacket& mpkt = *(pkt_q_.front());
+        while (it != pkt_q_.end()) {
+            ModPacket& mpkt = **it;
 
-            if (mpkt.incomplete.test_and_set(std::memory_order_acquire))
-                break;
+            // If modulation is incomplete, try the next packet
+            if (mpkt.incomplete.test_and_set(std::memory_order_acquire)) {
+                ++it;
+                continue;
+            }
 
+            // Save the size of the packet so we can update counters later
             size_t n = mpkt.samples->size();
 
             // Drop packets that won't fit in a slot
@@ -75,7 +80,8 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
                 fprintf(stderr, "Dropping modulated packet that is too long to send: n=%u, max=%u\n",
                         (unsigned) n,
                         (unsigned) maxSamples);
-                pkt_q_.pop();
+
+                pkt_q_.erase(it++);
                 nsamples_ -= n;
                 continue;
             }
@@ -88,8 +94,8 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
             }
 
             // Pop the packet
-            pkts.emplace_back(std::move(pkt_q_.front()));
-            pkt_q_.pop();
+            pkts.emplace_back(std::move(*it));
+            pkt_q_.erase(it++);
             nsamples_ -= n;
             nsamples += n;
 
@@ -212,9 +218,13 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
             // network. Note that we acquire the lock on the network first, then
             // the lock on the queue. We don't want to hold the lock on the
             // queue for long because that will starve the transmitter.
+            //
+            // Although we modulate packets in order, we have now relaxed the
+            // restriction that they be *sent* in order (see
+            // ParallelPacketModulator::pop).
             std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-            pkt_q_.emplace(std::make_unique<ModPacket>());
+            pkt_q_.emplace_back(std::make_unique<ModPacket>());
             mpkt = pkt_q_.back().get();
         }
 
