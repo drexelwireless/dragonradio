@@ -455,7 +455,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
 void SmartController::transmitted(std::shared_ptr<NetPacket>& pkt)
 {
-    if (!pkt->isFlagSet(kBroadcast)) {
+    if (!pkt->isFlagSet(kBroadcast) && pkt->data_len != 0) {
         SendWindow                      &sendw = getSendWindow(pkt->nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
