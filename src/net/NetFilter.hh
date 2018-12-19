@@ -12,7 +12,7 @@ class NetFilter : public Processor<std::shared_ptr<NetPacket>>
 {
 public:
     NetFilter(std::shared_ptr<Net> net);
-    ~NetFilter();
+    virtual ~NetFilter() = default;
 
 protected:
     bool process(std::shared_ptr<NetPacket>& pkt) override;

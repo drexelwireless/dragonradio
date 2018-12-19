@@ -17,9 +17,7 @@ public:
     {
     }
 
-    virtual ~Processor()
-    {
-    }
+    virtual ~Processor() = default;
 
     /** @brief The processor's packet input port. */
     Port<In,Push,T> in;
@@ -36,5 +34,8 @@ protected:
 
     virtual bool process(T& pkt) = 0;
 };
+
+using NetProcessor = Processor<std::shared_ptr<NetPacket>>;
+using RadioProcessor = Processor<std::shared_ptr<RadioPacket>>;
 
 #endif /* PROCESSOR_HH_ */

@@ -1,5 +1,6 @@
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
+#include "net/Noop.hh"
 #include "net/Queue.hh"
 #include "python/PyModules.hh"
 
@@ -56,13 +57,6 @@ void exportNet(py::module &m)
         .def(py::init())
         ;
 
-    // Export class NetFilter to Python
-    py::class_<NetFilter, std::shared_ptr<NetFilter>>(m, "NetFilter")
-        .def(py::init<std::shared_ptr<Net>>())
-        .def_property_readonly("input", [](std::shared_ptr<NetFilter> element) { return exposePort(element, &element->in); } )
-        .def_property_readonly("output", [](std::shared_ptr<NetFilter> element) { return exposePort(element, &element->out); } )
-        ;
-
     // Export class TunTap to Python
     py::class_<TunTap, std::shared_ptr<TunTap>>(m, "TunTap")
         .def(py::init<const std::string&,
@@ -72,5 +66,32 @@ void exportNet(py::module &m)
         .def_property_readonly("mtu", &TunTap::getMTU)
         .def_property_readonly("source", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->source); } )
         .def_property_readonly("sink", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->sink); } )
+        ;
+
+    // Export class NetProcessor to Python
+    py::class_<NetProcessor, std::shared_ptr<NetProcessor>>(m, "NetProcessor")
+        .def_property_readonly("input", [](std::shared_ptr<NetProcessor> element) { return exposePort(element, &element->in); } )
+        .def_property_readonly("output", [](std::shared_ptr<NetProcessor> element) { return exposePort(element, &element->out); } )
+        ;
+
+    // Export class RadioProcessor to Python
+    py::class_<RadioProcessor, std::shared_ptr<RadioProcessor>>(m, "RadioProcessor")
+        .def_property_readonly("input", [](std::shared_ptr<RadioProcessor> element) { return exposePort(element, &element->in); } )
+        .def_property_readonly("output", [](std::shared_ptr<RadioProcessor> element) { return exposePort(element, &element->out); } )
+        ;
+
+    // Export class NetFilter to Python
+    py::class_<NetFilter, NetProcessor, std::shared_ptr<NetFilter>>(m, "NetFilter")
+        .def(py::init<std::shared_ptr<Net>>())
+        ;
+
+    // Export class NetNoop to Python
+    py::class_<NetNoop, NetProcessor, std::shared_ptr<NetNoop>>(m, "NetNoop")
+        .def(py::init<>())
+        ;
+
+    // Export class NetNoop to Python
+    py::class_<RadioNoop, RadioProcessor, std::shared_ptr<RadioNoop>>(m, "RadioNoop")
+        .def(py::init<>())
         ;
 }

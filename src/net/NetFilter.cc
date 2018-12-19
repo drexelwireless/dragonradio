@@ -7,13 +7,8 @@
 
 #include <cstddef>
 
-#include "NetFilter.hh"
-
-/** @brief Compute broadcast address from address and netmask  */
-uint32_t mkBroadcastAddress(uint32_t addr, uint32_t netmask)
-{
-    return (addr & netmask) | (0xffffffff & ~netmask);
-}
+#include "net/NetFilter.hh"
+#include "net/NetUtil.hh"
 
 NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
 {
@@ -36,15 +31,6 @@ NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
     ext_broadcast_ = mkBroadcastAddress(ext_net_, ext_netmask_);
 }
 
-NetFilter::~NetFilter()
-{
-}
-
-bool isEthernetBroadcast(const u_char *host)
-{
-    return memcmp(host, "\xff\xff\xff\xff\xff\xff", 6) == 0;
-}
-
 bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 {
     if (pkt->size() == 0)
@@ -60,12 +46,12 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
     // are the source and we know of the destination.
     if (ntohs(eth->ether_type) == ETHERTYPE_IP &&
         (isEthernetBroadcast(eth->ether_dhost) || (curhop_id == net_->getMyNodeId() && net_->contains(nexthop_id)))) {
-        struct ip* ip = reinterpret_cast<struct ip*>(pkt->data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
+        struct ip* iph = reinterpret_cast<struct ip*>(pkt->data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
         in_addr    ip_src;
         in_addr    ip_dst;
 
-        std::memcpy(&ip_src, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_src), sizeof(ip_src));
-        std::memcpy(&ip_dst, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
+        std::memcpy(&ip_src, reinterpret_cast<char*>(iph) + offsetof(struct ip, ip_src), sizeof(ip_src));
+        std::memcpy(&ip_dst, reinterpret_cast<char*>(iph) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
 
         NodeId src_id;
         NodeId dest_id;
