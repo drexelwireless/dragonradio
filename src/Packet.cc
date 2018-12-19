@@ -1,8 +1,3 @@
-#include <sys/socket.h>
-#include <netinet/if_ether.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-
 #include "Packet.hh"
 
 Packet::iterator::iterator(const Packet &pkt)
@@ -163,24 +158,98 @@ void Packet::appendSelectiveAck(const Seq &begin, const Seq &end)
     appendControl(msg);
 }
 
-bool Packet::isIP(void)
+struct mgenhdr *Packet::getMGENHdr(void)
 {
-    struct ether_header* eth = reinterpret_cast<struct ether_header*>(data() + sizeof(ExtendedHeader));
-
-    return ntohs(eth->ether_type) == ETHERTYPE_IP;
-}
-
-bool Packet::isIPProto(uint8_t proto)
-{
-    struct ether_header *eth = reinterpret_cast<struct ether_header*>(data() + sizeof(ExtendedHeader));
-
-    if (ntohs(eth->ether_type) != ETHERTYPE_IP)
-        return false;
-
-    struct ip *ip = reinterpret_cast<struct ip*>(data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
+    struct ip *iph;
     uint8_t   ip_p;
 
-    std::memcpy(&ip_p, reinterpret_cast<char*>(ip) + offsetof(struct ip, ip_p), sizeof(ip_p));
+    iph = getIPHdr(&ip_p);
+    if (!iph)
+       return nullptr;
 
-    return ip_p == proto;
+    size_t ip_hl = iph->ip_hl*4;
+
+    struct mgenhdr *mgenh = nullptr;
+
+    switch (ip_p) {
+        case IPPROTO_UDP:
+        {
+           if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + sizeof(struct udphdr) + sizeof(struct mgenhdr))
+               return nullptr;
+
+            mgenh = reinterpret_cast<struct mgenhdr*>(reinterpret_cast<char*>(iph) + ip_hl + sizeof(struct udphdr));
+        }
+        break;
+
+        case IPPROTO_TCP:
+        {
+           struct tcphdr *tcph;
+           size_t tcp_hl;
+
+           if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + sizeof(struct tcphdr))
+               return nullptr;
+
+           tcph = reinterpret_cast<struct tcphdr*>(reinterpret_cast<char*>(iph) + ip_hl);
+           tcp_hl = tcph->th_off*4;
+
+           if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + tcp_hl + sizeof(struct mgenhdr))
+               return nullptr;
+
+           mgenh = reinterpret_cast<struct mgenhdr*>(reinterpret_cast<char*>(iph) + ip_hl + tcp_hl);
+        }
+        break;
+    }
+
+    if (mgenh) {
+        uint16_t messageSize;
+
+        // Make sure the MGEN-specified data length and version are correct
+        std::memcpy(&messageSize, reinterpret_cast<uint16_t*>(mgenh) + offsetof(struct mgenhdr, messageSize), sizeof(messageSize));
+
+        if (ntohs(messageSize) == getPayloadSize() &&
+            (mgenh->version == MGEN_VERSION || mgenh->version == DARPA_MGEN_VERSION))
+            return mgenh;
+        else
+            return nullptr;
+    } else
+        return nullptr;
+}
+
+size_t Packet::getPayloadSize(void)
+{
+    struct ip *iph;
+    uint8_t   ip_p;
+
+    iph = getIPHdr(&ip_p);
+    if (!iph)
+       return 0;
+
+    size_t ip_hl = iph->ip_hl*4;
+
+    switch (ip_p) {
+        case IPPROTO_UDP:
+        {
+            if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + sizeof(struct udphdr))
+               return 0;
+
+            struct udphdr *udph = reinterpret_cast<struct udphdr*>(reinterpret_cast<char*>(iph) + ip_hl);
+
+            return ntohs(udph->uh_ulen) - sizeof(struct udphdr);
+        }
+        break;
+
+        case IPPROTO_TCP:
+        {
+           if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + sizeof(struct tcphdr))
+               return 0;
+
+           struct tcphdr *tcph = reinterpret_cast<struct tcphdr*>(reinterpret_cast<char*>(iph) + ip_hl);
+           size_t tcp_hl = tcph->th_off*4;
+
+           return size() - (sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + tcp_hl);
+        }
+        break;
+    }
+
+    return 0;
 }
