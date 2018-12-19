@@ -83,6 +83,12 @@ const ControlMsg *Packet::iterator::operator ->()
     return &ctrl_;
 }
 
+void Packet::clearControl(void)
+{
+    clearFlag(kControl);
+    resize(sizeof(ExtendedHeader) + data_len);
+}
+
 void Packet::appendControl(const ControlMsg &ctrl)
 {
     uint16_t ctrl_len = 0;

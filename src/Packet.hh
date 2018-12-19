@@ -221,6 +221,9 @@ struct Packet : public buffer<unsigned char>
         dest = ehdr.dest;
     }
 
+    /** @brief Clear control messages contained in packet */
+    void clearControl(void);
+
     /** @brief Append a control message to a packet */
     void appendControl(const ControlMsg &ctrl);
 

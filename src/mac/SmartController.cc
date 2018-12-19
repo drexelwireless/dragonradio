@@ -684,6 +684,9 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // takes ownership of its argument.
     std::shared_ptr<NetPacket> pkt = entry;
 
+    // Clear any control information in the packet
+    pkt->clearControl();
+
     // Mark the packet as a retransmission
     pkt->setInternalFlag(kRetransmission);
 
