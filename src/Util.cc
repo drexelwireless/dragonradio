@@ -39,7 +39,38 @@ int doze(double sec)
     return nanosleep(&ts, NULL);
 }
 
-void dummySignalHandler(int)
+BlockSignal::BlockSignal(int sig)
+{
+    sigset_t block_mask_;
+
+    // Block sig, saving the current signal mask to orig_mask_
+    sigemptyset(&block_mask_);
+    sigaddset(&block_mask_, sig);
+
+    if (sigprocmask(SIG_BLOCK, &block_mask_, &orig_mask_) == -1) {
+        perror("sigprocmask failed");
+        exit(1);
+    }
+}
+
+BlockSignal::~BlockSignal()
+{
+    // Restore signal mask saved in orig_mask_
+    if (sigprocmask(SIG_SETMASK, &orig_mask_, NULL) == -1) {
+        perror("sigprocmask failed");
+        exit(1);
+    }
+}
+
+void BlockSignal::unblockAndPause(void)
+{
+    if (sigsuspend(&orig_mask_) == -1 && errno != EINTR) {
+        perror("sigsuspend failed");
+        exit(1);
+    }
+}
+
+static void dummySignalHandler(int)
 {
 }
 
@@ -49,7 +80,7 @@ void makeThreadWakeable(void)
 
     sa.sa_handler = dummySignalHandler;
 
-    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+    if (sigaction(SIGWAKE, &sa, NULL) == -1) {
         perror("makeThreadWakeable() failed");
         exit(1);
     }
@@ -57,5 +88,5 @@ void makeThreadWakeable(void)
 
 void wakeThread(std::thread& t)
 {
-    pthread_kill(t.native_handle(), SIGUSR1);
+    pthread_kill(t.native_handle(), SIGWAKE);
 }
