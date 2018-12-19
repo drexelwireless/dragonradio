@@ -174,11 +174,13 @@ class Config(object):
         self.arq = False
         self.arq_window = 1024
         self.arq_enforce_ordering = False
+        self.arq_max_retransmissions = None
         self.arq_ack_delay = 100e-3
         self.arq_retransmission_delay = 500e-3
         self.arq_explicit_nak_win = 10
         self.arq_explicit_nak_win_duration = 0.1
         self.arq_selective_ack = True
+        self.arq_selective_ack_feedback_delay = 0.300
         self.arq_broadcast_gain_db = 0.0
         self.arq_ack_gain_db = 0.0
 
@@ -479,6 +481,9 @@ class Config(object):
         parser.add_argument('--arq-enforce-ordering', action='store_const', const=True,
                             dest='arq_enforce_ordering',
                             help='enforce packet order when performing ARQ')
+        parser.add_argument('--max-retransmissions', action='store', type=int,
+                            dest='arq_max_retransmissions',
+                            help='set maximum number of retransmission attempts')
         parser.add_argument('--explicit-nak-window', action='store', type=int,
                             dest='arq_explicit_nak_win',
                             help='set explicit NAK window size')
@@ -729,6 +734,7 @@ class Radio(object):
 
             self.configSmartControllerSlotSize()
 
+            self.controller.max_retransmissions = config.arq_max_retransmissions
             self.controller.enforce_ordering = config.arq_enforce_ordering
 
             self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
@@ -751,6 +757,7 @@ class Radio(object):
             self.controller.explicit_nak_window = config.arq_explicit_nak_win
             self.controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
             self.controller.selective_ack = config.arq_selective_ack
+            self.controller.selective_ack_feedback_delay = config.arq_selective_ack_feedback_delay
         else:
             self.controller = dragonradio.DummyController(self.net)
 
@@ -949,6 +956,7 @@ class Radio(object):
     def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
+                                            self.controller,
                                             self.snapshot_collector,
                                             self.rx_channels,
                                             self.tx_channels,
@@ -963,6 +971,7 @@ class Radio(object):
     def configureTDMA(self, nslots):
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
+                                    self.controller,
                                     self.snapshot_collector,
                                     self.rx_channels,
                                     self.tx_channels,
@@ -1025,7 +1034,7 @@ class Radio(object):
 
                     self.setTXChannel(idx)
                 else:
-                    logging.error('No TX channel for radio %d (channels=%s)', self.node_id, config.channels)
+                    logging.error('No TX channel for radio %d (channels=%s)', self.node_id, self.channels)
         else:
             idx = nodes.index(self.node_id)
 

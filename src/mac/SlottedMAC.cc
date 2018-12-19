@@ -5,6 +5,7 @@
 
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
+                       std::shared_ptr<Controller> controller,
                        std::shared_ptr<SnapshotCollector> collector,
                        const Channels &rx_channels,
                        const Channels &tx_channels,
@@ -13,7 +14,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        double slot_size,
                        double guard_size,
                        double demod_overlap_size)
-  : MAC(usrp, phy, collector, rx_channels, tx_channels, modulator, demodulator)
+  : MAC(usrp, phy, controller, collector, rx_channels, tx_channels, modulator, demodulator)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , demod_overlap_size_(demod_overlap_size)
@@ -171,12 +172,14 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
     nsamples = modulator_->pop(modBuf, maxSamples, overfill);
 
     if (!modBuf.empty()) {
+        // Transmit the packets via the USRP
         if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
                 txBuf.emplace_back((*it)->samples);
 
             usrp_->burstTX(Clock::to_mono_time(when), txBuf);
 
+            // Log the sent packets
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
                 Header hdr;
 
@@ -203,6 +206,11 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
             usrp_->burstTX(Clock::to_mono_time(when), txBuf);
         }
 
+        // Inform the controller of the transmission
+        for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
+            controller_->transmitted((*it)->pkt);
+
+        // Tell the snapshot collector about this local self-transmission
         if (snapshot_collector_)
             snapshot_collector_->selfTX(when,
                                         rx_rate_,

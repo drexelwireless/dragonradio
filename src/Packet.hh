@@ -39,18 +39,14 @@ struct Time {
 struct ControlMsg {
     enum Type {
         kHello,
-        kAck,
         kTimestamp,
-        kTimestampDelta
+        kTimestampDelta,
+        kNak,
+        kSelectiveAck,
     };
 
     struct Hello {
         bool is_gateway;
-    };
-
-    struct Ack {
-        Seq begin;
-        Seq end;
     };
 
     struct Timestamp {
@@ -67,13 +63,21 @@ struct ControlMsg {
         Time delta;
     };
 
+    struct SelectiveAck {
+        Seq begin;
+        Seq end;
+    };
+
+    using Nak = Seq;
+
     Type type;
 
     union {
         Hello hello;
-        Ack ack;
         Timestamp timestamp;
         TimestampDelta timestamp_delta;
+        Nak nak;
+        SelectiveAck ack;
     };
 };
 
@@ -217,14 +221,14 @@ struct Packet : public buffer<unsigned char>
         dest = ehdr.dest;
     }
 
+    /** @brief Clear control messages contained in packet */
+    void clearControl(void);
+
     /** @brief Append a control message to a packet */
     void appendControl(const ControlMsg &ctrl);
 
     /** @brief Append a Hello control message to a packet */
     void appendHello(const ControlMsg::Hello &hello);
-
-    /** @brief Append an Ack control message to a packet */
-    void appendAck(const Seq &begin, const Seq &end);
 
     /** @brief Append a Timestamp control message to a packet */
     void appendTimestamp(const Seq &epoch, const Clock::time_point &t);
@@ -233,6 +237,12 @@ struct Packet : public buffer<unsigned char>
     void appendTimestampDelta(NodeId node_id,
                               const Seq &epoch,
                               const Clock::time_point &delta);
+
+    /** @brief Append a NAK control message to a packet */
+    void appendNak(const Seq &seq);
+
+    /** @brief Append a selective ACK control message to a packet */
+    void appendSelectiveAck(const Seq &begin, const Seq &end);
 
     /** @brief Return iterator to beginning control data. */
     iterator begin() const
@@ -297,6 +307,9 @@ struct RadioPacket : public Packet
     /** @brief Center frequency packet was received on (Hz) */
     float fc;
 
+    /** @brief MCS used for this packet by transmitter */
+    MCS mcs;
+
     /** @brief This Boolean is true if this packet is a barrier and should not
      * be processed or removed from a queue except by its creator.
      */
@@ -310,14 +323,17 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
         case ControlMsg::kHello:
             return offsetof(ControlMsg, hello) + sizeof(ControlMsg::Hello);
 
-        case ControlMsg::kAck:
-            return offsetof(ControlMsg, ack) + sizeof(ControlMsg::Ack);
-
         case ControlMsg::kTimestamp:
             return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);
 
         case ControlMsg::kTimestampDelta:
             return offsetof(ControlMsg, timestamp_delta) + sizeof(ControlMsg::TimestampDelta);
+
+        case ControlMsg::kNak:
+            return offsetof(ControlMsg, nak) + sizeof(ControlMsg::Nak);
+
+        case ControlMsg::kSelectiveAck:
+            return offsetof(ControlMsg, ack) + sizeof(ControlMsg::SelectiveAck);
 
         default:
             return 0;

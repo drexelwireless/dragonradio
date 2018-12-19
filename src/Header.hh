@@ -24,9 +24,6 @@ enum {
     /** @brief Set if the packet is ACKing */
     kACK,
 
-    /** @brief Set if the packet is NAKing */
-    kNAK,
-
     /** @brief Set if this is a broadcast packet */
     kBroadcast,
 
@@ -50,7 +47,13 @@ enum {
     kInvalidHeader,
 
     /** @brief Set if the packet had invalid payload */
-    kInvalidPayload
+    kInvalidPayload,
+
+    /** @brief Set if the packet is a retransmission */
+    kRetransmission,
+
+    /** @brief Set if the packet contains a selective ACK */
+    kHasSelectiveACK
 };
 
 typedef uint16_t InternalFlags;

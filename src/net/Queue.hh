@@ -3,6 +3,8 @@
 
 #include <functional>
 
+#include "spinlock_mutex.hh"
+#include "Header.hh"
 #include "SafeQueue.hh"
 #include "net/Element.hh"
 
@@ -36,8 +38,11 @@ public:
     /** @brief Push an element onto the queue. */
     virtual void push(T&& val) = 0;
 
-    /** @brief Push an element onto the high-priority queue. */
-    virtual void push_hi(T&& item) = 0;
+    /** @brief Push an element onto the front of the high-priority queue. */
+    virtual void push_hi_front(T&& item) = 0;
+
+    /** @brief Push an element onto the back of the high-priority queue. */
+    virtual void push_hi_back(T&& item) = 0;
 
     /** @brief Splice a list of elements onto the the high-priority queue. */
     virtual void splice_hi(std::list<T>& items) = 0;
@@ -51,11 +56,41 @@ public:
     /** @brief Stop processing queue elements. */
     virtual void stop(void) = 0;
 
+    /** @brief Set whether or not a node's send window is open */
+    void setSendWindowStatus(NodeId id, bool isOpen)
+    {
+        std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
+
+        send_window_status_[id] = isOpen;
+    }
+
     /** @brief The queue's packet input port. */
     Port<In, Push, T> in;
 
     /** @brief The queue's packet output port. */
     Port<Out, Pull, T> out;
+
+protected:
+    /** @brief Mutex protecting the send window status */
+    spinlock_mutex send_window_status_mutex_;
+
+    /** @brief Nodes' send window statuses */
+    std::unordered_map<NodeId, bool> send_window_status_;
+
+    /** @brief Return true if the packet can be popped */
+    bool canPop(const T& pkt)
+    {
+        if (pkt->isFlagSet(kBroadcast))
+            return true;
+
+        std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
+        auto                            it = send_window_status_.find(pkt->nexthop);
+
+        if (it != send_window_status_.end())
+            return it->second;
+        else
+            return true;
+    }
 };
 
 using NetQueue = Queue<std::shared_ptr<NetPacket>>;
@@ -97,7 +132,18 @@ public:
         cond_.notify_one();
     }
 
-    virtual void push_hi(T&& item) override
+    virtual void push_hi_front(T&& item) override
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            hiq_.push_front(item);
+        }
+
+        cond_.notify_one();
+    }
+
+    virtual void push_hi_back(T&& item) override
     {
         {
             std::lock_guard<std::mutex> lock(m_);
@@ -153,6 +199,7 @@ protected:
 template <class T>
 class FIFO : public SimpleQueue<T> {
 public:
+    using SimpleQueue<T>::canPop;
     using SimpleQueue<T>::done_;
     using SimpleQueue<T>::m_;
     using SimpleQueue<T>::cond_;
@@ -173,11 +220,16 @@ public:
             hiq_.pop_front();
             return true;
         } else if (!q_.empty()) {
-            val = std::move(q_.front());
-            q_.pop_front();
-            return true;
-        } else
-            return false;
+            for (auto it = q_.begin(); it != q_.end(); ++it) {
+                if (canPop(*it)) {
+                    val = std::move(*it);
+                    q_.erase(it);
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 };
 
@@ -189,6 +241,7 @@ using RadioFIFO = FIFO<std::shared_ptr<RadioPacket>>;
 template <class T>
 class LIFO : public SimpleQueue<T> {
 public:
+    using SimpleQueue<T>::canPop;
     using SimpleQueue<T>::done_;
     using SimpleQueue<T>::m_;
     using SimpleQueue<T>::cond_;
@@ -209,11 +262,16 @@ public:
             hiq_.pop_front();
             return true;
         } else if (!q_.empty()) {
-            val = std::move(q_.back());
-            q_.pop_back();
-            return true;
-        } else
-            return false;
+            for (auto it = q_.rbegin(); it != q_.rend(); ++it) {
+                if (canPop(*it)) {
+                    val = std::move(*it);
+                    q_.erase(std::next(it).base());
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 };
 

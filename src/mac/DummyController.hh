@@ -13,6 +13,8 @@ public:
     bool pull(std::shared_ptr<NetPacket>& pkt) override;
 
     void received(std::shared_ptr<RadioPacket>&& pkt) override;
+
+    void transmitted(std::shared_ptr<NetPacket>& pkt) override;
 };
 
 #endif /* DUMMYCONTROLLER_H_ */

@@ -32,6 +32,11 @@ public:
      */
     virtual void disconnect(void);
 
+    /** @brief Notify controller that a packet has been transmitted. */
+    /** This function is called by the MAC when a packet has been transmitted.
+     */
+    virtual void transmitted(std::shared_ptr<NetPacket>& pkt) = 0;
+
     /** @brief Input port for packets coming from the network. */
     NetIn<Pull> net_in;
 

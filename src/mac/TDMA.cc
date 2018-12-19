@@ -8,6 +8,7 @@
 
 TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PHY> phy,
+           std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            const Channels &rx_channels,
            const Channels &tx_channels,
@@ -17,7 +18,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            double guard_size,
            double demod_overlap_size,
            size_t nslots)
-  : SlottedMAC(usrp, phy, collector, rx_channels, tx_channels, modulator, demodulator, slot_size, guard_size, demod_overlap_size)
+  : SlottedMAC(usrp, phy, controller, collector, rx_channels, tx_channels, modulator, demodulator, slot_size, guard_size, demod_overlap_size)
   , slots_(*this, nslots)
   , superslots_(false)
 {

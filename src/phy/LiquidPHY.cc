@@ -169,6 +169,10 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     pkt->rssi = stats_.rssi;
     pkt->cfo = stats_.cfo;
     pkt->fc = shift_;
+    pkt->mcs.check = static_cast<crc_scheme>(stats_.check);
+    pkt->mcs.fec0 = static_cast<fec_scheme>(stats_.fec0);
+    pkt->mcs.fec1 = static_cast<fec_scheme>(stats_.fec1);
+    pkt->mcs.ms = static_cast<modulation_scheme>(stats_.mod_scheme);
 
     // Calculate sample offsets
     size_t start = off + resamp_fact*stats_.start_counter;

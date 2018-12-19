@@ -74,7 +74,7 @@ private:
     std::condition_variable producer_cond_;
 
     /* @brief Queue of modulated packets */
-    std::queue<std::unique_ptr<ModPacket>> pkt_q_;
+    std::list<std::unique_ptr<ModPacket>> pkt_q_;
 
     /* @brief Modulator for one-off modulation */
     std::shared_ptr<PHY::Modulator> one_mod_;

@@ -9,6 +9,7 @@
 #include "phy/PHY.hh"
 #include "phy/PacketDemodulator.hh"
 #include "phy/PacketModulator.hh"
+#include "mac/Controller.hh"
 #include "mac/MAC.hh"
 #include "mac/Snapshot.hh"
 
@@ -18,6 +19,7 @@ class MAC
 public:
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<PHY> phy,
+        std::shared_ptr<Controller> controller,
         std::shared_ptr<SnapshotCollector> collector,
         const Channels &rx_channels,
         const Channels &tx_channels,
@@ -127,6 +129,9 @@ protected:
 
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
+
+    /** @brief Our controller */
+    std::shared_ptr<Controller> controller_;
 
     /** @brief Our snapshot collector */
     std::shared_ptr<SnapshotCollector> snapshot_collector_;

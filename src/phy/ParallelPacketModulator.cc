@@ -61,13 +61,18 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
 
     {
         std::unique_lock<std::mutex> lock(pkt_mutex_);
+        auto                         it = pkt_q_.begin();
 
-        while (!pkt_q_.empty()) {
-            ModPacket& mpkt = *(pkt_q_.front());
+        while (it != pkt_q_.end()) {
+            ModPacket& mpkt = **it;
 
-            if (mpkt.complete.test_and_set(std::memory_order_acquire))
-                break;
+            // If modulation is incomplete, try the next packet
+            if (mpkt.incomplete.test_and_set(std::memory_order_acquire)) {
+                ++it;
+                continue;
+            }
 
+            // Save the size of the packet so we can update counters later
             size_t n = mpkt.samples->size();
 
             // Drop packets that won't fit in a slot
@@ -75,7 +80,8 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
                 fprintf(stderr, "Dropping modulated packet that is too long to send: n=%u, max=%u\n",
                         (unsigned) n,
                         (unsigned) maxSamples);
-                pkt_q_.pop();
+
+                pkt_q_.erase(it++);
                 nsamples_ -= n;
                 continue;
             }
@@ -83,13 +89,13 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
             // If we don't have enough room to pop this packet and we're not
             // overfilling, break out of the loop.
             if (n > maxSamples && !overfill) {
-                mpkt.complete.clear(std::memory_order_release);
+                mpkt.incomplete.clear(std::memory_order_release);
                 break;
             }
 
             // Pop the packet
-            pkts.emplace_back(std::move(pkt_q_.front()));
-            pkt_q_.pop();
+            pkts.emplace_back(std::move(*it));
+            pkt_q_.erase(it++);
             nsamples_ -= n;
             nsamples += n;
 
@@ -212,10 +218,21 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
             // network. Note that we acquire the lock on the network first, then
             // the lock on the queue. We don't want to hold the lock on the
             // queue for long because that will starve the transmitter.
+            //
+            // Although we modulate packets in order, we have now relaxed the
+            // restriction that they be *sent* in order (see
+            // ParallelPacketModulator::pop).
             std::unique_lock<std::mutex> lock(pkt_mutex_);
 
-            pkt_q_.emplace(std::make_unique<ModPacket>());
-            mpkt = pkt_q_.back().get();
+            // Packets containing a selective ACK are prioritized over other
+            // packets.
+            if (pkt->isInternalFlagSet(kHasSelectiveACK)) {
+                pkt_q_.emplace_front(std::make_unique<ModPacket>());
+                mpkt = pkt_q_.front().get();
+            } else {
+                pkt_q_.emplace_back(std::make_unique<ModPacket>());
+                mpkt = pkt_q_.back().get();
+            }
         }
 
         // Reconfigure if necessary
@@ -239,7 +256,7 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
         // Mark the modulated packet as complete. The packet may be invalidated
         // by a consumer immediately after we mark it complete, so we cannot use
         // the mpkt pointer after this statement!
-        mpkt->complete.clear(std::memory_order_release);
+        mpkt->incomplete.clear(std::memory_order_release);
 
         // Add the number of modulated samples to the total in the queue. Note
         // that the packet may already have been removed from the queue and the

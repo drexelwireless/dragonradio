@@ -108,7 +108,7 @@ public:
         update_heap(value.heap_index);
     }
 
-	  void swap(heap& other)
+    void swap(heap& other)
     {
         std::swap(c, other.c);
         std::swap(comp, other.comp);

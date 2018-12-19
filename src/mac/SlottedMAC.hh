@@ -15,6 +15,7 @@ class SlottedMAC : public MAC
 public:
     SlottedMAC(std::shared_ptr<USRP> usrp,
                std::shared_ptr<PHY> phy,
+               std::shared_ptr<Controller> controller,
                std::shared_ptr<SnapshotCollector> collector,
                const Channels &rx_channels,
                const Channels &tx_channels,

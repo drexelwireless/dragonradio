@@ -24,7 +24,14 @@ class SmartController;
 
 struct SendWindow {
     struct Entry : public TimerQueue::Timer {
-        Entry(SendWindow &sendw) : sendw(sendw), pkt(nullptr) {};
+        Entry(SendWindow &sendw)
+          : sendw(sendw)
+          , pkt(nullptr)
+          , timestamp(0.0)
+          , mcsidx(0)
+          , nretrans(0)
+         {
+         };
 
         virtual ~Entry() = default;
 
@@ -55,12 +62,22 @@ struct SendWindow {
 
         /** @brief The packet received in this window entry. */
         std::shared_ptr<NetPacket> pkt;
+
+        /** @brief Timestamp of last transmission of this packet. */
+        Clock::time_point timestamp;
+
+        /** @brief Modulation index used for last transmission of this packet */
+        size_t mcsidx;
+
+        /** @brief Number of retransmissions for this packet. */
+        /** The retransmission count will be 0 on the first transmission. */
+        size_t nretrans;
     };
 
     using vector_type = std::vector<Entry>;
 
-    SendWindow(NodeId node_id, SmartController &controller, Seq::uint_type maxwin)
-      : node_id(node_id)
+    SendWindow(Node &n, SmartController &controller, Seq::uint_type maxwin)
+      : node(n)
       , controller(controller)
       , unack(0)
       , max(0)
@@ -73,8 +90,8 @@ struct SendWindow {
     {
     }
 
-    /** @brief Node ID of destination. */
-    NodeId node_id;
+    /** @brief Destination node. */
+    Node &node;
 
     /** @brief Our controller. */
     SmartController &controller;
@@ -98,14 +115,14 @@ struct SendWindow {
     /** @brief Modulation index */
     size_t mcsidx;
 
-    /** @brief First sequence number at this modulation index */
-    Seq mcsidx_init_seq;
-
     /** @brief The probability of moving to a given MCS */
     std::vector<double> mcsidx_prob;
 
-    /** @brief Pending packets we can't send because our window isn't large enough */
-    std::list<std::shared_ptr<NetPacket>> pending;
+    /** @brief End of the current PER window PER. */
+    /** Every packet up to, but not including, this sequence number has already been
+     * used to calculate the current PER
+     */
+    Seq per_end;
 
     /** @brief Mutex for the send window */
     spinlock_mutex mutex;
@@ -158,22 +175,25 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     using vector_type = std::vector<Entry>;
 
-    RecvWindow(NodeId node_id,
+    RecvWindow(Node &n,
                SmartController &controller,
+               Seq seq,
                Seq::uint_type win,
                size_t nak_win)
-      : node_id(node_id)
+      : node(n)
       , controller(controller)
-      , ack(0)
-      , max(0)
+      , ack(seq)
+      , max(seq-1)
       , win(win)
+      , need_selective_ack(false)
+      , timer_for_ack(false)
       , explicit_nak_win(nak_win)
       , explicit_nak_idx(0)
       , entries_(win)
     {}
 
-    /** @brief Node ID of destination. */
-    NodeId node_id;
+    /** @brief Sender node. */
+    Node &node;
 
     /** @brief Our controller. */
     SmartController &controller;
@@ -189,10 +209,7 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     /** @brief Maximum sequence number we have received */
     /** INVARIANT: ack <= max < ack + win. When max == ack, we have no holes in
-    * our receive, window, which should therefore be empty, and we should ACK
-    * ack+1. Otherwise we have a hole in our receive window and we should NAK
-    * ack+1. Note than a NAK of sequence number N+1 implicitly ACKs N, since
-    * otherwise we would've NAK'ed N instead.
+    * our receive window, which should therefore be empty.
     */
     Seq max;
 
@@ -202,6 +219,14 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     /** @brief Receive window size */
     Seq::uint_type win;
+
+    /** @brief Flag indicating whether or not we need a selective ACK. */
+    bool need_selective_ack;
+
+    /** @brief Flag indicating whether or not the timer is for an ACK or a
+     * selective ACK.
+     */
+    bool timer_for_ack;
 
     /** @brief Explicit NAK window */
     std::vector<MonoClock::time_point> explicit_nak_win;
@@ -215,6 +240,9 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
+#if defined(DEBUG)
+        assert(seq >= ack && seq <= ack + win && max <= ack + win);
+#endif /* defined(DEBUG) */
         return entries_[seq % entries_.size()];
     }
 
@@ -230,6 +258,9 @@ private:
 /** @brief A MAC controller that implements ARQ. */
 class SmartController : public Controller
 {
+    friend class SendWindow;
+    friend class RecvWindow;
+
 public:
     SmartController(std::shared_ptr<Net> net,
                     std::shared_ptr<PHY> phy,
@@ -241,24 +272,6 @@ public:
                     double mcsidx_alpha,
                     double mcsidx_prob_floor);
     virtual ~SmartController();
-
-    bool pull(std::shared_ptr<NetPacket>& pkt) override;
-
-    void received(std::shared_ptr<RadioPacket>&& pkt) override;
-
-    /** @brief Retransmit a send window entry on timeout. */
-    void retransmitOnTimeout(SendWindow::Entry &entry);
-
-    /** @brief Send an ACK to the given receiver. The caller MUST hold the lock
-     * on recvw.
-     */
-    void ack(RecvWindow &recvw);
-
-    /** @brief Send a NAK to the given receiver. */
-    void nak(NodeId node_id, Seq seq);
-
-    /** @brief Broadcast a HELLO packet. */
-    void broadcastHello(void);
 
     /** @brief Get the controller's network queue. */
     std::shared_ptr<NetQueue> getNetQueue(void)
@@ -383,6 +396,30 @@ public:
         selective_ack_ = ack;
     }
 
+    /** @brief Return selective ACK feedback delay. */
+    double getSelectiveACKFeedbackDelay(void)
+    {
+        return selective_ack_feedback_delay_;
+    }
+
+    /** @brief Set selective ACK feedback delay. */
+    void setSelectiveACKFeedbackDelay(double delay)
+    {
+        selective_ack_feedback_delay_ = delay;
+    }
+
+    /** @brief Return maximum number of retransmission attempts. */
+    std::optional<size_t> getMaxRetransmissions(void)
+    {
+        return max_retransmissions_;
+    }
+
+    /** @brief Set maximum number of retransmission attempts. */
+    void setMaxRetransmissions(std::optional<size_t> max_retransmissions)
+    {
+        max_retransmissions_ = max_retransmissions;
+    }
+
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
@@ -406,6 +443,25 @@ public:
     {
         return slot_size_/phy_->getModulatedSize(p, rc.mtu + sizeof(struct ether_header));
     }
+
+    bool pull(std::shared_ptr<NetPacket>& pkt) override;
+
+    void received(std::shared_ptr<RadioPacket>&& pkt) override;
+
+    void transmitted(std::shared_ptr<NetPacket>& pkt) override;
+
+    /** @brief Retransmit a send window entry on timeout. */
+    void retransmitOnTimeout(SendWindow::Entry &entry);
+
+    /** @brief Send an ACK to the given receiver. */
+    /** The caller MUST hold the lock on recvw. */
+    void ack(RecvWindow &recvw);
+
+    /** @brief Send a NAK to the given receiver. */
+    void nak(NodeId node_id, Seq seq);
+
+    /** @brief Broadcast a HELLO packet. */
+    void broadcastHello(void);
 
     /** @brief Broadcast TX params */
     TXParams broadcast_tx_params;
@@ -476,6 +532,15 @@ protected:
     /** @brief Should we send selective ACK packets? */
     bool selective_ack_;
 
+    /** @brief Amount of time we wait to accept selective ACK feedback about a
+     * packet
+     */
+    double selective_ack_feedback_delay_;
+
+    /** @brief Maximum number of retransmission attempts
+     */
+    std::optional<size_t> max_retransmissions_;
+
     /** @brief Should packets always be output in the order they were actually
      * received?
      */
@@ -490,14 +555,26 @@ protected:
     /** @brief Uniform 0-1 real distribution */
     std::uniform_real_distribution<double> dist_;
 
+    /** @brief Re-transmit or drop a send window entry. */
+    void retransmitOrDrop(SendWindow::Entry &entry);
+
     /** @brief Re-transmit a send window entry. */
     void retransmit(SendWindow::Entry &entry);
+
+    /** @brief Drop a send window entry. */
+    void drop(SendWindow::Entry &entry);
+
+    /** @brief Advance the send window.
+     * @param sendw The send window to advance
+     * @param unack The new value of the send window's unack parameter
+     */
+    void advanceSendWindow(SendWindow &sendw, Seq unack, Seq max);
 
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow::Entry &entry);
 
-    /** @brief Start the ACK timer if it is not set. */
-    void startACKTimer(RecvWindow &recvw);
+    /** @brief Start the selective ACK timer if it is not set. */
+    void startSACKTimer(RecvWindow &recvw);
 
     /** @brief Handle HELLO and timestamp control messages. */
     void handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& pkt);
@@ -505,32 +582,45 @@ protected:
     /** @brief Handle timestamp delta control messages. */
     void handleCtrlTimestampDeltas(Node &node, std::shared_ptr<RadioPacket>& pkt);
 
-    /** @brief Handle ACK control messages. */
-    void handleCtrlACK(Node &node, std::shared_ptr<RadioPacket>& pkt);
-
     /** @brief Append ACK control messages. */
     void appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);
 
     /** @brief Handle an ACK. */
     void handleACK(SendWindow &sendw, const Seq &seq);
 
-    /** @brief Handle a NAK. */
-    void handleNAK(SendWindow &sendw, Node &dest, const Seq &seq);
+    /** @brief Handle a NAK.
+     * @param sendw The sender's window
+     * @param pkt The packet potentially containing NAK's
+     * @return The NAK with the highest sequence number, if there is a NAK
+     */
+    std::optional<Seq> handleNAK(SendWindow &sendw,
+                                 std::shared_ptr<RadioPacket>& pkt);
 
-    /** @brief Handle a successful packet transmission. */
-    void txSuccess(SendWindow &sendw, Node &node);
+    /** @brief Handle select ACK messages. */
+    void handleSelectiveACK(SendWindow &sendw,
+                            std::shared_ptr<RadioPacket>& pkt,
+                            Clock::time_point tfeedback);
+
+    /** @brief Update PER as a result of successful packet transmission. */
+    void txSuccess(Node &node);
 
     /** @brief Update PER as a result of unsuccessful packet transmission. */
-    void txFailureUpdatePER(Node &node);
+    void txFailure(Node &node);
 
-    /** @brief Handle an unsuccessful packet transmission based on updated PER. */
-    void txFailure(SendWindow &sendw, Node &node);
+    /** @brief Update MCS based on current PER */
+    void updateMCS(SendWindow &sendw);
+
+    /** @brief Move down one MCS level */
+    void moveDownMCS(SendWindow &sendw);
+
+    /** @brief Move up one MCS level */
+    void moveUpMCS(SendWindow &sendw);
+
+    /** @brief Reconfigure a node's PER estimates */
+    void resetPEREstimates(SendWindow &sendw);
 
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);
-
-    /** @brief Reconfigure a node's PER estimates */
-    void resetPEREstimates(Node &node);
 
     /** @brief Get a node's send window.
      * @param node_id The node whose window to get

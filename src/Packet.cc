@@ -83,6 +83,12 @@ const ControlMsg *Packet::iterator::operator ->()
     return &ctrl_;
 }
 
+void Packet::clearControl(void)
+{
+    clearFlag(kControl);
+    resize(sizeof(ExtendedHeader) + data_len);
+}
+
 void Packet::appendControl(const ControlMsg &ctrl)
 {
     uint16_t ctrl_len = 0;
@@ -111,17 +117,6 @@ void Packet::appendHello(const ControlMsg::Hello &hello)
     appendControl(msg);
 }
 
-void Packet::appendAck(const Seq &begin, const Seq &end)
-{
-    ControlMsg msg;
-
-    msg.type = ControlMsg::Type::kAck;
-    msg.ack.begin = begin;
-    msg.ack.end = end;
-
-    appendControl(msg);
-}
-
 void Packet::appendTimestamp(const Seq &epoch, const Clock::time_point &t)
 {
     ControlMsg msg;
@@ -143,6 +138,27 @@ void Packet::appendTimestampDelta(NodeId node_id,
     msg.timestamp_delta.node = node_id;
     msg.timestamp_delta.epoch = epoch;
     msg.timestamp_delta.delta.from_wall_time(delta);
+
+    appendControl(msg);
+}
+
+void Packet::appendNak(const Seq &seq)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kNak;
+    msg.nak = seq;
+
+    appendControl(msg);
+}
+
+void Packet::appendSelectiveAck(const Seq &begin, const Seq &end)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kSelectiveAck;
+    msg.ack.begin = begin;
+    msg.ack.end = end;
 
     appendControl(msg);
 }

@@ -9,9 +9,9 @@
 /** A modulated data packet to be sent over the radio */
 struct ModPacket
 {
-    ModPacket() : fc(0), complete ATOMIC_FLAG_INIT
+    ModPacket() : fc(0), incomplete ATOMIC_FLAG_INIT
     {
-        complete.test_and_set(std::memory_order_acquire);
+        incomplete.test_and_set(std::memory_order_acquire);
     };
 
     /** @brief Center frequency. */
@@ -23,8 +23,8 @@ struct ModPacket
     /** @brief The un-modulated packet. */
     std::shared_ptr<NetPacket> pkt;
 
-    /** @brief Flag that is set until modulation is completed. */
-    std::atomic_flag complete;
+    /** @brief Flag that is set while modulation is incomplete. */
+    std::atomic_flag incomplete;
 };
 
 #endif /* MODPACKET_HH_ */
