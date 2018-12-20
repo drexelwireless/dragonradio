@@ -797,6 +797,10 @@ class Radio(object):
         if config.arq:
             self.controller.net_queue = self.netq
 
+    def __del__(self):
+        if self.logger:
+            self.logger.close()
+
     @property
     def rx_channels(self):
         return self.channels

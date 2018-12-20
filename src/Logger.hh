@@ -47,6 +47,7 @@ public:
     Logger& operator=(Logger&&) = delete;
 
     void open(const std::string& filename);
+    void close(void);
 
     bool getCollectSource(Source src);
     void setCollectSource(Source src, bool collect);
@@ -104,6 +105,7 @@ public:
     void stop(void);
 
 private:
+    bool is_open_;
     H5::H5File file_;
     std::unique_ptr<ExtensibleDataSet> slots_;
     std::unique_ptr<ExtensibleDataSet> snapshots_;

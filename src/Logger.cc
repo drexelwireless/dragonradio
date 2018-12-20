@@ -135,18 +135,18 @@ struct EventEntry {
     const char *event;
 };
 
-Logger::Logger(Clock::time_point t_start) :
-  t_start_(t_start),
-  t_last_slot_((time_t) 0),
-  sources_(0),
-  done_(false)
+Logger::Logger(Clock::time_point t_start)
+  : is_open_(false)
+  , t_start_(t_start)
+  , t_last_slot_((time_t) 0)
+  , sources_(0)
+  , done_(false)
 {
 }
 
 Logger::~Logger()
 {
-    stop();
-    file_.close();
+    close();
 }
 
 void Logger::open(const std::string& filename)
@@ -276,6 +276,23 @@ void Logger::open(const std::string& filename)
 
     // Start worker thread
     worker_thread_ = std::thread(&Logger::worker, this);
+
+    is_open_ = true;
+}
+
+void Logger::close(void)
+{
+    if (is_open_) {
+        stop();
+        slots_.reset();
+        snapshots_.reset();
+        selftx_.reset();
+        recv_.reset();
+        send_.reset();
+        event_.reset();
+        file_.close();
+        is_open_ = false;
+    }
 }
 
 bool Logger::getCollectSource(Source src)

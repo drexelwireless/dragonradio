@@ -30,6 +30,7 @@ void exportLogger(py::module &m)
             [](py::object) { return logger; },
             [](py::object, std::shared_ptr<Logger> log) { return logger = log; })
         .def(py::init(&mkLogger))
+        .def("close", &Logger::close)
         .def("setAttribute", py::overload_cast<const std::string&, const std::string&>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, uint8_t>(&Logger::setAttribute))
         .def("setAttribute", py::overload_cast<const std::string&, uint32_t>(&Logger::setAttribute))
