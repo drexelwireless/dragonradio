@@ -396,12 +396,8 @@ void Logger::logSend(const Clock::time_point& t,
 void Logger::logEvent(const Clock::time_point& t,
                       const std::string& s)
 {
-    EventEntry entry;
-
-    entry.timestamp = (t - t_start_).get_real_secs();
-    entry.event = s.c_str();
-
-    event_->write(&entry, 1);
+    if (getCollectSource(kEvents))
+        log_q_.emplace([=](){ logEvent_(t, s); });
 }
 
 void Logger::stop(void)
@@ -578,8 +574,12 @@ void Logger::logSend_(const Clock::time_point& t,
 void Logger::logEvent_(const Clock::time_point& t,
                        const std::string& s)
 {
-    if (getCollectSource(kEvents))
-        log_q_.emplace([=](){ logEvent_(t, s); });
+    EventEntry entry;
+
+    entry.timestamp = (t - t_start_).get_real_secs();
+    entry.event = s.c_str();
+
+    event_->write(&entry, 1);
 }
 
 void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap0)
