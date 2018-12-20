@@ -503,8 +503,8 @@ class EventLog(object):
         # Parse events
         for (r, k, c) in EVENTS:
             idx = events.event.str.match(r)
-            events.category.loc[idx] = k
-            events.color.loc[idx] = c
+            events.loc[idx, 'category'] = k
+            events.loc[idx, 'color'] = c
 
         def ppr(e):
             return e.event
