@@ -222,6 +222,7 @@ class Log:
             # Load received packets
             if self.load_recv:
                 df = loadDataSet(f['recv'])
+
                 df.crc = df.crc.astype(LIQUID_CRC_CAT)
                 df.crc.cat.rename_categories(LIQUID_CRC, inplace=True)
 
@@ -242,6 +243,19 @@ class Log:
             # Load sent packets
             if self.load_send:
                 df = loadDataSet(f['send'])
+
+                df.crc = df.crc.astype(LIQUID_CRC_CAT)
+                df.crc.cat.rename_categories(LIQUID_CRC, inplace=True)
+
+                df.fec0 = df.fec0.astype(LIQUID_FEC_CAT)
+                df.fec0.cat.rename_categories(LIQUID_FEC, inplace=True)
+
+                df.fec1 = df.fec1.astype(LIQUID_FEC_CAT)
+                df.fec1.cat.rename_categories(LIQUID_FEC, inplace=True)
+
+                df.ms = df.ms.astype(LIQUID_MS_CAT)
+                df.ms.cat.rename_categories(LIQUID_MS, inplace=True)
+
                 df['start'] = df.timestamp
                 df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
 

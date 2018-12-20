@@ -109,6 +109,14 @@ struct PacketSendEntry {
     uint8_t src;
     /** @brief Packet destination. */
     uint8_t dest;
+    /** @brief Liquid CRC scheme. */
+    crc_scheme crc;
+    /** @brief Liquid inner FEC scheme. */
+    fec_scheme fec0;
+    /** @brief Liquid outer FEC scheme. */
+    fec_scheme fec1;
+    /** @brief Liquid modulation scheme. */
+    modulation_scheme ms;
     /** @brief Center frequency [Hz] */
     float fc;
     /** @brief Bandwidth [Hz] */
@@ -238,6 +246,10 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("seq", HOFFSET(PacketSendEntry, seq), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("src", HOFFSET(PacketSendEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("dest", HOFFSET(PacketSendEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_send.insertMember("crc", HOFFSET(PacketSendEntry, crc), h5_crc_scheme);
+    h5_packet_send.insertMember("fec0", HOFFSET(PacketSendEntry, fec0), h5_fec_scheme);
+    h5_packet_send.insertMember("fec1", HOFFSET(PacketSendEntry, fec1), h5_fec_scheme);
+    h5_packet_send.insertMember("ms", HOFFSET(PacketSendEntry, ms), h5_modulation_scheme);
     h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("size", HOFFSET(PacketSendEntry, size), H5::PredType::NATIVE_UINT32);
@@ -364,13 +376,17 @@ void Logger::logSend(const Clock::time_point& t,
                      const Header& hdr,
                      NodeId src,
                      NodeId dest,
+                     crc_scheme crc,
+                     fec_scheme fec0,
+                     fec_scheme fec1,
+                     modulation_scheme ms,
                      float fc,
                      float bw,
                      uint32_t size,
                      std::shared_ptr<IQBuf> buf)
 {
     if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, fc, bw, size, buf); });
+        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, crc, fec0, fec1, ms, fc, bw, size, buf); });
 }
 
 void Logger::logEvent(const Clock::time_point& t,
@@ -518,6 +534,10 @@ void Logger::logSend_(const Clock::time_point& t,
                       const Header& hdr,
                       NodeId src,
                       NodeId dest,
+                      crc_scheme crc,
+                      fec_scheme fec0,
+                      fec_scheme fec1,
+                      modulation_scheme ms,
                       float fc,
                       float bw,
                       uint32_t size,
@@ -531,6 +551,10 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.seq = hdr.seq;
     entry.src = src;
     entry.dest = dest;
+    entry.crc = crc;
+    entry.fec0 = fec0;
+    entry.fec1 = fec1;
+    entry.ms = ms;
     entry.fc = fc;
     entry.bw = bw;
     entry.size = size;
