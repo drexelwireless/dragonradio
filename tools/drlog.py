@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import h5py
 import pandas as pd
+from pandas.api.types import CategoricalDtype
 import matplotlib as mp
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,109 +21,115 @@ class Slot:
     def data(self):
         return self._iqdata
 
-LIQUID_CRC = pd.Series([ 'unknown'
-                       , 'none'
-                       , 'checksum'
-                       , 'crc8'
-                       , 'crc16'
-                       , 'crc24'
-                       , 'crc32' ])
+LIQUID_CRC = [ 'unknown'
+             , 'none'
+             , 'checksum'
+             , 'crc8'
+             , 'crc16'
+             , 'crc24'
+             , 'crc32' ]
 
-LIQUID_FEC = pd.Series([ 'unknown'
-                       , 'none'
-                       , 'rep3'
-                       , 'rep5'
-                       , 'h74'
-                       , 'h84'
-                       , 'h128'
-                       , 'g2412'
-                       , 'secded2216'
-                       , 'secded3932'
-                       , 'secded7264'
-                       , 'v27'
-                       , 'v29'
-                       , 'v39'
-                       , 'v615'
-                       , 'v27p23'
-                       , 'v27p34'
-                       , 'v27p45'
-                       , 'v27p56'
-                       , 'v27p67'
-                       , 'v27p78'
-                       , 'v29p23'
-                       , 'v29p34'
-                       , 'v29p45'
-                       , 'v29p56'
-                       , 'v29p67'
-                       , 'v29p78'
-                       , 'rs8' ])
+LIQUID_CRC_CAT = CategoricalDtype(range(0, len(LIQUID_CRC)))
 
-LIQUID_MS = pd.Series([ 'unknown'
+LIQUID_FEC = [ 'unknown'
+             , 'none'
+             , 'rep3'
+             , 'rep5'
+             , 'h74'
+             , 'h84'
+             , 'h128'
+             , 'g2412'
+             , 'secded2216'
+             , 'secded3932'
+             , 'secded7264'
+             , 'v27'
+             , 'v29'
+             , 'v39'
+             , 'v615'
+             , 'v27p23'
+             , 'v27p34'
+             , 'v27p45'
+             , 'v27p56'
+             , 'v27p67'
+             , 'v27p78'
+             , 'v29p23'
+             , 'v29p34'
+             , 'v29p45'
+             , 'v29p56'
+             , 'v29p67'
+             , 'v29p78'
+             , 'rs8' ]
 
-                        # phase-shift keying
-                      , 'psk2'
-                      , 'psk4'
-                      , 'psk8'
-                      , 'psk16'
-                      , 'psk32'
-                      , 'psk64'
-                      , 'psk128'
-                      , 'psk256'
+LIQUID_FEC_CAT = CategoricalDtype(range(0, len(LIQUID_FEC)))
 
-                        # differential phase-shift keying
-                      , 'dpsk2'
-                      , 'dpsk4'
-                      , 'dpsk8'
-                      , 'dpsk16'
-                      , 'dpsk32'
-                      , 'dpsk64'
-                      , 'dpsk128'
-                      , 'dpsk256'
+LIQUID_MS = [ 'unknown'
 
-                      # amplitude-shift keying
-                      , 'ask2'
-                      , 'ask4'
-                      , 'ask8'
-                      , 'ask16'
-                      , 'ask32'
-                      , 'ask64'
-                      , 'ask128'
-                      , 'ask256'
+            # phase-shift keying
+            , 'psk2'
+            , 'psk4'
+            , 'psk8'
+            , 'psk16'
+            , 'psk32'
+            , 'psk64'
+            , 'psk128'
+            , 'psk256'
 
-                        # quadrature amplitude-shift keying
-                      , 'qam4'
-                      , 'qam8'
-                      , 'qam16'
-                      , 'qam32'
-                      , 'qam64'
-                      , 'qam128'
-                      , 'qam256'
+            # differential phase-shift keying
+            , 'dpsk2'
+            , 'dpsk4'
+            , 'dpsk8'
+            , 'dpsk16'
+            , 'dpsk32'
+            , 'dpsk64'
+            , 'dpsk128'
+            , 'dpsk256'
 
-                        # amplitude/phase-shift keying
-                      , 'apsk4'
-                      , 'apsk8'
-                      , 'apsk16'
-                      , 'apsk32'
-                      , 'apsk64'
-                      , 'apsk128'
-                      , 'apsk256'
+            # amplitude-shift keying
+            , 'ask4'
+            , 'ask2'
+            , 'ask8'
+            , 'ask16'
+            , 'ask32'
+            , 'ask64'
+            , 'ask128'
+            , 'ask256'
 
-                        # specific modem types
-                      , 'bpsk'
-                      , 'qpsk'
-                      , 'ook'
-                      , 'sqam32'
-                      , 'sqam128'
-                      , 'V29'
-                      , 'arb16opt'
-                      , 'arb32opt'
-                      , 'arb64opt'
-                      , 'arb128opt'
-                      , 'arb256opt'
-                      , 'arb64vt'
+            # quadrature amplitude-shift keying
+            , 'qam4'
+            , 'qam8'
+            , 'qam16'
+            , 'qam32'
+            , 'qam64'
+            , 'qam128'
+            , 'qam256'
 
-                        # arbitrary modem type
-                      , 'arb' ])
+            # amplitude/phase-shift keying
+            , 'apsk4'
+            , 'apsk8'
+            , 'apsk16'
+            , 'apsk32'
+            , 'apsk64'
+            , 'apsk128'
+            , 'apsk256'
+
+            # specific modem types
+            , 'bpsk'
+            , 'qpsk'
+            , 'ook'
+            , 'sqam32'
+            , 'sqam128'
+            , 'V29'
+            , 'arb16opt'
+            , 'arb32opt'
+            , 'arb64opt'
+            , 'arb128opt'
+            , 'arb256opt'
+            , 'arb64vt'
+
+            # arbitrary modem type
+            , 'arb' ]
+
+LIQUID_MS_CAT = CategoricalDtype(range(0, len(LIQUID_MS)))
 
 class Node:
     def __init__(self):
@@ -215,10 +222,18 @@ class Log:
             # Load received packets
             if self.load_recv:
                 df = loadDataSet(f['recv'])
-                df.crc = LIQUID_CRC.get(df.crc, 'unknown').values
-                df.fec0 = LIQUID_FEC.get(df.fec0, 'unknown').values
-                df.fec1 = LIQUID_FEC.get(df.fec1, 'unknown').values
-                df.ms = LIQUID_MS.get(df.ms, 'unknown').values
+                df.crc = df.crc.astype(LIQUID_CRC_CAT)
+                df.crc.cat.rename_categories(LIQUID_CRC, inplace=True)
+
+                df.fec0 = df.fec0.astype(LIQUID_FEC_CAT)
+                df.fec0.cat.rename_categories(LIQUID_FEC, inplace=True)
+
+                df.fec1 = df.fec1.astype(LIQUID_FEC_CAT)
+                df.fec1.cat.rename_categories(LIQUID_FEC, inplace=True)
+
+                df.ms = df.ms.astype(LIQUID_MS_CAT)
+                df.ms.cat.rename_categories(LIQUID_MS, inplace=True)
+
                 df['start'] = df.timestamp + df.start_samples/df.bw
                 df['end'] = df.timestamp + df.end_samples/df.bw
 
