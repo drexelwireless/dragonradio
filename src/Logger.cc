@@ -88,6 +88,8 @@ struct PacketRecvEntry {
     float fc;
     /** @brief Bandwidth [Hz] */
     float bw;
+    /** @brief Demodulation latency (sec) */
+    float demod_latency;
     /** @brief Data size (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
@@ -234,6 +236,7 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("cfo", HOFFSET(PacketRecvEntry, cfo), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("fc", HOFFSET(PacketRecvEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("bw", HOFFSET(PacketRecvEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_packet_recv.insertMember("demod_latency", HOFFSET(PacketRecvEntry, demod_latency), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("size", HOFFSET(PacketRecvEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("iq_data", HOFFSET(PacketRecvEntry, iq_data), h5_iqdata);
 
@@ -365,11 +368,12 @@ void Logger::logRecv(const Clock::time_point& t,
                      float cfo,
                      float fc,
                      float bw,
+                     float demod_latency,
                      uint32_t size,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
     if (getCollectSource(kRecvPackets))
-        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, fc, bw, size, buf); });
+        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, crc, fec0, fec1, ms, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
@@ -494,6 +498,7 @@ void Logger::logRecv_(const Clock::time_point& t,
                       float cfo,
                       float fc,
                       float bw,
+                      float demod_latency,
                       uint32_t size,
                       std::shared_ptr<buffer<std::complex<float>>> buf)
 {
@@ -518,6 +523,7 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.cfo = cfo;
     entry.fc = fc;
     entry.bw = bw;
+    entry.demod_latency = demod_latency;
     entry.size = size;
     if (getCollectSource(kRecvData)) {
         entry.iq_data.p = buf->data();

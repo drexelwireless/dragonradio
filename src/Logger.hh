@@ -81,6 +81,7 @@ public:
                  float cfo,
                  float fc,
                  float bw,
+                 float demod_latency,
                  uint32_t size,
                  std::shared_ptr<buffer<std::complex<float>>> buf);
 
@@ -157,6 +158,7 @@ private:
                   float cfo,
                   float fc,
                   float bw,
+                  float demod_latency,
                   uint32_t size,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
 
