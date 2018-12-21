@@ -85,6 +85,8 @@ SOURCES := \
     mac/SlottedMAC.cc \
     mac/Snapshot.cc \
     mac/TDMA.cc \
+    net/FlowSink.cc \
+    net/FlowSource.cc \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
@@ -92,6 +94,7 @@ SOURCES := \
     python/Controller.cc \
     python/Estimator.cc \
     python/Filter.cc \
+    python/Flow.cc \
     python/IQBuffer.cc \
     python/IQCompression.cc \
     python/LiquidEnum.cc \
