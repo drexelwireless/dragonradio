@@ -391,6 +391,9 @@ struct NetPacket : public Packet
 {
     NetPacket(size_t n) : Packet(n), tx_params(nullptr) {};
 
+    /** @brief Packet delivery deadline */
+    std::optional<Clock::time_point> deadline;
+
     /** @brief TX parameters */
     TXParams *tx_params;
 
