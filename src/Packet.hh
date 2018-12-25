@@ -399,6 +399,18 @@ struct NetPacket : public Packet
 
     /** @brief Multiplicative TX gain. */
     float g;
+
+    /** @brief Return true if the packet's deadline has passed, false otherwise */
+    bool deadlinePassed(const Clock::time_point &now)
+    {
+        return deadline && *deadline < now;
+    }
+
+    /** @brief Return true if this packet should be dropped, false otherwise */
+    bool shouldDrop(const Clock::time_point &now)
+    {
+        return !isFlagSet(kSYN) && deadlinePassed(now);
+    }
 };
 
 /** @brief A packet received from the radio. */
