@@ -32,13 +32,21 @@ void exportControllers(py::module &m)
                       double,
                       double,
                       double>())
-        .def_property("net_queue", &SmartController::getNetQueue, &SmartController::setNetQueue)
-        .def_property("mac", &SmartController::getMAC, &SmartController::setMAC)
-        .def_readwrite("broadcast_tx_params", &SmartController::broadcast_tx_params, "Broadcast TX parameters",
-             py::return_value_policy::reference_internal)
-        .def_readwrite("broadcast_gain", &SmartController::broadcast_gain,
+        .def_property("net_queue",
+            &SmartController::getNetQueue,
+            &SmartController::setNetQueue)
+        .def_property("mac",
+            &SmartController::getMAC,
+            &SmartController::setMAC)
+        .def_readwrite("broadcast_tx_params",
+            &SmartController::broadcast_tx_params,
+            "Broadcast TX parameters",
             py::return_value_policy::reference_internal)
-        .def_readwrite("ack_gain", &SmartController::ack_gain,
+        .def_readwrite("broadcast_gain",
+            &SmartController::broadcast_gain,
+            py::return_value_policy::reference_internal)
+        .def_readwrite("ack_gain",
+            &SmartController::ack_gain,
             py::return_value_policy::reference_internal)
         .def_property("slot_size",
             &SmartController::getSlotSize,
@@ -79,8 +87,11 @@ void exportControllers(py::module &m)
         .def_property("max_retransmissions",
             &SmartController::getMaxRetransmissions,
             &SmartController::setMaxRetransmissions)
-        .def_property("enforce_ordering", &SmartController::getEnforceOrdering, &SmartController::setEnforceOrdering)
-        .def("broadcastHello", &SmartController::broadcastHello)
+        .def_property("enforce_ordering",
+            &SmartController::getEnforceOrdering,
+            &SmartController::setEnforceOrdering)
+        .def("broadcastHello",
+            &SmartController::broadcastHello)
         .def("resetMCSTransitionProbabilities",
             &SmartController::resetMCSTransitionProbabilities,
             "Reset all AMC transition probabilties to 1.0")
