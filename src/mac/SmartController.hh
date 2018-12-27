@@ -13,7 +13,6 @@
 #include "Clock.hh"
 #include "RadioConfig.hh"
 #include "TimerQueue.hh"
-#include "TimeSync.hh"
 #include "net/Queue.hh"
 #include "mac/Controller.hh"
 #include "mac/MAC.hh"
@@ -434,6 +433,12 @@ public:
         enforce_ordering_ = enforce;
     }
 
+    /** @brief Get echoed timestamps */
+    timestamp_vector getEchoedTimestamps(void)
+    {
+        return echoed_timestamps_;
+    }
+
     /** @brief Return maximum number of packets per slot.
      * @param p The TXParams uses for modulation
      * @returns The number of packets of maximum size that can fit in one slot
@@ -546,8 +551,8 @@ protected:
      */
     bool enforce_ordering_;
 
-    /** @brief Time sync information */
-    struct TimeSync time_sync_;
+    /** @brief Our timestamps as received by time master */
+    timestamp_vector echoed_timestamps_;
 
     /** @brief Random number generator */
     std::mt19937 gen_;
@@ -579,8 +584,8 @@ protected:
     /** @brief Handle HELLO and timestamp control messages. */
     void handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& pkt);
 
-    /** @brief Handle timestamp delta control messages. */
-    void handleCtrlTimestampDeltas(Node &node, std::shared_ptr<RadioPacket>& pkt);
+    /** @brief Handle timestampecho control messages. */
+    void handleCtrlTimestampEchos(Node &node, std::shared_ptr<RadioPacket>& pkt);
 
     /** @brief Append ACK control messages. */
     void appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);

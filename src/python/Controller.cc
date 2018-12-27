@@ -90,6 +90,9 @@ void exportControllers(py::module &m)
         .def_property("enforce_ordering",
             &SmartController::getEnforceOrdering,
             &SmartController::setEnforceOrdering)
+        .def_property_readonly("echoed_timestamps",
+            &SmartController::getEchoedTimestamps,
+            "Our timestamps echoed by the time master")
         .def("broadcastHello",
             &SmartController::broadcastHello)
         .def("resetMCSTransitionProbabilities",

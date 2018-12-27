@@ -26,15 +26,15 @@ struct Time {
     uint64_t secs;
     double frac_secs;
 
-    void from_wall_time(Clock::time_point t)
+    void from_mono_time(MonoClock::time_point t)
     {
         secs = t.t.get_full_secs();
         frac_secs = t.t.get_frac_secs();
     }
 
-    Clock::time_point to_wall_time(void) const
+    MonoClock::time_point to_mono_time(void) const
     {
-        return Clock::time_point { uhd::time_spec_t { static_cast<time_t>(secs), frac_secs } };
+        return MonoClock::time_point { uhd::time_spec_t { static_cast<time_t>(secs), frac_secs } };
     }
 };
 
@@ -43,7 +43,7 @@ struct ControlMsg {
     enum Type {
         kHello,
         kTimestamp,
-        kTimestampDelta,
+        kTimestampEcho,
         kNak,
         kSelectiveAck,
     };
@@ -53,17 +53,17 @@ struct ControlMsg {
     };
 
     struct Timestamp {
-        Seq epoch;
-        Time t;
+        /** @brief Transmission time of this packet at the transmitter */
+        Time t_sent;
     };
 
-    struct TimestampDelta {
-        /** @brief Node ID of sender */
+    struct TimestampEcho {
+        /** @brief Node ID of original timestamp transmitter */
         NodeId node;
-        /** @brief Epoch of sender */
-        Seq epoch;
-        /** @brief Delta between receiver and sender */
-        Time delta;
+        /** @brief Transmitter's timestamp on sent packet */
+        Time t_sent;
+        /** @brief Receiver's timestamp of packet */
+        Time t_recv;
     };
 
     struct SelectiveAck {
@@ -78,7 +78,7 @@ struct ControlMsg {
     union {
         Hello hello;
         Timestamp timestamp;
-        TimestampDelta timestamp_delta;
+        TimestampEcho timestamp_echo;
         Nak nak;
         SelectiveAck ack;
     };
@@ -240,12 +240,12 @@ struct Packet : public buffer<unsigned char>
     void appendHello(const ControlMsg::Hello &hello);
 
     /** @brief Append a Timestamp control message to a packet */
-    void appendTimestamp(const Seq &epoch, const Clock::time_point &t);
+    void appendTimestamp(const MonoClock::time_point &t_sent);
 
-    /** @brief Append a timestamp delta control message to a packet */
-    void appendTimestampDelta(NodeId node_id,
-                              const Seq &epoch,
-                              const Clock::time_point &delta);
+    /** @brief Append a Timestamp Echo control message to a packet */
+    void appendTimestampEcho(NodeId node_id,
+                             const MonoClock::time_point &t_sent,
+                             const MonoClock::time_point &t_recv);
 
     /** @brief Append a NAK control message to a packet */
     void appendNak(const Seq &seq);
@@ -450,8 +450,8 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
         case ControlMsg::kTimestamp:
             return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);
 
-        case ControlMsg::kTimestampDelta:
-            return offsetof(ControlMsg, timestamp_delta) + sizeof(ControlMsg::TimestampDelta);
+        case ControlMsg::kTimestampEcho:
+            return offsetof(ControlMsg, timestamp_echo) + sizeof(ControlMsg::TimestampEcho);
 
         case ControlMsg::kNak:
             return offsetof(ControlMsg, nak) + sizeof(ControlMsg::Nak);

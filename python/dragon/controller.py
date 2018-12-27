@@ -139,6 +139,7 @@ class Controller(TCPProtoServer):
 
             self.switched_macs = False
             self.loop.create_task(self.discoverNeighbors())
+            self.loop.create_task(self.synchronizeClock())
             self.loop.create_task(self.switchToTDMA())
 
     def stopRadio(self):
@@ -341,6 +342,15 @@ class Controller(TCPProtoServer):
             await asyncio.sleep(delta)
             radio.controller.broadcastHello()
             await asyncio.sleep(PERIOD - delta)
+
+    async def synchronizeClock(self):
+        radio = self.radio
+        config = self.config
+
+        while True:
+            await asyncio.sleep(config.clock_sync_interval)
+
+            radio.synchronizeClock()
 
     @handle('Request.radio_command')
     def radioCommand(self, req):

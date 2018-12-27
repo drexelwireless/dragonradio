@@ -100,6 +100,12 @@ public:
 
     static const bool is_steady = true;
 
+    /** @brief Get time 0, for purposes of linear fit. */
+    MonoClock::time_point getTimeZero(void)
+    {
+        return time_point { t0_ };
+    }
+
     /** @brief Get the current time. Guaranteed to be monotonic. */
     static time_point now() noexcept
     {
@@ -107,6 +113,9 @@ public:
     }
 
 protected:
+    /** @brief Time zero, for purposes of linear fit. */
+    static uhd::time_spec_t t0_;
+
     /** @brief The USRP used for clock operations. */
     static uhd::usrp::multi_usrp::sptr usrp_;
 };
@@ -125,42 +134,48 @@ public:
 
     static const bool is_steady = false;
 
+    /** @brief Get time offset. */
+    MonoClock::time_point getTimeOffset(void)
+    {
+        return MonoClock::time_point { offset_ };
+    }
+
+    /** @brief Set time offset. */
+    void setTimeOffset(const MonoClock::time_point &offset)
+    {
+        offset_ = offset.t;
+    }
+
+    /** @brief Get skew. */
+    double getSkew(void)
+    {
+        return skew_;
+    }
+
+    /** @brief set skew. */
+    void setSkew(double skew)
+    {
+        skew_ = skew;
+    }
+
     /** @brief Get the current wall-clock time. */
     static time_point now() noexcept
     {
         uhd::time_spec_t now = usrp_->get_time_now();
 
-        return time_point { offset_ + (now + skew_*(now - last_adjustment_.t).get_real_secs()) };
+        return time_point { t0_ + offset_ + skew_*(now - t0_).get_real_secs() };
     }
 
     /** @brief Return the monotonic time corresponding to wall-clock time. */
     static MonoClock::time_point to_mono_time(const time_point &t) noexcept
     {
-        return MonoClock::time_point { t.t - offset_ };
+        return MonoClock::time_point { t0_ + (t.t - t0_ - offset_).get_real_secs() / skew_ };
     }
 
     /** @brief Return the wall-clock time corresponding to monotonic time. */
     static time_point to_wall_time(const MonoClock::time_point &t) noexcept
     {
-        return time_point { t.t + offset_ };
-    }
-
-    /** @brief Return the current clock epoch.
-     */
-    static Seq epoch(void)
-    {
-        return epoch_;
-    }
-
-    /** @brief Adjust the current wall-clock time by the given offset.
-     * @param off Adjustment offset.
-     */
-    static void adjust(const time_point &off, double skew)
-    {
-        offset_ += off.t;
-        skew_ = skew;
-        last_adjustment_ = time_point { usrp_->get_time_now() };
-        ++epoch_;
+        return time_point { t0_ + offset_ + skew_*(t.t - t0_).get_real_secs() };
     }
 
     /** @brief Set the USRP used for clock operations.
@@ -172,17 +187,11 @@ public:
     static void releaseUSRP(void);
 
 private:
-    /** @brief The current clock epoch. */
-    static Seq epoch_;
-
-    /** @brief Clock skew. */
-    static double skew_;
-
     /** @brief The offset between the USRP's clock and wall-clock time. */
     static uhd::time_spec_t offset_;
 
-    /** @brief The time of the last adjustment. */
-    static time_point last_adjustment_;
+    /** @brief Clock skew. */
+    static double skew_;
 };
 
 #endif /* CLOCK_H_ */

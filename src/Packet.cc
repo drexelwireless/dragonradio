@@ -112,27 +112,26 @@ void Packet::appendHello(const ControlMsg::Hello &hello)
     appendControl(msg);
 }
 
-void Packet::appendTimestamp(const Seq &epoch, const Clock::time_point &t)
+void Packet::appendTimestamp(const MonoClock::time_point &t_sent)
 {
     ControlMsg msg;
 
     msg.type = ControlMsg::Type::kTimestamp;
-    msg.timestamp.epoch = epoch;
-    msg.timestamp.t.from_wall_time(t);
+    msg.timestamp.t_sent.from_mono_time(t_sent);
 
     appendControl(msg);
 }
 
-void Packet::appendTimestampDelta(NodeId node_id,
-                                  const Seq &epoch,
-                                  const Clock::time_point &delta)
+void Packet::appendTimestampEcho(NodeId node_id,
+                                const MonoClock::time_point &t_sent,
+                                const MonoClock::time_point &t_recv)
 {
     ControlMsg msg;
 
-    msg.type = ControlMsg::Type::kTimestampDelta;
-    msg.timestamp_delta.node = node_id;
-    msg.timestamp_delta.epoch = epoch;
-    msg.timestamp_delta.delta.from_wall_time(delta);
+    msg.type = ControlMsg::Type::kTimestampEcho;
+    msg.timestamp_echo.node = node_id;
+    msg.timestamp_echo.t_sent.from_mono_time(t_sent);
+    msg.timestamp_echo.t_recv.from_mono_time(t_recv);
 
     appendControl(msg);
 }
