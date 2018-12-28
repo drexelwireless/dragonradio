@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import matplotlib as mp
+mp.use('GTK3Agg')
 from matplotlib.text import OffsetFrom
 import matplotlib.patches as patches
 from matplotlib.widgets import Button, Slider

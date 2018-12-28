@@ -4,6 +4,9 @@ from functools import reduce
 import logging
 import re
 
+import matplotlib
+matplotlib.use('GTK3Agg')
+
 from drlog import EventLog
 
 def main():
