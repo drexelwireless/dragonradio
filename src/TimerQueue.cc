@@ -25,14 +25,13 @@ void TimerQueue::run_at(Timer &t, const time_type &when)
 
     if (t.in_heap())
         timer_queue_.update(t);
-    else {
+    else
         timer_queue_.push(t);
 
-        // Wake the timer worker if it's running and the timer we just inserted
-        // is the first timer that needs to be run.
-        if (!done_ && t.is_top())
-            wakeThread(timer_worker_thread_);
-    }
+    // Wake the timer worker if it's running and the timer we just inserted
+    // is the first timer that needs to be run.
+    if (!done_ && t.is_top())
+        wakeThread(timer_worker_thread_);
 }
 
 bool TimerQueue::running(const Timer& t)
