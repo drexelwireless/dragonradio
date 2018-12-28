@@ -119,7 +119,9 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
     // Perform test to see if we want to continue demodulating this packets
     if (header_test_) {
-        if (header_valid_ && (h->flags & (1 << kBroadcast) || h->nexthop == phy_.getNodeId()))
+        if (   header_valid_
+            && h->curhop != phy_.getNodeId()
+            && (h->flags & (1 << kBroadcast) || h->nexthop == phy_.getNodeId()))
             return 1;
         else
             return 0;
