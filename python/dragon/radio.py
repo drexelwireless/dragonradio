@@ -14,6 +14,7 @@ import sys
 
 import dragonradio
 from dragonradio import Channels, MCS, TXParams, TXParamsVector
+import dragon.internal
 
 logger = logging.getLogger('radio')
 
@@ -793,9 +794,10 @@ class Radio(object):
         #
         # Configure packet path from tun/tap to the modulator
         # The path is:
-        #   tun/tap -> NetFilter -> FlowSource -> NetQueue -> controller -> modulator
+        #   tun/tap -> NetFilter -> NetFirewall -> FlowSource -> NetQueue -> controller -> modulator
         #
         self.netfilter = dragonradio.NetFilter(self.net)
+        self.netfirewall = dragonradio.NetFirewall()
         self.flowsource = dragonradio.FlowSource(config.measurement_period)
 
         if config.queue == 'lifo':
@@ -805,7 +807,9 @@ class Radio(object):
 
         self.tuntap.source >> self.netfilter.input
 
-        self.netfilter.output >> self.flowsource.input
+        self.netfilter.output >> self.netfirewall.input
+
+        self.netfirewall.output >> self.flowsource.input
 
         self.flowsource.output >> self.netq.push
 
@@ -1103,9 +1107,11 @@ class Radio(object):
     def setMandatedOutcomes(self, mandates):
         config = self.config
 
+        allowed = set([dragon.internal.INTERNAL_PORT])
         mandateMap = dragonradio.MandatedOutcomeMap()
 
         for (flow, m) in mandates.items():
+            allowed.add(flow)
             mandateMap[flow] = dragonradio.MandatedOutcome(config.measurement_period,
                                                            0.0,
                                                            m.min_throughput_bps,
@@ -1114,6 +1120,10 @@ class Radio(object):
 
         self.flowsink.mandates = mandateMap
         self.flowsource.mandates = mandateMap
+
+        self.netfirewall.allow_broadcasts = True
+        self.netfirewall.allowed = allowed
+        self.netfirewall.enabled = True
 
     def getRadioLogPath(self):
         """
