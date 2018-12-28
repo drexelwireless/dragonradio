@@ -111,24 +111,14 @@ get_packet:
         pkt->setFlag(kACK);
         ehdr.ack = recvw.ack;
 
-        if (pkt->data_len == 0)
-            logEvent("ARQ: send delayed ack: node=%u; ack=%u",
-                (unsigned) nexthop,
-                (unsigned) recvw.ack);
-        else
-            logEvent("ARQ: send ack: node=%u; ack=%u",
-                (unsigned) nexthop,
-                (unsigned) recvw.ack);
-
 #if DEBUG
         if (pkt->data_len == 0)
-            dprintf("ARQ: send: node=%u; ack=%u",
+            dprintf("ARQ: send delayed ack: node=%u; ack=%u",
                 (unsigned) nexthop,
                 (unsigned) recvw.ack);
         else
-            dprintf("ARQ: send: node=%u; seq=%u; ack=%u",
+            dprintf("ARQ: send ack: node=%u; ack=%u",
                 (unsigned) nexthop,
-                (unsigned) pkt->seq,
                 (unsigned) recvw.ack);
 #endif
 
@@ -272,7 +262,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         // Handle ACK
         if (pkt->isFlagSet(kACK)) {
             if (ehdr.ack > unack) {
-                logEvent("ARQ: ack: node=%u; seq=[%u,%u)",
+                dprintf("ARQ: ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
                     (unsigned) unack,
                     (unsigned) ehdr.ack);
