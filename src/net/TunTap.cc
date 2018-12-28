@@ -218,7 +218,7 @@ void TunTap::worker(void)
 
         pkt->data_len = nread;
         pkt->resize(sizeof(ExtendedHeader) + nread);
-        pkt->timestamp = Clock::now();
+        pkt->timestamp = MonoClock::now();
         source.push(std::move(pkt));
     }
 }

@@ -651,7 +651,7 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
     // 3) OR it has passed its deadline.
     if (!entry.pkt->isFlagSet(kSYN) &&
         (   (max_retransmissions_ && entry.nretrans >= *max_retransmissions_)
-         || entry.pkt->deadlinePassed(Clock::now())))
+         || entry.pkt->deadlinePassed(MonoClock::now())))
         drop(entry);
     else
         retransmit(entry);
@@ -792,7 +792,7 @@ void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& 
                 MonoClock::time_point t_recv;
 
                 t_sent = it->timestamp.t_sent.to_mono_time();
-                t_recv = Clock::to_mono_time(pkt->timestamp);
+                t_recv = pkt->timestamp;
 
                 node.timestamps.emplace_back(std::make_pair(t_sent, t_recv));
 
@@ -1280,7 +1280,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // drop a packet with a sequence number, because we need to drop a
             // packet with a sequence number in the controller to ensure the
             // send window is properly adjusted.
-            if (pkt->shouldDrop(Clock::now())) {
+            if (pkt->shouldDrop(MonoClock::now())) {
                 drop(sendw[pkt->seq]);
                 pkt.reset();
                 continue;

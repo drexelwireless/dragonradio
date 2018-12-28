@@ -200,7 +200,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
             memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
         }
 
-        logger_->logRecv(demod_start_,
+        logger_->logRecv(Clock::to_wall_time(demod_start_),
                          start,
                          end,
                          header_valid_,
@@ -217,7 +217,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
                          stats_.cfo,
                          shift_,
                          phy_.getRXRate(),
-                         (Clock::now() - demod_start_).get_real_secs(),
+                         (MonoClock::now() - demod_start_).get_real_secs(),
                          payload_len_,
                          std::move(buf));
     }
@@ -225,7 +225,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void LiquidPHY::Demodulator::reset(Clock::time_point timestamp,
+void LiquidPHY::Demodulator::reset(MonoClock::time_point timestamp,
                                    size_t off,
                                    double shift,
                                    double rate)

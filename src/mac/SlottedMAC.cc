@@ -187,7 +187,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
                 hdr.nexthop = (*it)->pkt->nexthop;
                 hdr.seq = (*it)->pkt->seq;
 
-                logger_->logSend((*it)->samples->timestamp,
+                logger_->logSend(Clock::to_wall_time((*it)->samples->timestamp),
                                  hdr,
                                  (*it)->pkt->src,
                                  (*it)->pkt->dest,
@@ -216,7 +216,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
 
         // Tell the snapshot collector about this local self-transmission
         if (snapshot_collector_)
-            snapshot_collector_->selfTX(when,
+            snapshot_collector_->selfTX(Clock::to_mono_time(when),
                                         rx_rate_,
                                         tx_rate_,
                                         demodulator_->getChannelRate(),

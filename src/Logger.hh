@@ -114,7 +114,7 @@ private:
     std::unique_ptr<ExtensibleDataSet> send_;
     std::unique_ptr<ExtensibleDataSet> event_;
     Clock::time_point t_start_;
-    Clock::time_point t_last_slot_;
+    MonoClock::time_point t_last_slot_;
 
     /** @brief Data sources we collect. */
     uint32_t sources_;

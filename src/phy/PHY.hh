@@ -75,13 +75,13 @@ public:
 
         /** @brief Reset the internal state of the demodulator.
          * @brief timestamp The timestamp of IQ buffer from which the first
-         * provided sample willcome.
+         * provided sample will come.
          * @brief off The offset of the first provided sample.
          * @brief shift The center frequency of the demodulated data.
          * @brief rate The rate of the resampler applied before data is passed
          * to thedemodulator.
          */
-        virtual void reset(Clock::time_point timestamp,
+        virtual void reset(MonoClock::time_point timestamp,
                            size_t off,
                            double shift,
                            double rate) = 0;

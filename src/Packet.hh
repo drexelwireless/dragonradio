@@ -149,7 +149,7 @@ struct Packet : public buffer<unsigned char>
     std::optional<FlowUID> flow_uid;
 
     /** @brief Packet timestamp */
-    Clock::time_point timestamp;
+    MonoClock::time_point timestamp;
 
     /** @brief Set a flag */
     void setFlag(unsigned f)
@@ -392,7 +392,7 @@ struct NetPacket : public Packet
     NetPacket(size_t n) : Packet(n), tx_params(nullptr) {};
 
     /** @brief Packet delivery deadline */
-    std::optional<Clock::time_point> deadline;
+    std::optional<MonoClock::time_point> deadline;
 
     /** @brief TX parameters */
     TXParams *tx_params;
@@ -401,13 +401,13 @@ struct NetPacket : public Packet
     float g;
 
     /** @brief Return true if the packet's deadline has passed, false otherwise */
-    bool deadlinePassed(const Clock::time_point &now)
+    bool deadlinePassed(const MonoClock::time_point &now)
     {
         return deadline && *deadline < now;
     }
 
     /** @brief Return true if this packet should be dropped, false otherwise */
-    bool shouldDrop(const Clock::time_point &now)
+    bool shouldDrop(const MonoClock::time_point &now)
     {
         return !isFlagSet(kSYN) && deadlinePassed(now);
     }

@@ -214,7 +214,7 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     /** @brief Timestamp of packet with the maximum sequence number we have
       * sent. */
-    Clock::time_point max_timestamp;
+    MonoClock::time_point max_timestamp;
 
     /** @brief Receive window size */
     Seq::uint_type win;

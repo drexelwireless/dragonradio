@@ -455,7 +455,7 @@ void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
 {
     SlotEntry entry;
 
-    entry.timestamp = (buf->timestamp - t_start_).get_real_secs();
+    entry.timestamp = (Clock::to_wall_time(buf->timestamp) - t_start_).get_real_secs();
     entry.bw = bw;
     entry.iq_data.p = &(*buf)[0];
     entry.iq_data.len = buf->size();
@@ -470,7 +470,7 @@ void Logger::logSnapshot_(std::shared_ptr<IQBuf> buf)
 
     data = compressFLAC(8, buf->data(), buf->size());
 
-    entry.timestamp = (buf->timestamp - t_start_).get_real_secs();
+    entry.timestamp = (Clock::to_wall_time(buf->timestamp) - t_start_).get_real_secs();
     entry.fs = buf->fs;
 
     entry.iq_data.p = data.data();
