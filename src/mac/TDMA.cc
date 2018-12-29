@@ -61,13 +61,14 @@ void TDMA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<Net
 
 void TDMA::txWorker(void)
 {
-    Clock::time_point t_now;            // Current time
-    Clock::time_point t_prev_slot;      // Previous, completed slot
-    Clock::time_point t_next_slot;      // Time at which our next slot starts
-    Clock::time_point t_following_slot; // Time at which our following slot starts
-    bool              own_next_slot;    // Do we own the next slot too?
-    size_t            noverfill = 0;    // Number of overfilled samples;
-    double            delta;            // Time until we need to wake up to modulate more packets
+    Clock::time_point t_now;              // Current time
+    Clock::time_point t_prev_slot;        // Previous, completed slot
+    Clock::time_point t_next_slot;        // Time at which our next slot starts
+    Clock::time_point t_following_slot;   // Time at which our following slot starts
+    bool              own_next_slot;      // Do we own the next slot too?
+    bool              own_following_slot; // Do we own the following slot too?
+    size_t            noverfill = 0;      // Number of overfilled samples;
+    double            delta;              // Time until we need to wake up to modulate more packets
 
     uhd::set_thread_priority_safe();
 
@@ -86,20 +87,23 @@ void TDMA::txWorker(void)
                 continue;
             }
 
-            // Find following slot. We divide slot_size_ by two to avoid possible
-            // rounding issues where we mights end up skipping a slot.
-            findNextSlot(t_next_slot + slot_size_/2.0, t_following_slot, own_next_slot);
+            // Find following slot. We divide slot_size_ by two to avoid
+            // possible rounding issues where we mights end up skipping a slot.
+            findNextSlot(t_next_slot + slot_size_/2.0,
+                         t_following_slot,
+                         own_following_slot);
 
             // Schedule transmission for start of our next slot if we haven't
             // already transmitted for that slot
             if (!approx(t_next_slot, t_prev_slot)) {
-                if (superslots_ && own_next_slot)
-                    noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_full_slot_samps_ - noverfill, true);
-                else
-                    noverfill = txSlot(t_next_slot + noverfill/tx_rate_, tx_slot_samps_ - noverfill, false);
+                bool overfill_allowed = superslots_ && own_following_slot;
 
-                // XXX For some reason this is necessary to please USRP. Otherwise
-                // we get late TX errors.
+                noverfill = txSlot(t_next_slot + noverfill/tx_rate_,
+                                   tx_full_slot_samps_ - noverfill,
+                                   overfill_allowed);
+
+                // XXX For some reason this is necessary to please USRP.
+                // Otherwise we get late TX errors.
                 if (noverfill != 0)
                     noverfill += 1;
 
