@@ -96,7 +96,8 @@ void TDMA::txWorker(void)
             // Schedule transmission for start of our next slot if we haven't
             // already transmitted for that slot
             if (!approx(t_next_slot, t_prev_slot)) {
-                bool overfill_allowed = superslots_ && own_following_slot;
+                bool overfill_allowed = superslots_ &&
+                    own_following_slot && !pendingTimestamp(t_following_slot);
 
                 noverfill = txSlot(t_next_slot + noverfill/tx_rate_,
                                    tx_full_slot_samps_ - noverfill,

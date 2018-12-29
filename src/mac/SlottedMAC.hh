@@ -92,6 +92,16 @@ public:
         reconfigure();
     }
 
+    /** @brief Do we have a pending timestamp packet?
+     * @param when Time to check for pending timestamp
+     * @return true if there is a pending timstamp at given time, false
+     * otherwise.
+     */
+    bool pendingTimestamp(Clock::time_point when)
+    {
+        return timestamped_mpkt_ && approx(timestamped_deadline_, when);
+    }
+
     virtual void reconfigure(void) override;
 
 protected:
