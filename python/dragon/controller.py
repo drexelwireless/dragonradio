@@ -13,7 +13,7 @@ import dragonradio
 
 from dragon.collab import CollabAgent, MandatedOutcome, Node, Voxel
 from dragon.gpsd import GPSDClient
-from dragon.internal import InternalAgent
+from dragon.internal import InternalProtoClient, InternalProtoServer
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
@@ -75,6 +75,12 @@ class Controller(TCPProtoServer):
 
         self.mandated_outcomes = {}
         """Current mandated outcomes"""
+
+        self.internal_server = None
+        """Internal protocol server"""
+
+        self.internal_client = None
+        """Internal protocol client"""
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -138,18 +144,20 @@ class Controller(TCPProtoServer):
         if self.config.force_gateway:
             radio.net[radio.node_id].is_gateway = True
 
-        # Start the internal agent
-        self.internal_agent = InternalAgent(self,
-                                            loop=self.loop,
-                                            local_ip='0.0.0.0')
+        # Start the internal protocol server
+        self.internal_server = InternalProtoServer(self,
+                                                   loop=self.loop,
+                                                   local_ip='0.0.0.0')
 
-        # If we are the gateway, connect the internal agent to the broadcast
-        # address
+        # If we are the gateway, start an internal protocol client connected to
+        # the broadcast address
         if self.is_gateway:
-            self.internal_agent.startClient(INTERNAL_BCAST_ADDR)
+            self.internal_client = InternalProtoClient(self,
+                                                       loop=self.loop,
+                                                       server_host=INTERNAL_BCAST_ADDR)
 
         # Start our local status update
-        self.loop.create_task(self.localStatusUpdate())
+        self.loop.create_task(self.localStatisticsUpdate())
 
         # XXX we need *some* task to be running or else we run_forever can't be
         # stopped!
@@ -258,9 +266,11 @@ class Controller(TCPProtoServer):
 
             # If new node is a gateway, connect to it and start sending status
             # updates
-            if self.internal_agent and self.radio.net[node_id].is_gateway:
-                self.internal_agent.startClient(internalNodeIP(node_id))
-                self.internal_agent.loop.create_task(self.internal_agent.status_update())
+            if self.radio.net[node_id].is_gateway:
+                self.internal_client = InternalProtoClient(self,
+                                                           loop=self.loop,
+                                                           server_host=internalNodeIP(node_id))
+                self.loop.create_task(self.gatewayStatisticsUpdate())
 
             try:
                 subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
@@ -309,27 +319,6 @@ class Controller(TCPProtoServer):
             mandate.latency = latency
             mandate.throughput = throughput
             mandate.bytes = bytes
-
-    async def localStatusUpdate(self):
-        """Update flow statistics locally"""
-        radio = self.radio
-        node_id = radio.node_id
-
-        try:
-            while True:
-                for flow_uid, stats in radio.flowsource.flows.items():
-                    self.addLink(node_id, stats.dest, flow_uid)
-
-                for flow_uid, stats in radio.flowsink.flows.items():
-                    self.addLink(stats.src, node_id, flow_uid)
-                    self.updateMandateStats(flow_uid,
-                                            stats.latency.value,
-                                            stats.throughput.value,
-                                            stats.bytes)
-
-                await asyncio.sleep(5)
-        except CancelledError:
-            pass
 
     def installMACSchedule(self, sched):
         """Install a new MAC schedule"""
@@ -380,6 +369,42 @@ class Controller(TCPProtoServer):
 
         return voxels
 
+    async def localStatisticsUpdate(self):
+        """Update local flow statistics"""
+        radio = self.radio
+        node_id = radio.node_id
+
+        try:
+            while not self.done:
+                for flow_uid, stats in radio.flowsource.flows.items():
+                    self.addLink(node_id, stats.dest, flow_uid)
+
+                for flow_uid, stats in radio.flowsink.flows.items():
+                    self.addLink(stats.src, node_id, flow_uid)
+                    self.updateMandateStats(flow_uid,
+                                            stats.latency.value,
+                                            stats.throughput.value,
+                                            stats.bytes)
+
+                await asyncio.sleep(5)
+        except CancelledError:
+            pass
+
+    async def gatewayStatisticsUpdate(self):
+        """Send flow statistics update to gateway"""
+        radio = self.radio
+        config = self.config
+
+        if self.is_gateway or config.status_update_period == 0:
+            return
+
+        try:
+            while not self.done:
+                await self.internal_client.sendStatus()
+                await asyncio.sleep(config.status_update_period)
+        except CancelledError:
+            pass
+
     async def createSchedule(self):
         """Create a new TDMA schedule"""
         NSLOTS = 10
@@ -424,9 +449,9 @@ class Controller(TCPProtoServer):
         """Brodcast the TDMA schedule"""
         if type(self.schedule) != type(None):
             logging.debug('Broadcasting schedule')
-            await self.internal_agent.broadcastSchedule(self.schedule_seq,
-                                                        self.schedule_nodes,
-                                                        self.schedule)
+            await self.internal_client.sendSchedule(self.schedule_seq,
+                                                    self.schedule_nodes,
+                                                    self.schedule)
         else:
             logging.debug('No schedule!')
 

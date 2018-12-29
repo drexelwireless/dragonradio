@@ -25,38 +25,17 @@ internal.TimeStamp.set_timestamp = set_timestamp
 internal.TimeStamp.get_timestamp = get_timestamp
 
 @handler(internal.Message)
-class InternalAgent(UDPProtoServer, UDPProtoClient):
+class InternalProtoServer(UDPProtoServer):
     def __init__(self,
                  controller,
                  loop=None,
-                 local_ip=None,
-                 server_host=None):
+                 local_ip=None):
         UDPProtoServer.__init__(self, loop=loop)
-        UDPProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=INTERNAL_PORT)
-
-        self.controller = controller
 
         self.loop = loop
+        self.controller = controller
 
         self.startServer(internal.Message, local_ip, INTERNAL_PORT)
-
-    def startClient(self, server_host):
-        self.server_host = server_host
-        self.open()
-
-    async def status_update(self):
-        config = self.controller.config
-
-        try:
-            while True:
-                me = self.controller.thisNode()
-
-                if self.server_host and self.controller.bootstrapped:
-                    await self.sendStatus()
-
-                await asyncio.sleep(config.status_update_period)
-        except CancelledError:
-            pass
 
     @handle('Message.status')
     def handle_status(self, msg):
@@ -96,6 +75,19 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
 
             self.controller.installMACSchedule(sched)
 
+class InternalProtoClient(UDPProtoClient):
+    def __init__(self,
+                 controller,
+                 loop=None,
+                 server_host=None):
+        UDPProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=INTERNAL_PORT)
+
+        self.loop = loop
+        self.controller = controller
+        self.server_host = server_host
+
+        self.open()
+
     @send(internal.Message)
     async def sendStatus(self, msg):
         me = self.controller.thisNode()
@@ -108,11 +100,11 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
         msg.status.loc.location.longitude = me.loc.lon
         msg.status.loc.location.elevation = me.loc.alt
         msg.status.loc.timestamp.set_timestamp(me.loc.timestamp)
-        msg.status.source_flows.extend(copyFlowInfo(radio.flowsource.flows))
-        msg.status.sink_flows.extend(copyFlowInfo(radio.flowsink.flows))
+        msg.status.source_flows.extend(toFlowInfo(radio.flowsource.flows))
+        msg.status.sink_flows.extend(toFlowInfo(radio.flowsink.flows))
 
     @send(internal.Message)
-    async def broadcastSchedule(self, msg, seq, nodes, sched):
+    async def sendSchedule(self, msg, seq, nodes, sched):
         (nchannels, nslots) = sched.shape
 
         msg.schedule.seq = seq
@@ -121,7 +113,8 @@ class InternalAgent(UDPProtoServer, UDPProtoClient):
         msg.schedule.nodes.extend(nodes)
         msg.schedule.schedule.extend(sched.reshape(nchannels*nslots))
 
-def copyFlowInfo(flows):
+def toFlowInfo(flows):
+    """Convert dragonradio.FlowInfo to internal agent FlowInfo"""
     internal_flows = []
 
     for flow_uid, flow_info in flows.items():
