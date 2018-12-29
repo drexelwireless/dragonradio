@@ -311,6 +311,12 @@ class UDPProtoClient(object):
     def close(self):
         self.transport.close()
 
+    def connection_made(self, transport):
+        pass
+
+    def connection_lost(self, exc):
+        pass
+
     async def send(self, msg):
         if self.transport:
             self.transport.sendto(msg.SerializeToString(), addr=None)
