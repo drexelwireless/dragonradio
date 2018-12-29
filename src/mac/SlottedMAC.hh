@@ -24,7 +24,7 @@ public:
                double slot_size,
                double guard_size,
                double demod_overlap_size);
-    virtual ~SlottedMAC();
+    virtual ~SlottedMAC() = default;
 
     SlottedMAC(const SlottedMAC&) = delete;
     SlottedMAC(SlottedMAC&&) = delete;
@@ -33,36 +33,64 @@ public:
     SlottedMAC& operator=(SlottedMAC&&) = delete;
 
     /** @brief Get slot size, including guard interval */
-    virtual double getSlotSize(void);
+    virtual double getSlotSize(void)
+    {
+        return slot_size_;
+    }
 
     /** @brief Set slot size, including guard interval
      * @param t Slot size in seconds
      */
-    virtual void setSlotSize(double t);
+    virtual void setSlotSize(double t)
+    {
+        slot_size_ = t;
+        reconfigure();
+    }
 
     /** @brief Get guard interval size */
-    virtual double getGuardSize(void);
+    virtual double getGuardSize(void)
+    {
+        return guard_size_;
+    }
 
     /** @brief Set guard interval size
      * @param t Guard interval size in seconds
      */
-    virtual void setGuardSize(double t);
+    virtual void setGuardSize(double t)
+    {
+        guard_size_ = t;
+        reconfigure();
+    }
 
     /** @brief Get demodulation overlap size */
-    virtual double getDemodOverlapSize(void);
+    virtual double getDemodOverlapSize(void)
+    {
+        return demod_overlap_size_;
+    }
 
     /** @brief Set demodulation overlap size
      * @param t Overlap size in seconds
      */
-    virtual void setDemodOverlapSize(double t);
+    virtual void setDemodOverlapSize(double t)
+    {
+        demod_overlap_size_ = t;
+        reconfigure();
+    }
 
     /** @brief Get number of slots to pre-modulate */
-    virtual double getPreModulateSlots(void);
+    virtual double getPreModulateSlots(void)
+    {
+        return premod_slots_;
+    }
 
     /** @brief Set demodulation overlap size
      * @param n Number of slots to pre-modulate
      */
-    virtual void setPreModulateSlots(double n);
+    virtual void setPreModulateSlots(double n)
+    {
+        premod_slots_ = n;
+        reconfigure();
+    }
 
     virtual void reconfigure(void) override;
 
