@@ -561,17 +561,18 @@ class Controller(TCPProtoServer):
             frequency = env.get('scenario_center_frequency', self.config.frequency)
 
             if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
-                old_bandwidth = self.bandwidth
+                old_bandwidth = self.radio.bandwidth
 
                 self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
 
                 # If only the center frequency has changed, keep the old
                 # schedule. Otherwise create a new schedule.
-                if self.bandwidth != old_bandwidth:
-                    if is_gateway:
+                if self.radio.bandwidth != old_bandwidth:
+                    self.radio.mac.slots = []
+                    if self.is_gateway:
+                        # Force new schedule
+                        self.schedule = None
                         self.tdma_reschedule.set()
-                    else:
-                        self.radio.mac.slots = []
 
         resp = remote.Response()
         resp.status.state = self.state
