@@ -262,7 +262,14 @@ class Controller(TCPProtoServer):
     def addNode(self, node_id):
         if node_id != self.radio.node_id and node_id not in self.nodes:
             logger.info('Adding node %d', node_id)
-            self.nodes[node_id] = Node(node_id)
+            node = Node(node_id)
+            self.nodes[node_id] = node
+
+            # Add a route for the new node
+            try:
+                subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
+            except:
+                logger.exception('Could not add route to node {}'.format(node_id))
 
             # If new node is a gateway, connect to it and start sending status
             # updates
@@ -272,10 +279,12 @@ class Controller(TCPProtoServer):
                                                            server_host=internalNodeIP(node_id))
                 self.loop.create_task(self.gatewayStatisticsUpdate())
 
-            try:
-                subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
-            except:
-                logger.exception('Could not add route to node {}'.format(node_id))
+            # If we are the gateway, connect an internal protocol client to the
+            # new node's server
+            if self.is_gateway:
+                node.internal_client = InternalProtoClient(self,
+                                                           loop=self.loop,
+                                                           server_host=internalNodeIP(node_id))
 
             # If we are the gateway, update the schedule
             if self.is_gateway:
@@ -433,27 +442,22 @@ class Controller(TCPProtoServer):
                 self.schedule_seq += 1
                 self.installMACSchedule(sched)
                 self.voxels = self.scheduleToVoxels(sched)
-                await self.broadcastSchedule()
+                await self.distributeSchedule()
 
     async def distributeSchedule(self):
-        """Distribute the TDMA schedule"""
+        """Distribute the TDMA schedule to known nodes"""
         config = self.config
         radio = self.radio
 
-        while not self.done:
-            await asyncio.sleep(10)
+        if self.schedule is None:
+            return
 
-            await self.broadcastSchedule()
-
-    async def broadcastSchedule(self):
-        """Brodcast the TDMA schedule"""
-        if type(self.schedule) != type(None):
-            logging.debug('Broadcasting schedule')
-            await self.internal_client.sendSchedule(self.schedule_seq,
-                                                    self.schedule_nodes,
-                                                    self.schedule)
-        else:
-            logging.debug('No schedule!')
+        for node_id in self.schedule_nodes:
+            node = self.nodes[node_id]
+            if hasattr(node, 'internal_client'):
+                await node.internal_client.sendSchedule(self.schedule_seq,
+                                                        self.schedule_nodes,
+                                                        self.schedule)
 
     async def bootstrapNetwork(self):
         loop = self.loop
@@ -463,9 +467,8 @@ class Controller(TCPProtoServer):
         # Sleep for the discovery interval
         await asyncio.sleep(config.neighbor_discovery_period)
 
-        # Start the schedule distribution loop
+        # Start the schedule creation task
         self.loop.create_task(self.createSchedule())
-        self.loop.create_task(self.distributeSchedule())
 
         # Trigger TDMA scheduler
         self.tdma_reschedule.set()
