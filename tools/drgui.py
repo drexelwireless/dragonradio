@@ -548,8 +548,8 @@ def main():
         if not node:
             print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
         else:
-            tx = viewer.snapshotFig(node, nfft=args.nfft)
-            tx.plot(0)
+            snap = viewer.snapshotFig(node, nfft=args.nfft)
+            snap.plot(0)
 
     plt.show()
 
