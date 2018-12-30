@@ -291,6 +291,7 @@ class UDPProtoClient(object):
         self.server_host = server_host
         self.server_port = server_port
         self.transport = None
+        self.connected_event_ = asyncio.Event()
 
     def __enter__(self):
         self.open()
@@ -304,7 +305,7 @@ class UDPProtoClient(object):
                                                       remote_addr=(self.server_host, self.server_port),
                                                       reuse_address=True,
                                                       allow_broadcast=True)
-            (self.transport, _) = await task
+            await task
 
         self.loop.create_task(open_())
 
@@ -312,11 +313,13 @@ class UDPProtoClient(object):
         self.transport.close()
 
     def connection_made(self, transport):
-        pass
+        self.transport = transport
+        self.connected_event_.set()
 
     def connection_lost(self, exc):
-        pass
+        self.connected_event_.clear()
+        self.transport = None
 
     async def send(self, msg):
-        if self.transport:
-            self.transport.sendto(msg.SerializeToString(), addr=None)
+        await self.connected_event_.wait()
+        self.transport.sendto(msg.SerializeToString(), addr=None)
