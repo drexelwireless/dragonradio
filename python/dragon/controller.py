@@ -81,7 +81,7 @@ class Controller(TCPProtoServer):
         # See if we are a gateway, and if so, start the collaboration agent
         self.collab_agent = None
 
-        if self.config.collab_iface in netifaces.interfaces():
+        if self.config.collab_iface in netifaces.interfaces() and self.config.collab_server_ip != None:
             radio.net[radio.node_id].is_gateway = True
             collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
 
@@ -95,6 +95,10 @@ class Controller(TCPProtoServer):
                                                 peer_port=self.config.collab_peer_port)
             except:
                 logger.exception('Could not create collaboration agent')
+
+        # We might also be forced to be the gateway...
+        if self.config.force_gateway:
+            radio.net[radio.node_id].is_gateway = True
 
         # Start the internal agent
         self.internal_agent = InternalAgent(self,
@@ -349,3 +353,9 @@ class Controller(TCPProtoServer):
         resp.status.state = self.state
         resp.status.info = 'Environment updated'
         return resp
+
+    @property
+    def is_gateway(self):
+        radio = self.radio
+
+        return radio.net[radio.node_id].is_gateway
