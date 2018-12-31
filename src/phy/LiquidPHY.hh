@@ -49,7 +49,7 @@ public:
         Demodulator& operator=(const Demodulator&) = delete;
         Demodulator& operator=(Demodulator&&) = delete;
 
-        void reset(Clock::time_point timestamp,
+        void reset(MonoClock::time_point timestamp,
                    size_t off,
                    double shift,
                    double rate) override final;
@@ -83,7 +83,7 @@ public:
         double rate_;
 
         /** @brief The timestamp of the slot we are demodulating. */
-        Clock::time_point demod_start_;
+        MonoClock::time_point demod_start_;
 
         /** @brief The offset (in samples) from the beggining of the slot at
          * which we started demodulating.

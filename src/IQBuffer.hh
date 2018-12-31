@@ -99,7 +99,7 @@ public:
 
 #if !defined(NOUHD)
     /** @brief Timestamp of the first sample */
-    Clock::time_point timestamp;
+    MonoClock::time_point timestamp;
 #endif /* !defined(NOUHD) */
 
     /** @brief Sample center frequency */

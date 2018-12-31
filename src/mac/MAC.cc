@@ -32,7 +32,7 @@ void MAC::timestampPacket(const Clock::time_point &deadline, std::shared_ptr<Net
 {
     std::unique_ptr<ModPacket> mpkt;
 
-    pkt->appendTimestamp(Clock::epoch(), deadline);
+    pkt->appendTimestamp(Clock::to_mono_time(deadline));
 
     mpkt = std::make_unique<ModPacket>();
     modulator_->modulateOne(pkt, *mpkt);

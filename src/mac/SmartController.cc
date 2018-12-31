@@ -217,7 +217,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     // Process control info
     if (pkt->isFlagSet(kControl)) {
         handleCtrlHello(node, pkt);
-        handleCtrlTimestampDeltas(node, pkt);
+        handleCtrlTimestampEchos(node, pkt);
     }
 
     // Handle broadcast packets
@@ -599,12 +599,24 @@ void SmartController::broadcastHello(void)
 
     pkt->appendHello(msg);
 
-    // Append timestamp deltas
-    for (auto it = net_->begin(); it != net_->end(); ++it) {
-        if (it->second.time_info.saw_timestamp)
-            pkt->appendTimestampDelta(it->second.id,
-                                      it->second.time_info.last_timestamp_epoch,
-                                      it->second.time_info.last_timestamp_delta);
+    // Echo most recently heard timestamps if we are the time master
+    std::optional<NodeId> time_master = net_->getTimeMaster();
+
+    if (time_master && *time_master == net_->getMyNodeId()) {
+        for (auto it = net_->begin(); it != net_->end(); ++it) {
+            auto last_timestamp = it->second.timestamps.rbegin();
+
+            if (it->first != net_->getMyNodeId() && last_timestamp != it->second.timestamps.rend()) {
+                logEvent("TIMESYNC: Echoing timestamp: node=%u; t_sent=%f; t_recv=%f",
+                    (unsigned) it->first,
+                    (double) last_timestamp->first.get_real_secs(),
+                    (double) last_timestamp->second.get_real_secs());
+
+                pkt->appendTimestampEcho(it->first,
+                                         last_timestamp->first,
+                                         last_timestamp->second);
+            }
+        }
     }
 
     // Send a timestamped HELLO
@@ -639,7 +651,7 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
     // 3) OR it has passed its deadline.
     if (!entry.pkt->isFlagSet(kSYN) &&
         (   (max_retransmissions_ && entry.nretrans >= *max_retransmissions_)
-         || entry.pkt->deadlinePassed(Clock::now())))
+         || entry.pkt->deadlinePassed(MonoClock::now())))
         drop(entry);
     else
         retransmit(entry);
@@ -776,11 +788,18 @@ void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& 
 
             case ControlMsg::Type::kTimestamp:
             {
-                node.time_info.updateTimestamp(it->timestamp, pkt->timestamp);
+                MonoClock::time_point t_sent;
+                MonoClock::time_point t_recv;
 
-                logEvent("TIMESYNC: Timestamp: node=%u; delta=%g",
+                t_sent = it->timestamp.t_sent.to_mono_time();
+                t_recv = pkt->timestamp;
+
+                node.timestamps.emplace_back(std::make_pair(t_sent, t_recv));
+
+                logEvent("TIMESYNC: Timestamp: node=%u; t_sent=%f; t_recv=%f",
                     (unsigned) pkt->curhop,
-                    (double) node.time_info.last_timestamp_delta.t.get_real_secs());
+                    (double) t_sent.get_real_secs(),
+                    (double) t_recv.get_real_secs());
             }
             break;
 
@@ -790,67 +809,29 @@ void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& 
     }
 }
 
-void SmartController::handleCtrlTimestampDeltas(Node &node, std::shared_ptr<RadioPacket>& pkt)
+void SmartController::handleCtrlTimestampEchos(Node &node, std::shared_ptr<RadioPacket>& pkt)
 {
-    // Process timestamp deltas.
-    // If we have seen a timestamp from this node and it is the time master,
-    // synchronize with it.
-    if (node.time_info.saw_timestamp && node.id != net_->getMyNodeId() && node.id == net_->getTimeMaster()) {
+    // If the transmitter is the time master, record our echoed timestamps.
+    std::optional<NodeId> time_master = net_->getTimeMaster();
+
+    if (node.id != net_->getMyNodeId() && time_master && node.id == *time_master) {
         for(auto it = pkt->begin(); it != pkt->end(); ++it) {
             switch (it->type) {
-                case ControlMsg::Type::kTimestampDelta:
+                case ControlMsg::Type::kTimestampEcho:
                 {
-                    if (it->timestamp_delta.node == net_->getMyNodeId()) {
-                        double            epsilon; // TX delay
-                        double            delta;   // Clock difference
-                        double            sigma;   // Clock skew
+                    if (it->timestamp_echo.node == net_->getMyNodeId()) {
+                        MonoClock::time_point t_sent;
+                        MonoClock::time_point t_recv;
 
-                        double our_delta   = node.time_info.last_timestamp_delta.get_real_secs();
-                        double their_delta = it->timestamp_delta.delta.to_wall_time().get_real_secs();
+                        t_sent = it->timestamp_echo.t_sent.to_mono_time();
+                        t_recv = it->timestamp_echo.t_recv.to_mono_time();
 
-                        epsilon = 0.5*(our_delta + their_delta);
-                        delta = 0.5*(our_delta - their_delta);
+                        echoed_timestamps_.emplace_back(std::make_pair(t_sent, t_recv));
 
-                        sigma = delta/(node.time_info.last_timestamp_our_time - time_sync_.last_adjustment).get_real_secs();
-
-                        logEvent("TIMESYNC: Time stamp delta between us and node %u is %g",
+                        logEvent("TIMESYNC: Timestamp echo: node=%u; t_sent=%f; t_recv=%f",
                             (unsigned) pkt->curhop,
-                            (double) our_delta);
-
-                        logEvent("TIMESYNC: Time stamp delta between node %u and us is %g",
-                            (unsigned) pkt->curhop,
-                            (double) their_delta);
-
-                        if (it->timestamp_delta.epoch == Clock::epoch()) {
-                            logEvent("TIMESYNC: Estimated clock delta between us and node %u is %g (epsilon=%g)",
-                                (unsigned) pkt->curhop,
-                                (double) delta,
-                                (double) epsilon);
-
-                            if (time_sync_.time_master == node.id) {
-                                time_sync_.skew.update(sigma);
-
-                                logEvent("TIMESYNC: Estimated skew between us and node %u is %g (sample=%g)",
-                                    (unsigned) pkt->curhop,
-                                    (double) time_sync_.skew.getValue(),
-                                    (double) sigma);
-                            }
-
-                            if (time_sync_.time_master == 0)
-                                Clock::adjust(Clock::time_point { -delta }, 0.);
-                            else {
-                                Clock::adjust(Clock::time_point { -delta }, -time_sync_.skew.getValue());
-                                logEvent("TIMESYNC: Setting skew to %g",
-                                    (double) -time_sync_.skew.getValue());
-                            }
-
-                            time_sync_.time_master = node.id;
-                            time_sync_.last_adjustment = Clock::now();
-
-                            // Timestamp deltas are no longer valid since we've adjusted our clock
-                            for (auto it = net_->begin(); it != net_->end(); ++it)
-                                it->second.time_info.saw_timestamp = false;
-                        }
+                            (double) t_sent.get_real_secs(),
+                            (double) t_recv.get_real_secs());
                     }
                 }
                 break;
@@ -1299,7 +1280,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // drop a packet with a sequence number, because we need to drop a
             // packet with a sequence number in the controller to ensure the
             // send window is properly adjusted.
-            if (pkt->shouldDrop(Clock::now())) {
+            if (pkt->shouldDrop(MonoClock::now())) {
                 drop(sendw[pkt->seq]);
                 pkt.reset();
                 continue;

@@ -2,15 +2,13 @@
 
 #include "Clock.hh"
 
+uhd::time_spec_t MonoClock::t0_(0.0);
+
 uhd::usrp::multi_usrp::sptr MonoClock::usrp_;
 
-Seq Clock::epoch_(0);
+double Clock::skew_(1.0);
 
-double Clock::skew_ = 0.;
-
-uhd::time_spec_t Clock::offset_;
-
-Clock::time_point Clock::last_adjustment_;
+uhd::time_spec_t Clock::offset_(0.0);
 
 void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 {
@@ -19,11 +17,12 @@ void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 
     gettimeofday(&tv, NULL);
 
-    offset_ = uhd::time_spec_t(tv.tv_sec, ((double)tv.tv_usec)/1e6);
+    uhd::time_spec_t now(tv.tv_sec, ((double)tv.tv_usec)/1e6);
 
     usrp_ = usrp;
+    t0_ = now;
 
-    usrp->set_time_now(0.0);
+    usrp->set_time_now(t0_);
 }
 
 void Clock::releaseUSRP(void)

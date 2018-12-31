@@ -3,28 +3,59 @@
 #include "Clock.hh"
 #include "python/PyModules.hh"
 
-void exportClock(py::module &m)
+template <class T>
+void exportTimePoint(py::module &m, const char *name)
 {
-    // Export class Clock::time_point to Python
-    py::class_<Clock::time_point, std::shared_ptr<Clock::time_point>>(m, "TimePoint")
+    py::class_<T, std::shared_ptr<T>>(m, name)
+        .def(py::init())
+        .def(py::init<double>())
+        .def(py::init<int64_t>())
+        .def(py::init<int64_t, double>())
         .def_property_readonly("full_secs",
-            [](const Clock::time_point t) {
+            [](const T &t) {
                 return t.get_full_secs();
             },
             "Full seconds")
         .def_property_readonly("frac_secs",
-            [](const Clock::time_point t) {
+            [](const T &t) {
                 return t.get_frac_secs();
             },
             "Fractional seconds")
         .def_property_readonly("secs",
-            [](const Clock::time_point t) {
+            [](const T &t) {
                 return t.get_real_secs();
             },
             "Seconds")
+        .def(py::self + py::self)
+        .def(py::self + double())
+        .def(py::self - py::self)
+        .def(py::self - double())
+        .def(py::self > py::self)
+        .def(py::self < py::self)
         .def("__repr__",
-            [](const Clock::time_point& self) {
-                return py::str("TimePoint(full_secs={}, frac_secs={})").format(self.get_full_secs(), self.get_frac_secs());
-            });
+            [name](const T &self) {
+                return py::str("{}(full_secs={}, frac_secs={})").format(name, self.get_full_secs(), self.get_frac_secs());
+            })
         ;
+}
+
+void exportClock(py::module &m)
+{
+    exportTimePoint<Clock::time_point>(m, "TimePoint");
+    exportTimePoint<MonoClock::time_point>(m, "MonoTimePoint");
+
+    py::class_<Clock, std::shared_ptr<Clock>>(m, "Clock")
+      .def_property_readonly("t0",
+          [](Clock &clock) {
+              return clock.getTimeZero();
+          })
+      .def_property("offset",
+          &Clock::getTimeOffset,
+          &Clock::setTimeOffset)
+      .def_property("skew",
+          &Clock::getSkew,
+          &Clock::setSkew)
+      ;
+
+    m.attr("clock") = std::make_shared<Clock>();
 }

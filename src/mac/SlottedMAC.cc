@@ -24,54 +24,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
 {
 }
 
-SlottedMAC::~SlottedMAC()
-{
-}
-
-double SlottedMAC::getSlotSize(void)
-{
-    return slot_size_;
-}
-
-void SlottedMAC::setSlotSize(double t)
-{
-    slot_size_ = t;
-    reconfigure();
-}
-
-double SlottedMAC::getGuardSize(void)
-{
-    return guard_size_;
-}
-
-void SlottedMAC::setGuardSize(double t)
-{
-    guard_size_ = t;
-    reconfigure();
-}
-
-double SlottedMAC::getDemodOverlapSize(void)
-{
-    return demod_overlap_size_;
-}
-
-void SlottedMAC::setDemodOverlapSize(double t)
-{
-    demod_overlap_size_ = t;
-    reconfigure();
-}
-
-double SlottedMAC::getPreModulateSlots(void)
-{
-    return premod_slots_;
-}
-
-void SlottedMAC::setPreModulateSlots(double n)
-{
-    premod_slots_ = n;
-    reconfigure();
-}
-
 void SlottedMAC::reconfigure(void)
 {
     MAC::reconfigure();
@@ -187,7 +139,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
                 hdr.nexthop = (*it)->pkt->nexthop;
                 hdr.seq = (*it)->pkt->seq;
 
-                logger_->logSend((*it)->samples->timestamp,
+                logger_->logSend(Clock::to_wall_time((*it)->samples->timestamp),
                                  hdr,
                                  (*it)->pkt->src,
                                  (*it)->pkt->dest,
@@ -216,7 +168,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
 
         // Tell the snapshot collector about this local self-transmission
         if (snapshot_collector_)
-            snapshot_collector_->selfTX(when,
+            snapshot_collector_->selfTX(Clock::to_mono_time(when),
                                         rx_rate_,
                                         tx_rate_,
                                         demodulator_->getChannelRate(),

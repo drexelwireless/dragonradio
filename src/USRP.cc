@@ -110,7 +110,7 @@ void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
         IQBuf& iqbuf = **it; // Current buffer we are sending
 
-        iqbuf.timestamp = Clock::to_wall_time(when);
+        iqbuf.timestamp = when;
 
         for (size_t off = iqbuf.delay; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
@@ -185,7 +185,7 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
             continue;
 
         if (ndelivered == 0) {
-            buf.timestamp = Clock::to_wall_time(MonoClock::time_point { rx_md.time_spec });
+            buf.timestamp = MonoClock::time_point { rx_md.time_spec };
             buf.undersample = (rx_md.time_spec - t_start.t).get_real_secs() * rxRate;
         }
 

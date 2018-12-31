@@ -79,20 +79,20 @@ Net::map_type::iterator Net::end(void)
     return nodes_.end();
 }
 
-Node& Net::me(void)
+Node &Net::me(void)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
 
     return nodes_.at(getMyNodeId());
 }
 
-NodeId Net::getTimeMaster(void)
+std::optional<NodeId> Net::getTimeMaster(void)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
-    NodeId                      master = 0;
+    std::optional<NodeId>       master;
 
     for (auto it = nodes_.begin(); it != nodes_.end(); ++it) {
-        if (it->second.is_gateway && (master == 0 || it->first < master))
+        if (it->second.is_gateway && (!master || it->first < *master))
             master = it->first;
     }
 

@@ -28,7 +28,7 @@ struct SelfTX {
 /** @brief A snapshot of received spectrum. */
 struct Snapshot {
     /** @brief Timestamp of start of snapshot */
-    Clock::time_point timestamp;
+    MonoClock::time_point timestamp;
 
     /** @brief IQ buffers holding samples in snapshot */
     std::vector<std::shared_ptr<IQBuf>> slots;
@@ -82,7 +82,7 @@ public:
      * @param nsamples Number of samples of self-transmission
      * @param fc Center frequency of self-transmission
      */
-    void selfTX(Clock::time_point when,
+    void selfTX(MonoClock::time_point when,
                 float fs_rx,
                 float fs_tx,
                 float fs_chan,
@@ -109,7 +109,7 @@ protected:
     size_t snapshot_off_;
 
     /** @brief Timestamp of ast local TX */
-    Clock::time_point last_local_tx_start_;
+    MonoClock::time_point last_local_tx_start_;
 
     /** @brief RX sampling frequency during last local TX  */
     float last_local_tx_fs_rx_;

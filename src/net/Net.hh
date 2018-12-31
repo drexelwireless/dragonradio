@@ -4,13 +4,13 @@
 #include <math.h>
 
 #include <map>
+#include <optional>
 #include <queue>
 #include <thread>
-#include <stdio.h>
+#include <vector>
 
 #include "Packet.hh"
 #include "SafeQueue.hh"
-#include "TimeSync.hh"
 #include "net/TunTap.hh"
 #include "stats/Estimator.hh"
 
@@ -33,6 +33,12 @@ extern const char *kExtIPNet;
 
 /** @brief External IP network mask. */
 extern const char *kExtIPNetmask;
+
+/** @brief Vector of pairs of timestamps. */
+/** The first timestamp is the transmitter's timestamp, and the second timestamp
+ * is the local time at which the timestamp was received.
+ */
+using timestamp_vector = std::vector<std::pair<MonoClock::time_point, MonoClock::time_point>>;
 
 struct Node {
     Node(NodeId id, TXParams *tx_params);
@@ -68,8 +74,8 @@ struct Node {
     /** @brief Long-term packet error rate */
     WindowedMean<double> long_per;
 
-    /** @brief Time information for this node */
-    TimeInfo time_info;
+    /** @brief Timestamps received from this node */
+    timestamp_vector timestamps;
 
     /** @brief Set soft TX gain.
      * @param dB The soft gain (dBFS).
@@ -117,10 +123,10 @@ public:
     map_type::iterator end(void);
 
     /** @brief Get the entry for this node */
-    Node& me(void);
+    Node &me(void);
 
     /** @brief Get the node that is the time master */
-    NodeId getTimeMaster(void);
+    std::optional<NodeId> getTimeMaster(void);
 
     /** @brief Get the entry for a particular node in the network */
     Node& operator[](NodeId nodeid);

@@ -1,3 +1,6 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
 #include "net/Net.hh"
 #include "python/PyModules.hh"
 
@@ -60,6 +63,9 @@ void exportRadioNet(py::module &m)
         .def_property_readonly("long_per",
             [](Node &node) { return node.long_per.getValue(); },
             "Long-term packet error rate (unitless)")
+        .def_readonly("timestamps",
+            &Node::timestamps,
+            "Timestamps received from this node")
         ;
 
     // Export class Net to Python
@@ -99,6 +105,8 @@ void exportRadioNet(py::module &m)
             py::return_value_policy::reference_internal)
         .def_property_readonly("my_node_id",
             &Net::getMyNodeId)
+        .def_property_readonly("time_master",
+            &Net::getTimeMaster)
         .def_readwrite("tx_params",
             &Net::tx_params,
             "TX parameters")

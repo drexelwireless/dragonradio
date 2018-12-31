@@ -220,7 +220,7 @@ public:
         if (done_)
             return false;
 
-        Clock::time_point now = Clock::now();
+        MonoClock::time_point now = MonoClock::now();
 
         // First look in high-priority queue
         if (!hiq_.empty()) {
@@ -278,7 +278,7 @@ public:
         if (done_)
             return false;
 
-        Clock::time_point now = Clock::now();
+        MonoClock::time_point now = MonoClock::now();
 
         // First look in high-priority queue
         if (!hiq_.empty()) {

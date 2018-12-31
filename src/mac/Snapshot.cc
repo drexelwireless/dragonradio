@@ -14,13 +14,13 @@ void SnapshotCollector::start(void)
     snapshot_ = std::make_shared<Snapshot>();
     // Set *provisional* snapshot timestamp. Eventually, we will set this to the
     // timestamp of the first collected slot.
-    snapshot_->timestamp = Clock::now();
+    snapshot_->timestamp = MonoClock::now();
     snapshot_collect_ = true;
     snapshot_off_ = 0;
 
     // Log last TX if it is in progress
-    float             fs = last_local_tx_fs_rx_;
-    Clock::time_point end = last_local_tx_start_ + last_local_tx_.end/fs;
+    float                 fs = last_local_tx_fs_rx_;
+    MonoClock::time_point end = last_local_tx_start_ + last_local_tx_.end/fs;
 
     if (snapshot_->timestamp < end) {
         ssize_t actual_start = (snapshot_->timestamp - last_local_tx_start_).get_real_secs()*fs;
@@ -44,10 +44,10 @@ std::shared_ptr<Snapshot> SnapshotCollector::finish(void)
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
     if (!snapshot_->slots.empty()) {
-        float             fs = snapshot_->slots[0]->fs;
-        Clock::time_point provisional_timestamp = snapshot_->timestamp;
-        Clock::time_point actual_timestamp = snapshot_->slots[0]->timestamp;
-        ssize_t           delta = (actual_timestamp - provisional_timestamp).get_real_secs()*fs;
+        float                 fs = snapshot_->slots[0]->fs;
+        MonoClock::time_point provisional_timestamp = snapshot_->timestamp;
+        MonoClock::time_point actual_timestamp = snapshot_->slots[0]->timestamp;
+        ssize_t               delta = (actual_timestamp - provisional_timestamp).get_real_secs()*fs;
 
         // Make snapshot timestamp the timestamp of the first collected slot
         snapshot_->timestamp = actual_timestamp;
@@ -100,7 +100,7 @@ void SnapshotCollector::selfTX(unsigned start, unsigned end, float fc, float fs)
         snapshot_->selftx.emplace_back(SelfTX{false, start, end, fc, fs});
 }
 
-void SnapshotCollector::selfTX(Clock::time_point when,
+void SnapshotCollector::selfTX(MonoClock::time_point when,
                                float fs_rx,
                                float fs_tx,
                                float fs_chan,
