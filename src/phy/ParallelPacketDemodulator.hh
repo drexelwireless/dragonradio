@@ -109,7 +109,7 @@ private:
 
     /** @brief Get two slot's worth of IQ data.
      * @param b The barrier before which network packets should be inserted.
-     * @param shift The frequency IQ samples should be shifted before demodulation.
+     * @param channel The channel to demodulate.
      * @param buf1 The buffer holding the previous slot's IQ data.
      * @param buf2 The buffer holding the current slot's IQ data.
      * @return Return true if pop was successful, false otherwise.
@@ -119,7 +119,7 @@ private:
      * slot is kept in the queue because it becomes the new "previous" slot.
      */
     bool pop(RadioPacketQueue::barrier& b,
-             double &shift,
+             unsigned &channel,
              std::shared_ptr<IQBuf>& buf1,
              std::shared_ptr<IQBuf>& buf2);
 

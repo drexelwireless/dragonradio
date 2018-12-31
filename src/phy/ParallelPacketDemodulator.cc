@@ -112,6 +112,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
                                           phy_->getRXDownsampleRate(),
                                           0.0);
     RadioPacketQueue::barrier b;
+    unsigned                  channel;
     double                    shift;
     std::shared_ptr<IQBuf>    buf1;
     std::shared_ptr<IQBuf>    buf2;
@@ -130,10 +131,11 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
     };
 
     while (!done_) {
-        if (!pop(b, shift, buf1, buf2))
+        if (!pop(b, channel, buf1, buf2))
             break;
 
         received = false;
+        shift = channels_[channel];
 
         // Calculate how many samples we want to demodulate from the tail end of
         // the previous slot
@@ -239,7 +241,7 @@ void ParallelPacketDemodulator::netWorker(void)
 }
 
 bool ParallelPacketDemodulator::pop(RadioPacketQueue::barrier& b,
-                                    double &shift,
+                                    unsigned &channel,
                                     std::shared_ptr<IQBuf>& buf1,
                                     std::shared_ptr<IQBuf>& buf2)
 {
@@ -256,7 +258,7 @@ bool ParallelPacketDemodulator::pop(RadioPacketQueue::barrier& b,
     b = radio_q_.pushBarrier();
 
     assert(iq_next_channel_ < channels_.size());
-    shift = channels_[iq_next_channel_++];
+    channel = iq_next_channel_++;
 
     buf1 = *it++;
     buf2 = *it;
