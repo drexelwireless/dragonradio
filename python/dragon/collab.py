@@ -1,6 +1,7 @@
 import asyncio
 from concurrent.futures import CancelledError
 import logging
+import math
 import socket
 import struct
 import sys
@@ -48,6 +49,9 @@ class MandatedOutcome(object):
     def __init__(self, json=None):
         self.start = time.time()
         self.scalar_performance = 0
+        self.latency_ = None
+        self.throughput_ = None
+        self.bytes_ = None
 
         if json:
             fields = [ 'goal_type'
@@ -56,8 +60,7 @@ class MandatedOutcome(object):
                      , 'hold_period']
 
             for f in fields:
-                if f in json:
-                    setattr(self, f, json[f])
+                setattr(self, f, json.get(f, None))
 
             fields = [ 'max_latency_s'
                      , 'min_throughput_bps'
@@ -66,14 +69,55 @@ class MandatedOutcome(object):
                      , 'file_size_bytes']
 
             for f in fields:
-                if f in json['requirements']:
-                    setattr(self, f, json['requirements'][f])
-
-    def is_discrete(self):
-        return hasattr(self, 'file_transfer_deadline_s')
+                setattr(self, f, json['requirements'].get(f, None))
 
     def __repr__(self):
         return 'MandatedOutcome({})'.format(self.__dict__)
+
+    @property
+    def is_discrete(self):
+        return hasattr(self, 'file_transfer_deadline_s')
+
+    @property
+    def latency(self):
+        return self.latency_
+
+    @latency.setter
+    def latency(self, x):
+        self.latency_ = x
+        self.updateMetrics()
+
+    @property
+    def throughput(self):
+        return self.throughput_
+
+    @throughput.setter
+    def throughput(self, x):
+        self.throughput_ = x
+        self.updateMetrics()
+
+    @property
+    def bytes(self):
+        return self.bytes_
+
+    @bytes.setter
+    def bytes(self, x):
+        self.bytes_ = x
+        self.updateMetrics()
+
+    def updateMetrics(self):
+        metrics = []
+
+        if hasattr(self, 'max_latency_s') and isinstance(self.latency, float) and math.isfinite(self.latency) and self.latency != 0:
+            metrics.append(self.max_latency_s/self.latency)
+
+        if hasattr(self, 'min_throughput_bps') and self.min_throughput_bps != 0 and isinstance(self.throughput, float) and math.isfinite(self.throughput):
+            metrics.append(self.throughput/self.min_throughput_bps)
+
+        if len(metrics) != 0:
+            self.scalar_performance = min(metrics)
+        else:
+            self.scalar_performance = 0
 
 class GPSLocation(object):
     def __init__(self):
@@ -173,23 +217,21 @@ class Peer(ZMQProtoClient):
 
     @sendCIL
     async def detailed_performance(self, msg, controller):
-        goals = controller.mandated_outcomes.values()
+        mandates = controller.mandated_outcomes.values()
 
-        msg.detailed_performance.mandate_count = len(goals)
+        msg.detailed_performance.mandate_count = len(mandates)
         # Pretend this performance metric is from 5 seconds ago
         msg.detailed_performance.timestamp.set_timestamp(time.time() - 5)
 
-        for g in goals:
-            mandate = cil.MandatePerformance()
-            mandate.scalar_performance = g.scalar_performance
-            mandate.radio_ids.extend([])
-            if hasattr(g, 'flow_uid'):
-                mandate.flow_id = g.flow_uid
-            if hasattr(g, 'hold_period'):
-                mandate.hold_period = g.hold_period
-            mandate.achieved_duration = 0
+        for mandate in mandates:
+            perf = cil.MandatePerformance()
+            perf.scalar_performance = mandate.scalar_performance
+            perf.radio_ids.extend([])
+            perf.flow_id = mandate.flow_uid
+            perf.hold_period = mandate.hold_period
+            perf.achieved_duration = 0
 
-            msg.detailed_performance.mandates.extend([mandate])
+            msg.detailed_performance.mandates.extend([perf])
 
         msg.detailed_performance.mandates_achieved = 0
 

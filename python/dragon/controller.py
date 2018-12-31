@@ -41,6 +41,7 @@ class Controller(TCPProtoServer):
 
         self.nodes = {}
         self.voxels = []
+        self.links = {}
         self.mandated_outcomes = {}
 
     def setupRadio(self, bootstrap=False):
@@ -104,6 +105,9 @@ class Controller(TCPProtoServer):
         self.internal_agent = InternalAgent(self,
                                             loop=self.loop,
                                             local_ip=internalNodeIP(radio.node_id))
+
+        # Start our local status update
+        self.loop.create_task(self.localStatusUpdate())
 
         # XXX we need *some* task to be running or else we run_forever can't be
         # stopped!
@@ -203,8 +207,11 @@ class Controller(TCPProtoServer):
             logger.info('Adding node %d', node_id)
             self.nodes[node_id] = Node(node_id)
 
+            # If new node is a gateway, connect to it and start sending status
+            # updates
             if self.internal_agent and self.radio.net[node_id].is_gateway:
                 self.internal_agent.startClient(internalNodeIP(node_id))
+                self.internal_agent.loop.create_task(self.internal_agent.status_update())
 
             try:
                 subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
@@ -221,6 +228,43 @@ class Controller(TCPProtoServer):
                 logger.exception('Could not remove route to node {}'.format(node_id))
 
             del self.nodes[node_id]
+
+    def addLink(self, src, dest, flow_uid):
+        """Record a link between nodes"""
+        link = (src, dest)
+        if link not in self.links:
+            self.links[link] = [flow_uid]
+        else:
+            self.links[link].append([flow_uid])
+
+    def updateMandateStats(self, flow_uid, latency, throughput, bytes):
+        """Update local mandate with flow statistics"""
+        mandate = self.mandated_outcomes.get(flow_uid, None)
+        if mandate:
+            mandate.latency = latency
+            mandate.throughput = throughput
+            mandate.bytes = bytes
+
+    async def localStatusUpdate(self):
+        """Update flow statistics locally"""
+        radio = self.radio
+        node_id = radio.node_id
+
+        try:
+            while True:
+                for flow_uid, stats in radio.flowsource.flows.items():
+                    self.addLink(node_id, stats.dest, flow_uid)
+
+                for flow_uid, stats in radio.flowsink.flows.items():
+                    self.addLink(stats.src, node_id, flow_uid)
+                    self.updateMandateStats(flow_uid,
+                                            stats.latency.value,
+                                            stats.throughput.value,
+                                            stats.bytes)
+
+                await asyncio.sleep(5)
+        except CancelledError:
+            pass
 
     async def switchToTDMA(self):
         config = self.config
@@ -320,11 +364,16 @@ class Controller(TCPProtoServer):
     def updateMandatedOutcomes(self, req):
         logger.info('Mandated outcomes:\n%s', req.update_mandated_outcomes.goals)
 
+        radio = self.radio
+
+        # Update mandated outcomes
         self.mandated_outcomes = {}
 
         for goal in json.loads(req.update_mandated_outcomes.goals):
             outcome = MandatedOutcome(json=goal)
             self.mandated_outcomes[outcome.flow_uid] = outcome
+
+        self.radio.setMandatedOutcomes(self.mandated_outcomes)
 
         resp = remote.Response()
         resp.status.state = self.state

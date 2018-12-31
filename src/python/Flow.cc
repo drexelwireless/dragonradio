@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "net/Firewall.hh"
 #include "net/FlowInfo.hh"
 #include "net/FlowSource.hh"
 #include "net/FlowSink.hh"
@@ -101,5 +102,37 @@ void exportFlow(py::module &m)
         .def_property_readonly("flows",
             &FlowSink::getFlowInfo,
             "Return set of observed flows")
+        ;
+
+    py::class_<NetFirewall, NetProcessor, std::shared_ptr<NetFirewall>>(m, "NetFirewall")
+        .def(py::init<>())
+        .def_property("enabled",
+            &NetFirewall::getEnabled,
+            &NetFirewall::setEnabled,
+            "Is the firewall enabled?")
+        .def_property("allow_broadcasts",
+            &NetFirewall::getAllowBroadcasts,
+            &NetFirewall::setAllowBroadcasts,
+            "Allow broadcast packets?")
+        .def_property("allowed",
+            &NetFirewall::getAllowedPorts,
+            &NetFirewall::setAllowedPorts,
+            "Set of allowed ports")
+        ;
+
+    py::class_<RadioFirewall, RadioProcessor, std::shared_ptr<RadioFirewall>>(m, "RadioFirewall")
+        .def(py::init<>())
+        .def_property("enabled",
+            &RadioFirewall::getEnabled,
+            &RadioFirewall::setEnabled,
+            "Is the firewall enabled?")
+        .def_property("allow_broadcasts",
+            &RadioFirewall::getAllowBroadcasts,
+            &RadioFirewall::setAllowBroadcasts,
+            "Allow broadcast packets?")
+        .def_property("allowed",
+            &RadioFirewall::getAllowedPorts,
+            &RadioFirewall::setAllowedPorts,
+            "Set of allowed ports")
         ;
 }
