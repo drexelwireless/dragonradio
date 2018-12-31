@@ -20,7 +20,8 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
   , prev_samps_(0)
   , cur_samps_(0)
   , done_(false)
-  , demod_q_(radio_q_, channels_)
+  , iq_size_(0)
+  , iq_next_channel_(0)
   , demod_reconfigure_(nthreads)
   , logger_(logger)
 {
@@ -39,6 +40,16 @@ ParallelPacketDemodulator::~ParallelPacketDemodulator()
     stop();
 }
 
+void ParallelPacketDemodulator::setChannels(const Channels &channels)
+{
+    PacketDemodulator::setChannels(channels);
+
+    std::lock_guard<std::mutex> lock(iq_mutex_);
+
+    if (iq_next_channel_ >= channels_.size())
+        nextWindow();
+}
+
 void ParallelPacketDemodulator::setWindowParameters(const size_t prev_samps,
                                                     const size_t cur_samps)
 {
@@ -48,7 +59,16 @@ void ParallelPacketDemodulator::setWindowParameters(const size_t prev_samps,
 
 void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
 {
-    demod_q_.push(buf);
+    // Push the packet on the end of the queue
+    {
+        std::lock_guard<std::mutex> lock(iq_mutex_);
+
+        iq_.push_back(buf);
+        ++iq_size_;
+    }
+
+    // Signal anyone waiting on the queue
+    iq_cond_.notify_one();
 }
 
 void ParallelPacketDemodulator::reconfigure(void)
@@ -61,7 +81,8 @@ void ParallelPacketDemodulator::stop(void)
 {
     done_ = true;
 
-    demod_q_.stop();
+    iq_cond_.notify_all();
+
     radio_q_.stop();
 
     if (net_thread_.joinable())
@@ -109,7 +130,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
     };
 
     while (!done_) {
-        if (!demod_q_.pop(b, shift, buf1, buf2))
+        if (!pop(b, shift, buf1, buf2))
             break;
 
         received = false;
@@ -217,6 +238,42 @@ void ParallelPacketDemodulator::netWorker(void)
     }
 }
 
+bool ParallelPacketDemodulator::pop(RadioPacketQueue::barrier& b,
+                                    double &shift,
+                                    std::shared_ptr<IQBuf>& buf1,
+                                    std::shared_ptr<IQBuf>& buf2)
+{
+    // Acquire the previous slot and the current slot, removing the previous
+    // slot from the queue since we no longer need it.
+    std::unique_lock<std::mutex> lock(iq_mutex_);
+
+    iq_cond_.wait(lock, [this]{ return done_ || iq_size_ > 1; });
+    if (done_)
+        return false;
+
+    auto it = iq_.begin();
+
+    b = radio_q_.pushBarrier();
+
+    assert(iq_next_channel_ < channels_.size());
+    shift = channels_[iq_next_channel_++];
+
+    buf1 = *it++;
+    buf2 = *it;
+
+    if (iq_next_channel_ == channels_.size())
+        nextWindow();
+
+    return true;
+}
+
+void ParallelPacketDemodulator::nextWindow(void)
+{
+    iq_.pop_front();
+    --iq_size_;
+    iq_next_channel_ = 0;
+}
+
 void ParallelPacketDemodulator::demodulateWithParams(PHY::Demodulator &demod,
                                                      ModParams &params,
                                                      IQBuf &shift_buf,
@@ -248,69 +305,4 @@ void ParallelPacketDemodulator::demodulateWithParams(PHY::Demodulator &demod,
         demod.demodulate(resamp_buf.data(), resamp_buf.size(), callback);
     } else
         demod.demodulate(data, count, callback);
-}
-
-IQBufQueue::IQBufQueue(RadioPacketQueue& radio_q,
-                       const Channels &channels)
-  : radio_q_(radio_q)
-  , channels_(channels)
-  , done_(false)
-  , size_(0)
-  , next_channel_(0)
-{
-}
-
-IQBufQueue::~IQBufQueue()
-{
-}
-
-void IQBufQueue::push(std::shared_ptr<IQBuf> buf)
-{
-    // Push the packet on the end of the queue
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.push_back(buf);
-        ++size_;
-    }
-
-    // Signal anyone waiting on the queue
-    cond_.notify_one();
-}
-
-bool IQBufQueue::pop(RadioPacketQueue::barrier& b,
-                     double &shift,
-                     std::shared_ptr<IQBuf>& buf1,
-                     std::shared_ptr<IQBuf>& buf2)
-{
-    // Acquire the previous slot and the current slot, removing the previous
-    // slot from the queue since we no longer need it.
-    std::unique_lock<std::mutex> lock(m_);
-
-    cond_.wait(lock, [this]{ return done_ || size_ > 1; });
-    if (done_)
-        return false;
-
-    auto it = q_.begin();
-
-    b = radio_q_.pushBarrier();
-
-    std::lock_guard<spinlock_mutex> chan_lock(channels_mutex_);
-
-    assert(next_channel_ < channels_.size());
-    shift = channels_[next_channel_++];
-
-    buf1 = *it++;
-    buf2 = *it;
-
-    if (next_channel_ == channels_.size())
-        nextWindow();
-
-    return true;
-}
-
-void IQBufQueue::stop(void)
-{
-    done_ = true;
-    cond_.notify_all();
 }
