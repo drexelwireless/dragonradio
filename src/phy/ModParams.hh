@@ -27,8 +27,13 @@ public:
     }
 
     ModParams() = delete;
+    ModParams(const ModParams&) = delete;
+    ModParams(ModParams&&) = delete;
 
     ~ModParams() = default;
+
+    ModParams &operator =(const ModParams&) = delete;
+    ModParams &operator =(ModParams&&) = delete;
 
     void reconfigure(double signal_rate_,
                      double resamp_rate_,
