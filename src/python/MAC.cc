@@ -1,3 +1,7 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+
 #include "mac/SlottedALOHA.hh"
 #include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
@@ -39,12 +43,15 @@ void exportMACs(py::module &m)
             try {
                 slots[i] = v;
             } catch (const std::out_of_range&) {
-              throw py::index_error();
+                throw py::index_error();
             }
         })
         .def("__len__", &TDMA::Slots::size)
         .def("__iter__", [](TDMA::Slots &slots) {
-            return py::make_iterator(slots.begin(), slots.end());
+            return py::make_iterator<py::return_value_policy::copy,
+                                     TDMA::Slots::slots_type::iterator,
+                                     TDMA::Slots::slots_type::iterator,
+                                     TDMA::Slots::slots_type::value_type>(slots.begin(), slots.end());
          }, py::keep_alive<0, 1>())
         .def("resize", &TDMA::Slots::resize)
         ;
@@ -63,7 +70,12 @@ void exportMACs(py::module &m)
                       double,
                       double,
                       size_t>())
-        .def_property_readonly("slots", &TDMA::getSlots,
+        .def_property("slots",
+            &TDMA::getSlots,
+            [](TDMA &self, const TDMA::Slots::slots_type &slots)
+            {
+                self.getSlots() = slots;
+            },
             py::return_value_policy::reference_internal)
         .def_property("superslots", &TDMA::getSuperslots, &TDMA::setSuperslots,
             "Flag indicating whether or not to use superslots.");

@@ -71,7 +71,7 @@ def main():
         for i in range(0, config.num_nodes):
             radio.net.addNode(i+1)
 
-        radio.configureFDMATDMASchedule()
+        radio.configureSimpleMACSchedule()
 
     #
     # Start IPython shell if we are in interactive mode. Otherwise, run the

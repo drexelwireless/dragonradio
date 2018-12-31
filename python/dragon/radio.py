@@ -977,6 +977,11 @@ class Radio(object):
         self.mac.tx_channels = self.tx_channels
         self.mac.reconfigure()
 
+        # We need to re-set the channel after a frequency change because
+        # although the channel number may be the same, the corresponding
+        # frequency will be different.
+        self.setTXChannel(self.tx_channel)
+
         if config.arq:
             self.controller.resetMCSTransitionProbabilities()
             self.configSmartControllerSlotSize()
@@ -1005,6 +1010,15 @@ class Radio(object):
         self.finishConfiguringMAC()
 
     def configureTDMA(self, nslots):
+        """Configures a TDMA MAC with 'nslots' slots.
+
+        This function sets up a TDMA MAC for a schedule with `nslots` slots, but
+        it does not claim any of the slots. After calling this function, the
+        node *will not transmit* until it is given a slot.
+
+        Args:
+            nslots: The number of slots in the schedule
+        """
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
                                     self.controller,
@@ -1036,6 +1050,8 @@ class Radio(object):
     def setTXChannel(self, channel):
         config = self.config
 
+        self.tx_channel = channel
+
         if config.tx_upsample:
             self.mac.tx_channel = channel
         else:
@@ -1044,10 +1060,65 @@ class Radio(object):
 
             self.usrp.tx_frequency = self.frequency + fc
 
-    def configureFDMATDMASchedule(self):
+    def mkGreedyMACSchedule(self, nslots, nodes, k):
+        """Create a greedy schedule that gives each node its own channel.
+
+        Args:
+            nslots: The number of time slots
+            nodes: The nodes
+            k: The desired channel separation
+
+        Returns:
+            A schedule consisting of a nchannels X nslots array of node IDs.
         """
-        Set the TDMA/FDMA schedule based on configuration parameters and the
-        given set of nodes.
+        nchannels = len(self.channels)
+
+        sched = np.zeros((nchannels, nslots), dtype=int)
+
+        # Each node gets its own channel. Any leftover nodes don't get anything
+        nodes = nodes[:nchannels]
+
+        i = 0
+        while len(nodes) != 0:
+            if np.all(sched[i] == 0):
+                sched[i] = nodes[0]
+                nodes = nodes[1:]
+                i += k
+            else:
+                i += 1
+
+            if i >= nchannels:
+                i = 0
+
+        return sched
+
+    def installMACSchedule(self, sched):
+        """Install a MAC schedule.
+
+        Args:
+            sched: The schedule, which is a nchannels X nslots array of node
+                IDs.
+        """
+        logging.debug('Installing MAC schedule:\n%s', sched)
+
+        (nchannels, nslots) = sched.shape
+
+        # Look for a channel where we have a slot. If there is more than one
+        # such channel, use the first, because we don't yet support multiple
+        # channels.
+        for chan in range(0, nchannels):
+            slots = (sched[chan] == self.node_id)
+            if np.any(slots):
+                self.mac.slots = slots
+                self.setTXChannel(chan)
+                return
+
+        logging.error('No MAC schedule entry for radio %d', self.node_id)
+
+    def configureSimpleMACSchedule(self):
+        """
+        Set a simple, static TDMA/FDMA schedule based on configuration
+        parameters and the given set of nodes.
         """
         config = self.config
 
@@ -1061,16 +1132,8 @@ class Radio(object):
                 self.mac.slots[0] = True
                 self.setTXChannel(config.tx_channel)
             else:
-                sched = self.defaultFDMASchedule(len(self.channels), 3, nodes)
-
-                if self.node_id in sched:
-                    idx = sched.index(self.node_id)
-
-                    self.mac.slots[0] = True
-
-                    self.setTXChannel(idx)
-                else:
-                    logging.error('No TX channel for radio %d (channels=%s)', self.node_id, self.channels)
+                sched = self.mkGreedyMACSchedule(1, nodes, 3)
+                self.installMACSchedule(sched)
         else:
             idx = nodes.index(self.node_id)
 
@@ -1078,36 +1141,6 @@ class Radio(object):
             self.mac.slots[idx] = True
 
             self.setTXChannel(0)
-
-    def defaultFDMASchedule(self, n, k, nodes):
-        """
-        Determine the default FDMA schedule.
-
-        Args:
-            n: The number of channels.
-            k: Desired channel separation.
-            nodes: The nodes to schedule.
-
-        Returns:
-            A channel assignment.
-        """
-        nodes = nodes[:n]
-
-        sched = [None] * n
-
-        i = 0
-        while len(nodes) != 0:
-            if sched[i] == None:
-                sched[i] = nodes[0]
-                nodes = nodes[1:]
-                i += k
-            else:
-                i += 1
-
-            if i >= len(sched):
-                i = 0
-
-        return sched
 
     def setMandatedOutcomes(self, mandates):
         config = self.config
