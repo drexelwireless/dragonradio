@@ -10,6 +10,7 @@
 #include <complex>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <vector>
 
 #include <liquid/liquid.h>
@@ -83,6 +84,9 @@ struct ControlMsg {
     };
 };
 
+/** @brief A flow UID. */
+typedef uint16_t FlowUID;
+
 /** @brief A packet. */
 struct Packet : public buffer<unsigned char>
 {
@@ -140,6 +144,9 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Destination */
     NodeId dest;
+
+    /** @brief Flow UID */
+    std::optional<FlowUID> flow_uid;
 
     /** @brief Packet timestamp */
     Clock::time_point timestamp;
@@ -384,11 +391,26 @@ struct NetPacket : public Packet
 {
     NetPacket(size_t n) : Packet(n), tx_params(nullptr) {};
 
+    /** @brief Packet delivery deadline */
+    std::optional<Clock::time_point> deadline;
+
     /** @brief TX parameters */
     TXParams *tx_params;
 
     /** @brief Multiplicative TX gain. */
     float g;
+
+    /** @brief Return true if the packet's deadline has passed, false otherwise */
+    bool deadlinePassed(const Clock::time_point &now)
+    {
+        return deadline && *deadline < now;
+    }
+
+    /** @brief Return true if this packet should be dropped, false otherwise */
+    bool shouldDrop(const Clock::time_point &now)
+    {
+        return !isFlagSet(kSYN) && deadlinePassed(now);
+    }
 };
 
 /** @brief A packet received from the radio. */

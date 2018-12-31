@@ -215,17 +215,33 @@ public:
         std::unique_lock<std::mutex> lock(m_);
 
         cond_.wait(lock, [this]{ return done_ || !hiq_.empty() || !q_.empty(); });
+
+        // If we're done, we're done
+        if (done_)
+            return false;
+
+        Clock::time_point now = Clock::now();
+
+        // First look in high-priority queue
         if (!hiq_.empty()) {
             val = std::move(hiq_.front());
             hiq_.pop_front();
             return true;
-        } else if (!q_.empty()) {
-            for (auto it = q_.begin(); it != q_.end(); ++it) {
-                if (canPop(*it)) {
+        }
+
+        // Then look in the network queue, FIFO-style
+        {
+            auto it = q_.begin();
+
+            while (it != q_.end()) {
+                if ((*it)->shouldDrop(now))
+                    it = q_.erase(it);
+                else if (canPop(*it)) {
                     val = std::move(*it);
                     q_.erase(it);
                     return true;
-                }
+                } else
+                    it++;
             }
         }
 
@@ -257,17 +273,33 @@ public:
         std::unique_lock<std::mutex> lock(m_);
 
         cond_.wait(lock, [this]{ return done_ || !hiq_.empty() || !q_.empty(); });
+
+        // If we're done, we're done
+        if (done_)
+            return false;
+
+        Clock::time_point now = Clock::now();
+
+        // First look in high-priority queue
         if (!hiq_.empty()) {
             val = std::move(hiq_.front());
             hiq_.pop_front();
             return true;
-        } else if (!q_.empty()) {
-            for (auto it = q_.rbegin(); it != q_.rend(); ++it) {
-                if (canPop(*it)) {
+        }
+
+        // Then look in the network queue, LIFO-style
+        {
+            auto it = q_.rbegin();
+
+            while (it != q_.rend()) {
+                if ((*it)->shouldDrop(now)) {
+                    it = decltype(it){ q_.erase(std::next(it).base()) };
+                } else if (canPop(*it)) {
                     val = std::move(*it);
                     q_.erase(std::next(it).base());
                     return true;
-                }
+                } else
+                    it++;
             }
         }
 

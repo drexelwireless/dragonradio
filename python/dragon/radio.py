@@ -212,6 +212,9 @@ class Config(object):
         self.standard_hello_interval = 60.0
         self.timestamp_delay = 100e-3
 
+        # Measurement options
+        self.measurement_period = 1.0
+
         # Default collab server settings
         self.collab_server_port = 5556
         self.collab_client_port = 5557
@@ -764,18 +767,23 @@ class Radio(object):
         #
         # Configure packet path from demodulator to tun/tap
         # Right now, the path is direct:
-        #   demodulator -> controller -> tun/tap
+        #   demodulator -> controller -> FlowSink -> tun/tap
         #
+        self.flowsink = dragonradio.FlowSink(config.measurement_period)
+
         self.demodulator.source >> self.controller.radio_in
 
-        self.controller.radio_out >> self.tuntap.sink
+        self.controller.radio_out >> self.flowsink.input
+
+        self.flowsink.output >> self.tuntap.sink
 
         #
         # Configure packet path from tun/tap to the modulator
         # The path is:
-        #   tun/tap -> NetFilter -> NetQueue -> controller -> modulator
+        #   tun/tap -> NetFilter -> FlowSource -> NetQueue -> controller -> modulator
         #
         self.netfilter = dragonradio.NetFilter(self.net)
+        self.flowsource = dragonradio.FlowSource(config.measurement_period)
 
         if config.queue == 'lifo':
             self.netq = dragonradio.NetLIFO()
@@ -784,7 +792,9 @@ class Radio(object):
 
         self.tuntap.source >> self.netfilter.input
 
-        self.netfilter.output >> self.netq.push
+        self.netfilter.output >> self.flowsource.input
+
+        self.flowsource.output >> self.netq.push
 
         self.netq.pop >> self.controller.net_in
 

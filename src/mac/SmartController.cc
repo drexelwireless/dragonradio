@@ -632,15 +632,17 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
 {
     assert(entry.pkt);
 
-    // We always retransmit SYN packets because they are needed to initiate a
-    // connection. Otherwise we only retransmit when we haven't exceeded the
-    // maximum number of allowed retransmissions.
-    if (   !max_retransmissions_
-        || (max_retransmissions_ && entry.nretrans < *max_retransmissions_)
-        || entry.pkt->isFlagSet(kSYN))
-        retransmit(entry);
-    else
+    // We drop a packet if:
+    // 1) It is NOT a SYN packet, because in that case it is needed to initiate
+    //    a connection. We always retrasmit SYN packets.
+    // 2) It has exceeded the maximum number of allowed retransmissions.
+    // 3) OR it has passed its deadline.
+    if (!entry.pkt->isFlagSet(kSYN) &&
+        (   (max_retransmissions_ && entry.nretrans >= *max_retransmissions_)
+         || entry.pkt->deadlinePassed(Clock::now())))
         drop(entry);
+    else
+        retransmit(entry);
 }
 
 /** NOTE: The lock on the send window to which entry belongs MUST be held before
@@ -1292,6 +1294,17 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // Otherwise it had better be in our window becasue we added it back
             // when our window expanded due to an ACK!
             assert(pkt->seq < unack + sendw.win);
+
+            // See if this packet should be dropped. The network queue won't
+            // drop a packet with a sequence number, because we need to drop a
+            // packet with a sequence number in the controller to ensure the
+            // send window is properly adjusted.
+            if (pkt->shouldDrop(Clock::now())) {
+                drop(sendw[pkt->seq]);
+                pkt.reset();
+                continue;
+            }
+
 
             return true;
         }
