@@ -63,7 +63,7 @@ void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
     {
         std::lock_guard<std::mutex> lock(iq_mutex_);
 
-        iq_.push_back(buf);
+        iq_.push_back(std::move(buf));
         ++iq_size_;
     }
 
