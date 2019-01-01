@@ -568,7 +568,9 @@ class Controller(TCPProtoServer):
                 # If only the center frequency has changed, keep the old
                 # schedule. Otherwise create a new schedule.
                 if self.radio.bandwidth != old_bandwidth:
-                    self.radio.mac.slots = []
+                    if self.bootstrapped:
+                        self.radio.mac.slots = []
+
                     if self.is_gateway:
                         # Force new schedule
                         self.schedule = None
