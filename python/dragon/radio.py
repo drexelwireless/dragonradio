@@ -977,11 +977,6 @@ class Radio(object):
         self.mac.tx_channels = self.tx_channels
         self.mac.reconfigure()
 
-        # We need to re-set the channel after a frequency change because
-        # although the channel number may be the same, the corresponding
-        # frequency will be different.
-        self.setTXChannel(self.tx_channel)
-
         if config.arq:
             self.controller.resetMCSTransitionProbabilities()
             self.configSmartControllerSlotSize()

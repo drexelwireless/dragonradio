@@ -575,6 +575,11 @@ class Controller(TCPProtoServer):
                         # Force new schedule
                         self.schedule = None
                         self.tdma_reschedule.set()
+                else:
+                    # We need to re-set the channel after a frequency change
+                    # because although the channel number may be the same, the
+                    # corresponding frequency will be different.
+                    self.radio.setTXChannel(self.radio.tx_channel)
 
         resp = remote.Response()
         resp.status.state = self.state
