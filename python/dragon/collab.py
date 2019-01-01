@@ -108,11 +108,15 @@ class MandatedOutcome(object):
     def updateMetrics(self):
         metrics = []
 
-        if hasattr(self, 'max_latency_s') and isinstance(self.latency, float) and math.isfinite(self.latency) and self.latency != 0:
-            metrics.append(self.max_latency_s/self.latency)
+        if isinstance(self.max_latency_s, float) and isinstance(self.latency, float):
+            metric = self.max_latency_s/self.latency
+            if math.isfinite(metric):
+                metrics.append(metric)
 
-        if hasattr(self, 'min_throughput_bps') and self.min_throughput_bps != 0 and isinstance(self.throughput, float) and math.isfinite(self.throughput):
-            metrics.append(self.throughput/self.min_throughput_bps)
+        if isinstance(self.min_throughput_bps, float) and isinstance(self.throughput, float):
+            metric = self.throughput/self.min_throughput_bps
+            if math.isfinite(metric):
+                metrics.append(metric)
 
         if len(metrics) != 0:
             self.scalar_performance = min(metrics)
