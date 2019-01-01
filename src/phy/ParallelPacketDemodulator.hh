@@ -14,6 +14,44 @@
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
+/** @brief Demodulation state. */
+class DemodState {
+public:
+    DemodState(const Liquid::ResamplerParams &params,
+               double signal_rate,
+               double resamp_rate,
+               double shift)
+      : modparams(params,
+                  signal_rate,
+                  resamp_rate,
+                  shift)
+      , demod(nullptr)
+    {
+    }
+
+    DemodState() = delete;
+    DemodState(const DemodState&) = delete;
+    DemodState(DemodState&&) = delete;
+
+    ~DemodState() = default;
+
+    DemodState &operator =(const DemodState&) = delete;
+    DemodState &operator =(DemodState &&) = delete;
+
+    /** @brief Channel demodulation parameters */
+    ModParams modparams;
+
+    /** @brief Channel demodulator */
+    std::shared_ptr<PHY::Demodulator> demod;
+
+   /** @brief Demodulate data with given parameters */
+   void demodulate(IQBuf &shift_buf,
+                   IQBuf &resamp_buf,
+                   const std::complex<float>* data,
+                   size_t count,
+                   std::function<void(std::unique_ptr<RadioPacket>)> callback);
+};
+
 /** @brief A parallel packet demodulator. */
 class ParallelPacketDemodulator : public PacketDemodulator, public Element
 {
@@ -127,8 +165,7 @@ private:
      void nextWindow(void);
 
     /** @brief Demodulate data with given parameters */
-    void demodulateWithParams(PHY::Demodulator &demodulator,
-                              ModParams &params,
+    void demodulateWithParams(DemodState &demod,
                               IQBuf &shift_buf,
                               IQBuf &resamp_buf,
                               const std::complex<float>* data,

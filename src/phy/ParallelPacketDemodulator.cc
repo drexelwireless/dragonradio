@@ -106,11 +106,10 @@ void ParallelPacketDemodulator::setEnforceOrdering(bool enforce)
 
 void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
 {
-    auto                      demod = phy_->mkDemodulator();
-    ModParams                 demodparams(downsamp_params,
-                                          phy_->getRXRate(),
-                                          phy_->getRXDownsampleRate(),
-                                          0.0);
+    DemodState                chanstate(downsamp_params,
+                                        phy_->getRXRate(),
+                                        phy_->getRXDownsampleRate(),
+                                        0.0);
     RadioPacketQueue::barrier b;
     unsigned                  channel;
     double                    shift;
@@ -119,6 +118,8 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
     IQBuf                     shift_buf(0);
     IQBuf                     resamp_buf(0);
     bool                      received;
+
+    chanstate.demod = phy_->mkDemodulator();
 
     auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
         received = true;
@@ -150,28 +151,26 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_relaxed)) {
-            demodparams.reconfigure(phy_->getRXRate(),
-                                    phy_->getRXDownsampleRate(),
-                                    shift);
+            chanstate.modparams.reconfigure(phy_->getRXRate(),
+                                            phy_->getRXDownsampleRate(),
+                                            shift);
 
             reconfig.store(false, std::memory_order_relaxed);
         } else {
-            demodparams.setFreqShift(shift);
+            chanstate.modparams.setFreqShift(shift);
         }
 
         // Reset the state of the demodulator
-        demod->reset(buf1->timestamp,
-                     buf1_off,
-                     demodparams.shift,
-                     demodparams.resamp_rate);
+        chanstate.demod->reset(buf1->timestamp,
+                               buf1_off,
+                               chanstate.modparams.shift,
+                               chanstate.modparams.resamp_rate);
 
         if (buf1->in_snapshot)
-            demod->setSnapshotOffset(buf1->snapshot_off);
+            chanstate.demod->setSnapshotOffset(buf1->snapshot_off);
 
         // Demodulate the last part of the guard interval of the previous slots
-        demodulateWithParams(*demod,
-                             demodparams,
-                             shift_buf,
+        chanstate.demodulate(shift_buf,
                              resamp_buf,
                              buf1->data() + buf1_off,
                              buf1_nsamples,
@@ -184,7 +183,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
             ;
 
         if (buf2->in_snapshot)
-            demod->setSnapshotOffset(buf2->snapshot_off - buf1->size());
+            chanstate.demod->setSnapshotOffset(buf2->snapshot_off - buf1->size());
 
         if (cur_samps_ > buf2->undersample) {
             // Calculate how many samples from the current slot we want to
@@ -201,9 +200,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
                 n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
 
                 if (n != 0) {
-                    demodulateWithParams(*demod,
-                                         demodparams,
-                                         shift_buf,
+                    chanstate.demodulate(shift_buf,
                                          resamp_buf,
                                          &(*buf2)[ndemodulated],
                                          n,
@@ -276,22 +273,20 @@ void ParallelPacketDemodulator::nextWindow(void)
     iq_next_channel_ = 0;
 }
 
-void ParallelPacketDemodulator::demodulateWithParams(PHY::Demodulator &demod,
-                                                     ModParams &params,
-                                                     IQBuf &shift_buf,
-                                                     IQBuf &resamp_buf,
-                                                     const std::complex<float>* data,
-                                                     size_t count,
-                                                     std::function<void(std::unique_ptr<RadioPacket>)> callback)
+void DemodState::demodulate(IQBuf &shift_buf,
+                            IQBuf &resamp_buf,
+                            const std::complex<float>* data,
+                            size_t count,
+                            std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
-    if (params.shift != 0.0 || params.resamp_rate != 1.0) {
+    if (modparams.shift != 0.0 || modparams.resamp_rate != 1.0) {
         // Mix down
         shift_buf.resize(count);
 
-        if (params.shift != 0.0) {
-            params.nco.mix_down(data,
-                                shift_buf.data(),
-                                count);
+        if (modparams.shift != 0.0) {
+            modparams.nco.mix_down(data,
+                                   shift_buf.data(),
+                                   count);
             data = shift_buf.data();
         }
 
@@ -299,12 +294,12 @@ void ParallelPacketDemodulator::demodulateWithParams(PHY::Demodulator &demod,
         // so we are guaranteed that the resampler's rate is not 1 here.
         unsigned nw;
 
-        resamp_buf.resize(params.resamp.neededOut(count));
-        nw = params.resamp.resample(data, count, resamp_buf.data());
+        resamp_buf.resize(modparams.resamp.neededOut(count));
+        nw = modparams.resamp.resample(data, count, resamp_buf.data());
         resamp_buf.resize(nw);
 
         // Demodulate resampled data.
-        demod.demodulate(resamp_buf.data(), resamp_buf.size(), callback);
+        demod->demodulate(resamp_buf.data(), resamp_buf.size(), callback);
     } else
-        demod.demodulate(data, count, callback);
+        demod->demodulate(data, count, callback);
 }
