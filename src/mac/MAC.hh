@@ -87,11 +87,12 @@ public:
         }
 
         tx_channel_ = channel;
-        logEvent("MAC: tx_channel=%lu (freq offset = %f)",
-            channel,
-            getTXShift());
 
         modulator_->setTXChannel(channel);
+
+        logEvent("MAC: Set TX channel: channel=%lu; freq offset = %f",
+            channel,
+            getTXShift());
     }
 
     /** @brief Get the frequency shift to use during transmission
