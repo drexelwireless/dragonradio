@@ -1290,7 +1290,7 @@ class Radio(object):
 
                     self.logger.logSnapshot(iqbuf)
                     for e in snapshot.selftx:
-                        self.logger.logSelfTX(t, e)
+                        self.logger.logSelfTX(snapshot.timestamp.wall_time, e)
 
             await asyncio.sleep(config.snapshot_period)
 
