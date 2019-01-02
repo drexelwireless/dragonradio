@@ -3,6 +3,7 @@
 
 #include <complex>
 #include <functional>
+#include <type_traits>
 
 #include <liquid/liquid.h>
 
@@ -49,12 +50,12 @@ public:
         Demodulator& operator=(const Demodulator&) = delete;
         Demodulator& operator=(Demodulator&&) = delete;
 
-        void reset(MonoClock::time_point timestamp,
-                   size_t off,
-                   double shift,
-                   double rate) override final;
+        void reset(double shift) override final;
 
-        void setSnapshotOffset(ssize_t snapshot_off) override final;
+        void timestamp(const MonoClock::time_point &timestamp,
+                       std::optional<size_t> snapshot_off,
+                       size_t offset,
+                       float rate) override final;
 
         void demodulate(const std::complex<float>* data,
                         size_t count,
@@ -67,6 +68,13 @@ public:
         /** @brief Callback for received packets. */
         std::function<void(std::unique_ptr<RadioPacket>)> callback_;
 
+        /** @brief Frequency shift of demodulated data */
+        double shift_;
+
+        /** @brief Rate conversion from samples to full RX rate */
+        /** This is used internally purely to properly timestamp packets. */
+        double resamp_rate_;
+
         /** @brief Internal resampling factor. */
         /** This is the factor by which the PHY internally oversamples, i.e., the
          * samples seen by the Liquid demodulator are decimated by this amount. We
@@ -74,27 +82,23 @@ public:
          */
         unsigned int internal_oversample_fact_;
 
-        /** @brief Frequency shift of demodulated data */
-        double shift_;
+        /** @brief Timestamp of current slot. */
+        MonoClock::time_point timestamp_;
 
-        /** @brief Resampler rate */
-        /** This is used internally purely to properly timestamp packets.
-         */
-        double rate_;
+        /** @brief Snapshot offset of current slot. */
+        std::optional<size_t> snapshot_off_;
 
-        /** @brief The timestamp of the slot we are demodulating. */
-        MonoClock::time_point demod_start_;
+        /** @brief Sample offset ffset of first provided sample from slot. */
+        size_t offset_;
 
-        /** @brief The offset (in samples) from the beggining of the slot at
-         * which we started demodulating.
-         */
-        size_t demod_off_;
+        /** @brief The sample number of the sample at offset in current slot */
+        unsigned sample_start_;
 
-        /** @brief Are we snapshotting? */
-        bool in_snapshot_;
+        /** @brief The sample number of the last sample in current slot */
+        unsigned sample_end_;
 
-        /** @brief The snapshot offset. */
-        size_t snapshot_off_;
+        /** @brief The sample counter. */
+        unsigned sample_;
 
         /** @brief A reference to the global logger */
         std::shared_ptr<Logger> logger_;

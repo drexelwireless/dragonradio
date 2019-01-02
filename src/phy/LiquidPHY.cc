@@ -102,7 +102,14 @@ LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
   : Liquid::Demodulator(phy.soft_header_, phy.soft_payload_)
   , PHY::Demodulator(phy)
   , liquid_phy_(phy)
+  , shift_(0)
+  , resamp_rate_(1.0)
   , internal_oversample_fact_(1)
+  , timestamp_(0.0)
+  , offset_(0)
+  , sample_start_(0)
+  , sample_end_(0)
+  , sample_(0)
   , logger_(logger)
 {
 }
@@ -117,23 +124,28 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 {
     Header* h = reinterpret_cast<Header*>(header_);
 
+    // Save samples of frame start and end
+    unsigned frame_start = sample_ + stats_.start_counter;
+    unsigned frame_end = sample_ + stats_.end_counter;
+
     // Perform test to see if we want to continue demodulating this packets
     if (header_test_) {
         if (   header_valid_
             && h->curhop != phy_.getNodeId()
             && (h->flags & (1 << kBroadcast) || h->nexthop == phy_.getNodeId()))
             return 1;
-        else
+        else {
+            // Update sample count. The framesync object is reset if we decline
+            // to demodulate the frame, which sets its internal counters to 0.
+            sample_ = frame_end;
+
             return 0;
+        }
     }
 
-    // Deal with the demodulated packet
-    size_t off = demod_off_;   // Save demodulation offset for use when we log.
-    double resamp_fact = internal_oversample_fact_/rate_;
-
-    // Update demodulation offset. The framesync object is reset after the
-    // callback is called, which sets its internal counters to 0.
-    demod_off_ += resamp_fact*stats_.end_counter;
+    // Update sample count. The framesync object is reset after the callback is
+    // called, which sets its internal counters to 0.
+    sample_ = frame_end;
 
     // Create the packet and fill it out
     std::unique_ptr<RadioPacket> pkt;
@@ -176,17 +188,18 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     pkt->mcs.fec1 = static_cast<fec_scheme>(stats_.fec1);
     pkt->mcs.ms = static_cast<modulation_scheme>(stats_.mod_scheme);
 
-    // Calculate sample offsets
-    size_t start = off + resamp_fact*stats_.start_counter;
-    size_t end = off + resamp_fact*stats_.end_counter;
+    // The start and end variables contain full-rate sample offsets of the frame
+    // start and end relative to the beginning of the slot.
+    ssize_t start = offset_ + resamp_rate_*static_cast<signed>(frame_start - sample_start_);
+    ssize_t end = offset_ + resamp_rate_*static_cast<signed>(frame_end - sample_start_);
 
-    pkt->timestamp = demod_start_ + start / phy_.getRXRate();
+    pkt->timestamp = timestamp_ + start / phy_.getRXRate();
 
-    if (in_snapshot_)
-        liquid_phy_.snapshot_collector_->selfTX(snapshot_off_ + start,
-                                                snapshot_off_ + end,
+    if (snapshot_off_)
+        liquid_phy_.snapshot_collector_->selfTX(*snapshot_off_ + start,
+                                                *snapshot_off_ + end,
                                                 shift_,
-                                                phy_.getRXRate()/resamp_fact);
+                                                phy_.getRXRate()/resamp_rate_);
 
     callback_(std::move(pkt));
 
@@ -200,7 +213,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
             memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
         }
 
-        logger_->logRecv(Clock::to_wall_time(demod_start_),
+        logger_->logRecv(Clock::to_wall_time(timestamp_),
                          start,
                          end,
                          header_valid_,
@@ -217,7 +230,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
                          stats_.cfo,
                          shift_,
                          phy_.getRXRate(),
-                         (MonoClock::now() - demod_start_).get_real_secs(),
+                         (MonoClock::now() - timestamp_).get_real_secs(),
                          payload_len_,
                          std::move(buf));
     }
@@ -225,10 +238,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void LiquidPHY::Demodulator::reset(MonoClock::time_point timestamp,
-                                   size_t off,
-                                   double shift,
-                                   double rate)
+void LiquidPHY::Demodulator::reset(double shift)
 {
     if (pending_reconfigure_.load(std::memory_order_relaxed)) {
         pending_reconfigure_.store(false, std::memory_order_relaxed);
@@ -237,20 +247,26 @@ void LiquidPHY::Demodulator::reset(MonoClock::time_point timestamp,
 
     reset();
 
-    rate_ = rate;
     shift_ = shift;
-    demod_start_ = timestamp;
-    demod_off_ = off;
-    in_snapshot_ = false;
-    snapshot_off_ = 0;
+    resamp_rate_ = 1.0;
+    timestamp_ = MonoClock::time_point { 0.0 };
+    snapshot_off_ = std::nullopt;
+    offset_ = 0;
+    sample_start_ = 0;
+    sample_end_ = 0;
+    sample_ = 0;
 }
 
-void LiquidPHY::Demodulator::setSnapshotOffset(ssize_t snapshot_off)
+void LiquidPHY::Demodulator::timestamp(const MonoClock::time_point &timestamp,
+                                       std::optional<size_t> snapshot_off,
+                                       size_t offset,
+                                       float rate)
 {
-    if (liquid_phy_.snapshot_collector_) {
-        in_snapshot_ = liquid_phy_.snapshot_collector_->active();
-        snapshot_off_ = snapshot_off;
-    }
+    resamp_rate_ = internal_oversample_fact_/rate;
+    timestamp_ = timestamp;
+    snapshot_off_ = snapshot_off;
+    offset_ = offset;
+    sample_start_ = sample_end_;
 }
 
 void LiquidPHY::Demodulator::demodulate(const std::complex<float>* data,
@@ -258,8 +274,8 @@ void LiquidPHY::Demodulator::demodulate(const std::complex<float>* data,
                                         std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
     callback_ = callback;
-
     demodulateSamples(data, count);
+    sample_end_ += count;
 }
 
 void LiquidPHY::Demodulator::reconfigure(void)

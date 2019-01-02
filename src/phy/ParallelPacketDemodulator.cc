@@ -161,15 +161,14 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
         }
 
         // Reset the state of the demodulator
-        chanstate.demod->reset(buf1->timestamp,
-                               buf1_off,
-                               chanstate.modparams.shift,
-                               chanstate.modparams.resamp_rate);
-
-        if (buf1->snapshot_off)
-            chanstate.demod->setSnapshotOffset(*buf1->snapshot_off);
+        chanstate.demod->reset(chanstate.modparams.shift);
 
         // Demodulate the last part of the guard interval of the previous slots
+        chanstate.demod->timestamp(buf1->timestamp,
+                                   buf1->snapshot_off,
+                                   buf1_off,
+                                   chanstate.modparams.resamp_rate);
+
         chanstate.demodulate(shift_buf,
                              resamp_buf,
                              buf1->data() + buf1_off,
@@ -182,9 +181,6 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
         while (buf2->nsamples.load(std::memory_order_acquire) == 0)
             ;
 
-        if (buf2->snapshot_off)
-            chanstate.demod->setSnapshotOffset(*buf2->snapshot_off - buf1->size());
-
         if (cur_samps_ > buf2->undersample) {
             // Calculate how many samples from the current slot we want to
             // demodulate. We do not demodulate the tail end of the guard interval.
@@ -192,6 +188,22 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t nwanted;          // How many samples we still want to demodulate.
             size_t n = 0;
+
+            // When the snapshot is over, we need to record self-transmissions
+            // for one more slot to ensure we record any transmission that
+            // began in the last slot of the snapshot but ended in the following
+            // slot.
+            std::optional<size_t> snapshot_off;
+
+            if (buf2->snapshot_off)
+                snapshot_off = buf2->snapshot_off;
+            else if (buf1->snapshot_off)
+                snapshot_off = *buf1->snapshot_off + buf1->size();
+
+            chanstate.demod->timestamp(buf2->timestamp,
+                                       snapshot_off,
+                                       0,
+                                       chanstate.modparams.resamp_rate);
 
             nwanted = cur_samps_ - buf2->undersample;
 

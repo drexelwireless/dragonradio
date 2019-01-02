@@ -74,32 +74,32 @@ public:
         virtual ~Demodulator() = default;
 
         /** @brief Reset the internal state of the demodulator.
-         * @brief timestamp The timestamp of IQ buffer from which the first
-         * provided sample will come.
-         * @brief off The offset of the first provided sample.
-         * @brief shift The center frequency of the demodulated data.
-         * @brief rate The rate of the resampler applied before data is passed
-         * to thedemodulator.
+         * @param shift The center frequency of the demodulated data.
          */
-        virtual void reset(MonoClock::time_point timestamp,
-                           size_t off,
-                           double shift,
-                           double rate) = 0;
+        virtual void reset(double shift) = 0;
 
-        /** @brief Set the snapshot offset.
-        * @brief snapshot_off The current snapshot offset.
-        */
-        virtual void setSnapshotOffset(ssize_t snapshot_off) = 0;
+        /** @brief Set timestamp for demodulation
+         * @param timestamp The timestamp for future samples.
+         * @param snapshot_off The snapshot offset associated with the given
+         * timestamp.
+         * @param offset The offset of the first sample that will be demodulated.
+         * @param rate The rate of the resampler applied before data is passed
+         * to the demodulator.
+         */
+         virtual void timestamp(const MonoClock::time_point &timestamp,
+                                std::optional<size_t> snapshot_off,
+                                size_t offset,
+                                float rate) = 0;
 
         /** @brief Demodulate IQ samples.
-         * @param data IQ samples to demodulate.
+         * @param data The IQ data to demodulate
          * @param count The number of samples to demodulate
          * @param callback The function to call with any demodulated packets. If
          * a bad packet is received, the argument will be nullptr.
          */
-        virtual void demodulate(const std::complex<float>* data,
-                                size_t count,
-                                std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
+         virtual void demodulate(const std::complex<float>* data,
+                                 size_t count,
+                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
     };
 
     PHY(NodeId node_id)
