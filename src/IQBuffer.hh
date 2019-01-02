@@ -5,6 +5,7 @@
 #include <complex>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #if !defined(NOUHD)
@@ -23,8 +24,6 @@ public:
     IQBuf(size_t sz)
       : buffer(sz)
       , delay(0)
-      , in_snapshot(false)
-      , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
@@ -35,7 +34,6 @@ public:
     IQBuf(const IQBuf &other)
       : buffer(other)
       , delay(other.delay)
-      , in_snapshot(other.in_snapshot)
       , snapshot_off(other.snapshot_off)
       , undersample(other.undersample)
       , oversample(other.oversample)
@@ -49,7 +47,6 @@ public:
     IQBuf(IQBuf &&other)
       : buffer(std::move(other))
       , delay(other.delay)
-      , in_snapshot(other.in_snapshot)
       , snapshot_off(other.snapshot_off)
       , undersample(other.undersample)
       , oversample(other.oversample)
@@ -63,8 +60,6 @@ public:
     IQBuf(const buffer<std::complex<float>> &other)
       : buffer(other)
       , delay(0)
-      , in_snapshot(false)
-      , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
@@ -75,8 +70,6 @@ public:
     IQBuf(buffer<std::complex<float>> &&other)
       : buffer(std::move(other))
       , delay(0)
-      , in_snapshot(false)
-      , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
@@ -87,8 +80,6 @@ public:
     IQBuf(const std::complex<float> *data, size_t n)
       : buffer(data, n)
       , delay(0)
-      , in_snapshot(false)
-      , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
@@ -122,11 +113,8 @@ public:
     /** @brief Flag that is true when receive is completed. */
     std::atomic<bool> complete;
 
-    /** @brief Is this buffer part of a snapshot?. */
-    bool in_snapshot;
-
     /** @brief Offset from beginning of the current snapshot. */
-    size_t snapshot_off;
+    std::optional<size_t> snapshot_off;
 
     /** @brief Number of undersamples at the beginning of the buffer. That is,
      * this is how many samples we missed at the beginning of the receive.

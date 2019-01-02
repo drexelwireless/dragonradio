@@ -73,7 +73,6 @@ bool SnapshotCollector::push(std::shared_ptr<IQBuf> &buf)
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
     if (snapshot_ && snapshot_collect_) {
-        buf->in_snapshot = true;
         buf->snapshot_off = snapshot_off_;
         snapshot_->slots.emplace_back(buf);
         return true;

@@ -166,8 +166,8 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
                                chanstate.modparams.shift,
                                chanstate.modparams.resamp_rate);
 
-        if (buf1->in_snapshot)
-            chanstate.demod->setSnapshotOffset(buf1->snapshot_off);
+        if (buf1->snapshot_off)
+            chanstate.demod->setSnapshotOffset(*buf1->snapshot_off);
 
         // Demodulate the last part of the guard interval of the previous slots
         chanstate.demodulate(shift_buf,
@@ -182,8 +182,8 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
         while (buf2->nsamples.load(std::memory_order_acquire) == 0)
             ;
 
-        if (buf2->in_snapshot)
-            chanstate.demod->setSnapshotOffset(buf2->snapshot_off - buf1->size());
+        if (buf2->snapshot_off)
+            chanstate.demod->setSnapshotOffset(*buf2->snapshot_off - buf1->size());
 
         if (cur_samps_ > buf2->undersample) {
             // Calculate how many samples from the current slot we want to
