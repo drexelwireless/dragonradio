@@ -136,10 +136,10 @@ protected:
     /** @brief Our snapshot collector */
     std::shared_ptr<SnapshotCollector> snapshot_collector_;
 
-    /** @brief RX channels, given as shift from center frequency */
+    /** @brief RX channels */
     Channels rx_channels_;
 
-    /** @brief TX channels, given as shift from center frequency */
+    /** @brief TX channels */
     Channels tx_channels_;
 
     /** @brief Our packet modulator. */
@@ -154,7 +154,7 @@ protected:
     /** @brief TX rate */
     double tx_rate_;
 
-    /** @brief Transmission channel, given hift from center frequency */
+    /** @brief Transmission channel */
     Channels::size_type tx_channel_;
 
     /** @brief Mutex for timestamped packet */
