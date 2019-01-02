@@ -173,7 +173,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
                                         tx_rate_,
                                         demodulator_->getChannelRate(),
                                         nsamples,
-                                        getTXShift());
+                                        tx_fc_off_);
     }
 
     return (nsamples > maxSamples) ? (nsamples - maxSamples) : 0;

@@ -102,6 +102,16 @@ public:
         return timestamped_mpkt_ && approx(timestamped_deadline_, when);
     }
 
+    virtual void setTXChannel(Channels::size_type channel) override
+    {
+        MAC::setTXChannel(channel);
+
+        if (tx_rate_ == rx_rate_)
+            tx_fc_off_ = getTXShift();
+        else
+            tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
+    }
+
     virtual void reconfigure(void) override;
 
 protected:
@@ -128,6 +138,9 @@ protected:
 
     /** @brief Number of samples to pre-modulate */
     size_t premod_samps_;
+
+    /** @brief TX center frequency offset from RX center frequency */
+    float tx_fc_off_;
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;
