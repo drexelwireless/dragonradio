@@ -53,9 +53,9 @@ struct PacketRecvEntry {
     /** If the packet spans two slots, this is the timestamp of the first slot. */
     double timestamp;
     /** @brief Offset (in samples) from timestamp slot to start of frame. */
-    uint32_t start_samples;
+    int32_t start_samples;
     /** @brief Offset (in samples) from timestamp slot to end of frame. */
-    uint32_t end_samples;
+    int32_t end_samples;
     /** @brief Was header valid? */
     uint8_t header_valid;
     /** @brief Was payload valid? */
@@ -218,8 +218,8 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_packet_recv(sizeof(PacketRecvEntry));
 
     h5_packet_recv.insertMember("timestamp", HOFFSET(PacketRecvEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
-    h5_packet_recv.insertMember("start_samples", HOFFSET(PacketRecvEntry, start_samples), H5::PredType::NATIVE_UINT32);
-    h5_packet_recv.insertMember("end_samples", HOFFSET(PacketRecvEntry, end_samples), H5::PredType::NATIVE_UINT32);
+    h5_packet_recv.insertMember("start_samples", HOFFSET(PacketRecvEntry, start_samples), H5::PredType::NATIVE_INT32);
+    h5_packet_recv.insertMember("end_samples", HOFFSET(PacketRecvEntry, end_samples), H5::PredType::NATIVE_INT32);
     h5_packet_recv.insertMember("header_valid", HOFFSET(PacketRecvEntry, header_valid), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("payload_valid", HOFFSET(PacketRecvEntry, payload_valid), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("curhop", HOFFSET(PacketRecvEntry, curhop), H5::PredType::NATIVE_UINT8);
@@ -369,8 +369,8 @@ void Logger::logSelfTX(Clock::time_point t,
 }
 
 void Logger::logRecv(const Clock::time_point& t,
-                     uint32_t start_samples,
-                     uint32_t end_samples,
+                     int32_t start_samples,
+                     int32_t end_samples,
                      bool header_valid,
                      bool payload_valid,
                      const Header& hdr,
@@ -495,8 +495,8 @@ void Logger::logSelfTX_(Clock::time_point timestamp,
 }
 
 void Logger::logRecv_(const Clock::time_point& t,
-                      uint32_t start_samples,
-                      uint32_t end_samples,
+                      int32_t start_samples,
+                      int32_t end_samples,
                       bool header_valid,
                       bool payload_valid,
                       const Header& hdr,
