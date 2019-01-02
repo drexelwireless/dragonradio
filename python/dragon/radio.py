@@ -1268,8 +1268,8 @@ class Radio(object):
             # Stop collecting slots
             collector.stop()
 
-            # Wait 200ms for remaining packets in snapshot to be demodulated and get
-            # the snapshot
+            # Wait 200ms for remaining packets in snapshot to be demodulated and
+            # get the snapshot
             await asyncio.sleep(0.2)
             snapshot = collector.finish()
 
