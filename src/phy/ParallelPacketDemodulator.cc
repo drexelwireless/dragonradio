@@ -166,6 +166,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
         if (cur_samps_ > buf2->undersample) {
             // Calculate how many samples from the current slot we want to
             // demodulate. We do not demodulate the tail end of the guard interval.
+            bool   complete = false; // Is the buffer complete?
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t nwanted;          // How many samples we still want to demodulate.
             size_t n = 0;
@@ -173,6 +174,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
             nwanted = cur_samps_ - buf2->undersample;
 
             for (;;) {
+                complete = buf2->complete.load(std::memory_order_acquire);
                 n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
 
                 if (n != 0) {
@@ -189,7 +191,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
 
                     if (nwanted == 0)
                         break;
-                } else if (buf2->complete)
+                } else if (complete)
                     break;
             }
         }

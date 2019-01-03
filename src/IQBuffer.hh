@@ -23,73 +23,77 @@ public:
     IQBuf(size_t sz)
       : buffer(sz)
       , delay(0)
-      , complete(false)
       , in_snapshot(false)
       , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
         nsamples.store(0, std::memory_order_release);
+        complete.store(false, std::memory_order_release);
     }
 
     IQBuf(const IQBuf &other)
       : buffer(other)
       , delay(other.delay)
-      , complete(other.complete)
       , in_snapshot(other.in_snapshot)
       , snapshot_off(other.snapshot_off)
       , undersample(other.undersample)
       , oversample(other.oversample)
     {
-        nsamples.store(other.nsamples.load());
+        nsamples.store(other.nsamples.load(std::memory_order_acquire),
+            std::memory_order_release);
+        complete.store(other.complete.load(std::memory_order_acquire),
+            std::memory_order_release);
     }
 
     IQBuf(IQBuf &&other)
       : buffer(std::move(other))
       , delay(other.delay)
-      , complete(other.complete)
       , in_snapshot(other.in_snapshot)
       , snapshot_off(other.snapshot_off)
       , undersample(other.undersample)
       , oversample(other.oversample)
     {
-        nsamples.store(other.nsamples.load());
+        nsamples.store(other.nsamples.load(std::memory_order_acquire),
+            std::memory_order_release);
+        complete.store(other.complete.load(std::memory_order_acquire),
+            std::memory_order_release);
     }
 
     IQBuf(const buffer<std::complex<float>> &other)
       : buffer(other)
       , delay(0)
-      , complete(false)
       , in_snapshot(false)
       , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
         nsamples.store(0, std::memory_order_release);
+        complete.store(true, std::memory_order_release);
     }
 
     IQBuf(buffer<std::complex<float>> &&other)
       : buffer(std::move(other))
       , delay(0)
-      , complete(true)
       , in_snapshot(false)
       , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
         nsamples.store(0, std::memory_order_release);
+        complete.store(true, std::memory_order_release);
     }
 
     IQBuf(const std::complex<float> *data, size_t n)
       : buffer(data, n)
       , delay(0)
-      , complete(true)
       , in_snapshot(false)
       , snapshot_off(0)
       , undersample(0)
       , oversample(0)
     {
         nsamples.store(0, std::memory_order_release);
+        complete.store(true, std::memory_order_release);
     }
 
     ~IQBuf() noexcept {}
@@ -116,7 +120,7 @@ public:
     std::atomic<size_t> nsamples;
 
     /** @brief Flag that is true when receive is completed. */
-    bool complete;
+    std::atomic<bool> complete;
 
     /** @brief Is this buffer part of a snapshot?. */
     bool in_snapshot;

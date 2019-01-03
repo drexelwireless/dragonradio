@@ -203,12 +203,12 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
             // then we have sampled undersample too many samples!
             buf.oversample = (ndelivered - nsamps) + buf.undersample;
 
-            // Mark the buffer as complete.
-            buf.complete = true;
-
             // One last store to the atomic nsamples field to ensure write
             // ordering.
             buf.nsamples.store(ndelivered, std::memory_order_release);
+
+            // Mark the buffer as complete.
+            buf.complete.store(true, std::memory_order_release);
             break;
         } else {
             // It's possible that we don't have enough buffer space to hold
