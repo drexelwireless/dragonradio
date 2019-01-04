@@ -433,6 +433,18 @@ public:
         enforce_ordering_ = enforce;
     }
 
+    /** @brief Get maximum number of extra control bytes beyond MTU. */
+    size_t getMCU(void)
+    {
+        return mcu_;
+    }
+
+    /** @brief Set maximum number of extra control bytes beyond MTU. */
+    void setMCU(size_t mcu)
+    {
+        mcu_ = mcu;
+    }
+
     /** @brief Get echoed timestamps */
     timestamp_vector getEchoedTimestamps(void)
     {
@@ -446,7 +458,7 @@ public:
      */
     size_t getMaxPacketsPerSlot(const TXParams &p)
     {
-        return slot_size_/phy_->getModulatedSize(p, rc.mtu + sizeof(struct ether_header));
+        return slot_size_/phy_->getModulatedSize(p, rc.mtu + mcu_ + sizeof(struct ether_header));
     }
 
     bool pull(std::shared_ptr<NetPacket>& pkt) override;
@@ -550,6 +562,9 @@ protected:
      * received?
      */
     bool enforce_ordering_;
+
+    /** @brief Maximum extra control bytes, in contrast to MTU */
+    size_t mcu_;
 
     /** @brief Our timestamps as received by time master */
     timestamp_vector echoed_timestamps_;

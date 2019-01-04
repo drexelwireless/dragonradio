@@ -90,6 +90,10 @@ void exportControllers(py::module &m)
         .def_property("enforce_ordering",
             &SmartController::getEnforceOrdering,
             &SmartController::setEnforceOrdering)
+        .def_property("mcu",
+            &SmartController::getMCU,
+            &SmartController::setMCU,
+            "Maximum number of extra control bytes beyond MTU")
         .def_property_readonly("echoed_timestamps",
             &SmartController::getEchoedTimestamps,
             "Our timestamps echoed by the time master")

@@ -68,6 +68,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , selective_ack_feedback_delay_(0.0)
   , max_retransmissions_({})
   , enforce_ordering_(false)
+  , mcu_(0)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
 {
@@ -843,12 +844,13 @@ void SmartController::handleCtrlTimestampEchos(Node &node, std::shared_ptr<Radio
     }
 }
 
-inline bool apendSelectiveACK(RecvWindow &recvw,
+inline bool apendSelectiveACK(size_t mtu,
+                              RecvWindow &recvw,
                               std::shared_ptr<NetPacket>& pkt,
                               Seq begin,
                               Seq end)
 {
-    if (pkt->size() + ctrlsize(ControlMsg::Type::kSelectiveAck) < rc.mtu) {
+    if (pkt->size() + ctrlsize(ControlMsg::Type::kSelectiveAck) < mtu) {
         logEvent("ARQ: send selective ack: node=%u; seq=[%u, %u)",
             (unsigned) recvw.node.id,
             (unsigned) begin,
@@ -888,7 +890,7 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
             end = seq;
         } else {
             if (in_run) {
-                if (!apendSelectiveACK(recvw, pkt, begin, end + 1))
+                if (!apendSelectiveACK(rc.mtu + mcu_, recvw, pkt, begin, end + 1))
                     return;
 
                 in_run = false;
@@ -898,7 +900,7 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
 
     // Close out any final run
     if (in_run) {
-        if (!apendSelectiveACK(recvw, pkt, begin, end + 1))
+        if (!apendSelectiveACK(rc.mtu + mcu_, recvw, pkt, begin, end + 1))
             return;
     }
 
@@ -906,7 +908,7 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
     // end up our received packets. This will inform the sender that the last
     // stretch of packets WAS NOT received.
     if (end < recvw.max) {
-        if (!apendSelectiveACK(recvw, pkt, recvw.max+1, recvw.max+1))
+        if (!apendSelectiveACK(rc.mtu + mcu_, recvw, pkt, recvw.max+1, recvw.max+1))
             return;
     }
 
