@@ -37,11 +37,13 @@ message Status {
 }
 
 message Schedule {
-    uint32 seq = 1;                             // Schedule sequence number
-    uint32 nchannels = 2;                       // Number of channels
-    uint32 nslots = 3;                          // Number of time slots
-    repeated uint32 nodes = 4 [packed=true];    // Nodes in schedule
-    repeated uint32 schedule = 5 [packed=true]; // Schedule consisting of nchannels*nslots node ID's
+    double frequency = 1;                       // Center frequency
+    double bandwidth = 2;                       // Bandwidth
+    uint32 seq = 3;                             // Schedule sequence number
+    uint32 nchannels = 4;                       // Number of channels
+    uint32 nslots = 5;                          // Number of time slots
+    repeated uint32 nodes = 6 [packed=true];    // Nodes in schedule
+    repeated uint32 schedule = 7 [packed=true]; // Schedule consisting of nchannels*nslots node ID's
 }
 
 message Message {

@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='dragonradio.internal',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0einternal.proto\x12\x14\x64ragonradio.internal\"1\n\tTimeStamp\x12\x0f\n\x07seconds\x18\x01 \x01(\x05\x12\x13\n\x0bpicoseconds\x18\x02 \x01(\x03\"B\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x11\n\televation\x18\x03 \x01(\x01\"t\n\x0cLocationInfo\x12\x30\n\x08location\x18\x01 \x01(\x0b\x32\x1e.dragonradio.internal.Location\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\"{\n\x08\x46lowInfo\x12\x10\n\x08\x66low_uid\x18\x01 \x01(\r\x12\x0b\n\x03src\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\r\x12\x0e\n\x06window\x18\x04 \x01(\x01\x12\x0f\n\x07latency\x18\x05 \x01(\x01\x12\x12\n\nthroughput\x18\x06 \x01(\x01\x12\r\n\x05\x62ytes\x18\x07 \x01(\x04\"\xe9\x01\n\x06Status\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\x12/\n\x03loc\x18\x03 \x01(\x0b\x32\".dragonradio.internal.LocationInfo\x12\x34\n\x0csource_flows\x18\x04 \x03(\x0b\x32\x1e.dragonradio.internal.FlowInfo\x12\x32\n\nsink_flows\x18\x05 \x03(\x0b\x32\x1e.dragonradio.internal.FlowInfo\"c\n\x08Schedule\x12\x0b\n\x03seq\x18\x01 \x01(\r\x12\x11\n\tnchannels\x18\x02 \x01(\r\x12\x0e\n\x06nslots\x18\x03 \x01(\r\x12\x11\n\x05nodes\x18\x04 \x03(\rB\x02\x10\x01\x12\x14\n\x08schedule\x18\x05 \x03(\rB\x02\x10\x01\"x\n\x07Message\x12.\n\x06status\x18\x01 \x01(\x0b\x32\x1c.dragonradio.internal.StatusH\x00\x12\x32\n\x08schedule\x18\x02 \x01(\x0b\x32\x1e.dragonradio.internal.ScheduleH\x00\x42\t\n\x07payloadb\x06proto3')
+  serialized_pb=_b('\n\x0einternal.proto\x12\x14\x64ragonradio.internal\"1\n\tTimeStamp\x12\x0f\n\x07seconds\x18\x01 \x01(\x05\x12\x13\n\x0bpicoseconds\x18\x02 \x01(\x03\"B\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x11\n\televation\x18\x03 \x01(\x01\"t\n\x0cLocationInfo\x12\x30\n\x08location\x18\x01 \x01(\x0b\x32\x1e.dragonradio.internal.Location\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\"{\n\x08\x46lowInfo\x12\x10\n\x08\x66low_uid\x18\x01 \x01(\r\x12\x0b\n\x03src\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\r\x12\x0e\n\x06window\x18\x04 \x01(\x01\x12\x0f\n\x07latency\x18\x05 \x01(\x01\x12\x12\n\nthroughput\x18\x06 \x01(\x01\x12\r\n\x05\x62ytes\x18\x07 \x01(\x04\"\xe9\x01\n\x06Status\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\x12/\n\x03loc\x18\x03 \x01(\x0b\x32\".dragonradio.internal.LocationInfo\x12\x34\n\x0csource_flows\x18\x04 \x03(\x0b\x32\x1e.dragonradio.internal.FlowInfo\x12\x32\n\nsink_flows\x18\x05 \x03(\x0b\x32\x1e.dragonradio.internal.FlowInfo\"\x89\x01\n\x08Schedule\x12\x11\n\tfrequency\x18\x01 \x01(\x01\x12\x11\n\tbandwidth\x18\x02 \x01(\x01\x12\x0b\n\x03seq\x18\x03 \x01(\r\x12\x11\n\tnchannels\x18\x04 \x01(\r\x12\x0e\n\x06nslots\x18\x05 \x01(\r\x12\x11\n\x05nodes\x18\x06 \x03(\rB\x02\x10\x01\x12\x14\n\x08schedule\x18\x07 \x03(\rB\x02\x10\x01\"x\n\x07Message\x12.\n\x06status\x18\x01 \x01(\x0b\x32\x1c.dragonradio.internal.StatusH\x00\x12\x32\n\x08schedule\x18\x02 \x01(\x0b\x32\x1e.dragonradio.internal.ScheduleH\x00\x42\t\n\x07payloadb\x06proto3')
 )
 
 
@@ -286,36 +286,50 @@ _SCHEDULE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='seq', full_name='dragonradio.internal.Schedule.seq', index=0,
-      number=1, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
+      name='frequency', full_name='dragonradio.internal.Schedule.frequency', index=0,
+      number=1, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='nchannels', full_name='dragonradio.internal.Schedule.nchannels', index=1,
-      number=2, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
+      name='bandwidth', full_name='dragonradio.internal.Schedule.bandwidth', index=1,
+      number=2, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='nslots', full_name='dragonradio.internal.Schedule.nslots', index=2,
+      name='seq', full_name='dragonradio.internal.Schedule.seq', index=2,
       number=3, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='nodes', full_name='dragonradio.internal.Schedule.nodes', index=3,
-      number=4, type=13, cpp_type=3, label=3,
+      name='nchannels', full_name='dragonradio.internal.Schedule.nchannels', index=3,
+      number=4, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='nslots', full_name='dragonradio.internal.Schedule.nslots', index=4,
+      number=5, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='nodes', full_name='dragonradio.internal.Schedule.nodes', index=5,
+      number=6, type=13, cpp_type=3, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=_b('\020\001'), file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='schedule', full_name='dragonradio.internal.Schedule.schedule', index=4,
-      number=5, type=13, cpp_type=3, label=3,
+      name='schedule', full_name='dragonradio.internal.Schedule.schedule', index=6,
+      number=7, type=13, cpp_type=3, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -332,8 +346,8 @@ _SCHEDULE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=638,
-  serialized_end=737,
+  serialized_start=639,
+  serialized_end=776,
 )
 
 
@@ -373,8 +387,8 @@ _MESSAGE = _descriptor.Descriptor(
       name='payload', full_name='dragonradio.internal.Message.payload',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=739,
-  serialized_end=859,
+  serialized_start=778,
+  serialized_end=898,
 )
 
 _LOCATIONINFO.fields_by_name['location'].message_type = _LOCATION

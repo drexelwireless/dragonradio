@@ -68,6 +68,9 @@ class InternalProtoServer(UDPProtoServer):
         radio = self.controller.radio
 
         if radio.node_id in msg.schedule.nodes:
+            radio.reconfigureBandwidthAndFrequency(msg.schedule.bandwidth,
+                                                   msg.schedule.frequency)
+
             nchannels = msg.schedule.nchannels
             nslots = msg.schedule.nslots
 
@@ -105,8 +108,12 @@ class InternalProtoClient(UDPProtoClient):
 
     @send(internal.Message)
     async def sendSchedule(self, msg, seq, nodes, sched):
+        config = self.controller.config
+
         (nchannels, nslots) = sched.shape
 
+        msg.schedule.frequency = config.frequency
+        msg.schedule.bandwidth = config.bandwidth
         msg.schedule.seq = seq
         msg.schedule.nchannels = nchannels
         msg.schedule.nslots = nslots
