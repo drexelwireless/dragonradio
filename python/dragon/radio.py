@@ -957,6 +957,9 @@ class Radio(object):
         """
         config = self.config
 
+        if bandwidth == config.bandwidth and frequency == config.frequency:
+            return
+
         config.bandwidth = bandwidth
         config.frequency = frequency
 
