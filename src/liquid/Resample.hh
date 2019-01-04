@@ -109,6 +109,8 @@ public:
         delay_ = msresamp_crcf_get_delay(resamp_);
     }
 
+    MultiStageResampler(const MultiStageResampler &) = delete;
+
     MultiStageResampler(MultiStageResampler &&resamp)
     {
         msresamp_crcf_destroy(resamp_);
@@ -125,6 +127,8 @@ public:
             msresamp_crcf_destroy(resamp_);
     }
 
+    MultiStageResampler& operator =(const MultiStageResampler&) = delete;
+
     MultiStageResampler &operator =(MultiStageResampler &&resamp)
     {
         msresamp_crcf_destroy(resamp_);
@@ -136,8 +140,6 @@ public:
 
         return *this;
     }
-
-    MultiStageResampler& operator=(const MultiStageResampler&) = delete;
 
     double getRate(void) const override final
     {
