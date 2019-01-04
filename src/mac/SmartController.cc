@@ -69,6 +69,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , max_retransmissions_({})
   , enforce_ordering_(false)
   , mcu_(0)
+  , move_along_(true)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
 {
@@ -1237,29 +1238,34 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         if (!pkt->isInternalFlagSet(kHasSeq)) {
             Node& nexthop = (*net_)[pkt->nexthop];
 
-            // If we can fit this packet in our window, do so. Otherwise, we
-            // log an error and drop the packet. We should never receive a
-            // packet from the network queue that we can't send.
-            if (nexthop.seq < unack + sendw.win) {
-                pkt->seq = nexthop.seq++;
-                pkt->setInternalFlag(kHasSeq);
-
-                // If this is the first packet we are sending to the destination,
-                // set its SYN flag
-                if (sendw.new_window) {
-                    pkt->setFlag(kSYN);
-                    sendw.new_window = false;
-                }
-
-                // If the send window is closed, tell the network queue
-                if (nexthop.seq >= unack + sendw.win)
-                    netq_->setSendWindowStatus(nexthop.id, false);
-
-                return true;
-            } else {
-                logEvent("ARQ: DROPPING DUE TO FULL WINDOW: node=%u",
+            // If we can't fit this packet in our window, move the window along
+            // by dropping the oldest packet.
+            if (   nexthop.seq >= unack + sendw.win
+                && sendw[unack].canDrop(max_retransmissions_)) {
+                logEvent("ARQ: MOVING WINDOW ALONG: node=%u",
                     (unsigned) pkt->nexthop);
+                drop(sendw[unack]);
+                unack = sendw.unack.load(std::memory_order_acquire);
             }
+
+            pkt->seq = nexthop.seq++;
+            pkt->setInternalFlag(kHasSeq);
+
+            // If this is the first packet we are sending to the destination,
+            // set its SYN flag
+            if (sendw.new_window) {
+                pkt->setFlag(kSYN);
+                sendw.new_window = false;
+            }
+
+            // Close the send window if it's full and we're not supposed to
+            // "move along." However, if the send window is only 1 packet,
+            // ALWAYS close it since we're waiting for the ACK to our SYN!
+            if (   nexthop.seq >= unack + sendw.win
+                && (!move_along_ || sendw.win == 1))
+                netq_->setSendWindowStatus(nexthop.id, false);
+
+            return true;
         } else {
             // If this packet comes before our window, drop it. It could have
             // snuck in as a retransmission just before the send window moved

@@ -184,6 +184,7 @@ class Config(object):
         self.arq_selective_ack = True
         self.arq_selective_ack_feedback_delay = 0.300
         self.arq_mcu = 100
+        self.arq_move_along = True
         self.arq_broadcast_gain_db = 0.0
         self.arq_ack_gain_db = 0.0
 
@@ -760,6 +761,7 @@ class Radio(object):
             self.controller.max_retransmissions = config.arq_max_retransmissions
             self.controller.enforce_ordering = config.arq_enforce_ordering
             self.controller.mcu = config.arq_mcu
+            self.controller.move_along = config.arq_move_along
 
             self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
             self.controller.ack_gain.dB = config.arq_ack_gain_db

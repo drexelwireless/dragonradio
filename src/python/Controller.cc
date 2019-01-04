@@ -94,6 +94,10 @@ void exportControllers(py::module &m)
             &SmartController::getMCU,
             &SmartController::setMCU,
             "Maximum number of extra control bytes beyond MTU")
+        .def_property("move_along",
+            &SmartController::getMoveAlong,
+            &SmartController::setMoveAlong,
+            "Should we always move the send window along even if it's full?")
         .def_property_readonly("echoed_timestamps",
             &SmartController::getEchoedTimestamps,
             "Our timestamps echoed by the time master")

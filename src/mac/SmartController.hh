@@ -460,6 +460,18 @@ public:
         mcu_ = mcu;
     }
 
+    /** @brief Get whether or not we always move the send windwo along. */
+    bool getMoveAlong(void)
+    {
+        return move_along_;
+    }
+
+    /** @brief Set whether or not to always move the send windwo along. */
+    void setMoveAlong(bool move_along)
+    {
+        move_along_ = move_along;
+    }
+
     /** @brief Get echoed timestamps */
     timestamp_vector getEchoedTimestamps(void)
     {
@@ -580,6 +592,9 @@ protected:
 
     /** @brief Maximum extra control bytes, in contrast to MTU */
     size_t mcu_;
+
+    /** @brief Always move the send window along, even if it's full */
+    bool move_along_;
 
     /** @brief Our timestamps as received by time master */
     timestamp_vector echoed_timestamps_;
