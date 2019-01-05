@@ -17,7 +17,17 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            double guard_size,
                            double demod_overlap_size,
                            double p)
-  : SlottedMAC(usrp, phy, controller, collector, rx_channels, tx_channels, modulator, demodulator, slot_size, guard_size, demod_overlap_size)
+  : SlottedMAC(usrp,
+               phy,
+               controller,
+               collector,
+               rx_channels,
+               tx_channels,
+               modulator,
+               demodulator,
+               slot_size,
+               guard_size,
+               demod_overlap_size)
   , p_(p)
   , gen_(std::random_device()())
   , dist_(0, 1.0)

@@ -14,7 +14,14 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        double slot_size,
                        double guard_size,
                        double demod_overlap_size)
-  : MAC(usrp, phy, controller, collector, rx_channels, tx_channels, modulator, demodulator)
+  : MAC(usrp,
+        phy,
+        controller,
+        collector,
+        rx_channels,
+        tx_channels,
+        modulator,
+        demodulator)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , demod_overlap_size_(demod_overlap_size)
