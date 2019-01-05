@@ -11,9 +11,18 @@ void exportMACs(py::module &m)
 {
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
-        .def_property("rx_channels", &MAC::getRXChannels, &MAC::setRXChannels)
-        .def_property("tx_channels", &MAC::getTXChannels, &MAC::setTXChannels)
-        .def_property("tx_channel", &MAC::getTXChannel, &MAC::setTXChannel)
+        .def_property("rx_channels",
+            &MAC::getRXChannels,
+            &MAC::setRXChannels,
+            "RX channels")
+        .def_property("tx_channels",
+            &MAC::getTXChannels,
+            &MAC::setTXChannels,
+            "TX channels")
+        .def_property("tx_channel",
+            &MAC::getTXChannel,
+            &MAC::setTXChannel,
+            "Our TX channel")
         .def("stop",
             &MAC::stop,
             "Tell MAC to stop processing packets.")
@@ -24,10 +33,18 @@ void exportMACs(py::module &m)
 
     // Export class SlottedMAC to Python
     py::class_<SlottedMAC, MAC, std::shared_ptr<SlottedMAC>>(m, "SlottedMAC")
-        .def_property("slot_size", &SlottedMAC::getSlotSize, &SlottedMAC::setSlotSize)
-        .def_property("guard_size", &SlottedMAC::getGuardSize, &SlottedMAC::setGuardSize)
-        .def_property("demod_overlap_size", &SlottedMAC::getDemodOverlapSize, &SlottedMAC::setDemodOverlapSize)
-        .def_property("premod_slots", &SlottedMAC::getPreModulateSlots, &SlottedMAC::setPreModulateSlots)
+        .def_property("slot_size",
+            &SlottedMAC::getSlotSize,
+            &SlottedMAC::setSlotSize,
+            "Slot size (sec)")
+        .def_property("guard_size",
+            &SlottedMAC::getGuardSize,
+            &SlottedMAC::setGuardSize,
+            "Guard size (sec)")
+        .def_property("premod_slots",
+            &SlottedMAC::getPreModulateSlots,
+            &SlottedMAC::setPreModulateSlots,
+            "Maintain this many slots worth of modulated packets.")
         ;
 
     // Export class TDMA::Slots to Python
@@ -77,7 +94,9 @@ void exportMACs(py::module &m)
                 self.getSlots() = slots;
             },
             py::return_value_policy::reference_internal)
-        .def_property("superslots", &TDMA::getSuperslots, &TDMA::setSuperslots,
+        .def_property("superslots",
+            &TDMA::getSuperslots,
+            &TDMA::setSuperslots,
             "Flag indicating whether or not to use superslots.");
         ;
 
