@@ -5,7 +5,7 @@
 
 #include "spinlock_mutex.hh"
 #include "USRP.hh"
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 #include "phy/PHY.hh"
 #include "phy/PacketDemodulator.hh"
 #include "phy/PacketModulator.hh"
@@ -108,7 +108,7 @@ public:
      */
     virtual double getTXShift(void) const
     {
-        return tx_channels_.size() > 0 ? tx_channels_[tx_channel_] : 0.0;
+        return tx_channels_.size() > 0 ? tx_channels_[tx_channel_].fc : 0.0;
     }
 
     /** @brief Reconfigure the MAC when after parameters change */

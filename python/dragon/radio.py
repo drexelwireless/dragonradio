@@ -15,7 +15,7 @@ import scipy.stats as stats
 import sys
 
 import dragonradio
-from dragonradio import Channels, MCS, TXParams, TXParamsVector
+from dragonradio import Channel, Channels, MCS, TXParams, TXParamsVector
 
 logger = logging.getLogger('radio')
 
@@ -848,7 +848,7 @@ class Radio(object):
         if self.config.tx_upsample:
             return self.channels
         else:
-            return Channels([0.0])
+            return Channels([Channel(0.0, self.channel_bandwidth)])
 
     def configTXParamsSoftGain(self, tx_params):
         config = self.config
@@ -910,12 +910,12 @@ class Radio(object):
         if config.maximize_channel_guard_bandwidth and n > 1:
             cgbw = (bandwidth-2*egbw-n*cbw)/(n-1)
 
-        channels = [egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2. for i in range(0,n)]
+        channels = [Channel(egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2., cbw) for i in range(0,n)]
 
         self.channels = Channels(channels[:config.max_channels])
 
         logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
-            self.channels, bandwidth, config.rx_oversample_factor, config.tx_oversample_factor, cbw, cgbw, egbw)
+            list(self.channels), bandwidth, config.rx_oversample_factor, config.tx_oversample_factor, cbw, cgbw, egbw)
 
         #
         # Set RX and TX rates
@@ -1070,7 +1070,7 @@ class Radio(object):
         if config.tx_upsample:
             self.mac.tx_channel = channel
         else:
-            fc = self.channels[channel]
+            fc = self.channels[channel].fc
             logging.info("Setting TX frequency offset to %g", fc)
 
             self.usrp.tx_frequency = self.frequency + fc

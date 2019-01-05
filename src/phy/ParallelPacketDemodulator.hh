@@ -9,7 +9,7 @@
 #include "spinlock_mutex.hh"
 #include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 #include "phy/ModParams.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"

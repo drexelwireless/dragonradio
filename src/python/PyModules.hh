@@ -5,11 +5,12 @@
 #include <pybind11/stl_bind.h>
 
 #include "net/Element.hh"
+#include "phy/Channel.hh"
 #include "phy/TXParams.hh"
 
 namespace py = pybind11;
 
-PYBIND11_MAKE_OPAQUE(std::vector<double>)
+PYBIND11_MAKE_OPAQUE(std::vector<Channel>)
 
 PYBIND11_MAKE_OPAQUE(std::vector<TXParams>)
 

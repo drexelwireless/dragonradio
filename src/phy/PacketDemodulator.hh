@@ -2,7 +2,7 @@
 #define PACKETDEMODULATOR_H_
 
 #include "IQBuffer.hh"
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 
 /** @brief A packet demodulator. */
 class PacketDemodulator

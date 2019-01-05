@@ -2,7 +2,7 @@
 
 namespace py = pybind11;
 
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 #include "net/Net.hh"
 #include "python/PyModules.hh"
 
@@ -15,9 +15,6 @@ namespace py = pybind11;
 PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     // Export DragonRadio version
     m.attr("version") = TOSTRING(VERSION);
-
-    // Export class Channels to Python
-    py::bind_vector<std::vector<double>, std::shared_ptr<std::vector<double>>>(m, "Channels");
 
     exportLiquidEnums(m);
     exportClock(m);

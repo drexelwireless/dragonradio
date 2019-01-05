@@ -1,4 +1,4 @@
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
 #include "python/PyModules.hh"

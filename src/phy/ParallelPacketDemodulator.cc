@@ -127,7 +127,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
             break;
 
         received = false;
-        shift = channels_[channel];
+        shift = channels_[channel].fc;
 
         // Calculate how many samples we want to demodulate from the tail end of
         // the previous slot

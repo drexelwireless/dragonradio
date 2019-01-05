@@ -2,7 +2,7 @@
 #define PACKETMODULATOR_H_
 
 #include "Logger.hh"
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 #include "phy/ModPacket.hh"
 
 /** @brief A packet modulator. */
@@ -92,7 +92,7 @@ public:
      */
     virtual double getTXShift(void) const
     {
-        return channels_.size() > 0 ? channels_[tx_channel_] : 0.0;
+        return channels_.size() > 0 ? channels_[tx_channel_].fc : 0.0;
     }
 
     /** @brief Get maximum packet size. */
