@@ -254,6 +254,8 @@ bool ParallelPacketDemodulator::pop(RadioPacketQueue::barrier& b,
                                     std::shared_ptr<IQBuf>& buf1,
                                     std::shared_ptr<IQBuf>& buf2)
 {
+    static MonoClock::time_point last_overflow_log(0.0);
+
     // Acquire the previous slot and the current slot, removing the previous
     // slot from the queue since we no longer need it.
     std::unique_lock<std::mutex> lock(iq_mutex_);
@@ -261,6 +263,16 @@ bool ParallelPacketDemodulator::pop(RadioPacketQueue::barrier& b,
     iq_cond_.wait(lock, [this]{ return done_ || iq_size_ > 1; });
     if (done_)
         return false;
+
+    if (iq_size_ > 8) {
+        MonoClock::time_point now = MonoClock::now();
+
+        if ((now - last_overflow_log).get_full_secs() >= 1) {
+            logEvent("PHY: Large demodulation queue: size=%lu",
+                iq_size_);
+            last_overflow_log = now;
+        }
+    }
 
     auto it = iq_.begin();
 
