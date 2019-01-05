@@ -22,8 +22,8 @@ public:
                             size_t nthreads);
     virtual ~ParallelPacketModulator();
 
-   virtual void modulateOne(std::shared_ptr<NetPacket> pkt,
-                            ModPacket &mpkt) override;
+    virtual void modulateOne(std::shared_ptr<NetPacket> pkt,
+                             ModPacket &mpkt) override;
 
     void modulate(size_t n) override;
 
