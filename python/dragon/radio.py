@@ -1000,6 +1000,8 @@ class Radio(object):
         self.mac = None
 
     def configureALOHA(self):
+        config = self.config
+
         self.mac = dragonradio.SlottedALOHA(self.usrp,
                                             self.phy,
                                             self.controller,
@@ -1008,10 +1010,13 @@ class Radio(object):
                                             self.tx_channels,
                                             self.modulator,
                                             self.demodulator,
-                                            self.config.slot_size,
-                                            self.config.guard_size,
-                                            self.config.demod_overlap_size,
-                                            self.config.aloha_prob)
+                                            config.slot_size,
+                                            config.guard_size,
+                                            config.aloha_prob)
+
+        self.demodulator.prev_demod = 0.5*config.slot_size
+        self.demodulator.cur_demod = config.slot_size
+
         self.finishConfiguringMAC()
 
     def configureTDMA(self, nslots):
@@ -1024,6 +1029,8 @@ class Radio(object):
         Args:
             nslots: The number of slots in the schedule
         """
+        config = self.config
+
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
                                     self.controller,
@@ -1032,17 +1039,22 @@ class Radio(object):
                                     self.tx_channels,
                                     self.modulator,
                                     self.demodulator,
-                                    self.config.slot_size,
-                                    self.config.guard_size,
-                                    self.config.demod_overlap_size,
+                                    config.slot_size,
+                                    config.guard_size,
                                     nslots)
 
+        self.mac.superslots = self.config.superslots
+
+        # When we using superslots, we need to demodulate half the previous slot
+        # becasue a sender could start transmitting a packet halfway into a slot
+        # + epsilon.
         if self.config.superslots:
-            self.mac.superslots = True
-            # When we using superslots, we need to enlarge the demodulation
-            # overlap size since a sender could start transmitting a packet
-            # halfway into a slot + epsilon.
-            self.mac.demod_overlap_size = 0.5*self.config.slot_size
+            self.demodulator.prev_demod = 0.5*config.slot_size
+            self.demodulator.cur_demod = config.slot_size
+        else:
+            self.demodulator.prev_demod = config.demod_overlap_size
+            self.demodulator.cur_demod = \
+                config.slot_size - config.guard_size + config.demod_overlap_size
 
         self.finishConfiguringMAC()
 

@@ -53,8 +53,6 @@ void exportPacketModulators(py::module &m)
         .def_property("channels",
             &PacketDemodulator::getChannels,
             &PacketDemodulator::setChannels)
-        .def("setWindowParameters",
-            &PacketDemodulator::setWindowParameters)
         ;
 
     // Export class ParallelPacketModulator to Python
@@ -79,6 +77,12 @@ void exportPacketModulators(py::module &m)
                       std::shared_ptr<PHY>,
                       const Channels&,
                       unsigned int>())
+        .def_property("prev_demod",
+            &ParallelPacketDemodulator::getPrevDemod,
+            &ParallelPacketDemodulator::setPrevDemod)
+        .def_property("cur_demod",
+            &ParallelPacketDemodulator::getCurDemod,
+            &ParallelPacketDemodulator::setCurDemod)
         .def_property("enforce_ordering",
             &ParallelPacketDemodulator::getEnforceOrdering,
             &ParallelPacketDemodulator::setEnforceOrdering)

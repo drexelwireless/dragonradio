@@ -26,7 +26,6 @@ public:
                  std::shared_ptr<PacketDemodulator> demodulator,
                  double slot_size,
                  double guard_size,
-                 double demod_overlap_size,
                  double p);
     virtual ~SlottedALOHA();
 
@@ -53,8 +52,6 @@ public:
 
     /** @brief Stop processing packets */
     void stop(void) override;
-
-    void reconfigure(void) override;
 
     void sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt) override;
 

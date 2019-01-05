@@ -16,9 +16,12 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
   , downsamp_params(std::bind(&PacketDemodulator::reconfigure, this))
   , net_(net)
   , phy_(phy)
+  , slot_size_(0.0)
+  , prev_demod_(0.0)
+  , prev_demod_samps_(0)
+  , cur_demod_(0.0)
+  , cur_demod_samps_(0)
   , enforce_ordering_(false)
-  , prev_samps_(0)
-  , cur_samps_(0)
   , done_(false)
   , iq_size_(0)
   , iq_next_channel_(0)
@@ -50,13 +53,6 @@ void ParallelPacketDemodulator::setChannels(const Channels &channels)
         nextWindow();
 }
 
-void ParallelPacketDemodulator::setWindowParameters(const size_t prev_samps,
-                                                    const size_t cur_samps)
-{
-    prev_samps_ = prev_samps;
-    cur_samps_ = cur_samps;
-}
-
 void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
 {
     // Push the packet on the end of the queue
@@ -73,6 +69,11 @@ void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
 
 void ParallelPacketDemodulator::reconfigure(void)
 {
+    double rx_rate = phy_->getRXRate();
+
+    prev_demod_samps_ = prev_demod_*rx_rate;
+    cur_demod_samps_ = cur_demod_*rx_rate;
+
     for (auto &flag : demod_reconfigure_)
         flag.store(true, std::memory_order_relaxed);
 }
@@ -92,16 +93,6 @@ void ParallelPacketDemodulator::stop(void)
         if (demod_threads_[i].joinable())
             demod_threads_[i].join();
     }
-}
-
-bool ParallelPacketDemodulator::getEnforceOrdering(void)
-{
-    return enforce_ordering_;
-}
-
-void ParallelPacketDemodulator::setEnforceOrdering(bool enforce)
-{
-    enforce_ordering_ = enforce;
 }
 
 void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
@@ -140,7 +131,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
 
         // Calculate how many samples we want to demodulate from the tail end of
         // the previous slot
-        size_t buf1_nsamples = buf1->oversample + prev_samps_;
+        size_t buf1_nsamples = buf1->oversample + prev_demod_samps_;
 
         // This can happen when the user has set a large demodulation overlap
         if (buf1_nsamples > buf1->size())
@@ -181,7 +172,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
         while (buf2->nsamples.load(std::memory_order_acquire) == 0)
             ;
 
-        if (cur_samps_ > buf2->undersample) {
+        if (cur_demod_samps_ > buf2->undersample) {
             // Calculate how many samples from the current slot we want to
             // demodulate. We do not demodulate the tail end of the guard interval.
             bool   complete = false; // Is the buffer complete?
@@ -205,7 +196,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
                                        0,
                                        chanstate.modparams.resamp_rate);
 
-            nwanted = cur_samps_ - buf2->undersample;
+            nwanted = cur_demod_samps_ - buf2->undersample;
 
             for (;;) {
                 complete = buf2->complete.load(std::memory_order_acquire);

@@ -15,7 +15,6 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            std::shared_ptr<PacketDemodulator> demodulator,
                            double slot_size,
                            double guard_size,
-                           double demod_overlap_size,
                            double p)
   : SlottedMAC(usrp,
                phy,
@@ -26,8 +25,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                modulator,
                demodulator,
                slot_size,
-               guard_size,
-               demod_overlap_size)
+               guard_size)
   , p_(p)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
@@ -62,17 +60,6 @@ void SlottedALOHA::sendTimestampedPacket(const Clock::time_point &t, std::shared
     tx_slot = t.get_real_secs() / slot_size_ + arrival_dist_(gen_);
 
     timestampPacket(Clock::time_point { tx_slot * slot_size_ }, std::move(pkt));
-}
-
-void SlottedALOHA::reconfigure(void)
-{
-    SlottedMAC::reconfigure();
-
-    // For ALOHA, we demodulate the whole slot, including the guard interval.
-    // This may lead to duplicate packets, but we may also not be
-    // time-synchronized yet, so our slots may be mis-aligned.
-    demodulator_->setWindowParameters(0.5*slot_size_*rx_rate_,
-                                      slot_size_*rx_rate_);
 }
 
 void SlottedALOHA::txWorker(void)

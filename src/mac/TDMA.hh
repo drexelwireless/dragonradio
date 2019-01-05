@@ -94,7 +94,6 @@ public:
          std::shared_ptr<PacketDemodulator> demodulator,
          double slot_size,
          double guard_size,
-         double demod_overlap_size,
          size_t nslots);
     virtual ~TDMA();
 

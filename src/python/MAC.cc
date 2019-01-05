@@ -85,7 +85,6 @@ void exportMACs(py::module &m)
                       std::shared_ptr<PacketDemodulator>,
                       double,
                       double,
-                      double,
                       size_t>())
         .def_property("slots",
             &TDMA::getSlots,
@@ -110,7 +109,6 @@ void exportMACs(py::module &m)
                       const Channels&,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
-                      double,
                       double,
                       double,
                       double>())

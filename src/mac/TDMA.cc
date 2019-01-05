@@ -16,7 +16,6 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PacketDemodulator> demodulator,
            double slot_size,
            double guard_size,
-           double demod_overlap_size,
            size_t nslots)
   : SlottedMAC(usrp,
                phy,
@@ -27,8 +26,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
                modulator,
                demodulator,
                slot_size,
-               guard_size,
-               demod_overlap_size)
+               guard_size)
   , slots_(*this, nslots)
   , superslots_(false)
 {

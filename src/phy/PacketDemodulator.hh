@@ -57,15 +57,6 @@ public:
         channels_ = channels;
     }
 
-    /** @brief Set demodulation parameters.
-     * @brief prev_samps The number of samples from the end of the previous slot
-     * to demodulate.
-     * @brief cur_samps The number of samples from the current slot to
-     * demodulate.
-     */
-    virtual void setWindowParameters(const size_t prev_samps,
-                                     const size_t cur_samps) = 0;
-
     /** @brief Add an IQ buffer to demodulate.
      * @param buf The IQ samples to demodulate
      */

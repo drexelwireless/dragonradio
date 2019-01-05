@@ -64,20 +64,53 @@ public:
 
     void setChannels(const Channels &channels) override;
 
-    void setWindowParameters(const size_t prev_samps,
-                             const size_t cur_samps) override;
-
     void push(std::shared_ptr<IQBuf> buf) override;
 
     void reconfigure(void) override;
 
+    /** @brief Return the portion of the end of the previous slot that we
+     * demodulate.
+     */
+    double getPrevDemod(void)
+    {
+        return prev_demod_;
+    }
+
+    /** @brief Set the portion of the end of the previous slot that we
+     * demodulate.
+     */
+    void setPrevDemod(double sec)
+    {
+        prev_demod_ = sec;
+        reconfigure();
+    }
+
+    /** @brief Return the portion of the current slot that we demodulate. */
+    double getCurDemod(void)
+    {
+        return cur_demod_;
+    }
+
+    /** @brief Set the portion of the current slot that we demodulate. */
+    void setCurDemod(double sec)
+    {
+        cur_demod_ = sec;
+        reconfigure();
+    }
+
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
-    bool getEnforceOrdering(void);
+    bool getEnforceOrdering(void)
+    {
+        return enforce_ordering_;
+    }
 
     /** @brief Set whether or not demodulation queue enforces packet order. */
-    void setEnforceOrdering(bool enforce);
+    void setEnforceOrdering(bool enforce)
+    {
+        enforce_ordering_ = enforce;
+    }
 
     /** @brief Stop demodulating. */
     void stop(void);
@@ -95,16 +128,29 @@ private:
     /** @brief PHY we use for demodulation. */
     std::shared_ptr<PHY> phy_;
 
+    /** @brief Length of a single TDMA slot, *including* guard (sec) */
+    double slot_size_;
+
+    /** @brief What portion of the end of the previous slot should we
+     * demodulate (sec)?
+     */
+    double prev_demod_;
+
+    /** @brief How many samples from the end of the previous slot should we
+     * demodulate?
+     */
+    size_t prev_demod_samps_;
+
+    /** @brief What portion of the current slot should we demodulate (sec)? */
+    double cur_demod_;
+
+    /** @brief How many samples from the current slot should we demodulate? */
+    size_t cur_demod_samps_;
+
     /** @brief Should packets be output in the order they were actually
      * received? Setting this to true increases latency!
      */
     bool enforce_ordering_;
-
-    /** @brief Number of samples to demod from tail of previous slot. */
-    size_t prev_samps_;
-
-    /** @brief Number of samples NOT to demod from tail of current slot. */
-    size_t cur_samps_;
 
     /** @brief Flag that is true when we should finish processing. */
     bool done_;
