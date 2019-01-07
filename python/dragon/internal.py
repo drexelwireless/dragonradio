@@ -76,7 +76,7 @@ class InternalProtoServer(UDPProtoServer):
 
             sched = np.array(msg.schedule.schedule).reshape((nchannels, nslots))
 
-            self.controller.installMACSchedule(sched)
+            self.controller.installMACSchedule(msg.schedule.seq, sched)
 
 class InternalProtoClient(UDPProtoClient):
     def __init__(self,

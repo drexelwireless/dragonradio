@@ -330,10 +330,14 @@ class Controller(TCPProtoServer):
             mandate.throughput = throughput
             mandate.bytes = bytes
 
-    def installMACSchedule(self, sched):
+    def installMACSchedule(self, seq, sched):
         """Install a new MAC schedule"""
         config = self.config
         radio = self.radio
+
+        if self.schedule_seq is not None and seq <= self.schedule_seq:
+            logger.info('Skipping schedule with sequence number %d (currently at %d)',
+                seq, self.schedule_seq)
 
         if not np.array_equal(sched, self.schedule):
             (nchannels, nslots) = sched.shape
@@ -346,6 +350,8 @@ class Controller(TCPProtoServer):
 
             radio.installMACSchedule(sched)
             self.schedule = sched
+
+        self.schedule_seq = seq
 
     def scheduleToVoxels(self, sched):
         """Determine voxel usage from schedule"""
@@ -440,8 +446,7 @@ class Controller(TCPProtoServer):
             # Create the schedule
             sched = radio.mkGreedyMACSchedule(NSLOTS, self.schedule_nodes, 3)
             if not np.array_equal(sched, self.schedule):
-                self.schedule_seq += 1
-                self.installMACSchedule(sched)
+                self.installMACSchedule(self.schedule_seq + 1, sched)
                 self.voxels = self.scheduleToVoxels(sched)
                 await self.distributeSchedule()
 
