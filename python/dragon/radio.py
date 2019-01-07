@@ -603,6 +603,9 @@ class Radio(object):
         # Add global work queue workers
         dragonradio.work_queue.addThreads(1)
 
+        # Set default TX channel
+        self.tx_channel = Channel(0.0, 0.0)
+
         # Create the USRP
         self.usrp = dragonradio.USRP(config.addr,
                                      self.frequency,
@@ -718,23 +721,21 @@ class Radio(object):
         #
         self.modulator = dragonradio.ParallelPacketModulator(self.net,
                                                              self.phy,
-                                                             self.tx_channels,
+                                                             self.tx_channel,
                                                              config.num_modulation_threads)
 
         self.demodulator = dragonradio.ParallelPacketDemodulator(self.net,
                                                                  self.phy,
-                                                                 self.rx_channels,
+                                                                 self.channels,
                                                                  config.num_demodulation_threads)
 
         self.modulator.tx_rate = self.usrp.tx_rate
-        self.modulator.channel_rate = self.channel_bandwidth
         self.modulator.upsamp_params.m = config.phy_upsamp_m
         self.modulator.upsamp_params.fc = config.phy_upsamp_fc
         self.modulator.upsamp_params.As = config.phy_upsamp_As
         self.modulator.upsamp_params.npfb = config.phy_upsamp_npfb
 
         self.demodulator.rx_rate = self.usrp.rx_rate
-        self.demodulator.channel_rate = self.channel_bandwidth
         self.demodulator.downsamp_params.m = config.phy_downsamp_m;
         self.demodulator.downsamp_params.fc = config.phy_downsamp_fc;
         self.demodulator.downsamp_params.As = config.phy_downsamp_As;
@@ -839,17 +840,6 @@ class Radio(object):
         if self.logger:
             self.logger.close()
 
-    @property
-    def rx_channels(self):
-        return self.channels
-
-    @property
-    def tx_channels(self):
-        if self.config.tx_upsample:
-            return self.channels
-        else:
-            return Channels([Channel(0.0, self.channel_bandwidth)])
-
     def configTXParamsSoftGain(self, tx_params):
         config = self.config
 
@@ -934,7 +924,6 @@ class Radio(object):
 
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
-        self.phy.channel_rate = cbw
 
     def configSmartControllerSlotSize(self):
         """
@@ -975,16 +964,11 @@ class Radio(object):
         self.configRatesAndChannels()
 
         self.modulator.tx_rate = self.usrp.tx_rate
-        self.modulator.channel_rate = self.channel_bandwidth
-        self.modulator.channels = self.tx_channels
 
         self.demodulator.rx_rate = self.usrp.rx_rate
-        self.demodulator.channel_rate = self.channel_bandwidth
-        self.demodulator.channels = self.rx_channels
+        self.demodulator.channels = self.channels
 
         if self.mac is not None:
-            self.mac.rx_channels = self.rx_channels
-            self.mac.tx_channels = self.tx_channels
             self.mac.reconfigure()
 
         if config.arq:
@@ -1006,8 +990,6 @@ class Radio(object):
                                             self.phy,
                                             self.controller,
                                             self.snapshot_collector,
-                                            self.rx_channels,
-                                            self.tx_channels,
                                             self.modulator,
                                             self.demodulator,
                                             config.slot_size,
@@ -1035,8 +1017,6 @@ class Radio(object):
                                     self.phy,
                                     self.controller,
                                     self.snapshot_collector,
-                                    self.rx_channels,
-                                    self.tx_channels,
                                     self.modulator,
                                     self.demodulator,
                                     config.slot_size,
@@ -1068,13 +1048,19 @@ class Radio(object):
         config = self.config
 
         if config.tx_upsample:
-            self.mac.tx_channel = channel
+            self.modulator.tx_channel = channel
         else:
-            fc = self.channels[channel].fc
+            fc = channel.fc
             logging.info("Setting TX frequency offset to %g", fc)
 
             self.usrp.tx_frequency = self.frequency + fc
-            self.mac.tx_channel = 0
+
+            self.modulator.tx_channel = Channel(0.0, self.channel_bandwidth)
+
+        # Allow the MAC to figure out the TX offset so snapshot self
+        # tranmissions are correctly logged
+        if self.mac is not None:
+            self.mac.reconfigure()
 
         self.tx_channel = channel
 
@@ -1137,7 +1123,7 @@ class Radio(object):
             slots = (sched[chan] == self.node_id)
             if np.any(slots):
                 self.mac.slots = slots
-                self.setTXChannel(chan)
+                self.setTXChannel(self.channels[chan])
                 return
 
         logging.error('No MAC schedule entry for radio %d', self.node_id)
@@ -1157,7 +1143,7 @@ class Radio(object):
 
             if config.tx_channel != None:
                 self.mac.slots[0] = True
-                self.setTXChannel(config.tx_channel)
+                self.setTXChannel(self.channels[config.tx_channel])
             else:
                 nchannels = len(self.channels)
                 sched = fullChannelMACSchedule(nchannels, 1, nodes, 3)
@@ -1168,7 +1154,7 @@ class Radio(object):
             self.configureTDMA(len(self.net))
             self.mac.slots[idx] = True
 
-            self.setTXChannel(0)
+            self.setTXChannel(self.channels[0])
 
     def synchronizeClock(self):
         """Use timestamps to syncrhonize our clock with the time master (the gateway)"""

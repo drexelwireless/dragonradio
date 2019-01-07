@@ -7,8 +7,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
                        std::shared_ptr<Controller> controller,
                        std::shared_ptr<SnapshotCollector> collector,
-                       const Channels &rx_channels,
-                       const Channels &tx_channels,
                        std::shared_ptr<PacketModulator> modulator,
                        std::shared_ptr<PacketDemodulator> demodulator,
                        double slot_size,
@@ -17,8 +15,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
         phy,
         controller,
         collector,
-        rx_channels,
-        tx_channels,
         modulator,
         demodulator)
   , slot_size_(slot_size)
@@ -37,6 +33,11 @@ void SlottedMAC::reconfigure(void)
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
     tx_full_slot_samps_ = tx_rate_*slot_size_;
     premod_samps_ = premod_slots_*tx_full_slot_samps_;
+
+    if (usrp_->getTXRate() == usrp_->getRXRate())
+        tx_fc_off_ = std::nullopt;
+    else
+        tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
 
     modulator_->setMaxPacketSize(tx_slot_samps_);
 }
@@ -126,6 +127,8 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
     nsamples = modulator_->pop(modBuf, maxSamples, overfill);
 
     if (!modBuf.empty()) {
+        Channel channel = modBuf.front()->channel;
+
         // Transmit the packets via the USRP
         if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
@@ -149,7 +152,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
                                  (*it)->pkt->tx_params->mcs.fec0,
                                  (*it)->pkt->tx_params->mcs.fec1,
                                  (*it)->pkt->tx_params->mcs.ms,
-                                 (*it)->fc,
+                                 tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
                                  tx_rate_,
                                  (*it)->pkt->size(),
                                  (*it)->samples);
@@ -173,9 +176,9 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
             snapshot_collector_->selfTX(Clock::to_mono_time(when),
                                         rx_rate_,
                                         tx_rate_,
-                                        demodulator_->getChannelRate(),
+                                        channel.bw,
                                         nsamples,
-                                        tx_fc_off_);
+                                        tx_fc_off_ ? *tx_fc_off_ :channel.fc);
     }
 
     return (nsamples > maxSamples) ? (nsamples - maxSamples) : 0;

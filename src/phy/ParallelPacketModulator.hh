@@ -8,6 +8,7 @@
 
 #include "PacketModulator.hh"
 #include "liquid/Resample.hh"
+#include "phy/Channel.hh"
 #include "phy/ModParams.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
@@ -18,9 +19,11 @@ class ParallelPacketModulator : public PacketModulator, public Element
 public:
     ParallelPacketModulator(std::shared_ptr<Net> net,
                             std::shared_ptr<PHY> phy,
-                            const Channels &channels,
+                            const Channel &tx_channel,
                             size_t nthreads);
     virtual ~ParallelPacketModulator();
+
+    double getMaxTXUpsampleRate(void) override;
 
     virtual void modulateOne(std::shared_ptr<NetPacket> pkt,
                              ModPacket &mpkt) override;
@@ -32,6 +35,19 @@ public:
                bool overfill) override;
 
     void reconfigure(void) override;
+
+    /** @brief Get TX channel. */
+    Channel getTXChannel(void)
+    {
+        return tx_channel_;
+    }
+
+    /** @brief Set TX channel. */
+    void setTXChannel(const Channel &channel)
+    {
+        tx_channel_ = channel;
+        reconfigure();
+    }
 
     /** @brief Stop modulating. */
     void stop(void);
@@ -51,6 +67,9 @@ private:
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
+
+    /** @brief TX channel */
+    Channel tx_channel_;
 
     /** @brief Reconfiguration flags */
     std::vector<std::atomic<bool>> mod_reconfigure_;
@@ -81,6 +100,15 @@ private:
 
     /* @brief Parameters for one-off modulation */
     ModParams one_modparams_;
+
+    /** @brief Get TX upsample rate. */
+    double getTXUpsampleRate(void)
+    {
+        if (tx_channel_.bw == 0.0)
+            return 1.0;
+        else
+            return tx_rate_/(phy_->getMinRXRateOversample()*tx_channel_.bw);
+    }
 
     /** @brief Thread modulating packets */
     void modWorker(std::atomic<bool> &reconfig);

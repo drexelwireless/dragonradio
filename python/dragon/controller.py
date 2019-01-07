@@ -531,7 +531,8 @@ class Controller(TCPProtoServer):
             await asyncio.sleep(delta)
 
             if not self.bootstrapped:
-                radio.setTXChannel(random.randint(0, len(radio.channels)-1))
+                chanidx = random.randint(0, len(radio.channels)-1)
+                radio.setTXChannel(radio.channels[chanidx])
 
             radio.controller.broadcastHello()
 

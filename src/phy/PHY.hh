@@ -74,9 +74,9 @@ public:
         virtual ~Demodulator() = default;
 
         /** @brief Reset the internal state of the demodulator.
-         * @param shift The center frequency of the demodulated data.
+         * @param channel The channel being demodulated.
          */
-        virtual void reset(double shift) = 0;
+        virtual void reset(const Channel &channel) = 0;
 
         /** @brief Set timestamp for demodulation
          * @param timestamp The timestamp for future samples.
@@ -106,7 +106,6 @@ public:
       : node_id_(node_id)
       , rx_rate_(0.0)
       , tx_rate_(0.0)
-      , chan_rate_(0.0)
     {
     }
 
@@ -148,34 +147,6 @@ public:
     {
         tx_rate_ = rate;
         reconfigureTX();
-    }
-
-    /** @brief Get the channel sample rate. */
-    virtual double getChannelRate(void)
-    {
-        return chan_rate_;
-    }
-
-    /** @brief Set the channel sample rate.
-     * @param rate The rate.
-     */
-    virtual void setChannelRate(double rate)
-    {
-        chan_rate_ = rate;
-        reconfigureRX();
-        reconfigureTX();
-    }
-
-    /** @brief Get TX upsample rate. */
-    virtual double getTXUpsampleRate(void)
-    {
-        return tx_rate_/(getMinTXRateOversample()*chan_rate_);
-    }
-
-    /** @brief Get RX downsample rate. */
-    virtual double getRXDownsampleRate(void)
-    {
-        return (getMinRXRateOversample()*chan_rate_)/rx_rate_;
     }
 
     /** @brief Return the minimum oversample rate (with respect to PHY
@@ -220,9 +191,6 @@ protected:
 
     /** @brief TX sample rate */
     double tx_rate_;
-
-    /** @brief Per-channel sample rate */
-    double chan_rate_;
 
     /** @brief Modulators */
     std::list<std::weak_ptr<Modulator>> modulators_;

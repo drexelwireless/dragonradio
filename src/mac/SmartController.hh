@@ -485,7 +485,11 @@ public:
      */
     size_t getMaxPacketsPerSlot(const TXParams &p)
     {
-        return slot_size_/phy_->getModulatedSize(p, rc.mtu + mcu_ + sizeof(struct ether_header));
+        size_t maxPacketSize = rc.mtu + mcu_ + sizeof(struct ether_header);
+        size_t maxModSize = phy_->getModulatedSize(p, maxPacketSize);
+        double maxUpsampleRate = mac_->getModulator().getMaxTXUpsampleRate();
+
+        return slot_size_/(maxUpsampleRate*maxModSize);
     }
 
     bool pull(std::shared_ptr<NetPacket>& pkt) override;

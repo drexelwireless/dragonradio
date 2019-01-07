@@ -28,9 +28,6 @@ void exportPHYs(py::module &m)
         .def_property("tx_rate",
             &PHY::getTXRate,
             &PHY::setTXRate)
-        .def_property("channel_rate",
-            &PHY::getChannelRate,
-            &PHY::setChannelRate)
         ;
 
     // Export class LiquidPHY to Python

@@ -50,7 +50,7 @@ public:
         Demodulator& operator=(const Demodulator&) = delete;
         Demodulator& operator=(Demodulator&&) = delete;
 
-        void reset(double shift) override final;
+        void reset(const Channel &channel) override final;
 
         void timestamp(const MonoClock::time_point &timestamp,
                        std::optional<size_t> snapshot_off,
@@ -68,8 +68,8 @@ public:
         /** @brief Callback for received packets. */
         std::function<void(std::unique_ptr<RadioPacket>)> callback_;
 
-        /** @brief Frequency shift of demodulated data */
-        double shift_;
+        /** @brief The channel being demodulated */
+        Channel channel_;
 
         /** @brief Rate conversion from samples to full RX rate */
         /** This is used internally purely to properly timestamp packets. */
