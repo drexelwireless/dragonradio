@@ -645,14 +645,7 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
 {
     assert(entry.pkt);
 
-    // We drop a packet if:
-    // 1) It is NOT a SYN packet, because in that case it is needed to initiate
-    //    a connection. We always retrasmit SYN packets.
-    // 2) It has exceeded the maximum number of allowed retransmissions.
-    // 3) OR it has passed its deadline.
-    if (!entry.pkt->isFlagSet(kSYN) &&
-        (   (max_retransmissions_ && entry.nretrans >= *max_retransmissions_)
-         || entry.pkt->deadlinePassed(MonoClock::now())))
+    if (entry.canDrop(max_retransmissions_))
         drop(entry);
     else
         retransmit(entry);
