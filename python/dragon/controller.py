@@ -193,6 +193,7 @@ class Controller(TCPProtoServer):
 
             if self.is_gateway:
                 self.loop.create_task(self.bootstrapNetwork())
+                self.loop.create_task(self.distributeScheduleViaBroadcast())
 
             self.state = remote.ACTIVE
 
@@ -458,6 +459,30 @@ class Controller(TCPProtoServer):
                 await node.internal_client.sendSchedule(self.schedule_seq,
                                                         self.schedule_nodes,
                                                         self.schedule)
+
+        # Now broadcast a few times for robustness
+        for i in range(0, 10):
+            await asyncio.sleep(0.5)
+            await self.broadcastSchedule()
+
+    async def distributeScheduleViaBroadcast(self):
+        """Distribute the TDMA schedule via broadcast"""
+
+        while not self.done:
+            await asyncio.sleep(10)
+            await self.broadcastSchedule()
+
+    async def broadcastSchedule(self):
+        """Broadcast the TDMA schedule"""
+        config = self.config
+        radio = self.radio
+
+        if self.schedule is None:
+            return
+
+        await self.internal_client.sendSchedule(self.schedule_seq,
+                                                self.schedule_nodes,
+                                                self.schedule)
 
     async def bootstrapNetwork(self):
         loop = self.loop
