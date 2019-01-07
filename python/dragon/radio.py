@@ -4,6 +4,7 @@ import configparser
 import io
 import libconf
 import logging
+import math
 import numpy as np
 import os
 from pprint import pformat
@@ -1195,8 +1196,9 @@ class Radio(object):
 
             logging.debug("TIMESYNC: regression parameters: sigma=%f; delta=%f; epsilon=%f", sigma, delta, epsilon)
 
-            dragonradio.clock.offset = dragonradio.MonoTimePoint(delta)
-            dragonradio.clock.skew = sigma
+            if math.isfinite(delta) and math.isfinite(sigma):
+                dragonradio.clock.offset = dragonradio.MonoTimePoint(delta)
+                dragonradio.clock.skew = sigma
 
     def timetampRegression(self, echoed, master):
         """Perform a linear regression on timestamps to determine clock skew and delta"""
