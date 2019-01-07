@@ -453,7 +453,15 @@ class Controller(TCPProtoServer):
         if self.schedule is None:
             return
 
-        for node_id in self.schedule_nodes:
+        # Only distribute the MAC schedule to nodes with a slot in the schedule.
+        # Otherwise we get stuck waiting for an ACK to our SYN and the
+        # destination will never have an opportunity to see a later packet
+        # containing the schedule.
+        nodes_with_slot = set(self.schedule.flatten())
+        if 0 in nodes_with_slot:
+            nodes_with_slot.remove(0)
+
+        for node_id in nodes_with_slot:
             node = self.nodes[node_id]
             if hasattr(node, 'internal_client'):
                 await node.internal_client.sendSchedule(self.schedule_seq,
