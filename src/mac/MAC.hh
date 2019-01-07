@@ -87,11 +87,12 @@ public:
         }
 
         tx_channel_ = channel;
-        logEvent("MAC: tx_channel=%lu (freq offset = %f)",
-            channel,
-            getTXShift());
 
         modulator_->setTXChannel(channel);
+
+        logEvent("MAC: Set TX channel: channel=%lu; freq offset = %f",
+            channel,
+            getTXShift());
     }
 
     /** @brief Get the frequency shift to use during transmission
@@ -136,10 +137,10 @@ protected:
     /** @brief Our snapshot collector */
     std::shared_ptr<SnapshotCollector> snapshot_collector_;
 
-    /** @brief RX channels, given as shift from center frequency */
+    /** @brief RX channels */
     Channels rx_channels_;
 
-    /** @brief TX channels, given as shift from center frequency */
+    /** @brief TX channels */
     Channels tx_channels_;
 
     /** @brief Our packet modulator. */
@@ -154,7 +155,7 @@ protected:
     /** @brief TX rate */
     double tx_rate_;
 
-    /** @brief Transmission channel, given hift from center frequency */
+    /** @brief Transmission channel */
     Channels::size_type tx_channel_;
 
     /** @brief Mutex for timestamped packet */

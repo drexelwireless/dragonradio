@@ -66,8 +66,8 @@ public:
                    SelfTX pkt);
 
     void logRecv(const Clock::time_point& t,
-                 uint32_t start_samples,
-                 uint32_t end_samples,
+                 int32_t start_samples,
+                 int32_t end_samples,
                  bool header_valid,
                  bool payload_valid,
                  const Header& hdr,
@@ -144,8 +144,8 @@ private:
                     SelfTX pkt);
 
     void logRecv_(const Clock::time_point& t,
-                  uint32_t start_samples,
-                  uint32_t end_samples,
+                  int32_t start_samples,
+                  int32_t end_samples,
                   bool header_valid,
                   bool payload_valid,
                   const Header& hdr,

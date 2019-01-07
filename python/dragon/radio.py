@@ -1045,8 +1045,6 @@ class Radio(object):
     def setTXChannel(self, channel):
         config = self.config
 
-        self.tx_channel = channel
-
         if config.tx_upsample:
             self.mac.tx_channel = channel
         else:
@@ -1054,6 +1052,9 @@ class Radio(object):
             logging.info("Setting TX frequency offset to %g", fc)
 
             self.usrp.tx_frequency = self.frequency + fc
+            self.mac.tx_channel = 0
+
+        self.tx_channel = channel
 
     def mkGreedyMACSchedule(self, nslots, nodes, k):
         """Create a greedy schedule that gives each node its own channel.
@@ -1268,8 +1269,8 @@ class Radio(object):
             # Stop collecting slots
             collector.stop()
 
-            # Wait 200ms for remaining packets in snapshot to be demodulated and get
-            # the snapshot
+            # Wait 200ms for remaining packets in snapshot to be demodulated and
+            # get the snapshot
             await asyncio.sleep(0.2)
             snapshot = collector.finish()
 
@@ -1289,7 +1290,7 @@ class Radio(object):
 
                     self.logger.logSnapshot(iqbuf)
                     for e in snapshot.selftx:
-                        self.logger.logSelfTX(t, e)
+                        self.logger.logSelfTX(snapshot.timestamp.wall_time, e)
 
             await asyncio.sleep(config.snapshot_period)
 
