@@ -981,9 +981,10 @@ class Radio(object):
         self.demodulator.channel_rate = self.channel_bandwidth
         self.demodulator.channels = self.rx_channels
 
-        self.mac.rx_channels = self.rx_channels
-        self.mac.tx_channels = self.tx_channels
-        self.mac.reconfigure()
+        if self.mac is not None:
+            self.mac.rx_channels = self.rx_channels
+            self.mac.tx_channels = self.tx_channels
+            self.mac.reconfigure()
 
         if config.arq:
             self.controller.resetMCSTransitionProbabilities()
@@ -995,7 +996,7 @@ class Radio(object):
             self.controller.mac = None
 
         self.mac.stop()
-        del self.mac
+        self.mac = None
 
     def configureALOHA(self):
         self.mac = dragonradio.SlottedALOHA(self.usrp,
