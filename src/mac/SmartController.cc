@@ -176,8 +176,12 @@ get_packet:
         if (pkt->seq > max)
             sendw.max.store(pkt->seq, std::memory_order_release);
 
-        // Apply TX params
-        applyTXParams(*pkt, dest.tx_params, dest.g);
+        // Apply TX params. If the destination can transmit, proceed as usual.
+        // Otherwise, use the default MCS.
+        if (dest.can_transmit)
+            applyTXParams(*pkt, dest.tx_params, dest.g);
+        else
+            applyTXParams(*pkt, &net_->tx_params[mcsidx_init_], dest.g);
     } else
         // Apply broadcast TX params
         applyTXParams(*pkt, &broadcast_tx_params, ack_gain.getLinearGain());
@@ -484,8 +488,8 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
         return;
     }
 
-    // Record the packet error
-    if (sendw.mcsidx >= entry.mcsidx) {
+    // Record the packet error as long as receiving node can transmit
+    if (sendw.node.can_transmit && sendw.mcsidx >= entry.mcsidx) {
         txFailure(sendw.node);
 
         logEvent("AMC: txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
@@ -504,6 +508,9 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 void SmartController::ack(RecvWindow &recvw)
 {
     if (!netq_)
+        return;
+
+    if (!net_->me().can_transmit)
         return;
 
     // Create an ACK-only packet. Why don't we set the ACK field here!? Because
@@ -530,6 +537,9 @@ void SmartController::ack(RecvWindow &recvw)
 void SmartController::nak(NodeId node_id, Seq seq)
 {
     if (!netq_)
+        return;
+
+    if (!net_->me().can_transmit)
         return;
 
     // Get the receive window
@@ -588,6 +598,9 @@ void SmartController::broadcastHello(void)
     if (!netq_)
         return;
 
+    if (!net_->me().can_transmit)
+        return;
+
     dprintf("ARQ: broadcast HELLO");
 
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
@@ -635,8 +648,7 @@ void SmartController::broadcastHello(void)
         pkt->tx_params = &broadcast_tx_params;
         pkt->g = broadcast_tx_params.g_0dBFS.getValue();
         mac_->sendTimestampedPacket(Clock::now() + rc.timestamp_delay, std::move(pkt));
-    } else
-        netq_->push_hi_front(std::move(pkt));
+    }
 }
 
 void SmartController::resetMCSTransitionProbabilities(void)
@@ -666,6 +678,9 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
  */
 void SmartController::retransmit(SendWindow::Entry &entry)
 {
+    if (!entry.sendw.node.can_transmit)
+        return;
+
     if (!entry.pkt) {
         logEvent("AMC: attempted to retransmit ACK'ed packet");
         return;
@@ -686,22 +701,29 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // don't cancel it, we can end up retransmitting the same packet twice,
     // e.g., once due to the explicit NAK, and again due to a retransmission
     // timeout.
+    //
+    // The one case where we DO start the transmit timer here is when the MAC
+    // cannot currently send a packet, in which case we DO NOT re-queue the
+    // packet, but instead just restart the retransmission timer.
     timer_queue_.cancel(entry);
 
-    // We need to make an explicit new reference to the shared_ptr because push
-    // takes ownership of its argument.
-    std::shared_ptr<NetPacket> pkt = entry;
+    if (net_->me().can_transmit) {
+        // We need to make an explicit new reference to the shared_ptr because
+        // push takes ownership of its argument.
+        std::shared_ptr<NetPacket> pkt = entry;
 
-    // Clear any control information in the packet
-    pkt->clearControl();
+        // Clear any control information in the packet
+        pkt->clearControl();
 
-    // Mark the packet as a retransmission
-    pkt->setInternalFlag(kRetransmission);
+        // Mark the packet as a retransmission
+        pkt->setInternalFlag(kRetransmission);
 
-    // Put the packet on the high-priority network queue. The ACK and MCS will
-    // be set properly upon retransmission.
-    if (netq_)
-        netq_->push_hi_back(std::move(pkt));
+        // Put the packet on the high-priority network queue. The ACK and MCS
+        // will be set properly upon retransmission.
+        if (netq_)
+            netq_->push_hi_back(std::move(pkt));
+    } else
+        startRetransmissionTimer(entry);
 }
 
 void SmartController::drop(SendWindow::Entry &entry)

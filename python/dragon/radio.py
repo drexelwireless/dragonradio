@@ -1106,6 +1106,15 @@ class Radio(object):
         """
         logging.debug('Installing MAC schedule:\n%s', sched)
 
+        # Determine which nodes are allowed to transmit
+        nodes_with_slot = set(sched.flatten())
+        if 0 in nodes_with_slot:
+            nodes_with_slot.remove(0)
+
+        for (node_id, node) in self.net.items():
+            node.can_transmit = node_id in nodes_with_slot
+
+        # Install the MAC schedule.
         (nchannels, nslots) = sched.shape
 
         # Look for a channel where we have a slot. If there is more than one
