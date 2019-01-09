@@ -444,7 +444,8 @@ class Controller(TCPProtoServer):
             self.schedule_nodes = [radio.node_id] + self.schedule_nodes
 
             # Create the schedule
-            sched = radio.mkGreedyMACSchedule(NSLOTS, self.schedule_nodes, 3)
+            nchannels = len(radio.channels)
+            sched = dragon.radio.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
             if not np.array_equal(sched, self.schedule):
                 self.installMACSchedule(self.schedule_seq + 1, sched)
                 self.voxels = self.scheduleToVoxels(sched)
