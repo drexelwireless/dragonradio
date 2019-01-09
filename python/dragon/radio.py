@@ -16,7 +16,6 @@ import sys
 
 import dragonradio
 from dragonradio import Channels, MCS, TXParams, TXParamsVector
-import dragon.internal
 
 logger = logging.getLogger('radio')
 
@@ -1156,27 +1155,6 @@ class Radio(object):
             self.mac.slots[idx] = True
 
             self.setTXChannel(0)
-
-    def setMandatedOutcomes(self, mandates):
-        config = self.config
-
-        allowed = set([dragon.internal.INTERNAL_PORT])
-        mandateMap = dragonradio.MandatedOutcomeMap()
-
-        for (flow, m) in mandates.items():
-            allowed.add(flow)
-            mandateMap[flow] = dragonradio.MandatedOutcome(config.measurement_period,
-                                                           0.0,
-                                                           m.min_throughput_bps,
-                                                           m.max_latency_s,
-                                                           m.file_transfer_deadline_s)
-
-        self.flowsink.mandates = mandateMap
-        self.flowsource.mandates = mandateMap
-
-        self.netfirewall.allow_broadcasts = True
-        self.netfirewall.allowed = allowed
-        self.netfirewall.enabled = True
 
     def synchronizeClock(self):
         """Use timestamps to syncrhonize our clock with the time master (the gateway)"""

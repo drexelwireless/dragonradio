@@ -13,6 +13,7 @@ import dragonradio
 
 from dragon.collab import CollabAgent, MandatedOutcome, Node, Voxel
 from dragon.gpsd import GPSDClient
+import dragon.internal
 from dragon.internal import InternalProtoClient, InternalProtoServer
 from dragon.protobuf import *
 import dragon.radio
@@ -576,18 +577,55 @@ class Controller(TCPProtoServer):
         radio = self.radio
 
         # Update mandated outcomes
-        self.mandated_outcomes = {}
+        mandates = {}
 
         for goal in json.loads(req.update_mandated_outcomes.goals):
             outcome = MandatedOutcome(json=goal)
-            self.mandated_outcomes[outcome.flow_uid] = outcome
+            mandates[outcome.flow_uid] = outcome
 
-        self.radio.setMandatedOutcomes(self.mandated_outcomes)
+        self.setMandatedOutcomes(mandates)
 
         resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Mandated outcomes updated'
         return resp
+
+    def setMandatedOutcomes(self, mandates):
+        """Set our mandated outcomes and update the flowsink and flowsource"""
+        config = self.config
+        radio = self.radio
+
+        self.mandated_outcomes = mandates
+
+        # Create a MandatedOutcomeMap for flow source and sink components
+        mandateMap = dragonradio.MandatedOutcomeMap()
+
+        for (flow, m) in mandates.items():
+            mandateMap[flow] = dragonradio.MandatedOutcome(config.measurement_period,
+                                                           0.0,
+                                                           m.min_throughput_bps,
+                                                           m.max_latency_s,
+                                                           m.file_transfer_deadline_s)
+
+
+        radio.flowsink.mandates = mandateMap
+        radio.flowsource.mandates = mandateMap
+
+        self.setAllowedFlows()
+
+    def setAllowedFlows(self):
+        """Decide which flows are allowed"""
+        config = self.config
+        radio = self.radio
+
+        allowed = set([dragon.internal.INTERNAL_PORT])
+
+        for (flow, m) in self.mandated_outcomes.items():
+            allowed.add(flow)
+
+        radio.netfirewall.allow_broadcasts = True
+        radio.netfirewall.allowed = allowed
+        radio.netfirewall.enabled = True
 
     @handle('Request.update_environment')
     def updateEnvironment(self, req):
