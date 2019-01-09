@@ -53,6 +53,9 @@ struct Node {
     /** @brief Flag indicating whether or not this node is the gateway */
     bool is_gateway;
 
+    /** @brief Flag indicating whether or not this node can transmit */
+    bool can_transmit;
+
     /** @brief Current packet sequence number for this destination */
     Seq seq;
 

@@ -24,6 +24,7 @@ const char *kExtIPNetmask = "255.255.0.0";
 Node::Node(NodeId id, TXParams *tx_params)
   : id(id)
   , is_gateway(false)
+  , can_transmit(true)
   , seq(0)
   , tx_params(tx_params)
   , g(1.0)
