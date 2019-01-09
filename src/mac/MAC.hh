@@ -32,6 +32,14 @@ public:
     MAC& operator =(const MAC&) = delete;
     MAC& operator =(MAC&&) = delete;
 
+    /** @brief Can this MAC transmit
+     * @return true if we can transmit, false otherwise
+     */
+    virtual bool canTransmit(void) const
+    {
+        return can_transmit_;
+    }
+
     /** @brief Get the RX channels
      * @return The RX channels
      */
@@ -136,6 +144,11 @@ protected:
 
     /** @brief Our snapshot collector */
     std::shared_ptr<SnapshotCollector> snapshot_collector_;
+
+    /** @brief Flag indicating whether or not we can transmit */
+    /** This is used, in particular, for the TDMA MAC, which may not have a slot
+     */
+    bool can_transmit_;
 
     /** @brief RX channels */
     Channels rx_channels_;
