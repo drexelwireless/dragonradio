@@ -42,7 +42,10 @@ using timestamp_vector = std::vector<std::pair<MonoClock::time_point, MonoClock:
 
 struct Node {
     Node(NodeId id, TXParams *tx_params);
-    ~Node();
+
+    Node() = delete;
+
+    ~Node() = default;
 
     /** @brief Node ID */
     NodeId id;
@@ -99,7 +102,9 @@ public:
 
     Net(std::shared_ptr<TunTap> tuntap,
         NodeId nodeId);
-    ~Net();
+    Net() = delete;
+
+    ~Net() = default;
 
     Net(const Net&) = delete;
     Net(Net&&) = delete;
@@ -108,22 +113,46 @@ public:
     Net& operator=(Net&&) = delete;
 
     /** @brief Get this node's ID */
-    NodeId getMyNodeId(void);
+    NodeId getMyNodeId(void)
+    {
+        return my_node_id_;
+    }
 
     /** @brief Get the number of nodes in the network */
-    map_type::size_type size(void);
+    map_type::size_type size(void)
+    {
+        std::lock_guard<std::mutex> lock(nodes_mutex_);
+
+        return nodes_.size();
+    }
 
     /** @brief Return true if node is in the network, false otherwise */
-    bool contains(NodeId nodeId);
+    bool contains(NodeId nodeId)
+    {
+        std::lock_guard<std::mutex> lock(nodes_mutex_);
+
+        return nodes_.count(nodeId) == 1;
+    }
 
     /** @brief Return an iterator to the beginning of nodes. */
-    map_type::iterator begin(void);
+    map_type::iterator begin(void)
+    {
+        return nodes_.begin();
+    }
 
     /** @brief Return an iterator to the end of nodes. */
-    map_type::iterator end(void);
+    map_type::iterator end(void)
+    {
+        return nodes_.end();
+    }
 
     /** @brief Get the entry for this node */
-    Node &me(void);
+    Node &me(void)
+    {
+        std::lock_guard<std::mutex> lock(nodes_mutex_);
+
+        return nodes_.at(getMyNodeId());
+    }
 
     /** @brief Get the node that is the time master */
     std::optional<NodeId> getTimeMaster(void);

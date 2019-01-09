@@ -34,56 +34,12 @@ Node::Node(NodeId id, TXParams *tx_params)
 {
 }
 
-Node::~Node()
-{
-}
-
 Net::Net(std::shared_ptr<TunTap> tuntap,
          NodeId nodeId)
   : tx_params(1)
   , tuntap_(tuntap)
   , my_node_id_(nodeId)
 {
-}
-
-Net::~Net()
-{
-}
-
-NodeId Net::getMyNodeId(void)
-{
-    return my_node_id_;
-}
-
-Net::map_type::size_type Net::size(void)
-{
-    std::lock_guard<std::mutex> lock(nodes_mutex_);
-
-    return nodes_.size();
-}
-
-bool Net::contains(NodeId nodeid)
-{
-    std::lock_guard<std::mutex> lock(nodes_mutex_);
-
-    return nodes_.count(nodeid) == 1;
-}
-
-Net::map_type::iterator Net::begin(void)
-{
-    return nodes_.begin();
-}
-
-Net::map_type::iterator Net::end(void)
-{
-    return nodes_.end();
-}
-
-Node &Net::me(void)
-{
-    std::lock_guard<std::mutex> lock(nodes_mutex_);
-
-    return nodes_.at(getMyNodeId());
 }
 
 std::optional<NodeId> Net::getTimeMaster(void)
