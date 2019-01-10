@@ -1,3 +1,5 @@
+#include "net/FIFO.hh"
+#include "net/LIFO.hh"
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
