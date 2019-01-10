@@ -108,7 +108,10 @@ get_packet:
 
         // The packet we are ACK'ing had better be no more than 1 more than the
         // max sequence number we've received.
-        assert(recvw.ack <= recvw.max + 1);
+        if(recvw.ack > recvw.max + 1)
+            logEvent("ARQ: INVARIANT VIOLATED: received packet outside window: ack=%u; mac=%u",
+                (unsigned) recvw.ack,
+                (unsigned) recvw.max);
 
         pkt->setFlag(kACK);
         ehdr.ack = recvw.ack;
@@ -147,9 +150,15 @@ get_packet:
         if (pkt->seq < unack)
             goto get_packet;
 
-        // This asserts that the sequence number of the packet we are sending is
+        // This checks that the sequence number of the packet we are sending is
         // in our send window.
-        assert(pkt->seq >= unack && pkt->seq < unack + sendw.win);
+        if (pkt->seq < unack || pkt->seq >= unack + sendw.win) {
+            logEvent("ARQ: INVARIANT VIOLATED: asked to send packet outside window: seq=%u; unack=%u; win=%u",
+                (unsigned) pkt->seq,
+                (unsigned) unack,
+                (unsigned) sendw.win);
+            goto get_packet;
+        }
 
         // Save the packet in our send window.
         sendw[pkt->seq] = pkt;
@@ -1275,7 +1284,14 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
             // Otherwise it had better be in our window becasue we added it back
             // when our window expanded due to an ACK!
-            assert(pkt->seq < unack + sendw.win);
+            if(pkt->seq >= unack + sendw.win) {
+                logEvent("ARQ: INVARIANT VIOLATED: got packet outside window: seq=%u; unack=%u; win=%u",
+                    (unsigned) pkt->seq,
+                    (unsigned) unack,
+                    (unsigned) sendw.win);
+
+                continue;
+            }
 
             // See if this packet should be dropped. The network queue won't
             // drop a packet with a sequence number, because we need to drop a
@@ -1286,7 +1302,6 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
                 pkt.reset();
                 continue;
             }
-
 
             return true;
         }
