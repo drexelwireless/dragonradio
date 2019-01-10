@@ -869,25 +869,16 @@ void SmartController::handleCtrlTimestampEchos(Node &node, std::shared_ptr<Radio
     }
 }
 
-inline bool apendSelectiveACK(size_t mtu,
-                              RecvWindow &recvw,
+inline void apendSelectiveACK(RecvWindow &recvw,
                               std::shared_ptr<NetPacket>& pkt,
                               Seq begin,
                               Seq end)
 {
-    if (pkt->size() + ctrlsize(ControlMsg::Type::kSelectiveAck) < mtu) {
-        logEvent("ARQ: send selective ack: node=%u; seq=[%u, %u)",
-            (unsigned) recvw.node.id,
-            (unsigned) begin,
-            (unsigned) end);
-        pkt->appendSelectiveAck(begin, end);
-        return true;
-    } else {
-        logEvent("ARQ: OUT OF SPACE for selective ack: node=%u; size=%lu",
-            (unsigned) recvw.node.id,
-            pkt->size());
-        return false;
-    }
+    logEvent("ARQ: send selective ack: node=%u; seq=[%u, %u)",
+        (unsigned) recvw.node.id,
+        (unsigned) begin,
+        (unsigned) end);
+    pkt->appendSelectiveAck(begin, end);
 }
 
 void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt)
@@ -898,6 +889,7 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
     bool in_run = false; // Are we in the middle of a run of ACK's?
     Seq  begin = recvw.ack;
     Seq  end = recvw.ack;
+    int  nsacks = 0;
 
     // The ACK in the (extended) header will handle ACK'ing recvw.ack, so we
     // need to start looking for selective ACK's at recvw.ack + 1. Recall that
@@ -915,8 +907,8 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
             end = seq;
         } else {
             if (in_run) {
-                if (!apendSelectiveACK(rc.mtu + mcu_, recvw, pkt, begin, end + 1))
-                    return;
+                apendSelectiveACK(recvw, pkt, begin, end + 1);
+                nsacks++;
 
                 in_run = false;
             }
@@ -925,16 +917,45 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
 
     // Close out any final run
     if (in_run) {
-        if (!apendSelectiveACK(rc.mtu + mcu_, recvw, pkt, begin, end + 1))
-            return;
+        apendSelectiveACK(recvw, pkt, begin, end + 1);
+        nsacks++;
     }
 
     // If we cannot ACK recvw.max, add an empty selective ACK range marking then
     // end up our received packets. This will inform the sender that the last
     // stretch of packets WAS NOT received.
     if (end < recvw.max) {
-        if (!apendSelectiveACK(rc.mtu + mcu_, recvw, pkt, recvw.max+1, recvw.max+1))
-            return;
+        apendSelectiveACK(recvw, pkt, recvw.max+1, recvw.max+1);
+        nsacks++;
+    }
+
+    // If we have too many selective ACK's, keep as many as we can, but keep the
+    // *latest* selective ACKs.
+    if (pkt->size() > rc.mtu + mcu_) {
+        // How many SACK's do we need to remove?
+        size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
+        int    nremove;
+        int    nkeep;
+
+        nremove = (pkt->size() - (rc.mtu + mcu_) + sack_size - 1) /
+                      sack_size;
+
+        if (nremove > nsacks)
+            nremove = nsacks;
+
+        if (nremove > 0) {
+            nkeep = nsacks - nremove;
+
+            logEvent("ARQ: pruning SACKs: node=%u; nremove=%d; nkeep=%d",
+                (unsigned) recvw.node.id,
+                nremove,
+                nkeep);
+
+            unsigned char *sack_start = pkt->data() + pkt->size() -
+                                            nsacks*sack_size;
+
+            memmove(sack_start, sack_start+nremove*sack_size, nkeep*sack_size);
+        }
     }
 
     // Mark this packet as containing a selective ACK
