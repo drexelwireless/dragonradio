@@ -8,7 +8,7 @@ from dragon.protobuf import *
 from dragon.internal_pb2 import *
 import dragon.internal_pb2 as internal
 
-INTERNAL_PORT = 8889
+INTERNAL_PORT = 4096
 
 #
 # Monkey patch Timestamp class to support setting timestamps using
