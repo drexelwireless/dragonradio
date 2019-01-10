@@ -44,12 +44,6 @@ public:
     /** @brief Push an element onto the back of the high-priority queue. */
     virtual void push_hi_back(T&& item) = 0;
 
-    /** @brief Splice a list of elements onto the the high-priority queue. */
-    virtual void splice_hi(std::list<T>& items) = 0;
-
-    /** @brief Splice a list of elements onto the the high-priority queue. */
-    virtual void splice_hi(std::list<T>& items, const_iterator first, const_iterator last) = 0;
-
     /** @brief Pop an element from the queue. */
     virtual bool pop(T& val) = 0;
 
@@ -152,24 +146,6 @@ public:
         }
 
         cond_.notify_one();
-    }
-
-    virtual void splice_hi(std::list<T>& items) override
-    {
-        std::unique_lock<std::mutex> lock(m_);
-
-        hiq_.splice(hiq_.end(), items);
-
-        cond_.notify_all();
-    }
-
-    virtual void splice_hi(std::list<T>& items, const_iterator first, const_iterator last) override
-    {
-        std::unique_lock<std::mutex> lock(m_);
-
-        hiq_.splice(hiq_.end(), items, first, last);
-
-        cond_.notify_all();
     }
 
     virtual void stop(void) override
