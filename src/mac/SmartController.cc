@@ -531,7 +531,7 @@ void SmartController::ack(RecvWindow &recvw)
     // Append selective ACK control messages
     appendCtrlACK(recvw, pkt);
 
-    netq_->push_hi_front(std::move(pkt));
+    netq_->push_hi(std::move(pkt));
 }
 
 void SmartController::nak(NodeId node_id, Seq seq)
@@ -590,7 +590,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
     // Append selective ACK control messages
     appendCtrlACK(recvw, pkt);
 
-    netq_->push_hi_front(std::move(pkt));
+    netq_->push_hi(std::move(pkt));
 }
 
 void SmartController::broadcastHello(void)
@@ -718,10 +718,10 @@ void SmartController::retransmit(SendWindow::Entry &entry)
         // Mark the packet as a retransmission
         pkt->setInternalFlag(kRetransmission);
 
-        // Put the packet on the high-priority network queue. The ACK and MCS
-        // will be set properly upon retransmission.
+        // Re-queue the packet. The ACK and MCS will be set properly upon
+        // retransmission.
         if (netq_)
-            netq_->push_hi_back(std::move(pkt));
+            netq_->repush(std::move(pkt));
     } else
         startRetransmissionTimer(entry);
 }
