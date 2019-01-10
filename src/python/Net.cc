@@ -1,9 +1,13 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
 #include "net/FIFO.hh"
 #include "net/LIFO.hh"
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
 #include "net/Queue.hh"
+#include "net/SmartLIFO.hh"
 #include "python/PyModules.hh"
 
 void exportNet(py::module &m)
@@ -56,6 +60,11 @@ void exportNet(py::module &m)
 
     // Export class NetLIFO to Python
     py::class_<NetLIFO, NetQueue, std::shared_ptr<NetLIFO>>(m, "NetLIFO")
+        .def(py::init())
+        ;
+
+    // Export class NetSmartLIFO to Python
+    py::class_<NetSmartLIFO, NetQueue, std::shared_ptr<NetSmartLIFO>>(m, "NetSmartLIFO")
         .def(py::init())
         ;
 

@@ -552,7 +552,7 @@ class Config(object):
                             dest='mtu',
                             help='set Maximum Transmission Unit (bytes)')
         parser.add_argument('--queue', action='store',
-                            choices=['fifo', 'lifo'],
+                            choices=['fifo', 'lifo', 'smartlifo'],
                             dest='queue',
                             help='set network queuing algorithm')
         parser.add_argument('--fifo', action='store_const', const='fifo',
@@ -809,10 +809,12 @@ class Radio(object):
         self.netfirewall = dragonradio.NetFirewall()
         self.flowsource = dragonradio.FlowSource(config.measurement_period)
 
-        if config.queue == 'lifo':
+        if config.queue == 'fifo':
+            self.netq = dragonradio.NetFIFO()
+        elif config.queue == 'lifo':
             self.netq = dragonradio.NetLIFO()
         else:
-            self.netq = dragonradio.NetFIFO()
+            self.netq = dragonradio.NetSmartLIFO()
 
         self.tuntap.source >> self.netfilter.input
 
