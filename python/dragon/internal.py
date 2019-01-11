@@ -65,11 +65,18 @@ class InternalProtoServer(UDPProtoServer):
 
     @handle('Message.schedule')
     def handle_schedule(self, msg):
+        config = self.controller.config
         radio = self.controller.radio
 
         if radio.node_id in msg.schedule.nodes:
-            radio.reconfigureBandwidthAndFrequency(msg.schedule.bandwidth,
-                                                   msg.schedule.frequency)
+            if msg.schedule.bandwidth != config.bandwidth or \
+                msg.schedule.frequency != config.frequency:
+                logging.info('Not installing schedule with frequency parameters (bw={:g}; fc={:g}) different from ours (bw={:g}; fc={:g})'.\
+                    format(msg.schedule.bandwidth,
+                           msg.schedule.frequency,
+                           config.bandwidth,
+                           config.frequency))
+                return
 
             nchannels = msg.schedule.nchannels
             nslots = msg.schedule.nslots
