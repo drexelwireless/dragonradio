@@ -53,13 +53,13 @@ void ParallelPacketDemodulator::setChannels(const Channels &channels)
         nextWindow();
 }
 
-void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
+void ParallelPacketDemodulator::push(const std::shared_ptr<IQBuf> &buf)
 {
     // Push the packet on the end of the queue
     {
         std::lock_guard<std::mutex> lock(iq_mutex_);
 
-        iq_.push_back(std::move(buf));
+        iq_.push_back(buf);
         ++iq_size_;
     }
 

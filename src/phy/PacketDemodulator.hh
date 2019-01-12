@@ -45,7 +45,7 @@ public:
     /** @brief Add an IQ buffer to demodulate.
      * @param buf The IQ samples to demodulate
      */
-    virtual void push(std::shared_ptr<IQBuf> buf) = 0;
+    virtual void push(const std::shared_ptr<IQBuf> &buf) = 0;
 
     /** @brief Reconfigure for new RX parameters */
     virtual void reconfigure(void) = 0;

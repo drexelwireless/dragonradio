@@ -64,7 +64,7 @@ public:
 
     void setChannels(const Channels &channels) override;
 
-    void push(std::shared_ptr<IQBuf> buf) override;
+    void push(const std::shared_ptr<IQBuf> &) override;
 
     void reconfigure(void) override;
 
