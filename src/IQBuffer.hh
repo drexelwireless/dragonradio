@@ -117,11 +117,15 @@ public:
     std::optional<size_t> snapshot_off;
 
     /** @brief Number of undersamples at the beginning of the buffer. That is,
-     * this is how many samples we missed at the beginning of the receive.
+     * this is how many samples we missed relative to the requested RX start
+     * time at the beginning of the RX.
      */
     size_t undersample;
 
-    /** @brief Number oversamples at the end of buffer. */
+    /** @brief Number oversamples at the end of buffer. That is, this is how
+     * many samples we missed relative to the requested RX end time at the end
+     * of the RX.
+     */
     size_t oversample;
 };
 
