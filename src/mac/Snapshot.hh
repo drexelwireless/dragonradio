@@ -58,7 +58,7 @@ public:
     /** The IQ buffer should not yet have been filled with received data. This
      * will initialize the snapshot_off field of the IQ buffer.
      */
-    bool push(std::shared_ptr<IQBuf> &buf);
+    bool push(const std::shared_ptr<IQBuf> &buf);
 
     /** @brief Finalize a snapshotted IQ buffer */
     /** Call this after the IQ buffer has been filled. This will update the

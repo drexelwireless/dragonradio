@@ -68,7 +68,7 @@ std::shared_ptr<Snapshot> SnapshotCollector::finish(void)
     return result;
 }
 
-bool SnapshotCollector::push(std::shared_ptr<IQBuf> &buf)
+bool SnapshotCollector::push(const std::shared_ptr<IQBuf> &buf)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
