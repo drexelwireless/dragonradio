@@ -26,10 +26,48 @@ public:
     TableNCO& operator=(const TableNCO&) = default;
     TableNCO& operator=(TableNCO&&) = default;
 
+    double getFrequency(void) override final
+    {
+        return sintab<INTBITS>::from_brad(dtheta_);
+    }
+
+    void setFrequency(double dtheta) override final
+    {
+        dtheta_ = sintab<INTBITS>::to_brad(dtheta);
+    }
+
+    double getPhase(void) override final
+    {
+        return theta_;
+    }
+
+    void setPhase(double theta) override final
+    {
+        theta_ = theta;
+    }
+
     void reset(double dtheta) override final
     {
         theta_ = 0;
         dtheta_ = sintab<INTBITS>::to_brad(dtheta);
+    }
+
+    std::complex<float> mix_up(const std::complex<float> in) override final
+    {
+        std::complex<float> out;
+
+        out = in * (sintab_.cos(theta_) + 1if*sintab_.sin(theta_));
+        theta_ += dtheta_;
+        return out;
+    }
+
+    std::complex<float> mix_down(const std::complex<float> in) override final
+    {
+        std::complex<float> out;
+
+        out = in * (sintab_.cos(theta_) - 1if*sintab_.sin(theta_));
+        theta_ += dtheta_;
+        return out;
     }
 
     void mix_up(const std::complex<float> *in,

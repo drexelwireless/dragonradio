@@ -10,7 +10,17 @@ void exportNCOs(py::module &m)
 {
     // Export class NCO to Python
     py::class_<NCO, std::shared_ptr<NCO>>(m, "NCO")
-        .def("reset", &NCO::reset, "reset NCO state")
+        .def_property("frequency",
+            &NCO::getFrequency,
+            &NCO::setFrequency,
+            "Frequency in radians per sample")
+        .def_property("phase",
+            &NCO::getPhase,
+            &NCO::setPhase,
+            "Phase in radians")
+        .def("reset",
+            &NCO::reset,
+            "Reset NCO state given frequency in radians per sample")
         .def("mix_up", [](NCO &nco, py::array_t<std::complex<float>> in) -> py::array_t<std::complex<float>> {
             auto inbuf = in.request();
 
@@ -23,7 +33,7 @@ void exportNCOs(py::module &m)
 
             return outarr;
         },
-        "mix signal up")
+        "Mix signal up")
         .def("mix_down", [](NCO &nco, py::array_t<std::complex<float>> in) -> py::array_t<std::complex<float>> {
             auto inbuf = in.request();
 
@@ -36,7 +46,7 @@ void exportNCOs(py::module &m)
 
             return outarr;
         },
-        "mix signal down")
+        "Mix signal down")
         ;
 
     // Export class LiquidNCOBase to Python
