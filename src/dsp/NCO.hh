@@ -8,8 +8,6 @@
 
 #include <liquid/liquid.h>
 
-#include "sintab.hh"
-
 class NCO {
 public:
     NCO() = default;
