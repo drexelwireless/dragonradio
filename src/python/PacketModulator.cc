@@ -1,3 +1,8 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/complex.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+
 #include "phy/Channel.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
@@ -68,6 +73,10 @@ void exportPacketModulators(py::module &m)
                       std::shared_ptr<PHY>,
                       const Channels&,
                       unsigned int>())
+        .def_property("taps",
+            &ParallelPacketDemodulator::getTaps,
+            &ParallelPacketDemodulator::setTaps,
+            "Prototype filter for channelization. Should have unity gain.")
         .def_property("prev_demod",
             &ParallelPacketDemodulator::getPrevDemod,
             &ParallelPacketDemodulator::setPrevDemod)
@@ -82,8 +91,5 @@ void exportPacketModulators(py::module &m)
             {
                 return exposePort(e, &e->source);
             })
-        .def_readwrite("downsamp_params",
-            &ParallelPacketDemodulator::downsamp_params,
-            py::return_value_policy::reference_internal)
         ;
 }

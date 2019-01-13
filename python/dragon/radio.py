@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import configparser
+from fractions import Fraction
 import io
 import libconf
 import logging
@@ -11,6 +12,7 @@ from pprint import pformat
 import platform
 import random
 import re
+import scipy.signal as signal
 import scipy.stats as stats
 import sys
 
@@ -749,18 +751,24 @@ class Radio(object):
                                                                  self.channels,
                                                                  config.num_demodulation_threads)
 
+        # Determine channel bandwidth, passband, and stopband
+        cbw = self.channel_bandwidth
+        wp = cbw-100e3
+        ws = cbw+100e3
+
+        # Configure modulator
         self.modulator.tx_rate = self.usrp.tx_rate
         self.modulator.upsamp_params.m = config.phy_upsamp_m
         self.modulator.upsamp_params.fc = config.phy_upsamp_fc
         self.modulator.upsamp_params.As = config.phy_upsamp_As
         self.modulator.upsamp_params.npfb = config.phy_upsamp_npfb
 
-        self.demodulator.rx_rate = self.usrp.rx_rate
-        self.demodulator.downsamp_params.m = config.phy_downsamp_m;
-        self.demodulator.downsamp_params.fc = config.phy_downsamp_fc;
-        self.demodulator.downsamp_params.As = config.phy_downsamp_As;
-        self.demodulator.downsamp_params.npfb = config.phy_downsamp_npfb;
+        # Configure demodulator
+        rate = Fraction(cbw/self.usrp.rx_rate).limit_denominator(200)
 
+        self.demodulator.rx_rate = self.usrp.rx_rate
+        if rate != 1:
+            self.demodulator.taps = lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
         self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
 
         #
@@ -1430,3 +1438,28 @@ def fairMACSchedule(nchannels, nslots, nodes, k):
             rem_nodes = nodes
 
     return sched
+
+def lowpass(wp, ws, fs, atten=60):
+    """Design a lowpass filter
+
+    Args:
+        wp: Passband frequency
+        ws: Stopband frequency
+        fs: Sample rate
+        atten: desired attenuation (dB)
+
+    Returns:
+        Filter taps.
+    """
+    N, beta = signal.kaiserord(atten, (ws-wp)/fs)
+    if N % 2 == 0:
+        N += 1
+
+    logging.debug("Creating prototype lowpass filter with %d taps, (wp=%g, ws=%g; fs=%g; beta = %f)",
+        N, wp, ws, fs, beta)
+
+    return signal.firwin(N, ws/2,
+                         window=('kaiser', beta),
+                         fs=fs,
+                         pass_zero=True,
+                         scale=True)

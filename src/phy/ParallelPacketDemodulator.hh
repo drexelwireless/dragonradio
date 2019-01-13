@@ -10,52 +10,16 @@
 #include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
 #include "phy/Channel.hh"
-#include "phy/ModParams.hh"
+#include "phy/ChannelDemodulator.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
-
-/** @brief Demodulation state. */
-class DemodState {
-public:
-    DemodState(const Liquid::ResamplerParams &params,
-               double signal_rate,
-               double resamp_rate,
-               double shift)
-      : modparams(params,
-                  signal_rate,
-                  resamp_rate,
-                  shift)
-      , demod(nullptr)
-    {
-    }
-
-    DemodState() = delete;
-    DemodState(const DemodState&) = delete;
-    DemodState(DemodState&&) = delete;
-
-    ~DemodState() = default;
-
-    DemodState &operator =(const DemodState&) = delete;
-    DemodState &operator =(DemodState &&) = delete;
-
-    /** @brief Channel demodulation parameters */
-    ModParams modparams;
-
-    /** @brief Channel demodulator */
-    std::shared_ptr<PHY::Demodulator> demod;
-
-   /** @brief Demodulate data with given parameters */
-   void demodulate(IQBuf &shift_buf,
-                   IQBuf &resamp_buf,
-                   const std::complex<float>* data,
-                   size_t count,
-                   std::function<void(std::unique_ptr<RadioPacket>)> callback);
-};
 
 /** @brief A parallel packet demodulator. */
 class ParallelPacketDemodulator : public PacketDemodulator, public Element
 {
 public:
+    using C = std::complex<float>;
+
     ParallelPacketDemodulator(std::shared_ptr<Net> net,
                               std::shared_ptr<PHY> phy,
                               const Channels &channels,
@@ -67,6 +31,20 @@ public:
     void push(const std::shared_ptr<IQBuf> &) override;
 
     void reconfigure(void) override;
+
+    /** @brief Get prototype filter for channelization. */
+    const std::vector<C> &getTaps(void) const
+    {
+        return taps_;
+    }
+
+    /** @brief Set prototype filter for channelization. */
+    /** The prototype filter should have unity gain. */
+    void setTaps(const std::vector<C> &taps)
+    {
+        taps_ = taps;
+        reconfigure();
+    }
 
     /** @brief Return the portion of the end of the previous slot that we
      * demodulate.
@@ -118,15 +96,15 @@ public:
     /** @brief Demodulated packets */
     RadioOut<Push> source;
 
-    /** @brief Resampler parameters for demodulator */
-    Liquid::ResamplerParams downsamp_params;
-
 private:
     /** @brief Destination for packets. */
     std::shared_ptr<Net> net_;
 
     /** @brief PHY we use for demodulation. */
     std::shared_ptr<PHY> phy_;
+
+    /** @brief Prototype filter */
+    std::vector<C> taps_;
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;
@@ -218,14 +196,6 @@ private:
 
      /** @brief Move to the next demodulation window. */
      void nextWindow(void);
-
-    /** @brief Demodulate data with given parameters */
-    void demodulateWithParams(DemodState &demod,
-                              IQBuf &shift_buf,
-                              IQBuf &resamp_buf,
-                              const std::complex<float>* data,
-                              size_t count,
-                              std::function<void(std::unique_ptr<RadioPacket>)> callback);
 };
 
 #endif /* PARALLELPACKETDEMODULATOR_H_ */

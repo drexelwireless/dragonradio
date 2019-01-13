@@ -13,9 +13,9 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
                                                      unsigned int nthreads)
   : PacketDemodulator(channels)
   , source(*this, nullptr, nullptr)
-  , downsamp_params(std::bind(&PacketDemodulator::reconfigure, this))
   , net_(net)
   , phy_(phy)
+  , taps_{1.0}
   , slot_size_(0.0)
   , prev_demod_(0.0)
   , prev_demod_samps_(0)
@@ -95,19 +95,13 @@ void ParallelPacketDemodulator::stop(void)
 
 void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
 {
-    DemodState                chanstate(downsamp_params,
-                                        rx_rate_,
-                                        1.0,
-                                        0.0);
+    ChannelDemodulator        demod(*phy_, taps_, 1.0, 0.0);
     RadioPacketQueue::barrier b;
     unsigned                  channelidx;
     std::shared_ptr<IQBuf>    buf1;
     std::shared_ptr<IQBuf>    buf2;
-    IQBuf                     shift_buf(0);
     IQBuf                     resamp_buf(0);
     bool                      received;
-
-    chanstate.demod = phy_->mkDemodulator();
 
     auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
         received = true;
@@ -140,29 +134,27 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_relaxed)) {
-            chanstate.modparams.reconfigure(rx_rate_,
-                                            getRXDownsampleRate(channel),
-                                            channel.fc);
+            demod.setTaps(taps_);
+            demod.setRate(getRXDownsampleRate(channel));
+            demod.setFreqShift(2*M_PI*channel.fc/rx_rate_);
 
             reconfig.store(false, std::memory_order_relaxed);
         } else {
-            chanstate.modparams.setFreqShift(channel.fc);
+            demod.setFreqShift(2*M_PI*channel.fc/rx_rate_);
         }
 
         // Reset the state of the demodulator
-        chanstate.demod->reset(channel);
+        demod.reset(channel);
 
         // Demodulate the last part of the guard interval of the previous slots
-        chanstate.demod->timestamp(buf1->timestamp,
-                                   buf1->snapshot_off,
-                                   buf1_off,
-                                   chanstate.modparams.resamp_rate);
+        demod.timestamp(buf1->timestamp,
+                        buf1->snapshot_off,
+                        buf1_off);
 
-        chanstate.demodulate(shift_buf,
-                             resamp_buf,
-                             buf1->data() + buf1_off,
-                             buf1_nsamples,
-                             callback);
+        demod.demodulate(resamp_buf,
+                         buf1->data() + buf1_off,
+                         buf1_nsamples,
+                         callback);
 
         // Wait for the second buffer to start to fill. If demodulation is very
         // fast, it is possible for us to finish demodulating the first buffer
@@ -190,10 +182,9 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
             else if (buf1->snapshot_off)
                 snapshot_off = *buf1->snapshot_off + buf1->size();
 
-            chanstate.demod->timestamp(buf2->timestamp,
-                                       snapshot_off,
-                                       0,
-                                       chanstate.modparams.resamp_rate);
+            demod.timestamp(buf2->timestamp,
+                            snapshot_off,
+                            0);
 
             nwanted = cur_demod_samps_ - buf2->undersample;
 
@@ -202,11 +193,10 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
                 n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
 
                 if (n != 0) {
-                    chanstate.demodulate(shift_buf,
-                                         resamp_buf,
-                                         &(*buf2)[ndemodulated],
-                                         n,
-                                         callback);
+                    demod.demodulate(resamp_buf,
+                                     &(*buf2)[ndemodulated],
+                                     n,
+                                     callback);
 
                     ndemodulated += n;
                     nwanted -= n;
@@ -285,35 +275,4 @@ void ParallelPacketDemodulator::nextWindow(void)
     iq_.pop_front();
     --iq_size_;
     iq_next_channel_ = 0;
-}
-
-void DemodState::demodulate(IQBuf &shift_buf,
-                            IQBuf &resamp_buf,
-                            const std::complex<float>* data,
-                            size_t count,
-                            std::function<void(std::unique_ptr<RadioPacket>)> callback)
-{
-    if (modparams.shift != 0.0 || modparams.resamp_rate != 1.0) {
-        // Mix down
-        shift_buf.resize(count);
-
-        if (modparams.shift != 0.0) {
-            modparams.nco.mix_down(data,
-                                   shift_buf.data(),
-                                   count);
-            data = shift_buf.data();
-        }
-
-        // Resample. Note that we can't very well mix without a frequency shift,
-        // so we are guaranteed that the resampler's rate is not 1 here.
-        unsigned nw;
-
-        resamp_buf.resize(modparams.resamp.neededOut(count));
-        nw = modparams.resamp.resample(data, count, resamp_buf.data());
-        resamp_buf.resize(nw);
-
-        // Demodulate resampled data.
-        demod->demodulate(resamp_buf.data(), resamp_buf.size(), callback);
-    } else
-        demod->demodulate(data, count, callback);
 }
