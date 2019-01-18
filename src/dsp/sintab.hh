@@ -49,6 +49,12 @@ public:
         return (x/M_PI)*(static_cast<brad_t>(1) << (BRADBITS-1));
     }
 
+    /** @brief Convert an angle in binary radians to radians */
+    static double from_brad(brad_t x)
+    {
+        return x/(static_cast<brad_t>(1) << (BRADBITS-1)) * M_PI;
+    }
+
     float operator [](brad_t pos)
     {
         float y1 = sintab_[pos >> FRACBITS];
