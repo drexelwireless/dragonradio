@@ -10,6 +10,7 @@
 #include "Math.hh"
 #include "dsp/Filter.hh"
 #include "dsp/Resample.hh"
+#include "dsp/TableNCO.hh"
 #include "dsp/Window.hh"
 
 namespace Dragon {
@@ -390,6 +391,150 @@ protected:
     {
         Pfb<T,C>::reconfigure();
         reset();
+    }
+};
+
+/** @brief A rational resampler that uses a polyphase filter bank and performs
+ * mixing.
+ */
+template <class T, class C>
+class MixingRationalResampler : public RationalResampler<T,C> {
+protected:
+    using RationalResampler<T,C>::l_;
+    using RationalResampler<T,C>::m_;
+    using RationalResampler<T,C>::w_;
+    using RationalResampler<T,C>::idx_;
+    using RationalResampler<T,C>::taps_;
+    using RationalResampler<T,C>::rtaps_;
+    using RationalResampler<T,C>::adjtaps_;
+
+public:
+    /** @brief Construct a polyphase rational resampler
+     * @param l The upsampling rate
+     * @param m The downsampling rate
+     * @param taps The taps for the prototype FIR filter. The filter must be
+     * designed to run at the upsampler rater.
+     */
+    MixingRationalResampler(unsigned l, unsigned m, const std::vector<C> &taps)
+      : RationalResampler<T,C>(l, m, taps)
+      , rad_(0.0)
+      , nco_(0.0)
+    {
+    }
+
+    /** @brief Construct a polyphase rational resampler
+     * @param r The resampler rate
+     * @param taps The taps for the prototype FIR filter. The filter must be
+     * designed to run at the upsampler rater.
+     */
+    MixingRationalResampler(double r, const std::vector<C> &taps = {1.0})
+      : RationalResampler<T,C>(r, taps)
+      , rad_(0.0)
+      , nco_(0.0)
+    {
+    }
+
+    MixingRationalResampler() = delete;
+
+    virtual ~MixingRationalResampler() = default;
+
+    /** @brief Get frequency shift in radians */
+    double getFreqShift(void)
+    {
+        return rad_;
+    }
+
+    /** @brief Set frequency shift in radians
+     * @param rad Frequency shift with respect to the highest sample rate out of
+     * the input and output rates. The resampler will internally compensate for
+     * non-unity upsampler and downsampler rates.
+     */
+    void setFreqShift(double rad)
+    {
+        rad_ = rad;
+        reconfigure();
+    }
+
+    /** @brief Get mixed (bandpass) prototype filter taps */
+    const std::vector<C> &getBandpassTaps(void) const
+    {
+        return adjtaps_;
+    }
+
+    void reset(void) override
+    {
+        RationalResampler<T,C>::reset();
+        nco_.setPhase(0.0);
+    }
+
+    size_t resampleMixUp(const T *in, size_t count, T *out)
+    {
+        size_t k = 0; // Output index
+
+        for (unsigned i = 0; i < count; ++i) {
+            w_.add(nco_.mix_up(in[i]));
+
+            for (unsigned j = 0; j < l_; ++j) {
+                if (idx_++ == 0)
+                    out[k++] = w_.dotprod(rtaps_[j].data(), xsimd::aligned_mode());
+
+                idx_ %= m_;
+            }
+        }
+
+        return k;
+    }
+
+    size_t resampleMixDown(const T *in, size_t count, T *out)
+    {
+        size_t k = 0; // Output index
+
+        for (unsigned i = 0; i < count; ++i) {
+            w_.add(in[i]);
+
+            for (unsigned j = 0; j < l_; ++j) {
+                if (idx_++ == 0)
+                    out[k++] = nco_.mix_down(w_.dotprod(rtaps_[j].data(), xsimd::aligned_mode()));
+
+                idx_ %= m_;
+            }
+        }
+
+        return k;
+    }
+
+protected:
+    /** @brief Frequency shift in radians */
+    double rad_;
+
+    /** @brief NCO used for mixing */
+    TableNCO nco_;
+
+    void reconfigure(void) override
+    {
+        double rate = RationalResampler<T,C>::getRate();
+
+        // Our adjusted taps are the taps we get by transforming the prototype
+        // lowpass filter into a bandpass filter. The frequency shift is
+        // specified at the higher of the input and output rates, so we have to
+        // compensate appropriately.
+        TableNCO nco(rate > 1.0 ? rad_/static_cast<double>(m_)
+                                : rad_/static_cast<double>(l_));
+
+        adjtaps_.resize(taps_.size());
+
+        for (unsigned i = 0; i < taps_.size(); ++i)
+            adjtaps_[i] = nco.mix_up(taps_[i]);
+
+        // Now that we have the proper adjusted taps, we can reconfigure the
+        // base class.
+        RationalResampler<T,C>::reconfigure();
+
+        // And finally we reset the NCO
+        if (rate > 1.0)
+            nco_.reset(rad_*static_cast<double>(l_)/static_cast<double>(m_));
+        else
+            nco_.reset(rad_*static_cast<double>(m_)/static_cast<double>(l_));
     }
 };
 
