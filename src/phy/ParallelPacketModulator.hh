@@ -9,7 +9,7 @@
 #include "PacketModulator.hh"
 #include "liquid/Resample.hh"
 #include "phy/Channel.hh"
-#include "phy/ModParams.hh"
+#include "phy/ChannelModulator.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
@@ -49,14 +49,25 @@ public:
         reconfigure();
     }
 
+    /** @brief Get prototype filter for channelization. */
+    const std::vector<C> &getTaps(void) const
+    {
+        return taps_;
+    }
+
+    /** @brief Set prototype filter for channelization. */
+    /** The prototype filter should have unity gain. */
+    void setTaps(const std::vector<C> &taps)
+    {
+        taps_ = taps;
+        reconfigure();
+    }
+
     /** @brief Stop modulating. */
     void stop(void);
 
     /** @brief Input port for packets. */
     NetIn<Pull> sink;
-
-    /** @brief Resampler parameters for modulator */
-    Liquid::ResamplerParams upsamp_params;
 
 private:
     /** @brief Our network. */
@@ -67,6 +78,9 @@ private:
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
+
+    /** @brief Prototype filter */
+    std::vector<C> taps_;
 
     /** @brief TX channel */
     Channel tx_channel_;
@@ -96,10 +110,7 @@ private:
     std::list<std::unique_ptr<ModPacket>> pkt_q_;
 
     /* @brief Modulator for one-off modulation */
-    std::shared_ptr<PHY::Modulator> one_mod_;
-
-    /* @brief Parameters for one-off modulation */
-    ModParams one_modparams_;
+    ChannelModulator one_mod_;
 
     /** @brief Get TX upsample rate. */
     double getTXUpsampleRate(void)
@@ -112,12 +123,6 @@ private:
 
     /** @brief Thread modulating packets */
     void modWorker(std::atomic<bool> &reconfig);
-
-    /** @brief Modulate one packet with given parameters */
-    void modulateWithParams(PHY::Modulator &modulator,
-                            ModParams &params,
-                            std::shared_ptr<NetPacket> pkt,
-                            ModPacket &mpkt);
 };
 
 #endif /* PARALLELPACKETMODULATOR_H_ */

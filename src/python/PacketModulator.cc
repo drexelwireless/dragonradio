@@ -54,6 +54,10 @@ void exportPacketModulators(py::module &m)
                       std::shared_ptr<PHY>,
                       const Channel&,
                       unsigned int>())
+        .def_property("taps",
+            &ParallelPacketModulator::getTaps,
+            &ParallelPacketModulator::setTaps,
+            "Prototype filter for channelization. Should have unity gain.")
         .def_property("tx_channel",
             &ParallelPacketModulator::getTXChannel,
             &ParallelPacketModulator::setTXChannel)
@@ -62,9 +66,6 @@ void exportPacketModulators(py::module &m)
             {
                 return exposePort(element, &element->sink);
             })
-        .def_readwrite("upsamp_params",
-            &ParallelPacketModulator::upsamp_params,
-            py::return_value_policy::reference_internal)
         ;
 
     // Export class ParallelPacketDemodulator to Python

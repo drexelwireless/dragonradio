@@ -77,6 +77,7 @@ SOURCES := \
     liquid/PHY.cc \
     liquid/Resample.cc \
     phy/ChannelDemodulator.cc \
+    phy/ChannelModulator.cc \
     phy/TXParams.cc \
     phy/LiquidPHY.cc \
     phy/ParallelPacketDemodulator.cc \

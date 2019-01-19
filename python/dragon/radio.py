@@ -758,10 +758,10 @@ class Radio(object):
 
         # Configure modulator
         self.modulator.tx_rate = self.usrp.tx_rate
-        self.modulator.upsamp_params.m = config.phy_upsamp_m
-        self.modulator.upsamp_params.fc = config.phy_upsamp_fc
-        self.modulator.upsamp_params.As = config.phy_upsamp_As
-        self.modulator.upsamp_params.npfb = config.phy_upsamp_npfb
+        if config.tx_upsample:
+            rate = Fraction(self.usrp.tx_rate/cbw).limit_denominator(200)
+            if rate != 1:
+                self.modulator.taps = lowpass(wp, ws, rate.numerator*cbw)
 
         # Configure demodulator
         rate = Fraction(cbw/self.usrp.rx_rate).limit_denominator(200)
