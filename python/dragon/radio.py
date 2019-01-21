@@ -123,17 +123,6 @@ class Config(object):
         self.max_channels = 10
         self.tx_upsample = True
 
-        # PHY resampling parameters
-        self.phy_upsamp_m = 7;
-        self.phy_upsamp_fc = 0.4;
-        self.phy_upsamp_As = 60.0;
-        self.phy_upsamp_npfb = 64;
-
-        self.phy_downsamp_m = 7;
-        self.phy_downsamp_fc = 0.4;
-        self.phy_downsamp_As = 60.0;
-        self.phy_downsamp_npfb = 64;
-
         # General liquid modulation options
         self.check = 'crc32'
         self.fec0 = 'rs8'

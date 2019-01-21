@@ -8,29 +8,8 @@
 #include "phy/ParallelPacketDemodulator.hh"
 #include "python/PyModules.hh"
 
-using Liquid::ResamplerParams;
-
 void exportPacketModulators(py::module &m)
 {
-    // Export class ResamplerParams to Python
-    py::class_<ResamplerParams, std::shared_ptr<ResamplerParams>>(m, "ResamplerParams")
-        .def_property("m",
-            &ResamplerParams::get_m,
-            &ResamplerParams::set_m)
-        .def_property("fc",
-            &ResamplerParams::get_fc,
-            &ResamplerParams::set_fc)
-        .def_property("As",
-            &ResamplerParams::get_As,
-            &ResamplerParams::set_As)
-        .def_property("npfb",
-            &ResamplerParams::get_npfb,
-            &ResamplerParams::set_npfb)
-        .def("__repr__", [](const ResamplerParams& self) {
-            return py::str("ResamplerParams(m={}, fc={}, As={}, npfb={})").format(self.m, self.fc, self.As, self.npfb);
-         })
-        ;
-
     // Export class PacketModulator to Python
     py::class_<PacketModulator, std::shared_ptr<PacketModulator>>(m, "PacketModulator")
         .def_property("tx_rate",
