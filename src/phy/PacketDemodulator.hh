@@ -9,7 +9,8 @@ class PacketDemodulator
 {
 public:
     PacketDemodulator(const Channels &channels)
-        : channels_(channels)
+      : rx_rate_(0.0)
+      , channels_(channels)
     {
     }
 
