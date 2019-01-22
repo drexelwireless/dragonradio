@@ -1,9 +1,9 @@
-ipython==7.0.1
-libconf==1.0.1
-matplotlib==3.0.0
-netifaces==0.10.7
-numpy==1.15.2
+ipython==7.2.0
+libconf==2.0.0
+matplotlib==3.0.2
+netifaces==0.10.9
+numpy==1.16.1
 protobuf==3.6.1
-python-daemon==2.1.2
+python-daemon==2.2.3
 pyzmq==17.1.2
-scipy==1.1.0
+scipy==1.2.1
