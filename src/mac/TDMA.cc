@@ -47,6 +47,13 @@ void TDMA::reconfigure(void)
     SlottedMAC::reconfigure();
 
     frame_size_ = slot_size_*slots_.size();
+
+    // Determine whether or not we have a slot
+    Clock::time_point t_now = Clock::now();
+    Clock::time_point t_next_slot;
+    bool              own_next_slot;
+
+    can_transmit_ = findNextSlot(t_now, t_next_slot, own_next_slot);
 }
 
 void TDMA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt)
@@ -54,9 +61,10 @@ void TDMA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<Net
     Clock::time_point t_next_slot;
     bool              own_next_slot;
 
-    findNextSlot(t, t_next_slot, own_next_slot);
-
-    timestampPacket(t_next_slot, std::move(pkt));
+    if (findNextSlot(t, t_next_slot, own_next_slot))
+        timestampPacket(t_next_slot, std::move(pkt));
+    else
+        pkt.reset();
 }
 
 void TDMA::txWorker(void)

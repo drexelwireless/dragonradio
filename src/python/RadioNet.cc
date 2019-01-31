@@ -38,6 +38,9 @@ void exportRadioNet(py::module &m)
         .def_readwrite("is_gateway",
             &Node::is_gateway,
             "Flag indicating whether or not this node is the gateway")
+        .def_readwrite("can_transmit",
+            &Node::can_transmit,
+            "Flag indicating whether or not this node can transmit")
         // Make a copy of the Node's TXParams because it shouldn't be modified
         // directly since it is NOT owned by the node.
         .def_property_readonly("tx_params",

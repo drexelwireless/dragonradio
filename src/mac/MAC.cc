@@ -12,6 +12,7 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , phy_(phy)
   , controller_(controller)
   , snapshot_collector_(collector)
+  , can_transmit_(true)
   , rx_channels_(rx_channels)
   , tx_channels_(tx_channels)
   , modulator_(modulator)
