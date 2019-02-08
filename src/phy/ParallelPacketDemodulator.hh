@@ -9,7 +9,7 @@
 #include "spinlock_mutex.hh"
 #include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 #include "phy/ModParams.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
@@ -184,6 +184,15 @@ private:
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;
+
+    /** @brief Get RX downsample rate for given channel. */
+    double getRXDownsampleRate(const Channel &channel)
+    {
+        if (channel.bw == 0.0)
+            return 1.0;
+        else
+            return (phy_->getMinTXRateOversample()*channel.bw)/rx_rate_;
+    }
 
     /** @brief A demodulation worker. */
     void demodWorker(std::atomic<bool> &reconfig);

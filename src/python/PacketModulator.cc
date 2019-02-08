@@ -1,4 +1,4 @@
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
 #include "python/PyModules.hh"
@@ -31,15 +31,6 @@ void exportPacketModulators(py::module &m)
         .def_property("tx_rate",
             &PacketModulator::getTXRate,
             &PacketModulator::setTXRate)
-        .def_property("channel_rate",
-            &PacketModulator::getChannelRate,
-            &PacketModulator::setChannelRate)
-        .def_property("channels",
-            &PacketModulator::getChannels,
-            &PacketModulator::setChannels)
-        .def_property("tx_channel",
-            &PacketModulator::getTXChannel,
-            &PacketModulator::setTXChannel)
         ;
 
     // Export class PacketDemodulator to Python
@@ -47,9 +38,6 @@ void exportPacketModulators(py::module &m)
         .def_property("rx_rate",
             &PacketDemodulator::getRXRate,
             &PacketDemodulator::setRXRate)
-        .def_property("channel_rate",
-            &PacketDemodulator::getChannelRate,
-            &PacketDemodulator::setChannelRate)
         .def_property("channels",
             &PacketDemodulator::getChannels,
             &PacketDemodulator::setChannels)
@@ -59,8 +47,11 @@ void exportPacketModulators(py::module &m)
     py::class_<ParallelPacketModulator, PacketModulator, std::shared_ptr<ParallelPacketModulator>>(m, "ParallelPacketModulator")
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
-                      const Channels&,
+                      const Channel&,
                       unsigned int>())
+        .def_property("tx_channel",
+            &ParallelPacketModulator::getTXChannel,
+            &ParallelPacketModulator::setTXChannel)
         .def_property_readonly("sink",
             [](std::shared_ptr<ParallelPacketModulator> element)
             {

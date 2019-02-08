@@ -19,6 +19,7 @@
 #include "Clock.hh"
 #include "Header.hh"
 #include "net/mgen.h"
+#include "phy/Channel.hh"
 #include "phy/TXParams.hh"
 
 /** @brief A time */
@@ -428,8 +429,8 @@ struct RadioPacket : public Packet
     /** @brief Carrier frequency offset (f/Fs) */
     float cfo;
 
-    /** @brief Center frequency packet was received on (Hz) */
-    float fc;
+    /** @brief Channel the packet was received on */
+    Channel channel;
 
     /** @brief MCS used for this packet by transmitter */
     MCS mcs;

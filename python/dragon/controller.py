@@ -369,9 +369,9 @@ class Controller(TCPProtoServer):
             if 0 in transmitters:
                 transmitters.remove(0)
 
-            if transmitters != set():
-                f_start = config.frequency + radio.channels[chan]-cbw/2
-                f_end = config.frequency + radio.channels[chan]+cbw/2
+            if len(transmitters) != 0:
+                f_start = config.frequency + radio.channels[chan].fc-cbw/2
+                f_end = config.frequency + radio.channels[chan].fc+cbw/2
 
                 rx = radio.node_id
 
@@ -531,7 +531,8 @@ class Controller(TCPProtoServer):
             await asyncio.sleep(delta)
 
             if not self.bootstrapped:
-                radio.setTXChannel(random.randint(0, len(radio.channels)-1))
+                chanidx = random.randint(0, len(radio.channels)-1)
+                radio.setTXChannel(radio.channels[chanidx])
 
             radio.controller.broadcastHello()
 

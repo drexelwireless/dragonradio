@@ -1,6 +1,8 @@
 #ifndef SLOTTEDMAC_H_
 #define SLOTTEDMAC_H_
 
+#include <optional>
+
 #include "Logger.hh"
 #include "USRP.hh"
 #include "phy/PHY.hh"
@@ -17,8 +19,6 @@ public:
                std::shared_ptr<PHY> phy,
                std::shared_ptr<Controller> controller,
                std::shared_ptr<SnapshotCollector> collector,
-               const Channels &rx_channels,
-               const Channels &tx_channels,
                std::shared_ptr<PacketModulator> modulator,
                std::shared_ptr<PacketDemodulator> demodulator,
                double slot_size,
@@ -86,16 +86,6 @@ public:
         return timestamped_mpkt_ && approx(timestamped_deadline_, when);
     }
 
-    virtual void setTXChannel(Channels::size_type channel) override
-    {
-        MAC::setTXChannel(channel);
-
-        if (tx_rate_ == rx_rate_)
-            tx_fc_off_ = getTXShift();
-        else
-            tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
-    }
-
     virtual void reconfigure(void) override;
 
 protected:
@@ -114,14 +104,17 @@ protected:
     /** @brief Number of TX samples in the entire slot, including the guard */
     size_t tx_full_slot_samps_;
 
+    /** @brief TX center frequency offset from RX center frequency. */
+    /** If the TX and RX rates are different, this is non-empty and contains
+     * the frequency of the channel we transmit on.
+     */
+    std::optional<double> tx_fc_off_;
+
     /** @brief Number of slots to pre-modulate */
     double premod_slots_;
 
     /** @brief Number of samples to pre-modulate */
     size_t premod_samps_;
-
-    /** @brief TX center frequency offset from RX center frequency */
-    float tx_fc_off_;
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;

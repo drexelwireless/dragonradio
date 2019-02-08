@@ -7,22 +7,23 @@
 
 ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
                                                  std::shared_ptr<PHY> phy,
-                                                 const Channels &channels,
+                                                 const Channel &tx_channel,
                                                  size_t nthreads)
-  : PacketModulator(channels)
+  : PacketModulator()
   , sink(*this, nullptr, nullptr)
   , upsamp_params(std::bind(&PacketModulator::reconfigure, this))
   , net_(net)
   , phy_(phy)
   , done_(false)
+  , tx_channel_(tx_channel)
   , mod_reconfigure_(nthreads)
   , nwanted_(0)
   , nsamples_(0)
   , one_mod_(phy->mkModulator())
   , one_modparams_(upsamp_params,
-                   phy_->getTXRate(),
-                   phy_->getTXUpsampleRate(),
-                   getTXShift())
+                   tx_rate_,
+                   1.0,
+                   0.0)
 {
     for (size_t i = 0; i < nthreads; ++i) {
         mod_reconfigure_[i].store(false, std::memory_order_relaxed);
@@ -35,6 +36,11 @@ ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
 ParallelPacketModulator::~ParallelPacketModulator()
 {
     stop();
+}
+
+double ParallelPacketModulator::getMaxTXUpsampleRate(void)
+{
+    return getTXUpsampleRate();
 }
 
 void ParallelPacketModulator::modulateOne(std::shared_ptr<NetPacket> pkt,
@@ -164,8 +170,8 @@ void ParallelPacketModulator::modulateWithParams(PHY::Modulator &modulator,
         mpkt.samples = std::move(iqbuf);
     }
 
-    // Set center frequency
-    mpkt.fc = params.shift;
+    // Set channel
+    mpkt.channel = tx_channel_;
 }
 
 void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
@@ -174,9 +180,9 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
     std::shared_ptr<NetPacket>  pkt;
     ModPacket                   *mpkt;
     ModParams                   modparams(upsamp_params,
-                                          phy_->getTXRate(),
-                                          phy_->getTXUpsampleRate(),
-                                          getTXShift());
+                                          tx_rate_,
+                                          getTXUpsampleRate(),
+                                          tx_channel_.fc);
     // We want the last 10 packets to account for 86% of the EMA
     EMA<double>                 samples_per_packet(2.0/(10.0 + 1.0));
 
@@ -237,9 +243,9 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_relaxed)) {
-            modparams.reconfigure(phy_->getTXRate(),
-                                  phy_->getTXUpsampleRate(),
-                                  getTXShift());
+            modparams.reconfigure(tx_rate_,
+                                  getTXUpsampleRate(),
+                                  tx_channel_.fc);
 
             reconfig.store(false, std::memory_order_relaxed);
         }

@@ -4,8 +4,6 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
-         const Channels &rx_channels,
-         const Channels &tx_channels,
          std::shared_ptr<PacketModulator> modulator,
          std::shared_ptr<PacketDemodulator> demodulator)
   : usrp_(usrp)
@@ -13,11 +11,8 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , controller_(controller)
   , snapshot_collector_(collector)
   , can_transmit_(true)
-  , rx_channels_(rx_channels)
-  , tx_channels_(tx_channels)
   , modulator_(modulator)
   , demodulator_(demodulator)
-  , tx_channel_(0)
 {
     rx_rate_ = usrp->getRXRate();
     tx_rate_ = usrp->getTXRate();

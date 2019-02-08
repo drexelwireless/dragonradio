@@ -9,20 +9,25 @@
 
 void exportMACs(py::module &m)
 {
+    // Export class Channel to Python
+    py::class_<Channel, std::shared_ptr<Channel>>(m, "Channel")
+        .def(py::init<>())
+        .def(py::init<double, double>())
+        .def_readwrite("fc",
+            &Channel::fc,
+           "Frequency shift from center")
+        .def_readwrite("bw",
+            &Channel::bw,
+            "Bandwidth")
+        .def("__repr__", [](const Channel& self) {
+            return py::str("Channel(fc={}, bw={})").format(self.fc, self.bw);
+         })
+        ;
+
+    py::bind_vector<std::vector<Channel>>(m, "Channels");
+
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
-        .def_property("rx_channels",
-            &MAC::getRXChannels,
-            &MAC::setRXChannels,
-            "RX channels")
-        .def_property("tx_channels",
-            &MAC::getTXChannels,
-            &MAC::setTXChannels,
-            "TX channels")
-        .def_property("tx_channel",
-            &MAC::getTXChannel,
-            &MAC::setTXChannel,
-            "Our TX channel")
         .def("stop",
             &MAC::stop,
             "Tell MAC to stop processing packets.")
@@ -79,8 +84,6 @@ void exportMACs(py::module &m)
                       std::shared_ptr<PHY>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
-                      const Channels&,
-                      const Channels&,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
                       double,
@@ -105,8 +108,6 @@ void exportMACs(py::module &m)
                       std::shared_ptr<PHY>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
-                      const Channels&,
-                      const Channels&,
                       std::shared_ptr<PacketModulator>,
                       std::shared_ptr<PacketDemodulator>,
                       double,

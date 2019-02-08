@@ -69,10 +69,8 @@ void ParallelPacketDemodulator::push(std::shared_ptr<IQBuf> buf)
 
 void ParallelPacketDemodulator::reconfigure(void)
 {
-    double rx_rate = phy_->getRXRate();
-
-    prev_demod_samps_ = prev_demod_*rx_rate;
-    cur_demod_samps_ = cur_demod_*rx_rate;
+    prev_demod_samps_ = prev_demod_*rx_rate_;
+    cur_demod_samps_ = cur_demod_*rx_rate_;
 
     for (auto &flag : demod_reconfigure_)
         flag.store(true, std::memory_order_relaxed);
@@ -98,12 +96,11 @@ void ParallelPacketDemodulator::stop(void)
 void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
 {
     DemodState                chanstate(downsamp_params,
-                                        phy_->getRXRate(),
-                                        phy_->getRXDownsampleRate(),
+                                        rx_rate_,
+                                        1.0,
                                         0.0);
     RadioPacketQueue::barrier b;
-    unsigned                  channel;
-    double                    shift;
+    unsigned                  channelidx;
     std::shared_ptr<IQBuf>    buf1;
     std::shared_ptr<IQBuf>    buf2;
     IQBuf                     shift_buf(0);
@@ -123,11 +120,12 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
     };
 
     while (!done_) {
-        if (!pop(b, channel, buf1, buf2))
+        if (!pop(b, channelidx, buf1, buf2))
             break;
 
+        const Channel &channel = channels_[channelidx];
+
         received = false;
-        shift = channels_[channel];
 
         // Calculate how many samples we want to demodulate from the tail end of
         // the previous slot
@@ -142,17 +140,17 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_relaxed)) {
-            chanstate.modparams.reconfigure(phy_->getRXRate(),
-                                            phy_->getRXDownsampleRate(),
-                                            shift);
+            chanstate.modparams.reconfigure(rx_rate_,
+                                            getRXDownsampleRate(channel),
+                                            channel.fc);
 
             reconfig.store(false, std::memory_order_relaxed);
         } else {
-            chanstate.modparams.setFreqShift(shift);
+            chanstate.modparams.setFreqShift(channel.fc);
         }
 
         // Reset the state of the demodulator
-        chanstate.demod->reset(chanstate.modparams.shift);
+        chanstate.demod->reset(channel);
 
         // Demodulate the last part of the guard interval of the previous slots
         chanstate.demod->timestamp(buf1->timestamp,

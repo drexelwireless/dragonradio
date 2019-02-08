@@ -102,7 +102,7 @@ LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
   : Liquid::Demodulator(phy.soft_header_, phy.soft_payload_)
   , PHY::Demodulator(phy)
   , liquid_phy_(phy)
-  , shift_(0)
+  , channel_(0.0, 0.0)
   , resamp_rate_(1.0)
   , internal_oversample_fact_(1)
   , timestamp_(0.0)
@@ -182,7 +182,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     pkt->evm = stats_.evm;
     pkt->rssi = stats_.rssi;
     pkt->cfo = stats_.cfo;
-    pkt->fc = shift_;
+    pkt->channel = channel_;
     pkt->mcs.check = static_cast<crc_scheme>(stats_.check);
     pkt->mcs.fec0 = static_cast<fec_scheme>(stats_.fec0);
     pkt->mcs.fec1 = static_cast<fec_scheme>(stats_.fec1);
@@ -198,8 +198,8 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     if (snapshot_off_)
         liquid_phy_.snapshot_collector_->selfTX(*snapshot_off_ + start,
                                                 *snapshot_off_ + end,
-                                                shift_,
-                                                phy_.getRXRate()/resamp_rate_);
+                                                channel_.fc,
+                                                channel_.bw);
 
     callback_(std::move(pkt));
 
@@ -228,7 +228,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
                          stats_.evm,
                          stats_.rssi,
                          stats_.cfo,
-                         shift_,
+                         channel_.fc,
                          phy_.getRXRate(),
                          (MonoClock::now() - timestamp_).get_real_secs(),
                          payload_len_,
@@ -238,7 +238,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void LiquidPHY::Demodulator::reset(double shift)
+void LiquidPHY::Demodulator::reset(const Channel &channel)
 {
     if (pending_reconfigure_.load(std::memory_order_relaxed)) {
         pending_reconfigure_.store(false, std::memory_order_relaxed);
@@ -247,7 +247,7 @@ void LiquidPHY::Demodulator::reset(double shift)
 
     reset();
 
-    shift_ = shift;
+    channel_ = channel;
     resamp_rate_ = 1.0;
     timestamp_ = MonoClock::time_point { 0.0 };
     snapshot_off_ = std::nullopt;
@@ -296,5 +296,5 @@ size_t LiquidPHY::getModulatedSize(const TXParams &params, size_t n)
 
     mod->assemble(header.bytes, body.data(), body.size());
 
-    return getTXUpsampleRate()*mod->assembledSize();
+    return mod->assembledSize();
 }

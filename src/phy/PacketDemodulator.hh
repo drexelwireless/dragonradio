@@ -2,7 +2,7 @@
 #define PACKETDEMODULATOR_H_
 
 #include "IQBuffer.hh"
-#include "phy/Channels.hh"
+#include "phy/Channel.hh"
 
 /** @brief A packet demodulator. */
 class PacketDemodulator
@@ -30,21 +30,6 @@ public:
         reconfigure();
     }
 
-    /** @brief Get the channel sample rate. */
-    virtual double getChannelRate(void)
-    {
-        return chan_rate_;
-    }
-
-    /** @brief Set the channel sample rate.
-     * @param rate The rate.
-     */
-    virtual void setChannelRate(double rate)
-    {
-        chan_rate_ = rate;
-        reconfigure();
-    }
-
     /** @brief Get channels. */
     virtual const Channels &getChannels(void) const
     {
@@ -68,9 +53,6 @@ public:
 protected:
     /** @brief RX sample rate */
     double rx_rate_;
-
-    /** @brief Per-channel sample rate */
-    double chan_rate_;
 
     /** @brief Radio channels, given as shift from center frequency */
     Channels channels_;
