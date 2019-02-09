@@ -47,7 +47,7 @@ def configureLogging(config):
         return (fh, fout, ferr)
 
 def shutdown(controller, signum, frame):
-    controller.stopRadio()
+    asyncio.ensure_future(controller.stopRadio())
 
 def run(config):
     # Configure logging

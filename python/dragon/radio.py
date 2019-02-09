@@ -583,8 +583,16 @@ class Config(object):
 class Radio(object):
     def __init__(self, config):
         self.config = config
+        """Config object for radio"""
+
         self.node_id = config.node_id
+        """This node's ID"""
+
         self.logger = None
+        """Our DragonRadio logger"""
+
+        self.lock = asyncio.Lock()
+        """Lock protecting radio configuration"""
 
         logger.info('Radio version: %s', dragonradio.version)
         logger.info('Radio configuration:\n%s', str(config))
@@ -688,6 +696,14 @@ class Radio(object):
                                              config.taper_len)
         else:
             fail('Bad PHY: {}'.format(config.phy))
+
+        #
+        # Configure the MAC
+        #
+        # We start out without a MAC
+        #
+        self.mac = None
+        """The radio's MAC"""
 
         #
         # Create tun/tap interface and net neighborhood

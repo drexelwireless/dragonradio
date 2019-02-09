@@ -171,7 +171,7 @@ class Controller(TCPProtoServer):
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
         if bootstrap:
-            self.startRadio()
+            self.loop.create_task(self.startRadio())
 
         self.state = remote.READY
 
@@ -181,72 +181,89 @@ class Controller(TCPProtoServer):
             logger.info('done running forever')
             self.loop.close()
 
-    def startRadio(self):
+    async def startRadio(self):
         if not self.started:
-            self.started = True
+            with await self.radio.lock:
+                self.started = True
 
-            # Create ALOHA MAC for HELLO messages
-            self.radio.configureALOHA()
+                # Create ALOHA MAC for HELLO messages
+                self.radio.configureALOHA()
 
-            self.loop.create_task(self.discoverNeighbors())
-            self.loop.create_task(self.addDiscoveredNeighbors())
-            self.loop.create_task(self.synchronizeClock())
+                self.loop.create_task(self.discoverNeighbors())
+                self.loop.create_task(self.addDiscoveredNeighbors())
+                self.loop.create_task(self.synchronizeClock())
 
-            if self.is_gateway:
-                self.loop.create_task(self.bootstrapNetwork())
-                self.loop.create_task(self.distributeScheduleViaBroadcast())
+                if self.is_gateway:
+                    self.loop.create_task(self.bootstrapNetwork())
+                    self.loop.create_task(self.distributeScheduleViaBroadcast())
 
-            self.state = remote.ACTIVE
+                self.state = remote.ACTIVE
 
-    def stopRadio(self):
-        self.done = True
-        self.state = remote.STOPPING
+    async def stopRadio(self):
+        if not self.done:
+            with await self.radio.lock:
+                self.done = True
+                self.state = remote.STOPPING
 
-        for p in self.dumpcap_procs:
-            try:
-                p.terminate()
-                p.wait()
-            except:
-                logger.exception('Could not terminate PID %d', p.pid)
-
-        if self.config.compress_interface_logs:
-            # Compressing large interface logs takes too long
-            xzprocs = []
-            for iface in self.config.log_interfaces:
-                if iface in netifaces.interfaces():
+                for p in self.dumpcap_procs:
                     try:
-                        p = subprocess.Popen('xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
-                                             stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
-                        xzprocs.append(p)
+                        p.terminate()
+                        p.wait()
                     except:
-                        logging.exception('Could not xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir))
+                        logger.exception('Could not terminate PID %d', p.pid)
 
-            for p in xzprocs:
-                try:
-                    p.wait()
-                except:
-                    logger.exception('Failed to wait on xz PID %d', p.pid)
+                if self.config.compress_interface_logs:
+                    # Compressing large interface logs takes too long
+                    xzprocs = []
+                    for iface in self.config.log_interfaces:
+                        if iface in netifaces.interfaces():
+                            try:
+                                p = subprocess.Popen('xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                                                     stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
+                                xzprocs.append(p)
+                            except:
+                                logging.exception('Could not xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir))
 
-        for node_id in list(self.nodes):
-            self.removeNode(node_id)
+                    for p in xzprocs:
+                        try:
+                            p.wait()
+                        except:
+                            logger.exception('Failed to wait on xz PID %d', p.pid)
 
-        async def shutdownGracefully():
-            if self.collab_agent:
-                logger.info('Leaving collaboration network...')
-                try:
-                    await self.collab_agent.shutdown()
-                except:
-                    logger.exception('Could not gracefully terminate collaboration agent')
-            logger.info('Shutting down...')
-            self.loop.stop()
-            self.state = remote.FINISHED
+                for node_id in list(self.nodes):
+                    self.removeNode(node_id)
 
-        logger.info('Cancelling tasks...')
-        self.tdma_reschedule.set()
-        for task in asyncio.Task.all_tasks():
-            task.cancel()
+                if self.collab_agent:
+                    logger.info('Leaving collaboration network...')
+                    try:
+                        await self.collab_agent.shutdown()
+                    except:
+                        logger.exception('Could not gracefully terminate collaboration agent')
 
-        self.loop.create_task(shutdownGracefully())
+                #
+                # End all tasks
+                #
+                logger.info('Cancelling tasks...')
+
+                this_task = asyncio.Task.current_task()
+                all_tasks = asyncio.Task.all_tasks()
+                all_tasks.remove(this_task)
+
+                for task in all_tasks:
+                    task.cancel()
+
+                self.tdma_reschedule.set()
+
+                if False:
+                    for task in all_tasks:
+                        await task
+
+                #
+                # Stop the event loop
+                #
+                logger.info('Shutting down...')
+                self.loop.stop()
+                self.state = remote.FINISHED
 
     async def dummy(self):
         while True:
@@ -331,28 +348,29 @@ class Controller(TCPProtoServer):
             mandate.throughput = throughput
             mandate.bytes = bytes
 
-    def installMACSchedule(self, seq, sched):
+    async def installMACSchedule(self, seq, sched):
         """Install a new MAC schedule"""
-        config = self.config
-        radio = self.radio
+        with await self.radio.lock:
+            config = self.config
+            radio = self.radio
 
-        if self.schedule_seq is not None and seq <= self.schedule_seq:
-            logger.info('Skipping schedule with sequence number %d (currently at %d)',
-                seq, self.schedule_seq)
+            if self.schedule_seq is not None and seq <= self.schedule_seq:
+                logger.info('Skipping schedule with sequence number %d (currently at %d)',
+                    seq, self.schedule_seq)
 
-        if not np.array_equal(sched, self.schedule):
-            (nchannels, nslots) = sched.shape
+            if not np.array_equal(sched, self.schedule):
+                (nchannels, nslots) = sched.shape
 
-            if not self.bootstrapped:
-                logger.info('Switching to TDMA MAC with %s slots', nslots)
-                self.bootstrapped = True
-                radio.deleteMAC()
-                radio.configureTDMA(nslots)
+                if not self.bootstrapped:
+                    logger.info('Switching to TDMA MAC with %s slots', nslots)
+                    self.bootstrapped = True
+                    radio.deleteMAC()
+                    radio.configureTDMA(nslots)
 
-            radio.installMACSchedule(sched)
-            self.schedule = sched
+                radio.installMACSchedule(sched)
+                self.schedule = sched
 
-        self.schedule_seq = seq
+            self.schedule_seq = seq
 
     def scheduleToVoxels(self, sched):
         """Determine voxel usage from schedule"""
@@ -448,7 +466,7 @@ class Controller(TCPProtoServer):
             nchannels = len(radio.channels)
             sched = dragon.radio.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
             if not np.array_equal(sched, self.schedule):
-                self.installMACSchedule(self.schedule_seq + 1, sched)
+                await self.installMACSchedule(self.schedule_seq + 1, sched)
                 self.voxels = self.scheduleToVoxels(sched)
                 await self.distributeSchedule()
 
@@ -498,6 +516,33 @@ class Controller(TCPProtoServer):
         await self.internal_client.sendSchedule(self.schedule_seq,
                                                 self.schedule_nodes,
                                                 self.schedule)
+
+    async def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
+        """Reconfigure bandwidth and frequency.
+
+        If we are the gateway node, this will trigger a new TDMA schedule.
+        """
+        with await self.radio.lock:
+            if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
+                old_bandwidth = self.radio.bandwidth
+
+                self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
+
+                # If only the center frequency has changed, keep the old
+                # schedule. Otherwise create a new schedule.
+                if self.radio.bandwidth != old_bandwidth:
+                    if self.bootstrapped:
+                        self.radio.mac.slots = []
+
+                    if self.is_gateway:
+                        # Force new schedule
+                        self.schedule = None
+                        self.tdma_reschedule.set()
+                else:
+                    # We need to re-set the channel after a frequency change
+                    # because although the channel number may be the same, the
+                    # corresponding frequency will be different.
+                    self.radio.setTXChannel(self.radio.tx_channel)
 
     async def bootstrapNetwork(self):
         loop = self.loop
@@ -559,11 +604,11 @@ class Controller(TCPProtoServer):
 
         if req.radio_command == remote.START:
             if self.state == remote.READY:
-                self.startRadio()
+                self.loop.create_task(self.startRadio())
                 info = 'Radio started'
         elif req.radio_command == remote.STOP:
             if self.state == remote.READY or self.state == remote.ACTIVE:
-                self.stopRadio()
+                self.loop.create_task(self.stopRadio())
                 info = 'Radio stopping'
 
         resp = remote.Response()
@@ -638,26 +683,7 @@ class Controller(TCPProtoServer):
             bandwidth = env.get('scenario_rf_bandwidth', self.config.bandwidth)
             frequency = env.get('scenario_center_frequency', self.config.frequency)
 
-            if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
-                old_bandwidth = self.radio.bandwidth
-
-                self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
-
-                # If only the center frequency has changed, keep the old
-                # schedule. Otherwise create a new schedule.
-                if self.radio.bandwidth != old_bandwidth:
-                    if self.bootstrapped:
-                        self.radio.mac.slots = []
-
-                    if self.is_gateway:
-                        # Force new schedule
-                        self.schedule = None
-                        self.tdma_reschedule.set()
-                else:
-                    # We need to re-set the channel after a frequency change
-                    # because although the channel number may be the same, the
-                    # corresponding frequency will be different.
-                    self.radio.setTXChannel(self.radio.tx_channel)
+            self.loop.create_task(self.reconfigureBandwidthAndFrequency(bandwidth, frequency))
 
         resp = remote.Response()
         resp.status.state = self.state
