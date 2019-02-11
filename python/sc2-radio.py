@@ -68,6 +68,7 @@ def run(config):
                                   stdout=fout,
                                   stderr=ferr,
                                   detach_process=True,
+                                  prevent_core=False,
                                   pidfile=daemon.pidfile.TimeoutPIDLockFile(config.pidfile),
                                   signal_map={signal.SIGTERM: partial(shutdown, controller),
                                               signal.SIGTSTP: partial(shutdown, controller)}):

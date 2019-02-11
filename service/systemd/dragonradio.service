@@ -3,11 +3,16 @@ Description=DragonRadio
 
 [Service]
 Type=forking
+ExecStartPre=/bin/mkdir -p /logs/cores
+ExecStartPre=/bin/chown -R root root /logs/cores
+ExecStartPre=/bin/chmod 0777 /logs/cores
+ExecStartPre=/bin/ln -sfn /logs/cores /tmp/cores
 ExecStart=/root/dragonradio/service/systemd/dragonradio.sh start
 ExecStop=/root/dragonradio/service/systemd/dragonradio.sh stop
 RestartSec=5
 TimeoutStartSec=10
 TimeoutSec=60
+LimitCORE=infinity
 RuntimeMaxSec=infinity
 Restart=on-failure
 PIDFile=/var/run/dragonradio.pid

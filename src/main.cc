@@ -16,7 +16,7 @@ namespace py = pybind11;
 /** See:
  * https://stackoverflow.com/questions/77005/how-to-automatically-generate-a-stacktrace-when-my-program-crashes
  */
-extern "C" void backtraceHandler(int, siginfo_t *si, void *ptr)
+extern "C" void backtraceHandler(int signum, siginfo_t *si, void *ptr)
 {
     void   *frames[MAXFRAMES];
     size_t nframes;
@@ -28,7 +28,9 @@ extern "C" void backtraceHandler(int, siginfo_t *si, void *ptr)
     fprintf(stderr, "CRASH: signal %d:\n", si->si_signo);
     backtrace_symbols_fd(frames, nframes, STDERR_FILENO);
 
-    exit(1);
+    // Re-raise the signal to get a core dump
+    signal(signum, SIG_DFL);
+    raise(signum);
 }
 
 int main(int argc, char** argv)
