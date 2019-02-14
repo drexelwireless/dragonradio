@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import argparse
+import math
 import matplotlib as mp
 mp.use('GTK3Agg')
 from matplotlib.text import OffsetFrom
 import matplotlib.patches as patches
-from matplotlib.widgets import Button, Slider
+from matplotlib.widgets import Button, CheckButtons, Slider
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
@@ -52,6 +53,38 @@ def zoom_factory(fig, ax, base_scale = 2.0):
             fig.canvas.draw() # force re-draw
 
     return zoom_fun
+
+def addWidget(fig, widget):
+    """Add a widget to a figure"""
+    if not hasattr(fig, 'widgets'):
+        fig.widgets = [widget]
+    else:
+        fig.widgets.append(widget)
+
+def addCheckboxWidget(fig, lines):
+    """Add a checkbox widget to a figure"""
+    rax = fig.add_axes([0.92, 0.6, 0.15, 0.2])
+    labels = [str(line.get_label()) for line in lines]
+    visibility = [line.get_visible() for line in lines]
+    check = CheckButtons(rax, labels, visibility)
+
+    cs = [l.get_facecolor()[0] for l in lines]
+
+    for i, l in enumerate(check.labels):
+        check.rectangles[i].set_facecolor(cs[i])
+        l.set_color(cs[i])
+
+    addWidget(fig, check)
+
+    def func(label):
+        index = labels.index(label)
+        lines[index].set_visible(not lines[index].get_visible())
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+
+    check.on_clicked(func)
+
+    return check
 
 class SpecgramPlot:
     def __init__(self, fig, ax, nfft=256, scale=1e3, cmap=plt.get_cmap('viridis')):
@@ -468,12 +501,80 @@ class SnapshotPlot:
     def prev_snapshot(self, event):
         self.plot(self.snapshotidx-1)
 
+class MetricPlot:
+    def __init__(self, log, metric):
+        self.log = log
+        self.metric = metric
+
+        self.fig = plt.figure()
+
+        ax = self.fig.add_subplot(1,1,1)
+
+        lines = []
+        yticks = None
+
+        starts = [log.nodes[node_id].start for node_id in log.nodes]
+        start_min = min(starts)
+
+        for node_id in log.nodes:
+            recv = log.received[node_id]
+            x = recv.timestamp + (log.nodes[node_id].start - start_min)
+
+            if metric == 'demod_latency':
+                y = recv.demod_latency
+                ylabel = 'Demodulation Latency (sec)'
+            elif metric == 'evm':
+                y = recv.evm
+                ylabel = 'EVM (dB)'
+            elif metric == 'rssi':
+                y = recv.rssi
+                ylabel = 'RSSI (dB)'
+            elif metric == 'cfo':
+                y = recv.cfo
+                ylabel = 'CFO (Hz)'
+            elif metric == 'ms':
+                y = recv.ms.cat.codes
+                ylabel = 'Modulation Scheme'
+                cats = recv.ms.cat.categories
+                yticks = (range(0, len(cats)), list(cats))
+            elif metric == 'sent_ms':
+                sent = log.sent[node_id]
+                x = sent.timestamp + (log.nodes[node_id].start - start_min)
+                y = sent.ms.cat.codes
+
+                ylabel = 'Modulation Scheme'
+                cats = sent.ms.cat.categories
+                yticks = (range(0, len(cats)), list(cats))
+            else:
+                raise ValueError('Cannot plot {}'.format(metric))
+
+            l = ax.scatter(x, y, label='{}'.format(node_id), s=5, alpha=0.3)
+            lines.append(l)
+
+        addCheckboxWidget(self.fig, lines)
+
+        ax.set_xlabel('Time (sec)')
+        ax.set_ylabel(ylabel)
+        if yticks is not None:
+            lo, hi = ax.get_ylim()
+            lo = math.ceil(lo)
+            hi = math.ceil(hi)
+
+            ticks, labels = yticks
+            ax.set_yticks(ticks[lo:hi])
+            ax.set_yticklabels(labels[lo:hi])
+        ax.legend(handles=lines)
+
+    def plot(self):
+        self.fig.canvas.draw()
+
 class LogViewer:
     def __init__(self, log):
         self.log = log
         self.rxFigs = {}
         self.txFigs = {}
         self.snapshotFigs = {}
+        self.metricFigs = {}
 
     def rxFig(self, node, nfft=256, show_header_invalid=False):
         if node.node_id in self.rxFigs:
@@ -502,6 +603,15 @@ class LogViewer:
             fig.fig.show()
             return fig
 
+    def metricFig(self, metric):
+        if metric in self.metricFigs:
+            return self.metricFigs[metric]
+        else:
+            fig = MetricPlot(self.log, metric)
+            self.metricFigs[metric] = fig
+            fig.fig.show()
+            return fig
+
 def main():
     global viewer
 
@@ -514,6 +624,24 @@ def main():
                         help='view RX log for given node')
     parser.add_argument('--snapshots', action='append', type=int, default=[], dest='snapshots',
                         help='view snapshot log for given node')
+    parser.add_argument('--demod-latency', action='store_true',
+                        dest='demod_latency',
+                        help='plot demodulation latency')
+    parser.add_argument('--evm', action='store_true',
+                        dest='evm',
+                        help='plot EVM')
+    parser.add_argument('--rssi', action='store_true',
+                        dest='rssi',
+                        help='plot RSSI')
+    parser.add_argument('--cfo', action='store_true',
+                        dest='cfo',
+                        help='plot CFO')
+    parser.add_argument('--ms', action='store_true',
+                        dest='ms',
+                        help='plot modulation scheme of received packets')
+    parser.add_argument('--sent-ms', action='store_true',
+                        dest='sent_ms',
+                        help='plot modulation scheme of sent packets')
     parser.add_argument('--nfft', action='store', type=int, default=256, dest='nfft',
                         help='set number of FFT points')
     parser.add_argument('--show-invalid-headers', action='store_true', default=False, dest='show_invalid_headers',
@@ -550,6 +678,30 @@ def main():
         else:
             snap = viewer.snapshotFig(node, nfft=args.nfft)
             snap.plot(0)
+
+    if args.demod_latency:
+        metric = viewer.metricFig('demod_latency')
+        metric.plot()
+
+    if args.evm:
+        metric = viewer.metricFig('evm')
+        metric.plot()
+
+    if args.rssi:
+        metric = viewer.metricFig('rssi')
+        metric.plot()
+
+    if args.cfo:
+        metric = viewer.metricFig('cfo')
+        metric.plot()
+
+    if args.ms:
+        metric = viewer.metricFig('ms')
+        metric.plot()
+
+    if args.sent_ms:
+        metric = viewer.metricFig('sent_ms')
+        metric.plot()
 
     plt.show()
 
