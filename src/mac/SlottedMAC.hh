@@ -98,6 +98,9 @@ protected:
     /** @brief Number of RX samples in a full slot */
     size_t rx_slot_samps_;
 
+    /** @brief RX buffer size */
+    size_t rx_bufsize_;
+
     /** @brief Number of TX samples in the non-guard portion of a slot */
     size_t tx_slot_samps_;
 

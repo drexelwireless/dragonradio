@@ -161,8 +161,6 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
     buf.fc = usrp_->get_rx_freq();
     buf.fs = rxRate;
 
-    buf.resize(nsamps + rx_max_samps_);
-
     for (;;) {
         uhd::rx_metadata_t rx_md;
         ssize_t            n;
@@ -199,8 +197,8 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 
             // Determine how much we oversampled. Why do we *add* the number of
             // undersamples? Because this represents how many samples "late" we
-            // started sampling. If we sample nsamps starting at undersample,
-            // then we have sampled undersample too many samples!
+            // started sampling. If we sample exactly nsamps starting at
+            // undersample, then we have sampled undersample too many samples!
             buf.oversample = (ndelivered - nsamps) + buf.undersample;
 
             // One last store to the atomic nsamples field to ensure write
@@ -209,19 +207,35 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 
             // Mark the buffer as complete.
             buf.complete.store(true, std::memory_order_release);
-            break;
+
+            // We're done
+            return true;
         } else {
-            // It's possible that we don't have enough buffer space to hold
-            // upcoming samples if RX started before we expected it to, so
-            // resize our buffer if needed.
-            if (buf.size() < ndelivered + rx_max_samps_)
-                buf.resize(buf.size() + rx_max_samps_);
-
             buf.nsamples.store(ndelivered, std::memory_order_release);
-        }
-    }
 
-    return true;
+            // It's also possible that we don't have enough buffer space to hold
+            // upcoming samples if RX started before we expected it to, in which
+            // case we also need to exit. We can't just resize the buffer
+            // because it may have already been passed to a demodulator running
+            // in another thread, and we may not move memory out from under that
+            // demodulator. In this case, buf.oversample remains 0. This also
+            // leads to us *missing samples*, which is BAD BAD BAD, but we can't
+            // dynamically resize the IQ buffer.
+            if (buf.size() < ndelivered + rx_max_samps_) {
+                logEvent("USRP: WARNING: buffer too small to read entire slot: bufsize=%lu, ndelivered=%lu; rx_max_samps=%lu",
+                    buf.size(),
+                    ndelivered,
+                    rx_max_samps_);
+
+                // Mark the buffer as complete.
+                buf.complete.store(true, std::memory_order_release);
+
+                // We're done
+                return true;
+            }
+        }
+
+    }
 }
 
 void USRP::stop(void)

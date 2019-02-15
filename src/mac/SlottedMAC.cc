@@ -30,6 +30,7 @@ void SlottedMAC::reconfigure(void)
     MAC::reconfigure();
 
     rx_slot_samps_ = rx_rate_*slot_size_;
+    rx_bufsize_ = usrp_->getRecommendedBurstRXSize(rx_slot_samps_);
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
     tx_full_slot_samps_ = tx_rate_*slot_size_;
     premod_samps_ = premod_slots_*tx_full_slot_samps_;
@@ -66,7 +67,7 @@ void SlottedMAC::rxWorker(void)
             t_next_slot += slot_size_;
 
             // Create buffer for slot
-            auto curSlot = std::make_shared<IQBuf>(rx_slot_samps_ + usrp_->getMaxRXSamps());
+            auto curSlot = std::make_shared<IQBuf>(rx_bufsize_);
 
             // Push the buffer if we're snapshotting
             bool do_snapshot;

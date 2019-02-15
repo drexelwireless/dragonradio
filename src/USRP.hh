@@ -144,7 +144,8 @@ public:
     /** @brief Receive specified number of samples at the given time
      * @param when The time at which to start receiving.
      * @param The number of samples to receive.
-     * @param buf The IQBuf to hold received IQ samples.
+     * @param buf The IQBuf to hold received IQ samples. The buffer should be at
+     * least getRecommendedBurstRXSize(nsamps) bytes.
      * @returns Returns true if the burst was successfully received, false
      * otherwise.
      */
@@ -180,6 +181,15 @@ public:
     void setMaxTXSamps(size_t count)
     {
         tx_max_samps_ = count;
+    }
+
+    /** @brief Return the recommended buffer size during burstRX.
+     * @param nsamps Number of samples to read during burst
+     * @return Recommended buffer size
+     */
+    size_t getRecommendedBurstRXSize(size_t nsamps)
+    {
+        return nsamps + 8*rx_max_samps_;
     }
 
     /** @brief Get the TX error count. */
