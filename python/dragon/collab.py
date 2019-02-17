@@ -15,7 +15,7 @@ import sc2.registration_pb2 as registration
 
 logger = logging.getLogger('collab')
 
-CIL_VERSION = (2, 7, 0)
+CIL_VERSION = (3, 1, 0)
 
 MAX_LOCATION_AGE = 45
 
