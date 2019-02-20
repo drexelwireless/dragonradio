@@ -751,27 +751,14 @@ class Radio(object):
                                                                      self.channels,
                                                                      config.num_demodulation_threads)
 
-        # Determine channel bandwidth, passband, and stopband
-        cbw = self.channel_bandwidth
-        wp = cbw-100e3
-        ws = cbw+100e3
-
-        # Configure modulator
-        self.modulator.tx_rate = self.usrp.tx_rate
-        if config.tx_upsample:
-            rate = Fraction(self.usrp.tx_rate/cbw).limit_denominator(200)
-            if rate != 1:
-                self.modulator.taps = lowpass(wp, ws, rate.numerator*cbw)
-
-        # Configure demodulator
-        rate = Fraction(cbw/self.usrp.rx_rate).limit_denominator(200)
-
-        self.demodulator.rx_rate = self.usrp.rx_rate
-        if rate != 1:
-            self.demodulator.taps = lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
-
-        if isinstance(self.demodulator, dragonradio.ParallelPacketDemodulator):
             self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
+
+        # Set modulator/demodulator rates and channels
+        self.modulator.tx_rate = self.usrp.tx_rate
+        self.demodulator.rx_rate = self.usrp.rx_rate
+
+        # Configure modulator and demodulator taps
+        self.configureModTaps()
 
         #
         # Configure the controller
@@ -997,17 +984,42 @@ class Radio(object):
 
         self.configRatesAndChannels()
 
+        # Set modulator/demodulator rates and channels
         self.modulator.tx_rate = self.usrp.tx_rate
-
         self.demodulator.rx_rate = self.usrp.rx_rate
+
         self.demodulator.channels = self.channels
 
+        # Reocnfigure taps
+        self.configureModTaps()
+
+        # Reconfigure the MAC
         if self.mac is not None:
             self.mac.reconfigure()
 
         if config.arq:
             self.controller.resetMCSTransitionProbabilities()
             self.configSmartControllerSlotSize()
+
+    def configureModTaps(self):
+        """Configure filter taps for modulator and demodulator"""
+        config = self.config
+
+        # Determine channel bandwidth, passband, and stopband
+        cbw = self.channel_bandwidth
+        wp = cbw-100e3
+        ws = cbw+100e3
+
+        # Re-configure modulator
+        if config.tx_upsample:
+            rate = Fraction(self.usrp.tx_rate/cbw).limit_denominator(200)
+            if rate != 1:
+                self.modulator.taps = lowpass(wp, ws, rate.numerator*cbw)
+
+        # Re-configure demodulator
+        rate = Fraction(cbw/self.usrp.rx_rate).limit_denominator(200)
+        if rate != 1:
+            self.demodulator.taps = lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
 
     def deleteMAC(self):
         """Delete the current MAC"""
