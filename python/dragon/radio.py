@@ -403,7 +403,7 @@ class Config(object):
 
         # PHY parameters
         parser.add_argument('--phy', action='store',
-                            choices=['flexframe', 'newflexframe', 'ofdm', 'multiofdm'],
+                            choices=['flexframe', 'newflexframe', 'ofdm'],
                             dest='phy',
                             help='set PHY')
         parser.add_argument('--min-packet-size', action='store', type=int,
@@ -684,16 +684,6 @@ class Radio(object):
                                         config.M,
                                         config.cp_len,
                                         config.taper_len)
-        elif config.phy == 'multiofdm':
-            self.phy = dragonradio.MultiOFDM(self.snapshot_collector,
-                                             self.node_id,
-                                             header_mcs,
-                                             config.soft_header,
-                                             config.soft_payload,
-                                             config.min_packet_size,
-                                             config.M,
-                                             config.cp_len,
-                                             config.taper_len)
         else:
             fail('Bad PHY: {}'.format(config.phy))
 

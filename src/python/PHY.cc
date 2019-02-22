@@ -1,6 +1,5 @@
 #include "phy/FlexFrame.hh"
 #include "phy/Gain.hh"
-#include "phy/MultiOFDM.hh"
 #include "phy/NewFlexFrame.hh"
 #include "phy/OFDM.hh"
 #include "python/PyModules.hh"
@@ -65,29 +64,6 @@ void exportPHYs(py::module &m)
 
     // Export class OFDM to Python
     py::class_<OFDM, LiquidPHY, std::shared_ptr<OFDM>>(m, "OFDM")
-        .def(py::init<std::shared_ptr<SnapshotCollector>,
-                      NodeId,
-                      const MCS&,
-                      bool,
-                      bool,
-                      size_t,
-                      unsigned int,
-                      unsigned int,
-                      unsigned int>())
-        .def(py::init<std::shared_ptr<SnapshotCollector>,
-                      NodeId,
-                      const MCS&,
-                      bool,
-                      bool,
-                      size_t,
-                      unsigned int,
-                      unsigned int,
-                      unsigned int,
-                      std::vector<unsigned char>&>())
-        ;
-
-    // Export class MultiOFDM to Python
-    py::class_<MultiOFDM, LiquidPHY, std::shared_ptr<MultiOFDM>>(m, "MultiOFDM")
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
                       const MCS&,

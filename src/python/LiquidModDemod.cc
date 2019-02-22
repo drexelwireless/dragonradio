@@ -4,9 +4,6 @@
 
 #include "liquid/FlexFrame.hh"
 #include "liquid/NewFlexFrame.hh"
-#if defined(PYTHON_EXPORT_MULTIOFDM)
-#include "liquid/MultiOFDM.hh"
-#endif /* defined(PYTHON_EXPORT_MULTIOFDM) */
 #include "liquid/OFDM.hh"
 #include "python/PyModules.hh"
 
@@ -224,38 +221,6 @@ void exportLiquidModDemod(py::module &m)
                      unsigned,
                      const std::vector<unsigned char>&>())
         ;
-
-#if defined(PYTHON_EXPORT_MULTIOFDM)
-    // Export class MultiOFDMModulator to Python
-    py::class_<Liquid::MultiOFDMModulator,
-               Liquid::Modulator,
-               std::shared_ptr<Liquid::MultiOFDMModulator>>(m, "MultiOFDMModulator", py::multiple_inheritance{})
-        .def(py::init<unsigned,
-                      unsigned,
-                      unsigned>())
-        .def(py::init<unsigned,
-                      unsigned,
-                      unsigned,
-                      const std::vector<unsigned char>&>())
-        ;
-
-    // Export class MultiOFDMDemodulator to Python
-    py::class_<Liquid::MultiOFDMDemodulator,
-               Liquid::Demodulator,
-               std::shared_ptr<Liquid::MultiOFDMDemodulator>>(m, "MultiOFDMDemodulator", py::multiple_inheritance{})
-        .def(py::init<bool,
-                      bool,
-                      unsigned,
-                      unsigned,
-                      unsigned>())
-        .def(py::init<bool,
-                      bool,
-                      unsigned,
-                      unsigned,
-                      unsigned,
-                      const std::vector<unsigned char>&>())
-        ;
-#endif /* defined(PYTHON_EXPORT_MULTIOFDM) */
 
     // Export class FlexFrameModulator to Python
     py::class_<Liquid::FlexFrameModulator,

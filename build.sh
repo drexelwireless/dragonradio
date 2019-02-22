@@ -21,9 +21,6 @@ sudo apt-get install gcc-8 g++-8
 # Build and install liquid-dsp
 (cd dependencies/liquid-dsp && ./bootstrap.sh && ./configure && make && sudo make install && sudo ldconfig && make clean)
 
-# Build and install liquid-usrp
-(cd dependencies/liquid-usrp && ./bootstrap.sh && ./configure && make && sudo make install && sudo ldconfig && make clean)
-
 # Install Python dependencies
 sudo pip3 install --upgrade pip
 sudo pip3 install -Ur python/requirements.txt
