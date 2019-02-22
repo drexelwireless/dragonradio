@@ -485,7 +485,13 @@ class SnapshotPlot:
                 else:
                     color = 'r'
 
-                rect = patches.Rectangle((start, f_bot), end-start, f_height, linewidth=0.4, edgecolor=color, facecolor='none')
+                rect = patches.Rectangle((start, f_bot),
+                                         end-start,
+                                         f_height,
+                                         linewidth=0.4,
+                                         edgecolor=color,
+                                         facecolor=color,
+                                         alpha=0.3)
                 self.specgram.ax.add_patch(rect)
 
             self.fig.canvas.draw()
