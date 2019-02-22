@@ -128,11 +128,18 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     unsigned frame_start = sample_ + stats_.start_counter;
     unsigned frame_end = sample_ + stats_.end_counter;
 
-    // Perform test to see if we want to continue demodulating this packets
+    // Perform test to see if we want to continue demodulating this packet. We
+    // only demodulate packets destined for us *unless* we are collecting
+    // snapshots, in which case we demodulate everything so we can correctly
+    // record all known transmissions.
+    auto collector = liquid_phy_.snapshot_collector_;
+
     if (header_test_) {
         if (   header_valid_
             && h->curhop != phy_.getNodeId()
-            && (h->flags & (1 << kBroadcast) || h->nexthop == phy_.getNodeId()))
+            && (h->flags & (1 << kBroadcast) ||
+                h->nexthop == phy_.getNodeId() ||
+                (collector && collector->active())))
             return 1;
         else {
             // Update sample count. The framesync object is reset if we decline
