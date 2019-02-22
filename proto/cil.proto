@@ -179,7 +179,7 @@ message MandatePerformance
   double scalar_performance = 1; // mandatory, the progress at measurement time
   repeated uint32 radio_ids = 2; // mandatory, the radios in the traffic flow
   repeated SpectrumVoxel desired_voxels = 3; // optional, the required voxels
-  uint32 flow_id = 4; // optional, the mandate flow id (destination port)
+  uint32 flow_id = 4; // mandatory, the mandate flow id (destination port)
   uint32 hold_period = 5; // mandatory, the length of the steady state period
   uint32 achieved_duration = 6; // mandatory, number of periods it was met
 }
