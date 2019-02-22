@@ -619,10 +619,13 @@ def main():
     parser.add_argument('-d', '--debug', action='store_true',
                         help='debug')
     parser.add_argument('--tx', action='append', type=int, default=[], dest='tx',
+                        metavar='NODE',
                         help='view TX log for given node')
     parser.add_argument('--rx', action='append', type=int, default=[], dest='rx',
+                        metavar='NODE',
                         help='view RX log for given node')
     parser.add_argument('--snapshots', action='append', type=int, default=[], dest='snapshots',
+                        metavar='NODE',
                         help='view snapshot log for given node')
     parser.add_argument('--demod-latency', action='store_true',
                         dest='demod_latency',
@@ -643,9 +646,10 @@ def main():
                         dest='sent_ms',
                         help='plot modulation scheme of sent packets')
     parser.add_argument('--nfft', action='store', type=int, default=256, dest='nfft',
+                        metavar='N',
                         help='set number of FFT points')
     parser.add_argument('--show-invalid-headers', action='store_true', default=False, dest='show_invalid_headers',
-                        help='set number of FFT points')
+                        help='show invalid headers when displaying RX log')
     parser.add_argument('paths', nargs='*')
     args = parser.parse_args()
 
