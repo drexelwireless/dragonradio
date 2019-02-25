@@ -132,6 +132,11 @@ public:
         return 2;
     }
 
+    bool isFrameOpen(void) override
+    {
+        return origflexframesync_is_frame_open(fs_);
+    }
+
     void print(void) override
     {
         origflexframesync_print(fs_);

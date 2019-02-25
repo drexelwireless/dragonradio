@@ -33,6 +33,11 @@ public:
         }
 
         virtual ~Demodulator() = default;
+
+        bool isFrameOpen(void) override final
+        {
+            return Liquid::NewFlexFrameDemodulator::isFrameOpen();
+        }
     };
 
     NewFlexFrame(std::shared_ptr<SnapshotCollector> collector,

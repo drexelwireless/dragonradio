@@ -48,6 +48,11 @@ public:
 
         virtual ~Demodulator() = default;
 
+        bool isFrameOpen(void) override final
+        {
+            return Liquid::OFDMDemodulator::isFrameOpen();
+        }
+
     private:
         /** @brief Our associated PHY. */
         OFDM &myphy_;

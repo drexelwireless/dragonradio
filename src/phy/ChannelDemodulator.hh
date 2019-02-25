@@ -63,6 +63,15 @@ public:
         }
     }
 
+    /** @brief Is a frame currently being demodulated?
+     * @return true if a frame is currently being demodulated, false
+     * otherwise.
+     */
+    bool isFrameOpen(void)
+    {
+        return demod_->isFrameOpen();
+    }
+
     /** @brief Reset internal state */
     void reset(const Channel &channel)
     {

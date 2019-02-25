@@ -178,6 +178,8 @@ void exportLiquidModDemod(py::module &m)
         .def_property_readonly("soft_payload",
             &Liquid::Demodulator::getSoftPayload,
             "Use soft decoding for payload")
+        .def_property_readonly("is_frame_open",
+            &Liquid::Demodulator::isFrameOpen)
         .def("reset",
             &Liquid::Demodulator::reset,
             "Reset demodulator state")

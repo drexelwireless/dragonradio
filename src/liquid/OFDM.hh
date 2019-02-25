@@ -156,6 +156,11 @@ public:
     OFDMDemodulator &operator==(const OFDMDemodulator &) = delete;
     OFDMDemodulator &operator!=(const OFDMDemodulator &) = delete;
 
+    bool isFrameOpen(void) override
+    {
+        return ofdmflexframesync_is_frame_open(fs_);
+    }
+
     void print(void) override
     {
         ofdmflexframesync_print(fs_);
