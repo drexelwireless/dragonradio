@@ -97,6 +97,9 @@ public:
     MonoClock::time_point timestamp;
 #endif /* !defined(NOUHD) */
 
+    /** @brief Sequence number of current slot */
+    unsigned seq;
+
     /** @brief Sample center frequency */
     float fc;
 

@@ -49,6 +49,7 @@ void SlottedMAC::rxWorker(void)
     Clock::time_point t_cur_slot;   // Time at which current slot starts
     Clock::time_point t_next_slot;  // Time at which next slot starts
     double            t_slot_pos;   // Offset into the current slot (sec)
+    unsigned          seq = 0;      // Current IQ buffer sequence number
 
     uhd::set_thread_priority_safe();
 
@@ -57,6 +58,9 @@ void SlottedMAC::rxWorker(void)
         t_now = Clock::now();
         t_slot_pos = fmod(t_now, slot_size_);
         t_next_slot = t_now + slot_size_ - t_slot_pos;
+
+        // Bump the sequence number to indicate a discontinuity
+        seq++;
 
         usrp_->startRXStream(Clock::to_mono_time(t_next_slot));
 
@@ -68,6 +72,8 @@ void SlottedMAC::rxWorker(void)
 
             // Create buffer for slot
             auto curSlot = std::make_shared<IQBuf>(rx_bufsize_);
+
+            curSlot->seq = seq++;
 
             // Push the buffer if we're snapshotting
             bool do_snapshot;

@@ -94,6 +94,9 @@ private:
     /** @brief Packets to demodulate */
     std::vector<ringbuffer<std::shared_ptr<IQBuf>, LOGN>> iqbufs_;
 
+    /** @brief Channel IQ buffer sequence numbers */
+    std::vector<unsigned> chan_seqs_;
+
     /** @brief Demodulation worker threads. */
     std::vector<std::thread> demod_threads_;
 

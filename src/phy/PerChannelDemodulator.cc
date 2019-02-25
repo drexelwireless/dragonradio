@@ -72,6 +72,7 @@ void PerChannelDemodulator::reconfigure(void)
 
     demods_.resize(nchannels);
     iqbufs_.resize(nchannels);
+    chan_seqs_.resize(nchannels);
 
     for (unsigned i = 0; i < nchannels; i++) {
         Channel &channel = channels_[i];
@@ -90,6 +91,7 @@ void PerChannelDemodulator::reconfigure(void)
                                                           rate,
                                                           shift);
         iqbufs_[i].clear();
+        chan_seqs_[i] = 0;
     }
 
     // We are done reconfiguring
@@ -160,6 +162,7 @@ void PerChannelDemodulator::demodWorker(unsigned tid)
         // Demodulate the next channel for which we are responsible
         auto &demod = *demods_[channelidx];
         auto &iqbuf = iqbufs_[channelidx];
+        auto &seq = chan_seqs_[channelidx];
 
         received = false;
 
@@ -188,6 +191,14 @@ void PerChannelDemodulator::demodWorker(unsigned tid)
             snapshot_off = next_snapshot_off;
             next_snapshot_off = std::nullopt;
         }
+
+        // Reset state if we have a discontinuity or if we're not currently
+        // receiving a frame
+        if (buf->seq != seq + 1 || !demod.isFrameOpen())
+            demod.reset(channels_[channelidx]);
+
+        // Record buffer sequence number
+        seq = buf->seq;
 
         // Timestamp the demodulated data
         demod.timestamp(buf->timestamp,
