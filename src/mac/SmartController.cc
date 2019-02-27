@@ -413,7 +413,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             entry.reset();
         }
 
-	    recvw.ack = new_ack;
+        recvw.ack = new_ack;
     } else if (recvw[pkt->seq].received) {
         // Drop this packet if we have already received it
         dprintf("ARQ: recv DUP: node=%u; seq=%u",
@@ -654,7 +654,7 @@ void SmartController::broadcastHello(void)
 void SmartController::resetMCSTransitionProbabilities(void)
 {
     std::lock_guard<spinlock_mutex> lock(send_mutex_);
-    
+
     for (auto it = send_.begin(); it != send_.end(); ++it) {
         SendWindow                      &sendw = it->second;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
