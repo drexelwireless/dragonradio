@@ -1070,18 +1070,24 @@ void SmartController::handleSelectiveACK(SendWindow &sendw,
 
                     for (Seq seq = nextSeq; seq < it->ack.begin; ++seq) {
                         if (seq >= sendw.per_end) {
-                            sendw.per_end = seq + 1;
+                            if (sendw[seq]) {
+                                if (sendw[seq].timestamp < tfeedback) {
+                                    // Record TX failure for PER
+                                    txFailure(node);
 
-                            if (sendw[seq].timestamp < tfeedback && sendw[seq]) {
-                                txFailure(node);
+                                    logEvent("ARQ: txFailure selective nak: node=%u; seq=%u",
+                                        (unsigned) node.id,
+                                        (unsigned) seq);
 
-                                logEvent("ARQ: txFailure selective nak: node=%u; seq=%u",
-                                    (unsigned) node.id,
-                                    (unsigned) seq);
+                                    // Retransmit the NAK'ed packet
+                                    retransmit(sendw[seq]);
 
-                                // Retransmit the NAK'ed packet
-                                retransmit(sendw[seq]);
-                            }
+                                    // Move PER window forward
+                                    sendw.per_end = seq + 1;
+                                }
+                            } else
+                                // Move PER window forward
+                                sendw.per_end = seq + 1;
                         }
                     }
                 }
@@ -1099,7 +1105,10 @@ void SmartController::handleSelectiveACK(SendWindow &sendw,
 
                     // Update our packet error rate to reflect successful TX
                     if (seq >= sendw.per_end && sendw[seq].timestamp < tfeedback) {
+                        // Record TX success for PER
                         txSuccess(node);
+
+                        // Move PER window forward
                         sendw.per_end = seq + 1;
                     }
                 }
