@@ -78,6 +78,29 @@ const ControlMsg *Packet::iterator::operator ->()
     return &ctrl_;
 }
 
+
+uint16_t Packet::getControlLen(void) const
+{
+    uint16_t len;
+
+    if (!isFlagSet(kControl) || size() < sizeof(ExtendedHeader) + data_len + sizeof(len)) {
+        return 0;
+    } else {
+        memcpy(&len, data() + sizeof(ExtendedHeader) + data_len, sizeof(len));
+        return std::min(len, static_cast<uint16_t>(size() - sizeof(ExtendedHeader) - data_len));
+    }
+}
+
+void Packet::setControlLen(uint16_t len)
+{
+    if (!isFlagSet(kControl)) {
+        setFlag(kControl);
+        resize(size() + sizeof(uint16_t));
+    }
+
+    memcpy(&(*this)[sizeof(ExtendedHeader) + data_len], &len, sizeof(uint16_t));
+}
+
 void Packet::clearControl(void)
 {
     clearFlag(kControl);
@@ -86,20 +109,16 @@ void Packet::clearControl(void)
 
 void Packet::appendControl(const ControlMsg &ctrl)
 {
-    uint16_t ctrl_len = 0;
+    uint16_t ctrl_len = getControlLen();
 
-    if (!isFlagSet(kControl)) {
-        setFlag(kControl);
-        resize(size() + sizeof(uint16_t) + ctrlsize(ctrl.type));
-    } else {
-        memcpy(&ctrl_len, &(*this)[sizeof(ExtendedHeader) + data_len], sizeof(uint16_t));
-        resize(size() + ctrlsize(ctrl.type));
-    }
+    // Increase length of control information
+    setControlLen(ctrl_len + ctrlsize(ctrl.type));
 
+    // Add space for control data
+    resize(size() + ctrlsize(ctrl.type));
+
+    // Copy control data to packet
     memcpy(&(*this)[sizeof(ExtendedHeader) + data_len + sizeof(uint16_t) + ctrl_len], &ctrl, ctrlsize(ctrl.type));
-
-    ctrl_len += ctrlsize(ctrl.type);
-    memcpy(&(*this)[sizeof(ExtendedHeader) + data_len], &ctrl_len, sizeof(uint16_t));
 }
 
 void Packet::appendHello(const ControlMsg::Hello &hello)

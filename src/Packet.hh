@@ -231,6 +231,12 @@ struct Packet : public buffer<unsigned char>
         dest = ehdr.dest;
     }
 
+    /** @brief Get length of control info */
+    uint16_t getControlLen(void) const;
+
+    /** @brief Set length of control info */
+    void setControlLen(uint16_t len);
+
     /** @brief Clear control messages contained in packet */
     void clearControl(void);
 
