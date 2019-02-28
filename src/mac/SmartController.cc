@@ -957,6 +957,8 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
                                             nsacks*sack_size;
 
             memmove(sack_start, sack_start+nremove*sack_size, nkeep*sack_size);
+            pkt->setControlLen(pkt->getControlLen() - nremove*sack_size);
+            pkt->resize(pkt->size() - nremove*sack_size);
         }
     }
 
