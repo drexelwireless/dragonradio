@@ -302,12 +302,16 @@ public:
     /** @brief Get the controller's MAC. */
     std::shared_ptr<MAC> getMAC(void)
     {
+        std::lock_guard<std::mutex> lock(mac_mutex_);
+
         return mac_;
     }
 
     /** @brief Set the controller's MAC. */
     void setMAC(std::shared_ptr<MAC> mac)
     {
+        std::lock_guard<std::mutex> lock(mac_mutex_);
+
         mac_ = mac;
     }
 
@@ -483,14 +487,7 @@ public:
      * @returns The number of packets of maximum size that can fit in one slot
      *          with the given modulation scheme.
      */
-    size_t getMaxPacketsPerSlot(const TXParams &p)
-    {
-        size_t maxPacketSize = rc.mtu + mcu_ + sizeof(struct ether_header);
-        size_t maxModSize = phy_->getModulatedSize(p, maxPacketSize);
-        double maxUpsampleRate = mac_->getModulator().getMaxTXUpsampleRate();
-
-        return slot_size_/(maxUpsampleRate*maxModSize);
-    }
+    size_t getMaxPacketsPerSlot(const TXParams &p);
 
     bool pull(std::shared_ptr<NetPacket>& pkt) override;
 
@@ -523,6 +520,9 @@ public:
 protected:
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
+
+    /** @brief Mutex protecting the MAC. */
+    std::mutex mac_mutex_;
 
     /** @brief Our MAC. */
     std::shared_ptr<MAC> mac_;

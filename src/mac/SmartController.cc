@@ -81,6 +81,21 @@ SmartController::~SmartController()
     timer_queue_.stop();
 }
 
+size_t SmartController::getMaxPacketsPerSlot(const TXParams &p)
+{
+    // Calculate max packets per slot
+    std::lock_guard<std::mutex> lock(mac_mutex_);
+
+    if (mac_) {
+        size_t maxPacketSize = rc.mtu + mcu_ + sizeof(struct ether_header);
+        size_t maxModSize = phy_->getModulatedSize(p, maxPacketSize);
+        double maxUpsampleRate = mac_->getModulator().getMaxTXUpsampleRate();
+
+        return slot_size_/(maxUpsampleRate*maxModSize);
+    } else
+        return 1;
+}
+
 bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
 {
 get_packet:
@@ -644,10 +659,14 @@ void SmartController::broadcastHello(void)
     }
 
     // Send a timestamped HELLO
-    if (mac_) {
-        pkt->tx_params = &broadcast_tx_params;
-        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
-        mac_->sendTimestampedPacket(Clock::now() + rc.timestamp_delay, std::move(pkt));
+    {
+        std::lock_guard<std::mutex> lock(mac_mutex_);
+
+        if (mac_) {
+            pkt->tx_params = &broadcast_tx_params;
+            pkt->g = broadcast_tx_params.g_0dBFS.getValue();
+            mac_->sendTimestampedPacket(Clock::now() + rc.timestamp_delay, std::move(pkt));
+        }
     }
 }
 
