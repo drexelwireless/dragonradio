@@ -167,7 +167,8 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
         // Wait for the second buffer to start to fill. If demodulation is very
         // fast, it is possible for us to finish demodulating the first buffer
         // before the second begins to fill! This actually happens with OFDM.
-        while (buf2->nsamples.load(std::memory_order_acquire) == 0)
+        while (buf2->nsamples.load(std::memory_order_acquire) == 0 &&
+               !buf2->complete.load(std::memory_order_acquire))
             ;
 
         if (cur_demod_samps_ > buf2->undersample) {
