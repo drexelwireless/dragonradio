@@ -6,6 +6,7 @@
 #include "phy/Channel.hh"
 #include "phy/ParallelPacketModulator.hh"
 #include "phy/ParallelPacketDemodulator.hh"
+#include "phy/PerChannelDemodulator.hh"
 #include "python/PyModules.hh"
 
 void exportPacketModulators(py::module &m)
@@ -68,6 +69,23 @@ void exportPacketModulators(py::module &m)
             &ParallelPacketDemodulator::setEnforceOrdering)
         .def_property_readonly("source",
             [](std::shared_ptr<ParallelPacketDemodulator> e)
+            {
+                return exposePort(e, &e->source);
+            })
+        ;
+
+    // Export class PerChannelDemodulator to Python
+    py::class_<PerChannelDemodulator, PacketDemodulator, std::shared_ptr<PerChannelDemodulator>>(m, "PerChannelDemodulator")
+        .def(py::init<std::shared_ptr<Net>,
+                      std::shared_ptr<PHY>,
+                      const Channels&,
+                      unsigned int>())
+        .def_property("taps",
+            &PerChannelDemodulator::getTaps,
+            &PerChannelDemodulator::setTaps,
+            "Prototype filter for channelization. Should have unity gain.")
+        .def_property_readonly("source",
+            [](std::shared_ptr<PerChannelDemodulator> e)
             {
                 return exposePort(e, &e->source);
             })

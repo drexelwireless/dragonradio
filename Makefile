@@ -82,6 +82,7 @@ SOURCES := \
     phy/LiquidPHY.cc \
     phy/ParallelPacketDemodulator.cc \
     phy/ParallelPacketModulator.cc \
+    phy/PerChannelDemodulator.cc \
     phy/RadioPacketQueue.cc \
     mac/Controller.cc \
     mac/DummyController.cc \

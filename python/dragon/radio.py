@@ -151,6 +151,7 @@ class Config(object):
         self.taper_len = 4
 
         # Demodulator parameters
+        self.demodulator = 'perchannel'
         self.demodulator_enforce_ordering = False
 
         # MAC parameters
@@ -462,6 +463,10 @@ class Config(object):
                             help='set OFDM taper length')
 
         # Demodulator parameters
+        parser.add_argument('--demodulator', action='store',
+                            choices=['parallel', 'perchannel'],
+                            dest='demodulator',
+                            help='set demodulation algorithm')
         parser.add_argument('--demodulator-enforce-ordering', action='store_const', const=True,
                             dest='demodulator_enforce_ordering',
                             help='enforce packet order when demodulating')
@@ -735,10 +740,16 @@ class Radio(object):
                                                              self.tx_channel,
                                                              config.num_modulation_threads)
 
-        self.demodulator = dragonradio.ParallelPacketDemodulator(self.net,
+        if config.demodulator == 'perchannel':
+            self.demodulator = dragonradio.PerChannelDemodulator(self.net,
                                                                  self.phy,
                                                                  self.channels,
                                                                  config.num_demodulation_threads)
+        else:
+            self.demodulator = dragonradio.ParallelPacketDemodulator(self.net,
+                                                                     self.phy,
+                                                                     self.channels,
+                                                                     config.num_demodulation_threads)
 
         # Determine channel bandwidth, passband, and stopband
         cbw = self.channel_bandwidth
@@ -758,7 +769,9 @@ class Radio(object):
         self.demodulator.rx_rate = self.usrp.rx_rate
         if rate != 1:
             self.demodulator.taps = lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
-        self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
+
+        if isinstance(self.demodulator, dragonradio.ParallelPacketDemodulator):
+            self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
 
         #
         # Configure the controller
@@ -1017,8 +1030,9 @@ class Radio(object):
                                             config.guard_size,
                                             config.aloha_prob)
 
-        self.demodulator.prev_demod = 0.5*config.slot_size
-        self.demodulator.cur_demod = config.slot_size
+        if isinstance(self.demodulator, dragonradio.ParallelPacketDemodulator):
+            self.demodulator.prev_demod = 0.5*config.slot_size
+            self.demodulator.cur_demod = config.slot_size
 
         self.finishConfiguringMAC()
 
@@ -1049,13 +1063,14 @@ class Radio(object):
         # When we using superslots, we need to demodulate half the previous slot
         # becasue a sender could start transmitting a packet halfway into a slot
         # + epsilon.
-        if self.config.superslots:
-            self.demodulator.prev_demod = 0.5*config.slot_size
-            self.demodulator.cur_demod = config.slot_size
-        else:
-            self.demodulator.prev_demod = config.demod_overlap_size
-            self.demodulator.cur_demod = \
-                config.slot_size - config.guard_size + config.demod_overlap_size
+        if isinstance(self.demodulator, dragonradio.ParallelPacketDemodulator):
+            if self.config.superslots:
+                self.demodulator.prev_demod = 0.5*config.slot_size
+                self.demodulator.cur_demod = config.slot_size
+            else:
+                self.demodulator.prev_demod = config.demod_overlap_size
+                self.demodulator.cur_demod = \
+                    config.slot_size - config.guard_size + config.demod_overlap_size
 
         self.finishConfiguringMAC()
 
