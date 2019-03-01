@@ -175,8 +175,13 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
             else
                 logEvent("RX error: %s", rx_md.strerror().c_str());
 
-            if (rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+            if (rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT) {
+                // Mark the buffer as complete.
+                buf.complete.store(true, std::memory_order_release);
+
+                // We're done, and we've failed
                 return false;
+            }
         }
 
         if (n == 0 || rx_md.time_spec < t_start.t)
