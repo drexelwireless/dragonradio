@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/complex.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
@@ -113,6 +114,69 @@ void exportDragonRationalResampler(py::module &m, const char *name)
         ;
 }
 
+template <class T, class C>
+void exportDragonMixingRationalResampler(py::module &m, const char *name)
+{
+    using I = T;
+    using O = T;
+    using pyarray_I = py::array_t<I, py::array::c_style | py::array::forcecast>;
+    using pyarray_O = py::array_t<O>;
+
+    py::class_<Dragon::MixingRationalResampler<T,C>,
+               Dragon::RationalResampler<T,C>,
+               std::shared_ptr<Dragon::MixingRationalResampler<T,C>>>(m, name)
+        .def(py::init<unsigned,
+                      unsigned,
+                      const std::vector<C>&>())
+        .def(py::init<double,
+                      const std::vector<C>&>())
+        .def(py::init<double>())
+        .def_property("shift",
+            &Dragon::MixingRationalResampler<T,C>::getFreqShift,
+            &Dragon::MixingRationalResampler<T,C>::setFreqShift,
+            "Mixing frequency shift")
+        .def_property_readonly("bandpass_taps",
+            &Dragon::MixingRationalResampler<T,C>::getBandpassTaps,
+            "Prototype bandpass filter taps")
+        .def("resampleMixUp",
+          [](Dragon::MixingRationalResampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
+          {
+              auto      inbuf = sig.request();
+              pyarray_O outarr(resamp.neededOut(inbuf.size));
+              auto      outbuf = outarr.request();
+              unsigned  nw;
+
+              nw = resamp.resampleMixUp(static_cast<I*>(inbuf.ptr),
+                                        inbuf.size,
+                                        static_cast<O*>(outbuf.ptr));
+              assert(nw <= outbuf.size);
+
+              outarr.resize({nw});
+
+              return outarr;
+          },
+          "Mix up and resample signal")
+        .def("resampleMixDown",
+          [](Dragon::MixingRationalResampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
+          {
+              auto      inbuf = sig.request();
+              pyarray_O outarr(resamp.neededOut(inbuf.size));
+              auto      outbuf = outarr.request();
+              unsigned  nw;
+
+              nw = resamp.resampleMixDown(static_cast<I*>(inbuf.ptr),
+                                          inbuf.size,
+                                          static_cast<O*>(outbuf.ptr));
+              assert(nw <= outbuf.size);
+
+              outarr.resize({nw});
+
+              return outarr;
+          },
+          "Resample signal and mix down")
+        ;
+}
+
 void exportResamplers(py::module &m)
 {
     using C = std::complex<float>;
@@ -132,4 +196,6 @@ void exportResamplers(py::module &m)
 
     exportDragonRationalResampler<C,F>(m, "RationalResamplerCCF");
     exportDragonRationalResampler<C,C>(m, "RationalResamplerCCC");
+
+    exportDragonMixingRationalResampler<C,C>(m, "MixingRationalResamplerCCC");
 }
