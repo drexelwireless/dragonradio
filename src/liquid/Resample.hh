@@ -12,6 +12,9 @@
 
 namespace Liquid {
 
+using C = std::complex<float>;
+using F = float;
+
 struct ResamplerParams {
     using update_t = std::function<void(void)>;
 
@@ -89,7 +92,72 @@ protected:
     update_t update_;
 };
 
-class MultiStageResampler : public Resampler {
+template<class I, class O, class C>
+class MultiStageResampler : public Resampler<I,O> {
+public:
+   /** @brief Create a liquid multi-stage resampler
+    * @param rate Resampling rate
+    * @param m Prototype filter semi-length
+    * @param fc Prototype filter cutoff frequency, in range (0, 0.5)
+    * @param As Stop-band attenuation
+    * @param npfb Number of filters in polyphase filterbank
+    */
+    MultiStageResampler(float rate,
+                        unsigned m,
+                        float fc,
+                        float As,
+                        unsigned npfb)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+    }
+
+    MultiStageResampler(MultiStageResampler &&resamp)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+    }
+
+    virtual ~MultiStageResampler()
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+    }
+
+    double getRate(void) const override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+        return 0;
+    }
+
+    double getDelay(void) const override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+        return 0;
+    }
+
+    size_t neededOut(size_t count) const override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+        return 0;
+    }
+
+    void reset(void) override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+    }
+
+    size_t resample(const std::complex<float> *in, size_t count, std::complex<float> *out) override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+        return 0;
+    }
+
+    void print(void)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of MultiStageResampler can be used");
+    }
+};
+
+template<>
+class MultiStageResampler<C,C,F> : public Resampler<C,C> {
 public:
    /** @brief Create a liquid multi-stage resampler
     * @param rate Resampling rate

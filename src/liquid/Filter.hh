@@ -2,6 +2,8 @@
 #define LIQUID_FILTER_HH_
 
 #include <complex>
+#include <tuple>
+#include <vector>
 
 #include <liquid/liquid.h>
 
@@ -9,39 +11,131 @@
 
 namespace Liquid {
 
-class FIRFilter : public ::FIRFilter
+using C = std::complex<float>;
+using F = float;
+
+/** @brief An FIR filter */
+template <class I, class O, class C>
+class FIR : public ::FIR<I,O,C>
 {
 public:
-    FIRFilter() = delete;
+    FIR() = delete;
 
-    FIRFilter(FIRFilter &&f)
+    FIR(FIR &&f)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    FIR(const std::vector<C> &h)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    virtual ~FIR()
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    FIR& operator=(const std::vector<C> &h)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    FIR& operator=(FIR &&f)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    FIR& operator=(const FIR &) = delete;
+
+    float getGroupDelay(float fc) const override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        return 0;
+    }
+
+    void reset(void) override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    /** @brief Execute the filter */
+    void execute(const I *in, O *out, size_t n) override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    float getDelay(void) const override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        return 0;
+    }
+
+    const std::vector<C> &getTaps(void) const override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    void setTaps(const std::vector<C> &taps) override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    /** @brief Get output scaling for filter
+     * @return Scaling factor applied to each output sample
+     */
+    C getScale() const
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        return 0;
+    }
+
+    /** @brief Set output scaling for filter
+     * @param scale Scaling factor applied to each output sample
+     */
+    void setScale(C scale)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+
+    /** @brief Print filter object information to stdout */
+    void print(void) const
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+    }
+};
+
+template <>
+class FIR<C, C, C> : public ::FIR<C,C,C>
+{
+public:
+    FIR() = delete;
+
+    FIR(FIR &&f)
     {
         firfilt_cccf_destroy(q_);
         q_ = f.q_;
         f.q_ = nullptr;
     }
 
-    FIRFilter(const std::vector<std::complex<float>> &h)
+    FIR(const std::vector<C> &taps)
     {
-        q_ = firfilt_cccf_create(const_cast<std::complex<float>*>(h.data()), h.size());
-        delay_ = (h.size() - 1.0)/2.0;
+        setTaps(taps);
     }
 
-    virtual ~FIRFilter()
+    virtual ~FIR()
     {
         if (q_)
             firfilt_cccf_destroy(q_);
     }
 
-    FIRFilter& operator=(const std::vector<std::complex<float>> &h)
+    FIR& operator=(const std::vector<C> &taps)
     {
-        firfilt_cccf_recreate(q_, const_cast<std::complex<float>*>(h.data()), h.size());
-        delay_ = (h.size() - 1.0)/2.0;
-
+        setTaps(taps);
         return *this;
     }
 
-    FIRFilter& operator=(FIRFilter &&f)
+    FIR& operator=(FIR &&f)
     {
         firfilt_cccf_destroy(q_);
         q_ = f.q_;
@@ -50,9 +144,9 @@ public:
         return *this;
     }
 
-    FIRFilter& operator=(const FIRFilter &) = delete;
+    FIR& operator=(const FIR &) = delete;
 
-    float getGroupDelay(float fc) override final
+    float getGroupDelay(float fc) const override final
     {
         return firfilt_cccf_groupdelay(q_, fc);
     }
@@ -62,46 +156,57 @@ public:
         firfilt_cccf_reset(q_);
     }
 
-    void execute(const std::complex<float> *in, std::complex<float> *out, size_t n) override final
+    void execute(const C *in, C *out, size_t n) override final
     {
         firfilt_cccf_execute_block(q_,
-                                   const_cast<std::complex<float>*>(in),
+                                   const_cast<C*>(in),
                                    n,
                                    out);
     }
 
-    float getDelay(void) override final
+    float getDelay(void) const override final
     {
         return delay_;
     }
 
-    /** @brief Get output scaling for filter
-     * @return Scaling factor applied to each output sample
-     */
-    std::complex<float> getScale() const
+    const std::vector<C> &getTaps(void) const override final
     {
-        std::complex<float> scale;
+        return taps_;
+    }
+
+    void setTaps(const std::vector<C> &taps) override final
+    {
+        taps_ = taps;
+        firfilt_cccf_recreate(q_, const_cast<C*>(taps_.data()), taps_.size());
+        delay_ = (taps_.size() - 1.0)/2.0;
+    }
+
+    C getScale() const
+    {
+        C scale;
 
         firfilt_cccf_get_scale(q_, &scale);
         return scale;
     }
 
-    /** @brief Set output scaling for filter
-     * @param scale Scaling factor applied to each output sample
-     */
-    void setScale(std::complex<float> scale)
+    void setScale(C scale)
     {
         firfilt_cccf_set_scale(q_, scale);
     }
 
-    /** @brief Print filter object information to stdout */
     void print(void) const
     {
         firfilt_cccf_print(q_);
     }
 
 protected:
+    /** @brief Filter taps */
+    std::vector<C> taps_;
+
+    /** @brief Liquid filter object */
     firfilt_cccf q_;
+
+    /** @brief Filter delay */
     float delay_;
 };
 
@@ -125,28 +230,85 @@ std::vector<float> kaiser(unsigned n,
                           float    fc,
                           float    As);
 
-class IIRFilter : public ::IIRFilter
+/** @brief An IIR filter */
+template <class I, class O, class C>
+class IIR : public ::IIR<I,O,C>
 {
 public:
-    IIRFilter() = delete;
+    IIR() = delete;
 
-    IIRFilter(IIRFilter &&f)
+    IIR(IIR &&f)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+    }
+
+    /** @brief Initialize filter with feedforward and feedback constants */
+    IIR(const C *b, unsigned Nb,
+        const C *a, unsigned Na)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+    }
+
+    /** @brief Initialize filter with second-order-sections */
+    IIR(const C *sos, unsigned N)
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+    }
+
+    virtual ~IIR()
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+    }
+
+    IIR& operator=(const IIR &) = delete;
+    IIR& operator=(IIR &&) = delete;
+
+    float getGroupDelay(float fc) const override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        return 0;
+    }
+
+    void reset(void) override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+    }
+
+    void execute(const C *in, C *out, size_t n) override final
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+    }
+
+    /** @brief Print filter object information to stdout */
+    void print(void) const
+    {
+        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+    }
+};
+
+template <>
+class IIR<C,C,C> : public ::IIR<C,C,C>
+{
+public:
+    IIR() = delete;
+
+    IIR(IIR &&f)
     {
         q_ = f.q_;
         f.q_ = nullptr;
     }
 
-    IIRFilter(const std::complex<float> *b, unsigned Nb,
-              const std::complex<float> *a, unsigned Na)
+    IIR(const C *b, unsigned Nb,
+        const C *a, unsigned Na)
     {
-        q_ = iirfilt_cccf_create(const_cast<std::complex<float>*>(b), Nb,
-                                 const_cast<std::complex<float>*>(a), Na);
+        q_ = iirfilt_cccf_create(const_cast<C*>(b), Nb,
+                                 const_cast<C*>(a), Na);
     }
 
-    IIRFilter(const std::complex<float> *sos, unsigned N)
+    IIR(const C *sos, unsigned N)
     {
-        std::vector<std::complex<float>> b(3*N);
-        std::vector<std::complex<float>> a(3*N);
+        std::vector<C> b(3*N);
+        std::vector<C> a(3*N);
 
         for (unsigned i = 0; i < N; ++i) {
             for (unsigned j = 0; j < 3; ++j) {
@@ -158,31 +320,31 @@ public:
         q_ = iirfilt_cccf_create_sos(b.data(), a.data(), N);
     }
 
-    virtual ~IIRFilter()
+    virtual ~IIR()
     {
         if (q_)
             iirfilt_cccf_destroy(q_);
     }
 
-    IIRFilter& operator=(const IIRFilter &) = delete;
-    IIRFilter& operator=(IIRFilter &&) = delete;
+    IIR& operator=(const IIR &) = delete;
+    IIR& operator=(IIR &&) = delete;
+
+    float getGroupDelay(float fc) const override final
+    {
+        return iirfilt_cccf_groupdelay(q_, fc);
+    }
 
     void reset(void) override final
     {
         iirfilt_cccf_reset(q_);
     }
 
-    void execute(const std::complex<float> *in, std::complex<float> *out, size_t n) override final
+    void execute(const C *in, C *out, size_t n) override final
     {
         iirfilt_cccf_execute_block(q_,
-                                   const_cast<std::complex<float>*>(in),
+                                   const_cast<C*>(in),
                                    n,
                                    out);
-    }
-
-    float getGroupDelay(float fc) override final
-    {
-        return iirfilt_cccf_groupdelay(q_, fc);
     }
 
     /** @brief Print filter object information to stdout */

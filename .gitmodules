@@ -16,3 +16,6 @@
 [submodule "dependencies/libcorrect"]
 	path = dependencies/libcorrect
 	url = git@github.com:mainland/libcorrect.git
+[submodule "dependencies/xsimd"]
+	path = dependencies/xsimd
+	url = git@github.com:QuantStack/xsimd.git

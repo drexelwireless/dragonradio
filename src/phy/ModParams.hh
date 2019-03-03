@@ -8,6 +8,9 @@
 /** @brief A class that bundles up resampler and mixing parameters */
 class ModParams {
 public:
+    using C = std::complex<float>;
+    using F = float;
+
     ModParams(const Liquid::ResamplerParams &params,
               double signal_rate_,
               double resamp_rate_,
@@ -40,11 +43,11 @@ public:
                      double shift_)
     {
         if (resamp_rate_ != resamp_rate) {
-            resamp = Liquid::MultiStageResampler(resamp_rate_,
-                                                 params_.m,
-                                                 params_.fc,
-                                                 params_.As,
-                                                 params_.npfb);
+            resamp = Liquid::MultiStageResampler<C,C,F>(resamp_rate_,
+                                                        params_.m,
+                                                        params_.fc,
+                                                        params_.As,
+                                                        params_.npfb);
             resamp_rate = resamp.getRate();
         }
 
@@ -64,7 +67,7 @@ public:
     }
 
     /** @brief Resampler */
-    Liquid::MultiStageResampler resamp;
+    Liquid::MultiStageResampler<C,C,F> resamp;
 
     /** @brief NCO for mixing */
     TableNCO nco;

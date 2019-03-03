@@ -1,13 +1,9 @@
 #ifndef FILTER_H_
 #define FILTER_H_
 
-#include <complex>
 #include <vector>
 
-#include <liquid/liquid.h>
-
-#include "NCO.hh"
-
+template <class I, class O>
 class Filter
 {
 public:
@@ -15,30 +11,38 @@ public:
     virtual ~Filter() = default;
 
     /** @brief Get filter group delay */
-    virtual float getGroupDelay(float fc) = 0;
+    virtual float getGroupDelay(float fc) const = 0;
 
     /** @brief Reset filter state */
     virtual void reset(void) = 0;
 
     /** @brief Execute the filter */
-    virtual void execute(const std::complex<float> *in, std::complex<float> *out, size_t n) = 0;
+    virtual void execute(const I *in, O *out, size_t n) = 0;
 };
 
-class FIRFilter : public Filter
+template <class I, class O, class C>
+class FIR : public Filter<I,O>
 {
 public:
-    FIRFilter() = default;
-    virtual ~FIRFilter() = default;
+    FIR() = default;
+    virtual ~FIR() = default;
 
     /** @brief Get filter delay */
-    virtual float getDelay(void) = 0;
+    virtual float getDelay(void) const = 0;
+
+    /** @brief Get taps */
+    virtual const std::vector<C> &getTaps(void) const = 0;
+
+    /** @brief Set taps */
+    virtual void setTaps(const std::vector<C> &taps) = 0;
 };
 
-class IIRFilter : public Filter
+template <class I, class O, class C>
+class IIR : public Filter<I,O>
 {
 public:
-    IIRFilter() = default;
-    virtual ~IIRFilter() = default;
+    IIR() = default;
+    virtual ~IIR() = default;
 };
 
 #endif /* FILTER_H_ */

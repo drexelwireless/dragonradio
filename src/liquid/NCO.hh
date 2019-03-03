@@ -50,6 +50,44 @@ public:
         nco_crcf_set_frequency(nco_, dtheta);
     }
 
+    double getFrequency(void) override final
+    {
+        return nco_crcf_get_frequency(nco_);
+    }
+
+    void setFrequency(double dtheta) override final
+    {
+        nco_crcf_set_frequency(nco_, dtheta);
+    }
+
+    double getPhase(void) override final
+    {
+        return nco_crcf_get_phase(nco_);
+    }
+
+    void setPhase(double theta) override final
+    {
+        nco_crcf_set_phase(nco_, theta);
+    }
+
+    std::complex<float> mix_up(const std::complex<float> in) override final
+    {
+        std::complex<float> out;
+
+        nco_crcf_mix_up(nco_, in, &out);
+        nco_crcf_step(nco_);
+        return out;
+    }
+
+    std::complex<float> mix_down(const std::complex<float> in) override final
+    {
+        std::complex<float> out;
+
+        nco_crcf_mix_down(nco_, in, &out);
+        nco_crcf_step(nco_);
+        return out;
+    }
+
     void mix_up(const std::complex<float> *in,
                 std::complex<float> *out,
                 size_t count) override final

@@ -31,6 +31,9 @@ LIBS += -lpython3.5m
 # Needed for FLAC
 LIBS += -lFLAC++ -lFLAC
 
+# Needed for xsimd
+CPPFLAGS += -Idependencies/xsimd/include
+
 # Version information
 GIT_HASH=$(shell git rev-parse HEAD^{} | cut -c1-8)
 
@@ -60,12 +63,14 @@ SOURCES := \
     IQCompression/FLAC.cc \
     Logger.cc \
     main.cc \
+    Math.cc \
     Packet.cc \
     RadioConfig.cc \
     TimerQueue.cc \
     USRP.cc \
     Util.cc \
     WorkQueue.cc \
+    dsp/FFTW.cc \
     dsp/TableNCO.cc \
     liquid/Filter.cc \
     liquid/Mutex.cc \

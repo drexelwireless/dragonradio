@@ -4,12 +4,12 @@
 
 namespace Liquid {
 
-size_t MultiStageResampler::resample(const std::complex<float> *in, size_t count, std::complex<float> *out)
+size_t MultiStageResampler<C,C,F>::resample(const C *in, size_t count, C *out)
 {
     unsigned nw;
 
     msresamp_crcf_execute(resamp_,
-                          const_cast<std::complex<float>*>(in),
+                          const_cast<C*>(in),
                           count,
                           out,
                           &nw);

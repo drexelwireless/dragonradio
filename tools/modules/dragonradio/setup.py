@@ -30,6 +30,8 @@ ext_modules = [
         ['src/main.cpp',
          'main_src/IQCompression.cc',
          'main_src/IQCompression/FLAC.cc',
+         'main_src/Math.cc',
+         'main_src/dsp/FFTW.cc',
          'main_src/dsp/TableNCO.cc',
          'main_src/liquid/Filter.cc',
          'main_src/liquid/Mutex.cc',
@@ -48,6 +50,7 @@ ext_modules = [
             # Path to pybind11 headers
             get_pybind_include(),
             get_pybind_include(user=True),
+            '../../../dependencies/xsimd/include',
             'src',
             'main_src',
         ],
