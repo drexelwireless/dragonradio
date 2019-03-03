@@ -6,7 +6,7 @@ sudo apt install -y libboost-all-dev libusb-1.0-0-dev python-mako doxygen python
 sudo apt install -y libfftw3-dev
 sudo apt install -y python3 python3-pip python3-tk python3-virtualenv
 sudo apt install -y libflac8 libflac-dev libflac++-dev
-sudo apt install -y libffi-dev libgirepository1.0-dev
+sudo apt install -y libffi-dev libgirepository1.0-dev libcairo2-dev pkg-config gir1.2-gtk-3.0
 
 (
     # Build and install libcorrect
