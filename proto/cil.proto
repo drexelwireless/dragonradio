@@ -177,7 +177,7 @@ message Hello
 message MandatePerformance
 {
   double scalar_performance = 1; // mandatory, the progress at measurement time
-  repeated uint32 radio_ids = 2; // mandatory, the radios in the traffic flow
+  repeated uint32 radio_ids = 2; // mandatory, SRN numbers of radios in the traffic flow
   repeated SpectrumVoxel desired_voxels = 3; // optional, the required voxels
   uint32 flow_id = 4; // mandatory, the mandate flow id (destination port)
   uint32 hold_period = 5; // mandatory, the length of the steady state period
@@ -214,7 +214,7 @@ message DetailedPerformance
 
 /*
  * The TransmitterInfo describes a specific transmission for a given
- * spectrum voxel. The radio identifier must be unique within a network.
+ * spectrum voxel. The radio identifier must be set to its unique SRN number.
  * The energy of the transmitted signal is measured in dBFS
  * and adjusted by the SDR TX gain settings. For example, a baseband digital
  * signal with 0.1 RMS transmitted with 25.0 dB TX gain would have 
@@ -225,15 +225,15 @@ message DetailedPerformance
  */
 message TransmitterInfo
 {
-  uint32 radio_id = 1; // mandatory, unique identifier of transmitter
+  uint32 radio_id = 1; // mandatory, SRN number of transmitter
   google.protobuf.DoubleValue power_db = 3; // mandatory, transmit power
   bool mac_cca = 4; // optional, MAC performs clear channel assessment
 }
 
 /*
  * The ReceiverInfo describes a reception characteristic of a signal with
- * a given spectrum voxel. The radio identifier must be unique within a 
- * network. The energy of the received signal is measured
+ * a given spectrum voxel. The radio identifier must be set to its unique 
+ * SRN number. The energy of the received signal is measured
  * in dBFs adjusted by the SDR RX gain settings. For example, a received 
  * baseband digital signal with 0.1 RMS received with 25.0 dB RX gain would
  * have power_db=-45. The duty cycle does not affect this value, so power 
@@ -241,7 +241,7 @@ message TransmitterInfo
  */
 message ReceiverInfo
 {
-  uint32 radio_id = 1; // mandatory, unique identifier of receiver
+  uint32 radio_id = 1; // mandatory, SRN number of receiver
   google.protobuf.DoubleValue power_db = 3; // optional, receive power
 }
 
@@ -301,7 +301,7 @@ message SpectrumUsage
  */
 message LocationInfo
 {
-  uint32 radio_id = 1; // mandatory, unique identifier of node
+  uint32 radio_id = 1; // mandatory, SRN number of node
   Location location = 2; // mandatory, location of the node
   TimeStamp timestamp = 3; // mandatory, the time of measurement
 }
