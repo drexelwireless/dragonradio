@@ -58,13 +58,16 @@ private:
     class ChannelState {
     public:
         ChannelState(PHY &phy,
+                     const Channel &channel,
                      const std::vector<C> &taps,
                      double rate,
                      double rad)
-          : rate_(rate)
+          : channel_(channel)
+          , rate_(rate)
           , rad_(rad)
           , resamp_(rate, taps)
           , demod_(phy.mkDemodulator())
+          , seq_(0)
         {
             resamp_.setFreqShift(rad);
         }
@@ -101,6 +104,18 @@ private:
             }
         }
 
+        /** @brief Update IQ buffer equence number */
+        void updateSeq(unsigned seq)
+        {
+            // Reset state if we have a discontinuity or if we're not currently
+            // receiving a frame
+            if (seq != seq_ + 1 || !isFrameOpen())
+                reset();
+
+            // Record buffer sequence number
+            seq_ = seq;
+        }
+
         /** @brief Is a frame currently being demodulated?
          * @return true if a frame is currently being demodulated, false
          * otherwise.
@@ -111,10 +126,11 @@ private:
         }
 
         /** @brief Reset internal state */
-        void reset(const Channel &channel)
+        void reset(void)
         {
             resamp_.reset();
-            demod_->reset(channel);
+            demod_->reset(channel_);
+            seq_ = 0;
         }
 
         /** @brief Set timestamp for demodulation
@@ -140,6 +156,9 @@ private:
                         std::function<void(std::unique_ptr<RadioPacket>)> callback);
 
     protected:
+        /** @brief Channel we are demodulating */
+        Channel channel_;
+
         /** @brief Resampling rate */
         double rate_;
 
@@ -151,6 +170,9 @@ private:
 
         /** @brief Our demodulator */
         std::shared_ptr<PHY::Demodulator> demod_;
+
+        /** @brief Channel IQ buffer sequence number */
+        unsigned seq_;
     };
 
     static const unsigned LOGN = 4;
@@ -192,10 +214,7 @@ private:
     std::vector<std::unique_ptr<ChannelState>> demods_;
 
     /** @brief Packets to demodulate */
-    std::vector<ringbuffer<std::shared_ptr<IQBuf>, LOGN>> iqbufs_;
-
-    /** @brief Channel IQ buffer sequence numbers */
-    std::vector<unsigned> chan_seqs_;
+    std::unique_ptr<ringbuffer<std::shared_ptr<IQBuf>, LOGN> []> iqbufs_;
 
     /** @brief Demodulation worker threads. */
     std::vector<std::thread> demod_threads_;

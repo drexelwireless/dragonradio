@@ -15,15 +15,6 @@ public:
         widx_.store(0, std::memory_order_release);
     }
 
-    ringbuffer(ringbuffer &&other)
-    {
-        std::move(std::begin(other.items_), std::end(other.items_), items_);
-        ridx_.store(other.ridx_.load(std::memory_order_acquire),
-                    std::memory_order_release);
-        widx_.store(other.widx_.load(std::memory_order_acquire),
-                    std::memory_order_release);
-    }
-
     void clear()
     {
         ridx_.store(0, std::memory_order_release);

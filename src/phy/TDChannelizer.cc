@@ -45,9 +45,10 @@ void TDChannelizer::setChannels(const Channels &channels)
 void TDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
     std::lock_guard<spinlock_mutex> lock(demod_mutex_);
+    unsigned                        nchannels = channels_.size();
 
-    for (auto it = iqbufs_.begin(); it != iqbufs_.end(); ++it)
-        (*it).push(buf);
+    for (unsigned i = 0; i < nchannels; ++i)
+        iqbufs_[i].push(buf);
 }
 
 void TDChannelizer::reconfigure(void)
@@ -71,8 +72,7 @@ void TDChannelizer::reconfigure(void)
     unsigned nchannels = channels_.size();
 
     demods_.resize(nchannels);
-    iqbufs_.resize(nchannels);
-    chan_seqs_.resize(nchannels);
+    iqbufs_ = std::unique_ptr<ringbuffer<std::shared_ptr<IQBuf>, LOGN> []>(new ringbuffer<std::shared_ptr<IQBuf>, LOGN>[nchannels]);
 
     for (unsigned i = 0; i < nchannels; i++) {
         Channel &channel = channels_[i];
@@ -87,11 +87,10 @@ void TDChannelizer::reconfigure(void)
         }
 
         demods_[i] = std::make_unique<ChannelState>(*phy_,
+                                                    channel,
                                                     taps_,
                                                     rate,
                                                     shift);
-        iqbufs_[i].clear();
-        chan_seqs_[i] = 0;
     }
 
     // We are done reconfiguring
@@ -162,7 +161,6 @@ void TDChannelizer::demodWorker(unsigned tid)
         // Demodulate the next channel for which we are responsible
         auto &demod = *demods_[channelidx];
         auto &iqbuf = iqbufs_[channelidx];
-        auto &seq = chan_seqs_[channelidx];
 
         received = false;
 
@@ -192,13 +190,8 @@ void TDChannelizer::demodWorker(unsigned tid)
             next_snapshot_off = std::nullopt;
         }
 
-        // Reset state if we have a discontinuity or if we're not currently
-        // receiving a frame
-        if (buf->seq != seq + 1 || !demod.isFrameOpen())
-            demod.reset(channels_[channelidx]);
-
-        // Record buffer sequence number
-        seq = buf->seq;
+        // Update IQ buffer sequence number
+        demod.updateSeq(buf->seq);
 
         // Timestamp the demodulated data
         demod.timestamp(buf->timestamp,
