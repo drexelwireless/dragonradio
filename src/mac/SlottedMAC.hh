@@ -5,9 +5,9 @@
 
 #include "Logger.hh"
 #include "USRP.hh"
+#include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
-#include "phy/PacketDemodulator.hh"
-#include "phy/PacketModulator.hh"
+#include "phy/Synthesizer.hh"
 #include "mac/MAC.hh"
 #include "net/Net.hh"
 
@@ -19,8 +19,8 @@ public:
                std::shared_ptr<PHY> phy,
                std::shared_ptr<Controller> controller,
                std::shared_ptr<SnapshotCollector> collector,
-               std::shared_ptr<PacketModulator> modulator,
-               std::shared_ptr<PacketDemodulator> demodulator,
+               std::shared_ptr<Channelizer> channelizer,
+               std::shared_ptr<Synthesizer> synthesizer,
                double slot_size,
                double guard_size);
     virtual ~SlottedMAC() = default;

@@ -1,5 +1,5 @@
-#ifndef PERCHANNELDEMODULATOR_H_
-#define PERCHANNELDEMODULATOR_H_
+#ifndef TDCHANNELIZER_H_
+#define TDCHANNELIZER_H_
 
 #include <condition_variable>
 #include <functional>
@@ -9,22 +9,22 @@
 #include "barrier.hh"
 #include "ringbuffer.hh"
 #include "spinlock_mutex.hh"
-#include "PacketDemodulator.hh"
 #include "RadioPacketQueue.hh"
 #include "phy/Channel.hh"
 #include "phy/ChannelDemodulator.hh"
+#include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
-/** @brief A threaded, per-channel, time-domain packet demodulator. */
-class PerChannelDemodulator : public PacketDemodulator, public Element
+/** @brief A time-domain channelizer. */
+class TDChannelizer : public Channelizer, public Element
 {
 public:
-    PerChannelDemodulator(std::shared_ptr<Net> net,
-                          std::shared_ptr<PHY> phy,
-                          const Channels &channels,
-                          unsigned int nthreads);
-    virtual ~PerChannelDemodulator();
+    TDChannelizer(std::shared_ptr<Net> net,
+                  std::shared_ptr<PHY> phy,
+                  const Channels &channels,
+                  unsigned int nthreads);
+    virtual ~TDChannelizer();
 
     void setChannels(const Channels &channels) override;
 
@@ -122,4 +122,4 @@ private:
     void netWorker(void);
 };
 
-#endif /* PERCHANNELDEMODULATOR_H_ */
+#endif /* TDCHANNELIZER_H_ */

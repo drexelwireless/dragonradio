@@ -1,5 +1,5 @@
-#ifndef PARALLELPACKETDEMODULATOR_H_
-#define PARALLELPACKETDEMODULATOR_H_
+#ifndef OVERLAPTDCHANNELIZER_H_
+#define OVERLAPTDCHANNELIZER_H_
 
 #include <condition_variable>
 #include <functional>
@@ -7,24 +7,29 @@
 #include <mutex>
 
 #include "spinlock_mutex.hh"
-#include "PacketDemodulator.hh"
+#include "Logger.hh"
 #include "RadioPacketQueue.hh"
 #include "phy/Channel.hh"
 #include "phy/ChannelDemodulator.hh"
+#include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
-/** @brief A parallel packet demodulator. */
-class ParallelPacketDemodulator : public PacketDemodulator, public Element
+/** @brief A time-domain channelizer that demodulates overlapping pairs of
+ * slots. This duplicates work (and leads to duplicate packets), but it allows
+ * us to parallelize demodulation of *a single channel*. We have to do this when
+ * demodulation is slow, such as when we use liquid's resamplers.
+ */
+class OverlapTDChannelizer : public Channelizer, public Element
 {
 public:
     using C = std::complex<float>;
 
-    ParallelPacketDemodulator(std::shared_ptr<Net> net,
-                              std::shared_ptr<PHY> phy,
-                              const Channels &channels,
-                              unsigned int nthreads);
-    virtual ~ParallelPacketDemodulator();
+    OverlapTDChannelizer(std::shared_ptr<Net> net,
+                         std::shared_ptr<PHY> phy,
+                         const Channels &channels,
+                         unsigned int nthreads);
+    virtual ~OverlapTDChannelizer();
 
     void setChannels(const Channels &channels) override;
 
@@ -175,7 +180,7 @@ private:
     /** @brief A demodulation worker. */
     void demodWorker(std::atomic<bool> &reconfig);
 
-    /** @brief The network wend worker. */
+    /** @brief The network send worker. */
     void netWorker(void);
 
     /** @brief Get two slot's worth of IQ data.
@@ -198,4 +203,4 @@ private:
      void nextWindow(void);
 };
 
-#endif /* PARALLELPACKETDEMODULATOR_H_ */
+#endif /* OVERLAPTDCHANNELIZER_H_ */

@@ -1,27 +1,27 @@
-#ifndef PARALLELPACKETMODULATOR_H_
-#define PARALLELPACKETMODULATOR_H_
+#ifndef TDSYNTHESIZER_H_
+#define TDSYNTHESIZER_H_
 
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <queue>
 
-#include "PacketModulator.hh"
 #include "liquid/Resample.hh"
 #include "phy/Channel.hh"
 #include "phy/ChannelModulator.hh"
 #include "phy/PHY.hh"
+#include "phy/Synthesizer.hh"
 #include "net/Net.hh"
 
-/** @brief A parallel packet modulator. */
-class ParallelPacketModulator : public PacketModulator, public Element
+/** @brief A time-domain synthesizer. */
+class TDSynthesizer : public Synthesizer, public Element
 {
 public:
-    ParallelPacketModulator(std::shared_ptr<Net> net,
-                            std::shared_ptr<PHY> phy,
-                            const Channel &tx_channel,
-                            size_t nthreads);
-    virtual ~ParallelPacketModulator();
+    TDSynthesizer(std::shared_ptr<Net> net,
+                  std::shared_ptr<PHY> phy,
+                  const Channel &tx_channel,
+                  size_t nthreads);
+    virtual ~TDSynthesizer();
 
     double getMaxTXUpsampleRate(void) override;
 
@@ -125,4 +125,4 @@ private:
     void modWorker(std::atomic<bool> &reconfig);
 };
 
-#endif /* PARALLELPACKETMODULATOR_H_ */
+#endif /* TDSYNTHESIZER_H_ */

@@ -89,7 +89,7 @@ size_t SmartController::getMaxPacketsPerSlot(const TXParams &p)
     if (mac_) {
         size_t maxPacketSize = rc.mtu + mcu_ + sizeof(struct ether_header);
         size_t maxModSize = phy_->getModulatedSize(p, maxPacketSize);
-        double maxUpsampleRate = mac_->getModulator().getMaxTXUpsampleRate();
+        double maxUpsampleRate = mac_->getSynthesizer().getMaxTXUpsampleRate();
 
         return slot_size_/(maxUpsampleRate*maxModSize);
     } else

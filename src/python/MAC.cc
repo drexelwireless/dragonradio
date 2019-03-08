@@ -84,8 +84,8 @@ void exportMACs(py::module &m)
                       std::shared_ptr<PHY>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
-                      std::shared_ptr<PacketModulator>,
-                      std::shared_ptr<PacketDemodulator>,
+                      std::shared_ptr<Channelizer>,
+                      std::shared_ptr<Synthesizer>,
                       double,
                       double,
                       size_t>())
@@ -108,8 +108,8 @@ void exportMACs(py::module &m)
                       std::shared_ptr<PHY>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
-                      std::shared_ptr<PacketModulator>,
-                      std::shared_ptr<PacketDemodulator>,
+                      std::shared_ptr<Channelizer>,
+                      std::shared_ptr<Synthesizer>,
                       double,
                       double,
                       double>())

@@ -80,9 +80,9 @@ SOURCES := \
     phy/ChannelModulator.cc \
     phy/TXParams.cc \
     phy/LiquidPHY.cc \
-    phy/ParallelPacketDemodulator.cc \
-    phy/ParallelPacketModulator.cc \
-    phy/PerChannelDemodulator.cc \
+    phy/OverlapTDChannelizer.cc \
+    phy/TDChannelizer.cc \
+    phy/TDSynthesizer.cc \
     phy/RadioPacketQueue.cc \
     mac/Controller.cc \
     mac/DummyController.cc \
@@ -96,6 +96,7 @@ SOURCES := \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
+    python/Channelization.cc \
     python/Clock.cc \
     python/Controller.cc \
     python/Estimator.cc \
@@ -110,7 +111,6 @@ SOURCES := \
     python/NCO.cc \
     python/Net.cc \
     python/PHY.cc \
-    python/PacketModulator.cc \
     python/Python.cc \
     python/RadioConfig.cc \
     python/RadioNet.cc \

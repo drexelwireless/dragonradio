@@ -4,15 +4,15 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
-         std::shared_ptr<PacketModulator> modulator,
-         std::shared_ptr<PacketDemodulator> demodulator)
+         std::shared_ptr<Channelizer> channelizer,
+         std::shared_ptr<Synthesizer> synthesizer)
   : usrp_(usrp)
   , phy_(phy)
   , controller_(controller)
   , snapshot_collector_(collector)
   , can_transmit_(true)
-  , modulator_(modulator)
-  , demodulator_(demodulator)
+  , channelizer_(channelizer)
+  , synthesizer_(synthesizer)
 {
     rx_rate_ = usrp->getRXRate();
     tx_rate_ = usrp->getTXRate();
@@ -31,7 +31,7 @@ void MAC::timestampPacket(const Clock::time_point &deadline, std::shared_ptr<Net
     pkt->appendTimestamp(Clock::to_mono_time(deadline));
 
     mpkt = std::make_unique<ModPacket>();
-    modulator_->modulateOne(pkt, *mpkt);
+    synthesizer_->modulateOne(pkt, *mpkt);
 
     // We modulate the packet before we check to see if we can actually send it
     // becuase we don't want to hold the spinlock for too long. This can result

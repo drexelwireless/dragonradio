@@ -10,8 +10,8 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PHY> phy,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
-           std::shared_ptr<PacketModulator> modulator,
-           std::shared_ptr<PacketDemodulator> demodulator,
+           std::shared_ptr<Channelizer> channelizer,
+           std::shared_ptr<Synthesizer> synthesizer,
            double slot_size,
            double guard_size,
            size_t nslots)
@@ -19,8 +19,8 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
                phy,
                controller,
                collector,
-               modulator,
-               demodulator,
+               channelizer,
+               synthesizer,
                slot_size,
                guard_size)
   , slots_(*this, nslots)
@@ -135,7 +135,7 @@ void TDMA::txWorker(void)
                 doze(delta);
 
             // Modulate samples for next slot
-            modulator_->modulate(premod_samps_);
+            synthesizer_->modulate(premod_samps_);
 
             // Sleep until it's time to send the slot's modulated data
             t_now = Clock::now();

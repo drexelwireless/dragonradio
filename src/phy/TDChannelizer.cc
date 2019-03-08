@@ -2,16 +2,16 @@
 
 #include "Logger.hh"
 #include "phy/PHY.hh"
-#include "phy/PerChannelDemodulator.hh"
+#include "phy/TDChannelizer.hh"
 #include "net/Net.hh"
 
 using namespace std::placeholders;
 
-PerChannelDemodulator::PerChannelDemodulator(std::shared_ptr<Net> net,
-                                             std::shared_ptr<PHY> phy,
-                                             const Channels &channels,
-                                             unsigned int nthreads)
-  : PacketDemodulator(channels)
+TDChannelizer::TDChannelizer(std::shared_ptr<Net> net,
+                             std::shared_ptr<PHY> phy,
+                             const Channels &channels,
+                             unsigned int nthreads)
+  : Channelizer(channels)
   , source(*this, nullptr, nullptr)
   , net_(net)
   , phy_(phy)
@@ -21,28 +21,28 @@ PerChannelDemodulator::PerChannelDemodulator(std::shared_ptr<Net> net,
   , reconfigure_sync_(nthreads+1)
   , logger_(logger)
 {
-    net_thread_ = std::thread(&PerChannelDemodulator::netWorker, this);
+    net_thread_ = std::thread(&TDChannelizer::netWorker, this);
 
     for (unsigned int tid = 0; tid < nthreads; ++tid)
-        demod_threads_.emplace_back(std::thread(&PerChannelDemodulator::demodWorker,
+        demod_threads_.emplace_back(std::thread(&TDChannelizer::demodWorker,
                                     this,
                                     tid));
 
     reconfigure();
 }
 
-PerChannelDemodulator::~PerChannelDemodulator()
+TDChannelizer::~TDChannelizer()
 {
     stop();
 }
 
-void PerChannelDemodulator::setChannels(const Channels &channels)
+void TDChannelizer::setChannels(const Channels &channels)
 {
-    PacketDemodulator::setChannels(channels);
+    Channelizer::setChannels(channels);
     reconfigure();
 }
 
-void PerChannelDemodulator::push(const std::shared_ptr<IQBuf> &buf)
+void TDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
     std::lock_guard<spinlock_mutex> lock(demod_mutex_);
 
@@ -50,7 +50,7 @@ void PerChannelDemodulator::push(const std::shared_ptr<IQBuf> &buf)
         (*it).push(buf);
 }
 
-void PerChannelDemodulator::reconfigure(void)
+void TDChannelizer::reconfigure(void)
 {
     std::lock_guard<spinlock_mutex> lock(demod_mutex_);
 
@@ -101,7 +101,7 @@ void PerChannelDemodulator::reconfigure(void)
     reconfigure_sync_.wait();
 }
 
-void PerChannelDemodulator::stop(void)
+void TDChannelizer::stop(void)
 {
     done_ = true;
 
@@ -118,7 +118,7 @@ void PerChannelDemodulator::stop(void)
     }
 }
 
-void PerChannelDemodulator::demodWorker(unsigned tid)
+void TDChannelizer::demodWorker(unsigned tid)
 {
     unsigned               channelidx = tid;
     unsigned               nchannels = demods_.size();
@@ -244,7 +244,7 @@ void PerChannelDemodulator::demodWorker(unsigned tid)
     }
 }
 
-void PerChannelDemodulator::netWorker(void)
+void TDChannelizer::netWorker(void)
 {
     std::unique_ptr<RadioPacket> pkt;
 

@@ -7,16 +7,16 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
                        std::shared_ptr<Controller> controller,
                        std::shared_ptr<SnapshotCollector> collector,
-                       std::shared_ptr<PacketModulator> modulator,
-                       std::shared_ptr<PacketDemodulator> demodulator,
+                       std::shared_ptr<Channelizer> channelizer,
+                       std::shared_ptr<Synthesizer> synthesizer,
                        double slot_size,
                        double guard_size)
   : MAC(usrp,
         phy,
         controller,
         collector,
-        modulator,
-        demodulator)
+        channelizer,
+        synthesizer)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , premod_slots_(1.0)
@@ -40,7 +40,7 @@ void SlottedMAC::reconfigure(void)
     else
         tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
 
-    modulator_->setMaxPacketSize(tx_slot_samps_);
+    synthesizer_->setMaxPacketSize(tx_slot_samps_);
 }
 
 void SlottedMAC::rxWorker(void)
@@ -83,9 +83,9 @@ void SlottedMAC::rxWorker(void)
             else
                 do_snapshot = false;
 
-            // Put the buffer into the demodulator's queue so it can start
+            // Put the buffer into the channelizer's queue so it can start
             // working now
-            demodulator_->push(curSlot);
+            channelizer_->push(curSlot);
 
             // Read samples for current slot. The demodulator will do its thing
             // as we continue to read samples.
@@ -131,7 +131,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
     // Fill the rest of the slot with modulated packets
     size_t nsamples;
 
-    nsamples = modulator_->pop(modBuf, maxSamples, overfill);
+    nsamples = synthesizer_->pop(modBuf, maxSamples, overfill);
 
     if (!modBuf.empty()) {
         Channel channel = modBuf.front()->channel;

@@ -151,9 +151,12 @@ class Config(object):
         self.cp_len = 6
         self.taper_len = 4
 
-        # Demodulator parameters
-        self.demodulator = 'perchannel'
-        self.demodulator_enforce_ordering = False
+        # Channelizer parameters
+        self.channelizer = 'timedomain'
+        self.channelizer_enforce_ordering = False
+
+        # Synthesizer parameters
+        self.synthesizer = 'timedomain'
 
         # MAC parameters
         self.slot_size = .035
@@ -463,14 +466,20 @@ class Config(object):
                             dest='taper_len',
                             help='set OFDM taper length')
 
-        # Demodulator parameters
-        parser.add_argument('--demodulator', action='store',
-                            choices=['parallel', 'perchannel'],
-                            dest='demodulator',
-                            help='set demodulation algorithm')
-        parser.add_argument('--demodulator-enforce-ordering', action='store_const', const=True,
-                            dest='demodulator_enforce_ordering',
-                            help='enforce packet order when demodulating')
+        # Channelizer parameters
+        parser.add_argument('--channelizer', action='store',
+                            choices=['timedomain', 'overlap'],
+                            dest='channelizer',
+                            help='set channelization algorithm')
+        parser.add_argument('--channelizer-enforce-ordering', action='store_const', const=True,
+                            dest='channelizer_enforce_ordering',
+                            help='enforce packet order when demodulating in channelizer')
+
+        # Synthesizer parameters
+        parser.add_argument('--synthesizer', action='store',
+                            choices=['timedomain'],
+                            dest='synthesizer',
+                            help='set synthesizer algorithm')
 
         # MAC parameters
         parser.add_argument('--slot-size', action='store', type=float,
@@ -734,32 +743,32 @@ class Radio(object):
         self.configRatesAndChannels()
 
         #
-        # Configure the modulator and demodulator
+        # Configure the channelization
         #
-        self.modulator = dragonradio.ParallelPacketModulator(self.net,
-                                                             self.phy,
-                                                             self.tx_channel,
-                                                             config.num_modulation_threads)
+        if config.channelizer == 'overlap':
+            self.channelizer = dragonradio.OverlapTDChannelizer(self.net,
+                                                                self.phy,
+                                                                self.channels,
+                                                                config.num_demodulation_threads)
 
-        if config.demodulator == 'perchannel':
-            self.demodulator = dragonradio.PerChannelDemodulator(self.net,
-                                                                 self.phy,
-                                                                 self.channels,
-                                                                 config.num_demodulation_threads)
+            self.channelizer.enforce_ordering = config.channelizer_enforce_ordering
         else:
-            self.demodulator = dragonradio.ParallelPacketDemodulator(self.net,
-                                                                     self.phy,
-                                                                     self.channels,
-                                                                     config.num_demodulation_threads)
+            self.channelizer = dragonradio.TDChannelizer(self.net,
+                                                         self.phy,
+                                                         self.channels,
+                                                         config.num_demodulation_threads)
 
-            self.demodulator.enforce_ordering = config.demodulator_enforce_ordering
+        self.synthesizer = dragonradio.TDSynthesizer(self.net,
+                                                     self.phy,
+                                                     self.tx_channel,
+                                                     config.num_modulation_threads)
 
-        # Set modulator/demodulator rates and channels
-        self.modulator.tx_rate = self.usrp.tx_rate
-        self.demodulator.rx_rate = self.usrp.rx_rate
+        # Set modulator/demodulator rates
+        self.channelizer.rx_rate = self.usrp.rx_rate
+        self.synthesizer.tx_rate = self.usrp.tx_rate
 
-        # Configure modulator and demodulator taps
-        self.configureModTaps()
+        # Configure channelization taps
+        self.configureChannelizationTaps()
 
         #
         # Configure the controller
@@ -816,7 +825,7 @@ class Radio(object):
         # Right now, the path is direct:
         #   demodulator -> controller -> FlowPerformance.radio -> tun/tap
         #
-        self.demodulator.source >> self.controller.radio_in
+        self.channelizer.source >> self.controller.radio_in
 
         self.controller.radio_out >> self.flowperf.radio_in
 
@@ -847,7 +856,7 @@ class Radio(object):
 
         self.netq.pop >> self.controller.net_in
 
-        self.controller.net_out >> self.modulator.sink
+        self.controller.net_out >> self.synthesizer.sink
 
         #
         # If we are using a SmartController, tell it about the network queue is
@@ -985,14 +994,14 @@ class Radio(object):
 
         self.configRatesAndChannels()
 
-        # Set modulator/demodulator rates and channels
-        self.modulator.tx_rate = self.usrp.tx_rate
-        self.demodulator.rx_rate = self.usrp.rx_rate
+        # Set channelization rates and channels
+        self.channelizer.rx_rate = self.usrp.rx_rate
+        self.synthesizer.tx_rate = self.usrp.tx_rate
 
-        self.demodulator.channels = self.channels
+        self.channelizer.channels = self.channels
 
-        # Reocnfigure taps
-        self.configureModTaps()
+        # Reconfigure taps
+        self.configureChannelizationTaps()
 
         # Reconfigure the MAC
         if self.mac is not None:
@@ -1002,8 +1011,8 @@ class Radio(object):
             self.controller.resetMCSTransitionProbabilities()
             self.configSmartControllerSlotSize()
 
-    def configureModTaps(self):
-        """Configure filter taps for modulator and demodulator"""
+    def configureChannelizationTaps(self):
+        """Configure filter taps for channelizer and synthesizer"""
         config = self.config
 
         # Determine channel bandwidth, passband, and stopband
@@ -1011,16 +1020,16 @@ class Radio(object):
         wp = cbw-100e3
         ws = cbw+100e3
 
-        # Re-configure modulator
+        # Re-configure channelizer taps
+        rate = Fraction(cbw/self.usrp.rx_rate).limit_denominator(200)
+        if rate != 1:
+            self.channelizer.taps = lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
+
+        # Re-configure synthesizer taps
         if config.tx_upsample:
             rate = Fraction(self.usrp.tx_rate/cbw).limit_denominator(200)
             if rate != 1:
-                self.modulator.taps = lowpass(wp, ws, rate.numerator*cbw)
-
-        # Re-configure demodulator
-        rate = Fraction(cbw/self.usrp.rx_rate).limit_denominator(200)
-        if rate != 1:
-            self.demodulator.taps = lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
+                self.synthesizer.taps = lowpass(wp, ws, rate.numerator*cbw)
 
     def deleteMAC(self):
         """Delete the current MAC"""
@@ -1037,15 +1046,15 @@ class Radio(object):
                                             self.phy,
                                             self.controller,
                                             self.snapshot_collector,
-                                            self.modulator,
-                                            self.demodulator,
+                                            self.channelizer,
+                                            self.synthesizer,
                                             config.slot_size,
                                             config.guard_size,
                                             config.aloha_prob)
 
-        if isinstance(self.demodulator, dragonradio.ParallelPacketDemodulator):
-            self.demodulator.prev_demod = 0.5*config.slot_size
-            self.demodulator.cur_demod = config.slot_size
+        if isinstance(self.channelizer, dragonradio.OverlapTDChannelizer):
+            self.channelizer.prev_demod = 0.5*config.slot_size
+            self.channelizer.cur_demod = config.slot_size
 
         self.finishConfiguringMAC()
 
@@ -1065,8 +1074,8 @@ class Radio(object):
                                     self.phy,
                                     self.controller,
                                     self.snapshot_collector,
-                                    self.modulator,
-                                    self.demodulator,
+                                    self.channelizer,
+                                    self.synthesizer,
                                     config.slot_size,
                                     config.guard_size,
                                     nslots)
@@ -1076,13 +1085,13 @@ class Radio(object):
         # When we using superslots, we need to demodulate half the previous slot
         # becasue a sender could start transmitting a packet halfway into a slot
         # + epsilon.
-        if isinstance(self.demodulator, dragonradio.ParallelPacketDemodulator):
+        if isinstance(self.channelizer, dragonradio.OverlapTDChannelizer):
             if self.config.superslots:
-                self.demodulator.prev_demod = 0.5*config.slot_size
-                self.demodulator.cur_demod = config.slot_size
+                self.channelizer.prev_demod = 0.5*config.slot_size
+                self.channelizer.cur_demod = config.slot_size
             else:
-                self.demodulator.prev_demod = config.demod_overlap_size
-                self.demodulator.cur_demod = \
+                self.channelizer.prev_demod = config.demod_overlap_size
+                self.channelizer.cur_demod = \
                     config.slot_size - config.guard_size + config.demod_overlap_size
 
         self.finishConfiguringMAC()
@@ -1097,14 +1106,14 @@ class Radio(object):
         config = self.config
 
         if config.tx_upsample:
-            self.modulator.tx_channel = channel
+            self.synthesizer.tx_channel = channel
         else:
             fc = channel.fc
             logging.info("Setting TX frequency offset to %g", fc)
 
             self.usrp.tx_frequency = self.frequency + fc
 
-            self.modulator.tx_channel = Channel(0.0, self.channel_bandwidth)
+            self.synthesizer.tx_channel = Channel(0.0, self.channel_bandwidth)
 
         # Allow the MAC to figure out the TX offset so snapshot self
         # tranmissions are correctly logged

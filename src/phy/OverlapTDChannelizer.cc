@@ -1,17 +1,16 @@
 #include <functional>
 
-#include "Logger.hh"
 #include "phy/PHY.hh"
-#include "phy/ParallelPacketDemodulator.hh"
+#include "phy/OverlapTDChannelizer.hh"
 #include "net/Net.hh"
 
 using namespace std::placeholders;
 
-ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
-                                                     std::shared_ptr<PHY> phy,
-                                                     const Channels &channels,
-                                                     unsigned int nthreads)
-  : PacketDemodulator(channels)
+OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<Net> net,
+                                           std::shared_ptr<PHY> phy,
+                                           const Channels &channels,
+                                           unsigned int nthreads)
+  : Channelizer(channels)
   , source(*this, nullptr, nullptr)
   , net_(net)
   , phy_(phy)
@@ -28,24 +27,24 @@ ParallelPacketDemodulator::ParallelPacketDemodulator(std::shared_ptr<Net> net,
   , demod_reconfigure_(nthreads)
   , logger_(logger)
 {
-    net_thread_ = std::thread(&ParallelPacketDemodulator::netWorker, this);
+    net_thread_ = std::thread(&OverlapTDChannelizer::netWorker, this);
 
     for (unsigned int i = 0; i < nthreads; ++i) {
         demod_reconfigure_[i].store(false, std::memory_order_relaxed);
-        demod_threads_.emplace_back(std::thread(&ParallelPacketDemodulator::demodWorker,
+        demod_threads_.emplace_back(std::thread(&OverlapTDChannelizer::demodWorker,
                                     this,
                                     std::ref(demod_reconfigure_[i])));
     }
 }
 
-ParallelPacketDemodulator::~ParallelPacketDemodulator()
+OverlapTDChannelizer::~OverlapTDChannelizer()
 {
     stop();
 }
 
-void ParallelPacketDemodulator::setChannels(const Channels &channels)
+void OverlapTDChannelizer::setChannels(const Channels &channels)
 {
-    PacketDemodulator::setChannels(channels);
+    Channelizer::setChannels(channels);
 
     std::lock_guard<std::mutex> lock(iq_mutex_);
 
@@ -53,7 +52,7 @@ void ParallelPacketDemodulator::setChannels(const Channels &channels)
         nextWindow();
 }
 
-void ParallelPacketDemodulator::push(const std::shared_ptr<IQBuf> &buf)
+void OverlapTDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
     // Push the packet on the end of the queue
     {
@@ -67,7 +66,7 @@ void ParallelPacketDemodulator::push(const std::shared_ptr<IQBuf> &buf)
     iq_cond_.notify_one();
 }
 
-void ParallelPacketDemodulator::reconfigure(void)
+void OverlapTDChannelizer::reconfigure(void)
 {
     prev_demod_samps_ = prev_demod_*rx_rate_;
     cur_demod_samps_ = cur_demod_*rx_rate_;
@@ -76,7 +75,7 @@ void ParallelPacketDemodulator::reconfigure(void)
         flag.store(true, std::memory_order_relaxed);
 }
 
-void ParallelPacketDemodulator::stop(void)
+void OverlapTDChannelizer::stop(void)
 {
     done_ = true;
 
@@ -93,7 +92,7 @@ void ParallelPacketDemodulator::stop(void)
     }
 }
 
-void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
+void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
 {
     ChannelDemodulator        demod(*phy_, taps_, 1.0, 0.0);
     RadioPacketQueue::barrier b;
@@ -219,7 +218,7 @@ void ParallelPacketDemodulator::demodWorker(std::atomic<bool> &reconfig)
     }
 }
 
-void ParallelPacketDemodulator::netWorker(void)
+void OverlapTDChannelizer::netWorker(void)
 {
     std::unique_ptr<RadioPacket> pkt;
 
@@ -229,10 +228,10 @@ void ParallelPacketDemodulator::netWorker(void)
     }
 }
 
-bool ParallelPacketDemodulator::pop(RadioPacketQueue::barrier& b,
-                                    unsigned &channel,
-                                    std::shared_ptr<IQBuf>& buf1,
-                                    std::shared_ptr<IQBuf>& buf2)
+bool OverlapTDChannelizer::pop(RadioPacketQueue::barrier& b,
+                               unsigned &channel,
+                               std::shared_ptr<IQBuf>& buf1,
+                               std::shared_ptr<IQBuf>& buf2)
 {
     static MonoClock::time_point last_overflow_log(0.0);
 
@@ -270,7 +269,7 @@ bool ParallelPacketDemodulator::pop(RadioPacketQueue::barrier& b,
     return true;
 }
 
-void ParallelPacketDemodulator::nextWindow(void)
+void OverlapTDChannelizer::nextWindow(void)
 {
     iq_.pop_front();
     --iq_size_;

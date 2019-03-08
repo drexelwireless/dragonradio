@@ -1,20 +1,20 @@
-#ifndef PACKETMODULATOR_H_
-#define PACKETMODULATOR_H_
+#ifndef SYNTHESIZER_H_
+#define SYNTHESIZER_H_
 
 #include "Logger.hh"
 #include "phy/ModPacket.hh"
 
-/** @brief A packet modulator. */
-class PacketModulator
+/** @brief Base class for synthesizers */
+class Synthesizer
 {
 public:
-    PacketModulator()
+    Synthesizer()
       : tx_rate_(0.0)
       , maxPacketSize_(0)
     {
     }
 
-    virtual ~PacketModulator() = default;
+    virtual ~Synthesizer() = default;
 
     /** @brief Get the TX sample rate. */
     virtual double getTXRate(void)
@@ -85,4 +85,4 @@ protected:
     size_t maxPacketSize_;
 };
 
-#endif /* PACKETMODULATOR_H_ */
+#endif /* SYNTHESIZER_H_ */
