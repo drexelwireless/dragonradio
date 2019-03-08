@@ -9,7 +9,6 @@
 #include "barrier.hh"
 #include "ringbuffer.hh"
 #include "spinlock_mutex.hh"
-#include "RadioPacketQueue.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
@@ -204,9 +203,6 @@ private:
     /** @brief Condition variable for waking demodulators. */
     std::condition_variable wake_cond_;
 
-    /** @brief Queue of radio packets. */
-    RadioPacketQueue radio_q_;
-
     /** @brief Mutex for demodulation state. */
     spinlock_mutex demod_mutex_;
 
@@ -218,9 +214,6 @@ private:
 
     /** @brief Demodulation worker threads. */
     std::vector<std::thread> demod_threads_;
-
-    /** @brief Network send thread. */
-    std::thread net_thread_;
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;
@@ -236,9 +229,6 @@ private:
 
     /** @brief A demodulation worker. */
     void demodWorker(unsigned tid);
-
-    /** @brief The network wend worker. */
-    void netWorker(void);
 };
 
 #endif /* TDCHANNELIZER_H_ */

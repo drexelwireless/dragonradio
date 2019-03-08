@@ -21,8 +21,6 @@ TDChannelizer::TDChannelizer(std::shared_ptr<Net> net,
   , reconfigure_sync_(nthreads+1)
   , logger_(logger)
 {
-    net_thread_ = std::thread(&TDChannelizer::netWorker, this);
-
     for (unsigned int tid = 0; tid < nthreads; ++tid)
         demod_threads_.emplace_back(std::thread(&TDChannelizer::demodWorker,
                                     this,
@@ -105,11 +103,6 @@ void TDChannelizer::stop(void)
     done_ = true;
 
     wake_cond_.notify_all();
-
-    radio_q_.stop();
-
-    if (net_thread_.joinable())
-        net_thread_.join();
 
     for (unsigned int i = 0; i < demod_threads_.size(); ++i) {
         if (demod_threads_[i].joinable())
@@ -234,16 +227,6 @@ void TDChannelizer::demodWorker(unsigned tid)
         channelidx += nchannels;
         if (channelidx >= nchannels)
             channelidx = tid;
-    }
-}
-
-void TDChannelizer::netWorker(void)
-{
-    std::unique_ptr<RadioPacket> pkt;
-
-    while (!done_) {
-        if (radio_q_.pop(pkt))
-            source.push(std::move(pkt));
     }
 }
 
