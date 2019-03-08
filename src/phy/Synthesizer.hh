@@ -10,7 +10,7 @@ class Synthesizer
 public:
     Synthesizer()
       : tx_rate_(0.0)
-      , maxPacketSize_(0)
+      , max_packet_size_(0)
     {
     }
 
@@ -34,13 +34,13 @@ public:
     /** @brief Get maximum packet size. */
     size_t getMaxPacketSize(void)
     {
-        return maxPacketSize_;
+        return max_packet_size_;
     }
 
     /** @brief Set maximum packet size. */
-    void setMaxPacketSize(size_t maxPacketSize)
+    void setMaxPacketSize(size_t max_packet_size)
     {
-        maxPacketSize_ = maxPacketSize;
+        max_packet_size_ = max_packet_size;
     }
 
     /** @brief Get the maximum modulation upsample rate. */
@@ -82,7 +82,7 @@ protected:
     double tx_rate_;
 
     /** @brief Maximum number of possible samples in a modulated packet. */
-    size_t maxPacketSize_;
+    size_t max_packet_size_;
 };
 
 #endif /* SYNTHESIZER_H_ */

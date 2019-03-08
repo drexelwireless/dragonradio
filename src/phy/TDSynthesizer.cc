@@ -78,7 +78,7 @@ size_t TDSynthesizer::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
             size_t n = mpkt.samples->size();
 
             // Drop packets that won't fit in a slot
-            if (n > maxPacketSize_ && maxPacketSize_ != 0) {
+            if (n > max_packet_size_ && max_packet_size_ != 0) {
                 fprintf(stderr, "Dropping modulated packet that is too long to send: n=%u, max=%u\n",
                         (unsigned) n,
                         (unsigned) maxSamples);
