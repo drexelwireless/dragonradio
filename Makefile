@@ -76,8 +76,6 @@ SOURCES := \
     liquid/Mutex.cc \
     liquid/PHY.cc \
     liquid/Resample.cc \
-    phy/ChannelDemodulator.cc \
-    phy/ChannelModulator.cc \
     phy/TXParams.cc \
     phy/LiquidPHY.cc \
     phy/OverlapTDChannelizer.cc \

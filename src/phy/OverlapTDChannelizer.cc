@@ -94,7 +94,7 @@ void OverlapTDChannelizer::stop(void)
 
 void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
 {
-    ChannelDemodulator        demod(*phy_, taps_, 1.0, 0.0);
+    ChannelState              demod(*phy_, taps_, 1.0, 0.0);
     RadioPacketQueue::barrier b;
     unsigned                  channelidx;
     std::shared_ptr<IQBuf>    buf1;
@@ -274,4 +274,24 @@ void OverlapTDChannelizer::nextWindow(void)
     iq_.pop_front();
     --iq_size_;
     iq_next_channel_ = 0;
+}
+
+void OverlapTDChannelizer::ChannelState::demodulate(IQBuf &resamp_buf,
+                                                    const std::complex<float>* data,
+                                                    size_t count,
+                                                    std::function<void(std::unique_ptr<RadioPacket>)> callback)
+{
+    if (rad_ != 0.0 || rate_ != 1.0) {
+        // Resample. Note that we can't very well mix without a frequency shift,
+        // so we are guaranteed that the resampler's rate is not 1 here.
+        unsigned nw;
+
+        resamp_buf.resize(resamp_.neededOut(count));
+        nw = resamp_.resampleMixDown(data, count, resamp_buf.data());
+        resamp_buf.resize(nw);
+
+        // Demodulate resampled data.
+        demod_->demodulate(resamp_buf.data(), resamp_buf.size(), callback);
+    } else
+        demod_->demodulate(data, count, callback);
 }

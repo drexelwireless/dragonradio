@@ -86,10 +86,10 @@ void TDChannelizer::reconfigure(void)
             shift = 2*M_PI*channel.fc/rx_rate_;
         }
 
-        demods_[i] = std::make_unique<ChannelDemodulator>(*phy_,
-                                                          taps_,
-                                                          rate,
-                                                          shift);
+        demods_[i] = std::make_unique<ChannelState>(*phy_,
+                                                    taps_,
+                                                    rate,
+                                                    shift);
         iqbufs_[i].clear();
         chan_seqs_[i] = 0;
     }
@@ -252,4 +252,24 @@ void TDChannelizer::netWorker(void)
         if (radio_q_.pop(pkt))
             source.push(std::move(pkt));
     }
+}
+
+void TDChannelizer::ChannelState::demodulate(IQBuf &resamp_buf,
+                                             const std::complex<float>* data,
+                                             size_t count,
+                                             std::function<void(std::unique_ptr<RadioPacket>)> callback)
+{
+    if (rad_ != 0.0 || rate_ != 1.0) {
+        // Resample. Note that we can't very well mix without a frequency shift,
+        // so we are guaranteed that the resampler's rate is not 1 here.
+        unsigned nw;
+
+        resamp_buf.resize(resamp_.neededOut(count));
+        nw = resamp_.resampleMixDown(data, count, resamp_buf.data());
+        resamp_buf.resize(nw);
+
+        // Demodulate resampled data.
+        demod_->demodulate(resamp_buf.data(), resamp_buf.size(), callback);
+    } else
+        demod_->demodulate(data, count, callback);
 }
