@@ -855,10 +855,12 @@ class Radio(object):
             tx_params.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
 
     def setTXParams(self, crc, fec0, fec1, ms, g, clip=0.999):
+        config = self.config
+
         tx_params = TXParams(MCS(crc, fec0, fec1, ms))
 
         if g == 'auto':
-            tx_params.soft_tx_gain_0dBFS = self.soft_tx_gain
+            tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
             tx_params.recalc0dBFSEstimate(100)
             tx_params.auto_soft_tx_gain_clip_frac = clip
         else:
