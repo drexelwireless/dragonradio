@@ -60,78 +60,15 @@ private:
         ChannelState(PHY &phy,
                      const Channel &channel,
                      const std::vector<C> &taps,
-                     double rate,
-                     double rad)
-          : channel_(channel)
-          , rate_(rate)
-          , rad_(rad)
-          , resamp_(rate, taps)
-          , demod_(phy.mkDemodulator())
-          , seq_(0)
-        {
-            resamp_.setFreqShift(rad);
-        }
+                     double rx_rate);
 
         ~ChannelState() = default;
 
-        /** @brief Set prototype filter. Should have unity gain. */
-        const std::vector<C> &getTaps(void) const
-        {
-            return resamp_.getTaps();
-        }
-
-        /** @brief Set prototype filter. Should have unity gain. */
-        void setTaps(const std::vector<C> &taps)
-        {
-            resamp_.setTaps(taps);
-        }
-
-        /** @brief Set resampling rate */
-        void setRate(double rate)
-        {
-            if (rate_ != rate) {
-                rate_ = rate;
-                resamp_.setRate(rate_);
-            }
-        }
-
-        /** @brief Set frequency shift */
-        void setFreqShift(double rad)
-        {
-            if (rad != rad_) {
-                rad_ = rad;
-                resamp_.setFreqShift(rad_);
-            }
-        }
-
-        /** @brief Update IQ buffer equence number */
-        void updateSeq(unsigned seq)
-        {
-            // Reset state if we have a discontinuity or if we're not currently
-            // receiving a frame
-            if (seq != seq_ + 1 || !isFrameOpen())
-                reset();
-
-            // Record buffer sequence number
-            seq_ = seq;
-        }
-
-        /** @brief Is a frame currently being demodulated?
-         * @return true if a frame is currently being demodulated, false
-         * otherwise.
-         */
-        bool isFrameOpen(void)
-        {
-            return demod_->isFrameOpen();
-        }
+        /** @brief Update IQ buffer sequence number */
+        void updateSeq(unsigned seq);
 
         /** @brief Reset internal state */
-        void reset(void)
-        {
-            resamp_.reset();
-            demod_->reset(channel_);
-            seq_ = 0;
-        }
+        void reset(void);
 
         /** @brief Set timestamp for demodulation
          * @param timestamp The timestamp for future samples.
@@ -139,15 +76,9 @@ private:
          * timestamp.
          * @param offset The offset of the first sample that will be demodulated.
          */
-         virtual void timestamp(const MonoClock::time_point &timestamp,
-                                std::optional<size_t> snapshot_off,
-                                size_t offset)
-         {
-             demod_->timestamp(timestamp,
-                               snapshot_off,
-                               offset,
-                               rate_);
-         }
+        void timestamp(const MonoClock::time_point &timestamp,
+                       std::optional<size_t> snapshot_off,
+                       size_t offset);
 
         /** @brief Demodulate data with given parameters */
         void demodulate(IQBuf &resamp_buf,
@@ -218,15 +149,6 @@ private:
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;
-
-    /** @brief Get RX downsample rate for given channel. */
-    double getRXDownsampleRate(const Channel &channel)
-    {
-        if (channel.bw == 0.0)
-            return 1.0;
-        else
-            return (phy_->getMinTXRateOversample()*channel.bw)/rx_rate_;
-    }
 
     /** @brief A demodulation worker. */
     void demodWorker(unsigned tid);

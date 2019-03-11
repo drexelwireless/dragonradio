@@ -79,8 +79,7 @@ void TDChannelizer::reconfigure(void)
         demods_[i] = std::make_unique<ChannelState>(*phy_,
                                                     channel,
                                                     taps_,
-                                                    getRXDownsampleRate(channel),
-                                                    2*M_PI*channel.fc/rx_rate_);
+                                                    rx_rate_);
     }
 
     // We are done reconfiguring
@@ -220,6 +219,49 @@ void TDChannelizer::demodWorker(unsigned tid)
         if (channelidx >= nchannels)
             channelidx = tid;
     }
+}
+
+TDChannelizer::ChannelState::ChannelState(PHY &phy,
+                                          const Channel &channel,
+                                          const std::vector<C> &taps,
+                                          double rx_rate)
+  : channel_(channel)
+  , rate_(phy.getMinRXRateOversample()*channel.bw/rx_rate)
+  , rad_(2*M_PI*channel.fc/rx_rate)
+  , resamp_(rate_, taps)
+  , demod_(phy.mkDemodulator())
+  , seq_(0)
+{
+    resamp_.setFreqShift(rad_);
+}
+
+void TDChannelizer::ChannelState::updateSeq(unsigned seq)
+{
+    // Reset state if we have a discontinuity or if we're not currently
+    // receiving a frame
+    if (seq != seq_ + 1 || !demod_->isFrameOpen())
+        reset();
+
+    // Record buffer sequence number
+    seq_ = seq;
+}
+
+/** @brief Reset internal state */
+void TDChannelizer::ChannelState::reset(void)
+{
+    resamp_.reset();
+    demod_->reset(channel_);
+    seq_ = 0;
+}
+
+void TDChannelizer::ChannelState::timestamp(const MonoClock::time_point &timestamp,
+                                            std::optional<size_t> snapshot_off,
+                                            size_t offset)
+{
+    demod_->timestamp(timestamp,
+                      snapshot_off,
+                      offset,
+                      rate_);
 }
 
 void TDChannelizer::ChannelState::demodulate(IQBuf &resamp_buf,

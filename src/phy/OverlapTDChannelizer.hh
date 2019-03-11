@@ -108,49 +108,17 @@ private:
     class ChannelState {
     public:
         ChannelState(PHY &phy,
+                     const Channel &channel,
                      const std::vector<C> &taps,
-                     double rate,
-                     double rad)
-          : rate_(rate)
-          , rad_(rad)
-          , resamp_(rate, taps)
-          , demod_(phy.mkDemodulator())
-        {
-            resamp_.setFreqShift(rad);
-        }
+                     double rx_rate);
 
         ~ChannelState() = default;
 
-        /** @brief Set prototype filter. Should have unity gain. */
-        void setTaps(const std::vector<C> &taps)
-        {
-            resamp_.setTaps(taps);
-        }
-
-        /** @brief Set resampling rate */
-        void setRate(double rate)
-        {
-            if (rate_ != rate) {
-                rate_ = rate;
-                resamp_.setRate(rate_);
-            }
-        }
-
-        /** @brief Set frequency shift */
-        void setFreqShift(double rad)
-        {
-            if (rad != rad_) {
-                rad_ = rad;
-                resamp_.setFreqShift(rad_);
-            }
-        }
+        /** @brief Set channel */
+        void setChannel(const Channel &channel);
 
         /** @brief Reset internal state */
-        void reset(const Channel &channel)
-        {
-            resamp_.reset();
-            demod_->reset(channel);
-        }
+        void reset(void);
 
         /** @brief Set timestamp for demodulation
          * @param timestamp The timestamp for future samples.
@@ -158,15 +126,9 @@ private:
          * timestamp.
          * @param offset The offset of the first sample that will be demodulated.
          */
-         virtual void timestamp(const MonoClock::time_point &timestamp,
-                                std::optional<size_t> snapshot_off,
-                                size_t offset)
-         {
-             demod_->timestamp(timestamp,
-                               snapshot_off,
-                               offset,
-                               rate_);
-         }
+        void timestamp(const MonoClock::time_point &timestamp,
+                       std::optional<size_t> snapshot_off,
+                       size_t offset);
 
         /** @brief Demodulate data with given parameters */
         void demodulate(IQBuf &resamp_buf,
@@ -175,6 +137,15 @@ private:
                         std::function<void(std::unique_ptr<RadioPacket>)> callback);
 
     protected:
+        /** @brief Channel we are demodulating */
+        Channel channel_;
+
+        /** @brief RX rate */
+        double rx_rate_;
+
+        /** @brief RX oversample factor */
+        unsigned rx_oversample_;
+
         /** @brief Resampling rate */
         double rate_;
 
