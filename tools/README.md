@@ -24,6 +24,10 @@ This script visualizes sent and received packets. Invoking it with `--tx ID` sho
 
 Produces a summary of a `iperf-radio.py` run when given the run's server and client logs.
 
+### MGEN Wireshark dissector
+
+The `wireshark` directory contains a Wireshark dissector for MGEN packets. The [README](./wireshark/README.md) contains installation instructions.
+
 ## Running the `iperf-radio.py` radio driver
 
 The `iperf-radio.py` radio driver allows automated search over radio configuration parameters using iperf-like tests. Parameters are configured using a Python configuration file; see the examples in the `iperf-config` directory.
