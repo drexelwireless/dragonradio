@@ -113,6 +113,11 @@ namespace fftw
         {
             static_assert(sizeof(T) == 0, "Only specializations of fftw::FFTBase can be used");
         }
+
+        void execute(T *in, T *out)
+        {
+            static_assert(sizeof(T) == 0, "Only specializations of fftw::FFTBase can be used");
+        }
     };
 
     template <>
@@ -149,6 +154,13 @@ namespace fftw
         void execute(void)
         {
             fftwf_execute(plan_);
+        }
+
+        void execute(C *in, C *out)
+        {
+            fftwf_execute_dft(plan_,
+                              reinterpret_cast<fftwf_complex*>(in),
+                              reinterpret_cast<fftwf_complex*>(out));
         }
 
         vector<C> in;
