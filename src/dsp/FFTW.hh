@@ -87,6 +87,9 @@ namespace fftw
         }
     };
 
+    template<typename T>
+    using vector = std::vector<T, allocator<T>>;
+
     template <class T>
     class FFT {
     public:
@@ -148,9 +151,9 @@ namespace fftw
             fftwf_execute(plan_);
         }
 
-        std::vector<C, allocator<C>> in;
+        vector<C> in;
 
-        std::vector<C, allocator<C>> out;
+        vector<C> out;
 
     protected:
         /** @brief Size of FFT */
