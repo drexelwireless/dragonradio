@@ -152,7 +152,7 @@ class Config(object):
         self.taper_len = 4
 
         # Channelizer parameters
-        self.channelizer = 'timedomain'
+        self.channelizer = 'freqdomain'
         self.channelizer_enforce_ordering = False
 
         # Synthesizer parameters
@@ -468,7 +468,7 @@ class Config(object):
 
         # Channelizer parameters
         parser.add_argument('--channelizer', action='store',
-                            choices=['timedomain', 'overlap'],
+                            choices=['freqdomain', 'timedomain', 'overlap'],
                             dest='channelizer',
                             help='set channelization algorithm')
         parser.add_argument('--channelizer-enforce-ordering', action='store_const', const=True,
@@ -753,8 +753,14 @@ class Radio(object):
                                                                 config.num_demodulation_threads)
 
             self.channelizer.enforce_ordering = config.channelizer_enforce_ordering
-        else:
+        elif config.channelizer == 'timedomain':
             self.channelizer = dragonradio.TDChannelizer(self.net,
+                                                         self.phy,
+                                                         self.usrp.rx_rate,
+                                                         self.channels,
+                                                         config.num_demodulation_threads)
+        else:
+            self.channelizer = dragonradio.FDChannelizer(self.net,
                                                          self.phy,
                                                          self.usrp.rx_rate,
                                                          self.channels,

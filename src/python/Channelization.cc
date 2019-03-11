@@ -5,6 +5,7 @@
 
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
+#include "phy/FDChannelizer.hh"
 #include "phy/OverlapTDChannelizer.hh"
 #include "phy/Synthesizer.hh"
 #include "phy/TDChannelizer.hh"
@@ -21,6 +22,36 @@ void exportPacketModulators(py::module &m)
         .def_property("channels",
             &Channelizer::getChannels,
             &Channelizer::setChannels)
+        ;
+
+    // Export class FDChannelizer to Python
+    py::class_<FDChannelizer, Channelizer, std::shared_ptr<FDChannelizer>>(m, "FDChannelizer")
+        .def(py::init<std::shared_ptr<Net>,
+                      std::shared_ptr<PHY>,
+                      double,
+                      const Channels&,
+                      unsigned int>())
+        .def_property("taps",
+            &FDChannelizer::getTaps,
+            &FDChannelizer::setTaps,
+            "Prototype filter for channelization. Should have unity gain.")
+        .def_readonly_static("P",
+            &FDChannelizer::P,
+            "Maximum prototype filter length.")
+        .def_readonly_static("V",
+            &FDChannelizer::V,
+            "Overlap factor.")
+        .def_readonly_static("N",
+            &FDChannelizer::N,
+            "FFT size.")
+        .def_readonly_static("L",
+            &FDChannelizer::L,
+            "Samples consumer per input block.")
+        .def_property_readonly("source",
+            [](std::shared_ptr<FDChannelizer> e)
+            {
+                return exposePort(e, &e->source);
+            })
         ;
 
     // Export class TDChannelizer to Python
