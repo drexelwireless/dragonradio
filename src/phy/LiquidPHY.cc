@@ -1,3 +1,6 @@
+#include <xsimd/xsimd.hpp>
+#include <xsimd/stl/algorithms.hpp>
+
 #include "Logger.hh"
 #include "RadioConfig.hh"
 #include "WorkQueue.hh"
@@ -70,9 +73,14 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
     do {
         last_symbol = modulateSamples(&(*iqbuf)[nsamples], nw);
 
-        // Apply soft gain. Note that this is where nsamples is incremented.
-        for (unsigned int i = 0; i < nw; i++)
-            (*iqbuf)[nsamples++] *= g;
+        // Apply soft gain.
+        xsimd::transform(iqbuf->data() + nsamples,
+                         iqbuf->data() + nsamples + nw,
+                         iqbuf->data() + nsamples,
+            [&](const auto& x) { return x*g; });
+
+        // We have nw additional samples
+        nsamples += nw;
 
         // If we can't add another nw samples to the current IQ buffer, resize
         // it.
