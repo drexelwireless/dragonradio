@@ -8,9 +8,10 @@ using namespace std::placeholders;
 
 OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<Net> net,
                                            std::shared_ptr<PHY> phy,
+                                           double rx_rate,
                                            const Channels &channels,
                                            unsigned int nthreads)
-  : Channelizer(channels)
+  : Channelizer(rx_rate, channels)
   , source(*this, nullptr, nullptr)
   , net_(net)
   , phy_(phy)

@@ -27,6 +27,7 @@ void exportPacketModulators(py::module &m)
     py::class_<TDChannelizer, Channelizer, std::shared_ptr<TDChannelizer>>(m, "TDChannelizer")
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
+                      double,
                       const Channels&,
                       unsigned int>())
         .def_property("taps",
@@ -44,6 +45,7 @@ void exportPacketModulators(py::module &m)
     py::class_<OverlapTDChannelizer, Channelizer, std::shared_ptr<OverlapTDChannelizer>>(m, "OverlapTDChannelizer")
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
+                      double,
                       const Channels&,
                       unsigned int>())
         .def_property("taps",
@@ -77,6 +79,7 @@ void exportPacketModulators(py::module &m)
     py::class_<TDSynthesizer, Synthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
+                      double,
                       const Channel&,
                       unsigned int>())
         .def_property("taps",

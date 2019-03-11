@@ -28,6 +28,7 @@ public:
 
     OverlapTDChannelizer(std::shared_ptr<Net> net,
                          std::shared_ptr<PHY> phy,
+                         double rx_rate,
                          const Channels &channels,
                          unsigned int nthreads);
     virtual ~OverlapTDChannelizer();

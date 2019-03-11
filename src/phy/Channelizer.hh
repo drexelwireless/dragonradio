@@ -8,8 +8,9 @@
 class Channelizer
 {
 public:
-    Channelizer(const Channels &channels)
-      : rx_rate_(0.0)
+    Channelizer(double rx_rate,
+                const Channels &channels)
+      : rx_rate_(rx_rate)
       , channels_(channels)
     {
     }

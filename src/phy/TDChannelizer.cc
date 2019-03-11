@@ -9,9 +9,10 @@ using namespace std::placeholders;
 
 TDChannelizer::TDChannelizer(std::shared_ptr<Net> net,
                              std::shared_ptr<PHY> phy,
+                             double rx_rate,
                              const Channels &channels,
                              unsigned int nthreads)
-  : Channelizer(channels)
+  : Channelizer(rx_rate, channels)
   , source(*this, nullptr, nullptr)
   , net_(net)
   , phy_(phy)
@@ -74,21 +75,12 @@ void TDChannelizer::reconfigure(void)
 
     for (unsigned i = 0; i < nchannels; i++) {
         Channel &channel = channels_[i];
-        double  rate = 1.0;
-        double  shift = 0.0;
-
-        // If the RX rate hasn't been set yet, use the default rate of 1.0 and
-        // no frequency shift.
-        if (rx_rate_ != 0) {
-            rate = getRXDownsampleRate(channel);
-            shift = 2*M_PI*channel.fc/rx_rate_;
-        }
 
         demods_[i] = std::make_unique<ChannelState>(*phy_,
                                                     channel,
                                                     taps_,
-                                                    rate,
-                                                    shift);
+                                                    getRXDownsampleRate(channel),
+                                                    2*M_PI*channel.fc/rx_rate_);
     }
 
     // We are done reconfiguring

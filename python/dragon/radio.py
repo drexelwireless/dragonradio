@@ -748,6 +748,7 @@ class Radio(object):
         if config.channelizer == 'overlap':
             self.channelizer = dragonradio.OverlapTDChannelizer(self.net,
                                                                 self.phy,
+                                                                self.usrp.rx_rate,
                                                                 self.channels,
                                                                 config.num_demodulation_threads)
 
@@ -755,17 +756,15 @@ class Radio(object):
         else:
             self.channelizer = dragonradio.TDChannelizer(self.net,
                                                          self.phy,
+                                                         self.usrp.rx_rate,
                                                          self.channels,
                                                          config.num_demodulation_threads)
 
         self.synthesizer = dragonradio.TDSynthesizer(self.net,
                                                      self.phy,
+                                                     self.usrp.tx_rate,
                                                      self.tx_channel,
                                                      config.num_modulation_threads)
-
-        # Set modulator/demodulator rates
-        self.channelizer.rx_rate = self.usrp.rx_rate
-        self.synthesizer.tx_rate = self.usrp.tx_rate
 
         # Configure channelization taps
         self.configureChannelizationTaps()

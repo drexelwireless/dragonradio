@@ -8,8 +8,8 @@
 class Synthesizer
 {
 public:
-    Synthesizer()
-      : tx_rate_(0.0)
+    Synthesizer(double tx_rate)
+      : tx_rate_(tx_rate)
       , max_packet_size_(0)
     {
     }

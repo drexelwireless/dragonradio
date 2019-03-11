@@ -7,9 +7,10 @@
 
 TDSynthesizer::TDSynthesizer(std::shared_ptr<Net> net,
                              std::shared_ptr<PHY> phy,
+                             double tx_rate,
                              const Channel &tx_channel,
                              size_t nthreads)
-  : Synthesizer()
+  : Synthesizer(tx_rate)
   , sink(*this, nullptr, nullptr)
   , net_(net)
   , phy_(phy)
