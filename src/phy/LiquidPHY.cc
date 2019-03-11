@@ -65,9 +65,9 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
     // Number of samples written
     size_t nw;
     // Flag indicating when we've reached the last symbol
-    bool last_symbol = false;
+    bool last_symbol;
 
-    while (!last_symbol) {
+    do {
         last_symbol = modulateSamples(&(*iqbuf)[nsamples], nw);
 
         // Apply soft gain. Note that this is where nsamples is incremented.
@@ -78,7 +78,7 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
         // it.
         if (nsamples + kMaxModSamples > iqbuf->size())
             iqbuf->resize(2*iqbuf->size());
-    }
+    } while (!last_symbol);
 
     // Resize the final buffer to the number of samples generated.
     iqbuf->resize(nsamples);
