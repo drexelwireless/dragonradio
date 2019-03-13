@@ -122,9 +122,7 @@ void FDChannelizer::fftWorker(void)
         iqbuf_.pop();
 
         // Wait for the buffer to start to fill.
-        while (buf->nsamples.load(std::memory_order_acquire) == 0 &&
-               !buf->complete.load(std::memory_order_acquire))
-            ;
+        buf->waitToStartFilling();
 
         // Create a frequency-domain buffer
         fdbuf = std::make_shared<IQBuf>((buf->capacity() + L - 1)*N/L);
@@ -285,9 +283,7 @@ void FDChannelizer::demodWorker(unsigned tid)
         auto &fdiqbuf = buf.second;
 
         // Wait for the buffer to start to fill.
-        while (fdiqbuf->nsamples.load(std::memory_order_acquire) == 0 &&
-               !fdiqbuf->complete.load(std::memory_order_acquire))
-            ;
+        fdiqbuf->waitToStartFilling();
 
         // When the snapshot is over, we need to record self-transmissions
         // for one more slot to ensure we record any transmission that

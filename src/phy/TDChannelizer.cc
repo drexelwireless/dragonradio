@@ -156,9 +156,7 @@ void TDChannelizer::demodWorker(unsigned tid)
         iqbuf.pop();
 
         // Wait for the buffer to start to fill.
-        while (buf->nsamples.load(std::memory_order_acquire) == 0 &&
-               !buf->complete.load(std::memory_order_acquire))
-            ;
+        buf->waitToStartFilling();
 
         // When the snapshot is over, we need to record self-transmissions
         // for one more slot to ensure we record any transmission that

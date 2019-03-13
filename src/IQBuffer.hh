@@ -130,6 +130,14 @@ public:
      * of the RX.
      */
     size_t oversample;
+
+    /** @brief Wait for the buffer to start filling. */
+    void waitToStartFilling(void)
+    {
+        while (nsamples.load(std::memory_order_acquire) == 0 &&
+               !complete.load(std::memory_order_acquire))
+            ;
+    }
 };
 
 #endif /* IQBUFFER_H_ */
