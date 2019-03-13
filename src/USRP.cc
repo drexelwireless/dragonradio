@@ -168,8 +168,6 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
         n = rx_stream_->recv(&buf[ndelivered], rx_max_samps_, rx_md, 0.1, false);
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
-            fprintf(stderr, "RX error: %s\n", rx_md.strerror().c_str());
-
             if (rx_md.has_time_spec)
                 logEventAt(Clock::to_wall_time(MonoClock::time_point { rx_md.time_spec }), "RX error: %s", rx_md.strerror().c_str());
             else
