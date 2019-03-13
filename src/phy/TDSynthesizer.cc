@@ -20,7 +20,6 @@ TDSynthesizer::TDSynthesizer(std::shared_ptr<Net> net,
   , mod_reconfigure_(nthreads)
   , nwanted_(0)
   , nsamples_(0)
-  , one_mod_(*phy_, taps_, 1.0, 0.0)
 {
     for (size_t i = 0; i < nthreads; ++i) {
         mod_reconfigure_[i].store(false, std::memory_order_relaxed);
@@ -37,13 +36,16 @@ TDSynthesizer::~TDSynthesizer()
 
 double TDSynthesizer::getMaxTXUpsampleRate(void)
 {
-    return getTXUpsampleRate();
+    if (tx_channel_.bw == 0.0)
+        return 1.0;
+    else
+        return tx_rate_/(phy_->getMinRXRateOversample()*tx_channel_.bw);
 }
 
 void TDSynthesizer::modulateOne(std::shared_ptr<NetPacket> pkt,
                                           ModPacket &mpkt)
 {
-    one_mod_.modulate(tx_channel_, std::move(pkt), mpkt);
+    one_mod_->modulate(tx_channel_, std::move(pkt), mpkt);
 }
 
 void TDSynthesizer::modulate(size_t n)
@@ -120,9 +122,7 @@ size_t TDSynthesizer::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
 
 void TDSynthesizer::reconfigure(void)
 {
-    one_mod_.setTaps(taps_);
-    one_mod_.setRate(getTXUpsampleRate());
-    one_mod_.setFreqShift(2*M_PI*tx_channel_.fc/tx_rate_);
+    one_mod_ = std::make_unique<ChannelState>(*phy_, tx_channel_, taps_, tx_rate_);
 
     for (auto &flag : mod_reconfigure_)
         flag.store(true, std::memory_order_relaxed);
@@ -144,11 +144,11 @@ void TDSynthesizer::stop(void)
 
 void TDSynthesizer::modWorker(std::atomic<bool> &reconfig)
 {
-    ChannelState               mod(*phy_, taps_, 1.0, 0.0);
-    std::shared_ptr<NetPacket> pkt;
-    ModPacket                  *mpkt;
+    std::unique_ptr<ChannelState> mod;
+    std::shared_ptr<NetPacket>    pkt;
+    ModPacket                     *mpkt;
     // We want the last 10 packets to account for 86% of the EMA
-    EMA<double>                samples_per_packet(2.0/(10.0 + 1.0));
+    EMA<double>                   samples_per_packet(2.0/(10.0 + 1.0));
 
     for (;;) {
         size_t estimated_samples = samples_per_packet.getValue();
@@ -207,15 +207,13 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_relaxed)) {
-            mod.setTaps(taps_);
-            mod.setRate(getTXUpsampleRate());
-            mod.setFreqShift(2*M_PI*tx_channel_.fc/tx_rate_);
+            mod = std::make_unique<ChannelState>(*phy_, tx_channel_, taps_, tx_rate_);
 
             reconfig.store(false, std::memory_order_relaxed);
         }
 
         // Modulate the packet
-        mod.modulate(tx_channel_, std::move(pkt), *mpkt);
+        mod->modulate(tx_channel_, std::move(pkt), *mpkt);
 
         // Save the number of modulated samples so we can record them later.
         size_t n = mpkt->samples->size();
@@ -245,6 +243,24 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig)
             }
         }
     }
+}
+
+TDSynthesizer::ChannelState::ChannelState(PHY &phy,
+                                          const Channel &channel,
+                                          const std::vector<C> &taps,
+                                          double tx_rate)
+  // XXX Protected against channel with zero bandwidth
+  : rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
+  , rad_(2*M_PI*channel.fc/tx_rate)
+  , resamp_(rate_, taps)
+  , mod_(phy.mkModulator())
+{
+    resamp_.setFreqShift(rad_);
+}
+
+void TDSynthesizer::ChannelState::reset(void)
+{
+    resamp_.reset();
 }
 
 void TDSynthesizer::ChannelState::modulate(const Channel &channel,

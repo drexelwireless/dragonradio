@@ -79,48 +79,14 @@ private:
         using C = std::complex<float>;
 
         ChannelState(PHY &phy,
+                     const Channel &channel,
                      const std::vector<C> &taps,
-                     double rate,
-                     double rad)
-          : rate_(rate)
-          , rad_(rad)
-          , resamp_(rate, taps)
-          , mod_(phy.mkModulator())
-        {
-            resamp_.setFreqShift(rad);
-        }
+                     double tx_rate);
 
         ~ChannelState() = default;
 
-        /** @brief Set prototype filter. Should have unity gain. */
-        void setTaps(const std::vector<C> &taps)
-        {
-            resamp_.setTaps(taps);
-        }
-
-        /** @brief Set resampling rate */
-        void setRate(double rate)
-        {
-            if (rate_ != rate) {
-                rate_ = rate;
-                resamp_.setRate(rate_);
-            }
-        }
-
-        /** @brief Set frequency shift */
-        void setFreqShift(double rad)
-        {
-            if (rad != rad_) {
-                rad_ = rad;
-                resamp_.setFreqShift(rad_);
-            }
-        }
-
         /** @brief Reset internal state */
-        void reset(const Channel &channel)
-        {
-            resamp_.reset();
-        }
+        void reset(void);
 
         /** @brief Modulate a packet to produce IQ samples.
          * @param channel The channel being modulated.
@@ -185,16 +151,7 @@ private:
     std::list<std::unique_ptr<ModPacket>> pkt_q_;
 
     /* @brief Modulator for one-off modulation */
-    ChannelState one_mod_;
-
-    /** @brief Get TX upsample rate. */
-    double getTXUpsampleRate(void)
-    {
-        if (tx_channel_.bw == 0.0)
-            return 1.0;
-        else
-            return tx_rate_/(phy_->getMinRXRateOversample()*tx_channel_.bw);
-    }
+    std::unique_ptr<ChannelState> one_mod_;
 
     /** @brief Thread modulating packets */
     void modWorker(std::atomic<bool> &reconfig);
