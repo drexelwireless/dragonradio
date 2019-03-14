@@ -39,12 +39,6 @@ FDChannelizer::~FDChannelizer()
     stop();
 }
 
-void FDChannelizer::setChannels(const Channels &channels)
-{
-    Channelizer::setChannels(channels);
-    reconfigure();
-}
-
 void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
     iqbuf_.push(buf);

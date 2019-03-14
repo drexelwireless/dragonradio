@@ -35,12 +35,6 @@ TDChannelizer::~TDChannelizer()
     stop();
 }
 
-void TDChannelizer::setChannels(const Channels &channels)
-{
-    Channelizer::setChannels(channels);
-    reconfigure();
-}
-
 void TDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
     std::lock_guard<spinlock_mutex> lock(demod_mutex_);

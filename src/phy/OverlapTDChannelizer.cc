@@ -45,7 +45,7 @@ OverlapTDChannelizer::~OverlapTDChannelizer()
 
 void OverlapTDChannelizer::setChannels(const Channels &channels)
 {
-    Channelizer::setChannels(channels);
+    channels_ = channels;
 
     std::lock_guard<std::mutex> lock(iq_mutex_);
 

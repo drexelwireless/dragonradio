@@ -42,6 +42,7 @@ public:
     virtual void setChannels(const Channels &channels)
     {
         channels_ = channels;
+        reconfigure();
     }
 
     /** @brief Add an IQ buffer to demodulate.

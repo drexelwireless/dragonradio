@@ -44,8 +44,6 @@ public:
                   unsigned int nthreads);
     virtual ~FDChannelizer();
 
-    void setChannels(const Channels &channels) override;
-
     void push(const std::shared_ptr<IQBuf> &) override;
 
     void reconfigure(void) override;
