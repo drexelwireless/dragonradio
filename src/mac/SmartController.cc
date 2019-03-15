@@ -688,7 +688,7 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
 {
     assert(entry.pkt);
 
-    if (entry.canDrop(max_retransmissions_))
+    if (entry.shouldDrop(max_retransmissions_))
         drop(entry);
     else
         retransmit(entry);
@@ -1329,7 +1329,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // If we can't fit this packet in our window, move the window along
             // by dropping the oldest packet.
             if (   nexthop.seq >= unack + sendw.win
-                && sendw[unack].canDrop(max_retransmissions_)) {
+                && sendw[unack].mayDrop(max_retransmissions_)) {
                 logEvent("ARQ: MOVING WINDOW ALONG: node=%u",
                     (unsigned) pkt->nexthop);
                 drop(sendw[unack]);
@@ -1350,7 +1350,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // "move along." However, if the send window is only 1 packet,
             // ALWAYS close it since we're waiting for the ACK to our SYN!
             if (   nexthop.seq >= unack + sendw.win
-                && (!move_along_ || sendw.win == 1))
+                && ((sendw[unack] && !sendw[unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
                 netq_->setSendWindowStatus(nexthop.id, false);
 
             return true;

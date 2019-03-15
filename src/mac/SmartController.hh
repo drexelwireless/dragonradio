@@ -54,15 +54,25 @@ struct SendWindow {
             pkt.reset();
         }
 
-        /** @brief Return true if we are allowed to drop this window entry. */
-        /** We drop an entry if:
+        /** @brief Return true if we MAY drop this window entry. */
+        /** We MAY drop an entry if:
+         * 1) It is NOT a SYN packet, because in that case it is needed to
+         * initiate a connection. We always retransmit SYN packets.
+         */
+        inline bool mayDrop(const std::optional<size_t> &max_retransmissions)
+        {
+            return !pkt->isFlagSet(kSYN);
+        }
+
+        /** @brief Return true if we SHOULD drop this window entry. */
+        /** We SHOULD drop an entry if:
          * 1) It is NOT a SYN packet, because in that case it is needed to
          * initiate a connection. We always retransmit SYN packets.
          * AND
          * 2) It has exceeded the maximum number of allowed retransmissions.
          * 3) OR it has passed its deadline.
          */
-        inline bool canDrop(const std::optional<size_t> &max_retransmissions)
+        inline bool shouldDrop(const std::optional<size_t> &max_retransmissions)
         {
             return !pkt->isFlagSet(kSYN) &&
                  (  (max_retransmissions && nretrans >= *max_retransmissions)
