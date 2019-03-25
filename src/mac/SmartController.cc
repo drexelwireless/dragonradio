@@ -478,6 +478,11 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     }
 }
 
+void SmartController::missed(std::shared_ptr<NetPacket>&& pkt)
+{
+    netq_->repush(std::move(pkt));
+}
+
 void SmartController::transmitted(std::shared_ptr<NetPacket>& pkt)
 {
     if (!pkt->isFlagSet(kBroadcast) && pkt->data_len != 0) {
@@ -664,14 +669,11 @@ void SmartController::broadcastHello(void)
     }
 
     // Send a timestamped HELLO
-    {
-        std::lock_guard<std::mutex> lock(mac_mutex_);
-
-        if (mac_) {
-            pkt->tx_params = &broadcast_tx_params;
-            pkt->g = broadcast_tx_params.g_0dBFS.getValue();
-            mac_->sendTimestampedPacket(Clock::now() + rc.timestamp_delay, std::move(pkt));
-        }
+    if (netq_) {
+        pkt->tx_params = &broadcast_tx_params;
+        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
+        pkt->setInternalFlag(kIsTimestamp);
+        netq_->push_hi(std::move(pkt));
     }
 }
 

@@ -46,10 +46,14 @@ void exportMACs(py::module &m)
             &SlottedMAC::getGuardSize,
             &SlottedMAC::setGuardSize,
             "Guard size (sec)")
-        .def_property("premod_slots",
-            &SlottedMAC::getPreModulateSlots,
-            &SlottedMAC::setPreModulateSlots,
-            "Maintain this many slots worth of modulated packets.")
+        .def_property("slot_modulate_lead_time",
+            &SlottedMAC::getSlotModulateLeadTime,
+            &SlottedMAC::setSlotModulateLeadTime,
+            "Slot modulation lead time (sec)")
+        .def_property("slot_send_lead_time",
+            &SlottedMAC::getSlotSendLeadTime,
+            &SlottedMAC::setSlotSendLeadTime,
+            "Slot send lead time (sec)")
         ;
 
     // Export class TDMA::Slots to Python
@@ -88,6 +92,8 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Synthesizer>,
                       double,
                       double,
+                      double,
+                      double,
                       size_t>())
         .def_property("slots",
             &TDMA::getSlots,
@@ -110,6 +116,8 @@ void exportMACs(py::module &m)
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
                       std::shared_ptr<Synthesizer>,
+                      double,
+                      double,
                       double,
                       double,
                       double>())

@@ -53,7 +53,10 @@ enum {
     kRetransmission,
 
     /** @brief Set if the packet contains a selective ACK */
-    kHasSelectiveACK
+    kHasSelectiveACK,
+
+    /** @brief Set if this is a timestamp packet */
+    kIsTimestamp
 };
 
 typedef uint16_t InternalFlags;

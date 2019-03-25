@@ -10,7 +10,9 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<Channelizer> channelizer,
                        std::shared_ptr<Synthesizer> synthesizer,
                        double slot_size,
-                       double guard_size)
+                       double guard_size,
+                       double slot_modulate_lead_time,
+                       double slot_send_lead_time)
   : MAC(usrp,
         phy,
         controller,
@@ -19,10 +21,22 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
         synthesizer)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
-  , premod_slots_(1.0)
+  , slot_modulate_lead_time_(slot_modulate_lead_time)
+  , slot_send_lead_time_(slot_send_lead_time)
   , logger_(logger)
   , done_(false)
 {
+}
+
+SlottedMAC::~SlottedMAC()
+{
+    // Mark all remaining packets in un-finalized slots as missed
+    std::lock_guard<spinlock_mutex> lock(slots_mutex_);
+
+    while (!slots_.empty()) {
+        missedSlot(*slots_.front());
+        slots_.pop();
+    }
 }
 
 void SlottedMAC::reconfigure(void)
@@ -33,7 +47,6 @@ void SlottedMAC::reconfigure(void)
     rx_bufsize_ = usrp_->getRecommendedBurstRXSize(rx_slot_samps_);
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
     tx_full_slot_samps_ = tx_rate_*slot_size_;
-    premod_samps_ = premod_slots_*tx_full_slot_samps_;
 
     if (usrp_->getTXRate() == usrp_->getRXRate())
         tx_fc_off_ = std::nullopt;
@@ -104,89 +117,147 @@ void SlottedMAC::rxWorker(void)
     }
 }
 
-size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfill)
+void SlottedMAC::modulateSlot(Clock::time_point when,
+                              size_t prev_overfill,
+                              bool owns_next_slot)
 {
-    std::list<std::shared_ptr<IQBuf>>     txBuf;  // IQ buffers to transmit
-    std::list<std::unique_ptr<ModPacket>> modBuf; // Modulated packets
+    assert(prev_overfill <= tx_slot_samps_);
+    assert(prev_overfill <= tx_full_slot_samps_);
 
-    // Put the timestamped packet on the front of the TX queue if it is due to
-    // be sent this slot.
-    {
-        std::lock_guard<spinlock_mutex> lock(timestamped_mutex_);
+    // XXX For some reason this is necessary to please USRP. Otherwise we get
+    // late TX errors.
+    if (prev_overfill > 0)
+        prev_overfill += 1;
 
-        if (timestamped_mpkt_) {
-            if (approx(timestamped_deadline_, when)) {
-                maxSamples -= timestamped_mpkt_->samples->size();
-                modBuf.emplace_back(std::move(timestamped_mpkt_));
-            } else if (timestamped_deadline_ < when) {
-                logEvent("TIMESYNC: MISSED TIMESTAMPED PACKET: timestamp=%f; slot=%f",
-                    (double) timestamped_deadline_.get_real_secs(),
-                    (double) when.get_real_secs());
+    size_t max_samples = owns_next_slot ? tx_full_slot_samps_ - prev_overfill : tx_slot_samps_ - prev_overfill;
+    auto   slot = std::make_shared<Synthesizer::Slot>(when, prev_overfill, max_samples, owns_next_slot);
 
-                timestamped_mpkt_.reset();
-            }
+    // Tell the synthesizer to synthesize for this slot
+    synthesizer_->modulate(slot);
+
+    std::lock_guard<spinlock_mutex> lock(slots_mutex_);
+
+    slots_.emplace(std::move(slot));
+}
+
+std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(Clock::time_point when)
+{
+    std::shared_ptr<Synthesizer::Slot> slot;
+    Clock::time_point                  deadline;
+
+    for (;;) {
+        // Get the next slot
+        {
+            std::lock_guard<spinlock_mutex> lock(slots_mutex_);
+
+            // If we don't have any slots synthesized, we can't send anything
+            if (slots_.empty())
+                return nullptr;
+
+            // Check deadline of next slot
+            deadline = slots_.front()->deadline;
+
+            // If the next slot needs to be transmitted or tossed, pop it,
+            // otherwise return nullptr since we need to wait longer
+            if (deadline < when || approx(deadline, when)) {
+                slot = std::move(slots_.front());
+                slots_.pop();
+            } else
+                return nullptr;
+        }
+
+        // Close the slot. We grab the slot's mutex to guarantee that all
+        // synthesizer threads have seen that the slot is closed---this serves
+        // as a barrier. After this, no synthesizer will touch the slot, so we
+        // are guaranteed exclusive access.
+        {
+            std::lock_guard<spinlock_mutex> lock(slot->mutex);
+
+            slot->closed.store(true, std::memory_order_relaxed);
+        }
+
+        // Finalize the slot
+        synthesizer_->finalize(*slot);
+
+        // If the slot's deadline has passed, try the next slot. Otherwise,
+        // return the slot.
+        if (approx(deadline, when)) {
+            return slot;
+        } else {
+            logEvent("MAC: MISSED SLOT DEADLINE: deadline=%f; slot=%f; now=%f",
+                (double) deadline.get_real_secs(),
+                (double) when.get_real_secs(),
+                (double) Clock::now().get_real_secs());
+
+            // Re-queue packets that were modulated for this slot
+            missedSlot(*slot);
+        }
+    }
+}
+
+void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
+{
+    // If the slot doesn't contain any IQ data to send, we're done
+    if (slot->mpkts.empty())
+        return;
+
+    // Transmit the packets via the USRP
+    usrp_->burstTX(Clock::to_mono_time(slot->deadline) + slot->delay/tx_rate_,
+                   true,
+                   true,
+                   slot->iqbufs);
+
+    // Log the transmissions
+    if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
+        // Log the sent packets
+        for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
+            Header hdr;
+
+            hdr.curhop = (*it)->pkt->curhop;
+            hdr.nexthop = (*it)->pkt->nexthop;
+            hdr.seq = (*it)->pkt->seq;
+
+            logger_->logSend(Clock::to_wall_time((*it)->samples->timestamp),
+                             hdr,
+                             (*it)->pkt->src,
+                             (*it)->pkt->dest,
+                             (*it)->pkt->tx_params->mcs.check,
+                             (*it)->pkt->tx_params->mcs.fec0,
+                             (*it)->pkt->tx_params->mcs.fec1,
+                             (*it)->pkt->tx_params->mcs.ms,
+                             tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
+                             tx_rate_,
+                             (*it)->pkt->size(),
+                             (*it)->samples);
         }
     }
 
-    // Fill the rest of the slot with modulated packets
-    size_t nsamples;
+    // Inform the controller of the transmission
+    for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it)
+        controller_->transmitted((*it)->pkt);
 
-    nsamples = synthesizer_->pop(modBuf, maxSamples, overfill);
-
-    if (!modBuf.empty()) {
-        Channel channel = modBuf.front()->channel;
-
-        // Transmit the packets via the USRP
-        if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
-            for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
-                txBuf.emplace_back((*it)->samples);
-
-            usrp_->burstTX(Clock::to_mono_time(when), true, true, txBuf);
-
-            // Log the sent packets
-            for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
-                Header hdr;
-
-                hdr.curhop = (*it)->pkt->curhop;
-                hdr.nexthop = (*it)->pkt->nexthop;
-                hdr.seq = (*it)->pkt->seq;
-
-                logger_->logSend(Clock::to_wall_time((*it)->samples->timestamp),
-                                 hdr,
-                                 (*it)->pkt->src,
-                                 (*it)->pkt->dest,
-                                 (*it)->pkt->tx_params->mcs.check,
-                                 (*it)->pkt->tx_params->mcs.fec0,
-                                 (*it)->pkt->tx_params->mcs.fec1,
-                                 (*it)->pkt->tx_params->mcs.ms,
-                                 tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
-                                 tx_rate_,
-                                 (*it)->pkt->size(),
-                                 (*it)->samples);
-            }
-        } else {
-            // When we aren't logging, use std::move to hand the samples over
-            // without retaining a reference. This avoids a shared_ptr refcount
-            // operation. Do we care?
-            for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
-                txBuf.emplace_back(std::move((*it)->samples));
-
-            usrp_->burstTX(Clock::to_mono_time(when), true, true, txBuf);
-        }
-
-        // Inform the controller of the transmission
-        for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
-            controller_->transmitted((*it)->pkt);
-
-        // Tell the snapshot collector about this local self-transmission
-        if (snapshot_collector_)
-            snapshot_collector_->selfTX(Clock::to_mono_time(when),
+    // Tell the snapshot collector about local self-transmissions
+    if (snapshot_collector_) {
+        for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it)
+            snapshot_collector_->selfTX(Clock::to_mono_time(slot->deadline) + (*it)->start/tx_rate_,
                                         rx_rate_,
                                         tx_rate_,
-                                        channel.bw,
-                                        nsamples,
-                                        tx_fc_off_ ? *tx_fc_off_ :channel.fc);
+                                        (*it)->channel.bw,
+                                        (*it)->nsamples,
+                                        tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc);
     }
+}
 
-    return (nsamples > maxSamples) ? (nsamples - maxSamples) : 0;
+void SlottedMAC::missedSlot(Synthesizer::Slot &slot)
+{
+    std::lock_guard<spinlock_mutex> lock(slot.mutex);
+
+    // Close the slot
+    slot.closed.store(true, std::memory_order_relaxed);
+
+    // Re-queue packets that were modulated for this slot
+    for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
+        if (!(*it)->pkt->isInternalFlagSet(kIsTimestamp))
+            controller_->missed(std::move((*it)->pkt));
+    }
 }

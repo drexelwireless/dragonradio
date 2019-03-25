@@ -24,6 +24,8 @@ public:
                  std::shared_ptr<Synthesizer> synthesizer,
                  double slot_size,
                  double guard_size,
+                 double slot_modulate_lead_time,
+                 double slot_send_lead_time,
                  double p);
     virtual ~SlottedALOHA();
 
@@ -50,8 +52,6 @@ public:
 
     /** @brief Stop processing packets */
     void stop(void) override;
-
-    void sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt) override;
 
 private:
     /** @brief Probability of transmission */

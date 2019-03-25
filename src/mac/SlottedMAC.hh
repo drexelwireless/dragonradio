@@ -2,7 +2,9 @@
 #define SLOTTEDMAC_H_
 
 #include <optional>
+#include <queue>
 
+#include "spinlock_mutex.hh"
 #include "Logger.hh"
 #include "USRP.hh"
 #include "phy/Channelizer.hh"
@@ -22,8 +24,10 @@ public:
                std::shared_ptr<Channelizer> channelizer,
                std::shared_ptr<Synthesizer> synthesizer,
                double slot_size,
-               double guard_size);
-    virtual ~SlottedMAC() = default;
+               double guard_size,
+               double slot_modulate_lead_time,
+               double slot_send_lead_time);
+    virtual ~SlottedMAC();
 
     SlottedMAC(const SlottedMAC&) = delete;
     SlottedMAC(SlottedMAC&&) = delete;
@@ -61,29 +65,26 @@ public:
         reconfigure();
     }
 
-    /** @brief Get number of slots to pre-modulate */
-    virtual double getPreModulateSlots(void)
+    virtual size_t getSlotModulateLeadTime(void)
     {
-        return premod_slots_;
+        return slot_modulate_lead_time_;
     }
 
-    /** @brief Set demodulation overlap size
-     * @param n Number of slots to pre-modulate
-     */
-    virtual void setPreModulateSlots(double n)
+    virtual void setSlotModulateLeadTime(size_t t)
     {
-        premod_slots_ = n;
+        slot_modulate_lead_time_ = t;
         reconfigure();
     }
 
-    /** @brief Do we have a pending timestamp packet?
-     * @param when Time to check for pending timestamp
-     * @return true if there is a pending timstamp at given time, false
-     * otherwise.
-     */
-    bool pendingTimestamp(Clock::time_point when)
+    virtual size_t getSlotSendLeadTime(void)
     {
-        return timestamped_mpkt_ && approx(timestamped_deadline_, when);
+        return slot_send_lead_time_;
+    }
+
+    virtual void setSlotSendLeadTime(size_t t)
+    {
+        slot_send_lead_time_ = t;
+        reconfigure();
     }
 
     virtual void reconfigure(void) override;
@@ -94,6 +95,12 @@ protected:
 
     /** @brief Length of inter-slot guard (sec) */
     double guard_size_;
+
+    /** @brief Lead time needed to modulate a slot's worth of data. */
+    double slot_modulate_lead_time_;
+
+    /** @brief Lead time needed to send a slot's worth of data. */
+    double slot_send_lead_time_;
 
     /** @brief Number of RX samples in a full slot */
     size_t rx_slot_samps_;
@@ -107,17 +114,17 @@ protected:
     /** @brief Number of TX samples in the entire slot, including the guard */
     size_t tx_full_slot_samps_;
 
+    /** @brief Mutex protecting synthesized slots */
+    spinlock_mutex slots_mutex_;
+
+    /** @brief Synthesized slots */
+    std::queue<std::shared_ptr<Synthesizer::Slot>> slots_;
+
     /** @brief TX center frequency offset from RX center frequency. */
     /** If the TX and RX rates are different, this is non-empty and contains
      * the frequency of the channel we transmit on.
      */
     std::optional<double> tx_fc_off_;
-
-    /** @brief Number of slots to pre-modulate */
-    double premod_slots_;
-
-    /** @brief Number of samples to pre-modulate */
-    size_t premod_samps_;
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;
@@ -128,13 +135,34 @@ protected:
     /** @brief Worker receiving packets */
     void rxWorker(void);
 
-    /** @brief Transmit one slot's worth of samples
+    /** @brief Schedule modulation of a slot
      * @param when Start time of slot
-     * @param maxSamples The maximum number of samples to transmits
-     * @param overfill Flag that is true if we are allowed to overfill the slot
-     * @return The number of samples overfilled
+     * @param prev_overfill Number of overfill samples from previous slot.
+     * @param owns_next_slot Flag that is true if we own the next slot
      */
-    virtual size_t txSlot(Clock::time_point when, size_t maxSamples, bool overfill);
+    void modulateSlot(Clock::time_point when,
+                      size_t prev_overfill,
+                      bool owns_next_slot);
+
+    /** @brief Finalize the next TX slot.
+     * @param when Start time of slot
+     * @return The slot
+     */
+    /** After finalizeSlot returns, the caller has exclusive access to the slot.
+     * That is, it does not need to acquire the slot's lock to modify it,
+     * because it is guaranteed exclusive access.
+     */
+    std::shared_ptr<Synthesizer::Slot> finalizeSlot(Clock::time_point when);
+
+    /** @brief Transmit a slot
+     * @param slot The slot
+     */
+    void txSlot(std::shared_ptr<Synthesizer::Slot> &&slot);
+
+    /** @brief Mark a slot as missed
+     * @param slot The slot
+     */
+    void missedSlot(Synthesizer::Slot &slot);
 };
 
 #endif /* SLOTTEDMAC_H_ */

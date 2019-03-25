@@ -49,12 +49,6 @@ public:
     /** @brief Retransmission delay in seconds */
     double arq_retransmission_delay;
 
-    /** @brief Time needed to modulate a slot's worth of data. */
-    double slot_modulate_time;
-
-    /** @brief Time needed to send a slot's worth of data. */
-    double slot_send_time;
-
     /** @brief Display packets written to tun/tap device? */
     bool verbose_packet_trace;
 };

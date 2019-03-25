@@ -26,10 +26,6 @@ void exportRadioConfig(py::module &m)
             "ACK delay, in seconds")
         .def_readwrite("arq_retransmission_delay", &RadioConfig::arq_retransmission_delay,
             "Retransmission delay, in seconds")
-        .def_readwrite("slot_modulate_time", &RadioConfig::slot_modulate_time,
-            "Time needed to modulate a slot's worth of data, in seconds")
-        .def_readwrite("slot_send_time", &RadioConfig::slot_send_time,
-            "Time needed to send a slot's worth of data, in seconds")
         .def_readwrite("verbose_packet_trace",
             &RadioConfig::verbose_packet_trace,
             "Display packets written to tun/tap device?")

@@ -14,6 +14,8 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<Synthesizer> synthesizer,
            double slot_size,
            double guard_size,
+           double slot_modulate_lead_time,
+           double slot_send_lead_time,
            size_t nslots)
   : SlottedMAC(usrp,
                phy,
@@ -22,7 +24,9 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
                channelizer,
                synthesizer,
                slot_size,
-               guard_size)
+               guard_size,
+               slot_modulate_lead_time,
+               slot_send_lead_time)
   , slots_(*this, nslots)
   , superslots_(false)
 {
@@ -60,17 +64,6 @@ void TDMA::reconfigure(void)
     can_transmit_ = findNextSlot(t_now, t_next_slot, own_next_slot);
 }
 
-void TDMA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt)
-{
-    Clock::time_point t_next_slot;
-    bool              own_next_slot;
-
-    if (findNextSlot(t, t_next_slot, own_next_slot))
-        timestampPacket(t_next_slot, std::move(pkt));
-    else
-        pkt.reset();
-}
-
 void TDMA::txWorker(void)
 {
     Clock::time_point t_now;              // Current time
@@ -80,7 +73,6 @@ void TDMA::txWorker(void)
     bool              own_next_slot;      // Do we own the next slot too?
     bool              own_following_slot; // Do we own the following slot too?
     size_t            noverfill = 0;      // Number of overfilled samples;
-    double            delta;              // Time until we need to wake up to modulate more packets
 
     uhd::set_thread_priority_safe();
 
@@ -99,56 +91,51 @@ void TDMA::txWorker(void)
                 continue;
             }
 
+            // Finalize next slot. After this returns, we have EXCLUSIVE access
+            // to the slot.
+            auto slot = finalizeSlot(t_next_slot);
+
             // Find following slot. We divide slot_size_ by two to avoid
             // possible rounding issues where we mights end up skipping a slot.
             bool hasFollowingSlot = findNextSlot(t_next_slot + slot_size_/2.0,
                                                  t_following_slot,
                                                  own_following_slot);
 
-            // Schedule transmission for start of our next slot if we haven't
-            // already transmitted for that slot
-            if (hasFollowingSlot && !approx(t_next_slot, t_prev_slot)) {
-                bool overfill_allowed = superslots_ &&
-                    own_following_slot && !pendingTimestamp(t_following_slot);
+            // Schedule modulation of the following slot
+            if (slot)
+                noverfill = slot->nsamples < slot->max_samples ? 0 : slot->nsamples - slot->max_samples;
+            else
+                noverfill = 0;
 
-                noverfill = txSlot(t_next_slot + noverfill/tx_rate_,
-                                   tx_full_slot_samps_ - noverfill,
-                                   overfill_allowed);
+            // Schedule modulation of following slot
+            if (hasFollowingSlot && !approx(t_following_slot, t_prev_slot)) {
+                modulateSlot(t_following_slot,
+                             noverfill,
+                             superslots_ && own_following_slot);
 
-                // XXX For some reason this is necessary to please USRP.
-                // Otherwise we get late TX errors.
-                if (noverfill != 0)
-                    noverfill += 1;
-
-                t_prev_slot = t_next_slot;
+                t_prev_slot = t_following_slot;
             }
 
+            // Transmit next slot
+            if (slot)
+                txSlot(std::move(slot));
+
+            // If we had a TX error, restart the TX loop
             if (usrp_->getTXErrorCount() != 0)
                 break;
 
-            // Sleep until it's time to modulate the next slot
+            // Sleep until it's time to send the following slot
+            double delta;
+
             t_now = Clock::now();
-
-            delta = (t_following_slot - t_now - rc.slot_modulate_time).get_real_secs();
-
-            if (delta > 0.0)
-                doze(delta);
-
-            // Modulate samples for next slot
-            synthesizer_->modulate(premod_samps_);
-
-            // Sleep until it's time to send the slot's modulated data
-            t_now = Clock::now();
-
-            delta = (t_following_slot - t_now - rc.slot_send_time).get_real_secs();
-
+            delta = (t_following_slot - t_now).get_real_secs() - slot_send_lead_time_;
             if (delta > 0.0)
                 doze(delta);
         }
 
         // Attempt to deal with TX errors
         logEvent("MAC: attempting to reset TX loop");
-        doze(0.100);
+        doze(slot_size_/2.0);
     }
 }
 

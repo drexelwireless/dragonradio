@@ -2,9 +2,7 @@
 #define TDSYNTHESIZER_H_
 
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
-#include <queue>
 
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
@@ -17,8 +15,6 @@
 class TDSynthesizer : public Synthesizer
 {
 public:
-    using C = std::complex<float>;
-
     TDSynthesizer(std::shared_ptr<Net> net,
                   std::shared_ptr<PHY> phy,
                   double tx_rate,
@@ -28,14 +24,7 @@ public:
 
     double getMaxTXUpsampleRate(void) override;
 
-    virtual void modulateOne(std::shared_ptr<NetPacket> pkt,
-                             ModPacket &mpkt) override;
-
-    void modulate(size_t n) override;
-
-    size_t pop(std::list<std::unique_ptr<ModPacket>>& pkts,
-               size_t maxSamples,
-               bool overfill) override;
+    void modulate(const std::shared_ptr<Slot> &slot) override;
 
     void reconfigure(void) override;
 
@@ -86,15 +75,16 @@ private:
         void reset(void);
 
         /** @brief Modulate a packet to produce IQ samples.
-         * @param channel The channel being modulated.
          * @param pkt The NetPacket to modulate.
          * @param mpkt The ModPacket in which to place modulated samples.
          */
-        void modulate(const Channel &channel,
-                      std::shared_ptr<NetPacket> pkt,
+        void modulate(std::shared_ptr<NetPacket> pkt,
                       ModPacket &mpkt);
 
     protected:
+        /** @brief Channel we are modulating */
+        Channel channel_;
+
         /** @brief Resampling rate */
         double rate_;
 
@@ -123,32 +113,14 @@ private:
     /** @brief Reconfiguration flags */
     std::vector<std::atomic<bool>> mod_reconfigure_;
 
-    /** @brief Thread running modWorker */
+    /** @brief Current slot that need to be synthesized */
+    std::shared_ptr<Synthesizer::Slot> curslot_;
+
+    /** @brief Threads running modWorker */
     std::vector<std::thread> mod_threads_;
 
-    /** @brief Number of modulated samples we want. */
-    size_t nwanted_;
-
-    /** @brief Number of modulated samples we have */
-    size_t nsamples_;
-
-    /** @brief Mutex to serialize access to the network */
-    std::mutex net_mutex_;
-
-    /* @brief Mutex protecting queue of modulated packets */
-    std::mutex pkt_mutex_;
-
-    /* @brief Condition variable used to signal modulation workers */
-    std::condition_variable producer_cond_;
-
-    /* @brief Queue of modulated packets */
-    std::list<std::unique_ptr<ModPacket>> pkt_q_;
-
-    /* @brief Modulator for one-off modulation */
-    std::unique_ptr<ChannelState> one_mod_;
-
     /** @brief Thread modulating packets */
-    void modWorker(std::atomic<bool> &reconfig);
+    void modWorker(std::atomic<bool> &reconfig, unsigned tid);
 };
 
 #endif /* TDSYNTHESIZER_H_ */

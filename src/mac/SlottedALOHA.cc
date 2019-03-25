@@ -13,6 +13,8 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            std::shared_ptr<Synthesizer> synthesizer,
                            double slot_size,
                            double guard_size,
+                           double slot_modulate_lead_time,
+                           double slot_send_lead_time,
                            double p)
   : SlottedMAC(usrp,
                phy,
@@ -21,7 +23,9 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                channelizer,
                synthesizer,
                slot_size,
-               guard_size)
+               guard_size,
+               slot_modulate_lead_time,
+               slot_send_lead_time)
   , p_(p)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
@@ -49,20 +53,12 @@ void SlottedALOHA::stop(void)
         tx_thread_.join();
 }
 
-void SlottedALOHA::sendTimestampedPacket(const Clock::time_point &t, std::shared_ptr<NetPacket> &&pkt)
-{
-    size_t tx_slot;
-
-    tx_slot = t.get_real_secs() / slot_size_ + arrival_dist_(gen_);
-
-    timestampPacket(Clock::time_point { tx_slot * slot_size_ }, std::move(pkt));
-}
-
 void SlottedALOHA::txWorker(void)
 {
-    Clock::time_point t_now;       // Current time
-    Clock::time_point t_next_slot; // Time at which our next slot starts
-    double            t_slot_pos;  // Offset into the current slot (sec)
+    Clock::time_point t_now;            // Current time
+    Clock::time_point t_next_slot;      // Time at which our next slot starts
+    Clock::time_point t_following_slot; // Time at which the following slot starts
+    double            t_slot_pos;       // Offset into the current slot (sec)
 
     uhd::set_thread_priority_safe();
 
@@ -71,26 +67,25 @@ void SlottedALOHA::txWorker(void)
         t_now = Clock::now();
         t_slot_pos = fmod(t_now, slot_size_);
         t_next_slot = t_now + (slot_size_ - t_slot_pos);
+        t_following_slot = t_next_slot + slot_size_;
 
-        // Transmit in the next slot with probability p_...
-        bool transmit = dist_(gen_) < p_;
+        // Finalize next slot
+        auto slot = finalizeSlot(t_next_slot);
 
-        // ...or if we have a timestamped packet to send.
-        {
-            std::lock_guard<spinlock_mutex> lock(timestamped_mutex_);
+        // Modulate following slot with probability p_
+        if (dist_(gen_) < p_)
+            modulateSlot(t_following_slot, 0, false);
 
-            if (timestamped_mpkt_ && approx(timestamped_deadline_, t_next_slot))
-                transmit = true;
-        }
+        // Transmit next slot
+        if (slot)
+            txSlot(std::move(slot));
 
-        if (transmit) {
-            txSlot(t_next_slot, tx_slot_samps_, false);
+        // Sleep until TX time for following slot
+        double delta;
 
-            // Modulate samples for next slot
-            synthesizer_->modulate(premod_samps_);
-        }
-
-        // Sleep until the next slot
-        doze((t_next_slot - t_now).get_real_secs());
+        t_now = Clock::now();
+        delta = (t_following_slot - t_now).get_real_secs() - slot_send_lead_time_;
+        if (delta > 0.0)
+            doze(delta);
     }
 }

@@ -119,7 +119,7 @@ class Config(object):
         # PHY parameters
         self.phy = 'ofdm'
         self.min_packet_size = 0
-        self.num_modulation_threads = 4
+        self.num_modulation_threads = 1
         self.num_demodulation_threads = 16
         self.max_channels = 10
         self.tx_upsample = True
@@ -160,16 +160,25 @@ class Config(object):
 
         # MAC parameters
         self.slot_size = .035
+        """Total slot duration, including guard interval (seconds)"""
         self.guard_size = .01
+        """Size of slot guard interval (seconds)"""
         self.demod_overlap_size = .005
-        self.premod_slots = 2.0
+        """Size of demodulation overlap if using the overlapping demodulator (seconds)"""
+        self.slot_modulate_lead_time = 30e-3
+        """Lead time needed for slot modulation (seconds)"""
+        self.slot_send_lead_time = 5e-3
+        """Lead time needed for slot transmission (seconds)"""
         self.aloha_prob = .1
-        self.slot_modulate_time = 30e-3
-        self.slot_send_time = 10e-3
+        """Probability of transmission in a given slot for ALOHA"""
         self.fdma = False
+        """True if we should use FDMA MAC, False for pure TDMA"""
         self.tx_channel = None
+        """Hard-coded transmission channel"""
         self.superslots = False
+        """True if slots should be combined into superslots"""
         self.neighbor_discovery_period = 12
+        """Neighbor discovery period at radio startup (sec)"""
 
         # ARQ options
         self.arq = False
@@ -491,9 +500,6 @@ class Config(object):
         parser.add_argument('--demod-overlap-size', action='store', type=float,
                             dest='demod_overlap_size',
                             help='set demodulation overlap interval (sec)')
-        parser.add_argument('--premod-slots', action='store', type=float,
-                            dest='premod_slots',
-                            help='set number of slots to pre-modulate')
         parser.add_argument('--fdma', action='store_const', const=True,
                             dest='fdma',
                             help='use FDMA instead of TDMA')
@@ -623,7 +629,6 @@ class Radio(object):
                      'timestamp_delay',
                      'mtu',
                      'arq_ack_delay', 'arq_retransmission_delay',
-                     'slot_modulate_time', 'slot_send_time',
                      'verbose_packet_trace']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
@@ -1055,6 +1060,8 @@ class Radio(object):
                                             self.synthesizer,
                                             config.slot_size,
                                             config.guard_size,
+                                            config.slot_modulate_lead_time,
+                                            config.slot_send_lead_time,
                                             config.aloha_prob)
 
         if isinstance(self.channelizer, dragonradio.OverlapTDChannelizer):
@@ -1083,6 +1090,8 @@ class Radio(object):
                                     self.synthesizer,
                                     config.slot_size,
                                     config.guard_size,
+                                    config.slot_modulate_lead_time,
+                                    config.slot_send_lead_time,
                                     nslots)
 
         self.mac.superslots = self.config.superslots
@@ -1102,8 +1111,6 @@ class Radio(object):
         self.finishConfiguringMAC()
 
     def finishConfiguringMAC(self):
-        self.mac.premod_slots = self.config.premod_slots
-
         if self.config.arq:
             self.controller.mac = self.mac
 

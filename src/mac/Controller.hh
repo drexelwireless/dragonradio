@@ -32,6 +32,12 @@ public:
      */
     virtual void disconnect(void);
 
+    /** @brief Notify controller that a packet missed its transmission slot. */
+    /** This function is called by the MAC when a packet has missed its
+     * transmission slot.
+     */
+    virtual void missed(std::shared_ptr<NetPacket>&& pkt) = 0;
+
     /** @brief Notify controller that a packet has been transmitted. */
     /** This function is called by the MAC when a packet has been transmitted.
      */
