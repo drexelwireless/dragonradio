@@ -131,7 +131,7 @@ void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>
             tx_md.start_of_burst = false;
         }
 
-        when += static_cast<double>(iqbuf.size())/txRate;
+        when += static_cast<double>(iqbuf.size() - iqbuf.delay)/txRate;
     }
 }
 
