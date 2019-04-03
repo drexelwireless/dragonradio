@@ -141,7 +141,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
                 txBuf.emplace_back((*it)->samples);
 
-            usrp_->burstTX(Clock::to_mono_time(when), txBuf);
+            usrp_->burstTX(Clock::to_mono_time(when), true, true, txBuf);
 
             // Log the sent packets
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it) {
@@ -171,7 +171,7 @@ size_t SlottedMAC::txSlot(Clock::time_point when, size_t maxSamples, bool overfi
             for (auto it = modBuf.begin(); it != modBuf.end(); ++it)
                 txBuf.emplace_back(std::move((*it)->samples));
 
-            usrp_->burstTX(Clock::to_mono_time(when), txBuf);
+            usrp_->burstTX(Clock::to_mono_time(when), true, true, txBuf);
         }
 
         // Inform the controller of the transmission

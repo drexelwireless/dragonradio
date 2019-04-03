@@ -93,15 +93,21 @@ void USRP::setRXFrequency(double freq)
     logEvent("USRP: RX frequency set to %f", freq);
 }
 
-void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs)
+void USRP::burstTX(MonoClock::time_point when,
+                   bool start_of_burst,
+                   bool end_of_burst,
+                   std::list<std::shared_ptr<IQBuf>>& bufs)
 {
     const double       txRate = usrp_->get_tx_rate(); // TX rate in Hz
     uhd::tx_metadata_t tx_md; // TX metadata for UHD
     size_t             n;     // Size of next send
 
-    tx_md.time_spec = when.t;
-    tx_md.has_time_spec = true;
-    tx_md.start_of_burst = true;
+    if (start_of_burst) {
+        tx_md.time_spec = when.t;
+        tx_md.has_time_spec = true;
+        tx_md.start_of_burst = true;
+        tx_md.end_of_burst = false;
+    }
 
     // We walk through the supplied queue of buffers and trasmit each in chunks
     // whose size is no more than tx_max_samps_ bytes, which is the maximum size
@@ -119,7 +125,8 @@ void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>
             // If this is the last segment of the current buffer *and* this is
             // the last buffer, mark this transmission as the end of the burst.
             tx_md.end_of_burst = off + n == iqbuf.size()
-                              && std::next(it) == bufs.end();
+                              && std::next(it) == bufs.end()
+                              && end_of_burst;
 
             // Send the buffer segment and update the offset into the current
             // buffer.
@@ -133,6 +140,15 @@ void USRP::burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>
 
         when += static_cast<double>(iqbuf.size() - iqbuf.delay)/txRate;
     }
+}
+
+void USRP::stopTXBurst(void)
+{
+    uhd::tx_metadata_t tx_md; // TX metadata for UHD
+
+    tx_md.end_of_burst = true;
+
+    tx_stream_->send((char *) nullptr, 0, tx_md);
 }
 
 void USRP::startRXStream(MonoClock::time_point when)

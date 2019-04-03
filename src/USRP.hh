@@ -131,9 +131,17 @@ public:
 
     /** @brief Transmit a burst of IQ buffers at the given time.
      * @param when Time at which to start the burst.
+     * @param start_of_burst Is this the start of a burst?
+     * @param end_of_burst Is this the end of a burst?
      * @param bufs A list of IQBuf%s to transmit.
      */
-    void burstTX(MonoClock::time_point when, std::list<std::shared_ptr<IQBuf>>& bufs);
+    void burstTX(MonoClock::time_point when,
+                 bool start_of_burst,
+                 bool end_of_burst,
+                 std::list<std::shared_ptr<IQBuf>>& bufs);
+
+    /** @brief Stop TX burst */
+    void stopTXBurst(void);
 
     /** @brief Start streaming read */
     void startRXStream(MonoClock::time_point when);
