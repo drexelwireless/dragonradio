@@ -114,6 +114,9 @@ protected:
     /** @brief Number of TX samples in the entire slot, including the guard */
     size_t tx_full_slot_samps_;
 
+    /** @brief Is the next slot the start of a burst? */
+    bool next_slot_start_of_burst_;
+
     /** @brief Mutex protecting synthesized slots */
     spinlock_mutex slots_mutex_;
 

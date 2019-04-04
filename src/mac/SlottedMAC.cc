@@ -23,6 +23,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
   , guard_size_(guard_size)
   , slot_modulate_lead_time_(slot_modulate_lead_time)
   , slot_send_lead_time_(slot_send_lead_time)
+  , next_slot_start_of_burst_(true)
   , logger_(logger)
   , done_(false)
 {
@@ -124,11 +125,6 @@ void SlottedMAC::modulateSlot(Clock::time_point when,
     assert(prev_overfill <= tx_slot_samps_);
     assert(prev_overfill <= tx_full_slot_samps_);
 
-    // XXX For some reason this is necessary to please USRP. Otherwise we get
-    // late TX errors.
-    if (prev_overfill > 0)
-        prev_overfill += 1;
-
     size_t max_samples = owns_next_slot ? tx_full_slot_samps_ - prev_overfill : tx_slot_samps_ - prev_overfill;
     auto   slot = std::make_shared<Synthesizer::Slot>(when, prev_overfill, max_samples, owns_next_slot);
 
@@ -189,6 +185,11 @@ std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(Clock::time_point wh
                 (double) when.get_real_secs(),
                 (double) Clock::now().get_real_secs());
 
+            // Stop any current TX burst. Also, the next slot is definitely the
+            // start of a burst since we missed this slot.
+            usrp_->stopTXBurst();
+            next_slot_start_of_burst_ = true;
+
             // Re-queue packets that were modulated for this slot
             missedSlot(*slot);
         }
@@ -198,14 +199,23 @@ std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(Clock::time_point wh
 void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
 {
     // If the slot doesn't contain any IQ data to send, we're done
-    if (slot->mpkts.empty())
+    if (slot->mpkts.empty()) {
+        if (!next_slot_start_of_burst_)
+            usrp_->stopTXBurst();
+
+        next_slot_start_of_burst_ = true;
         return;
+    }
 
     // Transmit the packets via the USRP
+    bool end_of_burst = slot->nsamples < slot->max_samples || !slot->overfill;
+
     usrp_->burstTX(Clock::to_mono_time(slot->deadline) + slot->delay/tx_rate_,
-                   true,
-                   true,
+                   next_slot_start_of_burst_,
+                   end_of_burst,
                    slot->iqbufs);
+
+    next_slot_start_of_burst_ = end_of_burst;
 
     // Log the transmissions
     if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
