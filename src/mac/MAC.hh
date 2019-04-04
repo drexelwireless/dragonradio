@@ -31,15 +31,15 @@ public:
     MAC& operator =(MAC&&) = delete;
 
     /** @brief Get the MAC's channelizer */
-    Channelizer &getChannelizer(void)
+    const std::shared_ptr<Channelizer> &getChannelizer(void)
     {
-        return *channelizer_;
+        return channelizer_;
     }
 
     /** @brief Get the MAC's synthesizer */
-    Synthesizer &getSynthesizer(void)
+    const std::shared_ptr<Synthesizer> &getSynthesizer(void)
     {
-        return *synthesizer_;
+        return synthesizer_;
     }
 
     /** @brief Can this MAC transmit
