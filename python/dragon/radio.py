@@ -173,8 +173,8 @@ class Config(object):
         """Probability of transmission in a given slot for ALOHA"""
         self.fdma = False
         """True if we should use FDMA MAC, False for pure TDMA"""
-        self.tx_channel = None
-        """Hard-coded transmission channel"""
+        self.tx_channel_idx = None
+        """TX channel index"""
         self.superslots = False
         """True if slots should be combined into superslots"""
         self.neighbor_discovery_period = 12
@@ -636,8 +636,8 @@ class Radio(object):
         # Add global work queue workers
         dragonradio.work_queue.addThreads(1)
 
-        # Set default TX channel
-        self.tx_channel = Channel(0.0, 0.0)
+        # Set default TX channel index
+        self.tx_channel_idx = 0
 
         # Create the USRP
         self.usrp = dragonradio.USRP(config.addr,
@@ -754,7 +754,7 @@ class Radio(object):
             self.channelizer = dragonradio.OverlapTDChannelizer(self.net,
                                                                 self.phy,
                                                                 self.usrp.rx_rate,
-                                                                self.channels,
+                                                                self.channelizer_channels,
                                                                 config.num_demodulation_threads)
 
             self.channelizer.enforce_ordering = config.channelizer_enforce_ordering
@@ -762,23 +762,22 @@ class Radio(object):
             self.channelizer = dragonradio.TDChannelizer(self.net,
                                                          self.phy,
                                                          self.usrp.rx_rate,
-                                                         self.channels,
+                                                         self.channelizer_channels,
                                                          config.num_demodulation_threads)
         else:
             self.channelizer = dragonradio.FDChannelizer(self.net,
                                                          self.phy,
                                                          self.usrp.rx_rate,
-                                                         self.channels,
+                                                         self.channelizer_channels,
                                                          config.num_demodulation_threads)
 
         self.synthesizer = dragonradio.TDSynthesizer(self.net,
                                                      self.phy,
                                                      self.usrp.tx_rate,
-                                                     self.tx_channel,
+                                                     self.synthesizer_channels[self.tx_channel_idx][0],
                                                      config.num_modulation_threads)
 
-        # Configure channelization taps
-        self.configureChannelizationTaps()
+        self.synthesizer.taps =self.synthesizer_channels[self.tx_channel_idx][1]
 
         #
         # Configure the controller
@@ -943,7 +942,7 @@ class Radio(object):
 
         channels = [Channel(egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2., cbw) for i in range(0,n)]
 
-        self.channels = Channels(channels[:config.max_channels])
+        self.channels = channels[:config.max_channels]
 
         logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
             list(self.channels), bandwidth, config.rx_oversample_factor, config.tx_oversample_factor, cbw, cgbw, egbw)
@@ -965,6 +964,12 @@ class Radio(object):
 
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
+
+        #
+        # Calculate channels with taps for channelizer and synthesizer
+        #
+        self.channelizer_channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
+        self.synthesizer_channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
 
     def configSmartControllerSlotSize(self):
         """
@@ -1008,10 +1013,8 @@ class Radio(object):
         self.channelizer.rx_rate = self.usrp.rx_rate
         self.synthesizer.tx_rate = self.usrp.tx_rate
 
-        self.channelizer.channels = self.channels
-
-        # Reconfigure taps
-        self.configureChannelizationTaps()
+        self.channelizer.channels = self.channelizer_channels
+        self.synthesizer.taps = self.synthesizer_channels[0][1]
 
         # Reconfigure the MAC
         if self.mac is not None:
@@ -1021,25 +1024,39 @@ class Radio(object):
             self.controller.resetMCSTransitionProbabilities()
             self.configSmartControllerSlotSize()
 
-    def configureChannelizationTaps(self):
-        """Configure filter taps for channelizer and synthesizer"""
+    def genChannelizerTaps(self, channel):
+        """Generate channelizer filter taps for given channel"""
         config = self.config
 
-        # Determine channel bandwidth, passband, and stopband
-        cbw = self.channel_bandwidth
-        wp = cbw-100e3
-        ws = cbw+100e3
+        # Determine passband, and stopband
+        wp = channel.bw-100e3
+        ws = channel.bw+100e3
 
-        # Re-configure channelizer taps
-        rate = Fraction(cbw/self.usrp.rx_rate).limit_denominator(200)
-        if rate != 1:
-            self.channelizer.taps = lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
+        # Calculate channelizer taps
+        rate = Fraction(channel.bw/self.usrp.rx_rate).limit_denominator(200)
 
-        # Re-configure synthesizer taps
+        if rate == 1:
+            return [1]
+        else:
+            return lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
+
+    def genSynthesizerTaps(self, channel):
+        """Generate synthesizer filter taps for given channel"""
+        config = self.config
+
+        # Determine passband, and stopband
+        wp = channel.bw-100e3
+        ws = channel.bw+100e3
+
         if config.tx_upsample:
-            rate = Fraction(self.usrp.tx_rate/cbw).limit_denominator(200)
-            if rate != 1:
-                self.synthesizer.taps = lowpass(wp, ws, rate.numerator*cbw)
+            rate = Fraction(self.usrp.tx_rate/channel.bw).limit_denominator(200)
+
+            if rate == 1:
+                return [1]
+            else:
+                return lowpass(wp, ws, rate.numerator*channel.bw)
+        else:
+            return [1]
 
     def deleteMAC(self):
         """Delete the current MAC"""
@@ -1114,25 +1131,29 @@ class Radio(object):
         if self.config.arq:
             self.controller.mac = self.mac
 
-    def setTXChannel(self, channel):
+    def setTXChannel(self, channel_idx):
         config = self.config
 
+        self.tx_channel_idx = channel_idx
+
         if config.tx_upsample:
-            self.synthesizer.tx_channel = channel
+            self.synthesizer.tx_channel = self.synthesizer_channels[channel_idx][0]
+            self.synthesizer.taps = self.synthesizer_channels[channel_idx][1]
         else:
+            channel = self.synthesizer_channels[channel_idx][0]
+
             fc = channel.fc
             logging.info("Setting TX frequency offset to %g", fc)
 
             self.usrp.tx_frequency = self.frequency + fc
 
             self.synthesizer.tx_channel = Channel(0.0, self.channel_bandwidth)
+            self.synthesizer.taps = [1]
 
         # Allow the MAC to figure out the TX offset so snapshot self
         # tranmissions are correctly logged
         if self.mac is not None:
             self.mac.reconfigure()
-
-        self.tx_channel = channel
 
     def mkGreedyMACSchedule(self, nslots, nodes, k):
         """Create a greedy schedule that gives each node its own channel.
@@ -1193,7 +1214,7 @@ class Radio(object):
             slots = (sched[chan] == self.node_id)
             if np.any(slots):
                 self.mac.slots = slots
-                self.setTXChannel(self.channels[chan])
+                self.setTXChannel(chan)
                 return
 
         logging.error('No MAC schedule entry for radio %d', self.node_id)
@@ -1213,7 +1234,7 @@ class Radio(object):
 
             if config.tx_channel != None:
                 self.mac.slots[0] = True
-                self.setTXChannel(self.channels[config.tx_channel])
+                self.setTXChannel(config.tx_channel)
             else:
                 nchannels = len(self.channels)
                 sched = fullChannelMACSchedule(nchannels, 1, nodes, 3)
@@ -1224,7 +1245,7 @@ class Radio(object):
             self.configureTDMA(len(self.net))
             self.mac.slots[idx] = True
 
-            self.setTXChannel(self.channels[0])
+            self.setTXChannel(0)
 
     def synchronizeClock(self):
         """Use timestamps to syncrhonize our clock with the time master (the gateway)"""

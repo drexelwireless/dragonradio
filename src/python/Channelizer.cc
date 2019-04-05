@@ -34,10 +34,6 @@ void exportChannelizers(py::module &m)
                       double,
                       const Channels&,
                       unsigned int>())
-        .def_property("taps",
-            &FDChannelizer::getTaps,
-            &FDChannelizer::setTaps,
-            "Prototype filter for channelization. Should have unity gain.")
         .def_readonly_static("P",
             &FDChannelizer::P,
             "Maximum prototype filter length.")
@@ -59,10 +55,6 @@ void exportChannelizers(py::module &m)
                       double,
                       const Channels&,
                       unsigned int>())
-        .def_property("taps",
-            &TDChannelizer::getTaps,
-            &TDChannelizer::setTaps,
-            "Prototype filter for channelization. Should have unity gain.")
         ;
 
     // Export class OverlapTDChannelizer to Python
@@ -72,10 +64,6 @@ void exportChannelizers(py::module &m)
                       double,
                       const Channels&,
                       unsigned int>())
-        .def_property("taps",
-            &OverlapTDChannelizer::getTaps,
-            &OverlapTDChannelizer::setTaps,
-            "Prototype filter for channelization. Should have unity gain.")
         .def_property("prev_demod",
             &OverlapTDChannelizer::getPrevDemod,
             &OverlapTDChannelizer::setPrevDemod)

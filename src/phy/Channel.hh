@@ -1,6 +1,7 @@
 #ifndef CHANNEL_H_
 #define CHANNEL_H_
 
+#include <complex>
 #include <vector>
 
 struct Channel {
@@ -14,6 +15,9 @@ struct Channel {
     double bw;
 };
 
-using Channels = std::vector<Channel>;
+using C = std::complex<float>;
+
+/** @brief A vector of pairs of channels and taps */
+using Channels = std::vector<std::pair<Channel, std::vector<C>>>;
 
 #endif /* CHANNEL_H_ */

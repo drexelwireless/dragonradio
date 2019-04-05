@@ -802,7 +802,7 @@ class Controller(TCPProtoServer):
                     # We need to re-set the channel after a frequency change
                     # because although the channel number may be the same, the
                     # corresponding frequency will be different.
-                    self.radio.setTXChannel(self.radio.tx_channel)
+                    self.radio.setTXChannel(self.radio.tx_channel_idx)
 
     async def bootstrapNetwork(self):
         loop = self.loop
@@ -841,7 +841,7 @@ class Controller(TCPProtoServer):
 
                 if not self.bootstrapped:
                     chanidx = random.randint(0, len(radio.channels)-1)
-                    radio.setTXChannel(radio.channels[chanidx])
+                    radio.setTXChannel(chanidx)
 
                 radio.controller.broadcastHello()
 

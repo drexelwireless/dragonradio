@@ -37,20 +37,6 @@ public:
 
     void reconfigure(void) override;
 
-    /** @brief Get prototype filter for channelization. */
-    const std::vector<C> &getTaps(void) const
-    {
-        return taps_;
-    }
-
-    /** @brief Set prototype filter for channelization. */
-    /** The prototype filter should have unity gain. */
-    void setTaps(const std::vector<C> &taps)
-    {
-        taps_ = taps;
-        reconfigure();
-    }
-
     /** @brief Return the portion of the end of the previous slot that we
      * demodulate.
      */
@@ -156,9 +142,6 @@ private:
 
     /** @brief Destination for packets. */
     std::shared_ptr<Net> net_;
-
-    /** @brief Prototype filter */
-    std::vector<C> taps_;
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;

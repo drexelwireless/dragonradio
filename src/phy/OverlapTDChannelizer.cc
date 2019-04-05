@@ -13,7 +13,6 @@ OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<Net> net,
                                            unsigned int nthreads)
   : Channelizer(phy, rx_rate, channels)
   , net_(net)
-  , taps_{1.0}
   , slot_size_(0.0)
   , prev_demod_(0.0)
   , prev_demod_samps_(0)
@@ -115,8 +114,6 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
         if (!pop(b, channelidx, buf1, buf2))
             break;
 
-        const Channel &channel = channels_[channelidx];
-
         received = false;
 
         // Calculate how many samples we want to demodulate from the tail end of
@@ -133,10 +130,13 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
         // Either reconfigure or set current channel
         if (reconfig.load(std::memory_order_relaxed)) {
             assert(rx_rate_ != 0);
-            demod = std::make_unique<ChannelState>(*phy_, channel, taps_, rx_rate_);
+            demod = std::make_unique<ChannelState>(*phy_,
+                                                   channels_[channelidx].first,
+                                                   channels_[channelidx].second,
+                                                   rx_rate_);
             reconfig.store(false, std::memory_order_relaxed);
         } else
-            demod->setChannel(channel);
+            demod->setChannel(channels_[channelidx].first);
 
         // Reset the state of the demodulator
         demod->reset();

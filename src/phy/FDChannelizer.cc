@@ -65,14 +65,11 @@ void FDChannelizer::reconfigure(void)
     demods_.resize(nchannels);
     fdiqbufs_ = std::unique_ptr<ringbuffer<bufpair, LOGR> []>(new ringbuffer<bufpair, LOGR>[nchannels]);
 
-    for (unsigned i = 0; i < nchannels; i++) {
-        Channel &channel = channels_[i];
-
+    for (unsigned i = 0; i < nchannels; i++)
         demods_[i] = std::make_unique<ChannelState>(*phy_,
-                                                    channel,
-                                                    taps_,
+                                                    channels_[i].first,
+                                                    channels_[i].second,
                                                     rx_rate_);
-    }
 
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
@@ -226,7 +223,7 @@ void FDChannelizer::demodWorker(unsigned tid)
     auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
         received = true;
         if (pkt) {
-            pkt->channel = channels_[channelidx];
+            pkt->channel = channels_[channelidx].first;
             source.push(std::move(pkt));
         }
     };

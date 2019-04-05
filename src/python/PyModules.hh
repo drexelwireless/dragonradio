@@ -10,7 +10,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MAKE_OPAQUE(std::vector<Channel>)
+PYBIND11_MAKE_OPAQUE(Channels)
 
 PYBIND11_MAKE_OPAQUE(std::vector<TXParams>)
 

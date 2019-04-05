@@ -46,20 +46,6 @@ public:
 
     void reconfigure(void) override;
 
-    /** @brief Get prototype filter for channelization. */
-    const std::vector<C> &getTaps(void) const
-    {
-        return taps_;
-    }
-
-    /** @brief Set prototype filter for channelization. */
-    /** The prototype filter should have unity gain. */
-    void setTaps(const std::vector<C> &taps)
-    {
-        taps_ = taps;
-        reconfigure();
-    }
-
     /** @brief Stop demodulating. */
     void stop(void);
 
@@ -129,9 +115,6 @@ private:
 
     /** @brief Destination for packets. */
     std::shared_ptr<Net> net_;
-
-    /** @brief Prototype filter */
-    std::vector<C> taps_;
 
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
