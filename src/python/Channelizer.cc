@@ -7,12 +7,10 @@
 #include "phy/Channelizer.hh"
 #include "phy/FDChannelizer.hh"
 #include "phy/OverlapTDChannelizer.hh"
-#include "phy/Synthesizer.hh"
 #include "phy/TDChannelizer.hh"
-#include "phy/TDSynthesizer.hh"
 #include "python/PyModules.hh"
 
-void exportPacketModulators(py::module &m)
+void exportChannelizers(py::module &m)
 {
     // Export class Channelizer to Python
     py::class_<Channelizer, std::shared_ptr<Channelizer>>(m, "Channelizer")
@@ -87,33 +85,5 @@ void exportPacketModulators(py::module &m)
         .def_property("enforce_ordering",
             &OverlapTDChannelizer::getEnforceOrdering,
             &OverlapTDChannelizer::setEnforceOrdering)
-        ;
-
-    // Export class Synthesizer to Python
-    py::class_<Synthesizer, std::shared_ptr<Synthesizer>>(m, "Synthesizer")
-        .def_property("tx_rate",
-            &Synthesizer::getTXRate,
-            &Synthesizer::setTXRate)
-        .def_property_readonly("sink",
-            [](std::shared_ptr<Synthesizer> element)
-            {
-                return exposePort(element, &element->sink);
-            })
-        ;
-
-    // Export class TDSynthesizer to Python
-    py::class_<TDSynthesizer, Synthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
-        .def(py::init<std::shared_ptr<Net>,
-                      std::shared_ptr<PHY>,
-                      double,
-                      const Channel&,
-                      unsigned int>())
-        .def_property("taps",
-            &TDSynthesizer::getTaps,
-            &TDSynthesizer::setTaps,
-            "Prototype filter for channelization. Should have unity gain.")
-        .def_property("tx_channel",
-            &TDSynthesizer::getTXChannel,
-            &TDSynthesizer::setTXChannel)
         ;
 }

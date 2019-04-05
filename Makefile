@@ -98,7 +98,7 @@ SOURCES := \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
-    python/Channelization.cc \
+    python/Channelizer.cc \
     python/Clock.cc \
     python/Controller.cc \
     python/Estimator.cc \
@@ -118,6 +118,7 @@ SOURCES := \
     python/RadioNet.cc \
     python/Resample.cc \
     python/Snapshot.cc \
+    python/Synthesizer.cc \
     python/USRP.cc \
     python/WorkQueue.cc
 
