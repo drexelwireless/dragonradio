@@ -99,6 +99,7 @@ SOURCES := \
     net/NetFilter.cc \
     net/TunTap.cc \
     python/Channelizer.cc \
+    python/Channels.cc \
     python/Clock.cc \
     python/Controller.cc \
     python/Estimator.cc \

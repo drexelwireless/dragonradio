@@ -9,23 +9,6 @@
 
 void exportMACs(py::module &m)
 {
-    // Export class Channel to Python
-    py::class_<Channel, std::shared_ptr<Channel>>(m, "Channel")
-        .def(py::init<>())
-        .def(py::init<double, double>())
-        .def_readwrite("fc",
-            &Channel::fc,
-           "Frequency shift from center")
-        .def_readwrite("bw",
-            &Channel::bw,
-            "Bandwidth")
-        .def("__repr__", [](const Channel& self) {
-            return py::str("Channel(fc={}, bw={})").format(self.fc, self.bw);
-         })
-        ;
-
-    py::bind_vector<std::vector<Channel>>(m, "Channels");
-
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
         .def("stop",

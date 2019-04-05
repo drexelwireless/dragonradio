@@ -69,6 +69,7 @@ void exportNet(py::module &m);
 void exportFlow(py::module &m);
 void exportRadioNet(py::module &m);
 void exportPHYs(py::module &m);
+void exportChannels(py::module &m);
 void exportChannelizers(py::module &m);
 void exportSynthesizers(py::module &m);
 void exportControllers(py::module &m);
