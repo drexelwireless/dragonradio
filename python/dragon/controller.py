@@ -21,6 +21,7 @@ from dragon.internal import InternalProtoClient, InternalProtoServer
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
+import dragon.schedule
 import dragon.scoring as scoring
 
 logger = logging.getLogger('controller')
@@ -720,7 +721,7 @@ class Controller(TCPProtoServer):
 
                 # Create the schedule
                 nchannels = len(radio.channels)
-                sched = dragon.radio.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
+                sched = dragon.schedule.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
                 if not np.array_equal(sched, self.schedule):
                     await self.installMACSchedule(self.schedule_seq + 1, sched)
                     self.voxels = self.scheduleToVoxels(sched)
