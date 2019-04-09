@@ -12,14 +12,18 @@ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
 sudo apt-get install gcc-8 g++-8
 
+CC=gcc-8
+CXX=g++-8
+CFLAGS="-Ofast -march=native"
+
 # Build and install libcorrect
-(cd dependencies/libcorrect && rm -rf build && mkdir build && cd build && cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
+(cd dependencies/libcorrect && rm -rf build && mkdir build && cd build && CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
 
 # Build and install UHD
 (cd dependencies/uhd/host && rm -rf build && mkdir build && cd build && cmake ../ && make -j4 && sudo make install && sudo ldconfig && make clean)
 
 # Build and install liquid-dsp
-(cd dependencies/liquid-dsp && ./bootstrap.sh && ./configure && make && sudo make install && sudo ldconfig && make clean)
+(cd dependencies/liquid-dsp && ./bootstrap.sh && CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" ./configure && make && sudo make install && sudo ldconfig && make clean)
 
 # Install Python dependencies
 sudo pip3 install --upgrade pip
