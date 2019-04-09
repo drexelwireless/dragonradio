@@ -357,6 +357,7 @@ class Controller(TCPProtoServer):
             if self.schedule_seq is not None and seq <= self.schedule_seq:
                 logger.info('Skipping schedule with sequence number %d (currently at %d)',
                     seq, self.schedule_seq)
+                return
 
             if not np.array_equal(sched, self.schedule):
                 (nchannels, nslots) = sched.shape
