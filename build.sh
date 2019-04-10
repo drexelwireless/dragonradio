@@ -8,9 +8,9 @@ sudo apt install -y libhdf5-dev libhdf5-doc libhdf5-cpp-11 libhdf5-cpp-11-dbg
 sudo apt install -y python3 python3-pip
 sudo apt install -y libflac8 libflac-dev libflac++-dev
 
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 sudo apt-get update
-sudo apt-get install gcc-8 g++-8
+sudo apt-get install -y gcc-8 g++-8
 
 CC=gcc-8
 CXX=g++-8
