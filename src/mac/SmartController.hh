@@ -479,6 +479,8 @@ public:
     /** @brief Get echoed timestamps */
     timestamp_vector getEchoedTimestamps(void)
     {
+        std::lock_guard<std::mutex> lock(echoed_timestamps_mutex_);
+
         return echoed_timestamps_;
     }
 
@@ -599,6 +601,9 @@ protected:
 
     /** @brief Always move the send window along, even if it's full */
     bool move_along_;
+
+    /** @brief Mutex for timestamps */
+    std::mutex echoed_timestamps_mutex_;
 
     /** @brief Our timestamps as received by time master */
     timestamp_vector echoed_timestamps_;

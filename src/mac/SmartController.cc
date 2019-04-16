@@ -873,7 +873,11 @@ void SmartController::handleCtrlTimestampEchos(Node &node, std::shared_ptr<Radio
                         t_sent = it->timestamp_echo.t_sent.to_mono_time();
                         t_recv = it->timestamp_echo.t_recv.to_mono_time();
 
-                        echoed_timestamps_.emplace_back(std::make_pair(t_sent, t_recv));
+                        {
+                            std::lock_guard<std::mutex> lock(echoed_timestamps_mutex_);
+
+                            echoed_timestamps_.emplace_back(std::make_pair(t_sent, t_recv));
+                        }
 
                         logEvent("TIMESYNC: Timestamp echo: node=%u; t_sent=%f; t_recv=%f",
                             (unsigned) pkt->curhop,
