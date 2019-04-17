@@ -182,6 +182,7 @@ message MandatePerformance
   uint32 flow_id = 4; // mandatory, the mandate flow id (destination port)
   uint32 hold_period = 5; // mandatory, the length of the steady state period
   uint32 achieved_duration = 6; // mandatory, number of periods it was met
+  uint32 point_value = 7; //mandatory, the point_value of the mandate flow
 }
 
 /*
@@ -206,6 +207,8 @@ message DetailedPerformance
   TimeStamp timestamp = 3; // mandatory, the end of the measurement period
   repeated MandatePerformance mandates = 4; // mandatory, all known mandates
   uint32 mandates_achieved = 5; // mandatory, number of achieved mandates 
+  uint32 total_score_achieved = 6; // mandatory, sum of point_value for all achieved mandates
+  uint32 scoring_point_threshold = 7; // mandatory, the threshold value from environment.json
 }
 
 //=================================================================================================

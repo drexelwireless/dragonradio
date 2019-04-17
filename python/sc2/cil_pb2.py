@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='sc2.cil',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\tcil.proto\x12\x07sc2.cil\x1a\x1egoogle/protobuf/wrappers.proto\"1\n\tTimeStamp\x12\x0f\n\x07seconds\x18\x01 \x01(\x05\x12\x13\n\x0bpicoseconds\x18\x02 \x01(\x03\"B\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x11\n\televation\x18\x03 \x01(\x01\"\x99\x02\n\rSpectrumVoxel\x12\x12\n\nfreq_start\x18\x01 \x01(\x01\x12\x10\n\x08\x66req_end\x18\x02 \x01(\x01\x12&\n\ntime_start\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12$\n\x08time_end\x18\x04 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12\x30\n\nduty_cycle\x18\x05 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\x12\x31\n\x0bperiod_time\x18\x06 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\x12/\n\tslot_time\x18\x07 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\"\xa4\x01\n\x0bNetworkType\x12/\n\x0cnetwork_type\x18\x64 \x01(\x0e\x32\x19.sc2.cil.NetworkType.Type\"d\n\x04Type\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0e\n\nCOMPETITOR\x10\x01\x12\x15\n\x11INCUMBENT_PASSIVE\x10\n\x12\x12\n\x0eINCUMBENT_DSRC\x10\x0b\x12\x14\n\x10INCUMBENT_JAMMER\x10\x0c\"9\n\nCilVersion\x12\r\n\x05major\x18\x01 \x01(\r\x12\r\n\x05minor\x18\x02 \x01(\r\x12\r\n\x05patch\x18\x03 \x01(\r\"-\n\x05Hello\x12$\n\x07version\x18\x02 \x01(\x0b\x32\x13.sc2.cil.CilVersion\"\xb4\x01\n\x12MandatePerformance\x12\x1a\n\x12scalar_performance\x18\x01 \x01(\x01\x12\x11\n\tradio_ids\x18\x02 \x03(\r\x12.\n\x0e\x64\x65sired_voxels\x18\x03 \x03(\x0b\x32\x16.sc2.cil.SpectrumVoxel\x12\x0f\n\x07\x66low_id\x18\x04 \x01(\r\x12\x13\n\x0bhold_period\x18\x05 \x01(\r\x12\x19\n\x11\x61\x63hieved_duration\x18\x06 \x01(\r\"\x9d\x01\n\x13\x44\x65tailedPerformance\x12\x15\n\rmandate_count\x18\x01 \x01(\r\x12%\n\ttimestamp\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12-\n\x08mandates\x18\x04 \x03(\x0b\x32\x1b.sc2.cil.MandatePerformance\x12\x19\n\x11mandates_achieved\x18\x05 \x01(\r\"d\n\x0fTransmitterInfo\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12.\n\x08power_db\x18\x03 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\x12\x0f\n\x07mac_cca\x18\x04 \x01(\x08\"P\n\x0cReceiverInfo\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12.\n\x08power_db\x18\x03 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\"\xec\x01\n\x12SpectrumVoxelUsage\x12.\n\x0espectrum_voxel\x18\x01 \x01(\x0b\x32\x16.sc2.cil.SpectrumVoxel\x12\x32\n\x10transmitter_info\x18\x02 \x01(\x0b\x32\x18.sc2.cil.TransmitterInfo\x12,\n\rreceiver_info\x18\x03 \x03(\x0b\x32\x15.sc2.cil.ReceiverInfo\x12-\n\x07utility\x18\x04 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\x12\x15\n\rmeasured_data\x18\x05 \x01(\x08\"<\n\rSpectrumUsage\x12+\n\x06voxels\x18\x01 \x03(\x0b\x32\x1b.sc2.cil.SpectrumVoxelUsage\"l\n\x0cLocationInfo\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12#\n\x08location\x18\x02 \x01(\x0b\x32\x11.sc2.cil.Location\x12%\n\ttimestamp\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\":\n\x0eLocationUpdate\x12(\n\tlocations\x18\x01 \x03(\x0b\x32\x15.sc2.cil.LocationInfo\"\xaf\x02\n\x14IncumbentPassiveInfo\x12\x14\n\x0cincumbent_id\x18\x01 \x01(\x05\x12;\n\x08msg_type\x18\x02 \x01(\x0e\x32).sc2.cil.IncumbentPassiveInfo.MessageType\x12\'\n\x0breport_time\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12\r\n\x05power\x18\x04 \x01(\x01\x12\x11\n\tthreshold\x18\x05 \x01(\x01\x12\x13\n\x0b\x63\x65nter_freq\x18\x06 \x01(\x03\x12\x11\n\tbandwidth\x18\x07 \x01(\x03\x12\x1a\n\x12threshold_exceeded\x18\x08 \x01(\x08\"5\n\x0bMessageType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\n\n\x06REPORT\x10\n\x12\r\n\tVIOLATION\x10\x0b\"K\n\x0fIncumbentNotify\x12-\n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x1d.sc2.cil.IncumbentPassiveInfoH\x00\x42\t\n\x07payload\"\x94\x03\n\nCilMessage\x12\x19\n\x11sender_network_id\x18\x01 \x01(\r\x12\x11\n\tmsg_count\x18\x02 \x01(\r\x12%\n\ttimestamp\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12*\n\x0cnetwork_type\x18\x04 \x01(\x0b\x32\x14.sc2.cil.NetworkType\x12\x1f\n\x05hello\x18\n \x01(\x0b\x32\x0e.sc2.cil.HelloH\x00\x12\x30\n\x0espectrum_usage\x18\x0c \x01(\x0b\x32\x16.sc2.cil.SpectrumUsageH\x00\x12\x32\n\x0flocation_update\x18\r \x01(\x0b\x32\x17.sc2.cil.LocationUpdateH\x00\x12<\n\x14\x64\x65tailed_performance\x18\x1e \x01(\x0b\x32\x1c.sc2.cil.DetailedPerformanceH\x00\x12\x35\n\x10incumbent_notify\x18\xc8\x01 \x01(\x0b\x32\x18.sc2.cil.IncumbentNotifyH\x00\x42\t\n\x07payloadb\x06proto3')
+  serialized_pb=_b('\n\tcil.proto\x12\x07sc2.cil\x1a\x1egoogle/protobuf/wrappers.proto\"1\n\tTimeStamp\x12\x0f\n\x07seconds\x18\x01 \x01(\x05\x12\x13\n\x0bpicoseconds\x18\x02 \x01(\x03\"B\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x11\n\televation\x18\x03 \x01(\x01\"\x99\x02\n\rSpectrumVoxel\x12\x12\n\nfreq_start\x18\x01 \x01(\x01\x12\x10\n\x08\x66req_end\x18\x02 \x01(\x01\x12&\n\ntime_start\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12$\n\x08time_end\x18\x04 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12\x30\n\nduty_cycle\x18\x05 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\x12\x31\n\x0bperiod_time\x18\x06 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\x12/\n\tslot_time\x18\x07 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\"\xa4\x01\n\x0bNetworkType\x12/\n\x0cnetwork_type\x18\x64 \x01(\x0e\x32\x19.sc2.cil.NetworkType.Type\"d\n\x04Type\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0e\n\nCOMPETITOR\x10\x01\x12\x15\n\x11INCUMBENT_PASSIVE\x10\n\x12\x12\n\x0eINCUMBENT_DSRC\x10\x0b\x12\x14\n\x10INCUMBENT_JAMMER\x10\x0c\"9\n\nCilVersion\x12\r\n\x05major\x18\x01 \x01(\r\x12\r\n\x05minor\x18\x02 \x01(\r\x12\r\n\x05patch\x18\x03 \x01(\r\"-\n\x05Hello\x12$\n\x07version\x18\x02 \x01(\x0b\x32\x13.sc2.cil.CilVersion\"\xc9\x01\n\x12MandatePerformance\x12\x1a\n\x12scalar_performance\x18\x01 \x01(\x01\x12\x11\n\tradio_ids\x18\x02 \x03(\r\x12.\n\x0e\x64\x65sired_voxels\x18\x03 \x03(\x0b\x32\x16.sc2.cil.SpectrumVoxel\x12\x0f\n\x07\x66low_id\x18\x04 \x01(\r\x12\x13\n\x0bhold_period\x18\x05 \x01(\r\x12\x19\n\x11\x61\x63hieved_duration\x18\x06 \x01(\r\x12\x13\n\x0bpoint_value\x18\x07 \x01(\r\"\xdc\x01\n\x13\x44\x65tailedPerformance\x12\x15\n\rmandate_count\x18\x01 \x01(\r\x12%\n\ttimestamp\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12-\n\x08mandates\x18\x04 \x03(\x0b\x32\x1b.sc2.cil.MandatePerformance\x12\x19\n\x11mandates_achieved\x18\x05 \x01(\r\x12\x1c\n\x14total_score_achieved\x18\x06 \x01(\r\x12\x1f\n\x17scoring_point_threshold\x18\x07 \x01(\r\"d\n\x0fTransmitterInfo\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12.\n\x08power_db\x18\x03 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\x12\x0f\n\x07mac_cca\x18\x04 \x01(\x08\"P\n\x0cReceiverInfo\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12.\n\x08power_db\x18\x03 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\"\xec\x01\n\x12SpectrumVoxelUsage\x12.\n\x0espectrum_voxel\x18\x01 \x01(\x0b\x32\x16.sc2.cil.SpectrumVoxel\x12\x32\n\x10transmitter_info\x18\x02 \x01(\x0b\x32\x18.sc2.cil.TransmitterInfo\x12,\n\rreceiver_info\x18\x03 \x03(\x0b\x32\x15.sc2.cil.ReceiverInfo\x12-\n\x07utility\x18\x04 \x01(\x0b\x32\x1c.google.protobuf.DoubleValue\x12\x15\n\rmeasured_data\x18\x05 \x01(\x08\"<\n\rSpectrumUsage\x12+\n\x06voxels\x18\x01 \x03(\x0b\x32\x1b.sc2.cil.SpectrumVoxelUsage\"l\n\x0cLocationInfo\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12#\n\x08location\x18\x02 \x01(\x0b\x32\x11.sc2.cil.Location\x12%\n\ttimestamp\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\":\n\x0eLocationUpdate\x12(\n\tlocations\x18\x01 \x03(\x0b\x32\x15.sc2.cil.LocationInfo\"\xaf\x02\n\x14IncumbentPassiveInfo\x12\x14\n\x0cincumbent_id\x18\x01 \x01(\x05\x12;\n\x08msg_type\x18\x02 \x01(\x0e\x32).sc2.cil.IncumbentPassiveInfo.MessageType\x12\'\n\x0breport_time\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12\r\n\x05power\x18\x04 \x01(\x01\x12\x11\n\tthreshold\x18\x05 \x01(\x01\x12\x13\n\x0b\x63\x65nter_freq\x18\x06 \x01(\x03\x12\x11\n\tbandwidth\x18\x07 \x01(\x03\x12\x1a\n\x12threshold_exceeded\x18\x08 \x01(\x08\"5\n\x0bMessageType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\n\n\x06REPORT\x10\n\x12\r\n\tVIOLATION\x10\x0b\"K\n\x0fIncumbentNotify\x12-\n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x1d.sc2.cil.IncumbentPassiveInfoH\x00\x42\t\n\x07payload\"\x94\x03\n\nCilMessage\x12\x19\n\x11sender_network_id\x18\x01 \x01(\r\x12\x11\n\tmsg_count\x18\x02 \x01(\r\x12%\n\ttimestamp\x18\x03 \x01(\x0b\x32\x12.sc2.cil.TimeStamp\x12*\n\x0cnetwork_type\x18\x04 \x01(\x0b\x32\x14.sc2.cil.NetworkType\x12\x1f\n\x05hello\x18\n \x01(\x0b\x32\x0e.sc2.cil.HelloH\x00\x12\x30\n\x0espectrum_usage\x18\x0c \x01(\x0b\x32\x16.sc2.cil.SpectrumUsageH\x00\x12\x32\n\x0flocation_update\x18\r \x01(\x0b\x32\x17.sc2.cil.LocationUpdateH\x00\x12<\n\x14\x64\x65tailed_performance\x18\x1e \x01(\x0b\x32\x1c.sc2.cil.DetailedPerformanceH\x00\x12\x35\n\x10incumbent_notify\x18\xc8\x01 \x01(\x0b\x32\x18.sc2.cil.IncumbentNotifyH\x00\x42\t\n\x07payloadb\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_wrappers__pb2.DESCRIPTOR,])
 
@@ -81,8 +81,8 @@ _INCUMBENTPASSIVEINFO_MESSAGETYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1979,
-  serialized_end=2032,
+  serialized_start=2063,
+  serialized_end=2116,
 )
 _sym_db.RegisterEnumDescriptor(_INCUMBENTPASSIVEINFO_MESSAGETYPE)
 
@@ -400,6 +400,13 @@ _MANDATEPERFORMANCE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='point_value', full_name='sc2.cil.MandatePerformance.point_value', index=6,
+      number=7, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -413,7 +420,7 @@ _MANDATEPERFORMANCE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=731,
-  serialized_end=911,
+  serialized_end=932,
 )
 
 
@@ -452,6 +459,20 @@ _DETAILEDPERFORMANCE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='total_score_achieved', full_name='sc2.cil.DetailedPerformance.total_score_achieved', index=4,
+      number=6, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='scoring_point_threshold', full_name='sc2.cil.DetailedPerformance.scoring_point_threshold', index=5,
+      number=7, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -464,8 +485,8 @@ _DETAILEDPERFORMANCE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=914,
-  serialized_end=1071,
+  serialized_start=935,
+  serialized_end=1155,
 )
 
 
@@ -509,8 +530,8 @@ _TRANSMITTERINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1073,
-  serialized_end=1173,
+  serialized_start=1157,
+  serialized_end=1257,
 )
 
 
@@ -547,8 +568,8 @@ _RECEIVERINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1175,
-  serialized_end=1255,
+  serialized_start=1259,
+  serialized_end=1339,
 )
 
 
@@ -606,8 +627,8 @@ _SPECTRUMVOXELUSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1258,
-  serialized_end=1494,
+  serialized_start=1342,
+  serialized_end=1578,
 )
 
 
@@ -637,8 +658,8 @@ _SPECTRUMUSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1496,
-  serialized_end=1556,
+  serialized_start=1580,
+  serialized_end=1640,
 )
 
 
@@ -682,8 +703,8 @@ _LOCATIONINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1558,
-  serialized_end=1666,
+  serialized_start=1642,
+  serialized_end=1750,
 )
 
 
@@ -713,8 +734,8 @@ _LOCATIONUPDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1668,
-  serialized_end=1726,
+  serialized_start=1752,
+  serialized_end=1810,
 )
 
 
@@ -794,8 +815,8 @@ _INCUMBENTPASSIVEINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1729,
-  serialized_end=2032,
+  serialized_start=1813,
+  serialized_end=2116,
 )
 
 
@@ -828,8 +849,8 @@ _INCUMBENTNOTIFY = _descriptor.Descriptor(
       name='payload', full_name='sc2.cil.IncumbentNotify.payload',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=2034,
-  serialized_end=2109,
+  serialized_start=2118,
+  serialized_end=2193,
 )
 
 
@@ -918,8 +939,8 @@ _CILMESSAGE = _descriptor.Descriptor(
       name='payload', full_name='sc2.cil.CilMessage.payload',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=2112,
-  serialized_end=2516,
+  serialized_start=2196,
+  serialized_end=2600,
 )
 
 _SPECTRUMVOXEL.fields_by_name['time_start'].message_type = _TIMESTAMP

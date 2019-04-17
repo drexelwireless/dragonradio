@@ -77,6 +77,12 @@ class Controller(TCPProtoServer):
         self.mandated_outcomes = {}
         """Current mandated outcomes"""
 
+        self.scoring_percent_threshold = 0
+        """Scoring percent threshold"""
+
+        self.scoring_point_threshold = 0
+        """Scoring point threshold"""
+
         self.internal_server = None
         """Internal protocol server"""
 
@@ -702,6 +708,12 @@ class Controller(TCPProtoServer):
         for env in envs:
             bandwidth = env.get('scenario_rf_bandwidth', self.config.bandwidth)
             frequency = env.get('scenario_center_frequency', self.config.frequency)
+
+            if 'scoring_percent_threshold' in env:
+                self.scoring_percent_threshold = env['scoring_percent_threshold']
+
+            if 'scoring_point_threshold' in env:
+                self.scoring_point_threshold = env['scoring_point_threshold']
 
             self.loop.create_task(self.reconfigureBandwidthAndFrequency(bandwidth, frequency))
 

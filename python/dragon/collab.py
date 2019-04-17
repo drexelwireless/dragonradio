@@ -15,7 +15,7 @@ import sc2.registration_pb2 as registration
 
 logger = logging.getLogger('collab')
 
-CIL_VERSION = (3, 2, 1)
+CIL_VERSION = (3, 3, 0)
 
 MAX_LOCATION_AGE = 45
 
@@ -52,6 +52,7 @@ class MandatedOutcome(object):
         self.latency_ = None
         self.throughput_ = None
         self.bytes_ = None
+        self.point_value_ = None
 
         if json:
             fields = [ 'goal_type'
@@ -61,6 +62,8 @@ class MandatedOutcome(object):
 
             for f in fields:
                 setattr(self, f, json.get(f, None))
+
+            self.point_value = json.get('point_value', 1)
 
             fields = [ 'max_latency_s'
                      , 'min_throughput_bps'
@@ -251,10 +254,13 @@ class Peer(ZMQProtoClient):
             perf.flow_id = mandate.flow_uid
             perf.hold_period = mandate.hold_period
             perf.achieved_duration = 0
+            perf.point_value = mandate.point_value
 
             msg.detailed_performance.mandates.extend([perf])
 
         msg.detailed_performance.mandates_achieved = 0
+        msg.detailed_performance.total_score_achieved = 0
+        msg.detailed_performance.scoring_point_threshold = controller.scoring_point_threshold
 
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
