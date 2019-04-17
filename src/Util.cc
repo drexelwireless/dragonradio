@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <time.h>
 
+#include "Logger.hh"
 #include "RadioConfig.hh"
 #include "Util.hh"
 
@@ -21,8 +22,8 @@ int sys(const char *fmt, ...)
 
     res = system(cmd);
 
-    if (rc.verbose)
-        printf("%s\n", cmd);
+    logEvent("SYSTEM: %s (%d)", cmd, res);
+
     return res;
 }
 
