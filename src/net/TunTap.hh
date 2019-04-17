@@ -48,7 +48,7 @@ public:
     NetOut<Push> source;
 
 private:
-    /** @brief Flag indicatign whether or not the interface is persistent. */
+    /** @brief Flag indicating whether or not the interface is persistent. */
     bool persistent_;
 
     /** @brief The name of the tun/tap device */
