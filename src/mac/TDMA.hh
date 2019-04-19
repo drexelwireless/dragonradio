@@ -15,74 +15,7 @@
 class TDMA : public SlottedMAC
 {
 public:
-    class Slots
-    {
-    public:
-        using slots_type = std::vector<bool>;
-
-        explicit Slots(TDMA &mac, size_t nslots)
-          : mac_(mac)
-          , slots_(nslots, false)
-        {
-            mac.reconfigure();
-        }
-
-        Slots() = delete;
-        Slots(const Slots&) = delete;
-        Slots(Slots&&) = delete;
-
-        Slots& operator=(const Slots&) = delete;
-        Slots& operator=(Slots&&) = delete;
-
-        Slots& operator=(const slots_type& slots)
-        {
-            slots_ = slots;
-            mac_.reconfigure();
-
-            return *this;
-        }
-
-        /** @brief Get number of slots
-         */
-        slots_type::size_type size(void)
-        {
-            return slots_.size();
-        }
-
-        /** @brief Set number of slots
-         * @param n The number of slots
-         */
-        void resize(slots_type::size_type n)
-        {
-            slots_.resize(n, false);
-            mac_.reconfigure();
-        }
-
-        /** @brief Access a slot */
-        slots_type::reference operator [](size_t i)
-        {
-            return slots_.at(i);
-        }
-
-        /** @brief Return an iterator to the beginning of slots. */
-        slots_type::iterator begin(void)
-        {
-            return slots_.begin();
-        }
-
-        /** @brief Return an iterator to the end of slots. */
-        slots_type::iterator end(void)
-        {
-            return slots_.end();
-        }
-
-    private:
-        /** @brief The TDMA MAC for this slot schedule */
-        TDMA &mac_;
-
-        /** @brief The slot schedule */
-        slots_type slots_;
-    };
+    using TDMASchedule = std::vector<bool>;
 
     TDMA(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,
@@ -106,10 +39,10 @@ public:
     /** @brief Stop processing packets */
     void stop(void) override;
 
-    /** @brief TDMA slots */
-    Slots &getSlots(void)
+    /** @brief Get number of slots */
+    size_t getNSlots(void)
     {
-        return slots_;
+        return nslots_;
     }
 
     /** @brief Get superslots flag */
@@ -130,8 +63,11 @@ private:
     /** @brief Length of TDMA frame (sec) */
     double frame_size_;
 
-    /** @brief The slot schedule */
-    Slots slots_;
+    /** @brief Number of TDMA slots */
+    size_t nslots_;
+
+    /** @brief The TDMA schedule */
+    TDMASchedule tdma_schedule_;
 
     /** @brief Use superslots */
     bool superslots_;

@@ -1097,7 +1097,7 @@ class Radio(object):
         """
         config = self.config
 
-        if isinstance(self.mac, dragonradio.TDMA) and len(self.mac.slots) == nslots:
+        if isinstance(self.mac, dragonradio.TDMA) and self.mac.nslots == nslots:
             return
 
         self.mac = dragonradio.TDMA(self.usrp,
@@ -1185,7 +1185,7 @@ class Radio(object):
         for chan in range(0, nchannels):
             slots = (sched[chan] == self.node_id)
             if np.any(slots):
-                self.mac.slots = slots
+                self.mac.schedule = (sched == self.node_id)
                 self.setTXChannel(chan)
                 return
 

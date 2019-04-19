@@ -11,6 +11,7 @@
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
 #include "mac/MAC.hh"
+#include "mac/Schedule.hh"
 #include "net/Net.hh"
 
 /** @brief A slotted MAC. */
@@ -87,6 +88,26 @@ public:
         reconfigure();
     }
 
+    /** @brief Get MAC schedule */
+    virtual const Schedule &getSchedule(void) const
+    {
+        return schedule_;
+    }
+
+    /** @brief Set MAC schedule */
+    virtual void setSchedule(const Schedule &schedule)
+    {
+        schedule_ = schedule;
+        reconfigure();
+    }
+
+    /** @brief Set MAC schedule */
+    virtual void setSchedule(const Schedule::sched_type &schedule)
+    {
+        schedule_ = schedule;
+        reconfigure();
+    }
+
     virtual void reconfigure(void) override;
 
 protected:
@@ -101,6 +122,9 @@ protected:
 
     /** @brief Lead time needed to send a slot's worth of data. */
     double slot_send_lead_time_;
+
+    /** @brief The MAC schedule */
+    Schedule schedule_;
 
     /** @brief Number of RX samples in a full slot */
     size_t rx_slot_samps_;

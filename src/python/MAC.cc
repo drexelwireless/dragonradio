@@ -39,32 +39,6 @@ void exportMACs(py::module &m)
             "Slot send lead time (sec)")
         ;
 
-    // Export class TDMA::Slots to Python
-    py::class_<TDMA::Slots, std::shared_ptr<TDMA::Slots>>(m, "Slots")
-        .def("__getitem__", [](TDMA::Slots &slots, TDMA::Slots::slots_type::size_type i) {
-            try {
-                return slots[i];
-            } catch (const std::out_of_range&) {
-                throw py::index_error();
-            }
-        })
-        .def("__setitem__", [](TDMA::Slots &slots, TDMA::Slots::slots_type::size_type i, bool v) {
-            try {
-                slots[i] = v;
-            } catch (const std::out_of_range&) {
-                throw py::index_error();
-            }
-        })
-        .def("__len__", &TDMA::Slots::size)
-        .def("__iter__", [](TDMA::Slots &slots) {
-            return py::make_iterator<py::return_value_policy::copy,
-                                     TDMA::Slots::slots_type::iterator,
-                                     TDMA::Slots::slots_type::iterator,
-                                     TDMA::Slots::slots_type::value_type>(slots.begin(), slots.end());
-         }, py::keep_alive<0, 1>())
-        .def("resize", &TDMA::Slots::resize)
-        ;
-
     // Export class TDMA to Python
     py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<USRP>,
@@ -78,13 +52,13 @@ void exportMACs(py::module &m)
                       double,
                       double,
                       size_t>())
-        .def_property("slots",
-            &TDMA::getSlots,
-            [](TDMA &self, const TDMA::Slots::slots_type &slots)
-            {
-                self.getSlots() = slots;
-            },
-            py::return_value_policy::reference_internal)
+        .def_property("schedule",
+            &TDMA::getSchedule,
+            py::overload_cast<const Schedule::sched_type &>(&TDMA::setSchedule),
+            "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
+        .def_property_readonly("nslots",
+            &TDMA::getNSlots,
+            "Number of TDMA slots.")
         .def_property("superslots",
             &TDMA::getSuperslots,
             &TDMA::setSuperslots,

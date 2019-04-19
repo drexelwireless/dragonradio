@@ -27,7 +27,8 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
                guard_size,
                slot_modulate_lead_time,
                slot_send_lead_time)
-  , slots_(*this, nslots)
+  , nslots_(nslots)
+  , tdma_schedule_(nslots)
   , superslots_(false)
 {
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
@@ -54,7 +55,10 @@ void TDMA::reconfigure(void)
 {
     SlottedMAC::reconfigure();
 
-    frame_size_ = slot_size_*slots_.size();
+    for (size_t i = 0; i < nslots_; ++i)
+        tdma_schedule_[i] = schedule_.canTransmit(i);
+
+    frame_size_ = nslots_*slot_size_;
 
     // Determine whether or not we have a slot
     Clock::time_point t_now = Clock::now();
@@ -150,10 +154,10 @@ bool TDMA::findNextSlot(Clock::time_point t,
     t_slot_pos = fmod(t, slot_size_);
     cur_slot = fmod(t, frame_size_) / slot_size_;
 
-    for (tx_slot = 1; tx_slot <= slots_.size(); ++tx_slot) {
-        if (slots_[(cur_slot + tx_slot) % slots_.size()]) {
+    for (tx_slot = 1; tx_slot <= nslots_; ++tx_slot) {
+        if (tdma_schedule_[(cur_slot + tx_slot) % nslots_]) {
             t_next = t + (tx_slot*slot_size_ - t_slot_pos);
-            owns_next_slot = slots_[(cur_slot + tx_slot + 1) % slots_.size()];
+            owns_next_slot = tdma_schedule_[(cur_slot + tx_slot + 1) % nslots_];
             return true;
         }
     }

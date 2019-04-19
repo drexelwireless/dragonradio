@@ -793,7 +793,7 @@ class Controller(TCPProtoServer):
                 # schedule. Otherwise create a new schedule.
                 if self.radio.bandwidth != old_bandwidth:
                     if self.bootstrapped:
-                        self.radio.mac.slots = []
+                        self.radio.mac.schedule = []
 
                     if self.is_gateway:
                         # Force new schedule
