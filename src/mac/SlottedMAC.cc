@@ -2,6 +2,7 @@
 
 #include "Logger.hh"
 #include "SlottedMAC.hh"
+#include "Util.hh"
 
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
@@ -72,6 +73,12 @@ void SlottedMAC::rxWorker(void)
     uhd::set_thread_priority_safe();
 
     while (!done_) {
+        // Wait for slot size to be known
+        if (rx_slot_samps_ == 0) {
+            doze(100e-3);
+            continue;
+        }
+
         // Set up streaming starting at *next* slot
         t_now = Clock::now();
         t_slot_pos = fmod(t_now, slot_size_);
