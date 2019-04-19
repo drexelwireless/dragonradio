@@ -111,7 +111,7 @@ public:
     }
 
     /** @brief Get superslots flag */
-    bool getSuperslots(void)
+    bool getSuperslots(void) const
     {
         return superslots_;
     }
