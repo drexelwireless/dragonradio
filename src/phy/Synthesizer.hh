@@ -5,6 +5,7 @@
 
 #include "spinlock_mutex.hh"
 #include "Logger.hh"
+#include "mac/Schedule.hh"
 #include "net/Net.hh"
 #include "phy/ModPacket.hh"
 #include "phy/PHY.hh"
@@ -18,12 +19,14 @@ public:
         Slot(const Clock::time_point &deadline_,
              size_t delay_,
              size_t max_samples_,
-             bool overfill_)
+             size_t max_superslot_samples_,
+             size_t slotidx_)
          : deadline(deadline_)
          , delay(delay_)
-         , max_samples(max_samples_)
-         , overfill(overfill_)
+         , max_superslot_samples(max_superslot_samples_)
+         , slotidx(slotidx_)
          , closed(false)
+         , max_samples(max_samples_)
          , nsamples(0)
         {
         }
@@ -38,13 +41,11 @@ public:
         /** @brief Number of samples to delay */
         const size_t delay;
 
-        /** @brief Maximum number of samples in this slot */
-        const size_t max_samples;
+        /** @brief Maximum number of samples in this slot if it is a superslot */
+        const size_t max_superslot_samples;
 
-        /** @brief A flag indicating whether or not we are allowed to overfill
-         * the slot and spill into the next slot.
-         */
-        const bool overfill;
+        /** @brief The schedule slot this slot represents */
+        const size_t slotidx;
 
         /** @brief When true, indicates that the slot is closed for further
          * samples.
@@ -53,6 +54,9 @@ public:
 
         /** @brief Mutex protecting slot info */
         spinlock_mutex mutex;
+
+        /** @brief Maximum number of samples in this slot */
+        size_t max_samples;
 
         /** @brief Number of samples in slot */
         size_t nsamples;
@@ -93,10 +97,13 @@ public:
     };
 
     Synthesizer(std::shared_ptr<PHY> phy,
-                double tx_rate)
+                double tx_rate,
+                const Channels &channels)
       : sink(*this, nullptr, nullptr)
       , phy_(phy)
       , tx_rate_(tx_rate)
+      , superslots_(false)
+      , channels_(channels)
       , max_packet_size_(0)
     {
     }
@@ -115,6 +122,51 @@ public:
     virtual void setTXRate(double rate)
     {
         tx_rate_ = rate;
+        reconfigure();
+    }
+
+    /** @brief Get superslots flag */
+    bool getSuperslots(void) const
+    {
+        return superslots_.load(std::memory_order_relaxed);
+    }
+
+    /** @brief Set superslots flag */
+    void setSuperslots(bool superslots)
+    {
+        superslots_.store(superslots, std::memory_order_relaxed);
+    }
+
+    /** @brief Get channels. */
+    virtual const Channels &getChannels(void) const
+    {
+        return channels_;
+    }
+
+    /** @brief Set channels */
+    virtual void setChannels(const Channels &channels)
+    {
+        channels_ = channels;
+        reconfigure();
+    }
+
+    /** @brief Get schedule. */
+    virtual const Schedule &getSchedule(void) const
+    {
+        return schedule_;
+    }
+
+    /** @brief Set schedule */
+    virtual void setSchedule(const Schedule &schedule)
+    {
+        schedule_ = schedule;
+        reconfigure();
+    }
+
+    /** @brief Set schedule */
+    virtual void setSchedule(const Schedule::sched_type &schedule)
+    {
+        schedule_ = schedule;
         reconfigure();
     }
 
@@ -161,6 +213,15 @@ protected:
 
     /** @brief TX sample rate */
     double tx_rate_;
+
+    /** @brief Use superslots */
+    std::atomic<bool> superslots_;
+
+    /** @brief Radio channels */
+    Channels channels_;
+
+    /** @brief Radio schedule */
+    Schedule schedule_;
 
     /** @brief Maximum number of possible samples in a modulated packet. */
     size_t max_packet_size_;

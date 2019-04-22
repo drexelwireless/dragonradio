@@ -26,6 +26,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                guard_size,
                slot_modulate_lead_time,
                slot_send_lead_time)
+  , slotidx_(0)
   , p_(p)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
@@ -53,6 +54,14 @@ void SlottedALOHA::stop(void)
         tx_thread_.join();
 }
 
+void SlottedALOHA::reconfigure(void)
+{
+    SlottedMAC::reconfigure();
+
+    if (schedule_.size() == 0 || slotidx_ >= schedule_[0].size())
+        slotidx_ = 0;
+}
+
 void SlottedALOHA::txWorker(void)
 {
     Clock::time_point t_now;            // Current time
@@ -74,7 +83,7 @@ void SlottedALOHA::txWorker(void)
 
         // Modulate following slot with probability p_
         if (dist_(gen_) < p_)
-            modulateSlot(t_following_slot, 0, false);
+            modulateSlot(t_following_slot, 0, slotidx_);
 
         // Transmit next slot
         if (slot)

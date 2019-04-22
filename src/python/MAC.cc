@@ -37,6 +37,10 @@ void exportMACs(py::module &m)
             &SlottedMAC::getSlotSendLeadTime,
             &SlottedMAC::setSlotSendLeadTime,
             "Slot send lead time (sec)")
+        .def_property("schedule",
+            &SlottedMAC::getSchedule,
+            py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
+            "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         ;
 
     // Export class TDMA to Python
@@ -52,17 +56,9 @@ void exportMACs(py::module &m)
                       double,
                       double,
                       size_t>())
-        .def_property("schedule",
-            &TDMA::getSchedule,
-            py::overload_cast<const Schedule::sched_type &>(&TDMA::setSchedule),
-            "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         .def_property_readonly("nslots",
             &TDMA::getNSlots,
-            "Number of TDMA slots.")
-        .def_property("superslots",
-            &TDMA::getSuperslots,
-            &TDMA::setSuperslots,
-            "Flag indicating whether or not to use superslots.");
+            "The number of TDMA slots.")
         ;
 
     // Export class SlottedALOHA to Python
@@ -78,6 +74,13 @@ void exportMACs(py::module &m)
                       double,
                       double,
                       double>())
-        .def_property("p", &SlottedALOHA::getTXProb, &SlottedALOHA::setTXProb)
+        .def_property("slotidx",
+            &SlottedALOHA::getSlotIndex,
+            &SlottedALOHA::setSlotIndex,
+            "Slot index to transmit in")
+        .def_property("p",
+            &SlottedALOHA::getTXProb,
+            &SlottedALOHA::setTXProb,
+            "Probability of transmission in a given slot")
         ;
 }

@@ -131,13 +131,16 @@ void SlottedMAC::rxWorker(void)
 
 void SlottedMAC::modulateSlot(Clock::time_point when,
                               size_t prev_overfill,
-                              bool owns_next_slot)
+                              size_t slotidx)
 {
     assert(prev_overfill <= tx_slot_samps_);
     assert(prev_overfill <= tx_full_slot_samps_);
 
-    size_t max_samples = owns_next_slot ? tx_full_slot_samps_ - prev_overfill : tx_slot_samps_ - prev_overfill;
-    auto   slot = std::make_shared<Synthesizer::Slot>(when, prev_overfill, max_samples, owns_next_slot);
+    auto slot = std::make_shared<Synthesizer::Slot>(when,
+                                                    prev_overfill,
+                                                    tx_slot_samps_ - prev_overfill,
+                                                    tx_full_slot_samps_ - prev_overfill,
+                                                    slotidx);
 
     // Tell the synthesizer to synthesize for this slot
     synthesizer_->modulate(slot);
@@ -219,7 +222,7 @@ void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
     }
 
     // Transmit the packets via the USRP
-    bool end_of_burst = slot->nsamples < slot->max_samples || !slot->overfill;
+    bool end_of_burst = slot->nsamples < slot->max_samples;
 
     usrp_->burstTX(Clock::to_mono_time(slot->deadline) + slot->delay/tx_rate_,
                    next_slot_start_of_burst_,

@@ -15,6 +15,18 @@ void exportSynthesizers(py::module &m)
         .def_property("tx_rate",
             &Synthesizer::getTXRate,
             &Synthesizer::setTXRate)
+        .def_property("superslots",
+            &Synthesizer::getSuperslots,
+            &Synthesizer::setSuperslots,
+            "Flag indicating whether or not to use superslots.")
+        .def_property("channels",
+            &Synthesizer::getChannels,
+            &Synthesizer::setChannels,
+            "TX channels")
+        .def_property("schedule",
+            &Synthesizer::getSchedule,
+            py::overload_cast<const Schedule::sched_type &>(&Synthesizer::setSchedule),
+            "MAC schedule")
         .def_property_readonly("sink",
             [](std::shared_ptr<Synthesizer> element)
             {
@@ -27,14 +39,7 @@ void exportSynthesizers(py::module &m)
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
                       double,
-                      const Channel&,
+                      const Channels&,
                       unsigned int>())
-        .def_property("taps",
-            &TDSynthesizer::getTaps,
-            &TDSynthesizer::setTaps,
-            "Prototype filter for channelization. Should have unity gain.")
-        .def_property("tx_channel",
-            &TDSynthesizer::getTXChannel,
-            &TDSynthesizer::setTXChannel)
         ;
 }

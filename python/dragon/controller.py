@@ -799,11 +799,6 @@ class Controller(TCPProtoServer):
                         # Force new schedule
                         self.schedule = None
                         self.tdma_reschedule.set()
-                else:
-                    # We need to re-set the channel after a frequency change
-                    # because although the channel number may be the same, the
-                    # corresponding frequency will be different.
-                    self.radio.setTXChannel(self.radio.tx_channel_idx)
 
     async def bootstrapNetwork(self):
         loop = self.loop
@@ -842,7 +837,7 @@ class Controller(TCPProtoServer):
 
                 if not self.bootstrapped:
                     chanidx = random.randint(0, len(radio.channels)-1)
-                    radio.setTXChannel(chanidx)
+                    radio.setALOHAChannel(chanidx)
 
                 radio.controller.broadcastHello()
 

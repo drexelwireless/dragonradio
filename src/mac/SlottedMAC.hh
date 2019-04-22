@@ -165,11 +165,11 @@ protected:
     /** @brief Schedule modulation of a slot
      * @param when Start time of slot
      * @param prev_overfill Number of overfill samples from previous slot.
-     * @param owns_next_slot Flag that is true if we own the next slot
+     * @param slotidx Index of the slot to modulated
      */
     void modulateSlot(Clock::time_point when,
                       size_t prev_overfill,
-                      bool owns_next_slot);
+                      size_t slotidx);
 
     /** @brief Finalize the next TX slot.
      * @param when Start time of slot

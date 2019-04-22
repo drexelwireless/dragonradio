@@ -8,13 +8,11 @@
 TDSynthesizer::TDSynthesizer(std::shared_ptr<Net> net,
                              std::shared_ptr<PHY> phy,
                              double tx_rate,
-                             const Channel &tx_channel,
+                             const Channels &channels,
                              size_t nthreads)
-  : Synthesizer(phy, tx_rate)
+  : Synthesizer(phy, tx_rate, channels)
   , net_(net)
   , done_(false)
-  , taps_({1.0})
-  , tx_channel_(tx_channel)
   , mod_reconfigure_(nthreads)
 {
     for (size_t i = 0; i < nthreads; ++i) {
@@ -33,10 +31,10 @@ TDSynthesizer::~TDSynthesizer()
 
 double TDSynthesizer::getMaxTXUpsampleRate(void)
 {
-    if (tx_channel_.bw == 0.0)
+    if (channels_.size() == 0)
         return 1.0;
     else
-        return tx_rate_/(phy_->getMinRXRateOversample()*tx_channel_.bw);
+        return tx_rate_/(phy_->getMinRXRateOversample()*channels_[0].first.bw);
 }
 
 void TDSynthesizer::modulate(const std::shared_ptr<Slot> &slot)
@@ -68,6 +66,8 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
     std::unique_ptr<ChannelState>      mod;
     std::shared_ptr<Synthesizer::Slot> prev_slot;
     std::shared_ptr<Synthesizer::Slot> slot;
+    std::vector<size_t>                slot_chanidx; // TX channel for each slot
+    size_t                             chanidx = 0;  // Index of TX channel
     std::shared_ptr<NetPacket>         pkt;
 
     while (!done_) {
@@ -82,9 +82,50 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_acquire)) {
-            mod = std::make_unique<ChannelState>(*phy_, tx_channel_, taps_, tx_rate_);
+            // If we have no schedule or channels, yield and try again
+            if (schedule_.size() == 0 ||
+                channels_.size() == 0 ||
+                slot->slotidx >= schedule_[0].size()) {
+                std::this_thread::yield();
+                continue;
+            }
+
+            // Cache which channel we use in each slot
+            size_t nslots = schedule_[0].size();
+
+            slot_chanidx.resize(nslots);
+
+            for (size_t slot = 0; slot < nslots; ++slot)
+                schedule_.firstChannelIdx(slot, slot_chanidx[slot]);
+
+            // We need to update the modulator
+            chanidx = slot_chanidx.size();
 
             reconfig.store(false, std::memory_order_relaxed);
+        }
+
+        if (slot_chanidx[slot->slotidx] != chanidx) {
+            // Update our channel index
+            chanidx = slot_chanidx[slot->slotidx];
+
+            // Reconfigure the modulator
+            mod = std::make_unique<ChannelState>(*phy_,
+                                                 channels_[chanidx].first,
+                                                 channels_[chanidx].second,
+                                                 tx_rate_);
+        }
+
+        // We can overfill if we are allowed to transmit on the same channel in
+        // the next slot in the schedule
+        const Schedule::slot_type &slots = schedule_[chanidx];
+
+        // Determine maximum number of samples in this slot
+        bool overfill = getSuperslots() && slots[(chanidx + 1) % slots.size()];
+
+        if (overfill) {
+            std::lock_guard<spinlock_mutex> lock(slot->mutex);
+
+            slot->max_samples = slot->max_superslot_samples;
         }
 
         // Modulate packets for the current slot
@@ -115,13 +156,13 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 
                 mod->modulate(std::move(pkt), *mpkt);
 
-                pushed = slot->push(mpkt, slot->overfill);
+                pushed = slot->push(mpkt, overfill);
             } else {
                 mod->modulate(std::move(pkt), *mpkt);
 
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-                pushed = slot->push(mpkt, slot->overfill);
+                pushed = slot->push(mpkt, overfill);
             }
 
             if (!pushed) {

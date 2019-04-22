@@ -45,18 +45,6 @@ public:
         return nslots_;
     }
 
-    /** @brief Get superslots flag */
-    bool getSuperslots(void) const
-    {
-        return superslots_;
-    }
-
-    /** @brief Set superslots flag */
-    void setSuperslots(bool superslots)
-    {
-        superslots_ = superslots;
-    }
-
     void reconfigure(void) override;
 
 private:
@@ -68,9 +56,6 @@ private:
 
     /** @brief The TDMA schedule */
     TDMASchedule tdma_schedule_;
-
-    /** @brief Use superslots */
-    bool superslots_;
 
     /** @brief Thread running rxWorker */
     std::thread rx_thread_;
@@ -84,12 +69,12 @@ private:
     /** @brief Find next TX slot
      * @param t Time at which to start looking for a TX slot
      * @param t_next The beginning of the next TX slot
-     * @param owns_next_slot Will contain true if the next slow is also owned
+     * @param slotidx Slot index
      * @returns True if a slot was found, false otherwise
      */
     bool findNextSlot(Clock::time_point t,
                       Clock::time_point &t_next,
-                      bool &owns_next_slot);
+                      size_t &slotidx);
 };
 
 #endif /* TDMA_H_ */

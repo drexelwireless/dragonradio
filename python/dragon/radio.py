@@ -772,10 +772,8 @@ class Radio(object):
         self.synthesizer = dragonradio.TDSynthesizer(self.net,
                                                      self.phy,
                                                      self.usrp.tx_rate,
-                                                     self.synthesizer_channels[self.tx_channel_idx][0],
+                                                     self.synthesizer_channels,
                                                      config.num_modulation_threads)
-
-        self.synthesizer.taps =self.synthesizer_channels[self.tx_channel_idx][1]
 
         #
         # Configure the controller
@@ -1012,7 +1010,11 @@ class Radio(object):
         self.synthesizer.tx_rate = self.usrp.tx_rate
 
         self.channelizer.channels = self.channelizer_channels
-        self.synthesizer.taps = self.synthesizer_channels[0][1]
+
+        # We need to re-set the channel after a frequency change because
+        # although the channel number may be the same, the corresponding
+        # frequency will be different.
+        self.setTXChannel(self.tx_channel_idx)
 
         # Reconfigure the MAC
         if self.mac is not None:
@@ -1079,7 +1081,16 @@ class Radio(object):
                                             config.slot_send_lead_time,
                                             config.aloha_prob)
 
+        # Install slot-per-channel schedule for ALOHA MAC
+        self.installALOHASchedule()
+
+        # We may not use superslots with the ALOHA MAC
+        self.synthesizer.superslots = False
+
+        # Set up overlap channelizer
         if isinstance(self.channelizer, dragonradio.OverlapTDChannelizer):
+            # We need to demodulate half the previous slot because a sender
+            # could start transmitting a packet halfway into a slot + epsilon.
             self.channelizer.prev_demod = 0.5*config.slot_size
             self.channelizer.cur_demod = config.slot_size
 
@@ -1112,12 +1123,14 @@ class Radio(object):
                                     config.slot_send_lead_time,
                                     nslots)
 
-        self.mac.superslots = self.config.superslots
+        # We may use superslots with the TDMA MAC
+        self.synthesizer.superslots = config.superslots
 
-        # When we using superslots, we need to demodulate half the previous slot
-        # becasue a sender could start transmitting a packet halfway into a slot
-        # + epsilon.
+        # Set up overlap channelizer
         if isinstance(self.channelizer, dragonradio.OverlapTDChannelizer):
+            # When using superslots, we need to demodulate half the previous
+            # slot because a sender could start transmitting a packet halfway
+            # into a slot + epsilon.
             if self.config.superslots:
                 self.channelizer.prev_demod = 0.5*config.slot_size
                 self.channelizer.cur_demod = config.slot_size
@@ -1133,28 +1146,55 @@ class Radio(object):
             self.controller.mac = self.mac
 
     def setTXChannel(self, channel_idx):
+        """Set the transmission channel.
+
+        If we are upsampling on TX, this is a no-op. Otherwise we set the
+        radio's frequency to transmit on the current channel.
+        """
         config = self.config
 
-        self.tx_channel_idx = channel_idx
+        if not config.tx_upsample:
+            self.tx_channel_idx = channel_idx
 
-        if config.tx_upsample:
-            self.synthesizer.tx_channel = self.synthesizer_channels[channel_idx][0]
-            self.synthesizer.taps = self.synthesizer_channels[channel_idx][1]
+            channel = self.channels[channel_idx]
+
+            logging.info("Setting TX frequency offset to %g", channel.fc)
+            self.usrp.tx_frequency = self.frequency + channel.fc
+
+            self.synthesizer.channels = Channels([(Channel(0, channel.bw), [1])])
+
+            # Allow the MAC to figure out the TX offset so snapshot self
+            # tranmissions are correctly logged
+            if self.mac is not None:
+                self.mac.reconfigure()
+
+    def setALOHAChannel(self, channel_idx):
+        """Set the transmission channel for the ALOHA MAC."""
+        if not isinstance(self.mac, dragonradio.SlottedALOHA):
+            logging.debug("Cannot change ALOHA channel for non-ALOHA MAC")
+
+        if self.config.tx_upsample:
+            self.mac.slotidx = channel_idx
         else:
-            channel = self.synthesizer_channels[channel_idx][0]
+            self.setTXChannel(channel_idx)
 
-            fc = channel.fc
-            logging.info("Setting TX frequency offset to %g", fc)
+    def installALOHASchedule(self):
+        """Install a schedule for an ALOHA MAC.
 
-            self.usrp.tx_frequency = self.frequency + fc
+        This installs a schedule with one slot per channel. If we are not
+        resampling on TX, it installs a schedule with one slot.
+        """
+        self.mac.slotidx = 0
 
-            self.synthesizer.tx_channel = Channel(0.0, self.channel_bandwidth)
-            self.synthesizer.taps = [1]
+        if self.config.tx_upsample:
+            self.my_schedule = np.identity(len(self.channels)).astype('bool')
+        else:
+            self.setTXChannel(0)
 
-        # Allow the MAC to figure out the TX offset so snapshot self
-        # tranmissions are correctly logged
-        if self.mac is not None:
-            self.mac.reconfigure()
+            self.my_schedule = [[1]]
+
+        self.mac.schedule = self.my_schedule
+        self.synthesizer.schedule = self.my_schedule
 
     def installMACSchedule(self, sched):
         """Install a MAC schedule.
@@ -1163,6 +1203,8 @@ class Radio(object):
             sched: The schedule, which is a nchannels X nslots array of node
                 IDs.
         """
+        config = self.config
+
         logging.debug('Installing MAC schedule:\n%s', sched)
 
         # Get number of channels and slots
@@ -1179,17 +1221,24 @@ class Radio(object):
         for (node_id, node) in self.net.items():
             node.can_transmit = node_id in nodes_with_slot
 
-        # Look for a channel where we have a slot. If there is more than one
-        # such channel, use the first, because we don't yet support multiple
-        # channels.
-        for chan in range(0, nchannels):
-            slots = (sched[chan] == self.node_id)
-            if np.any(slots):
-                self.mac.schedule = (sched == self.node_id)
-                self.setTXChannel(chan)
-                return
+        # If we are upsampling on TX, go ahead and install the schedule
+        if config.tx_upsample:
+            self.my_schedule = (sched == self.node_id)
+        # Otherwise we need to pick a channel we're allowed to send on and stick
+        # to that
+        else:
+            try:
+                chan = dragon.schedule.bestScheduleChannel(sched, self.node_id)
+            except:
+                logging.error('No MAC schedule entry for radio %d', self.node_id)
+                chan = 0
 
-        logging.error('No MAC schedule entry for radio %d', self.node_id)
+            self.setTXChannel(chan)
+
+            self.my_schedule = [sched[chan] == self.node_id]
+
+        self.mac.schedule = self.my_schedule
+        self.synthesizer.schedule = self.my_schedule
 
     def configureSimpleMACSchedule(self):
         """

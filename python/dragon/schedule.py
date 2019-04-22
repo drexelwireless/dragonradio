@@ -1,5 +1,24 @@
 import numpy as np
 
+def bestScheduleChannel(sched, node_id):
+    """Choose the best single channel for the given node to use from the
+    schedule.
+
+    If the schedule allows the given node to transmit on multiple channels, pick
+    the channel with the most air time.
+
+    Args:
+        sched: A schedule
+        node_id: A node
+
+    Returns:
+        The best channel to transmit on
+    """
+    if not (sched == node_id).any():
+        raise Exception("No slot for node {}".format(node_id))
+    else:
+        return (sched == node_id).sum(axis=1).argmax()
+
 def pureTDMASchedule(nodes):
     """Create a pure TDMA schedule that gives each node a single slot.
 

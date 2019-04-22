@@ -18,7 +18,7 @@ public:
     TDSynthesizer(std::shared_ptr<Net> net,
                   std::shared_ptr<PHY> phy,
                   double tx_rate,
-                  const Channel &tx_channel,
+                  const Channels &channels,
                   size_t nthreads);
     virtual ~TDSynthesizer();
 
@@ -27,33 +27,6 @@ public:
     void modulate(const std::shared_ptr<Slot> &slot) override;
 
     void reconfigure(void) override;
-
-    /** @brief Get TX channel. */
-    Channel getTXChannel(void)
-    {
-        return tx_channel_;
-    }
-
-    /** @brief Set TX channel. */
-    void setTXChannel(const Channel &channel)
-    {
-        tx_channel_ = channel;
-        reconfigure();
-    }
-
-    /** @brief Get prototype filter for channelization. */
-    const std::vector<C> &getTaps(void) const
-    {
-        return taps_;
-    }
-
-    /** @brief Set prototype filter for channelization. */
-    /** The prototype filter should have unity gain. */
-    void setTaps(const std::vector<C> &taps)
-    {
-        taps_ = taps;
-        reconfigure();
-    }
 
     /** @brief Stop modulating. */
     void stop(void);
@@ -103,12 +76,6 @@ private:
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
-
-    /** @brief Prototype filter */
-    std::vector<C> taps_;
-
-    /** @brief TX channel */
-    Channel tx_channel_;
 
     /** @brief Reconfiguration flags */
     std::vector<std::atomic<bool>> mod_reconfigure_;

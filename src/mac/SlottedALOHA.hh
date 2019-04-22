@@ -35,9 +35,20 @@ public:
     SlottedALOHA& operator=(const SlottedALOHA&) = delete;
     SlottedALOHA& operator=(SlottedALOHA&&) = delete;
 
-    /** @brief Get probability of transmission
-     */
-    double getTXProb(void)
+    /** @brief Get slot index to transmit on */
+    size_t getSlotIndex(void) const
+    {
+        return slotidx_;
+    }
+
+    /** @brief Set slot to transmit on */
+    void setSlotIndex(size_t slotidx)
+    {
+        slotidx_ = slotidx;
+    }
+
+    /** @brief Get probability of transmission */
+    double getTXProb(void) const
     {
         return p_;
     }
@@ -53,7 +64,12 @@ public:
     /** @brief Stop processing packets */
     void stop(void) override;
 
+    void reconfigure(void) override;
+
 private:
+    /** @brief Slot index to use */
+    size_t slotidx_;
+
     /** @brief Probability of transmission */
     double p_;
 
