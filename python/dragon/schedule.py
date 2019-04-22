@@ -79,40 +79,33 @@ def fairMACSchedule(nchannels, nslots, nodes, k):
     Returns:
         A schedule consisting of a nchannels X nslots array of node IDs.
     """
-    sched = np.zeros((nchannels, nslots), dtype=int)
+    # Assign nodes to channels
+    channels = [[] for _ in range(0, nchannels)]
 
-    # How many slots to fill per assignment
-    slotsper = 1
-
-    # Current slot
-    slot = 0
-
-    # How many channels we've filled in the current slot
-    filled = 0
-
-    # Current channel
     chan = 0
 
-    # Remaining nodes to assign
-    rem_nodes = nodes
+    for nodeidx in range(0, len(nodes)):
+        node = nodes[nodeidx]
 
-    while slot < nslots:
-        if np.all(sched[chan,slot:slot+slotsper] == 0):
-            sched[chan,slot:slot+slotsper] = rem_nodes[0]
-            rem_nodes = rem_nodes[1:]
-            chan += k
-            filled += 1
-        else:
-            chan += 1
+        while chan < nchannels:
+            if len(channels[chan]) == nodeidx // nchannels:
+                channels[chan].append(node)
+                chan += k
+                break
+            else:
+                chan += 1
 
         if chan >= nchannels:
             chan = 0
 
-        if filled == nchannels:
-            slot += slotsper
-            filled = 0
+    # Create a schedule where nodes alternate slots in their assigned channel
+    sched = np.zeros((nchannels, nslots), dtype=int)
 
-        if not rem_nodes:
-            rem_nodes = nodes
+    for chan in range(0, nchannels):
+        nodes = channels[chan]
+
+        if len(nodes) > 0:
+            for slot in range (0, nslots):
+                sched[chan,slot] = nodes[slot % len(nodes)]
 
     return sched
