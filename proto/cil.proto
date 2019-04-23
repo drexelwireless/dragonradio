@@ -96,6 +96,7 @@ message NetworkType
       INCUMBENT_PASSIVE = 10;
       INCUMBENT_DSRC = 11;
       INCUMBENT_JAMMER = 12;
+      INCUMBENT_ACTIVE = 13;
     }
 
     Type network_type = 100;  // type of network
@@ -363,6 +364,35 @@ message LocationUpdate
    bool threshold_exceeded = 8;  // was the threshold breached?
  }
 
+/*
+ * The IncumbentActiveInfo notifies the competitor of its current interference ratio (INR); as a 
+ * function of measured power (during incumbent transmissions) and receiver noise floor. If measured
+ * INR is greater than the threshold, then a violation is tripped.
+ *
+ */
+ message IncumbentActiveInfo
+ {
+    enum MessageType
+    {
+      UNKNOWN = 0;
+      REPORT = 10;
+      VIOLATION = 11;
+    }
+
+   int32 incumbent_id = 1;       // incumbent identifier
+   MessageType msg_type = 2;     // incumbent message type
+
+   TimeStamp report_time = 3;    // timestamp of when this measurement was made
+
+   double inr = 4;             // see description
+   double threshold = 5;         // current threshold setting (dB)
+
+   int64 center_freq = 6;        // tuned center frequency (Hz)
+   int64 bandwidth = 7;          // tuned bandwidth (Hz)
+
+   bool threshold_exceeded = 8;  // was the threshold breached?
+ }
+
  /*
   * Top-level wrapper for Incumbent messages
   */
@@ -371,6 +401,7 @@ message LocationUpdate
    oneof payload
    {
      IncumbentPassiveInfo data = 1;
+     IncumbentActiveInfo data_active = 2;
    }
  }
 
