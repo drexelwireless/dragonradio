@@ -317,22 +317,22 @@ class Controller(TCPProtoServer):
 
             # Log ARP table
             result = subprocess.run(['arp', '-an'], stdout=subprocess.PIPE)
-            logger.debug('ARP table:\n%s', result.stdout.decode('utf-8'))
+            logger.info('ARP table:\n%s', result.stdout.decode('utf-8'))
 
             # Log routes
             result = subprocess.run(['ip', 'route'], stdout=subprocess.PIPE)
-            logger.debug('Routing table:\n%s', result.stdout.decode('utf-8'))
+            logger.info('Routing table:\n%s', result.stdout.decode('utf-8'))
 
             # Log ip links
             result = subprocess.run(['ip', 'a'], stdout=subprocess.PIPE)
-            logger.debug('IP links:\n%s', result.stdout.decode('utf-8'))
+            logger.info('IP links:\n%s', result.stdout.decode('utf-8'))
 
             # Log routes
             for node_id in [self.radio.node_id, node_id]:
                 for octet in [1]:
                     ipaddr = '192.168.{:d}.{:d}'.format(node_id+100, octet)
                     result = subprocess.run(['ip', 'route', 'get', ipaddr], stdout=subprocess.PIPE)
-                    logger.debug('IP route for %s:\n%s', ipaddr, result.stdout.decode('utf-8'))
+                    logger.info('IP route for %s:\n%s', ipaddr, result.stdout.decode('utf-8'))
 
     def removeNode(self, node_id):
         if node_id != self.radio.node_id and node_id in self.nodes:
