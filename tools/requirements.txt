@@ -1,11 +1,11 @@
 cairocffi==1.0.2
 h5py==2.9.0
-ipython==7.3.0
+ipython==7.4.0
 jupyter==1.0.0
 matplotlib==3.0.3
-numpy==1.16.2
-pandas==0.24.1
+numpy==1.16.3
+pandas==0.24.2
 pybind11==2.2.4
-PyGObject==3.30.4
+PyGObject==3.32.1
 scipy==1.2.1
 tornado==5.1.1
