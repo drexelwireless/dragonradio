@@ -23,6 +23,12 @@ def configureLogging(config):
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     logger.handlers = []
 
+    protobuf_logger = logging.getLogger('protobuf')
+    if config.log_protobuf:
+        protobuf_logger.setLevel(logging.DEBUG)
+    else:
+        protobuf_logger.setLevel(logging.INFO)
+
     if config.foreground:
         # Set up python logger
         sh = logging.StreamHandler()

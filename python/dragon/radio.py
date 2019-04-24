@@ -83,6 +83,7 @@ class Config(object):
         self.log_interfaces = []
         self.log_invalid_headers = False
         self.log_snapshots = False
+        self.log_protobuf = False
         self.compress_interface_logs = False
         # This is the actual path to the log directory
         self.logdir_ = None
@@ -340,6 +341,9 @@ class Config(object):
         parser.add_argument('--log-snapshots', action='store_const', const=True,
                             dest='log_snapshots',
                             help='log snapshots')
+        parser.add_argument('--log-protobuf', action='store_const', const=True,
+                            dest='log_protobuf',
+                            help='log protobuf')
 
         # USRP settings
         parser.add_argument('--addr', action='store',
