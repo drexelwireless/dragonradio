@@ -19,6 +19,7 @@ void exportFlow(py::module &m)
     .def(py::init())
     .def(py::init<double,
                   double,
+                  int,
                   std::optional<double>,
                   std::optional<double>,
                   std::optional<double>>())
@@ -28,6 +29,9 @@ void exportFlow(py::module &m)
     .def_readwrite("max_drop_rate",
         &MandatedOutcome::max_drop_rate,
         "Maximum drop rate as a fraction of traffic")
+    .def_readwrite("point_value",
+        &MandatedOutcome::point_value,
+        "Point value")
     .def_readwrite("min_throughput_bps",
         &MandatedOutcome::min_throughput_bps,
         "Minimum throughput (bps)")

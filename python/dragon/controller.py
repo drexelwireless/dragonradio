@@ -675,6 +675,7 @@ class Controller(TCPProtoServer):
         for (flow, m) in mandates.items():
             mandateMap[flow] = dragonradio.MandatedOutcome(config.measurement_period,
                                                            0.0,
+                                                           m.point_value,
                                                            m.min_throughput_bps,
                                                            m.max_latency_s,
                                                            m.file_transfer_deadline_s)
