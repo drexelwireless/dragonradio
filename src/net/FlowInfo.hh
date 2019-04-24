@@ -132,14 +132,12 @@ protected:
     /** @brief Tag a packet */
     virtual bool process(T& pkt) override
     {
-        const struct ip *iph;
-        uint8_t         ip_p;
+        const struct ip *iph = pkt->getIPHdr();
 
-        iph = pkt->getIPHdr(&ip_p);
         if (!iph)
             return true;
 
-        switch (ip_p) {
+        switch (iph->ip_p) {
             case IPPROTO_UDP:
             {
                 const struct udphdr *udph = pkt->getUDPHdr();

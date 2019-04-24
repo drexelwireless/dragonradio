@@ -281,32 +281,23 @@ struct Packet : public buffer<unsigned char>
         if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header))
             return nullptr;
 
-        const struct ether_header *eth = reinterpret_cast<const struct ether_header*>(data() + sizeof(ExtendedHeader));
-
-        if (ntohs(eth->ether_type) != ETHERTYPE_IP)
-            return nullptr;
-
-        return eth;
+        return reinterpret_cast<const struct ether_header*>(data() + sizeof(ExtendedHeader));
     }
 
     /** @brief Get IP header
-     * @pram ip_p A pointer to a variable that will hold the IP protocol
-     * contained in the header
      * @return A pointer to the IP header or nullptr if this is not an IP packet
      */
-    const struct ip *getIPHdr(uint8_t *ip_p) const
+    const struct ip *getIPHdr(void) const
     {
-        if (!getEthernetHdr())
+        const struct ether_header *eth = getEthernetHdr();
+
+        if (!eth || ntohs(eth->ether_type) != ETHERTYPE_IP)
             return nullptr;
 
         if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + sizeof(struct ip))
             return nullptr;
 
-        const struct ip *iph = reinterpret_cast<const struct ip*>(data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
-
-        std::memcpy(ip_p, reinterpret_cast<const char*>(iph) + offsetof(struct ip, ip_p), sizeof(*ip_p));
-
-        return iph;
+        return reinterpret_cast<const struct ip*>(data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
     }
 
     /** @brief Get UDP header
@@ -315,11 +306,9 @@ struct Packet : public buffer<unsigned char>
      */
     const struct udphdr *getUDPHdr(void) const
     {
-        const struct ip *iph;
-        uint8_t         ip_p;
+        const struct ip *iph = getIPHdr();
 
-        iph = getIPHdr(&ip_p);
-        if (!iph || ip_p != IPPROTO_UDP)
+        if (!iph || iph->ip_p != IPPROTO_UDP)
             return nullptr;
 
         size_t ip_hl = iph->ip_hl*4;
@@ -336,11 +325,9 @@ struct Packet : public buffer<unsigned char>
      */
     const struct tcphdr *getTCPHdr(void) const
     {
-        const struct ip *iph;
-        uint8_t         ip_p;
+        const struct ip *iph = getIPHdr();
 
-        iph = getIPHdr(&ip_p);
-        if (!iph || ip_p != IPPROTO_TCP)
+        if (!iph || iph->ip_p != IPPROTO_TCP)
             return nullptr;
 
         size_t ip_hl = iph->ip_hl*4;
@@ -365,9 +352,7 @@ struct Packet : public buffer<unsigned char>
     /** @brief Return true if this is an IP packet, false otherwise */
     bool isIP(void) const
     {
-        uint8_t ip_p;
-
-        return getIPHdr(&ip_p) != nullptr;
+        return getIPHdr() != nullptr;
     }
 
     /** @brief Return true if this is an IP packet of the specified IP protocol,
@@ -375,9 +360,9 @@ struct Packet : public buffer<unsigned char>
      */
     bool isIPProto(uint8_t proto) const
     {
-        uint8_t ip_p;
+        const struct ip *iph = getIPHdr();
 
-        return getIPHdr(&ip_p) != nullptr && ip_p == proto;
+        return iph != nullptr && iph->ip_p == proto;
     }
 
     /** @brief Return true if this is a TCP packet, false otherwise */

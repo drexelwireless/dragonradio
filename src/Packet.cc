@@ -178,10 +178,8 @@ void Packet::appendSelectiveAck(const Seq &begin, const Seq &end)
 
 const struct mgenhdr *Packet::getMGENHdr(void) const
 {
-    const struct ip *iph;
-    uint8_t         ip_p;
+    const struct ip *iph = getIPHdr();
 
-    iph = getIPHdr(&ip_p);
     if (!iph)
        return nullptr;
 
@@ -189,7 +187,7 @@ const struct mgenhdr *Packet::getMGENHdr(void) const
 
     const struct mgenhdr *mgenh = nullptr;
 
-    switch (ip_p) {
+    switch (iph->ip_p) {
         case IPPROTO_UDP:
         {
            if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + sizeof(struct udphdr) + sizeof(struct mgenhdr))
@@ -235,16 +233,14 @@ const struct mgenhdr *Packet::getMGENHdr(void) const
 
 size_t Packet::getPayloadSize(void) const
 {
-    const struct ip *iph;
-    uint8_t         ip_p;
+    const struct ip *iph = getIPHdr();
 
-    iph = getIPHdr(&ip_p);
     if (!iph)
        return 0;
 
     size_t ip_hl = iph->ip_hl*4;
 
-    switch (ip_p) {
+    switch (iph->ip_p) {
         case IPPROTO_UDP:
         {
             if (size() < sizeof(ExtendedHeader) + sizeof(struct ether_header) + ip_hl + sizeof(struct udphdr))
