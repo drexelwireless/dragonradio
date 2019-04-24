@@ -100,7 +100,7 @@ protected:
 
         // Then look at the port
         std::lock_guard<spinlock_mutex> lock(mutex_);
-        struct ip                       *iph;
+        const struct ip                 *iph;
         uint8_t                         ip_p;
 
         iph = pkt->getIPHdr(&ip_p);
@@ -110,7 +110,7 @@ protected:
         switch (ip_p) {
             case IPPROTO_UDP:
             {
-                struct udphdr *udph = pkt->getUDPHdr();
+                const struct udphdr *udph = pkt->getUDPHdr();
 
                 return allowed_.find(ntohs(udph->uh_dport)) != allowed_.end();
             }
@@ -118,7 +118,7 @@ protected:
 
             case IPPROTO_TCP:
             {
-                struct tcphdr *tcph = pkt->getTCPHdr();
+                const struct tcphdr *tcph = pkt->getTCPHdr();
 
                 return allowed_.find(ntohs(tcph->th_dport)) != allowed_.end();
             }

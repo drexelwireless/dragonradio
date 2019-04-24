@@ -132,8 +132,8 @@ protected:
     /** @brief Tag a packet */
     virtual bool process(T& pkt) override
     {
-        struct ip *iph;
-        uint8_t   ip_p;
+        const struct ip *iph;
+        uint8_t         ip_p;
 
         iph = pkt->getIPHdr(&ip_p);
         if (!iph)
@@ -142,7 +142,7 @@ protected:
         switch (ip_p) {
             case IPPROTO_UDP:
             {
-                struct udphdr *udph = pkt->getUDPHdr();
+                const struct udphdr *udph = pkt->getUDPHdr();
 
                 if (udph)
                     pkt->flow_uid = ntohs(udph->uh_dport);
@@ -151,7 +151,7 @@ protected:
 
             case IPPROTO_TCP:
             {
-                struct tcphdr *tcph = pkt->getTCPHdr();
+                const struct tcphdr *tcph = pkt->getTCPHdr();
 
                 if (tcph)
                     pkt->flow_uid = ntohs(tcph->th_dport);

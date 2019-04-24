@@ -16,18 +16,18 @@ bool FlowSink::process(std::shared_ptr<RadioPacket> &pkt)
     Clock::time_point               t_recv = Clock::now();
 
     // Update latency
-    struct mgenhdr *mgenh = pkt->getMGENHdr();
+    const struct mgenhdr *mgenh = pkt->getMGENHdr();
     if (mgenh) {
         int64_t secs;
         int32_t usecs;
 
         if (mgenh->version == DARPA_MGEN_VERSION) {
-            struct darpa_mgenhdr *dmgenh = reinterpret_cast<struct darpa_mgenhdr*>(mgenh);
-            darpa_mgen_secs_t    hdr_secs;
-            mgen_usecs_t         hdr_usecs;
+            const struct darpa_mgenhdr *dmgenh = reinterpret_cast<const struct darpa_mgenhdr*>(mgenh);
+            darpa_mgen_secs_t          hdr_secs;
+            mgen_usecs_t               hdr_usecs;
 
-            std::memcpy(&hdr_secs, reinterpret_cast<char*>(dmgenh) + offsetof(struct darpa_mgenhdr, txTimeSeconds), sizeof(hdr_secs));
-            std::memcpy(&hdr_usecs, reinterpret_cast<char*>(dmgenh) + offsetof(struct darpa_mgenhdr, txTimeMicroseconds), sizeof(hdr_usecs));
+            std::memcpy(&hdr_secs, reinterpret_cast<const char*>(dmgenh) + offsetof(struct darpa_mgenhdr, txTimeSeconds), sizeof(hdr_secs));
+            std::memcpy(&hdr_usecs, reinterpret_cast<const char*>(dmgenh) + offsetof(struct darpa_mgenhdr, txTimeMicroseconds), sizeof(hdr_usecs));
 
             secs = ntoh_darpa_mgen_secs(hdr_secs);
             usecs = ntohl(hdr_usecs);
@@ -35,8 +35,8 @@ bool FlowSink::process(std::shared_ptr<RadioPacket> &pkt)
             mgen_secs_t  hdr_secs;
             mgen_usecs_t hdr_usecs;
 
-            std::memcpy(&hdr_secs, reinterpret_cast<char*>(mgenh) + offsetof(struct mgenhdr, txTimeSeconds), sizeof(hdr_secs));
-            std::memcpy(&hdr_usecs, reinterpret_cast<char*>(mgenh) + offsetof(struct mgenhdr, txTimeMicroseconds), sizeof(hdr_usecs));
+            std::memcpy(&hdr_secs, reinterpret_cast<const char*>(mgenh) + offsetof(struct mgenhdr, txTimeSeconds), sizeof(hdr_secs));
+            std::memcpy(&hdr_usecs, reinterpret_cast<const char*>(mgenh) + offsetof(struct mgenhdr, txTimeMicroseconds), sizeof(hdr_usecs));
 
             secs = ntoh_mgen_secs(hdr_secs);
             usecs = ntohl(hdr_usecs);
