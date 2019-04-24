@@ -33,6 +33,7 @@ class DummyController(object):
         self.voxels = []
         self.mandated_outcomes = {}
         self.voxels = []
+        self.scoring_point_threshold = 0
 
         self.nodes = {node.id : node}
         self.gpsd = GPSDClient(node.loc, loop=loop)
