@@ -30,4 +30,4 @@ sudo pip3 install --upgrade pip
 sudo pip3 install -Ur python/requirements.txt
 
 # Build dragonradio
-make
+make -j10
