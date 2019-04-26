@@ -1,0 +1,88 @@
+{
+ "BatchName" : "Scrimmage 3 Validation",
+ "Duration": 630,
+ "RFScenario" : "9988",
+ "TrafficScenario" : "99880",
+ "NodeData": [
+ {
+ "RFNode_ID" : 1,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : true,
+ "TrafficNode_ID" : 1,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 2,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 2,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 3,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 3,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 4,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 4,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 5,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 5,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 6,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 6,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 7,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 7,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 8,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 8,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 9,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 9,
+ "node_type" : "competitor"
+ },
+ {
+ "RFNode_ID" : 10,
+ "ImageName" : "scrimmage3",
+ "ModemConfig" : "scrimmage3.conf",
+ "isGateway" : false,
+ "TrafficNode_ID" : 10,
+ "node_type" : "competitor"
+ }
+ ]
+}
