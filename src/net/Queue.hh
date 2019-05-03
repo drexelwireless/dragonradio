@@ -91,6 +91,8 @@ using NetQueue = Queue<std::shared_ptr<NetPacket>>;
 
 using RadioQueue = Queue<std::shared_ptr<RadioPacket>>;
 
+const FlowUID INTERNAL_PORT = 4096;
+
 /** @brief A simple queue Element. */
 template <class T>
 class SimpleQueue : public Queue<T> {
@@ -120,7 +122,10 @@ public:
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            q_.emplace_back(std::move(item));
+            if (item->flow_uid && *item->flow_uid == INTERNAL_PORT)
+                hiq_.emplace_back(std::move(item));
+            else
+                q_.emplace_back(std::move(item));
         }
 
         cond_.notify_one();
