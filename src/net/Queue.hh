@@ -115,12 +115,12 @@ public:
         q_.swap(newq);
     }
 
-    virtual void push(T&& val) override
+    virtual void push(T&& item) override
     {
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            q_.push_back(std::move(val));
+            q_.emplace_back(std::move(item));
         }
 
         cond_.notify_one();
@@ -131,7 +131,7 @@ public:
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            hiq_.push_front(item);
+            hiq_.emplace_front(std::move(item));
         }
 
         cond_.notify_one();
@@ -142,7 +142,7 @@ public:
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            hiq_.push_back(item);
+            hiq_.emplace_back(std::move(item));
         }
 
         cond_.notify_one();
