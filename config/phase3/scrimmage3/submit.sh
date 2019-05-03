@@ -1,7 +1,7 @@
 #!/bin/sh
 EVENT=scrimmage3
 VALIDATE=3
-IMAGE=cil-20190426-da5f759c
+IMAGE=cil-20190430-23f717ee
 QUAL=80880
 
 ssh sc2-lz "rm -rf /share/nas/dragon-radio/$EVENT"
