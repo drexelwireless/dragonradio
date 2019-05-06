@@ -43,6 +43,7 @@ void RecvWindow::operator()()
 
 SmartController::SmartController(std::shared_ptr<Net> net,
                                  std::shared_ptr<PHY> phy,
+                                 double slot_size,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
                                  unsigned mcsidx_init,
@@ -54,6 +55,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , phy_(phy)
   , mac_(nullptr)
   , netq_(nullptr)
+  , slot_size_(slot_size)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , samples_per_slot_(0)

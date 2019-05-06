@@ -777,6 +777,7 @@ class Radio(object):
         if config.arq:
             self.controller = dragonradio.SmartController(self.net,
                                                           self.phy,
+                                                          config.slot_size,
                                                           config.arq_window,
                                                           config.arq_window,
                                                           config.amc_mcsidx_init,

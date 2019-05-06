@@ -288,6 +288,7 @@ class SmartController : public Controller
 public:
     SmartController(std::shared_ptr<Net> net,
                     std::shared_ptr<PHY> phy,
+                    double slot_size,
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
                     unsigned mcsidx_init,
@@ -543,6 +544,9 @@ protected:
 
     /** @brief Network queue with high-priority sub-queue. */
     std::shared_ptr<NetQueue> netq_;
+
+    /** @brief Slot size (sec) */
+    double slot_size_;
 
     /** @brief Maximum size of a send window */
     Seq::uint_type max_sendwin_;

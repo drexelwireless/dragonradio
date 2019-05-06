@@ -25,6 +25,7 @@ void exportControllers(py::module &m)
     py::class_<SmartController, Controller, std::shared_ptr<SmartController>>(m, "SmartController")
         .def(py::init<std::shared_ptr<Net>,
                       std::shared_ptr<PHY>,
+                      double,
                       Seq::uint_type,
                       Seq::uint_type,
                       unsigned,
