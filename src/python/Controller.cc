@@ -48,9 +48,9 @@ void exportControllers(py::module &m)
         .def_readwrite("ack_gain",
             &SmartController::ack_gain,
             py::return_value_policy::reference_internal)
-        .def_property("slot_size",
-            &SmartController::getSlotSize,
-            &SmartController::setSlotSize,
+        .def_property("samples_per_slot",
+            &SmartController::getSamplesPerSlot,
+            &SmartController::setSamplesPerSlot,
             "Number of samples in a transmission slot")
         .def_property("mcsidx_up_per_threshold",
             &SmartController::getUpPERThreshold,

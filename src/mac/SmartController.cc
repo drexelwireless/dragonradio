@@ -56,7 +56,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , netq_(nullptr)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
-  , slot_size_(0)
+  , samples_per_slot_(0)
   , mcsidx_init_(std::min(mcsidx_init, (unsigned) net_->tx_params.size() - 1))
   , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
   , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
@@ -94,7 +94,7 @@ size_t SmartController::getMaxPacketsPerSlot(const TXParams &p)
             size_t maxModSize = phy_->getModulatedSize(p, maxPacketSize);
             double maxUpsampleRate = synthesizer->getMaxTXUpsampleRate();
 
-            return slot_size_/(maxUpsampleRate*maxModSize);
+            return samples_per_slot_/(maxUpsampleRate*maxModSize);
         }
     }
 

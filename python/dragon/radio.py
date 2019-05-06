@@ -785,7 +785,7 @@ class Radio(object):
                                                           config.amc_mcsidx_alpha,
                                                           config.amc_mcsidx_prob_floor)
 
-            self.configSmartControllerSlotSize()
+            self.configSmartControllerSamplesPerSlot()
 
             self.controller.max_retransmissions = config.arq_max_retransmissions
             self.controller.enforce_ordering = config.arq_enforce_ordering
@@ -963,7 +963,7 @@ class Radio(object):
         self.channelizer_channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
         self.synthesizer_channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
 
-    def configSmartControllerSlotSize(self):
+    def configSmartControllerSamplesPerSlot(self):
         """
         Configure the SmartController's slot size
         """
@@ -980,7 +980,7 @@ class Radio(object):
             else:
                 slot_bw = cbw
 
-            self.controller.slot_size = int(slot_bw*(self.config.slot_size - self.config.guard_size))
+            self.controller.samples_per_slot = int(slot_bw*(self.config.slot_size - self.config.guard_size))
 
     def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
         """
@@ -1018,7 +1018,7 @@ class Radio(object):
 
         if config.arq:
             self.controller.resetMCSTransitionProbabilities()
-            self.configSmartControllerSlotSize()
+            self.configSmartControllerSamplesPerSlot()
 
     def genChannelizerTaps(self, channel):
         """Generate channelizer filter taps for given channel"""

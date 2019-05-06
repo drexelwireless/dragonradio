@@ -326,15 +326,15 @@ public:
     }
 
     /** @brief Get number of samples in a transmission slot */
-    size_t getSlotSize(void)
+    size_t getSamplesPerSlot(void) const
     {
-        return slot_size_;
+        return samples_per_slot_;
     }
 
     /** @brief Set number of samples in a transmission slot */
-    void setSlotSize(size_t size)
+    void setSamplesPerSlot(size_t samples_per_slot)
     {
-        slot_size_ = size;
+        samples_per_slot_ = samples_per_slot;
     }
 
     /** @brief Get PER threshold for increasing modulation level */
@@ -566,7 +566,7 @@ protected:
     TimerQueue timer_queue_;
 
     /** @brief Number of samples in a transmission slot */
-    size_t slot_size_;
+    size_t samples_per_slot_;
 
     /** @brief Initial MCS index */
     unsigned mcsidx_init_;
