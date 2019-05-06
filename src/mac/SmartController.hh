@@ -325,13 +325,13 @@ public:
         mac_ = mac;
     }
 
-    /** @brief Get number of samples in a trnsmission slot */
+    /** @brief Get number of samples in a transmission slot */
     size_t getSlotSize(void)
     {
         return slot_size_;
     }
 
-    /** @brief Set number of samples in a trnsmission slot */
+    /** @brief Set number of samples in a transmission slot */
     void setSlotSize(size_t size)
     {
         slot_size_ = size;
