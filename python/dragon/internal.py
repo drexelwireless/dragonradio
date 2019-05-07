@@ -68,6 +68,8 @@ class InternalProtoServer(UDPProtoServer):
         config = self.controller.config
         radio = self.controller.radio
 
+        self.controller.scenario_start_time = msg.schedule.scenario_start_time
+
         if radio.node_id in msg.schedule.nodes:
             if msg.schedule.bandwidth != config.bandwidth or \
                 msg.schedule.frequency != config.frequency:
@@ -121,6 +123,7 @@ class InternalProtoClient(UDPProtoClient):
 
         msg.schedule.frequency = config.frequency
         msg.schedule.bandwidth = config.bandwidth
+        msg.schedule.scenario_start_time = self.controller.scenario_start_time
         msg.schedule.seq = seq
         msg.schedule.nchannels = nchannels
         msg.schedule.nslots = nslots
