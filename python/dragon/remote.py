@@ -1,5 +1,6 @@
 import functools
 import struct
+import time
 
 from dragon.protobuf import *
 from dragon.remote_pb2 import *
@@ -13,23 +14,28 @@ class RemoteClient(TCPProtoClient):
         super(RemoteClient, self).__init__(*args, server_host=server_host, server_port=server_port, **kwargs)
 
     @rpc(remote.Request, remote.Response)
-    def start(self, req):
+    def start(self, req, timestamp=time.time()):
+        req.timestamp = timestamp
         req.radio_command = remote.START
 
     @rpc(remote.Request, remote.Response)
-    def stop(self, req):
+    def stop(self, req, timestamp=time.time()):
+        req.timestamp = timestamp
         req.radio_command = remote.STOP
 
     @rpc(remote.Request, remote.Response)
-    def status(self, req):
+    def status(self, req, timestamp=time.time()):
+        req.timestamp = timestamp
         req.radio_command = remote.STATUS
 
     @rpc(remote.Request, remote.Response)
-    def updateMandatedOutcomes(self, req, goals):
+    def updateMandatedOutcomes(self, req, goals, timestamp=time.time()):
+        req.timestamp = timestamp
         req.update_mandated_outcomes.goals = goals
 
     @rpc(remote.Request, remote.Response)
-    def updateEnvironment(self, req, env):
+    def updateEnvironment(self, req, env, timestamp=time.time()):
+        req.timestamp = timestamp
         req.update_environment.environment = env
 
 state_map = { remote.OFF: 'OFF'

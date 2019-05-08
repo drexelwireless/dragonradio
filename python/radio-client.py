@@ -2,7 +2,9 @@
 import argparse
 import asyncio
 import json
+import os
 from pprint import pprint
+import psutil
 import sys
 
 from dragon.protobuf import *
@@ -32,20 +34,23 @@ def main():
 
     loop=asyncio.get_event_loop()
 
+    p = psutil.Process(os.getpid())
+    timestamp = p.create_time()
+
     client = remote.RemoteClient(loop=loop)
 
     if args.action == 'start':
         with client:
-            client.start()
+            client.start(timestamp=timestamp)
     elif args.action == 'stop':
         with client:
-            client.stop()
+            client.stop(timestamp=timestamp)
     elif args.action == 'status':
         data = {}
 
         try:
             with client:
-                resp = client.status()
+                resp = client.status(timestamp=timestamp)
 
             data['STATE'] = remote.stateToString(resp.status.state)
             data['INFO'] = resp.status.info
@@ -64,7 +69,7 @@ def main():
             goals = f.read()
 
         with client:
-            client.updateMandatedOutcomes(goals)
+            client.updateMandatedOutcomes(goals, timestamp=timestamp)
     elif args.action == 'update-environment':
         if len(args.paths) == 0:
             path = "/root/radio_api/environment.json"
@@ -75,7 +80,7 @@ def main():
             goals = f.read()
 
         with client:
-            client.updateEnvironment(goals)
+            client.updateEnvironment(goals, timestamp=timestamp)
 
     loop.close()
     return 0

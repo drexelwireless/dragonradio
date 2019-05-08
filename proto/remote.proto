@@ -34,10 +34,11 @@ message Environment {
 }
 
 message Request {
+    double timestamp = 1;
     oneof payload {
-        RadioCommand radio_command = 1;
-        MandatedOutcomes update_mandated_outcomes = 2;
-        Environment update_environment = 3;
+        RadioCommand radio_command = 2;
+        MandatedOutcomes update_mandated_outcomes = 3;
+        Environment update_environment = 4;
     }
 }
 

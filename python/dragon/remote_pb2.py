@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='dragonradio.remote',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0cremote.proto\x12\x12\x64ragonradio.remote\"@\n\x06Status\x12(\n\x05state\x18\x01 \x01(\x0e\x32\x19.dragonradio.remote.State\x12\x0c\n\x04info\x18\x02 \x01(\t\"!\n\x10MandatedOutcomes\x12\r\n\x05goals\x18\x01 \x01(\t\"\"\n\x0b\x45nvironment\x12\x13\n\x0b\x65nvironment\x18\x01 \x01(\t\"\xd8\x01\n\x07Request\x12\x39\n\rradio_command\x18\x01 \x01(\x0e\x32 .dragonradio.remote.RadioCommandH\x00\x12H\n\x18update_mandated_outcomes\x18\x02 \x01(\x0b\x32$.dragonradio.remote.MandatedOutcomesH\x00\x12=\n\x12update_environment\x18\x03 \x01(\x0b\x32\x1f.dragonradio.remote.EnvironmentH\x00\x42\t\n\x07payload\"C\n\x08Response\x12,\n\x06status\x18\x01 \x01(\x0b\x32\x1a.dragonradio.remote.StatusH\x00\x42\t\n\x07payload*[\n\x05State\x12\x07\n\x03OFF\x10\x00\x12\x0b\n\x07\x42OOTING\x10\x01\x12\t\n\x05READY\x10\x02\x12\n\n\x06\x41\x43TIVE\x10\x03\x12\x0c\n\x08STOPPING\x10\x04\x12\x0c\n\x08\x46INISHED\x10\x05\x12\t\n\x05\x45RROR\x10\x06*/\n\x0cRadioCommand\x12\t\n\x05START\x10\x00\x12\x08\n\x04STOP\x10\x01\x12\n\n\x06STATUS\x10\x02\x62\x06proto3')
+  serialized_pb=_b('\n\x0cremote.proto\x12\x12\x64ragonradio.remote\"@\n\x06Status\x12(\n\x05state\x18\x01 \x01(\x0e\x32\x19.dragonradio.remote.State\x12\x0c\n\x04info\x18\x02 \x01(\t\"!\n\x10MandatedOutcomes\x12\r\n\x05goals\x18\x01 \x01(\t\"\"\n\x0b\x45nvironment\x12\x13\n\x0b\x65nvironment\x18\x01 \x01(\t\"\xeb\x01\n\x07Request\x12\x11\n\ttimestamp\x18\x01 \x01(\x01\x12\x39\n\rradio_command\x18\x02 \x01(\x0e\x32 .dragonradio.remote.RadioCommandH\x00\x12H\n\x18update_mandated_outcomes\x18\x03 \x01(\x0b\x32$.dragonradio.remote.MandatedOutcomesH\x00\x12=\n\x12update_environment\x18\x04 \x01(\x0b\x32\x1f.dragonradio.remote.EnvironmentH\x00\x42\t\n\x07payload\"C\n\x08Response\x12,\n\x06status\x18\x01 \x01(\x0b\x32\x1a.dragonradio.remote.StatusH\x00\x42\t\n\x07payload*[\n\x05State\x12\x07\n\x03OFF\x10\x00\x12\x0b\n\x07\x42OOTING\x10\x01\x12\t\n\x05READY\x10\x02\x12\n\n\x06\x41\x43TIVE\x10\x03\x12\x0c\n\x08STOPPING\x10\x04\x12\x0c\n\x08\x46INISHED\x10\x05\x12\t\n\x05\x45RROR\x10\x06*/\n\x0cRadioCommand\x12\t\n\x05START\x10\x00\x12\x08\n\x04STOP\x10\x01\x12\n\n\x06STATUS\x10\x02\x62\x06proto3')
 )
 
 _STATE = _descriptor.EnumDescriptor(
@@ -60,8 +60,8 @@ _STATE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=461,
-  serialized_end=552,
+  serialized_start=480,
+  serialized_end=571,
 )
 _sym_db.RegisterEnumDescriptor(_STATE)
 
@@ -87,8 +87,8 @@ _RADIOCOMMAND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=554,
-  serialized_end=601,
+  serialized_start=573,
+  serialized_end=620,
 )
 _sym_db.RegisterEnumDescriptor(_RADIOCOMMAND)
 
@@ -214,22 +214,29 @@ _REQUEST = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='radio_command', full_name='dragonradio.remote.Request.radio_command', index=0,
-      number=1, type=14, cpp_type=8, label=1,
+      name='timestamp', full_name='dragonradio.remote.Request.timestamp', index=0,
+      number=1, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='radio_command', full_name='dragonradio.remote.Request.radio_command', index=1,
+      number=2, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='update_mandated_outcomes', full_name='dragonradio.remote.Request.update_mandated_outcomes', index=1,
-      number=2, type=11, cpp_type=10, label=1,
+      name='update_mandated_outcomes', full_name='dragonradio.remote.Request.update_mandated_outcomes', index=2,
+      number=3, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='update_environment', full_name='dragonradio.remote.Request.update_environment', index=2,
-      number=3, type=11, cpp_type=10, label=1,
+      name='update_environment', full_name='dragonradio.remote.Request.update_environment', index=3,
+      number=4, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -250,7 +257,7 @@ _REQUEST = _descriptor.Descriptor(
       index=0, containing_type=None, fields=[]),
   ],
   serialized_start=174,
-  serialized_end=390,
+  serialized_end=409,
 )
 
 
@@ -283,8 +290,8 @@ _RESPONSE = _descriptor.Descriptor(
       name='payload', full_name='dragonradio.remote.Response.payload',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=392,
-  serialized_end=459,
+  serialized_start=411,
+  serialized_end=478,
 )
 
 _STATUS.fields_by_name['state'].enum_type = _STATE
