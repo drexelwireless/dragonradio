@@ -163,6 +163,9 @@ class Controller(TCPProtoServer):
                                                        loop=self.loop,
                                                        server_host=INTERNAL_BCAST_ADDR)
 
+        # Start task to get traffic interface addresses into ARP cache
+        self.loop.create_task(self.cacheTrafficInterfaceARP())
+
         # Start our local status update
         self.loop.create_task(self.localStatisticsUpdate())
 
@@ -429,6 +432,45 @@ class Controller(TCPProtoServer):
                     voxels.append(v)
 
         return voxels
+
+    async def cacheTrafficInterfaceARP(self):
+        """Get all addresses on the traffic interface's subnet into the ARP
+        cache.
+
+        See:
+            https://gitlab.com/darpa-sc2-phase3/CIL/issues/15
+        """
+        try:
+            IFACE = 'tr0'
+
+            node_id = self.radio.node_id
+
+            if IFACE in netifaces.interfaces():
+                procs = []
+
+                for i in range (1, 255):
+                    ip = '192.168.{:d}.{:d}'.format(node_id+100, i)
+
+                    p = await asyncio.create_subprocess_exec(
+                            'ping',
+                            '-c', '1',
+                            ip,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE)
+                    procs.append((p, ip))
+
+                for (p, ip) in procs:
+                    # Wait for the subprocess to finish
+                    stdout, stderr = await p.communicate()
+
+                    result = stdout.decode().strip()
+
+                    if p.returncode == 0:
+                        logging.info('ping %s succeeded:\n%s', ip, result)
+                    else:
+                        logging.info('ping %s failed:\n%s', ip, result)
+        except CancelledError:
+            return
 
     async def localStatisticsUpdate(self):
         """Update local flow statistics"""
