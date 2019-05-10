@@ -698,7 +698,7 @@ class Controller(TCPProtoServer):
 
         if req.radio_command == remote.START:
             if self.state == remote.READY:
-                self.loop.create_task(self.startRadio())
+                self.loop.create_task(self.startRadio(timestamp=req.timestamp))
                 info = 'Radio started'
         elif req.radio_command == remote.STOP:
             if self.state == remote.READY or self.state == remote.ACTIVE:
