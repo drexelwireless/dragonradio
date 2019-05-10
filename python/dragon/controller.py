@@ -215,10 +215,11 @@ class Controller(TCPProtoServer):
             logger.info('done running forever')
             self.loop.close()
 
-    async def startRadio(self):
+    async def startRadio(self, timestamp=time.time()):
         if not self.started:
             with await self.radio.lock:
                 self.started = True
+                self.scenario_start_time = timestamp
 
                 # Create ALOHA MAC for HELLO messages
                 self.radio.configureALOHA()
