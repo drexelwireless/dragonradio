@@ -8,6 +8,7 @@ import random
 import signal
 import subprocess
 import sys
+import time
 
 import dragonradio
 
@@ -49,6 +50,9 @@ class Controller(TCPProtoServer):
 
         self.started = False
         """Has the radio been started?"""
+
+        self.scenario_start_time_ = None
+        """RF scenario start time, in seconds since the epoch"""
 
         self.done = False
         """Is the radio done?"""
@@ -94,6 +98,21 @@ class Controller(TCPProtoServer):
         radio = self.radio
 
         return radio.net[radio.node_id].is_gateway
+
+    @property
+    def mp(self):
+        """Current measurement period"""
+        return int((time.time() - self.scenario_start_time) / self.config.measurement_period)
+
+    @property
+    def scenario_start_time(self):
+        """RF scenario start time, in seconds since the epoch"""
+        return self.scenario_start_time_
+
+    @scenario_start_time.setter
+    def scenario_start_time(self, t):
+        logging.info('RF scenario start time set to %f', t)
+        self.scenario_start_time_ = t
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
