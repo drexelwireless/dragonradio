@@ -89,6 +89,12 @@ class Controller(TCPProtoServer):
         self.internal_client = None
         """Internal protocol client"""
 
+    @property
+    def is_gateway(self):
+        radio = self.radio
+
+        return radio.net[radio.node_id].is_gateway
+
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
         # *before* we daemonize, and loop isn't valid after we fork
@@ -764,9 +770,3 @@ class Controller(TCPProtoServer):
         resp.status.state = self.state
         resp.status.info = 'Environment updated'
         return resp
-
-    @property
-    def is_gateway(self):
-        radio = self.radio
-
-        return radio.net[radio.node_id].is_gateway
