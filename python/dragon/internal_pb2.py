@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='dragonradio.internal',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0einternal.proto\x12\x14\x64ragonradio.internal\"1\n\tTimeStamp\x12\x0f\n\x07seconds\x18\x01 \x01(\x05\x12\x13\n\x0bpicoseconds\x18\x02 \x01(\x03\"B\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x11\n\televation\x18\x03 \x01(\x01\"t\n\x0cLocationInfo\x12\x30\n\x08location\x18\x01 \x01(\x0b\x32\x1e.dragonradio.internal.Location\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\"{\n\x08\x46lowInfo\x12\x10\n\x08\x66low_uid\x18\x01 \x01(\r\x12\x0b\n\x03src\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\r\x12\x0e\n\x06window\x18\x04 \x01(\x01\x12\x0f\n\x07latency\x18\x05 \x01(\x01\x12\x12\n\nthroughput\x18\x06 \x01(\x01\x12\r\n\x05\x62ytes\x18\x07 \x01(\x04\"\xe9\x01\n\x06Status\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\x12/\n\x03loc\x18\x03 \x01(\x0b\x32\".dragonradio.internal.LocationInfo\x12\x34\n\x0csource_flows\x18\x04 \x03(\x0b\x32\x1e.dragonradio.internal.FlowInfo\x12\x32\n\nsink_flows\x18\x05 \x03(\x0b\x32\x1e.dragonradio.internal.FlowInfo\"\xa6\x01\n\x08Schedule\x12\x11\n\tfrequency\x18\x01 \x01(\x01\x12\x11\n\tbandwidth\x18\x02 \x01(\x01\x12\x1b\n\x13scenario_start_time\x18\x03 \x01(\x01\x12\x0b\n\x03seq\x18\x04 \x01(\r\x12\x11\n\tnchannels\x18\x05 \x01(\r\x12\x0e\n\x06nslots\x18\x06 \x01(\r\x12\x11\n\x05nodes\x18\x07 \x03(\rB\x02\x10\x01\x12\x14\n\x08schedule\x18\x08 \x03(\rB\x02\x10\x01\"x\n\x07Message\x12.\n\x06status\x18\x01 \x01(\x0b\x32\x1c.dragonradio.internal.StatusH\x00\x12\x32\n\x08schedule\x18\x02 \x01(\x0b\x32\x1e.dragonradio.internal.ScheduleH\x00\x42\t\n\x07payloadb\x06proto3')
+  serialized_pb=_b('\n\x0einternal.proto\x12\x14\x64ragonradio.internal\"1\n\tTimeStamp\x12\x0f\n\x07seconds\x18\x01 \x01(\x05\x12\x13\n\x0bpicoseconds\x18\x02 \x01(\x03\"B\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x11\n\televation\x18\x03 \x01(\x01\"t\n\x0cLocationInfo\x12\x30\n\x08location\x18\x01 \x01(\x0b\x32\x1e.dragonradio.internal.Location\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\"t\n\tFlowStats\x12\x10\n\x08\x66low_uid\x18\x01 \x01(\r\x12\x0b\n\x03src\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\r\x12\x10\n\x08\x66irst_mp\x18\x04 \x01(\r\x12\x14\n\x08npackets\x18\x05 \x03(\rB\x02\x10\x01\x12\x12\n\x06nbytes\x18\x06 \x03(\rB\x02\x10\x01\"\xeb\x01\n\x06Status\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\x12/\n\x03loc\x18\x03 \x01(\x0b\x32\".dragonradio.internal.LocationInfo\x12\x35\n\x0csource_flows\x18\x04 \x03(\x0b\x32\x1f.dragonradio.internal.FlowStats\x12\x33\n\nsink_flows\x18\x05 \x03(\x0b\x32\x1f.dragonradio.internal.FlowStats\"\xa6\x01\n\x08Schedule\x12\x11\n\tfrequency\x18\x01 \x01(\x01\x12\x11\n\tbandwidth\x18\x02 \x01(\x01\x12\x1b\n\x13scenario_start_time\x18\x03 \x01(\x01\x12\x0b\n\x03seq\x18\x04 \x01(\r\x12\x11\n\tnchannels\x18\x05 \x01(\r\x12\x0e\n\x06nslots\x18\x06 \x01(\r\x12\x11\n\x05nodes\x18\x07 \x03(\rB\x02\x10\x01\x12\x14\n\x08schedule\x18\x08 \x03(\rB\x02\x10\x01\"x\n\x07Message\x12.\n\x06status\x18\x01 \x01(\x0b\x32\x1c.dragonradio.internal.StatusH\x00\x12\x32\n\x08schedule\x18\x02 \x01(\x0b\x32\x1e.dragonradio.internal.ScheduleH\x00\x42\t\n\x07payloadb\x06proto3')
 )
 
 
@@ -146,62 +146,55 @@ _LOCATIONINFO = _descriptor.Descriptor(
 )
 
 
-_FLOWINFO = _descriptor.Descriptor(
-  name='FlowInfo',
-  full_name='dragonradio.internal.FlowInfo',
+_FLOWSTATS = _descriptor.Descriptor(
+  name='FlowStats',
+  full_name='dragonradio.internal.FlowStats',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='flow_uid', full_name='dragonradio.internal.FlowInfo.flow_uid', index=0,
+      name='flow_uid', full_name='dragonradio.internal.FlowStats.flow_uid', index=0,
       number=1, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='src', full_name='dragonradio.internal.FlowInfo.src', index=1,
+      name='src', full_name='dragonradio.internal.FlowStats.src', index=1,
       number=2, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='dest', full_name='dragonradio.internal.FlowInfo.dest', index=2,
+      name='dest', full_name='dragonradio.internal.FlowStats.dest', index=2,
       number=3, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='window', full_name='dragonradio.internal.FlowInfo.window', index=3,
-      number=4, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='latency', full_name='dragonradio.internal.FlowInfo.latency', index=4,
-      number=5, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='throughput', full_name='dragonradio.internal.FlowInfo.throughput', index=5,
-      number=6, type=1, cpp_type=5, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='bytes', full_name='dragonradio.internal.FlowInfo.bytes', index=6,
-      number=7, type=4, cpp_type=4, label=1,
+      name='first_mp', full_name='dragonradio.internal.FlowStats.first_mp', index=3,
+      number=4, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='npackets', full_name='dragonradio.internal.FlowStats.npackets', index=4,
+      number=5, type=13, cpp_type=3, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=_b('\020\001'), file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='nbytes', full_name='dragonradio.internal.FlowStats.nbytes', index=5,
+      number=6, type=13, cpp_type=3, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=_b('\020\001'), file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -215,7 +208,7 @@ _FLOWINFO = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=277,
-  serialized_end=400,
+  serialized_end=393,
 )
 
 
@@ -273,8 +266,8 @@ _STATUS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=403,
-  serialized_end=636,
+  serialized_start=396,
+  serialized_end=631,
 )
 
 
@@ -353,8 +346,8 @@ _SCHEDULE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=639,
-  serialized_end=805,
+  serialized_start=634,
+  serialized_end=800,
 )
 
 
@@ -394,16 +387,16 @@ _MESSAGE = _descriptor.Descriptor(
       name='payload', full_name='dragonradio.internal.Message.payload',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=807,
-  serialized_end=927,
+  serialized_start=802,
+  serialized_end=922,
 )
 
 _LOCATIONINFO.fields_by_name['location'].message_type = _LOCATION
 _LOCATIONINFO.fields_by_name['timestamp'].message_type = _TIMESTAMP
 _STATUS.fields_by_name['timestamp'].message_type = _TIMESTAMP
 _STATUS.fields_by_name['loc'].message_type = _LOCATIONINFO
-_STATUS.fields_by_name['source_flows'].message_type = _FLOWINFO
-_STATUS.fields_by_name['sink_flows'].message_type = _FLOWINFO
+_STATUS.fields_by_name['source_flows'].message_type = _FLOWSTATS
+_STATUS.fields_by_name['sink_flows'].message_type = _FLOWSTATS
 _MESSAGE.fields_by_name['status'].message_type = _STATUS
 _MESSAGE.fields_by_name['schedule'].message_type = _SCHEDULE
 _MESSAGE.oneofs_by_name['payload'].fields.append(
@@ -415,7 +408,7 @@ _MESSAGE.fields_by_name['schedule'].containing_oneof = _MESSAGE.oneofs_by_name['
 DESCRIPTOR.message_types_by_name['TimeStamp'] = _TIMESTAMP
 DESCRIPTOR.message_types_by_name['Location'] = _LOCATION
 DESCRIPTOR.message_types_by_name['LocationInfo'] = _LOCATIONINFO
-DESCRIPTOR.message_types_by_name['FlowInfo'] = _FLOWINFO
+DESCRIPTOR.message_types_by_name['FlowStats'] = _FLOWSTATS
 DESCRIPTOR.message_types_by_name['Status'] = _STATUS
 DESCRIPTOR.message_types_by_name['Schedule'] = _SCHEDULE
 DESCRIPTOR.message_types_by_name['Message'] = _MESSAGE
@@ -442,12 +435,12 @@ LocationInfo = _reflection.GeneratedProtocolMessageType('LocationInfo', (_messag
   ))
 _sym_db.RegisterMessage(LocationInfo)
 
-FlowInfo = _reflection.GeneratedProtocolMessageType('FlowInfo', (_message.Message,), dict(
-  DESCRIPTOR = _FLOWINFO,
+FlowStats = _reflection.GeneratedProtocolMessageType('FlowStats', (_message.Message,), dict(
+  DESCRIPTOR = _FLOWSTATS,
   __module__ = 'internal_pb2'
-  # @@protoc_insertion_point(class_scope:dragonradio.internal.FlowInfo)
+  # @@protoc_insertion_point(class_scope:dragonradio.internal.FlowStats)
   ))
-_sym_db.RegisterMessage(FlowInfo)
+_sym_db.RegisterMessage(FlowStats)
 
 Status = _reflection.GeneratedProtocolMessageType('Status', (_message.Message,), dict(
   DESCRIPTOR = _STATUS,
@@ -471,6 +464,8 @@ Message = _reflection.GeneratedProtocolMessageType('Message', (_message.Message,
 _sym_db.RegisterMessage(Message)
 
 
+_FLOWSTATS.fields_by_name['npackets']._options = None
+_FLOWSTATS.fields_by_name['nbytes']._options = None
 _SCHEDULE.fields_by_name['nodes']._options = None
 _SCHEDULE.fields_by_name['schedule']._options = None
 # @@protoc_insertion_point(module_scope)

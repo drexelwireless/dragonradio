@@ -8,6 +8,8 @@ from dragon.protobuf import *
 from dragon.internal_pb2 import *
 import dragon.internal_pb2 as internal
 
+logger = logging.getLogger('internal')
+
 INTERNAL_PORT = 4096
 
 #
@@ -51,17 +53,13 @@ class InternalProtoServer(UDPProtoServer):
             n.loc.alt = loc.location.elevation
             n.loc.timestamp = loc.timestamp.get_timestamp()
 
-        # Update set of active flows
-        for flow in msg.status.source_flows:
-            self.controller.addLink(node_id, flow.dest, flow.flow_uid)
-
-        # Update flow statistics
-        for flow in msg.status.sink_flows:
-            self.controller.addLink(flow.src, node_id, flow.flow_uid)
-            self.controller.updateMandateStats(flow.flow_uid,
-                                               flow.latency,
-                                               flow.throughput,
-                                               flow.bytes)
+        # Update scoring
+        self.controller.scorer.updateSourceStats(node_id,
+                                                 msg.status.timestamp.get_timestamp(),
+                                                 msg.status.source_flows)
+        self.controller.scorer.updateSinkStats(node_id,
+                                               msg.status.timestamp.get_timestamp(),
+                                               msg.status.sink_flows)
 
     @handle('Message.schedule')
     def handle_schedule(self, msg):
@@ -101,7 +99,7 @@ class InternalProtoClient(UDPProtoClient):
         self.open()
 
     @send(internal.Message)
-    async def sendStatus(self, msg):
+    async def sendStatus(self, msg, sources, sinks):
         me = self.controller.thisNode()
 
         radio = self.controller.radio
@@ -112,8 +110,10 @@ class InternalProtoClient(UDPProtoClient):
         msg.status.loc.location.longitude = me.loc.lon
         msg.status.loc.location.elevation = me.loc.alt
         msg.status.loc.timestamp.set_timestamp(me.loc.timestamp)
-        msg.status.source_flows.extend(toFlowInfo(radio.flowsource.flows))
-        msg.status.sink_flows.extend(toFlowInfo(radio.flowsink.flows))
+        msg.status.source_flows.extend([mkFlowStats(flow) for flow in sources])
+        msg.status.sink_flows.extend([mkFlowStats(flow) for flow in sinks])
+
+        logging.debug("Sending status %s", msg)
 
     @send(internal.Message)
     async def sendSchedule(self, msg, seq, nodes, sched):
@@ -130,20 +130,14 @@ class InternalProtoClient(UDPProtoClient):
         msg.schedule.nodes.extend(nodes)
         msg.schedule.schedule.extend(sched.reshape(nchannels*nslots))
 
-def toFlowInfo(flows):
-    """Convert dragonradio.FlowInfo to internal agent FlowInfo"""
-    internal_flows = []
+def mkFlowStats(flow):
+    """Convert dragonradio.FlowStats to internal agent FlowStats"""
+    stats = internal.FlowStats()
+    stats.flow_uid = flow.flow_uid
+    stats.src = flow.src
+    stats.dest = flow.dest
+    stats.first_mp = flow.first_mp
+    stats.npackets.extend(flow.npackets)
+    stats.nbytes.extend(flow.nbytes)
 
-    for flow_uid, flow_info in flows.items():
-        info = internal.FlowInfo()
-        info.flow_uid = flow_uid
-        info.src = flow_info.src
-        info.dest = flow_info.dest
-        info.window = flow_info.latency.time_window
-        info.latency = flow_info.latency.value
-        info.throughput = flow_info.throughput.value
-        info.bytes = flow_info.bytes
-
-        internal_flows.append(info)
-
-    return internal_flows
+    return stats

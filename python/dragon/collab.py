@@ -49,10 +49,7 @@ class MandatedOutcome(object):
     def __init__(self, json=None):
         self.start = time.time()
         self.scalar_performance = 0
-        self.latency_ = None
-        self.throughput_ = None
-        self.bytes_ = None
-        self.point_value_ = None
+        self.achieved_duration = 0
 
         if json:
             fields = [ 'goal_type'
@@ -80,51 +77,6 @@ class MandatedOutcome(object):
     @property
     def is_discrete(self):
         return hasattr(self, 'file_transfer_deadline_s')
-
-    @property
-    def latency(self):
-        return self.latency_
-
-    @latency.setter
-    def latency(self, x):
-        self.latency_ = x
-        self.updateMetrics()
-
-    @property
-    def throughput(self):
-        return self.throughput_
-
-    @throughput.setter
-    def throughput(self, x):
-        self.throughput_ = x
-        self.updateMetrics()
-
-    @property
-    def bytes(self):
-        return self.bytes_
-
-    @bytes.setter
-    def bytes(self, x):
-        self.bytes_ = x
-        self.updateMetrics()
-
-    def updateMetrics(self):
-        metrics = []
-
-        if isinstance(self.max_latency_s, float) and isinstance(self.latency, float):
-            metric = self.max_latency_s/self.latency
-            if math.isfinite(metric):
-                metrics.append(metric)
-
-        if isinstance(self.min_throughput_bps, float) and isinstance(self.throughput, float):
-            metric = self.throughput/self.min_throughput_bps
-            if math.isfinite(metric):
-                metrics.append(metric)
-
-        if len(metrics) != 0:
-            self.scalar_performance = min(metrics)
-        else:
-            self.scalar_performance = 0
 
 class GPSLocation(object):
     def __init__(self):
@@ -198,68 +150,30 @@ class Peer(ZMQProtoClient):
         msg.hello.version.patch = CIL_VERSION[2]
 
     @sendCIL
-    async def location_update(self, msg, nodes):
-        for id, n in nodes.items():
-            if n.loc.timestamp > time.time() - MAX_LOCATION_AGE:
-                info = cil.LocationInfo()
-                info.radio_id = n.id
-                info.location.latitude = n.loc.lat
-                info.location.longitude = n.loc.lon
-                info.location.elevation = n.loc.alt
-                info.timestamp.set_timestamp(n.loc.timestamp)
-
-                msg.location_update.locations.extend([info])
+    async def location_update(self, msg, locations):
+        msg.location_update.locations.extend(locations)
 
     @sendCIL
-    async def spectrum_usage(self, msg, controller):
-        voxels = []
-
-        for vox in controller.voxels:
-            usage = cil.SpectrumVoxelUsage()
-
-            usage.spectrum_voxel.freq_start = vox.f_start
-            usage.spectrum_voxel.freq_end = vox.f_end
-            usage.spectrum_voxel.time_start.set_timestamp(time.time())
-            usage.transmitter_info.radio_id = vox.tx
-            usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
-            usage.transmitter_info.mac_cca = False
-
-            receivers = []
-            for rx in vox.rx:
-                rx_info = cil.ReceiverInfo()
-                rx_info.radio_id = rx
-                rx_info.power_db.value = controller.radio.usrp.rx_gain
-
-                receivers.append(rx_info)
-
-            usage.receiver_info.extend(receivers)
-            usage.measured_data = False
-
-            voxels.append(usage)
-
+    async def spectrum_usage(self, msg, voxels):
         msg.spectrum_usage.voxels.extend(voxels)
 
     @sendCIL
-    async def detailed_performance(self, msg, controller):
-        mandates = controller.mandated_outcomes.values()
+    async def detailed_performance(self,
+                                   msg,
+                                   controller,
+                                   performance,
+                                   mandates_achieved,
+                                   total_score_achieved):
+        msg.detailed_performance.mandate_count = len(performance)
+        if hasattr(controller, 'flow_mandates_timestamp') and controller.flow_mandates_timestamp is not None:
+            msg.detailed_performance.timestamp.set_timestamp(controller.flow_mandates_timestamp)
+        else:
+            # Pretend this performance metric is from 5 seconds ago
+            msg.detailed_performance.timestamp.set_timestamp(time.time() - 5)
 
-        msg.detailed_performance.mandate_count = len(mandates)
-        # Pretend this performance metric is from 5 seconds ago
-        msg.detailed_performance.timestamp.set_timestamp(time.time() - 5)
-
-        for mandate in mandates:
-            perf = cil.MandatePerformance()
-            perf.scalar_performance = mandate.scalar_performance
-            perf.radio_ids.extend([])
-            perf.flow_id = mandate.flow_uid
-            perf.hold_period = mandate.hold_period
-            perf.achieved_duration = 0
-            perf.point_value = mandate.point_value
-
-            msg.detailed_performance.mandates.extend([perf])
-
-        msg.detailed_performance.mandates_achieved = 0
-        msg.detailed_performance.total_score_achieved = 0
+        msg.detailed_performance.mandates.extend(performance)
+        msg.detailed_performance.mandates_achieved = mandates_achieved
+        msg.detailed_performance.total_score_achieved = total_score_achieved
         msg.detailed_performance.scoring_point_threshold = controller.scoring_point_threshold
 
 @handler(registration.TellClient)
@@ -289,8 +203,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.nonce = None
         self.max_keepalive = 30
 
-        self.location_update_period = 20
-        self.spectrum_usage_update_period = 5
+        self.location_update_period = 15
+        self.spectrum_usage_update_period = 15
         self.detailed_performance_update_period = 5
 
         self.startServer(cil.CilMessage, local_ip, peer_port)
@@ -342,43 +256,124 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
             pass
 
     async def location_update(self):
-        try:
-            while True:
+        while True:
+            try:
+                # Calculate locations
+                locations = []
+
+                for id, n in self.controller.nodes.items():
+                    if n.loc.timestamp > time.time() - MAX_LOCATION_AGE:
+                        info = cil.LocationInfo()
+                        info.radio_id = n.id
+                        info.location.latitude = n.loc.lat
+                        info.location.longitude = n.loc.lon
+                        info.location.elevation = n.loc.alt
+                        info.timestamp.set_timestamp(n.loc.timestamp)
+
+                # Send location update to all peers
+                logging.info('CIL: sending location update')
                 for ip, p in self.peers.items():
                     try:
-                        await p.location_update(self.controller.nodes)
+                        await p.location_update(locations)
                     except:
                         logger.exception("location_update")
+            except CancelledError:
+                return
+            except:
+                logger.exception("location_updates")
 
-                await asyncio.sleep(self.location_update_period)
-        except CancelledError:
-            pass
+            await asyncio.sleep(self.location_update_period)
 
     async def spectrum_usage(self):
-        try:
-            while True:
+        controller = self.controller
+
+        while True:
+            try:
+                # Calculate spectrum usage
+                voxels = []
+
+                for vox in controller.voxels:
+                    usage = cil.SpectrumVoxelUsage()
+
+                    usage.spectrum_voxel.freq_start = vox.f_start
+                    usage.spectrum_voxel.freq_end = vox.f_end
+                    usage.spectrum_voxel.time_start.set_timestamp(time.time())
+                    usage.transmitter_info.radio_id = vox.tx
+                    usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
+                    usage.transmitter_info.mac_cca = False
+
+                    receivers = []
+                    for rx in vox.rx:
+                        rx_info = cil.ReceiverInfo()
+                        rx_info.radio_id = rx
+                        rx_info.power_db.value = controller.radio.usrp.rx_gain
+
+                        receivers.append(rx_info)
+
+                    usage.receiver_info.extend(receivers)
+                    usage.measured_data = False
+
+                    voxels.append(usage)
+
+                # Send spectrum usage to all peers
+                logging.info('CIL: sending spectrum usage')
                 for ip, p in self.peers.items():
                     try:
-                        await p.spectrum_usage(self.controller)
+                        await p.spectrum_usage(voxels)
                     except:
                         logger.exception("spectrum_usage")
+            except CancelledError:
+                return
+            except:
+                logger.exception("spectrum_usage")
 
-                await asyncio.sleep(self.spectrum_usage_update_period)
-        except CancelledError:
-            pass
+            await asyncio.sleep(self.spectrum_usage_update_period)
 
     async def detailed_performance(self):
-        try:
-            while True:
-                for ip, p in self.peers.items():
-                    try:
-                        await p.detailed_performance(self.controller)
-                    except:
-                        logger.exception("detailed_performance")
+        controller = self.controller
 
-                await asyncio.sleep(self.spectrum_usage_update_period)
-        except CancelledError:
-            pass
+        while True:
+            t1 = time.time()
+
+            try:
+                # Only send mandates after the scenario has started
+                if controller.scenario_started:
+                    (mp, timestamp, mandates_achieved, total_score_achieved, performance) = await controller.getMandatePerformance()
+
+                    def mkMandatePerformance(p):
+                        perf = cil.MandatePerformance()
+                        perf.scalar_performance = p.scalar_performance
+                        perf.radio_ids.extend(p.radio_ids)
+                        perf.flow_id = p.flow_id
+                        perf.hold_period = p.hold_period
+                        perf.achieved_duration = p.achieved_duration
+                        perf.point_value = p.point_value
+
+                        return perf
+
+                    new_performance = [mkMandatePerformance(p) for p in performance]
+
+                    # Send mandates to all peers
+                    logging.info('CIL: sending detailed performance')
+                    for ip, p in self.peers.items():
+                        try:
+                            await p.detailed_performance(self.controller,
+                                                         new_performance,
+                                                         mandates_achieved,
+                                                         total_score_achieved)
+                        except:
+                            logger.exception("detailed_performance")
+            except CancelledError:
+                return
+            except:
+                logger.exception("detailed_performance")
+
+            t2 = time.time()
+            logger.info("Time to score: %f", t2 - t1)
+            delta = self.detailed_performance_update_period - (t2 - t1)
+
+            if delta > 0:
+                await asyncio.sleep(delta)
 
     @handle('TellClient.inform')
     async def handle_inform(self, msg):

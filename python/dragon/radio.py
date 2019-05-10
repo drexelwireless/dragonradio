@@ -224,8 +224,15 @@ class Config(object):
         # Measurement options
         self.measurement_period = 1.0
 
+        # Scoring options
+        self.max_performance_age = 8.0
+        """Performance reports may be from a measurement period no older than this"""
+
+        self.scoring_mp_slop = self.measurement_period + 0.5
+        """Only report flow performance data from before this many seconds ago"""
+
         # Internal agent options
-        self.status_update_period = 30
+        self.status_update_period = 5
 
         # Collaboration server options
         self.force_gateway = False
@@ -799,26 +806,28 @@ class Radio(object):
             self.controller = dragonradio.DummyController(self.net)
 
         #
+        # Create flow performance measurement component
+        #
+        self.flowperf = dragonradio.FlowPerformance(config.measurement_period)
+
+        #
         # Configure packet path from demodulator to tun/tap
         # Right now, the path is direct:
-        #   demodulator -> controller -> FlowSink -> tun/tap
+        #   demodulator -> controller -> FlowPerformance.radio -> tun/tap
         #
-        self.flowsink = dragonradio.FlowSink(config.measurement_period)
-
         self.demodulator.source >> self.controller.radio_in
 
-        self.controller.radio_out >> self.flowsink.input
+        self.controller.radio_out >> self.flowperf.radio_in
 
-        self.flowsink.output >> self.tuntap.sink
+        self.flowperf.radio_out >> self.tuntap.sink
 
         #
         # Configure packet path from tun/tap to the modulator
         # The path is:
-        #   tun/tap -> NetFilter -> NetFirewall -> FlowSource -> NetQueue -> controller -> modulator
+        #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall -> NetQueue -> controller -> modulator
         #
         self.netfilter = dragonradio.NetFilter(self.net)
         self.netfirewall = dragonradio.NetFirewall()
-        self.flowsource = dragonradio.FlowSource(config.measurement_period)
 
         if config.queue == 'fifo':
             self.netq = dragonradio.NetFIFO()
@@ -829,11 +838,11 @@ class Radio(object):
 
         self.tuntap.source >> self.netfilter.input
 
-        self.netfilter.output >> self.netfirewall.input
+        self.netfilter.output >> self.flowperf.net_in
 
-        self.netfirewall.output >> self.flowsource.input
+        self.flowperf.net_out >> self.netfirewall.input
 
-        self.flowsource.output >> self.netq.push
+        self.netfirewall.output >> self.netq.push
 
         self.netq.pop >> self.controller.net_in
 

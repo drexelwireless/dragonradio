@@ -4,10 +4,12 @@ import logging
 import netifaces
 import numpy as np
 import os
+import pandas as pd
 import random
 import signal
 import subprocess
 import sys
+import threading
 import time
 
 import dragonradio
@@ -19,6 +21,7 @@ from dragon.internal import InternalProtoClient, InternalProtoServer
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
+import dragon.scoring as scoring
 
 logger = logging.getLogger('controller')
 
@@ -51,6 +54,9 @@ class Controller(TCPProtoServer):
         self.started = False
         """Has the radio been started?"""
 
+        self.scenario_started = False
+        """Have we received mandates?"""
+
         self.scenario_start_time_ = None
         """RF scenario start time, in seconds since the epoch"""
 
@@ -63,8 +69,14 @@ class Controller(TCPProtoServer):
         self.nodes = {}
         """Nodes in our network"""
 
-        self.links = {}
-        """Flows for each link, i.e., source destination pair, in the network"""
+        self.scorer = scoring.Scorer(config)
+        """Match scorer"""
+
+        self.low_mp = 0
+        """Low range of measurement periods to include in updates"""
+
+        self.reported_mandate_performance = []
+        """Reported mandate performance"""
 
         self.schedule = None
         """Current TDMA schedule"""
@@ -78,8 +90,14 @@ class Controller(TCPProtoServer):
         self.voxels = []
         """Voxels used"""
 
+        self.mandated_outcomes_lock = threading.Lock()
+        """Lock for mandated outcomes"""
+
         self.mandated_outcomes = {}
         """Current mandated outcomes"""
+
+        self.stage_mandated_outcomes = {}
+        """Mandated outcomes for given stage"""
 
         self.scoring_percent_threshold = 0
         """Scoring percent threshold"""
@@ -111,8 +129,16 @@ class Controller(TCPProtoServer):
 
     @scenario_start_time.setter
     def scenario_start_time(self, t):
-        logging.info('RF scenario start time set to %f', t)
+        logging.info('RF scenario start time set: %f', t)
         self.scenario_start_time_ = t
+        self.scorer.scenario_start_time = t
+        self.radio.flowperf.start = t
+
+    @property
+    def mandated_flows(self):
+        """Return all mandated flows"""
+        with self.mandated_outcomes_lock:
+            return list(self.mandated_outcomes.keys())
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -188,11 +214,8 @@ class Controller(TCPProtoServer):
                                                        loop=self.loop,
                                                        server_host=INTERNAL_BCAST_ADDR)
 
-        # Start task to get traffic interface addresses into ARP cache
-        self.loop.create_task(self.cacheTrafficInterfaceARP())
-
         # Start our local status update
-        self.loop.create_task(self.localStatisticsUpdate())
+        self.loop.create_task(self.updateAllFlowStatistics())
 
         # XXX we need *some* task to be running or else we run_forever can't be
         # stopped!
@@ -217,9 +240,19 @@ class Controller(TCPProtoServer):
 
     async def startRadio(self, timestamp=time.time()):
         if not self.started:
+            logging.info('Starting radio: now=%f; timestamp=%f',
+                time.time(),
+                timestamp)
+
+            # Start task to get traffic interface addresses into ARP cache
+            self.loop.create_task(self.cacheTrafficInterfaceARP())
+
             with await self.radio.lock:
                 self.started = True
                 self.scenario_start_time = timestamp
+
+                # Start the scorer
+                self.scorer.start()
 
                 # Create ALOHA MAC for HELLO messages
                 self.radio.configureALOHA()
@@ -236,6 +269,20 @@ class Controller(TCPProtoServer):
 
     async def stopRadio(self):
         if not self.done:
+            # Update score one final time
+            if self.is_gateway:
+                self.scorer.updateScore()
+
+            # Stop the scorer
+            self.scorer.stop()
+
+            if self.is_gateway:
+                # Dump scoring data one last time
+                self.scorer.dumpScores(final=True)
+
+                # Dump reported scores
+                self.saveReportedMandatePerformance()
+
             with await self.radio.lock:
                 self.done = True
                 self.state = remote.STOPPING
@@ -331,7 +378,6 @@ class Controller(TCPProtoServer):
                 self.internal_client = InternalProtoClient(self,
                                                            loop=self.loop,
                                                            server_host=internalNodeIP(node_id))
-                self.loop.create_task(self.gatewayStatisticsUpdate())
 
             # If we are the gateway, connect an internal protocol client to the
             # new node's server
@@ -385,22 +431,6 @@ class Controller(TCPProtoServer):
         # Add discovered nodes
         for n in nodes:
             self.addNode(n)
-
-    def addLink(self, src, dest, flow_uid):
-        """Record a link between nodes"""
-        link = (src, dest)
-        if link not in self.links:
-            self.links[link] = [flow_uid]
-        else:
-            self.links[link].append([flow_uid])
-
-    def updateMandateStats(self, flow_uid, latency, throughput, bytes):
-        """Update local mandate with flow statistics"""
-        mandate = self.mandated_outcomes.get(flow_uid, None)
-        if mandate:
-            mandate.latency = latency
-            mandate.throughput = throughput
-            mandate.bytes = bytes
 
     async def installMACSchedule(self, seq, sched):
         """Install a new MAC schedule"""
@@ -498,41 +528,148 @@ class Controller(TCPProtoServer):
         except CancelledError:
             return
 
-    async def localStatisticsUpdate(self):
-        """Update local flow statistics"""
+    async def getMandatePerformance(self):
+        config = self.config
+
+        # Drain the scoring task queue
+        #await self.loop.run_in_executor(None, self.scorer.join)
+
+        # Update scoring data
+        await self.loop.run_in_executor(None, self.scorer.updateScore)
+
+        # Determine which measurement period to use. We use the latest MP for
+        # which we have data from all nodes, except if it is older than
+        # config.max_performance_age seconds ago, in which case we extrapolate.
+        known_mps = self.scorer.stats_max_mp.values()
+        if len(known_mps) == 0:
+            min_known_mp = 0
+        else:
+            min_known_mp = min(self.scorer.stats_max_mp.values())
+
+        min_mp = int((time.time() - config.max_performance_age - self.scenario_start_time) / config.measurement_period)
+
+        mp = max(min_known_mp, min_mp)
+        timestamp = self.scenario_start_time + mp*config.measurement_period
+        stage = self.scorer.getMPStage(mp)
+        if stage == 0:
+            stage = 1
+
+        logger.info('getMandatePerformance: min_known_mp=%d; min_mp=%d; mp=%d; stage=%d',
+            min_known_mp,
+            min_mp,
+            mp,
+            stage)
+
+        # Updated mandated outcomes from the given measureement period
+        with self.mandated_outcomes_lock:
+            mandated_outcomes = self.stage_mandated_outcomes[stage]
+
+            # Get scorer to update our mandated outcomes
+            await self.loop.run_in_executor(None, self.scorer.updateMandatedOutcomes,
+                                            mp,
+                                            mandated_outcomes)
+
+            # Build performance report
+            mandates_achieved = 0
+            total_score_achieved = 0
+            performance = []
+
+            for mandate in mandated_outcomes.values():
+                perf = scoring.MandatePerformance(mandate.scalar_performance,
+                                                  mandate.radio_ids,
+                                                  mandate.flow_uid,
+                                                  mandate.hold_period,
+                                                  mandate.achieved_duration,
+                                                  mandate.point_value)
+
+                if mandate.achieved_duration >= mandate.hold_period:
+                    mandates_achieved += 1
+                    total_score_achieved += mandate.point_value
+
+                performance.append(perf)
+
+        # Log the reported score
+        self.reported_mandate_performance.append((mp, mandates_achieved, total_score_achieved))
+
+        # Return performance metrics
+        return (mp, timestamp, mandates_achieved, total_score_achieved, performance)
+
+    def saveReportedMandatePerformance(self):
+        """Save reported performance"""
+        config = self.config
+
+        if self.is_gateway and config.log_directory:
+            try:
+                df = pd.DataFrame(self.reported_mandate_performance,
+                                  columns=['mp', 'mandates_achieved', 'total_score_achieved'])
+                logging.info('Logging scores to %s', 'score_reported.csv')
+                df.to_csv(os.path.join(config.logdir, 'score_reported.csv'))
+            except:
+                logging.exception('Exception when saving reported mandated performance')
+
+    def updateGoals(self, goals, timestamp):
+        logging.debug('Updating goals')
+
+        # Dump current scores and update scorer's goals
+        if self.is_gateway:
+            self.scorer.dumpScores()
+
+        self.scorer.updateGoals(goals, timestamp)
+
+        # Update mandated outcomes
+        mandates = {}
+
+        for goal in goals:
+            outcome = MandatedOutcome(json=goal)
+            mandates[outcome.flow_uid] = outcome
+
+        self.setMandatedOutcomes(mandates)
+
+        # We have mandates!
+        self.scenario_started = True
+
+    async def updateAllFlowStatistics(self):
+        """Update all flow statistics"""
+        config = self.config
         radio = self.radio
         node_id = radio.node_id
 
-        try:
-            while not self.done:
-                for flow_uid, stats in radio.flowsource.flows.items():
-                    self.addLink(node_id, stats.dest, flow_uid)
+        while not self.done:
+            try:
+                if self.scenario_started:
+                    if self.is_gateway or self.internal_client is not None:
+                        reset_stats = True
+                    else:
+                        reset_stats = False
 
-                for flow_uid, stats in radio.flowsink.flows.items():
-                    self.addLink(stats.src, node_id, flow_uid)
-                    self.updateMandateStats(flow_uid,
-                                            stats.latency.value,
-                                            stats.throughput.value,
-                                            stats.bytes)
+                    max_mp = int((time.time() - self.scenario_start_time - config.scoring_mp_slop) / self.config.measurement_period)
 
-                await asyncio.sleep(5)
-        except CancelledError:
-            pass
+                    # Get local flow statistics
+                    sources = [scoring.mkFlowStats(p, self.low_mp, max_mp) for p in radio.flowperf.getSources(reset_stats).values()]
+                    sinks = [scoring.mkFlowStats(p, self.low_mp, max_mp) for p in radio.flowperf.getSinks(reset_stats).values()]
 
-    async def gatewayStatisticsUpdate(self):
-        """Send flow statistics update to gateway"""
-        radio = self.radio
-        config = self.config
+                    self.low_mp = max_mp + 1
 
-        if self.is_gateway or config.status_update_period == 0:
-            return
+                    # Filter out
+                    sources = [p for p in sources if scoring.nonzeroFlowStats(p)]
+                    sinks = [p for p in sinks if scoring.nonzeroFlowStats(p)]
 
-        try:
-            while not self.done:
-                await self.internal_client.sendStatus()
-                await asyncio.sleep(config.status_update_period)
-        except CancelledError:
-            pass
+                    self.scorer.updateSourceStats(node_id,
+                                                  time.time(),
+                                                  sources)
+                    self.scorer.updateSinkStats(node_id,
+                                                time.time(),
+                                                sinks)
+
+                    # Send flow statistics to the gateway
+                    if not self.is_gateway and self.internal_client is not None:
+                        await self.internal_client.sendStatus(sources, sinks)
+            except CancelledError:
+                return
+            except:
+                logging.exception('Exception in updateAllFlowStatistics')
+
+            await asyncio.sleep(config.status_update_period)
 
     async def createSchedule(self):
         """Create a new TDMA schedule"""
@@ -698,10 +835,16 @@ class Controller(TCPProtoServer):
 
         if req.radio_command == remote.START:
             if self.state == remote.READY:
+                logging.info("Radio start: timestamp=%f",
+                    req.timestamp)
+
                 self.loop.create_task(self.startRadio(timestamp=req.timestamp))
                 info = 'Radio started'
         elif req.radio_command == remote.STOP:
             if self.state == remote.READY or self.state == remote.ACTIVE:
+                logging.info("Radio stop: timestamp=%f",
+                    req.timestamp)
+
                 self.loop.create_task(self.stopRadio())
                 info = 'Radio stopping'
 
@@ -712,57 +855,57 @@ class Controller(TCPProtoServer):
 
     @handle('Request.update_mandated_outcomes')
     def updateMandatedOutcomes(self, req):
-        logger.info('Mandated outcomes:\n%s', req.update_mandated_outcomes.goals)
+        logger.info('Update mandated outcomes: timestamp=%f\n%s',
+            req.timestamp,
+            req.update_mandated_outcomes.goals)
 
-        radio = self.radio
+        # Parse goals as JSON
+        goals = json.loads(req.update_mandated_outcomes.goals)
 
-        # Update mandated outcomes
-        mandates = {}
-
-        for goal in json.loads(req.update_mandated_outcomes.goals):
-            outcome = MandatedOutcome(json=goal)
-            mandates[outcome.flow_uid] = outcome
-
-        self.setMandatedOutcomes(mandates)
+        # Create scoring info from goals
+        self.loop.run_in_executor(None, self.updateGoals, goals, req.timestamp)
 
         resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Mandated outcomes updated'
         return resp
 
-    def setMandatedOutcomes(self, mandates):
-        """Set our mandated outcomes and update the flowsink and flowsource"""
+    def setMandatedOutcomes(self, mandated_outcomes):
+        """Set our mandated outcomes and update flowperf"""
         config = self.config
         radio = self.radio
 
-        self.mandated_outcomes = mandates
+        # Set our mandated outcomes
+        with self.mandated_outcomes_lock:
+            self.mandated_outcomes = mandated_outcomes
+            self.stage_mandated_outcomes[self.scorer.stage] = mandated_outcomes
 
-        # Create a MandatedOutcomeMap for flow source and sink components
-        mandateMap = dragonradio.MandatedOutcomeMap()
+        # Create a MandatedOutcomeMap for flow performance component
+        mandates = dragonradio.MandatedOutcomeMap()
 
-        for (flow, m) in mandates.items():
-            mandateMap[flow] = dragonradio.MandatedOutcome(config.measurement_period,
-                                                           0.0,
-                                                           m.point_value,
-                                                           m.min_throughput_bps,
-                                                           m.max_latency_s,
-                                                           m.file_transfer_deadline_s)
+        for (flow, m) in mandated_outcomes.items():
+            mandates[flow] = dragonradio.MandatedOutcome(m.hold_period,
+                                                         0.0,
+                                                         m.point_value,
+                                                         m.min_throughput_bps,
+                                                         m.max_latency_s,
+                                                         m.file_transfer_deadline_s)
 
+        radio.flowperf.mandates = mandates
 
-        radio.flowsink.mandates = mandateMap
-        radio.flowsource.mandates = mandateMap
+        # Set allowed flows
+        self.setAllowedFlows(mandated_outcomes.keys())
 
-        self.setAllowedFlows()
+    def setAllowedFlows(self, flows):
+        """Decide which flows are allowed by the firewall.
 
-    def setAllowedFlows(self):
-        """Decide which flows are allowed"""
-        config = self.config
+        The specified flows, the internal control port, and all broadcast
+        packets will be allowed through the packet firewall.
+        """
         radio = self.radio
 
-        allowed = set([dragon.internal.INTERNAL_PORT])
-
-        for (flow, m) in self.mandated_outcomes.items():
-            allowed.add(flow)
+        allowed = set(flows)
+        allowed.add(dragon.internal.INTERNAL_PORT)
 
         radio.netfirewall.allow_broadcasts = True
         radio.netfirewall.allowed = allowed
@@ -770,7 +913,9 @@ class Controller(TCPProtoServer):
 
     @handle('Request.update_environment')
     def updateEnvironment(self, req):
-        logger.info('Environment:\n%s', req.update_environment.environment)
+        logger.info('Update environment: timestamp=%f\n%s',
+            req.timestamp,
+            req.update_environment.environment)
 
         envs = json.loads(req.update_environment.environment)
         # Environment messages contain a *list* of updates...
@@ -778,11 +923,8 @@ class Controller(TCPProtoServer):
             bandwidth = env.get('scenario_rf_bandwidth', self.config.bandwidth)
             frequency = env.get('scenario_center_frequency', self.config.frequency)
 
-            if 'scoring_percent_threshold' in env:
-                self.scoring_percent_threshold = env['scoring_percent_threshold']
-
-            if 'scoring_point_threshold' in env:
-                self.scoring_point_threshold = env['scoring_point_threshold']
+            self.scoring_percent_threshold = env.get('scoring_percent_threshold', 0)
+            self.scoring_point_threshold = env.get('scoring_point_threshold', 0)
 
             self.loop.create_task(self.reconfigureBandwidthAndFrequency(bandwidth, frequency))
 

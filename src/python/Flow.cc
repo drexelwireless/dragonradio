@@ -2,13 +2,9 @@
 #include <pybind11/stl.h>
 
 #include "net/Firewall.hh"
-#include "net/FlowInfo.hh"
-#include "net/FlowSource.hh"
-#include "net/FlowSink.hh"
+#include "net/FlowPerformance.hh"
 #include "net/MandatedOutcome.hh"
 #include "python/PyModules.hh"
-
-PYBIND11_MAKE_OPAQUE(FlowInfoMap)
 
 PYBIND11_MAKE_OPAQUE(MandatedOutcomeMap)
 
@@ -45,67 +41,77 @@ void exportFlow(py::module &m)
 
     py::bind_map<MandatedOutcomeMap>(m, "MandatedOutcomeMap");
 
-    // Export FlowInfo class to Python
-    py::class_<FlowInfo, std::unique_ptr<FlowInfo>>(m, "FlowInfo")
-        .def_readonly("src",
-            &FlowInfo::src,
-            "Flow source")
-        .def_readonly("dest",
-            &FlowInfo::dest,
-            "Flow destination")
-        .def_readonly("latency",
-            &FlowInfo::latency,
-            "Flow latency (sec)")
-        .def_readonly("min_latency",
-            &FlowInfo::min_latency,
-            "Flow minimum latency (sec)")
-        .def_readonly("max_latency",
-            &FlowInfo::max_latency,
-            "Flow maximum latency (sec)")
-        .def_readonly("throughput",
-            &FlowInfo::throughput,
-            "Flow throughput (bps)")
-        .def_readonly("bytes",
-            &FlowInfo::bytes,
-            "Bytes transmitted")
-        .def("__repr__", [](const FlowInfo& self) {
-            return py::str("FlowInfo(src={}, dest={}, latency={}, throughput={}, bytes={})").\
-            format(self.src, self.dest, self.latency.getValue(), self.throughput.getValue(), self.bytes);
-         })
-        ;
+    // Export MPStats class to Python
+    py::class_<MPStats, std::unique_ptr<MPStats>>(m, "MPStats")
+    .def_readonly("npackets",
+        &MPStats::npackets,
+        "Number of packets")
+    .def_readonly("nbytes",
+        &MPStats::nbytes,
+        "Number of bytes")
+    .def("__repr__", [](const MPStats& self) {
+        return py::str("MPStats(npackets={}, nbytes={})").\
+        format(self.nbytes, self.nbytes);
+     })
+    ;
 
-    py::bind_map<FlowInfoMap>(m, "FlowInfoMap");
+    py::bind_vector<std::vector<MPStats>>(m, "MPStatsVector");
 
-    // Export class FlowSource to Python
-    py::class_<FlowSource, NetProcessor, std::shared_ptr<FlowSource>>(m, "FlowSource")
+    // Export FlowStats class to Python
+    py::class_<FlowStats, std::unique_ptr<FlowStats>>(m, "FlowStats")
+    .def_readonly("flow_uid",
+        &FlowStats::flow_uid,
+        "Flow UID")
+    .def_readonly("src",
+        &FlowStats::src,
+        "Flow source")
+    .def_readonly("dest",
+        &FlowStats::dest,
+        "Flow destinations")
+    .def_readonly("low_mp",
+        &FlowStats::low_mp,
+        "Lowest MP modified")
+    .def_readonly("stats",
+        &FlowStats::stats,
+        "Flow statistics per-measuremnt period")
+    .def("__repr__", [](const FlowStats& self) {
+        return py::str("FlowStats(src={}, dest={})").\
+        format(self.src, self.dest);
+     })
+    ;
+
+    // Export class FlowPerformance to Python
+    py::class_<FlowPerformance, std::shared_ptr<FlowPerformance>>(m, "FlowPerformance")
         .def(py::init<double>())
-        .def_property("mp",
-            &FlowSource::getMeasurementPeriod,
-            &FlowSource::setMeasurementPeriod,
+        .def_property_readonly("mp",
+            &FlowPerformance::getMeasurementPeriod,
             "Measurement period (sec)")
+        .def_property("start",
+            &FlowPerformance::getStart,
+            &FlowPerformance::setStart,
+            "Match start time in seconds since epoch")
         .def_property("mandates",
-            &FlowSource::getMandates,
-            &FlowSource::setMandates,
+            &FlowPerformance::getMandates,
+            &FlowPerformance::setMandates,
             "Mandates")
-        .def_property_readonly("flows",
-            &FlowSource::getFlowInfo,
-            "Return set of observed flows")
-        ;
-
-    // Export class FlowSink to Python
-    py::class_<FlowSink, RadioProcessor, std::shared_ptr<FlowSink>>(m, "FlowSink")
-        .def(py::init<double>())
-        .def_property("mp",
-            &FlowSink::getMeasurementPeriod,
-            &FlowSink::setMeasurementPeriod,
-            "Measurement period (sec)")
-        .def_property("mandates",
-            &FlowSink::getMandates,
-            &FlowSink::setMandates,
-            "Mandates")
-        .def_property_readonly("flows",
-            &FlowSink::getFlowInfo,
-            "Return set of observed flows")
+        .def("getSources",
+            &FlowPerformance::getSources,
+            "Get flow source statistics")
+        .def("getSinks",
+            &FlowPerformance::getSinks,
+            "Get flow sink statistics")
+        .def_property_readonly("net_in",
+            [](std::shared_ptr<FlowPerformance> element) { return exposePort(element, &element->net_in); },
+            "Network packet input port")
+        .def_property_readonly("net_out",
+            [](std::shared_ptr<FlowPerformance> element) { return exposePort(element, &element->net_out); },
+            "Network packet output port")
+        .def_property_readonly("radio_in",
+            [](std::shared_ptr<FlowPerformance> element) { return exposePort(element, &element->radio_in); },
+            "Radio packet input port")
+        .def_property_readonly("radio_out",
+            [](std::shared_ptr<FlowPerformance> element) { return exposePort(element, &element->radio_out); },
+            "Radio packet output port")
         ;
 
     py::class_<NetFirewall, NetProcessor, std::shared_ptr<NetFirewall>>(m, "NetFirewall")

@@ -84,8 +84,7 @@ SOURCES := \
     mac/SlottedMAC.cc \
     mac/Snapshot.cc \
     mac/TDMA.cc \
-    net/FlowSink.cc \
-    net/FlowSource.cc \
+    net/FlowPerformance.cc \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
