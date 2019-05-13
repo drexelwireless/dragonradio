@@ -75,7 +75,9 @@ Node &Net::addNode(NodeId nodeId)
 
 Node &Net::addNode_(NodeId nodeId)
 {
-    auto entry = nodes_.emplace(nodeId, Node(nodeId, &tx_params[0]));
+    auto entry = nodes_.emplace(std::piecewise_construct,
+                                std::forward_as_tuple(nodeId),
+                                std::forward_as_tuple(nodeId, &tx_params[0]));
 
     // If the entry is new, add an ARP entry for it
     if (entry.second && nodeId != my_node_id_)
