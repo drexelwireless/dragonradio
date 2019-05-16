@@ -44,35 +44,38 @@ class GPSDClient:
         self.writer.write(bytes(command, encoding='utf-8'))
 
     async def run(self):
-        while True:
-            try:
-                await self.connect()
-                await self.watch(True)
+        try:
+            while True:
+                try:
+                    await self.connect()
+                    await self.watch(True)
 
-                while True:
-                    raw = await self.reader.readline()
-                    data = json.loads(raw.decode(encoding='utf-8'))
-                    if data['class'] == 'TPV':
-                        t = time.time()
-
-                        if 'time' in data:
-                            dt = dateutil.parser.parse(data['time'])
-                            t = time.mktime(dt.timetuple())
-                        else:
+                    while True:
+                        raw = await self.reader.readline()
+                        data = json.loads(raw.decode(encoding='utf-8'))
+                        if data['class'] == 'TPV':
                             t = time.time()
 
-                        for attr in ['lat', 'lon', 'alt']:
-                            if attr in data:
-                                setattr(self.loc, attr, data[attr])
-                                self.loc.timestamp = t
-            except ConnectionError:
-                #logger.debug('Connection error')
-                await asyncio.sleep(1)
-            except json.decoder.JSONDecodeError:
-                #logger.debug('JSON decoding error')
-                await asyncio.sleep(1)
-            except CancelledError:
-                break
-            except Exception as e:
-                logger.exception('Could not obtain GPS location')
-                break
+                            if 'time' in data:
+                                dt = dateutil.parser.parse(data['time'])
+                                t = time.mktime(dt.timetuple())
+                            else:
+                                t = time.time()
+
+                            for attr in ['lat', 'lon', 'alt']:
+                                if attr in data:
+                                    setattr(self.loc, attr, data[attr])
+                                    self.loc.timestamp = t
+                except ConnectionError:
+                    #logger.debug('Connection error')
+                    await asyncio.sleep(1)
+                except json.decoder.JSONDecodeError:
+                    #logger.debug('JSON decoding error')
+                    await asyncio.sleep(1)
+                except CancelledError:
+                    break
+                except Exception as e:
+                    logger.exception('Could not obtain GPS location')
+                    break
+        except CancelledError:
+            return

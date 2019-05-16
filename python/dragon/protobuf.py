@@ -195,6 +195,8 @@ class TCPProtoServer(TCPProto):
                     await self.sendMessage(writer, resp)
             except KeyError as err:
                 logger.error('Received unsupported message type: {}', err)
+            except CancelledError:
+                return
 
 class TCPProtoClient(TCPProto):
     def __init__(self, loop=None, server_host=None, server_port=None):

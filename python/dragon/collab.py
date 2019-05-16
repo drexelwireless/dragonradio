@@ -277,12 +277,12 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                         await p.location_update(locations)
                     except:
                         logger.exception("location_update")
+
+                await asyncio.sleep(self.location_update_period)
             except CancelledError:
                 return
             except:
                 logger.exception("location_updates")
-
-            await asyncio.sleep(self.location_update_period)
 
     async def spectrum_usage(self):
         controller = self.controller
@@ -322,12 +322,12 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                         await p.spectrum_usage(voxels)
                     except:
                         logger.exception("spectrum_usage")
+
+                await asyncio.sleep(self.spectrum_usage_update_period)
             except CancelledError:
                 return
             except:
                 logger.exception("spectrum_usage")
-
-            await asyncio.sleep(self.spectrum_usage_update_period)
 
     async def detailed_performance(self):
         controller = self.controller
@@ -363,17 +363,17 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                                                          total_score_achieved)
                         except:
                             logger.exception("detailed_performance")
+
+                t2 = time.time()
+                logger.info("Time to score: %f", t2 - t1)
+                delta = self.detailed_performance_update_period - (t2 - t1)
+
+                if delta > 0:
+                    await asyncio.sleep(delta)
             except CancelledError:
                 return
             except:
                 logger.exception("detailed_performance")
-
-            t2 = time.time()
-            logger.info("Time to score: %f", t2 - t1)
-            delta = self.detailed_performance_update_period - (t2 - t1)
-
-            if delta > 0:
-                await asyncio.sleep(delta)
 
     @handle('TellClient.inform')
     async def handle_inform(self, msg):

@@ -274,19 +274,29 @@ class Controller(TCPProtoServer):
                 self.scorer.updateScore()
 
             # Stop the scorer
-            self.scorer.stop()
+            try:
+                self.scorer.stop()
+            except:
+                logger.exception('Could not gracefully terminate scorer')
 
+            # Dump score data if we are the gateway
             if self.is_gateway:
-                # Dump scoring data one last time
-                self.scorer.dumpScores(final=True)
+                try:
+                    # Dump scoring data one last time
+                    self.scorer.dumpScores(final=True)
 
-                # Dump reported scores
-                self.saveReportedMandatePerformance()
+                    # Dump reported scores
+                    self.saveReportedMandatePerformance()
+                except:
+                    logger.exception('Could not dump scoring data')
 
             with await self.radio.lock:
                 self.done = True
                 self.state = remote.STOPPING
 
+                #
+                # Stop dumpcap processes
+                #
                 for p in self.dumpcap_procs:
                     try:
                         p.terminate()
@@ -294,6 +304,9 @@ class Controller(TCPProtoServer):
                     except:
                         logger.exception('Could not terminate PID %d', p.pid)
 
+                #
+                # Compress pcap files
+                #
                 if self.config.compress_interface_logs:
                     # Compressing large interface logs takes too long
                     xzprocs = []
@@ -312,9 +325,15 @@ class Controller(TCPProtoServer):
                         except:
                             logger.exception('Failed to wait on xz PID %d', p.pid)
 
+                #
+                # Remove all nodes
+                #
                 for node_id in list(self.nodes):
                     self.removeNode(node_id)
 
+                #
+                # Leave the collaboration network
+                #
                 if self.collab_agent:
                     logger.info('Leaving collaboration network...')
                     try:
@@ -323,33 +342,30 @@ class Controller(TCPProtoServer):
                         logger.exception('Could not gracefully terminate collaboration agent')
 
                 #
-                # End all tasks
+                # Cancel all remaining tasks
                 #
+                tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
+
                 logger.info('Cancelling tasks...')
+                [task.cancel() for task in tasks]
 
-                this_task = asyncio.Task.current_task()
-                all_tasks = asyncio.Task.all_tasks()
-                all_tasks.remove(this_task)
-
-                for task in all_tasks:
-                    task.cancel()
-
-                self.tdma_reschedule.set()
-
-                if False:
-                    for task in all_tasks:
-                        await task
+                logging.info('Waiting for outstanding tasks')
+                await asyncio.gather(*tasks)
 
                 #
                 # Stop the event loop
                 #
-                logger.info('Shutting down...')
+                logger.info('Terminating event loop...')
                 self.loop.stop()
                 self.state = remote.FINISHED
+                logging.info('Shutdown complete.')
 
     async def dummy(self):
         while True:
-            await asyncio.sleep(1)
+            try:
+                await asyncio.sleep(1)
+            except CancelledError:
+                return
 
     def dumpcap(self, iface):
         if iface in netifaces.interfaces():
@@ -664,12 +680,12 @@ class Controller(TCPProtoServer):
                     # Send flow statistics to the gateway
                     if not self.is_gateway and self.internal_client is not None:
                         await self.internal_client.sendStatus(sources, sinks)
+
+                await asyncio.sleep(config.status_update_period)
             except CancelledError:
                 return
             except:
                 logging.exception('Exception in updateAllFlowStatistics')
-
-            await asyncio.sleep(config.status_update_period)
 
     async def createSchedule(self):
         """Create a new TDMA schedule"""
@@ -679,27 +695,30 @@ class Controller(TCPProtoServer):
         radio = self.radio
 
         while not self.done:
-            await self.tdma_reschedule.wait()
-            self.tdma_reschedule.clear()
+            try:
+                await self.tdma_reschedule.wait()
+                self.tdma_reschedule.clear()
 
-            logging.debug('Creating schedule')
+                logging.debug('Creating schedule')
 
-            # Get all nodes we know about
-            self.schedule_nodes = list(radio.net)
-            self.schedule_nodes.sort()
+                # Get all nodes we know about
+                self.schedule_nodes = list(radio.net)
+                self.schedule_nodes.sort()
 
-            # Make sure we are first in the list so we always get the same
-            # channel
-            self.schedule_nodes.remove(radio.node_id)
-            self.schedule_nodes = [radio.node_id] + self.schedule_nodes
+                # Make sure we are first in the list so we always get the same
+                # channel
+                self.schedule_nodes.remove(radio.node_id)
+                self.schedule_nodes = [radio.node_id] + self.schedule_nodes
 
-            # Create the schedule
-            nchannels = len(radio.channels)
-            sched = dragon.radio.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
-            if not np.array_equal(sched, self.schedule):
-                await self.installMACSchedule(self.schedule_seq + 1, sched)
-                self.voxels = self.scheduleToVoxels(sched)
-                await self.distributeSchedule()
+                # Create the schedule
+                nchannels = len(radio.channels)
+                sched = dragon.radio.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
+                if not np.array_equal(sched, self.schedule):
+                    await self.installMACSchedule(self.schedule_seq + 1, sched)
+                    self.voxels = self.scheduleToVoxels(sched)
+                    await self.distributeSchedule()
+            except CancelledError:
+                return
 
     async def distributeSchedule(self):
         """Distribute the TDMA schedule to known nodes"""
@@ -731,10 +750,12 @@ class Controller(TCPProtoServer):
 
     async def distributeScheduleViaBroadcast(self):
         """Distribute the TDMA schedule via broadcast"""
-
         while not self.done:
-            await asyncio.sleep(10)
-            await self.broadcastSchedule()
+            try:
+                await asyncio.sleep(10)
+                await self.broadcastSchedule()
+            except CancelledError:
+                return
 
     async def broadcastSchedule(self):
         """Broadcast the TDMA schedule"""
@@ -780,14 +801,17 @@ class Controller(TCPProtoServer):
         config = self.config
         radio = self.radio
 
-        # Sleep for the discovery interval
-        await asyncio.sleep(config.neighbor_discovery_period)
+        try:
+            # Sleep for the discovery interval
+            await asyncio.sleep(config.neighbor_discovery_period)
 
-        # Start the schedule creation task
-        self.loop.create_task(self.createSchedule())
+            # Start the schedule creation task
+            self.loop.create_task(self.createSchedule())
 
-        # Trigger TDMA scheduler
-        self.tdma_reschedule.set()
+            # Trigger TDMA scheduler
+            self.tdma_reschedule.set()
+        except CancelledError:
+            return
 
     async def discoverNeighbors(self):
         loop = self.loop
@@ -797,37 +821,46 @@ class Controller(TCPProtoServer):
         # Perform neighbor discovery by periodically broadcasting HELLO messages
         #
         while not self.done:
-            if self.bootstrapped:
-                period = self.config.standard_hello_interval
-            else:
-                period = self.config.discovery_hello_interval
+            try:
+                if self.bootstrapped:
+                    period = self.config.standard_hello_interval
+                else:
+                    period = self.config.discovery_hello_interval
 
-            delta = random.uniform(0.0, period)
+                delta = random.uniform(0.0, period)
 
-            await asyncio.sleep(delta)
+                await asyncio.sleep(delta)
 
-            if not self.bootstrapped:
-                chanidx = random.randint(0, len(radio.channels)-1)
-                radio.setTXChannel(radio.channels[chanidx])
+                if not self.bootstrapped:
+                    chanidx = random.randint(0, len(radio.channels)-1)
+                    radio.setTXChannel(radio.channels[chanidx])
 
-            radio.controller.broadcastHello()
+                radio.controller.broadcastHello()
 
-            await asyncio.sleep(period - delta)
+                await asyncio.sleep(period - delta)
+            except CancelledError:
+                return
 
     async def addDiscoveredNeighbors(self):
         """Periodically add nodes discovered by the radio to our local list of nodes"""
         while not self.done:
-            await asyncio.sleep(1)
-            self.addRadioNodes()
+            try:
+                await asyncio.sleep(1)
+                self.addRadioNodes()
+            except CancelledError:
+                return
 
     async def synchronizeClock(self):
         radio = self.radio
         config = self.config
 
         while not self.done:
-            await asyncio.sleep(config.clock_sync_interval)
+            try:
+                await asyncio.sleep(config.clock_sync_interval)
 
-            radio.synchronizeClock()
+                radio.synchronizeClock()
+            except CancelledError:
+                return
 
     @handle('Request.radio_command')
     def radioCommand(self, req):
