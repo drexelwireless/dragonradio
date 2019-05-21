@@ -172,6 +172,7 @@ class Config(object):
         self.fdma = False
         self.tx_channel = None
         self.superslots = False
+        self.neighbor_discovery_period = 12
 
         # ARQ options
         self.arq = False
