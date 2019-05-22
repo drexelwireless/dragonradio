@@ -157,7 +157,7 @@ class Config(object):
         self.channelizer_enforce_ordering = False
 
         # Synthesizer parameters
-        self.synthesizer = 'timedomain'
+        self.synthesizer = 'freqdomain'
 
         # MAC parameters
         self.slot_size = .035
@@ -487,7 +487,7 @@ class Config(object):
 
         # Synthesizer parameters
         parser.add_argument('--synthesizer', action='store',
-                            choices=['timedomain'],
+                            choices=['freqdomain', 'timedomain'],
                             dest='synthesizer',
                             help='set synthesizer algorithm')
 
@@ -751,10 +751,16 @@ class Radio(object):
                                                          self.channelizer_channels,
                                                          config.num_demodulation_threads)
 
-        self.synthesizer = dragonradio.TDSynthesizer(self.phy,
-                                                     self.usrp.tx_rate,
-                                                     self.synthesizer_channels,
-                                                     config.num_modulation_threads)
+        if config.synthesizer == 'timedomain':
+            self.synthesizer = dragonradio.TDSynthesizer(self.phy,
+                                                         self.usrp.tx_rate,
+                                                         self.synthesizer_channels,
+                                                         config.num_modulation_threads)
+        else:
+            self.synthesizer = dragonradio.FDSynthesizer(self.phy,
+                                                         self.usrp.tx_rate,
+                                                         self.synthesizer_channels,
+                                                         config.num_modulation_threads)
 
         #
         # Configure the controller

@@ -84,6 +84,7 @@ SOURCES := \
     liquid/PHY.cc \
     liquid/Resample.cc \
     phy/FDChannelizer.cc \
+    phy/FDSynthesizer.cc \
     phy/LiquidPHY.cc \
     phy/OverlapTDChannelizer.cc \
     phy/RadioPacketQueue.cc \
