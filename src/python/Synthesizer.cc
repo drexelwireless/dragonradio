@@ -36,8 +36,7 @@ void exportSynthesizers(py::module &m)
 
     // Export class TDSynthesizer to Python
     py::class_<TDSynthesizer, Synthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
-        .def(py::init<std::shared_ptr<Net>,
-                      std::shared_ptr<PHY>,
+        .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,
                       unsigned int>())

@@ -24,8 +24,7 @@ class OverlapTDChannelizer : public Channelizer
 public:
     using C = std::complex<float>;
 
-    OverlapTDChannelizer(std::shared_ptr<Net> net,
-                         std::shared_ptr<PHY> phy,
+    OverlapTDChannelizer(std::shared_ptr<PHY> phy,
                          double rx_rate,
                          const Channels &channels,
                          unsigned int nthreads);
@@ -139,9 +138,6 @@ private:
         /** @brief Our demodulator */
         std::shared_ptr<PHY::Demodulator> demod_;
     };
-
-    /** @brief Destination for packets. */
-    std::shared_ptr<Net> net_;
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;

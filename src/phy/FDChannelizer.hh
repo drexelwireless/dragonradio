@@ -35,8 +35,7 @@ public:
     /** @brief Number of new samples consumed per input block */
     static constexpr unsigned L = N - (P-1);
 
-    FDChannelizer(std::shared_ptr<Net> net,
-                  std::shared_ptr<PHY> phy,
+    FDChannelizer(std::shared_ptr<PHY> phy,
                   double rx_rate,
                   const Channels &channels,
                   unsigned int nthreads);
@@ -112,9 +111,6 @@ private:
         /** @brief Channel IQ buffer sequence number */
         unsigned seq_;
     };
-
-    /** @brief Destination for packets. */
-    std::shared_ptr<Net> net_;
 
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;

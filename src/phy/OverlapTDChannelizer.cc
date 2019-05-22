@@ -2,17 +2,14 @@
 
 #include "phy/PHY.hh"
 #include "phy/OverlapTDChannelizer.hh"
-#include "net/Net.hh"
 
 using namespace std::placeholders;
 
-OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<Net> net,
-                                           std::shared_ptr<PHY> phy,
+OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<PHY> phy,
                                            double rx_rate,
                                            const Channels &channels,
                                            unsigned int nthreads)
   : Channelizer(phy, rx_rate, channels)
-  , net_(net)
   , slot_size_(0.0)
   , prev_demod_(0.0)
   , prev_demod_samps_(0)

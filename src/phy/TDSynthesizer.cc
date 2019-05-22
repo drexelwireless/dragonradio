@@ -2,16 +2,13 @@
 #include "phy/PHY.hh"
 #include "phy/TDSynthesizer.hh"
 #include "phy/TXParams.hh"
-#include "net/Net.hh"
 #include "stats/Estimator.hh"
 
-TDSynthesizer::TDSynthesizer(std::shared_ptr<Net> net,
-                             std::shared_ptr<PHY> phy,
+TDSynthesizer::TDSynthesizer(std::shared_ptr<PHY> phy,
                              double tx_rate,
                              const Channels &channels,
                              size_t nthreads)
   : Synthesizer(phy, tx_rate, channels)
-  , net_(net)
   , done_(false)
   , mod_reconfigure_(nthreads)
 {

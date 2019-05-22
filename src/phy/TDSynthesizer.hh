@@ -15,8 +15,7 @@
 class TDSynthesizer : public Synthesizer
 {
 public:
-    TDSynthesizer(std::shared_ptr<Net> net,
-                  std::shared_ptr<PHY> phy,
+    TDSynthesizer(std::shared_ptr<PHY> phy,
                   double tx_rate,
                   const Channels &channels,
                   size_t nthreads);
@@ -68,9 +67,6 @@ private:
         /** @brief Our demodulator */
         std::shared_ptr<PHY::Modulator> mod_;
     };
-
-    /** @brief Our network. */
-    std::shared_ptr<Net> net_;
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;

@@ -29,8 +29,7 @@ void exportChannelizers(py::module &m)
 
     // Export class FDChannelizer to Python
     py::class_<FDChannelizer, Channelizer, std::shared_ptr<FDChannelizer>>(m, "FDChannelizer")
-        .def(py::init<std::shared_ptr<Net>,
-                      std::shared_ptr<PHY>,
+        .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,
                       unsigned int>())
@@ -50,8 +49,7 @@ void exportChannelizers(py::module &m)
 
     // Export class TDChannelizer to Python
     py::class_<TDChannelizer, Channelizer, std::shared_ptr<TDChannelizer>>(m, "TDChannelizer")
-        .def(py::init<std::shared_ptr<Net>,
-                      std::shared_ptr<PHY>,
+        .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,
                       unsigned int>())
@@ -59,8 +57,7 @@ void exportChannelizers(py::module &m)
 
     // Export class OverlapTDChannelizer to Python
     py::class_<OverlapTDChannelizer, Channelizer, std::shared_ptr<OverlapTDChannelizer>>(m, "OverlapTDChannelizer")
-        .def(py::init<std::shared_ptr<Net>,
-                      std::shared_ptr<PHY>,
+        .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,
                       unsigned int>())

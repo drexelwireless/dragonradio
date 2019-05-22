@@ -3,17 +3,14 @@
 #include "Logger.hh"
 #include "phy/PHY.hh"
 #include "phy/TDChannelizer.hh"
-#include "net/Net.hh"
 
 using namespace std::placeholders;
 
-TDChannelizer::TDChannelizer(std::shared_ptr<Net> net,
-                             std::shared_ptr<PHY> phy,
+TDChannelizer::TDChannelizer(std::shared_ptr<PHY> phy,
                              double rx_rate,
                              const Channels &channels,
                              unsigned int nthreads)
   : Channelizer(phy, rx_rate, channels)
-  , net_(net)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)

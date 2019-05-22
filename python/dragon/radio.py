@@ -749,28 +749,24 @@ class Radio(object):
         # Configure the channelization
         #
         if config.channelizer == 'overlap':
-            self.channelizer = dragonradio.OverlapTDChannelizer(self.net,
-                                                                self.phy,
+            self.channelizer = dragonradio.OverlapTDChannelizer(self.phy,
                                                                 self.usrp.rx_rate,
                                                                 self.channelizer_channels,
                                                                 config.num_demodulation_threads)
 
             self.channelizer.enforce_ordering = config.channelizer_enforce_ordering
         elif config.channelizer == 'timedomain':
-            self.channelizer = dragonradio.TDChannelizer(self.net,
-                                                         self.phy,
+            self.channelizer = dragonradio.TDChannelizer(self.phy,
                                                          self.usrp.rx_rate,
                                                          self.channelizer_channels,
                                                          config.num_demodulation_threads)
         else:
-            self.channelizer = dragonradio.FDChannelizer(self.net,
-                                                         self.phy,
+            self.channelizer = dragonradio.FDChannelizer(self.phy,
                                                          self.usrp.rx_rate,
                                                          self.channelizer_channels,
                                                          config.num_demodulation_threads)
 
-        self.synthesizer = dragonradio.TDSynthesizer(self.net,
-                                                     self.phy,
+        self.synthesizer = dragonradio.TDSynthesizer(self.phy,
                                                      self.usrp.tx_rate,
                                                      self.synthesizer_channels,
                                                      config.num_modulation_threads)

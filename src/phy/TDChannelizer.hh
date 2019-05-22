@@ -18,8 +18,7 @@
 class TDChannelizer : public Channelizer
 {
 public:
-    TDChannelizer(std::shared_ptr<Net> net,
-                  std::shared_ptr<PHY> phy,
+    TDChannelizer(std::shared_ptr<PHY> phy,
                   double rx_rate,
                   const Channels &channels,
                   unsigned int nthreads);
@@ -86,9 +85,6 @@ private:
     };
 
     static const unsigned LOGN = 4;
-
-    /** @brief Destination for packets. */
-    std::shared_ptr<Net> net_;
 
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
