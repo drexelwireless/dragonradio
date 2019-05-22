@@ -129,12 +129,6 @@ class Controller(TCPProtoServer):
         self.scorer.scenario_start_time = t
         self.radio.flowperf.start = t
 
-    @property
-    def mandated_flows(self):
-        """Return all mandated flows"""
-        with self.mandated_outcomes_lock:
-            return list(self.mandated_outcomes.keys())
-
     def timeToMP(self, t):
         """Convert time (in seconds since the epoch) to a measurement period"""
         return int((t - self.scenario_start_time) / self.config.measurement_period)
