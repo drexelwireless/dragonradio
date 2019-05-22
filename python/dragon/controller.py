@@ -57,7 +57,7 @@ class Controller(TCPProtoServer):
         self.scenario_started = False
         """Have we received mandates?"""
 
-        self.scenario_start_time_ = None
+        self.__scenario_start_time = None
         """RF scenario start time, in seconds since the epoch"""
 
         self.done = False
@@ -120,12 +120,12 @@ class Controller(TCPProtoServer):
     @property
     def scenario_start_time(self):
         """RF scenario start time, in seconds since the epoch"""
-        return self.scenario_start_time_
+        return self.__scenario_start_time
 
     @scenario_start_time.setter
     def scenario_start_time(self, t):
         logging.info('RF scenario start time set: %f', t)
-        self.scenario_start_time_ = t
+        self.__scenario_start_time = t
         self.scorer.scenario_start_time = t
         self.radio.flowperf.start = t
 
