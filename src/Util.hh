@@ -10,6 +10,9 @@
  */
 int sys(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
+/** @brief Make current thread high-priority. */
+void makeThisThreadHighPriority(void);
+
 /** @brief Sleep for the specified number of seconds. sleep, usleep, and
  * nanosleep were already taken, so this function is named "doze."
  * @param sec The number of seconds to sleep.

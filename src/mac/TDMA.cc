@@ -1,5 +1,3 @@
-#include <uhd/utils/thread_priority.hpp>
-
 #include "Clock.hh"
 #include "USRP.hh"
 #include "RadioConfig.hh"
@@ -77,7 +75,7 @@ void TDMA::txWorker(void)
     size_t            following_slotidx;  // Slot index of following slot
     size_t            noverfill = 0;      // Number of overfilled samples;
 
-    uhd::set_thread_priority_safe();
+    makeThisThreadHighPriority();
 
     while (!done_) {
         t_prev_slot = Clock::time_point { 0.0 };

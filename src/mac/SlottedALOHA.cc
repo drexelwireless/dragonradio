@@ -1,5 +1,3 @@
-#include <uhd/utils/thread_priority.hpp>
-
 #include "Clock.hh"
 #include "USRP.hh"
 #include "Util.hh"
@@ -69,7 +67,7 @@ void SlottedALOHA::txWorker(void)
     Clock::time_point t_following_slot; // Time at which the following slot starts
     double            t_slot_pos;       // Offset into the current slot (sec)
 
-    uhd::set_thread_priority_safe();
+    makeThisThreadHighPriority();
 
     while (!done_) {
         // Figure out when our next send slot is.

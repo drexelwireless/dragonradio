@@ -1,5 +1,3 @@
-#include <uhd/utils/thread_priority.hpp>
-
 #include "Logger.hh"
 #include "SlottedMAC.hh"
 #include "Util.hh"
@@ -70,7 +68,7 @@ void SlottedMAC::rxWorker(void)
     double            t_slot_pos;   // Offset into the current slot (sec)
     unsigned          seq = 0;      // Current IQ buffer sequence number
 
-    uhd::set_thread_priority_safe();
+    makeThisThreadHighPriority();
 
     while (!done_) {
         // Wait for slot size to be known

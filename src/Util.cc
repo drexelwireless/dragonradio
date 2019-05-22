@@ -6,6 +6,8 @@
 #include <signal.h>
 #include <time.h>
 
+#include <uhd/utils/thread_priority.hpp>
+
 #include "Logger.hh"
 #include "RadioConfig.hh"
 #include "Util.hh"
@@ -25,6 +27,11 @@ int sys(const char *fmt, ...)
     logEvent("SYSTEM: %s (%d)", cmd, res);
 
     return res;
+}
+
+void makeThisThreadHighPriority(void)
+{
+    uhd::set_thread_priority_safe();
 }
 
 int doze(double sec)
