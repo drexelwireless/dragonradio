@@ -53,10 +53,16 @@ class Scorer:
         self.stats_max_mp = {}
         """Maximum MP for which stats have been received from each SRN"""
 
-    @property
-    def mp(self):
+    def timeToMP(self, t, closest=False):
+        """Convert time (in seconds since the epoch) to a measurement period"""
+        if closest:
+            return int(round(t - self.scenario_start_time) / self.config.measurement_period)
+        else:
+            return int((t - self.scenario_start_time) / self.config.measurement_period)
+
+    def currentMP(self):
         """Current measurement period"""
-        return int((time.time() - self.scenario_start_time) / self.config.measurement_period)
+        return self.timeToMP(time.time())
 
     def start(self):
         """Start scorer.
@@ -74,7 +80,7 @@ class Scorer:
     def stop(self):
         """Finish all scoring tasks"""
         # Get current mp
-        mp = self.mp
+        mp = self.currentMP()
 
         # Finish all scoring tasks
         logger.info('Waiting for scoring tasks to finish (%d tasks remaining)...', self.q.qsize())
@@ -140,7 +146,7 @@ class Scorer:
             # Calculate current stage
             #
             self.stage += 1
-            self.stage_timestamp = int(round(timestamp - self.scenario_start_time))
+            self.stage_timestamp = self.timeToMP(timestamp, closest=True)
             self.stage_timestamps[self.stage] = self.stage_timestamp
 
             logger.info('Scenario stage timestamp = %d', self.stage_timestamp)
@@ -262,7 +268,7 @@ class Scorer:
             node_id,
             flow.flow_uid,
             timestamp,
-            self.mp,
+            self.currentMP(),
             flow.first_mp,
             max_mp,
             flow.npackets,

@@ -118,11 +118,6 @@ class Controller(TCPProtoServer):
         return radio.net[radio.node_id].is_gateway
 
     @property
-    def mp(self):
-        """Current measurement period"""
-        return int((time.time() - self.scenario_start_time) / self.config.measurement_period)
-
-    @property
     def scenario_start_time(self):
         """RF scenario start time, in seconds since the epoch"""
         return self.scenario_start_time_
@@ -139,6 +134,10 @@ class Controller(TCPProtoServer):
         """Return all mandated flows"""
         with self.mandated_outcomes_lock:
             return list(self.mandated_outcomes.keys())
+
+    def timeToMP(self, t):
+        """Convert time (in seconds since the epoch) to a measurement period"""
+        return int((t - self.scenario_start_time) / self.config.measurement_period)
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -562,7 +561,7 @@ class Controller(TCPProtoServer):
         else:
             min_known_mp = min(self.scorer.stats_max_mp.values())
 
-        min_mp = int((time.time() - config.max_performance_age - self.scenario_start_time) / config.measurement_period)
+        min_mp = self.timeToMP(time.time() - config.max_performance_age)
 
         mp = max(min_known_mp, min_mp)
         timestamp = self.scenario_start_time + mp*config.measurement_period
