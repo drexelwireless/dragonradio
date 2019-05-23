@@ -138,6 +138,12 @@ public:
                !complete.load(std::memory_order_acquire))
             ;
     }
+
+    /** @brief Zero all data in the buffer */
+    void zero(void)
+    {
+        std::fill(data(), data() + size(), 0);
+    }
 };
 
 #endif /* IQBUFFER_H_ */
