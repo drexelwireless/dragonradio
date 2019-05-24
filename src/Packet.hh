@@ -116,7 +116,7 @@ struct Packet : public buffer<unsigned char>
     };
 
     Packet() : buffer(), flags(0), seq(Seq::max()), internal_flags(0) {};
-    Packet(size_t n) : buffer(n), flags(0), seq(Seq::max()), internal_flags(0) {};
+    explicit Packet(size_t n) : buffer(n), flags(0), seq(Seq::max()), internal_flags(0) {};
     Packet(unsigned char* data, size_t n) : buffer(data, n), flags(0), seq(Seq::max()), internal_flags(0) {}
 
     /** @brief Current hop */
@@ -393,7 +393,8 @@ struct Packet : public buffer<unsigned char>
 /** @brief A packet received from the network. */
 struct NetPacket : public Packet
 {
-    NetPacket(size_t n) : Packet(n), tx_params(nullptr) {};
+    NetPacket() : tx_params(nullptr), g(1.0) {};
+    explicit NetPacket(size_t n) : Packet(n), tx_params(nullptr), g(1.0) {};
 
     /** @brief Packet delivery deadline */
     std::optional<MonoClock::time_point> deadline;
