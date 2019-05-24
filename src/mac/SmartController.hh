@@ -103,6 +103,7 @@ struct SendWindow {
     SendWindow(Node &n, SmartController &controller, Seq::uint_type maxwin)
       : node(n)
       , controller(controller)
+      , seq(0)
       , unack(0)
       , max(0)
       , new_window(true)
@@ -119,6 +120,9 @@ struct SendWindow {
 
     /** @brief Our controller. */
     SmartController &controller;
+
+    /** @brief Current sequence number for this destination */
+    Seq seq;
 
     /** @brief First un-ACKed sequence number. */
     std::atomic<Seq> unack;

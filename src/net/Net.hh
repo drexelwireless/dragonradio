@@ -56,9 +56,6 @@ struct Node {
     /** @brief Flag indicating whether or not this node can transmit */
     bool can_transmit;
 
-    /** @brief Current packet sequence number for this destination */
-    Seq seq;
-
     /** @brief Multiplicative TX gain as measured against 0 dBFS. */
     float g;
 

@@ -794,7 +794,7 @@ void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack, Seq max)
     sendw.win = sendw.maxwin;
 
     // Indicate that this node's send window is now open
-    if (sendw.node.seq < unack + sendw.win)
+    if (sendw.seq < unack + sendw.win)
         netq_->setSendWindowStatus(sendw.node.id, true);
 
     // Update unack
@@ -1245,7 +1245,7 @@ void SmartController::moveDownMCS(SendWindow &sendw)
         fprintf(stderr, "Moving down modulation scheme\n");
 
     --sendw.mcsidx;
-    sendw.per_end = node.seq;
+    sendw.per_end = sendw.seq;
 
     logEvent("AMC: Moving down modulation scheme: node=%u; short per=%f; swin=%lu; lwin=%lu",
         node.id,
@@ -1277,7 +1277,7 @@ void SmartController::moveUpMCS(SendWindow &sendw)
         fprintf(stderr, "Moving up modulation scheme\n");
 
     ++sendw.mcsidx;
-    sendw.per_end = node.seq;
+    sendw.per_end = sendw.seq;
 
     logEvent("AMC: Moving up modulation scheme: node=%u; long per=%f; swin=%lu; lwin=%lu",
         node.id,
@@ -1340,7 +1340,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
             // If we can't fit this packet in our window, move the window along
             // by dropping the oldest packet.
-            if (   nexthop.seq >= unack + sendw.win
+            if (   sendw.seq >= unack + sendw.win
                 && sendw[unack].mayDrop(max_retransmissions_)) {
                 logEvent("ARQ: MOVING WINDOW ALONG: node=%u",
                     (unsigned) pkt->nexthop);
@@ -1348,7 +1348,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
                 unack = sendw.unack.load(std::memory_order_acquire);
             }
 
-            pkt->seq = nexthop.seq++;
+            pkt->seq = sendw.seq++;
             pkt->setInternalFlag(kHasSeq);
 
             // If this is the first packet we are sending to the destination,
@@ -1361,7 +1361,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // Close the send window if it's full and we're not supposed to
             // "move along." However, if the send window is only 1 packet,
             // ALWAYS close it since we're waiting for the ACK to our SYN!
-            if (   nexthop.seq >= unack + sendw.win
+            if (   sendw.seq >= unack + sendw.win
                 && ((sendw[unack] && !sendw[unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
                 netq_->setSendWindowStatus(nexthop.id, false);
 
@@ -1425,7 +1425,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
 
         sendw.mcsidx = mcsidx_init_;
         sendw.mcsidx_prob.resize(tx_params_.size(), 1.0);
-        sendw.per_end = dest.seq;
+        sendw.per_end = sendw.seq;
 
         while (getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]) == 0)
             ++sendw.mcsidx;

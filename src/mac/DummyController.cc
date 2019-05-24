@@ -12,7 +12,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket>& pkt)
         if (!pkt->isInternalFlagSet(kHasSeq)) {
             Node &nexthop = (*net_)[pkt->nexthop];
 
-            pkt->seq = nexthop.seq++;
+            pkt->seq = 0;
             pkt->tx_params = &tx_params_[0];
             pkt->g = tx_params_[0].g_0dBFS.getValue() * nexthop.g;
 
