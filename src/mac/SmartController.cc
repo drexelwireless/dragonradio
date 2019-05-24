@@ -220,9 +220,9 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (!pkt->isFlagSet(kBroadcast) && pkt->nexthop != net_->getMyNodeId())
         return;
 
-    // Add the sending node if we haven't seen it before
-    if (!net_->contains(pkt->curhop))
-        net_->addNode(pkt->curhop);
+    // Get a reference to the sending node. This will add a new node to the
+    // network if it doesn't already exist.
+    Node &node = (*net_)[pkt->curhop];
 
     // Get node ID of source
     NodeId prevhop = pkt->curhop;
@@ -246,9 +246,6 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
         return;
     }
-
-    // Get a reference to the sending node
-    Node &node = (*net_)[pkt->curhop];
 
     // Process control info
     if (pkt->isFlagSet(kControl)) {
@@ -650,22 +647,21 @@ void SmartController::broadcastHello(void)
     // Echo most recently heard timestamps if we are the time master
     std::optional<NodeId> time_master = net_->getTimeMaster();
 
-    if (time_master && *time_master == net_->getMyNodeId()) {
-        for (auto it = net_->begin(); it != net_->end(); ++it) {
-            auto last_timestamp = it->second.timestamps.rbegin();
+    if (time_master && *time_master == net_->getMyNodeId())
+        net_->foreach([&] (Node &node) {
+            auto last_timestamp = node.timestamps.rbegin();
 
-            if (it->first != net_->getMyNodeId() && last_timestamp != it->second.timestamps.rend()) {
+            if (node.id != net_->getMyNodeId() && last_timestamp != node.timestamps.rend()) {
                 logEvent("TIMESYNC: Echoing timestamp: node=%u; t_sent=%f; t_recv=%f",
-                    (unsigned) it->first,
+                    (unsigned) node.id,
                     (double) last_timestamp->first.get_real_secs(),
                     (double) last_timestamp->second.get_real_secs());
 
-                pkt->appendTimestampEcho(it->first,
+                pkt->appendTimestampEcho(node.id,
                                          last_timestamp->first,
                                          last_timestamp->second);
             }
-        }
-    }
+        });
 
     // Send a timestamped HELLO
     if (netq_) {

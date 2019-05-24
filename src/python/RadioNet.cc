@@ -69,43 +69,15 @@ void exportRadioNet(py::module &m)
     py::class_<Net, std::shared_ptr<Net>>(m, "Net")
         .def(py::init<std::shared_ptr<TunTap>,
                       NodeId>())
-        .def("__getitem__",
-            [](Net &net, NodeId key) -> Node&
-            {
-                try {
-                    return net[key];
-                } catch (const std::out_of_range&) {
-                    throw py::key_error("key '" + std::to_string(key) + "' does not exist");
-                }
-            },
-            py::return_value_policy::reference_internal)
-        .def("__len__",
-            &Net::size)
-        .def("__iter__",
-            [](Net &net)
-            {
-                return py::make_key_iterator(net.begin(), net.end());
-            },
-            py::keep_alive<0, 1>())
-        .def("keys",
-            [](Net &net)
-            {
-                return py::make_key_iterator(net.begin(), net.end());
-            },
-            py::keep_alive<0, 1>())
-        .def("items",
-            [](Net &net)
-            {
-                return py::make_iterator(net.begin(), net.end());
-            },
-            py::keep_alive<0, 1>(),
-            py::return_value_policy::reference_internal)
         .def_property_readonly("my_node_id",
             &Net::getMyNodeId)
+        .def_property_readonly("nodes",
+            &Net::getNodes,
+            "Nodes in the network")
         .def_property_readonly("time_master",
             &Net::getTimeMaster)
         .def("addNode",
-            &Net::addNode,
+            [](Net &net, NodeId id) { return net[id]; },
             py::return_value_policy::reference_internal)
         ;
 }

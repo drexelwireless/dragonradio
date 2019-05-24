@@ -3,6 +3,7 @@
 
 #include <math.h>
 
+#include <functional>
 #include <map>
 #include <optional>
 #include <queue>
@@ -92,7 +93,7 @@ struct Node {
 class Net
 {
 public:
-    using map_type = std::map<NodeId, Node>;
+    using NodeMap = std::map<NodeId, std::shared_ptr<Node>>;
 
     Net(std::shared_ptr<TunTap> tuntap,
         NodeId nodeId);
@@ -112,32 +113,21 @@ public:
         return my_node_id_;
     }
 
-    /** @brief Get the number of nodes in the network */
-    map_type::size_type size(void)
-    {
-        std::lock_guard<std::mutex> lock(nodes_mutex_);
-
-        return nodes_.size();
-    }
-
     /** @brief Return true if node is in the network, false otherwise */
     bool contains(NodeId nodeId)
     {
         std::lock_guard<std::mutex> lock(nodes_mutex_);
 
-        return nodes_.count(nodeId) == 1;
+        return nodes_.find(nodeId) != nodes_.end();
     }
 
-    /** @brief Return an iterator to the beginning of nodes. */
-    map_type::iterator begin(void)
+    /** @brief Get nodes */
+    /** @return A copy of the current node map. */
+    NodeMap getNodes(void)
     {
-        return nodes_.begin();
-    }
+        std::lock_guard<std::mutex> lock(nodes_mutex_);
 
-    /** @brief Return an iterator to the end of nodes. */
-    map_type::iterator end(void)
-    {
-        return nodes_.end();
+        return nodes_;
     }
 
     /** @brief Get the entry for this node */
@@ -145,17 +135,39 @@ public:
     {
         std::lock_guard<std::mutex> lock(nodes_mutex_);
 
-        return nodes_.at(getMyNodeId());
+        return *nodes_.at(getMyNodeId());
+    }
+
+    /** @brief Get the entry for a particular node in the network */
+    Node& operator[](NodeId nodeId)
+    {
+        std::lock_guard<std::mutex> lock(nodes_mutex_);
+        auto                        entry = nodes_.try_emplace(nodeId, nullptr);
+
+        // If the entry is new, construct the shared_ptr. We pass nullptr above
+        // to avoid creating a shared_ptr even if the entry already exists.
+        if (entry.second) {
+            entry.first->second = std::make_shared<Node>(nodeId);
+
+            // Add ARP entry
+            if (nodeId != my_node_id_)
+                tuntap_->addARPEntry(nodeId);
+        }
+
+        return *(entry.first->second);
+    }
+
+    /** @brief Apply a function to each node */
+    void foreach(std::function<void(Node&)> f)
+    {
+        std::lock_guard<std::mutex> lock(nodes_mutex_);
+
+        for (auto it = nodes_.begin(); it != nodes_.end(); ++it)
+            f(*(it->second));
     }
 
     /** @brief Get the node that is the time master */
     std::optional<NodeId> getTimeMaster(void);
-
-    /** @brief Get the entry for a particular node in the network */
-    Node& operator[](NodeId nodeid);
-
-    /** @brief Add a node to the network */
-    Node &addNode(NodeId nodeId);
 
 private:
     /** @brief Our tun/tap interface */
@@ -164,14 +176,11 @@ private:
     /** @brief This node's ID */
     NodeId my_node_id_;
 
-    /** @brief The nodes in the network */
-    std::map<NodeId, Node> nodes_;
-
     /** @brief Mutex protecting nodes in the network */
     std::mutex nodes_mutex_;
 
-    /** @brief Add a node to the network assumign the Net mutex is held */
-    Node &addNode_(NodeId nodeId);
+    /** @brief The nodes in the network */
+    NodeMap nodes_;
 };
 
 #endif /* NET_HH_ */

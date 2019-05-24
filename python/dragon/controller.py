@@ -122,7 +122,7 @@ class Controller(TCPProtoServer):
     def is_gateway(self):
         radio = self.radio
 
-        return radio.net[radio.node_id].is_gateway
+        return radio.net.nodes[radio.node_id].is_gateway
 
     @property
     def scenario_start_time(self):
@@ -185,7 +185,7 @@ class Controller(TCPProtoServer):
         self.collab_agent = None
 
         if self.config.collab_iface in netifaces.interfaces() and self.config.collab_server_ip != None:
-            radio.net[radio.node_id].is_gateway = True
+            radio.net.nodes[radio.node_id].is_gateway = True
             collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
 
             try:
@@ -201,7 +201,7 @@ class Controller(TCPProtoServer):
 
         # We might also be forced to be the gateway...
         if self.config.force_gateway:
-            radio.net[radio.node_id].is_gateway = True
+            radio.net.nodes[radio.node_id].is_gateway = True
 
         # Start the internal protocol server
         self.internal_server = InternalProtoServer(self,
@@ -391,7 +391,7 @@ class Controller(TCPProtoServer):
 
             # If new node is a gateway, connect to it and start sending status
             # updates
-            if self.radio.net[node_id].is_gateway:
+            if self.radio.net.nodes[node_id].is_gateway:
                 self.internal_client = InternalProtoClient(self,
                                                            loop=self.loop,
                                                            server_host=internalNodeIP(node_id))
@@ -443,7 +443,7 @@ class Controller(TCPProtoServer):
         radio = self.radio
 
         # Get a sorted list of discovered nodes
-        nodes = list(radio.net.keys())
+        nodes = list(radio.net.nodes)
 
         # Add discovered nodes
         for n in nodes:

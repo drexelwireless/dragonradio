@@ -1209,7 +1209,7 @@ class Radio(object):
         if 0 in nodes_with_slot:
             nodes_with_slot.remove(0)
 
-        for (node_id, node) in self.net.items():
+        for (node_id, node) in self.net.nodes.items():
             node.can_transmit = node_id in nodes_with_slot
 
         # If we are upsampling on TX, go ahead and install the schedule
@@ -1238,7 +1238,7 @@ class Radio(object):
         """
         config = self.config
 
-        nodes = list(self.net)
+        nodes = list(self.net.nodes)
         nodes.sort()
 
         nchannels = len(self.channels)
@@ -1268,7 +1268,7 @@ class Radio(object):
         if len(echoed) == 0:
             return
 
-        master = [((us-t0).secs, (them-t0).secs) for (them, us) in self.net[self.net.time_master].timestamps]
+        master = [((us-t0).secs, (them-t0).secs) for (them, us) in self.net.nodes[self.net.time_master].timestamps]
         logging.debug("TIMESYNC: time master's timestamps: %s", master)
         if len(master) == 0:
             return
