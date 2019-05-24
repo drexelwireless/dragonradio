@@ -125,11 +125,11 @@ struct SendWindow {
     Seq seq;
 
     /** @brief First un-ACKed sequence number. */
-    std::atomic<Seq> unack;
+    Seq unack;
 
     /** @brief Maximum sequence number we have sent. */
     /** INVARIANT: max < unack + win */
-    std::atomic<Seq> max;
+    Seq max;
 
     /** @brief Is this a new window? */
     bool new_window;
@@ -646,9 +646,8 @@ protected:
 
     /** @brief Advance the send window.
      * @param sendw The send window to advance
-     * @param unack The new value of the send window's unack parameter
      */
-    void advanceSendWindow(SendWindow &sendw, Seq unack, Seq max);
+    void advanceSendWindow(SendWindow &sendw);
 
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow::Entry &entry);

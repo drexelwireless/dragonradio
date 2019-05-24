@@ -163,22 +163,20 @@ get_packet:
         SendWindow                      &sendw = getSendWindow(nexthop);
         Node                            &dest = (*net_)[nexthop];
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-        Seq                             unack = sendw.unack.load(std::memory_order_acquire);
-        Seq                             max = sendw.max.load(std::memory_order_acquire);
 
         // It is possible that the send window shifts after we pull a packet
         // but before we get to this point. For example, an ACK could be
         // received in between the time we release the lock on the receive
         // window and this point. If that happens, we get another packet
-        if (pkt->seq < unack)
+        if (pkt->seq < sendw.unack)
             goto get_packet;
 
         // This checks that the sequence number of the packet we are sending is
         // in our send window.
-        if (pkt->seq < unack || pkt->seq >= unack + sendw.win) {
+        if (pkt->seq < sendw.unack || pkt->seq >= sendw.unack + sendw.win) {
             logEvent("ARQ: INVARIANT VIOLATED: asked to send packet outside window: seq=%u; unack=%u; win=%u",
                 (unsigned) pkt->seq,
-                (unsigned) unack,
+                (unsigned) sendw.unack,
                 (unsigned) sendw.win);
             goto get_packet;
         }
@@ -196,8 +194,8 @@ get_packet:
             sendw[pkt->seq].nretrans = 0;
 
         // Update send window metrics
-        if (pkt->seq > max)
-            sendw.max.store(pkt->seq, std::memory_order_release);
+        if (pkt->seq > sendw.max)
+            sendw.max = pkt->seq;
 
         // Apply TX params. If the destination can transmit, proceed as usual.
         // Otherwise, use the default MCS.
@@ -283,8 +281,6 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     if (sendwptr) {
         SendWindow                      &sendw = *sendwptr;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-        Seq                             unack = sendw.unack.load(std::memory_order_acquire);
-        Seq                             max = sendw.max.load(std::memory_order_acquire);
         Clock::time_point               tfeedback = Clock::now() - selective_ack_feedback_delay_;
         std::optional<Seq>              nak;
 
@@ -299,10 +295,10 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
         // Handle ACK
         if (pkt->isFlagSet(kACK)) {
-            if (ehdr.ack > unack) {
+            if (ehdr.ack > sendw.unack) {
                 dprintf("ARQ: ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
-                    (unsigned) unack,
+                    (unsigned) sendw.unack,
                     (unsigned) ehdr.ack);
 
                 // Don't assert this because the sender could crash us with bad
@@ -312,12 +308,12 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // Move the send window along. It's possible the sender sends an
                 // ACK for something we haven't sent, so we must guard against
                 // that here as well
-                for (; unack < ehdr.ack && unack <= max; ++unack) {
+                for (; sendw.unack < ehdr.ack && sendw.unack <= sendw.max; ++sendw.unack) {
                     // Handle the ACK
-                    handleACK(sendw, unack);
+                    handleACK(sendw, sendw.unack);
 
                     // Update our packet error rate to reflect successful TX
-                    if (unack >= sendw.per_end)
+                    if (sendw.unack >= sendw.per_end)
                         txSuccess(sendw.node);
                 }
 
@@ -327,8 +323,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 // retranmission, so we must be careful not to "rewind" the PER
                 // window here by blindly setting sendw.per_end = unack without
                 // the test.
-                if (unack > sendw.per_end)
-                    sendw.per_end = unack;
+                if (sendw.unack > sendw.per_end)
+                    sendw.per_end = sendw.unack;
             }
 
             // Handle selective ACK. We do this *after* handling the ACK,
@@ -360,7 +356,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             // after the packet that the sender just ACK'ed have timed out and
             // been dropped, so advanceSendWindow must look for dropped packets
             // and attempt to push the send window up towards max.
-            advanceSendWindow(sendw, unack, max);
+            advanceSendWindow(sendw);
         }
     }
 
@@ -777,28 +773,22 @@ void SmartController::drop(SendWindow::Entry &entry)
     entry.reset();
 
     // Advance send window if we can
-    Seq unack = sendw.unack.load(std::memory_order_acquire);
-    Seq max = sendw.max.load(std::memory_order_acquire);
-
-    advanceSendWindow(sendw, unack, max);
+    advanceSendWindow(sendw);
 }
 
-void SmartController::advanceSendWindow(SendWindow &sendw, Seq unack, Seq max)
+void SmartController::advanceSendWindow(SendWindow &sendw)
 {
     // Advance send window if we can
-    while (unack <= max && !sendw[unack])
-        ++unack;
+    while (sendw.unack <= sendw.max && !sendw[sendw.unack])
+        ++sendw.unack;
 
     // Increase the send window. We really only need to do this after the
     // initial ACK, but it doesn't hurt to do it every time...
     sendw.win = sendw.maxwin;
 
     // Indicate that this node's send window is now open
-    if (sendw.seq < unack + sendw.win)
+    if (sendw.seq < sendw.unack + sendw.win)
         netq_->setSendWindowStatus(sendw.node.id, true);
-
-    // Update unack
-    sendw.unack.store(unack, std::memory_order_release);
 }
 
 void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
@@ -1005,15 +995,14 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
 void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
 {
     SendWindow::Entry &entry = sendw[seq];
-    Seq               unack = sendw.unack.load(std::memory_order_acquire);
 
     // If this packet is outside our send window, we're done.
-    if (seq < unack || seq >= unack + sendw.win) {
+    if (seq < sendw.unack || seq >= sendw.unack + sendw.win) {
         logEvent("ARQ: ack for packet outside send window: node=%u; seq=%u; unack=%u; end=%u",
             (unsigned) sendw.node.id,
             (unsigned) seq,
-            (unsigned) unack,
-            (unsigned) unack + sendw.win);
+            (unsigned) sendw.unack,
+            (unsigned) sendw.unack + sendw.win);
 
         return;
     }
@@ -1038,7 +1027,6 @@ std::optional<Seq> SmartController::handleNAK(SendWindow &sendw,
                                               std::shared_ptr<RadioPacket>& pkt)
 {
     std::optional<Seq> result;
-    Seq                unack = sendw.unack.load(std::memory_order_acquire);
 
     for(auto it = pkt->begin(); it != pkt->end(); ++it) {
         switch (it->type) {
@@ -1047,12 +1035,12 @@ std::optional<Seq> SmartController::handleNAK(SendWindow &sendw,
                 SendWindow::Entry &entry = sendw[it->nak];
 
                 // If this packet is outside our send window, ignore the NAK.
-                if (it->nak < unack || it->nak >= unack + sendw.win || !entry.pkt) {
+                if (it->nak < sendw.unack || it->nak >= sendw.unack + sendw.win || !entry.pkt) {
                     logEvent("ARQ: nak for packet outside send window: node=%u; seq=%u; unack=%u; end=%u",
                         (unsigned) sendw.node.id,
                         (unsigned) it->nak,
-                        (unsigned) unack,
-                        (unsigned) unack + sendw.win);
+                        (unsigned) sendw.unack,
+                        (unsigned) sendw.unack + sendw.win);
                 // If this packet has already been ACK'ed, ignore the NAK.
                 } else if (!entry.pkt) {
                     logEvent("ARQ: nak for already ACK'ed packet: node=%u; seq=%u",
@@ -1082,8 +1070,7 @@ void SmartController::handleSelectiveACK(SendWindow &sendw,
                                          Clock::time_point tfeedback)
 {
     Node &node = sendw.node;
-    Seq  unack = sendw.unack.load(std::memory_order_acquire);
-    Seq  nextSeq = unack;
+    Seq  nextSeq = sendw.unack;
     bool sawACKRun = false;
 
     for(auto it = pkt->begin(); it != pkt->end(); ++it) {
@@ -1135,7 +1122,7 @@ void SmartController::handleSelectiveACK(SendWindow &sendw,
 
                 for (Seq seq = it->ack.begin; seq < it->ack.end; ++seq) {
                     // Handle the ACK
-                    if (seq >= unack)
+                    if (seq >= sendw.unack)
                         handleACK(sendw, seq);
 
                     // Update our packet error rate to reflect successful TX
@@ -1263,7 +1250,7 @@ void SmartController::moveDownMCS(SendWindow &sendw)
         tx_params.mcs.fec0_name(),
         tx_params.mcs.fec1_name(),
         tx_params.mcs.ms_name(),
-        (unsigned) sendw.unack.load(std::memory_order_release),
+        (unsigned) sendw.unack,
         (unsigned) sendw.per_end,
         node.short_per.getWindowSize(),
         node.long_per.getWindowSize());
@@ -1295,7 +1282,7 @@ void SmartController::moveUpMCS(SendWindow &sendw)
         tx_params.mcs.fec0_name(),
         tx_params.mcs.fec1_name(),
         tx_params.mcs.ms_name(),
-        (unsigned) sendw.unack.load(std::memory_order_release),
+        (unsigned) sendw.unack,
         (unsigned) sendw.per_end,
         node.short_per.getWindowSize(),
         node.long_per.getWindowSize());
@@ -1327,7 +1314,6 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
         SendWindow                      &sendw = getSendWindow(pkt->nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-        Seq                             unack = sendw.unack.load(std::memory_order_acquire);
 
         // If packet has no payload, we can always send it---it has control
         // information.
@@ -1340,12 +1326,11 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
             // If we can't fit this packet in our window, move the window along
             // by dropping the oldest packet.
-            if (   sendw.seq >= unack + sendw.win
-                && sendw[unack].mayDrop(max_retransmissions_)) {
+            if (   sendw.seq >= sendw.unack + sendw.win
+                && sendw[sendw.unack].mayDrop(max_retransmissions_)) {
                 logEvent("ARQ: MOVING WINDOW ALONG: node=%u",
                     (unsigned) pkt->nexthop);
-                drop(sendw[unack]);
-                unack = sendw.unack.load(std::memory_order_acquire);
+                drop(sendw[sendw.unack]);
             }
 
             pkt->seq = sendw.seq++;
@@ -1361,8 +1346,8 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // Close the send window if it's full and we're not supposed to
             // "move along." However, if the send window is only 1 packet,
             // ALWAYS close it since we're waiting for the ACK to our SYN!
-            if (   sendw.seq >= unack + sendw.win
-                && ((sendw[unack] && !sendw[unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
+            if (   sendw.seq >= sendw.unack + sendw.win
+                && ((sendw[sendw.unack] && !sendw[sendw.unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
                 netq_->setSendWindowStatus(nexthop.id, false);
 
             return true;
@@ -1370,15 +1355,15 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // If this packet comes before our window, drop it. It could have
             // snuck in as a retransmission just before the send window moved
             // forward. Try again!
-            if (pkt->seq < unack)
+            if (pkt->seq < sendw.unack)
                 continue;
 
             // Otherwise it had better be in our window becasue we added it back
             // when our window expanded due to an ACK!
-            if(pkt->seq >= unack + sendw.win) {
+            if(pkt->seq >= sendw.unack + sendw.win) {
                 logEvent("ARQ: INVARIANT VIOLATED: got packet outside window: seq=%u; unack=%u; win=%u",
                     (unsigned) pkt->seq,
-                    (unsigned) unack,
+                    (unsigned) sendw.unack,
                     (unsigned) sendw.win);
 
                 continue;
