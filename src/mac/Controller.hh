@@ -5,15 +5,23 @@
 
 #include "net/Element.hh"
 #include "net/Net.hh"
+#include "phy/TXParams.hh"
 
 /** @brief A MAC controller. */
 class Controller : public Element
 {
 public:
-    Controller(std::shared_ptr<Net> net);
+    Controller(std::shared_ptr<Net> net,
+               const std::vector<TXParams> &tx_params);
     virtual ~Controller() = default;
 
     Controller() = delete;
+
+    /** @brief Get TX parameters */
+    std::vector<TXParams> getTXParams(void) const
+    {
+        return tx_params_;
+    }
 
     /** @brief Pull a packet from the network to be sent next over the radio. */
     /** This function is automatically called when a packet is requested from
@@ -58,6 +66,9 @@ public:
 protected:
     /** @brief The Net we're attached to */
     std::shared_ptr<Net> net_;
+
+    /** @brief TX parameters */
+    std::vector<TXParams> tx_params_;
 };
 
 #endif /* CONTROLLER_H_ */

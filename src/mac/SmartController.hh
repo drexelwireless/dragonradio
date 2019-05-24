@@ -291,6 +291,7 @@ public:
                     double slot_size,
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
+                    const std::vector<TXParams> &tx_params,
                     unsigned mcsidx_init,
                     double mcsidx_up_per_threshold,
                     double mcsidx_down_per_threshold,
@@ -554,17 +555,17 @@ protected:
     /** @brief Size of receive window */
     Seq::uint_type recvwin_;
 
-    /** @brief Send windows */
-    std::map<NodeId, SendWindow> send_;
-
     /** @brief Mutex for the send windows */
     spinlock_mutex send_mutex_;
 
-    /** @brief Receive windows */
-    std::map<NodeId, RecvWindow> recv_;
+    /** @brief Send windows */
+    std::map<NodeId, SendWindow> send_;
 
     /** @brief Mutex for the receive windows */
     spinlock_mutex recv_mutex_;
+
+    /** @brief Receive windows */
+    std::map<NodeId, RecvWindow> recv_;
 
     /** @brief Timer queue */
     TimerQueue timer_queue_;

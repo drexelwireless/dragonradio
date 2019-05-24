@@ -21,12 +21,11 @@ const char *kExtIPNet = "192.168.0.0";
 
 const char *kExtIPNetmask = "255.255.0.0";
 
-Node::Node(NodeId id, TXParams *tx_params)
+Node::Node(NodeId id)
   : id(id)
   , is_gateway(false)
   , can_transmit(true)
   , seq(0)
-  , tx_params(tx_params)
   , g(1.0)
   , ack_delay(rc.arq_ack_delay)
   , retransmission_delay(rc.arq_retransmission_delay)
@@ -37,8 +36,7 @@ Node::Node(NodeId id, TXParams *tx_params)
 
 Net::Net(std::shared_ptr<TunTap> tuntap,
          NodeId nodeId)
-  : tx_params(1)
-  , tuntap_(tuntap)
+  : tuntap_(tuntap)
   , my_node_id_(nodeId)
 {
 }
@@ -77,7 +75,7 @@ Node &Net::addNode_(NodeId nodeId)
 {
     auto entry = nodes_.emplace(std::piecewise_construct,
                                 std::forward_as_tuple(nodeId),
-                                std::forward_as_tuple(nodeId, &tx_params[0]));
+                                std::forward_as_tuple(nodeId));
 
     // If the entry is new, add an ARP entry for it
     if (entry.second && nodeId != my_node_id_)

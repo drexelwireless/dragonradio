@@ -1,7 +1,8 @@
 #include "DummyController.hh"
 
-DummyController::DummyController(std::shared_ptr<Net> net)
-  : Controller(net)
+DummyController::DummyController(std::shared_ptr<Net> net,
+                                 const std::vector<TXParams> &tx_params)
+  : Controller(net, tx_params)
 {
 }
 
@@ -12,8 +13,8 @@ bool DummyController::pull(std::shared_ptr<NetPacket>& pkt)
             Node &nexthop = (*net_)[pkt->nexthop];
 
             pkt->seq = nexthop.seq++;
-            pkt->tx_params = nexthop.tx_params;
-            pkt->g = nexthop.tx_params->g_0dBFS.getValue() * nexthop.g;
+            pkt->tx_params = &tx_params_[0];
+            pkt->g = tx_params_[0].g_0dBFS.getValue() * nexthop.g;
 
             pkt->setInternalFlag(kHasSeq);
         }

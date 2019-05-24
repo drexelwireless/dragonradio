@@ -7,7 +7,8 @@
 class DummyController : public Controller
 {
 public:
-    DummyController(std::shared_ptr<Net> net);
+    DummyController(std::shared_ptr<Net> net,
+                    const std::vector<TXParams> &tx_params);
     virtual ~DummyController() = default;
 
     bool pull(std::shared_ptr<NetPacket>& pkt) override;

@@ -46,12 +46,13 @@ SmartController::SmartController(std::shared_ptr<Net> net,
                                  double slot_size,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
+                                 const std::vector<TXParams> &tx_params,
                                  unsigned mcsidx_init,
                                  double mcsidx_up_per_threshold,
                                  double mcsidx_down_per_threshold,
                                  double mcsidx_alpha,
                                  double mcsidx_prob_floor)
-  : Controller(net)
+  : Controller(net, tx_params)
   , phy_(phy)
   , mac_(nullptr)
   , netq_(nullptr)
@@ -59,7 +60,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , samples_per_slot_(0)
-  , mcsidx_init_(std::min(mcsidx_init, (unsigned) net_->tx_params.size() - 1))
+  , mcsidx_init_(std::min(mcsidx_init, (unsigned) tx_params_.size() - 1))
   , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
   , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
   , mcsidx_alpha_(mcsidx_alpha)
@@ -201,9 +202,9 @@ get_packet:
         // Apply TX params. If the destination can transmit, proceed as usual.
         // Otherwise, use the default MCS.
         if (dest.can_transmit)
-            applyTXParams(*pkt, dest.tx_params, dest.g);
+            applyTXParams(*pkt, &tx_params_[sendw.mcsidx], dest.g);
         else
-            applyTXParams(*pkt, &net_->tx_params[mcsidx_init_], dest.g);
+            applyTXParams(*pkt, &tx_params_[mcsidx_init_], dest.g);
     } else
         // Apply broadcast TX params
         applyTXParams(*pkt, &broadcast_tx_params, ack_gain.getLinearGain());
@@ -1196,7 +1197,7 @@ void SmartController::updateMCS(SendWindow &sendw)
         && short_per > mcsidx_down_per_threshold_
         && sendw.mcsidx > 0) {
         // Don't decrease MCS if largest possible packet won't fit in slot.
-        if (getMaxPacketsPerSlot(net_->tx_params[sendw.mcsidx-1]) < 1)
+        if (getMaxPacketsPerSlot(tx_params_[sendw.mcsidx-1]) < 1)
             return;
 
         // Decrease the probability that we will transition to this MCS index
@@ -1228,7 +1229,7 @@ void SmartController::updateMCS(SendWindow &sendw)
         // Now we see if we can actually increase the MCS index. Not only must
         // there be a higher entry in the MCS table, but we must pass the
         // probabilistic transition test.
-        if (   sendw.mcsidx < net_->tx_params.size() - 1
+        if (   sendw.mcsidx < tx_params_.size() - 1
             && dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1]) {
             moveUpMCS(sendw);
         } else
@@ -1245,7 +1246,6 @@ void SmartController::moveDownMCS(SendWindow &sendw)
 
     --sendw.mcsidx;
     sendw.per_end = node.seq;
-    node.tx_params = &net_->tx_params[sendw.mcsidx];
 
     logEvent("AMC: Moving down modulation scheme: node=%u; short per=%f; swin=%lu; lwin=%lu",
         node.id,
@@ -1255,12 +1255,14 @@ void SmartController::moveDownMCS(SendWindow &sendw)
 
     resetPEREstimates(sendw);
 
+    const TXParams &tx_params = tx_params_[sendw.mcsidx];
+
     logEvent("AMC: Moved down modulation scheme: node=%u; mcsidx=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
-        node.tx_params->mcs.fec0_name(),
-        node.tx_params->mcs.fec1_name(),
-        node.tx_params->mcs.ms_name(),
+        tx_params.mcs.fec0_name(),
+        tx_params.mcs.fec1_name(),
+        tx_params.mcs.ms_name(),
         (unsigned) sendw.unack.load(std::memory_order_release),
         (unsigned) sendw.per_end,
         node.short_per.getWindowSize(),
@@ -1276,7 +1278,6 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 
     ++sendw.mcsidx;
     sendw.per_end = node.seq;
-    node.tx_params = &net_->tx_params[sendw.mcsidx];
 
     logEvent("AMC: Moving up modulation scheme: node=%u; long per=%f; swin=%lu; lwin=%lu",
         node.id,
@@ -1286,12 +1287,14 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 
     resetPEREstimates(sendw);
 
+    const TXParams &tx_params = tx_params_[sendw.mcsidx];
+
     logEvent("AMC: Moved up modulation scheme: node=%u; mcsidx=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
-        node.tx_params->mcs.fec0_name(),
-        node.tx_params->mcs.fec1_name(),
-        node.tx_params->mcs.ms_name(),
+        tx_params.mcs.fec0_name(),
+        tx_params.mcs.fec1_name(),
+        tx_params.mcs.ms_name(),
         (unsigned) sendw.unack.load(std::memory_order_release),
         (unsigned) sendw.per_end,
         node.short_per.getWindowSize(),
@@ -1300,7 +1303,7 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 
 void SmartController::resetPEREstimates(SendWindow &sendw)
 {
-    double max_packets_per_slot = getMaxPacketsPerSlot(*(sendw.node.tx_params));
+    double max_packets_per_slot = getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]);
 
     sendw.node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
     sendw.node.short_per.reset(0);
@@ -1421,15 +1424,11 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
                                           std::forward_as_tuple(dest, *this, max_sendwin_)).first->second;
 
         sendw.mcsidx = mcsidx_init_;
-        sendw.mcsidx_prob.resize(net_->tx_params.size(), 1.0);
+        sendw.mcsidx_prob.resize(tx_params_.size(), 1.0);
         sendw.per_end = dest.seq;
 
-        dest.tx_params = &net_->tx_params[mcsidx_init_];
-
-        while (getMaxPacketsPerSlot(*dest.tx_params) == 0) {
+        while (getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]) == 0)
             ++sendw.mcsidx;
-            dest.tx_params = &net_->tx_params[sendw.mcsidx];
-        }
 
         resetPEREstimates(sendw);
 

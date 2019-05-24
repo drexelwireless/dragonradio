@@ -726,21 +726,6 @@ class Radio(object):
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 
         #
-        # Set up TX params for network
-        #
-        if config.amc and config.amc_table:
-            tx_params = []
-            for (crc, fec0, fec1, ms) in config.amc_table:
-                tx_params.append(TXParams(MCS(crc, fec0, fec1, ms)))
-        else:
-            tx_params = [TXParams(MCS(config.check, config.fec0, config.fec1, config.ms))]
-
-        for p in tx_params:
-            self.configTXParamsSoftGain(p)
-
-        self.net.tx_params = TXParamsVector(tx_params)
-
-        #
         # Configure TX/RX rates and channels
         #
         self.configRatesAndChannels()
@@ -774,12 +759,23 @@ class Radio(object):
         #
         # Configure the controller
         #
+
+        # Create TX parameters
+        if config.amc and config.amc_table:
+            tx_params = [TXParams(MCS(*args)) for args in config.amc_table]
+        else:
+            tx_params = [TXParams(MCS(config.check, config.fec0, config.fec1, config.ms))]
+
+        for p in tx_params:
+            self.configTXParamsSoftGain(p)
+
         if config.arq:
             self.controller = dragonradio.SmartController(self.net,
                                                           self.phy,
                                                           config.slot_size,
                                                           config.arq_window,
                                                           config.arq_window,
+                                                          TXParamsVector(tx_params),
                                                           config.amc_mcsidx_init,
                                                           config.amc_mcsidx_up_per_threshold,
                                                           config.amc_mcsidx_down_per_threshold,
@@ -793,19 +789,16 @@ class Radio(object):
             self.controller.mcu = config.arq_mcu
             self.controller.move_along = config.arq_move_along
 
+            tx_params = TXParams(MCS(config.broadcast_check,
+                                     config.broadcast_fec0,
+                                     config.broadcast_fec1,
+                                     config.broadcast_ms))
+            self.configTXParamsSoftGain(tx_params)
+
+            self.controller.broadcast_tx_params = tx_params
             self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
+
             self.controller.ack_gain.dB = config.arq_ack_gain_db
-
-            #
-            # Configure broadcast MCS
-            #
-            mcs = self.controller.broadcast_tx_params.mcs
-            mcs.check = config.broadcast_check
-            mcs.fec0 = config.broadcast_fec0
-            mcs.fec1 = config.broadcast_fec1
-            mcs.ms = config.broadcast_ms
-
-            self.configTXParamsSoftGain(self.controller.broadcast_tx_params)
 
             #
             # Configure NAK's
@@ -815,7 +808,8 @@ class Radio(object):
             self.controller.selective_ack = config.arq_selective_ack
             self.controller.selective_ack_feedback_delay = config.arq_selective_ack_feedback_delay
         else:
-            self.controller = dragonradio.DummyController(self.net)
+            self.controller = dragonradio.DummyController(self.net,
+                                                          TXParamsVector(tx_params))
 
         #
         # Create flow performance measurement component

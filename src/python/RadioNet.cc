@@ -41,12 +41,6 @@ void exportRadioNet(py::module &m)
         .def_readwrite("can_transmit",
             &Node::can_transmit,
             "Flag indicating whether or not this node can transmit")
-        // Make a copy of the Node's TXParams because it shouldn't be modified
-        // directly since it is NOT owned by the node.
-        .def_property_readonly("tx_params",
-            [](Node &node) { return *node.tx_params; },
-            "TX parameters",
-            py::return_value_policy::copy)
         .def_readwrite("g",
             &Node::g,
             "Soft TX gain (multiplicative)")
@@ -110,9 +104,6 @@ void exportRadioNet(py::module &m)
             &Net::getMyNodeId)
         .def_property_readonly("time_master",
             &Net::getTimeMaster)
-        .def_readwrite("tx_params",
-            &Net::tx_params,
-            "TX parameters")
         .def("addNode",
             &Net::addNode,
             py::return_value_policy::reference_internal)

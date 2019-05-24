@@ -41,7 +41,7 @@ extern const char *kExtIPNetmask;
 using timestamp_vector = std::vector<std::pair<MonoClock::time_point, MonoClock::time_point>>;
 
 struct Node {
-    Node(NodeId id, TXParams *tx_params);
+    explicit Node(NodeId id);
 
     Node() = delete;
 
@@ -58,12 +58,6 @@ struct Node {
 
     /** @brief Current packet sequence number for this destination */
     Seq seq;
-
-    /** @brief TX parameters */
-    /** This points to the TX params used to modulate data sent to this node.
-     * It is non-const because we are allowed to update the g_0dBFS field.
-     */
-    TXParams *tx_params;
 
     /** @brief Multiplicative TX gain as measured against 0 dBFS. */
     float g;
@@ -165,9 +159,6 @@ public:
 
     /** @brief Add a node to the network */
     Node &addNode(NodeId nodeId);
-
-    /** @brief TX params */
-    std::vector<TXParams> tx_params;
 
 private:
     /** @brief Our tun/tap interface */

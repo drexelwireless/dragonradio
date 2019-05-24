@@ -18,7 +18,8 @@ void exportControllers(py::module &m)
 
     // Export class DummyController to Python
     py::class_<DummyController, Controller, std::shared_ptr<DummyController>>(m, "DummyController")
-        .def(py::init<std::shared_ptr<Net>>())
+        .def(py::init<std::shared_ptr<Net>,
+                      const std::vector<TXParams>&>())
         ;
 
     // Export class SmartController to Python
@@ -28,6 +29,7 @@ void exportControllers(py::module &m)
                       double,
                       Seq::uint_type,
                       Seq::uint_type,
+                      const std::vector<TXParams>&,
                       unsigned,
                       double,
                       double,
@@ -53,6 +55,9 @@ void exportControllers(py::module &m)
             &SmartController::getSamplesPerSlot,
             &SmartController::setSamplesPerSlot,
             "Number of samples in a transmission slot")
+        .def_property_readonly("tx_params",
+            &SmartController::getTXParams,
+            "TX parameters")
         .def_property("mcsidx_up_per_threshold",
             &SmartController::getUpPERThreshold,
             &SmartController::setUpPERThreshold,
