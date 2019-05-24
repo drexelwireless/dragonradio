@@ -54,6 +54,7 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     pkt->resize(std::max((size_t) pkt->size(), liquid_phy_.min_packet_size_));
 
+    assert(pkt->tx_params);
     setPayloadMCS(pkt->tx_params->mcs);
     assemble(header.bytes, pkt->data(), pkt->size());
 
@@ -92,6 +93,7 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
     iqbuf->resize(nsamples);
 
     // Pass the modulated packet to the 0dBFS estimator if requested
+    assert(pkt->tx_params);
     if (pkt->tx_params->nestimates_0dBFS > 0) {
         --pkt->tx_params->nestimates_0dBFS;
         work_queue.submit(&TXParams::autoSoftGain0dBFS, pkt->tx_params, g, iqbuf);
