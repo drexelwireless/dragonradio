@@ -49,7 +49,7 @@ struct Node {
     ~Node() = default;
 
     /** @brief Node ID */
-    NodeId id;
+    const NodeId id;
 
     /** @brief Flag indicating whether or not this node is the gateway */
     bool is_gateway;
@@ -108,7 +108,7 @@ public:
     Net& operator=(Net&&) = delete;
 
     /** @brief Get this node's ID */
-    NodeId getMyNodeId(void)
+    NodeId getMyNodeId(void) const
     {
         return my_node_id_;
     }
@@ -174,7 +174,7 @@ private:
     std::shared_ptr<TunTap> tuntap_;
 
     /** @brief This node's ID */
-    NodeId my_node_id_;
+    const NodeId my_node_id_;
 
     /** @brief Mutex protecting nodes in the network */
     std::mutex nodes_mutex_;
