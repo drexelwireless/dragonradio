@@ -77,7 +77,7 @@ void exportRadioNet(py::module &m)
         .def_property_readonly("time_master",
             &Net::getTimeMaster)
         .def("addNode",
-            [](Net &net, NodeId id) { return net[id]; },
+            [](Net &net, NodeId id) { return net.getNode(id); },
             py::return_value_policy::reference_internal)
         ;
 }

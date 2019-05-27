@@ -45,6 +45,7 @@ struct Node {
     explicit Node(NodeId id);
 
     Node() = delete;
+    Node(const Node &) = delete;
 
     ~Node() = default;
 
@@ -139,7 +140,7 @@ public:
     }
 
     /** @brief Get the entry for a particular node in the network */
-    Node& operator[](NodeId nodeId)
+    std::shared_ptr<Node> getNode(NodeId nodeId)
     {
         std::lock_guard<std::mutex> lock(nodes_mutex_);
         auto                        entry = nodes_.try_emplace(nodeId, nullptr);
@@ -154,7 +155,13 @@ public:
                 tuntap_->addARPEntry(nodeId);
         }
 
-        return *(entry.first->second);
+        return entry.first->second;
+    }
+
+    /** @brief Get the entry for a particular node in the network */
+    Node& operator[](NodeId nodeId)
+    {
+        return *getNode(nodeId);
     }
 
     /** @brief Apply a function to each node */
