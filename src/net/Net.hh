@@ -73,6 +73,9 @@ struct Node {
     /** @brief Long-term packet error rate */
     WindowedMean<double> long_per;
 
+    /** @brief Mutex protecting timestamps */
+    std::mutex timestamps_mutex;
+
     /** @brief Timestamps received from this node */
     timestamp_vector timestamps;
 

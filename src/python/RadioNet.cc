@@ -60,8 +60,12 @@ void exportRadioNet(py::module &m)
         .def_property_readonly("long_per",
             [](Node &node) { return node.long_per.getValue(); },
             "Long-term packet error rate (unitless)")
-        .def_readonly("timestamps",
-            &Node::timestamps,
+        .def_property_readonly("timestamps",
+            [](Node &node) {
+                std::lock_guard<std::mutex> lock(node.timestamps_mutex);
+
+                return node.timestamps;
+            },
             "Timestamps received from this node")
         ;
 

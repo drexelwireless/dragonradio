@@ -649,7 +649,8 @@ void SmartController::broadcastHello(void)
 
     if (time_master && *time_master == net_->getMyNodeId())
         net_->foreach([&] (Node &node) {
-            auto last_timestamp = node.timestamps.rbegin();
+            std::lock_guard<std::mutex> lock(node.timestamps_mutex);
+            auto                        last_timestamp = node.timestamps.rbegin();
 
             if (node.id != net_->getMyNodeId() && last_timestamp != node.timestamps.rend()) {
                 logEvent("TIMESYNC: Echoing timestamp: node=%u; t_sent=%f; t_recv=%f",
@@ -837,7 +838,11 @@ void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& 
                 t_sent = it->timestamp.t_sent.to_mono_time();
                 t_recv = pkt->timestamp;
 
-                node.timestamps.emplace_back(std::make_pair(t_sent, t_recv));
+		{
+                    std::lock_guard<std::mutex> lock(node.timestamps_mutex);
+
+                    node.timestamps.emplace_back(std::make_pair(t_sent, t_recv));
+                }
 
                 logEvent("TIMESYNC: Timestamp: node=%u; t_sent=%f; t_recv=%f",
                     (unsigned) pkt->curhop,
