@@ -54,12 +54,6 @@ void exportRadioNet(py::module &m)
         .def_readwrite("retransmission_delay",
             &Node::retransmission_delay,
             "Packet retransmission delay (in seconds)")
-        .def_property_readonly("short_per",
-            [](Node &node) { return node.short_per.getValue(); },
-            "Short-term packet error rate (unitless)")
-        .def_property_readonly("long_per",
-            [](Node &node) { return node.long_per.getValue(); },
-            "Long-term packet error rate (unitless)")
         .def_property_readonly("timestamps",
             [](Node &node) {
                 std::lock_guard<std::mutex> lock(node.timestamps_mutex);

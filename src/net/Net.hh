@@ -67,12 +67,6 @@ struct Node {
     /** @brief Packet re-transmit delay in seconds */
     double retransmission_delay;
 
-    /** @brief Short-term packet error rate */
-    WindowedMean<double> short_per;
-
-    /** @brief Long-term packet error rate */
-    WindowedMean<double> long_per;
-
     /** @brief Mutex protecting timestamps */
     std::mutex timestamps_mutex;
 

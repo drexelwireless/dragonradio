@@ -28,8 +28,6 @@ Node::Node(NodeId id)
   , g(1.0)
   , ack_delay(rc.arq_ack_delay)
   , retransmission_delay(rc.arq_retransmission_delay)
-  , short_per(1)
-  , long_per(1)
 {
 }
 

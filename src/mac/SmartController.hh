@@ -111,6 +111,8 @@ struct SendWindow {
       , maxwin(maxwin)
       , mcsidx(0)
       , mcsidx_prob(0)
+      , short_per(1)
+      , long_per(1)
       , entries_(maxwin, *this)
     {
     }
@@ -120,6 +122,9 @@ struct SendWindow {
 
     /** @brief Our controller. */
     SmartController &controller;
+
+    /** @brief Mutex for the send window */
+    spinlock_mutex mutex;
 
     /** @brief Current sequence number for this destination */
     Seq seq;
@@ -152,8 +157,11 @@ struct SendWindow {
      */
     Seq per_end;
 
-    /** @brief Mutex for the send window */
-    spinlock_mutex mutex;
+    /** @brief Short-term packet error rate */
+    WindowedMean<double> short_per;
+
+    /** @brief Long-term packet error rate */
+    WindowedMean<double> long_per;
 
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
@@ -226,6 +234,9 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Our controller. */
     SmartController &controller;
 
+    /** @brief Mutex for the receive window */
+    spinlock_mutex mutex;
+
     /** @brief Next sequence number we should ACK. */
     /** We have received (or given up) on all packets with sequence numbers <
      * this number. INVARIANT: The smallest sequence number in our receive
@@ -262,9 +273,6 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Explicit NAK window index */
     size_t explicit_nak_idx;
 
-    /** @brief Mutex for the receive window */
-    spinlock_mutex mutex;
-
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
@@ -283,11 +291,17 @@ private:
     vector_type entries_;
 };
 
+class SendWindowsProxy;
+class SendWindowProxy;
+
 /** @brief A MAC controller that implements ARQ. */
 class SmartController : public Controller
 {
     friend class SendWindow;
     friend class RecvWindow;
+
+    friend class SendWindowsProxy;
+    friend class SendWindowProxy;
 
 public:
     SmartController(std::shared_ptr<Net> net,
@@ -681,10 +695,10 @@ protected:
                             Clock::time_point tfeedback);
 
     /** @brief Update PER as a result of successful packet transmission. */
-    void txSuccess(Node &node);
+    void txSuccess(SendWindow &sendw);
 
     /** @brief Update PER as a result of unsuccessful packet transmission. */
-    void txFailure(Node &node);
+    void txFailure(SendWindow &sendw);
 
     /** @brief Update MCS based on current PER */
     void updateMCS(SendWindow &sendw);
@@ -708,6 +722,9 @@ protected:
     SendWindow *maybeGetSendWindow(NodeId node_id);
 
     /** @brief Get a node's send window */
+    SendWindow &getSendWindow(Node &node);
+
+    /** @brief Get a node's send window */
     SendWindow &getSendWindow(NodeId node_id);
 
     /** @brief Get a node's receive window.
@@ -718,6 +735,65 @@ protected:
 
     /** @brief Get a node's receive window */
     RecvWindow &getReceiveWindow(NodeId node_id, Seq seq, bool isSYN);
+};
+
+/** @brief A proxy object for a SmartController send window */
+class SendWindowProxy
+{
+public:
+    SendWindowProxy(std::shared_ptr<SmartController> controller,
+                    NodeId node_id)
+      : controller_(controller)
+      , node_id_(node_id)
+    {
+        if (controller_->maybeGetSendWindow(node_id_) == nullptr)
+            throw std::out_of_range("No send window for node");
+    }
+
+    double getLongPER(void)
+    {
+        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        return sendw.long_per.getValue();
+    }
+
+    double getShortPER(void)
+    {
+        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        return sendw.short_per.getValue();
+    }
+
+private:
+    /** @brief This send window's SmartController */
+    std::shared_ptr<SmartController> controller_;
+
+    /** @brief This send window's node ID */
+    const NodeId node_id_;
+};
+
+/** @brief A proxy object for SmartController's send windows */
+class SendWindowsProxy
+{
+public:
+    SendWindowsProxy(std::shared_ptr<SmartController> controller)
+      : controller_(controller)
+    {
+    }
+
+    SendWindowsProxy() = delete;
+    ~SendWindowsProxy() = default;
+
+    SendWindowProxy operator [](NodeId node)
+    {
+        return SendWindowProxy(controller_, node);
+    }
+
+private:
+    /** @brief This object's SmartController */
+    std::shared_ptr<SmartController> controller_;
 };
 
 #endif /* SMARTCONTROLLER_H_ */

@@ -107,10 +107,39 @@ void exportControllers(py::module &m)
         .def_property_readonly("echoed_timestamps",
             &SmartController::getEchoedTimestamps,
             "Our timestamps echoed by the time master")
+        .def_property_readonly("send",
+            [](std::shared_ptr<SmartController> controller) -> std::unique_ptr<SendWindowsProxy>
+            {
+                return std::make_unique<SendWindowsProxy>(controller);
+            },
+            "Send windows")
         .def("broadcastHello",
             &SmartController::broadcastHello)
         .def("resetMCSTransitionProbabilities",
             &SmartController::resetMCSTransitionProbabilities,
             "Reset all AMC transition probabilties to 1.0")
+        ;
+
+    // Export class SendWindowsProxy to Python
+    py::class_<SendWindowProxy, std::unique_ptr<SendWindowProxy>>(m, "SendWindow")
+        .def_property_readonly("short_per",
+            [](SendWindowProxy &proxy) { return proxy.getShortPER(); },
+            "Short-term packet error rate (unitless)")
+        .def_property_readonly("long_per",
+            [](SendWindowProxy &proxy) { return proxy.getLongPER(); },
+            "Long-term packet error rate (unitless)")
+        ;
+
+    // Export class SendWindowsProxy to Python
+    py::class_<SendWindowsProxy, std::unique_ptr<SendWindowsProxy>>(m, "SendWindows")
+        .def("__getitem__",
+            [](SendWindowsProxy &proxy, NodeId key) -> std::unique_ptr<SendWindowProxy>
+            {
+                try {
+                    return std::make_unique<SendWindowProxy>(proxy[key]);
+                } catch (const std::out_of_range&) {
+                    throw py::key_error("node '" + std::to_string(key) + "' does not have a send window");
+                }
+            })
         ;
 }

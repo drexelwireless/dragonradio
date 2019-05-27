@@ -311,7 +311,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
                     // Update our packet error rate to reflect successful TX
                     if (sendw.unack >= sendw.per_end)
-                        txSuccess(sendw.node);
+                        txSuccess(sendw);
                 }
 
                 // unack is the NEXT un-ACK'ed packet, i.e., the packet we  are
@@ -337,7 +337,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
                 SendWindow::Entry &entry = sendw[*nak];
 
                 if (sendw.mcsidx >= entry.mcsidx && entry.nretrans > 0) {
-                    txFailure(node);
+                    txFailure(sendw);
 
                     logEvent("ARQ: txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
                         (unsigned) node.id,
@@ -511,13 +511,13 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 
     // Record the packet error as long as receiving node can transmit
     if (sendw.node.can_transmit && sendw.mcsidx >= entry.mcsidx) {
-        txFailure(sendw.node);
+        txFailure(sendw);
 
         logEvent("AMC: txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
             (unsigned) sendw.node.id,
             (unsigned) entry.pkt->seq,
             (unsigned) entry.mcsidx,
-            sendw.node.short_per.getValue());
+            sendw.short_per.getValue());
 
         updateMCS(sendw);
     }
@@ -1096,7 +1096,7 @@ void SmartController::handleSelectiveACK(SendWindow &sendw,
                             if (sendw[seq]) {
                                 if (sendw[seq].timestamp < tfeedback) {
                                     // Record TX failure for PER
-                                    txFailure(node);
+                                    txFailure(sendw);
 
                                     logEvent("ARQ: txFailure selective nak: node=%u; seq=%u",
                                         (unsigned) node.id,
@@ -1129,7 +1129,7 @@ void SmartController::handleSelectiveACK(SendWindow &sendw,
                     // Update our packet error rate to reflect successful TX
                     if (seq >= sendw.per_end && sendw[seq].timestamp < tfeedback) {
                         // Record TX success for PER
-                        txSuccess(node);
+                        txSuccess(sendw);
 
                         // Move PER window forward
                         sendw.per_end = seq + 1;
@@ -1148,23 +1148,23 @@ void SmartController::handleSelectiveACK(SendWindow &sendw,
     }
 }
 
-void SmartController::txSuccess(Node &node)
+void SmartController::txSuccess(SendWindow &sendw)
 {
-    node.short_per.update(0.0);
-    node.long_per.update(0.0);
+    sendw.short_per.update(0.0);
+    sendw.long_per.update(0.0);
 }
 
-void SmartController::txFailure(Node &node)
+void SmartController::txFailure(SendWindow &sendw)
 {
-    node.short_per.update(1.0);
-    node.long_per.update(1.0);
+    sendw.short_per.update(1.0);
+    sendw.long_per.update(1.0);
 }
 
 void SmartController::updateMCS(SendWindow &sendw)
 {
     Node          &node = sendw.node;
-    double        short_per = node.short_per.getValue();
-    double        long_per = node.long_per.getValue();
+    double        short_per = sendw.short_per.getValue();
+    double        long_per = sendw.long_per.getValue();
     static double prev_short_per = 0.0;
     static double prev_long_per = 0.0;
 
@@ -1172,16 +1172,16 @@ void SmartController::updateMCS(SendWindow &sendw)
         logEvent("AMC: updateMCS: node=%u; short per=%f (%u samples); long per=%f (%u samples)",
             node.id,
             short_per,
-            node.short_per.getNSamples(),
+            sendw.short_per.getNSamples(),
             long_per,
-            node.long_per.getNSamples());
+            sendw.long_per.getNSamples());
 
         prev_short_per = short_per;
         prev_long_per = long_per;
     }
 
     // First for high PER, then test for low PER
-    if (   node.short_per.getNSamples() >= node.short_per.getWindowSize()
+    if (   sendw.short_per.getNSamples() >= sendw.short_per.getWindowSize()
         && short_per > mcsidx_down_per_threshold_
         && sendw.mcsidx > 0) {
         // Don't decrease MCS if largest possible packet won't fit in slot.
@@ -1200,7 +1200,7 @@ void SmartController::updateMCS(SendWindow &sendw)
 
         // Move down one MCS
         moveDownMCS(sendw);
-    } else if (   node.long_per.getNSamples() >= node.long_per.getWindowSize()
+    } else if (   sendw.long_per.getNSamples() >= sendw.long_per.getWindowSize()
                && long_per < mcsidx_up_per_threshold_) {
         double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
 
@@ -1237,9 +1237,9 @@ void SmartController::moveDownMCS(SendWindow &sendw)
 
     logEvent("AMC: Moving down modulation scheme: node=%u; short per=%f; swin=%lu; lwin=%lu",
         node.id,
-        node.short_per.getValue(),
-        node.short_per.getWindowSize(),
-        node.long_per.getWindowSize());
+        sendw.short_per.getValue(),
+        sendw.short_per.getWindowSize(),
+        sendw.long_per.getWindowSize());
 
     resetPEREstimates(sendw);
 
@@ -1253,8 +1253,8 @@ void SmartController::moveDownMCS(SendWindow &sendw)
         tx_params.mcs.ms_name(),
         (unsigned) sendw.unack,
         (unsigned) sendw.per_end,
-        node.short_per.getWindowSize(),
-        node.long_per.getWindowSize());
+        sendw.short_per.getWindowSize(),
+        sendw.long_per.getWindowSize());
 }
 
 void SmartController::moveUpMCS(SendWindow &sendw)
@@ -1269,9 +1269,9 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 
     logEvent("AMC: Moving up modulation scheme: node=%u; long per=%f; swin=%lu; lwin=%lu",
         node.id,
-        node.long_per.getValue(),
-        node.short_per.getWindowSize(),
-        node.long_per.getWindowSize());
+        sendw.long_per.getValue(),
+        sendw.short_per.getWindowSize(),
+        sendw.long_per.getWindowSize());
 
     resetPEREstimates(sendw);
 
@@ -1285,19 +1285,19 @@ void SmartController::moveUpMCS(SendWindow &sendw)
         tx_params.mcs.ms_name(),
         (unsigned) sendw.unack,
         (unsigned) sendw.per_end,
-        node.short_per.getWindowSize(),
-        node.long_per.getWindowSize());
+        sendw.short_per.getWindowSize(),
+        sendw.long_per.getWindowSize());
 }
 
 void SmartController::resetPEREstimates(SendWindow &sendw)
 {
     double max_packets_per_slot = getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]);
 
-    sendw.node.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
-    sendw.node.short_per.reset(0);
+    sendw.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
+    sendw.short_per.reset(0);
 
-    sendw.node.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
-    sendw.node.long_per.reset(0);
+    sendw.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
+    sendw.long_per.reset(0);
 }
 
 bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
