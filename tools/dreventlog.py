@@ -41,16 +41,19 @@ def main():
             node = log.load(path)
 
             if args.events:
+                print('# timestamp event')
                 events = log.events[node.node_id]
                 for index, row in events.iterrows():
                     print('{:5.4f}: {}'.format(row[0], row[1]))
 
             if args.recv:
+                print('# timestamp curhop nexthop seq ms')
                 recv = log.received[node.node_id]
                 for index, row in recv.iterrows():
                     print('{:5.4f}: {} {} {} {}'.format(row.timestamp, row.curhop, row.nexthop, row.seq, row.ms))
 
             if args.send:
+                print('# timestamp curhop nexthop seq')
                 send = log.sent[node.node_id]
                 for index, row in send.iterrows():
                     print('{:5.4f}: {} {} {}'.format(row.timestamp, row.curhop, row.nexthop, row.seq))
