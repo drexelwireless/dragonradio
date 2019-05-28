@@ -8,6 +8,7 @@
 #include <cstddef>
 
 #include "Logger.hh"
+#include "RadioConfig.hh"
 #include "net/NetFilter.hh"
 #include "net/NetUtil.hh"
 
@@ -98,6 +99,12 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         pkt->nexthop = nexthop_id;
         pkt->src = src_id;
         pkt->dest = dest_id;
+
+        if (rc.verbose_packet_trace)
+            printf("Read %lu bytes from %u to %u\n",
+                (unsigned long) pkt->data_len,
+                (unsigned) pkt->curhop,
+                (unsigned) pkt->nexthop);
 
         return true;
     } else {

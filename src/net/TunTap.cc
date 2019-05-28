@@ -175,10 +175,11 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
     }
 
     if (rc.verbose_packet_trace)
-        printf("Written %lu bytes (seq# %u) from %u (evm = %.2f; rssi = %.2f)\n",
+        printf("Wrote %lu bytes (seq# %u) from %u to %u (evm = %.2f; rssi = %.2f)\n",
             (unsigned long) nwrite,
             (unsigned int) pkt->seq,
             (unsigned int) pkt->src,
+            (unsigned int) pkt->dest,
             pkt->evm,
             pkt->rssi);
 }
