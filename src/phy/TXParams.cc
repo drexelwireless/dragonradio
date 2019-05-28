@@ -4,6 +4,15 @@
 
 void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
 {
+    {
+        std::unique_lock<std::shared_mutex> lock(mutex_);
+
+        if (nestimates_0dBFS_ > 0)
+            --nestimates_0dBFS_;
+        else
+            return;
+    }
+
     size_t n = buf->size();
 
     // This should never happen, but just in case...
@@ -21,7 +30,7 @@ void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
 
     std::sort(power.get(), power.get() + n);
 
-    size_t max_n = auto_soft_tx_gain_clip_frac*n;
+    size_t max_n = getAutoSoftTXGainClipFrac()*n;
 
     if (max_n < 0)
         max_n = 0;
@@ -38,7 +47,12 @@ void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
     float g_estimate = sqrtf(1.0/max_amp2);
 
     // g is the gain multiplier used to produce the IQ samples
-    g_0dBFS.update(g*g_estimate);
+    {
+        std::unique_lock<std::shared_mutex> lock(mutex_);
+
+        g_0dBFS_estimate_.update(g*g_estimate);
+        g_0dBFS_.store(g_0dBFS_estimate_.getValue(), std::memory_order_relaxed);
+    }
 
     logEvent("AMC: updated auto-gain %0.1f", (double) getSoftTXGain0dBFS());
 }

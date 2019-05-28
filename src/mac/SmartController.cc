@@ -17,7 +17,7 @@ const double kSACKDelay = 0.050;
 void applyTXParams(NetPacket &pkt, TXParams *p, float g)
 {
     pkt.tx_params = p;
-    pkt.g = p->g_0dBFS.getValue() * g;
+    pkt.g = p->getSoftTXGain() * g;
 }
 
 void SendWindow::Entry::operator()()
@@ -669,7 +669,7 @@ void SmartController::broadcastHello(void)
     // Send a timestamped HELLO
     if (netq_) {
         pkt->tx_params = &broadcast_tx_params_;
-        pkt->g = broadcast_tx_params_.g_0dBFS.getValue();
+        pkt->g = broadcast_tx_params_.getSoftTXGain();
         pkt->setInternalFlag(kIsTimestamp);
         netq_->push_hi(std::move(pkt));
     }

@@ -14,7 +14,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket>& pkt)
 
             pkt->seq = 0;
             pkt->tx_params = &tx_params_[0];
-            pkt->g = tx_params_[0].g_0dBFS.getValue() * nexthop.g;
+            pkt->g = tx_params_[0].getSoftTXGain() * nexthop.g;
 
             pkt->setInternalFlag(kHasSeq);
         }

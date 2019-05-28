@@ -94,10 +94,8 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     // Pass the modulated packet to the 0dBFS estimator if requested
     assert(pkt->tx_params);
-    if (pkt->tx_params->nestimates_0dBFS > 0) {
-        --pkt->tx_params->nestimates_0dBFS;
+    if (pkt->tx_params->needCalcAutoSoftGain0dBFS())
         work_queue.submit(&TXParams::autoSoftGain0dBFS, pkt->tx_params, g, iqbuf);
-    }
 
     // Fill in the ModPacket
     mpkt.samples = std::move(iqbuf);

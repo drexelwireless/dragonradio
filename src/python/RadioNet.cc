@@ -10,18 +10,20 @@ void exportRadioNet(py::module &m)
     py::class_<TXParams, std::shared_ptr<TXParams>>(m, "TXParams")
         .def(py::init<>())
         .def(py::init<MCS>())
-        .def_readwrite("mcs",
+        .def_readonly("mcs",
             &TXParams::mcs,
             "Modulation and coding scheme")
-        .def_readwrite("g_0dBFS",
-            &TXParams::g_0dBFS,
+        .def_property("g_0dBFS",
+            &TXParams::getSoftTXGain,
+            &TXParams::setSoftTXGain,
             "Soft TX gain (multiplicative factor)")
         .def_property("soft_tx_gain_0dBFS",
             &TXParams::getSoftTXGain0dBFS,
             &TXParams::setSoftTXGain0dBFS,
             "Soft TX gain (dBFS)")
-        .def_readwrite("auto_soft_tx_gain_clip_frac",
-            &TXParams::auto_soft_tx_gain_clip_frac,
+        .def_property("auto_soft_tx_gain_clip_frac",
+            &TXParams::getAutoSoftTXGainClipFrac,
+            &TXParams::setAutoSoftTXGainClipFrac,
             "Clipping threshold for automatic TX soft gain")
         .def("recalc0dBFSEstimate",
             &TXParams::recalc0dBFSEstimate,
