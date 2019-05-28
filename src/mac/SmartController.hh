@@ -565,6 +565,9 @@ protected:
     /** @brief Our MAC. */
     std::shared_ptr<MAC> mac_;
 
+    /** @brief Mutex to serialize access to the network */
+    std::mutex net_mutex_;
+
     /** @brief Network queue with high-priority sub-queue. */
     std::shared_ptr<NetQueue> netq_;
 

@@ -1305,6 +1305,13 @@ void SmartController::resetPEREstimates(SendWindow &sendw)
 bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 {
     for (;;) {
+        // We use a lock here to protect against a race between getting a packet
+        // and updating the send window status of the destination. Without this
+        // lock, it's possible that we receive two packets for the same
+        // destination before we are able to close it's send window while
+        // waiting for an ACK.
+        std::unique_lock<std::mutex> net_lock(net_mutex_);
+
         // Get a packet from the network
         if (!net_in.pull(pkt))
             return false;
