@@ -7,6 +7,7 @@
 
 #include <cstddef>
 
+#include "Logger.hh"
 #include "net/NetFilter.hh"
 #include "net/NetUtil.hh"
 
@@ -33,8 +34,10 @@ NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
 
 bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 {
-    if (pkt->size() == 0)
+    if (pkt->size() == 0) {
+        logEvent("NET: dropped size zero packet");
         return false;
+    }
 
     struct ether_header* eth = reinterpret_cast<struct ether_header*>(pkt->data() + sizeof(ExtendedHeader));
 
@@ -53,31 +56,39 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         std::memcpy(&ip_src, reinterpret_cast<char*>(iph) + offsetof(struct ip, ip_src), sizeof(ip_src));
         std::memcpy(&ip_dst, reinterpret_cast<char*>(iph) + offsetof(struct ip, ip_dst), sizeof(ip_dst));
 
-        NodeId src_id;
-        NodeId dest_id;
+        NodeId   src_id;
+        NodeId   dest_id;
+        uint32_t src_addr = ntohl(ip_src.s_addr);
+        uint32_t dest_addr = ntohl(ip_dst.s_addr);
 
-        if ((ntohl(ip_src.s_addr) & int_netmask_) == int_net_) {
+        if ((src_addr & int_netmask_) == int_net_) {
             // Traffic on the internal network has IP addresses of the form
             // 10.10.10.<SRN>/32
             pkt->setInternalFlag(kIntNet);
 
-            src_id = ntohl(ip_src.s_addr) & 0xff;
-            dest_id = ntohl(ip_dst.s_addr) & 0xff;
+            src_id = src_addr & 0xff;
+            dest_id = dest_addr & 0xff;
 
-            if (ntohl(ip_dst.s_addr) == int_broadcast_)
+            if (dest_addr == int_broadcast_)
                 pkt->setFlag(kBroadcast);
-        } else if ((ntohl(ip_src.s_addr) & ext_netmask_) == ext_net_) {
+        } else if ((src_addr & ext_netmask_) == ext_net_) {
             // Traffic on the external network has IP addresses of the form
             // 192.168.<SRN+100>.0/24
             pkt->setInternalFlag(kExtNet);
 
-            src_id = ((ntohl(ip_src.s_addr) >> 8) & 0xff) - 100;
-            dest_id = ((ntohl(ip_dst.s_addr) >> 8) & 0xff) - 100;
+            src_id = ((src_addr >> 8) & 0xff) - 100;
+            dest_id = ((dest_addr >> 8) & 0xff) - 100;
 
-            if (ntohl(ip_dst.s_addr) == ext_broadcast_)
+            if (dest_addr == ext_broadcast_)
                 pkt->setFlag(kBroadcast);
-        } else
+        } else {
+            logEvent("NET: dropped IP packet from unknown subnet %d.%d.%d.%d",
+                (src_addr >> 24) & 0xff,
+                (src_addr >> 16) & 0xff,
+                (src_addr >> 8) & 0xff,
+                src_addr & 0xff);
             return false;
+        }
 
         // NOTE: We are only responsible for setting hop/src/dest information
         // here. The pkt->data_len field is set in TunTap when the packet is
@@ -89,6 +100,11 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         pkt->dest = dest_id;
 
         return true;
-    } else
+    } else {
+        logEvent("NET: dropped unknown packet: ether_type=0x%x; shost=%u; dhost=%u",
+            ntohs(eth->ether_type),
+            eth->ether_shost[5],
+            eth->ether_dhost[5]);
         return false;
+    }
 }
