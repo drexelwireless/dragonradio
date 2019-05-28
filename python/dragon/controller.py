@@ -45,6 +45,9 @@ class Controller(TCPProtoServer):
         self.config = config
         """Our Config"""
 
+        self.radio = None
+        """Our Radio"""
+
         self.dumpcap_procs = []
         """dumpcap procs we've started"""
 
@@ -111,6 +114,9 @@ class Controller(TCPProtoServer):
         self.internal_client = None
         """Internal protocol client"""
 
+        # Provide default start time
+        self.scenario_start_time = time.time()
+
     @property
     def is_gateway(self):
         radio = self.radio
@@ -127,7 +133,8 @@ class Controller(TCPProtoServer):
         logging.info('RF scenario start time set: %f', t)
         self.__scenario_start_time = t
         self.scorer.scenario_start_time = t
-        self.radio.flowperf.start = t
+        if self.radio is not None:
+            self.radio.flowperf.start = t
 
     def timeToMP(self, t):
         """Convert time (in seconds since the epoch) to a measurement period"""
