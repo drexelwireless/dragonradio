@@ -310,6 +310,7 @@ public:
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
                     const std::vector<TXParams> &tx_params,
+                    const TXParams &broadcast_tx_params,
                     unsigned mcsidx_init,
                     double mcsidx_up_per_threshold,
                     double mcsidx_down_per_threshold,
@@ -355,6 +356,12 @@ public:
     void setSamplesPerSlot(size_t samples_per_slot)
     {
         samples_per_slot_ = samples_per_slot;
+    }
+
+    /** @brief Get broadcast TX params */
+    TXParams getBroadcastTXParams(void)
+    {
+        return broadcast_tx_params_;
     }
 
     /** @brief Get PER threshold for increasing modulation level */
@@ -542,9 +549,6 @@ public:
     /** @brief Broadcast a HELLO packet. */
     void broadcastHello(void);
 
-    /** @brief Broadcast TX params */
-    TXParams broadcast_tx_params;
-
     /** @brief Broadcast gain */
     Gain broadcast_gain;
 
@@ -590,6 +594,9 @@ protected:
 
     /** @brief Number of samples in a transmission slot */
     size_t samples_per_slot_;
+
+    /** @brief Broadcast TX params */
+    TXParams broadcast_tx_params_;
 
     /** @brief Initial MCS index */
     unsigned mcsidx_init_;

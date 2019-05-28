@@ -47,6 +47,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
                                  const std::vector<TXParams> &tx_params,
+                                 const TXParams &broadcast_tx_params,
                                  unsigned mcsidx_init,
                                  double mcsidx_up_per_threshold,
                                  double mcsidx_down_per_threshold,
@@ -60,6 +61,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , samples_per_slot_(0)
+  , broadcast_tx_params_(broadcast_tx_params)
   , mcsidx_init_(std::min(mcsidx_init, (unsigned) tx_params_.size() - 1))
   , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
   , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
@@ -113,7 +115,7 @@ get_packet:
 
     // Handle broadcast packets
     if (pkt->isFlagSet(kBroadcast)) {
-        applyTXParams(*pkt, &broadcast_tx_params, broadcast_gain.getLinearGain());
+        applyTXParams(*pkt, &broadcast_tx_params_, broadcast_gain.getLinearGain());
 
         return true;
     }
@@ -205,7 +207,7 @@ get_packet:
             applyTXParams(*pkt, &tx_params_[mcsidx_init_], dest.g);
     } else
         // Apply broadcast TX params
-        applyTXParams(*pkt, &broadcast_tx_params, ack_gain.getLinearGain());
+        applyTXParams(*pkt, &broadcast_tx_params_, ack_gain.getLinearGain());
 
     return true;
 }
@@ -666,8 +668,8 @@ void SmartController::broadcastHello(void)
 
     // Send a timestamped HELLO
     if (netq_) {
-        pkt->tx_params = &broadcast_tx_params;
-        pkt->g = broadcast_tx_params.g_0dBFS.getValue();
+        pkt->tx_params = &broadcast_tx_params_;
+        pkt->g = broadcast_tx_params_.g_0dBFS.getValue();
         pkt->setInternalFlag(kIsTimestamp);
         netq_->push_hi(std::move(pkt));
     }

@@ -30,6 +30,7 @@ void exportControllers(py::module &m)
                       Seq::uint_type,
                       Seq::uint_type,
                       const std::vector<TXParams>&,
+                      const TXParams&,
                       unsigned,
                       double,
                       double,
@@ -41,10 +42,9 @@ void exportControllers(py::module &m)
         .def_property("mac",
             &SmartController::getMAC,
             &SmartController::setMAC)
-        .def_readwrite("broadcast_tx_params",
-            &SmartController::broadcast_tx_params,
-            "Broadcast TX parameters",
-            py::return_value_policy::reference_internal)
+        .def_property_readonly("broadcast_tx_params",
+            &SmartController::getBroadcastTXParams,
+            "Broadcast TX parameters")
         .def_readwrite("broadcast_gain",
             &SmartController::broadcast_gain,
             py::return_value_policy::reference_internal)

@@ -769,6 +769,13 @@ class Radio(object):
         for p in tx_params:
             self.configTXParamsSoftGain(p)
 
+
+        broadcast_tx_params = TXParams(MCS(config.broadcast_check,
+                                           config.broadcast_fec0,
+                                           config.broadcast_fec1,
+                                           config.broadcast_ms))
+        self.configTXParamsSoftGain(broadcast_tx_params)
+
         if config.arq:
             self.controller = dragonradio.SmartController(self.net,
                                                           self.phy,
@@ -776,6 +783,7 @@ class Radio(object):
                                                           config.arq_window,
                                                           config.arq_window,
                                                           TXParamsVector(tx_params),
+                                                          broadcast_tx_params,
                                                           config.amc_mcsidx_init,
                                                           config.amc_mcsidx_up_per_threshold,
                                                           config.amc_mcsidx_down_per_threshold,
@@ -789,13 +797,6 @@ class Radio(object):
             self.controller.mcu = config.arq_mcu
             self.controller.move_along = config.arq_move_along
 
-            tx_params = TXParams(MCS(config.broadcast_check,
-                                     config.broadcast_fec0,
-                                     config.broadcast_fec1,
-                                     config.broadcast_ms))
-            self.configTXParamsSoftGain(tx_params)
-
-            self.controller.broadcast_tx_params = tx_params
             self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
 
             self.controller.ack_gain.dB = config.arq_ack_gain_db
