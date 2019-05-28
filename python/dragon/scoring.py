@@ -83,9 +83,7 @@ class Scorer:
         mp = self.currentMP()
 
         # Finish all scoring tasks
-        logger.info('Waiting for scoring tasks to finish (%d tasks remaining)...', self.q.qsize())
-        self.q.join()
-        logger.info('Scoring tasks finished')
+        self.join()
 
         # Delete score entries for all future measurement periods
         with self.lock:
@@ -105,9 +103,10 @@ class Scorer:
 
     def join(self):
         """Drain the task queue"""
-        logger.info('Waiting for scoring tasks to drain (%d tasks remaining)...', self.q.qsize())
-        self.q.join()
-        logger.info('Scoring tasks finished')
+        if self.q:
+            logger.info('Waiting for scoring tasks to drain (%d tasks remaining)...', self.q.qsize())
+            self.q.join()
+            logger.info('Scoring tasks finished')
 
     def getMPStage(self, mp):
         """Return stage that given measurement period belongs to"""
@@ -235,10 +234,12 @@ class Scorer:
                         mp)
 
     def updateSourceStats(self, node_id, timestamp, sources):
-        self.q.put((node_id, timestamp, sources, True))
+        if self.q:
+            self.q.put((node_id, timestamp, sources, True))
 
     def updateSinkStats(self, node_id, timestamp, sinks):
-        self.q.put((node_id, timestamp, sinks, False))
+        if self.q:
+            self.q.put((node_id, timestamp, sinks, False))
 
     def __updateFlowStatistics(self, node_id, timestamp, flow, sent=False, recv=False):
         # Skip recording statistics if we don't have mandates yet
