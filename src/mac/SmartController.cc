@@ -1325,8 +1325,6 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
         // Set the packet sequence number if it doesn't yet have one.
         if (!pkt->isInternalFlagSet(kHasSeq)) {
-            Node& nexthop = (*net_)[pkt->nexthop];
-
             // If we can't fit this packet in our window, move the window along
             // by dropping the oldest packet.
             if (   sendw.seq >= sendw.unack + sendw.win
@@ -1351,7 +1349,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // ALWAYS close it since we're waiting for the ACK to our SYN!
             if (   sendw.seq >= sendw.unack + sendw.win
                 && ((sendw[sendw.unack] && !sendw[sendw.unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
-                netq_->setSendWindowStatus(nexthop.id, false);
+                netq_->setSendWindowStatus(pkt->nexthop, false);
 
             return true;
         } else {
