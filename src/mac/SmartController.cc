@@ -178,7 +178,8 @@ get_packet:
         // This checks that the sequence number of the packet we are sending is
         // in our send window.
         if (pkt->seq < sendw.unack || pkt->seq >= sendw.unack + sendw.win) {
-            logEvent("ARQ: INVARIANT VIOLATED: asked to send packet outside window: seq=%u; unack=%u; win=%u",
+            logEvent("ARQ: INVARIANT VIOLATED: asked to send packet outside window: nexthop=%u; seq=%u; unack=%u; win=%u",
+                (unsigned) nexthop,
                 (unsigned) pkt->seq,
                 (unsigned) sendw.unack,
                 (unsigned) sendw.win);
