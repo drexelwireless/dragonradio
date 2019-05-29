@@ -708,8 +708,15 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
  */
 void SmartController::retransmit(SendWindow::Entry &entry)
 {
-    if (!entry.sendw.node.can_transmit)
+    // Squelch a retransmission when the destination can't transmit because we
+    // won't be able to hear an ACK anyway.
+    if (!entry.sendw.node.can_transmit) {
+        // We need to restart the retransmission timer here so that the packet
+        // will be retransmitted if the destination can transmit in the future.
+        timer_queue_.cancel(entry);
+        startRetransmissionTimer(entry);
         return;
+    }
 
     if (!entry.pkt) {
         logEvent("AMC: attempted to retransmit ACK'ed packet");
