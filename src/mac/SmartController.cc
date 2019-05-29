@@ -170,8 +170,10 @@ get_packet:
         // but before we get to this point. For example, an ACK could be
         // received in between the time we release the lock on the receive
         // window and this point. If that happens, we get another packet
-        if (pkt->seq < sendw.unack)
+        if (pkt->seq < sendw.unack) {
+            pkt.reset();
             goto get_packet;
+        }
 
         // This checks that the sequence number of the packet we are sending is
         // in our send window.
@@ -180,6 +182,7 @@ get_packet:
                 (unsigned) pkt->seq,
                 (unsigned) sendw.unack,
                 (unsigned) sendw.win);
+            pkt.reset();
             goto get_packet;
         }
 
