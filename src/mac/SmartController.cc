@@ -1363,8 +1363,10 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // If this packet comes before our window, drop it. It could have
             // snuck in as a retransmission just before the send window moved
             // forward. Try again!
-            if (pkt->seq < sendw.unack)
+            if (pkt->seq < sendw.unack) {
+                pkt.reset();
                 continue;
+            }
 
             // Otherwise it had better be in our window becasue we added it back
             // when our window expanded due to an ACK!
@@ -1374,6 +1376,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
                     (unsigned) sendw.unack,
                     (unsigned) sendw.win);
 
+                pkt.reset();
                 continue;
             }
 
