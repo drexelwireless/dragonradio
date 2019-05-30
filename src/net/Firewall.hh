@@ -94,7 +94,11 @@ protected:
         if (!enabled_)
             return true;
 
-        // First check for a broadcast
+        // Always pass SYN packets
+        if (pkt->isFlagSet(kSYN))
+            return true;
+
+        // Then check for a broadcast
         if (pkt->isFlagSet(kBroadcast) && allow_broadcasts_)
             return true;
 
