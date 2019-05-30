@@ -147,7 +147,10 @@ public:
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            hiq_.emplace_back(std::move(item));
+            if (item->isFlagSet(kSYN))
+                hiq_.emplace_front(std::move(item));
+            else
+                hiq_.emplace_back(std::move(item));
         }
 
         cond_.notify_one();
