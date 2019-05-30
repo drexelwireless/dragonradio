@@ -31,10 +31,19 @@ public:
         MonoClock::time_point now = MonoClock::now();
 
         // First look in high-priority queue
-        if (!hiq_.empty()) {
-            val = std::move(hiq_.front());
-            hiq_.pop_front();
-            return true;
+        {
+            auto it = hiq_.begin();
+
+            while (it != hiq_.end()) {
+                if ((*it)->shouldDrop(now))
+                    it = hiq_.erase(it);
+                else if (canPop(*it)) {
+                    val = std::move(*it);
+                    hiq_.erase(it);
+                    return true;
+                } else
+                    it++;
+            }
         }
 
         // Then look in the network queue, FIFO-style
