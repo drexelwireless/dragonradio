@@ -15,6 +15,7 @@
 
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
+#include "Logger.hh"
 #include "Packet.hh"
 #include "net/MandatedOutcome.hh"
 #include "net/Processor.hh"
@@ -114,7 +115,15 @@ protected:
             {
                 const struct udphdr *udph = pkt->getUDPHdr();
 
-                return allowed_.find(ntohs(udph->uh_dport)) != allowed_.end();
+                if (allowed_.find(ntohs(udph->uh_dport)) != allowed_.end())
+                    return true;
+                else {
+                    logEvent("NET: firewall dropping packet: curhop=%u; nexthop=%u; flow=%u",
+                        pkt->curhop,
+                        pkt->nexthop,
+                        ntohs(udph->uh_dport));
+                    return false;
+                }
             }
             break;
 
@@ -122,7 +131,15 @@ protected:
             {
                 const struct tcphdr *tcph = pkt->getTCPHdr();
 
-                return allowed_.find(ntohs(tcph->th_dport)) != allowed_.end();
+                if (allowed_.find(ntohs(tcph->th_dport)) != allowed_.end())
+                    return true;
+                else {
+                    logEvent("NET: firewall dropping packet: curhop=%u; nexthop=%u; flow=%u",
+                        pkt->curhop,
+                        pkt->nexthop,
+                        ntohs(tcph->th_dport));
+                    return false;
+                }
             }
             break;
 
