@@ -243,11 +243,23 @@ struct Packet : public buffer<unsigned char>
     /** @brief Append a control message to a packet */
     void appendControl(const ControlMsg &ctrl);
 
+    /** @brief Remove last control message from a packet */
+    /** Blindly remove the last control message from a packet, assuming in has
+     * type type.
+     */
+    void removeLastControl(ControlMsg::Type type);
+
     /** @brief Append a Hello control message to a packet */
     void appendHello(const ControlMsg::Hello &hello);
 
     /** @brief Append a Timestamp control message to a packet */
     void appendTimestamp(const MonoClock::time_point &t_sent);
+
+    /** @brief Remove a Timestamp control message from the end of a packet */
+    void removeTimestamp(void)
+    {
+        removeLastControl(ControlMsg::Type::kTimestamp);
+    }
 
     /** @brief Append a Timestamp Echo control message to a packet */
     void appendTimestampEcho(NodeId node_id,

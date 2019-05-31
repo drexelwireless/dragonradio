@@ -121,6 +121,17 @@ void Packet::appendControl(const ControlMsg &ctrl)
     memcpy(&(*this)[sizeof(ExtendedHeader) + data_len + sizeof(uint16_t) + ctrl_len], &ctrl, ctrlsize(ctrl.type));
 }
 
+void Packet::removeLastControl(ControlMsg::Type type)
+{
+    uint16_t ctrl_len = getControlLen();
+
+    // Decrease length of control information
+    setControlLen(ctrl_len - ctrlsize(type));
+
+    // Remove space for control data
+    resize(size() - ctrlsize(type));
+}
+
 void Packet::appendHello(const ControlMsg::Hello &hello)
 {
     ControlMsg msg;
