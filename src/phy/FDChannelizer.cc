@@ -14,10 +14,9 @@ FDChannelizer::FDChannelizer(std::shared_ptr<Net> net,
                              double rx_rate,
                              const Channels &channels,
                              unsigned int nthreads)
-  : Channelizer(rx_rate, channels)
+  : Channelizer(phy, rx_rate, channels)
   , source(*this, nullptr, nullptr)
   , net_(net)
-  , phy_(phy)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)

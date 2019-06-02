@@ -11,10 +11,9 @@ OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<Net> net,
                                            double rx_rate,
                                            const Channels &channels,
                                            unsigned int nthreads)
-  : Channelizer(rx_rate, channels)
+  : Channelizer(phy, rx_rate, channels)
   , source(*this, nullptr, nullptr)
   , net_(net)
-  , phy_(phy)
   , taps_{1.0}
   , slot_size_(0.0)
   , prev_demod_(0.0)

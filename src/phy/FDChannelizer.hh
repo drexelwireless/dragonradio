@@ -15,7 +15,6 @@
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
-#include "phy/PHY.hh"
 #include "net/Net.hh"
 
 /** @brief A frequency-domain channelizer. */
@@ -134,9 +133,6 @@ private:
 
     /** @brief Destination for packets. */
     std::shared_ptr<Net> net_;
-
-    /** @brief PHY we use for demodulation. */
-    std::shared_ptr<PHY> phy_;
 
     /** @brief Prototype filter */
     std::vector<C> taps_;

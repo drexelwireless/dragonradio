@@ -3,14 +3,17 @@
 
 #include "IQBuffer.hh"
 #include "phy/Channel.hh"
+#include "phy/PHY.hh"
 
 /** @brief Base class for channelizers */
 class Channelizer
 {
 public:
-    Channelizer(double rx_rate,
+    Channelizer(std::shared_ptr<PHY> phy,
+                double rx_rate,
                 const Channels &channels)
-      : rx_rate_(rx_rate)
+      : phy_(phy)
+      , rx_rate_(rx_rate)
       , channels_(channels)
     {
     }
@@ -54,6 +57,9 @@ public:
     virtual void reconfigure(void) = 0;
 
 protected:
+    /** @brief PHY we use for demodulation. */
+    std::shared_ptr<PHY> phy_;
+
     /** @brief RX sample rate */
     double rx_rate_;
 
