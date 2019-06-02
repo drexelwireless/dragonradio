@@ -13,14 +13,13 @@
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
-#include "net/Net.hh"
 
 /** @brief A time-domain channelizer that demodulates overlapping pairs of
  * slots. This duplicates work (and leads to duplicate packets), but it allows
  * us to parallelize demodulation of *a single channel*. We have to do this when
  * demodulation is slow, such as when we use liquid's resamplers.
  */
-class OverlapTDChannelizer : public Channelizer, public Element
+class OverlapTDChannelizer : public Channelizer
 {
 public:
     using C = std::complex<float>;
@@ -98,9 +97,6 @@ public:
 
     /** @brief Stop demodulating. */
     void stop(void);
-
-    /** @brief Demodulated packets */
-    RadioOut<Push> source;
 
 private:
     /** @brief Channel state for time-domain demodulation */

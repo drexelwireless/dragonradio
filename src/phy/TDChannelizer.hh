@@ -13,10 +13,9 @@
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
-#include "net/Net.hh"
 
 /** @brief A time-domain channelizer. */
-class TDChannelizer : public Channelizer, public Element
+class TDChannelizer : public Channelizer
 {
 public:
     TDChannelizer(std::shared_ptr<Net> net,
@@ -46,9 +45,6 @@ public:
 
     /** @brief Stop demodulating. */
     void stop(void);
-
-    /** @brief Demodulated packets */
-    RadioOut<Push> source;
 
 private:
     /** @brief Channel state for time-domain demodulation */

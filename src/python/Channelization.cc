@@ -22,6 +22,11 @@ void exportPacketModulators(py::module &m)
         .def_property("channels",
             &Channelizer::getChannels,
             &Channelizer::setChannels)
+        .def_property_readonly("source",
+            [](std::shared_ptr<Channelizer> e)
+            {
+                return exposePort(e, &e->source);
+            })
         ;
 
     // Export class FDChannelizer to Python
@@ -47,11 +52,6 @@ void exportPacketModulators(py::module &m)
         .def_readonly_static("L",
             &FDChannelizer::L,
             "Samples consumer per input block.")
-        .def_property_readonly("source",
-            [](std::shared_ptr<FDChannelizer> e)
-            {
-                return exposePort(e, &e->source);
-            })
         ;
 
     // Export class TDChannelizer to Python
@@ -65,11 +65,6 @@ void exportPacketModulators(py::module &m)
             &TDChannelizer::getTaps,
             &TDChannelizer::setTaps,
             "Prototype filter for channelization. Should have unity gain.")
-        .def_property_readonly("source",
-            [](std::shared_ptr<TDChannelizer> e)
-            {
-                return exposePort(e, &e->source);
-            })
         ;
 
     // Export class OverlapTDChannelizer to Python
@@ -92,11 +87,6 @@ void exportPacketModulators(py::module &m)
         .def_property("enforce_ordering",
             &OverlapTDChannelizer::getEnforceOrdering,
             &OverlapTDChannelizer::setEnforceOrdering)
-        .def_property_readonly("source",
-            [](std::shared_ptr<OverlapTDChannelizer> e)
-            {
-                return exposePort(e, &e->source);
-            })
         ;
 
     // Export class Synthesizer to Python

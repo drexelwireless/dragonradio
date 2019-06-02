@@ -15,10 +15,9 @@
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
-#include "net/Net.hh"
 
 /** @brief A frequency-domain channelizer. */
-class FDChannelizer : public Channelizer, public Element
+class FDChannelizer : public Channelizer
 {
 public:
     /** @brief Filter length */
@@ -63,9 +62,6 @@ public:
 
     /** @brief Stop demodulating. */
     void stop(void);
-
-    /** @brief Demodulated packets */
-    RadioOut<Push> source;
 
 private:
     /** @brief Log of size of ring buffers */

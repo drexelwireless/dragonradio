@@ -13,7 +13,6 @@ TDChannelizer::TDChannelizer(std::shared_ptr<Net> net,
                              const Channels &channels,
                              unsigned int nthreads)
   : Channelizer(phy, rx_rate, channels)
-  , source(*this, nullptr, nullptr)
   , net_(net)
   , nthreads_(nthreads)
   , done_(false)

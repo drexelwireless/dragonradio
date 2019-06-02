@@ -2,17 +2,19 @@
 #define CHANNELIZER_H_
 
 #include "IQBuffer.hh"
+#include "net/Net.hh"
 #include "phy/Channel.hh"
 #include "phy/PHY.hh"
 
 /** @brief Base class for channelizers */
-class Channelizer
+class Channelizer : public Element
 {
 public:
     Channelizer(std::shared_ptr<PHY> phy,
                 double rx_rate,
                 const Channels &channels)
-      : phy_(phy)
+      : source(*this, nullptr, nullptr)
+      , phy_(phy)
       , rx_rate_(rx_rate)
       , channels_(channels)
     {
@@ -55,6 +57,9 @@ public:
 
     /** @brief Reconfigure for new RX parameters */
     virtual void reconfigure(void) = 0;
+
+    /** @brief Demodulated packets */
+    RadioOut<Push> source;
 
 protected:
     /** @brief PHY we use for demodulation. */
