@@ -2,16 +2,18 @@
 #define SYNTHESIZER_H_
 
 #include "Logger.hh"
+#include "net/Net.hh"
 #include "phy/ModPacket.hh"
 #include "phy/PHY.hh"
 
 /** @brief Base class for synthesizers */
-class Synthesizer
+class Synthesizer : public Element
 {
 public:
     Synthesizer(std::shared_ptr<PHY> phy,
                 double tx_rate)
-      : phy_(phy)
+      : sink(*this, nullptr, nullptr)
+      , phy_(phy)
       , tx_rate_(tx_rate)
       , max_packet_size_(0)
     {
@@ -79,6 +81,9 @@ public:
 
     /** @brief Reconfigure for new TX parameters */
     virtual void reconfigure(void) = 0;
+
+    /** @brief Input port for packets. */
+    NetIn<Pull> sink;
 
 protected:
     /** @brief Our PHY. */

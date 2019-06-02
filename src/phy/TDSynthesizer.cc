@@ -11,7 +11,6 @@ TDSynthesizer::TDSynthesizer(std::shared_ptr<Net> net,
                              const Channel &tx_channel,
                              size_t nthreads)
   : Synthesizer(phy, tx_rate)
-  , sink(*this, nullptr, nullptr)
   , net_(net)
   , done_(false)
   , taps_({1.0})

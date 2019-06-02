@@ -14,7 +14,7 @@
 #include "net/Net.hh"
 
 /** @brief A time-domain synthesizer. */
-class TDSynthesizer : public Synthesizer, public Element
+class TDSynthesizer : public Synthesizer
 {
 public:
     using C = std::complex<float>;
@@ -68,9 +68,6 @@ public:
 
     /** @brief Stop modulating. */
     void stop(void);
-
-    /** @brief Input port for packets. */
-    NetIn<Pull> sink;
 
 private:
     /** @brief Channel state for time-domain modulation */

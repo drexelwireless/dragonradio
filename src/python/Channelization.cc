@@ -104,6 +104,11 @@ void exportPacketModulators(py::module &m)
         .def_property("tx_rate",
             &Synthesizer::getTXRate,
             &Synthesizer::setTXRate)
+        .def_property_readonly("sink",
+            [](std::shared_ptr<Synthesizer> element)
+            {
+                return exposePort(element, &element->sink);
+            })
         ;
 
     // Export class TDSynthesizer to Python
@@ -120,10 +125,5 @@ void exportPacketModulators(py::module &m)
         .def_property("tx_channel",
             &TDSynthesizer::getTXChannel,
             &TDSynthesizer::setTXChannel)
-        .def_property_readonly("sink",
-            [](std::shared_ptr<TDSynthesizer> element)
-            {
-                return exposePort(element, &element->sink);
-            })
         ;
 }
