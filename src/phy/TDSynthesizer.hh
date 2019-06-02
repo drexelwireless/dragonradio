@@ -22,8 +22,6 @@ public:
                   size_t nthreads);
     virtual ~TDSynthesizer();
 
-    double getMaxTXUpsampleRate(void) override;
-
     void modulate(const std::shared_ptr<Slot> &slot) override;
 
     void reconfigure(void) override;

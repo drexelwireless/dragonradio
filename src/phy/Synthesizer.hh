@@ -187,7 +187,19 @@ public:
      * This value is used by SmartController to estimate the maximum number of
      * packets that can fit in one time slot.
      */
-    virtual double getMaxTXUpsampleRate(void) = 0;
+    double getMaxTXUpsampleRate(void)
+    {
+        double max_rate = 1.0;
+
+        for (auto it = channels_.begin(); it != channels_.end(); ++it) {
+            double rate = tx_rate_/(phy_->getMinTXRateOversample()*it->first.bw);
+
+            if (rate > max_rate)
+                max_rate = rate;
+        }
+
+        return max_rate;
+    }
 
     /** @brief Modulate a slot. */
     virtual void modulate(const std::shared_ptr<Slot> &slot) = 0;

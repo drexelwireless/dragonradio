@@ -29,14 +29,6 @@ TDSynthesizer::~TDSynthesizer()
     stop();
 }
 
-double TDSynthesizer::getMaxTXUpsampleRate(void)
-{
-    if (channels_.size() == 0)
-        return 1.0;
-    else
-        return tx_rate_/(phy_->getMinRXRateOversample()*channels_[0].first.bw);
-}
-
 void TDSynthesizer::modulate(const std::shared_ptr<Slot> &slot)
 {
     std::atomic_store_explicit(&curslot_, slot, std::memory_order_release);
