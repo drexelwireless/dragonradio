@@ -3,13 +3,16 @@
 
 #include "Logger.hh"
 #include "phy/ModPacket.hh"
+#include "phy/PHY.hh"
 
 /** @brief Base class for synthesizers */
 class Synthesizer
 {
 public:
-    Synthesizer(double tx_rate)
-      : tx_rate_(tx_rate)
+    Synthesizer(std::shared_ptr<PHY> phy,
+                double tx_rate)
+      : phy_(phy)
+      , tx_rate_(tx_rate)
       , max_packet_size_(0)
     {
     }
@@ -78,6 +81,9 @@ public:
     virtual void reconfigure(void) = 0;
 
 protected:
+    /** @brief Our PHY. */
+    std::shared_ptr<PHY> phy_;
+
     /** @brief TX sample rate */
     double tx_rate_;
 

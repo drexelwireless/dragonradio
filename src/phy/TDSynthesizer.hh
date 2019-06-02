@@ -114,9 +114,6 @@ private:
     /** @brief Our network. */
     std::shared_ptr<Net> net_;
 
-    /** @brief Our PHY. */
-    std::shared_ptr<PHY> phy_;
-
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
 
