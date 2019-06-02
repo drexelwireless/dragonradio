@@ -101,13 +101,13 @@ void TDMA::txWorker(void)
 
             // Find following slot. We divide slot_size_ by two to avoid
             // possible rounding issues where we mights end up skipping a slot.
-            findNextSlot(t_next_slot + slot_size_/2.0,
-                         t_following_slot,
-                         own_following_slot);
+            bool hasFollowingSlot = findNextSlot(t_next_slot + slot_size_/2.0,
+                                                 t_following_slot,
+                                                 own_following_slot);
 
             // Schedule transmission for start of our next slot if we haven't
             // already transmitted for that slot
-            if (!approx(t_next_slot, t_prev_slot)) {
+            if (hasFollowingSlot && !approx(t_next_slot, t_prev_slot)) {
                 bool overfill_allowed = superslots_ &&
                     own_following_slot && !pendingTimestamp(t_following_slot);
 
