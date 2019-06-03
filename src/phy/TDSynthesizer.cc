@@ -55,6 +55,9 @@ void TDSynthesizer::stop(void)
 
 void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 {
+    Channels                           channels;
+    Schedule                           schedule;
+    double                             tx_rate;
     std::unique_ptr<ChannelState>      mod;
     std::shared_ptr<Synthesizer::Slot> prev_slot;
     std::shared_ptr<Synthesizer::Slot> slot;
@@ -74,21 +77,26 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_acquire)) {
+            // Make local copies to ensure thread safety
+            channels = channels_;
+            schedule = schedule_;
+            tx_rate = tx_rate_;
+
             // If we have no schedule or channels, yield and try again
-            if (schedule_.size() == 0 ||
-                channels_.size() == 0 ||
-                slot->slotidx >= schedule_[0].size()) {
+            if (schedule.size() == 0 ||
+                channels.size() == 0 ||
+                slot->slotidx >= schedule[0].size()) {
                 std::this_thread::yield();
                 continue;
             }
 
             // Cache which channel we use in each slot
-            size_t nslots = schedule_[0].size();
+            size_t nslots = schedule[0].size();
 
             slot_chanidx.resize(nslots);
 
             for (size_t slot = 0; slot < nslots; ++slot)
-                schedule_.firstChannelIdx(slot, slot_chanidx[slot]);
+                schedule.firstChannelIdx(slot, slot_chanidx[slot]);
 
             // We need to update the modulator
             chanidx = slot_chanidx.size();
@@ -102,14 +110,14 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 
             // Reconfigure the modulator
             mod = std::make_unique<ChannelState>(*phy_,
-                                                 channels_[chanidx].first,
-                                                 channels_[chanidx].second,
-                                                 tx_rate_);
+                                                 channels[chanidx].first,
+                                                 channels[chanidx].second,
+                                                 tx_rate);
         }
 
         // We can overfill if we are allowed to transmit on the same channel in
         // the next slot in the schedule
-        const Schedule::slot_type &slots = schedule_[chanidx];
+        const Schedule::slot_type &slots = schedule[chanidx];
 
         // Determine maximum number of samples in this slot
         bool overfill = getSuperslots() && slots[(chanidx + 1) % slots.size()];
