@@ -8,6 +8,9 @@
 #include <optional>
 #include <vector>
 
+#include <xsimd/xsimd.hpp>
+#include <xsimd/stl/algorithms.hpp>
+
 #if !defined(NOUHD)
 #include <uhd/types/time_spec.hpp>
 #endif /* !defined(NOUHD) */
@@ -143,6 +146,17 @@ public:
     void zero(void)
     {
         std::fill(data(), data() + size(), 0);
+    }
+
+    /** @brief Apply a gain
+     * @param g The multiplicative gain.
+     */
+    void gain(const float g)
+    {
+        xsimd::transform(data() + delay,
+                         data() + delay + size(),
+                         data() + delay,
+            [&](const auto& x) { return x*g; });
     }
 
     /** @brief Compute peak and average power */
