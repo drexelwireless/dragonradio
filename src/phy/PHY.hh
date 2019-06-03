@@ -190,7 +190,7 @@ public:
 
 protected:
     /** @brief Node ID */
-    double node_id_;
+    const NodeId node_id_;
 
     /** @brief RX sample rate */
     double rx_rate_;
