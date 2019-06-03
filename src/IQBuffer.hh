@@ -144,6 +144,28 @@ public:
     {
         std::fill(data(), data() + size(), 0);
     }
+
+    /** @brief Compute peak and average power */
+    void power(float &peak_power, float &avg_power)
+    {
+        size_t n = size();
+
+        peak_power = 0;
+        avg_power = 0;
+
+        for (size_t i = delay; i < n; ++i) {
+            std::complex<float> x = (*this)[i];
+
+            float norm = x.real()*x.real() + x.imag()*x.imag();
+
+            if (norm > peak_power)
+                peak_power = norm;
+
+            avg_power += norm;
+        }
+
+        avg_power /= n;
+    }
 };
 
 #endif /* IQBUFFER_H_ */
