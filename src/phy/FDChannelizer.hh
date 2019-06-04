@@ -32,6 +32,9 @@ public:
     /** @brief Length of FFT */
     static constexpr unsigned N = V*(P-1);
 
+    /** @brief Size of FFT overlap */
+    static constexpr unsigned O = P-1;
+
     /** @brief Number of new samples consumed per input block */
     static constexpr unsigned L = N - (P-1);
 
@@ -91,7 +94,7 @@ private:
         double rate_;
 
         /** @brief Oversample factor */
-        unsigned O_;
+        unsigned X_;
 
         /** @brief Decimation factor */
         unsigned D_;

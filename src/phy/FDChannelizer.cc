@@ -337,9 +337,9 @@ FDChannelizer::ChannelState::ChannelState(PHY &phy,
                                           double rx_rate)
   : channel_(channel)
   , rate_(phy.getMinRXRateOversample()*channel.bw/rx_rate)
-  , O_(phy.getMinRXRateOversample())
+  , X_(phy.getMinRXRateOversample())
   , D_(rx_rate/channel.bw)
-  , ifft_(O_*N/D_, FFTW_BACKWARD, FFTW_ESTIMATE)
+  , ifft_(X_*N/D_, FFTW_BACKWARD, FFTW_ESTIMATE)
   , H_(N)
   , demod_(phy.mkDemodulator())
   , seq_(0)
@@ -418,12 +418,12 @@ void FDChannelizer::ChannelState::demodulate(const std::complex<float>* data,
                 [](const auto& x, const auto& y) { return x+y; });
 
         // Oversample if needed
-        if (O_ != 1) {
+        if (X_ != 1) {
             unsigned n = N/D_;
 
             std::copy(ifft_.in.begin() + n/2,
                       ifft_.in.begin() + n,
-                      ifft_.in.begin() + O_*N/D_ - n/2);
+                      ifft_.in.begin() + X_*N/D_ - n/2);
             std::fill(ifft_.in.begin() + n/2,
                       ifft_.in.begin() + n,
                       0);
@@ -433,6 +433,6 @@ void FDChannelizer::ChannelState::demodulate(const std::complex<float>* data,
         ifft_.execute();
 
         // Demodulate
-        demod_->demodulate(ifft_.out.data() + O_*(P-1)/D_, O_*L/D_, callback);
+        demod_->demodulate(ifft_.out.data() + X_*(P-1)/D_, X_*L/D_, callback);
     }
 }
