@@ -67,6 +67,7 @@ void TDMA::reconfigure(void)
 
 void TDMA::txWorker(void)
 {
+    slot_queue        q;
     Clock::time_point t_now;              // Current time
     Clock::time_point t_prev_slot;        // Previous, completed slot
     Clock::time_point t_next_slot;        // Time at which our next slot starts
@@ -94,7 +95,7 @@ void TDMA::txWorker(void)
 
             // Finalize next slot. After this returns, we have EXCLUSIVE access
             // to the slot.
-            auto slot = finalizeSlot(t_next_slot);
+            auto slot = finalizeSlot(q, t_next_slot);
 
             // Find following slot. We divide slot_size_ by two to avoid
             // possible rounding issues where we mights end up skipping a slot.
@@ -110,7 +111,8 @@ void TDMA::txWorker(void)
 
             // Schedule modulation of following slot
             if (hasFollowingSlot && !approx(t_following_slot, t_prev_slot)) {
-                modulateSlot(t_following_slot,
+                modulateSlot(q,
+                             t_following_slot,
                              noverfill,
                              following_slotidx);
 
@@ -138,6 +140,8 @@ void TDMA::txWorker(void)
         logEvent("MAC: attempting to reset TX loop");
         doze(slot_size_/2.0);
     }
+
+    missedRemainingSlots(q);
 }
 
 bool TDMA::findNextSlot(Clock::time_point t,

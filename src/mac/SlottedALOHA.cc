@@ -62,6 +62,7 @@ void SlottedALOHA::reconfigure(void)
 
 void SlottedALOHA::txWorker(void)
 {
+    slot_queue        q;
     Clock::time_point t_now;            // Current time
     Clock::time_point t_next_slot;      // Time at which our next slot starts
     Clock::time_point t_following_slot; // Time at which the following slot starts
@@ -77,11 +78,11 @@ void SlottedALOHA::txWorker(void)
         t_following_slot = t_next_slot + slot_size_;
 
         // Finalize next slot
-        auto slot = finalizeSlot(t_next_slot);
+        auto slot = finalizeSlot(q, t_next_slot);
 
         // Modulate following slot with probability p_
         if (dist_(gen_) < p_)
-            modulateSlot(t_following_slot, 0, slotidx_);
+            modulateSlot(q, t_following_slot, 0, slotidx_);
 
         // Transmit next slot
         if (slot)
@@ -95,4 +96,6 @@ void SlottedALOHA::txWorker(void)
         if (delta > 0.0)
             doze(delta);
     }
+
+    missedRemainingSlots(q);
 }

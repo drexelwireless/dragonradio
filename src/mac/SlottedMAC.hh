@@ -111,6 +111,8 @@ public:
     virtual void reconfigure(void) override;
 
 protected:
+    using slot_queue = std::queue<std::shared_ptr<Synthesizer::Slot>>;
+
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;
 
@@ -141,12 +143,6 @@ protected:
     /** @brief Is the next slot the start of a burst? */
     bool next_slot_start_of_burst_;
 
-    /** @brief Mutex protecting synthesized slots */
-    spinlock_mutex slots_mutex_;
-
-    /** @brief Synthesized slots */
-    std::queue<std::shared_ptr<Synthesizer::Slot>> slots_;
-
     /** @brief TX center frequency offset from RX center frequency. */
     /** If the TX and RX rates are different, this is non-empty and contains
      * the frequency of the channel we transmit on.
@@ -163,15 +159,18 @@ protected:
     void rxWorker(void);
 
     /** @brief Schedule modulation of a slot
+     * @param q The slot queue
      * @param when Start time of slot
      * @param prev_overfill Number of overfill samples from previous slot.
      * @param slotidx Index of the slot to modulated
      */
-    void modulateSlot(Clock::time_point when,
+    void modulateSlot(slot_queue &q,
+                      Clock::time_point when,
                       size_t prev_overfill,
                       size_t slotidx);
 
     /** @brief Finalize the next TX slot.
+     * @param q The slot queue
      * @param when Start time of slot
      * @return The slot
      */
@@ -179,7 +178,8 @@ protected:
      * That is, it does not need to acquire the slot's lock to modify it,
      * because it is guaranteed exclusive access.
      */
-    std::shared_ptr<Synthesizer::Slot> finalizeSlot(Clock::time_point when);
+    std::shared_ptr<Synthesizer::Slot> finalizeSlot(slot_queue &q,
+                                                    Clock::time_point when);
 
     /** @brief Transmit a slot
      * @param slot The slot
@@ -190,6 +190,11 @@ protected:
      * @param slot The slot
      */
     void missedSlot(Synthesizer::Slot &slot);
+
+    /** @brief Mark all remaining slots in qeueue as missed
+     * @param q The slot queue
+     */
+    void missedRemainingSlots(slot_queue &q);
 };
 
 #endif /* SLOTTEDMAC_H_ */

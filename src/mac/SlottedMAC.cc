@@ -34,13 +34,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
 
 SlottedMAC::~SlottedMAC()
 {
-    // Mark all remaining packets in un-finalized slots as missed
-    std::lock_guard<spinlock_mutex> lock(slots_mutex_);
-
-    while (!slots_.empty()) {
-        missedSlot(*slots_.front());
-        slots_.pop();
-    }
 }
 
 void SlottedMAC::reconfigure(void)
@@ -127,7 +120,8 @@ void SlottedMAC::rxWorker(void)
     }
 }
 
-void SlottedMAC::modulateSlot(Clock::time_point when,
+void SlottedMAC::modulateSlot(slot_queue &q,
+                              Clock::time_point when,
                               size_t prev_overfill,
                               size_t slotidx)
 {
@@ -143,12 +137,11 @@ void SlottedMAC::modulateSlot(Clock::time_point when,
     // Tell the synthesizer to synthesize for this slot
     synthesizer_->modulate(slot);
 
-    std::lock_guard<spinlock_mutex> lock(slots_mutex_);
-
-    slots_.emplace(std::move(slot));
+    q.emplace(std::move(slot));
 }
 
-std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(Clock::time_point when)
+std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(slot_queue &q,
+                                                            Clock::time_point when)
 {
     std::shared_ptr<Synthesizer::Slot> slot;
     Clock::time_point                  deadline;
@@ -156,20 +149,18 @@ std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(Clock::time_point wh
     for (;;) {
         // Get the next slot
         {
-            std::lock_guard<spinlock_mutex> lock(slots_mutex_);
-
             // If we don't have any slots synthesized, we can't send anything
-            if (slots_.empty())
+            if (q.empty())
                 return nullptr;
 
             // Check deadline of next slot
-            deadline = slots_.front()->deadline;
+            deadline = q.front()->deadline;
 
             // If the next slot needs to be transmitted or tossed, pop it,
             // otherwise return nullptr since we need to wait longer
             if (deadline < when || approx(deadline, when)) {
-                slot = std::move(slots_.front());
-                slots_.pop();
+                slot = std::move(q.front());
+                q.pop();
             } else
                 return nullptr;
         }
@@ -281,5 +272,13 @@ void SlottedMAC::missedSlot(Synthesizer::Slot &slot)
     for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
         if (!(*it)->pkt->isInternalFlagSet(kIsTimestamp))
             controller_->missed(std::move((*it)->pkt));
+    }
+}
+
+void SlottedMAC::missedRemainingSlots(slot_queue &q)
+{
+    while (!q.empty()) {
+        missedSlot(*q.front());
+        q.pop();
     }
 }
