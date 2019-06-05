@@ -209,6 +209,8 @@ class Scorer:
 
     def updateScore(self):
         """Update score based on collected metrics."""
+        config = self.config
+
         with self.lock:
             if self.score is None:
                 return
@@ -217,7 +219,14 @@ class Scorer:
 
     def updateMandatedOutcomes(self, mp, mandated_outcomes):
         """Update mandated outcomes with scoring data from given measurement period"""
+        config = self.config
+
         with self.lock:
+            now = self.currentMP()
+
+            mandates_achieved = 0
+            total_score_achieved = 0
+
             for mandate in mandated_outcomes.values():
                 if mandate.flow_uid in self.flow_links:
                     (src, dest) = self.flow_links[mandate.flow_uid]
@@ -228,10 +237,20 @@ class Scorer:
                 try:
                     df = self.score.loc[(mandate.flow_uid, mp)]
                     mandate.achieved_duration = int(df.achieved_duration)
+
+                    if mandate.achieved_duration >= mandate.hold_period:
+                        mandates_achieved += 1
+                        total_score_achieved += mandate.point_value
                 except:
                     logger.exception('Could not index stats: (%s, %s)',
                         mandate.flow_uid,
                         mp)
+
+            # Log data used to generate report
+            if config.log_scoring:
+                filename = 'score_now_{:03d}_mp_{:03d}_achieved_{:d}_score_{:d}.csv'.format(now, mp, mandates_achieved, total_score_achieved)
+
+                self.score.to_csv(os.path.join(config.logdir, filename))
 
     def updateSourceStats(self, node_id, timestamp, sources):
         if self.q:

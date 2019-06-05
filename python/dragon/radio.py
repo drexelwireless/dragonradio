@@ -84,6 +84,7 @@ class Config(object):
         self.log_invalid_headers = False
         self.log_snapshots = False
         self.log_protobuf = False
+        self.log_scoring = False
         self.compress_interface_logs = False
         # This is the actual path to the log directory
         self.logdir_ = None
