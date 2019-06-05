@@ -495,11 +495,14 @@ class Controller(TCPProtoServer):
                 rx = radio.node_id
 
                 for tx in transmitters:
+                    occupancy = (sched[chan] == tx).sum() / len(sched[chan])
+
                     v = Voxel()
                     v.f_start = f_start
                     v.f_end = f_end
                     v.tx = tx
                     v.rx = [rx]
+                    v.duty_cycle = occupancy
 
                     voxels.append(v)
 

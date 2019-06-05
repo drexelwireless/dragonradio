@@ -102,9 +102,10 @@ class Voxel(object):
         self.f_end = 0
         self.tx = None
         self.rx = []
+        self.duty_cycle = 1.0
 
     def __str__(self):
-        return 'Voxel(f_start={}, f_end={}, tx={}, rx={})'.format(self.f_start, self.f_end, self.tx, self.rx)
+        return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
 
 def sendCIL(f):
     """
@@ -297,7 +298,9 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
                     usage.spectrum_voxel.freq_start = vox.f_start
                     usage.spectrum_voxel.freq_end = vox.f_end
+                    usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
                     usage.spectrum_voxel.time_start.set_timestamp(time.time())
+
                     usage.transmitter_info.radio_id = vox.tx
                     usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
                     usage.transmitter_info.mac_cca = False
