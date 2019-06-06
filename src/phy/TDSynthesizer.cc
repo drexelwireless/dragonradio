@@ -96,12 +96,12 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
                 schedule.firstChannelIdx(slot, slot_chanidx[slot]);
 
             // We need to update the modulator
-            chanidx = slot_chanidx.size();
+            mod.release();
 
             reconfig.store(false, std::memory_order_relaxed);
         }
 
-        if (slot_chanidx[slot->slotidx] != chanidx) {
+        if (!mod || slot_chanidx[slot->slotidx] != chanidx) {
             // Update our channel index
             chanidx = slot_chanidx[slot->slotidx];
 
