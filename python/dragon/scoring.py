@@ -323,7 +323,14 @@ def nonzeroFlowStats(flowperf):
     return any(x != 0 for x in flowperf.npackets)
 
 def scoreGoals(df):
-    """Score a DataFrame containing goals."""
+    """Score a DataFrame containing goals.
+
+    Args:
+        df: The data frame to score
+
+    Returns:
+        A scored DataFrame.
+    """
     # Select good throughput mandates
     tp_good = df.max_latency_s.notna() & \
               (df.nbytes_sent > 0) & \
