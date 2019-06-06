@@ -130,7 +130,7 @@ class Scorer:
                 if self.score is not None:
                     self.score.to_csv(os.path.join(config.logdir, filename))
         except:
-            logger.exception('Exception when saving goals')
+            logger.exception('Exception when dumping scores')
 
     def updateGoals(self, goals, timestamp, max_stage_mps=15*60):
         """Update mandated goals.
@@ -242,7 +242,7 @@ class Scorer:
                         mandates_achieved += 1
                         total_score_achieved += mandate.point_value
                 except:
-                    logger.exception('Could not index stats: (%s, %s)',
+                    logger.info('Could not index stats: (%s, %s)',
                         mandate.flow_uid,
                         mp)
 
