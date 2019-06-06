@@ -53,10 +53,16 @@ class Scorer:
         self.stats_max_mp = {}
         """Maximum MP for which stats have been received from each SRN"""
 
-    @property
-    def mp(self):
+    def timeToMP(self, t, closest=False):
+        """Convert time (in seconds since the epoch) to a measurement period"""
+        if closest:
+            return int(round(t - self.scenario_start_time) / self.config.measurement_period)
+        else:
+            return int((t - self.scenario_start_time) / self.config.measurement_period)
+
+    def currentMP(self):
         """Current measurement period"""
-        return int((time.time() - self.scenario_start_time) / self.config.measurement_period)
+        return self.timeToMP(time.time())
 
     def start(self):
         """Start scorer.
@@ -74,12 +80,10 @@ class Scorer:
     def stop(self):
         """Finish all scoring tasks"""
         # Get current mp
-        mp = self.mp
+        mp = self.currentMP()
 
         # Finish all scoring tasks
-        logger.info('Waiting for scoring tasks to finish (%d tasks remaining)...', self.q.qsize())
-        self.q.join()
-        logger.info('Scoring tasks finished')
+        self.join()
 
         # Delete score entries for all future measurement periods
         with self.lock:
@@ -99,9 +103,10 @@ class Scorer:
 
     def join(self):
         """Drain the task queue"""
-        logger.info('Waiting for scoring tasks to drain (%d tasks remaining)...', self.q.qsize())
-        self.q.join()
-        logger.info('Scoring tasks finished')
+        if self.q:
+            logger.info('Waiting for scoring tasks to drain (%d tasks remaining)...', self.q.qsize())
+            self.q.join()
+            logger.info('Scoring tasks finished')
 
     def getMPStage(self, mp):
         """Return stage that given measurement period belongs to"""
@@ -125,7 +130,7 @@ class Scorer:
                 if self.score is not None:
                     self.score.to_csv(os.path.join(config.logdir, filename))
         except:
-            logger.exception('Exception when saving goals')
+            logger.exception('Exception when dumping scores')
 
     def updateGoals(self, goals, timestamp, max_stage_mps=15*60):
         """Update mandated goals.
@@ -140,7 +145,7 @@ class Scorer:
             # Calculate current stage
             #
             self.stage += 1
-            self.stage_timestamp = int(round(timestamp - self.scenario_start_time))
+            self.stage_timestamp = self.timeToMP(timestamp, closest=True)
             self.stage_timestamps[self.stage] = self.stage_timestamp
 
             logger.info('Scenario stage timestamp = %d', self.stage_timestamp)
@@ -204,6 +209,8 @@ class Scorer:
 
     def updateScore(self):
         """Update score based on collected metrics."""
+        config = self.config
+
         with self.lock:
             if self.score is None:
                 return
@@ -212,7 +219,14 @@ class Scorer:
 
     def updateMandatedOutcomes(self, mp, mandated_outcomes):
         """Update mandated outcomes with scoring data from given measurement period"""
+        config = self.config
+
         with self.lock:
+            now = self.currentMP()
+
+            mandates_achieved = 0
+            total_score_achieved = 0
+
             for mandate in mandated_outcomes.values():
                 if mandate.flow_uid in self.flow_links:
                     (src, dest) = self.flow_links[mandate.flow_uid]
@@ -223,16 +237,28 @@ class Scorer:
                 try:
                     df = self.score.loc[(mandate.flow_uid, mp)]
                     mandate.achieved_duration = int(df.achieved_duration)
+
+                    if mandate.achieved_duration >= mandate.hold_period:
+                        mandates_achieved += 1
+                        total_score_achieved += mandate.point_value
                 except:
-                    logger.exception('Could not index stats: (%s, %s)',
+                    logger.info('Could not index stats: (%s, %s)',
                         mandate.flow_uid,
                         mp)
 
+            # Log data used to generate report
+            if config.log_scoring:
+                filename = 'score_now_{:03d}_mp_{:03d}_achieved_{:d}_score_{:d}.csv'.format(now, mp, mandates_achieved, total_score_achieved)
+
+                self.score.to_csv(os.path.join(config.logdir, filename))
+
     def updateSourceStats(self, node_id, timestamp, sources):
-        self.q.put((node_id, timestamp, sources, True))
+        if self.q:
+            self.q.put((node_id, timestamp, sources, True))
 
     def updateSinkStats(self, node_id, timestamp, sinks):
-        self.q.put((node_id, timestamp, sinks, False))
+        if self.q:
+            self.q.put((node_id, timestamp, sinks, False))
 
     def __updateFlowStatistics(self, node_id, timestamp, flow, sent=False, recv=False):
         # Skip recording statistics if we don't have mandates yet
@@ -262,7 +288,7 @@ class Scorer:
             node_id,
             flow.flow_uid,
             timestamp,
-            self.mp,
+            self.currentMP(),
             flow.first_mp,
             max_mp,
             flow.npackets,
@@ -297,7 +323,14 @@ def nonzeroFlowStats(flowperf):
     return any(x != 0 for x in flowperf.npackets)
 
 def scoreGoals(df):
-    """Score a DataFrame containing goals."""
+    """Score a DataFrame containing goals.
+
+    Args:
+        df: The data frame to score
+
+    Returns:
+        A scored DataFrame.
+    """
     # Select good throughput mandates
     tp_good = df.max_latency_s.notna() & \
               (df.nbytes_sent > 0) & \

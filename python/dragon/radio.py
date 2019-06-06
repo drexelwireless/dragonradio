@@ -84,6 +84,7 @@ class Config(object):
         self.log_invalid_headers = False
         self.log_snapshots = False
         self.log_protobuf = False
+        self.log_scoring = False
         self.compress_interface_logs = False
         # This is the actual path to the log directory
         self.logdir_ = None
@@ -227,10 +228,11 @@ class Config(object):
 
         # Scoring options
         self.max_performance_age = 8.0
-        """Performance reports may be from a measurement period no older than this"""
+        """Performance reports may be from a measurement period no older than
+        this many seconds"""
 
-        self.scoring_mp_slop = self.measurement_period + 0.5
-        """Only report flow performance data from before this many seconds ago"""
+        self.stats_ignore_window = self.measurement_period + 0.5
+        """Ignore flow statistics during this (most recent) time window"""
 
         # Internal agent options
         self.status_update_period = 5

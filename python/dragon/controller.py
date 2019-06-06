@@ -45,6 +45,9 @@ class Controller(TCPProtoServer):
         self.config = config
         """Our Config"""
 
+        self.radio = None
+        """Our Radio"""
+
         self.dumpcap_procs = []
         """dumpcap procs we've started"""
 
@@ -57,7 +60,7 @@ class Controller(TCPProtoServer):
         self.scenario_started = False
         """Have we received mandates?"""
 
-        self.scenario_start_time_ = None
+        self.__scenario_start_time = None
         """RF scenario start time, in seconds since the epoch"""
 
         self.done = False
@@ -72,8 +75,8 @@ class Controller(TCPProtoServer):
         self.scorer = scoring.Scorer(config)
         """Match scorer"""
 
-        self.low_mp = 0
-        """Low range of measurement periods to include in updates"""
+        self.max_reported_mp = 0
+        """Maximum MP for which flow statistics have been reported"""
 
         self.reported_mandate_performance = []
         """Reported mandate performance"""
@@ -111,6 +114,9 @@ class Controller(TCPProtoServer):
         self.internal_client = None
         """Internal protocol client"""
 
+        # Provide default start time
+        self.scenario_start_time = time.time()
+
     @property
     def is_gateway(self):
         radio = self.radio
@@ -118,27 +124,21 @@ class Controller(TCPProtoServer):
         return radio.net[radio.node_id].is_gateway
 
     @property
-    def mp(self):
-        """Current measurement period"""
-        return int((time.time() - self.scenario_start_time) / self.config.measurement_period)
-
-    @property
     def scenario_start_time(self):
         """RF scenario start time, in seconds since the epoch"""
-        return self.scenario_start_time_
+        return self.__scenario_start_time
 
     @scenario_start_time.setter
     def scenario_start_time(self, t):
         logging.info('RF scenario start time set: %f', t)
-        self.scenario_start_time_ = t
+        self.__scenario_start_time = t
         self.scorer.scenario_start_time = t
-        self.radio.flowperf.start = t
+        if self.radio is not None:
+            self.radio.flowperf.start = t
 
-    @property
-    def mandated_flows(self):
-        """Return all mandated flows"""
-        with self.mandated_outcomes_lock:
-            return list(self.mandated_outcomes.keys())
+    def timeToMP(self, t):
+        """Convert time (in seconds since the epoch) to a measurement period"""
+        return int((t - self.scenario_start_time) / self.config.measurement_period)
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -495,11 +495,14 @@ class Controller(TCPProtoServer):
                 rx = radio.node_id
 
                 for tx in transmitters:
+                    occupancy = (sched[chan] == tx).sum() / len(sched[chan])
+
                     v = Voxel()
                     v.f_start = f_start
                     v.f_end = f_end
                     v.tx = tx
                     v.rx = [rx]
+                    v.duty_cycle = occupancy
 
                     voxels.append(v)
 
@@ -562,7 +565,7 @@ class Controller(TCPProtoServer):
         else:
             min_known_mp = min(self.scorer.stats_max_mp.values())
 
-        min_mp = int((time.time() - config.max_performance_age - self.scenario_start_time) / config.measurement_period)
+        min_mp = self.timeToMP(time.time() - config.max_performance_age)
 
         mp = max(min_known_mp, min_mp)
         timestamp = self.scenario_start_time + mp*config.measurement_period
@@ -658,13 +661,15 @@ class Controller(TCPProtoServer):
                     else:
                         reset_stats = False
 
-                    max_mp = int((time.time() - self.scenario_start_time - config.scoring_mp_slop) / self.config.measurement_period)
+                    # This is the maximum MP for which we will report flow
+                    # statistics
+                    max_report_mp = self.timeToMP(time.time() - config.stats_ignore_window)
 
                     # Get local flow statistics
-                    sources = [scoring.mkFlowStats(p, self.low_mp, max_mp) for p in radio.flowperf.getSources(reset_stats).values()]
-                    sinks = [scoring.mkFlowStats(p, self.low_mp, max_mp) for p in radio.flowperf.getSinks(reset_stats).values()]
+                    sources = [scoring.mkFlowStats(p, self.max_reported_mp + 1, max_report_mp) for p in radio.flowperf.getSources(reset_stats).values()]
+                    sinks = [scoring.mkFlowStats(p, self.max_reported_mp + 1, max_report_mp) for p in radio.flowperf.getSinks(reset_stats).values()]
 
-                    self.low_mp = max_mp + 1
+                    self.max_reported_mp = max_report_mp
 
                     # Filter out
                     sources = [p for p in sources if scoring.nonzeroFlowStats(p)]
