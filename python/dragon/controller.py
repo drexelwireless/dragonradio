@@ -706,8 +706,11 @@ class Controller(TCPProtoServer):
 
                 logging.debug('Creating schedule')
 
+                # Make sure we know about all nodes
+                self.addRadioNodes()
+
                 # Get all nodes we know about
-                self.schedule_nodes = list(radio.net)
+                self.schedule_nodes = list(self.nodes.keys())
                 self.schedule_nodes.sort()
 
                 # Make sure we are first in the list so we always get the same
