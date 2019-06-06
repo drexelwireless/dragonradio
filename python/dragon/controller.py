@@ -663,7 +663,7 @@ class Controller(TCPProtoServer):
 
                     # This is the maximum MP for which we will report flow
                     # statistics
-                    max_report_mp = self.timeToMP(time.time() - config.scoring_mp_slop)
+                    max_report_mp = self.timeToMP(time.time() - config.stats_ignore_window)
 
                     # Get local flow statistics
                     sources = [scoring.mkFlowStats(p, self.max_reported_mp + 1, max_report_mp) for p in radio.flowperf.getSources(reset_stats).values()]
