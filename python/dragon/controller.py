@@ -75,8 +75,8 @@ class Controller(TCPProtoServer):
         self.scorer = scoring.Scorer(config)
         """Match scorer"""
 
-        self.low_mp = 0
-        """Low range of measurement periods to include in updates"""
+        self.max_reported_mp = 0
+        """Maximum MP for which flow statistics have been reported"""
 
         self.reported_mandate_performance = []
         """Reported mandate performance"""
@@ -661,13 +661,15 @@ class Controller(TCPProtoServer):
                     else:
                         reset_stats = False
 
-                    max_mp = int((time.time() - self.scenario_start_time - config.scoring_mp_slop) / self.config.measurement_period)
+                    # This is the maximum MP for which we will report flow
+                    # statistics
+                    max_report_mp = self.timeToMP(time.time() - config.scoring_mp_slop)
 
                     # Get local flow statistics
-                    sources = [scoring.mkFlowStats(p, self.low_mp, max_mp) for p in radio.flowperf.getSources(reset_stats).values()]
-                    sinks = [scoring.mkFlowStats(p, self.low_mp, max_mp) for p in radio.flowperf.getSinks(reset_stats).values()]
+                    sources = [scoring.mkFlowStats(p, self.max_reported_mp + 1, max_report_mp) for p in radio.flowperf.getSources(reset_stats).values()]
+                    sinks = [scoring.mkFlowStats(p, self.max_reported_mp + 1, max_report_mp) for p in radio.flowperf.getSinks(reset_stats).values()]
 
-                    self.low_mp = max_mp + 1
+                    self.max_reported_mp = max_report_mp
 
                     # Filter out
                     sources = [p for p in sources if scoring.nonzeroFlowStats(p)]
