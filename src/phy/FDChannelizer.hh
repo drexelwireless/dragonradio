@@ -122,6 +122,15 @@ private:
 
         /** @brief The slot's frequency-domain samples */
         std::shared_ptr<IQBuf> fdbuf;
+
+        /** @brief Offset of frequency-domain samples from time-domain samples
+         * (in samples)
+         */
+        /** This is used to account for the fact that the frequency-domain
+         * buffer may hold some samples from the previous slot's time-domain
+         * buffer that didn't fit in a full size N FFT.
+         */
+        ssize_t fd_offset;
     };
 
     /** @brief Number of demodulation threads. */

@@ -116,7 +116,8 @@ void FDChannelizer::fftWorker(void)
         fdbuf->seq = iqbuf->seq;
         fdbuf->fc = iqbuf->fc;
         fdbuf->fs = iqbuf->fs;
-        fdbuf->snapshot_off = iqbuf->snapshot_off;
+        if (iqbuf->snapshot_off)
+            fdbuf->snapshot_off = *iqbuf->snapshot_off - (fftoff - O);
 
         // Make the frequency-domain buffer available to the individual channels
         {
@@ -124,7 +125,7 @@ void FDChannelizer::fftWorker(void)
             unsigned                        nchannels = channels_.size();
 
             for (unsigned i = 0; i < nchannels; ++i)
-                slots_[i].push({iqbuf, fdbuf});
+                slots_[i].push({iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O)});
         }
 
         // Reset FFT state on buffer discontinuity. We detect a discontinuity
@@ -291,7 +292,7 @@ void FDChannelizer::demodWorker(unsigned tid)
         // Timestamp the demodulated data
         demod.timestamp(fdbuf->timestamp,
                         fdbuf->snapshot_off,
-                        0);
+                        slot.fd_offset);
 
         // Demodulate the IQ buffer
         bool   complete = false; // Is the buffer complete?
