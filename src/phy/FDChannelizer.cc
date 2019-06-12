@@ -36,7 +36,7 @@ FDChannelizer::~FDChannelizer()
 
 void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
-    iqbuf_.push(buf);
+    tdbufs_.push(buf);
 }
 
 void FDChannelizer::reconfigure(void)
@@ -60,7 +60,7 @@ void FDChannelizer::reconfigure(void)
     unsigned nchannels = channels_.size();
 
     demods_.resize(nchannels);
-    fdiqbufs_ = std::unique_ptr<ringbuffer<bufpair, LOGR> []>(new ringbuffer<bufpair, LOGR>[nchannels]);
+    slots_ = std::unique_ptr<ringbuffer<Slot, LOGR> []>(new ringbuffer<Slot, LOGR>[nchannels]);
 
     for (unsigned i = 0; i < nchannels; i++)
         demods_[i] = std::make_unique<ChannelState>(*phy_,
@@ -92,31 +92,31 @@ void FDChannelizer::stop(void)
 
 void FDChannelizer::fftWorker(void)
 {
-    std::shared_ptr<IQBuf> buf;
+    std::shared_ptr<IQBuf> iqbuf;
     std::shared_ptr<IQBuf> fdbuf;
     unsigned               seq = 0;
     fftw::FFT<C>           fft(N, FFTW_FORWARD, FFTW_ESTIMATE);
     size_t                 fftoff = P-1;
 
     while (!done_) {
-        if (iqbuf_.size() == 0)
+        if (tdbufs_.size() == 0)
             continue;
 
         // Get a time-domain IQ buffer
-        buf = std::move(iqbuf_.front());
-        assert(buf);
-        iqbuf_.pop();
+        iqbuf = std::move(tdbufs_.front());
+        assert(iqbuf);
+        tdbufs_.pop();
 
         // Wait for the buffer to start to fill.
-        buf->waitToStartFilling();
+        iqbuf->waitToStartFilling();
 
         // Create a frequency-domain buffer
-        fdbuf = std::make_shared<IQBuf>((buf->capacity() + L - 1)*N/L);
-        fdbuf->timestamp = buf->timestamp;
-        fdbuf->seq = buf->seq;
-        fdbuf->fc = buf->fc;
-        fdbuf->fs = buf->fs;
-        fdbuf->snapshot_off = buf->snapshot_off;
+        fdbuf = std::make_shared<IQBuf>((iqbuf->capacity() + L - 1)*N/L);
+        fdbuf->timestamp = iqbuf->timestamp;
+        fdbuf->seq = iqbuf->seq;
+        fdbuf->fc = iqbuf->fc;
+        fdbuf->fs = iqbuf->fs;
+        fdbuf->snapshot_off = iqbuf->snapshot_off;
 
         // Make the frequency-domain buffer available to the individual channels
         {
@@ -124,17 +124,17 @@ void FDChannelizer::fftWorker(void)
             unsigned                        nchannels = channels_.size();
 
             for (unsigned i = 0; i < nchannels; ++i)
-                fdiqbufs_[i].push({buf, fdbuf});
+                slots_[i].push({iqbuf, fdbuf});
         }
 
         // Reset FFT state on buffer discontinuity. We detect a discontinuity
         // via a gap in the time-domain IQ buffer sequence number.
-        if (buf->seq != seq + 1) {
+        if (iqbuf->seq != seq + 1) {
             std::fill(fft.in.begin(), fft.in.end(), 0);
             fftoff = P-1;
         }
 
-        seq = buf->seq;
+        seq = iqbuf->seq;
 
         // Perform overlap-save on input buffer as data becomes available
         bool   complete;            // Is the buffer complete?
@@ -144,8 +144,8 @@ void FDChannelizer::fftWorker(void)
         size_t outoff = 0;          // Offset into output buffer
 
         for (;;) {
-            complete = buf->complete.load(std::memory_order_acquire);
-            nsamples = buf->nsamples.load(std::memory_order_acquire);
+            complete = iqbuf->complete.load(std::memory_order_acquire);
+            nsamples = iqbuf->nsamples.load(std::memory_order_acquire);
 
             // If we don't have enough samples for a full FFT, wait for more if
             // the buffer *is not* complete, or stop processing samples if the
@@ -159,8 +159,8 @@ void FDChannelizer::fftWorker(void)
 
             // Use needed samples from the input buffer
             assert(fftoff + needed == N);
-            std::copy(buf->data() + inoff,
-                      buf->data() + inoff + needed,
+            std::copy(iqbuf->data() + inoff,
+                      iqbuf->data() + inoff + needed,
                       fft.in.begin() + fftoff);
 
             // Perform the FFT
@@ -201,8 +201,8 @@ void FDChannelizer::fftWorker(void)
         size_t nleftover = nsamples - inoff; // Number of leftover samples
 
         assert(fftoff + nleftover < N);
-        std::copy(buf->data() + inoff,
-                  buf->data() + nsamples,
+        std::copy(iqbuf->data() + inoff,
+                  iqbuf->data() + nsamples,
                   fft.in.begin() + fftoff);
         fftoff += nleftover;
     }
@@ -212,8 +212,8 @@ void FDChannelizer::demodWorker(unsigned tid)
 {
     unsigned               channelidx = tid;
     unsigned               nchannels = demods_.size();
-    bufpair                prev_buf;
-    bufpair                buf;
+    Slot                   prev_slot;
+    Slot                   slot;
     std::optional<ssize_t> next_snapshot_off;
     bool                   received;
 
@@ -253,23 +253,23 @@ void FDChannelizer::demodWorker(unsigned tid)
 
         // Get the buffer to demodulate
         {
-            auto &iqbuf = fdiqbufs_[channelidx];
+            auto &slots = slots_[channelidx];
 
             received = false;
 
-            if (iqbuf.size() == 0)
+            if (slots.size() == 0)
                 continue;
 
-            buf = std::move(iqbuf.front());
-            assert(buf.first);
-            assert(buf.second);
-            iqbuf.pop();
+            slot = std::move(slots.front());
+            assert(slot.iqbuf);
+            assert(slot.fdbuf);
+            slots.pop();
         }
 
-        auto &fdiqbuf = buf.second;
+        auto &fdbuf = slot.fdbuf;
 
         // Wait for the buffer to start to fill.
-        fdiqbuf->waitToStartFilling();
+        fdbuf->waitToStartFilling();
 
         // When the snapshot is over, we need to record self-transmissions
         // for one more slot to ensure we record any transmission that
@@ -277,20 +277,20 @@ void FDChannelizer::demodWorker(unsigned tid)
         // slot.
         std::optional<ssize_t> snapshot_off;
 
-        if (fdiqbuf->snapshot_off) {
-            snapshot_off = fdiqbuf->snapshot_off;
-            next_snapshot_off = *fdiqbuf->snapshot_off + fdiqbuf->size();
+        if (fdbuf->snapshot_off) {
+            snapshot_off = fdbuf->snapshot_off;
+            next_snapshot_off = *fdbuf->snapshot_off + fdbuf->size();
         } else if (next_snapshot_off) {
             snapshot_off = next_snapshot_off;
             next_snapshot_off = std::nullopt;
         }
 
         // Update IQ buffer sequence number
-        demod.updateSeq(fdiqbuf->seq);
+        demod.updateSeq(fdbuf->seq);
 
         // Timestamp the demodulated data
-        demod.timestamp(fdiqbuf->timestamp,
-                        fdiqbuf->snapshot_off,
+        demod.timestamp(fdbuf->timestamp,
+                        fdbuf->snapshot_off,
                         0);
 
         // Demodulate the IQ buffer
@@ -299,11 +299,11 @@ void FDChannelizer::demodWorker(unsigned tid)
         size_t n = 0;
 
         for (;;) {
-            complete = fdiqbuf->complete.load(std::memory_order_acquire);
-            n = fdiqbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
+            complete = fdbuf->complete.load(std::memory_order_acquire);
+            n = fdbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
 
             if (n != 0) {
-                demod.demodulate(fdiqbuf->data() + ndemodulated,
+                demod.demodulate(fdbuf->data() + ndemodulated,
                                  n,
                                  callback);
 
@@ -316,12 +316,12 @@ void FDChannelizer::demodWorker(unsigned tid)
         // slot. We then save the current slot in case we need to log it
         // later.
         if (logger_ && received && logger_->getCollectSource(Logger::kSlots)) {
-            if (prev_buf.first)
-                logger_->logSlot(prev_buf.first, rx_rate_);
+            if (prev_slot.iqbuf)
+                logger_->logSlot(prev_slot.iqbuf, rx_rate_);
 
-            logger_->logSlot(buf.first, rx_rate_);
+            logger_->logSlot(slot.iqbuf, rx_rate_);
 
-            prev_buf = std::move(buf);
+            prev_slot = std::move(slot);
         }
 
         // Demodulate next channel for which we are responsible

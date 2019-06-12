@@ -115,6 +115,15 @@ private:
         unsigned seq_;
     };
 
+    /** @brief A demodulation slot */
+    struct Slot {
+        /** @brief The slot's time-domain samples */
+        std::shared_ptr<IQBuf> iqbuf;
+
+        /** @brief The slot's frequency-domain samples */
+        std::shared_ptr<IQBuf> fdbuf;
+    };
+
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
 
@@ -133,8 +142,8 @@ private:
     /** @brief Condition variable for waking demodulators. */
     std::condition_variable wake_cond_;
 
-    /** @brief Time-domain packets to demodulate */
-    ringbuffer<std::shared_ptr<IQBuf>, LOGR> iqbuf_;
+    /** @brief Time-domain IQ buffers to demodulate */
+    ringbuffer<std::shared_ptr<IQBuf>, LOGR> tdbufs_;
 
     /** @brief Mutex for demodulation state. */
     spinlock_mutex demod_mutex_;
@@ -142,11 +151,8 @@ private:
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<ChannelState>> demods_;
 
-    /** @brief A pair of time- and frequency-domain IQ buffers */
-    using bufpair = std::pair<std::shared_ptr<IQBuf>, std::shared_ptr<IQBuf>>;
-
     /** @brief Frequency-domain packets to demodulate */
-    std::unique_ptr<ringbuffer<bufpair, LOGR> []> fdiqbufs_;
+    std::unique_ptr<ringbuffer<Slot, LOGR> []> slots_;
 
     /** @brief FFT worker thread. */
     std::thread fft_thread_;
