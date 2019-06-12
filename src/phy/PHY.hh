@@ -94,7 +94,7 @@ public:
          */
          virtual void timestamp(const MonoClock::time_point &timestamp,
                                 std::optional<size_t> snapshot_off,
-                                size_t offset,
+                                ssize_t offset,
                                 float rate) = 0;
 
         /** @brief Demodulate IQ samples.

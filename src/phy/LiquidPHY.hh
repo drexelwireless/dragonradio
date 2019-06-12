@@ -54,7 +54,7 @@ public:
 
         void timestamp(const MonoClock::time_point &timestamp,
                        std::optional<size_t> snapshot_off,
-                       size_t offset,
+                       ssize_t offset,
                        float rate) override final;
 
         void demodulate(const std::complex<float>* data,
@@ -89,7 +89,7 @@ public:
         std::optional<size_t> snapshot_off_;
 
         /** @brief Sample offset ffset of first provided sample from slot. */
-        size_t offset_;
+        ssize_t offset_;
 
         /** @brief The sample number of the sample at offset in current slot */
         unsigned sample_start_;

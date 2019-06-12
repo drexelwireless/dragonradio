@@ -274,7 +274,7 @@ void LiquidPHY::Demodulator::reset(const Channel &channel)
 
 void LiquidPHY::Demodulator::timestamp(const MonoClock::time_point &timestamp,
                                        std::optional<size_t> snapshot_off,
-                                       size_t offset,
+                                       ssize_t offset,
                                        float rate)
 {
     resamp_rate_ = internal_oversample_fact_/rate;
