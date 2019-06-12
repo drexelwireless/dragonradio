@@ -214,7 +214,7 @@ void FDChannelizer::demodWorker(unsigned tid)
     unsigned               nchannels = demods_.size();
     bufpair                prev_buf;
     bufpair                buf;
-    std::optional<size_t>  next_snapshot_off;
+    std::optional<ssize_t> next_snapshot_off;
     bool                   received;
 
     auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
@@ -275,7 +275,7 @@ void FDChannelizer::demodWorker(unsigned tid)
         // for one more slot to ensure we record any transmission that
         // began in the last slot of the snapshot but ended in the following
         // slot.
-        std::optional<size_t> snapshot_off;
+        std::optional<ssize_t> snapshot_off;
 
         if (fdiqbuf->snapshot_off) {
             snapshot_off = fdiqbuf->snapshot_off;
@@ -383,7 +383,7 @@ void FDChannelizer::ChannelState::reset(void)
 }
 
 void FDChannelizer::ChannelState::timestamp(const MonoClock::time_point &timestamp,
-                                            std::optional<size_t> snapshot_off,
+                                            std::optional<ssize_t> snapshot_off,
                                             size_t offset)
 {
     demod_->timestamp(timestamp,

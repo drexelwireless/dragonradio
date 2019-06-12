@@ -165,7 +165,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
             // for one more slot to ensure we record any transmission that
             // began in the last slot of the snapshot but ended in the following
             // slot.
-            std::optional<size_t> snapshot_off;
+            std::optional<ssize_t> snapshot_off;
 
             if (buf2->snapshot_off)
                 snapshot_off = buf2->snapshot_off;
@@ -305,7 +305,7 @@ void OverlapTDChannelizer::ChannelState::reset(void)
 }
 
 void OverlapTDChannelizer::ChannelState::timestamp(const MonoClock::time_point &timestamp,
-                                                   std::optional<size_t> snapshot_off,
+                                                   std::optional<ssize_t> snapshot_off,
                                                    size_t offset)
 {
     demod_->timestamp(timestamp,

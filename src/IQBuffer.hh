@@ -120,7 +120,7 @@ public:
     std::atomic<bool> complete;
 
     /** @brief Offset from beginning of the current snapshot. */
-    std::optional<size_t> snapshot_off;
+    std::optional<ssize_t> snapshot_off;
 
     /** @brief Number of undersamples at the beginning of the buffer. That is,
      * this is how many samples we missed relative to the requested RX start

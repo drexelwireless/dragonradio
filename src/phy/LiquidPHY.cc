@@ -273,7 +273,7 @@ void LiquidPHY::Demodulator::reset(const Channel &channel)
 }
 
 void LiquidPHY::Demodulator::timestamp(const MonoClock::time_point &timestamp,
-                                       std::optional<size_t> snapshot_off,
+                                       std::optional<ssize_t> snapshot_off,
                                        ssize_t offset,
                                        float rate)
 {

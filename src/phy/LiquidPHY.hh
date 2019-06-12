@@ -53,7 +53,7 @@ public:
         void reset(const Channel &channel) override final;
 
         void timestamp(const MonoClock::time_point &timestamp,
-                       std::optional<size_t> snapshot_off,
+                       std::optional<ssize_t> snapshot_off,
                        ssize_t offset,
                        float rate) override final;
 
@@ -86,7 +86,7 @@ public:
         MonoClock::time_point timestamp_;
 
         /** @brief Snapshot offset of current slot. */
-        std::optional<size_t> snapshot_off_;
+        std::optional<ssize_t> snapshot_off_;
 
         /** @brief Sample offset ffset of first provided sample from slot. */
         ssize_t offset_;

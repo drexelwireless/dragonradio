@@ -93,7 +93,7 @@ public:
          * to the demodulator.
          */
          virtual void timestamp(const MonoClock::time_point &timestamp,
-                                std::optional<size_t> snapshot_off,
+                                std::optional<ssize_t> snapshot_off,
                                 ssize_t offset,
                                 float rate) = 0;
 

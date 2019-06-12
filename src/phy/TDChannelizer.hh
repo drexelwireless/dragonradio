@@ -55,7 +55,7 @@ private:
          * @param offset The offset of the first sample that will be demodulated.
          */
         void timestamp(const MonoClock::time_point &timestamp,
-                       std::optional<size_t> snapshot_off,
+                       std::optional<ssize_t> snapshot_off,
                        size_t offset);
 
         /** @brief Demodulate data with given parameters */
