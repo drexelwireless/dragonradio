@@ -96,7 +96,7 @@ void FDChannelizer::fftWorker(void)
     std::shared_ptr<IQBuf> fdbuf;
     unsigned               seq = 0;
     fftw::FFT<C>           fft(N, FFTW_FORWARD, FFTW_ESTIMATE);
-    size_t                 fftoff = P-1;
+    size_t                 fftoff = O;
 
     while (!done_) {
         if (tdbufs_.size() == 0)
@@ -111,7 +111,7 @@ void FDChannelizer::fftWorker(void)
         iqbuf->waitToStartFilling();
 
         // Create a frequency-domain buffer
-        fdbuf = std::make_shared<IQBuf>((iqbuf->capacity() + L - 1)*N/L);
+        fdbuf = std::make_shared<IQBuf>(N*(1 + (iqbuf->size() + L - 1)/L));
         fdbuf->timestamp = iqbuf->timestamp;
         fdbuf->seq = iqbuf->seq;
         fdbuf->fc = iqbuf->fc;
@@ -131,7 +131,7 @@ void FDChannelizer::fftWorker(void)
         // via a gap in the time-domain IQ buffer sequence number.
         if (iqbuf->seq != seq + 1) {
             std::fill(fft.in.begin(), fft.in.end(), 0);
-            fftoff = P-1;
+            fftoff = O;
         }
 
         seq = iqbuf->seq;
@@ -396,7 +396,8 @@ void FDChannelizer::ChannelState::demodulate(const std::complex<float>* data,
                                              size_t count,
                                              std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
-    C temp[N];
+    const unsigned n = N/D_;
+    C              temp[N];
 
     for (; count > 0; count -= N, data += N) {
         // Shift FFT bins as we copy into temp buffer
@@ -408,22 +409,20 @@ void FDChannelizer::ChannelState::demodulate(const std::complex<float>* data,
 
         // Decimate by summing strides of temp buffer, placing result in IFFT
         // input buffer
-        std::copy(temp, temp+N/D_, ifft_.in.begin());
+        std::copy(temp, temp+n, ifft_.in.begin());
 
         for (unsigned i = 1; i < D_; ++i)
-            xsimd::transform(temp + i*N/D_,
-                             temp + (i+1)*N/D_,
+            xsimd::transform(temp + i*n,
+                             temp + (i+1)*n,
                              ifft_.in.begin(),
                              ifft_.in.begin(),
                 [](const auto& x, const auto& y) { return x+y; });
 
         // Oversample if needed
         if (X_ != 1) {
-            unsigned n = N/D_;
-
             std::copy(ifft_.in.begin() + n/2,
                       ifft_.in.begin() + n,
-                      ifft_.in.begin() + X_*N/D_ - n/2);
+                      ifft_.in.begin() + X_*n - n/2);
             std::fill(ifft_.in.begin() + n/2,
                       ifft_.in.begin() + n,
                       0);
@@ -433,6 +432,6 @@ void FDChannelizer::ChannelState::demodulate(const std::complex<float>* data,
         ifft_.execute();
 
         // Demodulate
-        demod_->demodulate(ifft_.out.data() + X_*(P-1)/D_, X_*L/D_, callback);
+        demod_->demodulate(ifft_.out.data() + X_*O/D_, X_*L/D_, callback);
     }
 }
