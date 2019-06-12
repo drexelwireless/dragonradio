@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import math
 import matplotlib as mp
 mp.use('GTK3Agg')
@@ -237,7 +238,8 @@ class ReceivePlot:
 
             slots = self.log.findSlots(self.node, self.pkt)
             if slots == None:
-                logging.error("Cannot find slots for packet at timestamp %f", self.pkt.timestamp)
+                logging.warning("Cannot find slots for packet at timestamp %f", self.pkt.timestamp)
+                return
 
             sig = slots.sig[self.pkt.start_samples:self.pkt.end_samples]
 
