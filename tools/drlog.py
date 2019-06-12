@@ -173,10 +173,14 @@ def loadDataSet(ds):
     return pd.DataFrame(data)
 
 class Slots:
-    def __init__(self, ts, sig, bw):
+    def __init__(self, ts, sig, offset, bw):
         self.ts = ts
         self.sig = sig
+        self.offset = offset
         self.bw = bw
+
+    def sigrange(self, start, end):
+        return self.sig[self.offset+start:self.offset+end]
 
 class Log:
     def __init__(self, send=True, recv=True):
@@ -344,13 +348,21 @@ class Log:
             return None
 
         i = slots.index[idx].tolist()[0]
+        offset = 0
 
-        slot1 = slots.loc[idx].iloc[0]
+        if pkt.start_samples < 0:
+            i -= 1
+
+        slot1 = slots.iloc[i]
         slot2 = slots.iloc[i+1]
+
+        if pkt.start_samples < 0:
+            offset = len(slot1.iq_data)
+
         ts = [slot1.timestamp, slot2.timestamp]
         data = np.concatenate((slot1.iq_data, slot2.iq_data))
 
-        return Slots(ts, data, slot1.bw)
+        return Slots(ts, data, offset, slot1.bw)
 
     def findReceivedPacketIndex(self, node, seq):
         """

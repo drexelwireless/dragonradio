@@ -241,7 +241,7 @@ class ReceivePlot:
                 logging.warning("Cannot find slots for packet at timestamp %f", self.pkt.timestamp)
                 return
 
-            sig = slots.sig[self.pkt.start_samples:self.pkt.end_samples]
+            sig = slots.sigrange(self.pkt.start_samples, self.pkt.end_samples)
 
             if not self.pkt.header_valid:
                 msg = 'INVALID HEADER'
