@@ -17,12 +17,12 @@ public:
     /** @brief A time slot that needs to be synthesized */
     struct Slot {
         Slot(const Clock::time_point &deadline_,
-             size_t delay_,
+             size_t deadline_delay_,
              size_t max_samples_,
              size_t max_superslot_samples_,
              size_t slotidx_)
          : deadline(deadline_)
-         , delay(delay_)
+         , deadline_delay(deadline_delay_)
          , max_superslot_samples(max_superslot_samples_)
          , slotidx(slotidx_)
          , closed(false)
@@ -38,8 +38,8 @@ public:
         /** @brief Synthesis deadline. Slot must be ready at this time! */
         const Clock::time_point deadline;
 
-        /** @brief Number of samples to delay */
-        const size_t delay;
+        /** @brief Number of samples to delay the deadline */
+        const size_t deadline_delay;
 
         /** @brief Maximum number of samples in this slot if it is a superslot */
         const size_t max_superslot_samples;
@@ -83,7 +83,7 @@ public:
             size_t n = mpkt->samples->size() - mpkt->samples->delay;
 
             if (nsamples + n <= max_samples || (nsamples < max_samples && overfill)) {
-                mpkt->start = delay + nsamples;
+                mpkt->start = deadline_delay + nsamples;
                 mpkt->nsamples = n;
 
                 iqbufs.emplace_back(mpkt->samples);

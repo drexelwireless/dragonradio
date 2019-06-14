@@ -149,7 +149,7 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             if (pkt->isInternalFlagSet(kIsTimestamp)) {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-                pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->delay + slot->nsamples)/phy_->getTXRate());
+                pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/phy_->getTXRate());
 
                 mod->modulate(std::move(pkt), *mpkt);
 
