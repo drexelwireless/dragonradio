@@ -211,20 +211,9 @@ void FDChannelizer::fftWorker(void)
 
 void FDChannelizer::demodWorker(unsigned tid)
 {
-    unsigned               channelidx = tid;
-    unsigned               nchannels = demods_.size();
     Slot                   prev_slot;
     Slot                   slot;
     std::optional<ssize_t> next_snapshot_off;
-    bool                   received;
-
-    auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
-        received = true;
-        if (pkt) {
-            pkt->channel = channels_[channelidx].first;
-            source.push(std::move(pkt));
-        }
-    };
 
     while (!done_) {
         // If we are reconfiguring, wait until reconfiguration is done
@@ -235,12 +224,8 @@ void FDChannelizer::demodWorker(unsigned tid)
             // Signal that we have resumed
             reconfigure_sync_.wait();
 
-            // Re-compute our channel index and the number of channels
-            channelidx = tid;
-            nchannels = demods_.size();
-
             // If we are unneeded, sleep
-            if (tid >= nchannels) {
+            if (tid >= channels_.size()) {
                 std::unique_lock<std::mutex> lock(wake_mutex_);
 
                 wake_cond_.wait(lock, [this]{ return done_ || reconfigure_.load(std::memory_order_acquire); });
@@ -249,14 +234,9 @@ void FDChannelizer::demodWorker(unsigned tid)
             }
         }
 
-        // Demodulate the next channel for which we are responsible
-        auto &demod = *demods_[channelidx];
-
-        // Get the buffer to demodulate
-        {
+        for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
+            auto &demod = *demods_[channelidx];
             auto &slots = slots_[channelidx];
-
-            received = false;
 
             if (slots.size() == 0)
                 continue;
@@ -265,70 +245,74 @@ void FDChannelizer::demodWorker(unsigned tid)
             assert(slot.iqbuf);
             assert(slot.fdbuf);
             slots.pop();
+
+            auto &fdbuf = slot.fdbuf;
+
+            // Wait for the buffer to start to fill.
+            fdbuf->waitToStartFilling();
+
+            // When the snapshot is over, we need to record self-transmissions
+            // for one more slot to ensure we record any transmission that
+            // began in the last slot of the snapshot but ended in the following
+            // slot.
+            std::optional<ssize_t> snapshot_off;
+
+            if (fdbuf->snapshot_off) {
+                snapshot_off = fdbuf->snapshot_off;
+                next_snapshot_off = *fdbuf->snapshot_off + fdbuf->size();
+            } else if (next_snapshot_off) {
+                snapshot_off = next_snapshot_off;
+                next_snapshot_off = std::nullopt;
+            }
+
+            // Update IQ buffer sequence number
+            demod.updateSeq(fdbuf->seq);
+
+            // Timestamp the demodulated data
+            demod.timestamp(fdbuf->timestamp,
+                            fdbuf->snapshot_off,
+                            slot.fd_offset);
+
+            // Demodulate the IQ buffer
+            bool   received = false; // Have we received any packets?
+            bool   complete = false; // Is the buffer complete?
+            size_t ndemodulated = 0; // How many samples we've already demodulated
+            size_t n = 0;
+
+            auto callback = [&, channel=channels_[channelidx].first] (std::unique_ptr<RadioPacket> pkt) {
+                received = true;
+                if (pkt) {
+                    pkt->channel = channel;
+                    source.push(std::move(pkt));
+                }
+            };
+
+            for (;;) {
+                complete = fdbuf->complete.load(std::memory_order_acquire);
+                n = fdbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
+
+                if (n != 0) {
+                    demod.demodulate(fdbuf->data() + ndemodulated,
+                                     n,
+                                     callback);
+
+                    ndemodulated += n;
+                } else if (complete)
+                    break;
+            }
+
+            // If we received any packets, log both the previous and the current
+            // slot. We then save the current slot in case we need to log it
+            // later.
+            if (logger_ && received && logger_->getCollectSource(Logger::kSlots)) {
+                if (prev_slot.iqbuf)
+                    logger_->logSlot(prev_slot.iqbuf, rx_rate_);
+
+                logger_->logSlot(slot.iqbuf, rx_rate_);
+
+                prev_slot = std::move(slot);
+            }
         }
-
-        auto &fdbuf = slot.fdbuf;
-
-        // Wait for the buffer to start to fill.
-        fdbuf->waitToStartFilling();
-
-        // When the snapshot is over, we need to record self-transmissions
-        // for one more slot to ensure we record any transmission that
-        // began in the last slot of the snapshot but ended in the following
-        // slot.
-        std::optional<ssize_t> snapshot_off;
-
-        if (fdbuf->snapshot_off) {
-            snapshot_off = fdbuf->snapshot_off;
-            next_snapshot_off = *fdbuf->snapshot_off + fdbuf->size();
-        } else if (next_snapshot_off) {
-            snapshot_off = next_snapshot_off;
-            next_snapshot_off = std::nullopt;
-        }
-
-        // Update IQ buffer sequence number
-        demod.updateSeq(fdbuf->seq);
-
-        // Timestamp the demodulated data
-        demod.timestamp(fdbuf->timestamp,
-                        fdbuf->snapshot_off,
-                        slot.fd_offset);
-
-        // Demodulate the IQ buffer
-        bool   complete = false; // Is the buffer complete?
-        size_t ndemodulated = 0; // How many samples we've already demodulated
-        size_t n = 0;
-
-        for (;;) {
-            complete = fdbuf->complete.load(std::memory_order_acquire);
-            n = fdbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
-
-            if (n != 0) {
-                demod.demodulate(fdbuf->data() + ndemodulated,
-                                 n,
-                                 callback);
-
-                ndemodulated += n;
-            } else if (complete)
-                break;
-        }
-
-        // If we received any packets, log both the previous and the current
-        // slot. We then save the current slot in case we need to log it
-        // later.
-        if (logger_ && received && logger_->getCollectSource(Logger::kSlots)) {
-            if (prev_slot.iqbuf)
-                logger_->logSlot(prev_slot.iqbuf, rx_rate_);
-
-            logger_->logSlot(slot.iqbuf, rx_rate_);
-
-            prev_slot = std::move(slot);
-        }
-
-        // Demodulate next channel for which we are responsible
-        channelidx += nchannels;
-        if (channelidx >= nchannels)
-            channelidx = tid;
     }
 }
 
