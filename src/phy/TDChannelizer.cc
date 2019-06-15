@@ -146,7 +146,7 @@ void TDChannelizer::demodWorker(unsigned tid)
 
             // Timestamp the demodulated data
             demod.timestamp(iqbuf->timestamp,
-                            iqbuf->snapshot_off,
+                            snapshot_off,
                             0);
 
             // Demodulate the IQ buffer

@@ -270,7 +270,7 @@ void FDChannelizer::demodWorker(unsigned tid)
 
             // Timestamp the demodulated data
             demod.timestamp(fdbuf->timestamp,
-                            fdbuf->snapshot_off,
+                            snapshot_off,
                             slot.fd_offset);
 
             // Demodulate the IQ buffer
