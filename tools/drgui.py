@@ -187,9 +187,10 @@ class PAPRPlot:
         self.fig.canvas.mpl_connect('scroll_event', zoom_factory(self.fig, self.ax, base_scale=2.0))
 
 class ReceivePlot:
-    def __init__(self, log, node, show_header_invalid=False, nfft=256):
+    def __init__(self, log, node, show_header_invalid=False, nfft=256, viewer=None):
         self.log = log
         self.node = node
+        self.viewer = viewer
         self.show_header_invalid = show_header_invalid
 
         self.pktidx = 0
@@ -200,6 +201,9 @@ class ReceivePlot:
         self.waveform = WaveformPlot(self.fig, self.fig.add_subplot(2,4,6))
         self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,4,7), nfft=nfft)
         self.papr = PAPRPlot(self.fig, self.fig.add_subplot(2,4,8))
+
+        # Handle close event for figure
+        self.fig.canvas.mpl_connect('close_event', self.on_close)
 
         # Add next and prev buttons. Coordinates are:
         #   posx, posy, width, height
@@ -220,6 +224,9 @@ class ReceivePlot:
         self.axpos = self.fig.add_axes([0.1, 0.02, 0.4, 0.03])
         self.spos = Slider(self.axpos, 'Packet Index', 0, len(self.received(self.node.node_id))-1, valfmt='%1.0f', valinit=0, valstep=1)
         self.spos.on_changed(self.update_slider)
+
+        # Add use to viewer's list of RX figures
+        self.viewer.rxFigs[self.node.node_id] = self
 
     def received(self, node_id):
         recv = self.log.received[node_id]
@@ -281,6 +288,10 @@ class ReceivePlot:
         idx = int(val)
         if idx != self.pktidx:
             self.plot(idx)
+
+    def on_close(self, event):
+        if self.viewer:
+            del self.viewer.rxFigs[self.node.node_id]
 
     def next_packet(self, event):
         self.plot(self.pktidx+1)
@@ -354,9 +365,10 @@ class ReceivePlot:
                     **kwargs)
 
 class SendPlot:
-    def __init__(self, log, node, nfft=256):
+    def __init__(self, log, node, nfft=256, viewer=None):
         self.log = log
         self.node = node
+        self.viewer = viewer
 
         self.pktidx = 0
 
@@ -365,6 +377,9 @@ class SendPlot:
         self.waveform = WaveformPlot(self.fig, self.fig.add_subplot(2,2,2))
         self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,2,3), nfft=nfft)
         self.papr = PAPRPlot(self.fig, self.fig.add_subplot(2,2,4))
+
+        # Handle close event for figure
+        self.fig.canvas.mpl_connect('close_event', self.on_close)
 
         # Add next and prev buttons. Coordinates are:
         #   posx, posy, width, height
@@ -385,6 +400,9 @@ class SendPlot:
         self.axpos = self.fig.add_axes([0.1, 0.02, 0.4, 0.03])
         self.spos = Slider(self.axpos, 'Packet Index', 0, len(self.log.sent[self.node.node_id]), valfmt='%1.0f', valinit=0, valstep=1)
         self.spos.on_changed(self.update_slider)
+
+        # Add use to viewer's list of TX figures
+        self.viewer.txFigs[self.node.node_id] = self
 
     def plot(self, idx):
         send = self.log.sent[self.node.node_id]
@@ -408,6 +426,10 @@ class SendPlot:
         idx = int(val)
         if idx != self.pktidx:
             self.plot(idx)
+
+    def on_close(self, event):
+        if self.viewer:
+            del self.viewer.txFigs[self.node.node_id]
 
     def next_packet(self, event):
         self.plot(self.pktidx+1)
@@ -588,8 +610,7 @@ class LogViewer:
         if node.node_id in self.rxFigs:
             return self.rxFigs[node.node_id]
         else:
-            fig = ReceivePlot(self.log, node, nfft=nfft, show_header_invalid=show_header_invalid)
-            self.rxFigs[node.node_id] = fig
+            fig = ReceivePlot(self.log, node, nfft=nfft, show_header_invalid=show_header_invalid, viewer=self)
             fig.fig.show()
             return fig
 
@@ -597,8 +618,7 @@ class LogViewer:
         if node.node_id in self.txFigs:
             return self.txFigs[node.node_id]
         else:
-            fig = SendPlot(self.log, node, nfft=nfft)
-            self.txFigs[node.node_id] = fig
+            fig = SendPlot(self.log, node, nfft=nfft, viewer=self)
             fig.fig.show()
             return fig
 
