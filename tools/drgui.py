@@ -293,7 +293,7 @@ class ReceivePlot:
 
         node = self.log.nodes[self.pkt.src]
         if not node:
-            return
+            logging.warning('Could not find TX node %s', self.pkt.src)
 
         idx = self.log.findSentPacketIndex(node, self.pkt.seq)
 
@@ -420,7 +420,7 @@ class SendPlot:
 
         node = self.log.nodes[self.pkt.dest]
         if not node:
-            return
+            logging.warning('Could not find RX node %s', self.pkt.dest)
 
         idx = self.log.findReceivedPacketIndex(node, self.pkt.seq)
 
