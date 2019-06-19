@@ -211,7 +211,7 @@ void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
     }
 
     // Transmit the packets via the USRP
-    bool end_of_burst = slot->length() < slot->max_samples;
+    bool end_of_burst = slot->length() < slot->max_superslot_samples;
 
     usrp_->burstTX(Clock::to_mono_time(slot->deadline) + slot->deadline_delay/tx_rate_,
                    next_slot_start_of_burst_,
