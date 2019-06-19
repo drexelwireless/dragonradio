@@ -137,7 +137,7 @@ jupyter notebook --no-browser
 
 This will give you a URL to a local jupyter server that you must open with a browser of your choice.
 
-It is possible that `jupyter` does not find the correct python interpreter. If you are sure you installed everythign properly and you still can't import the `liquid` python module, try executing the following command:
+It is possible that `jupyter` does not find the correct python interpreter. If you are sure you installed everything properly and you still can't import the `liquid` python module, try executing the following command:
 
 ```
 python3 -m ipykernel install --user
