@@ -31,6 +31,7 @@ ext_modules = [
          'main_src/IQCompression.cc',
          'main_src/IQCompression/FLAC.cc',
          'main_src/Math.cc',
+         'main_src/dsp/FIRDesign.cc',
          'main_src/dsp/FFTW.cc',
          'main_src/dsp/TableNCO.cc',
          'main_src/liquid/Filter.cc',
@@ -54,7 +55,7 @@ ext_modules = [
             'src',
             'main_src',
         ],
-        libraries = ['liquid', 'FLAC', 'FLAC++'],
+        libraries = ['liquid', 'FLAC', 'FLAC++', 'firpm'],
         library_dirs = ['/usr/local/lib'],
         language='c++'
     ),
