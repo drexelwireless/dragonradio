@@ -29,7 +29,9 @@ public:
          , max_samples(max_samples_)
          , delay(0)
          , nsamples(0)
+         , npartial(0)
         {
+            nfinished.store(0, std::memory_order_relaxed);
         }
 
         Slot() = delete;
@@ -70,6 +72,20 @@ public:
 
         /** @brief The list of modulated packets */
         std::list<std::unique_ptr<ModPacket>> mpkts;
+
+        /** @brief Number of threads who have finished with this slot */
+        std::atomic<unsigned> nfinished;
+
+        /** @brief Frequency-domain IQ buffer */
+        std::unique_ptr<IQBuf> fdbuf;
+
+        /** @brief Number of valid samples in the frequency-domain buffer */
+        size_t fdnsamples;
+
+        /** @brief Number of samples represented by final FFT block that were
+         * part of the slot.
+         */
+        size_t npartial;
 
         /** @brief The length of the slot, in samples. */
         /** Return the length of the slot, in samples. This does not include
