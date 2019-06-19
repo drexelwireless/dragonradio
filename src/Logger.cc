@@ -404,10 +404,12 @@ void Logger::logSend(const Clock::time_point& t,
                      float fc,
                      float bw,
                      uint32_t size,
-                     std::shared_ptr<IQBuf> buf)
+                     std::shared_ptr<IQBuf> buf,
+                     size_t offset,
+                     size_t nsamples)
 {
     if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, crc, fec0, fec1, ms, fc, bw, size, buf); });
+        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, crc, fec0, fec1, ms, fc, bw, size, buf, offset, nsamples); });
 }
 
 void Logger::logEvent(const Clock::time_point& t,
@@ -560,7 +562,9 @@ void Logger::logSend_(const Clock::time_point& t,
                       float fc,
                       float bw,
                       uint32_t size,
-                      std::shared_ptr<IQBuf> buf)
+                      std::shared_ptr<IQBuf> buf,
+                      size_t offset,
+                      size_t nsamples)
 {
     PacketSendEntry entry;
 
@@ -577,9 +581,13 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.fc = fc;
     entry.bw = bw;
     entry.size = size;
-    if (getCollectSource(kSentData)) {
-        entry.iq_data.p = buf->data();
-        entry.iq_data.len = buf->size();
+    if (buf && getCollectSource(kSentData)) {
+        // It's possible that a packet's content is split across two successive
+        // IQ buffers. If this happens, we won't have all of the packet's IQ
+        // data, so we need to clamp nsamples.
+        assert(offset <= buf->size());
+        entry.iq_data.p = buf->data() + offset;
+        entry.iq_data.len = std::min(nsamples, (unsigned) buf->size() - offset);
     } else {
         entry.iq_data.p = nullptr;
         entry.iq_data.len = 0;

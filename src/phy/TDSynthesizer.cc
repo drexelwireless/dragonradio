@@ -221,6 +221,8 @@ void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         iqbuf_up->delay = floor(resamp_.getRate()*resamp_.getDelay());
 
         // Put samples back into ModPacket
+        mpkt.offset = iqbuf_up->delay;
+        mpkt.nsamples = iqbuf_up->size() - iqbuf_up->delay;
         mpkt.samples = std::move(iqbuf_up);
     }
 

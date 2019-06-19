@@ -98,6 +98,8 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
         work_queue.submit(&TXParams::autoSoftGain0dBFS, pkt->tx_params, g, iqbuf);
 
     // Fill in the ModPacket
+    mpkt.offset = iqbuf->delay;
+    mpkt.nsamples = iqbuf->size() - iqbuf->delay;
     mpkt.samples = std::move(iqbuf);
     mpkt.pkt = std::move(pkt);
 }

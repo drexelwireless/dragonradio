@@ -222,6 +222,8 @@ void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
 
     // Log the transmissions
     if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
+        std::shared_ptr<IQBuf> &first = slot->iqbufs.front();
+
         // Log the sent packets
         for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
             Header hdr;
@@ -230,7 +232,9 @@ void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
             hdr.nexthop = (*it)->pkt->nexthop;
             hdr.seq = (*it)->pkt->seq;
 
-            logger_->logSend(Clock::to_wall_time((*it)->samples->timestamp),
+            std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
+
+            logger_->logSend(Clock::to_wall_time(samples->timestamp),
                              hdr,
                              (*it)->pkt->src,
                              (*it)->pkt->dest,
@@ -241,7 +245,9 @@ void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
                              tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
                              tx_rate_,
                              (*it)->pkt->size(),
-                             (*it)->samples);
+                             samples,
+                             (*it)->offset,
+                             (*it)->nsamples);
         }
     }
 

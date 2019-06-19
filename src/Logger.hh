@@ -97,7 +97,9 @@ public:
                  float fc,
                  float bw,
                  uint32_t size,
-                 std::shared_ptr<IQBuf> buf);
+                 std::shared_ptr<IQBuf> buf,
+                 size_t offset,
+                 size_t nsamples);
 
     void logEvent(const Clock::time_point& t,
                   const std::string& event);
@@ -175,7 +177,9 @@ private:
                   float fc,
                   float bw,
                   uint32_t size,
-                  std::shared_ptr<IQBuf> buf);
+                  std::shared_ptr<IQBuf> buf,
+                  size_t offset,
+                  size_t nsamples);
 
      void logEvent_(const Clock::time_point& t,
                     const std::string& event);
