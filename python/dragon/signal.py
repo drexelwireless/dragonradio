@@ -1,32 +1,22 @@
+import functools
 import logging
 import math
 import numpy as np
 import scipy.signal as signal
 
-def lowpass(wp, ws, fs, atten=60):
-    """Design a lowpass filter using a Kaiser window.
+import dragonradio
 
-    Args:
-        wp: Passband frequency
-        ws: Stopband frequency
-        fs: Sample rate
-        atten: desired attenuation (dB)
+def memoize(func):
+    cache = {}
 
-    Returns:
-        Filter taps.
-    """
-    N, beta = signal.kaiserord(atten, (ws-wp)/fs)
-    if N % 2 == 0:
-        N += 1
+    @functools.wraps(func)
+    def memoized_func(*args, **kwargs):
+        key = str((args, kwargs))
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
 
-    logging.debug("Creating prototype lowpass filter with %d taps: wp=%g; ws=%g; fs=%g; beta = %f",
-        N, wp, ws, fs, beta)
-
-    return signal.firwin(N, ws/2,
-                         window=('kaiser', beta),
-                         fs=fs,
-                         pass_zero=True,
-                         scale=True)
+    return memoized_func
 
 def bellangerord(delta1, delta2, fs, deltaf):
     """Estimate filter order.
@@ -60,8 +50,35 @@ def remez1f(numtaps, bands, desired, weight=None, Hz=None, type='bandpass', maxi
     # Re-normalize taps
     return taps / np.sum(taps)
 
-def lowpass2(wp, ws, fs, atten=90, n_max=400):
-    """Design a lowpass filter using a Parks-McClellan filter with 1/f rolloff.
+@memoize
+def lowpass(wp, ws, fs):
+    return lowpass_kaiser(wp, ws, fs, atten=60)
+
+def lowpass_kaiser(wp, ws, fs, atten=60):
+    """Design a lowpass filter using a Kaiser window.
+
+    Args:
+        wp: Passband frequency
+        ws: Stopband frequency
+        fs: Sample rate
+        atten: desired attenuation (dB)
+
+    Returns:
+        Filter taps.
+    """
+    N, beta = signal.kaiserord(atten, (ws-wp)/fs)
+    if N % 2 == 0:
+        N += 1
+
+    return signal.firwin(N, ws/2,
+                         window=('kaiser', beta),
+                         fs=fs,
+                         pass_zero=True,
+                         scale=True)
+
+def lowpass_iter(wp, ws, fs, f, atten=90, n_max=400):
+    """Design a lowpass filter using ftaps by iterating to minimize the number
+    of taps needed.
 
     Args:
         wp: Passband frequency
@@ -81,16 +98,10 @@ def lowpass2(wp, ws, fs, atten=90, n_max=400):
     if n > n_max:
         n = n_max
 
-    bands = np.array([0, wp, ws, fs/2])/(fs/2)
-    print(n, bands)
-    desired = [1, 1, 0, 0]
-    weights = [1, 1]
-
     while n != n_prev:
         N = 2*n + 1
 
-        #taps = signal.firls(N, bands, desired, weights, fs=2)
-        taps = remez1f(N, bands, desired[::2], weights, fs=2)
+        taps = f(N, wp, ws, fs)
 
         w, h = signal.freqz(taps, worN=8000)
         w = 0.5*fs*w/np.pi
@@ -114,8 +125,5 @@ def lowpass2(wp, ws, fs, atten=90, n_max=400):
 
         if n > n_max:
             n = n_max
-
-    logging.debug("Creating prototype lowpass filter with %d taps: wp=%g; ws=%g; fs=%g",
-        N, wp, ws, fs)
 
     return taps

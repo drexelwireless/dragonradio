@@ -1020,33 +1020,42 @@ class Radio(object):
         """Generate channelizer filter taps for given channel"""
         config = self.config
 
-        # Determine passband, and stopband
-        wp = channel.bw-100e3
-        ws = channel.bw+100e3
-
         # Calculate channelizer taps
         rate = Fraction(channel.bw/self.usrp.rx_rate).limit_denominator(200)
 
         if rate == 1:
             return [1]
         else:
-            return lowpass(wp, ws, rate.numerator*self.usrp.rx_rate)
+            wp = channel.bw-100e3
+            ws = channel.bw+100e3
+            fs = self.usrp.rx_rate
+
+            h = lowpass(wp, ws, fs)
+            logging.debug("Creating prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g",
+                          len(h), wp, ws, fs)
+            return h
 
     def genSynthesizerTaps(self, channel):
         """Generate synthesizer filter taps for given channel"""
         config = self.config
-
-        # Determine passband, and stopband
-        wp = channel.bw-100e3
-        ws = channel.bw+100e3
 
         if config.tx_upsample:
             rate = Fraction(self.usrp.tx_rate/channel.bw).limit_denominator(200)
 
             if rate == 1:
                 return [1]
+            elif config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
+                # Frequency-space synthesizers don't apply a filter
+                return [1]
             else:
-                return lowpass(wp, ws, rate.numerator*channel.bw)
+                wp = channel.bw-100e3
+                ws = channel.bw+100e3
+                fs = self.usrp.tx_rate
+
+                h = lowpass(wp, ws, fs)
+                logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
+                              len(h), wp, ws, fs)
+                return h
         else:
             return [1]
 
