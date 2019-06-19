@@ -105,7 +105,7 @@ void TDMA::txWorker(void)
 
             // Schedule modulation of the following slot
             if (slot)
-                noverfill = slot->nsamples < slot->max_samples ? 0 : slot->nsamples - slot->max_samples;
+                noverfill = slot->length() < slot->max_samples ? 0 : slot->length() - slot->max_samples;
             else
                 noverfill = 0;
 

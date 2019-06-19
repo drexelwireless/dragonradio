@@ -27,6 +27,7 @@ public:
          , slotidx(slotidx_)
          , closed(false)
          , max_samples(max_samples_)
+         , delay(0)
          , nsamples(0)
         {
         }
@@ -58,6 +59,9 @@ public:
         /** @brief Maximum number of samples in this slot */
         size_t max_samples;
 
+        /** @brief Number of samples to delay */
+        size_t delay;
+
         /** @brief Number of samples in slot */
         size_t nsamples;
 
@@ -66,6 +70,15 @@ public:
 
         /** @brief The list of modulated packets */
         std::list<std::unique_ptr<ModPacket>> mpkts;
+
+        /** @brief The length of the slot, in samples. */
+        /** Return the length of the slot, in samples. This does not include
+         * delayed samples.
+         */
+        size_t length(void)
+        {
+            return nsamples - delay;
+        }
 
         /** @brief Push a modulated packet onto the slot
          * @param mpkt A reference to a modulated packet
@@ -82,7 +95,7 @@ public:
 
             size_t n = mpkt->samples->size() - mpkt->samples->delay;
 
-            if (nsamples + n <= max_samples || (nsamples < max_samples && overfill)) {
+            if (nsamples + n <= delay + max_samples || (nsamples < delay + max_samples && overfill)) {
                 mpkt->start = deadline_delay + nsamples;
                 mpkt->nsamples = n;
 
