@@ -325,6 +325,7 @@ FDChannelizer::ChannelState::ChannelState(PHY &phy,
   , X_(phy.getMinRXRateOversample())
   , D_(rx_rate/channel.bw)
   , ifft_(X_*N/D_, FFTW_BACKWARD, FFTW_ESTIMATE)
+  , temp_(N)
   , H_(N)
   , demod_(phy.mkDemodulator())
   , seq_(0)
@@ -382,39 +383,38 @@ void FDChannelizer::ChannelState::demodulate(const std::complex<float>* data,
                                              std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
     const unsigned n = N/D_;
-    C              temp[N];
 
     for (; count > 0; count -= N, data += N) {
         // Shift FFT bins as we copy into temp buffer
-        std::rotate_copy(data, data + Nrot_, data + N, temp);
+        std::rotate_copy(data, data + Nrot_, data + N, temp_.begin());
 
         // Apply filter
-        xsimd::transform(temp, temp + N, H_.begin(), temp,
+        xsimd::transform(temp_.begin(), temp_.end(), H_.begin(), temp_.begin(),
             [](const auto& x, const auto& y) { return x*y; });
 
         // Decimate by summing strides of temp buffer, placing result in IFFT
         // input buffer
-        std::copy(temp, temp+n, ifft_.in.begin());
+        std::copy(temp_.begin(), temp_.begin() + n, ifft_.in.begin());
 
         for (unsigned i = 1; i < D_; ++i)
-            xsimd::transform(temp + i*n,
-                             temp + (i+1)*n,
-                             ifft_.in.begin(),
-                             ifft_.in.begin(),
+            xsimd::transform(temp_.begin() + i*n,
+                             temp_.begin() + (i+1)*n,
+                             temp_.begin(),
+                             temp_.begin(),
                 [](const auto& x, const auto& y) { return x+y; });
 
         // Oversample if needed
         if (X_ != 1) {
-            std::copy(ifft_.in.begin() + n/2,
-                      ifft_.in.begin() + n,
-                      ifft_.in.begin() + X_*n - n/2);
-            std::fill(ifft_.in.begin() + n/2,
-                      ifft_.in.begin() + n,
+            std::copy(temp_.begin() + n/2,
+                      temp_.begin() + n,
+                      temp_.begin() + X_*n - n/2);
+            std::fill(temp_.begin() + n/2,
+                      temp_.begin() + n,
                       0);
         }
 
         // Perform IFFT
-        ifft_.execute();
+        ifft_.execute(temp_.data(), ifft_.out.data());
 
         // Demodulate
         demod_->demodulate(ifft_.out.data() + X_*O/D_, X_*L/D_, callback);

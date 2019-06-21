@@ -105,6 +105,9 @@ private:
         /** @brief IFFT */
         fftw::FFT<C> ifft_;
 
+        /** @brief Vector containing rotated FFT input */
+        fftw::vector<C> temp_;
+
         /** @brief Frequency-domain filter */
         fftw::vector<C> H_;
 
