@@ -1025,6 +1025,16 @@ class Radio(object):
 
         if rate == 1:
             return [1]
+        elif config.channelizer == 'freqdomain':
+            wp = channel.bw-50e3
+            ws = channel.bw
+            fs = self.usrp.rx_rate
+
+            h = lowpass_firpm1f2(wp, ws, fs, Nmax=dragonradio.FDChannelizer.P)
+
+            logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
+                          len(h), wp, ws, fs)
+            return h
         else:
             wp = channel.bw-100e3
             ws = channel.bw+100e3
