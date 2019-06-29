@@ -198,11 +198,14 @@ void TDSynthesizer::ChannelState::reset(void)
 void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
                                            ModPacket &mpkt)
 {
-    // Modulate the packet
-    mod_->modulate(std::move(pkt), mpkt);
+    const float g = pkt->g;
 
     // Upsample if needed
     if (rad_ != 0.0 || rate_ != 1.0) {
+        // Modulate the packet, but don't paply gain yet. We will apply gain
+        // when we resample.
+        mod_->modulate(std::move(pkt), 1.0f, mpkt);
+
         // Get samples from ModPacket
         auto iqbuf = std::move(mpkt.samples);
 
@@ -213,7 +216,7 @@ void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         auto     iqbuf_up = std::make_shared<IQBuf>(resamp_.neededOut(iqbuf->size()));
         unsigned nw;
 
-        nw = resamp_.resampleMixUp(iqbuf->data(), iqbuf->size(), iqbuf_up->data());
+        nw = resamp_.resampleMixUp(iqbuf->data(), iqbuf->size(), g, iqbuf_up->data());
         assert(nw <= iqbuf_up->size());
         iqbuf_up->resize(nw);
 
@@ -224,7 +227,9 @@ void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         mpkt.offset = iqbuf_up->delay;
         mpkt.nsamples = iqbuf_up->size() - iqbuf_up->delay;
         mpkt.samples = std::move(iqbuf_up);
-    }
+    } else
+        // Modulate packet and apply gain
+        mod_->modulate(std::move(pkt), g, mpkt);
 
     // Set channel
     mpkt.channel = channel_;

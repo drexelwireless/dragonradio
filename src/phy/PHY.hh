@@ -59,9 +59,11 @@ public:
 
         /** @brief Modulate a packet to produce IQ samples.
          * @param pkt The NetPacket to modulate.
+         * @param g Soft (multiplicative) gain to apply to modulated signal.
          * @param mpkt The ModPacket in which to place modulated samples.
          */
         virtual void modulate(std::shared_ptr<NetPacket> pkt,
+                              const float gain,
                               ModPacket &mpkt) = 0;
     };
 
