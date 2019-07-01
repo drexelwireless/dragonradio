@@ -121,7 +121,7 @@ class Config(object):
         self.phy = 'ofdm'
         self.min_packet_size = 0
         self.num_modulation_threads = 1
-        self.num_demodulation_threads = 16
+        self.num_demodulation_threads = 10
         self.max_channels = 10
         self.tx_upsample = True
 
