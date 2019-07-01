@@ -180,19 +180,18 @@ TDSynthesizer::ChannelState::ChannelState(PHY &phy,
                                           const Channel &channel,
                                           const std::vector<C> &taps,
                                           double tx_rate)
-  : channel_(channel)
-  // XXX Protected against channel with zero bandwidth
-  , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
-  , rad_(2*M_PI*channel.fc/tx_rate)
-  , resamp_(rate_, taps)
+  : // XXX Protected against channel with zero bandwidth
+    Upsampler(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw),
+              taps)
+  , channel_(channel)
   , mod_(phy.mkModulator())
 {
-    resamp_.setFreqShift(rad_);
+    setFreqShift(2*M_PI*channel.fc/tx_rate);
 }
 
 void TDSynthesizer::ChannelState::reset(void)
 {
-    resamp_.reset();
+    Upsampler::reset();
 }
 
 void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
@@ -201,7 +200,7 @@ void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
     const float g = pkt->g;
 
     // Upsample if needed
-    if (rad_ != 0.0 || rate_ != 1.0) {
+    if (getFreqShift() != 0.0 || getRate() != 1.0) {
         // Modulate the packet, but don't paply gain yet. We will apply gain
         // when we resample.
         mod_->modulate(std::move(pkt), 1.0f, mpkt);
@@ -210,18 +209,18 @@ void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         auto iqbuf = std::move(mpkt.samples);
 
         // Append zeroes to compensate for delay
-        iqbuf->append(ceil(resamp_.getDelay()));
+        iqbuf->append(ceil(getDelay()));
 
         // Resample and mix up
-        auto     iqbuf_up = std::make_shared<IQBuf>(resamp_.neededOut(iqbuf->size()));
+        auto     iqbuf_up = std::make_shared<IQBuf>(neededOut(iqbuf->size()));
         unsigned nw;
 
-        nw = resamp_.resampleMixUp(iqbuf->data(), iqbuf->size(), g, iqbuf_up->data());
+        nw = resampleMixUp(iqbuf->data(), iqbuf->size(), g, iqbuf_up->data());
         assert(nw <= iqbuf_up->size());
         iqbuf_up->resize(nw);
 
         // Indicate delay
-        iqbuf_up->delay = floor(resamp_.getRate()*resamp_.getDelay());
+        iqbuf_up->delay = floor(getRate()*getDelay());
 
         // Put samples back into ModPacket
         mpkt.offset = iqbuf_up->delay;

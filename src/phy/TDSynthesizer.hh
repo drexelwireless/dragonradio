@@ -15,6 +15,8 @@
 class TDSynthesizer : public Synthesizer
 {
 public:
+    using Upsampler = Dragon::MixingRationalResampler<C,C>;
+
     TDSynthesizer(std::shared_ptr<PHY> phy,
                   double tx_rate,
                   const Channels &channels,
@@ -30,7 +32,7 @@ public:
 
 private:
     /** @brief Channel state for time-domain modulation */
-    class ChannelState {
+    class ChannelState : private Upsampler {
     public:
         using C = std::complex<float>;
 
@@ -54,15 +56,6 @@ private:
     protected:
         /** @brief Channel we are modulating */
         Channel channel_;
-
-        /** @brief Resampling rate */
-        double rate_;
-
-        /** @brief Frequency shift in radians, i.e., 2*M_PI*shift/Fs */
-        double rad_;
-
-        /** @brief Resampler */
-        Dragon::MixingRationalResampler<C,C> resamp_;
 
         /** @brief Our demodulator */
         std::shared_ptr<PHY::Modulator> mod_;
