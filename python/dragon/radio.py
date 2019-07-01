@@ -102,7 +102,7 @@ class Config(object):
         # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
         self.bandwidth = 5e6
-        self.max_bandwidth = 10e6
+        self.max_bandwidth = 40e6
         self.rx_oversample_factor = 1.0
         self.tx_oversample_factor = 1.0
         self.channel_bandwidth = 1e6

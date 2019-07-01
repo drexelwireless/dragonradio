@@ -21,10 +21,12 @@ class FDChannelizer : public Channelizer
 {
 public:
     /** @brief Filter length */
-    /** We need two factors of 5 because we need to support 25MHz bandwidth.
-     * The rest of the factors of 2 are for good measure.
+    /** We need two factors of 5 because we need to support 25MHz bandwidth. The
+     * remaining factors of 2 get us to a filter of order 12800, which is about
+     * how many taps we need for a 50kHz passband transition in 80MHz of
+     * bandwidth.
      */
-    static constexpr unsigned P = 25*64+1;
+    static constexpr unsigned P = 25*512+1;
 
     /** @brief Overlap factor */
     static constexpr unsigned V = 4;
