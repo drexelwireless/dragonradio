@@ -76,13 +76,25 @@ public:
          unsigned int M,
          unsigned int cp_len,
          unsigned int taper_len,
-         const std::vector<unsigned char> &p = {})
+         const std::optional<std::string> &p)
       : LiquidPHY(collector, node_id, header_mcs, soft_header, soft_payload, min_packet_size)
       , M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)
-      , p_(p)
+      , p_(M)
     {
+        if (p) {
+            if (p->size() != M) {
+                std::stringstream buffer;
+
+                buffer << "Subcarrier allocation must have " << M
+                       << "elements but got" << p->size();
+
+                throw std::range_error(buffer.str());
+            }
+
+            p_ = *p;
+        }
     }
 
     virtual ~OFDM() = default;
@@ -95,6 +107,11 @@ public:
     unsigned getMinTXRateOversample(void) const override
     {
         return 1;
+    }
+
+    Liquid::OFDMSubcarriers getSubcarriers(void) const
+    {
+        return p_;
     }
 
 protected:
@@ -110,7 +127,7 @@ protected:
     /** @brief The subcarrier allocation (null, pilot, data). Should have M
      * entries.
      */
-    std::vector<unsigned char> p_;
+    Liquid::OFDMSubcarriers p_;
 
     std::shared_ptr<PHY::Demodulator> mkDemodulatorInternal(void) override
     {

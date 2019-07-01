@@ -1,3 +1,6 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
 #include "phy/FlexFrame.hh"
 #include "phy/Gain.hh"
 #include "phy/NewFlexFrame.hh"
@@ -72,16 +75,12 @@ void exportPHYs(py::module &m)
                       size_t,
                       unsigned int,
                       unsigned int,
-                      unsigned int>())
-        .def(py::init<std::shared_ptr<SnapshotCollector>,
-                      NodeId,
-                      const MCS&,
-                      bool,
-                      bool,
-                      size_t,
                       unsigned int,
-                      unsigned int,
-                      unsigned int,
-                      std::vector<unsigned char>&>())
+                      std::optional<std::string>&>())
+        .def_property_readonly("subcarriers",
+            [](std::shared_ptr<OFDM> self)
+            {
+                return static_cast<std::string>(self->getSubcarriers());
+            })
         ;
 }

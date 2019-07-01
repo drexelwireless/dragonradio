@@ -151,6 +151,7 @@ class Config(object):
         self.M = 48
         self.cp_len = 6
         self.taper_len = 4
+        self.subcarriers = None
 
         # Channelizer parameters
         self.channelizer = 'freqdomain'
@@ -466,7 +467,7 @@ class Config(object):
                             help='use soft decoding for payload')
 
         # OFDM-specific options
-        parser.add_argument('-M', '--subcarriers', action='store', type=int,
+        parser.add_argument('-M', action='store', type=int,
                             dest='M',
                             help='set number of OFDM subcarriers')
         parser.add_argument('-C', '--cp', action='store', type=int,
@@ -475,6 +476,9 @@ class Config(object):
         parser.add_argument('-T', '--taper', action='store', type=int,
                             dest='taper_len',
                             help='set OFDM taper length')
+        parser.add_argument('--subcarriers', action='store', type=str,
+                            dest='subcarriers',
+                            help='set OFDM subcarrier allocation (.=null, P=pilot, +=data)')
 
         # Channelizer parameters
         parser.add_argument('--channelizer', action='store',
@@ -706,7 +710,8 @@ class Radio(object):
                                         config.min_packet_size,
                                         config.M,
                                         config.cp_len,
-                                        config.taper_len)
+                                        config.taper_len,
+                                        config.subcarriers)
         else:
             fail('Bad PHY: {}'.format(config.phy))
 

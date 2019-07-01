@@ -81,6 +81,7 @@ SOURCES := \
     dsp/TableNCO.cc \
     liquid/Filter.cc \
     liquid/Mutex.cc \
+    liquid/OFDM.cc \
     liquid/PHY.cc \
     liquid/Resample.cc \
     phy/FDChannelizer.cc \

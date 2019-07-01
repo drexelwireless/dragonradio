@@ -198,30 +198,42 @@ void exportLiquidModDemod(py::module &m)
     py::class_<Liquid::OFDMModulator,
                Liquid::Modulator,
                std::shared_ptr<Liquid::OFDMModulator>>(m, "OFDMModulator", py::multiple_inheritance{})
-        .def(py::init<unsigned,
-                      unsigned,
-                      unsigned>())
-        .def(py::init<unsigned,
-                      unsigned,
-                      unsigned,
-                      const std::vector<unsigned char>&>())
+        .def(py::init([](unsigned M,
+                         unsigned cp_len,
+                         unsigned taper_len)
+            {
+                return std::make_shared<Liquid::OFDMModulator>(M, cp_len, taper_len, std::nullopt);
+            }))
+        .def(py::init([](unsigned M,
+                         unsigned cp_len,
+                         unsigned taper_len,
+                         const std::string &p)
+            {
+                return std::make_shared<Liquid::OFDMModulator>(M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
+            }))
         ;
 
     // Export class OFDMDemodulator to Python
     py::class_<Liquid::OFDMDemodulator,
                Liquid::Demodulator,
                std::shared_ptr<Liquid::OFDMDemodulator>>(m, "OFDMDemodulator", py::multiple_inheritance{})
-        .def(py::init<bool,
-                      bool,
-                      unsigned,
-                      unsigned,
-                      unsigned>())
-       .def(py::init<bool,
-                     bool,
-                     unsigned,
-                     unsigned,
-                     unsigned,
-                     const std::vector<unsigned char>&>())
+        .def(py::init([](bool soft_header,
+                         bool soft_payload,
+                         unsigned M,
+                         unsigned cp_len,
+                         unsigned taper_len)
+            {
+                return std::make_shared<Liquid::OFDMDemodulator>(soft_header, soft_payload, M, cp_len, taper_len, std::nullopt);
+            }))
+        .def(py::init([](bool soft_header,
+                         bool soft_payload,
+                         unsigned M,
+                         unsigned cp_len,
+                         unsigned taper_len,
+                         const std::string &p)
+            {
+                return std::make_shared<Liquid::OFDMDemodulator>(soft_header, soft_payload, M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
+            }))
         ;
 
     // Export class FlexFrameModulator to Python

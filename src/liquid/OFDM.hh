@@ -3,6 +3,7 @@
 
 #include <complex>
 #include <functional>
+#include <optional>
 
 #include <liquid/liquid.h>
 
@@ -11,17 +12,45 @@
 
 namespace Liquid {
 
+class OFDMSubcarriers : public std::vector<char> {
+public:
+    explicit OFDMSubcarriers(unsigned int M);
+    OFDMSubcarriers(const std::string &scs);
+    OFDMSubcarriers(std::initializer_list<char> init);
+
+    OFDMSubcarriers() = delete;
+
+    OFDMSubcarriers &operator =(const std::string &scs);
+
+    operator std::string() const;
+
+    void validate(void);
+};
+
 class OFDMModulator : virtual public Modulator {
 public:
     OFDMModulator(unsigned M,
                   unsigned cp_len,
                   unsigned taper_len,
-                  const std::vector<unsigned char> &p = {})
+                  const std::optional<OFDMSubcarriers> &p)
       : M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)
-      , p_(p)
+      , p_(M)
     {
+        if (p) {
+            if (p->size() != M) {
+                std::stringstream buffer;
+
+                buffer << "Subcarrier allocation must have " << M
+                       << "elements but got" << p->size();
+
+                throw std::range_error(buffer.str());
+            }
+
+            p_ = *p;
+        }
+
         std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
         std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
@@ -31,7 +60,7 @@ public:
         fg_ = ofdmflexframegen_create(M_,
                                       cp_len_,
                                       taper_len_,
-                                      p_.size() == 0 ? nullptr : const_cast<unsigned char*>(p_.data()),
+                                      reinterpret_cast<unsigned char*>(p_.data()),
                                       &props);
 
         setHeaderMCS(header_mcs_);
@@ -99,7 +128,7 @@ protected:
     /* @param p The subcarrier allocation (null, pilot, data). Should have M
      * entries
      */
-    std::vector<unsigned char> p_;
+    OFDMSubcarriers p_;
 
     /* @brief OFDM flexframe generator object */
     ofdmflexframegen fg_;
@@ -131,20 +160,33 @@ public:
                     unsigned M,
                     unsigned cp_len,
                     unsigned taper_len,
-                    const std::vector<unsigned char> &p = {})
+                    const std::optional<OFDMSubcarriers> &p)
         : Demodulator(soft_header, soft_payload)
         , M_(M)
         , cp_len_(cp_len)
         , taper_len_(taper_len)
-        , p_(p)
+        , p_(M)
     {
+        if (p) {
+            if (p->size() != M) {
+                std::stringstream buffer;
+
+                buffer << "Subcarrier allocation must have " << M
+                       << "elements but got" << p->size();
+
+                throw std::range_error(buffer.str());
+            }
+
+            p_ = *p;
+        }
+
         std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
         std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         fs_ = ofdmflexframesync_create(M_,
                                        cp_len_,
                                        taper_len_,
-                                       p_.size() == 0 ? nullptr : const_cast<unsigned char*>(p_.data()),
+                                       reinterpret_cast<unsigned char*>(p_.data()),
                                        &Demodulator::liquid_callback,
                                        static_cast<Demodulator*>(this));
 
@@ -201,7 +243,7 @@ protected:
     /* @param p The subcarrier allocation (null, pilot, data). Should have M
      * entries
      */
-    std::vector<unsigned char> p_;
+    OFDMSubcarriers p_;
 
     /* @brief OFDM flexframe synchronizer object */
     ofdmflexframesync fs_;

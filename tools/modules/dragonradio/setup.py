@@ -36,6 +36,7 @@ ext_modules = [
          'main_src/dsp/TableNCO.cc',
          'main_src/liquid/Filter.cc',
          'main_src/liquid/Mutex.cc',
+         'main_src/liquid/OFDM.cc',
          'main_src/liquid/PHY.cc',
          'main_src/liquid/Resample.cc',
          'main_src/python/Filter.cc',
