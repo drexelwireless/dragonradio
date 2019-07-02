@@ -18,6 +18,8 @@ import sys
 
 import dragonradio
 from dragonradio import Channel, Channels, MCS, TXParams, TXParamsVector
+
+import dragon.channels
 import dragon.schedule
 from dragon.signal import *
 
@@ -926,34 +928,23 @@ class Radio(object):
         #
         bandwidth = self.bandwidth
         cbw = self.channel_bandwidth
-        cgbw = self.channel_guard_bandwidth
-        egbw = self.edge_guard_bandwidth
 
-        # We space channels so that there is edge_guard_bandwidth on each end
-        # and at least channel_guard_bandwidth between channels. For n channels,
-        # we therefore have n+1 guards, so:
-        #    n*cbw + 2*egbw + (n-1)*cgbw <= bandwidth
-        # => n <= 1 + (bandwidth - cbw - 2*egbw) / (cbw + cgbw)
-        n = 1 + int((bandwidth-cbw-2*egbw)/(cbw+cgbw))
-
-        if n < 1:
-            print("No channels (bandwidth={:g}; channel bandwidth={:g}; channel guard={:g}; edge guard={:g})".format(bandwidth, cbw, cgbw, egbw),
-                  file=sys.stderr)
-            sys.exit(1)
-
-        # We use the leftover space to space channels as far apart as possible.
-        # The variable gbw is the actualy guard bandwidth
-        #    (n-1)*cgbw + 2*egbw + n*cbw = bandwidth
-        # => cgbw = (bandwidth - 2*egbw - n*cbw)/(n-1)
-        if config.maximize_channel_guard_bandwidth and n > 1:
-            cgbw = (bandwidth-2*egbw-n*cbw)/(n-1)
-
-        channels = [Channel(egbw + i*(cbw + cgbw) + cbw/2. - bandwidth/2., cbw) for i in range(0,n)]
+        channels = dragon.channels.defaultChannelPlan(bandwidth,
+                                                      cbw,
+                                                      self.channel_guard_bandwidth,
+                                                      self.edge_guard_bandwidth,
+                                                      config.maximize_channel_guard_bandwidth)
 
         self.channels = channels[:config.max_channels]
 
         logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
-            list(self.channels), bandwidth, config.rx_oversample_factor, config.tx_oversample_factor, cbw, cgbw, egbw)
+            list(self.channels),
+            bandwidth,
+            config.rx_oversample_factor,
+            config.tx_oversample_factor,
+            cbw,
+            self.channel_guard_bandwidth,
+            self.edge_guard_bandwidth)
 
         #
         # Set RX and TX rates
