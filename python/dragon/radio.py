@@ -108,9 +108,6 @@ class Config(object):
         self.rx_oversample_factor = 1.0
         self.tx_oversample_factor = 1.0
         self.channel_bandwidth = 1e6
-        self.channel_guard_bandwidth = 0
-        self.edge_guard_bandwidth = None
-        self.maximize_channel_guard_bandwidth = True
 
         # TX/RX gain parameters
         self.tx_gain = 25
@@ -394,18 +391,6 @@ class Config(object):
         parser.add_argument('--channel-bandwidth', action='store', type=float,
                             dest='channel_bandwidth',
                             help='set channel bandwidth (Hz)')
-        parser.add_argument('--channel-guard-bandwidth', action='store', type=float,
-                            dest='channel_guard_bandwidth',
-                            help='set channel guard bandwidth (Hz)')
-        parser.add_argument('--edge-guard-bandwidth', action='store', type=float,
-                            dest='edge_guard_bandwidth',
-                            help='set spectrum edge guard bandwidth (Hz)')
-        parser.add_argument('--maximize-channel-guard-bandwidth', action='store_const', const=True,
-                            dest='maximize_channel_guard_bandwidth',
-                            help='maximize channel guard bandwidth')
-        parser.add_argument('--no-maximize-channel-guard-bandwidth', action='store_const', const=False,
-                            dest='maximize_channel_guard_bandwidth',
-                            help='don\'t maximize channel guard bandwidth')
 
         # Gain-related options
         parser.add_argument('-G', '--tx-gain', action='store', type=float,
@@ -929,22 +914,16 @@ class Radio(object):
         bandwidth = self.bandwidth
         cbw = self.channel_bandwidth
 
-        channels = dragon.channels.defaultChannelPlan(bandwidth,
-                                                      cbw,
-                                                      self.channel_guard_bandwidth,
-                                                      self.edge_guard_bandwidth,
-                                                      config.maximize_channel_guard_bandwidth)
+        channels = dragon.channels.defaultChannelPlan(bandwidth, cbw)
 
         self.channels = channels[:config.max_channels]
 
-        logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g; channel guard=%g; edge guard=%g)",
+        logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g)",
             list(self.channels),
             bandwidth,
             config.rx_oversample_factor,
             config.tx_oversample_factor,
-            cbw,
-            self.channel_guard_bandwidth,
-            self.edge_guard_bandwidth)
+            cbw)
 
         #
         # Set RX and TX rates
@@ -978,8 +957,6 @@ class Radio(object):
 
         bandwidth = self.bandwidth
         cbw = self.channel_bandwidth
-        cgbw = self.channel_guard_bandwidth
-        egbw = self.edge_guard_bandwidth
 
         if config.arq:
             if config.tx_upsample:
@@ -1444,16 +1421,3 @@ class Radio(object):
             return config.channel_bandwidth
         else:
             return config.bandwidth
-
-    @property
-    def channel_guard_bandwidth(self):
-        config = self.config
-        return config.channel_guard_bandwidth
-
-    @property
-    def edge_guard_bandwidth(self):
-        config = self.config
-        if config.edge_guard_bandwidth == None:
-            return self.channel_guard_bandwidth
-        else:
-            return config.edge_guard_bandwidth

@@ -1,6 +1,6 @@
 from dragonradio import Channel
 
-def defaultChannelPlan(bandwidth, cbw, cgbw, egbw, maximize_channel_guard_bandwidth=True):
+def defaultChannelPlan(bandwidth, cbw, cgbw=0, egbw=0, maximize_channel_guard_bandwidth=True):
     """
     Generate a default channel plan.
 
