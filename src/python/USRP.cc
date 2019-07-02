@@ -19,15 +19,32 @@ void exportUSRP(py::module &m)
                       const std::string&,
                       float,
                       float>())
-        .def_property_readonly("device_type", &USRP::getDeviceType)
-        .def_property("tx_frequency", &USRP::getTXFrequency, &USRP::setTXFrequency)
-        .def_property("rx_frequency", &USRP::getRXFrequency, &USRP::setRXFrequency)
-        .def_property("tx_rate", &USRP::getTXRate, &USRP::setTXRate)
-        .def_property("rx_rate", &USRP::getRXRate, &USRP::setRXRate)
-        .def_property("tx_gain", &USRP::getTXGain, &USRP::setTXGain)
-        .def_property("rx_gain", &USRP::getRXGain, &USRP::setRXGain)
-        .def_property("tx_max_samps", &USRP::getMaxTXSamps, &USRP::setMaxTXSamps)
-        .def_property("rx_max_samps", &USRP::getMaxRXSamps, &USRP::setMaxRXSamps)
+        .def_property_readonly("device_type",
+            &USRP::getDeviceType)
+        .def_property("tx_frequency",
+            &USRP::getTXFrequency,
+            &USRP::setTXFrequency)
+        .def_property("rx_frequency",
+            &USRP::getRXFrequency,
+            &USRP::setRXFrequency)
+        .def_property("tx_rate",
+            &USRP::getTXRate,
+            &USRP::setTXRate)
+        .def_property("rx_rate",
+            &USRP::getRXRate,
+            &USRP::setRXRate)
+        .def_property("tx_gain",
+            &USRP::getTXGain,
+            &USRP::setTXGain)
+        .def_property("rx_gain",
+            &USRP::getRXGain,
+            &USRP::setRXGain)
+        .def_property("tx_max_samps",
+            &USRP::getMaxTXSamps,
+            &USRP::setMaxTXSamps)
+        .def_property("rx_max_samps",
+            &USRP::getMaxRXSamps,
+            &USRP::setMaxRXSamps)
         .def_property("auto_dc_offset",
             &USRP::getAutoDCOffset,
             &USRP::setAutoDCOffset)
