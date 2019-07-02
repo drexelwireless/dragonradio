@@ -1041,7 +1041,8 @@ class Radio(object):
         config = self.config
 
         # Calculate channelizer taps
-        rate = Fraction(channel.bw/self.usrp.rx_rate).limit_denominator(200)
+        clock_rate_mhz = int(self.usrp.clock_rate/1e6)
+        rate = Fraction(channel.bw/self.usrp.rx_rate).limit_denominator(clock_rate_mhz)
 
         if rate == 1:
             return [1]
@@ -1070,7 +1071,8 @@ class Radio(object):
         config = self.config
 
         if config.tx_upsample:
-            rate = Fraction(self.usrp.tx_rate/channel.bw).limit_denominator(200)
+            clock_rate_mhz = int(self.usrp.clock_rate/1e6)
+            rate = Fraction(self.usrp.tx_rate/channel.bw).limit_denominator(clock_rate_mhz)
 
             if rate == 1:
                 return [1]
