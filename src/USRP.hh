@@ -43,6 +43,18 @@ public:
         return device_type_;
     }
 
+    /** @brief Get clock source. */
+    std::string getClockSource(void)
+    {
+        return usrp_->get_clock_source(0);
+    }
+
+    /** @brief Get master clock rate. */
+    double getMasterClockRate(void)
+    {
+        return usrp_->get_master_clock_rate(0);
+    }
+
     /** @brief Get TX frequency. */
     double getTXFrequency(void)
     {

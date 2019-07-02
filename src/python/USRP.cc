@@ -21,6 +21,10 @@ void exportUSRP(py::module &m)
                       float>())
         .def_property_readonly("device_type",
             &USRP::getDeviceType)
+        .def_property_readonly("clock_source",
+            &USRP::getClockSource)
+        .def_property_readonly("clock_rate",
+            &USRP::getMasterClockRate)
         .def_property("tx_frequency",
             &USRP::getTXFrequency,
             &USRP::setTXFrequency)
