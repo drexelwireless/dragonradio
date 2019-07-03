@@ -928,18 +928,37 @@ class Radio(object):
         #
         # Set RX and TX rates
         #
+
+        # Set RX rate
         rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+
+        want_rx_rate = bandwidth*rx_rate_oversample
+        # We max out at about 50Mhz with UHD 3.9
+        want_rx_rate = min(want_rx_rate, 50e6)
+        want_rx_rate = safeRate(want_rx_rate, self.usrp.clock_rate)
+
+        self.usrp.rx_rate = want_rx_rate
+        rx_rate = self.usrp.rx_rate
+
+        if rx_rate != want_rx_rate:
+            raise Exception('Wanted RX rate %g, but got %g' % (want_rx_rate, rx_rate))
+
+        # Set TX rate
         tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
 
-        self.usrp.rx_rate = bandwidth*rx_rate_oversample
         if config.tx_upsample:
-            self.usrp.tx_rate = bandwidth*tx_rate_oversample
+            want_tx_rate = bandwidth*tx_rate_oversample
         else:
-            self.usrp.tx_rate = cbw*tx_rate_oversample
+            want_tx_rate = cbw*tx_rate_oversample
+        want_tx_rate = safeRate(want_tx_rate, self.usrp.clock_rate)
 
-        rx_rate = self.usrp.rx_rate
+        self.usrp.tx_rate = want_tx_rate
         tx_rate = self.usrp.tx_rate
 
+        if tx_rate != want_tx_rate:
+            raise Exception('Wanted TX rate %g, but got %g' % (want_rx_rate, rx_rate))
+
+        # Tell PHY what the TX and RX rates are
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
 
@@ -1401,23 +1420,32 @@ class Radio(object):
 
     @property
     def frequency(self):
-        config = self.config
-
-        # We always use the lower portion of the available bandwidth. This
-        # allows us to avoid the incumbent in the DSRC scenario, which always
-        # uses the top portion of the available bandwidth when sharing spectrum.
-        diff = config.bandwidth - self.bandwidth
-        return config.frequency - diff/2.0
+        return self.config.frequency
 
     @property
     def bandwidth(self):
-        config = self.config
-        return min(config.bandwidth, config.max_bandwidth)
+        return min(self.config.bandwidth, self.config.max_bandwidth)
 
     @property
     def channel_bandwidth(self):
-        config = self.config
-        if config.fdma:
-            return config.channel_bandwidth
+        if self.config.fdma:
+            return self.config.channel_bandwidth
         else:
-            return config.bandwidth
+            return self.config.bandwidth
+
+def safeRate(min_rate, clock_rate):
+    """Find a safe rate no less than min_rate given the clock rate clock_rate.
+
+    Arguments:
+        min_rate: The minimum desired rate
+        clock_rate: The radio clock rate
+
+    Returns:
+        A rate no less than rate min_rate that is supported by the hardware"""
+
+    clock_rate_mhz = int(clock_rate/1e6)
+
+    f = Fraction(min_rate/clock_rate).limit_denominator(clock_rate_mhz)
+    n = math.floor(f.denominator/f.numerator)
+
+    return clock_rate/n
