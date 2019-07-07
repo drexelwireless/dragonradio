@@ -2,6 +2,7 @@ import asyncio
 from concurrent.futures import CancelledError
 import json
 import logging
+import math
 import netifaces
 import numpy as np
 import os
@@ -117,7 +118,7 @@ class Controller(TCPProtoServer):
         """Internal protocol client"""
 
         # Provide default start time
-        self.scenario_start_time = time.time()
+        self.scenario_start_time = math.floor(time.time())
 
     @property
     def is_gateway(self):
