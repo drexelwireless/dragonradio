@@ -201,6 +201,11 @@ message MandatePerformance
 * partitioned (so accurate statistics is not available), or there are mandates
 * that the CIRN cannot achieve or decided not to pursue. This message must be sent
 * at least once every 10 seconds, and at most once every 1 second.
+*
+* For the purposes of CIL reporting, each measurement period is defined as a
+* time period of 1 second, beginning and ending on a second boundary on the
+* system clock. This may differ from the official definition used for scoring.
+* The timestamp field must be aligned to this second boundary.
 */
 message DetailedPerformance
 {
