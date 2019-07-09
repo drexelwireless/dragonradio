@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+from concurrent.futures import CancelledError
 import configparser
 from fractions import Fraction
 import io
@@ -1381,42 +1382,45 @@ class Radio(object):
         config = self.config
         collector = self.snapshot_collector
 
-        # Sleep a random amount to de-synchronize with other radios collecting
-        # snapshots.
-        await asyncio.sleep(random.uniform(0, config.snapshot_duration))
+        try:
+            # Sleep a random amount to de-synchronize with other radios collecting
+            # snapshots.
+            await asyncio.sleep(random.uniform(0, config.snapshot_duration))
 
-        while True:
-            # Collecting snapshot for config.snapshot_duration
-            collector.start()
-            await asyncio.sleep(config.snapshot_duration)
+            while True:
+                # Collecting snapshot for config.snapshot_duration
+                collector.start()
+                await asyncio.sleep(config.snapshot_duration)
 
-            # Stop collecting slots
-            collector.stop()
+                # Stop collecting slots
+                collector.stop()
 
-            # Wait 200ms for remaining packets in snapshot to be demodulated and
-            # get the snapshot
-            await asyncio.sleep(0.2)
-            snapshot = collector.finish()
+                # Wait 200ms for remaining packets in snapshot to be demodulated and
+                # get the snapshot
+                await asyncio.sleep(0.2)
+                snapshot = collector.finish()
 
-            # Log the snapshot
-            slots = snapshot.slots
-            if len(slots) != 0:
-                t = slots[0].timestamp
-                fc = slots[0].fc
-                fs = slots[0].fs
+                # Log the snapshot
+                slots = snapshot.slots
+                if len(slots) != 0:
+                    t = slots[0].timestamp
+                    fc = slots[0].fc
+                    fs = slots[0].fs
 
-                if all([slot.fc == fc for slot in slots]) and all([slot.fs == fs for slot in slots]):
-                    # Get concatenated IQ buffer for all slots
-                    iqbuf = dragonradio.IQBuf(np.concatenate([slot.data for slot in slots]))
-                    iqbuf.timestamp = t
-                    iqbuf.fc = fc
-                    iqbuf.fs = fs
+                    if all([slot.fc == fc for slot in slots]) and all([slot.fs == fs for slot in slots]):
+                        # Get concatenated IQ buffer for all slots
+                        iqbuf = dragonradio.IQBuf(np.concatenate([slot.data for slot in slots]))
+                        iqbuf.timestamp = t
+                        iqbuf.fc = fc
+                        iqbuf.fs = fs
 
-                    self.logger.logSnapshot(iqbuf)
-                    for e in snapshot.selftx:
-                        self.logger.logSelfTX(snapshot.timestamp.wall_time, e)
+                        self.logger.logSnapshot(iqbuf)
+                        for e in snapshot.selftx:
+                            self.logger.logSelfTX(snapshot.timestamp.wall_time, e)
 
-            await asyncio.sleep(config.snapshot_period)
+                await asyncio.sleep(config.snapshot_period)
+        except CancelledError:
+            return
 
     @property
     def frequency(self):

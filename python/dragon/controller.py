@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import CancelledError
 import json
 import logging
 import netifaces
