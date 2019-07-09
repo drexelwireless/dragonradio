@@ -45,39 +45,6 @@ def ip_string_to_int(ip_string):
     """
     return struct.unpack('!L',socket.inet_aton(ip_string))[0]
 
-class MandatedOutcome(object):
-    def __init__(self, json=None):
-        self.start = time.time()
-        self.scalar_performance = 0
-        self.achieved_duration = 0
-
-        if json:
-            fields = [ 'goal_type'
-                     , 'flow_uid'
-                     , 'goal_set'
-                     , 'hold_period']
-
-            for f in fields:
-                setattr(self, f, json.get(f, None))
-
-            self.point_value = json.get('point_value', 1)
-
-            fields = [ 'max_latency_s'
-                     , 'min_throughput_bps'
-                     , 'max_packet_drop_rate'
-                     , 'file_transfer_deadline_s'
-                     , 'file_size_bytes']
-
-            for f in fields:
-                setattr(self, f, json['requirements'].get(f, None))
-
-    def __repr__(self):
-        return 'MandatedOutcome({})'.format(self.__dict__)
-
-    @property
-    def is_discrete(self):
-        return hasattr(self, 'file_transfer_deadline_s')
-
 class GPSLocation(object):
     def __init__(self):
         self.lat = 0
@@ -348,7 +315,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                         perf.scalar_performance = p.scalar_performance
                         perf.radio_ids.extend(p.radio_ids)
                         perf.flow_id = p.flow_id
-                        perf.hold_period = p.hold_period
+                        perf.hold_period = int(p.hold_period)
                         perf.achieved_duration = p.achieved_duration
                         perf.point_value = p.point_value
 

@@ -25,6 +25,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     exportMCS(m);
     exportEstimators(m);
     exportNet(m);
+    exportCIL(m);
     exportFlow(m);
     exportRadioNet(m);
     exportPHYs(m);

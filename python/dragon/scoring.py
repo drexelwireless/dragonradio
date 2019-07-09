@@ -13,7 +13,7 @@ logger = logging.getLogger('scoring')
 
 FlowStats = namedtuple('FlowStats', ['flow_uid', 'src', 'dest', 'first_mp', 'npackets', 'nbytes'])
 
-MandatePerformance = namedtuple('MandatePerformance', ['scalar_performance', 'radio_ids', 'flow_id', 'hold_period', 'achieved_duration', 'point_value'])
+MandatePerformance = namedtuple('MandatePerformance', ['flow_id', 'scalar_performance', 'radio_ids', 'hold_period', 'achieved_duration', 'point_value'])
 
 class Scorer:
     def __init__(self, config):
@@ -217,7 +217,7 @@ class Scorer:
 
             self.score = scoreGoals(self.score)
 
-    def updateMandatedOutcomes(self, mp, mandated_outcomes):
+    def updateMandatePerformance(self, mp, mandates):
         """Update mandated outcomes with scoring data from given measurement period"""
         config = self.config
 
@@ -226,21 +226,34 @@ class Scorer:
 
             mandates_achieved = 0
             total_score_achieved = 0
+            performance = []
 
-            for mandate in mandated_outcomes.values():
+            for (_flow_uid, mandate) in mandates.items():
                 if mandate.flow_uid in self.flow_links:
                     (src, dest) = self.flow_links[mandate.flow_uid]
-                    mandate.radio_ids = [src, dest]
+                    radio_ids = [src, dest]
                 else:
-                    mandate.radio_ids = []
+                    radio_ids = []
 
                 try:
                     df = self.score.loc[(mandate.flow_uid, mp)]
-                    mandate.achieved_duration = int(df.achieved_duration)
+                    achieved_duration = int(df.achieved_duration)
 
-                    if mandate.achieved_duration >= mandate.hold_period:
+                    if achieved_duration >= mandate.hold_period:
+                        scalar_performance = 1.0
                         mandates_achieved += 1
                         total_score_achieved += mandate.point_value
+                    else:
+                        scalar_performance = achieved_duration/mandate.hold_period
+
+                    perf = MandatePerformance(mandate.flow_uid,
+                                              scalar_performance,
+                                              radio_ids,
+                                              mandate.hold_period,
+                                              achieved_duration,
+                                              mandate.point_value)
+
+                    performance.append(perf)
                 except:
                     logger.info('Could not index stats: (%s, %s)',
                         mandate.flow_uid,
@@ -251,6 +264,8 @@ class Scorer:
                 filename = 'score_now_{:03d}_mp_{:03d}_achieved_{:d}_score_{:d}.csv'.format(now, mp, mandates_achieved, total_score_achieved)
 
                 self.score.to_csv(os.path.join(config.logdir, filename))
+
+        return (mandates_achieved, total_score_achieved, performance)
 
     def updateSourceStats(self, node_id, timestamp, sources):
         if self.q:

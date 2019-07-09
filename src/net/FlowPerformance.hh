@@ -6,9 +6,9 @@
 #include <unordered_map>
 
 #include "spinlock_mutex.hh"
+#include "CIL.hh"
 #include "Clock.hh"
 #include "Packet.hh"
-#include "net/MandatedOutcome.hh"
 #include "net/Processor.hh"
 #include "stats/TimeWindowEstimator.hh"
 
@@ -69,12 +69,12 @@ struct FlowStats {
     }
 
     /** @brief Set a flow's mandates */
-    void setMandate(const MandatedOutcome &mandate)
+    void setMandate(const Mandate &mandate)
     {
-        if (mandate.max_latency_sec)
-            mandated_latency = *mandate.max_latency_sec;
-        else if (mandate.deadline)
-            mandated_latency = *mandate.deadline;
+        if (mandate.max_latency_s)
+            mandated_latency = *mandate.max_latency_s;
+        else if (mandate.file_transfer_deadline_s)
+            mandated_latency = *mandate.file_transfer_deadline_s;
     }
 };
 
@@ -121,7 +121,7 @@ public:
     }
 
     /** @brief Get mandates */
-    MandatedOutcomeMap getMandates(void)
+    MandateMap getMandates(void)
     {
         std::lock_guard<spinlock_mutex> lock(mandates_mutex_);
 
@@ -129,7 +129,7 @@ public:
     }
 
     /** @brief Set mandates */
-    void setMandates(const MandatedOutcomeMap &mandates);
+    void setMandates(const MandateMap &mandates);
 
     /** @brief Network packet input port. */
     NetIn<Push> net_in;
@@ -166,7 +166,7 @@ protected:
     spinlock_mutex mandates_mutex_;
 
     /** @brief Mandates */
-    MandatedOutcomeMap mandates_;
+    MandateMap mandates_;
 
     /** @brief Handle a network packet */
     void netPush(std::shared_ptr<NetPacket> &&pkt);

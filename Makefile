@@ -105,6 +105,7 @@ SOURCES := \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
+    python/CIL.cc \
     python/Channelizer.cc \
     python/Channels.cc \
     python/Clock.cc \

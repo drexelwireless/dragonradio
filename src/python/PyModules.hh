@@ -66,6 +66,7 @@ void exportUSRP(py::module &m);
 void exportMCS(py::module &m);
 void exportEstimators(py::module &m);
 void exportNet(py::module &m);
+void exportCIL(py::module &m);
 void exportFlow(py::module &m);
 void exportRadioNet(py::module &m);
 void exportPHYs(py::module &m);

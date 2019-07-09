@@ -16,7 +16,7 @@ import time
 
 import dragonradio
 
-from dragon.collab import CollabAgent, MandatedOutcome, Node, Voxel
+from dragon.collab import CollabAgent, Node, Voxel
 from dragon.gpsd import GPSDClient
 import dragon.internal
 from dragon.internal import InternalProtoClient, InternalProtoServer
@@ -99,7 +99,7 @@ class Controller(TCPProtoServer):
         self.mandated_outcomes_lock = threading.Lock()
         """Lock for mandated outcomes"""
 
-        self.mandated_outcomes = {}
+        self.mandates = {}
         """Current mandated outcomes"""
 
         self.stage_mandated_outcomes = {}
@@ -584,31 +584,13 @@ class Controller(TCPProtoServer):
 
         # Updated mandated outcomes from the given measureement period
         with self.mandated_outcomes_lock:
-            mandated_outcomes = self.stage_mandated_outcomes[stage]
+            mandates = self.stage_mandated_outcomes[stage]
 
             # Get scorer to update our mandated outcomes
-            await self.loop.run_in_executor(None, self.scorer.updateMandatedOutcomes,
-                                            mp,
-                                            mandated_outcomes)
-
-            # Build performance report
-            mandates_achieved = 0
-            total_score_achieved = 0
-            performance = []
-
-            for mandate in mandated_outcomes.values():
-                perf = scoring.MandatePerformance(mandate.scalar_performance,
-                                                  mandate.radio_ids,
-                                                  mandate.flow_uid,
-                                                  mandate.hold_period,
-                                                  mandate.achieved_duration,
-                                                  mandate.point_value)
-
-                if mandate.achieved_duration >= mandate.hold_period:
-                    mandates_achieved += 1
-                    total_score_achieved += mandate.point_value
-
-                performance.append(perf)
+            (mandates_achieved, total_score_achieved, performance) = \
+                await self.loop.run_in_executor(None, self.scorer.updateMandatePerformance,
+                                                mp,
+                                                mandates)
 
         # Log the reported score
         self.reported_mandate_performance.append((mp, mandates_achieved, total_score_achieved))
@@ -639,13 +621,24 @@ class Controller(TCPProtoServer):
         self.scorer.updateGoals(goals, timestamp)
 
         # Update mandated outcomes
-        mandates = {}
+        mandates = dragonradio.MandateMap()
 
         for goal in goals:
-            outcome = MandatedOutcome(json=goal)
-            mandates[outcome.flow_uid] = outcome
+            flow_uid = goal['flow_uid']
+            hold_period = goal['hold_period']
+            point_value = goal.get('point_value', 1)
+            max_latency_s = goal['requirements'].get('max_latency_s', None)
+            min_throughput_bps = goal['requirements'].get('min_throughput_bps', None)
+            file_transfer_deadline_s = goal['requirements'].get('file_transfer_deadline_s', None)
 
-        self.setMandatedOutcomes(mandates)
+            mandates[flow_uid] = dragonradio.Mandate(flow_uid,
+                                                     hold_period,
+                                                     point_value,
+                                                     max_latency_s,
+                                                     min_throughput_bps,
+                                                     file_transfer_deadline_s)
+
+        self.setMandates(mandates)
 
         # We have mandates!
         self.scenario_started = True
@@ -909,31 +902,21 @@ class Controller(TCPProtoServer):
         resp.status.info = 'Mandated outcomes updated'
         return resp
 
-    def setMandatedOutcomes(self, mandated_outcomes):
+    def setMandates(self, mandates):
         """Set our mandated outcomes and update flowperf"""
         config = self.config
         radio = self.radio
 
         # Set our mandated outcomes
         with self.mandated_outcomes_lock:
-            self.mandated_outcomes = mandated_outcomes
-            self.stage_mandated_outcomes[self.scorer.stage] = mandated_outcomes
+            self.mandates = mandates
+            self.stage_mandated_outcomes[self.scorer.stage] = mandates
 
-        # Create a MandatedOutcomeMap for flow performance component
-        mandates = dragonradio.MandatedOutcomeMap()
-
-        for (flow, m) in mandated_outcomes.items():
-            mandates[flow] = dragonradio.MandatedOutcome(m.hold_period,
-                                                         0.0,
-                                                         m.point_value,
-                                                         m.min_throughput_bps,
-                                                         m.max_latency_s,
-                                                         m.file_transfer_deadline_s)
-
+        # Set flow performance mandates
         radio.flowperf.mandates = mandates
 
         # Set allowed flows
-        self.setAllowedFlows(mandated_outcomes.keys())
+        self.setAllowedFlows([flow_uid for (flow_uid, _mandate) in mandates.items()])
 
     def setAllowedFlows(self, flows):
         """Decide which flows are allowed by the firewall.

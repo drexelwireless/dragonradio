@@ -14,10 +14,10 @@
 #include <unordered_set>
 
 #include "spinlock_mutex.hh"
+#include "CIL.hh"
 #include "Clock.hh"
 #include "Logger.hh"
 #include "Packet.hh"
-#include "net/MandatedOutcome.hh"
 #include "net/Processor.hh"
 #include "stats/TimeWindowEstimator.hh"
 
