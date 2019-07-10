@@ -32,5 +32,5 @@ sudo apt-get install gcc-8 g++-8
 (
     cd modules/dragonradio
     CC=gcc-8 python3 setup.py build
-    python3 setup.py install
+    CC=gcc-8 python3 setup.py install
 )
