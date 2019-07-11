@@ -172,10 +172,6 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.nonce = None
         self.max_keepalive = 30
 
-        self.location_update_period = 15
-        self.spectrum_usage_update_period = 15
-        self.detailed_performance_update_period = 5
-
         self.startServer(cil.CilMessage, local_ip, peer_port)
         self.startServer(registration.TellClient, local_ip, client_port)
         self.open()
@@ -228,6 +224,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
             pass
 
     async def location_update(self):
+        config = self.controller.config
+
         while not self.done:
             try:
                 # Calculate locations
@@ -250,7 +248,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                     except:
                         logger.exception("location_update")
 
-                await asyncio.sleep(self.location_update_period)
+                await asyncio.sleep(config.location_update_period)
             except CancelledError:
                 return
             except:
@@ -258,6 +256,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     async def spectrum_usage(self):
         controller = self.controller
+        config = controller.config
 
         while not self.done:
             try:
@@ -297,7 +296,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                     except:
                         logger.exception("spectrum_usage")
 
-                await asyncio.sleep(self.spectrum_usage_update_period)
+                await asyncio.sleep(config.spectrum_usage_update_period)
             except CancelledError:
                 return
             except:
@@ -305,6 +304,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     async def detailed_performance(self):
         controller = self.controller
+        config = controller.config
 
         while not self.done:
             t1 = time.time()
@@ -340,7 +340,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
                 t2 = time.time()
                 logger.info("Time to score: %f", t2 - t1)
-                delta = self.detailed_performance_update_period - (t2 - t1)
+                delta = config.detailed_performance_update_period - (t2 - t1)
 
                 if delta > 0:
                     await asyncio.sleep(delta)

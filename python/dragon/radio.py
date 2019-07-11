@@ -251,6 +251,11 @@ class Config(object):
         self.collab_client_port = 5557
         self.collab_peer_port = 5558
 
+        # Collaboration agent message periods
+        self.location_update_period = 15
+        self.spectrum_usage_update_period = 5
+        self.detailed_performance_update_period = 5
+
     def __str__(self):
         return pformat(self.__dict__)
 
