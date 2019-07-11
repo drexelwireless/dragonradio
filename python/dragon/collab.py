@@ -161,6 +161,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.controller = controller
 
         self.loop = loop
+        self.done = False
         self.local_ip = local_ip
         self.server_host = server_host
         self.server_port = server_port
@@ -184,6 +185,9 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         loop.create_task(self.location_update())
         loop.create_task(self.spectrum_usage())
         loop.create_task(self.detailed_performance())
+
+    def stop(self):
+        self.done = True
 
     def addPeer(self, peer_ip):
         self.peers[peer_ip] = Peer(self, peer_ip, self.peer_port)
@@ -212,7 +216,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     async def heartbeat(self):
         try:
-            while True:
+            while not self.done:
                 if self.nonce:
                     try:
                         await self.keepalive()
@@ -224,7 +228,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
             pass
 
     async def location_update(self):
-        while True:
+        while not self.done:
             try:
                 # Calculate locations
                 locations = []
@@ -255,7 +259,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
     async def spectrum_usage(self):
         controller = self.controller
 
-        while True:
+        while not self.done:
             try:
                 # Calculate spectrum usage
                 voxels = []
@@ -302,7 +306,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
     async def detailed_performance(self):
         controller = self.controller
 
-        while True:
+        while not self.done:
             t1 = time.time()
 
             try:

@@ -276,6 +276,13 @@ class Controller(TCPProtoServer):
             if self.is_gateway:
                 self.scorer.updateScore()
 
+            # Stop the collaboration agent
+            if self.collab_agent:
+                try:
+                    self.collab_agent.stop()
+                except:
+                    logger.exception('Could not gracefully terminate collaboration agent')
+
             # Stop the scorer
             try:
                 self.scorer.stop()
