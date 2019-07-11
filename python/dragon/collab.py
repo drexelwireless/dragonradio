@@ -85,10 +85,12 @@ def sendCIL(f):
     """
     @wraps(f)
     async def wrapper(self, *args, **kwargs):
+        timestamp = kwargs.pop('timestamp', time.time())
+
         msg = cil.CilMessage()
         msg.sender_network_id = ip_string_to_int(self.local_ip)
         msg.msg_count = self.msg_count
-        msg.timestamp.set_timestamp(time.time())
+        msg.timestamp.set_timestamp(timestamp)
         msg.network_type.network_type = cil.NetworkType.COMPETITOR
 
         self.msg_count += 1
