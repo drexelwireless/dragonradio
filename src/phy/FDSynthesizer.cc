@@ -157,13 +157,13 @@ void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 
                 mod->modulate(std::move(pkt), *mpkt);
 
-                pushed = slot->push(mpkt, overfill);
+                pushed = slot->push(mpkt, chanidx, overfill);
             } else {
                 mod->modulate(std::move(pkt), *mpkt);
 
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-                pushed = slot->push(mpkt, overfill);
+                pushed = slot->push(mpkt, chanidx, overfill);
             }
 
             if (!pushed) {

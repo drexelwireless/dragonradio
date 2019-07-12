@@ -132,7 +132,8 @@ void SlottedMAC::modulateSlot(slot_queue &q,
                                                     prev_overfill,
                                                     tx_slot_samps_ - prev_overfill,
                                                     tx_full_slot_samps_ - prev_overfill,
-                                                    slotidx);
+                                                    slotidx,
+                                                    schedule_.size());
 
     // Tell the synthesizer to synthesize for this slot
     synthesizer_->modulate(slot);
@@ -219,6 +220,17 @@ void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
                    slot->iqbufs);
 
     next_slot_start_of_burst_ = end_of_burst;
+
+    // Record the slot's load
+    {
+        std::lock_guard<spinlock_mutex> lock(load_mutex_);
+        size_t                          nchannels = std::min(load_.nsamples.size(), slot->load.size());
+
+        for (size_t i = 0; i < nchannels; ++i)
+            load_.nsamples[i] += slot->load[i];
+
+        load_.end = slot->deadline + (slot->deadline_delay + slot->nsamples)/tx_rate_;
+    }
 
     // Log the transmissions
     if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
