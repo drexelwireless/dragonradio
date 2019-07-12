@@ -122,7 +122,7 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
         if (overfill) {
             std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-            slot->max_samples = slot->max_superslot_samples;
+            slot->max_samples = slot->full_slot_samples;
         }
 
         // Modulate packets for the current slot

@@ -19,11 +19,11 @@ public:
         Slot(const Clock::time_point &deadline_,
              size_t deadline_delay_,
              size_t max_samples_,
-             size_t max_superslot_samples_,
+             size_t full_slot_samples_,
              size_t slotidx_)
          : deadline(deadline_)
          , deadline_delay(deadline_delay_)
-         , max_superslot_samples(max_superslot_samples_)
+         , full_slot_samples(full_slot_samples_)
          , slotidx(slotidx_)
          , closed(false)
          , max_samples(max_samples_)
@@ -44,8 +44,8 @@ public:
         /** @brief Number of samples to delay the deadline */
         const size_t deadline_delay;
 
-        /** @brief Maximum number of samples in this slot if it is a superslot */
-        const size_t max_superslot_samples;
+        /** @brief Number of samples in a full slot including any guard */
+        const size_t full_slot_samples;
 
         /** @brief The schedule slot this slot represents */
         const size_t slotidx;
