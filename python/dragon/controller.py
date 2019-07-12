@@ -357,10 +357,9 @@ class Controller(TCPProtoServer):
                 tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
 
                 logger.info('Cancelling tasks...')
-                [task.cancel() for task in tasks]
-
-                logging.info('Waiting for outstanding tasks')
-                await asyncio.gather(*tasks)
+                for task in tasks:
+                    task.cancel()
+                    await task
 
                 #
                 # Stop the event loop
