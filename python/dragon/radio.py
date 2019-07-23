@@ -256,6 +256,14 @@ class Config(object):
         self.spectrum_usage_update_period = 5
         self.detailed_performance_update_period = 5
 
+        # Spectrum usage tuning parameters
+        self.spec_load_check_period = 0.5
+        self.spec_future_period = 10.0
+        self.spec_chan_trim_lo = 0.05
+        self.spec_chan_trim_hi = 0.05
+        self.spec_occupancy_min = 0.001
+        self.spec_occupancy_model = (1.0, 0.0)
+
     def __str__(self):
         return pformat(self.__dict__)
 

@@ -93,9 +93,6 @@ class Controller(TCPProtoServer):
         self.schedule_nodes = []
         """Nodes in the TDMA schedule"""
 
-        self.voxels = []
-        """Voxels used"""
-
         self.mandated_outcomes_lock = threading.Lock()
         """Lock for mandated outcomes"""
 
@@ -482,29 +479,69 @@ class Controller(TCPProtoServer):
 
             self.schedule_seq = seq
 
-    def scheduleToVoxels(self, sched):
+    def getVoxels(self, occupancy):
+        mac = self.radio.mac
+
+        if mac is None:
+            return []
+        elif isinstance(mac, dragonradio.SlottedALOHA):
+            return self.alohaToVoxels(occupancy)
+        else:
+            return self.scheduleToVoxels(self.schedule, occupancy)
+
+    def alohaToVoxels(self, occupancy):
+        """Determine voxel usage for ALOHA"""
+        config = self.config
+        radio = self.radio
+
+        nnodes = len(self.nodes)
+        nchannels = len(radio.channels)
+
+        voxels = []
+
+        for chan in radio.channels:
+            transmitters = set(self.nodes)
+
+            f_start = radio.frequency + chan.fc - chan.bw/2 + config.spec_chan_trim_lo*chan.bw
+            f_end = radio.frequency + chan.fc + chan.bw/2 - config.spec_chan_trim_hi*chan.bw
+
+            rx = radio.node_id
+
+            for tx in transmitters:
+                v = Voxel()
+                v.f_start = f_start
+                v.f_end = f_end
+                v.tx = tx
+                v.rx = [rx]
+                v.duty_cycle = occupancy
+
+                voxels.append(v)
+
+        return voxels
+
+    def scheduleToVoxels(self, sched, occupancy):
         """Determine voxel usage from schedule"""
         config = self.config
         radio = self.radio
 
         (nchannels, nslots) = sched.shape
-        cbw = radio.channel_bandwidth
 
         voxels = []
 
-        for chan in range(0, nchannels):
-            transmitters = set(sched[chan])
+        for chanidx in range(0, nchannels):
+            transmitters = set(sched[chanidx])
             if 0 in transmitters:
                 transmitters.remove(0)
 
             if len(transmitters) != 0:
-                f_start = config.frequency + radio.channels[chan].fc-cbw/2
-                f_end = config.frequency + radio.channels[chan].fc+cbw/2
+                chan = radio.channels[chanidx]
+                f_start = radio.frequency + chan.fc - chan.bw/2 + config.spec_chan_trim_lo*chan.bw
+                f_end = radio.frequency + chan.fc + chan.bw/2 - config.spec_chan_trim_hi*chan.bw
 
                 rx = radio.node_id
 
                 for tx in transmitters:
-                    occupancy = (sched[chan] == tx).sum() / len(sched[chan])
+                    #occupancy = (sched[chanidx] == tx).sum() / len(sched[chanidx])
 
                     v = Voxel()
                     v.f_start = f_start
@@ -725,7 +762,6 @@ class Controller(TCPProtoServer):
                 sched = dragon.schedule.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
                 if not np.array_equal(sched, self.schedule):
                     await self.installMACSchedule(self.schedule_seq + 1, sched)
-                    self.voxels = self.scheduleToVoxels(sched)
                     await self.distributeSchedule()
             except CancelledError:
                 return
@@ -789,6 +825,8 @@ class Controller(TCPProtoServer):
                 old_bandwidth = self.radio.bandwidth
 
                 self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
+                if self.collab_agent:
+                    self.collab_agent.push_spectrum_usage()
 
                 # If only the center frequency has changed, keep the old
                 # schedule. Otherwise create a new schedule.
