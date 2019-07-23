@@ -1,8 +1,8 @@
 {
     "BatchName": "{{name}}",
     "Duration": 630,
-    "RFScenario": 9989,
-    "TrafficScenario": 99890,
+    "RFScenario": 9990,
+    "TrafficScenario": 99900,
     "NodeData": [{
             "RFNode_ID": 1,
             "ImageName": "{{ image }}",
