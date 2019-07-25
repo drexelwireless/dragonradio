@@ -1,6 +1,9 @@
 #ifndef DUMMYCONTROLLER_H_
 #define DUMMYCONTROLLER_H_
 
+#include <unordered_map>
+
+#include "spinlock_mutex.hh"
 #include "mac/Controller.hh"
 
 /** @brief A Dummy MAC controller that just passes packets. */
@@ -18,6 +21,13 @@ public:
     void missed(std::shared_ptr<NetPacket> &&pkt) override;
 
     void transmitted(NetPacket &pkt) override;
+
+private:
+    /** @brief Mutex for sequence numbers */
+    spinlock_mutex seqs_mutex_;
+
+    /** @brief Receive windows */
+    std::unordered_map<NodeId, Seq> seqs_;
 };
 
 #endif /* DUMMYCONTROLLER_H_ */

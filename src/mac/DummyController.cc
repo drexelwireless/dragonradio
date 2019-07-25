@@ -12,7 +12,18 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
         if (!pkt->isInternalFlagSet(kHasSeq)) {
             Node &nexthop = (*net_)[pkt->nexthop];
 
-            pkt->seq = 0;
+            {
+                std::lock_guard<spinlock_mutex> lock(seqs_mutex_);
+                auto                            it = seqs_.find(nexthop.id);
+
+                if (it != seqs_.end())
+                    pkt->seq = ++(it->second);
+                else {
+                    pkt->seq = 0;
+                    seqs_.insert(std::make_pair(nexthop.id, Seq{0}));
+                }
+            }
+
             pkt->tx_params = &tx_params_[0];
             pkt->g = tx_params_[0].getSoftTXGain() * nexthop.g;
 
