@@ -125,8 +125,7 @@ void FDChannelizer::fftWorker(void)
         fdbuf->seq = iqbuf->seq;
         fdbuf->fc = iqbuf->fc;
         fdbuf->fs = iqbuf->fs;
-        if (iqbuf->snapshot_off)
-            fdbuf->snapshot_off = *iqbuf->snapshot_off - (fftoff - O);
+        fdbuf->snapshot_off = iqbuf->snapshot_off;
 
         // Make the frequency-domain buffer available to the individual channels
         {
