@@ -210,7 +210,9 @@ void FDChannelizer::fftWorker(void)
 
 void FDChannelizer::demodWorker(unsigned tid)
 {
-    Slot                   prev_slot;
+    // We keep two past buffers when logging slots
+    std::shared_ptr<IQBuf> prev_prev_iqbuf;
+    std::shared_ptr<IQBuf> prev_iqbuf;
     Slot                   slot;
     std::optional<ssize_t> next_snapshot_off;
     unsigned               num_extra_snapshot_slots = 0;
@@ -316,13 +318,23 @@ void FDChannelizer::demodWorker(unsigned tid)
             // If we received any packets, log both the previous and the current
             // slot. We then save the current slot in case we need to log it
             // later.
-            if (logger_ && received && logger_->getCollectSource(Logger::kSlots)) {
-                if (prev_slot.iqbuf)
-                    logger_->logSlot(prev_slot.iqbuf, rx_rate_);
+            if (logger_ && logger_->getCollectSource(Logger::kSlots)) {
+                if (received) {
+                    if (prev_prev_iqbuf) {
+                        logger_->logSlot(prev_prev_iqbuf, rx_rate_);
+                        prev_prev_iqbuf.reset();
+                    }
 
-                logger_->logSlot(slot.iqbuf, rx_rate_);
+                    if (prev_iqbuf) {
+                        logger_->logSlot(prev_iqbuf, rx_rate_);
+                        prev_iqbuf.reset();
+                    }
 
-                prev_slot = std::move(slot);
+                    logger_->logSlot(slot.iqbuf, rx_rate_);
+                } else {
+                    prev_prev_iqbuf = std::move(prev_iqbuf);
+                    prev_iqbuf = std::move(slot.iqbuf);
+                }
             }
         }
     }

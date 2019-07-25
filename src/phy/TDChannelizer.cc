@@ -188,13 +188,16 @@ void TDChannelizer::demodWorker(unsigned tid)
             // If we received any packets, log both the previous and the current
             // slot. We then save the current slot in case we need to log it
             // later.
-            if (logger_ && received && logger_->getCollectSource(Logger::kSlots)) {
-                if (prev_iqbuf)
-                    logger_->logSlot(prev_iqbuf, rx_rate_);
+            if (logger_ && logger_->getCollectSource(Logger::kSlots)) {
+                if (received) {
+                    if (prev_iqbuf) {
+                        logger_->logSlot(prev_iqbuf, rx_rate_);
+                        prev_iqbuf.reset();
+                    }
 
-                logger_->logSlot(iqbuf, rx_rate_);
-
-                prev_iqbuf = std::move(iqbuf);
+                    logger_->logSlot(iqbuf, rx_rate_);
+                } else
+                    prev_iqbuf = std::move(iqbuf);
             }
         }
     }
