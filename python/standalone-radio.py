@@ -71,12 +71,12 @@ def main():
     #
     # Configure the MAC
     #
+    for i in range(0, config.num_nodes):
+        radio.net.addNode(i+1)
+
     if config.aloha:
         radio.configureALOHA()
     else:
-        for i in range(0, config.num_nodes):
-            radio.net.addNode(i+1)
-
         radio.configureSimpleMACSchedule()
 
     #
