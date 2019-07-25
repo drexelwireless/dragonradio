@@ -213,6 +213,7 @@ void FDChannelizer::demodWorker(unsigned tid)
     Slot                   prev_slot;
     Slot                   slot;
     std::optional<ssize_t> next_snapshot_off;
+    unsigned               num_extra_snapshot_slots = 0;
 
     while (!done_) {
         // If we are reconfiguring, wait until reconfiguration is done
@@ -246,23 +247,23 @@ void FDChannelizer::demodWorker(unsigned tid)
             slots.pop();
 
             auto &fdbuf = slot.fdbuf;
+            auto &iqbuf = slot.iqbuf;
 
             // Wait for the buffer to start to fill.
             fdbuf->waitToStartFilling();
 
             // When the snapshot is over, we need to record self-transmissions
-            // for one more slot to ensure we record any transmission that
-            // began in the last slot of the snapshot but ended in the following
-            // slot.
+            // for one more slot to ensure we record any transmission that began
+            // in the last slot of the snapshot but ended in the following slot.
+            // The offset for the next snapshot IQ buffer was saved in
+            // next_snapshot_off, so we use that if this IQ buffer does not have
+            // a snapshot offset.
             std::optional<ssize_t> snapshot_off;
 
-            if (fdbuf->snapshot_off) {
-                snapshot_off = fdbuf->snapshot_off;
-                next_snapshot_off = *fdbuf->snapshot_off + fdbuf->size();
-            } else if (next_snapshot_off) {
+            if (iqbuf->snapshot_off)
+                snapshot_off = iqbuf->snapshot_off;
+            else
                 snapshot_off = next_snapshot_off;
-                next_snapshot_off = std::nullopt;
-            }
 
             // Update IQ buffer sequence number
             demod.updateSeq(fdbuf->seq);
@@ -299,6 +300,18 @@ void FDChannelizer::demodWorker(unsigned tid)
                 } else if (complete)
                     break;
             }
+
+            // Save the snapshot offset of the next IQ buffer here if we know
+            // what it will be. iqbuf's size is valid now that it has been
+            // marked complete.
+            if (iqbuf->snapshot_off) {
+                next_snapshot_off = *iqbuf->snapshot_off + iqbuf->size();
+                num_extra_snapshot_slots = 2;
+            } else if (num_extra_snapshot_slots > 0) {
+                --num_extra_snapshot_slots;
+                next_snapshot_off = *next_snapshot_off + iqbuf->size();
+            } else
+                next_snapshot_off = std::nullopt;
 
             // If we received any packets, log both the previous and the current
             // slot. We then save the current slot in case we need to log it
