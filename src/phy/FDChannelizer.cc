@@ -107,6 +107,15 @@ void FDChannelizer::fftWorker(void)
         assert(iqbuf);
         tdbufs_.pop();
 
+        // Reset FFT state on buffer discontinuity. We detect a discontinuity
+        // via a gap in the time-domain IQ buffer sequence number.
+        if (iqbuf->seq != seq + 1) {
+            std::fill(fft.in.begin(), fft.in.end(), 0);
+            fftoff = O;
+        }
+
+        seq = iqbuf->seq;
+
         // Wait for the buffer to start to fill.
         iqbuf->waitToStartFilling();
 
@@ -127,15 +136,6 @@ void FDChannelizer::fftWorker(void)
             for (unsigned i = 0; i < nchannels; ++i)
                 slots_[i].push({iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O)});
         }
-
-        // Reset FFT state on buffer discontinuity. We detect a discontinuity
-        // via a gap in the time-domain IQ buffer sequence number.
-        if (iqbuf->seq != seq + 1) {
-            std::fill(fft.in.begin(), fft.in.end(), 0);
-            fftoff = O;
-        }
-
-        seq = iqbuf->seq;
 
         // Perform overlap-save on input buffer as data becomes available
         bool   complete;            // Is the buffer complete?
