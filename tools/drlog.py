@@ -350,13 +350,17 @@ class Log:
         i = slots.index[idx].tolist()[0]
         offset = 0
 
-        if pkt.start_samples < 0:
+        if pkt.end_samples < 0:
+            i -= 2
+        elif pkt.start_samples < 0:
             i -= 1
 
         slot1 = slots.iloc[i]
         slot2 = slots.iloc[i+1]
 
-        if pkt.start_samples < 0:
+        if pkt.end_samples < 0:
+            offset = len(slot1.iq_data) + len(slot2.iq_data)
+        elif pkt.start_samples < 0:
             offset = len(slot1.iq_data)
 
         ts = [slot1.timestamp, slot2.timestamp]
