@@ -336,7 +336,7 @@ class ReceivePlot:
                     xy=(t_start, ymax),
                     xytext=(t_end, ymax),
                     xycoords='data',
-                    arrowprops=dict(arrowstyle='<->', connectionstyle='bar, fraction=0.5', ec='k'))
+                    arrowprops=dict(arrowstyle='<->', connectionstyle='bar, fraction=0.2', ec='k'))
 
         ax.text((t_start + t_end) / 2, ymax + 0.1*(ymax - ymin), str(pkt.seq),
                 ha='center',
