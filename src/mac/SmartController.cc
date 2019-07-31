@@ -154,7 +154,7 @@ get_packet:
 
         // Append selective ACK if needed
         if (recvw.need_selective_ack)
-            appendCtrlACK(recvw, pkt);
+            appendCtrlACK(*pkt, recvw);
     } else if (pkt->data_len != 0)
         dprintf("ARQ: send: node=%u; seq=%u",
             (unsigned) nexthop,
@@ -255,8 +255,8 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
 
     // Process control info
     if (pkt->isFlagSet(kControl)) {
-        handleCtrlHello(node, pkt);
-        handleCtrlTimestampEchos(node, pkt);
+        handleCtrlHello(*pkt, node);
+        handleCtrlTimestampEchos(*pkt, node);
     }
 
     // Handle broadcast packets
@@ -288,7 +288,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
         std::optional<Seq>              nak;
 
         // Handle any NAK
-        nak = handleNAK(sendw, pkt);
+        nak = handleNAK(*pkt, sendw);
 
         // If we saw a NAK, look at feedback at least up to the sequence number
         // that was NAK'ed. We add a tiny amount of slop, 0.001 sec, to make
@@ -333,7 +333,7 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
             // Handle selective ACK. We do this *after* handling the ACK,
             // because a selective ACK tells us about packets *beyond* that
             // which was ACK'ed.
-            handleSelectiveACK(sendw, pkt, tfeedback);
+            handleSelectiveACK(*pkt, sendw, tfeedback);
 
             // If the NAK is for a retransmitted packet, count it as a
             // transmission failure. We need to check for this case because a
@@ -556,7 +556,7 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->dest = recvw.node.id;
 
     // Append selective ACK control messages
-    appendCtrlACK(recvw, pkt);
+    appendCtrlACK(*pkt, recvw);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -615,7 +615,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
     pkt->appendNak(seq);
 
     // Append selective ACK control messages
-    appendCtrlACK(recvw, pkt);
+    appendCtrlACK(*pkt, recvw);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -826,19 +826,19 @@ void SmartController::startSACKTimer(RecvWindow &recvw)
     }
 }
 
-void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& pkt)
+void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
 {
-    for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
         switch (it->type) {
             case ControlMsg::Type::kHello:
             {
                 node.is_gateway = it->hello.is_gateway;
 
                 dprintf("ARQ: HELLO: node=%u",
-                    (unsigned) pkt->curhop);
+                    (unsigned) pkt.curhop);
 
                 logEvent("ARQ: Discovered neighbor: node=%u; gateway=%s",
-                    (unsigned) pkt->curhop,
+                    (unsigned) pkt.curhop,
                     node.is_gateway ? "true" : "false");
             }
             break;
@@ -849,7 +849,7 @@ void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& 
                 MonoClock::time_point t_recv;
 
                 t_sent = it->timestamp.t_sent.to_mono_time();
-                t_recv = pkt->timestamp;
+                t_recv = pkt.timestamp;
 
 		{
                     std::lock_guard<std::mutex> lock(node.timestamps_mutex);
@@ -858,7 +858,7 @@ void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& 
                 }
 
                 logEvent("TIMESYNC: Timestamp: node=%u; t_sent=%f; t_recv=%f",
-                    (unsigned) pkt->curhop,
+                    (unsigned) pkt.curhop,
                     (double) t_sent.get_real_secs(),
                     (double) t_recv.get_real_secs());
             }
@@ -870,13 +870,13 @@ void SmartController::handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& 
     }
 }
 
-void SmartController::handleCtrlTimestampEchos(Node &node, std::shared_ptr<RadioPacket>& pkt)
+void SmartController::handleCtrlTimestampEchos(RadioPacket &pkt, Node &node)
 {
     // If the transmitter is the time master, record our echoed timestamps.
     std::optional<NodeId> time_master = net_->getTimeMaster();
 
     if (node.id != net_->getMyNodeId() && time_master && node.id == *time_master) {
-        for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+        for(auto it = pkt.begin(); it != pkt.end(); ++it) {
             switch (it->type) {
                 case ControlMsg::Type::kTimestampEcho:
                 {
@@ -894,7 +894,7 @@ void SmartController::handleCtrlTimestampEchos(Node &node, std::shared_ptr<Radio
                         }
 
                         logEvent("TIMESYNC: Timestamp echo: node=%u; t_sent=%f; t_recv=%f",
-                            (unsigned) pkt->curhop,
+                            (unsigned) pkt.curhop,
                             (double) t_sent.get_real_secs(),
                             (double) t_recv.get_real_secs());
                     }
@@ -908,8 +908,8 @@ void SmartController::handleCtrlTimestampEchos(Node &node, std::shared_ptr<Radio
     }
 }
 
-inline void apendSelectiveACK(RecvWindow &recvw,
-                              std::shared_ptr<NetPacket>& pkt,
+inline void apendSelectiveACK(NetPacket &pkt,
+                              RecvWindow &recvw,
                               Seq begin,
                               Seq end)
 {
@@ -917,10 +917,10 @@ inline void apendSelectiveACK(RecvWindow &recvw,
         (unsigned) recvw.node.id,
         (unsigned) begin,
         (unsigned) end);
-    pkt->appendSelectiveAck(begin, end);
+    pkt.appendSelectiveAck(begin, end);
 }
 
-void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt)
+void SmartController::appendCtrlACK(NetPacket &pkt, RecvWindow &recvw)
 {
     if (!selective_ack_)
         return;
@@ -946,7 +946,7 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
             end = seq;
         } else {
             if (in_run) {
-                apendSelectiveACK(recvw, pkt, begin, end + 1);
+                apendSelectiveACK(pkt, recvw, begin, end + 1);
                 nsacks++;
 
                 in_run = false;
@@ -956,7 +956,7 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
 
     // Close out any final run
     if (in_run) {
-        apendSelectiveACK(recvw, pkt, begin, end + 1);
+        apendSelectiveACK(pkt, recvw, begin, end + 1);
         nsacks++;
     }
 
@@ -964,19 +964,19 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
     // end up our received packets. This will inform the sender that the last
     // stretch of packets WAS NOT received.
     if (end < recvw.max) {
-        apendSelectiveACK(recvw, pkt, recvw.max+1, recvw.max+1);
+        apendSelectiveACK(pkt, recvw, recvw.max+1, recvw.max+1);
         nsacks++;
     }
 
     // If we have too many selective ACK's, keep as many as we can, but keep the
     // *latest* selective ACKs.
-    if (pkt->size() > rc.mtu + mcu_) {
+    if (pkt.size() > rc.mtu + mcu_) {
         // How many SACK's do we need to remove?
         size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
         int    nremove;
         int    nkeep;
 
-        nremove = (pkt->size() - (rc.mtu + mcu_) + sack_size - 1) /
+        nremove = (pkt.size() - (rc.mtu + mcu_) + sack_size - 1) /
                       sack_size;
 
         if (nremove > nsacks)
@@ -990,17 +990,17 @@ void SmartController::appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket
                 nremove,
                 nkeep);
 
-            unsigned char *sack_start = pkt->data() + pkt->size() -
+            unsigned char *sack_start = pkt.data() + pkt.size() -
                                             nsacks*sack_size;
 
             memmove(sack_start, sack_start+nremove*sack_size, nkeep*sack_size);
-            pkt->setControlLen(pkt->getControlLen() - nremove*sack_size);
-            pkt->resize(pkt->size() - nremove*sack_size);
+            pkt.setControlLen(pkt.getControlLen() - nremove*sack_size);
+            pkt.resize(pkt.size() - nremove*sack_size);
         }
     }
 
     // Mark this packet as containing a selective ACK
-    pkt->setInternalFlag(kHasSelectiveACK);
+    pkt.setInternalFlag(kHasSelectiveACK);
 
     // We no longer need a selective ACK
     recvw.need_selective_ack = false;
@@ -1037,12 +1037,12 @@ void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
     entry.reset();
 }
 
-std::optional<Seq> SmartController::handleNAK(SendWindow &sendw,
-                                              std::shared_ptr<RadioPacket>& pkt)
+std::optional<Seq> SmartController::handleNAK(RadioPacket &pkt,
+                                              SendWindow &sendw)
 {
     std::optional<Seq> result;
 
-    for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
         switch (it->type) {
             case ControlMsg::Type::kNak:
             {
@@ -1079,15 +1079,15 @@ std::optional<Seq> SmartController::handleNAK(SendWindow &sendw,
     return result;
 }
 
-void SmartController::handleSelectiveACK(SendWindow &sendw,
-                                         std::shared_ptr<RadioPacket>& pkt,
+void SmartController::handleSelectiveACK(RadioPacket &pkt,
+                                         SendWindow &sendw,
                                          Clock::time_point tfeedback)
 {
     Node &node = sendw.node;
     Seq  nextSeq = sendw.unack;
     bool sawACKRun = false;
 
-    for(auto it = pkt->begin(); it != pkt->end(); ++it) {
+    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
         switch (it->type) {
             case ControlMsg::Type::kSelectiveAck:
             {

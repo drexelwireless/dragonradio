@@ -680,13 +680,13 @@ protected:
     void startSACKTimer(RecvWindow &recvw);
 
     /** @brief Handle HELLO and timestamp control messages. */
-    void handleCtrlHello(Node &node, std::shared_ptr<RadioPacket>& pkt);
+    void handleCtrlHello(RadioPacket &pkt, Node &node);
 
     /** @brief Handle timestampecho control messages. */
-    void handleCtrlTimestampEchos(Node &node, std::shared_ptr<RadioPacket>& pkt);
+    void handleCtrlTimestampEchos(RadioPacket &pkt, Node &node);
 
     /** @brief Append ACK control messages. */
-    void appendCtrlACK(RecvWindow &recvw, std::shared_ptr<NetPacket>& pkt);
+    void appendCtrlACK(NetPacket &pkt, RecvWindow &recvw);
 
     /** @brief Handle an ACK. */
     void handleACK(SendWindow &sendw, const Seq &seq);
@@ -696,12 +696,11 @@ protected:
      * @param pkt The packet potentially containing NAK's
      * @return The NAK with the highest sequence number, if there is a NAK
      */
-    std::optional<Seq> handleNAK(SendWindow &sendw,
-                                 std::shared_ptr<RadioPacket>& pkt);
+    std::optional<Seq> handleNAK(RadioPacket &pkt, SendWindow &sendw);
 
     /** @brief Handle select ACK messages. */
-    void handleSelectiveACK(SendWindow &sendw,
-                            std::shared_ptr<RadioPacket>& pkt,
+    void handleSelectiveACK(RadioPacket &pkt,
+                            SendWindow &sendw,
                             Clock::time_point tfeedback);
 
     /** @brief Update PER as a result of successful packet transmission. */
