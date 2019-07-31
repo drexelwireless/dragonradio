@@ -47,6 +47,7 @@ struct ControlMsg {
         kTimestampEcho,
         kNak,
         kSelectiveAck,
+        kSetUnack
     };
 
     struct Hello {
@@ -67,12 +68,17 @@ struct ControlMsg {
         Time t_recv;
     };
 
+    using Nak = Seq;
+
     struct SelectiveAck {
         Seq begin;
         Seq end;
     };
 
-    using Nak = Seq;
+    struct SetUnack {
+        /** @brief Sender's first un-ACK'ed packet */
+        Seq unack;
+    };
 
     Type type;
 
@@ -82,6 +88,7 @@ struct ControlMsg {
         TimestampEcho timestamp_echo;
         Nak nak;
         SelectiveAck ack;
+        SetUnack unack;
     };
 };
 
@@ -271,6 +278,9 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Append a selective ACK control message to a packet */
     void appendSelectiveAck(const Seq &begin, const Seq &end);
+
+    /** @brief Append a "set unack" control message to a packet */
+    void appendSetUnack(const Seq &unack);
 
     /** @brief Return iterator to beginning control data. */
     iterator begin() const
@@ -463,6 +473,9 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
 
         case ControlMsg::kSelectiveAck:
             return offsetof(ControlMsg, ack) + sizeof(ControlMsg::SelectiveAck);
+
+        case ControlMsg::kSetUnack:
+            return offsetof(ControlMsg, unack) + sizeof(ControlMsg::SetUnack);
 
         default:
             return 0;

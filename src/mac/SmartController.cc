@@ -203,6 +203,14 @@ get_packet:
         if (pkt->seq > sendw.max)
             sendw.max = pkt->seq;
 
+        // If we have locally updated our send window, tell the receiver.
+        if (sendw.locally_updated) {
+            logEvent("ARQ: Setting unack: unack=%u",
+                (unsigned) sendw.unack);
+            pkt->appendSetUnack(sendw.unack);
+            sendw.locally_updated = false;
+        }
+
         // Apply TX params. If the destination can transmit, proceed as usual.
         // Otherwise, use the default MCS.
         if (dest.can_transmit)
@@ -363,9 +371,6 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         }
     }
 
-    // Resize the packet to truncate non-data bytes
-    pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
-
     // If this packet doesn't contain any data, we are done
     if (pkt->data_len == 0) {
         dprintf("ARQ: recv: node=%u; ack=%u",
@@ -399,6 +404,9 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         ack(recvw);
     else
         startSACKTimer(recvw);
+
+    // Handle sender setting unack
+    handleSetUnack(*pkt, recvw);
 
     // Drop this packet if it is before our receive window
     if (pkt->seq < recvw.ack) {
@@ -449,6 +457,9 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         recvw.max = pkt->seq;
         recvw.max_timestamp = pkt->timestamp;
     }
+
+    // Resize the packet to truncate non-data bytes
+    pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
 
     // If this is the next packet we expected, send it now and update the
     // receive window
@@ -783,7 +794,14 @@ void SmartController::drop(SendWindow::Entry &entry)
     entry.reset();
 
     // Advance send window if we can
+    Seq old_unack = sendw.unack;
+
     advanceSendWindow(sendw);
+
+    // See if we locally updated the send window. If so, we need to tell the
+    // receiver, so set the locally_updated flag.
+    if (sendw.unack > old_unack)
+        sendw.locally_updated = true;
 }
 
 void SmartController::advanceSendWindow(SendWindow &sendw)
@@ -1152,6 +1170,33 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
                 // We've now handled at least one ACK run
                 sawACKRun = true;
                 nextSeq = it->ack.end;
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
+}
+
+void SmartController::handleSetUnack(RadioPacket &pkt, RecvWindow &recvw)
+{
+    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kSetUnack:
+            {
+                Seq next_ack = it->unack.unack;
+
+                if (next_ack > recvw.ack) {
+                    logEvent("ARQ: set next ack: node=%u; next_ack=%u",
+                        (unsigned) recvw.node.id,
+                        (unsigned) next_ack);
+
+                    for (Seq seq = recvw.ack; seq < next_ack; ++seq)
+                        recvw[seq].reset();
+
+                    recvw.ack = next_ack;
+                }
             }
             break;
 

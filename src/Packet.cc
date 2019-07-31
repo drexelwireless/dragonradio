@@ -187,6 +187,16 @@ void Packet::appendSelectiveAck(const Seq &begin, const Seq &end)
     appendControl(msg);
 }
 
+void Packet::appendSetUnack(const Seq &unack)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kSetUnack;
+    msg.unack.unack = unack;
+
+    appendControl(msg);
+}
+
 const struct mgenhdr *Packet::getMGENHdr(void) const
 {
     const struct ip *iph = getIPHdr();

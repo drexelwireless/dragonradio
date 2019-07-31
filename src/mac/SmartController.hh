@@ -107,6 +107,7 @@ struct SendWindow {
       , unack(0)
       , max(0)
       , new_window(true)
+      , locally_updated(false)
       , win(1)
       , maxwin(maxwin)
       , mcsidx(0)
@@ -138,6 +139,11 @@ struct SendWindow {
 
     /** @brief Is this a new window? */
     bool new_window;
+
+    /** @brief Has the send window been updated locally, i.e., not because of a
+     * receiver ACK?
+     */
+    bool locally_updated;
 
     /** @brief Send window size */
     Seq::uint_type win;
@@ -702,6 +708,9 @@ protected:
     void handleSelectiveACK(RadioPacket &pkt,
                             SendWindow &sendw,
                             Clock::time_point tfeedback);
+
+    /** @brief Handle sender setting unack */
+    void handleSetUnack(RadioPacket &pkt, RecvWindow &recvw);
 
     /** @brief Update PER as a result of successful packet transmission. */
     void txSuccess(SendWindow &sendw);
