@@ -528,13 +528,13 @@ public:
      */
     size_t getMaxPacketsPerSlot(const TXParams &p);
 
-    bool pull(std::shared_ptr<NetPacket>& pkt) override;
+    bool pull(std::shared_ptr<NetPacket> &pkt) override;
 
-    void received(std::shared_ptr<RadioPacket>&& pkt) override;
+    void received(std::shared_ptr<RadioPacket> &&pkt) override;
 
-    void missed(std::shared_ptr<NetPacket>&& pkt) override;
+    void missed(std::shared_ptr<NetPacket> &&pkt) override;
 
-    void transmitted(std::shared_ptr<NetPacket>& pkt) override;
+    void transmitted(NetPacket &pkt) override;
 
     /** @brief Retransmit a send window entry on timeout. */
     void retransmitOnTimeout(SendWindow::Entry &entry);

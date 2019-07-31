@@ -106,7 +106,7 @@ size_t SmartController::getMaxPacketsPerSlot(const TXParams &p)
     return 1;
 }
 
-bool SmartController::pull(std::shared_ptr<NetPacket>& pkt)
+bool SmartController::pull(std::shared_ptr<NetPacket> &pkt)
 {
 get_packet:
     // Get a packet to send. We look for a packet on our internal queue first.
@@ -216,7 +216,7 @@ get_packet:
     return true;
 }
 
-void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
+void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 {
     // Skip packets with invalid header
     if (pkt->isInternalFlagSet(kInvalidHeader))
@@ -480,24 +480,24 @@ void SmartController::received(std::shared_ptr<RadioPacket>&& pkt)
     }
 }
 
-void SmartController::missed(std::shared_ptr<NetPacket>&& pkt)
+void SmartController::missed(std::shared_ptr<NetPacket> &&pkt)
 {
     netq_->repush(std::move(pkt));
 }
 
-void SmartController::transmitted(std::shared_ptr<NetPacket>& pkt)
+void SmartController::transmitted(NetPacket &pkt)
 {
-    if (!pkt->isFlagSet(kBroadcast) && pkt->data_len != 0) {
-        SendWindow                      &sendw = getSendWindow(pkt->nexthop);
+    if (!pkt.isFlagSet(kBroadcast) && pkt.data_len != 0) {
+        SendWindow                      &sendw = getSendWindow(pkt.nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
         // Start the retransmit timer if it is not already running.
-        startRetransmissionTimer(sendw[pkt->seq]);
+        startRetransmissionTimer(sendw[pkt.seq]);
     }
 
     // Cancel the selective ACK timer when we actually have sent a selective ACK
-    if (pkt->isInternalFlagSet(kHasSelectiveACK)) {
-        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt->nexthop);
+    if (pkt.isInternalFlagSet(kHasSelectiveACK)) {
+        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt.nexthop);
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
         timer_queue_.cancel(recvw);

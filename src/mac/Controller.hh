@@ -27,13 +27,13 @@ public:
     /** This function is automatically called when a packet is requested from
      * the net_out port.
      */
-    virtual bool pull(std::shared_ptr<NetPacket>& pkt) = 0;
+    virtual bool pull(std::shared_ptr<NetPacket> &pkt) = 0;
 
     /** @brief Process demodulated packets. */
     /** This function is automatically called to process packets received on
      * on the radio_in port.
      */
-    virtual void received(std::shared_ptr<RadioPacket>&& pkt) = 0;
+    virtual void received(std::shared_ptr<RadioPacket> &&pkt) = 0;
 
     /** @brief Called when net_out is disconnected. By default, this disconnects
      * net_in so that any pending pulls will terminate.
@@ -44,12 +44,12 @@ public:
     /** This function is called by the MAC when a packet has missed its
      * transmission slot.
      */
-    virtual void missed(std::shared_ptr<NetPacket>&& pkt) = 0;
+    virtual void missed(std::shared_ptr<NetPacket> &&pkt) = 0;
 
     /** @brief Notify controller that a packet has been transmitted. */
     /** This function is called by the MAC when a packet has been transmitted.
      */
-    virtual void transmitted(std::shared_ptr<NetPacket>& pkt) = 0;
+    virtual void transmitted(NetPacket &pkt) = 0;
 
     /** @brief Input port for packets coming from the network. */
     NetIn<Pull> net_in;

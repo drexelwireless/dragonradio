@@ -253,7 +253,7 @@ void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
 
     // Inform the controller of the transmission
     for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it)
-        controller_->transmitted((*it)->pkt);
+        controller_->transmitted(*(*it)->pkt);
 
     // Tell the snapshot collector about local self-transmissions
     if (snapshot_collector_) {

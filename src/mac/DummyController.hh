@@ -11,13 +11,13 @@ public:
                     const std::vector<TXParams> &tx_params);
     virtual ~DummyController() = default;
 
-    bool pull(std::shared_ptr<NetPacket>& pkt) override;
+    bool pull(std::shared_ptr<NetPacket> &pkt) override;
 
-    void received(std::shared_ptr<RadioPacket>&& pkt) override;
+    void received(std::shared_ptr<RadioPacket> &&pkt) override;
 
-    void missed(std::shared_ptr<NetPacket>&& pkt) override;
+    void missed(std::shared_ptr<NetPacket> &&pkt) override;
 
-    void transmitted(std::shared_ptr<NetPacket>& pkt) override;
+    void transmitted(NetPacket &pkt) override;
 };
 
 #endif /* DUMMYCONTROLLER_H_ */

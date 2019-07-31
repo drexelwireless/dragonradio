@@ -6,7 +6,7 @@ DummyController::DummyController(std::shared_ptr<Net> net,
 {
 }
 
-bool DummyController::pull(std::shared_ptr<NetPacket>& pkt)
+bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
 {
     if (net_in.pull(pkt)) {
         if (!pkt->isInternalFlagSet(kHasSeq)) {
@@ -24,7 +24,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket>& pkt)
         return false;
 }
 
-void DummyController::received(std::shared_ptr<RadioPacket>&& pkt)
+void DummyController::received(std::shared_ptr<RadioPacket> &&pkt)
 {
     if (pkt->isInternalFlagSet(kInvalidHeader) || pkt->isInternalFlagSet(kInvalidPayload))
         return;
@@ -33,10 +33,10 @@ void DummyController::received(std::shared_ptr<RadioPacket>&& pkt)
         radio_out.push(std::move(pkt));
 }
 
-void DummyController::missed(std::shared_ptr<NetPacket>&& pkt)
+void DummyController::missed(std::shared_ptr<NetPacket> &&pkt)
 {
 }
 
-void DummyController::transmitted(std::shared_ptr<NetPacket>& pkt)
+void DummyController::transmitted(NetPacket &pkt)
 {
 }
