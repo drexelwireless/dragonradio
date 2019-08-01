@@ -2,7 +2,10 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#include <firpm/pm.h>
+
 #include "dsp/FIR.hh"
+#include "dsp/FIRDesign.hh"
 #include "dsp/Filter.hh"
 #include "dsp/Window.hh"
 #include "liquid/Filter.hh"
@@ -137,6 +140,60 @@ void exportFilters(py::module &m)
     m.def("kaiser", &Liquid::kaiser);
 
     m.def("butter_lowpass", &Liquid::butter_lowpass);
+
+    py::class_<PMOutput>(m, "PMOutput")
+        .def_readonly("h",
+            &PMOutput::h,
+            "Final filter coefficients")
+        .def_readonly("x",
+            &PMOutput::x,
+            "Reference set used to generate the final filter")
+        .def_readonly("iter",
+            &PMOutput::iter,
+            "Number of iterations that were necessary to achieve convergence")
+        .def_readonly("delta",
+            &PMOutput::delta,
+            "The final reference error")
+        .def_readonly("Q",
+            &PMOutput::Q,
+            "convergence parameter value")
+        .def("__repr__", [](const PMOutput& self) {
+            return py::str("PMOutput(h={}, x={}, iter={}, delta={}, Q={})").format(self.h, self.x, self.iter, self.delta, self.Q);
+         })
+        ;
+
+    m.def("firpm",
+        &Dragon::firpm,
+        "Use the Remez exchange algorithm to design an equiripple filter",
+        py::arg("numtaps"),
+        py::arg("bands"),
+        py::arg("desired"),
+        py::arg("w"),
+        py::arg("fs") = 2.0,
+        py::arg("epsT") = 0.01,
+        py::arg("Nmax") = 4);
+
+    m.def("firpm1f",
+        &Dragon::firpm1f,
+        "Use the Remez exchange algorithm to design a filter with 1/f rolloff",
+        py::arg("numtaps"),
+        py::arg("bands"),
+        py::arg("desired"),
+        py::arg("w"),
+        py::arg("fs") = 2.0,
+        py::arg("epsT") = 0.01,
+        py::arg("Nmax") = 4);
+
+    m.def("firpm1f2",
+        &Dragon::firpm1f2,
+        "Use the Remez exchange algorithm to design a filter with 1/f^2 rolloff",
+        py::arg("numtaps"),
+        py::arg("bands"),
+        py::arg("desired"),
+        py::arg("w"),
+        py::arg("fs") = 2.0,
+        py::arg("epsT") = 0.01,
+        py::arg("Nmax") = 4);
 
     exportWindow<C>(m, "WindowC");
 }

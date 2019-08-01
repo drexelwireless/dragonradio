@@ -37,6 +37,9 @@ LIBS += -lfftw3
 # Needed for xsimd
 CPPFLAGS += -Idependencies/xsimd/include
 
+# Needed for firpm
+LIBS += -lfirpm
+
 # Version information
 GIT_HASH=$(shell git rev-parse HEAD^{} | cut -c1-8)
 
@@ -74,6 +77,7 @@ SOURCES := \
     Util.cc \
     WorkQueue.cc \
     dsp/FFTW.cc \
+    dsp/FIRDesign.cc \
     dsp/TableNCO.cc \
     liquid/Filter.cc \
     liquid/Mutex.cc \

@@ -17,7 +17,10 @@ struct Channel {
 
 using C = std::complex<float>;
 
+/** @brief FIR taps */
+using Taps = std::vector<C>;
+
 /** @brief A vector of pairs of channels and taps */
-using Channels = std::vector<std::pair<Channel, std::vector<C>>>;
+using Channels = std::vector<std::pair<Channel, Taps>>;
 
 #endif /* CHANNEL_H_ */
