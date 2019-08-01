@@ -191,6 +191,7 @@ public:
                                        static_cast<Demodulator*>(this));
 
         setHeaderMCS(header_mcs_);
+        reconfigureSoftDecode();
     }
 
     virtual ~OFDMDemodulator()
