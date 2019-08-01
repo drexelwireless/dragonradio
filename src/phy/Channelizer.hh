@@ -1,20 +1,21 @@
-#ifndef PACKETDEMODULATOR_H_
-#define PACKETDEMODULATOR_H_
+#ifndef CHANNELIZER_H_
+#define CHANNELIZER_H_
 
 #include "IQBuffer.hh"
 #include "phy/Channel.hh"
 
-/** @brief A packet demodulator. */
-class PacketDemodulator
+/** @brief Base class for channelizers */
+class Channelizer
 {
 public:
-    PacketDemodulator(const Channels &channels)
-      : rx_rate_(0.0)
+    Channelizer(double rx_rate,
+                const Channels &channels)
+      : rx_rate_(rx_rate)
       , channels_(channels)
     {
     }
 
-    virtual ~PacketDemodulator() = default;
+    virtual ~Channelizer() = default;
 
     /** @brief Get the RX sample rate. */
     virtual double getRXRate(void)
@@ -55,8 +56,8 @@ protected:
     /** @brief RX sample rate */
     double rx_rate_;
 
-    /** @brief Radio channels, given as shift from center frequency */
+    /** @brief Radio channels */
     Channels channels_;
 };
 
-#endif /* PACKETDEMODULATOR_H_ */
+#endif /* CHANNELIZER_H_ */

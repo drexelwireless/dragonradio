@@ -6,6 +6,7 @@
 
 #include <liquid/liquid.h>
 
+#include "dsp/FFTW.hh"
 #include "liquid/PHY.hh"
 
 namespace Liquid {
@@ -21,7 +22,8 @@ public:
       , taper_len_(taper_len)
       , p_(p)
     {
-        std::lock_guard<std::mutex> lck(Liquid::mutex);
+        std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+        std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         ofdmflexframegenprops_s props;
 
@@ -37,8 +39,12 @@ public:
 
     virtual ~OFDMModulator()
     {
-        if (fg_)
+        if (fg_) {
+            std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+            std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
+
             ofdmflexframegen_destroy(fg_);
+        }
     }
 
     OFDMModulator(const OFDMModulator &) = delete;
@@ -132,7 +138,8 @@ public:
         , taper_len_(taper_len)
         , p_(p)
     {
-        std::lock_guard<std::mutex> lck(Liquid::mutex);
+        std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+        std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         fs_ = ofdmflexframesync_create(M_,
                                        cp_len_,
@@ -146,8 +153,12 @@ public:
 
     virtual ~OFDMDemodulator()
     {
-        if (fs_)
+        if (fs_) {
+            std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+            std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
+
             ofdmflexframesync_destroy(fs_);
+        }
     }
 
     OFDMDemodulator(const OFDMDemodulator &) = delete;
@@ -155,6 +166,11 @@ public:
 
     OFDMDemodulator &operator==(const OFDMDemodulator &) = delete;
     OFDMDemodulator &operator!=(const OFDMDemodulator &) = delete;
+
+    bool isFrameOpen(void) override
+    {
+        return ofdmflexframesync_is_frame_open(fs_);
+    }
 
     void print(void) override
     {

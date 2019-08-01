@@ -87,6 +87,9 @@ namespace fftw
         }
     };
 
+    template<typename T>
+    using vector = std::vector<T, allocator<T>>;
+
     template <class T>
     class FFT {
     public:
@@ -107,6 +110,11 @@ namespace fftw
         }
 
         void execute(void)
+        {
+            static_assert(sizeof(T) == 0, "Only specializations of fftw::FFTBase can be used");
+        }
+
+        void execute(T *in, T *out)
         {
             static_assert(sizeof(T) == 0, "Only specializations of fftw::FFTBase can be used");
         }
@@ -148,9 +156,16 @@ namespace fftw
             fftwf_execute(plan_);
         }
 
-        std::vector<C, allocator<C>> in;
+        void execute(C *in, C *out)
+        {
+            fftwf_execute_dft(plan_,
+                              reinterpret_cast<fftwf_complex*>(in),
+                              reinterpret_cast<fftwf_complex*>(out));
+        }
 
-        std::vector<C, allocator<C>> out;
+        vector<C> in;
+
+        vector<C> out;
 
     protected:
         /** @brief Size of FFT */

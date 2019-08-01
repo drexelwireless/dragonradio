@@ -31,6 +31,9 @@ LIBS += -lpython3.5m
 # Needed for FLAC
 LIBS += -lFLAC++ -lFLAC
 
+# Needed for FFTW
+LIBS += -lfftw3
+
 # Needed for xsimd
 CPPFLAGS += -Idependencies/xsimd/include
 
@@ -76,13 +79,13 @@ SOURCES := \
     liquid/Mutex.cc \
     liquid/PHY.cc \
     liquid/Resample.cc \
-    phy/ChannelDemodulator.cc \
-    phy/ChannelModulator.cc \
-    phy/TXParams.cc \
+    phy/FDChannelizer.cc \
     phy/LiquidPHY.cc \
-    phy/ParallelPacketDemodulator.cc \
-    phy/ParallelPacketModulator.cc \
+    phy/OverlapTDChannelizer.cc \
     phy/RadioPacketQueue.cc \
+    phy/TDChannelizer.cc \
+    phy/TDSynthesizer.cc \
+    phy/TXParams.cc \
     mac/Controller.cc \
     mac/DummyController.cc \
     mac/MAC.cc \
@@ -95,6 +98,7 @@ SOURCES := \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
+    python/Channelization.cc \
     python/Clock.cc \
     python/Controller.cc \
     python/Estimator.cc \
@@ -109,7 +113,6 @@ SOURCES := \
     python/NCO.cc \
     python/Net.cc \
     python/PHY.cc \
-    python/PacketModulator.cc \
     python/Python.cc \
     python/RadioConfig.cc \
     python/RadioNet.cc \

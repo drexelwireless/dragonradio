@@ -138,6 +138,12 @@ public:
         return 1;
     }
 
+    /** @brief Is a frame currently being demodulated?
+     * @return true if a frame is currently being demodulated, false
+     * otherwise.
+     */
+    virtual bool isFrameOpen(void) = 0;
+
     virtual void print(void) = 0;
 
     virtual void reset(void) = 0;

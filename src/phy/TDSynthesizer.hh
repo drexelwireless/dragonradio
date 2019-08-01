@@ -1,27 +1,30 @@
-#ifndef PARALLELPACKETMODULATOR_H_
-#define PARALLELPACKETMODULATOR_H_
+#ifndef TDSYNTHESIZER_H_
+#define TDSYNTHESIZER_H_
 
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <queue>
 
-#include "PacketModulator.hh"
-#include "liquid/Resample.hh"
+#include "dsp/Polyphase.hh"
+#include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
-#include "phy/ChannelModulator.hh"
 #include "phy/PHY.hh"
+#include "phy/Synthesizer.hh"
 #include "net/Net.hh"
 
-/** @brief A parallel packet modulator. */
-class ParallelPacketModulator : public PacketModulator, public Element
+/** @brief A time-domain synthesizer. */
+class TDSynthesizer : public Synthesizer, public Element
 {
 public:
-    ParallelPacketModulator(std::shared_ptr<Net> net,
-                            std::shared_ptr<PHY> phy,
-                            const Channel &tx_channel,
-                            size_t nthreads);
-    virtual ~ParallelPacketModulator();
+    using C = std::complex<float>;
+
+    TDSynthesizer(std::shared_ptr<Net> net,
+                  std::shared_ptr<PHY> phy,
+                  double tx_rate,
+                  const Channel &tx_channel,
+                  size_t nthreads);
+    virtual ~TDSynthesizer();
 
     double getMaxTXUpsampleRate(void) override;
 
@@ -70,6 +73,78 @@ public:
     NetIn<Pull> sink;
 
 private:
+    /** @brief Channel state for time-domain modulation */
+    class ChannelState {
+    public:
+        using C = std::complex<float>;
+
+        ChannelState(PHY &phy,
+                     const std::vector<C> &taps,
+                     double rate,
+                     double rad)
+          : rate_(rate)
+          , rad_(rad)
+          , resamp_(rate, taps)
+          , mod_(phy.mkModulator())
+        {
+            resamp_.setFreqShift(rad);
+        }
+
+        ~ChannelState() = default;
+
+        /** @brief Set prototype filter. Should have unity gain. */
+        void setTaps(const std::vector<C> &taps)
+        {
+            resamp_.setTaps(taps);
+        }
+
+        /** @brief Set resampling rate */
+        void setRate(double rate)
+        {
+            if (rate_ != rate) {
+                rate_ = rate;
+                resamp_.setRate(rate_);
+            }
+        }
+
+        /** @brief Set frequency shift */
+        void setFreqShift(double rad)
+        {
+            if (rad != rad_) {
+                rad_ = rad;
+                resamp_.setFreqShift(rad_);
+            }
+        }
+
+        /** @brief Reset internal state */
+        void reset(const Channel &channel)
+        {
+            resamp_.reset();
+        }
+
+        /** @brief Modulate a packet to produce IQ samples.
+         * @param channel The channel being modulated.
+         * @param pkt The NetPacket to modulate.
+         * @param mpkt The ModPacket in which to place modulated samples.
+         */
+        void modulate(const Channel &channel,
+                      std::shared_ptr<NetPacket> pkt,
+                      ModPacket &mpkt);
+
+    protected:
+        /** @brief Resampling rate */
+        double rate_;
+
+        /** @brief Frequency shift in radians, i.e., 2*M_PI*shift/Fs */
+        double rad_;
+
+        /** @brief Resampler */
+        Dragon::MixingRationalResampler<C,C> resamp_;
+
+        /** @brief Our demodulator */
+        std::shared_ptr<PHY::Modulator> mod_;
+    };
+
     /** @brief Our network. */
     std::shared_ptr<Net> net_;
 
@@ -110,7 +185,7 @@ private:
     std::list<std::unique_ptr<ModPacket>> pkt_q_;
 
     /* @brief Modulator for one-off modulation */
-    ChannelModulator one_mod_;
+    ChannelState one_mod_;
 
     /** @brief Get TX upsample rate. */
     double getTXUpsampleRate(void)
@@ -125,4 +200,4 @@ private:
     void modWorker(std::atomic<bool> &reconfig);
 };
 
-#endif /* PARALLELPACKETMODULATOR_H_ */
+#endif /* TDSYNTHESIZER_H_ */

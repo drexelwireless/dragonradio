@@ -73,6 +73,12 @@ public:
         Demodulator(PHY &phy) : Ulator(phy) {};
         virtual ~Demodulator() = default;
 
+        /** @brief Is a frame currently being demodulated?
+         * @return true if a frame is currently being demodulated, false
+         * otherwise.
+         */
+        virtual bool isFrameOpen(void) = 0;
+
         /** @brief Reset the internal state of the demodulator.
          * @param channel The channel being demodulated.
          */

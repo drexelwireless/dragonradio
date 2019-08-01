@@ -1,15 +1,16 @@
 #include "RadioConfig.hh"
 #include "phy/PHY.hh"
-#include "phy/ParallelPacketModulator.hh"
+#include "phy/TDSynthesizer.hh"
 #include "phy/TXParams.hh"
 #include "net/Net.hh"
 #include "stats/Estimator.hh"
 
-ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
-                                                 std::shared_ptr<PHY> phy,
-                                                 const Channel &tx_channel,
-                                                 size_t nthreads)
-  : PacketModulator()
+TDSynthesizer::TDSynthesizer(std::shared_ptr<Net> net,
+                             std::shared_ptr<PHY> phy,
+                             double tx_rate,
+                             const Channel &tx_channel,
+                             size_t nthreads)
+  : Synthesizer(tx_rate)
   , sink(*this, nullptr, nullptr)
   , net_(net)
   , phy_(phy)
@@ -23,29 +24,29 @@ ParallelPacketModulator::ParallelPacketModulator(std::shared_ptr<Net> net,
 {
     for (size_t i = 0; i < nthreads; ++i) {
         mod_reconfigure_[i].store(false, std::memory_order_relaxed);
-        mod_threads_.emplace_back(std::thread(&ParallelPacketModulator::modWorker,
+        mod_threads_.emplace_back(std::thread(&TDSynthesizer::modWorker,
                                               this,
                                               std::ref(mod_reconfigure_[i])));
     }
 }
 
-ParallelPacketModulator::~ParallelPacketModulator()
+TDSynthesizer::~TDSynthesizer()
 {
     stop();
 }
 
-double ParallelPacketModulator::getMaxTXUpsampleRate(void)
+double TDSynthesizer::getMaxTXUpsampleRate(void)
 {
     return getTXUpsampleRate();
 }
 
-void ParallelPacketModulator::modulateOne(std::shared_ptr<NetPacket> pkt,
+void TDSynthesizer::modulateOne(std::shared_ptr<NetPacket> pkt,
                                           ModPacket &mpkt)
 {
     one_mod_.modulate(tx_channel_, std::move(pkt), mpkt);
 }
 
-void ParallelPacketModulator::modulate(size_t n)
+void TDSynthesizer::modulate(size_t n)
 {
     std::unique_lock<std::mutex> lock(pkt_mutex_);
 
@@ -55,9 +56,9 @@ void ParallelPacketModulator::modulate(size_t n)
     }
 }
 
-size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
-                                    size_t maxSamples,
-                                    bool overfill)
+size_t TDSynthesizer::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
+                          size_t maxSamples,
+                          bool overfill)
 {
     size_t nsamples = 0;
 
@@ -78,7 +79,7 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
             size_t n = mpkt.samples->size();
 
             // Drop packets that won't fit in a slot
-            if (n > maxPacketSize_ && maxPacketSize_ != 0) {
+            if (n > max_packet_size_ && max_packet_size_ != 0) {
                 fprintf(stderr, "Dropping modulated packet that is too long to send: n=%u, max=%u\n",
                         (unsigned) n,
                         (unsigned) maxSamples);
@@ -117,7 +118,7 @@ size_t ParallelPacketModulator::pop(std::list<std::unique_ptr<ModPacket>>& pkts,
     return nsamples;
 }
 
-void ParallelPacketModulator::reconfigure(void)
+void TDSynthesizer::reconfigure(void)
 {
     one_mod_.setTaps(taps_);
     one_mod_.setRate(getTXUpsampleRate());
@@ -127,7 +128,7 @@ void ParallelPacketModulator::reconfigure(void)
         flag.store(true, std::memory_order_relaxed);
 }
 
-void ParallelPacketModulator::stop(void)
+void TDSynthesizer::stop(void)
 {
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
@@ -141,9 +142,9 @@ void ParallelPacketModulator::stop(void)
     }
 }
 
-void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
+void TDSynthesizer::modWorker(std::atomic<bool> &reconfig)
 {
-    ChannelModulator           mod(*phy_, taps_, 1.0, 0.0);
+    ChannelState               mod(*phy_, taps_, 1.0, 0.0);
     std::shared_ptr<NetPacket> pkt;
     ModPacket                  *mpkt;
     // We want the last 10 packets to account for 86% of the EMA
@@ -190,7 +191,7 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
             //
             // Although we modulate packets in order, we have now relaxed the
             // restriction that they be *sent* in order (see
-            // ParallelPacketModulator::pop).
+            // TDSynthesizer::pop).
             std::unique_lock<std::mutex> lock(pkt_mutex_);
 
             // Packets containing a selective ACK are prioritized over other
@@ -244,4 +245,38 @@ void ParallelPacketModulator::modWorker(std::atomic<bool> &reconfig)
             }
         }
     }
+}
+
+void TDSynthesizer::ChannelState::modulate(const Channel &channel,
+                                           std::shared_ptr<NetPacket> pkt,
+                                           ModPacket &mpkt)
+{
+    // Modulate the packet
+    mod_->modulate(std::move(pkt), mpkt);
+
+    // Upsample if needed
+    if (rad_ != 0.0 || rate_ != 1.0) {
+        // Get samples from ModPacket
+        auto iqbuf = std::move(mpkt.samples);
+
+        // Append zeroes to compensate for delay
+        iqbuf->append(ceil(resamp_.getDelay()));
+
+        // Resample and mix up
+        auto     iqbuf_up = std::make_shared<IQBuf>(resamp_.neededOut(iqbuf->size()));
+        unsigned nw;
+
+        nw = resamp_.resampleMixUp(iqbuf->data(), iqbuf->size(), iqbuf_up->data());
+        assert(nw <= iqbuf_up->size());
+        iqbuf_up->resize(nw);
+
+        // Indicate delay
+        iqbuf_up->delay = floor(resamp_.getRate()*resamp_.getDelay());
+
+        // Put samples back into ModPacket
+        mpkt.samples = std::move(iqbuf_up);
+    }
+
+    // Set channel
+    mpkt.channel = channel;
 }

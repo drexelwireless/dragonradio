@@ -1,5 +1,5 @@
-#ifndef PARALLELPACKETDEMODULATOR_H_
-#define PARALLELPACKETDEMODULATOR_H_
+#ifndef OVERLAPTDCHANNELIZER_H_
+#define OVERLAPTDCHANNELIZER_H_
 
 #include <condition_variable>
 #include <functional>
@@ -7,24 +7,31 @@
 #include <mutex>
 
 #include "spinlock_mutex.hh"
-#include "PacketDemodulator.hh"
+#include "Logger.hh"
 #include "RadioPacketQueue.hh"
+#include "dsp/Polyphase.hh"
+#include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
-#include "phy/ChannelDemodulator.hh"
+#include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
 #include "net/Net.hh"
 
-/** @brief A parallel packet demodulator. */
-class ParallelPacketDemodulator : public PacketDemodulator, public Element
+/** @brief A time-domain channelizer that demodulates overlapping pairs of
+ * slots. This duplicates work (and leads to duplicate packets), but it allows
+ * us to parallelize demodulation of *a single channel*. We have to do this when
+ * demodulation is slow, such as when we use liquid's resamplers.
+ */
+class OverlapTDChannelizer : public Channelizer, public Element
 {
 public:
     using C = std::complex<float>;
 
-    ParallelPacketDemodulator(std::shared_ptr<Net> net,
-                              std::shared_ptr<PHY> phy,
-                              const Channels &channels,
-                              unsigned int nthreads);
-    virtual ~ParallelPacketDemodulator();
+    OverlapTDChannelizer(std::shared_ptr<Net> net,
+                         std::shared_ptr<PHY> phy,
+                         double rx_rate,
+                         const Channels &channels,
+                         unsigned int nthreads);
+    virtual ~OverlapTDChannelizer();
 
     void setChannels(const Channels &channels) override;
 
@@ -97,6 +104,61 @@ public:
     RadioOut<Push> source;
 
 private:
+    /** @brief Channel state for time-domain demodulation */
+    class ChannelState {
+    public:
+        ChannelState(PHY &phy,
+                     const Channel &channel,
+                     const std::vector<C> &taps,
+                     double rx_rate);
+
+        ~ChannelState() = default;
+
+        /** @brief Set channel */
+        void setChannel(const Channel &channel);
+
+        /** @brief Reset internal state */
+        void reset(void);
+
+        /** @brief Set timestamp for demodulation
+         * @param timestamp The timestamp for future samples.
+         * @param snapshot_off The snapshot offset associated with the given
+         * timestamp.
+         * @param offset The offset of the first sample that will be demodulated.
+         */
+        void timestamp(const MonoClock::time_point &timestamp,
+                       std::optional<size_t> snapshot_off,
+                       size_t offset);
+
+        /** @brief Demodulate data with given parameters */
+        void demodulate(IQBuf &resamp_buf,
+                        const std::complex<float>* data,
+                        size_t count,
+                        std::function<void(std::unique_ptr<RadioPacket>)> callback);
+
+    protected:
+        /** @brief Channel we are demodulating */
+        Channel channel_;
+
+        /** @brief RX rate */
+        double rx_rate_;
+
+        /** @brief RX oversample factor */
+        unsigned rx_oversample_;
+
+        /** @brief Resampling rate */
+        double rate_;
+
+        /** @brief Frequency shift in radians, i.e., 2*M_PI*shift/Fs */
+        double rad_;
+
+        /** @brief Resampler */
+        Dragon::MixingRationalResampler<C,C> resamp_;
+
+        /** @brief Our demodulator */
+        std::shared_ptr<PHY::Demodulator> demod_;
+    };
+
     /** @brief Destination for packets. */
     std::shared_ptr<Net> net_;
 
@@ -175,7 +237,7 @@ private:
     /** @brief A demodulation worker. */
     void demodWorker(std::atomic<bool> &reconfig);
 
-    /** @brief The network wend worker. */
+    /** @brief The network send worker. */
     void netWorker(void);
 
     /** @brief Get two slot's worth of IQ data.
@@ -198,4 +260,4 @@ private:
      void nextWindow(void);
 };
 
-#endif /* PARALLELPACKETDEMODULATOR_H_ */
+#endif /* OVERLAPTDCHANNELIZER_H_ */

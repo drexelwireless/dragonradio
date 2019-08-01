@@ -1,20 +1,20 @@
-#ifndef PACKETMODULATOR_H_
-#define PACKETMODULATOR_H_
+#ifndef SYNTHESIZER_H_
+#define SYNTHESIZER_H_
 
 #include "Logger.hh"
 #include "phy/ModPacket.hh"
 
-/** @brief A packet modulator. */
-class PacketModulator
+/** @brief Base class for synthesizers */
+class Synthesizer
 {
 public:
-    PacketModulator()
-      : tx_rate_(0.0)
-      , maxPacketSize_(0)
+    Synthesizer(double tx_rate)
+      : tx_rate_(tx_rate)
+      , max_packet_size_(0)
     {
     }
 
-    virtual ~PacketModulator() = default;
+    virtual ~Synthesizer() = default;
 
     /** @brief Get the TX sample rate. */
     virtual double getTXRate(void)
@@ -34,13 +34,13 @@ public:
     /** @brief Get maximum packet size. */
     size_t getMaxPacketSize(void)
     {
-        return maxPacketSize_;
+        return max_packet_size_;
     }
 
     /** @brief Set maximum packet size. */
-    void setMaxPacketSize(size_t maxPacketSize)
+    void setMaxPacketSize(size_t max_packet_size)
     {
-        maxPacketSize_ = maxPacketSize;
+        max_packet_size_ = max_packet_size;
     }
 
     /** @brief Get the maximum modulation upsample rate. */
@@ -82,7 +82,7 @@ protected:
     double tx_rate_;
 
     /** @brief Maximum number of possible samples in a modulated packet. */
-    size_t maxPacketSize_;
+    size_t max_packet_size_;
 };
 
-#endif /* PACKETMODULATOR_H_ */
+#endif /* SYNTHESIZER_H_ */

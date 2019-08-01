@@ -9,8 +9,8 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            std::shared_ptr<PHY> phy,
                            std::shared_ptr<Controller> controller,
                            std::shared_ptr<SnapshotCollector> collector,
-                           std::shared_ptr<PacketModulator> modulator,
-                           std::shared_ptr<PacketDemodulator> demodulator,
+                           std::shared_ptr<Channelizer> channelizer,
+                           std::shared_ptr<Synthesizer> synthesizer,
                            double slot_size,
                            double guard_size,
                            double p)
@@ -18,8 +18,8 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                phy,
                controller,
                collector,
-               modulator,
-               demodulator,
+               channelizer,
+               synthesizer,
                slot_size,
                guard_size)
   , p_(p)
@@ -87,7 +87,7 @@ void SlottedALOHA::txWorker(void)
             txSlot(t_next_slot, tx_slot_samps_, false);
 
             // Modulate samples for next slot
-            modulator_->modulate(premod_samps_);
+            synthesizer_->modulate(premod_samps_);
         }
 
         // Sleep until the next slot

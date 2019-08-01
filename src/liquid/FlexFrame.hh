@@ -6,6 +6,7 @@
 
 #include <liquid/liquid.h>
 
+#include "dsp/FFTW.hh"
 #include "liquid/PHY.hh"
 
 namespace Liquid {
@@ -14,7 +15,8 @@ class FlexFrameModulator : virtual public Modulator {
 public:
     FlexFrameModulator()
     {
-        std::lock_guard<std::mutex> lck(Liquid::mutex);
+        std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+        std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         origflexframegenprops_s props;
 
@@ -26,8 +28,12 @@ public:
 
     virtual ~FlexFrameModulator()
     {
-        if (fg_)
+        if (fg_) {
+            std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+            std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
+
             origflexframegen_destroy(fg_);
+        }
     }
 
     FlexFrameModulator(const FlexFrameModulator &) = delete;
@@ -107,7 +113,8 @@ public:
                          bool soft_payload)
       : Demodulator(soft_header, soft_payload)
     {
-        std::lock_guard<std::mutex> lck(Liquid::mutex);
+        std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+        std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         fs_ = origflexframesync_create(&Demodulator::liquid_callback,
                                        static_cast<Demodulator*>(this));
@@ -117,8 +124,12 @@ public:
 
     virtual ~FlexFrameDemodulator()
     {
-        if (fs_)
+        if (fs_) {
+            std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+            std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
+
             origflexframesync_destroy(fs_);
+        }
     }
 
     FlexFrameDemodulator(const FlexFrameDemodulator &) = delete;
@@ -130,6 +141,11 @@ public:
     virtual unsigned getOversampleRate(void)
     {
         return 2;
+    }
+
+    bool isFrameOpen(void) override
+    {
+        return origflexframesync_is_frame_open(fs_);
     }
 
     void print(void) override
