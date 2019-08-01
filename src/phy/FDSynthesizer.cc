@@ -1,10 +1,14 @@
+#include <xsimd/xsimd.hpp>
+#include <xsimd/stl/algorithms.hpp>
+
 #include "RadioConfig.hh"
+#include "Util.hh"
+#include "phy/FDSynthesizer.hh"
 #include "phy/PHY.hh"
-#include "phy/TDSynthesizer.hh"
 #include "phy/TXParams.hh"
 #include "stats/Estimator.hh"
 
-TDSynthesizer::TDSynthesizer(std::shared_ptr<PHY> phy,
+FDSynthesizer::FDSynthesizer(std::shared_ptr<PHY> phy,
                              double tx_rate,
                              const Channels &channels,
                              size_t nthreads)
@@ -14,30 +18,30 @@ TDSynthesizer::TDSynthesizer(std::shared_ptr<PHY> phy,
 {
     for (size_t i = 0; i < nthreads; ++i) {
         mod_reconfigure_[i].store(true, std::memory_order_release);
-        mod_threads_.emplace_back(std::thread(&TDSynthesizer::modWorker,
+        mod_threads_.emplace_back(std::thread(&FDSynthesizer::modWorker,
                                               this,
                                               std::ref(mod_reconfigure_[i]),
                                               i));
     }
 }
 
-TDSynthesizer::~TDSynthesizer()
+FDSynthesizer::~FDSynthesizer()
 {
     stop();
 }
 
-void TDSynthesizer::modulate(const std::shared_ptr<Slot> &slot)
+void FDSynthesizer::modulate(const std::shared_ptr<Slot> &slot)
 {
     std::atomic_store_explicit(&curslot_, slot, std::memory_order_release);
 }
 
-void TDSynthesizer::reconfigure(void)
+void FDSynthesizer::reconfigure(void)
 {
     for (auto &flag : mod_reconfigure_)
         flag.store(true, std::memory_order_release);
 }
 
-void TDSynthesizer::stop(void)
+void FDSynthesizer::stop(void)
 {
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
@@ -50,11 +54,11 @@ void TDSynthesizer::stop(void)
     }
 }
 
-void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
+void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 {
     Channels                           channels;
     Schedule                           schedule;
-    double                             tx_rate;
+    double                             tx_rate = tx_rate_;
     std::unique_ptr<ChannelState>      mod;
     std::shared_ptr<Synthesizer::Slot> prev_slot;
     std::shared_ptr<Synthesizer::Slot> slot;
@@ -149,7 +153,7 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             if (pkt->isInternalFlagSet(kIsTimestamp)) {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-                pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->length())/phy_->getTXRate());
+                pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/phy_->getTXRate());
 
                 mod->modulate(std::move(pkt), *mpkt);
 
@@ -176,56 +180,65 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
     }
 }
 
-TDSynthesizer::ChannelState::ChannelState(PHY &phy,
+FDSynthesizer::ChannelState::ChannelState(PHY &phy,
                                           const Channel &channel,
                                           const std::vector<C> &taps,
                                           double tx_rate)
-  : channel_(channel)
+  : Upsampler(phy.getMinTXRateOversample(), tx_rate/channel.bw, N*(channel.fc/tx_rate))
+  , channel_(channel)
   // XXX Protected against channel with zero bandwidth
   , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
-  , rad_(2*M_PI*channel.fc/tx_rate)
-  , resamp_(rate_, taps)
   , mod_(phy.mkModulator())
 {
-    resamp_.setFreqShift(rad_);
 }
 
-void TDSynthesizer::ChannelState::reset(void)
-{
-    resamp_.reset();
-}
-
-void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
+void FDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
                                            ModPacket &mpkt)
 {
-    const float g = pkt->g;
+    const unsigned Li = X*L/I; // Number of samples consumed per input block
+    float          g = pkt->g;
 
-    // Upsample if needed
-    if (rad_ != 0.0 || rate_ != 1.0) {
+    // Interpolate if needed
+    if (Nrot != 0 || rate_ != 1.0) {
         // Modulate the packet, but don't paply gain yet. We will apply gain
         // when we resample.
         mod_->modulate(std::move(pkt), 1.0f, mpkt);
 
-        // Get samples from ModPacket
-        auto iqbuf = std::move(mpkt.samples);
+        // Perform overlap-save on modulated signal to upsample it.
+        //
+        // Each block of Li input samples results in a block of N output
+        // frequency domain samples. We add Li - 1 to round up.
+        //
+        // We zero the frequency-domain buffer because we only copy our signal
+        // into the frequency bins it occupies in the upsampled frequency space
+        // while leaving the other binds untouched.
+        auto   iqbuf = std::move(mpkt.samples);
+        auto   fdbuf = std::make_shared<IQBuf>(N*((iqbuf->size() + Li - 1)/Li));
+        size_t nsamples = 0;
+        size_t fdnsamples = 0;
 
-        // Append zeroes to compensate for delay
-        iqbuf->append(ceil(resamp_.getDelay()));
+        fdbuf->zero();
+        reset();
+        upsample(iqbuf->data(),
+                 iqbuf->size(),
+                 fdbuf->data(),
+                 g,
+                 true,
+                 nsamples,
+                 I*iqbuf->size()/X,
+                 fdnsamples);
+        fdbuf->resize(fdnsamples);
 
-        // Resample and mix up
-        auto     iqbuf_up = std::make_shared<IQBuf>(resamp_.neededOut(iqbuf->size()));
-        unsigned nw;
+        // Now convert upsampled signal back to time domain
+        auto iqbuf_up = std::make_shared<IQBuf>(L*((fdbuf->size() + N - 1)/N));
 
-        nw = resamp_.resampleMixUp(iqbuf->data(), iqbuf->size(), g, iqbuf_up->data());
-        assert(nw <= iqbuf_up->size());
-        iqbuf_up->resize(nw);
+        timedomain_.toTimeDomain(fdbuf->data(), fdbuf->size(), iqbuf_up->data());
 
-        // Indicate delay
-        iqbuf_up->delay = floor(resamp_.getRate()*resamp_.getDelay());
+        iqbuf_up->resize(I*iqbuf->size()/X);
 
         // Put samples back into ModPacket
-        mpkt.offset = iqbuf_up->delay;
-        mpkt.nsamples = iqbuf_up->size() - iqbuf_up->delay;
+        mpkt.offset = 0;
+        mpkt.nsamples = iqbuf_up->size();
         mpkt.samples = std::move(iqbuf_up);
     } else
         // Modulate packet and apply gain

@@ -4,6 +4,8 @@
 #include <pybind11/stl.h>
 
 #include "phy/Channel.hh"
+#include "phy/FDSynthesizer.hh"
+#include "phy/MultichannelSynthesizer.hh"
 #include "phy/Synthesizer.hh"
 #include "phy/TDSynthesizer.hh"
 #include "python/PyModules.hh"
@@ -36,6 +38,22 @@ void exportSynthesizers(py::module &m)
 
     // Export class TDSynthesizer to Python
     py::class_<TDSynthesizer, Synthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
+        .def(py::init<std::shared_ptr<PHY>,
+                      double,
+                      const Channels&,
+                      unsigned int>())
+        ;
+
+    // Export class FDSynthesizer to Python
+    py::class_<FDSynthesizer, Synthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
+        .def(py::init<std::shared_ptr<PHY>,
+                      double,
+                      const Channels&,
+                      unsigned int>())
+        ;
+
+    // Export class MultichannelSynthesizer to Python
+    py::class_<MultichannelSynthesizer, Synthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
         .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,

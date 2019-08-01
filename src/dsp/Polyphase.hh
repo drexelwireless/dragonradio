@@ -485,6 +485,25 @@ public:
         return k;
     }
 
+    template <typename S>
+    size_t resampleMixUp(const T *in, size_t count, S scale, T *out)
+    {
+        size_t k = 0; // Output index
+
+        for (unsigned i = 0; i < count; ++i) {
+            w_.add(nco_.mix_up(scale*in[i]));
+
+            for (unsigned j = 0; j < l_; ++j) {
+                if (idx_++ == 0)
+                    out[k++] = w_.dotprod(rtaps_[j].data(), xsimd::aligned_mode());
+
+                idx_ %= m_;
+            }
+        }
+
+        return k;
+    }
+
     size_t resampleMixDown(const T *in, size_t count, T *out)
     {
         size_t k = 0; // Output index

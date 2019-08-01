@@ -157,7 +157,7 @@ class Config(object):
         self.channelizer_enforce_ordering = False
 
         # Synthesizer parameters
-        self.synthesizer = 'timedomain'
+        self.synthesizer = 'freqdomain'
 
         # MAC parameters
         self.slot_size = .035
@@ -487,7 +487,7 @@ class Config(object):
 
         # Synthesizer parameters
         parser.add_argument('--synthesizer', action='store',
-                            choices=['timedomain'],
+                            choices=['multichannel', 'freqdomain', 'timedomain'],
                             dest='synthesizer',
                             help='set synthesizer algorithm')
 
@@ -745,16 +745,31 @@ class Radio(object):
                                                          self.usrp.rx_rate,
                                                          self.channelizer_channels,
                                                          config.num_demodulation_threads)
-        else:
+        elif config.channelizer == 'freqdomain':
             self.channelizer = dragonradio.FDChannelizer(self.phy,
                                                          self.usrp.rx_rate,
                                                          self.channelizer_channels,
                                                          config.num_demodulation_threads)
+        else:
+            raise Exception('Unknown channelizer: %s' % config.channelizer)
 
-        self.synthesizer = dragonradio.TDSynthesizer(self.phy,
-                                                     self.usrp.tx_rate,
-                                                     self.synthesizer_channels,
-                                                     config.num_modulation_threads)
+        if config.synthesizer == 'timedomain':
+            self.synthesizer = dragonradio.TDSynthesizer(self.phy,
+                                                         self.usrp.tx_rate,
+                                                         self.synthesizer_channels,
+                                                         config.num_modulation_threads)
+        elif config.synthesizer == 'freqdomain':
+            self.synthesizer = dragonradio.FDSynthesizer(self.phy,
+                                                         self.usrp.tx_rate,
+                                                         self.synthesizer_channels,
+                                                         config.num_modulation_threads)
+        elif config.synthesizer == 'multichannel':
+            self.synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
+                                                                   self.usrp.tx_rate,
+                                                                   self.synthesizer_channels,
+                                                                   config.num_modulation_threads)
+        else:
+            raise Exception('Unknown synthesizer: %s' % config.synthesizer)
 
         #
         # Configure the controller

@@ -30,6 +30,7 @@ public:
         Modulator& operator=(Modulator&&) = delete;
 
         void modulate(std::shared_ptr<NetPacket> pkt,
+                      const float g,
                       ModPacket &mpkt) override final;
 
     protected:
