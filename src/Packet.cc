@@ -163,6 +163,17 @@ void Packet::appendTimestampEcho(NodeId node_id,
     appendControl(msg);
 }
 
+void Packet::appendReceiverStats(double long_evm, double long_rssi)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kReceiverStats;
+    msg.receiver_stats.long_evm = long_evm;
+    msg.receiver_stats.long_rssi = long_rssi;
+
+    appendControl(msg);
+}
+
 void Packet::appendNak(const Seq &seq)
 {
     ControlMsg msg;

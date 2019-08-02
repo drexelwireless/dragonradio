@@ -153,7 +153,7 @@ get_packet:
 
         // Append selective ACK if needed
         if (recvw.need_selective_ack)
-            appendCtrlACK(*pkt, recvw);
+            appendFeedback(*pkt, recvw);
     } else if (pkt->ehdr().data_len != 0)
         dprintf("ARQ: send: node=%u; seq=%u",
             (unsigned) nexthop,
@@ -326,6 +326,11 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
         // Handle ACK
         if (pkt->hdr.flags.ack) {
+            // Handle statistics reported by the receiver. We do this before
+            // looking at ACK's because we use the statistics to decide whether
+            // to move up our MCS.
+            handleReceiverStats(*pkt, sendw);
+
             if (pkt->ehdr().ack > sendw.unack) {
                 dprintf("ARQ: ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
@@ -587,7 +592,7 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->ehdr().dest = recvw.node.id;
 
     // Append selective ACK control messages
-    appendCtrlACK(*pkt, recvw);
+    appendFeedback(*pkt, recvw);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -637,7 +642,7 @@ void SmartController::nak(RecvWindow &recvw, Seq seq)
     pkt->appendNak(seq);
 
     // Append selective ACK control messages
-    appendCtrlACK(*pkt, recvw);
+    appendFeedback(*pkt, recvw);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -947,8 +952,12 @@ inline void apendSelectiveACK(NetPacket &pkt,
     pkt.appendSelectiveAck(begin, end);
 }
 
-void SmartController::appendCtrlACK(NetPacket &pkt, RecvWindow &recvw)
+void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
 {
+    // Append statistics
+    pkt.appendReceiverStats(recvw.long_evm.getValue(), recvw.long_rssi.getValue());
+
+    // Append selective ACKs
     if (!selective_ack_)
         return;
 
@@ -1031,6 +1040,23 @@ void SmartController::appendCtrlACK(NetPacket &pkt, RecvWindow &recvw)
 
     // We no longer need a selective ACK
     recvw.need_selective_ack = false;
+}
+
+void SmartController::handleReceiverStats(RadioPacket &pkt, SendWindow &sendw)
+{
+    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kReceiverStats:
+            {
+                sendw.long_evm = it->receiver_stats.long_evm;
+                sendw.long_rssi = it->receiver_stats.long_rssi;
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
 }
 
 void SmartController::handleACK(SendWindow &sendw, const Seq &seq)

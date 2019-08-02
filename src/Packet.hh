@@ -45,6 +45,7 @@ struct ControlMsg {
         kHello,
         kTimestamp,
         kTimestampEcho,
+        kReceiverStats,
         kNak,
         kSelectiveAck,
         kSetUnack
@@ -68,6 +69,14 @@ struct ControlMsg {
         Time t_recv;
     };
 
+    struct ReceiverStats {
+        /** @brief Long-term EVM at receiver */
+        double long_evm;
+
+        /** @brief Long-term RSSI at receiver */
+        double long_rssi;
+    };
+
     using Nak = Seq;
 
     struct SelectiveAck {
@@ -86,6 +95,7 @@ struct ControlMsg {
         Hello hello;
         Timestamp timestamp;
         TimestampEcho timestamp_echo;
+        ReceiverStats receiver_stats;
         Nak nak;
         SelectiveAck ack;
         SetUnack unack;
@@ -252,6 +262,9 @@ struct Packet : public buffer<unsigned char>
     void appendTimestampEcho(NodeId node_id,
                              const MonoClock::time_point &t_sent,
                              const MonoClock::time_point &t_recv);
+
+    /** @brief Append receiver statistics control message to a packet */
+    void appendReceiverStats(double long_evm, double long_rssi);
 
     /** @brief Append a NAK control message to a packet */
     void appendNak(const Seq &seq);
@@ -492,6 +505,9 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
 
         case ControlMsg::kTimestampEcho:
             return offsetof(ControlMsg, timestamp_echo) + sizeof(ControlMsg::TimestampEcho);
+
+        case ControlMsg::kReceiverStats:
+            return offsetof(ControlMsg, receiver_stats) + sizeof(ControlMsg::ReceiverStats);
 
         case ControlMsg::kNak:
             return offsetof(ControlMsg, nak) + sizeof(ControlMsg::Nak);

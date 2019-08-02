@@ -171,6 +171,12 @@ struct SendWindow {
     /** @brief Long-term packet error rate */
     WindowedMean<double> long_per;
 
+    /** @brief Long-term EVM, as reported by receiver */
+    std::optional<double> long_evm;
+
+    /** @brief Long-term RSSI, as reported by receiver */
+    std::optional<double> long_rssi;
+
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
@@ -704,8 +710,14 @@ protected:
     /** @brief Handle timestampecho control messages. */
     void handleCtrlTimestampEchos(RadioPacket &pkt, Node &node);
 
-    /** @brief Append ACK control messages. */
-    void appendCtrlACK(NetPacket &pkt, RecvWindow &recvw);
+    /** @brief Append control messages for feedback to sender. */
+    /** This method appends feedback to the receiver in the form of both
+     * statistics and selective ACKs .
+     */
+    void appendFeedback(NetPacket &pkt, RecvWindow &recvw);
+
+    /** @brief Handle receiver statistics. */
+    void handleReceiverStats(RadioPacket &pkt, SendWindow &sendw);
 
     /** @brief Handle an ACK. */
     void handleACK(SendWindow &sendw, const Seq &seq);
