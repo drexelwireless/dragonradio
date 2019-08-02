@@ -13,14 +13,6 @@
 
 /** @brief PHY TX parameters. */
 struct TXParams {
-    TXParams()
-      : g_0dBFS_(1.0f)
-      , auto_soft_tx_gain_clip_frac_(0.999f)
-      , nestimates_0dBFS_(0)
-      , g_0dBFS_estimate_(1.0f)
-    {
-    }
-
     TXParams(const MCS &mcs)
       : mcs(mcs)
       , g_0dBFS_(1.0f)
@@ -49,6 +41,8 @@ struct TXParams {
         nestimates_0dBFS_ = other.nestimates_0dBFS_;
         g_0dBFS_estimate_ = std::move(other.g_0dBFS_estimate_);
     }
+
+    TXParams() = delete;
 
     TXParams& operator =(const TXParams &other)
     {
