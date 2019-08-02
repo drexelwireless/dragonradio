@@ -88,7 +88,7 @@ struct SendWindow {
         std::shared_ptr<NetPacket> pkt;
 
         /** @brief Timestamp of last transmission of this packet. */
-        Clock::time_point timestamp;
+        MonoClock::time_point timestamp;
 
         /** @brief Modulation index used for last transmission of this packet */
         size_t mcsidx;
@@ -707,7 +707,7 @@ protected:
     /** @brief Handle select ACK messages. */
     void handleSelectiveACK(RadioPacket &pkt,
                             SendWindow &sendw,
-                            Clock::time_point tfeedback);
+                            MonoClock::time_point tfeedback);
 
     /** @brief Handle sender setting unack */
     void handleSetUnack(RadioPacket &pkt, RecvWindow &recvw);

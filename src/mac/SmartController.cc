@@ -188,7 +188,7 @@ get_packet:
 
         // Save the packet in our send window.
         sendw[pkt->hdr.seq] = pkt;
-        sendw[pkt->hdr.seq].timestamp = Clock::now();
+        sendw[pkt->hdr.seq].timestamp = MonoClock::now();
         sendw[pkt->hdr.seq].mcsidx = sendw.mcsidx;
 
         // If this packet is a retransmission, increment the retransmission
@@ -289,7 +289,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     if (sendwptr) {
         SendWindow                      &sendw = *sendwptr;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-        Clock::time_point               tfeedback = Clock::now() - selective_ack_feedback_delay_;
+        MonoClock::time_point           tfeedback = MonoClock::now() - selective_ack_feedback_delay_;
         std::optional<Seq>              nak;
 
         // Handle any NAK
@@ -1085,7 +1085,7 @@ std::optional<Seq> SmartController::handleNAK(RadioPacket &pkt,
 
 void SmartController::handleSelectiveACK(RadioPacket &pkt,
                                          SendWindow &sendw,
-                                         Clock::time_point tfeedback)
+                                         MonoClock::time_point tfeedback)
 {
     Node &node = sendw.node;
     Seq  nextSeq = sendw.unack;
