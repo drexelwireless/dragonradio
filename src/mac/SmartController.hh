@@ -18,6 +18,7 @@
 #include "mac/MAC.hh"
 #include "phy/Gain.hh"
 #include "phy/PHY.hh"
+#include "stats/Estimator.hh"
 
 class SmartController;
 

@@ -15,7 +15,6 @@
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
 #include "phy/TXParams.hh"
-#include "stats/Estimator.hh"
 
 /** @brief A sprintf-style format string for internal network tun/tap IP
  * addresses.
