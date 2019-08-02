@@ -21,11 +21,17 @@ async def cycle_snr(radio, period):
         print("Gain: ", radio.usrp.tx_gain)
         await asyncio.sleep(period)
 
+async def cancel_tasks(loop):
+    tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
+    for task in tasks:
+        task.cancel()
+        await task
+
+    loop.stop()
+
 def cancel_loop():
     loop = asyncio.get_event_loop()
-    for task in asyncio.Task.all_tasks():
-        task.cancel()
-    loop.stop()
+    loop.create_task(cancel_tasks(loop))
 
 def main():
     config = dragon.radio.Config()
