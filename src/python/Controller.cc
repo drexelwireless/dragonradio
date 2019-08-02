@@ -113,6 +113,12 @@ void exportControllers(py::module &m)
                 return std::make_unique<SendWindowsProxy>(controller);
             },
             "Send windows")
+        .def_property_readonly("recv",
+            [](std::shared_ptr<SmartController> controller) -> std::unique_ptr<ReceiveWindowsProxy>
+            {
+                return std::make_unique<ReceiveWindowsProxy>(controller);
+            },
+            "Receive windows")
         .def("broadcastHello",
             &SmartController::broadcastHello)
         .def("resetMCSTransitionProbabilities",
@@ -139,6 +145,29 @@ void exportControllers(py::module &m)
                     return std::make_unique<SendWindowProxy>(proxy[key]);
                 } catch (const std::out_of_range&) {
                     throw py::key_error("node '" + std::to_string(key) + "' does not have a send window");
+                }
+            })
+        ;
+
+    // Export class ReceiveWindowProxy to Python
+    py::class_<ReceiveWindowProxy, std::unique_ptr<ReceiveWindowProxy>>(m, "ReceiveWindow")
+        .def_property_readonly("long_evm",
+            [](ReceiveWindowProxy &proxy) { return proxy.getLongEVM(); },
+            "Long-term EVM (dB)")
+        .def_property_readonly("long_rssi",
+            [](ReceiveWindowProxy &proxy) { return proxy.getLongRSSI(); },
+            "Long-term RSSI (dB)")
+        ;
+
+    // Export class ReceiveWindowsProxy to Python
+    py::class_<ReceiveWindowsProxy, std::unique_ptr<ReceiveWindowsProxy>>(m, "ReceiveWindows")
+        .def("__getitem__",
+            [](ReceiveWindowsProxy &proxy, NodeId key) -> std::unique_ptr<ReceiveWindowProxy>
+            {
+                try {
+                    return std::make_unique<ReceiveWindowProxy>(proxy[key]);
+                } catch (const std::out_of_range&) {
+                    throw py::key_error("node '" + std::to_string(key) + "' does not have a receive window");
                 }
             })
         ;

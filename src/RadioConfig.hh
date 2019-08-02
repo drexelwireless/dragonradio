@@ -37,6 +37,11 @@ public:
     /** @brief Number of slots worth of packets we use to calculate long-term PER */
     unsigned amc_long_per_nslots;
 
+    /** @brief Number of slots worth of packets we use to calculate long-term
+     * statistics
+     */
+    unsigned amc_long_stats_nslots;
+
     /** @brief Maximum Transmission Unit (bytes) */
     unsigned mtu;
 

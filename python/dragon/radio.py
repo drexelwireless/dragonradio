@@ -204,6 +204,7 @@ class Config(object):
 
         self.amc_short_per_nslots = 2
         self.amc_long_per_nslots = 8
+        self.amc_long_stats_nslots = 8
         self.amc_mcsidx_init = 0
         self.amc_mcsidx_up_per_threshold = 0.04
         self.amc_mcsidx_down_per_threshold = 0.10
@@ -560,6 +561,9 @@ class Config(object):
         parser.add_argument('--long-per-nslots', action='store', type=int,
                             dest='amc_long_per_nslots',
                             help='set number of TX slots worth of packets we use to calculate long-term PER')
+        parser.add_argument('--long-stats-nslots', action='store', type=int,
+                            dest='amc_long_stats_nslots',
+                            help='set number of TX slots worth of packets we use to calculate long-term statistics, e.g., EVM and RSSI')
         parser.add_argument('--mcsidx-up-per-threshold', action='store', type=float,
                             dest='amc_mcsidx_up_per_threshold',
                             help='set PER threshold for increasing modulation level')
@@ -636,7 +640,9 @@ class Radio(object):
 
         # Copy configuration settings to the C++ RadioConfig object
         for attr in ['verbose', 'debug',
-                     'amc_short_per_nslots', 'amc_long_per_nslots',
+                     'amc_short_per_nslots',
+                     'amc_long_per_nslots',
+                     'amc_long_stats_nslots',
                      'mtu',
                      'arq_ack_delay', 'arq_retransmission_delay',
                      'verbose_packet_trace']:

@@ -241,13 +241,18 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // Get node ID of source
     NodeId prevhop = pkt->hdr.curhop;
 
-    // Immediately NAK data packets with a bad payload if they contain data.
-    // We can't do anything else with the packet.
-    if (pkt->internal_flags.invalid_payload) {
-        if (pkt->hdr.flags.has_data) {
-            RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
-            std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+    if (pkt->hdr.flags.has_data) {
+        RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
+        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
+        // Update metrics. EVM and RSSI should be valid as long as the header is
+        // valid.
+        recvw.long_evm.update(pkt->timestamp, pkt->evm);
+        recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
+
+        // Immediately NAK data packets with a bad payload if they contain data.
+        // We can't do anything else with the packet.
+        if (pkt->internal_flags.invalid_payload) {
             // Update the max seq number we've received
             if (pkt->hdr.seq > recvw.max) {
                 recvw.max = pkt->hdr.seq;
@@ -256,9 +261,27 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
             // Send a NAK
             nak(recvw, pkt->hdr.seq);
+
+            // We're done with this packet since it has a bad payload
+            return;
+        }
+    } else  {
+        RecvWindow *recvwptr = maybeGetReceiveWindow(prevhop);
+
+        // Update metrics. EVM and RSSI should be valid as long as the header is
+        // valid. We won't create a receive window if we don't already have one
+        // because this packet has no data payload.
+        if (recvwptr) {
+            RecvWindow                      &recvw = *recvwptr;
+            std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+            recvw.long_evm.update(pkt->timestamp, pkt->evm);
+            recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
         }
 
-        return;
+        // We're done with this packet if it has a bad payload
+        if (pkt->internal_flags.invalid_payload)
+            return;
     }
 
     // Process control info
@@ -1531,6 +1554,9 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
     RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
                                       std::forward_as_tuple(node_id),
                                       std::forward_as_tuple(src, *this, seq, recvwin_, explicit_nak_win_)).first->second;
+
+    recvw.long_evm.setTimeWindow(rc.amc_long_stats_nslots*slot_size_);
+    recvw.long_rssi.setTimeWindow(rc.amc_long_stats_nslots*slot_size_);
 
     return recvw;
 }
