@@ -14,11 +14,14 @@ async def cycle_tx_gain(radio, period):
     gains = [25, 20, 15, 10, 5, 0]
     i = 0
 
-    while True:
-        radio.usrp.tx_gain = gains[i % len(gains)]
-        i += 1
-        print("Gain: ", radio.usrp.tx_gain)
-        await asyncio.sleep(period)
+    try:
+        while True:
+            radio.usrp.tx_gain = gains[i % len(gains)]
+            i += 1
+            print("Gain: ", radio.usrp.tx_gain)
+            await asyncio.sleep(period)
+    except CancelledError:
+        pass
 
 async def cancel_tasks(loop):
     tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
