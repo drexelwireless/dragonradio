@@ -145,7 +145,7 @@ class Config(object):
 
         # Soft decoding options
         self.soft_header = True
-        self.soft_payload = False
+        self.soft_payload = True
 
         # OFDM parameters
         self.M = 48
