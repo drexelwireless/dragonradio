@@ -10,7 +10,7 @@ import sys
 import dragonradio
 import dragon.radio
 
-async def cycle_snr(radio, period):
+async def cycle_tx_gain(radio, period):
     gains = [25, 20, 15, 10, 5, 0]
     i = 0
 
@@ -47,9 +47,9 @@ def main():
     parser.add_argument('--interactive',
                         action='store_true', dest='interactive',
                         help='enter interactive shell after radio is configured')
-    parser.add_argument('--simulate-cycle-snr', type=float, dest='cycle_snr',
+    parser.add_argument('--cycle-tx-gain', type=float,
                         default=0,
-                        help='simulate cycling between SNR levels')
+                        help='cycle between TX gain levels')
 
     # Parse arguments
     try:
@@ -90,8 +90,8 @@ def main():
         if config.log_snapshots != 0:
             loop.create_task(radio.snapshotLogger())
 
-        if config.cycle_snr != 0:
-            loop.create_task(cycle_snr(radio, config.cycle_snr))
+        if config.cycle_tx_gain != 0:
+            loop.create_task(cycle_tx_gain(radio, config.cycle_tx_gain))
 
         for sig in [signal.SIGINT, signal.SIGTERM]:
             loop.add_signal_handler(sig, cancel_loop)
