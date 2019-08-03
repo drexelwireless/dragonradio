@@ -1307,15 +1307,39 @@ void SmartController::updateMCS(SendWindow &sendw)
                 (unsigned) sendw.mcsidx,
                 sendw.mcsidx_prob[sendw.mcsidx]);
 
-        // Now we see if we can actually increase the MCS index. Not only must
-        // there be a higher entry in the MCS table, but we must pass the
-        // probabilistic transition test.
-        if (   sendw.mcsidx < tx_params_.size() - 1
-            && dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1]) {
+        // Now we see if we can actually increase the MCS index.
+        if (mayMoveUpMCS(sendw))
             moveUpMCS(sendw);
-        } else
+        else
             resetPEREstimates(sendw);
     }
+}
+
+bool SmartController::mayMoveUpMCS(const SendWindow &sendw)
+{
+    // We can't move up if we're at the top of the MCS hierarchy...
+    if (sendw.mcsidx == tx_params_.size() - 1)
+        return false;
+
+    // There are two cases where we may move up an MCS level:
+    //
+    // 1) The next-higher MCS has an EVM threshold that we meet
+    // 2) The next-higher MCS *does not* have an EVM threshold, but we pass
+    //    the probabilistic transition test.
+    TXParams &next = tx_params_[sendw.mcsidx+1];
+
+    if (next.evm_threshold) {
+        if (sendw.long_evm) {
+            logEvent("ARQ: EVM threshold: evm_threshold=%f, evm=%f",
+                *next.evm_threshold,
+                *sendw.long_evm);
+
+            return *sendw.long_evm < *next.evm_threshold;
+        } else
+            return false;
+    }
+
+    return dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1];
 }
 
 void SmartController::moveDownMCS(SendWindow &sendw)

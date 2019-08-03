@@ -746,6 +746,9 @@ protected:
     /** @brief Update MCS based on current PER */
     void updateMCS(SendWindow &sendw);
 
+    /** @brief Return true if we may move up one MCS level */
+    bool mayMoveUpMCS(const SendWindow &sendw);
+
     /** @brief Move down one MCS level */
     void moveDownMCS(SendWindow &sendw);
 
