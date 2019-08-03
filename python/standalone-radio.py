@@ -4,7 +4,6 @@ from concurrent.futures import CancelledError
 import IPython
 import logging
 import os
-from pprint import pprint
 import signal
 import sys
 
