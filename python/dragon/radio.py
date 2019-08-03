@@ -796,7 +796,15 @@ class Radio(object):
 
         # Create TX parameters
         if config.amc and config.amc_table:
-            tx_params = [TXParams(MCS(*args)) for args in config.amc_table]
+            def zeroToNone(x):
+                if x:
+                    return x
+                else:
+                    return None
+
+            # libconfig can't parse None, so we use zero to represent a
+            # non-existant threshold (zero is not a valid EVM threshold)
+            tx_params = [TXParams(MCS(*mcs), zeroToNone(evm_threshold)) for (mcs, evm_threshold) in config.amc_table]
         else:
             tx_params = [TXParams(MCS(config.check, config.fec0, config.fec1, config.ms))]
 
