@@ -72,7 +72,7 @@ public:
      * @param fc Center frequency of self-transmission
      * @param fs Bandwidth of self-transmission
      */
-    void selfTX(unsigned start, unsigned end, float fc, float fs);
+    void selfTX(ssize_t start, ssize_t end, float fc, float fs);
 
     /** @brief Add a local self-transmission event (we transmitted something)
      * @param when Timestamp of start of self-transmission

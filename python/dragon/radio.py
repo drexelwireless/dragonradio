@@ -211,7 +211,7 @@ class Config(object):
         self.amc_mcsidx_prob_floor = 0.1
 
         # Snapshot options
-        self.snapshot_period = 0
+        self.snapshot_period = None
         self.snapshot_duration = 0.5
 
         # Network options
@@ -662,7 +662,7 @@ class Radio(object):
         #
         # Configure snapshots
         #
-        if config.snapshot_period != 0:
+        if config.snapshot_period is not None:
             self.snapshot_collector = dragonradio.SnapshotCollector()
         else:
             self.snapshot_collector = None

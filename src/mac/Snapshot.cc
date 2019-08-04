@@ -91,7 +91,7 @@ void SnapshotCollector::finalizePush(void)
     }
 }
 
-void SnapshotCollector::selfTX(unsigned start, unsigned end, float fc, float fs)
+void SnapshotCollector::selfTX(ssize_t start, ssize_t end, float fc, float fs)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
