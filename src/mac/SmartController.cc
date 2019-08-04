@@ -1275,13 +1275,9 @@ void SmartController::updateMCS(SendWindow &sendw)
 
     // First for high PER, then test for low PER
     if (   sendw.short_per.getNSamples() >= sendw.short_per.getWindowSize()
-        && short_per > mcsidx_down_per_threshold_
-        && sendw.mcsidx > 0) {
-        // Don't decrease MCS if largest possible packet won't fit in slot.
-        if (getMaxPacketsPerSlot(tx_params_[sendw.mcsidx-1]) < 1)
-            return;
-
-        // Decrease the probability that we will transition to this MCS index
+        && short_per > mcsidx_down_per_threshold_) {
+        // Perform hysteresis on future MCS increases by decreasing the
+        // probability that we will transition to this MCS index.
         sendw.mcsidx_prob[sendw.mcsidx] =
             std::max(sendw.mcsidx_prob[sendw.mcsidx]*mcsidx_alpha_,
                      mcsidx_prob_floor_);
@@ -1291,8 +1287,28 @@ void SmartController::updateMCS(SendWindow &sendw)
             (unsigned) sendw.mcsidx,
             sendw.mcsidx_prob[sendw.mcsidx]);
 
-        // Move down one MCS
-        moveDownMCS(sendw);
+        // Decrease MCS until we hit rock bottom or we hit an MCS that produces
+        // packets too large to fit in a slot.
+        unsigned n = 0; // Number of MCS levels to decrease
+
+        while (sendw.mcsidx > n && getMaxPacketsPerSlot(tx_params_[sendw.mcsidx-(n+1)]) > 0) {
+            // Increment number of MCS levels we will move down
+            ++n;
+
+            // If we don't have both an EVM threshold and EVM feedback from the
+            // sender, stop. Otherwise, use our EVM information to decide if we
+            // should decrease the MCS level further.
+            TXParams &next = tx_params_[sendw.mcsidx-n];
+
+            if (!next.evm_threshold || !sendw.long_evm || (*sendw.long_evm < *next.evm_threshold))
+                break;
+        }
+
+        // Move down n MCS levels
+        if (n != 0)
+            moveDownMCS(sendw, n);
+        else
+            resetPEREstimates(sendw);
     } else if (   sendw.long_per.getNSamples() >= sendw.long_per.getWindowSize()
                && long_per < mcsidx_up_per_threshold_) {
         double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
@@ -1342,18 +1358,23 @@ bool SmartController::mayMoveUpMCS(const SendWindow &sendw)
     return dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1];
 }
 
-void SmartController::moveDownMCS(SendWindow &sendw)
+void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
 {
     Node &node = sendw.node;
 
     if (rc.verbose && !rc.debug)
         fprintf(stderr, "Moving down modulation scheme\n");
 
-    --sendw.mcsidx;
+    assert(sendw.mcsidx >= n);
+
+    sendw.mcsidx -= n;
     sendw.per_end = sendw.seq;
 
-    logEvent("AMC: Moving down modulation scheme: node=%u; short per=%f; swin=%lu; lwin=%lu",
+    assert(sendw.mcsidx < tx_params_.size());
+
+    logEvent("AMC: Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
         node.id,
+        (unsigned) sendw.mcsidx,
         sendw.short_per.getValue(),
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());
@@ -1388,8 +1409,12 @@ void SmartController::moveUpMCS(SendWindow &sendw)
     ++sendw.mcsidx;
     sendw.per_end = sendw.seq;
 
-    logEvent("AMC: Moving up modulation scheme: node=%u; long per=%f; swin=%lu; lwin=%lu",
+    assert(sendw.mcsidx >= 0);
+    assert(sendw.mcsidx < tx_params_.size());
+
+    logEvent("AMC: Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
         node.id,
+        (unsigned) sendw.mcsidx,
         sendw.long_per.getValue(),
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());

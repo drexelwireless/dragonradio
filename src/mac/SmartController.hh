@@ -750,7 +750,7 @@ protected:
     bool mayMoveUpMCS(const SendWindow &sendw);
 
     /** @brief Move down one MCS level */
-    void moveDownMCS(SendWindow &sendw);
+    void moveDownMCS(SendWindow &sendw, unsigned n);
 
     /** @brief Move up one MCS level */
     void moveUpMCS(SendWindow &sendw);
