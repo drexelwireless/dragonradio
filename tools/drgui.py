@@ -532,7 +532,7 @@ class SnapshotPlot:
         self.plot(self.snapshotidx-1)
 
 class MetricPlot:
-    def __init__(self, log, metric):
+    def __init__(self, log, metric, include_invalid_packets):
         self.log = log
         self.metric = metric
 
@@ -548,6 +548,8 @@ class MetricPlot:
 
         for node_id in log.nodes:
             recv = log.received[node_id]
+            if not include_invalid_packets:
+                recv = recv.loc[(recv.header_valid == 1) & (recv.payload_valid == 1)]
             x = recv.timestamp + (log.nodes[node_id].start - start_min)
 
             if metric == 'demod_latency':
@@ -631,11 +633,11 @@ class LogViewer:
             fig.fig.show()
             return fig
 
-    def metricFig(self, metric):
+    def metricFig(self, metric, include_invalid_packets):
         if metric in self.metricFigs:
             return self.metricFigs[metric]
         else:
-            fig = MetricPlot(self.log, metric)
+            fig = MetricPlot(self.log, metric, include_invalid_packets)
             self.metricFigs[metric] = fig
             fig.fig.show()
             return fig
@@ -678,6 +680,10 @@ def main():
                         help='set number of FFT points')
     parser.add_argument('--show-invalid-headers', action='store_true', default=False, dest='show_invalid_headers',
                         help='show invalid headers when displaying RX log')
+    parser.add_argument('--include-invalid-packets',
+                        action='store_true',
+                        default=False,
+                        help='include invalid packets when displaying matrics')
     parser.add_argument('paths', nargs='*')
     args = parser.parse_args()
 
@@ -712,27 +718,27 @@ def main():
             snap.plot(0)
 
     if args.demod_latency:
-        metric = viewer.metricFig('demod_latency')
+        metric = viewer.metricFig('demod_latency', args.include_invalid_packets)
         metric.plot()
 
     if args.evm:
-        metric = viewer.metricFig('evm')
+        metric = viewer.metricFig('evm', args.include_invalid_packets)
         metric.plot()
 
     if args.rssi:
-        metric = viewer.metricFig('rssi')
+        metric = viewer.metricFig('rssi', args.include_invalid_packets)
         metric.plot()
 
     if args.cfo:
-        metric = viewer.metricFig('cfo')
+        metric = viewer.metricFig('cfo', args.include_invalid_packets)
         metric.plot()
 
     if args.ms:
-        metric = viewer.metricFig('ms')
+        metric = viewer.metricFig('ms', args.include_invalid_packets)
         metric.plot()
 
     if args.sent_ms:
-        metric = viewer.metricFig('sent_ms')
+        metric = viewer.metricFig('sent_ms', args.include_invalid_packets)
         metric.plot()
 
     plt.show()
