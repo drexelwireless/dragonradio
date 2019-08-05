@@ -1571,7 +1571,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
         sendw.mcsidx_prob.resize(tx_params_.size(), 1.0);
         sendw.per_end = sendw.seq;
 
-        while (getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]) == 0)
+        while (sendw.mcsidx < tx_params_.size() - 1 && getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]) == 0)
             ++sendw.mcsidx;
 
         resetPEREstimates(sendw);
