@@ -181,12 +181,6 @@ struct Packet : public buffer<unsigned char>
         /** @brief Set if the packet has an assigned sequence number */
         uint8_t has_seq : 1;
 
-        /** @brief Set if the packet belongs to the internal IP network (10.*) */
-        uint8_t int_net : 1;
-
-        /** @brief Set if the packet belongs to the external IP network (192.168.*) */
-        uint8_t ext_net : 1;
-
         /** @brief Set if the packet had invalid header */
         uint8_t invalid_header : 1;
 

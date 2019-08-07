@@ -65,8 +65,6 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         if ((src_addr & int_netmask_) == int_net_) {
             // Traffic on the internal network has IP addresses of the form
             // 10.10.10.<SRN>/32
-            pkt->internal_flags.int_net = 1;
-
             src_id = src_addr & 0xff;
             dest_id = dest_addr & 0xff;
 
@@ -75,8 +73,6 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         } else if ((src_addr & ext_netmask_) == ext_net_) {
             // Traffic on the external network has IP addresses of the form
             // 192.168.<SRN+100>.0/24
-            pkt->internal_flags.ext_net = 1;
-
             src_id = ((src_addr >> 8) & 0xff) - 100;
             dest_id = ((dest_addr >> 8) & 0xff) - 100;
 
