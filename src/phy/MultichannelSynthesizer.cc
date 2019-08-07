@@ -334,7 +334,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                             break;
                     } else {
                         logEvent("PHY: failed to add packet to slot: seq=%u",
-                            (unsigned) mpkt->pkt->seq);
+                            (unsigned) mpkt->pkt->hdr.seq);
                         mpkt->samples = std::move(mod.iqbuf);
                     }
                 }

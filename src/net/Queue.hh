@@ -74,11 +74,11 @@ protected:
     /** @brief Return true if the packet can be popped */
     bool canPop(const T& pkt)
     {
-        if (pkt->flags.broadcast || pkt->internal_flags.has_seq)
+        if (pkt->hdr.flags.broadcast || pkt->internal_flags.has_seq)
             return true;
 
         std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
-        auto                            it = send_window_status_.find(pkt->nexthop);
+        auto                            it = send_window_status_.find(pkt->hdr.nexthop);
 
         if (it != send_window_status_.end())
             return it->second;
@@ -147,7 +147,7 @@ public:
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            if (item->flags.syn)
+            if (item->hdr.flags.syn)
                 hiq_.emplace_front(std::move(item));
             else
                 hiq_.emplace_back(std::move(item));

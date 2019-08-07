@@ -69,7 +69,7 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
             dest_id = dest_addr & 0xff;
 
             if (dest_addr == int_broadcast_)
-                pkt->flags.broadcast = 1;
+                pkt->hdr.flags.broadcast = 1;
         } else if ((src_addr & ext_netmask_) == ext_net_) {
             // Traffic on the external network has IP addresses of the form
             // 192.168.<SRN+100>.0/24
@@ -77,7 +77,7 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
             dest_id = ((dest_addr >> 8) & 0xff) - 100;
 
             if (dest_addr == ext_broadcast_)
-                pkt->flags.broadcast = 1;
+                pkt->hdr.flags.broadcast = 1;
         } else {
             logEvent("NET: dropped IP packet from unknown subnet %d.%d.%d.%d",
                 (src_addr >> 24) & 0xff,
@@ -88,19 +88,19 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         }
 
         // NOTE: We are only responsible for setting hop/src/dest information
-        // here. The pkt->data_len field is set in TunTap when the packet is
+        // here. The pkt->hdr.data_len field is set in TunTap when the packet is
         // read from the network, and the sequence number and modulation-related
         // fields are set by the controller
-        pkt->curhop = curhop_id;
-        pkt->nexthop = nexthop_id;
-        pkt->src = src_id;
-        pkt->dest = dest_id;
+        pkt->hdr.curhop = curhop_id;
+        pkt->hdr.nexthop = nexthop_id;
+        pkt->ehdr().src = src_id;
+        pkt->ehdr().dest = dest_id;
 
         if (rc.verbose_packet_trace)
             printf("Read %lu bytes from %u to %u\n",
-                (unsigned long) pkt->data_len,
-                (unsigned) pkt->curhop,
-                (unsigned) pkt->nexthop);
+                (unsigned long) pkt->hdr.data_len,
+                (unsigned) pkt->hdr.curhop,
+                (unsigned) pkt->hdr.nexthop);
 
         return true;
     } else {

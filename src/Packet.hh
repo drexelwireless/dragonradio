@@ -122,53 +122,33 @@ struct Packet : public buffer<unsigned char>
         ControlMsg ctrl_;
     };
 
-    Packet()
+    Packet() = delete;
+
+    Packet(const Header &hdr_)
       : buffer()
-      , flags({0})
-      , seq(Seq::max())
+      , hdr(hdr_)
       , internal_flags({0})
-    {};
+    {
+    }
 
     explicit Packet(size_t n)
       : buffer(n)
-      , flags({0})
-      , seq(Seq::max())
+      , hdr({0})
       , internal_flags({0})
-    {};
+    {
+        assert(n >= sizeof(ExtendedHeader));
+    }
 
-    Packet(unsigned char* data, size_t n)
+    Packet(const Header &hdr_, unsigned char* data, size_t n)
       : buffer(data, n)
-      , flags({0})
-      , seq(Seq::max())
+      , hdr(hdr_)
       , internal_flags({0})
-    {}
+    {
+        assert(n >= sizeof(ExtendedHeader));
+    }
 
-    /** @brief Current hop */
-    /** If the packet originated in the network, this should be the current
-     * node.
-     */
-    NodeId curhop;
-
-    /** @brief Next hop */
-    /** If the packet originated from the radio, this should be the current
-     * node.
-     */
-    NodeId nexthop;
-
-    /** @brief Packet flags. */
-    PacketFlags flags;
-
-    /** @brief Sequence number */
-    Seq seq;
-
-    /** @brief Length of data portion of the packet */
-    uint16_t data_len;
-
-    /** @brief Source */
-    NodeId src;
-
-    /** @brief Destination */
-    NodeId dest;
+    /** @brief Header */
+    Header hdr;
 
     /** @brief Flow UID */
     std::optional<FlowUID> flow_uid;
@@ -198,43 +178,17 @@ struct Packet : public buffer<unsigned char>
     } internal_flags;
 
     /** @brief Get extended header */
-    ExtendedHeader &getExtendedHeader(void)
+    ExtendedHeader &ehdr(void)
     {
+        assert(size() >= sizeof(ExtendedHeader));
         return *reinterpret_cast<ExtendedHeader*>(data());
     }
 
-    /** @brief Copy internal values to a PHY header */
-    void toHeader(Header &hdr)
+    /** @brief Get extended header */
+    const ExtendedHeader &ehdr(void) const
     {
-        ExtendedHeader &ehdr = getExtendedHeader();
-
-        hdr.curhop = curhop;
-        hdr.nexthop = nexthop;
-        hdr.flags = flags;
-        hdr.seq = seq;
-        hdr.data_len = data_len;
-
-        ehdr.src = src;
-        ehdr.dest = dest;
-    }
-
-    /** @brief Copy values from PHY header to packet */
-    void fromHeader(Header &hdr)
-    {
-        curhop = hdr.curhop;
-        nexthop = hdr.nexthop;
-        flags = hdr.flags;
-        seq = hdr.seq;
-        data_len = std::min(hdr.data_len, static_cast<uint16_t>(sizeof(ExtendedHeader) + size()));
-    }
-
-    /** @brief Copy values from PHY header to packet */
-    void fromExtendedHeader(void)
-    {
-        ExtendedHeader &ehdr = getExtendedHeader();
-
-        src = ehdr.src;
-        dest = ehdr.dest;
+        assert(size() >= sizeof(ExtendedHeader));
+        return *reinterpret_cast<const ExtendedHeader*>(data());
     }
 
     /** @brief Get length of control info */
@@ -402,8 +356,14 @@ struct Packet : public buffer<unsigned char>
 /** @brief A packet received from the network. */
 struct NetPacket : public Packet
 {
-    NetPacket() : tx_params(nullptr), g(1.0) {};
-    explicit NetPacket(size_t n) : Packet(n), tx_params(nullptr), g(1.0) {};
+    NetPacket() = delete;
+
+    explicit NetPacket(size_t n)
+      : Packet(n)
+      , tx_params(nullptr)
+      , g(1.0)
+    {
+    }
 
     /** @brief Packet delivery deadline */
     std::optional<MonoClock::time_point> deadline;
@@ -423,15 +383,24 @@ struct NetPacket : public Packet
     /** @brief Return true if this packet should be dropped, false otherwise */
     bool shouldDrop(const MonoClock::time_point &now)
     {
-        return !flags.syn && deadlinePassed(now);
+        return !hdr.flags.syn && deadlinePassed(now);
     }
 };
 
 /** @brief A packet received from the radio. */
 struct RadioPacket : public Packet
 {
-    RadioPacket() : Packet() {};
-    RadioPacket(unsigned char* data, size_t n) : Packet(data, n) {}
+    RadioPacket() = delete;
+
+    RadioPacket(const Header &hdr)
+      : Packet(hdr)
+    {
+    }
+
+    RadioPacket(const Header &hdr, unsigned char* data, size_t n)
+      : Packet(hdr, data, n)
+    {
+    }
 
     /** @brief Error vector magnitude [dB] */
     float evm;

@@ -17,23 +17,6 @@
 
 typedef uint8_t NodeId;
 
-struct PacketFlags {
-    /** @brief Set if the packet is the first in a new connection */
-    uint16_t syn : 1;
-
-    /** @brief Set if the packet is ACKing */
-    uint16_t ack : 1;
-
-    /** @brief Set if this is a broadcast packet */
-    uint16_t broadcast : 1;
-
-    /** @brief Set if the packet has control data */
-    uint16_t control : 1;
-
-    /** @brief Unused flags */
-    uint16_t unused : 12;
-};
-
 /** @brief %PHY packet header. */
 struct Header {
     /** @brief Current hop. */
@@ -43,7 +26,22 @@ struct Header {
     NodeId nexthop;
 
     /** @brief Packet flags. */
-    PacketFlags flags;
+    struct {
+        /** @brief Set if the packet is the first in a new connection */
+        uint16_t syn : 1;
+
+        /** @brief Set if the packet is ACKing */
+        uint16_t ack : 1;
+
+        /** @brief Set if this is a broadcast packet */
+        uint16_t broadcast : 1;
+
+        /** @brief Set if the packet has control data */
+        uint16_t control : 1;
+
+        /** @brief Unused flags */
+        uint16_t unused : 12;
+    } flags;
 
     /** @brief Packet sequence number. */
     Seq seq;

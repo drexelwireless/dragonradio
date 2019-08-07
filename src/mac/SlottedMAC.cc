@@ -228,16 +228,16 @@ void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
         for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
             Header hdr;
 
-            hdr.curhop = (*it)->pkt->curhop;
-            hdr.nexthop = (*it)->pkt->nexthop;
-            hdr.seq = (*it)->pkt->seq;
+            hdr.curhop = (*it)->pkt->hdr.curhop;
+            hdr.nexthop = (*it)->pkt->hdr.nexthop;
+            hdr.seq = (*it)->pkt->hdr.seq;
 
             std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
 
             logger_->logSend(Clock::to_wall_time(samples->timestamp),
                              hdr,
-                             (*it)->pkt->src,
-                             (*it)->pkt->dest,
+                             (*it)->pkt->ehdr().src,
+                             (*it)->pkt->ehdr().dest,
                              (*it)->pkt->tx_params->mcs.check,
                              (*it)->pkt->tx_params->mcs.fec0,
                              (*it)->pkt->tx_params->mcs.fec1,

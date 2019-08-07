@@ -221,7 +221,7 @@ FlowStatsMap FlowPerformance::getFlowStatsMap(FlowStatsMap &stats,
 FlowStats &FlowPerformance::findFlow(FlowStatsMap &stats, Packet &pkt)
 {
     FlowUID   flow_uid = *pkt.flow_uid;
-    auto      it = stats.try_emplace(flow_uid, flow_uid, pkt.src, pkt.dest);
+    auto      it = stats.try_emplace(flow_uid, flow_uid, pkt.ehdr().src, pkt.ehdr().dest);
     FlowStats &flow = it.first->second;
 
     // If we inserted a new flow, add its mandated latency
