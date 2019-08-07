@@ -89,13 +89,11 @@ protected:
 
     void reconfigureHeader(void) override
     {
-#if LIQUID_VERSION_NUMBER >= 1003001
         origflexframegenprops_s props;
 
         mcs2flexframegenprops(header_mcs_, props);
         origflexframegen_set_header_props(fg_, &props);
         origflexframegen_set_header_len(fg_, sizeof(Header));
-#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
     }
 
     void reconfigurePayload(void) override
@@ -171,21 +169,17 @@ protected:
 
     void reconfigureHeader(void) override
     {
-#if LIQUID_VERSION_NUMBER >= 1003001
         origflexframegenprops_s props;
 
         mcs2flexframegenprops(header_mcs_, props);
         origflexframesync_set_header_props(fs_, &props);
         origflexframesync_set_header_len(fs_, sizeof(Header));
-#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
     }
 
     void reconfigureSoftDecode(void) override
     {
-#if LIQUID_VERSION_NUMBER >= 1003001
         origflexframesync_decode_header_soft(fs_, soft_header_);
         origflexframesync_decode_payload_soft(fs_, soft_payload_);
-#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
     }
 };
 
