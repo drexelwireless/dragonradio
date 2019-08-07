@@ -261,7 +261,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
     // Process control info
-    if (pkt->hdr.flags.control) {
+    if (pkt->hdr.flags.has_control) {
         handleCtrlHello(*pkt, node);
         handleCtrlTimestampEchos(*pkt, node);
     }

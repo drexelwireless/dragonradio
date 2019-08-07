@@ -37,7 +37,7 @@ struct Header {
         uint16_t broadcast : 1;
 
         /** @brief Set if the packet has control data */
-        uint16_t control : 1;
+        uint16_t has_control : 1;
 
         /** @brief Unused flags */
         uint16_t unused : 12;
