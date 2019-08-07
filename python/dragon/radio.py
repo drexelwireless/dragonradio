@@ -133,8 +133,8 @@ class Config(object):
 
         # Header liquid modulation options
         self.header_check = 'crc32'
-        self.header_fec0 = 'secded7264'
-        self.header_fec1 = 'h84'
+        self.header_fec0 = 'none'
+        self.header_fec1 = 'v27'
         self.header_ms = 'bpsk'
 
         # Broadcast liquid modulation options
