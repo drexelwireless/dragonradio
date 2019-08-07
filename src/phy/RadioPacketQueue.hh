@@ -5,6 +5,7 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <variant>
 
 #include "IQBuffer.hh"
 #include "Packet.hh"
@@ -20,8 +21,11 @@
  */
 class RadioPacketQueue {
 public:
+    /** @brief A queue entry */
+    using entry = std::variant<std::monostate, std::unique_ptr<RadioPacket>>;
+
     /** @brief A barrier */
-    using barrier = std::list<std::unique_ptr<RadioPacket>>::iterator;
+    using barrier = std::list<entry>::iterator;
 
     RadioPacketQueue();
     ~RadioPacketQueue();
@@ -73,7 +77,7 @@ private:
     std::condition_variable cond_;
 
     /** @brief The queue of packets. */
-    std::list<std::unique_ptr<RadioPacket>> q_;
+    std::list<entry> q_;
 };
 
 

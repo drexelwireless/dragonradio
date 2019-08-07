@@ -35,16 +35,12 @@ void RadioPacketQueue::push(RadioPacketQueue::barrier b,
 
 RadioPacketQueue::barrier RadioPacketQueue::pushBarrier(void)
 {
-    auto pkt = std::make_unique<RadioPacket>();
-
-    pkt->barrier = true;
-
     RadioPacketQueue::barrier b;
 
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        b = q_.emplace(q_.end(), std::move(pkt));
+        b = q_.emplace(q_.end(), std::monostate());
     }
 
     cond_.notify_one();
@@ -67,11 +63,11 @@ bool RadioPacketQueue::pop(std::unique_ptr<RadioPacket>& pkt)
 {
     std::unique_lock<std::mutex> lock(m_);
 
-    cond_.wait(lock, [this]{ return done_ || (!q_.empty() && !q_.front()->barrier); });
+    cond_.wait(lock, [this]{ return done_ || (!q_.empty() && std::holds_alternative<std::unique_ptr<RadioPacket>>(q_.front())); });
     if (done_)
         return false;
     else {
-        pkt = std::move(q_.front());
+        pkt = std::move(std::get<std::unique_ptr<RadioPacket>>(q_.front()));
         q_.pop_front();
         return true;
     }

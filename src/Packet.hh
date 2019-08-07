@@ -431,8 +431,8 @@ struct NetPacket : public Packet
 /** @brief A packet received from the radio. */
 struct RadioPacket : public Packet
 {
-    RadioPacket() : Packet(), barrier(false) {};
-    RadioPacket(unsigned char* data, size_t n) : Packet(data, n), barrier(false) {}
+    RadioPacket() : Packet() {};
+    RadioPacket(unsigned char* data, size_t n) : Packet(data, n) {}
 
     /** @brief Error vector magnitude [dB] */
     float evm;
@@ -448,11 +448,6 @@ struct RadioPacket : public Packet
 
     /** @brief MCS used for this packet by transmitter */
     MCS mcs;
-
-    /** @brief This Boolean is true if this packet is a barrier and should not
-     * be processed or removed from a queue except by its creator.
-     */
-    bool barrier;
 };
 
 /** @brief Compute the size of the specified control message. */
