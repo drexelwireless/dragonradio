@@ -96,11 +96,11 @@ protected:
             return true;
 
         // Always pass SYN packets
-        if (pkt->isFlagSet(kSYN))
+        if (pkt->flags.syn)
             return true;
 
         // Then check for a broadcast
-        if (pkt->isFlagSet(kBroadcast) && allow_broadcasts_)
+        if (pkt->flags.broadcast && allow_broadcasts_)
             return true;
 
         // Then look at the port

@@ -74,7 +74,7 @@ protected:
     /** @brief Return true if the packet can be popped */
     bool canPop(const T& pkt)
     {
-        if (pkt->isFlagSet(kBroadcast) || pkt->isInternalFlagSet(kHasSeq))
+        if (pkt->flags.broadcast || pkt->isInternalFlagSet(kHasSeq))
             return true;
 
         std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
@@ -147,7 +147,7 @@ public:
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            if (item->isFlagSet(kSYN))
+            if (item->flags.syn)
                 hiq_.emplace_front(std::move(item));
             else
                 hiq_.emplace_back(std::move(item));

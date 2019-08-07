@@ -5,7 +5,7 @@ Packet::iterator::iterator(const Packet &pkt)
   , ctrl_()
 {
     // Make sure we have control data
-    if (!pkt_.isFlagSet(kControl) || pkt_.size() < sizeof(ExtendedHeader) + pkt_.data_len + sizeof(ctrl_len_)) {
+    if (!pkt_.flags.control || pkt_.size() < sizeof(ExtendedHeader) + pkt_.data_len + sizeof(ctrl_len_)) {
         ctrl_len_ = 0;
         ctrl_ptr_ = nullptr;
         return;
@@ -83,7 +83,7 @@ uint16_t Packet::getControlLen(void) const
 {
     uint16_t len;
 
-    if (!isFlagSet(kControl) || size() < sizeof(ExtendedHeader) + data_len + sizeof(len)) {
+    if (!flags.control || size() < sizeof(ExtendedHeader) + data_len + sizeof(len)) {
         return 0;
     } else {
         memcpy(&len, data() + sizeof(ExtendedHeader) + data_len, sizeof(len));
@@ -93,8 +93,8 @@ uint16_t Packet::getControlLen(void) const
 
 void Packet::setControlLen(uint16_t len)
 {
-    if (!isFlagSet(kControl)) {
-        setFlag(kControl);
+    if (!flags.control) {
+        flags.control = 1;
         resize(size() + sizeof(uint16_t));
     }
 
@@ -103,7 +103,7 @@ void Packet::setControlLen(uint16_t len)
 
 void Packet::clearControl(void)
 {
-    clearFlag(kControl);
+    flags.control = 0;
     resize(sizeof(ExtendedHeader) + data_len);
 }
 

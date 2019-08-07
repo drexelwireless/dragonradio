@@ -61,7 +61,7 @@ struct SendWindow {
          */
         inline bool mayDrop(const std::optional<size_t> &max_retransmissions)
         {
-            return !pkt->isFlagSet(kSYN);
+            return !pkt->flags.syn;
         }
 
         /** @brief Return true if we SHOULD drop this window entry. */
@@ -74,7 +74,7 @@ struct SendWindow {
          */
         inline bool shouldDrop(const std::optional<size_t> &max_retransmissions)
         {
-            return !pkt->isFlagSet(kSYN) &&
+            return !pkt->flags.syn &&
                  (  (max_retransmissions && nretrans >= *max_retransmissions)
                  || pkt->deadlinePassed(MonoClock::now()));
         }

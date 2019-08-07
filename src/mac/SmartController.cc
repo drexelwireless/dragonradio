@@ -114,7 +114,7 @@ get_packet:
         return false;
 
     // Handle broadcast packets
-    if (pkt->isFlagSet(kBroadcast)) {
+    if (pkt->flags.broadcast) {
         applyTXParams(*pkt, &broadcast_tx_params_, broadcast_gain.getLinearGain());
 
         return true;
@@ -138,7 +138,7 @@ get_packet:
                 (unsigned) recvw.ack,
                 (unsigned) recvw.max);
 
-        pkt->setFlag(kACK);
+        pkt->flags.ack = 1;
         ehdr.ack = recvw.ack;
 
 #if DEBUG
@@ -231,7 +231,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         return;
 
     // Skip packets that aren't for us
-    if (!pkt->isFlagSet(kBroadcast) && pkt->nexthop != net_->getMyNodeId())
+    if (!pkt->flags.broadcast && pkt->nexthop != net_->getMyNodeId())
         return;
 
     // Get a reference to the sending node. This will add a new node to the
@@ -245,7 +245,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // We can't do anything else with the packet.
     if (pkt->isInternalFlagSet(kInvalidPayload)) {
         if (pkt->data_len != 0) {
-            RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->isFlagSet(kSYN));
+            RecvWindow                        &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->flags.syn);
             //std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
             // Update the max seq number we've received
@@ -262,13 +262,13 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
     // Process control info
-    if (pkt->isFlagSet(kControl)) {
+    if (pkt->flags.control) {
         handleCtrlHello(*pkt, node);
         handleCtrlTimestampEchos(*pkt, node);
     }
 
     // Handle broadcast packets
-    if (pkt->isFlagSet(kBroadcast)) {
+    if (pkt->flags.broadcast) {
         // Resize the packet to truncate non-data bytes
         pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
 
@@ -305,7 +305,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             tfeedback = std::max(tfeedback, sendw[*nak].timestamp + 0.001);
 
         // Handle ACK
-        if (pkt->isFlagSet(kACK)) {
+        if (pkt->flags.ack) {
             if (ehdr.ack > sendw.unack) {
                 dprintf("ARQ: ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
@@ -380,7 +380,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
 #if DEBUG
-    if (pkt->isFlagSet(kACK))
+    if (flags.ack)
         dprintf("ARQ: recv: node=%u; seq=%u; ack=%u",
             (unsigned) prevhop,
             (unsigned) pkt->seq,
@@ -392,7 +392,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 #endif
 
     // Fill our receive window
-    RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->isFlagSet(kSYN));
+    RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->flags.syn);
     std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
     // If this is a SYN packet, ACK immediately to open up the window.
@@ -400,7 +400,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // Otherwise, start the ACK timer if it is not already running. Even if this
     // is a duplicate packet, we need to send an ACK because the duplicate may
     // be a retransmission, i.e., our previous ACK could have been lost.
-    if (pkt->isFlagSet(kSYN))
+    if (pkt->flags.syn)
         ack(recvw);
     else
         startSACKTimer(recvw);
@@ -498,7 +498,7 @@ void SmartController::missed(std::shared_ptr<NetPacket> &&pkt)
 
 void SmartController::transmitted(NetPacket &pkt)
 {
-    if (!pkt.isFlagSet(kBroadcast) && pkt.data_len != 0) {
+    if (!pkt.flags.broadcast && pkt.data_len != 0) {
         SendWindow                      &sendw = getSendWindow(pkt.nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
@@ -560,7 +560,7 @@ void SmartController::ack(RecvWindow &recvw)
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = recvw.node.id;
-    pkt->flags = 0;
+    pkt->flags = {0};
     pkt->seq = 0;
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
@@ -616,7 +616,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = node_id;
-    pkt->flags = 0;
+    pkt->flags = {0, 0, 0, 0};
     pkt->seq = 0;
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
@@ -645,13 +645,13 @@ void SmartController::broadcastHello(void)
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = 0;
-    pkt->flags = 0;
+    pkt->flags = {0, 0, 0, 0};
     pkt->seq = 0;
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
     pkt->dest = 0;
 
-    pkt->setFlag(kBroadcast);
+    pkt->flags.broadcast = 1;
 
     // Append hello message
     ControlMsg::Hello msg;
@@ -1375,7 +1375,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         assert(pkt);
 
         // We can always send a broadcast packet
-        if (pkt->isFlagSet(kBroadcast))
+        if (pkt->flags.broadcast)
             return true;
 
         SendWindow                      &sendw = getSendWindow(pkt->nexthop);
@@ -1403,7 +1403,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // If this is the first packet we are sending to the destination,
             // set its SYN flag
             if (sendw.new_window) {
-                pkt->setFlag(kSYN);
+                pkt->flags.syn = 1;
                 sendw.new_window = false;
             }
 

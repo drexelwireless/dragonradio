@@ -122,9 +122,26 @@ struct Packet : public buffer<unsigned char>
         ControlMsg ctrl_;
     };
 
-    Packet() : buffer(), flags(0), seq(Seq::max()), internal_flags(0) {};
-    explicit Packet(size_t n) : buffer(n), flags(0), seq(Seq::max()), internal_flags(0) {};
-    Packet(unsigned char* data, size_t n) : buffer(data, n), flags(0), seq(Seq::max()), internal_flags(0) {}
+    Packet()
+      : buffer()
+      , flags({0})
+      , seq(Seq::max())
+      , internal_flags(0)
+    {};
+
+    explicit Packet(size_t n)
+      : buffer(n)
+      , flags({0})
+      , seq(Seq::max())
+      , internal_flags(0)
+    {};
+
+    Packet(unsigned char* data, size_t n)
+      : buffer(data, n)
+      , flags({0})
+      , seq(Seq::max())
+      , internal_flags(0)
+    {}
 
     /** @brief Current hop */
     /** If the packet originated in the network, this should be the current
@@ -158,24 +175,6 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Packet timestamp */
     MonoClock::time_point timestamp;
-
-    /** @brief Set a flag */
-    void setFlag(unsigned f)
-    {
-        flags |= (1 << f);
-    }
-
-    /** @brief Clear a flag */
-    void clearFlag(unsigned f)
-    {
-        flags &= ~(1 << f);
-    }
-
-    /** @brief Test if a flag is set */
-    bool isFlagSet(unsigned f) const
-    {
-        return flags & (1 << f);
-    }
 
     /** @brief Internal flags. */
     InternalFlags internal_flags;
@@ -424,7 +423,7 @@ struct NetPacket : public Packet
     /** @brief Return true if this packet should be dropped, false otherwise */
     bool shouldDrop(const MonoClock::time_point &now)
     {
-        return !isFlagSet(kSYN) && deadlinePassed(now);
+        return !flags.syn && deadlinePassed(now);
     }
 };
 

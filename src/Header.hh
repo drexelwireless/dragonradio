@@ -17,21 +17,22 @@
 
 typedef uint8_t NodeId;
 
-enum {
+struct PacketFlags {
     /** @brief Set if the packet is the first in a new connection */
-    kSYN = 0,
+    uint16_t syn : 1;
 
     /** @brief Set if the packet is ACKing */
-    kACK,
+    uint16_t ack : 1;
 
     /** @brief Set if this is a broadcast packet */
-    kBroadcast,
+    uint16_t broadcast : 1;
 
     /** @brief Set if the packet has control data */
-    kControl
-};
+    uint16_t control : 1;
 
-typedef uint16_t PacketFlags;
+    /** @brief Unused flags */
+    uint16_t unused : 12;
+};
 
 enum {
     /** @brief Set if the packet has an assigned sequence number */
