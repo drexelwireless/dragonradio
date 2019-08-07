@@ -126,21 +126,21 @@ struct Packet : public buffer<unsigned char>
       : buffer()
       , flags({0})
       , seq(Seq::max())
-      , internal_flags(0)
+      , internal_flags({0})
     {};
 
     explicit Packet(size_t n)
       : buffer(n)
       , flags({0})
       , seq(Seq::max())
-      , internal_flags(0)
+      , internal_flags({0})
     {};
 
     Packet(unsigned char* data, size_t n)
       : buffer(data, n)
       , flags({0})
       , seq(Seq::max())
-      , internal_flags(0)
+      , internal_flags({0})
     {}
 
     /** @brief Current hop */
@@ -176,26 +176,32 @@ struct Packet : public buffer<unsigned char>
     /** @brief Packet timestamp */
     MonoClock::time_point timestamp;
 
-    /** @brief Internal flags. */
-    InternalFlags internal_flags;
+    /** @brief Internal flags */
+    struct {
+        /** @brief Set if the packet has an assigned sequence number */
+        uint8_t has_seq : 1;
 
-    /** @brief Set a flag */
-    void setInternalFlag(unsigned f)
-    {
-        internal_flags |= (1 << f);
-    }
+        /** @brief Set if the packet belongs to the internal IP network (10.*) */
+        uint8_t int_net : 1;
 
-    /** @brief Clear a flag */
-    void clearInternalFlag(unsigned f)
-    {
-        internal_flags &= ~(1 << f);
-    }
+        /** @brief Set if the packet belongs to the external IP network (192.168.*) */
+        uint8_t ext_net : 1;
 
-    /** @brief Test if a flag is set */
-    bool isInternalFlagSet(unsigned f) const
-    {
-        return internal_flags & (1 << f);
-    }
+        /** @brief Set if the packet had invalid header */
+        uint8_t invalid_header : 1;
+
+        /** @brief Set if the packet had invalid payload */
+        uint8_t invalid_payload : 1;
+
+        /** @brief Set if the packet is a retransmission */
+        uint8_t retransmission : 1;
+
+        /** @brief Set if the packet contains a selective ACK */
+        uint8_t has_selective_ack : 1;
+
+        /** @brief Set if this is a timestamp packet */
+        uint8_t is_timestamp : 1;
+    } internal_flags;
 
     /** @brief Get extended header */
     ExtendedHeader &getExtendedHeader(void)

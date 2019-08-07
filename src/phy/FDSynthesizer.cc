@@ -150,7 +150,7 @@ void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
              * mutex before modulation to ensure slot->nsamples doesn't change
              * out from under us.
              */
-            if (pkt->isInternalFlagSet(kIsTimestamp)) {
+            if (pkt->internal_flags.is_timestamp) {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
                 pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/phy_->getTXRate());
@@ -169,7 +169,7 @@ void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             if (!pushed) {
                 pkt = std::move(mpkt->pkt);
 
-                if (pkt->isInternalFlagSet(kIsTimestamp))
+                if (pkt->internal_flags.is_timestamp)
                     pkt->removeTimestamp();
             }
         }

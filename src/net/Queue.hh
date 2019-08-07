@@ -74,7 +74,7 @@ protected:
     /** @brief Return true if the packet can be popped */
     bool canPop(const T& pkt)
     {
-        if (pkt->flags.broadcast || pkt->isInternalFlagSet(kHasSeq))
+        if (pkt->flags.broadcast || pkt->internal_flags.has_seq)
             return true;
 
         std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);

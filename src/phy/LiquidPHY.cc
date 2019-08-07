@@ -178,7 +178,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     } else if (!payload_valid_) {
         pkt = std::make_unique<RadioPacket>();
 
-        pkt->setInternalFlag(kInvalidPayload);
+        pkt->internal_flags.invalid_payload = 1;
         pkt->fromHeader(*h);
 
         if (h->nexthop == phy_.getNodeId()) {

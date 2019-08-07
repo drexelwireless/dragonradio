@@ -194,7 +194,7 @@ get_packet:
 
         // If this packet is a retransmission, increment the retransmission
         // count, otherwise set it to 0.
-        if (pkt->isInternalFlagSet(kRetransmission))
+        if (pkt->internal_flags.retransmission)
             ++sendw[pkt->seq].nretrans;
         else
             sendw[pkt->seq].nretrans = 0;
@@ -227,7 +227,7 @@ get_packet:
 void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 {
     // Skip packets with invalid header
-    if (pkt->isInternalFlagSet(kInvalidHeader))
+    if (pkt->internal_flags.invalid_header)
         return;
 
     // Skip packets that aren't for us
@@ -243,7 +243,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // Immediately NAK data packets with a bad payload if they contain data.
     // We can't do anything else with the packet.
-    if (pkt->isInternalFlagSet(kInvalidPayload)) {
+    if (pkt->internal_flags.invalid_payload) {
         if (pkt->data_len != 0) {
             RecvWindow                        &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->flags.syn);
             //std::lock_guard<spinlock_mutex> lock(recvw.mutex);
@@ -507,7 +507,7 @@ void SmartController::transmitted(NetPacket &pkt)
     }
 
     // Cancel the selective ACK timer when we actually have sent a selective ACK
-    if (pkt.isInternalFlagSet(kHasSelectiveACK)) {
+    if (pkt.internal_flags.has_selective_ack) {
         RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt.nexthop);
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
@@ -616,7 +616,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = node_id;
-    pkt->flags = {0, 0, 0, 0};
+    pkt->flags = {0};
     pkt->seq = 0;
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
@@ -645,7 +645,7 @@ void SmartController::broadcastHello(void)
 
     pkt->curhop = net_->getMyNodeId();
     pkt->nexthop = 0;
-    pkt->flags = {0, 0, 0, 0};
+    pkt->flags = {0};
     pkt->seq = 0;
     pkt->data_len = 0;
     pkt->src = net_->getMyNodeId();
@@ -685,7 +685,7 @@ void SmartController::broadcastHello(void)
     if (netq_) {
         pkt->tx_params = &broadcast_tx_params_;
         pkt->g = broadcast_tx_params_.getSoftTXGain();
-        pkt->setInternalFlag(kIsTimestamp);
+        pkt->internal_flags.is_timestamp = 1;
         netq_->push_hi(std::move(pkt));
     }
 }
@@ -764,7 +764,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
         pkt->clearControl();
 
         // Mark the packet as a retransmission
-        pkt->setInternalFlag(kRetransmission);
+        pkt->internal_flags.retransmission = 1;
 
         // Re-queue the packet. The ACK and MCS will be set properly upon
         // retransmission.
@@ -1018,7 +1018,7 @@ void SmartController::appendCtrlACK(NetPacket &pkt, RecvWindow &recvw)
     }
 
     // Mark this packet as containing a selective ACK
-    pkt.setInternalFlag(kHasSelectiveACK);
+    pkt.internal_flags.has_selective_ack = 1;
 
     // We no longer need a selective ACK
     recvw.need_selective_ack = false;
@@ -1387,7 +1387,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             return true;
 
         // Set the packet sequence number if it doesn't yet have one.
-        if (!pkt->isInternalFlagSet(kHasSeq)) {
+        if (!pkt->internal_flags.has_seq) {
             // If we can't fit this packet in our window, move the window along
             // by dropping the oldest packet.
             if (   sendw.seq >= sendw.unack + sendw.win
@@ -1398,7 +1398,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             }
 
             pkt->seq = sendw.seq++;
-            pkt->setInternalFlag(kHasSeq);
+            pkt->internal_flags.has_seq = 1;
 
             // If this is the first packet we are sending to the destination,
             // set its SYN flag

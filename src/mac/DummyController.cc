@@ -9,7 +9,7 @@ DummyController::DummyController(std::shared_ptr<Net> net,
 bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
 {
     if (net_in.pull(pkt)) {
-        if (!pkt->isInternalFlagSet(kHasSeq)) {
+        if (!pkt->internal_flags.has_seq) {
             Node &nexthop = (*net_)[pkt->nexthop];
 
             {
@@ -27,7 +27,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
             pkt->tx_params = &tx_params_[0];
             pkt->g = tx_params_[0].getSoftTXGain() * nexthop.g;
 
-            pkt->setInternalFlag(kHasSeq);
+            pkt->internal_flags.has_seq = 1;
         }
 
         return true;
@@ -37,7 +37,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
 
 void DummyController::received(std::shared_ptr<RadioPacket> &&pkt)
 {
-    if (pkt->isInternalFlagSet(kInvalidHeader) || pkt->isInternalFlagSet(kInvalidPayload))
+    if (pkt->internal_flags.invalid_header || pkt->internal_flags.invalid_payload)
         return;
 
     if (pkt->data_len != 0 && pkt->nexthop == net_->getMyNodeId())

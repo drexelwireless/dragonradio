@@ -34,34 +34,6 @@ struct PacketFlags {
     uint16_t unused : 12;
 };
 
-enum {
-    /** @brief Set if the packet has an assigned sequence number */
-    kHasSeq = 0,
-
-    /** @brief Set if the packet belongs to the internal IP network (10.*) */
-    kIntNet,
-
-    /** @brief Set if the packet belongs to the external IP network (192.168.*) */
-    kExtNet,
-
-    /** @brief Set if the packet had invalid header */
-    kInvalidHeader,
-
-    /** @brief Set if the packet had invalid payload */
-    kInvalidPayload,
-
-    /** @brief Set if the packet is a retransmission */
-    kRetransmission,
-
-    /** @brief Set if the packet contains a selective ACK */
-    kHasSelectiveACK,
-
-    /** @brief Set if this is a timestamp packet */
-    kIsTimestamp
-};
-
-typedef uint16_t InternalFlags;
-
 /** @brief %PHY packet header. */
 struct Header {
     /** @brief Current hop. */
