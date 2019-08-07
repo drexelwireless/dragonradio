@@ -64,6 +64,7 @@ public:
                                       &props);
 
         setHeaderMCS(header_mcs_);
+        reconfigureHeader();
     }
 
     virtual ~OFDMModulator()
@@ -189,6 +190,7 @@ public:
                                        static_cast<Demodulator*>(this));
 
         setHeaderMCS(header_mcs_);
+        reconfigureHeader();
         reconfigureSoftDecode();
     }
 

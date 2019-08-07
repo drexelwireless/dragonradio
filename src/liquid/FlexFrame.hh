@@ -24,6 +24,7 @@ public:
         fg_ = origflexframegen_create(&props);
 
         setHeaderMCS(header_mcs_);
+        reconfigureHeader();
     }
 
     virtual ~FlexFrameModulator()
@@ -118,6 +119,7 @@ public:
                                        static_cast<Demodulator*>(this));
 
         setHeaderMCS(header_mcs_);
+        reconfigureHeader();
         reconfigureSoftDecode();
     }
 
