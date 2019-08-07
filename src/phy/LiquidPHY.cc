@@ -10,13 +10,6 @@
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;
 
-union PHYHeader {
-    Header h;
-    // FLEXFRAME_H_USER in liquid.internal.h. This is the largest header of any
-    // of the liquid PHY implementations.
-    unsigned char bytes[14];
-};
-
 LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
                      NodeId node_id,
                      const MCS &header_mcs,
@@ -47,17 +40,15 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
         reconfigure();
     }
 
-    PHYHeader header;
+    Header header;
 
-    memset(&header, 0, sizeof(header));
-
-    pkt->toHeader(header.h);
+    pkt->toHeader(header);
 
     pkt->resize(std::max((size_t) pkt->size(), liquid_phy_.min_packet_size_));
 
     assert(pkt->tx_params);
     setPayloadMCS(pkt->tx_params->mcs);
-    assemble(header.bytes, pkt->data(), pkt->size());
+    assemble((void*) &header, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_shared<IQBuf>(kInitialModbufSize);
@@ -306,12 +297,10 @@ size_t LiquidPHY::getModulatedSize(const TXParams &params, size_t n)
     mod->setHeaderMCS(header_mcs_);
     mod->setPayloadMCS(params.mcs);
 
-    PHYHeader                  header;
+    Header                     header = {0};
     std::vector<unsigned char> body(n);
 
-    memset(&header, 0, sizeof(header));
-
-    mod->assemble(header.bytes, body.data(), body.size());
+    mod->assemble(&header, body.data(), body.size());
 
     return mod->assembledSize();
 }
