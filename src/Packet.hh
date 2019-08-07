@@ -178,9 +178,6 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Internal flags */
     struct {
-        /** @brief Set if the packet has an assigned sequence number */
-        uint8_t has_seq : 1;
-
         /** @brief Set if the packet had invalid header */
         uint8_t invalid_header : 1;
 
@@ -189,6 +186,9 @@ struct Packet : public buffer<unsigned char>
 
         /** @brief Set if the packet is a retransmission */
         uint8_t retransmission : 1;
+
+        /** @brief Set if the packet has an assigned sequence number */
+        uint8_t has_seq : 1;
 
         /** @brief Set if the packet contains a selective ACK */
         uint8_t has_selective_ack : 1;
