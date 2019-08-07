@@ -48,12 +48,6 @@ struct Header {
 
     /** @brief Packet sequence number. */
     Seq seq;
-
-    /** @brief Length of the packet payload. */
-    /** The packet payload may be padded or contain control data. This field
-     * gives the size of the data portion of the payload.
-     */
-    uint16_t data_len;
 };
 
 /** @brief Extended header that appears in radio payload. */
@@ -66,6 +60,12 @@ struct ExtendedHeader {
 
     /** @brief Sequence number we are ACK'ing or NAK'ing. */
     Seq ack;
+
+    /** @brief Length of the packet payload. */
+    /** The packet payload may be padded or contain control data. This field
+     * gives the size of the data portion of the payload.
+     */
+    uint16_t data_len;
 };
 
 #endif /* HEADER_HH_ */

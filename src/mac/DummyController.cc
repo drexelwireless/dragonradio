@@ -40,7 +40,7 @@ void DummyController::received(std::shared_ptr<RadioPacket> &&pkt)
     if (pkt->internal_flags.invalid_header || pkt->internal_flags.invalid_payload)
         return;
 
-    if (pkt->hdr.data_len != 0 && pkt->hdr.nexthop == net_->getMyNodeId())
+    if (pkt->ehdr().data_len != 0 && pkt->hdr.nexthop == net_->getMyNodeId())
         radio_out.push(std::move(pkt));
 }
 

@@ -154,23 +154,23 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
 {
     ssize_t nwrite;
 
-    if ((nwrite = write(fd_, pkt->data() + sizeof(ExtendedHeader), pkt->hdr.data_len)) < 0) {
+    if ((nwrite = write(fd_, pkt->data() + sizeof(ExtendedHeader), pkt->ehdr().data_len)) < 0) {
         logEvent("NET: tun/tap write failure: errno=%s (%d); nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
             strerror(errno),
             errno,
             nwrite,
             (unsigned) pkt->size(),
             (unsigned) pkt->hdr.seq,
-            (unsigned) pkt->hdr.data_len);
+            (unsigned) pkt->ehdr().data_len);
         return;
     }
 
-    if ((size_t) nwrite != pkt->hdr.data_len) {
+    if ((size_t) nwrite != pkt->ehdr().data_len) {
         logEvent("NET: tun/tap incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
             nwrite,
             (unsigned) pkt->size(),
             (unsigned) pkt->hdr.seq,
-            (unsigned) pkt->hdr.data_len);
+            (unsigned) pkt->ehdr().data_len);
         return;
     }
 
@@ -218,7 +218,7 @@ void TunTap::worker(void)
         }
 
         pkt->hdr.flags.has_data = 1;
-        pkt->hdr.data_len = nread;
+        pkt->ehdr().data_len = nread;
         pkt->resize(sizeof(ExtendedHeader) + nread);
         pkt->timestamp = MonoClock::now();
         source.push(std::move(pkt));

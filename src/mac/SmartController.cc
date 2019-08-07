@@ -141,7 +141,7 @@ get_packet:
         pkt->ehdr().ack = recvw.ack;
 
 #if DEBUG
-        if (pkt->hdr.data_len == 0)
+        if (pkt->ehdr().data_len == 0)
             dprintf("ARQ: send delayed ack: node=%u; ack=%u",
                 (unsigned) nexthop,
                 (unsigned) recvw.ack);
@@ -154,13 +154,13 @@ get_packet:
         // Append selective ACK if needed
         if (recvw.need_selective_ack)
             appendCtrlACK(*pkt, recvw);
-    } else if (pkt->hdr.data_len != 0)
+    } else if (pkt->ehdr().data_len != 0)
         dprintf("ARQ: send: node=%u; seq=%u",
             (unsigned) nexthop,
             (unsigned) pkt->hdr.seq);
 
     // Update our send window if this packet has data
-    if (pkt->hdr.data_len != 0) {
+    if (pkt->ehdr().data_len != 0) {
         SendWindow                      &sendw = getSendWindow(nexthop);
         Node                            &dest = (*net_)[nexthop];
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
@@ -269,10 +269,10 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // Handle broadcast packets
     if (pkt->hdr.flags.broadcast) {
         // Resize the packet to truncate non-data bytes
-        pkt->resize(sizeof(ExtendedHeader) + pkt->hdr.data_len);
+        pkt->resize(sizeof(ExtendedHeader) + pkt->ehdr().data_len);
 
         // Send the packet along if it has data
-        if (pkt->hdr.data_len != 0)
+        if (pkt->ehdr().data_len != 0)
             radio_out.push(std::move(pkt));
 
         return;
@@ -368,7 +368,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
     // If this packet doesn't contain any data, we are done
-    if (pkt->hdr.data_len == 0) {
+    if (pkt->ehdr().data_len == 0) {
         dprintf("ARQ: recv: node=%u; ack=%u",
             (unsigned) prevhop,
             (unsigned) pkt->ehdr().ack);
@@ -455,7 +455,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
     // Resize the packet to truncate non-data bytes
-    pkt->resize(sizeof(ExtendedHeader) + pkt->hdr.data_len);
+    pkt->resize(sizeof(ExtendedHeader) + pkt->ehdr().data_len);
 
     // If this is the next packet we expected, send it now and update the
     // receive window
@@ -494,7 +494,7 @@ void SmartController::missed(std::shared_ptr<NetPacket> &&pkt)
 
 void SmartController::transmitted(NetPacket &pkt)
 {
-    if (!pkt.hdr.flags.broadcast && pkt.hdr.data_len != 0) {
+    if (!pkt.hdr.flags.broadcast && pkt.ehdr().data_len != 0) {
         SendWindow                      &sendw = getSendWindow(pkt.hdr.nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
@@ -558,7 +558,7 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->hdr.nexthop = recvw.node.id;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = 0;
-    pkt->hdr.data_len = 0;
+    pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
     pkt->ehdr().dest = recvw.node.id;
 
@@ -614,7 +614,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
     pkt->hdr.nexthop = node_id;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = 0;
-    pkt->hdr.data_len = 0;
+    pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
     pkt->ehdr().dest = node_id;
 
@@ -643,7 +643,7 @@ void SmartController::broadcastHello(void)
     pkt->hdr.nexthop = 0;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = 0;
-    pkt->hdr.data_len = 0;
+    pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
     pkt->ehdr().dest = 0;
 
@@ -1379,7 +1379,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
         // If packet has no payload, we can always send it---it has control
         // information.
-        if (pkt->hdr.data_len == 0)
+        if (pkt->ehdr().data_len == 0)
             return true;
 
         // Set the packet sequence number if it doesn't yet have one.

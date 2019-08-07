@@ -88,7 +88,7 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         }
 
         // NOTE: We are only responsible for setting hop/src/dest information
-        // here. The pkt->hdr.data_len field is set in TunTap when the packet is
+        // here. The pkt->ehdr().data_len field is set in TunTap when the packet is
         // read from the network, and the sequence number and modulation-related
         // fields are set by the controller
         pkt->hdr.curhop = curhop_id;
@@ -98,7 +98,7 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 
         if (rc.verbose_packet_trace)
             printf("Read %lu bytes from %u to %u\n",
-                (unsigned long) pkt->hdr.data_len,
+                (unsigned long) pkt->ehdr().data_len,
                 (unsigned) pkt->hdr.curhop,
                 (unsigned) pkt->hdr.nexthop);
 
