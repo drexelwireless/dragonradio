@@ -217,6 +217,7 @@ void TunTap::worker(void)
             exit(1);
         }
 
+        pkt->hdr.flags.has_data = 1;
         pkt->hdr.data_len = nread;
         pkt->resize(sizeof(ExtendedHeader) + nread);
         pkt->timestamp = MonoClock::now();

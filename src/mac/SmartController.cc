@@ -243,7 +243,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // Immediately NAK data packets with a bad payload if they contain data.
     // We can't do anything else with the packet.
     if (pkt->internal_flags.invalid_payload) {
-        if (pkt->hdr.data_len != 0) {
+        if (pkt->hdr.flags.has_data) {
             RecvWindow                        &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
             //std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 

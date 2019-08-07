@@ -36,11 +36,14 @@ struct Header {
         /** @brief Set if this is a broadcast packet */
         uint16_t broadcast : 1;
 
+        /** @brief Set if the packet has data */
+        uint16_t has_data : 1;
+
         /** @brief Set if the packet has control data */
         uint16_t has_control : 1;
 
         /** @brief Unused flags */
-        uint16_t unused : 12;
+        uint16_t unused : 11;
     } flags;
 
     /** @brief Packet sequence number. */
