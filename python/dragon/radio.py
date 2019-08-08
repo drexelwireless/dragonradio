@@ -134,13 +134,13 @@ class Config(object):
         # Header liquid modulation options
         self.header_check = 'crc32'
         self.header_fec0 = 'none'
-        self.header_fec1 = 'v27'
+        self.header_fec1 = 'v29p78'
         self.header_ms = 'bpsk'
 
         # Broadcast liquid modulation options
         self.broadcast_check = 'crc32'
         self.broadcast_fec0 = 'none'
-        self.broadcast_fec1 = 'v27'
+        self.broadcast_fec1 = 'v29p78'
         self.broadcast_ms = 'bpsk'
 
         # Soft decoding options
