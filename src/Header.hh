@@ -25,30 +25,30 @@ struct Header {
     /** @brief Next hop. */
     NodeId nexthop;
 
+    /** @brief Packet sequence number. */
+    Seq seq;
+
     /** @brief Packet flags. */
     struct {
         /** @brief Set if the packet is the first in a new connection */
-        uint16_t syn : 1;
+        uint8_t syn : 1;
 
         /** @brief Set if the packet is ACKing */
-        uint16_t ack : 1;
+        uint8_t ack : 1;
 
         /** @brief Set if this is a broadcast packet */
-        uint16_t broadcast : 1;
+        uint8_t broadcast : 1;
 
         /** @brief Set if the packet has data */
-        uint16_t has_data : 1;
+        uint8_t has_data : 1;
 
         /** @brief Set if the packet has control data */
-        uint16_t has_control : 1;
+        uint8_t has_control : 1;
 
         /** @brief Unused flags */
-        uint16_t unused : 11;
+        uint8_t unused : 3;
     } flags;
-
-    /** @brief Packet sequence number. */
-    Seq seq;
-};
+} __attribute__((packed));
 
 /** @brief Extended header that appears in radio payload. */
 struct ExtendedHeader {
