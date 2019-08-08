@@ -224,7 +224,6 @@ class Config(object):
         # packets during the rest of the run
         self.discovery_hello_interval = 1.0
         self.standard_hello_interval = 60.0
-        self.timestamp_delay = 100e-3
 
         # Clock synchronization
         self.clock_sync_interval = 10.0
@@ -617,7 +616,6 @@ class Radio(object):
         # Copy configuration settings to the C++ RadioConfig object
         for attr in ['verbose', 'debug',
                      'amc_short_per_nslots', 'amc_long_per_nslots',
-                     'timestamp_delay',
                      'mtu',
                      'arq_ack_delay', 'arq_retransmission_delay',
                      'verbose_packet_trace']:

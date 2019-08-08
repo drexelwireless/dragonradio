@@ -37,9 +37,6 @@ public:
     /** @brief Number of slots worth of packets we use to calculate long-term PER  */
     unsigned amc_long_per_nslots;
 
-    /** @brief Timestamp delay, in seconds */
-    double timestamp_delay;
-
     /** @brief Maximum Transmission Unit (bytes) */
     unsigned mtu;
 
