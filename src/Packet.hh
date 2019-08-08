@@ -122,36 +122,33 @@ struct Packet : public buffer<unsigned char>
         ControlMsg ctrl_;
     };
 
-    Packet() : buffer(), flags(0), seq(Seq::max()), internal_flags(0) {};
-    explicit Packet(size_t n) : buffer(n), flags(0), seq(Seq::max()), internal_flags(0) {};
-    Packet(unsigned char* data, size_t n) : buffer(data, n), flags(0), seq(Seq::max()), internal_flags(0) {}
+    Packet() = delete;
 
-    /** @brief Current hop */
-    /** If the packet originated in the network, this should be the current
-     * node.
-     */
-    NodeId curhop;
+    Packet(const Header &hdr_)
+      : buffer()
+      , hdr(hdr_)
+      , internal_flags({0})
+    {
+    }
 
-    /** @brief Next hop */
-    /** If the packet originated from the radio, this should be the current
-     * node.
-     */
-    NodeId nexthop;
+    explicit Packet(size_t n)
+      : buffer(n)
+      , hdr({0})
+      , internal_flags({0})
+    {
+        assert(n >= sizeof(ExtendedHeader));
+    }
 
-    /** @brief Packet flags. */
-    PacketFlags flags;
+    Packet(const Header &hdr_, unsigned char* data, size_t n)
+      : buffer(data, n)
+      , hdr(hdr_)
+      , internal_flags({0})
+    {
+        assert(n >= sizeof(ExtendedHeader));
+    }
 
-    /** @brief Sequence number */
-    Seq seq;
-
-    /** @brief Length of data portion of the packet */
-    uint16_t data_len;
-
-    /** @brief Source */
-    NodeId src;
-
-    /** @brief Destination */
-    NodeId dest;
+    /** @brief Header */
+    Header hdr;
 
     /** @brief Flow UID */
     std::optional<FlowUID> flow_uid;
@@ -159,83 +156,39 @@ struct Packet : public buffer<unsigned char>
     /** @brief Packet timestamp */
     MonoClock::time_point timestamp;
 
-    /** @brief Set a flag */
-    void setFlag(unsigned f)
-    {
-        flags |= (1 << f);
-    }
+    /** @brief Internal flags */
+    struct {
+        /** @brief Set if the packet had invalid header */
+        uint8_t invalid_header : 1;
 
-    /** @brief Clear a flag */
-    void clearFlag(unsigned f)
-    {
-        flags &= ~(1 << f);
-    }
+        /** @brief Set if the packet had invalid payload */
+        uint8_t invalid_payload : 1;
 
-    /** @brief Test if a flag is set */
-    bool isFlagSet(unsigned f) const
-    {
-        return flags & (1 << f);
-    }
+        /** @brief Set if the packet is a retransmission */
+        uint8_t retransmission : 1;
 
-    /** @brief Internal flags. */
-    InternalFlags internal_flags;
+        /** @brief Set if the packet has an assigned sequence number */
+        uint8_t has_seq : 1;
 
-    /** @brief Set a flag */
-    void setInternalFlag(unsigned f)
-    {
-        internal_flags |= (1 << f);
-    }
+        /** @brief Set if the packet contains a selective ACK */
+        uint8_t has_selective_ack : 1;
 
-    /** @brief Clear a flag */
-    void clearInternalFlag(unsigned f)
-    {
-        internal_flags &= ~(1 << f);
-    }
-
-    /** @brief Test if a flag is set */
-    bool isInternalFlagSet(unsigned f) const
-    {
-        return internal_flags & (1 << f);
-    }
+        /** @brief Set if this is a timestamp packet */
+        uint8_t is_timestamp : 1;
+    } internal_flags;
 
     /** @brief Get extended header */
-    ExtendedHeader &getExtendedHeader(void)
+    ExtendedHeader &ehdr(void)
     {
+        assert(size() >= sizeof(ExtendedHeader));
         return *reinterpret_cast<ExtendedHeader*>(data());
     }
 
-    /** @brief Copy internal values to a PHY header */
-    void toHeader(Header &hdr)
+    /** @brief Get extended header */
+    const ExtendedHeader &ehdr(void) const
     {
-        ExtendedHeader &ehdr = getExtendedHeader();
-
-        hdr.curhop = curhop;
-        hdr.nexthop = nexthop;
-        hdr.flags = flags;
-        hdr.seq = seq;
-        hdr.data_len = data_len;
-
-        ehdr.src = src;
-        ehdr.dest = dest;
-    }
-
-    /** @brief Copy values from PHY header to packet */
-    void fromHeader(Header &hdr)
-    {
-        curhop = hdr.curhop;
-        nexthop = hdr.nexthop;
-        flags = hdr.flags;
-        seq = hdr.seq;
-        data_len = std::min(hdr.data_len, static_cast<uint16_t>(sizeof(ExtendedHeader) + size()));
-    }
-
-    /** @brief Copy values from PHY header to packet */
-    void fromExtendedHeader(void)
-    {
-        ExtendedHeader &ehdr = getExtendedHeader();
-
-        src = ehdr.src;
-        dest = ehdr.dest;
+        assert(size() >= sizeof(ExtendedHeader));
+        return *reinterpret_cast<const ExtendedHeader*>(data());
     }
 
     /** @brief Get length of control info */
@@ -403,8 +356,14 @@ struct Packet : public buffer<unsigned char>
 /** @brief A packet received from the network. */
 struct NetPacket : public Packet
 {
-    NetPacket() : tx_params(nullptr), g(1.0) {};
-    explicit NetPacket(size_t n) : Packet(n), tx_params(nullptr), g(1.0) {};
+    NetPacket() = delete;
+
+    explicit NetPacket(size_t n)
+      : Packet(n)
+      , tx_params(nullptr)
+      , g(1.0)
+    {
+    }
 
     /** @brief Packet delivery deadline */
     std::optional<MonoClock::time_point> deadline;
@@ -424,15 +383,24 @@ struct NetPacket : public Packet
     /** @brief Return true if this packet should be dropped, false otherwise */
     bool shouldDrop(const MonoClock::time_point &now)
     {
-        return !isFlagSet(kSYN) && deadlinePassed(now);
+        return !hdr.flags.syn && deadlinePassed(now);
     }
 };
 
 /** @brief A packet received from the radio. */
 struct RadioPacket : public Packet
 {
-    RadioPacket() : Packet() {};
-    RadioPacket(unsigned char* data, size_t n) : Packet(data, n) {}
+    RadioPacket() = delete;
+
+    RadioPacket(const Header &hdr)
+      : Packet(hdr)
+    {
+    }
+
+    RadioPacket(const Header &hdr, unsigned char* data, size_t n)
+      : Packet(hdr, data, n)
+    {
+    }
 
     /** @brief Error vector magnitude [dB] */
     float evm;

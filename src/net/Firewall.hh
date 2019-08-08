@@ -96,11 +96,11 @@ protected:
             return true;
 
         // Always pass SYN packets
-        if (pkt->isFlagSet(kSYN))
+        if (pkt->hdr.flags.syn)
             return true;
 
         // Then check for a broadcast
-        if (pkt->isFlagSet(kBroadcast) && allow_broadcasts_)
+        if (pkt->hdr.flags.broadcast && allow_broadcasts_)
             return true;
 
         // Then look at the port
@@ -119,8 +119,8 @@ protected:
                     return true;
                 else {
                     logEvent("NET: firewall dropping packet: curhop=%u; nexthop=%u; flow=%u",
-                        pkt->curhop,
-                        pkt->nexthop,
+                        pkt->hdr.curhop,
+                        pkt->hdr.nexthop,
                         ntohs(udph->uh_dport));
                     return false;
                 }
@@ -135,8 +135,8 @@ protected:
                     return true;
                 else {
                     logEvent("NET: firewall dropping packet: curhop=%u; nexthop=%u; flow=%u",
-                        pkt->curhop,
-                        pkt->nexthop,
+                        pkt->hdr.curhop,
+                        pkt->hdr.nexthop,
                         ntohs(tcph->th_dport));
                     return false;
                 }

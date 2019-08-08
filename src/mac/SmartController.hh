@@ -61,7 +61,7 @@ struct SendWindow {
          */
         inline bool mayDrop(const std::optional<size_t> &max_retransmissions)
         {
-            return !pkt->isFlagSet(kSYN);
+            return !pkt->hdr.flags.syn;
         }
 
         /** @brief Return true if we SHOULD drop this window entry. */
@@ -74,7 +74,7 @@ struct SendWindow {
          */
         inline bool shouldDrop(const std::optional<size_t> &max_retransmissions)
         {
-            return !pkt->isFlagSet(kSYN) &&
+            return !pkt->hdr.flags.syn &&
                  (  (max_retransmissions && nretrans >= *max_retransmissions)
                  || pkt->deadlinePassed(MonoClock::now()));
         }
@@ -103,9 +103,9 @@ struct SendWindow {
     SendWindow(Node &n, SmartController &controller, Seq::uint_type maxwin)
       : node(n)
       , controller(controller)
-      , seq(0)
-      , unack(0)
-      , max(0)
+      , seq({0})
+      , unack({0})
+      , max({0})
       , new_window(true)
       , locally_updated(false)
       , win(1)

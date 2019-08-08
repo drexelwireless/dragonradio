@@ -10,7 +10,6 @@ struct Seq {
     using int_type = int16_t;
 
     Seq() = default;
-    Seq(uint_type seq) : seq_(seq) {};
 
     Seq(const Seq&) = default;
     Seq(Seq&&) = default;
@@ -34,13 +33,13 @@ struct Seq {
       { return static_cast<int_type>(seq_ - other.seq_) >= 0; }
 
     Seq operator ++() { seq_++; return *this; }
-    Seq operator ++(int) { seq_++; return seq_ - 1; }
+    Seq operator ++(int) { seq_++; return Seq { static_cast<uint_type>(seq_ - 1) }; }
 
     Seq operator --() { seq_--; return *this; }
-    Seq operator --(int) { seq_--; return seq_ + 1; }
+    Seq operator --(int) { seq_--; return Seq { static_cast<uint_type>(seq_ + 1) }; }
 
-    Seq operator +(int i) { return seq_ + i; }
-    Seq operator -(int i) { return seq_ - i; }
+    Seq operator +(int i) { return Seq { static_cast<uint_type>(seq_ + i) }; }
+    Seq operator -(int i) { return Seq { static_cast<uint_type>(seq_ - i) }; }
 
     operator uint_type() const { return seq_; }
 

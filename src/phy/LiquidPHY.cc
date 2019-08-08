@@ -10,13 +10,6 @@
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;
 
-union PHYHeader {
-    Header h;
-    // FLEXFRAME_H_USER in liquid.internal.h. This is the largest header of any
-    // of the liquid PHY implementations.
-    unsigned char bytes[14];
-};
-
 LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
                      NodeId node_id,
                      const MCS &header_mcs,
@@ -47,17 +40,11 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
         reconfigure();
     }
 
-    PHYHeader header;
-
-    memset(&header, 0, sizeof(header));
-
-    pkt->toHeader(header.h);
-
     pkt->resize(std::max((size_t) pkt->size(), liquid_phy_.min_packet_size_));
 
     assert(pkt->tx_params);
     setPayloadMCS(pkt->tx_params->mcs);
-    assemble(header.bytes, pkt->data(), pkt->size());
+    assemble((void*) &pkt->hdr, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples
     auto iqbuf = std::make_shared<IQBuf>(kInitialModbufSize);
@@ -146,9 +133,9 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
     if (header_test_) {
         if (   header_valid_
-            && h->curhop != phy_.getNodeId()
-            && (h->flags & (1 << kBroadcast) ||
-                h->nexthop == phy_.getNodeId() ||
+            && (h->curhop != phy_.getNodeId())
+            && (h->flags.broadcast ||
+                (h->nexthop == phy_.getNodeId()) ||
                 (collector && collector->active())))
             return 1;
         else {
@@ -176,25 +163,20 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
         return 0;
     } else if (!payload_valid_) {
-        pkt = std::make_unique<RadioPacket>();
+        pkt = std::make_unique<RadioPacket>(*h);
 
-        pkt->setInternalFlag(kInvalidPayload);
-        pkt->fromHeader(*h);
+        pkt->internal_flags.invalid_payload = 1;
 
         if (h->nexthop == phy_.getNodeId()) {
             if (rc.verbose && !rc.debug)
                 fprintf(stderr, "PAYLOAD INVALID\n");
             logEvent("PHY: invalid payload: curhop=%u; nexthop=%u; seq=%u",
-                pkt->curhop,
-                pkt->nexthop,
-                (unsigned) pkt->seq);
+                pkt->hdr.curhop,
+                pkt->hdr.nexthop,
+                (unsigned) pkt->hdr.seq);
         }
-    } else {
-        pkt = std::make_unique<RadioPacket>(payload_, payload_len_);
-
-        pkt->fromHeader(*h);
-        pkt->fromExtendedHeader();
-    }
+    } else
+        pkt = std::make_unique<RadioPacket>(*h, payload_, payload_len_);
 
     pkt->evm = stats_.evm;
     pkt->rssi = stats_.rssi;
@@ -306,12 +288,10 @@ size_t LiquidPHY::getModulatedSize(const TXParams &params, size_t n)
     mod->setHeaderMCS(header_mcs_);
     mod->setPayloadMCS(params.mcs);
 
-    PHYHeader                  header;
-    std::vector<unsigned char> body(n);
+    Header                     hdr = {0};
+    std::vector<unsigned char> body(sizeof(ExtendedHeader) + n);
 
-    memset(&header, 0, sizeof(header));
-
-    mod->assemble(header.bytes, body.data(), body.size());
+    mod->assemble(&hdr, body.data(), body.size());
 
     return mod->assembledSize();
 }

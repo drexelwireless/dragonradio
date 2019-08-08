@@ -15,6 +15,7 @@ public:
           : LiquidPHY::Modulator(phy)
           , Liquid::FlexFrameModulator()
         {
+            setHeaderMCS(phy.header_mcs_);
         }
 
         virtual ~Modulator() = default;
@@ -30,6 +31,7 @@ public:
           , LiquidPHY::Demodulator(phy)
           , Liquid::FlexFrameDemodulator(phy.soft_header_, phy.soft_payload_)
         {
+            setHeaderMCS(phy.header_mcs_);
         }
 
         virtual ~Demodulator() = default;

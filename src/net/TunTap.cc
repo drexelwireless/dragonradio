@@ -154,32 +154,32 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
 {
     ssize_t nwrite;
 
-    if ((nwrite = write(fd_, pkt->data() + sizeof(ExtendedHeader), pkt->data_len)) < 0) {
+    if ((nwrite = write(fd_, pkt->data() + sizeof(ExtendedHeader), pkt->ehdr().data_len)) < 0) {
         logEvent("NET: tun/tap write failure: errno=%s (%d); nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
             strerror(errno),
             errno,
             nwrite,
             (unsigned) pkt->size(),
-            (unsigned) pkt->seq,
-            (unsigned) pkt->data_len);
+            (unsigned) pkt->hdr.seq,
+            (unsigned) pkt->ehdr().data_len);
         return;
     }
 
-    if ((size_t) nwrite != pkt->data_len) {
+    if ((size_t) nwrite != pkt->ehdr().data_len) {
         logEvent("NET: tun/tap incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
             nwrite,
             (unsigned) pkt->size(),
-            (unsigned) pkt->seq,
-            (unsigned) pkt->data_len);
+            (unsigned) pkt->hdr.seq,
+            (unsigned) pkt->ehdr().data_len);
         return;
     }
 
     if (rc.verbose_packet_trace)
         printf("Wrote %lu bytes (seq# %u) from %u to %u (evm = %.2f; rssi = %.2f)\n",
             (unsigned long) nwrite,
-            (unsigned int) pkt->seq,
-            (unsigned int) pkt->src,
-            (unsigned int) pkt->dest,
+            (unsigned int) pkt->hdr.seq,
+            (unsigned int) pkt->ehdr().src,
+            (unsigned int) pkt->ehdr().dest,
             pkt->evm,
             pkt->rssi);
 }
@@ -217,7 +217,8 @@ void TunTap::worker(void)
             exit(1);
         }
 
-        pkt->data_len = nread;
+        pkt->hdr.flags.has_data = 1;
+        pkt->ehdr().data_len = nread;
         pkt->resize(sizeof(ExtendedHeader) + nread);
         pkt->timestamp = MonoClock::now();
         source.push(std::move(pkt));

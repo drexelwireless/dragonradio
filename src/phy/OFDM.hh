@@ -19,6 +19,7 @@ public:
                                   phy.p_)
           , myphy_(phy)
         {
+            setHeaderMCS(phy.header_mcs_);
         }
 
         virtual ~Modulator() = default;
@@ -44,6 +45,7 @@ public:
                                     phy.p_)
           , myphy_(phy)
         {
+            setHeaderMCS(phy.header_mcs_);
         }
 
         virtual ~Demodulator() = default;

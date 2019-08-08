@@ -21,13 +21,9 @@ py::array_t<std::complex<float>> modulate(Liquid::Modulator &mod,
                                           const Header &hdr,
                                           py::buffer payload)
 {
-    PHYHeader header;
     auto buf = payload.request();
 
-    memset(&header, 0, sizeof(header));
-    header.h = hdr;
-
-    mod.assemble(header.bytes, buf.ptr, buf.size);
+    mod.assemble((void*) &hdr, buf.ptr, buf.size);
 
     py::array_t<std::complex<float>> iqarr(kInitialModbufSize);
     auto                             iqbuf = iqarr.request();

@@ -114,21 +114,20 @@ get_packet:
         return false;
 
     // Handle broadcast packets
-    if (pkt->isFlagSet(kBroadcast)) {
+    if (pkt->hdr.flags.broadcast) {
         applyTXParams(*pkt, &broadcast_tx_params_, broadcast_gain.getLinearGain());
 
         return true;
     }
 
     // Get node ID of destination
-    NodeId nexthop = pkt->nexthop;
+    NodeId nexthop = pkt->hdr.nexthop;
 
     // If we have received a packet from the destination, add an ACK.
     RecvWindow *recvwptr = maybeGetReceiveWindow(nexthop);
 
     if (recvwptr) {
         RecvWindow                      &recvw = *recvwptr;
-        ExtendedHeader                  &ehdr = pkt->getExtendedHeader();
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
         // The packet we are ACK'ing had better be no more than 1 more than the
@@ -138,11 +137,11 @@ get_packet:
                 (unsigned) recvw.ack,
                 (unsigned) recvw.max);
 
-        pkt->setFlag(kACK);
-        ehdr.ack = recvw.ack;
+        pkt->hdr.flags.ack = 1;
+        pkt->ehdr().ack = recvw.ack;
 
 #if DEBUG
-        if (pkt->data_len == 0)
+        if (pkt->ehdr().data_len == 0)
             dprintf("ARQ: send delayed ack: node=%u; ack=%u",
                 (unsigned) nexthop,
                 (unsigned) recvw.ack);
@@ -155,13 +154,13 @@ get_packet:
         // Append selective ACK if needed
         if (recvw.need_selective_ack)
             appendCtrlACK(*pkt, recvw);
-    } else if (pkt->data_len != 0)
+    } else if (pkt->ehdr().data_len != 0)
         dprintf("ARQ: send: node=%u; seq=%u",
             (unsigned) nexthop,
-            (unsigned) pkt->seq);
+            (unsigned) pkt->hdr.seq);
 
     // Update our send window if this packet has data
-    if (pkt->data_len != 0) {
+    if (pkt->ehdr().data_len != 0) {
         SendWindow                      &sendw = getSendWindow(nexthop);
         Node                            &dest = (*net_)[nexthop];
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
@@ -170,17 +169,17 @@ get_packet:
         // but before we get to this point. For example, an ACK could be
         // received in between the time we release the lock on the receive
         // window and this point. If that happens, we get another packet
-        if (pkt->seq < sendw.unack) {
+        if (pkt->hdr.seq < sendw.unack) {
             pkt.reset();
             goto get_packet;
         }
 
         // This checks that the sequence number of the packet we are sending is
         // in our send window.
-        if (pkt->seq < sendw.unack || pkt->seq >= sendw.unack + sendw.win) {
+        if (pkt->hdr.seq < sendw.unack || pkt->hdr.seq >= sendw.unack + sendw.win) {
             logEvent("ARQ: INVARIANT VIOLATED: asked to send packet outside window: nexthop=%u; seq=%u; unack=%u; win=%u",
                 (unsigned) nexthop,
-                (unsigned) pkt->seq,
+                (unsigned) pkt->hdr.seq,
                 (unsigned) sendw.unack,
                 (unsigned) sendw.win);
             pkt.reset();
@@ -188,20 +187,20 @@ get_packet:
         }
 
         // Save the packet in our send window.
-        sendw[pkt->seq] = pkt;
-        sendw[pkt->seq].timestamp = Clock::now();
-        sendw[pkt->seq].mcsidx = sendw.mcsidx;
+        sendw[pkt->hdr.seq] = pkt;
+        sendw[pkt->hdr.seq].timestamp = Clock::now();
+        sendw[pkt->hdr.seq].mcsidx = sendw.mcsidx;
 
         // If this packet is a retransmission, increment the retransmission
         // count, otherwise set it to 0.
-        if (pkt->isInternalFlagSet(kRetransmission))
-            ++sendw[pkt->seq].nretrans;
+        if (pkt->internal_flags.retransmission)
+            ++sendw[pkt->hdr.seq].nretrans;
         else
-            sendw[pkt->seq].nretrans = 0;
+            sendw[pkt->hdr.seq].nretrans = 0;
 
         // Update send window metrics
-        if (pkt->seq > sendw.max)
-            sendw.max = pkt->seq;
+        if (pkt->hdr.seq > sendw.max)
+            sendw.max = pkt->hdr.seq;
 
         // If we have locally updated our send window, tell the receiver.
         if (sendw.locally_updated) {
@@ -227,64 +226,61 @@ get_packet:
 void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 {
     // Skip packets with invalid header
-    if (pkt->isInternalFlagSet(kInvalidHeader))
+    if (pkt->internal_flags.invalid_header)
         return;
 
     // Skip packets that aren't for us
-    if (!pkt->isFlagSet(kBroadcast) && pkt->nexthop != net_->getMyNodeId())
+    if (!pkt->hdr.flags.broadcast && pkt->hdr.nexthop != net_->getMyNodeId())
         return;
 
     // Get a reference to the sending node. This will add a new node to the
     // network if it doesn't already exist.
-    Node &node = (*net_)[pkt->curhop];
+    Node &node = (*net_)[pkt->hdr.curhop];
 
     // Get node ID of source
-    NodeId prevhop = pkt->curhop;
+    NodeId prevhop = pkt->hdr.curhop;
 
     // Immediately NAK data packets with a bad payload if they contain data.
     // We can't do anything else with the packet.
-    if (pkt->isInternalFlagSet(kInvalidPayload)) {
-        if (pkt->data_len != 0) {
-            RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->isFlagSet(kSYN));
+    if (pkt->internal_flags.invalid_payload) {
+        if (pkt->hdr.flags.has_data) {
+            RecvWindow                        &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
             //std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
             // Update the max seq number we've received
-            if (pkt->seq > recvw.max) {
-                recvw.max = pkt->seq;
+            if (pkt->hdr.seq > recvw.max) {
+                recvw.max = pkt->hdr.seq;
                 recvw.max_timestamp = pkt->timestamp;
             }
 
             // Send a NAK
-            nak(pkt->curhop, pkt->seq);
+            nak(pkt->hdr.curhop, pkt->hdr.seq);
         }
 
         return;
     }
 
     // Process control info
-    if (pkt->isFlagSet(kControl)) {
+    if (pkt->hdr.flags.has_control) {
         handleCtrlHello(*pkt, node);
         handleCtrlTimestampEchos(*pkt, node);
     }
 
     // Handle broadcast packets
-    if (pkt->isFlagSet(kBroadcast)) {
+    if (pkt->hdr.flags.broadcast) {
         // Resize the packet to truncate non-data bytes
-        pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
+        pkt->resize(sizeof(ExtendedHeader) + pkt->ehdr().data_len);
 
         // Send the packet along if it has data
-        if (pkt->data_len != 0)
+        if (pkt->ehdr().data_len != 0)
             radio_out.push(std::move(pkt));
 
         return;
     }
 
     // If this packet was not destined for us, we are done
-    if (pkt->nexthop != net_->getMyNodeId())
+    if (pkt->hdr.nexthop != net_->getMyNodeId())
         return;
-
-    // Get the extended header
-    ExtendedHeader &ehdr = pkt->getExtendedHeader();
 
     // Handle ACK/NAK
     SendWindow *sendwptr = maybeGetSendWindow(prevhop);
@@ -305,21 +301,21 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             tfeedback = std::max(tfeedback, sendw[*nak].timestamp + 0.001);
 
         // Handle ACK
-        if (pkt->isFlagSet(kACK)) {
-            if (ehdr.ack > sendw.unack) {
+        if (pkt->hdr.flags.ack) {
+            if (pkt->ehdr().ack > sendw.unack) {
                 dprintf("ARQ: ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
                     (unsigned) sendw.unack,
-                    (unsigned) ehdr.ack);
+                    (unsigned) pkt->ehdr().ack);
 
                 // Don't assert this because the sender could crash us with bad
                 // data! We protected against this case in the following loop.
-                //assert(ehdr.ack <= sendw.max + 1);
+                //assert(pkt->ehdr().ack <= sendw.max + 1);
 
                 // Move the send window along. It's possible the sender sends an
                 // ACK for something we haven't sent, so we must guard against
                 // that here as well
-                for (; sendw.unack < ehdr.ack && sendw.unack <= sendw.max; ++sendw.unack) {
+                for (; sendw.unack < pkt->ehdr().ack && sendw.unack <= sendw.max; ++sendw.unack) {
                     // Handle the ACK
                     handleACK(sendw, sendw.unack);
 
@@ -372,27 +368,27 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
     // If this packet doesn't contain any data, we are done
-    if (pkt->data_len == 0) {
+    if (pkt->ehdr().data_len == 0) {
         dprintf("ARQ: recv: node=%u; ack=%u",
             (unsigned) prevhop,
-            (unsigned) ehdr.ack);
+            (unsigned) pkt->ehdr().ack);
         return;
     }
 
 #if DEBUG
-    if (pkt->isFlagSet(kACK))
+    if (hdr.flags.ack)
         dprintf("ARQ: recv: node=%u; seq=%u; ack=%u",
             (unsigned) prevhop,
-            (unsigned) pkt->seq,
-            (unsigned) ehdr.ack);
+            (unsigned) pkt->hdr.seq,
+            (unsigned) pkt->ehdr().ack);
     else
         dprintf("ARQ: recv: node=%u; seq=%u",
             (unsigned) prevhop,
-            (unsigned) pkt->seq);
+            (unsigned) pkt->hdr.seq);
 #endif
 
     // Fill our receive window
-    RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->seq, pkt->isFlagSet(kSYN));
+    RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
     std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
     // If this is a SYN packet, ACK immediately to open up the window.
@@ -400,7 +396,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // Otherwise, start the ACK timer if it is not already running. Even if this
     // is a duplicate packet, we need to send an ACK because the duplicate may
     // be a retransmission, i.e., our previous ACK could have been lost.
-    if (pkt->isFlagSet(kSYN))
+    if (pkt->hdr.flags.syn)
         ack(recvw);
     else
         startSACKTimer(recvw);
@@ -409,26 +405,26 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     handleSetUnack(*pkt, recvw);
 
     // Drop this packet if it is before our receive window
-    if (pkt->seq < recvw.ack) {
+    if (pkt->hdr.seq < recvw.ack) {
         dprintf("ARQ: recv OUTSIDE WINDOW (DUP): node=%u; seq=%u",
             (unsigned) prevhop,
-            (unsigned) pkt->seq);
+            (unsigned) pkt->hdr.seq);
         return;
     }
 
     // If the packet is after our receive window, we need to advance the receive
     // window.
-    if (pkt->seq >= recvw.ack + recvw.win) {
+    if (pkt->hdr.seq >= recvw.ack + recvw.win) {
         logEvent("ARQ: recv OUTSIDE WINDOW (ADVANCE): node=%u; seq=%u",
             (unsigned) prevhop,
-            (unsigned) pkt->seq);
+            (unsigned) pkt->hdr.seq);
 
-        // We want to slide the window forward so pkt->seq is the new max
+        // We want to slide the window forward so pkt->hdr.seq is the new max
         // packet. We therefore need to "forget" all packets in our current
-        // window with sequence numbers less than pkt->seq - recvw.win. It's
+        // window with sequence numbers less than pkt->hdr.seq - recvw.win. It's
         // possible this number is greater than our max received sequence
         // number, so we must account for that as well!
-        Seq new_ack = pkt->seq + 1 - recvw.win;
+        Seq new_ack = pkt->hdr.seq + 1 - recvw.win;
         Seq forget = new_ack > recvw.max ? recvw.max + 1 : new_ack;
 
         // Go ahead and deliver packets that will be left outside our window.
@@ -444,36 +440,36 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         }
 
         recvw.ack = new_ack;
-    } else if (recvw[pkt->seq].received) {
+    } else if (recvw[pkt->hdr.seq].received) {
         // Drop this packet if we have already received it
         dprintf("ARQ: recv DUP: node=%u; seq=%u",
             (unsigned) prevhop,
-            (unsigned) pkt->seq);
+            (unsigned) pkt->hdr.seq);
         return;
     }
 
     // Update the max seq number we've received
-    if (pkt->seq > recvw.max) {
-        recvw.max = pkt->seq;
+    if (pkt->hdr.seq > recvw.max) {
+        recvw.max = pkt->hdr.seq;
         recvw.max_timestamp = pkt->timestamp;
     }
 
     // Resize the packet to truncate non-data bytes
-    pkt->resize(sizeof(ExtendedHeader) + pkt->data_len);
+    pkt->resize(sizeof(ExtendedHeader) + pkt->ehdr().data_len);
 
     // If this is the next packet we expected, send it now and update the
     // receive window
-    if (pkt->seq == recvw.ack) {
+    if (pkt->hdr.seq == recvw.ack) {
         recvw.ack++;
         radio_out.push(std::move(pkt));
     } else if (!enforce_ordering_ && !pkt->isTCP()) {
         // If this is not a TCP packet, insert it into our receive window, but
         // also go ahead and send it.
         radio_out.push(std::move(pkt));
-        recvw[pkt->seq].alreadyDelivered();
+        recvw[pkt->hdr.seq].alreadyDelivered();
     } else {
         // Insert the packet into our receive window
-        recvw[pkt->seq] = std::move(pkt);
+        recvw[pkt->hdr.seq] = std::move(pkt);
     }
 
     // Now drain the receive window until we reach a hole
@@ -498,17 +494,17 @@ void SmartController::missed(std::shared_ptr<NetPacket> &&pkt)
 
 void SmartController::transmitted(NetPacket &pkt)
 {
-    if (!pkt.isFlagSet(kBroadcast) && pkt.data_len != 0) {
-        SendWindow                      &sendw = getSendWindow(pkt.nexthop);
+    if (!pkt.hdr.flags.broadcast && pkt.ehdr().data_len != 0) {
+        SendWindow                      &sendw = getSendWindow(pkt.hdr.nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
         // Start the retransmit timer if it is not already running.
-        startRetransmissionTimer(sendw[pkt.seq]);
+        startRetransmissionTimer(sendw[pkt.hdr.seq]);
     }
 
     // Cancel the selective ACK timer when we actually have sent a selective ACK
-    if (pkt.isInternalFlagSet(kHasSelectiveACK)) {
-        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt.nexthop);
+    if (pkt.internal_flags.has_selective_ack) {
+        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt.hdr.nexthop);
         std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
         timer_queue_.cancel(recvw);
@@ -532,7 +528,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 
         logEvent("AMC: txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
             (unsigned) sendw.node.id,
-            (unsigned) entry.pkt->seq,
+            (unsigned) entry.pkt->hdr.seq,
             (unsigned) entry.mcsidx,
             sendw.short_per.getValue());
 
@@ -558,13 +554,13 @@ void SmartController::ack(RecvWindow &recvw)
     // queue.
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
-    pkt->curhop = net_->getMyNodeId();
-    pkt->nexthop = recvw.node.id;
-    pkt->flags = 0;
-    pkt->seq = 0;
-    pkt->data_len = 0;
-    pkt->src = net_->getMyNodeId();
-    pkt->dest = recvw.node.id;
+    pkt->hdr.curhop = net_->getMyNodeId();
+    pkt->hdr.nexthop = recvw.node.id;
+    pkt->hdr.flags = {0};
+    pkt->hdr.seq = {0};
+    pkt->ehdr().data_len = 0;
+    pkt->ehdr().src = net_->getMyNodeId();
+    pkt->ehdr().dest = recvw.node.id;
 
     // Append selective ACK control messages
     appendCtrlACK(*pkt, recvw);
@@ -614,13 +610,13 @@ void SmartController::nak(NodeId node_id, Seq seq)
     // queue.
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
-    pkt->curhop = net_->getMyNodeId();
-    pkt->nexthop = node_id;
-    pkt->flags = 0;
-    pkt->seq = 0;
-    pkt->data_len = 0;
-    pkt->src = net_->getMyNodeId();
-    pkt->dest = node_id;
+    pkt->hdr.curhop = net_->getMyNodeId();
+    pkt->hdr.nexthop = node_id;
+    pkt->hdr.flags = {0};
+    pkt->hdr.seq = {0};
+    pkt->ehdr().data_len = 0;
+    pkt->ehdr().src = net_->getMyNodeId();
+    pkt->ehdr().dest = node_id;
 
     // Append NAK control message
     pkt->appendNak(seq);
@@ -643,15 +639,15 @@ void SmartController::broadcastHello(void)
 
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
-    pkt->curhop = net_->getMyNodeId();
-    pkt->nexthop = 0;
-    pkt->flags = 0;
-    pkt->seq = 0;
-    pkt->data_len = 0;
-    pkt->src = net_->getMyNodeId();
-    pkt->dest = 0;
+    pkt->hdr.curhop = net_->getMyNodeId();
+    pkt->hdr.nexthop = 0;
+    pkt->hdr.flags = {0};
+    pkt->hdr.seq = {0};
+    pkt->ehdr().data_len = 0;
+    pkt->ehdr().src = net_->getMyNodeId();
+    pkt->ehdr().dest = 0;
 
-    pkt->setFlag(kBroadcast);
+    pkt->hdr.flags.broadcast = 1;
 
     // Append hello message
     ControlMsg::Hello msg;
@@ -685,7 +681,7 @@ void SmartController::broadcastHello(void)
     if (netq_) {
         pkt->tx_params = &broadcast_tx_params_;
         pkt->g = broadcast_tx_params_.getSoftTXGain();
-        pkt->setInternalFlag(kIsTimestamp);
+        pkt->internal_flags.is_timestamp = 1;
         netq_->push_hi(std::move(pkt));
     }
 }
@@ -735,8 +731,8 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     }
 
     logEvent("ARQ: retransmit: node=%u; seq=%u; mcsidx=%u",
-        (unsigned) entry.pkt->nexthop,
-        (unsigned) entry.pkt->seq,
+        (unsigned) entry.pkt->hdr.nexthop,
+        (unsigned) entry.pkt->hdr.seq,
         (unsigned) entry.mcsidx);
 
     // The retransmit timer will be restarted when the packet is actually sent,
@@ -764,7 +760,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
         pkt->clearControl();
 
         // Mark the packet as a retransmission
-        pkt->setInternalFlag(kRetransmission);
+        pkt->internal_flags.retransmission = 1;
 
         // Re-queue the packet. The ACK and MCS will be set properly upon
         // retransmission.
@@ -785,7 +781,7 @@ void SmartController::drop(SendWindow::Entry &entry)
     // Drop the packet
     logEvent("ARQ: dropping packet: node=%u; seq=%u",
         (unsigned) sendw.node.id,
-        (unsigned) entry.pkt->seq);
+        (unsigned) entry.pkt->hdr.seq);
 
     // Cancel retransmission timer
     timer_queue_.cancel(entry);
@@ -826,7 +822,7 @@ void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
     if (entry.pkt && !timer_queue_.running(entry)) {
         dprintf("ARQ: starting retransmission timer: node=%u; seq=%u",
             (unsigned) entry.sendw.node.id,
-            (unsigned) entry.pkt->seq);
+            (unsigned) entry.pkt->hdr.seq);
         timer_queue_.run_in(entry, entry.sendw.node.retransmission_delay);
     }
 }
@@ -853,10 +849,10 @@ void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
                 node.is_gateway = it->hello.is_gateway;
 
                 dprintf("ARQ: HELLO: node=%u",
-                    (unsigned) pkt.curhop);
+                    (unsigned) pkt.hdr.curhop);
 
                 logEvent("ARQ: Discovered neighbor: node=%u; gateway=%s",
-                    (unsigned) pkt.curhop,
+                    (unsigned) pkt.hdr.curhop,
                     node.is_gateway ? "true" : "false");
             }
             break;
@@ -876,7 +872,7 @@ void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
                 }
 
                 logEvent("TIMESYNC: Timestamp: node=%u; t_sent=%f; t_recv=%f",
-                    (unsigned) pkt.curhop,
+                    (unsigned) pkt.hdr.curhop,
                     (double) t_sent.get_real_secs(),
                     (double) t_recv.get_real_secs());
             }
@@ -912,7 +908,7 @@ void SmartController::handleCtrlTimestampEchos(RadioPacket &pkt, Node &node)
                         }
 
                         logEvent("TIMESYNC: Timestamp echo: node=%u; t_sent=%f; t_recv=%f",
-                            (unsigned) pkt.curhop,
+                            (unsigned) pkt.hdr.curhop,
                             (double) t_sent.get_real_secs(),
                             (double) t_recv.get_real_secs());
                     }
@@ -1018,7 +1014,7 @@ void SmartController::appendCtrlACK(NetPacket &pkt, RecvWindow &recvw)
     }
 
     // Mark this packet as containing a selective ACK
-    pkt.setInternalFlag(kHasSelectiveACK);
+    pkt.internal_flags.has_selective_ack = 1;
 
     // We no longer need a selective ACK
     recvw.need_selective_ack = false;
@@ -1375,35 +1371,35 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         assert(pkt);
 
         // We can always send a broadcast packet
-        if (pkt->isFlagSet(kBroadcast))
+        if (pkt->hdr.flags.broadcast)
             return true;
 
-        SendWindow                      &sendw = getSendWindow(pkt->nexthop);
+        SendWindow                      &sendw = getSendWindow(pkt->hdr.nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
         // If packet has no payload, we can always send it---it has control
         // information.
-        if (pkt->data_len == 0)
+        if (pkt->ehdr().data_len == 0)
             return true;
 
         // Set the packet sequence number if it doesn't yet have one.
-        if (!pkt->isInternalFlagSet(kHasSeq)) {
+        if (!pkt->internal_flags.has_seq) {
             // If we can't fit this packet in our window, move the window along
             // by dropping the oldest packet.
             if (   sendw.seq >= sendw.unack + sendw.win
                 && sendw[sendw.unack].mayDrop(max_retransmissions_)) {
                 logEvent("ARQ: MOVING WINDOW ALONG: node=%u",
-                    (unsigned) pkt->nexthop);
+                    (unsigned) pkt->hdr.nexthop);
                 drop(sendw[sendw.unack]);
             }
 
-            pkt->seq = sendw.seq++;
-            pkt->setInternalFlag(kHasSeq);
+            pkt->hdr.seq = sendw.seq++;
+            pkt->internal_flags.has_seq = 1;
 
             // If this is the first packet we are sending to the destination,
             // set its SYN flag
             if (sendw.new_window) {
-                pkt->setFlag(kSYN);
+                pkt->hdr.flags.syn = 1;
                 sendw.new_window = false;
             }
 
@@ -1412,23 +1408,23 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // ALWAYS close it since we're waiting for the ACK to our SYN!
             if (   sendw.seq >= sendw.unack + sendw.win
                 && ((sendw[sendw.unack] && !sendw[sendw.unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
-                netq_->setSendWindowStatus(pkt->nexthop, false);
+                netq_->setSendWindowStatus(pkt->hdr.nexthop, false);
 
             return true;
         } else {
             // If this packet comes before our window, drop it. It could have
             // snuck in as a retransmission just before the send window moved
             // forward. Try again!
-            if (pkt->seq < sendw.unack) {
+            if (pkt->hdr.seq < sendw.unack) {
                 pkt.reset();
                 continue;
             }
 
             // Otherwise it had better be in our window becasue we added it back
             // when our window expanded due to an ACK!
-            if(pkt->seq >= sendw.unack + sendw.win) {
+            if(pkt->hdr.seq >= sendw.unack + sendw.win) {
                 logEvent("ARQ: INVARIANT VIOLATED: got packet outside window: seq=%u; unack=%u; win=%u",
-                    (unsigned) pkt->seq,
+                    (unsigned) pkt->hdr.seq,
                     (unsigned) sendw.unack,
                     (unsigned) sendw.win);
 
@@ -1441,7 +1437,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // packet with a sequence number in the controller to ensure the
             // send window is properly adjusted.
             if (pkt->shouldDrop(MonoClock::now())) {
-                drop(sendw[pkt->seq]);
+                drop(sendw[pkt->hdr.seq]);
                 pkt.reset();
                 continue;
             }

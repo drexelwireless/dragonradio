@@ -24,6 +24,7 @@ public:
         fg_ = flexframegen_create(&props);
 
         setHeaderMCS(header_mcs_);
+        reconfigureHeader();
     }
 
     virtual ~NewFlexFrameModulator()
@@ -89,13 +90,11 @@ protected:
 
     void reconfigureHeader(void) override
     {
-#if LIQUID_VERSION_NUMBER >= 1003001
         flexframegenprops_s props;
 
         mcs2flexframegenprops(header_mcs_, props);
         flexframegen_set_header_props(fg_, &props);
         flexframegen_set_header_len(fg_, sizeof(Header));
-#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
     }
 
     void reconfigurePayload(void) override
@@ -120,6 +119,7 @@ public:
                                    static_cast<Demodulator*>(this));
 
         setHeaderMCS(header_mcs_);
+        reconfigureHeader();
         reconfigureSoftDecode();
     }
 
@@ -171,21 +171,17 @@ protected:
 
     void reconfigureHeader(void) override
     {
-#if LIQUID_VERSION_NUMBER >= 1003001
         flexframegenprops_s props;
 
         mcs2flexframegenprops(header_mcs_, props);
         flexframesync_set_header_props(fs_, &props);
         flexframesync_set_header_len(fs_, sizeof(Header));
-#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
     }
 
     void reconfigureSoftDecode(void) override
     {
-#if LIQUID_VERSION_NUMBER >= 1003001
         flexframesync_decode_header_soft(fs_, soft_header_);
         flexframesync_decode_payload_soft(fs_, soft_payload_);
-#endif /* LIQUID_VERSION_NUMBER >= 1003001 */
     }
 };
 

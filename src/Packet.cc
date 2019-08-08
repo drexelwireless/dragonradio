@@ -5,16 +5,16 @@ Packet::iterator::iterator(const Packet &pkt)
   , ctrl_()
 {
     // Make sure we have control data
-    if (!pkt_.isFlagSet(kControl) || pkt_.size() < sizeof(ExtendedHeader) + pkt_.data_len + sizeof(ctrl_len_)) {
+    if (!pkt_.hdr.flags.has_control || pkt_.size() < sizeof(ExtendedHeader) + pkt_.ehdr().data_len + sizeof(ctrl_len_)) {
         ctrl_len_ = 0;
         ctrl_ptr_ = nullptr;
         return;
     }
 
     // Extract the size of available control data
-    memcpy(&ctrl_len_, pkt_.data() + sizeof(ExtendedHeader) + pkt_.data_len, sizeof(ctrl_len_));
-    ctrl_len_ = std::min(ctrl_len_, static_cast<uint16_t>(pkt_.size() - sizeof(ExtendedHeader) - pkt_.data_len));
-    ctrl_ptr_ = pkt_.data() + sizeof(ExtendedHeader) + pkt_.data_len + sizeof(ctrl_len_);
+    memcpy(&ctrl_len_, pkt_.data() + sizeof(ExtendedHeader) + pkt_.ehdr().data_len, sizeof(ctrl_len_));
+    ctrl_len_ = std::min(ctrl_len_, static_cast<uint16_t>(pkt_.size() - sizeof(ExtendedHeader) - pkt_.ehdr().data_len));
+    ctrl_ptr_ = pkt_.data() + sizeof(ExtendedHeader) + pkt_.ehdr().data_len + sizeof(ctrl_len_);
 
     // Try to get the first control message
     (*this)++;
@@ -83,28 +83,28 @@ uint16_t Packet::getControlLen(void) const
 {
     uint16_t len;
 
-    if (!isFlagSet(kControl) || size() < sizeof(ExtendedHeader) + data_len + sizeof(len)) {
+    if (!hdr.flags.has_control || size() < sizeof(ExtendedHeader) + ehdr().data_len + sizeof(len)) {
         return 0;
     } else {
-        memcpy(&len, data() + sizeof(ExtendedHeader) + data_len, sizeof(len));
-        return std::min(len, static_cast<uint16_t>(size() - sizeof(ExtendedHeader) - data_len));
+        memcpy(&len, data() + sizeof(ExtendedHeader) + ehdr().data_len, sizeof(len));
+        return std::min(len, static_cast<uint16_t>(size() - sizeof(ExtendedHeader) - ehdr().data_len));
     }
 }
 
 void Packet::setControlLen(uint16_t len)
 {
-    if (!isFlagSet(kControl)) {
-        setFlag(kControl);
+    if (!hdr.flags.has_control) {
+        hdr.flags.has_control = 1;
         resize(size() + sizeof(uint16_t));
     }
 
-    memcpy(&(*this)[sizeof(ExtendedHeader) + data_len], &len, sizeof(uint16_t));
+    memcpy(&(*this)[sizeof(ExtendedHeader) + ehdr().data_len], &len, sizeof(uint16_t));
 }
 
 void Packet::clearControl(void)
 {
-    clearFlag(kControl);
-    resize(sizeof(ExtendedHeader) + data_len);
+    hdr.flags.has_control = 0;
+    resize(sizeof(ExtendedHeader) + ehdr().data_len);
 }
 
 void Packet::appendControl(const ControlMsg &ctrl)
@@ -118,7 +118,7 @@ void Packet::appendControl(const ControlMsg &ctrl)
     resize(size() + ctrlsize(ctrl.type));
 
     // Copy control data to packet
-    memcpy(&(*this)[sizeof(ExtendedHeader) + data_len + sizeof(uint16_t) + ctrl_len], &ctrl, ctrlsize(ctrl.type));
+    memcpy(&(*this)[sizeof(ExtendedHeader) + ehdr().data_len + sizeof(uint16_t) + ctrl_len], &ctrl, ctrlsize(ctrl.type));
 }
 
 void Packet::removeLastControl(ControlMsg::Type type)

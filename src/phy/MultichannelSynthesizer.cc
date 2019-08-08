@@ -273,7 +273,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
                     pkt->timestamp = timestamp;
 
-                    if (pkt->isInternalFlagSet(kIsTimestamp))
+                    if (pkt->internal_flags.is_timestamp)
                         pkt->appendTimestamp(timestamp);
 
                     const float g = pkt->g * g_nchan;
@@ -334,7 +334,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                             break;
                     } else {
                         logEvent("PHY: failed to add packet to slot: seq=%u",
-                            (unsigned) mpkt->pkt->seq);
+                            (unsigned) mpkt->pkt->hdr.seq);
                         mpkt->samples = std::move(mod.iqbuf);
                     }
                 }
@@ -343,7 +343,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 // packet, we need to strip it of its (now-inaccurate) timestamp and
                 // re-modulate it when we get a slot for it.
                 if (!pushed) {
-                    if (mpkt->pkt->isInternalFlagSet(kIsTimestamp)) {
+                    if (mpkt->pkt->internal_flags.is_timestamp) {
                         pkt = std::move(mpkt->pkt);
                         pkt->removeTimestamp();
                         mpkt.reset();
