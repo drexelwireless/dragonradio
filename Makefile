@@ -105,6 +105,7 @@ SOURCES := \
     net/FlowPerformance.cc \
     net/Net.cc \
     net/NetFilter.cc \
+    net/PacketCompressor.cc \
     net/TunTap.cc \
     python/CIL.cc \
     python/Channelizer.cc \

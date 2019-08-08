@@ -217,6 +217,7 @@ class Config(object):
         # Network options
         self.mtu = 1500
         self.queue = 'fifo'
+        self.packet_compression = False
 
         # Neighbor discover options
         # discovery_hello_interval is how often we send HELLO packets during
@@ -590,6 +591,9 @@ class Config(object):
         parser.add_argument('--lifo', action='store_const', const='lifo',
                             dest='queue',
                             help='use LIFO network queue algorithm')
+        parser.add_argument('--packet-compression', action='store_const', const=True,
+                            dest='packet_compression',
+                            help='enable network packet compress')
 
         # Collaboration server options
         parser.add_argument('--force-gateway', action='store_const', const=True,
@@ -838,13 +842,24 @@ class Radio(object):
         self.flowperf = dragonradio.FlowPerformance(config.measurement_period)
 
         #
+        # Create packet compression component
+        #
+        if config.packet_compression:
+            self.packet_compressor = dragonradio.PacketCompressor()
+
+        #
         # Configure packet path from demodulator to tun/tap
         # Right now, the path is direct:
         #   demodulator -> controller -> FlowPerformance.radio -> tun/tap
         #
         self.channelizer.source >> self.controller.radio_in
 
-        self.controller.radio_out >> self.flowperf.radio_in
+        if config.packet_compression:
+            self.controller.radio_out >> self.packet_compressor.radio_in
+
+            self.packet_compressor.radio_out >> self.flowperf.radio_in
+        else:
+            self.controller.radio_out >> self.flowperf.radio_in
 
         self.flowperf.radio_out >> self.tuntap.sink
 
@@ -869,7 +884,12 @@ class Radio(object):
 
         self.flowperf.net_out >> self.netfirewall.input
 
-        self.netfirewall.output >> self.netq.push
+        if config.packet_compression:
+            self.netfirewall.output >> self.packet_compressor.net_in
+
+            self.packet_compressor.net_out >> self.netq.push
+        else:
+            self.netfirewall.output >> self.netq.push
 
         self.netq.pop >> self.controller.net_in
 

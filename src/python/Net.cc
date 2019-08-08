@@ -6,6 +6,7 @@
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
+#include "net/PacketCompressor.hh"
 #include "net/Queue.hh"
 #include "net/SmartLIFO.hh"
 #include "python/PyModules.hh"
@@ -101,8 +102,26 @@ void exportNet(py::module &m)
         .def(py::init<>())
         ;
 
-    // Export class NetNoop to Python
+    // Export class RadioNoop to Python
     py::class_<RadioNoop, RadioProcessor, std::shared_ptr<RadioNoop>>(m, "RadioNoop")
         .def(py::init<>())
+        ;
+
+
+    // Export class Compress to Python
+    py::class_<PacketCompressor, std::shared_ptr<PacketCompressor>>(m, "PacketCompressor")
+        .def(py::init<>())
+        .def_property_readonly("net_in",
+            [](std::shared_ptr<PacketCompressor> element) { return exposePort(element, &element->net_in); },
+            "Network packet input port")
+        .def_property_readonly("net_out",
+            [](std::shared_ptr<PacketCompressor> element) { return exposePort(element, &element->net_out); },
+            "Network packet output port")
+        .def_property_readonly("radio_in",
+            [](std::shared_ptr<PacketCompressor> element) { return exposePort(element, &element->radio_in); },
+            "Radio packet input port")
+        .def_property_readonly("radio_out",
+            [](std::shared_ptr<PacketCompressor> element) { return exposePort(element, &element->radio_out); },
+            "Radio packet output port")
         ;
 }
