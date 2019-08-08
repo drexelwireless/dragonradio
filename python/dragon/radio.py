@@ -246,6 +246,7 @@ class Config(object):
 
         # Collaboration server options
         self.force_gateway = False
+        self.collab_iface = None
         self.collab_server_ip = None
         self.collab_server_port = 5556
         self.collab_client_port = 5557
