@@ -557,7 +557,7 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->hdr.curhop = net_->getMyNodeId();
     pkt->hdr.nexthop = recvw.node.id;
     pkt->hdr.flags = {0};
-    pkt->hdr.seq = 0;
+    pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
     pkt->ehdr().dest = recvw.node.id;
@@ -613,7 +613,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
     pkt->hdr.curhop = net_->getMyNodeId();
     pkt->hdr.nexthop = node_id;
     pkt->hdr.flags = {0};
-    pkt->hdr.seq = 0;
+    pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
     pkt->ehdr().dest = node_id;
@@ -642,7 +642,7 @@ void SmartController::broadcastHello(void)
     pkt->hdr.curhop = net_->getMyNodeId();
     pkt->hdr.nexthop = 0;
     pkt->hdr.flags = {0};
-    pkt->hdr.seq = 0;
+    pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
     pkt->ehdr().dest = 0;

@@ -19,7 +19,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
                 if (it != seqs_.end())
                     pkt->hdr.seq = ++(it->second);
                 else {
-                    pkt->hdr.seq = 0;
+                    pkt->hdr.seq = {0};
                     seqs_.insert(std::make_pair(nexthop.id, Seq{0}));
                 }
             }
