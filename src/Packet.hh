@@ -275,6 +275,14 @@ struct Packet : public buffer<unsigned char>
         return reinterpret_cast<const struct ip*>(data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
     }
 
+    /** @brief Get IP header
+     * @return A pointer to the IP header or nullptr if this is not an IP packet
+     */
+    struct ip *getIPHdr(void)
+    {
+        return const_cast<struct ip*>(static_cast<const Packet &>(*this).getIPHdr());
+    }
+
     /** @brief Get UDP header
      * @return A pointer to the UDP header or nullptr if this is not a UDP
      * packet
@@ -292,6 +300,15 @@ struct Packet : public buffer<unsigned char>
             return nullptr;
 
         return reinterpret_cast<const struct udphdr*>(reinterpret_cast<const char*>(iph) + ip_hl);
+    }
+
+    /** @brief Get UDP header
+     * @return A pointer to the UDP header or nullptr if this is not a UDP
+     * packet
+     */
+    struct udphdr *getUDPHdr(void)
+    {
+        return const_cast<struct udphdr*>(static_cast<const Packet &>(*this).getUDPHdr());
     }
 
     /** @brief Get TCP header
@@ -313,11 +330,29 @@ struct Packet : public buffer<unsigned char>
         return reinterpret_cast<const struct tcphdr*>(reinterpret_cast<const char*>(iph) + ip_hl);
     }
 
+    /** @brief Get TCP header
+     * @return A pointer to the TCP header or nullptr if this is not a TCP
+     * packet
+     */
+    struct tcphdr *getTCPHdr(void)
+    {
+        return const_cast<struct tcphdr*>(static_cast<const Packet &>(*this).getTCPHdr());
+    }
+
     /** @brief Get MGEN header
      * @return A pointer to the MGEN header or nullptr if this is not a MGEN
      * packet
      */
     const struct mgenhdr *getMGENHdr(void) const;
+
+    /** @brief Get MGEN header
+     * @return A pointer to the MGEN header or nullptr if this is not a MGEN
+     * packet
+     */
+    struct mgenhdr *getMGENHdr(void)
+    {
+        return const_cast<struct mgenhdr*>(static_cast<const Packet &>(*this).getMGENHdr());
+    }
 
     /** @brief Get payload size
      * @return The size of the data portion of a UDP or TCP packet.
