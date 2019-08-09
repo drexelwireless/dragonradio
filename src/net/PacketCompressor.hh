@@ -25,6 +25,18 @@ public:
     RadioOut<Push> radio_out;
 
 protected:
+    /** @brief Internal IP network */
+    in_addr_t int_net_;
+
+    /** @brief Internal IP network mask */
+    in_addr_t int_netmask_;
+
+    /** @brief External IP network */
+    in_addr_t ext_net_;
+
+    /** @brief External IP network mask */
+    in_addr_t ext_netmask_;
+
     /** @brief Handle a network packet */
     void netPush(std::shared_ptr<NetPacket> &&pkt);
 
