@@ -13,12 +13,16 @@
 
 using namespace std::placeholders;
 
+/** @brief IP address for internal DragonRadio network */
 const char *kIntIPNet = "10.10.10.0";
 
+/** @brief IP address mask for internal DragonRadio network */
 const char *kIntIPNetmask = "255.255.255.0";
 
+/** @brief IP address for external DARPA network */
 const char *kExtIPNet = "192.168.0.0";
 
+/** @brief IP address mask for external DARPA network */
 const char *kExtIPNetmask = "255.255.0.0";
 
 Node::Node(NodeId id)

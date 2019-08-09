@@ -22,22 +22,22 @@ private:
     std::shared_ptr<Net> net_;
 
     /** @brief Internal IP network */
-    uint32_t int_net_;
+    in_addr_t int_net_;
 
     /** @brief Internal IP network mask */
-    uint32_t int_netmask_;
+    in_addr_t int_netmask_;
 
     /** @brief Internal IP broadcast address */
-    uint32_t int_broadcast_;
+    in_addr_t int_broadcast_;
 
     /** @brief External IP network */
-    uint32_t ext_net_;
+    in_addr_t ext_net_;
 
     /** @brief External IP network mask */
-    uint32_t ext_netmask_;
+    in_addr_t ext_netmask_;
 
     /** @brief External IP broadcast address */
-    uint32_t ext_broadcast_;
+    in_addr_t ext_broadcast_;
 };
 
 #endif /* NETFILTER_HH_ */
