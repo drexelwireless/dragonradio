@@ -116,13 +116,13 @@ Test collaboration and mandated outcomes as follows:
 6. On the gateway, start a `mgen` listener:
 
 ```
-mgen port 5000-5004 output listen.drc
+mgen check port 5000-5004 output listen.drc
 ```
 
 6. On the non-gateway node, run `mgen`:
 
 ```
-mgen input tools/collab/scenario1.mgen
+mgen check input tools/collab/scenario1.mgen
 ```
 
 Note that this `.mgen` file assume it should send data to the IP address `10.10.10.1`, which corresponds to the gateway in this setup.
