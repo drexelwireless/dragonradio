@@ -9,9 +9,9 @@ local pf_version            = ProtoField.uint8("mgen.version", "Version")
 local pf_flags              = ProtoField.uint8("mgen.flags", "Flags", base.HEX)
 local pf_flow_id            = ProtoField.uint32("mgen.flow_id", "Flow ID")
 local pf_seq                = ProtoField.uint32("mgen.seq", "Sequence Number")
+local pf_reserved_darpa     = ProtoField.uint32("mgen.reserved_darpa", "Reserved")
 local pf_tx_time_secs       = ProtoField.uint32("mgen.tx_time_secs", "TX time (sec)")
-local pf_tx_time_secs_darpa = ProtoField.uint64("mgen.tx_time_secs", "TX time (sec)")
-local pf_tx_time_usecs      = ProtoField.uint32("mgen.tx_time_secs", "TX time (usec)")
+local pf_tx_time_usecs      = ProtoField.uint32("mgen.tx_time_usecs", "TX time (usec)")
 
 local pf_flag_continues = ProtoField.bool("mgen.flags.continues", "Continues",
                             8,
@@ -107,8 +107,8 @@ mgen.fields = { pf_size
 
               , pf_seq
 
+              , pf_reserved_darpa
               , pf_tx_time_secs
-              , pf_tx_time_secs_darpa
               , pf_tx_time_usecs
 
               , pf_dst_port
@@ -245,10 +245,9 @@ mgen.dissector = function (tvbuf,pktinfo,root)
     addField(pf_seq, 4)
 
     if version == DARPA_MGEN_VERSION then
-        addField(pf_tx_time_secs_darpa, 8)
-    else
-        addField(pf_tx_time_secs, 4)
+        addField(pf_reserved_darpa, 4)
     end
+    addField(pf_tx_time_secs, 4)
     addField(pf_tx_time_usecs, 4)
 
     -- Destination
