@@ -37,13 +37,7 @@ enum {
     MGEN_CHECKSUM_ERROR = 0x10
 };
 
-typedef uint64_t darpa_mgen_secs_t;
-
-#define ntoh_darpa_mgen_secs bswap_64
-
 typedef uint32_t mgen_secs_t;
-
-#define ntoh_mgen_secs ntohl
 
 typedef uint32_t mgen_usecs_t;
 
@@ -54,7 +48,8 @@ struct __attribute__((__packed__)) darpa_mgenhdr {
    uint8_t flags;
    uint32_t mgenFlowId;
    uint32_t sequenceNumber;
-   darpa_mgen_secs_t txTimeSeconds;
+   uint32_t reserved;
+   mgen_secs_t txTimeSeconds;
    mgen_usecs_t txTimeMicroseconds;
 };
 
@@ -100,29 +95,23 @@ struct __attribute__((__packed__)) mgenhdr {
 
     Clock::time_point getTimestamp(void) const
     {
-        int64_t secs;
-        int32_t usecs;
+        mgen_secs_t  hdr_secs;
+        mgen_usecs_t hdr_usecs;
+        int64_t      secs;
+        int32_t      usecs;
 
         if (version == DARPA_MGEN_VERSION) {
             const struct darpa_mgenhdr *dmgenh = reinterpret_cast<const struct darpa_mgenhdr*>(this);
-            darpa_mgen_secs_t          hdr_secs;
-            mgen_usecs_t               hdr_usecs;
 
             std::memcpy(&hdr_secs, reinterpret_cast<const char*>(dmgenh) + offsetof(struct darpa_mgenhdr, txTimeSeconds), sizeof(hdr_secs));
             std::memcpy(&hdr_usecs, reinterpret_cast<const char*>(dmgenh) + offsetof(struct darpa_mgenhdr, txTimeMicroseconds), sizeof(hdr_usecs));
-
-            secs = ntoh_darpa_mgen_secs(hdr_secs);
-            usecs = ntohl(hdr_usecs);
         } else {
-            mgen_secs_t  hdr_secs;
-            mgen_usecs_t hdr_usecs;
-
             std::memcpy(&hdr_secs, reinterpret_cast<const char*>(this) + offsetof(struct mgenhdr, txTimeSeconds), sizeof(hdr_secs));
             std::memcpy(&hdr_usecs, reinterpret_cast<const char*>(this) + offsetof(struct mgenhdr, txTimeMicroseconds), sizeof(hdr_usecs));
-
-            secs = ntoh_mgen_secs(hdr_secs);
-            usecs = ntohl(hdr_usecs);
         }
+
+        secs = ntohl(hdr_secs);
+        usecs = ntohl(hdr_usecs);
 
         return Clock::time_point{static_cast<int64_t>(secs), usecs/1e6};
     }
