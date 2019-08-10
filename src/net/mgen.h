@@ -7,11 +7,35 @@
 
 #include "Clock.hh"
 
-/** @brief DARPA MGEN version number */
-#define DARPA_MGEN_VERSION 4
+enum {
+    /** @brief MGEN version number */
+    MGEN_VERSION = 2,
 
-/** @brief MGEN version number */
-#define MGEN_VERSION 2
+    /** @brief DARPA MGEN version number */
+    DARPA_MGEN_VERSION = 4
+};
+
+enum {
+    MGEN_INVALID_ADDRESS = 0,
+    MGEN_IPv4            = 1,
+    MGEN_IPv6            = 2
+};
+
+enum
+{
+    MGEN_INVALID_GPS = 0,
+    MGEN_STALE       = 1,
+    MGEN_CURRENT     = 2
+};
+
+enum {
+    MGEN_CLEAR          = 0x00,
+    MGEN_CONTINUES      = 0x01,
+    MGEN_END_OF_MSG     = 0x02,
+    MGEN_CHECKSUM       = 0x04,
+    MGEN_LAST_BUFFER    = 0x08,
+    MGEN_CHECKSUM_ERROR = 0x10
+};
 
 typedef uint64_t darpa_mgen_secs_t;
 
@@ -108,6 +132,16 @@ struct __attribute__((__packed__)) mgenaddr {
     uint16_t dstPort;
     uint8_t dstAddrType;
     uint8_t dstAddrLen;
+};
+
+struct __attribute__((__packed__)) mgenstdaddr {
+    uint16_t dstPort;
+    uint8_t dstAddrType;
+    uint8_t dstAddrLen;
+    u_int32_t dstIPAddr;
+    uint16_t hostPort;
+    uint8_t hostAddrType;
+    uint8_t hostAddrLen;
 };
 
 struct __attribute__((__packed__)) mgenrest {
