@@ -180,6 +180,7 @@ PacketCompressor::PacketCompressor()
   , net_out(*this, nullptr, nullptr)
   , radio_in(*this, nullptr, nullptr, std::bind(&PacketCompressor::radioPush, this, _1))
   , radio_out(*this, nullptr, nullptr)
+  , enabled_(false)
 {
     struct in_addr in;
 
@@ -311,6 +312,11 @@ public:
 
 void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
 {
+    if (!enabled_) {
+        net_out.push(std::move(pkt));
+        return;
+    }
+
     CompressionBuffer buf(*pkt);
 
     // Test for compressible Ethernet header
@@ -319,14 +325,14 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
         const ether_header *ehdr = pkt->getEthernetHdr();
 
         if (ehdr == nullptr)
-            goto done;
+            goto no_compression;
 
         // Test source address
         eaddr.ether_addr_octet[5] = pkt->hdr.curhop;
 
         if (memcmp(&(eaddr.ether_addr_octet[0]), &(ehdr->ether_shost[0]), 6) != 0) {
             logCompress("Ethernet source doesn't match");
-            goto done;
+            goto no_compression;
         }
 
         // Test destination address
@@ -334,19 +340,21 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
 
         if (memcmp(eaddr.ether_addr_octet, ehdr->ether_dhost, sizeof(ether_addr)) != 0) {
             logCompress("Ethernet destination doesn't match");
-            goto done;
+            goto no_compression;
         }
 
         // Make sure this is an IP packet
         if (ntohs(ehdr->ether_type) != ETHERTYPE_IP) {
             logCompress("Not IP");
-            goto done;
+            goto no_compression;
         }
     }
 
     // Compress Ethernet header
     buf.inoff += sizeof(struct ether_header);
     buf.flags.type = kEthernet;
+
+    pkt->hdr.flags.compressed = 1;
 
     // Get IP header
     {
@@ -619,6 +627,8 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
 
 done:
     buf.flush();
+
+no_compression:
     net_out.push(std::move(pkt));
 }
 
@@ -689,6 +699,11 @@ public:
 
 void PacketCompressor::radioPush(std::shared_ptr<RadioPacket> &&pkt)
 {
+    if (!pkt->hdr.flags.compressed) {
+        radio_out.push(std::move(pkt));
+        return;
+    }
+
     DecompressionBuffer buf(*pkt);
 
     // Test for compressed Ethernet header

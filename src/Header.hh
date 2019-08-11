@@ -44,8 +44,11 @@ struct Header {
         /** @brief Set if the packet has control data */
         uint8_t has_control : 1;
 
+        /** @brief Set if the packet is compressed */
+        uint8_t compressed : 1;
+
         /** @brief Unused flags */
-        uint8_t unused : 4;
+        uint8_t unused : 3;
     } flags;
 } __attribute__((packed));
 

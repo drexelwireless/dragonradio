@@ -111,6 +111,10 @@ void exportNet(py::module &m)
     // Export class Compress to Python
     py::class_<PacketCompressor, std::shared_ptr<PacketCompressor>>(m, "PacketCompressor")
         .def(py::init<>())
+        .def_property("enabled",
+            &PacketCompressor::getEnabled,
+            &PacketCompressor::setEnabled,
+            "Is packet compression enabled?")
         .def_property_readonly("net_in",
             [](std::shared_ptr<PacketCompressor> element) { return exposePort(element, &element->net_in); },
             "Network packet input port")

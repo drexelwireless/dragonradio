@@ -846,6 +846,7 @@ class Radio(object):
         #
         if config.packet_compression:
             self.packet_compressor = dragonradio.PacketCompressor()
+            self.packet_compressor.enabled = True
 
         #
         # Configure packet path from demodulator to tun/tap

@@ -12,6 +12,18 @@ public:
 
     virtual ~PacketCompressor() = default;
 
+    /** @brief Get enabled flagd */
+    bool getEnabled(void)
+    {
+        return enabled_;
+    }
+
+    /** @brief Set enabled flag */
+    void setEnabled(bool enabled)
+    {
+        enabled_ = enabled;
+    }
+
     /** @brief Network packet input port. */
     NetIn<Push> net_in;
 
@@ -25,6 +37,9 @@ public:
     RadioOut<Push> radio_out;
 
 protected:
+    /** @brief Is packet compression enabled? */
+    bool enabled_;
+
     /** @brief Internal IP network */
     in_addr_t int_net_;
 
