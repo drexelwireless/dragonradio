@@ -114,7 +114,7 @@ get_packet:
         return false;
 
     // Handle broadcast packets
-    if (pkt->hdr.flags.broadcast) {
+    if (pkt->hdr.nexthop == kNodeBroadcast) {
         applyTXParams(*pkt, &broadcast_tx_params_, broadcast_gain.getLinearGain());
 
         return true;
@@ -230,7 +230,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         return;
 
     // Skip packets that aren't for us
-    if (!pkt->hdr.flags.broadcast && pkt->hdr.nexthop != net_->getMyNodeId())
+    if (pkt->hdr.nexthop != kNodeBroadcast &&
+        pkt->hdr.nexthop != net_->getMyNodeId())
         return;
 
     // Get a reference to the sending node. This will add a new node to the
@@ -267,7 +268,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
     // Handle broadcast packets
-    if (pkt->hdr.flags.broadcast) {
+    if (pkt->hdr.nexthop == kNodeBroadcast) {
         // Resize the packet to truncate non-data bytes
         pkt->resize(sizeof(ExtendedHeader) + pkt->ehdr().data_len);
 
@@ -494,7 +495,7 @@ void SmartController::missed(std::shared_ptr<NetPacket> &&pkt)
 
 void SmartController::transmitted(NetPacket &pkt)
 {
-    if (!pkt.hdr.flags.broadcast && pkt.ehdr().data_len != 0) {
+    if (pkt.hdr.nexthop != kNodeBroadcast && pkt.ehdr().data_len != 0) {
         SendWindow                      &sendw = getSendWindow(pkt.hdr.nexthop);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
@@ -640,14 +641,12 @@ void SmartController::broadcastHello(void)
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
     pkt->hdr.curhop = net_->getMyNodeId();
-    pkt->hdr.nexthop = 0;
+    pkt->hdr.nexthop = kNodeBroadcast;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
-    pkt->ehdr().dest = 0;
-
-    pkt->hdr.flags.broadcast = 1;
+    pkt->ehdr().dest = kNodeBroadcast;
 
     // Append hello message
     ControlMsg::Hello msg;
@@ -1371,7 +1370,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         assert(pkt);
 
         // We can always send a broadcast packet
-        if (pkt->hdr.flags.broadcast)
+        if (pkt->hdr.nexthop == kNodeBroadcast)
             return true;
 
         SendWindow                      &sendw = getSendWindow(pkt->hdr.nexthop);

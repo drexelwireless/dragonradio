@@ -17,6 +17,8 @@
 
 typedef uint8_t NodeId;
 
+const NodeId kNodeBroadcast = 255;
+
 /** @brief %PHY packet header. */
 struct Header {
     /** @brief Current hop. */
@@ -36,9 +38,6 @@ struct Header {
         /** @brief Set if the packet is ACKing */
         uint8_t ack : 1;
 
-        /** @brief Set if this is a broadcast packet */
-        uint8_t broadcast : 1;
-
         /** @brief Set if the packet has data */
         uint8_t has_data : 1;
 
@@ -46,7 +45,7 @@ struct Header {
         uint8_t has_control : 1;
 
         /** @brief Unused flags */
-        uint8_t unused : 3;
+        uint8_t unused : 4;
     } flags;
 } __attribute__((packed));
 

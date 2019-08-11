@@ -100,7 +100,7 @@ protected:
             return true;
 
         // Then check for a broadcast
-        if (pkt->hdr.flags.broadcast && allow_broadcasts_)
+        if (pkt->hdr.nexthop == kNodeBroadcast && allow_broadcasts_)
             return true;
 
         // Then look at the port
