@@ -1,7 +1,7 @@
 {
     "BatchName": "{{name}}",
     "Duration": 630,
-    "RFScenario": 9990,
+    "RFScenario": 9991,
     "TrafficScenario": 99900,
     "NodeData": [{
             "RFNode_ID": 1,
@@ -86,7 +86,7 @@
         {
             "RFNode_ID": 51,
             "ImageName": "incumbent-passive-v2-2",
-            "ModemConfig": "Node51Incumbent_7025.json",
+            "ModemConfig": "Node51Incumbent_9991.json",
             "isGateway": true,
             "TrafficNode_ID": 51,
             "node_type": "competitor"
