@@ -134,17 +134,13 @@ void exportLiquidModDemod(py::module &m)
         .def(py::init<>())
         .def(py::init<uint8_t,
                       uint8_t,
-                      uint16_t,
-                      uint16_t,
                       uint16_t>())
         .def_readwrite("curhop", &Header::curhop, "Current hop")
         .def_readwrite("nexthop", &Header::nexthop, "Next hop")
-        .def_readwrite("flags", &Header::flags, "Packet flags")
         .def_readwrite("seq", &Header::seq, "Packet sequence number")
-        .def_readwrite("data_len", &Header::data_len, "Size of actual packet data")
         .def("__repr__", [](const Header& self) {
-            return py::str("Header(curhop={}, nexthop={}, flags={:x}, seq={}, data_len={})").\
-            format(self.curhop, self.nexthop, self.flags, (unsigned) self.seq, self.data_len);
+            return py::str("Header(curhop={}, nexthop={}, seq={})").\
+            format(self.curhop, self.nexthop, (unsigned) self.seq);
          })
         ;
 
