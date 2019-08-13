@@ -17,22 +17,21 @@ message LocationInfo {
     TimeStamp timestamp = 2; // Time of measurement
 }
 
-// Flow statistics
 message FlowStats {
     uint32 flow_uid = 1;                        // Flow identifier
     uint32 src = 2;                             // Node id of the source
     uint32 dest = 3;                            // Node id of the destination
-    uint32 first_mp = 4;                        // First measurement period
-    repeated uint32 npackets = 5 [packed=true]; // Packets sent per MP
-    repeated uint32 nbytes = 6 [packed=true];   // Packets sent per MP
+    uint32 first_mp = 4;                        // First measurement period in this report
+    repeated uint32 npackets = 5 [packed=true]; // Packets sent per MP, starting at first_mp
+    repeated uint32 nbytes = 6 [packed=true];   // Bytes sent per MP, starting at first_mp
 }
 
 message Status {
-    uint32 radio_id = 1;                // Node id
-    TimeStamp timestamp = 2;            // Time of measurement
-    LocationInfo loc = 3;               // Node location
+    uint32 radio_id = 1;                 // Node id
+    TimeStamp timestamp = 2;             // Time of measurement
+    LocationInfo loc = 3;                // Node location
     repeated FlowStats source_flows = 4; // Flows for which node is source
-    repeated FlowStats sink_flows = 5;   // Flows for which node is source
+    repeated FlowStats sink_flows = 5;   // Flows for which node is sink
 }
 
 message Schedule {
