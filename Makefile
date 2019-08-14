@@ -76,6 +76,7 @@ SOURCES := \
     USRP.cc \
     Util.cc \
     WorkQueue.cc \
+    cil/Scorer.cc \
     dsp/FFTW.cc \
     dsp/FIRDesign.cc \
     dsp/TableNCO.cc \

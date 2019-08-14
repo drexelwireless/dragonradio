@@ -6,9 +6,9 @@
 #include <unordered_map>
 
 #include "spinlock_mutex.hh"
-#include "CIL.hh"
 #include "Clock.hh"
 #include "Packet.hh"
+#include "cil/CIL.hh"
 #include "net/Processor.hh"
 #include "stats/TimeWindowEstimator.hh"
 

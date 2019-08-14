@@ -437,20 +437,20 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
             try:
                 # Only send mandates after the scenario has started
                 if controller.scenario_started:
-                    (mp, timestamp, mandates_achieved, total_score_achieved, performance) = await controller.getMandatePerformance()
+                    (mp, timestamp, mandates_achieved, total_score_achieved, mandates) = await controller.getMandatePerformance()
 
-                    def mkMandatePerformance(p):
+                    def mkMandatePerformance(mandate):
                         perf = cil.MandatePerformance()
-                        perf.scalar_performance = p.scalar_performance
-                        perf.radio_ids.extend(p.radio_ids)
-                        perf.flow_id = p.flow_id
-                        perf.hold_period = int(p.hold_period)
-                        perf.achieved_duration = p.achieved_duration
-                        perf.point_value = p.point_value
+                        perf.scalar_performance = mandate.scalar_performance
+                        perf.radio_ids.extend(mandate.radio_ids)
+                        perf.flow_id = mandate.flow_uid
+                        perf.hold_period = int(mandate.hold_period)
+                        perf.achieved_duration = mandate.achieved_duration
+                        perf.point_value = mandate.point_value
 
                         return perf
 
-                    new_performance = [mkMandatePerformance(p) for p in performance]
+                    new_performance = [mkMandatePerformance(m) for m in mandates]
 
                     # Send mandates to all peers
                     logging.info('CIL: sending detailed performance')

@@ -53,13 +53,11 @@ class InternalProtoServer(UDPProtoServer):
             n.loc.alt = loc.location.elevation
             n.loc.timestamp = loc.timestamp.get_timestamp()
 
-        # Update scoring
-        self.controller.scorer.updateSourceStats(node_id,
-                                                 msg.status.timestamp.get_timestamp(),
-                                                 msg.status.source_flows)
-        self.controller.scorer.updateSinkStats(node_id,
-                                               msg.status.timestamp.get_timestamp(),
-                                               msg.status.sink_flows)
+        # Update statistics
+        self.loop.create_task(self.controller.updateFlowStatistics(node_id,
+                                                                   msg.status.timestamp.get_timestamp(),
+                                                                   msg.status.source_flows,
+                                                                   msg.status.sink_flows))
 
     @handle('Message.schedule')
     def handle_schedule(self, msg):
@@ -110,8 +108,8 @@ class InternalProtoClient(UDPProtoClient):
         msg.status.loc.location.longitude = me.loc.lon
         msg.status.loc.location.elevation = me.loc.alt
         msg.status.loc.timestamp.set_timestamp(me.loc.timestamp)
-        msg.status.source_flows.extend([mkFlowStats(flow) for flow in sources])
-        msg.status.sink_flows.extend([mkFlowStats(flow) for flow in sinks])
+        msg.status.source_flows.extend(sources)
+        msg.status.sink_flows.extend(sinks)
 
         logging.debug("Sending status %s", msg)
 
@@ -130,14 +128,17 @@ class InternalProtoClient(UDPProtoClient):
         msg.schedule.nodes.extend(nodes)
         msg.schedule.schedule.extend(sched.reshape(nchannels*nslots))
 
-def mkFlowStats(flow):
-    """Convert dragonradio.FlowStats to internal agent FlowStats"""
+def mkFlowStats(min_mp, max_mp, flowperf):
+    """Convert dragonradio.FlowStats to internal FlowStats"""
+    first_mp = min(min_mp, flowperf.low_mp)
+    mpstats = flowperf.stats[first_mp:max_mp+1]
+
     stats = internal.FlowStats()
-    stats.flow_uid = flow.flow_uid
-    stats.src = flow.src
-    stats.dest = flow.dest
-    stats.first_mp = flow.first_mp
-    stats.npackets.extend(flow.npackets)
-    stats.nbytes.extend(flow.nbytes)
+    stats.flow_uid = flowperf.flow_uid
+    stats.src = flowperf.src
+    stats.dest = flowperf.dest
+    stats.first_mp = first_mp
+    stats.npackets.extend([mp.npackets for mp in mpstats])
+    stats.nbytes.extend([mp.nbytes for mp in mpstats])
 
     return stats

@@ -7,10 +7,7 @@
 #include "net/Net.hh"
 
 struct Mandate {
-    Mandate()
-      : hold_period(1.0)
-    {
-    }
+    Mandate() = delete;
 
     Mandate(FlowUID flow_uid_,
             double hold_period_,
@@ -24,28 +21,39 @@ struct Mandate {
       , max_latency_s(max_latency_s_)
       , min_throughput_bps(min_throughput_bps_)
       , file_transfer_deadline_s(file_transfer_deadline_s_)
+      , achieved_duration(0)
+      , scalar_performace(0.0)
     {
     }
 
     ~Mandate() = default;
 
     /** @brief Flow UID */
-    FlowUID flow_uid;
+    const FlowUID flow_uid;
 
     /** @brief Period over which to measure outcome metrics (sec) */
-    double hold_period;
+    const double hold_period;
 
     /** @brief Point value */
-    int point_value;
+    const int point_value;
 
     /** @brief Maximum latency allowed for a packet (sec) */
-    std::optional<double> max_latency_s;
+    const std::optional<double> max_latency_s;
 
     /** @brief Minimum throughput (bps) */
-    std::optional<double> min_throughput_bps;
+    const std::optional<double> min_throughput_bps;
 
     /** @brief File transfer delivery deadline (sec) */
-    std::optional<double> file_transfer_deadline_s;
+    const std::optional<double> file_transfer_deadline_s;
+
+    /** @brief Achieved duration */
+    unsigned achieved_duration;
+
+    /** @brief Scalar performance */
+    double scalar_performace;
+
+    /** @brief Nodes in flow */
+    std::vector<NodeId> radio_ids;
 };
 
 using MandateMap = std::unordered_map<FlowUID, Mandate>;
