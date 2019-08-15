@@ -26,12 +26,25 @@ message FlowStats {
     repeated uint32 nbytes = 6 [packed=true];   // Bytes sent per MP, starting at first_mp
 }
 
+message SpectrumUsage {
+    float f_start = 1;    // Start of frequency range used
+    float f_end = 2;      // End of frequency range used
+    float duty_cycle = 3; // Duty cycle
+};
+
+message SpectrumStats {
+    TimeStamp start = 1;               // Start of measurement period
+    TimeStamp end = 2;                 // End of measurement period
+    repeated SpectrumUsage voxels = 3; // Per-voxel duty cycle
+};
+
 message Status {
-    uint32 radio_id = 1;                 // Node id
-    TimeStamp timestamp = 2;             // Time of measurement
-    LocationInfo loc = 3;                // Node location
-    repeated FlowStats source_flows = 4; // Flows for which node is source
-    repeated FlowStats sink_flows = 5;   // Flows for which node is sink
+    uint32 radio_id = 1;                       // Node id
+    TimeStamp timestamp = 2;                   // Time of measurement
+    LocationInfo loc = 3;                      // Node location
+    repeated FlowStats source_flows = 4;       // Flows for which node is source
+    repeated FlowStats sink_flows = 5;         // Flows for which node is sink
+    repeated SpectrumStats spectrum_stats = 6; // Spectrum usage
 }
 
 message Schedule {

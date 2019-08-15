@@ -255,148 +255,86 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         config = controller.config
         radio = controller.radio
 
-        # Get spectrum estimation parameters
-        (m, b) = config.spec_occupancy_model
-        occupancy_min = config.spec_occupancy_min
-
-        # Last time we reported usage
-        last_report = time.time()
-
         # Average load for last sample period
         last_avg_load = 0
 
-        # Historical voxels we need to send
-        historical_voxels = []
-
         while not self.done:
             try:
-                mac = radio.mac
-
-                if mac is not None:
+                if controller.scenario_started:
                     now = time.time()
 
-                    #
-                    # Get current load
-                    #
-                    load = mac.popLoad()
+                    voxels = await self.getHistoricalSpectrumUsage()
+                    voxels += await self.getPredictedSpectrumUsage(now)
 
-                    # We need the current sample rate to convert sample counts
-                    # to time
-                    fs = controller.radio.usrp.tx_rate
-
-                    # Calculate average load for just this reading
-                    cur_avg_load = sum(load.nsamples)/(fs*load.period)
-
-                    # Log values for debugging
-                    logging.debug('MAC load: start=%f; end=%f; period=%f; nsamples=%s; fs=%f; cur_avg_load=%s; last_avg_load=%s',
-                        load.start,
-                        load.end,
-                        load.period,
-                        load.nsamples,
-                        fs,
-                        cur_avg_load,
-                        last_avg_load)
-
-                    #
-                    # Add historical voxels
-                    #
-                    occupancy = max(occupancy_min, m*cur_avg_load + b)
-
-                    for vox in controller.getVoxels(occupancy):
-                        # Construct list of receivers for this voxel
-                        receivers = []
-
-                        for rx in vox.rx:
-                            rx_info = cil.ReceiverInfo()
-                            rx_info.radio_id = rx
-                            rx_info.power_db.value = controller.radio.usrp.rx_gain
-
-                            receivers.append(rx_info)
-
-                        # Construct historical usage report
-                        usage = cil.SpectrumVoxelUsage()
-
-                        usage.spectrum_voxel.freq_start = vox.f_start
-                        usage.spectrum_voxel.freq_end = vox.f_end
-                        usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
-                        usage.spectrum_voxel.time_start.set_timestamp(max(load.start, controller.scenario_start_time))
-                        usage.spectrum_voxel.time_end.set_timestamp(load.end)
-
-                        usage.transmitter_info.radio_id = vox.tx
-                        usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
-                        usage.transmitter_info.mac_cca = False
-
-                        usage.receiver_info.extend(receivers)
-                        usage.measured_data = True
-
-                        historical_voxels.append(usage)
-
-                    # If the load has changed a lot or if it's been a long time
-                    # since we've sent a report, send another report
-                    if (abs(cur_avg_load - last_avg_load)/max(cur_avg_load, last_avg_load, 1) > 0.1) or \
-                       (now - last_report > config.spectrum_usage_update_period):
-                        logging.debug('Calculating spectrum usage at time %f', now - self.controller.scenario_start_time)
-
-                        # Report all historical voxels and reset list of pending
-                        # historical voxels
-                        voxels = historical_voxels
-                        historical_voxels = []
-
-                        # Calculate spectrum usage
-                        occupancy = max(occupancy_min, m*cur_avg_load + b)
-
-                        for vox in controller.getVoxels(occupancy):
-                            # Construct list of receivers for this voxel
-                            receivers = []
-
-                            for rx in vox.rx:
-                                rx_info = cil.ReceiverInfo()
-                                rx_info.radio_id = rx
-                                rx_info.power_db.value = controller.radio.usrp.rx_gain
-
-                                receivers.append(rx_info)
-
-                            # Report future usage
-                            usage = cil.SpectrumVoxelUsage()
-
-                            usage.spectrum_voxel.freq_start = vox.f_start
-                            usage.spectrum_voxel.freq_end = vox.f_end
-                            usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
-                            usage.spectrum_voxel.time_start.set_timestamp(now)
-                            usage.spectrum_voxel.time_end.set_timestamp(now + config.spec_future_period)
-
-                            usage.transmitter_info.radio_id = vox.tx
-                            usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
-                            usage.transmitter_info.mac_cca = False
-
-                            usage.receiver_info.extend(receivers)
-                            usage.measured_data = False
-
-                            voxels.append(usage)
-
-                        # Send spectrum usage to all peers
-                        if len(voxels) != 0:
-                            logging.info('CIL: sending spectrum usage')
-                            for ip, p in self.peers.items():
-                                try:
-                                    asyncio.ensure_future(p.spectrum_usage(voxels, timestamp=now), loop=self.loop)
-                                except:
-                                    logger.exception("spectrum_usage")
-
-                            last_report = now
-
-                    # Save current measurement period's load for comparison on
-                    # next round
-                    last_avg_load = cur_avg_load
+                    # Send spectrum usage to all peers
+                    if len(voxels) != 0:
+                        logging.info('CIL: sending spectrum usage')
+                        for ip, p in self.peers.items():
+                            try:
+                                asyncio.ensure_future(p.spectrum_usage(voxels, timestamp=now), loop=self.loop)
+                            except:
+                                logger.exception("spectrum_usage")
 
                 # Wait for either a spectrum update event or for the load check
                 # period
-                if await event_wait(self.send_spectrum_update, config.spec_load_check_period):
+                if await event_wait(self.send_spectrum_update, config.spectrum_usage_update_period):
                     self.send_spectrum_update.clear()
             except CancelledError:
                 return
             except:
                 logger.exception("spectrum_usage")
+
+    async def getHistoricalSpectrumUsage(self):
+        """Get historical voxel usage from controller and convert it into CIL
+        voxels for spectrum usage report"""
+        voxels = await self.controller.getHistoricalSpectrumUsage()
+
+        return [self.voxel2CILVoxel(vox, start, end, True) for (start, end, vox) in voxels]
+
+    async def getPredictedSpectrumUsage(self, when):
+        """Get predicated voxel usage from controller and convert it into CIL
+        voxels for spectrum usage report"""
+        controller = self.controller
+        config = controller.config
+
+        start = when
+        end = when + config.spec_future_period
+        voxels = await self.controller.getPredictedSpectrumUsage()
+
+        return [self.voxel2CILVoxel(vox, start, end, False) for vox in voxels]
+
+    def voxel2CILVoxel(self, vox, start, end, measured):
+        controller = self.controller
+        config = controller.config
+
+        # Construct list of receivers for this voxel
+        receivers = []
+
+        for rx in vox.rx:
+            rx_info = cil.ReceiverInfo()
+            rx_info.radio_id = rx
+            rx_info.power_db.value = controller.radio.usrp.rx_gain
+
+            receivers.append(rx_info)
+
+        # Report future usage
+        usage = cil.SpectrumVoxelUsage()
+
+        usage.spectrum_voxel.freq_start = vox.f_start
+        usage.spectrum_voxel.freq_end = vox.f_end
+        usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
+        usage.spectrum_voxel.time_start.set_timestamp(start)
+        usage.spectrum_voxel.time_end.set_timestamp(end)
+
+        usage.transmitter_info.radio_id = vox.tx
+        usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
+        usage.transmitter_info.mac_cca = False
+
+        usage.measured_data = measured
+
+        usage.receiver_info.extend(receivers)
+
+        return usage
 
     async def detailed_performance(self):
         controller = self.controller

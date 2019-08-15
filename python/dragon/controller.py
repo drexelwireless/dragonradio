@@ -18,7 +18,7 @@ import dragonradio
 from dragon.collab import CollabAgent
 from dragon.gpsd import GPSDClient, GPSLocation
 import dragon.internal
-from dragon.internal import InternalProtoClient, InternalProtoServer, mkFlowStats
+from dragon.internal import InternalProtoClient, InternalProtoServer, mkFlowStats, mkSpectrumStats
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
@@ -109,6 +109,15 @@ class Controller(TCPProtoServer):
 
         self.reported_mandate_performance = []
         """Reported mandate performance"""
+
+        self.historical_voxel_usage = []
+        """Historical voxel usage"""
+
+        self.current_voxel_usage = {}
+        """Current voxel usage"""
+
+        self.voxel_lock = None
+        """Lock on voxel usage"""
 
         self.schedule = None
         """Current TDMA schedule"""
@@ -244,6 +253,7 @@ class Controller(TCPProtoServer):
         if self.is_gateway:
             self.scorer = dragonradio.Scorer()
             self.scorer_lock = asyncio.Lock()
+            self.voxel_lock = asyncio.Lock()
 
         # Start status update
         self.loop.create_task(self.updateStatus())
@@ -469,6 +479,17 @@ class Controller(TCPProtoServer):
         for n in nodes:
             self.addNode(n)
 
+    def getDestinations(self, node_id):
+        """Return a list of nodes given node transmits to"""
+        destinations = set()
+
+        for _, link in self.flow_links.items():
+            (src, dest) = link
+            if node_id == src:
+                destinations.add(dest)
+
+        return destinations
+
     async def installMACSchedule(self, seq, sched):
         """Install a new MAC schedule"""
         with await self.radio.lock:
@@ -494,17 +515,51 @@ class Controller(TCPProtoServer):
 
             self.schedule_seq = seq
 
-    def getVoxels(self, occupancy):
+    async def getHistoricalSpectrumUsage(self):
+        with await self.voxel_lock:
+            usage = self.historical_voxel_usage
+            self.historical_voxel_usage = []
+
+        return usage
+
+    async def getPredictedSpectrumUsage(self):
         mac = self.radio.mac
 
         if mac is None:
             return []
         elif isinstance(mac, dragonradio.SlottedALOHA):
-            return self.alohaToVoxels(occupancy)
+            return await self.alohaToVoxels()
         else:
-            return self.scheduleToVoxels(self.schedule, occupancy)
+            return await self.scheduleToVoxels(self.schedule)
 
-    def alohaToVoxels(self, occupancy):
+    async def updateVoxelUsage(self, vox):
+        """Get voxel usage
+
+        Arguments:
+            node_id: The node ID of the transmitting node
+            vox: The voxel
+        """
+        config = self.config
+
+        with await self.voxel_lock:
+            # Look up most recent usage report by this node on this channel
+            duty_cycle = 0
+
+            if vox.tx in self.current_voxel_usage:
+                duty_cycle = self.current_voxel_usage[vox.tx].get((vox.f_start, vox.f_end), None)
+                if duty_cycle is not None:
+                    # Set duty cycle
+                    vox.duty_cycle = duty_cycle
+
+                    # Trim channel start and end
+                    bw = vox.f_end - vox.f_start
+                    vox.f_start += config.spec_chan_trim_lo*bw
+                    vox.f_end -= config.spec_chan_trim_hi*bw
+
+                    # Set receivers
+                    vox.rx = self.getDestinations(vox.tx)
+
+    async def alohaToVoxels(self):
         """Determine voxel usage for ALOHA"""
         config = self.config
         radio = self.radio
@@ -517,24 +572,23 @@ class Controller(TCPProtoServer):
         for chan in radio.channels:
             transmitters = set(self.nodes)
 
-            f_start = radio.frequency + chan.fc - chan.bw/2 + config.spec_chan_trim_lo*chan.bw
-            f_end = radio.frequency + chan.fc + chan.bw/2 - config.spec_chan_trim_hi*chan.bw
-
-            rx = radio.node_id
+            f_start = radio.frequency + chan.fc - chan.bw/2
+            f_end = radio.frequency + chan.fc + chan.bw/2
 
             for tx in transmitters:
-                v = Voxel()
-                v.f_start = f_start
-                v.f_end = f_end
-                v.tx = tx
-                v.rx = [rx]
-                v.duty_cycle = occupancy
+                vox = Voxel()
+                vox.f_start = f_start
+                vox.f_end = f_end
+                vox.tx = tx
 
-                voxels.append(v)
+                await self.updateVoxelUsage(vox)
+
+                if vox.duty_cycle != 0:
+                    voxels.append(vox)
 
         return voxels
 
-    def scheduleToVoxels(self, sched, occupancy):
+    async def scheduleToVoxels(self, sched):
         """Determine voxel usage from schedule"""
         config = self.config
         radio = self.radio
@@ -550,22 +604,19 @@ class Controller(TCPProtoServer):
 
             if len(transmitters) != 0:
                 chan = radio.channels[chanidx]
-                f_start = radio.frequency + chan.fc - chan.bw/2 + config.spec_chan_trim_lo*chan.bw
-                f_end = radio.frequency + chan.fc + chan.bw/2 - config.spec_chan_trim_hi*chan.bw
-
-                rx = radio.node_id
+                f_start = radio.frequency + chan.fc - chan.bw/2
+                f_end = radio.frequency + chan.fc + chan.bw/2
 
                 for tx in transmitters:
-                    #occupancy = (sched[chanidx] == tx).sum() / len(sched[chanidx])
+                    vox = Voxel()
+                    vox.f_start = f_start
+                    vox.f_end = f_end
+                    vox.tx = tx
 
-                    v = Voxel()
-                    v.f_start = f_start
-                    v.f_end = f_end
-                    v.tx = tx
-                    v.rx = [rx]
-                    v.duty_cycle = occupancy
+                    await self.updateVoxelUsage(vox)
 
-                    voxels.append(v)
+                    if vox.duty_cycle != 0:
+                        voxels.append(vox)
 
         return voxels
 
@@ -713,7 +764,46 @@ class Controller(TCPProtoServer):
         # We have mandates!
         self.scenario_started = True
 
+    async def updateStatus(self):
+        """Update status"""
+        config = self.config
+        radio = self.radio
+        node_id = radio.node_id
+
+        while not self.done:
+            try:
+                if self.scenario_started:
+                    (sources, sinks) = await self.getFlowStatistics()
+                    spectrum = await self.getSpectrumStatistics()
+
+                    # Update local statistics if we are the gateway
+                    if self.is_gateway:
+                        await self.updateFlowStatistics(node_id,
+                                                        time.time(),
+                                                        sources,
+                                                        sinks)
+                        await self.updateSpectrumStatistics(node_id,
+                                                            time.time(),
+                                                            spectrum)
+                    # Otherwise, send statistics to the gateway
+                    elif self.internal_client is not None:
+                        await self.internal_client.sendStatus(sources,
+                                                              sinks,
+                                                              spectrum)
+
+                await asyncio.sleep(config.status_update_period)
+            except CancelledError:
+                return
+            except:
+                logging.exception('Exception in updateStatus')
+
     async def getFlowStatistics(self):
+        """Get flow statistics for this node.
+
+        Return:
+            A pair of lists of internal.FlowStats values representing flow
+            statistics for sources and sinks, respectively, for this node.
+        """
         config = self.config
         radio = self.radio
 
@@ -734,33 +824,52 @@ class Controller(TCPProtoServer):
 
         return (sources, sinks)
 
-    async def updateStatus(self):
-        """Update status"""
+    async def getSpectrumStatistics(self):
+        """Get spectrum usage statistics for this node.
+
+        Return:
+            A list of internal.SpectrumStats values representing spectrum usage
+            statistics for this node.
+        """
         config = self.config
         radio = self.radio
-        node_id = radio.node_id
+        mac = radio.mac
 
-        while not self.done:
-            try:
-                if self.scenario_started:
-                    (sources, sinks) = await self.getFlowStatistics()
+        spectrum_usage = []
 
-                    # Update local statistics if we are the gateway
-                    if self.is_gateway:
-                        await self.updateFlowStatistics(node_id,
-                                                        time.time(),
-                                                        sources,
-                                                        sinks)
-                    # Otherwise, send statistics to the gateway
-                    elif self.internal_client is not None:
-                        await self.internal_client.sendStatus(sources,
-                                                              sinks)
+        if mac is not None:
+            if config.tx_upsample:
+                channels = radio.channels
+            else:
+                channels = [radio.channels[radio.tx_channel_idx]]
 
-                await asyncio.sleep(config.status_update_period)
-            except CancelledError:
-                return
-            except:
-                logging.exception('Exception in updateStatus')
+            # Get per-channel load from MAC
+            load = mac.popLoad()
+
+            # Get current TX sample rate
+            fs = radio.usrp.tx_rate
+
+            # Calculate load denominator: the number of samples that could've
+            # been transmitted over the loaded period.
+            nsamples = fs*load.period
+
+            voxels = []
+
+            for idx, chan in enumerate(channels):
+                if idx < len(load.nsamples):
+                    duty_cycle = load.nsamples[idx]/nsamples
+
+                    if duty_cycle != 0:
+                        vox = Voxel()
+                        vox.f_start = self.radio.frequency + chan.fc - chan.bw/2
+                        vox.f_end = self.radio.frequency + chan.fc + chan.bw/2
+                        vox.duty_cycle = duty_cycle
+                        voxels.append(vox)
+
+            if len(voxels) != 0:
+                spectrum_usage.append(mkSpectrumStats(load.start, load.end, voxels))
+
+        return spectrum_usage
 
     async def updateFlowStatistics(self, node_id, timestamp, sources, sinks):
         """Update flow statistics from reported source and sink stats"""
@@ -814,6 +923,38 @@ class Controller(TCPProtoServer):
                                                      flow.first_mp,
                                                      flow.npackets,
                                                      flow.nbytes)
+
+    async def updateSpectrumStatistics(self, node_id, timestamp, reports):
+        """Update flow statistics from reported source and sink stats"""
+        radio = self.radio
+        channels = radio.channels
+
+        load = {}
+        historical_usage = []
+
+        for spectrum in reports:
+            for usage in spectrum.voxels:
+                vox = Voxel()
+                vox.f_start = usage.f_start
+                vox.f_end = usage.f_end
+                vox.duty_cycle = usage.duty_cycle
+                vox.tx = node_id
+                vox.rx = self.getDestinations(node_id)
+
+                historical_usage.append((spectrum.start.get_timestamp(),
+                                         spectrum.end.get_timestamp(),
+                                         vox))
+
+                load[(vox.f_start, vox.f_end)] = usage.duty_cycle
+
+                logging.debug("Spectrum usage: start=%s; end=%s; voxel=%s",
+                    spectrum.start.get_timestamp(),
+                    spectrum.end.get_timestamp(),
+                    vox)
+
+        with await self.voxel_lock:
+            self.historical_voxel_usage += historical_usage
+            self.current_voxel_usage[node_id] = load
 
     async def createSchedule(self):
         """Create a new TDMA schedule"""

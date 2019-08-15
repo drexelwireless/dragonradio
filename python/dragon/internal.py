@@ -58,6 +58,9 @@ class InternalProtoServer(UDPProtoServer):
                                                                    msg.status.timestamp.get_timestamp(),
                                                                    msg.status.source_flows,
                                                                    msg.status.sink_flows))
+        self.loop.create_task(self.controller.updateSpectrumStatistics(node_id,
+                                                                       msg.status.timestamp.get_timestamp(),
+                                                                       msg.status.spectrum_stats))
 
     @handle('Message.schedule')
     def handle_schedule(self, msg):
@@ -97,7 +100,7 @@ class InternalProtoClient(UDPProtoClient):
         self.open()
 
     @send(internal.Message)
-    async def sendStatus(self, msg, sources, sinks):
+    async def sendStatus(self, msg, sources, sinks, spectrum):
         me = self.controller.thisNode()
 
         radio = self.controller.radio
@@ -110,6 +113,7 @@ class InternalProtoClient(UDPProtoClient):
         msg.status.loc.timestamp.set_timestamp(me.loc.timestamp)
         msg.status.source_flows.extend(sources)
         msg.status.sink_flows.extend(sinks)
+        msg.status.spectrum_stats.extend(spectrum)
 
         logging.debug("Sending status %s", msg)
 
@@ -140,5 +144,25 @@ def mkFlowStats(min_mp, max_mp, flowperf):
     stats.first_mp = first_mp
     stats.npackets.extend([mp.npackets for mp in mpstats])
     stats.nbytes.extend([mp.nbytes for mp in mpstats])
+
+    return stats
+
+def mkSpectrumStats(start, end, voxels):
+    """Convert dragonradio.FlowStats to internal SpectrumStats"""
+    stats = internal.SpectrumStats()
+    stats.start.set_timestamp(start)
+    stats.end.set_timestamp(end)
+
+    internal_voxels = []
+
+    for vox in voxels:
+        usage = internal.SpectrumUsage()
+        usage.f_start = vox.f_start
+        usage.f_end = vox.f_end
+        usage.duty_cycle = vox.duty_cycle
+
+        internal_voxels.append(usage)
+
+    stats.voxels.extend(internal_voxels)
 
     return stats

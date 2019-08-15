@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='dragonradio.internal',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0einternal.proto\x12\x14\x64ragonradio.internal\"1\n\tTimeStamp\x12\x0f\n\x07seconds\x18\x01 \x01(\x05\x12\x13\n\x0bpicoseconds\x18\x02 \x01(\x03\"B\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x11\n\televation\x18\x03 \x01(\x01\"t\n\x0cLocationInfo\x12\x30\n\x08location\x18\x01 \x01(\x0b\x32\x1e.dragonradio.internal.Location\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\"t\n\tFlowStats\x12\x10\n\x08\x66low_uid\x18\x01 \x01(\r\x12\x0b\n\x03src\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\r\x12\x10\n\x08\x66irst_mp\x18\x04 \x01(\r\x12\x14\n\x08npackets\x18\x05 \x03(\rB\x02\x10\x01\x12\x12\n\x06nbytes\x18\x06 \x03(\rB\x02\x10\x01\"\xeb\x01\n\x06Status\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\x12/\n\x03loc\x18\x03 \x01(\x0b\x32\".dragonradio.internal.LocationInfo\x12\x35\n\x0csource_flows\x18\x04 \x03(\x0b\x32\x1f.dragonradio.internal.FlowStats\x12\x33\n\nsink_flows\x18\x05 \x03(\x0b\x32\x1f.dragonradio.internal.FlowStats\"\xa6\x01\n\x08Schedule\x12\x11\n\tfrequency\x18\x01 \x01(\x01\x12\x11\n\tbandwidth\x18\x02 \x01(\x01\x12\x1b\n\x13scenario_start_time\x18\x03 \x01(\x01\x12\x0b\n\x03seq\x18\x04 \x01(\r\x12\x11\n\tnchannels\x18\x05 \x01(\r\x12\x0e\n\x06nslots\x18\x06 \x01(\r\x12\x11\n\x05nodes\x18\x07 \x03(\rB\x02\x10\x01\x12\x14\n\x08schedule\x18\x08 \x03(\rB\x02\x10\x01\"x\n\x07Message\x12.\n\x06status\x18\x01 \x01(\x0b\x32\x1c.dragonradio.internal.StatusH\x00\x12\x32\n\x08schedule\x18\x02 \x01(\x0b\x32\x1e.dragonradio.internal.ScheduleH\x00\x42\t\n\x07payloadb\x06proto3')
+  serialized_pb=_b('\n\x0einternal.proto\x12\x14\x64ragonradio.internal\"1\n\tTimeStamp\x12\x0f\n\x07seconds\x18\x01 \x01(\x05\x12\x13\n\x0bpicoseconds\x18\x02 \x01(\x03\"B\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x11\n\televation\x18\x03 \x01(\x01\"t\n\x0cLocationInfo\x12\x30\n\x08location\x18\x01 \x01(\x0b\x32\x1e.dragonradio.internal.Location\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\"t\n\tFlowStats\x12\x10\n\x08\x66low_uid\x18\x01 \x01(\r\x12\x0b\n\x03src\x18\x02 \x01(\r\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\r\x12\x10\n\x08\x66irst_mp\x18\x04 \x01(\r\x12\x14\n\x08npackets\x18\x05 \x03(\rB\x02\x10\x01\x12\x12\n\x06nbytes\x18\x06 \x03(\rB\x02\x10\x01\"C\n\rSpectrumUsage\x12\x0f\n\x07\x66_start\x18\x01 \x01(\x02\x12\r\n\x05\x66_end\x18\x02 \x01(\x02\x12\x12\n\nduty_cycle\x18\x03 \x01(\x02\"\xa2\x01\n\rSpectrumStats\x12.\n\x05start\x18\x01 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\x12,\n\x03\x65nd\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\x12\x33\n\x06voxels\x18\x03 \x03(\x0b\x32#.dragonradio.internal.SpectrumUsage\"\xa8\x02\n\x06Status\x12\x10\n\x08radio_id\x18\x01 \x01(\r\x12\x32\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1f.dragonradio.internal.TimeStamp\x12/\n\x03loc\x18\x03 \x01(\x0b\x32\".dragonradio.internal.LocationInfo\x12\x35\n\x0csource_flows\x18\x04 \x03(\x0b\x32\x1f.dragonradio.internal.FlowStats\x12\x33\n\nsink_flows\x18\x05 \x03(\x0b\x32\x1f.dragonradio.internal.FlowStats\x12;\n\x0espectrum_stats\x18\x06 \x03(\x0b\x32#.dragonradio.internal.SpectrumStats\"\xa6\x01\n\x08Schedule\x12\x11\n\tfrequency\x18\x01 \x01(\x01\x12\x11\n\tbandwidth\x18\x02 \x01(\x01\x12\x1b\n\x13scenario_start_time\x18\x03 \x01(\x01\x12\x0b\n\x03seq\x18\x04 \x01(\r\x12\x11\n\tnchannels\x18\x05 \x01(\r\x12\x0e\n\x06nslots\x18\x06 \x01(\r\x12\x11\n\x05nodes\x18\x07 \x03(\rB\x02\x10\x01\x12\x14\n\x08schedule\x18\x08 \x03(\rB\x02\x10\x01\"x\n\x07Message\x12.\n\x06status\x18\x01 \x01(\x0b\x32\x1c.dragonradio.internal.StatusH\x00\x12\x32\n\x08schedule\x18\x02 \x01(\x0b\x32\x1e.dragonradio.internal.ScheduleH\x00\x42\t\n\x07payloadb\x06proto3')
 )
 
 
@@ -212,6 +212,96 @@ _FLOWSTATS = _descriptor.Descriptor(
 )
 
 
+_SPECTRUMUSAGE = _descriptor.Descriptor(
+  name='SpectrumUsage',
+  full_name='dragonradio.internal.SpectrumUsage',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='f_start', full_name='dragonradio.internal.SpectrumUsage.f_start', index=0,
+      number=1, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='f_end', full_name='dragonradio.internal.SpectrumUsage.f_end', index=1,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='duty_cycle', full_name='dragonradio.internal.SpectrumUsage.duty_cycle', index=2,
+      number=3, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=395,
+  serialized_end=462,
+)
+
+
+_SPECTRUMSTATS = _descriptor.Descriptor(
+  name='SpectrumStats',
+  full_name='dragonradio.internal.SpectrumStats',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='start', full_name='dragonradio.internal.SpectrumStats.start', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='end', full_name='dragonradio.internal.SpectrumStats.end', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='voxels', full_name='dragonradio.internal.SpectrumStats.voxels', index=2,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=465,
+  serialized_end=627,
+)
+
+
 _STATUS = _descriptor.Descriptor(
   name='Status',
   full_name='dragonradio.internal.Status',
@@ -254,6 +344,13 @@ _STATUS = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='spectrum_stats', full_name='dragonradio.internal.Status.spectrum_stats', index=5,
+      number=6, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -266,8 +363,8 @@ _STATUS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=396,
-  serialized_end=631,
+  serialized_start=630,
+  serialized_end=926,
 )
 
 
@@ -346,8 +443,8 @@ _SCHEDULE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=634,
-  serialized_end=800,
+  serialized_start=929,
+  serialized_end=1095,
 )
 
 
@@ -387,16 +484,20 @@ _MESSAGE = _descriptor.Descriptor(
       name='payload', full_name='dragonradio.internal.Message.payload',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=802,
-  serialized_end=922,
+  serialized_start=1097,
+  serialized_end=1217,
 )
 
 _LOCATIONINFO.fields_by_name['location'].message_type = _LOCATION
 _LOCATIONINFO.fields_by_name['timestamp'].message_type = _TIMESTAMP
+_SPECTRUMSTATS.fields_by_name['start'].message_type = _TIMESTAMP
+_SPECTRUMSTATS.fields_by_name['end'].message_type = _TIMESTAMP
+_SPECTRUMSTATS.fields_by_name['voxels'].message_type = _SPECTRUMUSAGE
 _STATUS.fields_by_name['timestamp'].message_type = _TIMESTAMP
 _STATUS.fields_by_name['loc'].message_type = _LOCATIONINFO
 _STATUS.fields_by_name['source_flows'].message_type = _FLOWSTATS
 _STATUS.fields_by_name['sink_flows'].message_type = _FLOWSTATS
+_STATUS.fields_by_name['spectrum_stats'].message_type = _SPECTRUMSTATS
 _MESSAGE.fields_by_name['status'].message_type = _STATUS
 _MESSAGE.fields_by_name['schedule'].message_type = _SCHEDULE
 _MESSAGE.oneofs_by_name['payload'].fields.append(
@@ -409,6 +510,8 @@ DESCRIPTOR.message_types_by_name['TimeStamp'] = _TIMESTAMP
 DESCRIPTOR.message_types_by_name['Location'] = _LOCATION
 DESCRIPTOR.message_types_by_name['LocationInfo'] = _LOCATIONINFO
 DESCRIPTOR.message_types_by_name['FlowStats'] = _FLOWSTATS
+DESCRIPTOR.message_types_by_name['SpectrumUsage'] = _SPECTRUMUSAGE
+DESCRIPTOR.message_types_by_name['SpectrumStats'] = _SPECTRUMSTATS
 DESCRIPTOR.message_types_by_name['Status'] = _STATUS
 DESCRIPTOR.message_types_by_name['Schedule'] = _SCHEDULE
 DESCRIPTOR.message_types_by_name['Message'] = _MESSAGE
@@ -441,6 +544,20 @@ FlowStats = _reflection.GeneratedProtocolMessageType('FlowStats', (_message.Mess
   # @@protoc_insertion_point(class_scope:dragonradio.internal.FlowStats)
   ))
 _sym_db.RegisterMessage(FlowStats)
+
+SpectrumUsage = _reflection.GeneratedProtocolMessageType('SpectrumUsage', (_message.Message,), dict(
+  DESCRIPTOR = _SPECTRUMUSAGE,
+  __module__ = 'internal_pb2'
+  # @@protoc_insertion_point(class_scope:dragonradio.internal.SpectrumUsage)
+  ))
+_sym_db.RegisterMessage(SpectrumUsage)
+
+SpectrumStats = _reflection.GeneratedProtocolMessageType('SpectrumStats', (_message.Message,), dict(
+  DESCRIPTOR = _SPECTRUMSTATS,
+  __module__ = 'internal_pb2'
+  # @@protoc_insertion_point(class_scope:dragonradio.internal.SpectrumStats)
+  ))
+_sym_db.RegisterMessage(SpectrumStats)
 
 Status = _reflection.GeneratedProtocolMessageType('Status', (_message.Message,), dict(
   DESCRIPTOR = _STATUS,
