@@ -12,6 +12,16 @@ logger = logging.getLogger('gpsd')
 DEFAULT_GPSD_SERVER = '127.0.0.1'
 DEFAULT_GPSD_PORT = 6000
 
+class GPSLocation(object):
+    def __init__(self):
+        self.lat = 0
+        self.lon = 0
+        self.alt = 0
+        self.timestamp = 0
+
+    def __str__(self):
+        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.format(self.lat, self.lon, self.alt, self.timestamp)
+
 class GPSDClient:
     def __init__(self, loc, loop=None, server_host=DEFAULT_GPSD_SERVER, server_port=DEFAULT_GPSD_PORT):
         self.loc = loc

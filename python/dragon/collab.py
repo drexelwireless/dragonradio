@@ -58,35 +58,6 @@ async def event_wait(evt, timeout):
 
     return evt.is_set()
 
-class GPSLocation(object):
-    def __init__(self):
-        self.lat = 0
-        self.lon = 0
-        self.alt = 0
-        self.timestamp = 0
-
-    def __str__(self):
-        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.format(self.lat, self.lon, self.alt, self.timestamp)
-
-class Node(object):
-    def __init__(self, id):
-        self.id = id
-        self.loc = GPSLocation()
-
-    def __str__(self):
-        return 'Node(loc={})'.format(self.loc)
-
-class Voxel(object):
-    def __init__(self):
-        self.f_start = 0
-        self.f_end = 0
-        self.tx = None
-        self.rx = []
-        self.duty_cycle = 1.0
-
-    def __str__(self):
-        return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
-
 def sendCIL(f):
     """
     Automatically add support to a function for constructing and sending a

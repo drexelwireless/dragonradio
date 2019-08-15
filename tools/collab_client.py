@@ -15,8 +15,16 @@ import zmq.asyncio
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), '../python'))
 
 from dragon.protobuf import *
-from dragon.collab import CollabAgent, Node
-from dragon.gpsd import GPSDClient
+from dragon.collab import CollabAgent
+from dragon.gpsd import GPSDClient, GPSLocation
+
+class Node(object):
+    def __init__(self, id):
+        self.id = id
+        self.loc = GPSLocation()
+
+    def __str__(self):
+        return 'Node(loc={})'.format(self.loc)
 
 class DummyUSRP(object):
     def __init__(self):

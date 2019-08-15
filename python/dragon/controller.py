@@ -15,8 +15,8 @@ import time
 
 import dragonradio
 
-from dragon.collab import CollabAgent, Node, Voxel
-from dragon.gpsd import GPSDClient
+from dragon.collab import CollabAgent
+from dragon.gpsd import GPSDClient, GPSLocation
 import dragon.internal
 from dragon.internal import InternalProtoClient, InternalProtoServer, mkFlowStats
 from dragon.protobuf import *
@@ -39,6 +39,25 @@ def darpaNodeNet(node_id):
     Return IP subnet of radio node on DARPA's network.
     """
     return '192.168.{:d}.0/24'.format(node_id+100)
+
+class Node(object):
+    def __init__(self, id):
+        self.id = id
+        self.loc = GPSLocation()
+
+    def __str__(self):
+        return 'Node(loc={})'.format(self.loc)
+
+class Voxel(object):
+    def __init__(self):
+        self.f_start = 0
+        self.f_end = 0
+        self.tx = None
+        self.rx = []
+        self.duty_cycle = 1.0
+
+    def __str__(self):
+        return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
 
 @handler(remote.Request)
 class Controller(TCPProtoServer):
