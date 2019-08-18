@@ -251,6 +251,19 @@ class Config(object):
         self.collab_client_port = 5557
         self.collab_peer_port = 5558
 
+        # Collaboration agent message periods
+        self.location_update_period = 15
+        self.spectrum_usage_update_period = 5
+        self.detailed_performance_update_period = 5
+
+        # Spectrum usage tuning parameters
+        self.spec_future_period = 10.0
+        """How far into the future to predict spectrum usage"""
+        self.spec_chan_trim_lo = 0.05
+        """Trim this fraction of the bandwidth from the low edge of channel when predicting"""
+        self.spec_chan_trim_hi = 0.05
+        """Trim this fraction of the bandwidth from the high edge of channel when predicting"""
+
     def __str__(self):
         return pformat(self.__dict__)
 

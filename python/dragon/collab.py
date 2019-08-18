@@ -15,7 +15,7 @@ import sc2.registration_pb2 as registration
 
 logger = logging.getLogger('collab')
 
-CIL_VERSION = (3, 4, 1)
+CIL_VERSION = (3, 5, 2)
 
 MAX_LOCATION_AGE = 45
 
@@ -45,67 +45,18 @@ def ip_string_to_int(ip_string):
     """
     return struct.unpack('!L',socket.inet_aton(ip_string))[0]
 
-class MandatedOutcome(object):
-    def __init__(self, json=None):
-        self.start = time.time()
-        self.scalar_performance = 0
-        self.achieved_duration = 0
+# See:
+#   https://stackoverflow.com/questions/49622924/wait-for-timeout-or-event-being-set-for-asyncio-event
+async def event_wait(evt, timeout):
+    """Wait for an event with a timeout"""
+    try:
+        await asyncio.wait_for(evt.wait(), timeout)
+    except CancelledError:
+        raise
+    except asyncio.TimeoutError:
+        pass
 
-        if json:
-            fields = [ 'goal_type'
-                     , 'flow_uid'
-                     , 'goal_set'
-                     , 'hold_period']
-
-            for f in fields:
-                setattr(self, f, json.get(f, None))
-
-            self.point_value = json.get('point_value', 1)
-
-            fields = [ 'max_latency_s'
-                     , 'min_throughput_bps'
-                     , 'max_packet_drop_rate'
-                     , 'file_transfer_deadline_s'
-                     , 'file_size_bytes']
-
-            for f in fields:
-                setattr(self, f, json['requirements'].get(f, None))
-
-    def __repr__(self):
-        return 'MandatedOutcome({})'.format(self.__dict__)
-
-    @property
-    def is_discrete(self):
-        return hasattr(self, 'file_transfer_deadline_s')
-
-class GPSLocation(object):
-    def __init__(self):
-        self.lat = 0
-        self.lon = 0
-        self.alt = 0
-        self.timestamp = 0
-
-    def __str__(self):
-        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.format(self.lat, self.lon, self.alt, self.timestamp)
-
-class Node(object):
-    def __init__(self, id):
-        self.id = id
-        self.loc = GPSLocation()
-
-    def __str__(self):
-        return 'Node(loc={})'.format(self.loc)
-
-class Voxel(object):
-    def __init__(self):
-        self.f_start = 0
-        self.f_end = 0
-        self.tx = None
-        self.rx = []
-        self.duty_cycle = 1.0
-
-    def __str__(self):
-        return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
+    return evt.is_set()
 
 def sendCIL(f):
     """
@@ -118,10 +69,12 @@ def sendCIL(f):
     """
     @wraps(f)
     async def wrapper(self, *args, **kwargs):
+        timestamp = kwargs.pop('timestamp', time.time())
+
         msg = cil.CilMessage()
         msg.sender_network_id = ip_string_to_int(self.local_ip)
         msg.msg_count = self.msg_count
-        msg.timestamp.set_timestamp(time.time())
+        msg.timestamp.set_timestamp(timestamp)
         msg.network_type.network_type = cil.NetworkType.COMPETITOR
 
         self.msg_count += 1
@@ -194,6 +147,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.controller = controller
 
         self.loop = loop
+        self.done = False
         self.local_ip = local_ip
         self.server_host = server_host
         self.server_port = server_port
@@ -204,19 +158,24 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.nonce = None
         self.max_keepalive = 30
 
-        self.location_update_period = 15
-        self.spectrum_usage_update_period = 15
-        self.detailed_performance_update_period = 5
-
         self.startServer(cil.CilMessage, local_ip, peer_port)
         self.startServer(registration.TellClient, local_ip, client_port)
         self.open()
+
+        self.send_spectrum_update = asyncio.Event()
 
         loop.create_task(self.register())
         loop.create_task(self.heartbeat())
         loop.create_task(self.location_update())
         loop.create_task(self.spectrum_usage())
         loop.create_task(self.detailed_performance())
+
+    def stop(self):
+        self.done = True
+
+        # We must trigger the event, otherwise we will be stuck waiting on it
+        # forever
+        self.send_spectrum_update.set()
 
     def addPeer(self, peer_ip):
         self.peers[peer_ip] = Peer(self, peer_ip, self.peer_port)
@@ -245,7 +204,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     async def heartbeat(self):
         try:
-            while True:
+            while not self.done:
                 if self.nonce:
                     try:
                         await self.keepalive()
@@ -257,7 +216,9 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
             pass
 
     async def location_update(self):
-        while True:
+        config = self.controller.config
+
+        while not self.done:
             try:
                 # Calculate locations
                 locations = []
@@ -279,82 +240,126 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                     except:
                         logger.exception("location_update")
 
-                await asyncio.sleep(self.location_update_period)
+                await asyncio.sleep(config.location_update_period)
             except CancelledError:
                 return
             except:
                 logger.exception("location_updates")
 
+    def push_spectrum_usage(self):
+        logging.debug('Forcing calculation of spectrum usage at time %f', time.time() - self.controller.scenario_start_time)
+        self.send_spectrum_update.set()
+
     async def spectrum_usage(self):
         controller = self.controller
+        config = controller.config
+        radio = controller.radio
 
-        while True:
+        # Average load for last sample period
+        last_avg_load = 0
+
+        while not self.done:
             try:
-                # Calculate spectrum usage
-                voxels = []
+                if controller.scenario_started:
+                    now = time.time()
 
-                for vox in controller.voxels:
-                    usage = cil.SpectrumVoxelUsage()
+                    voxels = await self.getHistoricalSpectrumUsage()
+                    voxels += await self.getPredictedSpectrumUsage(now)
 
-                    usage.spectrum_voxel.freq_start = vox.f_start
-                    usage.spectrum_voxel.freq_end = vox.f_end
-                    usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
-                    usage.spectrum_voxel.time_start.set_timestamp(time.time())
+                    # Send spectrum usage to all peers
+                    if len(voxels) != 0:
+                        logging.info('CIL: sending spectrum usage')
+                        for ip, p in self.peers.items():
+                            try:
+                                asyncio.ensure_future(p.spectrum_usage(voxels, timestamp=now), loop=self.loop)
+                            except:
+                                logger.exception("spectrum_usage")
 
-                    usage.transmitter_info.radio_id = vox.tx
-                    usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
-                    usage.transmitter_info.mac_cca = False
-
-                    receivers = []
-                    for rx in vox.rx:
-                        rx_info = cil.ReceiverInfo()
-                        rx_info.radio_id = rx
-                        rx_info.power_db.value = controller.radio.usrp.rx_gain
-
-                        receivers.append(rx_info)
-
-                    usage.receiver_info.extend(receivers)
-                    usage.measured_data = False
-
-                    voxels.append(usage)
-
-                # Send spectrum usage to all peers
-                logging.info('CIL: sending spectrum usage')
-                for ip, p in self.peers.items():
-                    try:
-                        await p.spectrum_usage(voxels)
-                    except:
-                        logger.exception("spectrum_usage")
-
-                await asyncio.sleep(self.spectrum_usage_update_period)
+                # Wait for either a spectrum update event or for the load check
+                # period
+                if await event_wait(self.send_spectrum_update, config.spectrum_usage_update_period):
+                    self.send_spectrum_update.clear()
             except CancelledError:
                 return
             except:
                 logger.exception("spectrum_usage")
 
+    async def getHistoricalSpectrumUsage(self):
+        """Get historical voxel usage from controller and convert it into CIL
+        voxels for spectrum usage report"""
+        voxels = await self.controller.getHistoricalSpectrumUsage()
+
+        return [self.voxel2CILVoxel(vox, start, end, True) for (start, end, vox) in voxels]
+
+    async def getPredictedSpectrumUsage(self, when):
+        """Get predicated voxel usage from controller and convert it into CIL
+        voxels for spectrum usage report"""
+        controller = self.controller
+        config = controller.config
+
+        start = when
+        end = when + config.spec_future_period
+        voxels = await self.controller.getPredictedSpectrumUsage()
+
+        return [self.voxel2CILVoxel(vox, start, end, False) for vox in voxels]
+
+    def voxel2CILVoxel(self, vox, start, end, measured):
+        controller = self.controller
+        config = controller.config
+
+        # Construct list of receivers for this voxel
+        receivers = []
+
+        for rx in vox.rx:
+            rx_info = cil.ReceiverInfo()
+            rx_info.radio_id = rx
+            rx_info.power_db.value = controller.radio.usrp.rx_gain
+
+            receivers.append(rx_info)
+
+        # Report future usage
+        usage = cil.SpectrumVoxelUsage()
+
+        usage.spectrum_voxel.freq_start = vox.f_start
+        usage.spectrum_voxel.freq_end = vox.f_end
+        usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
+        usage.spectrum_voxel.time_start.set_timestamp(start)
+        usage.spectrum_voxel.time_end.set_timestamp(end)
+
+        usage.transmitter_info.radio_id = vox.tx
+        usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
+        usage.transmitter_info.mac_cca = False
+
+        usage.measured_data = measured
+
+        usage.receiver_info.extend(receivers)
+
+        return usage
+
     async def detailed_performance(self):
         controller = self.controller
+        config = controller.config
 
-        while True:
+        while not self.done:
             t1 = time.time()
 
             try:
                 # Only send mandates after the scenario has started
                 if controller.scenario_started:
-                    (mp, timestamp, mandates_achieved, total_score_achieved, performance) = await controller.getMandatePerformance()
+                    (mp, timestamp, mandates_achieved, total_score_achieved, mandates) = await controller.getMandatePerformance()
 
-                    def mkMandatePerformance(p):
+                    def mkMandatePerformance(mandate):
                         perf = cil.MandatePerformance()
-                        perf.scalar_performance = p.scalar_performance
-                        perf.radio_ids.extend(p.radio_ids)
-                        perf.flow_id = p.flow_id
-                        perf.hold_period = p.hold_period
-                        perf.achieved_duration = p.achieved_duration
-                        perf.point_value = p.point_value
+                        perf.scalar_performance = mandate.scalar_performance
+                        perf.radio_ids.extend(mandate.radio_ids)
+                        perf.flow_id = mandate.flow_uid
+                        perf.hold_period = int(mandate.hold_period)
+                        perf.achieved_duration = mandate.achieved_duration
+                        perf.point_value = mandate.point_value
 
                         return perf
 
-                    new_performance = [mkMandatePerformance(p) for p in performance]
+                    new_performance = [mkMandatePerformance(m) for m in mandates]
 
                     # Send mandates to all peers
                     logging.info('CIL: sending detailed performance')
@@ -369,7 +374,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
                 t2 = time.time()
                 logger.info("Time to score: %f", t2 - t1)
-                delta = self.detailed_performance_update_period - (t2 - t1)
+                delta = config.detailed_performance_update_period - (t2 - t1)
 
                 if delta > 0:
                     await asyncio.sleep(delta)

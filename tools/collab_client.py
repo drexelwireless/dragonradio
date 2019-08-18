@@ -9,13 +9,22 @@ import signal
 import socket
 import struct
 import sys
+from types import SimpleNamespace
 import zmq.asyncio
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), '../python'))
 
 from dragon.protobuf import *
-from dragon.collab import CollabAgent, Node
-from dragon.gpsd import GPSDClient
+from dragon.collab import CollabAgent
+from dragon.gpsd import GPSDClient, GPSLocation
+
+class Node(object):
+    def __init__(self, id):
+        self.id = id
+        self.loc = GPSLocation()
+
+    def __str__(self):
+        return 'Node(loc={})'.format(self.loc)
 
 class DummyUSRP(object):
     def __init__(self):
@@ -26,17 +35,28 @@ class DummyRadio(object):
         self.node_id = node_id
         self.usrp = DummyUSRP()
 
+        self.mac = None
+
 class DummyController(object):
     def __init__(self, node_id, loop):
         node = Node(node_id)
         self.radio = DummyRadio(node_id)
-        self.voxels = []
         self.mandated_outcomes = {}
-        self.voxels = []
         self.scenario_started = False
 
         self.nodes = {node.id : node}
         self.gpsd = GPSDClient(node.loc, loop=loop)
+
+        self.config = SimpleNamespace()
+        self.config.location_update_period = 5.0
+        self.config.detailed_performance_update_period = 5.0
+        self.config.spec_load_check_period = 5.0
+
+        self.config.spec_occupancy_model = (1.0, 0.0)
+        self.config.spec_occupancy_min = 0.001
+
+    def getVoxels(self):
+        return []
 
 def shutdown(loop, agent):
     async def shutdownGracefully():

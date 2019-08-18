@@ -28,7 +28,7 @@ FlowPerformance::FlowPerformance(double mp)
 {
 }
 
-void FlowPerformance::setMandates(const MandatedOutcomeMap &mandates)
+void FlowPerformance::setMandates(const MandateMap &mandates)
 {
     // Set mandates
     {

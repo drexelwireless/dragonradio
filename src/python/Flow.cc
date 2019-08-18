@@ -3,44 +3,12 @@
 
 #include "net/Firewall.hh"
 #include "net/FlowPerformance.hh"
-#include "net/MandatedOutcome.hh"
 #include "python/PyModules.hh"
 
-PYBIND11_MAKE_OPAQUE(MandatedOutcomeMap)
+PYBIND11_MAKE_OPAQUE(MandateMap)
 
 void exportFlow(py::module &m)
 {
-    // Export MandatedOutcome class to Python
-    py::class_<MandatedOutcome, std::unique_ptr<MandatedOutcome>>(m, "MandatedOutcome")
-    .def(py::init())
-    .def(py::init<double,
-                  double,
-                  int,
-                  std::optional<double>,
-                  std::optional<double>,
-                  std::optional<double>>())
-    .def_readwrite("steady_state_period",
-        &MandatedOutcome::steady_state_period,
-        "Steady state period required for mandate success (sec)")
-    .def_readwrite("max_drop_rate",
-        &MandatedOutcome::max_drop_rate,
-        "Maximum drop rate as a fraction of traffic")
-    .def_readwrite("point_value",
-        &MandatedOutcome::point_value,
-        "Point value")
-    .def_readwrite("min_throughput_bps",
-        &MandatedOutcome::min_throughput_bps,
-        "Minimum throughput (bps)")
-    .def_readwrite("max_latency_sec",
-        &MandatedOutcome::max_latency_sec,
-        "Maximum latency allowed for a packet (sec)")
-    .def_readwrite("deadline",
-        &MandatedOutcome::deadline,
-        "Delivery deadline (sec)")
-    ;
-
-    py::bind_map<MandatedOutcomeMap>(m, "MandatedOutcomeMap");
-
     // Export MPStats class to Python
     py::class_<MPStats, std::unique_ptr<MPStats>>(m, "MPStats")
     .def_readonly("npackets",

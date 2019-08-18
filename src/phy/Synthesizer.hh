@@ -19,16 +19,18 @@ public:
         Slot(const Clock::time_point &deadline_,
              size_t deadline_delay_,
              size_t max_samples_,
-             size_t max_superslot_samples_,
-             size_t slotidx_)
+             size_t full_slot_samples_,
+             size_t slotidx_,
+             size_t nchannels)
          : deadline(deadline_)
          , deadline_delay(deadline_delay_)
-         , max_superslot_samples(max_superslot_samples_)
+         , full_slot_samples(full_slot_samples_)
          , slotidx(slotidx_)
          , closed(false)
          , max_samples(max_samples_)
          , delay(0)
          , nsamples(0)
+         , load(nchannels)
          , npartial(0)
         {
             nfinished.store(0, std::memory_order_relaxed);
@@ -44,8 +46,8 @@ public:
         /** @brief Number of samples to delay the deadline */
         const size_t deadline_delay;
 
-        /** @brief Maximum number of samples in this slot if it is a superslot */
-        const size_t max_superslot_samples;
+        /** @brief Number of samples in a full slot including any guard */
+        const size_t full_slot_samples;
 
         /** @brief The schedule slot this slot represents */
         const size_t slotidx;
@@ -66,6 +68,9 @@ public:
 
         /** @brief Number of samples in slot */
         size_t nsamples;
+
+        /** @brief Load per channel */
+        std::vector<size_t> load;
 
         /** @brief The list of IQ buffers */
         std::list<std::shared_ptr<IQBuf>> iqbufs;
@@ -98,13 +103,16 @@ public:
 
         /** @brief Push a modulated packet onto the slot
          * @param mpkt A reference to a modulated packet
+         * @param chanidx The channel on which the packet was modulated
          * @param overfill true if the slot can be overfilled
          * @return true if the packet was pushed, false if it didn't fit
          */
         /** The slot's mutex must be held by the caller. If pushed, the slot
          * takes ownership of the ModPacket.
          */
-        bool push(std::unique_ptr<ModPacket> &mpkt, bool overfill)
+        bool push(std::unique_ptr<ModPacket> &mpkt,
+                  size_t chanidx,
+                  bool overfill)
         {
             if (closed.load(std::memory_order_acquire))
                 return false;
@@ -118,6 +126,9 @@ public:
                 iqbufs.emplace_back(mpkt->samples);
                 mpkts.emplace_back(std::move(mpkt));
                 nsamples += n;
+
+                if (chanidx < load.size())
+                    load[chanidx] += n;
 
                 return true;
             } else

@@ -2,6 +2,7 @@ import asyncio
 from concurrent.futures import CancelledError
 import json
 import logging
+import math
 import netifaces
 import numpy as np
 import os
@@ -10,20 +11,18 @@ import random
 import signal
 import subprocess
 import sys
-import threading
 import time
 
 import dragonradio
 
-from dragon.collab import CollabAgent, MandatedOutcome, Node, Voxel
-from dragon.gpsd import GPSDClient
+from dragon.collab import CollabAgent
+from dragon.gpsd import GPSDClient, GPSLocation
 import dragon.internal
-from dragon.internal import InternalProtoClient, InternalProtoServer
+from dragon.internal import InternalProtoClient, InternalProtoServer, mkFlowStats, mkSpectrumStats
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
 import dragon.schedule
-import dragon.scoring as scoring
 
 logger = logging.getLogger('controller')
 
@@ -40,6 +39,25 @@ def darpaNodeNet(node_id):
     Return IP subnet of radio node on DARPA's network.
     """
     return '192.168.{:d}.0/24'.format(node_id+100)
+
+class Node(object):
+    def __init__(self, id):
+        self.id = id
+        self.loc = GPSLocation()
+
+    def __str__(self):
+        return 'Node(loc={})'.format(self.loc)
+
+class Voxel(object):
+    def __init__(self):
+        self.f_start = 0
+        self.f_end = 0
+        self.tx = None
+        self.rx = []
+        self.duty_cycle = 1.0
+
+    def __str__(self):
+        return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
 
 @handler(remote.Request)
 class Controller(TCPProtoServer):
@@ -74,14 +92,32 @@ class Controller(TCPProtoServer):
         self.nodes = {}
         """Nodes in our network"""
 
-        self.scorer = scoring.Scorer(config)
+        self.scorer = None
         """Match scorer"""
+
+        self.scorer_lock = None
+        """Lock on scorer"""
+
+        self.flow_links = {}
+        """Link, i.e., source/destination pair, for each flow"""
+
+        self.stats_max_mp = {}
+        """Maximum MP for which stats have been received from each SRN"""
 
         self.max_reported_mp = 0
         """Maximum MP for which flow statistics have been reported"""
 
         self.reported_mandate_performance = []
         """Reported mandate performance"""
+
+        self.historical_voxel_usage = []
+        """Historical voxel usage"""
+
+        self.current_voxel_usage = {}
+        """Current voxel usage"""
+
+        self.voxel_lock = None
+        """Lock on voxel usage"""
 
         self.schedule = None
         """Current TDMA schedule"""
@@ -92,17 +128,8 @@ class Controller(TCPProtoServer):
         self.schedule_nodes = []
         """Nodes in the TDMA schedule"""
 
-        self.voxels = []
-        """Voxels used"""
-
-        self.mandated_outcomes_lock = threading.Lock()
-        """Lock for mandated outcomes"""
-
-        self.mandated_outcomes = {}
+        self.mandates = {}
         """Current mandated outcomes"""
-
-        self.stage_mandated_outcomes = {}
-        """Mandated outcomes for given stage"""
 
         self.scoring_percent_threshold = 0
         """Scoring percent threshold"""
@@ -117,7 +144,7 @@ class Controller(TCPProtoServer):
         """Internal protocol client"""
 
         # Provide default start time
-        self.scenario_start_time = time.time()
+        self.scenario_start_time = math.floor(time.time())
 
     @property
     def is_gateway(self):
@@ -134,13 +161,19 @@ class Controller(TCPProtoServer):
     def scenario_start_time(self, t):
         logging.info('RF scenario start time set: %f', t)
         self.__scenario_start_time = t
-        self.scorer.scenario_start_time = t
         if self.radio is not None:
             self.radio.flowperf.start = t
 
-    def timeToMP(self, t):
+    def timeToMP(self, t, closest=False):
         """Convert time (in seconds since the epoch) to a measurement period"""
-        return int((t - self.scenario_start_time) / self.config.measurement_period)
+        if closest:
+            return int(round(t - self.scenario_start_time) / self.config.measurement_period)
+        else:
+            return int((t - self.scenario_start_time) / self.config.measurement_period)
+
+    def currentMP(self):
+        """Current measurement period"""
+        return self.timeToMP(time.time())
 
     def setupRadio(self, bootstrap=False):
         # We cannot do this in __init__ because the controller is created
@@ -216,8 +249,14 @@ class Controller(TCPProtoServer):
                                                        loop=self.loop,
                                                        server_host=INTERNAL_BCAST_ADDR)
 
-        # Start our local status update
-        self.loop.create_task(self.updateAllFlowStatistics())
+        # If we are the gateway, start the scorer
+        if self.is_gateway:
+            self.scorer = dragonradio.Scorer()
+            self.scorer_lock = asyncio.Lock()
+            self.voxel_lock = asyncio.Lock()
+
+        # Start status update
+        self.loop.create_task(self.updateStatus())
 
         # XXX we need *some* task to be running or else we run_forever can't be
         # stopped!
@@ -253,9 +292,6 @@ class Controller(TCPProtoServer):
                 self.started = True
                 self.scenario_start_time = timestamp
 
-                # Start the scorer
-                self.scorer.start()
-
                 # Create ALOHA MAC for HELLO messages
                 self.radio.configureALOHA()
 
@@ -271,22 +307,16 @@ class Controller(TCPProtoServer):
 
     async def stopRadio(self):
         if not self.done:
-            # Update score one final time
-            if self.is_gateway:
-                self.scorer.updateScore()
-
-            # Stop the scorer
-            try:
-                self.scorer.stop()
-            except:
-                logger.exception('Could not gracefully terminate scorer')
+            # Stop the collaboration agent
+            if self.collab_agent:
+                try:
+                    self.collab_agent.stop()
+                except:
+                    logger.exception('Could not gracefully terminate collaboration agent')
 
             # Dump score data if we are the gateway
             if self.is_gateway:
                 try:
-                    # Dump scoring data one last time
-                    self.scorer.dumpScores(final=True)
-
                     # Dump reported scores
                     self.saveReportedMandatePerformance()
                 except:
@@ -349,10 +379,9 @@ class Controller(TCPProtoServer):
                 tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
 
                 logger.info('Cancelling tasks...')
-                [task.cancel() for task in tasks]
-
-                logging.info('Waiting for outstanding tasks')
-                await asyncio.gather(*tasks)
+                for task in tasks:
+                    task.cancel()
+                    await task
 
                 #
                 # Stop the event loop
@@ -450,6 +479,17 @@ class Controller(TCPProtoServer):
         for n in nodes:
             self.addNode(n)
 
+    def getDestinations(self, node_id):
+        """Return a list of nodes given node transmits to"""
+        destinations = set()
+
+        for _, link in self.flow_links.items():
+            (src, dest) = link
+            if node_id == src:
+                destinations.add(dest)
+
+        return destinations
+
     async def installMACSchedule(self, seq, sched):
         """Install a new MAC schedule"""
         with await self.radio.lock:
@@ -475,38 +515,108 @@ class Controller(TCPProtoServer):
 
             self.schedule_seq = seq
 
-    def scheduleToVoxels(self, sched):
+    async def getHistoricalSpectrumUsage(self):
+        with await self.voxel_lock:
+            usage = self.historical_voxel_usage
+            self.historical_voxel_usage = []
+
+        return usage
+
+    async def getPredictedSpectrumUsage(self):
+        mac = self.radio.mac
+
+        if mac is None:
+            return []
+        elif isinstance(mac, dragonradio.SlottedALOHA):
+            return await self.alohaToVoxels()
+        else:
+            return await self.scheduleToVoxels(self.schedule)
+
+    async def updateVoxelUsage(self, vox):
+        """Get voxel usage
+
+        Arguments:
+            node_id: The node ID of the transmitting node
+            vox: The voxel
+        """
+        config = self.config
+
+        with await self.voxel_lock:
+            # Look up most recent usage report by this node on this channel
+            duty_cycle = 0
+
+            if vox.tx in self.current_voxel_usage:
+                duty_cycle = self.current_voxel_usage[vox.tx].get((vox.f_start, vox.f_end), None)
+                if duty_cycle is not None:
+                    # Set duty cycle
+                    vox.duty_cycle = duty_cycle
+
+                    # Trim channel start and end
+                    bw = vox.f_end - vox.f_start
+                    vox.f_start += config.spec_chan_trim_lo*bw
+                    vox.f_end -= config.spec_chan_trim_hi*bw
+
+                    # Set receivers
+                    vox.rx = self.getDestinations(vox.tx)
+
+    async def alohaToVoxels(self):
+        """Determine voxel usage for ALOHA"""
+        config = self.config
+        radio = self.radio
+
+        nnodes = len(self.nodes)
+        nchannels = len(radio.channels)
+
+        voxels = []
+
+        for chan in radio.channels:
+            transmitters = set(self.nodes)
+
+            f_start = radio.frequency + chan.fc - chan.bw/2
+            f_end = radio.frequency + chan.fc + chan.bw/2
+
+            for tx in transmitters:
+                vox = Voxel()
+                vox.f_start = f_start
+                vox.f_end = f_end
+                vox.tx = tx
+
+                await self.updateVoxelUsage(vox)
+
+                if vox.duty_cycle != 0:
+                    voxels.append(vox)
+
+        return voxels
+
+    async def scheduleToVoxels(self, sched):
         """Determine voxel usage from schedule"""
         config = self.config
         radio = self.radio
 
         (nchannels, nslots) = sched.shape
-        cbw = radio.channel_bandwidth
 
         voxels = []
 
-        for chan in range(0, nchannels):
-            transmitters = set(sched[chan])
+        for chanidx in range(0, nchannels):
+            transmitters = set(sched[chanidx])
             if 0 in transmitters:
                 transmitters.remove(0)
 
             if len(transmitters) != 0:
-                f_start = config.frequency + radio.channels[chan].fc-cbw/2
-                f_end = config.frequency + radio.channels[chan].fc+cbw/2
-
-                rx = radio.node_id
+                chan = radio.channels[chanidx]
+                f_start = radio.frequency + chan.fc - chan.bw/2
+                f_end = radio.frequency + chan.fc + chan.bw/2
 
                 for tx in transmitters:
-                    occupancy = (sched[chan] == tx).sum() / len(sched[chan])
+                    vox = Voxel()
+                    vox.f_start = f_start
+                    vox.f_end = f_end
+                    vox.tx = tx
 
-                    v = Voxel()
-                    v.f_start = f_start
-                    v.f_end = f_end
-                    v.tx = tx
-                    v.rx = [rx]
-                    v.duty_cycle = occupancy
+                    await self.updateVoxelUsage(vox)
 
-                    voxels.append(v)
+                    if vox.duty_cycle != 0:
+                        voxels.append(vox)
 
         return voxels
 
@@ -552,68 +662,68 @@ class Controller(TCPProtoServer):
     async def getMandatePerformance(self):
         config = self.config
 
-        # Drain the scoring task queue
-        #await self.loop.run_in_executor(None, self.scorer.join)
-
-        # Update scoring data
-        await self.loop.run_in_executor(None, self.scorer.updateScore)
-
         # Determine which measurement period to use. We use the latest MP for
         # which we have data from all nodes, except if it is older than
         # config.max_performance_age seconds ago, in which case we extrapolate.
-        known_mps = self.scorer.stats_max_mp.values()
+        known_mps = self.stats_max_mp.values()
         if len(known_mps) == 0:
             min_known_mp = 0
         else:
-            min_known_mp = min(self.scorer.stats_max_mp.values())
+            min_known_mp = min(self.stats_max_mp.values())
 
         min_mp = self.timeToMP(time.time() - config.max_performance_age)
 
         mp = max(min_known_mp, min_mp)
         timestamp = self.scenario_start_time + mp*config.measurement_period
-        stage = self.scorer.getMPStage(mp)
-        if stage == 0:
-            stage = 1
 
-        logger.info('getMandatePerformance: min_known_mp=%d; min_mp=%d; mp=%d; stage=%d',
-            min_known_mp,
-            min_mp,
-            mp,
-            stage)
+        # Get updated scores
+        with await self.scorer_lock:
+            self.scorer.updateScore(self.currentMP())
 
-        # Updated mandated outcomes from the given measureement period
-        with self.mandated_outcomes_lock:
-            mandated_outcomes = self.stage_mandated_outcomes[stage]
+            scores = self.scorer.scores
 
-            # Get scorer to update our mandated outcomes
-            await self.loop.run_in_executor(None, self.scorer.updateMandatedOutcomes,
-                                            mp,
-                                            mandated_outcomes)
+        # Updated mandated outcomes using scoring data from measurement period
+        # mp
+        mandates_achieved = 0
+        total_score_achieved = 0
+        mandates = []
 
-            # Build performance report
-            mandates_achieved = 0
-            total_score_achieved = 0
-            performance = []
+        for (flow_uid, mandate) in self.mandates.items():
+            mandates.append(mandate)
 
-            for mandate in mandated_outcomes.values():
-                perf = scoring.MandatePerformance(mandate.scalar_performance,
-                                                  mandate.radio_ids,
-                                                  mandate.flow_uid,
-                                                  mandate.hold_period,
-                                                  mandate.achieved_duration,
-                                                  mandate.point_value)
+            # Get radio IDs involved in this flow
+            if flow_uid in self.flow_links:
+                (src, dest) = self.flow_links[flow_uid]
+                mandate.radio_ids = [src, dest]
+            else:
+                mandate.radio_ids = []
 
-                if mandate.achieved_duration >= mandate.hold_period:
-                    mandates_achieved += 1
-                    total_score_achieved += mandate.point_value
+            # Get score for this flow at this MP
+            score = scores[flow_uid][mp]
 
-                performance.append(perf)
+            logging.debug("Score: flow_uid=%s; mp=%s; update_timestamp_sent=%s; npackets_sent=%s; update_timestamp_recv=%s; npackets_recv=%s",
+                flow_uid,
+                mp,
+                score.update_timestamp_sent,
+                score.npackets_sent,
+                score.update_timestamp_recv,
+                score.npackets_recv)
+
+            # Calculate scalar performance and
+            mandate.achieved_duration = score.achieved_duration
+
+            if mandate.achieved_duration >= mandate.hold_period:
+                mandate.scalar_performance = 1.0
+                mandates_achieved += 1
+                total_score_achieved += mandate.point_value
+            else:
+                mandate.scalar_performance = mandate.achieved_duration/mandate.hold_period
 
         # Log the reported score
         self.reported_mandate_performance.append((mp, mandates_achieved, total_score_achieved))
 
         # Return performance metrics
-        return (mp, timestamp, mandates_achieved, total_score_achieved, performance)
+        return (mp, timestamp, mandates_achieved, total_score_achieved, mandates)
 
     def saveReportedMandatePerformance(self):
         """Save reported performance"""
@@ -631,26 +741,31 @@ class Controller(TCPProtoServer):
     def updateGoals(self, goals, timestamp):
         logging.debug('Updating goals')
 
-        # Dump current scores and update scorer's goals
-        if self.is_gateway:
-            self.scorer.dumpScores()
-
-        self.scorer.updateGoals(goals, timestamp)
-
         # Update mandated outcomes
-        mandates = {}
+        mandates = dragonradio.MandateMap()
 
         for goal in goals:
-            outcome = MandatedOutcome(json=goal)
-            mandates[outcome.flow_uid] = outcome
+            flow_uid = goal['flow_uid']
+            hold_period = goal['hold_period']
+            point_value = goal.get('point_value', 1)
+            max_latency_s = goal['requirements'].get('max_latency_s', None)
+            min_throughput_bps = goal['requirements'].get('min_throughput_bps', None)
+            file_transfer_deadline_s = goal['requirements'].get('file_transfer_deadline_s', None)
 
-        self.setMandatedOutcomes(mandates)
+            mandates[flow_uid] = dragonradio.Mandate(flow_uid,
+                                                     hold_period,
+                                                     point_value,
+                                                     max_latency_s,
+                                                     min_throughput_bps,
+                                                     file_transfer_deadline_s)
+
+        self.setMandates(mandates)
 
         # We have mandates!
         self.scenario_started = True
 
-    async def updateAllFlowStatistics(self):
-        """Update all flow statistics"""
+    async def updateStatus(self):
+        """Update status"""
         config = self.config
         radio = self.radio
         node_id = radio.node_id
@@ -658,41 +773,188 @@ class Controller(TCPProtoServer):
         while not self.done:
             try:
                 if self.scenario_started:
-                    if self.is_gateway or self.internal_client is not None:
-                        reset_stats = True
-                    else:
-                        reset_stats = False
+                    (sources, sinks) = await self.getFlowStatistics()
+                    spectrum = await self.getSpectrumStatistics()
 
-                    # This is the maximum MP for which we will report flow
-                    # statistics
-                    max_report_mp = self.timeToMP(time.time() - config.stats_ignore_window)
-
-                    # Get local flow statistics
-                    sources = [scoring.mkFlowStats(p, self.max_reported_mp + 1, max_report_mp) for p in radio.flowperf.getSources(reset_stats).values()]
-                    sinks = [scoring.mkFlowStats(p, self.max_reported_mp + 1, max_report_mp) for p in radio.flowperf.getSinks(reset_stats).values()]
-
-                    self.max_reported_mp = max_report_mp
-
-                    # Filter out
-                    sources = [p for p in sources if scoring.nonzeroFlowStats(p)]
-                    sinks = [p for p in sinks if scoring.nonzeroFlowStats(p)]
-
-                    self.scorer.updateSourceStats(node_id,
-                                                  time.time(),
-                                                  sources)
-                    self.scorer.updateSinkStats(node_id,
-                                                time.time(),
-                                                sinks)
-
-                    # Send flow statistics to the gateway
-                    if not self.is_gateway and self.internal_client is not None:
-                        await self.internal_client.sendStatus(sources, sinks)
+                    # Update local statistics if we are the gateway
+                    if self.is_gateway:
+                        await self.updateFlowStatistics(node_id,
+                                                        time.time(),
+                                                        sources,
+                                                        sinks)
+                        await self.updateSpectrumStatistics(node_id,
+                                                            time.time(),
+                                                            spectrum)
+                    # Otherwise, send statistics to the gateway
+                    elif self.internal_client is not None:
+                        await self.internal_client.sendStatus(sources,
+                                                              sinks,
+                                                              spectrum)
 
                 await asyncio.sleep(config.status_update_period)
             except CancelledError:
                 return
             except:
-                logging.exception('Exception in updateAllFlowStatistics')
+                logging.exception('Exception in updateStatus')
+
+    async def getFlowStatistics(self):
+        """Get flow statistics for this node.
+
+        Return:
+            A pair of lists of internal.FlowStats values representing flow
+            statistics for sources and sinks, respectively, for this node.
+        """
+        config = self.config
+        radio = self.radio
+
+        # Determine minimum and maximum MP for which we will report
+        # flow statistics
+        min_mp = self.max_reported_mp + 1
+        max_mp = self.timeToMP(time.time() - config.stats_ignore_window)
+        self.max_reported_mp = max_mp
+
+        # Get local flow statistics
+        if self.is_gateway or self.internal_client is not None:
+            reset_stats = True
+        else:
+            reset_stats = False
+
+        sources = [mkFlowStats(min_mp, max_mp, p) for p in radio.flowperf.getSources(reset_stats).values() if p.low_mp is not None]
+        sinks = [mkFlowStats(min_mp, max_mp, p) for p in radio.flowperf.getSinks(reset_stats).values() if p.low_mp is not None]
+
+        return (sources, sinks)
+
+    async def getSpectrumStatistics(self):
+        """Get spectrum usage statistics for this node.
+
+        Return:
+            A list of internal.SpectrumStats values representing spectrum usage
+            statistics for this node.
+        """
+        config = self.config
+        radio = self.radio
+        mac = radio.mac
+
+        spectrum_usage = []
+
+        if mac is not None:
+            if config.tx_upsample:
+                channels = radio.channels
+            else:
+                channels = [radio.channels[radio.tx_channel_idx]]
+
+            # Get per-channel load from MAC
+            load = mac.popLoad()
+
+            # Get current TX sample rate
+            fs = radio.usrp.tx_rate
+
+            # Calculate load denominator: the number of samples that could've
+            # been transmitted over the loaded period.
+            nsamples = fs*load.period
+
+            voxels = []
+
+            for idx, chan in enumerate(channels):
+                if idx < len(load.nsamples):
+                    duty_cycle = load.nsamples[idx]/nsamples
+
+                    if duty_cycle != 0:
+                        vox = Voxel()
+                        vox.f_start = self.radio.frequency + chan.fc - chan.bw/2
+                        vox.f_end = self.radio.frequency + chan.fc + chan.bw/2
+                        vox.duty_cycle = duty_cycle
+                        voxels.append(vox)
+
+            if len(voxels) != 0:
+                spectrum_usage.append(mkSpectrumStats(load.start, load.end, voxels))
+
+        return spectrum_usage
+
+    async def updateFlowStatistics(self, node_id, timestamp, sources, sinks):
+        """Update flow statistics from reported source and sink stats"""
+        with await self.scorer_lock:
+            for flow in sources:
+                # Record maximum MP
+                max_mp = flow.first_mp + min(len(flow.npackets), len(flow.nbytes)) - 1
+                self.stats_max_mp[node_id] = max(self.stats_max_mp.get(node_id, 0), max_mp)
+
+                logger.info("Updating source flow statistics: node=%d; flow=%d; timestamp=%f; current mp=%d; first_mp=%d; max_mp=%d; npackets=%s; nbytes=%s",
+                    node_id,
+                    flow.flow_uid,
+                    timestamp,
+                    self.currentMP(),
+                    flow.first_mp,
+                    max_mp,
+                    flow.npackets,
+                    flow.nbytes)
+
+                # Record link between nodes
+                self.flow_links[flow.flow_uid] = (flow.src, flow.dest)
+
+                # Update scorer
+                self.scorer.updateSentStatistics(flow.flow_uid,
+                                                 timestamp,
+                                                 flow.first_mp,
+                                                 flow.npackets,
+                                                 flow.nbytes)
+
+            for flow in sinks:
+                # Record maximum MP
+                max_mp = flow.first_mp + min(len(flow.npackets), len(flow.nbytes)) - 1
+                self.stats_max_mp[node_id] = max(self.stats_max_mp.get(node_id, 0), max_mp)
+
+                logger.info("Updating sink flow statistics: node=%d; flow=%d; timestamp=%f; current mp=%d; first_mp=%d; max_mp=%d; npackets=%s; nbytes=%s",
+                    node_id,
+                    flow.flow_uid,
+                    timestamp,
+                    self.currentMP(),
+                    flow.first_mp,
+                    max_mp,
+                    flow.npackets,
+                    flow.nbytes)
+
+                # Record link between nodes
+                self.flow_links[flow.flow_uid] = (flow.src, flow.dest)
+
+                # Update scorer
+                self.scorer.updateReceivedStatistics(flow.flow_uid,
+                                                     timestamp,
+                                                     flow.first_mp,
+                                                     flow.npackets,
+                                                     flow.nbytes)
+
+    async def updateSpectrumStatistics(self, node_id, timestamp, reports):
+        """Update flow statistics from reported source and sink stats"""
+        radio = self.radio
+        channels = radio.channels
+
+        load = {}
+        historical_usage = []
+
+        for spectrum in reports:
+            for usage in spectrum.voxels:
+                vox = Voxel()
+                vox.f_start = usage.f_start
+                vox.f_end = usage.f_end
+                vox.duty_cycle = usage.duty_cycle
+                vox.tx = node_id
+                vox.rx = self.getDestinations(node_id)
+
+                historical_usage.append((spectrum.start.get_timestamp(),
+                                         spectrum.end.get_timestamp(),
+                                         vox))
+
+                load[(vox.f_start, vox.f_end)] = usage.duty_cycle
+
+                logging.debug("Spectrum usage: start=%s; end=%s; voxel=%s",
+                    spectrum.start.get_timestamp(),
+                    spectrum.end.get_timestamp(),
+                    vox)
+
+        with await self.voxel_lock:
+            self.historical_voxel_usage += historical_usage
+            self.current_voxel_usage[node_id] = load
 
     async def createSchedule(self):
         """Create a new TDMA schedule"""
@@ -725,7 +987,6 @@ class Controller(TCPProtoServer):
                 sched = dragon.schedule.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
                 if not np.array_equal(sched, self.schedule):
                     await self.installMACSchedule(self.schedule_seq + 1, sched)
-                    self.voxels = self.scheduleToVoxels(sched)
                     await self.distributeSchedule()
             except CancelledError:
                 return
@@ -789,6 +1050,8 @@ class Controller(TCPProtoServer):
                 old_bandwidth = self.radio.bandwidth
 
                 self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
+                if self.collab_agent:
+                    self.collab_agent.push_spectrum_usage()
 
                 # If only the center frequency has changed, keep the old
                 # schedule. Otherwise create a new schedule.
@@ -908,31 +1171,23 @@ class Controller(TCPProtoServer):
         resp.status.info = 'Mandated outcomes updated'
         return resp
 
-    def setMandatedOutcomes(self, mandated_outcomes):
+    def setMandates(self, mandates):
         """Set our mandated outcomes and update flowperf"""
         config = self.config
         radio = self.radio
 
         # Set our mandated outcomes
-        with self.mandated_outcomes_lock:
-            self.mandated_outcomes = mandated_outcomes
-            self.stage_mandated_outcomes[self.scorer.stage] = mandated_outcomes
+        self.mandates = mandates
 
-        # Create a MandatedOutcomeMap for flow performance component
-        mandates = dragonradio.MandatedOutcomeMap()
-
-        for (flow, m) in mandated_outcomes.items():
-            mandates[flow] = dragonradio.MandatedOutcome(m.hold_period,
-                                                         0.0,
-                                                         m.point_value,
-                                                         m.min_throughput_bps,
-                                                         m.max_latency_s,
-                                                         m.file_transfer_deadline_s)
-
+        # Set flow performance mandates
         radio.flowperf.mandates = mandates
 
+        # Set scorer mandates
+        if self.scorer:
+            self.scorer.setMandates(mandates)
+
         # Set allowed flows
-        self.setAllowedFlows(mandated_outcomes.keys())
+        self.setAllowedFlows([flow_uid for (flow_uid, _mandate) in mandates.items()])
 
     def setAllowedFlows(self, flows):
         """Decide which flows are allowed by the firewall.

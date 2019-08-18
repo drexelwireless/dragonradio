@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
@@ -17,6 +19,33 @@ void exportMACs(py::module &m)
         .def("reconfigure",
             &MAC::reconfigure,
             "Force the MAC to reconfigure after PHY parameters, e.g., TX rate, change.")
+        ;
+
+    // Export class SlottedMAC::Load to Python
+    using Load = SlottedMAC::Load;
+
+    py::class_<Load, std::shared_ptr<Load>>(m, "Load")
+        .def_property_readonly("start",
+            [](Load &self) -> double
+            {
+                return self.start.get_real_secs();
+            },
+            "Start of load measurement period (sec)")
+        .def_property_readonly("end",
+            [](Load &self) -> double
+            {
+                return self.end.get_real_secs();
+            },
+            "End of load measurement period (sec)")
+        .def_property_readonly("period",
+            [](Load &self) -> double
+            {
+                return (self.end - self.start).get_real_secs();
+            },
+            "Measurement period (sec)")
+        .def_readwrite("nsamples",
+            &SlottedMAC::Load::nsamples,
+            "Load per channel measured in number of samples")
         ;
 
     // Export class SlottedMAC to Python
@@ -41,6 +70,12 @@ void exportMACs(py::module &m)
             &SlottedMAC::getSchedule,
             py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
             "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
+        .def("getLoad",
+            &SlottedMAC::getLoad,
+            "Get current load")
+        .def("popLoad",
+            &SlottedMAC::popLoad,
+            "Get current load and reset load counters")
         ;
 
     // Export class TDMA to Python

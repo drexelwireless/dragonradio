@@ -17,7 +17,7 @@
 #include "Clock.hh"
 #include "Logger.hh"
 #include "Packet.hh"
-#include "net/MandatedOutcome.hh"
+#include "cil/CIL.hh"
 #include "net/Processor.hh"
 #include "stats/TimeWindowEstimator.hh"
 

@@ -76,6 +76,7 @@ SOURCES := \
     USRP.cc \
     Util.cc \
     WorkQueue.cc \
+    cil/Scorer.cc \
     dsp/FFTW.cc \
     dsp/FIRDesign.cc \
     dsp/TableNCO.cc \
@@ -105,6 +106,7 @@ SOURCES := \
     net/Net.cc \
     net/NetFilter.cc \
     net/TunTap.cc \
+    python/CIL.cc \
     python/Channelizer.cc \
     python/Channels.cc \
     python/Clock.cc \

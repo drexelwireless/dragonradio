@@ -202,7 +202,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 // frequency domain samples. We add L-1 to round up to the next
                 // partial block and one extra block to account for possible
                 // overflow from the previous slot.
-                slot->fdbuf = std::make_unique<IQBuf>(N*(1 + (slot->max_superslot_samples + L - 1)/L));
+                slot->fdbuf = std::make_unique<IQBuf>(N*(1 + (slot->full_slot_samples + L - 1)/L));
                 slot->fdbuf->zero();
             }
         }
@@ -230,7 +230,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
                 if (overfill)
-                    slot->max_samples = slot->max_superslot_samples;
+                    slot->max_samples = slot->full_slot_samples;
             }
 
             // Modulate into a new slot
@@ -395,7 +395,7 @@ void MultichannelSynthesizer::ChannelState::nextSlot(const Slot *prev_slot,
     // owns this buffer.
     fdbuf = slot.fdbuf.get();
 
-    max_samples = overfill ? slot.max_superslot_samples : slot.max_samples;
+    max_samples = overfill ? slot.full_slot_samples : slot.max_samples;
 
     // Was a partial block output in the previous slot?
     if (prev_slot && prev_slot->npartial != 0) {
@@ -431,7 +431,7 @@ void MultichannelSynthesizer::ChannelState::nextSlot(const Slot *prev_slot,
         // be 0, but we DO NOT want to re-initialize the upsampler. We test for
         // this case by seeing if the number of samples output in the previous
         // slot is equal to the size of the slot.
-        if (prev_slot && nsamples != delay + prev_slot->max_superslot_samples)
+        if (prev_slot && nsamples != delay + prev_slot->full_slot_samples)
             reset();
 
         nsamples = 0;
