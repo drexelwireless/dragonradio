@@ -134,7 +134,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     if (header_test_) {
         if (   header_valid_
             && (h->curhop != phy_.getNodeId())
-            && (h->flags.broadcast ||
+            && ((h->nexthop == kNodeBroadcast) ||
                 (h->nexthop == phy_.getNodeId()) ||
                 (collector && collector->active())))
             return 1;
