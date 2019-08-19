@@ -1,14 +1,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "net/FIFO.hh"
-#include "net/LIFO.hh"
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
 #include "net/PacketCompressor.hh"
+#include "net/SimpleQueue.hh"
 #include "net/Queue.hh"
-#include "net/SmartLIFO.hh"
 #include "python/PyModules.hh"
 
 void exportNet(py::module &m)
@@ -49,25 +47,20 @@ void exportNet(py::module &m)
         ;
 
     // Export class NetQueue to Python
-    py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
+    py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "Queue")
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
         ;
 
-    // Export class NetFIFO to Python
-    py::class_<NetFIFO, NetQueue, std::shared_ptr<NetFIFO>>(m, "NetFIFO")
-        .def(py::init())
+    // Export class SimpleNetQueue to Python
+    auto simple_queue_class = py::class_<SimpleNetQueue, NetQueue, std::shared_ptr<SimpleNetQueue>>(m, "SimpleQueue")
+        .def(py::init<SimpleNetQueue::QueueType>())
         ;
 
-    // Export class NetLIFO to Python
-    py::class_<NetLIFO, NetQueue, std::shared_ptr<NetLIFO>>(m, "NetLIFO")
-        .def(py::init())
-        ;
-
-    // Export class NetSmartLIFO to Python
-    py::class_<NetSmartLIFO, NetQueue, std::shared_ptr<NetSmartLIFO>>(m, "NetSmartLIFO")
-        .def(py::init())
-        ;
+    py::enum_<SimpleNetQueue::QueueType>(simple_queue_class, "QueueType")
+        .value("FIFO", SimpleNetQueue::FIFO)
+        .value("LIFO", SimpleNetQueue::LIFO)
+        .export_values();
 
     // Export class TunTap to Python
     py::class_<TunTap, std::shared_ptr<TunTap>>(m, "TunTap")

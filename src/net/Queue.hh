@@ -11,7 +11,7 @@
 using namespace std::placeholders;
 
 /** @brief A queue Element that has a separate high-priority queue that is
- *always serviced first.
+ * always serviced first.
  */
 template <class T>
 class Queue : public Element {
@@ -88,95 +88,5 @@ protected:
 };
 
 using NetQueue = Queue<std::shared_ptr<NetPacket>>;
-
-using RadioQueue = Queue<std::shared_ptr<RadioPacket>>;
-
-const FlowUID INTERNAL_PORT = 4096;
-
-/** @brief A simple queue Element. */
-template <class T>
-class SimpleQueue : public Queue<T> {
-public:
-    using const_iterator = typename std::list<T>::const_iterator;
-
-    SimpleQueue() : Queue<T>()
-    {
-    }
-
-    virtual ~SimpleQueue()
-    {
-        stop();
-    }
-
-    virtual void reset(void) override
-    {
-        std::lock_guard<std::mutex> lock(m_);
-        std::list<T> newq;
-
-        done_ = false;
-        q_.swap(newq);
-    }
-
-    virtual void push(T&& item) override
-    {
-        {
-            std::lock_guard<std::mutex> lock(m_);
-
-            if (item->flow_uid && *item->flow_uid == INTERNAL_PORT)
-                hiq_.emplace_back(std::move(item));
-            else
-                q_.emplace_back(std::move(item));
-        }
-
-        cond_.notify_one();
-    }
-
-    virtual void push_hi(T&& item) override
-    {
-        {
-            std::lock_guard<std::mutex> lock(m_);
-
-            hiq_.emplace_front(std::move(item));
-        }
-
-        cond_.notify_one();
-    }
-
-    virtual void repush(T&& item) override
-    {
-        {
-            std::lock_guard<std::mutex> lock(m_);
-
-            if (item->hdr.flags.syn)
-                hiq_.emplace_front(std::move(item));
-            else
-                hiq_.emplace_back(std::move(item));
-        }
-
-        cond_.notify_one();
-    }
-
-    virtual void stop(void) override
-    {
-        done_ = true;
-        cond_.notify_all();
-    }
-
-protected:
-    /** @brief Flag indicating that processing of the queue should stop. */
-    bool done_;
-
-    /** @brief Mutex protecting the queues. */
-    std::mutex m_;
-
-    /** @brief Condition variable protecting the queue. */
-    std::condition_variable cond_;
-
-    /** @brief The high-priority queue itself. */
-    std::list<T> hiq_;
-
-    /** @brief The standard_priority queue itself. */
-    std::list<T> q_;
-};
 
 #endif /* QUEUE_HH_ */
