@@ -11,8 +11,6 @@
 #include "Util.hh"
 #include "net/Net.hh"
 
-using namespace std::placeholders;
-
 /** @brief IP address for internal DragonRadio network */
 const char *kIntIPNet = "10.10.10.0";
 
