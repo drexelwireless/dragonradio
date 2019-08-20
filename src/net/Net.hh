@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Packet.hh"
+#include "RadioConfig.hh"
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
 #include "stats/Estimator.hh"
@@ -42,7 +43,15 @@ extern const char *kExtIPNetmask;
 using timestamp_vector = std::vector<std::pair<MonoClock::time_point, MonoClock::time_point>>;
 
 struct Node {
-    explicit Node(NodeId id);
+    explicit Node(NodeId id)
+      : id(id)
+      , is_gateway(false)
+      , can_transmit(true)
+      , g(1.0)
+      , ack_delay(rc.arq_ack_delay)
+      , retransmission_delay(rc.arq_retransmission_delay)
+    {
+    }
 
     Node() = delete;
     Node(const Node &) = delete;
@@ -93,9 +102,14 @@ class Net
 public:
     using NodeMap = std::map<NodeId, std::shared_ptr<Node>>;
 
-    Net(std::shared_ptr<TunTap> tuntap,
-        NodeId nodeId);
     Net() = delete;
+
+    Net(std::shared_ptr<TunTap> tuntap,
+        NodeId nodeId)
+      : tuntap_(tuntap)
+      , my_node_id_(nodeId)
+    {
+    }
 
     ~Net() = default;
 
