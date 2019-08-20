@@ -1282,7 +1282,7 @@ void SmartController::moveDownMCS(SendWindow &sendw)
 {
     Node &node = sendw.node;
 
-    if (rc.verbose && ! rc.debug)
+    if (rc.verbose && !rc.debug)
         fprintf(stderr, "Moving down modulation scheme\n");
 
     --sendw.mcsidx;
@@ -1314,7 +1314,7 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 {
     Node &node = sendw.node;
 
-    if (rc.verbose && ! rc.debug)
+    if (rc.verbose && !rc.debug)
         fprintf(stderr, "Moving up modulation scheme\n");
 
     ++sendw.mcsidx;
