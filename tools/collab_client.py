@@ -48,12 +48,9 @@ class DummyController(object):
         self.gpsd = GPSDClient(node.loc, loop=loop)
 
         self.config = SimpleNamespace()
-        self.config.location_update_period = 5.0
-        self.config.detailed_performance_update_period = 5.0
-        self.config.spec_load_check_period = 5.0
-
-        self.config.spec_occupancy_model = (1.0, 0.0)
-        self.config.spec_occupancy_min = 0.001
+        self.config.location_update_period = 15
+        self.config.spectrum_usage_update_period = 5
+        self.config.detailed_performance_update_period = 5
 
     def getVoxels(self):
         return []
