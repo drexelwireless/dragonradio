@@ -14,6 +14,7 @@
 #include "RadioConfig.hh"
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
+#include "phy/TXParams.hh"
 #include "stats/Estimator.hh"
 
 /** @brief A sprintf-style format string for internal network tun/tap IP
@@ -48,6 +49,7 @@ struct Node {
       , is_gateway(false)
       , can_transmit(true)
       , g(1.0)
+      , tx_params(nullptr)
       , ack_delay(rc.arq_ack_delay)
       , retransmission_delay(rc.arq_retransmission_delay)
     {
@@ -69,6 +71,9 @@ struct Node {
 
     /** @brief Multiplicative TX gain as measured against 0 dBFS. */
     float g;
+
+    /** @brief TX parameters for this node (may be null). */
+    const TXParams *tx_params;
 
     /** @brief ACK delay in seconds */
     double ack_delay;

@@ -50,6 +50,14 @@ void exportRadioNet(py::module &m)
             &Node::getSoftTXGain,
             &Node::setSoftTXGain,
             "Soft TX gain (dBFS)")
+        .def_property_readonly("tx_params",
+            [](Node &node) -> std::optional<TXParams> {
+                if (node.tx_params)
+                    return *node.tx_params;
+                else
+                    return std::nullopt;
+            },
+            "TX parameters")
         .def_readwrite("ack_delay",
             &Node::ack_delay,
             "ACK delay (in seconds)")

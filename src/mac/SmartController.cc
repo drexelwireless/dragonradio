@@ -1298,6 +1298,8 @@ void SmartController::moveDownMCS(SendWindow &sendw)
 
     const TXParams &tx_params = tx_params_[sendw.mcsidx];
 
+    node.tx_params = &tx_params;
+
     logEvent("AMC: Moved down modulation scheme: node=%u; mcsidx=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
@@ -1329,6 +1331,8 @@ void SmartController::moveUpMCS(SendWindow &sendw)
     resetPEREstimates(sendw);
 
     const TXParams &tx_params = tx_params_[sendw.mcsidx];
+
+    node.tx_params = &tx_params;
 
     logEvent("AMC: Moved up modulation scheme: node=%u; mcsidx=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
@@ -1478,6 +1482,10 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
             ++sendw.mcsidx;
 
         resetPEREstimates(sendw);
+
+        const TXParams &tx_params = tx_params_[sendw.mcsidx];
+
+        dest.tx_params = &tx_params;
 
         return sendw;
     }
