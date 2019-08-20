@@ -116,7 +116,7 @@ Test collaboration and mandated outcomes as follows:
 6. On the gateway, start a `mgen` listener:
 
 ```
-mgen check port 5000-5004 output listen.drc
+mgen check port 5000-5005 output listen.drc
 ```
 
 6. On the non-gateway node, run `mgen`:
