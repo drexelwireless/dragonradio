@@ -50,6 +50,9 @@ public:
     /** @brief Stop processing queue elements. */
     virtual void stop(void) = 0;
 
+    /** @brief Notify queue of new TXParams */
+    virtual void updateTXParams(NodeId id, const TXParams &tx_params) = 0;
+
     /** @brief Set whether or not a node's send window is open */
     void setSendWindowStatus(NodeId id, bool isOpen)
     {

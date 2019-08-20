@@ -162,6 +162,10 @@ public:
         cond_.notify_all();
     }
 
+    virtual void updateTXParams(NodeId id, const TXParams &tx_params) override
+    {
+    }
+
 protected:
     /** @brief Flag indicating that processing of the queue should stop. */
     bool done_;
