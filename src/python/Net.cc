@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "net/MandateQueue.hh"
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
@@ -8,6 +9,8 @@
 #include "net/SimpleQueue.hh"
 #include "net/Queue.hh"
 #include "python/PyModules.hh"
+
+PYBIND11_MAKE_OPAQUE(MandateMap)
 
 void exportNet(py::module &m)
 {
@@ -60,6 +63,32 @@ void exportNet(py::module &m)
     py::enum_<SimpleNetQueue::QueueType>(simple_queue_class, "QueueType")
         .value("FIFO", SimpleNetQueue::FIFO)
         .value("LIFO", SimpleNetQueue::LIFO)
+        .export_values();
+
+    // Export class MandateNetQueue to Python
+    auto mandate_queue_class = py::class_<MandateNetQueue, NetQueue, std::shared_ptr<MandateNetQueue>>(m, "MandateQueue")
+        .def(py::init<>())
+        .def("getFlowQueueType",
+            &MandateNetQueue::getFlowQueueType,
+            "Get flow queue's type")
+        .def("setFlowQueueType",
+            &MandateNetQueue::setFlowQueueType,
+            "Set flow queue's type")
+        .def("getFlowQueuePriority",
+            &MandateNetQueue::getFlowQueuePriority,
+            "Get flow queue's priority")
+        .def("setFlowQueuePriority",
+            &MandateNetQueue::setFlowQueuePriority,
+            "Set flow queue's priority")
+        .def_property("mandates",
+            &MandateNetQueue::getMandates,
+            &MandateNetQueue::setMandates,
+            "Mandates")
+        ;
+
+    py::enum_<MandateNetQueue::QueueType>(mandate_queue_class, "QueueType")
+        .value("FIFO", MandateNetQueue::FIFO)
+        .value("LIFO", MandateNetQueue::LIFO)
         .export_values();
 
     // Export class TunTap to Python

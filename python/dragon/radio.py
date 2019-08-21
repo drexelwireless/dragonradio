@@ -582,7 +582,7 @@ class Config(object):
                             dest='mtu',
                             help='set Maximum Transmission Unit (bytes)')
         parser.add_argument('--queue', action='store',
-                            choices=['fifo', 'lifo'],
+                            choices=['fifo', 'lifo', 'mandate'],
                             dest='queue',
                             help='set network queuing algorithm')
         parser.add_argument('--fifo', action='store_const', const='fifo',
@@ -876,6 +876,8 @@ class Radio(object):
             self.netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.FIFO)
         elif config.queue == 'lifo':
             self.netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.LIFO)
+        elif config.queue == 'mandate':
+            self.netq = dragonradio.MandateQueue()
         else:
             raise Exception('Unknown queue type: %s' % config.queue)
 
