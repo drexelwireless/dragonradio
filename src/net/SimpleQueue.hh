@@ -22,6 +22,7 @@ public:
 
     SimpleQueue(QueueType type)
       : Queue<T>()
+      , done_(false)
       , type_(type)
     {
     }
