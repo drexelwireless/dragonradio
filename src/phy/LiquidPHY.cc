@@ -186,6 +186,10 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
             logEvent("PHY: packet integrity not intact: seq=%u",
                 (unsigned) pkt->hdr.seq);
         }
+
+        // Cache payload size if this packet is not compressed
+        if (!pkt->hdr.flags.compressed)
+            pkt->payload_size = pkt->getPayloadSize();
     }
 
     pkt->evm = stats_.evm;

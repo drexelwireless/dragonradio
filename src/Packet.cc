@@ -240,7 +240,7 @@ const struct mgenhdr *Packet::getMGENHdr(void) const
         // Make sure the MGEN-specified data length and version are correct
         std::memcpy(&messageSize, reinterpret_cast<const uint16_t*>(mgenh) + offsetof(struct mgenhdr, messageSize), sizeof(messageSize));
 
-        if (ntohs(messageSize) == getPayloadSize() &&
+        if (ntohs(messageSize) == payload_size &&
             (mgenh->version == MGEN_VERSION || mgenh->version == DARPA_MGEN_VERSION))
             return mgenh;
         else
