@@ -126,11 +126,30 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        deactivate_all_queues();
-        activate_queue(hiq_);
-        activate_queue(defaultq_);
+        // Deactive queues that have a mandate but aren't in the new set of
+        // mandates
+        for (auto it = qs_.begin(); it != qs_.end(); ) {
+            SubQueue &subq = *it;
 
-        mandates_ = mandates;
+            if (subq.mandate && mandates.find(subq.mandate->flow_uid) == mandates.end()) {
+                subq.active = false;
+                it = qs_.erase(it);
+            } else
+                it++;
+        }
+
+        // Delete queues that have a mandate but aren't in the new mandate map
+        for (auto it = flow_qs_.begin(); it != flow_qs_.end(); ) {
+            if (it->second.mandate && mandates.find(it->first) == mandates.end())
+                it = flow_qs_.erase(it);
+            else
+                it++;
+        }
+
+        // Make sure we have a queue for each mandated flow with the proper
+        // queue type and mandate. If we update a mandate's priority and it is
+        // active, we need to re-sort the list of active queues.
+        bool need_sort = false;
 
         for (auto&& [flow_uid, mandate] : mandates) {
             // If this is a file transfer mandate, use a FIFO, otherwise, use a
@@ -143,10 +162,20 @@ public:
 
             if (!inserted) {
                 it->second.qtype = qtype;
-                it->second.mandate = mandate;
-                it->second.updatePriority();
+                it->second.setMandate(mandate);
+
+                if (it->second.active)
+                    need_sort |= it->second.updatePriority();
+                else
+                    it->second.updatePriority();
             }
         }
+
+        if (need_sort)
+            sort_queues();
+
+        // Record mandates
+        mandates_ = mandates;
     }
 
     virtual void reset(void) override
@@ -391,6 +420,14 @@ protected:
         bool operator >(const SubQueue &other) const
         {
             return priority > other.priority;
+        }
+
+        void setMandate(const Mandate &new_mandate)
+        {
+            mandate = new_mandate;
+
+            if (new_mandate.min_throughput_bps)
+                updateMinThroughputBps(*(new_mandate.min_throughput_bps)/8);
         }
 
         bool bucketHasTokensFor(const Packet &pkt)
