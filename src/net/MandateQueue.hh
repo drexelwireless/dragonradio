@@ -684,8 +684,12 @@ protected:
 
     SubQueue &queue_for(T &pkt)
     {
-        if (pkt->flow_uid)
-            return flow_qs_[*pkt->flow_uid];
+        if (pkt->flow_uid) {
+            auto it = flow_qs_.find(*pkt->flow_uid);
+
+            if (it != flow_qs_.end())
+                return it->second;
+        }
 
         return defaultq_;
     }
