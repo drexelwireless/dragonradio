@@ -1,8 +1,8 @@
 #!/bin/sh
 EVENT=scrimmage5
 VALIDATE=5
-IMAGE=cil-20190722-e072a033
-QUAL=96278
+IMAGE=master-20190819-fa26cfc5
+QUAL=101785
 
 copy()
 {
