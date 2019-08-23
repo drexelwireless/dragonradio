@@ -1255,13 +1255,11 @@ void SmartController::txFailure(SendWindow &sendw)
 
 void SmartController::updateMCS(SendWindow &sendw)
 {
-    Node          &node = sendw.node;
-    double        short_per = sendw.short_per.getValue();
-    double        long_per = sendw.long_per.getValue();
-    static double prev_short_per = 0.0;
-    static double prev_long_per = 0.0;
+    Node   &node = sendw.node;
+    double short_per = sendw.short_per.getValue();
+    double long_per = sendw.long_per.getValue();
 
-    if (short_per != prev_short_per || long_per != prev_long_per) {
+    if (short_per != sendw.prev_short_per || long_per != sendw.prev_long_per) {
         logEvent("AMC: updateMCS: node=%u; short per=%f (%u samples); long per=%f (%u samples)",
             node.id,
             short_per,
@@ -1269,8 +1267,8 @@ void SmartController::updateMCS(SendWindow &sendw)
             long_per,
             sendw.long_per.getNSamples());
 
-        prev_short_per = short_per;
-        prev_long_per = long_per;
+        sendw.prev_short_per = short_per;
+        sendw.prev_long_per = long_per;
     }
 
     // First for high PER, then test for low PER

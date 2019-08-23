@@ -114,6 +114,8 @@ struct SendWindow {
       , maxwin(maxwin)
       , mcsidx(0)
       , mcsidx_prob(0)
+      , prev_short_per(1)
+      , prev_long_per(1)
       , short_per(1)
       , long_per(1)
       , entries_(maxwin, *this)
@@ -164,6 +166,12 @@ struct SendWindow {
      * used to calculate the current PER
      */
     Seq per_end;
+
+    /** @brief Previous short-term packet error rate */
+    double prev_short_per;
+
+    /** @brief Previous long-term packet error rate */
+    double prev_long_per;
 
     /** @brief Short-term packet error rate */
     WindowedMean<double> short_per;
