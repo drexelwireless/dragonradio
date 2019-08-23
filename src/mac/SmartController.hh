@@ -796,20 +796,20 @@ public:
             throw std::out_of_range("No send window for node");
     }
 
-    double getLongPER(void)
-    {
-        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-
-        return sendw.long_per.getValue();
-    }
-
     double getShortPER(void)
     {
         SendWindow                      &sendw = controller_->getSendWindow(node_id_);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
         return sendw.short_per.getValue();
+    }
+
+    double getLongPER(void)
+    {
+        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        return sendw.long_per.getValue();
     }
 
 private:
