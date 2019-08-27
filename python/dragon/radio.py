@@ -1101,7 +1101,7 @@ class Radio(object):
 
             h = lowpass_firpm1f2(wp, ws, fs, Nmax=dragonradio.FDChannelizer.P)
 
-            logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
+            logging.debug("Creating prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g",
                           len(h), wp, ws, fs)
             return h
         else:
