@@ -1118,23 +1118,20 @@ class Radio(object):
         """Generate synthesizer filter taps for given channel"""
         config = self.config
 
-        if config.tx_upsample:
-            if channel.bw == self.usrp.tx_rate:
-                return [1]
-            elif config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
-                # Frequency-space synthesizers don't apply a filter
-                return [1]
-            else:
-                wp = channel.bw-100e3
-                ws = channel.bw+100e3
-                fs = self.usrp.tx_rate
-
-                h = lowpass(wp, ws, fs)
-                logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
-                              len(h), wp, ws, fs)
-                return h
-        else:
+        if channel.bw == self.usrp.tx_rate:
             return [1]
+        elif config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
+            # Frequency-space synthesizers don't apply a filter
+            return [1]
+        else:
+            wp = channel.bw-100e3
+            ws = channel.bw+100e3
+            fs = self.usrp.tx_rate
+
+            h = lowpass(wp, ws, fs)
+            logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
+                          len(h), wp, ws, fs)
+            return h
 
     def deleteMAC(self):
         """Delete the current MAC"""
