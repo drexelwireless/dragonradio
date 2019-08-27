@@ -222,25 +222,6 @@ public:
         max_packet_size_ = max_packet_size;
     }
 
-    /** @brief Get the maximum modulation upsample rate. */
-    /** This should return the maximum upsample rate used during modulation.
-     * This value is used by SmartController to estimate the maximum number of
-     * packets that can fit in one time slot.
-     */
-    double getMaxTXUpsampleRate(void)
-    {
-        double max_rate = 1.0;
-
-        for (auto it = channels_.begin(); it != channels_.end(); ++it) {
-            double rate = tx_rate_/(phy_->getMinTXRateOversample()*it->first.bw);
-
-            if (rate > max_rate)
-                max_rate = rate;
-        }
-
-        return max_rate;
-    }
-
     /** @brief Modulate a slot. */
     virtual void modulate(const std::shared_ptr<Slot> &slot) = 0;
 
