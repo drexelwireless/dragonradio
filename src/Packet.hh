@@ -195,7 +195,7 @@ struct Packet : public buffer<unsigned char>
     uint16_t getControlLen(void) const;
 
     /** @brief Set length of control info */
-    void setControlLen(uint16_t len);
+    void setControlLen(uint16_t ctrl_len);
 
     /** @brief Clear control messages contained in packet */
     void clearControl(void);

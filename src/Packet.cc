@@ -94,14 +94,14 @@ uint16_t Packet::getControlLen(void) const
     return ctrl_len;
 }
 
-void Packet::setControlLen(uint16_t len)
+void Packet::setControlLen(uint16_t ctrl_len)
 {
     if (!hdr.flags.has_control) {
         hdr.flags.has_control = 1;
         resize(size() + sizeof(uint16_t));
     }
 
-    memcpy(&(*this)[sizeof(ExtendedHeader) + ehdr().data_len], &len, sizeof(uint16_t));
+    memcpy(&(*this)[sizeof(ExtendedHeader) + ehdr().data_len], &ctrl_len, sizeof(uint16_t));
 }
 
 void Packet::clearControl(void)
