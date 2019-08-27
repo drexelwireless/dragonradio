@@ -52,6 +52,7 @@ public:
       , hiq_(kHiQueuePriority, FIFO)
       , defaultq_(kDefaultQueuePriority, FIFO)
       , nitems_(0)
+      , bonus_idx_(0)
     {
         activate_queue(hiq_);
         activate_queue(defaultq_);
@@ -244,12 +245,17 @@ public:
         MonoClock::time_point now = MonoClock::now();
         unsigned              idx = 0;
         unsigned              end = 0;
+        bool                  bonus = false;
 
+        // If the bonus flag is true, then we have served all mandated flows and
+        // can send "bonus" traffic. We do this in round-robin fashion.
+    retry:
         do {
             SubQueue                          &subq = qs_[idx];
             typename SubQueue::container_type &q = subq.q;
 
-            subq.fillBucket(now);
+            if (!bonus)
+                subq.fillBucket(now);
 
             switch (subq.qtype) {
                 case FIFO:
@@ -260,9 +266,13 @@ public:
                         if ((*it)->shouldDrop(now)) {
                             it = erase(subq, it);
                         } else if (canPop(*it)) {
-                            if (subq.bucketHasTokensFor(**it)) {
+                            if (bonus || subq.bucketHasTokensFor(**it)) {
                                 pkt = std::move(*it);
                                 erase(subq, it);
+
+                                if (bonus)
+                                    bonus_idx_ = idx+1;
+
                                 return true;
                             } else
                                 break;
@@ -280,9 +290,13 @@ public:
                         if ((*it)->shouldDrop(now)) {
                             it = decltype(it){ erase(subq, std::next(it).base()) };
                         } else if (canPop(*it)) {
-                            if (subq.bucketHasTokensFor(**it)) {
+                            if (bonus || subq.bucketHasTokensFor(**it)) {
                                 pkt = std::move(*it);
                                 erase(subq, std::next(it).base());
+
+                                if (bonus)
+                                    bonus_idx_ = idx+1;
+
                                 return true;
                             } else
                                 break;
@@ -296,6 +310,21 @@ public:
             if (++idx == qs_.size())
                 idx = 0;
         } while (idx != end);
+
+        if (!bonus) {
+            // Enter the bonus phase
+            bonus = true;
+
+            // Ensure starting bonus index is valid
+            if (bonus_idx_ >= qs_.size())
+                bonus_idx_ = 0;
+
+            // Start (and end) at the bonus index
+            idx = end = bonus_idx_;
+
+            // Try again to find a packet
+            goto retry;
+        }
 
         return false;
     }
@@ -591,6 +620,9 @@ protected:
 
     /** @brief Queues sorted by priority. */
     Queues qs_;
+
+    /** @brief Position of last-served queue during bonus time */
+    unsigned bonus_idx_;
 
     typename SubQueue::container_type::iterator erase(SubQueue &subq,
                                                       typename SubQueue::container_type::iterator pos)
