@@ -1507,10 +1507,12 @@ def safeRate(min_rate, clock_rate):
 
     Returns:
         A rate no less than rate min_rate that is supported by the hardware"""
-
     clock_rate_mhz = int(clock_rate/1e6)
 
     f = Fraction(min_rate/clock_rate).limit_denominator(clock_rate_mhz)
-    n = math.floor(f.denominator/f.numerator)
+    if f == 0:
+        n = clock_rate_mhz
+    else:
+        n = math.floor(f.denominator/f.numerator)
 
     return clock_rate/n
