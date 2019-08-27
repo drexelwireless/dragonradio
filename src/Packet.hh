@@ -191,14 +191,33 @@ struct Packet : public buffer<unsigned char>
         return *reinterpret_cast<const ExtendedHeader*>(data());
     }
 
+    /** @brief Check packet integrity */
+    bool integrityIntact(void) const
+    {
+        if (size() < sizeof(ExtendedHeader))
+            return false;
+
+        if (hdr.flags.has_control) {
+            if (size() < sizeof(ExtendedHeader) + ehdr().data_len + sizeof(uint16_t))
+                return false;
+
+            return size() == sizeof(ExtendedHeader) + ehdr().data_len + sizeof(uint16_t) + getControlLen();
+        } else
+            return size() == sizeof(ExtendedHeader) + ehdr().data_len;
+    }
+
     /** @brief Get length of control info */
     uint16_t getControlLen(void) const;
 
     /** @brief Set length of control info */
-    void setControlLen(uint16_t len);
+    void setControlLen(uint16_t ctrl_len);
 
     /** @brief Clear control messages contained in packet */
-    void clearControl(void);
+    void clearControl(void)
+    {
+        hdr.flags.has_control = 0;
+        resize(sizeof(ExtendedHeader) + ehdr().data_len);
+    }
 
     /** @brief Append a control message to a packet */
     void appendControl(const ControlMsg &ctrl);

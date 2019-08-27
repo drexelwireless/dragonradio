@@ -175,8 +175,18 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
                 pkt->hdr.nexthop,
                 (unsigned) pkt->hdr.seq);
         }
-    } else
+    } else {
         pkt = std::make_unique<RadioPacket>(*h, payload_, payload_len_);
+
+        if (!pkt->integrityIntact()) {
+            pkt->internal_flags.invalid_payload = 1;
+
+            if (rc.verbose && !rc.debug)
+                fprintf(stderr, "PAYLOAD INTEGRITY VIOLATED\n");
+            logEvent("PHY: packet integrity not intact: seq=%u",
+                (unsigned) pkt->hdr.seq);
+        }
+    }
 
     pkt->evm = stats_.evm;
     pkt->rssi = stats_.rssi;
