@@ -2,24 +2,37 @@ import argparse
 import asyncio
 from concurrent.futures import CancelledError
 import IPython
+from itertools import chain, cycle, starmap
 import logging
 import os
-from pprint import pprint
+import random
 import signal
 import sys
 
 import dragonradio
 import dragon.radio
 
-async def cycle_snr(radio, period):
-    gains = [25, 20, 15, 10, 5, 0]
-    i = 0
+def cycle_algorithm(desc):
+    if desc == 'sequential':
+        return cycle(chain(range(25, -1, -1), range(1, 25, 1)))
+    elif desc == 'discontinuous':
+        return cycle(range(25, -1, -5))
+    elif desc == 'random':
+        def f():
+            return random.randint(0, 25)
 
-    while True:
-        radio.usrp.tx_gain = gains[i % len(gains)]
-        i += 1
-        print("Gain: ", radio.usrp.tx_gain)
-        await asyncio.sleep(period)
+        return starmap(f, cycle([[]]))
+    else:
+        return []
+
+async def cycle_tx_gain(radio, period, gains):
+    try:
+        for g in gains:
+            radio.usrp.tx_gain = g
+            print("Gain: ", radio.usrp.tx_gain)
+            await asyncio.sleep(period)
+    except CancelledError:
+        pass
 
 async def cancel_tasks(loop):
     tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
@@ -48,9 +61,12 @@ def main():
     parser.add_argument('--interactive',
                         action='store_true', dest='interactive',
                         help='enter interactive shell after radio is configured')
-    parser.add_argument('--simulate-cycle-snr', type=float, dest='cycle_snr',
-                        default=0,
-                        help='simulate cycling between SNR levels')
+    parser.add_argument('--cycle-tx-gain', action='store',
+                        choices=['sequential', 'discontinuous', 'random'],
+                        help='enable TX gain cycling')
+    parser.add_argument('--cycle-tx-gain-period', type=float,
+                        default=10,
+                        help='TX gain cycling period')
 
     # Parse arguments
     try:
@@ -91,8 +107,10 @@ def main():
         if config.log_snapshots != 0:
             loop.create_task(radio.snapshotLogger())
 
-        if config.cycle_snr != 0:
-            loop.create_task(cycle_snr(radio, config.cycle_snr))
+        if config.cycle_tx_gain is not None:
+            loop.create_task(cycle_tx_gain(radio,
+                                           config.cycle_tx_gain_period,
+                                           cycle_algorithm(config.cycle_tx_gain)))
 
         for sig in [signal.SIGINT, signal.SIGTERM]:
             loop.add_signal_handler(sig, cancel_loop)
