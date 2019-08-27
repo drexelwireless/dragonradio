@@ -976,7 +976,11 @@ class Radio(object):
         # we must resample.
         #
         bandwidth = self.bandwidth
-        cbw = self.channel_bandwidth
+
+        if self.config.fdma:
+            cbw = config.channel_bandwidth
+        else:
+            cbw = config.bandwidth
 
         channels = dragon.channels.defaultChannelPlan(bandwidth, cbw)
 
@@ -1480,13 +1484,6 @@ class Radio(object):
     @property
     def bandwidth(self):
         return min(self.config.bandwidth, self.config.max_bandwidth)
-
-    @property
-    def channel_bandwidth(self):
-        if self.config.fdma:
-            return self.config.channel_bandwidth
-        else:
-            return self.config.bandwidth
 
 def safeRate(min_rate, clock_rate):
     """Find a safe rate no less than min_rate given the clock rate clock_rate.
