@@ -1092,10 +1092,7 @@ class Radio(object):
         config = self.config
 
         # Calculate channelizer taps
-        clock_rate_mhz = int(self.usrp.clock_rate/1e6)
-        rate = Fraction(channel.bw/self.usrp.rx_rate).limit_denominator(clock_rate_mhz)
-
-        if rate == 1:
+        if channel.bw == self.usrp.rx_rate:
             return [1]
         elif config.channelizer == 'freqdomain':
             wp = channel.bw-50e3
@@ -1122,10 +1119,7 @@ class Radio(object):
         config = self.config
 
         if config.tx_upsample:
-            clock_rate_mhz = int(self.usrp.clock_rate/1e6)
-            rate = Fraction(self.usrp.tx_rate/channel.bw).limit_denominator(clock_rate_mhz)
-
-            if rate == 1:
+            if channel.bw == self.usrp.tx_rate:
                 return [1]
             elif config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
                 # Frequency-space synthesizers don't apply a filter
