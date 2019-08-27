@@ -191,6 +191,21 @@ struct Packet : public buffer<unsigned char>
         return *reinterpret_cast<const ExtendedHeader*>(data());
     }
 
+    /** @brief Check packet integrity */
+    bool integrityIntact(void) const
+    {
+        if (size() < sizeof(ExtendedHeader))
+            return false;
+
+        if (hdr.flags.has_control) {
+            if (size() < sizeof(ExtendedHeader) + ehdr().data_len + sizeof(uint16_t))
+                return false;
+
+            return size() == sizeof(ExtendedHeader) + ehdr().data_len + sizeof(uint16_t) + getControlLen();
+        } else
+            return size() == sizeof(ExtendedHeader) + ehdr().data_len;
+    }
+
     /** @brief Get length of control info */
     uint16_t getControlLen(void) const;
 
