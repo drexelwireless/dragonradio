@@ -242,9 +242,11 @@ public:
             return false;
 
         MonoClock::time_point now = MonoClock::now();
+        unsigned              idx = 0;
+        unsigned              end = 0;
 
-        for (auto&& it : qs_) {
-            SubQueue                          &subq = it.get();
+        do {
+            SubQueue                          &subq = qs_[idx];
             typename SubQueue::container_type &q = subq.q;
 
             subq.fillBucket(now);
@@ -290,7 +292,10 @@ public:
                 }
                 break;
             }
-        }
+
+            if (++idx == qs_.size())
+                idx = 0;
+        } while (idx != end);
 
         return false;
     }
