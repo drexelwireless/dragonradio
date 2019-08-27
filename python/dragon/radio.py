@@ -1020,7 +1020,7 @@ class Radio(object):
         tx_rate = self.usrp.tx_rate
 
         if tx_rate != want_tx_rate:
-            raise Exception('Wanted TX rate %g, but got %g' % (want_rx_rate, rx_rate))
+            raise Exception('Wanted TX rate %g, but got %g' % (want_tx_rate, tx_rate))
 
         # Tell PHY what the TX and RX rates are
         self.phy.rx_rate = rx_rate
