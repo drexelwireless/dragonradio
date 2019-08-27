@@ -104,12 +104,6 @@ void Packet::setControlLen(uint16_t ctrl_len)
     memcpy(&(*this)[sizeof(ExtendedHeader) + ehdr().data_len], &ctrl_len, sizeof(uint16_t));
 }
 
-void Packet::clearControl(void)
-{
-    hdr.flags.has_control = 0;
-    resize(sizeof(ExtendedHeader) + ehdr().data_len);
-}
-
 void Packet::appendControl(const ControlMsg &ctrl)
 {
     uint16_t ctrl_len = getControlLen();

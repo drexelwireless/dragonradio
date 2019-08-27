@@ -198,7 +198,11 @@ struct Packet : public buffer<unsigned char>
     void setControlLen(uint16_t ctrl_len);
 
     /** @brief Clear control messages contained in packet */
-    void clearControl(void);
+    void clearControl(void)
+    {
+        hdr.flags.has_control = 0;
+        resize(sizeof(ExtendedHeader) + ehdr().data_len);
+    }
 
     /** @brief Append a control message to a packet */
     void appendControl(const ControlMsg &ctrl);
