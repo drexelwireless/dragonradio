@@ -78,17 +78,20 @@ const ControlMsg *Packet::iterator::operator ->()
     return &ctrl_;
 }
 
-
 uint16_t Packet::getControlLen(void) const
 {
-    uint16_t len;
+    uint16_t ctrl_len;
 
-    if (!hdr.flags.has_control || size() < sizeof(ExtendedHeader) + ehdr().data_len + sizeof(len)) {
+    if (!hdr.flags.has_control)
         return 0;
-    } else {
-        memcpy(&len, data() + sizeof(ExtendedHeader) + ehdr().data_len, sizeof(len));
-        return std::min(len, static_cast<uint16_t>(size() - sizeof(ExtendedHeader) - ehdr().data_len));
-    }
+
+    assert(size() >= sizeof(ExtendedHeader) + ehdr().data_len + sizeof(uint16_t));
+
+    memcpy(&ctrl_len, data() + sizeof(ExtendedHeader) + ehdr().data_len, sizeof(uint16_t));
+
+    assert(size() == sizeof(ExtendedHeader) + ehdr().data_len + sizeof(uint16_t) + ctrl_len);
+
+    return ctrl_len;
 }
 
 void Packet::setControlLen(uint16_t len)
