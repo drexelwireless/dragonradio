@@ -60,7 +60,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , slot_size_(slot_size)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
-  , samples_per_slot_(0)
+  , min_samples_per_slot_(0)
   , broadcast_tx_params_(broadcast_tx_params)
   , mcsidx_init_(std::min(mcsidx_init, (unsigned) tx_params_.size() - 1))
   , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
@@ -88,22 +88,10 @@ SmartController::~SmartController()
 
 size_t SmartController::getMaxPacketsPerSlot(const TXParams &p)
 {
-    // Calculate max packets per slot
-    std::lock_guard<std::mutex> lock(mac_mutex_);
+    size_t max_pkt_size = rc.mtu + mcu_ + sizeof(struct ether_header);
+    size_t max_mod_size = phy_->getModulatedSize(p, max_pkt_size);
 
-    if (mac_) {
-        const std::shared_ptr<Synthesizer> &synthesizer = mac_->getSynthesizer();
-
-        if (synthesizer) {
-            size_t maxPacketSize = rc.mtu + mcu_ + sizeof(struct ether_header);
-            size_t maxModSize = phy_->getModulatedSize(p, maxPacketSize);
-            double maxUpsampleRate = synthesizer->getMaxTXUpsampleRate();
-
-            return samples_per_slot_/(maxUpsampleRate*maxModSize);
-        }
-    }
-
-    return 1;
+    return min_samples_per_slot_/max_mod_size;
 }
 
 bool SmartController::pull(std::shared_ptr<NetPacket> &pkt)

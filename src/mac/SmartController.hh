@@ -379,16 +379,16 @@ public:
         mac_ = mac;
     }
 
-    /** @brief Get number of samples in a transmission slot */
-    size_t getSamplesPerSlot(void) const
+    /** @brief Get minimum number of samples in a transmission slot */
+    size_t getMinSamplesPerSlot(void) const
     {
-        return samples_per_slot_;
+        return min_samples_per_slot_;
     }
 
-    /** @brief Set number of samples in a transmission slot */
-    void setSamplesPerSlot(size_t samples_per_slot)
+    /** @brief Set minimum number of samples in a transmission slot */
+    void setMinSamplesPerSlot(size_t min_samples_per_slot)
     {
-        samples_per_slot_ = samples_per_slot;
+        min_samples_per_slot_ = min_samples_per_slot;
     }
 
     /** @brief Get broadcast TX params */
@@ -628,8 +628,8 @@ protected:
     /** @brief Timer queue */
     TimerQueue timer_queue_;
 
-    /** @brief Number of samples in a transmission slot */
-    size_t samples_per_slot_;
+    /** @brief Minimum number of samples in a transmission slot */
+    size_t min_samples_per_slot_;
 
     /** @brief Broadcast TX params */
     TXParams broadcast_tx_params_;

@@ -1038,16 +1038,9 @@ class Radio(object):
         """
         config = self.config
 
-        bandwidth = self.bandwidth
-        cbw = self.channel_bandwidth
+        min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer_channels])
 
-        if config.arq:
-            if config.tx_upsample:
-                slot_bw = bandwidth
-            else:
-                slot_bw = cbw
-
-            self.controller.samples_per_slot = int(slot_bw*(self.config.slot_size - self.config.guard_size))
+        self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
 
     def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
         """
