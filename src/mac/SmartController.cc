@@ -455,8 +455,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         recvw.max_timestamp = pkt->timestamp;
     }
 
-    // Resize the packet to truncate non-data bytes
-    pkt->resize(sizeof(ExtendedHeader) + pkt->ehdr().data_len);
+    // Clear packet control information now that it's already been processed.
+    pkt->clearControl();
 
     // If this is the next packet we expected, send it now and update the
     // receive window
