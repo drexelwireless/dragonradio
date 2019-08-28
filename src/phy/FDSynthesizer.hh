@@ -4,6 +4,7 @@
 #include <atomic>
 #include <mutex>
 
+#include "spinlock_mutex.hh"
 #include "dsp/FDResample.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Polyphase.hh"
@@ -39,6 +40,30 @@ public:
                   const Channels &channels,
                   size_t nthreads);
     virtual ~FDSynthesizer();
+
+    void setTXRate(double rate) override
+    {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
+        tx_rate_ = rate;
+        reconfigure();
+    }
+
+    void setChannels(const Channels &channels) override
+    {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
+        channels_ = channels;
+        reconfigure();
+    }
+
+    void setSchedule(const Schedule::sched_type &schedule) override
+    {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
+        schedule_ = schedule;
+        reconfigure();
+    }
 
     void modulate(const std::shared_ptr<Slot> &slot) override;
 
@@ -82,6 +107,9 @@ private:
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
+
+    /** @brief Mutex for synthesizer state. */
+    spinlock_mutex mutex_;
 
     /** @brief Reconfiguration flags */
     std::vector<std::atomic<bool>> mod_reconfigure_;

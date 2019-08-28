@@ -78,15 +78,16 @@ void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_acquire)) {
+            std::lock_guard<spinlock_mutex> lock(mutex_);
+
             // Make local copies to ensure thread safety
             channels = channels_;
             schedule = schedule_;
             tx_rate = tx_rate_;
 
             // If we have no schedule or channels, yield and try again
-            if (schedule.size() == 0 ||
-                channels.size() == 0 ||
-                slot->slotidx >= schedule[0].size()) {
+            if (schedule.size() == 0 || channels.size() == 0) {
+                reconfig.store(false, std::memory_order_relaxed);
                 std::this_thread::yield();
                 continue;
             }
@@ -103,6 +104,12 @@ void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             mod.release();
 
             reconfig.store(false, std::memory_order_relaxed);
+        }
+
+        // Skip illegal slot indices
+        if (slot->slotidx >= slot_chanidx.size()) {
+            logEvent("PHY: Bad slot index");
+            continue;
         }
 
         if (!mod || slot_chanidx[slot->slotidx] != chanidx) {
