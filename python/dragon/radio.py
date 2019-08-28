@@ -925,7 +925,7 @@ class Radio(object):
         # If we are using a SmartController, tell it about the network queue is
         # so that it can add high-priority packets.
         #
-        if config.arq:
+        if isinstance(self.controller, dragonradio.SmartController):
             self.controller.net_queue = self.netq
 
         #
@@ -1054,7 +1054,7 @@ class Radio(object):
         if self.mac is not None:
             self.mac.reconfigure()
 
-        if config.arq:
+        if isinstance(self.controller, dragonradio.SmartController):
             min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer_channels])
 
             self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
@@ -1078,7 +1078,7 @@ class Radio(object):
 
         self.configRatesAndChannels()
 
-        if config.arq:
+        if isinstance(self.controller, dragonradio.SmartController):
             self.controller.resetMCSTransitionProbabilities()
 
     def genChannelizerTaps(self, channel):
@@ -1129,7 +1129,7 @@ class Radio(object):
 
     def deleteMAC(self):
         """Delete the current MAC"""
-        if self.config.arq:
+        if isinstance(self.controller, dragonradio.SmartController):
             self.controller.mac = None
 
         self.mac.stop()
