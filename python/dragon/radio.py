@@ -866,30 +866,26 @@ class Radio(object):
         #
         # Create packet compression component
         #
-        if config.packet_compression:
-            self.packet_compressor = dragonradio.PacketCompressor()
-            self.packet_compressor.enabled = True
+        self.packet_compressor = dragonradio.PacketCompressor(config.packet_compression)
 
         #
-        # Configure packet path from demodulator to tun/tap
-        # Right now, the path is direct:
-        #   demodulator -> controller -> FlowPerformance.radio -> tun/tap
+        # Configure packet path from channelizer to tun/tap
+        #
+        #   channelizer -> controller -> PacketCompressor.radio -> FlowPerformance.radio -> tun/tap
         #
         self.channelizer.source >> self.controller.radio_in
 
-        if config.packet_compression:
-            self.controller.radio_out >> self.packet_compressor.radio_in
+        self.controller.radio_out >> self.packet_compressor.radio_in
 
-            self.packet_compressor.radio_out >> self.flowperf.radio_in
-        else:
-            self.controller.radio_out >> self.flowperf.radio_in
+        self.packet_compressor.radio_out >> self.flowperf.radio_in
 
         self.flowperf.radio_out >> self.tuntap.sink
 
         #
-        # Configure packet path from tun/tap to the modulator
+        # Configure packet path from tun/tap to the synthesizer
+        #
         # The path is:
-        #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall -> NetQueue -> controller -> modulator
+        #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall -> PacketCompressor.net -> NetQueue -> controller -> synthesizer
         #
         self.netfilter = dragonradio.NetFilter(self.net)
         self.netfirewall = dragonradio.NetFirewall()
@@ -910,12 +906,9 @@ class Radio(object):
 
         self.flowperf.net_out >> self.netfirewall.input
 
-        if config.packet_compression:
-            self.netfirewall.output >> self.packet_compressor.net_in
+        self.netfirewall.output >> self.packet_compressor.net_in
 
-            self.packet_compressor.net_out >> self.netq.push
-        else:
-            self.netfirewall.output >> self.netq.push
+        self.packet_compressor.net_out >> self.netq.push
 
         self.netq.pop >> self.controller.net_in
 
