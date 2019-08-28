@@ -756,25 +756,22 @@ class Radio(object):
         #
         # Configure the channelization
         #
-        self.channelizer_channels = Channels([])
-        self.synthesizer_channels = Channels([])
-
         if config.channelizer == 'overlap':
             self.channelizer = dragonradio.OverlapTDChannelizer(self.phy,
                                                                 self.usrp.rx_rate,
-                                                                self.channelizer_channels,
+                                                                Channels([]),
                                                                 config.num_demodulation_threads)
 
             self.channelizer.enforce_ordering = config.channelizer_enforce_ordering
         elif config.channelizer == 'timedomain':
             self.channelizer = dragonradio.TDChannelizer(self.phy,
                                                          self.usrp.rx_rate,
-                                                         self.channelizer_channels,
+                                                         Channels([]),
                                                          config.num_demodulation_threads)
         elif config.channelizer == 'freqdomain':
             self.channelizer = dragonradio.FDChannelizer(self.phy,
                                                          self.usrp.rx_rate,
-                                                         self.channelizer_channels,
+                                                         Channels([]),
                                                          config.num_demodulation_threads)
         else:
             raise Exception('Unknown channelizer: %s' % config.channelizer)
@@ -782,17 +779,17 @@ class Radio(object):
         if config.synthesizer == 'timedomain':
             self.synthesizer = dragonradio.TDSynthesizer(self.phy,
                                                          self.usrp.tx_rate,
-                                                         self.synthesizer_channels,
+                                                         Channels([]),
                                                          config.num_modulation_threads)
         elif config.synthesizer == 'freqdomain':
             self.synthesizer = dragonradio.FDSynthesizer(self.phy,
                                                          self.usrp.tx_rate,
-                                                         self.synthesizer_channels,
+                                                         Channels([]),
                                                          config.num_modulation_threads)
         elif config.synthesizer == 'multichannel':
             self.synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
                                                                    self.usrp.tx_rate,
-                                                                   self.synthesizer_channels,
+                                                                   Channels([]),
                                                                    config.num_modulation_threads)
         else:
             raise Exception('Unknown synthesizer: %s' % config.synthesizer)
@@ -1010,7 +1007,8 @@ class Radio(object):
         if config.tx_upsample:
             want_tx_rate = bandwidth*tx_rate_oversample
         else:
-            want_tx_rate = cbw*tx_rate_oversample
+            # XXX Assumes all channels have the same bandwidth!
+            want_tx_rate = self.channels[self.tx_channel_idx].bw*tx_rate_oversample
         want_tx_rate = safeRate(want_tx_rate, self.usrp.clock_rate)
 
         self.usrp.tx_rate = want_tx_rate
@@ -1023,32 +1021,34 @@ class Radio(object):
         self.phy.rx_rate = rx_rate
         self.phy.tx_rate = tx_rate
 
-        #
-        # Calculate channels with taps for channelizer and synthesizer
-        #
-        self.channelizer_channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
-        self.synthesizer_channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
-
-        # Set channelization rates and channels
+        # Tell the channelizer and synthesizer what the TX and RX rates are
         self.channelizer.rx_rate = self.usrp.rx_rate
         self.synthesizer.tx_rate = self.usrp.tx_rate
 
-        self.channelizer.channels = self.channelizer_channels
+        #
+        # Set channelizer and synthesizer channels and filters
+        #
 
-        # We need to re-set the channel after a frequency change because
-        # although the channel number may be the same, the corresponding
-        # frequency will be different.
+        # We need to do this *after* setting the USRP's TX and RX rates, because
+        # these rates are used to determine filter parameters
+        self.channelizer.channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
+
         if config.tx_upsample:
-            self.synthesizer.channels = self.synthesizer_channels
+            self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
         else:
             self.setTXChannel(self.tx_channel_idx)
 
+        #
         # Reconfigure the MAC
+        #
         if self.mac is not None:
             self.mac.reconfigure()
 
+        #
+        # Tell the MAC the minimum number of samples in a slot
+        #
         if isinstance(self.controller, dragonradio.SmartController):
-            min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer_channels])
+            min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer.channels])
 
             self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
 
