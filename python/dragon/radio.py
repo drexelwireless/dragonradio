@@ -754,13 +754,11 @@ class Radio(object):
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 
         #
-        # Configure TX/RX rates and channels
-        #
-        self.configRatesAndChannels()
-
-        #
         # Configure the channelization
         #
+        self.channelizer_channels = Channels([])
+        self.synthesizer_channels = Channels([])
+
         if config.channelizer == 'overlap':
             self.channelizer = dragonradio.OverlapTDChannelizer(self.phy,
                                                                 self.usrp.rx_rate,
@@ -839,8 +837,6 @@ class Radio(object):
                                                           config.amc_mcsidx_down_per_threshold,
                                                           config.amc_mcsidx_alpha,
                                                           config.amc_mcsidx_prob_floor)
-
-            self.configSmartControllerSamplesPerSlot()
 
             self.controller.max_retransmissions = config.arq_max_retransmissions
             self.controller.enforce_ordering = config.arq_enforce_ordering
@@ -931,6 +927,11 @@ class Radio(object):
         #
         if config.arq:
             self.controller.net_queue = self.netq
+
+        #
+        # Configure channels
+        #
+        self.configRatesAndChannels()
 
     def __del__(self):
         if self.logger:
@@ -1035,15 +1036,28 @@ class Radio(object):
         self.channelizer_channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
         self.synthesizer_channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
 
-    def configSmartControllerSamplesPerSlot(self):
-        """
-        Configure the SmartController's slot size
-        """
-        config = self.config
+        # Set channelization rates and channels
+        self.channelizer.rx_rate = self.usrp.rx_rate
+        self.synthesizer.tx_rate = self.usrp.tx_rate
 
-        min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer_channels])
+        self.channelizer.channels = self.channelizer_channels
 
-        self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
+        # We need to re-set the channel after a frequency change because
+        # although the channel number may be the same, the corresponding
+        # frequency will be different.
+        if config.tx_upsample:
+            self.synthesizer.channels = self.synthesizer_channels
+        else:
+            self.setTXChannel(self.tx_channel_idx)
+
+        # Reconfigure the MAC
+        if self.mac is not None:
+            self.mac.reconfigure()
+
+        if config.arq:
+            min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer_channels])
+
+            self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
 
     def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
         """
@@ -1064,24 +1078,8 @@ class Radio(object):
 
         self.configRatesAndChannels()
 
-        # Set channelization rates and channels
-        self.channelizer.rx_rate = self.usrp.rx_rate
-        self.synthesizer.tx_rate = self.usrp.tx_rate
-
-        self.channelizer.channels = self.channelizer_channels
-
-        # We need to re-set the channel after a frequency change because
-        # although the channel number may be the same, the corresponding
-        # frequency will be different.
-        self.setTXChannel(self.tx_channel_idx)
-
-        # Reconfigure the MAC
-        if self.mac is not None:
-            self.mac.reconfigure()
-
         if config.arq:
             self.controller.resetMCSTransitionProbabilities()
-            self.configSmartControllerSamplesPerSlot()
 
     def genChannelizerTaps(self, channel):
         """Generate channelizer filter taps for given channel"""
