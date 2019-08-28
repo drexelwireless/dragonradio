@@ -84,6 +84,9 @@ void exportNet(py::module &m)
             &MandateNetQueue::getMandates,
             &MandateNetQueue::setMandates,
             "Mandates")
+        .def_property_readonly("queue_priorities",
+            &MandateNetQueue::getQueuePriorities,
+            "Queue priorities")
         ;
 
     py::enum_<MandateNetQueue::QueueType>(mandate_queue_class, "QueueType")

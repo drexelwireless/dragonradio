@@ -179,6 +179,26 @@ public:
         mandates_ = mandates;
     }
 
+    using QueuePriorities = std::vector<std::tuple<std::optional<FlowUID>, Priority, std::optional<double>, std::optional<unsigned>, std::optional<unsigned>>>;
+
+    /** @brief Get queue priorities */
+    QueuePriorities getQueuePriorities(void)
+    {
+        std::lock_guard<std::mutex> lock(m_);
+        QueuePriorities             result;
+
+        for (auto&& it : qs_) {
+            SubQueue &subq = it.get();
+
+            if (subq.mandate)
+                result.push_back({subq.mandate->flow_uid, subq.priority, subq.rate, subq.mandate->point_value, subq.min_throughput});
+            else
+                result.push_back({std::nullopt, subq.priority, std::nullopt, std::nullopt, std::nullopt});
+        }
+
+        return result;
+    }
+
     virtual void reset(void) override
     {
         std::lock_guard<std::mutex> lock(m_);
