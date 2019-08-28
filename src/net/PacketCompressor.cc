@@ -175,12 +175,12 @@ uint32_t crc32(const void *data_, size_t count)
     return (result ^ CRC32_XOROT);
 }
 
-PacketCompressor::PacketCompressor()
+PacketCompressor::PacketCompressor(bool enabled)
   : net_in(*this, nullptr, nullptr, std::bind(&PacketCompressor::netPush, this, _1))
   , net_out(*this, nullptr, nullptr)
   , radio_in(*this, nullptr, nullptr, std::bind(&PacketCompressor::radioPush, this, _1))
   , radio_out(*this, nullptr, nullptr)
-  , enabled_(false)
+  , enabled_(enabled)
 {
     struct in_addr in;
 
