@@ -672,6 +672,15 @@ class Radio(object):
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
         self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
 
+        # Set the TX and RX rates to None to ensure they are properly set
+        # everywhere by setTXRate and setRXRate the first time those two
+        # functions are called.
+        self.tx_rate = None
+        """Current TX rate. None if not yet set."""
+
+        self.rx_rate = None
+        """Current RX rate. None if not yet set."""
+
         # Create the logger *after* we create the USRP so that we have a global
         # clock
         logdir = config.logdir
@@ -986,44 +995,12 @@ class Radio(object):
         #
         # Set RX and TX rates
         #
-
-        # Set RX rate
-        rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
-
-        want_rx_rate = bandwidth*rx_rate_oversample
-        # We max out at about 50Mhz with UHD 3.9
-        want_rx_rate = min(want_rx_rate, 50e6)
-        want_rx_rate = safeRate(want_rx_rate, self.usrp.clock_rate)
-
-        self.usrp.rx_rate = want_rx_rate
-        rx_rate = self.usrp.rx_rate
-
-        if rx_rate != want_rx_rate:
-            raise Exception('Wanted RX rate %g, but got %g' % (want_rx_rate, rx_rate))
-
-        # Set TX rate
-        tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
+        self.setRXRate(bandwidth)
 
         if config.tx_upsample:
-            want_tx_rate = bandwidth*tx_rate_oversample
+            self.setTXRate(bandwidth)
         else:
-            # XXX Assumes all channels have the same bandwidth!
-            want_tx_rate = self.channels[self.tx_channel_idx].bw*tx_rate_oversample
-        want_tx_rate = safeRate(want_tx_rate, self.usrp.clock_rate)
-
-        self.usrp.tx_rate = want_tx_rate
-        tx_rate = self.usrp.tx_rate
-
-        if tx_rate != want_tx_rate:
-            raise Exception('Wanted TX rate %g, but got %g' % (want_tx_rate, tx_rate))
-
-        # Tell PHY what the TX and RX rates are
-        self.phy.rx_rate = rx_rate
-        self.phy.tx_rate = tx_rate
-
-        # Tell the channelizer and synthesizer what the TX and RX rates are
-        self.channelizer.rx_rate = self.usrp.rx_rate
-        self.synthesizer.tx_rate = self.usrp.tx_rate
+            self.setTXRate(self.channels[self.tx_channel_idx].bw)
 
         #
         # Set channelizer and synthesizer channels and filters
@@ -1036,7 +1013,7 @@ class Radio(object):
         if config.tx_upsample:
             self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
         else:
-            self.setTXChannel(self.tx_channel_idx)
+            self.setSynthesizerTXChannel(self.channels[self.tx_channel_idx])
 
         #
         # Reconfigure the MAC
@@ -1051,6 +1028,81 @@ class Radio(object):
             min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer.channels])
 
             self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
+
+    def setRXRate(self, rate):
+        """Set RX rate"""
+        config = self.config
+
+        rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+
+        want_rx_rate = rate*rx_rate_oversample
+        # We max out at about 50Mhz with UHD 3.9
+        want_rx_rate = min(want_rx_rate, 50e6)
+        want_rx_rate = safeRate(want_rx_rate, self.usrp.clock_rate)
+
+        if self.rx_rate != want_rx_rate:
+            self.usrp.rx_rate = want_rx_rate
+            self.rx_rate = self.usrp.rx_rate
+
+            if self.rx_rate != want_rx_rate:
+                raise Exception('Wanted RX rate %g, but got %g' % (want_rx_rate, self.rx_rate))
+
+            self.phy.rx_rate = self.rx_rate
+
+            self.channelizer.rx_rate = self.rx_rate
+
+    def setTXRate(self, rate):
+        """Set TX rate"""
+        config = self.config
+
+        tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
+
+        want_tx_rate = rate*tx_rate_oversample
+        want_tx_rate = safeRate(want_tx_rate, self.usrp.clock_rate)
+
+        if self.tx_rate != want_tx_rate:
+            self.usrp.tx_rate = want_tx_rate
+            self.tx_rate = self.usrp.tx_rate
+
+            if self.tx_rate != want_tx_rate:
+                raise Exception('Wanted TX rate %g, but got %g' % (want_tx_rate, self.tx_rate))
+
+            self.phy.tx_rate = self.tx_rate
+
+            self.synthesizer.tx_rate = self.tx_rate
+
+    def setSynthesizerTXChannel(self, channel):
+        """Set the synthesizer's transmission channel.
+
+        This function creates an appropriate filter and sets the USRP's TX
+        frequency for single-channel synthesis.
+        """
+        logging.info("Setting TX frequency offset to %g", channel.fc)
+        self.usrp.tx_frequency = self.frequency + channel.fc
+
+        self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in [Channel(0, channel.bw)]])
+
+    def setTXChannel(self, channel_idx):
+        """Set the transmission channel.
+
+        If we are upsampling on TX, this is a no-op. Otherwise we set the
+        radio's frequency to transmit on the current channel and configure the
+        synthesizer for a single channel.
+        """
+        config = self.config
+
+        if not config.tx_upsample:
+            self.tx_channel_idx = min(channel_idx, len(self.channels) - 1)
+
+            channel = self.channels[self.tx_channel_idx]
+
+            self.setTXRate(channel.bw)
+            self.setSynthesizerTXChannel(channel)
+
+            # Allow the MAC to figure out the TX offset so snapshot self
+            # tranmissions are correctly logged
+            if self.mac is not None:
+                self.mac.reconfigure()
 
     def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
         """
@@ -1210,29 +1262,6 @@ class Radio(object):
     def finishConfiguringMAC(self):
         if self.config.arq:
             self.controller.mac = self.mac
-
-    def setTXChannel(self, channel_idx):
-        """Set the transmission channel.
-
-        If we are upsampling on TX, this is a no-op. Otherwise we set the
-        radio's frequency to transmit on the current channel.
-        """
-        config = self.config
-
-        if not config.tx_upsample:
-            self.tx_channel_idx = min(channel_idx, len(self.channels) - 1)
-
-            channel = self.channels[self.tx_channel_idx]
-
-            logging.info("Setting TX frequency offset to %g", channel.fc)
-            self.usrp.tx_frequency = self.frequency + channel.fc
-
-            self.synthesizer.channels = Channels([(Channel(0, channel.bw), [1])])
-
-            # Allow the MAC to figure out the TX offset so snapshot self
-            # tranmissions are correctly logged
-            if self.mac is not None:
-                self.mac.reconfigure()
 
     def setALOHAChannel(self, channel_idx):
         """Set the transmission channel for the ALOHA MAC."""
