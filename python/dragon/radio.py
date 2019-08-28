@@ -820,7 +820,6 @@ class Radio(object):
         for p in tx_params:
             self.configTXParamsSoftGain(p)
 
-
         broadcast_tx_params = TXParams(MCS(config.broadcast_check,
                                            config.broadcast_fec0,
                                            config.broadcast_fec1,
