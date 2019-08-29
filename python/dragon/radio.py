@@ -1208,9 +1208,9 @@ class Radio(object):
         config = self.config
 
         if not config.tx_upsample:
-            self.tx_channel_idx = channel_idx
+            self.tx_channel_idx = min(channel_idx, len(self.channels) - 1)
 
-            channel = self.channels[channel_idx]
+            channel = self.channels[self.tx_channel_idx]
 
             logging.info("Setting TX frequency offset to %g", channel.fc)
             self.usrp.tx_frequency = self.frequency + channel.fc
