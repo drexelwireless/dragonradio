@@ -68,6 +68,10 @@ void exportNet(py::module &m)
     // Export class MandateNetQueue to Python
     auto mandate_queue_class = py::class_<MandateNetQueue, NetQueue, std::shared_ptr<MandateNetQueue>>(m, "MandateQueue")
         .def(py::init<>())
+        .def_property("bonus_phase",
+            &MandateNetQueue::getBonusPhase,
+            &MandateNetQueue::setBonusPhase,
+            "Flag indicating whether or not to have a bonus phase")
         .def("getFlowQueueType",
             &MandateNetQueue::getFlowQueueType,
             "Get flow queue's type")

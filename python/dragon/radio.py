@@ -219,6 +219,10 @@ class Config(object):
         self.queue = 'fifo'
         self.packet_compression = False
 
+        # mandate queue
+        self.mandate_bonus_phase = True
+        """Flag indicating whether or not to have a bonus phase"""
+
         # Neighbor discover options
         # discovery_hello_interval is how often we send HELLO packets during
         # discovery, and standard_hello_interval is how often we send HELLO
@@ -878,6 +882,7 @@ class Radio(object):
             self.netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.LIFO)
         elif config.queue == 'mandate':
             self.netq = dragonradio.MandateQueue()
+            self.netq.bonus_phase = config.mandate_bonus_phase
         else:
             raise Exception('Unknown queue type: %s' % config.queue)
 

@@ -49,6 +49,7 @@ public:
     MandateQueue()
       : Queue<T>()
       , done_(false)
+      , bonus_phase_(false)
       , hiq_(kHiQueuePriority, FIFO)
       , defaultq_(kDefaultQueuePriority, FIFO)
       , nitems_(0)
@@ -61,6 +62,18 @@ public:
     virtual ~MandateQueue()
     {
         stop();
+    }
+
+    /** @brief Get flag indicating whether or not to have a bonus phase */
+    bool getBonusPhase(void) const
+    {
+        return bonus_phase_;
+    }
+
+    /** @brief Set flag indicating whether or not to have a bonus phase */
+    void setBonusPhase(bool bonus_phase)
+    {
+        bonus_phase_ = bonus_phase;
     }
 
     /** @brief Get flow queue type */
@@ -331,7 +344,7 @@ public:
                 idx = 0;
         } while (idx != end);
 
-        if (!bonus) {
+        if (!bonus && bonus_phase_) {
             // Enter the bonus phase
             bonus = true;
 
@@ -613,6 +626,9 @@ protected:
 
     /** @brief Flag indicating that processing of the queue should stop. */
     bool done_;
+
+    /** @brief Flag indicating whether or not to have a bonus phase. */
+    bool bonus_phase_;
 
     /** @brief Mutex protecting the queues. */
     mutable std::mutex m_;
