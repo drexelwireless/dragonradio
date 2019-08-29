@@ -111,6 +111,9 @@ class Config(object):
         """Radio bandwidth to use"""
         self.max_bandwidth = 40e6
         """Max bandwidth radio can handle"""
+        self.rx_bandwidth = None
+        """If set, always receive at this bandwidth. Otherwise, calculate
+        receive bandwidth based on RX oversample factor and radio bandwidth."""
         self.rx_oversample_factor = 1.0
         """Oversample factor on RX"""
         self.tx_oversample_factor = 1.0
@@ -414,6 +417,9 @@ class Config(object):
         parser.add_argument('--max-bandwidth', action='store', type=float,
                             dest='max_bandwidth',
                             help='set maximum bandwidth (Hz)')
+        parser.add_argument('--rx-bandwidth', action='store', type=float,
+                            dest='rx_bandwidth',
+                            help='set receive bandwidth (Hz)')
         parser.add_argument('--rx-oversample', action='store', type=float,
                             dest='rx_oversample_factor',
                             help='set RX oversample factor')
@@ -1037,11 +1043,15 @@ class Radio(object):
         """Set RX rate"""
         config = self.config
 
-        rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+        if config.rx_bandwidth:
+            want_rx_rate = config.rx_bandwidth
+        else:
+            rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
 
-        want_rx_rate = rate*rx_rate_oversample
-        # We max out at about 50Mhz with UHD 3.9
-        want_rx_rate = min(want_rx_rate, 50e6)
+            want_rx_rate = rate*rx_rate_oversample
+            # We max out at about 50Mhz with UHD 3.9
+            want_rx_rate = min(want_rx_rate, 50e6)
+
         want_rx_rate = safeRate(want_rx_rate, self.usrp.clock_rate)
 
         if self.rx_rate != want_rx_rate:
