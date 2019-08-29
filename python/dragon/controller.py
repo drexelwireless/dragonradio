@@ -485,7 +485,8 @@ class Controller(TCPProtoServer):
 
         for _, link in self.flow_links.items():
             (src, dest) = link
-            if node_id == src:
+            # Don't include broadcasts
+            if node_id == src and dest != 255:
                 destinations.add(dest)
 
         return destinations
