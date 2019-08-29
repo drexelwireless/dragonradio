@@ -930,7 +930,7 @@ class Radio(object):
         #
         # Configure channels
         #
-        self.configRatesAndChannels()
+        self.configureDefaultChannels()
 
     def __del__(self):
         if self.logger:
@@ -958,22 +958,10 @@ class Radio(object):
 
         self.net.tx_params = TXParamsVector([tx_params])
 
-    def configRatesAndChannels(self):
-        """
-        Configure USRP and PHY rates as well as channels.
-
-        This will set our channels member variable as well as set rates on the
-        USRP and PHY based on the current configuration's bandwidth and center
-        frequency. It *will not* update the modulator/demodulator, MAC, or
-        controller.
-        """
+    def configureDefaultChannels(self):
+        """Configure default channels"""
         config = self.config
 
-        #
-        # Configure bandwidth, channels, and sampling rate. We MUST do this
-        # before creating the modulator and demodulator so we know at what rate
-        # we must resample.
-        #
         bandwidth = self.bandwidth
 
         if self.config.fdma:
@@ -983,22 +971,32 @@ class Radio(object):
 
         channels = dragon.channels.defaultChannelPlan(bandwidth, cbw)
 
-        self.channels = channels[:config.max_channels]
-
         logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g)",
-            list(self.channels),
+            list(channels),
             bandwidth,
             config.rx_oversample_factor,
             config.tx_oversample_factor,
             cbw)
 
+        self.setChannels(channels)
+
+    def setChannels(self, channels):
+        """Set current channels.
+
+        This function will also configure the RX and TX rates necessary for the
+        channels.
+        """
+        config = self.config
+
+        self.channels = channels[:config.max_channels]
+
         #
         # Set RX and TX rates
         #
-        self.setRXRate(bandwidth)
+        self.setRXRate(self.bandwidth)
 
         if config.tx_upsample:
-            self.setTXRate(bandwidth)
+            self.setTXRate(self.bandwidth)
         else:
             self.setTXRate(self.channels[self.tx_channel_idx].bw)
 
@@ -1113,16 +1111,27 @@ class Radio(object):
         if bandwidth == config.bandwidth and frequency == config.frequency:
             return
 
-        config.bandwidth = bandwidth
-        config.frequency = frequency
-
         logger.info("Reconfiguring radio: bandwidth=%f, frequency=%f", bandwidth, frequency)
+
+        # Set current frequency
+        config.frequency = frequency
 
         self.usrp.rx_frequency = self.frequency
         self.usrp.tx_frequency = self.frequency
 
-        self.configRatesAndChannels()
+        # If the bandwidth has changed, re-configure channels. Otherwise just
+        # set the current channel---we need to re-set the channel after a
+        # frequency change because although the channel number may be the same,
+        # the corresponding frequency will be different.
+        if config.bandwidth != bandwidth:
+            config.bandwidth = bandwidth
 
+            self.configureDefaultChannels()
+        else:
+            self.setTXChannel(self.tx_channel_idx)
+
+        # When the environment changes, we reset MCS transition probabilities
+        # because we need to re-explore to find the best MCS.
         if isinstance(self.controller, dragonradio.SmartController):
             self.controller.resetMCSTransitionProbabilities()
 
