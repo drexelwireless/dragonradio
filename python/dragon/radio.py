@@ -106,11 +106,17 @@ class Config(object):
         # Frequency and bandwidth
         # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
+        """Radio frequency"""
         self.bandwidth = 5e6
+        """Radio bandwidth to use"""
         self.max_bandwidth = 40e6
+        """Max bandwidth radio can handle"""
         self.rx_oversample_factor = 1.0
+        """Oversample factor on RX"""
         self.tx_oversample_factor = 1.0
+        """Oversample factor on TX"""
         self.channel_bandwidth = 1e6
+        """Default channel bandwidth for FDMA"""
 
         # TX/RX gain parameters
         self.tx_gain = 25
