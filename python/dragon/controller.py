@@ -1192,9 +1192,6 @@ class Controller(TCPProtoServer):
         if self.scorer:
             self.scorer.setMandates(mandates)
 
-        # Set allowed flows
-        self.setAllowedFlows([flow_uid for (flow_uid, _mandate) in mandates.items()])
-
         # Update Mandate queue
         if isinstance(radio.netq, dragonradio.MandateQueue):
             # Add mandates
@@ -1203,6 +1200,9 @@ class Controller(TCPProtoServer):
             # Make internal traffic very high priority
             radio.netq.setFlowQueuePriority(dragon.internal.INTERNAL_PORT, (99, 0.0))
             radio.netq.setFlowQueueType(dragon.internal.INTERNAL_PORT, dragonradio.MandateQueue.FIFO)
+        else:
+            # Set allowed flows
+            self.setAllowedFlows([flow_uid for (flow_uid, _mandate) in mandates.items()])
 
     def setAllowedFlows(self, flows):
         """Decide which flows are allowed by the firewall.
