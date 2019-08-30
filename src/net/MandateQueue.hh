@@ -155,9 +155,14 @@ public:
 
         // Delete queues that have a mandate but aren't in the new mandate map
         for (auto it = flow_qs_.begin(); it != flow_qs_.end(); ) {
-            if (it->second.mandate && mandates.find(it->first) == mandates.end())
+            if (it->second.mandate && mandates.find(it->first) == mandates.end()) {
+                // Append the items in the queue we are deleting to the end of
+                // the default queue.
+                defaultq_.q.splice(defaultq_.q.end(), it->second.q);
+
+                // Delete the queue that not longer has a mandate.
                 it = flow_qs_.erase(it);
-            else
+            } else
                 it++;
         }
 
