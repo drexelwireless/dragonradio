@@ -241,7 +241,7 @@ public:
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            emplace_front(hiq_, std::move(pkt));
+            emplace_back(hiq_, std::move(pkt));
         }
 
         cond_.notify_one();
@@ -252,10 +252,7 @@ public:
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            if (pkt->hdr.flags.syn)
-                emplace_front(hiq_, std::move(pkt));
-            else
-                emplace_back(hiq_, std::move(pkt));
+            emplace_back(hiq_, std::move(pkt));
         }
 
         cond_.notify_one();
