@@ -53,6 +53,7 @@ public:
       , hiq_(kHiQueuePriority, FIFO)
       , defaultq_(kDefaultQueuePriority, FIFO)
       , nitems_(0)
+      , need_sort_(false)
       , bonus_idx_(0)
     {
         activate_queue(hiq_);
@@ -118,7 +119,7 @@ public:
             if (subq.priority != priority) {
                 subq.priority = priority;
                 if (subq.active)
-                    sort_queues();
+                    need_sort_ = true;
             }
         } else
             flow_qs_.emplace(std::piecewise_construct,
@@ -163,8 +164,6 @@ public:
         // Make sure we have a queue for each mandated flow with the proper
         // queue type and mandate. If we update a mandate's priority and it is
         // active, we need to re-sort the list of active queues.
-        bool need_sort = false;
-
         for (auto&& [flow_uid, mandate] : mandates) {
             // If this is a file transfer mandate, use a FIFO, otherwise, use a
             // LIFO
@@ -179,14 +178,11 @@ public:
                 it->second.setMandate(mandate);
 
                 if (it->second.active)
-                    need_sort |= it->second.updatePriority();
+                    need_sort_ |= it->second.updatePriority();
                 else
                     it->second.updatePriority();
             }
         }
-
-        if (need_sort)
-            sort_queues();
 
         // Record mandates
         mandates_ = mandates;
@@ -280,6 +276,9 @@ public:
         unsigned              end = 0;
         bool                  bonus = false;
 
+        if (need_sort_)
+            sort_queues();
+
         // If the bonus flag is true, then we have served all mandated flows and
         // can send "bonus" traffic. We do this in round-robin fashion.
     retry:
@@ -372,7 +371,6 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
         double                       rate = tx_params.mcs.getRate();
-        bool                         need_sort = false;
 
         node_rates_[id] = rate;
 
@@ -380,11 +378,8 @@ public:
             SubQueue &subq = subqref.get();
 
             if (subq.nexthop == id)
-                need_sort |= subq.updateRate(rate);
+                need_sort_ |= subq.updateRate(rate);
         }
-
-        if (need_sort)
-            sort_queues();
     }
 
 protected:
@@ -654,6 +649,9 @@ protected:
     /** @brief Map from flow to queue. */
     std::unordered_map<FlowUID, SubQueue> flow_qs_;
 
+    /** @brief Does the list of queues need to be sorted? */
+    bool need_sort_;
+
     /** @brief Queues sorted by priority. */
     Queues qs_;
 
@@ -731,6 +729,7 @@ protected:
         // re-ordering queues with equal priority because we don't want churn to
         // disrupt a stable flow in favor of an unstable flow of equal priority.
         std::stable_sort(qs_.begin(), qs_.end(), std::greater<SubQueue>());
+        need_sort_ = false;
     }
 
     void emplace_front(SubQueue &subq, T &&pkt)
@@ -738,7 +737,7 @@ protected:
         activate_queue(subq, pkt);
 
         if (subq.updateBurst(*pkt))
-            sort_queues();
+            need_sort_ = true;
 
         subq.q.emplace_front(std::move(pkt));
         nitems_++;
@@ -749,7 +748,7 @@ protected:
         activate_queue(subq, pkt);
 
         if (subq.updateBurst(*pkt))
-            sort_queues();
+            need_sort_ = true;
 
         subq.q.emplace_back(std::move(pkt));
         nitems_++;
