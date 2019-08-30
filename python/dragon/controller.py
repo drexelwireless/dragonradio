@@ -89,6 +89,9 @@ class Controller(TCPProtoServer):
         self.bootstrapped = False
         """Has the radio already been bootstrapped?"""
 
+        self.in_colosseum = 'tr0' in netifaces.interfaces()
+        """Are we in the Colosseum?"""
+
         self.nodes = {}
         """Nodes in our network"""
 
@@ -414,10 +417,11 @@ class Controller(TCPProtoServer):
             self.nodes[node_id] = node
 
             # Add a route for the new node
-            try:
-                subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
-            except:
-                logger.exception('Could not add route to node {}'.format(node_id))
+            if self.in_colosseum:
+                try:
+                    subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
+                except:
+                    logger.exception('Could not add route to node {}'.format(node_id))
 
             # If new node is a gateway, connect to it and start sending status
             # updates
@@ -437,24 +441,38 @@ class Controller(TCPProtoServer):
             if self.is_gateway:
                 self.tdma_reschedule.set()
 
-            # Log ARP table
-            result = subprocess.run(['arp', '-an'], stdout=subprocess.PIPE)
-            logger.info('ARP table:\n%s', result.stdout.decode('utf-8'))
+    async def logNetworkInfo(self):
+        # Log ARP table
+        p = await asyncio.create_subprocess_exec('arp', '-an',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await p.communicate()
+        logger.info('ARP table:\n%s', stdout.decode('utf-8'))
 
-            # Log routes
-            result = subprocess.run(['ip', 'route'], stdout=subprocess.PIPE)
-            logger.info('Routing table:\n%s', result.stdout.decode('utf-8'))
+        # Log routes
+        p = await asyncio.create_subprocess_exec('ip', 'route',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await p.communicate()
+        logger.info('Routing table:\n%s', stdout.decode('utf-8'))
 
-            # Log ip links
-            result = subprocess.run(['ip', 'a'], stdout=subprocess.PIPE)
-            logger.info('IP links:\n%s', result.stdout.decode('utf-8'))
+        # Log ip links
+        p = await asyncio.create_subprocess_exec('ip', 'a',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await p.communicate()
+        logger.info('IP links:\n%s', stdout.decode('utf-8'))
 
-            # Log routes
-            for node_id in [self.radio.node_id, node_id]:
-                for octet in [1]:
-                    ipaddr = '192.168.{:d}.{:d}'.format(node_id+100, octet)
-                    result = subprocess.run(['ip', 'route', 'get', ipaddr], stdout=subprocess.PIPE)
-                    logger.info('IP route for %s:\n%s', ipaddr, result.stdout.decode('utf-8'))
+        # Log routes
+        for node_id in self.nodes:
+            for octet in [1]:
+                ip = '192.168.{:d}.{:d}'.format(node_id+100, octet)
+
+                p = await asyncio.create_subprocess_exec('ip', 'route', 'get', ip,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE)
+                stdout, stderr = await p.communicate()
+                logger.info('IP route for %s:\n%s', ip, stdout.decode('utf-8'))
 
     def removeNode(self, node_id):
         if node_id != self.radio.node_id and node_id in self.nodes:
@@ -626,37 +644,21 @@ class Controller(TCPProtoServer):
         cache.
 
         See:
-            https://gitlab.com/darpa-sc2-phase3/CIL/issues/15
+            https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220402-traffic-generation
         """
         try:
-            IFACE = 'tr0'
-
-            node_id = self.radio.node_id
-
-            if IFACE in netifaces.interfaces():
-                procs = []
+            if self.in_colosseum:
+                node_id = self.radio.node_id
 
                 for i in range (1, 255):
                     ip = '192.168.{:d}.{:d}'.format(node_id+100, i)
+                    ether = '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.format(192, 168, node_id+100, i)
 
                     p = await asyncio.create_subprocess_exec(
-                            'ping',
-                            '-c', '1',
-                            ip,
+                            'arp', '-s', ip, ether,
                             stdout=asyncio.subprocess.PIPE,
                             stderr=asyncio.subprocess.PIPE)
-                    procs.append((p, ip))
-
-                for (p, ip) in procs:
-                    # Wait for the subprocess to finish
-                    stdout, stderr = await p.communicate()
-
-                    result = stdout.decode().strip()
-
-                    if p.returncode == 0:
-                        logging.info('ping %s succeeded:\n%s', ip, result)
-                    else:
-                        logging.info('ping %s failed:\n%s', ip, result)
+                    await p.communicate()
         except CancelledError:
             return
 
@@ -1073,6 +1075,9 @@ class Controller(TCPProtoServer):
         try:
             # Sleep for the discovery interval
             await asyncio.sleep(config.neighbor_discovery_period)
+
+            # Log network info
+            await self.logNetworkInfo()
 
             # Start the schedule creation task
             self.loop.create_task(self.createSchedule())
