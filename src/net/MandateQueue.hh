@@ -728,6 +728,8 @@ protected:
         // highest-priority queue is first. We use a stable sort to prevent
         // re-ordering queues with equal priority because we don't want churn to
         // disrupt a stable flow in favor of an unstable flow of equal priority.
+        logEvent("QUEUE: sort (%lu queues)",
+            qs_.size());
         std::stable_sort(qs_.begin(), qs_.end(), std::greater<SubQueue>());
         need_sort_ = false;
     }
