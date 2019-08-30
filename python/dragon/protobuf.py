@@ -178,9 +178,19 @@ class TCPProtoServer(TCPProto):
         self.loop = loop
 
     def startServer(self, cls, listen_ip, listen_port):
-        return asyncio.start_server(partial(self.handle_request, cls),
-                                    listen_ip, listen_port,
-                                    loop=self.loop)
+        return self.runServer(cls, listen_ip, listen_port)
+
+    async def runServer(self, cls, listen_ip, listen_port):
+        while True:
+            try:
+                server = await asyncio.start_server(partial(self.handle_request, cls),
+                                           listen_ip, listen_port,
+                                           loop=self.loop)
+                await server.wait_closed()
+            except CancelledError:
+                return
+            except:
+                logger.exception('Restarting TCP proto server')
 
     async def handle_request(self, cls, reader, writer):
         while True:
