@@ -414,13 +414,7 @@ protected:
     struct SubQueue {
         using container_type = std::list<T>;
 
-        SubQueue()
-          : priority(kDefaultFlowQueuePriority)
-          , qtype(FIFO)
-          , active(false)
-        {
-
-        }
+        SubQueue() = delete;
 
         SubQueue(const Priority &priority_,
                  QueueType qtype_)
