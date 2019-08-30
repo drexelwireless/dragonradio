@@ -34,6 +34,9 @@ def main():
     parser.add_argument('--usrp', action='store_true',
                         default=False,
                         help='show USRP error events')
+    parser.add_argument('--queue', action='store_true',
+                        default=False,
+                        help='show queue events')
     parser.add_argument('-n', '--node', action='append',
                         metavar='NODE')
     parser.add_argument('paths', nargs='*')
@@ -78,6 +81,9 @@ def main():
 
         if args.usrp:
             e.addSeriesCategory(node, 'USRP')
+
+        if args.queue:
+            e.addSeriesCategory(node, 'QUEUE')
 
         if args.send:
             e.addSeriesCategory(node, 'sent')
