@@ -65,7 +65,7 @@ struct FlowStats {
             low_mp = mp;
 
         ++stats[mp].npackets;
-        stats[mp].nbytes += pkt.getPayloadSize();
+        stats[mp].nbytes += pkt.payload_size;
     }
 
     /** @brief Set a flow's mandates */

@@ -1,20 +1,47 @@
 [{"flow_uid":5000,
   "goal_type":"Traffic",
   "hold_period":20,
-  "requirements":{"max_latency_s":0.37,"max_packet_drop_rate":0.1,"min_throughput_bps":400000.0}},
+  "requirements": {
+      "max_latency_s":0.37,
+      "min_throughput_bps":400000.0
+  }
+ },
  {"flow_uid":5001,
   "goal_type":"Traffic",
   "hold_period":20,
-  "requirements":{"max_latency_s":0.37,"max_packet_drop_rate":0.1,"min_throughput_bps":400000.0}},
+  "requirements": {
+      "max_latency_s":0.37,
+      "min_throughput_bps":400000.0
+  }
+ },
  {"flow_uid":5002,
   "goal_type":"Traffic",
   "hold_period":20,
-  "requirements":{"max_latency_s":0.37,"max_packet_drop_rate":0.1,"min_throughput_bps":400000.0}},
+  "requirements": {
+      "max_latency_s":0.37,
+      "min_throughput_bps":400000.0
+  }
+ },
  {"flow_uid":5003,
   "goal_type":"Traffic",
   "hold_period":20,
-  "requirements":{"max_latency_s":0.37,"max_packet_drop_rate":0.1,"min_throughput_bps":400000.0}},
+  "requirements": {
+      "max_latency_s":0.37,
+      "min_throughput_bps":400000.0
+  }
+ },
  {"flow_uid":5004,
   "goal_type":"Traffic",
   "hold_period":20,
-  "requirements":{"max_latency_s":0.37,"max_packet_drop_rate":0.1,"min_throughput_bps":400000.0}}]
+  "requirements": {
+      "max_latency_s":0.37,
+      "min_throughput_bps":400000.0
+  }
+ },
+ {"flow_uid":5005,
+  "goal_type":"File",
+  "hold_period":10,
+  "requirements": {
+      "file_transfer_deadline_s": 30.0
+  }
+ }]

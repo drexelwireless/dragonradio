@@ -485,6 +485,7 @@ EVENTS = [ [r'^AMC: Moving up modulation scheme', 'AMC', 'g']
          , [r'^TIMESYNC:', 'TIMESYNC', 'k']
          , [r'^(RX|TX) error:', 'USRP', 'r']
          , [r'^USRP:', 'USRP', 'k']
+         , [r'^QUEUE:', 'QUEUE', 'k']
          ]
 
 for i in range(0, len(EVENTS)):

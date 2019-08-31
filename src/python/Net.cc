@@ -1,15 +1,16 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "net/FIFO.hh"
-#include "net/LIFO.hh"
+#include "net/MandateQueue.hh"
 #include "net/Net.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
 #include "net/PacketCompressor.hh"
+#include "net/SimpleQueue.hh"
 #include "net/Queue.hh"
-#include "net/SmartLIFO.hh"
 #include "python/PyModules.hh"
+
+PYBIND11_MAKE_OPAQUE(MandateMap)
 
 void exportNet(py::module &m)
 {
@@ -49,25 +50,53 @@ void exportNet(py::module &m)
         ;
 
     // Export class NetQueue to Python
-    py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "NetQueue")
+    py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "Queue")
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
         ;
 
-    // Export class NetFIFO to Python
-    py::class_<NetFIFO, NetQueue, std::shared_ptr<NetFIFO>>(m, "NetFIFO")
-        .def(py::init())
+    // Export class SimpleNetQueue to Python
+    auto simple_queue_class = py::class_<SimpleNetQueue, NetQueue, std::shared_ptr<SimpleNetQueue>>(m, "SimpleQueue")
+        .def(py::init<SimpleNetQueue::QueueType>())
         ;
 
-    // Export class NetLIFO to Python
-    py::class_<NetLIFO, NetQueue, std::shared_ptr<NetLIFO>>(m, "NetLIFO")
-        .def(py::init())
+    py::enum_<SimpleNetQueue::QueueType>(simple_queue_class, "QueueType")
+        .value("FIFO", SimpleNetQueue::FIFO)
+        .value("LIFO", SimpleNetQueue::LIFO)
+        .export_values();
+
+    // Export class MandateNetQueue to Python
+    auto mandate_queue_class = py::class_<MandateNetQueue, NetQueue, std::shared_ptr<MandateNetQueue>>(m, "MandateQueue")
+        .def(py::init<>())
+        .def_property("bonus_phase",
+            &MandateNetQueue::getBonusPhase,
+            &MandateNetQueue::setBonusPhase,
+            "Flag indicating whether or not to have a bonus phase")
+        .def("getFlowQueueType",
+            &MandateNetQueue::getFlowQueueType,
+            "Get flow queue's type")
+        .def("setFlowQueueType",
+            &MandateNetQueue::setFlowQueueType,
+            "Set flow queue's type")
+        .def("getFlowQueuePriority",
+            &MandateNetQueue::getFlowQueuePriority,
+            "Get flow queue's priority")
+        .def("setFlowQueuePriority",
+            &MandateNetQueue::setFlowQueuePriority,
+            "Set flow queue's priority")
+        .def_property("mandates",
+            &MandateNetQueue::getMandates,
+            &MandateNetQueue::setMandates,
+            "Mandates")
+        .def_property_readonly("queue_priorities",
+            &MandateNetQueue::getQueuePriorities,
+            "Queue priorities")
         ;
 
-    // Export class NetSmartLIFO to Python
-    py::class_<NetSmartLIFO, NetQueue, std::shared_ptr<NetSmartLIFO>>(m, "NetSmartLIFO")
-        .def(py::init())
-        ;
+    py::enum_<MandateNetQueue::QueueType>(mandate_queue_class, "QueueType")
+        .value("FIFO", MandateNetQueue::FIFO)
+        .value("LIFO", MandateNetQueue::LIFO)
+        .export_values();
 
     // Export class TunTap to Python
     py::class_<TunTap, std::shared_ptr<TunTap>>(m, "TunTap")

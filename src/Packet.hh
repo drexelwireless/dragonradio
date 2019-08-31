@@ -127,6 +127,7 @@ struct Packet : public buffer<unsigned char>
     Packet(const Header &hdr_)
       : buffer()
       , hdr(hdr_)
+      , payload_size(0)
       , internal_flags({0})
     {
     }
@@ -134,6 +135,7 @@ struct Packet : public buffer<unsigned char>
     explicit Packet(size_t n)
       : buffer(n)
       , hdr({0})
+      , payload_size(0)
       , internal_flags({0})
     {
         assert(n >= sizeof(ExtendedHeader));
@@ -142,6 +144,7 @@ struct Packet : public buffer<unsigned char>
     Packet(const Header &hdr_, unsigned char* data, size_t n)
       : buffer(data, n)
       , hdr(hdr_)
+      , payload_size(0)
       , internal_flags({0})
     {
         assert(n >= sizeof(ExtendedHeader));
@@ -155,6 +158,11 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Packet timestamp */
     MonoClock::time_point timestamp;
+
+    /** @brief Payload size
+     * @return The size of the data portion of a UDP or TCP packet.
+     */
+    size_t payload_size;
 
     /** @brief Internal flags */
     struct {

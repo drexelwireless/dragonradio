@@ -891,5 +891,8 @@ done:
         iph->ip_sum = ip_checksum(iph, sizeof(struct ip));
     }
 
+    // Cache payload size
+    pkt->payload_size = pkt->getPayloadSize();
+
     radio_out.push(std::move(pkt));
 }

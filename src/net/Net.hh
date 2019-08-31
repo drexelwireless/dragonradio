@@ -11,8 +11,10 @@
 #include <vector>
 
 #include "Packet.hh"
+#include "RadioConfig.hh"
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
+#include "phy/TXParams.hh"
 #include "stats/Estimator.hh"
 
 /** @brief A sprintf-style format string for internal network tun/tap IP
@@ -42,7 +44,16 @@ extern const char *kExtIPNetmask;
 using timestamp_vector = std::vector<std::pair<MonoClock::time_point, MonoClock::time_point>>;
 
 struct Node {
-    explicit Node(NodeId id);
+    explicit Node(NodeId id)
+      : id(id)
+      , is_gateway(false)
+      , can_transmit(true)
+      , g(1.0)
+      , tx_params(nullptr)
+      , ack_delay(rc.arq_ack_delay)
+      , retransmission_delay(rc.arq_retransmission_delay)
+    {
+    }
 
     Node() = delete;
     Node(const Node &) = delete;
@@ -60,6 +71,9 @@ struct Node {
 
     /** @brief Multiplicative TX gain as measured against 0 dBFS. */
     float g;
+
+    /** @brief TX parameters for this node (may be null). */
+    const TXParams *tx_params;
 
     /** @brief ACK delay in seconds */
     double ack_delay;
@@ -93,9 +107,14 @@ class Net
 public:
     using NodeMap = std::map<NodeId, std::shared_ptr<Node>>;
 
-    Net(std::shared_ptr<TunTap> tuntap,
-        NodeId nodeId);
     Net() = delete;
+
+    Net(std::shared_ptr<TunTap> tuntap,
+        NodeId nodeId)
+      : tuntap_(tuntap)
+      , my_node_id_(nodeId)
+    {
+    }
 
     ~Net() = default;
 

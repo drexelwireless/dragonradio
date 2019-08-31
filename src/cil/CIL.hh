@@ -29,22 +29,22 @@ struct Mandate {
     ~Mandate() = default;
 
     /** @brief Flow UID */
-    const FlowUID flow_uid;
+    FlowUID flow_uid;
 
     /** @brief Period over which to measure outcome metrics (sec) */
-    const double hold_period;
+    double hold_period;
 
     /** @brief Point value */
-    const int point_value;
+    int point_value;
 
     /** @brief Maximum latency allowed for a packet (sec) */
-    const std::optional<double> max_latency_s;
+    std::optional<double> max_latency_s;
 
     /** @brief Minimum throughput (bps) */
-    const std::optional<double> min_throughput_bps;
+    std::optional<double> min_throughput_bps;
 
     /** @brief File transfer delivery deadline (sec) */
-    const std::optional<double> file_transfer_deadline_s;
+    std::optional<double> file_transfer_deadline_s;
 
     /** @brief Achieved duration */
     unsigned achieved_duration;

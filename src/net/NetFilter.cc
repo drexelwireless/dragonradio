@@ -96,6 +96,9 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         pkt->ehdr().src = src_id;
         pkt->ehdr().dest = dest_id;
 
+        // Cache payload size
+        pkt->payload_size = pkt->getPayloadSize();
+
         if (rc.verbose_packet_trace)
             printf("Read %lu bytes from %u to %u\n",
                 (unsigned long) pkt->ehdr().data_len,
