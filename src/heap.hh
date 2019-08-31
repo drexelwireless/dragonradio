@@ -35,16 +35,7 @@ public:
         size_type heap_index;
     };
 
-    heap(const Compare& compare, const Container& cont)
-      : c(cont)
-      , comp(compare)
-    {
-    }
-
-    explicit heap(const Compare& compare = Compare(),
-                  Container&& cont = Container())
-      : c(std::move(cont))
-      , comp(compare)
+    heap()
     {
     }
 
@@ -53,13 +44,11 @@ public:
     heap& operator=(const heap& other)
     {
         c = other.c;
-        comp = other.comp;
     }
 
     heap& operator=(heap&& other)
     {
         c = std::move(other.c);
-        comp = std::move(other.comp);
     }
 
     reference top()
@@ -111,12 +100,10 @@ public:
     void swap(heap& other)
     {
         std::swap(c, other.c);
-        std::swap(comp, other.comp);
     }
 
 protected:
     Container c;
-    Compare comp;
 
     static constexpr size_type parent(size_type i)
     {
@@ -155,7 +142,7 @@ protected:
     /** @brief Move item at given index to proper heap position */
     void update_heap(size_type index)
     {
-        if (index > 0 && comp(c[index], c[parent(index)]))
+        if (index > 0 && value_compare()(c[index], c[parent(index)]))
             up_heap(index);
         else
             down_heap(index);
@@ -167,7 +154,7 @@ protected:
         while (index > 0) {
             size_type p = parent(index);
 
-            if (!comp(c[index], c[p]))
+            if (!value_compare()(c[index], c[p]))
                 break;
 
             swap_heap(index, p);
@@ -181,9 +168,9 @@ protected:
         size_type child = left(index);
 
         while (child < c.size()) {
-            size_type top_child = (child + 1 == c.size() || comp(c[child], c[child + 1])) ? child : child + 1;
+            size_type top_child = (child + 1 == c.size() || value_compare()(c[child], c[child + 1])) ? child : child + 1;
 
-            if (comp(c[index], c[top_child]))
+            if (value_compare()(c[index], c[top_child]))
                 break;
 
             swap_heap(index, top_child);
