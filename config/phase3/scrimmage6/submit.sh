@@ -1,8 +1,8 @@
 #!/bin/sh
 EVENT=scrimmage6
 VALIDATE=6
-IMAGE=testing-20190829-11ca8244
-QUAL=103868
+IMAGE=testing-20190902-ef5e158c
+QUAL=104777
 
 copy()
 {
