@@ -245,8 +245,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // We can't do anything else with the packet.
     if (pkt->internal_flags.invalid_payload) {
         if (pkt->hdr.flags.has_data) {
-            RecvWindow                        &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
-            //std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+            RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
+            std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
             // Update the max seq number we've received
             if (pkt->hdr.seq > recvw.max) {
@@ -255,7 +255,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             }
 
             // Send a NAK
-            nak(pkt->hdr.curhop, pkt->hdr.seq);
+            nak(recvw, pkt->hdr.seq);
         }
 
         return;
@@ -569,22 +569,13 @@ void SmartController::ack(RecvWindow &recvw)
     netq_->push_hi(std::move(pkt));
 }
 
-void SmartController::nak(NodeId node_id, Seq seq)
+void SmartController::nak(RecvWindow &recvw, Seq seq)
 {
     if (!netq_)
         return;
 
     if (!net_->me().can_transmit)
         return;
-
-    // Get the receive window
-    RecvWindow *recvwptr = maybeGetReceiveWindow(node_id);
-
-    if (!recvwptr)
-        return;
-
-    RecvWindow                      &recvw = *recvwptr;
-    std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
     // If we have a zero-sized NAK window, don't send any NAK's.
     if (recvw.explicit_nak_win.size() == 0)
@@ -601,7 +592,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
 
     // Send the explicit NAK
     logEvent("ARQ: send nak: node=%u; nak=%u",
-        (unsigned) node_id,
+        (unsigned) recvw.node.id,
         (unsigned) seq);
 
     // Create an ACK-only packet. Why don't we set the ACK field here!? Because
@@ -612,12 +603,12 @@ void SmartController::nak(NodeId node_id, Seq seq)
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
     pkt->hdr.curhop = net_->getMyNodeId();
-    pkt->hdr.nexthop = node_id;
+    pkt->hdr.nexthop = recvw.node.id;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
-    pkt->ehdr().dest = node_id;
+    pkt->ehdr().dest = recvw.node.id;
 
     // Append NAK control message
     pkt->appendNak(seq);

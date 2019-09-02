@@ -550,7 +550,7 @@ public:
     void ack(RecvWindow &recvw);
 
     /** @brief Send a NAK to the given receiver. */
-    void nak(NodeId node_id, Seq seq);
+    void nak(RecvWindow &recvw, Seq seq);
 
     /** @brief Broadcast a HELLO packet. */
     void broadcastHello(void);
