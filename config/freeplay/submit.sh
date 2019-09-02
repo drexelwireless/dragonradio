@@ -1,5 +1,5 @@
 #!/bin/sh
-IMAGE=queuing-roun-20190828-d5995197
+IMAGE=testing-20190902-ef5e158c
 
 scp freeplay.conf sc2-lz:/share/nas/freeplay/dragon-radio
 ssh sc2-lz "chmod 0750 /share/nas/freeplay/dragon-radio/freeplay.conf"
