@@ -269,8 +269,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // Handle broadcast packets
     if (pkt->hdr.nexthop == kNodeBroadcast) {
-        // Resize the packet to truncate non-data bytes
-        pkt->resize(sizeof(ExtendedHeader) + pkt->ehdr().data_len);
+        // Clear all control information, leaving only data payload behind.
+        pkt->clearControl();
 
         // Send the packet along if it has data
         if (pkt->ehdr().data_len != 0)
