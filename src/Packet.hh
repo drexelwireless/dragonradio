@@ -67,7 +67,7 @@ struct ControlMsg {
         Time t_sent;
         /** @brief Receiver's timestamp of packet */
         Time t_recv;
-    };
+    } __attribute__((packed));
 
     struct ReceiverStats {
         /** @brief Long-term EVM at receiver */
@@ -89,7 +89,7 @@ struct ControlMsg {
         Seq unack;
     };
 
-    Type type;
+    uint8_t type;
 
     union {
         Hello hello;
@@ -100,7 +100,7 @@ struct ControlMsg {
         SelectiveAck ack;
         SetUnack unack;
     };
-};
+} __attribute__((packed));
 
 /** @brief A flow UID. */
 typedef uint16_t FlowUID;
@@ -494,7 +494,7 @@ struct RadioPacket : public Packet
 };
 
 /** @brief Compute the size of the specified control message. */
-constexpr size_t ctrlsize(ControlMsg::Type ty)
+constexpr size_t ctrlsize(uint8_t ty)
 {
     switch (ty) {
         case ControlMsg::kHello:
@@ -522,5 +522,13 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
             return 0;
     }
 }
+
+static_assert(ctrlsize(ControlMsg::kHello) == 2);
+static_assert(ctrlsize(ControlMsg::kTimestamp) == 17);
+static_assert(ctrlsize(ControlMsg::kTimestampEcho) == 34);
+static_assert(ctrlsize(ControlMsg::kReceiverStats) == 17);
+static_assert(ctrlsize(ControlMsg::kNak) == 3);
+static_assert(ctrlsize(ControlMsg::kSelectiveAck) == 5);
+static_assert(ctrlsize(ControlMsg::kSetUnack) == 3);
 
 #endif /* PACKET_HH_ */
