@@ -1008,9 +1008,9 @@ void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
     // *latest* selective ACKs.
     if (pkt.size() > rc.mtu + mcu_) {
         // How many SACK's do we need to remove?
-        size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
-        int    nremove;
-        int    nkeep;
+        constexpr size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
+        int              nremove;
+        int              nkeep;
 
         nremove = (pkt.size() - (rc.mtu + mcu_) + sack_size - 1) /
                       sack_size;
