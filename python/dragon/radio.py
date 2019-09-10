@@ -114,6 +114,10 @@ class Config(object):
         self.rx_bandwidth = None
         """If set, always receive at this bandwidth. Otherwise, calculate
         receive bandwidth based on RX oversample factor and radio bandwidth."""
+        self.tx_bandwidth = None
+        """If set, always transmit at this bandwidth. Otherwise, calculate
+        transmit bandwidth based on TX oversample factor and channel
+        bandwidth."""
         self.rx_oversample_factor = 1.0
         """Oversample factor on RX"""
         self.tx_oversample_factor = 1.0
@@ -420,6 +424,9 @@ class Config(object):
         parser.add_argument('--rx-bandwidth', action='store', type=float,
                             dest='rx_bandwidth',
                             help='set receive bandwidth (Hz)')
+        parser.add_argument('--tx-bandwidth', action='store', type=float,
+                            dest='tx_bandwidth',
+                            help='set transmit bandwidth (Hz)')
         parser.add_argument('--rx-oversample', action='store', type=float,
                             dest='rx_oversample_factor',
                             help='set RX oversample factor')
@@ -1069,9 +1076,16 @@ class Radio(object):
         """Set TX rate"""
         config = self.config
 
-        tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
+        if config.tx_bandwidth and config.tx_upsample:
+            logger.warning("TX bandwidth set, but TX upsampling requested.")
 
-        want_tx_rate = rate*tx_rate_oversample
+        if config.tx_bandwidth and not config.tx_upsample:
+            want_tx_rate = config.tx_bandwidth
+        else:
+            tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
+
+            want_tx_rate = rate*tx_rate_oversample
+
         want_tx_rate = safeRate(want_tx_rate, self.usrp.clock_rate)
 
         if self.tx_rate != want_tx_rate:
