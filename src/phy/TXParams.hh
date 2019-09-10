@@ -13,16 +13,9 @@
 
 /** @brief PHY TX parameters. */
 struct TXParams {
-    TXParams()
-      : g_0dBFS_(1.0f)
-      , auto_soft_tx_gain_clip_frac_(0.999f)
-      , nestimates_0dBFS_(0)
-      , g_0dBFS_estimate_(1.0f)
-    {
-    }
-
-    TXParams(const MCS &mcs)
+    TXParams(const MCS &mcs, std::optional<double> evm_threshold = std::nullopt)
       : mcs(mcs)
+      , evm_threshold(evm_threshold)
       , g_0dBFS_(1.0f)
       , auto_soft_tx_gain_clip_frac_(0.999f)
       , nestimates_0dBFS_(0)
@@ -35,6 +28,7 @@ struct TXParams {
         std::shared_lock<std::shared_mutex> lock(other.mutex_);
 
         mcs = other.mcs;
+        evm_threshold = other.evm_threshold;
         g_0dBFS_.store(other.g_0dBFS_.load(std::memory_order_relaxed), std::memory_order_relaxed);
         auto_soft_tx_gain_clip_frac_.store(other.auto_soft_tx_gain_clip_frac_.load(std::memory_order_relaxed), std::memory_order_relaxed);
         nestimates_0dBFS_ = other.nestimates_0dBFS_;
@@ -44,11 +38,14 @@ struct TXParams {
     TXParams(TXParams &&other)
     {
         mcs = std::move(other.mcs);
+        evm_threshold = std::move(other.evm_threshold);
         g_0dBFS_.store(other.g_0dBFS_.load(std::memory_order_relaxed), std::memory_order_relaxed);
         auto_soft_tx_gain_clip_frac_.store(other.auto_soft_tx_gain_clip_frac_.load(std::memory_order_relaxed), std::memory_order_relaxed);
         nestimates_0dBFS_ = other.nestimates_0dBFS_;
         g_0dBFS_estimate_ = std::move(other.g_0dBFS_estimate_);
     }
+
+    TXParams() = delete;
 
     TXParams& operator =(const TXParams &other)
     {
@@ -59,6 +56,7 @@ struct TXParams {
             std::lock(this_lock, other_lock);
 
             mcs = other.mcs;
+            evm_threshold = other.evm_threshold;
             g_0dBFS_.store(other.g_0dBFS_.load(std::memory_order_relaxed), std::memory_order_relaxed);
             auto_soft_tx_gain_clip_frac_.store(other.auto_soft_tx_gain_clip_frac_.load(std::memory_order_relaxed), std::memory_order_relaxed);
             nestimates_0dBFS_ = other.nestimates_0dBFS_;
@@ -74,6 +72,7 @@ struct TXParams {
             std::unique_lock<std::shared_mutex> lock(mutex_);
 
             mcs = std::move(other.mcs);
+            evm_threshold = std::move(other.evm_threshold);
             g_0dBFS_.store(other.g_0dBFS_.load(std::memory_order_relaxed), std::memory_order_relaxed);
             auto_soft_tx_gain_clip_frac_.store(other.auto_soft_tx_gain_clip_frac_.load(std::memory_order_relaxed), std::memory_order_relaxed);
             nestimates_0dBFS_ = other.nestimates_0dBFS_;
@@ -85,6 +84,9 @@ struct TXParams {
 
     /** @brief Modulation and coding scheme */
     MCS mcs;
+
+    /** @brief EVM required for this MCS */
+    std::optional<double> evm_threshold;
 
     /** @brief Get the fraction of unclipped IQ values. Defaults to 0.999. */
     float getAutoSoftTXGainClipFrac(void) const

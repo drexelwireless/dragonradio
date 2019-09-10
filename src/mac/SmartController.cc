@@ -153,7 +153,7 @@ get_packet:
 
         // Append selective ACK if needed
         if (recvw.need_selective_ack)
-            appendCtrlACK(*pkt, recvw);
+            appendFeedback(*pkt, recvw);
     } else if (pkt->ehdr().data_len != 0)
         dprintf("ARQ: send: node=%u; seq=%u",
             (unsigned) nexthop,
@@ -188,7 +188,7 @@ get_packet:
 
         // Save the packet in our send window.
         sendw[pkt->hdr.seq] = pkt;
-        sendw[pkt->hdr.seq].timestamp = Clock::now();
+        sendw[pkt->hdr.seq].timestamp = MonoClock::now();
         sendw[pkt->hdr.seq].mcsidx = sendw.mcsidx;
 
         // If this packet is a retransmission, increment the retransmission
@@ -241,13 +241,18 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // Get node ID of source
     NodeId prevhop = pkt->hdr.curhop;
 
-    // Immediately NAK data packets with a bad payload if they contain data.
-    // We can't do anything else with the packet.
-    if (pkt->internal_flags.invalid_payload) {
-        if (pkt->hdr.flags.has_data) {
-            RecvWindow                        &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
-            //std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+    if (pkt->hdr.flags.has_data) {
+        RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
+        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
+        // Update metrics. EVM and RSSI should be valid as long as the header is
+        // valid.
+        recvw.long_evm.update(pkt->timestamp, pkt->evm);
+        recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
+
+        // Immediately NAK data packets with a bad payload if they contain data.
+        // We can't do anything else with the packet.
+        if (pkt->internal_flags.invalid_payload) {
             // Update the max seq number we've received
             if (pkt->hdr.seq > recvw.max) {
                 recvw.max = pkt->hdr.seq;
@@ -255,10 +260,28 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             }
 
             // Send a NAK
-            nak(pkt->hdr.curhop, pkt->hdr.seq);
+            nak(recvw, pkt->hdr.seq);
+
+            // We're done with this packet since it has a bad payload
+            return;
+        }
+    } else  {
+        RecvWindow *recvwptr = maybeGetReceiveWindow(prevhop);
+
+        // Update metrics. EVM and RSSI should be valid as long as the header is
+        // valid. We won't create a receive window if we don't already have one
+        // because this packet has no data payload.
+        if (recvwptr) {
+            RecvWindow                      &recvw = *recvwptr;
+            std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+            recvw.long_evm.update(pkt->timestamp, pkt->evm);
+            recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
         }
 
-        return;
+        // We're done with this packet if it has a bad payload
+        if (pkt->internal_flags.invalid_payload)
+            return;
     }
 
     // Process control info
@@ -269,8 +292,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // Handle broadcast packets
     if (pkt->hdr.nexthop == kNodeBroadcast) {
-        // Resize the packet to truncate non-data bytes
-        pkt->resize(sizeof(ExtendedHeader) + pkt->ehdr().data_len);
+        // Clear all control information, leaving only data payload behind.
+        pkt->clearControl();
 
         // Send the packet along if it has data
         if (pkt->ehdr().data_len != 0)
@@ -289,7 +312,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     if (sendwptr) {
         SendWindow                      &sendw = *sendwptr;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-        Clock::time_point               tfeedback = Clock::now() - selective_ack_feedback_delay_;
+        MonoClock::time_point           tfeedback = MonoClock::now() - selective_ack_feedback_delay_;
         std::optional<Seq>              nak;
 
         // Handle any NAK
@@ -303,6 +326,11 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
         // Handle ACK
         if (pkt->hdr.flags.ack) {
+            // Handle statistics reported by the receiver. We do this before
+            // looking at ACK's because we use the statistics to decide whether
+            // to move up our MCS.
+            handleReceiverStats(*pkt, sendw);
+
             if (pkt->ehdr().ack > sendw.unack) {
                 dprintf("ARQ: ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
@@ -564,27 +592,18 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->ehdr().dest = recvw.node.id;
 
     // Append selective ACK control messages
-    appendCtrlACK(*pkt, recvw);
+    appendFeedback(*pkt, recvw);
 
     netq_->push_hi(std::move(pkt));
 }
 
-void SmartController::nak(NodeId node_id, Seq seq)
+void SmartController::nak(RecvWindow &recvw, Seq seq)
 {
     if (!netq_)
         return;
 
     if (!net_->me().can_transmit)
         return;
-
-    // Get the receive window
-    RecvWindow *recvwptr = maybeGetReceiveWindow(node_id);
-
-    if (!recvwptr)
-        return;
-
-    RecvWindow                      &recvw = *recvwptr;
-    std::lock_guard<spinlock_mutex> lock(recvw.mutex);
 
     // If we have a zero-sized NAK window, don't send any NAK's.
     if (recvw.explicit_nak_win.size() == 0)
@@ -601,7 +620,7 @@ void SmartController::nak(NodeId node_id, Seq seq)
 
     // Send the explicit NAK
     logEvent("ARQ: send nak: node=%u; nak=%u",
-        (unsigned) node_id,
+        (unsigned) recvw.node.id,
         (unsigned) seq);
 
     // Create an ACK-only packet. Why don't we set the ACK field here!? Because
@@ -612,18 +631,18 @@ void SmartController::nak(NodeId node_id, Seq seq)
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
     pkt->hdr.curhop = net_->getMyNodeId();
-    pkt->hdr.nexthop = node_id;
+    pkt->hdr.nexthop = recvw.node.id;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
     pkt->ehdr().src = net_->getMyNodeId();
-    pkt->ehdr().dest = node_id;
+    pkt->ehdr().dest = recvw.node.id;
 
     // Append NAK control message
     pkt->appendNak(seq);
 
     // Append selective ACK control messages
-    appendCtrlACK(*pkt, recvw);
+    appendFeedback(*pkt, recvw);
 
     netq_->push_hi(std::move(pkt));
 }
@@ -933,8 +952,12 @@ inline void apendSelectiveACK(NetPacket &pkt,
     pkt.appendSelectiveAck(begin, end);
 }
 
-void SmartController::appendCtrlACK(NetPacket &pkt, RecvWindow &recvw)
+void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
 {
+    // Append statistics
+    pkt.appendReceiverStats(recvw.long_evm.getValue(), recvw.long_rssi.getValue());
+
+    // Append selective ACKs
     if (!selective_ack_)
         return;
 
@@ -985,9 +1008,9 @@ void SmartController::appendCtrlACK(NetPacket &pkt, RecvWindow &recvw)
     // *latest* selective ACKs.
     if (pkt.size() > rc.mtu + mcu_) {
         // How many SACK's do we need to remove?
-        size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
-        int    nremove;
-        int    nkeep;
+        constexpr size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
+        int              nremove;
+        int              nkeep;
 
         nremove = (pkt.size() - (rc.mtu + mcu_) + sack_size - 1) /
                       sack_size;
@@ -1017,6 +1040,23 @@ void SmartController::appendCtrlACK(NetPacket &pkt, RecvWindow &recvw)
 
     // We no longer need a selective ACK
     recvw.need_selective_ack = false;
+}
+
+void SmartController::handleReceiverStats(RadioPacket &pkt, SendWindow &sendw)
+{
+    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kReceiverStats:
+            {
+                sendw.long_evm = it->receiver_stats.long_evm;
+                sendw.long_rssi = it->receiver_stats.long_rssi;
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
 }
 
 void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
@@ -1094,7 +1134,7 @@ std::optional<Seq> SmartController::handleNAK(RadioPacket &pkt,
 
 void SmartController::handleSelectiveACK(RadioPacket &pkt,
                                          SendWindow &sendw,
-                                         Clock::time_point tfeedback)
+                                         MonoClock::time_point tfeedback)
 {
     Node &node = sendw.node;
     Seq  nextSeq = sendw.unack;
@@ -1215,13 +1255,11 @@ void SmartController::txFailure(SendWindow &sendw)
 
 void SmartController::updateMCS(SendWindow &sendw)
 {
-    Node          &node = sendw.node;
-    double        short_per = sendw.short_per.getValue();
-    double        long_per = sendw.long_per.getValue();
-    static double prev_short_per = 0.0;
-    static double prev_long_per = 0.0;
+    Node   &node = sendw.node;
+    double short_per = sendw.short_per.getValue();
+    double long_per = sendw.long_per.getValue();
 
-    if (short_per != prev_short_per || long_per != prev_long_per) {
+    if (short_per != sendw.prev_short_per || long_per != sendw.prev_long_per) {
         logEvent("AMC: updateMCS: node=%u; short per=%f (%u samples); long per=%f (%u samples)",
             node.id,
             short_per,
@@ -1229,19 +1267,15 @@ void SmartController::updateMCS(SendWindow &sendw)
             long_per,
             sendw.long_per.getNSamples());
 
-        prev_short_per = short_per;
-        prev_long_per = long_per;
+        sendw.prev_short_per = short_per;
+        sendw.prev_long_per = long_per;
     }
 
     // First for high PER, then test for low PER
     if (   sendw.short_per.getNSamples() >= sendw.short_per.getWindowSize()
-        && short_per > mcsidx_down_per_threshold_
-        && sendw.mcsidx > 0) {
-        // Don't decrease MCS if largest possible packet won't fit in slot.
-        if (getMaxPacketsPerSlot(tx_params_[sendw.mcsidx-1]) < 1)
-            return;
-
-        // Decrease the probability that we will transition to this MCS index
+        && short_per > mcsidx_down_per_threshold_) {
+        // Perform hysteresis on future MCS increases by decreasing the
+        // probability that we will transition to this MCS index.
         sendw.mcsidx_prob[sendw.mcsidx] =
             std::max(sendw.mcsidx_prob[sendw.mcsidx]*mcsidx_alpha_,
                      mcsidx_prob_floor_);
@@ -1251,8 +1285,28 @@ void SmartController::updateMCS(SendWindow &sendw)
             (unsigned) sendw.mcsidx,
             sendw.mcsidx_prob[sendw.mcsidx]);
 
-        // Move down one MCS
-        moveDownMCS(sendw);
+        // Decrease MCS until we hit rock bottom or we hit an MCS that produces
+        // packets too large to fit in a slot.
+        unsigned n = 0; // Number of MCS levels to decrease
+
+        while (sendw.mcsidx > n && getMaxPacketsPerSlot(tx_params_[sendw.mcsidx-(n+1)]) > 0) {
+            // Increment number of MCS levels we will move down
+            ++n;
+
+            // If we don't have both an EVM threshold and EVM feedback from the
+            // sender, stop. Otherwise, use our EVM information to decide if we
+            // should decrease the MCS level further.
+            TXParams &next = tx_params_[sendw.mcsidx-n];
+
+            if (!next.evm_threshold || !sendw.long_evm || (*sendw.long_evm < *next.evm_threshold))
+                break;
+        }
+
+        // Move down n MCS levels
+        if (n != 0)
+            moveDownMCS(sendw, n);
+        else
+            resetPEREstimates(sendw);
     } else if (   sendw.long_per.getNSamples() >= sendw.long_per.getWindowSize()
                && long_per < mcsidx_up_per_threshold_) {
         double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
@@ -1267,29 +1321,58 @@ void SmartController::updateMCS(SendWindow &sendw)
                 (unsigned) sendw.mcsidx,
                 sendw.mcsidx_prob[sendw.mcsidx]);
 
-        // Now we see if we can actually increase the MCS index. Not only must
-        // there be a higher entry in the MCS table, but we must pass the
-        // probabilistic transition test.
-        if (   sendw.mcsidx < tx_params_.size() - 1
-            && dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1]) {
+        // Now we see if we can actually increase the MCS index.
+        if (mayMoveUpMCS(sendw))
             moveUpMCS(sendw);
-        } else
+        else
             resetPEREstimates(sendw);
     }
 }
 
-void SmartController::moveDownMCS(SendWindow &sendw)
+bool SmartController::mayMoveUpMCS(const SendWindow &sendw)
+{
+    // We can't move up if we're at the top of the MCS hierarchy...
+    if (sendw.mcsidx == tx_params_.size() - 1)
+        return false;
+
+    // There are two cases where we may move up an MCS level:
+    //
+    // 1) The next-higher MCS has an EVM threshold that we meet
+    // 2) The next-higher MCS *does not* have an EVM threshold, but we pass
+    //    the probabilistic transition test.
+    TXParams &next = tx_params_[sendw.mcsidx+1];
+
+    if (next.evm_threshold) {
+        if (sendw.long_evm) {
+            logEvent("ARQ: EVM threshold: evm_threshold=%f, evm=%f",
+                *next.evm_threshold,
+                *sendw.long_evm);
+
+            return *sendw.long_evm < *next.evm_threshold;
+        } else
+            return false;
+    }
+
+    return dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1];
+}
+
+void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
 {
     Node &node = sendw.node;
 
     if (rc.verbose && !rc.debug)
         fprintf(stderr, "Moving down modulation scheme\n");
 
-    --sendw.mcsidx;
+    assert(sendw.mcsidx >= n);
+
+    sendw.mcsidx -= n;
     sendw.per_end = sendw.seq;
 
-    logEvent("AMC: Moving down modulation scheme: node=%u; short per=%f; swin=%lu; lwin=%lu",
+    assert(sendw.mcsidx < tx_params_.size());
+
+    logEvent("AMC: Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
         node.id,
+        (unsigned) sendw.mcsidx,
         sendw.short_per.getValue(),
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());
@@ -1324,8 +1407,12 @@ void SmartController::moveUpMCS(SendWindow &sendw)
     ++sendw.mcsidx;
     sendw.per_end = sendw.seq;
 
-    logEvent("AMC: Moving up modulation scheme: node=%u; long per=%f; swin=%lu; lwin=%lu",
+    assert(sendw.mcsidx >= 0);
+    assert(sendw.mcsidx < tx_params_.size());
+
+    logEvent("AMC: Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
         node.id,
+        (unsigned) sendw.mcsidx,
         sendw.long_per.getValue(),
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());
@@ -1482,7 +1569,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
         sendw.mcsidx_prob.resize(tx_params_.size(), 1.0);
         sendw.per_end = sendw.seq;
 
-        while (getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]) == 0)
+        while (sendw.mcsidx < tx_params_.size() - 1 && getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]) == 0)
             ++sendw.mcsidx;
 
         resetPEREstimates(sendw);
@@ -1540,6 +1627,9 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
     RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
                                       std::forward_as_tuple(node_id),
                                       std::forward_as_tuple(src, *this, seq, recvwin_, explicit_nak_win_)).first->second;
+
+    recvw.long_evm.setTimeWindow(rc.amc_long_stats_nslots*slot_size_);
+    recvw.long_rssi.setTimeWindow(rc.amc_long_stats_nslots*slot_size_);
 
     return recvw;
 }

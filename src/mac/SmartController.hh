@@ -18,6 +18,8 @@
 #include "mac/MAC.hh"
 #include "phy/Gain.hh"
 #include "phy/PHY.hh"
+#include "stats/Estimator.hh"
+#include "stats/TimeWindowEstimator.hh"
 
 class SmartController;
 
@@ -88,7 +90,7 @@ struct SendWindow {
         std::shared_ptr<NetPacket> pkt;
 
         /** @brief Timestamp of last transmission of this packet. */
-        Clock::time_point timestamp;
+        MonoClock::time_point timestamp;
 
         /** @brief Modulation index used for last transmission of this packet */
         size_t mcsidx;
@@ -112,6 +114,8 @@ struct SendWindow {
       , maxwin(maxwin)
       , mcsidx(0)
       , mcsidx_prob(0)
+      , prev_short_per(1)
+      , prev_long_per(1)
       , short_per(1)
       , long_per(1)
       , entries_(maxwin, *this)
@@ -163,11 +167,23 @@ struct SendWindow {
      */
     Seq per_end;
 
+    /** @brief Previous short-term packet error rate */
+    double prev_short_per;
+
+    /** @brief Previous long-term packet error rate */
+    double prev_long_per;
+
     /** @brief Short-term packet error rate */
     WindowedMean<double> short_per;
 
     /** @brief Long-term packet error rate */
     WindowedMean<double> long_per;
+
+    /** @brief Long-term EVM, as reported by receiver */
+    std::optional<double> long_evm;
+
+    /** @brief Long-term RSSI, as reported by receiver */
+    std::optional<double> long_rssi;
 
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
@@ -231,6 +247,8 @@ struct RecvWindow : public TimerQueue::Timer  {
       , timer_for_ack(false)
       , explicit_nak_win(nak_win)
       , explicit_nak_idx(0)
+      , long_evm(0)
+      , long_rssi(0)
       , entries_(win)
     {}
 
@@ -279,6 +297,12 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Explicit NAK window index */
     size_t explicit_nak_idx;
 
+    /** @brief Long-term packet error rate */
+    TimeWindowMean<MonoClock, double> long_evm;
+
+    /** @brief Long-term packet RSSI */
+    TimeWindowMean<MonoClock, double> long_rssi;
+
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
@@ -308,6 +332,9 @@ class SmartController : public Controller
 
     friend class SendWindowsProxy;
     friend class SendWindowProxy;
+
+    friend class ReceiveWindowsProxy;
+    friend class ReceiveWindowProxy;
 
 public:
     SmartController(std::shared_ptr<Net> net,
@@ -550,7 +577,7 @@ public:
     void ack(RecvWindow &recvw);
 
     /** @brief Send a NAK to the given receiver. */
-    void nak(NodeId node_id, Seq seq);
+    void nak(RecvWindow &recvw, Seq seq);
 
     /** @brief Broadcast a HELLO packet. */
     void broadcastHello(void);
@@ -691,8 +718,14 @@ protected:
     /** @brief Handle timestampecho control messages. */
     void handleCtrlTimestampEchos(RadioPacket &pkt, Node &node);
 
-    /** @brief Append ACK control messages. */
-    void appendCtrlACK(NetPacket &pkt, RecvWindow &recvw);
+    /** @brief Append control messages for feedback to sender. */
+    /** This method appends feedback to the receiver in the form of both
+     * statistics and selective ACKs .
+     */
+    void appendFeedback(NetPacket &pkt, RecvWindow &recvw);
+
+    /** @brief Handle receiver statistics. */
+    void handleReceiverStats(RadioPacket &pkt, SendWindow &sendw);
 
     /** @brief Handle an ACK. */
     void handleACK(SendWindow &sendw, const Seq &seq);
@@ -707,7 +740,7 @@ protected:
     /** @brief Handle select ACK messages. */
     void handleSelectiveACK(RadioPacket &pkt,
                             SendWindow &sendw,
-                            Clock::time_point tfeedback);
+                            MonoClock::time_point tfeedback);
 
     /** @brief Handle sender setting unack */
     void handleSetUnack(RadioPacket &pkt, RecvWindow &recvw);
@@ -721,8 +754,11 @@ protected:
     /** @brief Update MCS based on current PER */
     void updateMCS(SendWindow &sendw);
 
+    /** @brief Return true if we may move up one MCS level */
+    bool mayMoveUpMCS(const SendWindow &sendw);
+
     /** @brief Move down one MCS level */
-    void moveDownMCS(SendWindow &sendw);
+    void moveDownMCS(SendWindow &sendw, unsigned n);
 
     /** @brief Move up one MCS level */
     void moveUpMCS(SendWindow &sendw);
@@ -768,20 +804,20 @@ public:
             throw std::out_of_range("No send window for node");
     }
 
-    double getLongPER(void)
-    {
-        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-
-        return sendw.long_per.getValue();
-    }
-
     double getShortPER(void)
     {
         SendWindow                      &sendw = controller_->getSendWindow(node_id_);
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
         return sendw.short_per.getValue();
+    }
+
+    double getLongPER(void)
+    {
+        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        return sendw.long_per.getValue();
     }
 
 private:
@@ -807,6 +843,65 @@ public:
     SendWindowProxy operator [](NodeId node)
     {
         return SendWindowProxy(controller_, node);
+    }
+
+private:
+    /** @brief This object's SmartController */
+    std::shared_ptr<SmartController> controller_;
+};
+
+/** @brief A proxy object for a SmartController receive window */
+class ReceiveWindowProxy
+{
+public:
+    ReceiveWindowProxy(std::shared_ptr<SmartController> controller,
+                       NodeId node_id)
+      : controller_(controller)
+      , node_id_(node_id)
+    {
+        if (controller_->maybeGetReceiveWindow(node_id_) == nullptr)
+            throw std::out_of_range("No receive window for node");
+    }
+
+    double getLongEVM(void)
+    {
+        RecvWindow                      &recvw = *controller_->maybeGetReceiveWindow(node_id_);
+        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+        return recvw.long_evm.getValue();
+    }
+
+    double getLongRSSI(void)
+    {
+        RecvWindow                      &recvw = *controller_->maybeGetReceiveWindow(node_id_);
+        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+        return recvw.long_rssi.getValue();
+    }
+
+private:
+    /** @brief This send window's SmartController */
+    std::shared_ptr<SmartController> controller_;
+
+    /** @brief This send window's node ID */
+    const NodeId node_id_;
+};
+
+/** @brief A proxy object for SmartController's receive windows */
+class ReceiveWindowsProxy
+{
+public:
+    ReceiveWindowsProxy(std::shared_ptr<SmartController> controller)
+      : controller_(controller)
+    {
+    }
+
+    ReceiveWindowsProxy() = delete;
+    ~ReceiveWindowsProxy() = default;
+
+    ReceiveWindowProxy operator [](NodeId node)
+    {
+        return ReceiveWindowProxy(controller_, node);
     }
 
 private:

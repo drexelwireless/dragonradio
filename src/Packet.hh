@@ -45,6 +45,7 @@ struct ControlMsg {
         kHello,
         kTimestamp,
         kTimestampEcho,
+        kReceiverStats,
         kNak,
         kSelectiveAck,
         kSetUnack
@@ -66,6 +67,14 @@ struct ControlMsg {
         Time t_sent;
         /** @brief Receiver's timestamp of packet */
         Time t_recv;
+    } __attribute__((packed));
+
+    struct ReceiverStats {
+        /** @brief Long-term EVM at receiver */
+        double long_evm;
+
+        /** @brief Long-term RSSI at receiver */
+        double long_rssi;
     };
 
     using Nak = Seq;
@@ -80,17 +89,18 @@ struct ControlMsg {
         Seq unack;
     };
 
-    Type type;
+    uint8_t type;
 
     union {
         Hello hello;
         Timestamp timestamp;
         TimestampEcho timestamp_echo;
+        ReceiverStats receiver_stats;
         Nak nak;
         SelectiveAck ack;
         SetUnack unack;
     };
-};
+} __attribute__((packed));
 
 /** @brief A flow UID. */
 typedef uint16_t FlowUID;
@@ -252,6 +262,9 @@ struct Packet : public buffer<unsigned char>
     void appendTimestampEcho(NodeId node_id,
                              const MonoClock::time_point &t_sent,
                              const MonoClock::time_point &t_recv);
+
+    /** @brief Append receiver statistics control message to a packet */
+    void appendReceiverStats(double long_evm, double long_rssi);
 
     /** @brief Append a NAK control message to a packet */
     void appendNak(const Seq &seq);
@@ -481,7 +494,7 @@ struct RadioPacket : public Packet
 };
 
 /** @brief Compute the size of the specified control message. */
-constexpr size_t ctrlsize(ControlMsg::Type ty)
+constexpr size_t ctrlsize(uint8_t ty)
 {
     switch (ty) {
         case ControlMsg::kHello:
@@ -492,6 +505,9 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
 
         case ControlMsg::kTimestampEcho:
             return offsetof(ControlMsg, timestamp_echo) + sizeof(ControlMsg::TimestampEcho);
+
+        case ControlMsg::kReceiverStats:
+            return offsetof(ControlMsg, receiver_stats) + sizeof(ControlMsg::ReceiverStats);
 
         case ControlMsg::kNak:
             return offsetof(ControlMsg, nak) + sizeof(ControlMsg::Nak);
@@ -506,5 +522,13 @@ constexpr size_t ctrlsize(ControlMsg::Type ty)
             return 0;
     }
 }
+
+static_assert(ctrlsize(ControlMsg::kHello) == 2);
+static_assert(ctrlsize(ControlMsg::kTimestamp) == 17);
+static_assert(ctrlsize(ControlMsg::kTimestampEcho) == 34);
+static_assert(ctrlsize(ControlMsg::kReceiverStats) == 17);
+static_assert(ctrlsize(ControlMsg::kNak) == 3);
+static_assert(ctrlsize(ControlMsg::kSelectiveAck) == 5);
+static_assert(ctrlsize(ControlMsg::kSetUnack) == 3);
 
 #endif /* PACKET_HH_ */

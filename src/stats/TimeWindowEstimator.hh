@@ -121,8 +121,8 @@ protected:
     void purge(typename Clock::time_point t) const
     {
         // Pop first element of buffer as long as it falls before our window
-        for (auto it = window_.begin(); it != window_.end() && it->first + twindow_ < t; it = window_.begin()) {
-            sum_ -= it->second;
+        while (!window_.empty() && window_.front().first + twindow_ < t) {
+            sum_ -= window_.front().second;
             window_.pop_front();
         }
     }
@@ -204,7 +204,7 @@ protected:
         bool recalc = false;
 
         // Pop first element of buffer as long as it falls before our window.
-        for (auto it = window_.begin(); it != window_.end() && it->first + twindow_ < t; it = window_.begin()) {
+        while (!window_.empty() && window_.front().first + twindow_ < t) {
             recalc = true;
             window_.pop_front();
         }
@@ -281,7 +281,7 @@ protected:
         bool recalc = false;
 
         // Pop first element of buffer as long as it falls before our window.
-        for (auto it = window_.begin(); it != window_.end() && it->first + twindow_ < t; it = window_.begin()) {
+        while (!window_.empty() && window_.front().first + twindow_ < t) {
             recalc = true;
             window_.pop_front();
         }

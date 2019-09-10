@@ -17,7 +17,9 @@ void exportRadioConfig(py::module &m)
         .def_readwrite("amc_short_per_nslots", &RadioConfig::amc_short_per_nslots,
             "Number of slots worth of packets we use to calculate short-term PER")
         .def_readwrite("amc_long_per_nslots", &RadioConfig::amc_long_per_nslots,
-            "Number of lots worth of packets we use to calculate long-term PER")
+            "Number of slots worth of packets we use to calculate long-term PER")
+        .def_readwrite("amc_long_stats_nslots", &RadioConfig::amc_long_stats_nslots,
+            "Number of slots worth of packets we use to calculate long-term statistics")
         .def_readwrite("mtu", &RadioConfig::mtu,
             "Maximum Transmission Unit (bytes)")
         .def_readwrite("arq_ack_delay", &RadioConfig::arq_ack_delay,

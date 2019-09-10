@@ -8,8 +8,8 @@ void exportRadioNet(py::module &m)
 {
     // Export class TXParams to Python
     py::class_<TXParams, std::shared_ptr<TXParams>>(m, "TXParams")
-        .def(py::init<>())
         .def(py::init<MCS>())
+        .def(py::init<MCS, std::optional<double>>())
         .def_readonly("mcs",
             &TXParams::mcs,
             "Modulation and coding scheme")
