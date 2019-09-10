@@ -478,10 +478,11 @@ class Controller(TCPProtoServer):
         if node_id != self.radio.node_id and node_id in self.nodes:
             logger.info('Removing node %d', node_id)
 
-            try:
-                subprocess.check_call('ip route del {}'.format(darpaNodeNet(node_id)), shell=True)
-            except:
-                logger.exception('Could not remove route to node {}'.format(node_id))
+            if self.in_colosseum:
+                try:
+                    subprocess.check_call('ip route del {}'.format(darpaNodeNet(node_id)), shell=True)
+                except:
+                    logger.exception('Could not remove route to node {}'.format(node_id))
 
             del self.nodes[node_id]
 
