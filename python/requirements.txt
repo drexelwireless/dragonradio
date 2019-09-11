@@ -1,8 +1,8 @@
-ipython==7.7.0
+ipython==7.8.0
 libconf==2.0.0
 matplotlib==3.0.3
 netifaces==0.10.9
-numpy==1.17.0
+numpy==1.17.2
 pandas==0.24.2
 protobuf==3.6.1
 psutil==5.6.3
