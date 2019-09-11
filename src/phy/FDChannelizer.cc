@@ -95,7 +95,7 @@ void FDChannelizer::fftWorker(void)
     std::shared_ptr<IQBuf> iqbuf;
     std::shared_ptr<IQBuf> fdbuf;
     unsigned               seq = 0;
-    fftw::FFT<C>           fft(N, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw::FFT<C>           fft(N, FFTW_FORWARD, FFTW_MEASURE);
     size_t                 fftoff = O;
 
     while (!done_) {
@@ -348,7 +348,7 @@ FDChannelizer::ChannelState::ChannelState(PHY &phy,
   , rate_(phy.getMinRXRateOversample()*channel.bw/rx_rate)
   , X_(phy.getMinRXRateOversample())
   , D_(rx_rate/channel.bw)
-  , ifft_(X_*N/D_, FFTW_BACKWARD, FFTW_ESTIMATE)
+  , ifft_(X_*N/D_, FFTW_BACKWARD, FFTW_MEASURE)
   , temp_(N)
   , H_(N)
   , demod_(phy.mkDemodulator())
@@ -360,7 +360,7 @@ FDChannelizer::ChannelState::ChannelState(PHY &phy,
         Nrot_ += N;
 
     // Compute frequency-domain filter
-    fftw::FFT<C> fft(N, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw::FFT<C> fft(N, FFTW_FORWARD, FFTW_MEASURE);
 
     std::fill(fft.in.begin(), fft.in.end(), 0);
     assert(taps.size() <= P);

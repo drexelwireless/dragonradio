@@ -18,7 +18,7 @@ public:
       : X(X_)
       , I(I_)
       , Nrot(Nrot_)
-      , fft(X*N/I, FFTW_FORWARD, FFTW_ESTIMATE)
+      , fft(X*N/I, FFTW_FORWARD, FFTW_MEASURE)
     {
         const int n = N/I; // Size of input block, not counting oversampling
 
@@ -211,7 +211,7 @@ public:
     {
     public:
         ToTimeDomain(void)
-          : ifft(N, FFTW_BACKWARD, FFTW_ESTIMATE)
+          : ifft(N, FFTW_BACKWARD, FFTW_MEASURE)
         {
         }
 
