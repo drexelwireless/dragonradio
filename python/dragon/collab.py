@@ -232,6 +232,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                         info.location.elevation = n.loc.alt
                         info.timestamp.set_timestamp(n.loc.timestamp)
 
+                        locations.append(info)
+
                 # Send location update to all peers
                 logging.info('CIL: sending location update')
                 for ip, p in self.peers.items():
