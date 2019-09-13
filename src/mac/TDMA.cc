@@ -70,9 +70,9 @@ void TDMA::reconfigure(void)
     // Determine whether or not we have a slot
     Clock::time_point t_now = Clock::now();
     Clock::time_point t_next_slot;
-    size_t            slotidx;
+    size_t            next_slotidx;
 
-    can_transmit_ = findNextSlot(t_now, t_next_slot, slotidx);
+    can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
 }
 
 void TDMA::txSlotWorker(void)
@@ -156,7 +156,7 @@ void TDMA::txSlotWorker(void)
 
 bool TDMA::findNextSlot(Clock::time_point t,
                         Clock::time_point &t_next,
-                        size_t &slotidx)
+                        size_t &next_slotidx)
 {
     double t_slot_pos; // Offset into the current slot (sec)
     size_t cur_slot;   // Current slot index
@@ -168,7 +168,7 @@ bool TDMA::findNextSlot(Clock::time_point t,
     for (tx_slot = 1; tx_slot <= nslots_; ++tx_slot) {
         if (tdma_schedule_[(cur_slot + tx_slot) % nslots_]) {
             t_next = t + (tx_slot*slot_size_ - t_slot_pos);
-            slotidx = (cur_slot + tx_slot) % nslots_;
+            next_slotidx = (cur_slot + tx_slot) % nslots_;
             return true;
         }
     }
