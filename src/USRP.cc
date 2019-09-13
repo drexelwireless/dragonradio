@@ -135,9 +135,9 @@ void USRP::burstTX(MonoClock::time_point when,
 
             // If this is the last segment of the current buffer *and* this is
             // the last buffer, mark this transmission as the end of the burst.
-            tx_md.end_of_burst = off + n == iqbuf.size()
-                              && std::next(it) == bufs.end()
-                              && end_of_burst;
+            tx_md.end_of_burst = end_of_burst
+                              && off + n == iqbuf.size()
+                              && std::next(it) == bufs.end();
 
             // Send the buffer segment and update the offset into the current
             // buffer.
