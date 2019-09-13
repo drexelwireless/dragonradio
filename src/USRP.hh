@@ -89,6 +89,7 @@ public:
     {
         usrp_->set_tx_rate(rate);
         logEvent("USRP: TX rate set to %f", rate);
+        tx_rate_ = usrp_->get_tx_rate();
     }
 
     /** @brief Get RX rate. */
@@ -102,6 +103,7 @@ public:
     {
         usrp_->set_rx_rate(rate);
         logEvent("USRP: RX rate set to %f", rate);
+        rx_rate_ = usrp_->get_rx_rate();
     }
 
     /** @brief Get TX gain (dB). */
@@ -234,6 +236,12 @@ private:
 
     /** @brief The DeviceType of the main device */
     DeviceType device_type_;
+
+    /** @brief Current TX rate */
+    double tx_rate_;
+
+    /** @brief Current RX rate */
+    double rx_rate_;
 
     /** @brief The UHD TX stream for this USRP. */
     uhd::tx_streamer::sptr tx_stream_;

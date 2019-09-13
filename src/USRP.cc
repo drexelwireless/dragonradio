@@ -35,6 +35,10 @@ USRP::USRP(const std::string& addr,
     setRXFrequency(freq);
     setTXFrequency(freq);
 
+    // Get TX and RX rates
+    tx_rate_ = usrp_->get_tx_rate();
+    rx_rate_ = usrp_->get_rx_rate();
+
     // Set up USRP streaming
     uhd::stream_args_t stream_args("fc32");
 
@@ -98,7 +102,6 @@ void USRP::burstTX(MonoClock::time_point when,
                    bool end_of_burst,
                    std::list<std::shared_ptr<IQBuf>>& bufs)
 {
-    const double       txRate = usrp_->get_tx_rate(); // TX rate in Hz
     uhd::tx_metadata_t tx_md; // TX metadata for UHD
     size_t             n;     // Size of next send
 
@@ -138,7 +141,7 @@ void USRP::burstTX(MonoClock::time_point when,
             tx_md.start_of_burst = false;
         }
 
-        when += static_cast<double>(iqbuf.size() - iqbuf.delay)/txRate;
+        when += static_cast<double>(iqbuf.size() - iqbuf.delay)/tx_rate_;
     }
 }
 
@@ -170,12 +173,11 @@ void USRP::stopRXStream(void)
 
 bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
-    const double     rxRate = usrp_->get_rx_rate(); // RX rate in Hz
-    uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rxRate;
+    uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rx_rate_;
     size_t           ndelivered = 0;
 
     buf.fc = usrp_->get_rx_freq();
-    buf.fs = rxRate;
+    buf.fs = rx_rate_;
 
     for (;;) {
         uhd::rx_metadata_t rx_md;
@@ -203,14 +205,14 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 
         if (ndelivered == 0) {
             buf.timestamp = MonoClock::time_point { rx_md.time_spec };
-            buf.undersample = (rx_md.time_spec - t_start.t).get_real_secs() * rxRate;
+            buf.undersample = (rx_md.time_spec - t_start.t).get_real_secs() * rx_rate_;
         }
 
         ndelivered += n;
 
         // If we have received enough samples to move us past t_end, stop
         // receiving.
-        if (rx_md.time_spec + static_cast<double>(n)/rxRate >= t_end) {
+        if (rx_md.time_spec + static_cast<double>(n)/rx_rate_ >= t_end) {
             // Set proper buffer size
             buf.resize(ndelivered);
 
