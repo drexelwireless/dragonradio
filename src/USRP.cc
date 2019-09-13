@@ -39,6 +39,10 @@ USRP::USRP(const std::string& addr,
     tx_rate_ = usrp_->get_tx_rate();
     rx_rate_ = usrp_->get_rx_rate();
 
+    // Get TX and RX frequencies
+    tx_freq_ = usrp_->get_tx_freq();
+    rx_freq_ = usrp_->get_rx_freq();
+
     // Set up USRP streaming
     uhd::stream_args_t stream_args("fc32");
 
@@ -80,6 +84,8 @@ void USRP::setTXFrequency(double freq)
     while (!usrp_->get_tx_sensor("lo_locked").to_bool())
         usleep(10);
 
+    tx_freq_ = usrp_->get_tx_freq();
+
     logEvent("USRP: TX frequency set to %f", freq);
 }
 
@@ -93,6 +99,8 @@ void USRP::setRXFrequency(double freq)
 
     while (!usrp_->get_rx_sensor("lo_locked").to_bool())
         usleep(10);
+
+    rx_freq_ = usrp_->get_rx_freq();
 
     logEvent("USRP: RX frequency set to %f", freq);
 }
@@ -176,7 +184,7 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
     uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rx_rate_;
     size_t           ndelivered = 0;
 
-    buf.fc = usrp_->get_rx_freq();
+    buf.fc = rx_freq_;
     buf.fs = rx_rate_;
 
     for (;;) {

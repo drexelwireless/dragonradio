@@ -243,6 +243,12 @@ private:
     /** @brief Current RX rate */
     double rx_rate_;
 
+    /** @brief Current TX frequency */
+    double tx_freq_;
+
+    /** @brief Current RX frequency */
+    double rx_freq_;
+
     /** @brief The UHD TX stream for this USRP. */
     uhd::tx_streamer::sptr tx_stream_;
 
