@@ -567,7 +567,7 @@ public:
 
     void missed(std::shared_ptr<NetPacket> &&pkt) override;
 
-    void transmitted(NetPacket &pkt) override;
+    void transmitted(Synthesizer::Slot &slot) override;
 
     /** @brief Retransmit a send window entry on timeout. */
     void retransmitOnTimeout(SendWindow::Entry &entry);

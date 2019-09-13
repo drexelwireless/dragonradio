@@ -48,6 +48,6 @@ void DummyController::missed(std::shared_ptr<NetPacket> &&pkt)
 {
 }
 
-void DummyController::transmitted(NetPacket &pkt)
+void DummyController::transmitted(Synthesizer::Slot &slot)
 {
 }

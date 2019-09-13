@@ -521,22 +521,26 @@ void SmartController::missed(std::shared_ptr<NetPacket> &&pkt)
     netq_->repush(std::move(pkt));
 }
 
-void SmartController::transmitted(NetPacket &pkt)
+void SmartController::transmitted(Synthesizer::Slot &slot)
 {
-    if (pkt.hdr.nexthop != kNodeBroadcast && pkt.ehdr().data_len != 0) {
-        SendWindow                      &sendw = getSendWindow(pkt.hdr.nexthop);
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+    for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
+        NetPacket &pkt = *(*it)->pkt;
 
-        // Start the retransmit timer if it is not already running.
-        startRetransmissionTimer(sendw[pkt.hdr.seq]);
-    }
+        if (pkt.hdr.nexthop != kNodeBroadcast && pkt.ehdr().data_len != 0) {
+            SendWindow                      &sendw = getSendWindow(pkt.hdr.nexthop);
+            std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
-    // Cancel the selective ACK timer when we actually have sent a selective ACK
-    if (pkt.internal_flags.has_selective_ack) {
-        RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt.hdr.nexthop);
-        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+            // Start the retransmit timer if it is not already running.
+            startRetransmissionTimer(sendw[pkt.hdr.seq]);
+        }
 
-        timer_queue_.cancel(recvw);
+        // Cancel the selective ACK timer when we actually have sent a selective ACK
+        if (pkt.internal_flags.has_selective_ack) {
+            RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt.hdr.nexthop);
+            std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+
+            timer_queue_.cancel(recvw);
+        }
     }
 }
 

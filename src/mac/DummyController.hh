@@ -20,7 +20,7 @@ public:
 
     void missed(std::shared_ptr<NetPacket> &&pkt) override;
 
-    void transmitted(NetPacket &pkt) override;
+    void transmitted(Synthesizer::Slot &slot) override;
 
 private:
     /** @brief Mutex for sequence numbers */

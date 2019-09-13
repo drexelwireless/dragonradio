@@ -5,6 +5,7 @@
 
 #include "net/Element.hh"
 #include "net/Net.hh"
+#include "phy/Synthesizer.hh"
 #include "phy/TXParams.hh"
 
 /** @brief A MAC controller. */
@@ -46,10 +47,10 @@ public:
      */
     virtual void missed(std::shared_ptr<NetPacket> &&pkt) = 0;
 
-    /** @brief Notify controller that a packet has been transmitted. */
-    /** This function is called by the MAC when a packet has been transmitted.
+    /** @brief Notify controller that slot has been transmitted. */
+    /** This function is called by the MAC when a slot has been transmitted.
      */
-    virtual void transmitted(NetPacket &pkt) = 0;
+    virtual void transmitted(Synthesizer::Slot &slot) = 0;
 
     /** @brief Input port for packets coming from the network. */
     NetIn<Pull> net_in;
