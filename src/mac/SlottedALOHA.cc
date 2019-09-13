@@ -34,6 +34,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
 
     rx_thread_ = std::thread(&SlottedALOHA::rxWorker, this);
     tx_thread_ = std::thread(&SlottedALOHA::txWorker, this);
+    tx_notifier_thread_ = std::thread(&SlottedALOHA::txNotifier, this);
 }
 
 SlottedALOHA::~SlottedALOHA()
@@ -45,11 +46,16 @@ void SlottedALOHA::stop(void)
 {
     done_ = true;
 
+    txed_slots_cond_.notify_all();
+
     if (rx_thread_.joinable())
         rx_thread_.join();
 
     if (tx_thread_.joinable())
         tx_thread_.join();
+
+    if (tx_notifier_thread_.joinable())
+        tx_notifier_thread_.join();
 }
 
 void SlottedALOHA::reconfigure(void)

@@ -63,6 +63,9 @@ private:
     /** @brief Thread running txWorker */
     std::thread tx_thread_;
 
+    /** @brief Thread running txNotifier */
+    std::thread tx_notifier_thread_;
+
     /** @brief Worker transmitting packets */
     void txWorker(void);
 

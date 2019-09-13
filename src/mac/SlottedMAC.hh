@@ -211,6 +211,18 @@ protected:
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
 
+    /** @brief Mutex for transmitted slots */
+    std::mutex txed_slots_mutex_;
+
+    /** @brief Condition variable protecting transmitted slots */
+    std::condition_variable txed_slots_cond_;
+
+    /** @brief Queue of transmitted slots */
+    std::queue<std::shared_ptr<Synthesizer::Slot>> txed_slots_q_;
+
+    /** @brief Worker handling notification for transmitted slots */
+    void txNotifier(void);
+
     /** @brief Worker receiving packets */
     void rxWorker(void);
 
