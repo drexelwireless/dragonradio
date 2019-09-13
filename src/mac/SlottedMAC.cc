@@ -184,9 +184,9 @@ std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(slot_queue &q,
         if (approx(deadline, when)) {
             return slot;
         } else {
-            logEvent("MAC: MISSED SLOT DEADLINE: deadline=%f; slot=%f; now=%f",
-                (double) deadline.get_real_secs(),
+            logEvent("MAC: MISSED SLOT DEADLINE: desired slot=%f; slot=%f; now=%f",
                 (double) when.get_real_secs(),
+                (double) deadline.get_real_secs(),
                 (double) Clock::now().get_real_secs());
 
             // Stop any current TX burst.
