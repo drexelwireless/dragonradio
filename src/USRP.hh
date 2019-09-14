@@ -188,6 +188,15 @@ public:
     void setMaxRXSamps(size_t count)
     {
         rx_max_samps_ = count;
+        logEvent("USRP: rx_max_samps_=%lu", rx_max_samps_);
+    }
+
+    /** @brief Set the multiplier for the maximum number of samples we will read
+     * at a time during burstRX.
+     */
+    void setMaxRXSampsFactor(unsigned n)
+    {
+        setMaxRXSamps(n*rx_stream_->get_max_num_samps());
     }
 
     /** @brief Return the maximum number of samples we will write at a time
@@ -204,6 +213,15 @@ public:
     void setMaxTXSamps(size_t count)
     {
         tx_max_samps_ = count;
+        logEvent("USRP: tx_max_samps_=%lu", tx_max_samps_);
+    }
+
+    /** @brief Set the multiplier for the maximum number of samples we will read
+     * at a time during burstTX.
+     */
+    void setMaxTXSampsFactor(unsigned n)
+    {
+        setMaxTXSamps(n*tx_stream_->get_max_num_samps());
     }
 
     /** @brief Return the recommended buffer size during burstRX.

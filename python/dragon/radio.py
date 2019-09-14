@@ -100,6 +100,8 @@ class Config(object):
         self.addr = ''
         self.rx_antenna = 'RX2'
         self.tx_antenna = 'TX/RX'
+        self.rx_max_samps_factor = 8
+        self.tx_max_samps_factor = 8
 
         # Frequency and bandwidth
         # Default frequency in the Colosseum is 1GHz
@@ -662,6 +664,9 @@ class Radio(object):
                                      config.rx_antenna,
                                      config.tx_gain,
                                      config.rx_gain)
+
+        self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
+        self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
 
         # Create the logger *after* we create the USRP so that we have a global
         # clock
