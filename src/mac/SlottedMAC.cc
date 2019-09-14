@@ -116,6 +116,8 @@ void SlottedMAC::rxWorker(void)
                 break;
         }
 
+        // Attempt to deal with RX errors
+        logEvent("MAC: attempting to reset RX loop");
         usrp_->stopRXStream();
     }
 }
