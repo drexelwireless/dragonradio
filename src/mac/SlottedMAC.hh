@@ -1,9 +1,11 @@
 #ifndef SLOTTEDMAC_H_
 #define SLOTTEDMAC_H_
 
+#include <atomic>
 #include <optional>
 #include <queue>
 
+#include "ringbuffer.hh"
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "Logger.hh"
@@ -190,8 +192,8 @@ protected:
     /** @brief Number of TX samples in the entire slot, including the guard */
     size_t tx_full_slot_samps_;
 
-    /** @brief Is the next slot the start of a burst? */
-    bool next_slot_start_of_burst_;
+    /** @brief Do we need to stop the current burst? */
+    std::atomic<bool> stop_burst_;
 
     /** @brief TX center frequency offset from RX center frequency. */
     /** If the TX and RX rates are different, this is non-empty and contains
@@ -219,6 +221,12 @@ protected:
 
     /** @brief Queue of transmitted slots */
     std::queue<std::shared_ptr<Synthesizer::Slot>> txed_slots_q_;
+
+    /** @brief Slots to transmit */
+    ringbuffer<std::shared_ptr<Synthesizer::Slot>, 4> tx_slots_;
+
+    /** @brief Worker transmitting slots */
+    void txWorker(void);
 
     /** @brief Worker handling notification for transmitted slots */
     void txNotifier(void);
@@ -252,7 +260,10 @@ protected:
     /** @brief Transmit a slot
      * @param slot The slot
      */
-    void txSlot(std::shared_ptr<Synthesizer::Slot> &&slot);
+    void txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
+    {
+        tx_slots_.push(std::move(slot));
+    }
 
     /** @brief Mark a slot as missed
      * @param slot The slot

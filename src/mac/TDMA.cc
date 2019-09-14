@@ -30,6 +30,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
 {
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
     tx_thread_ = std::thread(&TDMA::txWorker, this);
+    tx_slot_thread_ = std::thread(&TDMA::txSlotWorker, this);
     tx_notifier_thread_ = std::thread(&TDMA::txNotifier, this);
 }
 
@@ -49,6 +50,9 @@ void TDMA::stop(void)
 
     if (tx_thread_.joinable())
         tx_thread_.join();
+
+    if (tx_slot_thread_.joinable())
+        tx_slot_thread_.join();
 
     if (tx_notifier_thread_.joinable())
         tx_notifier_thread_.join();
@@ -71,7 +75,7 @@ void TDMA::reconfigure(void)
     can_transmit_ = findNextSlot(t_now, t_next_slot, slotidx);
 }
 
-void TDMA::txWorker(void)
+void TDMA::txSlotWorker(void)
 {
     slot_queue        q;
     Clock::time_point t_now;              // Current time

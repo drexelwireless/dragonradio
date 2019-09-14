@@ -8,6 +8,7 @@
 
 #include <uhd/usrp/multi_usrp.hpp>
 
+#include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "IQBuffer.hh"
 #include "Logger.hh"

@@ -26,7 +26,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
   , rx_bufsize_(0)
   , tx_slot_samps_(0)
   , tx_full_slot_samps_(0)
-  , next_slot_start_of_burst_(true)
+  , stop_burst_(false)
   , logger_(logger)
   , done_(false)
 {
@@ -189,14 +189,65 @@ std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(slot_queue &q,
                 (double) when.get_real_secs(),
                 (double) Clock::now().get_real_secs());
 
-            // Stop any current TX burst. Also, the next slot is definitely the
-            // start of a burst since we missed this slot.
-            usrp_->stopTXBurst();
-            next_slot_start_of_burst_ = true;
+            // Stop any current TX burst.
+            stop_burst_.store(true, std::memory_order_relaxed);
 
             // Re-queue packets that were modulated for this slot
             missedSlot(*slot);
         }
+    }
+}
+
+void SlottedMAC::txWorker(void)
+{
+    std::shared_ptr<Synthesizer::Slot> slot;
+    bool                               next_slot_start_of_burst = true;
+
+    makeThisThreadHighPriority();
+
+    while (!done_) {
+        if (tx_slots_.size() == 0)
+            continue;
+
+        // Get a slot
+        slot = std::move(tx_slots_.front());
+        tx_slots_.pop();
+
+        // If the slot doesn't contain any IQ data to send, we're done
+        if (slot->mpkts.empty()) {
+            if (!next_slot_start_of_burst) {
+                usrp_->stopTXBurst();
+                next_slot_start_of_burst = true;
+            }
+
+            continue;
+        }
+
+        if (stop_burst_.load(std::memory_order_relaxed)) {
+            stop_burst_.store(false, std::memory_order_relaxed);
+
+            usrp_->stopTXBurst();
+            next_slot_start_of_burst = true;
+        }
+
+        // Transmit the packets via the USRP
+        bool end_of_burst = slot->length() < slot->full_slot_samples;
+
+        usrp_->burstTX(Clock::to_mono_time(slot->deadline) + slot->deadline_delay/tx_rate_,
+                       next_slot_start_of_burst,
+                       end_of_burst,
+                       slot->iqbufs);
+
+        next_slot_start_of_burst = end_of_burst;
+
+        // Hand-off slot to TX notification thread
+        {
+            std::lock_guard<std::mutex> lock(txed_slots_mutex_);
+
+            txed_slots_q_.emplace(std::move(slot));
+        }
+
+        txed_slots_cond_.notify_one();
     }
 }
 
@@ -276,37 +327,6 @@ void SlottedMAC::txNotifier(void)
                                             tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc);
         }
     }
-}
-
-void SlottedMAC::txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
-{
-    // If the slot doesn't contain any IQ data to send, we're done
-    if (slot->mpkts.empty()) {
-        if (!next_slot_start_of_burst_)
-            usrp_->stopTXBurst();
-
-        next_slot_start_of_burst_ = true;
-        return;
-    }
-
-    // Transmit the packets via the USRP
-    bool end_of_burst = slot->length() < slot->full_slot_samples;
-
-    usrp_->burstTX(Clock::to_mono_time(slot->deadline) + slot->deadline_delay/tx_rate_,
-                   next_slot_start_of_burst_,
-                   end_of_burst,
-                   slot->iqbufs);
-
-    next_slot_start_of_burst_ = end_of_burst;
-
-    // Hand-off slot to TX notification thread
-    {
-        std::lock_guard<std::mutex> lock(txed_slots_mutex_);
-
-        txed_slots_q_.emplace(std::move(slot));
-    }
-
-    txed_slots_cond_.notify_one();
 }
 
 void SlottedMAC::missedSlot(Synthesizer::Slot &slot)
