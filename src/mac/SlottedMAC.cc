@@ -8,6 +8,8 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<SnapshotCollector> collector,
                        std::shared_ptr<Channelizer> channelizer,
                        std::shared_ptr<Synthesizer> synthesizer,
+                       bool pin_rx_worker,
+                       bool pin_tx_worker,
                        double slot_size,
                        double guard_size,
                        double slot_modulate_lead_time,
@@ -18,6 +20,8 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
         collector,
         channelizer,
         synthesizer)
+  , pin_rx_worker_(pin_rx_worker)
+  , pin_tx_worker_(pin_tx_worker)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , slot_modulate_lead_time_(slot_modulate_lead_time)
@@ -61,6 +65,11 @@ void SlottedMAC::rxWorker(void)
     unsigned          seq = 0;      // Current IQ buffer sequence number
 
     makeThisThreadHighPriority();
+
+    if (pin_rx_worker_) {
+        logEvent("MAC: pinning RX worker to CPU");
+        pinThisThread();
+    }
 
     while (!done_) {
         // Wait for slot size to be known
@@ -207,6 +216,11 @@ void SlottedMAC::txWorker(void)
     bool                               next_slot_start_of_burst = true;
 
     makeThisThreadHighPriority();
+
+    if (pin_tx_worker_) {
+        logEvent("MAC: pinning TX worker to CPU");
+        pinThisThread();
+    }
 
     while (!done_) {
         if (tx_slots_.size() == 0)
