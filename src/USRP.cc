@@ -191,7 +191,7 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
         uhd::rx_metadata_t rx_md;
         ssize_t            n;
 
-        n = rx_stream_->recv(&buf[ndelivered], rx_max_samps_, rx_md, 0.1, false);
+        n = rx_stream_->recv(&buf[ndelivered], rx_max_samps_, rx_md, 1, false);
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
             if (rx_md.has_time_spec)
