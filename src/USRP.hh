@@ -233,16 +233,13 @@ public:
         return nsamps + 8*rx_max_samps_;
     }
 
-    /** @brief Get the TX error count. */
-    uint64_t getTXErrorCount(void)
+    /** @brief Get the TX late count.
+     * @return The number of late TX packet errors
+     */
+    /** Return the number of TX late packet errors and reset the counter */
+    uint64_t getTXLateCount(void)
     {
-        return tx_error_count_.load(std::memory_order_relaxed);
-    }
-
-    /** @brief Reset the TX error count. */
-    void resetTXErrorCount(void)
-    {
-        tx_error_count_.store(0, std::memory_order_relaxed);
+        return tx_late_count_.exchange(0, std::memory_order_relaxed);
     }
 
     /** @brief Stop processing data. */
@@ -289,8 +286,8 @@ private:
     /** @brief Flag indicating the we should stop processing data. */
     bool done_;
 
-    /** @brief TX error count. */
-    std::atomic<uint64_t> tx_error_count_;
+    /** @brief TX late count. */
+    std::atomic<uint64_t> tx_late_count_;
 
     /** @brief Thread that receives TX errors. */
     std::thread tx_error_thread_;

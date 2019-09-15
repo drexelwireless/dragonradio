@@ -95,8 +95,6 @@ void TDMA::txSlotWorker(void)
     while (!done_) {
         t_prev_slot = Clock::time_point { 0.0 };
 
-        usrp_->resetTXErrorCount();
-
         while (!done_) {
             // Figure out when our next send slot is.
             t_now = Clock::now();
@@ -134,7 +132,7 @@ void TDMA::txSlotWorker(void)
                 txSlot(std::move(slot));
 
             // If we had a TX error, restart the TX loop
-            if (usrp_->getTXErrorCount() != 0)
+            if (usrp_->getTXLateCount() != 0)
                 break;
 
             // Sleep until it's time to send the following slot
