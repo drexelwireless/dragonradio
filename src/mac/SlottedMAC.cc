@@ -55,7 +55,6 @@ void SlottedMAC::reconfigure(void)
 
 void SlottedMAC::rxWorker(void)
 {
-    Clock::time_point t_now;        // Current time
     Clock::time_point t_cur_slot;   // Time at which current slot starts
     Clock::time_point t_next_slot;  // Time at which next slot starts
     double            t_slot_pos;   // Offset into the current slot (sec)
@@ -71,9 +70,12 @@ void SlottedMAC::rxWorker(void)
         }
 
         // Set up streaming starting at *next* slot
-        t_now = Clock::now();
-        t_slot_pos = fmod(t_now, slot_size_);
-        t_next_slot = t_now + slot_size_ - t_slot_pos;
+        {
+            Clock::time_point t_now = Clock::now();
+
+            t_slot_pos = fmod(t_now, slot_size_);
+            t_next_slot = t_now + slot_size_ - t_slot_pos;
+        }
 
         // Bump the sequence number to indicate a discontinuity
         seq++;
@@ -82,7 +84,6 @@ void SlottedMAC::rxWorker(void)
 
         while (!done_) {
             // Update times
-            t_now = Clock::now();
             t_cur_slot = t_next_slot;
             t_next_slot += slot_size_;
 
