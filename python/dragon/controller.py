@@ -464,7 +464,7 @@ class Controller(TCPProtoServer):
         logger.info('IP links:\n%s', stdout.decode('utf-8'))
 
         # Log routes
-        for node_id in self.nodes:
+        for node_id in list(self.nodes):
             for octet in [1]:
                 ip = '192.168.{:d}.{:d}'.format(node_id+100, octet)
 
@@ -1078,7 +1078,10 @@ class Controller(TCPProtoServer):
             await asyncio.sleep(config.neighbor_discovery_period)
 
             # Log network info
-            await self.logNetworkInfo()
+            try:
+                await self.logNetworkInfo()
+            except:
+                logging.exception("Error while logging network info")
 
             # Start the schedule creation task
             self.loop.create_task(self.createSchedule())
