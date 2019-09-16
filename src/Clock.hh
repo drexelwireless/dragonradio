@@ -109,7 +109,13 @@ public:
     /** @brief Get the current time. Guaranteed to be monotonic. */
     static time_point now() noexcept
     {
-        return time_point { usrp_->get_time_now() };
+        while (true) {
+            try {
+                return time_point { usrp_->get_time_now() };
+            } catch (uhd::io_error &err) {
+                fprintf(stderr, "USRP: get_time_now: %s", err.what());
+            }
+        }
     }
 
 protected:
@@ -161,9 +167,15 @@ public:
     /** @brief Get the current wall-clock time. */
     static time_point now() noexcept
     {
-        uhd::time_spec_t now = usrp_->get_time_now();
+        while (true) {
+            try {
+                uhd::time_spec_t now = usrp_->get_time_now();
 
-        return time_point { t0_ + offset_ + skew_*(now - t0_).get_real_secs() };
+                return time_point { t0_ + offset_ + skew_*(now - t0_).get_real_secs() };
+            } catch (uhd::io_error &err) {
+                fprintf(stderr, "USRP: get_time_now: %s", err.what());
+            }
+        }
     }
 
     /** @brief Return the monotonic time corresponding to wall-clock time. */
