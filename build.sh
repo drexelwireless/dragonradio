@@ -55,6 +55,11 @@ CFLAGS="-Ofast -march=native"
   ninja clean
 )
 
+# Download firmware
+sudo apt install -y python-is-python3 python3-requests
+sudo pip install --upgrade urllib3
+sudo uhd_images_downloader
+
 # Build and install liquid-dsp
 (
   cd extern/liquid-dsp;
