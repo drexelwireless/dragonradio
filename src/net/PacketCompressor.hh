@@ -8,7 +8,9 @@
 class PacketCompressor : public Element
 {
 public:
-    PacketCompressor();
+    PacketCompressor() = delete;
+
+    PacketCompressor(bool enabled = false);
 
     virtual ~PacketCompressor() = default;
 

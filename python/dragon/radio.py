@@ -106,11 +106,24 @@ class Config(object):
         # Frequency and bandwidth
         # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
+        """Radio frequency"""
         self.bandwidth = 5e6
+        """Radio bandwidth to use"""
         self.max_bandwidth = 40e6
+        """Max bandwidth radio can handle"""
+        self.rx_bandwidth = None
+        """If set, always receive at this bandwidth. Otherwise, calculate
+        receive bandwidth based on RX oversample factor and radio bandwidth."""
+        self.tx_bandwidth = None
+        """If set, always transmit at this bandwidth. Otherwise, calculate
+        transmit bandwidth based on TX oversample factor and channel
+        bandwidth."""
         self.rx_oversample_factor = 1.0
+        """Oversample factor on RX"""
         self.tx_oversample_factor = 1.0
+        """Oversample factor on TX"""
         self.channel_bandwidth = 1e6
+        """Default channel bandwidth for FDMA"""
 
         # TX/RX gain parameters
         self.tx_gain = 25
@@ -408,6 +421,12 @@ class Config(object):
         parser.add_argument('--max-bandwidth', action='store', type=float,
                             dest='max_bandwidth',
                             help='set maximum bandwidth (Hz)')
+        parser.add_argument('--rx-bandwidth', action='store', type=float,
+                            dest='rx_bandwidth',
+                            help='set receive bandwidth (Hz)')
+        parser.add_argument('--tx-bandwidth', action='store', type=float,
+                            dest='tx_bandwidth',
+                            help='set transmit bandwidth (Hz)')
         parser.add_argument('--rx-oversample', action='store', type=float,
                             dest='rx_oversample_factor',
                             help='set RX oversample factor')
@@ -672,6 +691,15 @@ class Radio(object):
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
         self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
 
+        # Set the TX and RX rates to None to ensure they are properly set
+        # everywhere by setTXRate and setRXRate the first time those two
+        # functions are called.
+        self.tx_rate = None
+        """Current TX rate. None if not yet set."""
+
+        self.rx_rate = None
+        """Current RX rate. None if not yet set."""
+
         # Create the logger *after* we create the USRP so that we have a global
         # clock
         logdir = config.logdir
@@ -754,29 +782,24 @@ class Radio(object):
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 
         #
-        # Configure TX/RX rates and channels
-        #
-        self.configRatesAndChannels()
-
-        #
         # Configure the channelization
         #
         if config.channelizer == 'overlap':
             self.channelizer = dragonradio.OverlapTDChannelizer(self.phy,
                                                                 self.usrp.rx_rate,
-                                                                self.channelizer_channels,
+                                                                Channels([]),
                                                                 config.num_demodulation_threads)
 
             self.channelizer.enforce_ordering = config.channelizer_enforce_ordering
         elif config.channelizer == 'timedomain':
             self.channelizer = dragonradio.TDChannelizer(self.phy,
                                                          self.usrp.rx_rate,
-                                                         self.channelizer_channels,
+                                                         Channels([]),
                                                          config.num_demodulation_threads)
         elif config.channelizer == 'freqdomain':
             self.channelizer = dragonradio.FDChannelizer(self.phy,
                                                          self.usrp.rx_rate,
-                                                         self.channelizer_channels,
+                                                         Channels([]),
                                                          config.num_demodulation_threads)
         else:
             raise Exception('Unknown channelizer: %s' % config.channelizer)
@@ -784,17 +807,17 @@ class Radio(object):
         if config.synthesizer == 'timedomain':
             self.synthesizer = dragonradio.TDSynthesizer(self.phy,
                                                          self.usrp.tx_rate,
-                                                         self.synthesizer_channels,
+                                                         Channels([]),
                                                          config.num_modulation_threads)
         elif config.synthesizer == 'freqdomain':
             self.synthesizer = dragonradio.FDSynthesizer(self.phy,
                                                          self.usrp.tx_rate,
-                                                         self.synthesizer_channels,
+                                                         Channels([]),
                                                          config.num_modulation_threads)
         elif config.synthesizer == 'multichannel':
             self.synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
                                                                    self.usrp.tx_rate,
-                                                                   self.synthesizer_channels,
+                                                                   Channels([]),
                                                                    config.num_modulation_threads)
         else:
             raise Exception('Unknown synthesizer: %s' % config.synthesizer)
@@ -820,7 +843,6 @@ class Radio(object):
         for p in tx_params:
             self.configTXParamsSoftGain(p)
 
-
         broadcast_tx_params = TXParams(MCS(config.broadcast_check,
                                            config.broadcast_fec0,
                                            config.broadcast_fec1,
@@ -840,8 +862,6 @@ class Radio(object):
                                                           config.amc_mcsidx_down_per_threshold,
                                                           config.amc_mcsidx_alpha,
                                                           config.amc_mcsidx_prob_floor)
-
-            self.configSmartControllerSamplesPerSlot()
 
             self.controller.max_retransmissions = config.arq_max_retransmissions
             self.controller.enforce_ordering = config.arq_enforce_ordering
@@ -871,30 +891,26 @@ class Radio(object):
         #
         # Create packet compression component
         #
-        if config.packet_compression:
-            self.packet_compressor = dragonradio.PacketCompressor()
-            self.packet_compressor.enabled = True
+        self.packet_compressor = dragonradio.PacketCompressor(config.packet_compression)
 
         #
-        # Configure packet path from demodulator to tun/tap
-        # Right now, the path is direct:
-        #   demodulator -> controller -> FlowPerformance.radio -> tun/tap
+        # Configure packet path from channelizer to tun/tap
+        #
+        #   channelizer -> controller -> PacketCompressor.radio -> FlowPerformance.radio -> tun/tap
         #
         self.channelizer.source >> self.controller.radio_in
 
-        if config.packet_compression:
-            self.controller.radio_out >> self.packet_compressor.radio_in
+        self.controller.radio_out >> self.packet_compressor.radio_in
 
-            self.packet_compressor.radio_out >> self.flowperf.radio_in
-        else:
-            self.controller.radio_out >> self.flowperf.radio_in
+        self.packet_compressor.radio_out >> self.flowperf.radio_in
 
         self.flowperf.radio_out >> self.tuntap.sink
 
         #
-        # Configure packet path from tun/tap to the modulator
+        # Configure packet path from tun/tap to the synthesizer
+        #
         # The path is:
-        #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall -> NetQueue -> controller -> modulator
+        #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall -> PacketCompressor.net -> NetQueue -> controller -> synthesizer
         #
         self.netfilter = dragonradio.NetFilter(self.net)
         self.netfirewall = dragonradio.NetFirewall()
@@ -915,12 +931,9 @@ class Radio(object):
 
         self.flowperf.net_out >> self.netfirewall.input
 
-        if config.packet_compression:
-            self.netfirewall.output >> self.packet_compressor.net_in
+        self.netfirewall.output >> self.packet_compressor.net_in
 
-            self.packet_compressor.net_out >> self.netq.push
-        else:
-            self.netfirewall.output >> self.netq.push
+        self.packet_compressor.net_out >> self.netq.push
 
         self.netq.pop >> self.controller.net_in
 
@@ -930,8 +943,13 @@ class Radio(object):
         # If we are using a SmartController, tell it about the network queue is
         # so that it can add high-priority packets.
         #
-        if config.arq:
+        if isinstance(self.controller, dragonradio.SmartController):
             self.controller.net_queue = self.netq
+
+        #
+        # Configure channels
+        #
+        self.configureDefaultChannels()
 
     def __del__(self):
         if self.logger:
@@ -959,95 +977,160 @@ class Radio(object):
 
         self.net.tx_params = TXParamsVector([tx_params])
 
-    def configRatesAndChannels(self):
-        """
-        Configure USRP and PHY rates as well as channels.
-
-        This will set our channels member variable as well as set rates on the
-        USRP and PHY based on the current configuration's bandwidth and center
-        frequency. It *will not* update the modulator/demodulator, MAC, or
-        controller.
-        """
+    def configureDefaultChannels(self):
+        """Configure default channels"""
         config = self.config
 
-        #
-        # Configure bandwidth, channels, and sampling rate. We MUST do this
-        # before creating the modulator and demodulator so we know at what rate
-        # we must resample.
-        #
         bandwidth = self.bandwidth
-        cbw = self.channel_bandwidth
+
+        if self.config.fdma:
+            cbw = config.channel_bandwidth
+        else:
+            cbw = config.bandwidth
 
         channels = dragon.channels.defaultChannelPlan(bandwidth, cbw)
 
-        self.channels = channels[:config.max_channels]
-
         logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g)",
-            list(self.channels),
+            list(channels),
             bandwidth,
             config.rx_oversample_factor,
             config.tx_oversample_factor,
             cbw)
 
-        #
-        # Set RX and TX rates
-        #
+        self.setChannels(channels)
 
-        # Set RX rate
-        rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+    def setChannels(self, channels):
+        """Set current channels.
 
-        want_rx_rate = bandwidth*rx_rate_oversample
-        # We max out at about 50Mhz with UHD 3.9
-        want_rx_rate = min(want_rx_rate, 50e6)
-        want_rx_rate = safeRate(want_rx_rate, self.usrp.clock_rate)
-
-        self.usrp.rx_rate = want_rx_rate
-        rx_rate = self.usrp.rx_rate
-
-        if rx_rate != want_rx_rate:
-            raise Exception('Wanted RX rate %g, but got %g' % (want_rx_rate, rx_rate))
-
-        # Set TX rate
-        tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
-
-        if config.tx_upsample:
-            want_tx_rate = bandwidth*tx_rate_oversample
-        else:
-            want_tx_rate = cbw*tx_rate_oversample
-        want_tx_rate = safeRate(want_tx_rate, self.usrp.clock_rate)
-
-        self.usrp.tx_rate = want_tx_rate
-        tx_rate = self.usrp.tx_rate
-
-        if tx_rate != want_tx_rate:
-            raise Exception('Wanted TX rate %g, but got %g' % (want_rx_rate, rx_rate))
-
-        # Tell PHY what the TX and RX rates are
-        self.phy.rx_rate = rx_rate
-        self.phy.tx_rate = tx_rate
-
-        #
-        # Calculate channels with taps for channelizer and synthesizer
-        #
-        self.channelizer_channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
-        self.synthesizer_channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
-
-    def configSmartControllerSamplesPerSlot(self):
-        """
-        Configure the SmartController's slot size
+        This function will also configure the RX and TX rates necessary for the
+        channels.
         """
         config = self.config
 
-        bandwidth = self.bandwidth
-        cbw = self.channel_bandwidth
+        self.channels = channels[:config.max_channels]
 
-        if config.arq:
-            if config.tx_upsample:
-                slot_bw = bandwidth
-            else:
-                slot_bw = cbw
+        #
+        # Set RX and TX rates
+        #
+        self.setRXRate(self.bandwidth)
 
-            self.controller.samples_per_slot = int(slot_bw*(self.config.slot_size - self.config.guard_size))
+        if config.tx_upsample:
+            self.setTXRate(self.bandwidth)
+        else:
+            self.setTXRate(self.channels[self.tx_channel_idx].bw)
+
+        #
+        # Set channelizer and synthesizer channels and filters
+        #
+
+        # We need to do this *after* setting the USRP's TX and RX rates, because
+        # these rates are used to determine filter parameters
+        self.channelizer.channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
+
+        if config.tx_upsample:
+            self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
+        else:
+            self.setSynthesizerTXChannel(self.channels[self.tx_channel_idx])
+
+        #
+        # Reconfigure the MAC
+        #
+        if self.mac is not None:
+            self.mac.reconfigure()
+
+        #
+        # Tell the MAC the minimum number of samples in a slot
+        #
+        if isinstance(self.controller, dragonradio.SmartController):
+            min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer.channels])
+
+            self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
+
+    def setRXRate(self, rate):
+        """Set RX rate"""
+        config = self.config
+
+        if config.rx_bandwidth:
+            want_rx_rate = config.rx_bandwidth
+        else:
+            rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+
+            want_rx_rate = rate*rx_rate_oversample
+            # We max out at about 50Mhz with UHD 3.9
+            want_rx_rate = min(want_rx_rate, 50e6)
+
+        want_rx_rate = safeRate(want_rx_rate, self.usrp.clock_rate)
+
+        if self.rx_rate != want_rx_rate:
+            self.usrp.rx_rate = want_rx_rate
+            self.rx_rate = self.usrp.rx_rate
+
+            if self.rx_rate != want_rx_rate:
+                raise Exception('Wanted RX rate %g, but got %g' % (want_rx_rate, self.rx_rate))
+
+            self.phy.rx_rate = self.rx_rate
+
+            self.channelizer.rx_rate = self.rx_rate
+
+    def setTXRate(self, rate):
+        """Set TX rate"""
+        config = self.config
+
+        if config.tx_bandwidth and config.tx_upsample:
+            logger.warning("TX bandwidth set, but TX upsampling requested.")
+
+        if config.tx_bandwidth and not config.tx_upsample:
+            want_tx_rate = config.tx_bandwidth
+        else:
+            tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
+
+            want_tx_rate = rate*tx_rate_oversample
+
+        want_tx_rate = safeRate(want_tx_rate, self.usrp.clock_rate)
+
+        if self.tx_rate != want_tx_rate:
+            self.usrp.tx_rate = want_tx_rate
+            self.tx_rate = self.usrp.tx_rate
+
+            if self.tx_rate != want_tx_rate:
+                raise Exception('Wanted TX rate %g, but got %g' % (want_tx_rate, self.tx_rate))
+
+            self.phy.tx_rate = self.tx_rate
+
+            self.synthesizer.tx_rate = self.tx_rate
+
+    def setSynthesizerTXChannel(self, channel):
+        """Set the synthesizer's transmission channel.
+
+        This function creates an appropriate filter and sets the USRP's TX
+        frequency for single-channel synthesis.
+        """
+        logging.info("Setting TX frequency offset to %g", channel.fc)
+        self.usrp.tx_frequency = self.frequency + channel.fc
+
+        self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in [Channel(0, channel.bw)]])
+
+    def setTXChannel(self, channel_idx):
+        """Set the transmission channel.
+
+        If we are upsampling on TX, this is a no-op. Otherwise we set the
+        radio's frequency to transmit on the current channel and configure the
+        synthesizer for a single channel.
+        """
+        config = self.config
+
+        if not config.tx_upsample:
+            self.tx_channel_idx = min(channel_idx, len(self.channels) - 1)
+
+            channel = self.channels[self.tx_channel_idx]
+
+            self.setTXRate(channel.bw)
+            self.setSynthesizerTXChannel(channel)
+
+            # Allow the MAC to figure out the TX offset so snapshot self
+            # tranmissions are correctly logged
+            if self.mac is not None:
+                self.mac.reconfigure()
 
     def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
         """
@@ -1058,44 +1141,36 @@ class Radio(object):
         if bandwidth == config.bandwidth and frequency == config.frequency:
             return
 
-        config.bandwidth = bandwidth
-        config.frequency = frequency
-
         logger.info("Reconfiguring radio: bandwidth=%f, frequency=%f", bandwidth, frequency)
+
+        # Set current frequency
+        config.frequency = frequency
 
         self.usrp.rx_frequency = self.frequency
         self.usrp.tx_frequency = self.frequency
 
-        self.configRatesAndChannels()
+        # If the bandwidth has changed, re-configure channels. Otherwise just
+        # set the current channel---we need to re-set the channel after a
+        # frequency change because although the channel number may be the same,
+        # the corresponding frequency will be different.
+        if config.bandwidth != bandwidth:
+            config.bandwidth = bandwidth
 
-        # Set channelization rates and channels
-        self.channelizer.rx_rate = self.usrp.rx_rate
-        self.synthesizer.tx_rate = self.usrp.tx_rate
+            self.configureDefaultChannels()
+        else:
+            self.setTXChannel(self.tx_channel_idx)
 
-        self.channelizer.channels = self.channelizer_channels
-
-        # We need to re-set the channel after a frequency change because
-        # although the channel number may be the same, the corresponding
-        # frequency will be different.
-        self.setTXChannel(self.tx_channel_idx)
-
-        # Reconfigure the MAC
-        if self.mac is not None:
-            self.mac.reconfigure()
-
-        if config.arq:
+        # When the environment changes, we reset MCS transition probabilities
+        # because we need to re-explore to find the best MCS.
+        if isinstance(self.controller, dragonradio.SmartController):
             self.controller.resetMCSTransitionProbabilities()
-            self.configSmartControllerSamplesPerSlot()
 
     def genChannelizerTaps(self, channel):
         """Generate channelizer filter taps for given channel"""
         config = self.config
 
         # Calculate channelizer taps
-        clock_rate_mhz = int(self.usrp.clock_rate/1e6)
-        rate = Fraction(channel.bw/self.usrp.rx_rate).limit_denominator(clock_rate_mhz)
-
-        if rate == 1:
+        if channel.bw == self.usrp.rx_rate:
             return [1]
         elif config.channelizer == 'freqdomain':
             wp = channel.bw-50e3
@@ -1104,7 +1179,7 @@ class Radio(object):
 
             h = lowpass_firpm1f2(wp, ws, fs, Nmax=dragonradio.FDChannelizer.P)
 
-            logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
+            logging.debug("Creating prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g",
                           len(h), wp, ws, fs)
             return h
         else:
@@ -1121,30 +1196,24 @@ class Radio(object):
         """Generate synthesizer filter taps for given channel"""
         config = self.config
 
-        if config.tx_upsample:
-            clock_rate_mhz = int(self.usrp.clock_rate/1e6)
-            rate = Fraction(self.usrp.tx_rate/channel.bw).limit_denominator(clock_rate_mhz)
-
-            if rate == 1:
-                return [1]
-            elif config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
-                # Frequency-space synthesizers don't apply a filter
-                return [1]
-            else:
-                wp = channel.bw-100e3
-                ws = channel.bw+100e3
-                fs = self.usrp.tx_rate
-
-                h = lowpass(wp, ws, fs)
-                logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
-                              len(h), wp, ws, fs)
-                return h
-        else:
+        if channel.bw == self.usrp.tx_rate:
             return [1]
+        elif config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
+            # Frequency-space synthesizers don't apply a filter
+            return [1]
+        else:
+            wp = channel.bw-100e3
+            ws = channel.bw+100e3
+            fs = self.usrp.tx_rate
+
+            h = lowpass(wp, ws, fs)
+            logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
+                          len(h), wp, ws, fs)
+            return h
 
     def deleteMAC(self):
         """Delete the current MAC"""
-        if self.config.arq:
+        if isinstance(self.controller, dragonradio.SmartController):
             self.controller.mac = None
 
         self.mac.stop()
@@ -1232,29 +1301,6 @@ class Radio(object):
     def finishConfiguringMAC(self):
         if self.config.arq:
             self.controller.mac = self.mac
-
-    def setTXChannel(self, channel_idx):
-        """Set the transmission channel.
-
-        If we are upsampling on TX, this is a no-op. Otherwise we set the
-        radio's frequency to transmit on the current channel.
-        """
-        config = self.config
-
-        if not config.tx_upsample:
-            self.tx_channel_idx = min(channel_idx, len(self.channels) - 1)
-
-            channel = self.channels[self.tx_channel_idx]
-
-            logging.info("Setting TX frequency offset to %g", channel.fc)
-            self.usrp.tx_frequency = self.frequency + channel.fc
-
-            self.synthesizer.channels = Channels([(Channel(0, channel.bw), [1])])
-
-            # Allow the MAC to figure out the TX offset so snapshot self
-            # tranmissions are correctly logged
-            if self.mac is not None:
-                self.mac.reconfigure()
 
     def setALOHAChannel(self, channel_idx):
         """Set the transmission channel for the ALOHA MAC."""
@@ -1497,13 +1543,6 @@ class Radio(object):
     def bandwidth(self):
         return min(self.config.bandwidth, self.config.max_bandwidth)
 
-    @property
-    def channel_bandwidth(self):
-        if self.config.fdma:
-            return self.config.channel_bandwidth
-        else:
-            return self.config.bandwidth
-
 def safeRate(min_rate, clock_rate):
     """Find a safe rate no less than min_rate given the clock rate clock_rate.
 
@@ -1513,10 +1552,12 @@ def safeRate(min_rate, clock_rate):
 
     Returns:
         A rate no less than rate min_rate that is supported by the hardware"""
-
     clock_rate_mhz = int(clock_rate/1e6)
 
     f = Fraction(min_rate/clock_rate).limit_denominator(clock_rate_mhz)
-    n = math.floor(f.denominator/f.numerator)
+    if f == 0:
+        n = clock_rate_mhz
+    else:
+        n = math.floor(f.denominator/f.numerator)
 
     return clock_rate/n

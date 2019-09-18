@@ -139,7 +139,10 @@ void exportNet(py::module &m)
 
     // Export class Compress to Python
     py::class_<PacketCompressor, std::shared_ptr<PacketCompressor>>(m, "PacketCompressor")
-        .def(py::init<>())
+        .def(py::init([]() {
+                return std::make_shared<PacketCompressor>(false);
+            }))
+        .def(py::init<bool>())
         .def_property("enabled",
             &PacketCompressor::getEnabled,
             &PacketCompressor::setEnabled,
