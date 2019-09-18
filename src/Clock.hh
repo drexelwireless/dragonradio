@@ -8,6 +8,10 @@
 #include <chrono>
 #include <memory>
 
+#if defined(UHD_VERSION)
+#include <uhd/types/time_spec.hpp>
+#endif /* defined(UHD_VERSION) */
+
 /** @brief A high-resolution representation for time values. */
 struct timerep_t
 {
