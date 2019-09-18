@@ -46,9 +46,15 @@ void exportUSRP(py::module &m)
         .def_property("tx_max_samps",
             &USRP::getMaxTXSamps,
             &USRP::setMaxTXSamps)
+        .def_property("tx_max_samps_factor",
+            nullptr,
+            &USRP::setMaxTXSampsFactor)
         .def_property("rx_max_samps",
             &USRP::getMaxRXSamps,
             &USRP::setMaxRXSamps)
+        .def_property("rx_max_samps_factor",
+            nullptr,
+            &USRP::setMaxRXSampsFactor)
         .def_property("auto_dc_offset",
             &USRP::getAutoDCOffset,
             &USRP::setAutoDCOffset)

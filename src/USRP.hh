@@ -8,6 +8,7 @@
 
 #include <uhd/usrp/multi_usrp.hpp>
 
+#include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "IQBuffer.hh"
 #include "Logger.hh"
@@ -88,6 +89,7 @@ public:
     {
         usrp_->set_tx_rate(rate);
         logEvent("USRP: TX rate set to %f", rate);
+        tx_rate_ = usrp_->get_tx_rate();
     }
 
     /** @brief Get RX rate. */
@@ -101,6 +103,7 @@ public:
     {
         usrp_->set_rx_rate(rate);
         logEvent("USRP: RX rate set to %f", rate);
+        rx_rate_ = usrp_->get_rx_rate();
     }
 
     /** @brief Get TX gain (dB). */
@@ -185,6 +188,15 @@ public:
     void setMaxRXSamps(size_t count)
     {
         rx_max_samps_ = count;
+        logEvent("USRP: rx_max_samps_=%lu", rx_max_samps_);
+    }
+
+    /** @brief Set the multiplier for the maximum number of samples we will read
+     * at a time during burstRX.
+     */
+    void setMaxRXSampsFactor(unsigned n)
+    {
+        setMaxRXSamps(n*rx_stream_->get_max_num_samps());
     }
 
     /** @brief Return the maximum number of samples we will write at a time
@@ -201,6 +213,15 @@ public:
     void setMaxTXSamps(size_t count)
     {
         tx_max_samps_ = count;
+        logEvent("USRP: tx_max_samps_=%lu", tx_max_samps_);
+    }
+
+    /** @brief Set the multiplier for the maximum number of samples we will read
+     * at a time during burstTX.
+     */
+    void setMaxTXSampsFactor(unsigned n)
+    {
+        setMaxTXSamps(n*tx_stream_->get_max_num_samps());
     }
 
     /** @brief Return the recommended buffer size during burstRX.
@@ -212,16 +233,13 @@ public:
         return nsamps + 8*rx_max_samps_;
     }
 
-    /** @brief Get the TX error count. */
-    uint64_t getTXErrorCount(void)
+    /** @brief Get the TX late count.
+     * @return The number of late TX packet errors
+     */
+    /** Return the number of TX late packet errors and reset the counter */
+    uint64_t getTXLateCount(void)
     {
-        return tx_error_count_.load(std::memory_order_relaxed);
-    }
-
-    /** @brief Reset the TX error count. */
-    void resetTXErrorCount(void)
-    {
-        tx_error_count_.store(0, std::memory_order_relaxed);
+        return tx_late_count_.exchange(0, std::memory_order_relaxed);
     }
 
     /** @brief Stop processing data. */
@@ -233,6 +251,18 @@ private:
 
     /** @brief The DeviceType of the main device */
     DeviceType device_type_;
+
+    /** @brief Current TX rate */
+    double tx_rate_;
+
+    /** @brief Current RX rate */
+    double rx_rate_;
+
+    /** @brief Current TX frequency */
+    double tx_freq_;
+
+    /** @brief Current RX frequency */
+    double rx_freq_;
 
     /** @brief The UHD TX stream for this USRP. */
     uhd::tx_streamer::sptr tx_stream_;
@@ -256,8 +286,8 @@ private:
     /** @brief Flag indicating the we should stop processing data. */
     bool done_;
 
-    /** @brief TX error count. */
-    std::atomic<uint64_t> tx_error_count_;
+    /** @brief TX late count. */
+    std::atomic<uint64_t> tx_late_count_;
 
     /** @brief Thread that receives TX errors. */
     std::thread tx_error_thread_;

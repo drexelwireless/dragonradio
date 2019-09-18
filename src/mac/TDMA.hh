@@ -23,6 +23,8 @@ public:
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
          std::shared_ptr<Synthesizer> synthesizer,
+         bool pin_rx_worker,
+         bool pin_tx_worker,
          double slot_size,
          double guard_size,
          double slot_modulate_lead_time,
@@ -63,18 +65,28 @@ private:
     /** @brief Thread running txWorker */
     std::thread tx_thread_;
 
-    /** @brief Worker transmitting packets */
-    void txWorker(void);
+    /** @brief Thread running txSlotWorker */
+    std::thread tx_slot_thread_;
+
+    /** @brief Thread running txNotifier */
+    std::thread tx_notifier_thread_;
+
+    /** @brief Worker preparing slots for transmission */
+    void txSlotWorker(void);
 
     /** @brief Find next TX slot
      * @param t Time at which to start looking for a TX slot
      * @param t_next The beginning of the next TX slot
-     * @param slotidx Slot index
+     * @param next_slotidx Slot index of next slot
+     * @param t_following The beginning of the following TX slot
+     * @param following_slotidx Slot index of following slot
      * @returns True if a slot was found, false otherwise
      */
     bool findNextSlot(Clock::time_point t,
                       Clock::time_point &t_next,
-                      size_t &slotidx);
+                      size_t &next_slotidx,
+                      Clock::time_point &t_following,
+                      size_t &following_slotidx);
 };
 
 #endif /* TDMA_H_ */

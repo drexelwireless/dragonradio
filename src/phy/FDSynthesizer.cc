@@ -160,7 +160,7 @@ void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             if (pkt->internal_flags.is_timestamp) {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-                pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/phy_->getTXRate());
+                pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/tx_rate_);
 
                 mod->modulate(std::move(pkt), *mpkt);
 

@@ -22,6 +22,8 @@ public:
                  std::shared_ptr<SnapshotCollector> collector,
                  std::shared_ptr<Channelizer> channelizer,
                  std::shared_ptr<Synthesizer> synthesizer,
+                 bool pin_rx_worker,
+                 bool pin_tx_worker,
                  double slot_size,
                  double guard_size,
                  double slot_modulate_lead_time,
@@ -88,8 +90,14 @@ private:
     /** @brief Thread running txWorker */
     std::thread tx_thread_;
 
-    /** @brief Worker transmitting packets */
-    void txWorker(void);
+    /** @brief Thread running txSlotWorker */
+    std::thread tx_slot_thread_;
+
+    /** @brief Thread running txNotifier */
+    std::thread tx_notifier_thread_;
+
+    /** @brief Worker preparing slots for transmission */
+    void txSlotWorker(void);
 };
 
 #endif /* SLOTTEDALOHA_H_ */

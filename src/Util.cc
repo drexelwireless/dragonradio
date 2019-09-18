@@ -6,6 +6,9 @@
 #include <signal.h>
 #include <time.h>
 
+#include <atomic>
+#include <thread>
+
 #include <uhd/utils/thread_priority.hpp>
 
 #include "Logger.hh"
@@ -29,9 +32,55 @@ int sys(const char *fmt, ...)
     return res;
 }
 
+void setRealtimePriority(pthread_t t)
+{
+    int                ret;
+    constexpr int      policy = SCHED_RR;
+    struct sched_param params;
+
+    ret = sched_get_priority_max(policy);
+    if (ret == -1) {
+        logEvent("SCHEDULER: sched_get_priority_max: %s; error=%d",
+            strerror(errno),
+            errno);
+        return;
+    }
+
+    params.sched_priority = ret;
+
+    ret = pthread_setschedparam(t, policy, &params);
+    if (ret != 0)
+        logEvent("SCHEDULER: pthread_setschedparam: %s; error=%d",
+            strerror(ret),
+            ret);
+}
+
 void makeThisThreadHighPriority(void)
 {
     uhd::set_thread_priority_safe();
+}
+
+void pinThreadToCPU(pthread_t t, int cpu_num)
+{
+    int       ret;
+    cpu_set_t cpuset;
+
+    CPU_ZERO(&cpuset);
+    CPU_SET(cpu_num, &cpuset);
+
+    ret = pthread_setaffinity_np(t, sizeof(cpu_set_t), &cpuset);
+    if (ret != 0)
+        logEvent("SCHEDULER: pthread_setaffinity_np: %s; error=%d",
+            strerror(ret),
+            ret);
+}
+
+void pinThisThread(void)
+{
+    static std::atomic<unsigned> npinned = 0;
+    unsigned                     num_cpus = std::thread::hardware_concurrency();
+
+    pinThreadToCPU(pthread_self(), npinned++ % num_cpus);
 }
 
 int doze(double sec)

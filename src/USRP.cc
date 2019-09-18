@@ -18,7 +18,7 @@ USRP::USRP(const std::string& addr,
   , auto_dc_offset_(false)
   , done_(false)
 {
-    tx_error_count_.store(0, std::memory_order_release);
+    tx_late_count_.store(0, std::memory_order_release);
 
     determineDeviceType();
 
@@ -35,6 +35,14 @@ USRP::USRP(const std::string& addr,
     setRXFrequency(freq);
     setTXFrequency(freq);
 
+    // Get TX and RX rates
+    tx_rate_ = usrp_->get_tx_rate();
+    rx_rate_ = usrp_->get_rx_rate();
+
+    // Get TX and RX frequencies
+    tx_freq_ = usrp_->get_tx_freq();
+    rx_freq_ = usrp_->get_rx_freq();
+
     // Set up USRP streaming
     uhd::stream_args_t stream_args("fc32");
 
@@ -43,11 +51,11 @@ USRP::USRP(const std::string& addr,
 
     // Set maximum number of samples we attempt to TX/RX.
     if (device_type_ == kUSRPX310) {
-        tx_max_samps_ = 8*tx_stream_->get_max_num_samps();
-        rx_max_samps_ = 8*rx_stream_->get_max_num_samps();
+        setMaxTXSamps(8*tx_stream_->get_max_num_samps());
+        setMaxRXSamps(8*rx_stream_->get_max_num_samps());
     } else {
-        tx_max_samps_ = 512;
-        rx_max_samps_ = 2048;
+        setMaxTXSamps(512);
+        setMaxRXSamps(2048);
     }
 
     // Start thread that receives TX errors
@@ -76,6 +84,8 @@ void USRP::setTXFrequency(double freq)
     while (!usrp_->get_tx_sensor("lo_locked").to_bool())
         usleep(10);
 
+    tx_freq_ = usrp_->get_tx_freq();
+
     logEvent("USRP: TX frequency set to %f", freq);
 }
 
@@ -90,6 +100,8 @@ void USRP::setRXFrequency(double freq)
     while (!usrp_->get_rx_sensor("lo_locked").to_bool())
         usleep(10);
 
+    rx_freq_ = usrp_->get_rx_freq();
+
     logEvent("USRP: RX frequency set to %f", freq);
 }
 
@@ -98,7 +110,6 @@ void USRP::burstTX(MonoClock::time_point when,
                    bool end_of_burst,
                    std::list<std::shared_ptr<IQBuf>>& bufs)
 {
-    const double       txRate = usrp_->get_tx_rate(); // TX rate in Hz
     uhd::tx_metadata_t tx_md; // TX metadata for UHD
     size_t             n;     // Size of next send
 
@@ -124,9 +135,9 @@ void USRP::burstTX(MonoClock::time_point when,
 
             // If this is the last segment of the current buffer *and* this is
             // the last buffer, mark this transmission as the end of the burst.
-            tx_md.end_of_burst = off + n == iqbuf.size()
-                              && std::next(it) == bufs.end()
-                              && end_of_burst;
+            tx_md.end_of_burst = end_of_burst
+                              && off + n == iqbuf.size()
+                              && std::next(it) == bufs.end();
 
             // Send the buffer segment and update the offset into the current
             // buffer.
@@ -138,7 +149,7 @@ void USRP::burstTX(MonoClock::time_point when,
             tx_md.start_of_burst = false;
         }
 
-        when += static_cast<double>(iqbuf.size() - iqbuf.delay)/txRate;
+        when += static_cast<double>(iqbuf.size() - iqbuf.delay)/tx_rate_;
     }
 }
 
@@ -170,18 +181,17 @@ void USRP::stopRXStream(void)
 
 bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
-    const double     rxRate = usrp_->get_rx_rate(); // RX rate in Hz
-    uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rxRate;
+    uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rx_rate_;
     size_t           ndelivered = 0;
 
-    buf.fc = usrp_->get_rx_freq();
-    buf.fs = rxRate;
+    buf.fc = rx_freq_;
+    buf.fs = rx_rate_;
 
     for (;;) {
         uhd::rx_metadata_t rx_md;
         ssize_t            n;
 
-        n = rx_stream_->recv(&buf[ndelivered], rx_max_samps_, rx_md, 0.1, false);
+        n = rx_stream_->recv(&buf[ndelivered], rx_max_samps_, rx_md, 1, false);
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
             if (rx_md.has_time_spec)
@@ -203,14 +213,14 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 
         if (ndelivered == 0) {
             buf.timestamp = MonoClock::time_point { rx_md.time_spec };
-            buf.undersample = (rx_md.time_spec - t_start.t).get_real_secs() * rxRate;
+            buf.undersample = (rx_md.time_spec - t_start.t).get_real_secs() * rx_rate_;
         }
 
         ndelivered += n;
 
         // If we have received enough samples to move us past t_end, stop
         // receiving.
-        if (rx_md.time_spec + static_cast<double>(n)/rxRate >= t_end) {
+        if (rx_md.time_spec + static_cast<double>(n)/rx_rate_ >= t_end) {
             // Set proper buffer size
             buf.resize(ndelivered);
 
@@ -300,7 +310,7 @@ void USRP::txErrorWorker(void)
 
                 case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
                     msg = "TX error: packet had time that was late";
-                    tx_error_count_.fetch_add(1, std::memory_order_relaxed);
+                    tx_late_count_.fetch_add(1, std::memory_order_relaxed);
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:

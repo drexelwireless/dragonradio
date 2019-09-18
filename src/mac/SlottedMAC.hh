@@ -1,9 +1,11 @@
 #ifndef SLOTTEDMAC_H_
 #define SLOTTEDMAC_H_
 
+#include <atomic>
 #include <optional>
 #include <queue>
 
+#include "ringbuffer.hh"
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "Logger.hh"
@@ -43,6 +45,8 @@ public:
                std::shared_ptr<SnapshotCollector> collector,
                std::shared_ptr<Channelizer> channelizer,
                std::shared_ptr<Synthesizer> synthesizer,
+               bool pin_rx_worker,
+               bool pin_tx_worker,
                double slot_size,
                double guard_size,
                double slot_modulate_lead_time,
@@ -163,6 +167,12 @@ public:
 protected:
     using slot_queue = std::queue<std::shared_ptr<Synthesizer::Slot>>;
 
+    /** @brif Pin RX worker thread to CPU */
+    bool pin_rx_worker_;
+
+    /** @brif Pin TX worker thread to CPU */
+    bool pin_tx_worker_;
+
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;
 
@@ -190,8 +200,8 @@ protected:
     /** @brief Number of TX samples in the entire slot, including the guard */
     size_t tx_full_slot_samps_;
 
-    /** @brief Is the next slot the start of a burst? */
-    bool next_slot_start_of_burst_;
+    /** @brief Do we need to stop the current burst? */
+    std::atomic<bool> stop_burst_;
 
     /** @brief TX center frequency offset from RX center frequency. */
     /** If the TX and RX rates are different, this is non-empty and contains
@@ -210,6 +220,24 @@ protected:
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
+
+    /** @brief Mutex for transmitted slots */
+    std::mutex txed_slots_mutex_;
+
+    /** @brief Condition variable protecting transmitted slots */
+    std::condition_variable txed_slots_cond_;
+
+    /** @brief Queue of transmitted slots */
+    std::queue<std::shared_ptr<Synthesizer::Slot>> txed_slots_q_;
+
+    /** @brief Slots to transmit */
+    ringbuffer<std::shared_ptr<Synthesizer::Slot>, 4> tx_slots_;
+
+    /** @brief Worker transmitting slots */
+    void txWorker(void);
+
+    /** @brief Worker handling notification for transmitted slots */
+    void txNotifier(void);
 
     /** @brief Worker receiving packets */
     void rxWorker(void);
@@ -240,7 +268,10 @@ protected:
     /** @brief Transmit a slot
      * @param slot The slot
      */
-    void txSlot(std::shared_ptr<Synthesizer::Slot> &&slot);
+    void txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
+    {
+        tx_slots_.push(std::move(slot));
+    }
 
     /** @brief Mark a slot as missed
      * @param slot The slot

@@ -9,6 +9,8 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            std::shared_ptr<SnapshotCollector> collector,
                            std::shared_ptr<Channelizer> channelizer,
                            std::shared_ptr<Synthesizer> synthesizer,
+                           bool pin_rx_worker,
+                           bool pin_tx_worker,
                            double slot_size,
                            double guard_size,
                            double slot_modulate_lead_time,
@@ -20,6 +22,8 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                collector,
                channelizer,
                synthesizer,
+               pin_rx_worker,
+               pin_tx_worker,
                slot_size,
                guard_size,
                slot_modulate_lead_time,
@@ -34,6 +38,8 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
 
     rx_thread_ = std::thread(&SlottedALOHA::rxWorker, this);
     tx_thread_ = std::thread(&SlottedALOHA::txWorker, this);
+    tx_slot_thread_ = std::thread(&SlottedALOHA::txSlotWorker, this);
+    tx_notifier_thread_ = std::thread(&SlottedALOHA::txNotifier, this);
 }
 
 SlottedALOHA::~SlottedALOHA()
@@ -45,11 +51,19 @@ void SlottedALOHA::stop(void)
 {
     done_ = true;
 
+    txed_slots_cond_.notify_all();
+
     if (rx_thread_.joinable())
         rx_thread_.join();
 
     if (tx_thread_.joinable())
         tx_thread_.join();
+
+    if (tx_slot_thread_.joinable())
+        tx_slot_thread_.join();
+
+    if (tx_notifier_thread_.joinable())
+        tx_notifier_thread_.join();
 }
 
 void SlottedALOHA::reconfigure(void)
@@ -60,7 +74,7 @@ void SlottedALOHA::reconfigure(void)
         slotidx_ = 0;
 }
 
-void SlottedALOHA::txWorker(void)
+void SlottedALOHA::txSlotWorker(void)
 {
     slot_queue        q;
     Clock::time_point t_now;            // Current time

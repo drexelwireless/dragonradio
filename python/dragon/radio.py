@@ -100,6 +100,8 @@ class Config(object):
         self.addr = ''
         self.rx_antenna = 'RX2'
         self.tx_antenna = 'TX/RX'
+        self.rx_max_samps_factor = 8
+        self.tx_max_samps_factor = 8
 
         # Frequency and bandwidth
         # Default frequency in the Colosseum is 1GHz
@@ -161,6 +163,10 @@ class Config(object):
         self.synthesizer = 'freqdomain'
 
         # MAC parameters
+        self.pin_rx_worker = False
+        """Pin RX worker thread to CPU"""
+        self.pin_tx_worker = False
+        """Pin TX worker thread to CPU"""
         self.slot_size = .035
         """Total slot duration, including guard interval (seconds)"""
         self.guard_size = .01
@@ -663,6 +669,9 @@ class Radio(object):
                                      config.tx_gain,
                                      config.rx_gain)
 
+        self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
+        self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
+
         # Create the logger *after* we create the USRP so that we have a global
         # clock
         logdir = config.logdir
@@ -1150,6 +1159,8 @@ class Radio(object):
                                             self.snapshot_collector,
                                             self.channelizer,
                                             self.synthesizer,
+                                            config.pin_rx_worker,
+                                            config.pin_tx_worker,
                                             config.slot_size,
                                             config.guard_size,
                                             config.slot_modulate_lead_time,
@@ -1192,6 +1203,8 @@ class Radio(object):
                                     self.snapshot_collector,
                                     self.channelizer,
                                     self.synthesizer,
+                                    config.pin_rx_worker,
+                                    config.pin_tx_worker,
                                     config.slot_size,
                                     config.guard_size,
                                     config.slot_modulate_lead_time,

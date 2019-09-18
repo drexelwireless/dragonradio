@@ -10,8 +10,17 @@
  */
 int sys(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
+/** @brief Make thread have real-time priority. */
+void setRealtimePriority(void);
+
 /** @brief Make current thread high-priority. */
 void makeThisThreadHighPriority(void);
+
+/** @brief Pin thread to given CPU */
+void pinThreadToCPU(pthread_t t, int cpu_num);
+
+/** @brief Pin this thread to a CPU */
+void pinThisThread(void);
 
 /** @brief Sleep for the specified number of seconds. sleep, usleep, and
  * nanosleep were already taken, so this function is named "doze."
