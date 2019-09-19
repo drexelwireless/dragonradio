@@ -28,6 +28,16 @@ struct Channel {
         return fc > other.fc;
     }
 
+    bool intersects(const Channel &other) const
+    {
+        double start = fc - bw/2.;
+        double end = fc + bw/2.;
+        double other_start = other.fc - other.bw/2.;
+        double other_end = other.fc + other.bw/2.;
+
+        return (start < other_end) && (end > other_start);
+    }
+
     /** @brief Frequency shift from center */
     double fc;
 

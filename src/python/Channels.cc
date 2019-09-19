@@ -18,6 +18,9 @@ void exportChannels(py::module &m)
         .def_readwrite("bw",
             &Channel::bw,
             "Bandwidth")
+        .def("intersects",
+            &Channel::intersects,
+            "Return true if channels intersect, false otherwise")
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def(py::self < py::self)
