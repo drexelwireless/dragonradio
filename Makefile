@@ -2,7 +2,7 @@
 # Note: install all dependencies system-wide for this makefile to work
 ##################################################
 
-TARGETS = dragonradio flexframedemod
+TARGETS = dragonradio
 
 RM       = rm -f
 RMRF     = rm -rf
