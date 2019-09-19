@@ -8,6 +8,26 @@ struct Channel {
     Channel() : fc(0.0), bw(0.0) {};
     Channel(double fc_, double bw_) : fc(fc_), bw(bw_) {};
 
+    bool operator ==(const Channel &other) const
+    {
+        return fc == other.fc && bw == other.bw;
+    }
+
+    bool operator !=(const Channel &other) const
+    {
+        return !(*this == other);
+    }
+
+    bool operator <(const Channel &other) const
+    {
+        return fc < other.fc;
+    }
+
+    bool operator >(const Channel &other) const
+    {
+        return fc > other.fc;
+    }
+
     /** @brief Frequency shift from center */
     double fc;
 

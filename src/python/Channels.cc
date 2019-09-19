@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/complex.h>
 #include <pybind11/numpy.h>
+#include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
 #include "python/PyModules.hh"
@@ -17,6 +18,10 @@ void exportChannels(py::module &m)
         .def_readwrite("bw",
             &Channel::bw,
             "Bandwidth")
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def(py::self < py::self)
+        .def(py::self > py::self)
         .def("__repr__", [](const Channel& self) {
             return py::str("Channel(fc={}, bw={})").format(self.fc, self.bw);
          })
