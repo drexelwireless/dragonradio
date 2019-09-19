@@ -109,7 +109,7 @@ class Config(object):
         """Radio frequency"""
         self.bandwidth = 5e6
         """Radio bandwidth to use"""
-        self.max_bandwidth = 40e6
+        self.max_bandwidth = 50e6
         """Max bandwidth radio can handle"""
         self.rx_bandwidth = None
         """If set, always receive at this bandwidth. Otherwise, calculate
