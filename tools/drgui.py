@@ -691,7 +691,10 @@ def main():
     viewer = LogViewer(log)
 
     for path in args.paths:
-        log.load(path)
+        try:
+            log.load(path)
+        except:
+            logging.exception('Could not load %s', path)
 
     for node_id in args.tx:
         node = log.nodes[node_id]
