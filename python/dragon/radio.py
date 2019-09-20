@@ -410,6 +410,12 @@ class Config(object):
         parser.add_argument('--tx-antenna', action='store',
                             dest='tx_antenna',
                             help='set TX antenna')
+        parser.add_argument('--rx-max-samps-factor', action='store', type=int,
+                            dest='rx_max_samps_factor',
+                            help='set multiplicative factor for rx_max_samps')
+        parser.add_argument('--tx-max-samps-factor', action='store', type=int,
+                            dest='tx_max_samps_factor',
+                            help='set multiplicative factor for tx_max_samps')
 
         # Frequency and bandwidth
         parser.add_argument('-f', '--frequency', action='store', type=float,
