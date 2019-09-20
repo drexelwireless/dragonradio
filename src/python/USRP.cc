@@ -1,3 +1,5 @@
+#include <pybind11/stl.h>
+
 #include "USRP.hh"
 #include "python/PyModules.hh"
 
@@ -14,6 +16,8 @@ void exportUSRP(py::module &m)
 
     py::class_<USRP, std::shared_ptr<USRP>>(m, "USRP")
         .def(py::init<const std::string&,
+                      const std::optional<std::string>&,
+                      const std::optional<std::string>&,
                       double,
                       const std::string&,
                       const std::string&,

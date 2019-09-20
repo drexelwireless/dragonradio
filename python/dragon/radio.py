@@ -100,6 +100,8 @@ class Config(object):
         self.addr = ''
         self.rx_antenna = 'RX2'
         self.tx_antenna = 'TX/RX'
+        self.rx_subdev = None
+        self.tx_subdev = None
         self.rx_max_samps_factor = 8
         self.tx_max_samps_factor = 8
 
@@ -404,6 +406,12 @@ class Config(object):
         parser.add_argument('--addr', action='store',
                             dest='addr',
                             help='specify device address')
+        parser.add_argument('--rx-subdev', action='store', type=str,
+                            dest='rx_subdev',
+                            help='specify RX subdevice')
+        parser.add_argument('--tx-subdev', action='store', type=str,
+                            dest='tx_subdev',
+                            help='specify TX subdevice')
         parser.add_argument('--rx-antenna', action='store',
                             dest='rx_antenna',
                             help='set RX antenna')
@@ -694,6 +702,8 @@ class Radio(object):
 
         # Create the USRP
         self.usrp = dragonradio.USRP(config.addr,
+                                     config.tx_subdev,
+                                     config.rx_subdev,
                                      self.frequency,
                                      config.tx_antenna,
                                      config.rx_antenna,

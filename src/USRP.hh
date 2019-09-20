@@ -24,6 +24,8 @@ public:
     };
 
     USRP(const std::string& addr,
+         const std::optional<std::string>& tx_subdev,
+         const std::optional<std::string>& rx_subdev,
          double freq,
          const std::string& tx_ant,
          const std::string& rx_ant,

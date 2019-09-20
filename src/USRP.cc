@@ -9,6 +9,8 @@
 #include "USRP.hh"
 
 USRP::USRP(const std::string& addr,
+           const std::optional<std::string>& tx_subdev,
+           const std::optional<std::string>& rx_subdev,
            double freq,
            const std::string& tx_ant,
            const std::string& rx_ant,
@@ -27,6 +29,13 @@ USRP::USRP(const std::string& addr,
 
     usrp_->set_tx_gain(tx_gain);
     usrp_->set_rx_gain(rx_gain);
+
+    // Set subdevice specifications
+    if (tx_subdev)
+        usrp_->set_tx_subdev_spec(*tx_subdev);
+
+    if (rx_subdev)
+        usrp_->set_rx_subdev_spec(*rx_subdev);
 
     // Set up clock
     Clock::setUSRP(usrp_);
