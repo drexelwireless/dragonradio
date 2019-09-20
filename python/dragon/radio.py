@@ -534,6 +534,12 @@ class Config(object):
                             help='set synthesizer algorithm')
 
         # MAC parameters
+        parser.add_argument('--pin-rx-worker', action='store_const', const=True,
+                            dest='pin_rx_worker',
+                            help='pin RX worker thread to a CPU')
+        parser.add_argument('--pin-tx-worker', action='store_const', const=True,
+                            dest='pin_tx_worker',
+                            help='pin TX worker thread to a CPU')
         parser.add_argument('--slot-size', action='store', type=float,
                             dest='slot_size',
                             help='set MAC slot size (sec)')
