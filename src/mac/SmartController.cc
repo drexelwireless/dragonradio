@@ -1431,7 +1431,9 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 
 void SmartController::resetPEREstimates(SendWindow &sendw)
 {
-    double max_packets_per_slot = getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]);
+    size_t max_packets_per_slot = getMaxPacketsPerSlot(tx_params_[sendw.mcsidx]);
+
+    assert(max_packets_per_slot > 0);
 
     sendw.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
     sendw.short_per.reset(0);
