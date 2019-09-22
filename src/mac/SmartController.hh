@@ -101,7 +101,7 @@ struct SendWindow {
       , unack({0})
       , max({0})
       , new_window(true)
-      , locally_updated(false)
+      , send_set_unack(false)
       , win(1)
       , maxwin(maxwin)
       , mcsidx(0)
@@ -139,10 +139,8 @@ struct SendWindow {
     /** @brief Is this a new window? */
     bool new_window;
 
-    /** @brief Has the send window been updated locally, i.e., not because of a
-     * receiver ACK?
-     */
-    bool locally_updated;
+    /** @brief Do we need to send a set unack control message? */
+    bool send_set_unack;
 
     /** @brief Send window size */
     Seq::uint_type win;

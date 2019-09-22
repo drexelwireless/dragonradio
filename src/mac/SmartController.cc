@@ -197,11 +197,12 @@ get_packet:
             sendw.max = pkt->hdr.seq;
 
         // If we have locally updated our send window, tell the receiver.
-        if (sendw.locally_updated) {
-            logEvent("ARQ: Setting unack: unack=%u",
+        if (sendw.send_set_unack) {
+            logEvent("ARQ: send set unack: nexthop=%u; unack=%u",
+                (unsigned) nexthop,
                 (unsigned) sendw.unack);
             pkt->appendSetUnack(sendw.unack);
-            sendw.locally_updated = false;
+            sendw.send_set_unack = false;
         }
 
         // Apply TX params. If the destination can transmit, proceed as usual.
@@ -843,9 +844,9 @@ void SmartController::drop(SendWindow::Entry &entry)
     advanceSendWindow(sendw);
 
     // See if we locally updated the send window. If so, we need to tell the
-    // receiver, so set the locally_updated flag.
+    // receiver we've updated our unack
     if (sendw.unack > old_unack)
-        sendw.locally_updated = true;
+        sendw.send_set_unack = true;
 }
 
 void SmartController::advanceSendWindow(SendWindow &sendw)
@@ -1181,10 +1182,17 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
         switch (it->type) {
             case ControlMsg::Type::kSelectiveAck:
             {
-                if (!sawACKRun)
+                // Handle first selective ACK
+                if (!sawACKRun) {
                     logEvent("ARQ: selective ack: node=%u; per_end=%u",
                         (unsigned) node.id,
                         (unsigned) sendw.per_end);
+
+                    // If the selective ACK is from before our send window, send
+                    // a set unack control message
+                    if (it->ack.begin < sendw.unack)
+                        sendw.send_set_unack = true;
+                }
 
                 // Record the gap between the last packet in the previous ACK
                 // run and the first packet in this ACK run as failures.
@@ -1261,11 +1269,12 @@ void SmartController::handleSetUnack(RadioPacket &pkt, RecvWindow &recvw)
             {
                 Seq next_ack = it->unack.unack;
 
-                if (next_ack > recvw.ack) {
-                    logEvent("ARQ: set next ack: node=%u; next_ack=%u",
-                        (unsigned) recvw.node.id,
-                        (unsigned) next_ack);
+                logEvent("ARQ: set unack: node=%u; cur_ack=%u; unack=%u",
+                    (unsigned) recvw.node.id,
+                    (unsigned) recvw.ack,
+                    (unsigned) next_ack);
 
+                if (next_ack > recvw.ack) {
                     for (Seq seq = recvw.ack; seq < next_ack; ++seq)
                         recvw[seq].reset();
 
