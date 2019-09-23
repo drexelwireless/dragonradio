@@ -121,9 +121,9 @@ class Radio(dragonradio.tasks.TaskManager):
 
     def start(self, user_ns=locals()):
         """Start the radio"""
-        # Start logging snapshots
-        if self.config.log_snapshots:
-            self.startSnapshotLogger()
+        # Collect snapshots if requested
+        if self.config.snapshot_period is not None:
+            self.startSnapshots()
 
         # Add radio nodes to the network if number of nodes was specified
         if self.config.num_nodes is not None:
@@ -1105,11 +1105,11 @@ class Radio(dragonradio.tasks.TaskManager):
                 return path
             i += 1
 
-    def startSnapshotLogger(self):
+    def startSnapshots(self):
         """Start the snapshot logger"""
-        self.createTask(self.snapshotLoggerTask(), name='snapshot logger')
+        self.createTask(self.snapshotTask(), name='snapshots')
 
-    async def snapshotLoggerTask(self):
+    async def snapshotTask(self):
         """Snapshot logging task"""
         if not self.logger:
             return
@@ -1136,27 +1136,31 @@ class Radio(dragonradio.tasks.TaskManager):
                 snapshot = collector.finish()
 
                 # Log the snapshot
-                slots = snapshot.slots
-                if len(slots) != 0:
-                    t = slots[0].timestamp
-                    fc = slots[0].fc
-                    fs = slots[0].fs
-
-                    if all([slot.fc == fc for slot in slots]) and \
-                        all([slot.fs == fs for slot in slots]):
-                        # Get concatenated IQ buffer for all slots
-                        iqbuf = dragonradio.IQBuf(np.concatenate([slot.data for slot in slots]))
-                        iqbuf.timestamp = t
-                        iqbuf.fc = fc
-                        iqbuf.fs = fs
-
-                        self.logger.logSnapshot(iqbuf)
-                        for e in snapshot.selftx:
-                            self.logger.logSelfTX(snapshot.timestamp.wall_time, e)
+                if config.log_snapshots:
+                    await self.loop.run_in_executor(None, self.logSnapshot, snapshot)
 
                 await asyncio.sleep(config.snapshot_period)
         except asyncio.CancelledError:
             return
+
+    def logSnapshot(self, snapshot):
+        slots = snapshot.slots
+        if len(slots) != 0:
+            t = slots[0].timestamp
+            fc = slots[0].fc
+            fs = slots[0].fs
+
+            if all([slot.fc == fc for slot in slots]) and \
+                all([slot.fs == fs for slot in slots]):
+                # Get concatenated IQ buffer for all slots
+                iqbuf = dragonradio.IQBuf(np.concatenate([slot.data for slot in slots]))
+                iqbuf.timestamp = t
+                iqbuf.fc = fc
+                iqbuf.fs = fs
+
+                self.logger.logSnapshot(iqbuf)
+                for e in snapshot.selftx:
+                    self.logger.logSelfTX(snapshot.timestamp.wall_time, e)
 
     @property
     def frequency(self):
