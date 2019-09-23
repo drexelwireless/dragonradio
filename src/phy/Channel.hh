@@ -4,6 +4,8 @@
 #include <complex>
 #include <vector>
 
+#include <boost/functional/hash.hpp>
+
 struct Channel {
     Channel() : fc(0.0), bw(0.0) {};
     Channel(double fc_, double bw_) : fc(fc_), bw(bw_) {};
@@ -43,6 +45,17 @@ struct Channel {
 
     /** @brief Bandwidth */
     double bw;
+};
+
+template<>
+struct std::hash<Channel> {
+    size_t operator()(const Channel &chan)
+    {
+        std::size_t h = std::hash<double>{}(chan.fc);
+
+        boost::hash_combine(h, std::hash<double>{}(chan.bw));
+        return h;
+    }
 };
 
 using C = std::complex<float>;

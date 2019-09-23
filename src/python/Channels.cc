@@ -25,6 +25,7 @@ void exportChannels(py::module &m)
         .def(py::self != py::self)
         .def(py::self < py::self)
         .def(py::self > py::self)
+        .def(hash(py::self))
         .def("__repr__", [](const Channel& self) {
             return py::str("Channel(fc={}, bw={})").format(self.fc, self.bw);
          })
