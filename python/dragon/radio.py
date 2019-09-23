@@ -1038,7 +1038,7 @@ class Radio(object):
 
         # We need to do this *after* setting the RX rate because it is used to
         # determine filter parameters
-        self.channelizer.channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
+        self.setChannelizerChannels(self.channels)
 
         #
         # Initialize synthesizer
@@ -1054,6 +1054,10 @@ class Radio(object):
         #
         if self.mac is not None:
             self.mac.reconfigure()
+
+    def setChannelizerChannels(self, channels):
+        """Set channelizer's channels."""
+        self.channelizer.channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in channels])
 
     def setSynthesizerChannels(self, channels):
         """Set synthesizer's channels."""
