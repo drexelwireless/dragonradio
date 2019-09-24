@@ -35,6 +35,9 @@ struct Snapshot {
 
     /** @brief Demodulated packets */
     std::vector<SelfTX> selftx;
+
+    /** @brief Return an IQBuf containing IQ data from all slots */
+    std::optional<std::shared_ptr<IQBuf>> getCombinedSlots(void) const;
 };
 
 /** @brief A snapshot collector. */

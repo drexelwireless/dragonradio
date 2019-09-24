@@ -2,6 +2,38 @@
 
 #include "mac/Snapshot.hh"
 
+std::optional<std::shared_ptr<IQBuf>> Snapshot::getCombinedSlots(void) const
+{
+    if (slots.empty())
+        return std::nullopt;
+
+    size_t size = 0;
+    float  fc = slots[0]->fc;
+    float  fs = slots[0]->fs;
+
+    for (auto it = slots.begin(); it != slots.end() && (*it)->fc == fc && (*it)->fs == fs; ++it) {
+        assert((*it)->complete);
+        size += (*it)->size();
+    }
+
+    std::shared_ptr<IQBuf> buf = std::make_shared<IQBuf>(size);
+    size_t                 off = 0;
+
+    buf->timestamp = timestamp;
+    buf->fc = fc;
+    buf->fs = fs;
+
+    using C = std::complex<float>;
+
+    for (auto it = slots.begin(); it != slots.end() && (*it)->fc == fc && (*it)->fs == fs; ++it) {
+        assert(off + (*it)->size() <= buf->size());
+        memcpy(buf->data() + off, (*it)->data(), (*it)->size()*sizeof(C));
+        off += (*it)->size();
+    }
+
+    return buf;
+}
+
 SnapshotCollector::SnapshotCollector()
   : last_local_tx_start_(0.0)
 {
