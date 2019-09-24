@@ -71,15 +71,9 @@ public:
     void logSlot(std::shared_ptr<IQBuf> buf,
                  float bw);
 
-    void logSnapshot(std::shared_ptr<IQBuf> buf)
+    void logSnapshot(std::shared_ptr<Snapshot> snapshot)
     {
-        log_q_.emplace([=](){ logSnapshot_(buf); });
-    }
-
-    void logSelfTX(Clock::time_point t,
-                   SelfTX selftx)
-    {
-        log_q_.emplace([=](){ logSelfTX_(t, selftx); });
+        log_q_.emplace([=](){ logSnapshot_(snapshot); });
     }
 
     void logRecv(const Clock::time_point& t,
@@ -191,10 +185,7 @@ private:
     void logSlot_(std::shared_ptr<IQBuf> buf,
                   float bw);
 
-    void logSnapshot_(std::shared_ptr<IQBuf> buf);
-
-    void logSelfTX_(Clock::time_point timestamp,
-                    SelfTX pkt);
+    void logSnapshot_(std::shared_ptr<Snapshot> snapshot);
 
     void logRecv_(const Clock::time_point& t,
                   int32_t start_samples,

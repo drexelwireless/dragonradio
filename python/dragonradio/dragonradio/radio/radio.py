@@ -1137,30 +1137,11 @@ class Radio(dragonradio.tasks.TaskManager):
 
                 # Log the snapshot
                 if config.log_snapshots:
-                    await self.loop.run_in_executor(None, self.logSnapshot, snapshot)
+                    self.logger.logSnapshot(snapshot)
 
                 await asyncio.sleep(config.snapshot_period)
         except asyncio.CancelledError:
             return
-
-    def logSnapshot(self, snapshot):
-        slots = snapshot.slots
-        if len(slots) != 0:
-            t = slots[0].timestamp
-            fc = slots[0].fc
-            fs = slots[0].fs
-
-            if all([slot.fc == fc for slot in slots]) and \
-                all([slot.fs == fs for slot in slots]):
-                # Get concatenated IQ buffer for all slots
-                iqbuf = dragonradio.IQBuf(np.concatenate([slot.data for slot in slots]))
-                iqbuf.timestamp = t
-                iqbuf.fc = fc
-                iqbuf.fs = fs
-
-                self.logger.logSnapshot(iqbuf)
-                for e in snapshot.selftx:
-                    self.logger.logSelfTX(snapshot.timestamp.wall_time, e)
 
     @property
     def frequency(self):

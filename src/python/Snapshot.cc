@@ -4,6 +4,8 @@
 #include "mac/Snapshot.hh"
 #include "python/PyModules.hh"
 
+PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
+
 void exportSnapshot(py::module &m)
 {
     // Export class Snapshot to Python
