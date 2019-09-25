@@ -102,6 +102,9 @@ protected:
     /** @brief The current snapshot */
     std::shared_ptr<Snapshot> snapshot_;
 
+    /** @brief The current IQ buffer */
+    std::shared_ptr<IQBuf> curbuf_;
+
     /** @brief Should we collect new slots? */
     bool snapshot_collect_;
 

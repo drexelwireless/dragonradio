@@ -74,7 +74,7 @@ bool SnapshotCollector::push(const std::shared_ptr<IQBuf> &buf)
 
     if (snapshot_ && snapshot_collect_) {
         buf->snapshot_off = snapshot_off_;
-        snapshot_->slots.emplace_back(buf);
+        curbuf_ = buf;
         return true;
     } else
         return false;
@@ -85,10 +85,10 @@ void SnapshotCollector::finalizePush(void)
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
     if (snapshot_) {
-        auto it = snapshot_->slots.rbegin();
-
-        snapshot_off_ += (*it)->size();
-    }
+        snapshot_off_ += curbuf_->size();
+        snapshot_->slots.emplace_back(std::move(curbuf_));
+    } else
+        curbuf_.reset();
 }
 
 void SnapshotCollector::selfTX(ssize_t start, ssize_t end, float fc, float fs)
