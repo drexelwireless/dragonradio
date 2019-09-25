@@ -43,7 +43,7 @@ void SnapshotCollector::start(void)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
-    snapshot_ = std::make_shared<Snapshot>();
+    snapshot_ = std::make_unique<Snapshot>();
     // Set *provisional* snapshot timestamp. Eventually, we will set this to the
     // timestamp of the first collected slot.
     snapshot_->timestamp = MonoClock::now();

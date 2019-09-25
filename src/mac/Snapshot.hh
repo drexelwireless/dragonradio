@@ -103,7 +103,7 @@ protected:
     spinlock_mutex mutex_;
 
     /** @brief The current snapshot */
-    std::shared_ptr<Snapshot> snapshot_;
+    std::unique_ptr<Snapshot> snapshot_;
 
     /** @brief The current IQ buffer */
     std::shared_ptr<IQBuf> curbuf_;
