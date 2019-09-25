@@ -34,7 +34,10 @@ void exportIQBuffer(py::module &m)
             "Signal delay")
         .def_property("data",
             [](const IQBuf &iqbuf) {
-                return py::array_t<fc32>(iqbuf.size(), iqbuf.data());
+                if (iqbuf.complete)
+                    return py::array_t<fc32>(iqbuf.size(), iqbuf.data());
+                else
+                    return py::array_t<fc32>();
             },
             [](IQBuf &iqbuf, py::array_t<fc32> data) {
                 auto         buf = data.request();
