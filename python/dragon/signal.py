@@ -55,7 +55,7 @@ def lowpass(wp, ws, fs):
     return lowpass_kaiser(wp, ws, fs, atten=60)
 
 @memoize
-def lowpass_firpm1f2(wp, ws, fs, Nmax=301):
+def lowpass_firpm1f(wp, ws, fs, Nmax=301):
     # Use Bellanger's estimation of filter order
     N = bellangerord(0.001, 0.001, fs, ws-wp)
     N = min(Nmax, N)
@@ -68,6 +68,23 @@ def lowpass_firpm1f2(wp, ws, fs, Nmax=301):
     weights = [1, 1]
 
     out = dragonradio.firpm1f(N, bands, desired, weights, fs=fs)
+
+    return out.h
+
+@memoize
+def lowpass_firpm1f2(wp, ws, fs, Nmax=301):
+    # Use Bellanger's estimation of filter order
+    N = bellangerord(0.001, 0.001, fs, ws-wp)
+    N = min(Nmax, N)
+    if N % 2 == 0:
+        N = N + 1
+
+    # Design a filter with 1/f^2 roll-off
+    bands = np.array([0, wp/2, ws/2, fs/2])
+    desired = [1, 1, 0, 0]
+    weights = [1, 1]
+
+    out = dragonradio.firpm1f2(N, bands, desired, weights, fs=fs)
 
     return out.h
 
