@@ -14,14 +14,12 @@ LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
                      NodeId node_id,
                      const MCS &header_mcs,
                      bool soft_header,
-                     bool soft_payload,
-                     size_t min_packet_size)
+                     bool soft_payload)
   : PHY(node_id)
   , snapshot_collector_(collector)
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
-  , min_packet_size_(min_packet_size)
 {
 }
 
@@ -39,8 +37,6 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
         pending_reconfigure_.store(false, std::memory_order_relaxed);
         reconfigure();
     }
-
-    pkt->resize(std::max((size_t) pkt->size(), liquid_phy_.min_packet_size_));
 
     assert(pkt->tx_params);
     setPayloadMCS(pkt->tx_params->mcs);

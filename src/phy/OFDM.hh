@@ -63,8 +63,6 @@ public:
     };
 
     /** @brief Construct an OFDM PHY.
-     * @param min_packet_size The minimum number of bytes we will send in a
-     * packet.
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)
@@ -76,12 +74,11 @@ public:
          const MCS &header_mcs,
          bool soft_header,
          bool soft_payload,
-         size_t min_packet_size,
          unsigned int M,
          unsigned int cp_len,
          unsigned int taper_len,
          const std::optional<std::string> &p)
-      : LiquidPHY(collector, node_id, header_mcs, soft_header, soft_payload, min_packet_size)
+      : LiquidPHY(collector, node_id, header_mcs, soft_header, soft_payload)
       , M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)

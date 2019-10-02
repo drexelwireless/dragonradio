@@ -40,9 +40,6 @@ void exportPHYs(py::module &m)
             &LiquidPHY::getSoftHeader)
         .def_property_readonly("soft_payload",
             &LiquidPHY::getSoftPayload)
-        .def_property("min_packet_size",
-            &LiquidPHY::getMinPacketSize,
-            &LiquidPHY::setMinPacketSize)
         ;
 
     // Export class FlexFrame to Python
@@ -51,8 +48,7 @@ void exportPHYs(py::module &m)
                       NodeId,
                       const MCS&,
                       bool,
-                      bool,
-                      size_t>())
+                      bool>())
         ;
 
     // Export class NewFlexFrame to Python
@@ -61,8 +57,7 @@ void exportPHYs(py::module &m)
                       NodeId,
                       const MCS&,
                       bool,
-                      bool,
-                      size_t>())
+                      bool>())
         ;
 
     // Export class OFDM to Python
@@ -72,7 +67,6 @@ void exportPHYs(py::module &m)
                       const MCS&,
                       bool,
                       bool,
-                      size_t,
                       unsigned int,
                       unsigned int,
                       unsigned int,

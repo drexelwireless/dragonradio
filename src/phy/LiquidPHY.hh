@@ -121,8 +121,7 @@ public:
               NodeId node_id,
               const MCS &header_mcs,
               bool soft_header,
-              bool soft_payload,
-              size_t min_packet_size);
+              bool soft_payload);
     virtual ~LiquidPHY() = default;
 
     LiquidPHY() = delete;
@@ -154,21 +153,6 @@ public:
         return soft_payload_;
     }
 
-    /** @brief Return minimum packet size.
-      */
-    size_t getMinPacketSize() const
-    {
-        return min_packet_size_;
-    }
-
-    /** @brief Return flag indicating whether or not to use soft-decoding for
-      * payload.
-      */
-    void setMinPacketSize(size_t size)
-    {
-        min_packet_size_ = size;
-    }
-
     size_t getModulatedSize(const TXParams &params, size_t n) override;
 
 protected:
@@ -185,10 +169,6 @@ protected:
     /** @brief Flag indicating whether or not to use soft-decoding for payload.
       */
     bool soft_payload_;
-
-    /** @brief Minimum packet size. */
-    /** Packets will be padded to at least this many bytes */
-    size_t min_packet_size_;
 
     /** @brief Create underlying liquid modulator object */
     virtual std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) = 0;

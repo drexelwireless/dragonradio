@@ -136,7 +136,6 @@ class Config(object):
 
         # PHY parameters
         self.phy = 'ofdm'
-        self.min_packet_size = 0
         self.num_modulation_threads = 1
         self.num_demodulation_threads = 10
         self.max_channels = 10
@@ -473,9 +472,6 @@ class Config(object):
                             choices=['flexframe', 'newflexframe', 'ofdm'],
                             dest='phy',
                             help='set PHY')
-        parser.add_argument('--min-packet-size', action='store', type=int,
-                            dest='min_packet_size',
-                            help='set minimum packet size (in bytes)')
         parser.add_argument('--max-channels', action='store', type=int,
                             dest='max_channels',
                             help='set maximum number of channels')
@@ -768,22 +764,19 @@ class Radio(object):
                                              self.node_id,
                                              header_mcs,
                                              config.soft_header,
-                                             config.soft_payload,
-                                             config.min_packet_size)
+                                             config.soft_payload)
         elif config.phy == 'newflexframe':
             self.phy = dragonradio.NewFlexFrame(self.snapshot_collector,
                                                 self.node_id,
                                                 header_mcs,
                                                 config.soft_header,
-                                                config.soft_payload,
-                                                config.min_packet_size)
+                                                config.soft_payload)
         elif config.phy == 'ofdm':
             self.phy = dragonradio.OFDM(self.snapshot_collector,
                                         self.node_id,
                                         header_mcs,
                                         config.soft_header,
                                         config.soft_payload,
-                                        config.min_packet_size,
                                         config.M,
                                         config.cp_len,
                                         config.taper_len,
