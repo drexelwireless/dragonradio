@@ -70,7 +70,7 @@ struct MCS {
     const char *ms_name() const { return modulation_types[ms].name; }
 };
 
-inline void mcs2flexframegenprops(const MCS &mcs, ofdmflexframegenprops_s &props)
+inline void mcs2genprops(const MCS &mcs, ofdmflexframegenprops_s &props)
 {
     props.check = mcs.check;
     props.fec0 = mcs.fec0;
@@ -78,7 +78,7 @@ inline void mcs2flexframegenprops(const MCS &mcs, ofdmflexframegenprops_s &props
     props.mod_scheme = mcs.ms;
 }
 
-inline void mcs2flexframegenprops(const MCS &mcs, origflexframegenprops_s &props)
+inline void mcs2genprops(const MCS &mcs, origflexframegenprops_s &props)
 {
     props.check = mcs.check;
     props.fec0 = mcs.fec0;
@@ -86,7 +86,7 @@ inline void mcs2flexframegenprops(const MCS &mcs, origflexframegenprops_s &props
     props.mod_scheme = mcs.ms;
 }
 
-inline void mcs2flexframegenprops(const MCS &mcs, flexframegenprops_s &props)
+inline void mcs2genprops(const MCS &mcs, flexframegenprops_s &props)
 {
     props.check = mcs.check;
     props.fec0 = mcs.fec0;

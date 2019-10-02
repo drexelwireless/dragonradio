@@ -20,7 +20,7 @@ public:
 
         flexframegenprops_s props;
 
-        mcs2flexframegenprops(payload_mcs_, props);
+        mcs2genprops(payload_mcs_, props);
         fg_ = flexframegen_create(&props);
 
         setHeaderMCS(header_mcs_);
@@ -92,7 +92,7 @@ protected:
     {
         flexframegenprops_s props;
 
-        mcs2flexframegenprops(header_mcs_, props);
+        mcs2genprops(header_mcs_, props);
         flexframegen_set_header_props(fg_, &props);
         flexframegen_set_header_len(fg_, sizeof(Header));
     }
@@ -101,7 +101,7 @@ protected:
     {
         flexframegenprops_s props;
 
-        mcs2flexframegenprops(payload_mcs_, props);
+        mcs2genprops(payload_mcs_, props);
         flexframegen_setprops(fg_, &props);
     }
 };
@@ -173,7 +173,7 @@ protected:
     {
         flexframegenprops_s props;
 
-        mcs2flexframegenprops(header_mcs_, props);
+        mcs2genprops(header_mcs_, props);
         flexframesync_set_header_props(fs_, &props);
         flexframesync_set_header_len(fs_, sizeof(Header));
     }

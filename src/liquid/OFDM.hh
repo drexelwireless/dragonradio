@@ -56,7 +56,7 @@ public:
 
         ofdmflexframegenprops_s props;
 
-        mcs2flexframegenprops(payload_mcs_, props);
+        mcs2genprops(payload_mcs_, props);
         fg_ = ofdmflexframegen_create(M_,
                                       cp_len_,
                                       taper_len_,
@@ -138,7 +138,7 @@ protected:
     {
         ofdmflexframegenprops_s props;
 
-        mcs2flexframegenprops(header_mcs_, props);
+        mcs2genprops(header_mcs_, props);
         ofdmflexframegen_set_header_props(fg_, &props);
         ofdmflexframegen_set_header_len(fg_, sizeof(Header));
     }
@@ -147,7 +147,7 @@ protected:
     {
         ofdmflexframegenprops_s props;
 
-        mcs2flexframegenprops(payload_mcs_, props);
+        mcs2genprops(payload_mcs_, props);
         ofdmflexframegen_setprops(fg_, &props);
     }
 };
@@ -253,7 +253,7 @@ protected:
     {
         ofdmflexframegenprops_s props;
 
-        mcs2flexframegenprops(header_mcs_, props);
+        mcs2genprops(header_mcs_, props);
         ofdmflexframesync_set_header_props(fs_, &props);
         ofdmflexframesync_set_header_len(fs_, sizeof(Header));
     }
