@@ -46,6 +46,23 @@ void exportIQBuffer(py::module &m)
                 static_cast<buffer<fc32>&>(iqbuf) = std::move(copy);
             },
             "IQ data")
+        .def("__getitem__",
+            [](const IQBuf &self, size_t i) {
+                if (i >= self.size())
+                    throw py::index_error();
+                return self[i];
+            })
+        .def("__setitem__",
+            [](IQBuf &self, size_t i, fc32 v) {
+                if (i >= self.size())
+                    throw py::index_error();
+                self[i] = v;
+            })
+        .def("__len__",
+            [](const IQBuf &self) -> size_t
+            {
+                return self.size();
+            })
         .def("__repr__",
             [](const IQBuf& self) {
 #if defined(NOUHD)
