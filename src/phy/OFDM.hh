@@ -13,21 +13,17 @@ public:
     public:
         Modulator(OFDM &phy)
           : Liquid::Modulator(phy.header_mcs_)
-          , LiquidPHY::Modulator(phy)
+          , LiquidPHY::Modulator(phy,
+                                 phy.header_mcs_)
           , Liquid::OFDMModulator(phy.header_mcs_,
                                   phy.M_,
                                   phy.cp_len_,
                                   phy.taper_len_,
                                   phy.p_)
-          , myphy_(phy)
         {
         }
 
         virtual ~Modulator() = default;
-
-    private:
-        /** @brief Our associated PHY. */
-        OFDM &myphy_;
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
@@ -38,7 +34,10 @@ public:
           : Liquid::Demodulator(phy.header_mcs_,
                                 phy.soft_header_,
                                 phy.soft_payload_)
-          , LiquidPHY::Demodulator(phy)
+          , LiquidPHY::Demodulator(phy,
+                                   phy.header_mcs_,
+                                   phy.soft_header_,
+                                   phy.soft_payload_)
           , Liquid::OFDMDemodulator(phy.header_mcs_,
                                     phy.soft_header_,
                                     phy.soft_payload_,
@@ -46,7 +45,6 @@ public:
                                     phy.cp_len_,
                                     phy.taper_len_,
                                     phy.p_)
-          , myphy_(phy)
         {
         }
 
@@ -56,10 +54,6 @@ public:
         {
             return Liquid::OFDMDemodulator::isFrameOpen();
         }
-
-    private:
-        /** @brief Our associated PHY. */
-        OFDM &myphy_;
     };
 
     /** @brief Construct an OFDM PHY.
@@ -130,12 +124,12 @@ protected:
      */
     Liquid::OFDMSubcarriers p_;
 
-    std::shared_ptr<PHY::Demodulator> mkDemodulatorInternal(void) override
+    std::shared_ptr<PHY::Demodulator> mkDemodulator(void) override
     {
         return std::make_shared<Demodulator>(*this);
     }
 
-    std::shared_ptr<PHY::Modulator> mkModulatorInternal(void) override
+    std::shared_ptr<PHY::Modulator> mkModulator(void) override
     {
         return std::make_shared<Modulator>(*this);
     }

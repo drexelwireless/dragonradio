@@ -13,14 +13,18 @@
 #include "dsp/TableNCO.hh"
 #include "liquid/PHY.hh"
 #include "liquid/Resample.hh"
-#include "mac/Snapshot.hh"
 #include "phy/PHY.hh"
 
 class LiquidPHY : public PHY {
 public:
     class Modulator : public PHY::Modulator, virtual protected Liquid::Modulator {
     public:
-        Modulator(LiquidPHY &phy);
+        Modulator(PHY &phy, const MCS &header_mcs)
+          : Liquid::Modulator(header_mcs)
+          , PHY::Modulator(phy)
+        {
+        }
+
         virtual ~Modulator() = default;
 
         Modulator(const Modulator&) = delete;
@@ -32,17 +36,14 @@ public:
         void modulate(std::shared_ptr<NetPacket> pkt,
                       const float g,
                       ModPacket &mpkt) override final;
-
-    protected:
-        /** Our Liquid PHY */
-        LiquidPHY &liquid_phy_;
-
-        virtual void reconfigure(void) override;
     };
 
     class Demodulator : public PHY::Demodulator, virtual protected Liquid::Demodulator {
     public:
-        Demodulator(LiquidPHY &phy);
+        Demodulator(PHY &phy,
+                    const MCS &header_mcs,
+                    bool soft_header,
+                    bool soft_payload);
         virtual ~Demodulator() = default;
 
         Demodulator(const Demodulator&) = delete;
@@ -63,9 +64,6 @@ public:
                         std::function<void(std::unique_ptr<RadioPacket>)> callback) override final;
 
     protected:
-        /** @brief Our Liquid PHY */
-        LiquidPHY &liquid_phy_;
-
         /** @brief Callback for received packets. */
         std::function<void(std::unique_ptr<RadioPacket>)> callback_;
 
@@ -113,8 +111,6 @@ public:
                              framesyncstats_s stats_) override;
 
         using Liquid::Demodulator::reset;
-
-        virtual void reconfigure(void) override;
     };
 
     LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
@@ -156,9 +152,6 @@ public:
     size_t getModulatedSize(const TXParams &params, size_t n) override;
 
 protected:
-    /** @brief Our snapshot collector */
-    std::shared_ptr<SnapshotCollector> snapshot_collector_;
-
     /** @brief Modulation and coding scheme for headers. */
     MCS header_mcs_;
 

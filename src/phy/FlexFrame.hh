@@ -11,9 +11,9 @@ public:
     class Modulator : public LiquidPHY::Modulator, protected Liquid::FlexFrameModulator
     {
     public:
-        Modulator(FlexFrame& phy)
+        Modulator(FlexFrame &phy)
           : Liquid::Modulator(phy.header_mcs_)
-          , LiquidPHY::Modulator(phy)
+          , LiquidPHY::Modulator(phy, phy.header_mcs_)
           , Liquid::FlexFrameModulator(phy.header_mcs_)
         {
         }
@@ -29,7 +29,10 @@ public:
           : Liquid::Demodulator(phy.header_mcs_,
                                 phy.soft_header_,
                                 phy.soft_payload_)
-          , LiquidPHY::Demodulator(phy)
+          , LiquidPHY::Demodulator(phy,
+                                   phy.header_mcs_,
+                                   phy.soft_header_,
+                                   phy.soft_payload_)
           , Liquid::FlexFrameDemodulator(phy.header_mcs_,
                                          phy.soft_header_,
                                          phy.soft_payload_)
@@ -66,12 +69,12 @@ public:
     }
 
 protected:
-    std::shared_ptr<PHY::Demodulator> mkDemodulatorInternal(void) override
+    std::shared_ptr<PHY::Demodulator> mkDemodulator(void) override
     {
         return std::make_shared<Demodulator>(*this);
     }
 
-    std::shared_ptr<PHY::Modulator> mkModulatorInternal(void) override
+    std::shared_ptr<PHY::Modulator> mkModulator(void) override
     {
         return std::make_shared<Modulator>(*this);
     }

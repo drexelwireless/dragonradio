@@ -15,17 +15,10 @@ LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
                      const MCS &header_mcs,
                      bool soft_header,
                      bool soft_payload)
-  : PHY(node_id)
-  , snapshot_collector_(collector)
+  : PHY(collector, node_id)
   , header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
-{
-}
-
-LiquidPHY::Modulator::Modulator(LiquidPHY &phy)
-    : PHY::Modulator(phy)
-    , liquid_phy_(phy)
 {
 }
 
@@ -33,11 +26,6 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
                                     const float g,
                                     ModPacket &mpkt)
 {
-    if (pending_reconfigure_.load(std::memory_order_relaxed)) {
-        pending_reconfigure_.store(false, std::memory_order_relaxed);
-        reconfigure();
-    }
-
     assert(pkt->tx_params);
     setPayloadMCS(pkt->tx_params->mcs);
     assemble((void*) &pkt->hdr, pkt->data(), pkt->size());
@@ -87,15 +75,13 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
     mpkt.pkt = std::move(pkt);
 }
 
-void LiquidPHY::Modulator::reconfigure(void)
-{
-}
-
-LiquidPHY::Demodulator::Demodulator(LiquidPHY &phy)
-  : Liquid::Demodulator(phy.soft_header_, phy.soft_payload_)
+LiquidPHY::Demodulator::Demodulator(PHY &phy,
+                                    const MCS &header_mcs,
+                                    bool soft_header,
+                                    bool soft_payload)
+  : Liquid::Demodulator(header_mcs, soft_header, soft_payload)
   , PHY::Demodulator(phy)
-  , liquid_phy_(phy)
-  , channel_(0.0, 0.0)
+  , channel_()
   , resamp_rate_(1.0)
   , internal_oversample_fact_(1)
   , timestamp_(0.0)
@@ -125,7 +111,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     // only demodulate packets destined for us *unless* we are collecting
     // snapshots, in which case we demodulate everything so we can correctly
     // record all known transmissions.
-    auto collector = liquid_phy_.snapshot_collector_;
+    const std::shared_ptr<SnapshotCollector> &collector = phy_.getSnapshotCollector();
 
     if (header_test_) {
         if (   header_valid_
@@ -205,10 +191,10 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     pkt->timestamp = timestamp_ + start / phy_.getRXRate();
 
     if (snapshot_off_)
-        liquid_phy_.snapshot_collector_->selfTX(*snapshot_off_ + start,
-                                                *snapshot_off_ + end,
-                                                channel_.fc,
-                                                channel_.bw);
+        collector->selfTX(*snapshot_off_ + start,
+                          *snapshot_off_ + end,
+                          channel_.fc,
+                          channel_.bw);
 
     callback_(std::move(pkt));
 
@@ -249,11 +235,6 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
 void LiquidPHY::Demodulator::reset(const Channel &channel)
 {
-    if (pending_reconfigure_.load(std::memory_order_relaxed)) {
-        pending_reconfigure_.store(false, std::memory_order_relaxed);
-        reconfigure();
-    }
-
     reset();
 
     channel_ = channel;
@@ -285,10 +266,6 @@ void LiquidPHY::Demodulator::demodulate(const std::complex<float>* data,
     callback_ = callback;
     demodulateSamples(data, count);
     sample_end_ += count;
-}
-
-void LiquidPHY::Demodulator::reconfigure(void)
-{
 }
 
 size_t LiquidPHY::getModulatedSize(const TXParams &params, size_t n)
