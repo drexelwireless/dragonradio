@@ -43,7 +43,7 @@ void exportIQBuffer(py::module &m)
                 auto         buf = data.request();
                 buffer<fc32> copy(reinterpret_cast<fc32*>(buf.ptr), buf.size);
 
-                static_cast<buffer<fc32>&>(iqbuf) = copy;
+                static_cast<buffer<fc32>&>(iqbuf) = std::move(copy);
             },
             "IQ data")
         .def("__repr__",
