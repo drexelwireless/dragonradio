@@ -1246,24 +1246,21 @@ class Radio(object):
         if channel.bw == self.usrp.rx_rate:
             return [1]
         elif config.channelizer == 'freqdomain':
-            wp = channel.bw-50e3
+            wp = 0.95*channel.bw
             ws = channel.bw
             fs = self.usrp.rx_rate
 
             h = lowpass_firpm1f2(wp, ws, fs, Nmax=dragonradio.FDChannelizer.P)
-
-            logging.debug("Creating prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g",
-                          len(h), wp, ws, fs)
-            return h
         else:
-            wp = channel.bw-100e3
-            ws = channel.bw+100e3
+            wp = 0.9*channel.bw
+            ws = 1.1*channel.bw
             fs = self.usrp.rx_rate
 
             h = lowpass(wp, ws, fs)
-            logging.debug("Creating prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g",
-                          len(h), wp, ws, fs)
-            return h
+
+        logging.debug('Created prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g',
+                      len(h), wp, ws, fs)
+        return h
 
     def genSynthesizerTaps(self, channel):
         """Generate synthesizer filter taps for given channel"""
@@ -1275,14 +1272,15 @@ class Radio(object):
             # Frequency-space synthesizers don't apply a filter
             return [1]
         else:
-            wp = channel.bw-100e3
-            ws = channel.bw+100e3
+            wp = 0.9*channel.bw
+            ws = 1.1*channel.bw
             fs = self.usrp.tx_rate
 
             h = lowpass(wp, ws, fs)
-            logging.debug("Creating prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g",
-                          len(h), wp, ws, fs)
-            return h
+
+        logging.debug('Created prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g',
+                      len(h), wp, ws, fs)
+        return h
 
     def deleteMAC(self):
         """Delete the current MAC"""
