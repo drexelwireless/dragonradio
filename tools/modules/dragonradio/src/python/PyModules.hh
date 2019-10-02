@@ -3,6 +3,8 @@
 
 #include <pybind11/pybind11.h>
 
+#include "python/capsule.hh"
+
 namespace py = pybind11;
 
 void exportLiquidEnums(py::module &m);

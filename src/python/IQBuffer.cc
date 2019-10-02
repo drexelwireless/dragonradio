@@ -33,9 +33,9 @@ void exportIQBuffer(py::module &m)
             &IQBuf::delay,
             "Signal delay")
         .def_property("data",
-            [](const IQBuf &iqbuf) {
-                if (iqbuf.complete)
-                    return py::array_t<fc32>(iqbuf.size(), iqbuf.data());
+            [](const std::shared_ptr<IQBuf> &iqbuf) {
+                if (iqbuf->complete)
+                    return py::array_t<fc32>(iqbuf->size(), iqbuf->data(), sharedptr_capsule(iqbuf));
                 else
                     return py::array_t<fc32>();
             },

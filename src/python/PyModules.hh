@@ -7,6 +7,7 @@
 #include "net/Element.hh"
 #include "phy/Channel.hh"
 #include "phy/TXParams.hh"
+#include "python/capsule.hh"
 
 namespace py = pybind11;
 
