@@ -713,6 +713,9 @@ class Radio(object):
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
         self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
 
+        # Configure valid decimation rates
+        self.configureValidDecimationRates()
+
         # Set the TX and RX rates to None to ensure they are properly set
         # everywhere by setTXRate and setRXRate the first time those two
         # functions are called.
@@ -1073,6 +1076,49 @@ class Radio(object):
 
             self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
 
+    def configureValidDecimationRates(self):
+        """Determine valid decimation and interpolation rates"""
+        # See:
+        #   https://files.ettus.com/manual/page_general.html#general_sampleratenotes
+
+        # Start out with only even rates. We sort this list in reverse so we can
+        # easily find the first rate that is less than or equal to the requested
+        # decimation rate.
+        rates = sorted([2**i * 5**j for i in range(1,5) for j in range(0,4)], reverse=True)
+
+        # If the rate exceeds 128, then rate must be evenly divisible by 2
+        rates = [r for r in rates if r <= 128 or r % 2 == 0]
+
+        # If the rate exceeds 256, the rate must be evenly divisible by 4.
+        rates = [r for r in rates if r <= 256 or r % 4 == 0]
+
+        self.valid_rates = rates
+
+    def validRate(self, min_rate, clock_rate):
+        """Find a valid rate no less than min_rate given the clock rate clock_rate.
+
+        Arguments:
+            min_rate: The minimum desired rate
+            clock_rate: The radio clock rate
+
+        Returns:
+            A rate no less than rate min_rate that is supported by the hardware"""
+        # Compute decimation rate
+        dec_rate = math.floor(clock_rate/min_rate)
+
+        logging.debug('Desired decimation rate: %g', dec_rate)
+
+        # Otherwise, make sure we use a safe decimation rate
+        if dec_rate != 1:
+            for rate in self.valid_rates:
+                if dec_rate >= rate:
+                    dec_rate = rate
+                    break
+
+        logging.debug('Actual decimation rate: %g', dec_rate)
+
+        return clock_rate/dec_rate
+
     def setRXRate(self, rate):
         """Set RX rate"""
         config = self.config
@@ -1086,7 +1132,7 @@ class Radio(object):
             # We max out at about 50Mhz with UHD 3.9
             want_rx_rate = min(want_rx_rate, 50e6)
 
-        want_rx_rate = safeRate(want_rx_rate, self.usrp.clock_rate)
+        want_rx_rate = self.validRate(want_rx_rate, self.usrp.clock_rate)
 
         if self.rx_rate != want_rx_rate:
             self.usrp.rx_rate = want_rx_rate
@@ -1113,7 +1159,7 @@ class Radio(object):
 
             want_tx_rate = rate*tx_rate_oversample
 
-        want_tx_rate = safeRate(want_tx_rate, self.usrp.clock_rate)
+        want_tx_rate = self.validRate(want_tx_rate, self.usrp.clock_rate)
 
         if self.tx_rate != want_tx_rate:
             self.usrp.tx_rate = want_tx_rate
@@ -1569,22 +1615,3 @@ class Radio(object):
     @property
     def bandwidth(self):
         return min(self.config.bandwidth, self.config.max_bandwidth)
-
-def safeRate(min_rate, clock_rate):
-    """Find a safe rate no less than min_rate given the clock rate clock_rate.
-
-    Arguments:
-        min_rate: The minimum desired rate
-        clock_rate: The radio clock rate
-
-    Returns:
-        A rate no less than rate min_rate that is supported by the hardware"""
-    clock_rate_mhz = int(clock_rate/1e6)
-
-    f = Fraction(min_rate/clock_rate).limit_denominator(clock_rate_mhz)
-    if f == 0:
-        n = clock_rate_mhz
-    else:
-        n = math.floor(f.denominator/f.numerator)
-
-    return clock_rate/n
