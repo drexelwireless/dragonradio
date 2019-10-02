@@ -190,18 +190,20 @@ void exportLiquidModDemod(py::module &m)
     py::class_<Liquid::OFDMModulator,
                Liquid::Modulator,
                std::shared_ptr<Liquid::OFDMModulator>>(m, "OFDMModulator", py::multiple_inheritance{})
-        .def(py::init([](unsigned M,
+        .def(py::init([](const MCS &header_mcs,
+                         unsigned M,
                          unsigned cp_len,
                          unsigned taper_len)
             {
-                return std::make_shared<Liquid::OFDMModulator>(M, cp_len, taper_len, std::nullopt);
+                return std::make_shared<Liquid::OFDMModulator>(header_mcs, M, cp_len, taper_len, std::nullopt);
             }))
-        .def(py::init([](unsigned M,
+        .def(py::init([](const MCS &header_mcs,
+                         unsigned M,
                          unsigned cp_len,
                          unsigned taper_len,
                          const std::string &p)
             {
-                return std::make_shared<Liquid::OFDMModulator>(M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
+                return std::make_shared<Liquid::OFDMModulator>(header_mcs, M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
             }))
         ;
 
@@ -209,22 +211,24 @@ void exportLiquidModDemod(py::module &m)
     py::class_<Liquid::OFDMDemodulator,
                Liquid::Demodulator,
                std::shared_ptr<Liquid::OFDMDemodulator>>(m, "OFDMDemodulator", py::multiple_inheritance{})
-        .def(py::init([](bool soft_header,
+        .def(py::init([](const MCS &header_mcs,
+                         bool soft_header,
                          bool soft_payload,
                          unsigned M,
                          unsigned cp_len,
                          unsigned taper_len)
             {
-                return std::make_shared<Liquid::OFDMDemodulator>(soft_header, soft_payload, M, cp_len, taper_len, std::nullopt);
+                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs, soft_header, soft_payload, M, cp_len, taper_len, std::nullopt);
             }))
-        .def(py::init([](bool soft_header,
+        .def(py::init([](const MCS &header_mcs,
+                         bool soft_header,
                          bool soft_payload,
                          unsigned M,
                          unsigned cp_len,
                          unsigned taper_len,
                          const std::string &p)
             {
-                return std::make_shared<Liquid::OFDMDemodulator>(soft_header, soft_payload, M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
+                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs, soft_header, soft_payload, M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
             }))
         ;
 
@@ -232,14 +236,15 @@ void exportLiquidModDemod(py::module &m)
     py::class_<Liquid::FlexFrameModulator,
                Liquid::Modulator,
                std::shared_ptr<Liquid::FlexFrameModulator>>(m, "FlexFrameModulator", py::multiple_inheritance{})
-        .def(py::init<>())
+        .def(py::init<const MCS&>())
         ;
 
     // Export class FlexFrameDemodulator to Python
     py::class_<Liquid::FlexFrameDemodulator,
                Liquid::Demodulator,
                std::shared_ptr<Liquid::FlexFrameDemodulator>>(m, "FlexFrameDemodulator", py::multiple_inheritance{})
-        .def(py::init<bool,
+        .def(py::init<const MCS&,
+                      bool,
                       bool>())
         ;
 
@@ -247,14 +252,15 @@ void exportLiquidModDemod(py::module &m)
     py::class_<Liquid::NewFlexFrameModulator,
                Liquid::Modulator,
                std::shared_ptr<Liquid::NewFlexFrameModulator>>(m, "NewFlexFrameModulator", py::multiple_inheritance{})
-        .def(py::init<>())
+        .def(py::init<const MCS&>())
         ;
 
     // Export class FlexFrameDemodulator to Python
     py::class_<Liquid::NewFlexFrameDemodulator,
                Liquid::Demodulator,
                std::shared_ptr<Liquid::NewFlexFrameDemodulator>>(m, "NewFlexFrameDemodulator", py::multiple_inheritance{})
-        .def(py::init<bool,
+        .def(py::init<const MCS&,
+                      bool,
                       bool>())
         ;
 }

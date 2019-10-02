@@ -12,10 +12,10 @@ public:
     {
     public:
         Modulator(NewFlexFrame& phy)
-          : LiquidPHY::Modulator(phy)
-          , Liquid::NewFlexFrameModulator()
+          : Liquid::Modulator(phy.header_mcs_)
+          , LiquidPHY::Modulator(phy)
+          , Liquid::NewFlexFrameModulator(phy.header_mcs_)
         {
-            setHeaderMCS(phy.header_mcs_);
         }
 
         virtual ~Modulator() = default;
@@ -26,12 +26,14 @@ public:
     {
     public:
         Demodulator(NewFlexFrame &phy)
-          : Liquid::Demodulator(phy.soft_header_,
+          : Liquid::Demodulator(phy.header_mcs_,
+                                phy.soft_header_,
                                 phy.soft_payload_)
           , LiquidPHY::Demodulator(phy)
-          , Liquid::NewFlexFrameDemodulator(phy.soft_header_, phy.soft_payload_)
+          , Liquid::NewFlexFrameDemodulator(phy.header_mcs_,
+                                            phy.soft_header_,
+                                            phy.soft_payload_)
         {
-            setHeaderMCS(phy.header_mcs_);
         }
 
         virtual ~Demodulator() = default;
@@ -77,7 +79,7 @@ protected:
 
     std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) override
     {
-        return std::make_unique<Liquid::NewFlexFrameModulator>();
+        return std::make_unique<Liquid::NewFlexFrameModulator>(header_mcs_);
     }
 };
 

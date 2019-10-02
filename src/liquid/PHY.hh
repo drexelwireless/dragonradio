@@ -14,15 +14,21 @@ namespace Liquid {
 
 class Modulator {
 public:
-    Modulator() = default;
+    Modulator(const MCS &header_mcs)
+      : header_mcs_(header_mcs)
+    {
+    }
+
+    Modulator() = delete;
+
     virtual ~Modulator() = default;
 
-    virtual const MCS &getHeaderMCS() const
+    const MCS &getHeaderMCS() const
     {
         return header_mcs_;
     }
 
-    virtual void setHeaderMCS(const MCS &mcs)
+    void setHeaderMCS(const MCS &mcs)
     {
         if (mcs != header_mcs_) {
             header_mcs_ = mcs;
@@ -30,12 +36,12 @@ public:
         }
     }
 
-    virtual const MCS &getPayloadMCS() const
+    const MCS &getPayloadMCS() const
     {
         return payload_mcs_;
     }
 
-    virtual void setPayloadMCS(const MCS &mcs)
+    void setPayloadMCS(const MCS &mcs)
     {
         if (mcs != payload_mcs_) {
             payload_mcs_ = mcs;
@@ -85,21 +91,25 @@ public:
                                          bool,
                                          framesyncstats_s)>;
 
-    Demodulator(bool soft_header,
+    Demodulator(const MCS &header_mcs,
+                bool soft_header,
                 bool soft_payload)
-      : soft_header_(soft_header)
+      : header_mcs_(header_mcs)
+      , soft_header_(soft_header)
       , soft_payload_(soft_payload)
     {
     }
 
+    Demodulator() = delete;
+
     virtual ~Demodulator() = default;
 
-    virtual const MCS &getHeaderMCS() const
+    const MCS &getHeaderMCS() const
     {
         return header_mcs_;
     }
 
-    virtual void setHeaderMCS(const MCS &mcs)
+    void setHeaderMCS(const MCS &mcs)
     {
         if (mcs != header_mcs_) {
             header_mcs_ = mcs;
@@ -107,12 +117,12 @@ public:
         }
     }
 
-    virtual bool getSoftHeader() const
+    bool getSoftHeader() const
     {
         return soft_header_;
     }
 
-    virtual void setSoftHeader(bool soft)
+    void setSoftHeader(bool soft)
     {
         if (soft != soft_header_) {
             soft_header_ = soft;
@@ -120,12 +130,12 @@ public:
         }
     }
 
-    virtual bool getSoftPayload() const
+    bool getSoftPayload() const
     {
         return soft_payload_;
     }
 
-    virtual void setSoftPayload(bool soft)
+    void setSoftPayload(bool soft)
     {
         if (soft != soft_payload_) {
             soft_payload_ = soft;

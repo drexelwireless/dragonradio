@@ -13,7 +13,8 @@ namespace Liquid {
 
 class NewFlexFrameModulator : virtual public Modulator {
 public:
-    NewFlexFrameModulator()
+    NewFlexFrameModulator(const MCS &header_mcs)
+      : Modulator(header_mcs)
     {
         std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
         std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
@@ -23,7 +24,6 @@ public:
         mcs2genprops(payload_mcs_, props);
         fg_ = flexframegen_create(&props);
 
-        setHeaderMCS(header_mcs_);
         reconfigureHeader();
     }
 
@@ -36,6 +36,8 @@ public:
             flexframegen_destroy(fg_);
         }
     }
+
+    NewFlexFrameModulator() = delete;
 
     NewFlexFrameModulator(const NewFlexFrameModulator &) = delete;
     NewFlexFrameModulator(NewFlexFrameModulator &&) = delete;
@@ -108,9 +110,10 @@ protected:
 
 class NewFlexFrameDemodulator : virtual public Demodulator {
 public:
-    NewFlexFrameDemodulator(bool soft_header,
+    NewFlexFrameDemodulator(const MCS &header_mcs,
+                            bool soft_header,
                             bool soft_payload)
-      : Demodulator(soft_header, soft_payload)
+      : Demodulator(header_mcs, soft_header, soft_payload)
     {
         std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
         std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
@@ -118,7 +121,6 @@ public:
         fs_ = flexframesync_create(&Demodulator::liquid_callback,
                                    static_cast<Demodulator*>(this));
 
-        setHeaderMCS(header_mcs_);
         reconfigureHeader();
         reconfigureSoftDecode();
     }
@@ -132,6 +134,8 @@ public:
             flexframesync_destroy(fs_);
         }
     }
+
+    NewFlexFrameDemodulator() = delete;
 
     NewFlexFrameDemodulator(const NewFlexFrameDemodulator &) = delete;
     NewFlexFrameDemodulator(NewFlexFrameDemodulator &&) = delete;

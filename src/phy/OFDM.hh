@@ -12,14 +12,15 @@ public:
     {
     public:
         Modulator(OFDM &phy)
-          : LiquidPHY::Modulator(phy)
-          , Liquid::OFDMModulator(phy.M_,
+          : Liquid::Modulator(phy.header_mcs_)
+          , LiquidPHY::Modulator(phy)
+          , Liquid::OFDMModulator(phy.header_mcs_,
+                                  phy.M_,
                                   phy.cp_len_,
                                   phy.taper_len_,
                                   phy.p_)
           , myphy_(phy)
         {
-            setHeaderMCS(phy.header_mcs_);
         }
 
         virtual ~Modulator() = default;
@@ -34,10 +35,12 @@ public:
     {
     public:
         Demodulator(OFDM &phy)
-          : Liquid::Demodulator(phy.soft_header_,
+          : Liquid::Demodulator(phy.header_mcs_,
+                                phy.soft_header_,
                                 phy.soft_payload_)
           , LiquidPHY::Demodulator(phy)
-          , Liquid::OFDMDemodulator(phy.soft_header_,
+          , Liquid::OFDMDemodulator(phy.header_mcs_,
+                                    phy.soft_header_,
                                     phy.soft_payload_,
                                     phy.M_,
                                     phy.cp_len_,
@@ -45,7 +48,6 @@ public:
                                     phy.p_)
           , myphy_(phy)
         {
-            setHeaderMCS(phy.header_mcs_);
         }
 
         virtual ~Demodulator() = default;
@@ -143,7 +145,7 @@ protected:
 
     std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) override
     {
-        return std::make_unique<Liquid::OFDMModulator>(M_, cp_len_, taper_len_, p_);
+        return std::make_unique<Liquid::OFDMModulator>(header_mcs_, M_, cp_len_, taper_len_, p_);
     }
 };
 

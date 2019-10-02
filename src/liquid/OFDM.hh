@@ -29,11 +29,13 @@ public:
 
 class OFDMModulator : virtual public Modulator {
 public:
-    OFDMModulator(unsigned M,
+    OFDMModulator(const MCS &header_mcs,
+                  unsigned M,
                   unsigned cp_len,
                   unsigned taper_len,
                   const std::optional<OFDMSubcarriers> &p)
-      : M_(M)
+      : Modulator(header_mcs)
+      , M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)
       , p_(M)
@@ -63,7 +65,6 @@ public:
                                       reinterpret_cast<unsigned char*>(p_.data()),
                                       &props);
 
-        setHeaderMCS(header_mcs_);
         reconfigureHeader();
     }
 
@@ -76,6 +77,8 @@ public:
             ofdmflexframegen_destroy(fg_);
         }
     }
+
+    OFDMModulator() = delete;
 
     OFDMModulator(const OFDMModulator &) = delete;
     OFDMModulator(OFDMModulator &&) = delete;
@@ -154,13 +157,14 @@ protected:
 
 class OFDMDemodulator : virtual public Demodulator {
 public:
-    OFDMDemodulator(bool soft_header,
+    OFDMDemodulator(const MCS &header_mcs,
+                    bool soft_header,
                     bool soft_payload,
                     unsigned M,
                     unsigned cp_len,
                     unsigned taper_len,
                     const std::optional<OFDMSubcarriers> &p)
-        : Demodulator(soft_header, soft_payload)
+        : Demodulator(header_mcs, soft_header, soft_payload)
         , M_(M)
         , cp_len_(cp_len)
         , taper_len_(taper_len)
@@ -189,7 +193,6 @@ public:
                                        &Demodulator::liquid_callback,
                                        static_cast<Demodulator*>(this));
 
-        setHeaderMCS(header_mcs_);
         reconfigureHeader();
         reconfigureSoftDecode();
     }
@@ -203,6 +206,8 @@ public:
             ofdmflexframesync_destroy(fs_);
         }
     }
+
+    OFDMDemodulator() = delete;
 
     OFDMDemodulator(const OFDMDemodulator &) = delete;
     OFDMDemodulator(OFDMDemodulator &&) = delete;

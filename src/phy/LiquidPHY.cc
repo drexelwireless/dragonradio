@@ -299,7 +299,6 @@ size_t LiquidPHY::getModulatedSize(const TXParams &params, size_t n)
 {
     std::unique_ptr<Liquid::Modulator> mod = mkLiquidModulator();
 
-    mod->setHeaderMCS(header_mcs_);
     mod->setPayloadMCS(params.mcs);
 
     Header                     hdr = {0};
