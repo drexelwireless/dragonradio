@@ -224,7 +224,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
             // We can overfill if we are allowed to transmit on the same channel
             // in the next slot in the schedule
-            bool overfill = getSuperslots() && slots[(channelidx + 1) % slots.size()];
+            bool overfill = getSuperslots() && slots[(slot->slotidx + 1) % slots.size()];
 
             {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);

@@ -128,7 +128,7 @@ void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
         const Schedule::slot_type &slots = schedule[chanidx];
 
         // Determine maximum number of samples in this slot
-        bool overfill = getSuperslots() && slots[(chanidx + 1) % slots.size()];
+        bool overfill = getSuperslots() && slots[(slot->slotidx + 1) % slots.size()];
 
         if (overfill) {
             std::lock_guard<spinlock_mutex> lock(slot->mutex);
