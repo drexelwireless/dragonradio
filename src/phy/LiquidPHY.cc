@@ -107,18 +107,9 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     unsigned frame_start = sample_ + stats_.start_counter;
     unsigned frame_end = sample_ + stats_.end_counter;
 
-    // Perform test to see if we want to continue demodulating this packet. We
-    // only demodulate packets destined for us *unless* we are collecting
-    // snapshots, in which case we demodulate everything so we can correctly
-    // record all known transmissions.
-    const std::shared_ptr<SnapshotCollector> &collector = phy_.getSnapshotCollector();
-
+    // Perform test to see if we want to continue demodulating this packet.
     if (header_test_) {
-        if (   header_valid_
-            && (h->curhop != phy_.getNodeId())
-            && ((h->nexthop == kNodeBroadcast) ||
-                (h->nexthop == phy_.getNodeId()) ||
-                (collector && collector->active())))
+        if (phy_.wantPacket(header_valid_, h))
             return 1;
         else {
             // Update sample count. The framesync object is reset if we decline
@@ -134,45 +125,14 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     sample_ = frame_end;
 
     // Create the packet and fill it out
-    std::unique_ptr<RadioPacket> pkt;
+    std::unique_ptr<RadioPacket> pkt = phy_.mkRadioPacket(header_valid_,
+                                                          payload_valid_,
+                                                          h,
+                                                          payload_len_,
+                                                          payload_);
 
-    if (!header_valid_) {
-        if (rc.log_invalid_headers) {
-            if (rc.verbose && !rc.debug)
-                fprintf(stderr, "HEADER INVALID\n");
-            logEvent("PHY: invalid header");
-        }
-
+    if (!pkt)
         return 0;
-    } else if (!payload_valid_) {
-        pkt = std::make_unique<RadioPacket>(*h);
-
-        pkt->internal_flags.invalid_payload = 1;
-
-        if (h->nexthop == phy_.getNodeId()) {
-            if (rc.verbose && !rc.debug)
-                fprintf(stderr, "PAYLOAD INVALID\n");
-            logEvent("PHY: invalid payload: curhop=%u; nexthop=%u; seq=%u",
-                pkt->hdr.curhop,
-                pkt->hdr.nexthop,
-                (unsigned) pkt->hdr.seq);
-        }
-    } else {
-        pkt = std::make_unique<RadioPacket>(*h, payload_, payload_len_);
-
-        if (!pkt->integrityIntact()) {
-            pkt->internal_flags.invalid_payload = 1;
-
-            if (rc.verbose && !rc.debug)
-                fprintf(stderr, "PAYLOAD INTEGRITY VIOLATED\n");
-            logEvent("PHY: packet integrity not intact: seq=%u",
-                (unsigned) pkt->hdr.seq);
-        }
-
-        // Cache payload size if this packet is not compressed
-        if (!pkt->hdr.flags.compressed)
-            pkt->payload_size = pkt->getPayloadSize();
-    }
 
     pkt->evm = stats_.evm;
     pkt->rssi = stats_.rssi;
@@ -190,13 +150,13 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
 
     pkt->timestamp = timestamp_ + start / phy_.getRXRate();
 
-    if (snapshot_off_)
-        collector->selfTX(*snapshot_off_ + start,
-                          *snapshot_off_ + end,
-                          channel_.fc,
-                          channel_.bw);
-
     callback_(std::move(pkt));
+
+    if (snapshot_off_)
+        phy_.getSnapshotCollector()->selfTX(*snapshot_off_ + start,
+                                            *snapshot_off_ + end,
+                                            channel_.fc,
+                                            channel_.bw);
 
     if (logger_ &&
         logger_->getCollectSource(Logger::kRecvPackets) &&

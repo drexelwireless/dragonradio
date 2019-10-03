@@ -6,7 +6,9 @@
 #include <list>
 
 #include "IQBuffer.hh"
+#include "Logger.hh"
 #include "Packet.hh"
+#include "RadioConfig.hh"
 #include "SafeQueue.hh"
 #include "mac/Snapshot.hh"
 #include "phy/ModPacket.hh"
@@ -157,6 +159,70 @@ public:
 
     /** @brief Create a Demodulator for this %PHY */
     virtual std::shared_ptr<Demodulator> mkDemodulator(void) = 0;
+
+    /** @brief Return flag indicating whether or not we want the given packet */
+    /** We only demodulate packets destined for us *unless* we are collecting
+     * snapshots, in which case we demodulate everything so we can correctly
+     * record all known transmissions.
+     */
+    bool wantPacket(bool header_valid, const Header *h)
+    {
+        return header_valid
+            && (h->curhop != node_id_)
+            && ((h->nexthop == kNodeBroadcast) ||
+                (h->nexthop == node_id_) ||
+                (snapshot_collector_ && snapshot_collector_->active()));
+    }
+
+    /** @brief Create a radio packet from a header and payload */
+    std::unique_ptr<RadioPacket> mkRadioPacket(bool header_valid,
+                                               bool payload_valid,
+                                               const Header *h,
+                                               size_t payload_len,
+                                               unsigned char *payload_data)
+    {
+        if (!header_valid) {
+            if (rc.log_invalid_headers) {
+                if (rc.verbose && !rc.debug)
+                    fprintf(stderr, "HEADER INVALID\n");
+                logEvent("PHY: invalid header");
+            }
+
+            return nullptr;
+        } else if (!payload_valid) {
+            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(*h);
+
+            pkt->internal_flags.invalid_payload = 1;
+
+            if (h->nexthop == node_id_) {
+                if (rc.verbose && !rc.debug)
+                    fprintf(stderr, "PAYLOAD INVALID\n");
+                logEvent("PHY: invalid payload: curhop=%u; nexthop=%u; seq=%u",
+                    pkt->hdr.curhop,
+                    pkt->hdr.nexthop,
+                    (unsigned) pkt->hdr.seq);
+            }
+
+            return pkt;
+        } else {
+            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(*h, payload_data, payload_len);
+
+            if (!pkt->integrityIntact()) {
+                pkt->internal_flags.invalid_payload = 1;
+
+                if (rc.verbose && !rc.debug)
+                    fprintf(stderr, "PAYLOAD INTEGRITY VIOLATED\n");
+                logEvent("PHY: packet integrity not intact: seq=%u",
+                    (unsigned) pkt->hdr.seq);
+            }
+
+            // Cache payload size if this packet is not compressed
+            if (!pkt->hdr.flags.compressed)
+                pkt->payload_size = pkt->getPayloadSize();
+
+            return pkt;
+        }
+    }
 
 protected:
     /** @brief Our snapshot collector */
