@@ -105,9 +105,13 @@ public:
         const unsigned Ni = X*N/I; // Size of forward FFT for input
         const unsigned Li = X*L/I; // Number of samples consumed per input block
         const unsigned Oi = X*O/I; // Overlap factor for input FFT
-        const float    k = g*static_cast<float>(I)/static_cast<float>(N);
-        size_t         inoff = 0;    // Offset into input buffer
+        size_t         inoff = 0;  // Offset into input buffer
         auto           fftin = fft.in.begin();
+
+        // The upsampled signal is multiplied by this constant. It incorporates:
+        //   * The requested gain
+        //   * Scaling compensation for the FFT
+        const float k = g/static_cast<float>(Ni);
 
         while (nsamples < max_nsamples) {
             size_t avail = count - inoff;
@@ -134,10 +138,7 @@ public:
             // Perform the FFT
             fft.execute();
 
-            // Normalize. We need to multiply by the upsampling factor to
-            // compensate for interpolation, and we need to divide by N to
-            // compensate for the fact that FFTW's IFFT doesn't normalize.
-
+            // Normalize by k
             xsimd::transform(fft.out.begin(),
                              fft.out.end(),
                              fft.out.begin(),
