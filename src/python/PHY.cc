@@ -5,6 +5,7 @@
 #include "phy/Gain.hh"
 #include "phy/NewFlexFrame.hh"
 #include "phy/OFDM.hh"
+#include "phy/PHY.hh"
 #include "python/PyModules.hh"
 
 void exportPHYs(py::module &m)
@@ -31,19 +32,22 @@ void exportPHYs(py::module &m)
             &PHY::getTXRate,
             &PHY::setTXRate)
         ;
+}
 
-    // Export class LiquidPHY to Python
-    py::class_<LiquidPHY, PHY, std::shared_ptr<LiquidPHY>>(m, "LiquidPHY")
+void exportLiquidPHYs(py::module &m)
+{
+    // Export class Liquid::PHY to Python
+    py::class_<Liquid::PHY, PHY, std::shared_ptr<Liquid::PHY>>(m, "LiquidPHY")
         .def_property_readonly("header_mcs",
-            &LiquidPHY::getHeaderMCS)
+            &Liquid::PHY::getHeaderMCS)
         .def_property_readonly("soft_header",
-            &LiquidPHY::getSoftHeader)
+            &Liquid::PHY::getSoftHeader)
         .def_property_readonly("soft_payload",
-            &LiquidPHY::getSoftPayload)
+            &Liquid::PHY::getSoftPayload)
         ;
 
     // Export class FlexFrame to Python
-    py::class_<FlexFrame, LiquidPHY, std::shared_ptr<FlexFrame>>(m, "FlexFrame")
+    py::class_<Liquid::FlexFrame, Liquid::PHY, std::shared_ptr<Liquid::FlexFrame>>(m, "FlexFrame")
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
                       const MCS&,
@@ -52,7 +56,7 @@ void exportPHYs(py::module &m)
         ;
 
     // Export class NewFlexFrame to Python
-    py::class_<NewFlexFrame, LiquidPHY, std::shared_ptr<NewFlexFrame>>(m, "NewFlexFrame")
+    py::class_<Liquid::NewFlexFrame, Liquid::PHY, std::shared_ptr<Liquid::NewFlexFrame>>(m, "NewFlexFrame")
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
                       const MCS&,
@@ -61,7 +65,7 @@ void exportPHYs(py::module &m)
         ;
 
     // Export class OFDM to Python
-    py::class_<OFDM, LiquidPHY, std::shared_ptr<OFDM>>(m, "OFDM")
+    py::class_<Liquid::OFDM, Liquid::PHY, std::shared_ptr<Liquid::OFDM>>(m, "OFDM")
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
                       const MCS&,
@@ -72,7 +76,7 @@ void exportPHYs(py::module &m)
                       unsigned int,
                       std::optional<std::string>&>())
         .def_property_readonly("subcarriers",
-            [](std::shared_ptr<OFDM> self)
+            [](std::shared_ptr<Liquid::OFDM> self)
             {
                 return static_cast<std::string>(self->getSubcarriers());
             })

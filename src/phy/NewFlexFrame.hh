@@ -2,19 +2,21 @@
 #define NEWFLEXFRAME_H_
 
 #include "liquid/NewFlexFrame.hh"
-#include "phy/LiquidPHY.hh"
+#include "liquid/PHY.hh"
+
+namespace Liquid {
 
 /** @brief A %PHY thats uses the liquid-usrp flexframegen code. */
-class NewFlexFrame : public LiquidPHY {
+class NewFlexFrame : public Liquid::PHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp flexframe. */
-    class PacketModulator : public LiquidPHY::PacketModulator, protected Liquid::NewFlexFrameModulator
+    class PacketModulator : public Liquid::PHY::PacketModulator, protected Liquid::NewFlexFrameModulator
     {
     public:
         PacketModulator(NewFlexFrame& phy)
           : Liquid::Modulator(phy.header_mcs_)
-          , LiquidPHY::PacketModulator(phy,
-                                       phy.header_mcs_)
+          , Liquid::PHY::PacketModulator(phy,
+                                         phy.header_mcs_)
           , Liquid::NewFlexFrameModulator(phy.header_mcs_)
         {
         }
@@ -23,17 +25,17 @@ public:
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
-    class PacketDemodulator : public LiquidPHY::PacketDemodulator, protected Liquid::NewFlexFrameDemodulator
+    class PacketDemodulator : public Liquid::PHY::PacketDemodulator, protected Liquid::NewFlexFrameDemodulator
     {
     public:
         PacketDemodulator(NewFlexFrame &phy)
           : Liquid::Demodulator(phy.header_mcs_,
                                 phy.soft_header_,
                                 phy.soft_payload_)
-          , LiquidPHY::PacketDemodulator(phy,
-                                         phy.header_mcs_,
-                                         phy.soft_header_,
-                                         phy.soft_payload_)
+          , Liquid::PHY::PacketDemodulator(phy,
+                                           phy.header_mcs_,
+                                           phy.soft_header_,
+                                           phy.soft_payload_)
           , Liquid::NewFlexFrameDemodulator(phy.header_mcs_,
                                             phy.soft_header_,
                                             phy.soft_payload_)
@@ -53,7 +55,7 @@ public:
                  const MCS &header_mcs,
                  bool soft_header,
                  bool soft_payload)
-      : LiquidPHY(collector, node_id, header_mcs, soft_header, soft_payload)
+      : Liquid::PHY(collector, node_id, header_mcs, soft_header, soft_payload)
     {
     }
 
@@ -70,12 +72,12 @@ public:
     }
 
 protected:
-    std::shared_ptr<PHY::PacketDemodulator> mkPacketDemodulator(void) override
+    std::shared_ptr<::PHY::PacketDemodulator> mkPacketDemodulator(void) override
     {
         return std::make_shared<PacketDemodulator>(*this);
     }
 
-    std::shared_ptr<PHY::PacketModulator> mkPacketModulator(void) override
+    std::shared_ptr<::PHY::PacketModulator> mkPacketModulator(void) override
     {
         return std::make_shared<PacketModulator>(*this);
     }
@@ -85,5 +87,7 @@ protected:
         return std::make_unique<Liquid::NewFlexFrameModulator>(header_mcs_);
     }
 };
+
+}
 
 #endif /* NEWFLEXFRAME_H_ */

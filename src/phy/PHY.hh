@@ -66,10 +66,10 @@ public:
          * @param rate The rate of the resampler applied before data is passed
          * to the demodulator.
          */
-         virtual void timestamp(const MonoClock::time_point &timestamp,
-                                std::optional<ssize_t> snapshot_off,
-                                ssize_t offset,
-                                float rate) = 0;
+        virtual void timestamp(const MonoClock::time_point &timestamp,
+                               std::optional<ssize_t> snapshot_off,
+                               ssize_t offset,
+                               float rate) = 0;
 
         /** @brief Demodulate IQ samples.
          * @param data The IQ data to demodulate
@@ -77,9 +77,9 @@ public:
          * @param callback The function to call with any demodulated packets. If
          * a bad packet is received, the argument will be nullptr.
          */
-         virtual void demodulate(const std::complex<float>* data,
-                                 size_t count,
-                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
+        virtual void demodulate(const std::complex<float>* data,
+                                size_t count,
+                                std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
 
     protected:
         /** @brief Our PHY */

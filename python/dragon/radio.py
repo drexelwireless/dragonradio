@@ -484,21 +484,21 @@ class Config(object):
 
         # General liquid modulation options
         parser.add_argument('-r', '--check',
-                            action='store', type=dragonradio.CRCScheme,
+                            action='store', type=dragonradio.liquid.CRCScheme,
                             dest='check',
-                            help='set data validity check: ' + enumHelp(dragonradio.CRCScheme))
+                            help='set data validity check: ' + enumHelp(dragonradio.liquid.CRCScheme))
         parser.add_argument('-c', '--fec0',
-                            action='store', type=dragonradio.FECScheme,
+                            action='store', type=dragonradio.liquid.FECScheme,
                             dest='fec0',
-                            help='set inner FEC: ' + enumHelp(dragonradio.FECScheme))
+                            help='set inner FEC: ' + enumHelp(dragonradio.liquid.FECScheme))
         parser.add_argument('-k', '--fec1',
-                            action='store', type=dragonradio.FECScheme,
+                            action='store', type=dragonradio.liquid.FECScheme,
                             dest='fec1',
-                            help='set outer FEC: ' + enumHelp(dragonradio.FECScheme))
+                            help='set outer FEC: ' + enumHelp(dragonradio.liquid.FECScheme))
         parser.add_argument('-m', '--mod',
-                            action='store', type=dragonradio.ModulationScheme,
+                            action='store', type=dragonradio.liquid.ModulationScheme,
                             dest='ms',
-                            help='set modulation scheme: ' + enumHelp(dragonradio.ModulationScheme))
+                            help='set modulation scheme: ' + enumHelp(dragonradio.liquid.ModulationScheme))
 
         # Soft decoding options
         parser.add_argument('--soft-header', action='store_const', const=True,
@@ -754,27 +754,27 @@ class Radio(object):
                          config.header_ms)
 
         if config.phy == 'flexframe':
-            self.phy = dragonradio.FlexFrame(self.snapshot_collector,
-                                             self.node_id,
-                                             header_mcs,
-                                             config.soft_header,
-                                             config.soft_payload)
+            self.phy = dragonradio.liquid.FlexFrame(self.snapshot_collector,
+                                                    self.node_id,
+                                                    header_mcs,
+                                                    config.soft_header,
+                                                    config.soft_payload)
         elif config.phy == 'newflexframe':
-            self.phy = dragonradio.NewFlexFrame(self.snapshot_collector,
-                                                self.node_id,
-                                                header_mcs,
-                                                config.soft_header,
-                                                config.soft_payload)
+            self.phy = dragonradio.liquid.NewFlexFrame(self.snapshot_collector,
+                                                       self.node_id,
+                                                       header_mcs,
+                                                       config.soft_header,
+                                                       config.soft_payload)
         elif config.phy == 'ofdm':
-            self.phy = dragonradio.OFDM(self.snapshot_collector,
-                                        self.node_id,
-                                        header_mcs,
-                                        config.soft_header,
-                                        config.soft_payload,
-                                        config.M,
-                                        config.cp_len,
-                                        config.taper_len,
-                                        config.subcarriers)
+            self.phy = dragonradio.liquid.OFDM(self.snapshot_collector,
+                                               self.node_id,
+                                               header_mcs,
+                                               config.soft_header,
+                                               config.soft_payload,
+                                               config.M,
+                                               config.cp_len,
+                                               config.taper_len,
+                                               config.subcarriers)
         else:
             fail('Bad PHY: {}'.format(config.phy))
 

@@ -7,7 +7,7 @@
 #include <liquid/liquid.h>
 
 #include "dsp/FFTW.hh"
-#include "liquid/PHY.hh"
+#include "liquid/Modem.hh"
 
 namespace Liquid {
 
@@ -50,13 +50,13 @@ public:
         flexframegen_print(fg_);
     }
 
-    void assemble(const void *header,
+    void assemble(const Header *header,
                   const void *payload,
                   const size_t payload_len) override
     {
         flexframegen_reset(fg_);
         flexframegen_assemble(fg_,
-                              static_cast<unsigned char*>(const_cast<void*>(header)),
+                              reinterpret_cast<unsigned char*>(const_cast<Header*>(header)),
                               static_cast<unsigned char*>(const_cast<void*>(payload)),
                               payload_len);
     }

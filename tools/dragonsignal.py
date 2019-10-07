@@ -10,7 +10,7 @@ import dragonradio
 import drlog
 import drgui
 
-HEADER_MCS = dragonradio.MCS('crc32', 'secded7264', 'h84', 'bpsk')
+HEADER_MCS = dragonradio.liquid.MCS('crc32', 'secded7264', 'h84', 'bpsk')
 """MCS used for packet headers"""
 
 def dB2gain(dB):

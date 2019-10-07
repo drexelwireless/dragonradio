@@ -2,8 +2,6 @@
 
 namespace py = pybind11;
 
-#include "phy/Channel.hh"
-#include "net/Net.hh"
 #include "python/PyModules.hh"
 
 // UGH. See:
@@ -13,22 +11,26 @@ namespace py = pybind11;
 #define TOSTRING(s) TOSTRING2(s)
 
 PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
+    // Create submodule for liquid
+    auto mliquid = m.def_submodule("liquid");
+
     // Export DragonRadio version
     m.attr("version") = TOSTRING(VERSION);
 
-    exportLiquidEnums(m);
     exportClock(m);
     exportLogger(m);
     exportRadioConfig(m);
     exportWorkQueue(m);
     exportUSRP(m);
-    exportMCS(m);
     exportEstimators(m);
     exportNet(m);
     exportCIL(m);
     exportFlow(m);
     exportRadioNet(m);
+    exportModem(m);
     exportPHYs(m);
+    exportLiquid(mliquid);
+    exportLiquidPHYs(mliquid);
     exportChannels(m);
     exportChannelizers(m);
     exportSynthesizers(m);

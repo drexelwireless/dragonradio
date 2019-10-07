@@ -2,19 +2,21 @@
 #define OFDM_H_
 
 #include "liquid/OFDM.hh"
-#include "phy/LiquidPHY.hh"
+#include "liquid/PHY.hh"
+
+namespace Liquid {
 
 /** @brief A %PHY thats uses the liquid-usrp ofdmflexframegen code. */
-class OFDM : public LiquidPHY {
+class OFDM : public Liquid::PHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp ofdmflexframegen. */
-    class PacketModulator : public LiquidPHY::PacketModulator, protected Liquid::OFDMModulator
+    class PacketModulator : public Liquid::PHY::PacketModulator, protected Liquid::OFDMModulator
     {
     public:
         PacketModulator(OFDM &phy)
           : Liquid::Modulator(phy.header_mcs_)
-          , LiquidPHY::PacketModulator(phy,
-                                       phy.header_mcs_)
+          , Liquid::PHY::PacketModulator(phy,
+                                         phy.header_mcs_)
           , Liquid::OFDMModulator(phy.header_mcs_,
                                   phy.M_,
                                   phy.cp_len_,
@@ -27,17 +29,17 @@ public:
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
-    class PacketDemodulator : public LiquidPHY::PacketDemodulator, protected Liquid::OFDMDemodulator
+    class PacketDemodulator : public Liquid::PHY::PacketDemodulator, protected Liquid::OFDMDemodulator
     {
     public:
         PacketDemodulator(OFDM &phy)
           : Liquid::Demodulator(phy.header_mcs_,
                                 phy.soft_header_,
                                 phy.soft_payload_)
-          , LiquidPHY::PacketDemodulator(phy,
-                                         phy.header_mcs_,
-                                         phy.soft_header_,
-                                         phy.soft_payload_)
+          , Liquid::PHY::PacketDemodulator(phy,
+                                           phy.header_mcs_,
+                                           phy.soft_header_,
+                                           phy.soft_payload_)
           , Liquid::OFDMDemodulator(phy.header_mcs_,
                                     phy.soft_header_,
                                     phy.soft_payload_,
@@ -72,7 +74,7 @@ public:
          unsigned int cp_len,
          unsigned int taper_len,
          const std::optional<std::string> &p)
-      : LiquidPHY(collector, node_id, header_mcs, soft_header, soft_payload)
+      : Liquid::PHY(collector, node_id, header_mcs, soft_header, soft_payload)
       , M_(M)
       , cp_len_(cp_len)
       , taper_len_(taper_len)
@@ -124,12 +126,12 @@ protected:
      */
     Liquid::OFDMSubcarriers p_;
 
-    std::shared_ptr<PHY::PacketDemodulator> mkPacketDemodulator(void) override
+    std::shared_ptr<::PHY::PacketDemodulator> mkPacketDemodulator(void) override
     {
         return std::make_shared<PacketDemodulator>(*this);
     }
 
-    std::shared_ptr<PHY::PacketModulator> mkPacketModulator(void) override
+    std::shared_ptr<::PHY::PacketModulator> mkPacketModulator(void) override
     {
         return std::make_shared<PacketModulator>(*this);
     }
@@ -139,5 +141,7 @@ protected:
         return std::make_unique<Liquid::OFDMModulator>(header_mcs_, M_, cp_len_, taper_len_, p_);
     }
 };
+
+}
 
 #endif /* OFDM_H_ */
