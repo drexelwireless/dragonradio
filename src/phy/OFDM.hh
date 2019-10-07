@@ -8,13 +8,13 @@
 class OFDM : public LiquidPHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp ofdmflexframegen. */
-    class Modulator : public LiquidPHY::Modulator, protected Liquid::OFDMModulator
+    class PacketModulator : public LiquidPHY::PacketModulator, protected Liquid::OFDMModulator
     {
     public:
-        Modulator(OFDM &phy)
+        PacketModulator(OFDM &phy)
           : Liquid::Modulator(phy.header_mcs_)
-          , LiquidPHY::Modulator(phy,
-                                 phy.header_mcs_)
+          , LiquidPHY::PacketModulator(phy,
+                                       phy.header_mcs_)
           , Liquid::OFDMModulator(phy.header_mcs_,
                                   phy.M_,
                                   phy.cp_len_,
@@ -23,21 +23,21 @@ public:
         {
         }
 
-        virtual ~Modulator() = default;
+        virtual ~PacketModulator() = default;
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
-    class Demodulator : public LiquidPHY::Demodulator, protected Liquid::OFDMDemodulator
+    class PacketDemodulator : public LiquidPHY::PacketDemodulator, protected Liquid::OFDMDemodulator
     {
     public:
-        Demodulator(OFDM &phy)
+        PacketDemodulator(OFDM &phy)
           : Liquid::Demodulator(phy.header_mcs_,
                                 phy.soft_header_,
                                 phy.soft_payload_)
-          , LiquidPHY::Demodulator(phy,
-                                   phy.header_mcs_,
-                                   phy.soft_header_,
-                                   phy.soft_payload_)
+          , LiquidPHY::PacketDemodulator(phy,
+                                         phy.header_mcs_,
+                                         phy.soft_header_,
+                                         phy.soft_payload_)
           , Liquid::OFDMDemodulator(phy.header_mcs_,
                                     phy.soft_header_,
                                     phy.soft_payload_,
@@ -48,7 +48,7 @@ public:
         {
         }
 
-        virtual ~Demodulator() = default;
+        virtual ~PacketDemodulator() = default;
 
         bool isFrameOpen(void) override final
         {
@@ -124,14 +124,14 @@ protected:
      */
     Liquid::OFDMSubcarriers p_;
 
-    std::shared_ptr<PHY::Demodulator> mkDemodulator(void) override
+    std::shared_ptr<PHY::PacketDemodulator> mkPacketDemodulator(void) override
     {
-        return std::make_shared<Demodulator>(*this);
+        return std::make_shared<PacketDemodulator>(*this);
     }
 
-    std::shared_ptr<PHY::Modulator> mkModulator(void) override
+    std::shared_ptr<PHY::PacketModulator> mkPacketModulator(void) override
     {
-        return std::make_shared<Modulator>(*this);
+        return std::make_shared<PacketModulator>(*this);
     }
 
     std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) override

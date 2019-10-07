@@ -157,7 +157,7 @@ private:
         const double rate_;
 
         /** @brief Our demodulator */
-        std::shared_ptr<PHY::Modulator> mod_;
+        std::shared_ptr<PHY::PacketModulator> mod_;
     };
 
     /** @brief Number of synthesizer threads. */

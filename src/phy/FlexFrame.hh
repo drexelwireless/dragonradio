@@ -8,38 +8,38 @@
 class FlexFrame : public LiquidPHY {
 public:
     /** @brief Modulate IQ data using a liquid-usrp flexframe. */
-    class Modulator : public LiquidPHY::Modulator, protected Liquid::FlexFrameModulator
+    class PacketModulator : public LiquidPHY::PacketModulator, protected Liquid::FlexFrameModulator
     {
     public:
-        Modulator(FlexFrame &phy)
+        PacketModulator(FlexFrame &phy)
           : Liquid::Modulator(phy.header_mcs_)
-          , LiquidPHY::Modulator(phy, phy.header_mcs_)
+          , LiquidPHY::PacketModulator(phy, phy.header_mcs_)
           , Liquid::FlexFrameModulator(phy.header_mcs_)
         {
         }
 
-        virtual ~Modulator() = default;
+        virtual ~PacketModulator() = default;
     };
 
     /** @brief Demodulate IQ data using a liquid-usrp flexframe. */
-    class Demodulator : public LiquidPHY::Demodulator, protected Liquid::FlexFrameDemodulator
+    class PacketDemodulator : public LiquidPHY::PacketDemodulator, protected Liquid::FlexFrameDemodulator
     {
     public:
-        Demodulator(FlexFrame &phy)
+        PacketDemodulator(FlexFrame &phy)
           : Liquid::Demodulator(phy.header_mcs_,
                                 phy.soft_header_,
                                 phy.soft_payload_)
-          , LiquidPHY::Demodulator(phy,
-                                   phy.header_mcs_,
-                                   phy.soft_header_,
-                                   phy.soft_payload_)
+          , LiquidPHY::PacketDemodulator(phy,
+                                         phy.header_mcs_,
+                                         phy.soft_header_,
+                                         phy.soft_payload_)
           , Liquid::FlexFrameDemodulator(phy.header_mcs_,
                                          phy.soft_header_,
                                          phy.soft_payload_)
         {
         }
 
-        virtual ~Demodulator() = default;
+        virtual ~PacketDemodulator() = default;
 
         bool isFrameOpen(void) override final
         {
@@ -69,14 +69,14 @@ public:
     }
 
 protected:
-    std::shared_ptr<PHY::Demodulator> mkDemodulator(void) override
+    std::shared_ptr<PHY::PacketDemodulator> mkPacketDemodulator(void) override
     {
-        return std::make_shared<Demodulator>(*this);
+        return std::make_shared<PacketDemodulator>(*this);
     }
 
-    std::shared_ptr<PHY::Modulator> mkModulator(void) override
+    std::shared_ptr<PHY::PacketModulator> mkPacketModulator(void) override
     {
-        return std::make_shared<Modulator>(*this);
+        return std::make_shared<PacketModulator>(*this);
     }
 
     std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) override

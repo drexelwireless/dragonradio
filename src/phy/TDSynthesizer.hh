@@ -58,7 +58,7 @@ private:
         Channel channel_;
 
         /** @brief Our demodulator */
-        std::shared_ptr<PHY::Modulator> mod_;
+        std::shared_ptr<PHY::PacketModulator> mod_;
     };
 
     /** @brief Flag indicating if we should stop processing packets */

@@ -351,7 +351,7 @@ FDChannelizer::ChannelState::ChannelState(PHY &phy,
   , ifft_(X_*N/D_, FFTW_BACKWARD, FFTW_MEASURE)
   , temp_(N)
   , H_(N)
-  , demod_(phy.mkDemodulator())
+  , demod_(phy.mkPacketDemodulator())
   , seq_(0)
 {
     // Number of FFT bins to rotate

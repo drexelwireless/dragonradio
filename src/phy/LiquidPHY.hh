@@ -17,40 +17,40 @@
 
 class LiquidPHY : public PHY {
 public:
-    class Modulator : public PHY::Modulator, virtual protected Liquid::Modulator {
+    class PacketModulator : public PHY::PacketModulator, virtual protected Liquid::Modulator {
     public:
-        Modulator(PHY &phy, const MCS &header_mcs)
+        PacketModulator(PHY &phy, const MCS &header_mcs)
           : Liquid::Modulator(header_mcs)
-          , PHY::Modulator(phy)
+          , PHY::PacketModulator(phy)
         {
         }
 
-        virtual ~Modulator() = default;
+        virtual ~PacketModulator() = default;
 
-        Modulator(const Modulator&) = delete;
-        Modulator(Modulator&&) = delete;
+        PacketModulator(const PacketModulator&) = delete;
+        PacketModulator(PacketModulator&&) = delete;
 
-        Modulator& operator=(const Modulator&) = delete;
-        Modulator& operator=(Modulator&&) = delete;
+        PacketModulator& operator=(const PacketModulator&) = delete;
+        PacketModulator& operator=(PacketModulator&&) = delete;
 
         void modulate(std::shared_ptr<NetPacket> pkt,
                       const float g,
                       ModPacket &mpkt) override final;
     };
 
-    class Demodulator : public PHY::Demodulator, virtual protected Liquid::Demodulator {
+    class PacketDemodulator : public PHY::PacketDemodulator, virtual protected Liquid::Demodulator {
     public:
-        Demodulator(PHY &phy,
-                    const MCS &header_mcs,
-                    bool soft_header,
-                    bool soft_payload);
-        virtual ~Demodulator() = default;
+        PacketDemodulator(PHY &phy,
+                          const MCS &header_mcs,
+                          bool soft_header,
+                          bool soft_payload);
+        virtual ~PacketDemodulator() = default;
 
-        Demodulator(const Demodulator&) = delete;
-        Demodulator(Demodulator&&) = delete;
+        PacketDemodulator(const PacketDemodulator&) = delete;
+        PacketDemodulator(PacketDemodulator&&) = delete;
 
-        Demodulator& operator=(const Demodulator&) = delete;
-        Demodulator& operator=(Demodulator&&) = delete;
+        PacketDemodulator& operator=(const PacketDemodulator&) = delete;
+        PacketDemodulator& operator=(PacketDemodulator&&) = delete;
 
         void reset(const Channel &channel) override final;
 

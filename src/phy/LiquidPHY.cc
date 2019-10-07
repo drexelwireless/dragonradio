@@ -22,9 +22,9 @@ LiquidPHY::LiquidPHY(std::shared_ptr<SnapshotCollector> collector,
 {
 }
 
-void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
-                                    const float g,
-                                    ModPacket &mpkt)
+void LiquidPHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
+                                          const float g,
+                                          ModPacket &mpkt)
 {
     assert(pkt->tx_params);
     setPayloadMCS(pkt->tx_params->mcs);
@@ -75,12 +75,12 @@ void LiquidPHY::Modulator::modulate(std::shared_ptr<NetPacket> pkt,
     mpkt.pkt = std::move(pkt);
 }
 
-LiquidPHY::Demodulator::Demodulator(PHY &phy,
-                                    const MCS &header_mcs,
-                                    bool soft_header,
-                                    bool soft_payload)
+LiquidPHY::PacketDemodulator::PacketDemodulator(PHY &phy,
+                                                const MCS &header_mcs,
+                                                bool soft_header,
+                                                bool soft_payload)
   : Liquid::Demodulator(header_mcs, soft_header, soft_payload)
-  , PHY::Demodulator(phy)
+  , PHY::PacketDemodulator(phy)
   , channel_()
   , resamp_rate_(1.0)
   , internal_oversample_fact_(1)
@@ -93,13 +93,13 @@ LiquidPHY::Demodulator::Demodulator(PHY &phy,
 {
 }
 
-int LiquidPHY::Demodulator::callback(unsigned char *  header_,
-                                     int              header_valid_,
-                                     int              header_test_,
-                                     unsigned char *  payload_,
-                                     unsigned int     payload_len_,
-                                     int              payload_valid_,
-                                     framesyncstats_s stats_)
+int LiquidPHY::PacketDemodulator::callback(unsigned char *  header_,
+                                           int              header_valid_,
+                                           int              header_test_,
+                                           unsigned char *  payload_,
+                                           unsigned int     payload_len_,
+                                           int              payload_valid_,
+                                           framesyncstats_s stats_)
 {
     Header* h = reinterpret_cast<Header*>(header_);
 
@@ -193,7 +193,7 @@ int LiquidPHY::Demodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void LiquidPHY::Demodulator::reset(const Channel &channel)
+void LiquidPHY::PacketDemodulator::reset(const Channel &channel)
 {
     reset();
 
@@ -207,10 +207,10 @@ void LiquidPHY::Demodulator::reset(const Channel &channel)
     sample_ = 0;
 }
 
-void LiquidPHY::Demodulator::timestamp(const MonoClock::time_point &timestamp,
-                                       std::optional<ssize_t> snapshot_off,
-                                       ssize_t offset,
-                                       float rate)
+void LiquidPHY::PacketDemodulator::timestamp(const MonoClock::time_point &timestamp,
+                                             std::optional<ssize_t> snapshot_off,
+                                             ssize_t offset,
+                                             float rate)
 {
     resamp_rate_ = internal_oversample_fact_/rate;
     timestamp_ = timestamp;
@@ -219,9 +219,9 @@ void LiquidPHY::Demodulator::timestamp(const MonoClock::time_point &timestamp,
     sample_start_ = sample_end_;
 }
 
-void LiquidPHY::Demodulator::demodulate(const std::complex<float>* data,
-                                        size_t count,
-                                        std::function<void(std::unique_ptr<RadioPacket>)> callback)
+void LiquidPHY::PacketDemodulator::demodulate(const std::complex<float>* data,
+                                              size_t count,
+                                              std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
     callback_ = callback;
     demodulateSamples(data, count);

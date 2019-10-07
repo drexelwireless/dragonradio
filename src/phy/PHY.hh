@@ -18,12 +18,12 @@
  */
 class PHY {
 public:
-    /** @brief Modulate IQ data. */
-    class Modulator
+    /** @brief Modulate packets. */
+    class PacketModulator
     {
     public:
-        Modulator(PHY &phy) : phy_(phy) {}
-        virtual ~Modulator() = default;
+        PacketModulator(PHY &phy) : phy_(phy) {}
+        virtual ~PacketModulator() = default;
 
         /** @brief Modulate a packet to produce IQ samples.
          * @param pkt The NetPacket to modulate.
@@ -39,13 +39,13 @@ public:
         PHY &phy_;
     };
 
-    /** @brief Demodulate IQ data.
+    /** @brief Demodulate packets.
      */
-    class Demodulator
+    class PacketDemodulator
     {
     public:
-        Demodulator(PHY &phy) : phy_(phy) {}
-        virtual ~Demodulator() = default;
+        PacketDemodulator(PHY &phy) : phy_(phy) {}
+        virtual ~PacketDemodulator() = default;
 
         /** @brief Is a frame currently being demodulated?
          * @return true if a frame is currently being demodulated, false
@@ -155,10 +155,10 @@ public:
     virtual size_t getModulatedSize(const TXParams &params, size_t n) = 0;
 
     /** @brief Create a Modulator for this %PHY */
-    virtual std::shared_ptr<Modulator> mkModulator(void) = 0;
+    virtual std::shared_ptr<PacketModulator> mkPacketModulator(void) = 0;
 
     /** @brief Create a Demodulator for this %PHY */
-    virtual std::shared_ptr<Demodulator> mkDemodulator(void) = 0;
+    virtual std::shared_ptr<PacketDemodulator> mkPacketDemodulator(void) = 0;
 
     /** @brief Return flag indicating whether or not we want the given packet */
     /** We only demodulate packets destined for us *unless* we are collecting

@@ -184,7 +184,7 @@ TDSynthesizer::ChannelState::ChannelState(PHY &phy,
     Upsampler(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw),
               taps)
   , channel_(channel)
-  , mod_(phy.mkModulator())
+  , mod_(phy.mkPacketModulator())
 {
     setFreqShift(2*M_PI*channel.fc/tx_rate);
 }

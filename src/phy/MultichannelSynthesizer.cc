@@ -382,7 +382,7 @@ MultichannelSynthesizer::ChannelState::ChannelState(PHY &phy,
   , channel_(channel)
   // XXX Protected against channel with zero bandwidth
   , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
-  , mod_(phy.mkModulator())
+  , mod_(phy.mkPacketModulator())
 {
 }
 
