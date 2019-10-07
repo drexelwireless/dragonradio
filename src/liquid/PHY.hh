@@ -8,7 +8,7 @@
 
 #include "Header.hh"
 #include "liquid/Mutex.hh"
-#include "phy/MCS.hh"
+#include "phy/Modem.hh"
 
 namespace Liquid {
 

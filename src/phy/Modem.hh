@@ -1,5 +1,5 @@
-#ifndef MCS_HH_
-#define MCS_HH_
+#ifndef MODEM_HH_
+#define MODEM_HH_
 
 #include <complex>
 
@@ -94,4 +94,4 @@ inline void mcs2genprops(const MCS &mcs, flexframegenprops_s &props)
     props.mod_scheme = mcs.ms;
 }
 
-#endif /* MCS_HH_ */
+#endif /* MODEM_HH_ */

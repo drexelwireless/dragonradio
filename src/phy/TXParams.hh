@@ -8,7 +8,7 @@
 #include <liquid/liquid.h>
 
 #include "IQBuffer.hh"
-#include "phy/MCS.hh"
+#include "phy/Modem.hh"
 #include "stats/Estimator.hh"
 
 /** @brief PHY TX parameters. */
