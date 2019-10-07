@@ -30,12 +30,7 @@ void exportControllers(py::module &m)
                       Seq::uint_type,
                       Seq::uint_type,
                       const std::vector<TXParams>&,
-                      const TXParams&,
-                      unsigned,
-                      double,
-                      double,
-                      double,
-                      double>())
+                      const TXParams&>())
         .def_property("net_queue",
             &SmartController::getNetQueue,
             &SmartController::setNetQueue)
@@ -58,6 +53,22 @@ void exportControllers(py::module &m)
         .def_property_readonly("tx_params",
             &SmartController::getTXParams,
             "TX parameters")
+        .def_property("short_per_nslots",
+            &SmartController::getShortPERNSlots,
+            &SmartController::setShortPERNSlots,
+            "Number of slots worth of packets we use to calculate short-term PER")
+        .def_property("long_per_nslots",
+            &SmartController::getLongPERNSlots,
+            &SmartController::setLongPERNSlots,
+            "Number of slots worth of packets we use to calculate long-term PER")
+        .def_property("long_stats_nslots",
+            &SmartController::getLongStatsNSlots,
+            &SmartController::setLongStatsNSlots,
+            "Number of slots worth of packets we use to calculate long-term statistics")
+        .def_property("mcsidx_init",
+            &SmartController::getInitialMCSIndex,
+            &SmartController::setInitialMCSIndex,
+            "Initial MCS index")
         .def_property("mcsidx_up_per_threshold",
             &SmartController::getUpPERThreshold,
             &SmartController::setUpPERThreshold,
@@ -74,6 +85,18 @@ void exportControllers(py::module &m)
             &SmartController::getMCSProbFloor,
             &SmartController::setMCSProbFloor,
             "MCS transition probability floor")
+        .def_property("ack_delay",
+            &SmartController::getACKDelay,
+            &SmartController::setACKDelay,
+            "ACK delay (sec)")
+        .def_property("retransmission_delay",
+            &SmartController::getRetransmissionDelay,
+            &SmartController::setRetransmissionDelay,
+            "Retransmission delay (sec)")
+        .def_property("sack_delay",
+            &SmartController::getSACKDelay,
+            &SmartController::setSACKDelay,
+            "SACK delay (sec)")
         .def_property("explicit_nak_window",
             &SmartController::getExplicitNAKWindow,
             &SmartController::setExplicitNAKWindow,

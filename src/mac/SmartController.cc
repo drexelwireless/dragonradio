@@ -10,10 +10,6 @@
 #define dprintf(...)
 #endif /* !DEBUG */
 
-/** @brief Amount of time we wait for a regular packet to have a SACK attached.
- */
-const double kSACKDelay = 0.050;
-
 void applyTXParams(NetPacket &pkt, TXParams *p, float g)
 {
     pkt.tx_params = p;
@@ -37,7 +33,7 @@ void RecvWindow::operator()()
 
         dprintf("ARQ: starting full ACK timer: node=%u",
             (unsigned) node.id);
-        controller.timer_queue_.run_in(*this, kSACKDelay);
+        controller.timer_queue_.run_in(*this, controller.sack_delay_);
     }
 }
 
@@ -47,12 +43,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
                                  const std::vector<TXParams> &tx_params,
-                                 const TXParams &broadcast_tx_params,
-                                 unsigned mcsidx_init,
-                                 double mcsidx_up_per_threshold,
-                                 double mcsidx_down_per_threshold,
-                                 double mcsidx_alpha,
-                                 double mcsidx_prob_floor)
+                                 const TXParams &broadcast_tx_params)
   : Controller(net, tx_params)
   , phy_(phy)
   , mac_(nullptr)
@@ -62,11 +53,17 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , recvwin_(recvwin)
   , min_samples_per_slot_(0)
   , broadcast_tx_params_(broadcast_tx_params)
-  , mcsidx_init_(std::min(mcsidx_init, (unsigned) tx_params_.size() - 1))
-  , mcsidx_up_per_threshold_(mcsidx_up_per_threshold)
-  , mcsidx_down_per_threshold_(mcsidx_down_per_threshold)
-  , mcsidx_alpha_(mcsidx_alpha)
-  , mcsidx_prob_floor_(mcsidx_prob_floor)
+  , short_per_nslots_(2)
+  , long_per_nslots_(8)
+  , long_stats_nslots_(8)
+  , mcsidx_init_(0)
+  , mcsidx_up_per_threshold_(0.04)
+  , mcsidx_down_per_threshold_(0.10)
+  , mcsidx_alpha_(0.5)
+  , mcsidx_prob_floor_(0.1)
+  , ack_delay_(100e-3)
+  , retransmission_delay_(500e-3)
+  , sack_delay_(50e-3)
   , explicit_nak_win_(0)
   , explicit_nak_win_duration_(0.0)
   , selective_ack_(false)
@@ -833,7 +830,7 @@ void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
         dprintf("ARQ: starting retransmission timer: node=%u; seq=%u",
             (unsigned) entry.sendw.node.id,
             (unsigned) entry.pkt->hdr.seq);
-        timer_queue_.run_in(entry, entry.sendw.node.retransmission_delay);
+        timer_queue_.run_in(entry, retransmission_delay_);
     }
 }
 
@@ -846,7 +843,7 @@ void SmartController::startSACKTimer(RecvWindow &recvw)
 
         recvw.need_selective_ack = false;
         recvw.timer_for_ack = false;
-        timer_queue_.run_in(recvw, recvw.node.ack_delay - kSACKDelay);
+        timer_queue_.run_in(recvw, ack_delay_ - sack_delay_);
     }
 }
 
@@ -1435,10 +1432,10 @@ void SmartController::resetPEREstimates(SendWindow &sendw)
 
     assert(max_packets_per_slot > 0);
 
-    sendw.short_per.setWindowSize(rc.amc_short_per_nslots*max_packets_per_slot);
+    sendw.short_per.setWindowSize(short_per_nslots_*max_packets_per_slot);
     sendw.short_per.reset(0);
 
-    sendw.long_per.setWindowSize(rc.amc_long_per_nslots*max_packets_per_slot);
+    sendw.long_per.setWindowSize(long_per_nslots_*max_packets_per_slot);
     sendw.long_per.reset(0);
 }
 
@@ -1622,8 +1619,8 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
                                       std::forward_as_tuple(node_id),
                                       std::forward_as_tuple(src, *this, seq, recvwin_, explicit_nak_win_)).first->second;
 
-    recvw.long_evm.setTimeWindow(rc.amc_long_stats_nslots*slot_size_);
-    recvw.long_rssi.setTimeWindow(rc.amc_long_stats_nslots*slot_size_);
+    recvw.long_evm.setTimeWindow(long_stats_nslots_*slot_size_);
+    recvw.long_rssi.setTimeWindow(long_stats_nslots_*slot_size_);
 
     return recvw;
 }

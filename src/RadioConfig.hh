@@ -31,25 +31,8 @@ public:
     /** @brief Log invalid headers? */
     bool log_invalid_headers;
 
-    /** @brief Number of slots worth of packets we use to calculate short-term PER */
-    unsigned amc_short_per_nslots;
-
-    /** @brief Number of slots worth of packets we use to calculate long-term PER */
-    unsigned amc_long_per_nslots;
-
-    /** @brief Number of slots worth of packets we use to calculate long-term
-     * statistics
-     */
-    unsigned amc_long_stats_nslots;
-
     /** @brief Maximum Transmission Unit (bytes) */
     unsigned mtu;
-
-    /** @brief ACK delay in seconds */
-    double arq_ack_delay;
-
-    /** @brief Retransmission delay in seconds */
-    double arq_retransmission_delay;
 
     /** @brief Display packets written to tun/tap device? */
     bool verbose_packet_trace;

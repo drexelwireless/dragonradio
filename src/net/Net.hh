@@ -49,8 +49,6 @@ struct Node {
       , can_transmit(true)
       , g(1.0)
       , tx_params(nullptr)
-      , ack_delay(rc.arq_ack_delay)
-      , retransmission_delay(rc.arq_retransmission_delay)
     {
     }
 
@@ -73,12 +71,6 @@ struct Node {
 
     /** @brief TX parameters for this node (may be null). */
     const TXParams *tx_params;
-
-    /** @brief ACK delay in seconds */
-    double ack_delay;
-
-    /** @brief Packet re-transmit delay in seconds */
-    double retransmission_delay;
 
     /** @brief Mutex protecting timestamps */
     std::mutex timestamps_mutex;

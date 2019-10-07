@@ -58,12 +58,6 @@ void exportRadioNet(py::module &m)
                     return std::nullopt;
             },
             "TX parameters")
-        .def_readwrite("ack_delay",
-            &Node::ack_delay,
-            "ACK delay (in seconds)")
-        .def_readwrite("retransmission_delay",
-            &Node::retransmission_delay,
-            "Packet retransmission delay (in seconds)")
         .def_property_readonly("timestamps",
             [](Node &node) {
                 std::lock_guard<std::mutex> lock(node.timestamps_mutex);

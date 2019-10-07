@@ -343,12 +343,7 @@ public:
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
                     const std::vector<TXParams> &tx_params,
-                    const TXParams &broadcast_tx_params,
-                    unsigned mcsidx_init,
-                    double mcsidx_up_per_threshold,
-                    double mcsidx_down_per_threshold,
-                    double mcsidx_alpha,
-                    double mcsidx_prob_floor);
+                    const TXParams &broadcast_tx_params);
     virtual ~SmartController();
 
     /** @brief Get the controller's network queue. */
@@ -395,6 +390,57 @@ public:
     TXParams getBroadcastTXParams(void)
     {
         return broadcast_tx_params_;
+    }
+
+    /** @brief Get short time window over which to calculate PER (sec) */
+    unsigned getShortPERNSlots(void)
+    {
+        return short_per_nslots_;
+    }
+
+    /** @brief Set short time window over which to calculate PER (sec) */
+    void setShortPERNSlots(unsigned nslots)
+    {
+        short_per_nslots_ = nslots;
+    }
+
+    /** @brief Get long time window over which to calculate PER (sec) */
+    unsigned getLongPERNSlots(void)
+    {
+        return long_per_nslots_;
+    }
+
+    /** @brief Set long time window over which to calculate PER (sec) */
+    void setLongPERNSlots(unsigned nslots)
+    {
+        long_per_nslots_ = nslots;
+    }
+
+    /** @brief Get time window for statistics collection (sec) */
+    unsigned getLongStatsNSlots(void)
+    {
+        return long_stats_nslots_;
+    }
+
+    /** @brief Set time window for statistics collection (sec) */
+    void setLongStatsNSlots(unsigned nslots)
+    {
+        long_stats_nslots_ = nslots;
+    }
+
+    /** @brief Get initial MCS index */
+    unsigned getInitialMCSIndex(void)
+    {
+        return mcsidx_init_;
+    }
+
+    /** @brief Set initial MCS index */
+    void setInitialMCSIndex(unsigned mcsidx)
+    {
+        if(mcsidx >= tx_params_.size())
+            throw std::out_of_range("Initial MCS index out of range");
+
+        mcsidx_init_ = mcsidx;
     }
 
     /** @brief Get PER threshold for increasing modulation level */
@@ -447,6 +493,42 @@ public:
 
     /** @brief Reset all MCS transition probabilities to 1.0 */
     void resetMCSTransitionProbabilities(void);
+
+    /** @brief Get ACK delay. */
+    double getACKDelay(void)
+    {
+        return ack_delay_;
+    }
+
+    /** @brief Set ACK delay. */
+    void setACKDelay(double t)
+    {
+        ack_delay_ = t;
+    }
+
+    /** @brief Get retransmission delay. */
+    double getRetransmissionDelay(void)
+    {
+        return retransmission_delay_;
+    }
+
+    /** @brief Set retransmission delay. */
+    void setRetransmissionDelay(double t)
+    {
+        retransmission_delay_ = t;
+    }
+
+    /** @brief Get SACK delay. */
+    double getSACKDelay(void)
+    {
+        return sack_delay_;
+    }
+
+    /** @brief Set SACK delay. */
+    void setSACKDelay(double t)
+    {
+        sack_delay_ = t;
+    }
 
     /** @brief Return explicit NAK window size. */
     bool getExplicitNAKWindow(void)
@@ -634,6 +716,17 @@ protected:
     /** @brief Broadcast TX params */
     TXParams broadcast_tx_params_;
 
+    /** @brief Number of slots worth of packets we use to calculate short-term PER */
+    unsigned short_per_nslots_;
+
+    /** @brief Number of slots worth of packets we use to calculate long-term PER */
+    unsigned long_per_nslots_;
+
+    /** @brief Number of slots worth of packets we use to calculate long-term
+     * statistics
+     */
+    unsigned long_stats_nslots_;
+
     /** @brief Initial MCS index */
     unsigned mcsidx_init_;
 
@@ -650,6 +743,18 @@ protected:
 
     /** @brief Minimum MCS transition probability */
     double mcsidx_prob_floor_;
+
+    /** @brief ACK delay in seconds */
+    double ack_delay_;
+
+    /** @brief Packet re-transmission delay in seconds */
+    double retransmission_delay_;
+
+    /** @brief SACK delay (sec) */
+    /** @brief Amount of time we wait for a regular packet to have a SACK
+     * attached.
+     */
+    double sack_delay_;
 
     /** @brief Explicit NAK window */
     size_t explicit_nak_win_;

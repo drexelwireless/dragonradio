@@ -209,6 +209,7 @@ class Config(object):
         self.arq_max_retransmissions = None
         self.arq_ack_delay = 100e-3
         self.arq_retransmission_delay = 500e-3
+        self.arq_sack_delay = 50e-3
         self.arq_explicit_nak_win = 10
         self.arq_explicit_nak_win_duration = 0.1
         self.arq_selective_ack = True
@@ -221,7 +222,6 @@ class Config(object):
         # AMC options
         self.amc = False
         self.amc_table = None
-
         self.amc_short_per_nslots = 2
         self.amc_long_per_nslots = 8
         self.amc_long_stats_nslots = 8
@@ -680,13 +680,7 @@ class Radio(object):
         logger.info('Radio configuration:\n%s', str(config))
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose', 'debug',
-                     'amc_short_per_nslots',
-                     'amc_long_per_nslots',
-                     'amc_long_stats_nslots',
-                     'mtu',
-                     'arq_ack_delay', 'arq_retransmission_delay',
-                     'verbose_packet_trace']:
+        for attr in ['verbose', 'debug', 'mtu', 'verbose_packet_trace']:
             if hasattr(config, attr):
                 setattr(dragonradio.rc, attr, getattr(config, attr))
 
@@ -874,29 +868,33 @@ class Radio(object):
                                                           config.arq_window,
                                                           config.arq_window,
                                                           TXParamsVector(tx_params),
-                                                          broadcast_tx_params,
-                                                          config.amc_mcsidx_init,
-                                                          config.amc_mcsidx_up_per_threshold,
-                                                          config.amc_mcsidx_down_per_threshold,
-                                                          config.amc_mcsidx_alpha,
-                                                          config.amc_mcsidx_prob_floor)
+                                                          broadcast_tx_params)
 
-            self.controller.max_retransmissions = config.arq_max_retransmissions
+            # ARQ parameters
             self.controller.enforce_ordering = config.arq_enforce_ordering
-            self.controller.mcu = config.arq_mcu
-            self.controller.move_along = config.arq_move_along
-
-            self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
-
-            self.controller.ack_gain.dB = config.arq_ack_gain_db
-
-            #
-            # Configure NAK's
-            #
+            self.controller.max_retransmissions = config.arq_max_retransmissions
+            self.controller.ack_delay = config.arq_ack_delay
+            self.controller.retransmission_delay = config.arq_retransmission_delay
+            self.controller.sack_delay = config.arq_sack_delay
             self.controller.explicit_nak_window = config.arq_explicit_nak_win
             self.controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
             self.controller.selective_ack = config.arq_selective_ack
             self.controller.selective_ack_feedback_delay = config.arq_selective_ack_feedback_delay
+            self.controller.mcu = config.arq_mcu
+            self.controller.move_along = config.arq_move_along
+            self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
+            self.controller.ack_gain.dB = config.arq_ack_gain_db
+
+            # AMC parameters
+            self.controller.short_per_nslots = config.amc_short_per_nslots
+            self.controller.long_per_nslots = config.amc_long_per_nslots
+            self.controller.long_stats_nslots = config.amc_long_stats_nslots
+            self.controller.mcsidx_init = config.amc_mcsidx_init
+            self.controller.mcsidx_up_per_threshold = config.amc_mcsidx_up_per_threshold
+            self.controller.mcsidx_down_per_threshold = config.amc_mcsidx_down_per_threshold
+            self.controller.mcsidx_alpha = config.amc_mcsidx_alpha
+            self.controller.mcsidx_prob_floor = config.amc_mcsidx_prob_floor
+
         else:
             self.controller = dragonradio.DummyController(self.net,
                                                           TXParamsVector(tx_params))
