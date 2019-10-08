@@ -41,6 +41,18 @@ SlottedMAC::~SlottedMAC()
 {
 }
 
+void SlottedMAC::setMinChannelBandwidth(double min_bw)
+{
+    // Maximum number of samples that will fit in minimum-bandwidth channel
+    size_t max_samples = min_bw*(slot_size_ - guard_size_);
+
+    for (mcsidx_t mcsidx = 0; mcsidx < phy_->mcs_table.size(); ++mcsidx)
+        phy_->mcs_table[mcsidx].valid = phy_->getModulatedSize(mcsidx, rc.mtu) <= max_samples;
+
+    if (!phy_->mcs_table[phy_->mcs_table.size()-1].valid)
+        logEvent("MAC: WARNING: Slot size too small to support a full-sized packet!");
+}
+
 void SlottedMAC::reconfigure(void)
 {
     MAC::reconfigure();

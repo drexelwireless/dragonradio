@@ -1077,10 +1077,13 @@ class Radio(object):
         #
         # Tell the MAC the minimum number of samples in a slot
         #
-        if isinstance(self.controller, dragonradio.SmartController):
-            min_chan_bw = min([chan.bw for (chan, _taps) in self.synthesizer.channels])
+        min_channel_bandwidth = min([chan.bw for (chan, _taps) in self.synthesizer.channels])
 
-            self.controller.min_samples_per_slot = int(min_chan_bw*(config.slot_size - config.guard_size))
+        if self.mac is not None:
+            self.mac.min_channel_bandwidth = min_channel_bandwidth
+
+        if isinstance(self.controller, dragonradio.SmartController):
+            self.controller.min_samples_per_slot = int(min_channel_bandwidth*(config.slot_size - config.guard_size))
 
     def configureValidDecimationRates(self):
         """Determine valid decimation and interpolation rates"""
@@ -1323,6 +1326,8 @@ class Radio(object):
             self.channelizer.prev_demod = 0.5*config.slot_size
             self.channelizer.cur_demod = config.slot_size
 
+        self.finishConfiguringMAC()
+
     def configureTDMA(self, nslots):
         """Configures a TDMA MAC with 'nslots' slots.
 
@@ -1367,6 +1372,13 @@ class Radio(object):
                 self.channelizer.prev_demod = config.demod_overlap_size
                 self.channelizer.cur_demod = \
                     config.slot_size - config.guard_size + config.demod_overlap_size
+
+        self.finishConfiguringMAC()
+
+    def finishConfiguringMAC(self):
+        bws = [chan.bw for (chan, _taps) in self.synthesizer.channels]
+        if len(bws) != 0:
+            self.mac.min_channel_bandwidth = min(bws)
 
     def setALOHAChannel(self, channel_idx):
         """Set the transmission channel for the ALOHA MAC."""

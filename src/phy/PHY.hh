@@ -130,6 +130,9 @@ public:
 
         /** @brief auto-gain for this MCS */
         AutoGain autogain;
+
+        /** @brief Is this entry valid? */
+        bool valid;
     };
 
     /** @brief MCS table */

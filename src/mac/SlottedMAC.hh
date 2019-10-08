@@ -162,6 +162,8 @@ public:
         return load;
     }
 
+    void setMinChannelBandwidth(double min_bw) override;
+
     virtual void reconfigure(void) override;
 
 protected:

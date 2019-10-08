@@ -50,6 +50,11 @@ public:
         return can_transmit_;
     }
 
+    /** @brief Set minimum channel bandwidth */
+    virtual void setMinChannelBandwidth(double min_bw)
+    {
+    }
+
     /** @brief Reconfigure the MAC when after parameters change */
     virtual void reconfigure(void);
 

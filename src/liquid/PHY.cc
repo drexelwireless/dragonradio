@@ -26,7 +26,7 @@ Liquid::PHY::PHY(std::shared_ptr<SnapshotCollector> collector,
 
     for (unsigned i = 0; i < mcs_table_.size(); ++i) {
         mcs_table_[i] = mcstab[i].first;
-        mcs_table[i] = { &mcs_table_[i], mcstab[i].second };
+        mcs_table[i] = { &mcs_table_[i], mcstab[i].second, true };
     }
 }
 

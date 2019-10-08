@@ -19,6 +19,10 @@ void exportMACs(py::module &m)
         .def("reconfigure",
             &MAC::reconfigure,
             "Force the MAC to reconfigure after PHY parameters, e.g., TX rate, change.")
+        .def_property("min_channel_bandwidth",
+            nullptr,
+            &MAC::setMinChannelBandwidth,
+            "Minimum channel bandwidth")
         ;
 
     // Export class SlottedMAC::Load to Python

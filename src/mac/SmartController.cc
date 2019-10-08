@@ -1286,7 +1286,7 @@ void SmartController::updateMCS(SendWindow &sendw)
 
         while (sendw.mcsidx > n &&
                sendw.mcsidx - n > mcsidx_min_ &&
-               getMaxPacketsPerSlot(sendw.mcsidx-(n+1)) > 0) {
+               phy_->mcs_table[sendw.mcsidx-(n+1)].valid) {
             // Increment number of MCS levels we will move down
             ++n;
 
@@ -1562,7 +1562,8 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
         sendw.mcsidx_prob.resize(phy_->mcs_table.size(), 1.0);
         sendw.per_end = sendw.seq;
 
-        while (sendw.mcsidx < phy_->mcs_table.size() - 1 && getMaxPacketsPerSlot(sendw.mcsidx) == 0)
+        // Move MCS up until we reach a valid MCS
+        while (sendw.mcsidx < phy_->mcs_table.size() - 1 && !phy_->mcs_table[sendw.mcsidx].valid)
             ++sendw.mcsidx;
 
         resetPEREstimates(sendw);
