@@ -126,7 +126,7 @@ public:
     /** @brief MCS entry */
     struct MCSEntry {
         /** @brief MCS */
-        MCS mcs;
+        const MCS *mcs;
 
         /** @brief auto-gain for this MCS */
         AutoGain autogain;

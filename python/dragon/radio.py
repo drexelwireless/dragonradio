@@ -18,7 +18,8 @@ import scipy.stats as stats
 import sys
 
 import dragonradio
-from dragonradio import Channel, Channels, MCS
+from dragonradio import Channel, Channels
+from dragonradio.liquid import MCS
 
 import dragon.channels
 import dragon.schedule

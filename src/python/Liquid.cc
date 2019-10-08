@@ -109,6 +109,22 @@ void exportLiquid(py::module &m)
     m.attr("kSCTypePilot") = py::int_(OFDMFRAME_SCTYPE_PILOT);
     m.attr("kSCTypeData") = py::int_(OFDMFRAME_SCTYPE_DATA);
 
+    // Export class MCS to Python
+    py::class_<Liquid::MCS, MCS, std::shared_ptr<Liquid::MCS>>(m, "MCS")
+        .def(py::init<>())
+        .def(py::init<crc_scheme,
+                      fec_scheme,
+                      fec_scheme,
+                      modulation_scheme>())
+        .def_readwrite("check", &Liquid::MCS::check, "Data validity check")
+        .def_readwrite("fec0", &Liquid::MCS::fec0, "Inner FEC")
+        .def_readwrite("fec1", &Liquid::MCS::fec1, "Outer FEC")
+        .def_readwrite("ms", &Liquid::MCS::ms, "Modulation scheme")
+        .def("__repr__", [](const Liquid::MCS& self) {
+            return py::str("MCS(check={}, fec0={}, fec1={}, ms={})").format(self.check, self.fec0, self.fec1, self.ms);
+         })
+    ;
+
     // Export class FrameStats to Python
     py::class_<FrameStats, std::shared_ptr<FrameStats>>(m, "FrameStats")
         .def(py::init<>())
@@ -177,14 +193,14 @@ void exportLiquid(py::module &m)
     py::class_<Liquid::OFDMModulator,
                Liquid::Modulator,
                std::shared_ptr<Liquid::OFDMModulator>>(m, "OFDMModulator", py::multiple_inheritance{})
-        .def(py::init([](const MCS &header_mcs,
+        .def(py::init([](const Liquid::MCS &header_mcs,
                          unsigned M,
                          unsigned cp_len,
                          unsigned taper_len)
             {
                 return std::make_shared<Liquid::OFDMModulator>(header_mcs, M, cp_len, taper_len, std::nullopt);
             }))
-        .def(py::init([](const MCS &header_mcs,
+        .def(py::init([](const Liquid::MCS &header_mcs,
                          unsigned M,
                          unsigned cp_len,
                          unsigned taper_len,
@@ -198,7 +214,7 @@ void exportLiquid(py::module &m)
     py::class_<Liquid::OFDMDemodulator,
                Liquid::Demodulator,
                std::shared_ptr<Liquid::OFDMDemodulator>>(m, "OFDMDemodulator", py::multiple_inheritance{})
-        .def(py::init([](const MCS &header_mcs,
+        .def(py::init([](const Liquid::MCS &header_mcs,
                          bool soft_header,
                          bool soft_payload,
                          unsigned M,
@@ -207,7 +223,7 @@ void exportLiquid(py::module &m)
             {
                 return std::make_shared<Liquid::OFDMDemodulator>(header_mcs, soft_header, soft_payload, M, cp_len, taper_len, std::nullopt);
             }))
-        .def(py::init([](const MCS &header_mcs,
+        .def(py::init([](const Liquid::MCS &header_mcs,
                          bool soft_header,
                          bool soft_payload,
                          unsigned M,
@@ -223,14 +239,14 @@ void exportLiquid(py::module &m)
     py::class_<Liquid::FlexFrameModulator,
                Liquid::Modulator,
                std::shared_ptr<Liquid::FlexFrameModulator>>(m, "FlexFrameModulator", py::multiple_inheritance{})
-        .def(py::init<const MCS&>())
+        .def(py::init<const Liquid::MCS&>())
         ;
 
     // Export class FlexFrameDemodulator to Python
     py::class_<Liquid::FlexFrameDemodulator,
                Liquid::Demodulator,
                std::shared_ptr<Liquid::FlexFrameDemodulator>>(m, "FlexFrameDemodulator", py::multiple_inheritance{})
-        .def(py::init<const MCS&,
+        .def(py::init<const Liquid::MCS&,
                       bool,
                       bool>())
         ;
@@ -239,14 +255,14 @@ void exportLiquid(py::module &m)
     py::class_<Liquid::NewFlexFrameModulator,
                Liquid::Modulator,
                std::shared_ptr<Liquid::NewFlexFrameModulator>>(m, "NewFlexFrameModulator", py::multiple_inheritance{})
-        .def(py::init<const MCS&>())
+        .def(py::init<const Liquid::MCS&>())
         ;
 
     // Export class FlexFrameDemodulator to Python
     py::class_<Liquid::NewFlexFrameDemodulator,
                Liquid::Demodulator,
                std::shared_ptr<Liquid::NewFlexFrameDemodulator>>(m, "NewFlexFrameDemodulator", py::multiple_inheritance{})
-        .def(py::init<const MCS&,
+        .def(py::init<const Liquid::MCS&,
                       bool,
                       bool>())
         ;

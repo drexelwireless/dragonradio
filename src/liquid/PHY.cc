@@ -13,7 +13,7 @@ const size_t kInitialModbufSize = 16384;
 Liquid::PHY::PHY(std::shared_ptr<SnapshotCollector> collector,
                  NodeId node_id,
                  const MCS &header_mcs,
-                 const std::vector<std::pair<MCS, AutoGain>> &mcs_table_,
+                 const std::vector<std::pair<MCS, AutoGain>> &mcstab,
                  bool soft_header,
                  bool soft_payload)
   : ::PHY(collector, node_id)
@@ -21,10 +21,13 @@ Liquid::PHY::PHY(std::shared_ptr<SnapshotCollector> collector,
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
 {
-    mcs_table.resize(mcs_table_.size());
+    mcs_table.resize(mcstab.size());
+    mcs_table_.resize(mcstab.size());
 
-    for (unsigned i = 0; i < mcs_table_.size(); ++i)
-        mcs_table[i] = { mcs_table_[i].first, mcs_table_[i].second };
+    for (unsigned i = 0; i < mcs_table_.size(); ++i) {
+        mcs_table_[i] = mcstab[i].first;
+        mcs_table[i] = { &mcs_table_[i], mcstab[i].second };
+    }
 }
 
 void Liquid::PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
@@ -32,7 +35,7 @@ void Liquid::PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
                                             ModPacket &mpkt)
 {
     assert(pkt->mcsidx < phy_.mcs_table.size());
-    setPayloadMCS(phy_.mcs_table[pkt->mcsidx].mcs);
+    setPayloadMCS(*reinterpret_cast<const MCS*>(phy_.mcs_table[pkt->mcsidx].mcs));
     assemble(&pkt->hdr, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples
@@ -235,7 +238,7 @@ size_t Liquid::PHY::getModulatedSize(mcsidx_t mcsidx, size_t n)
     std::unique_ptr<Liquid::Modulator> mod = mkLiquidModulator();
 
     assert(mcsidx < mcs_table.size());
-    mod->setPayloadMCS(mcs_table[mcsidx].mcs);
+    mod->setPayloadMCS(mcs_table_[mcsidx]);
 
     Header                     hdr = {0};
     std::vector<unsigned char> body(sizeof(ExtendedHeader) + n);

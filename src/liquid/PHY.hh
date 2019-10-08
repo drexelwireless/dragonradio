@@ -158,6 +158,9 @@ protected:
     /** @brief Modulation and coding scheme for headers. */
     MCS header_mcs_;
 
+    /** @brief MCS table */
+    std::vector<Liquid::MCS> mcs_table_;
+
     /** @brief Flag indicating whether or not to use soft-decoding for headers.
       */
     bool soft_header_;

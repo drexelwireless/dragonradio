@@ -1374,16 +1374,14 @@ void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
 
     node.mcsidx = sendw.mcsidx;
 
-    const MCS &mcs = phy_->mcs_table[sendw.mcsidx].mcs;
+    const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
 
     netq_->updateMCS(node.id, mcs);
 
-    logEvent("AMC: Moved down modulation scheme: node=%u; mcsidx=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+    logEvent("AMC: Moved down modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
-        mcs.fec0_name(),
-        mcs.fec1_name(),
-        mcs.ms_name(),
+        mcs->description().c_str(),
         (unsigned) sendw.unack,
         (unsigned) sendw.per_end,
         sendw.short_per.getWindowSize(),
@@ -1414,16 +1412,14 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 
     node.mcsidx = sendw.mcsidx;
 
-    const MCS &mcs = phy_->mcs_table[sendw.mcsidx].mcs;
+    const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
 
     netq_->updateMCS(node.id, mcs);
 
-    logEvent("AMC: Moved up modulation scheme: node=%u; mcsidx=%u; fec0=%s; fec1=%s; ms=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+    logEvent("AMC: Moved up modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
-        mcs.fec0_name(),
-        mcs.fec1_name(),
-        mcs.ms_name(),
+        mcs->description().c_str(),
         (unsigned) sendw.unack,
         (unsigned) sendw.per_end,
         sendw.short_per.getWindowSize(),

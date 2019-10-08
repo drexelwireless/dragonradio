@@ -162,7 +162,7 @@ public:
         cond_.notify_all();
     }
 
-    virtual void updateMCS(NodeId, const MCS&) override
+    virtual void updateMCS(NodeId, const MCS*) override
     {
     }
 

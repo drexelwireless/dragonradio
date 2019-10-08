@@ -12,6 +12,96 @@
 
 namespace Liquid {
 
+/** @brief A liquid modulation and coding scheme. */
+struct MCS : public ::MCS {
+    MCS(crc_scheme check,
+        fec_scheme fec0,
+        fec_scheme fec1,
+        modulation_scheme ms)
+      : check(check)
+      , fec0(fec0)
+      , fec1(fec1)
+      , ms(ms)
+    {
+    }
+
+    MCS()
+      : check(LIQUID_CRC_32)
+      , fec0(LIQUID_FEC_NONE)
+      , fec1(LIQUID_FEC_CONV_V27)
+      , ms(LIQUID_MODEM_BPSK)
+    {
+    }
+
+    bool operator ==(const MCS &other) const
+    {
+        return check == other.check &&
+               fec0 == other.fec0 &&
+               fec1 == other.fec1 &&
+               ms == other.ms;
+    }
+
+    bool operator !=(const MCS &other) const
+    {
+        return !(*this == other);
+    }
+
+    /** @brief CRC */
+    crc_scheme check;
+
+    /** @brief FEC0 (inner FEC) */
+    fec_scheme fec0;
+
+    /** @brief FEC1 (outer FEC) */
+    fec_scheme fec1;
+
+    /** @brief Modulation scheme */
+    modulation_scheme ms;
+
+    float getRate(void) const override
+    {
+        return fec_get_rate(fec0)*fec_get_rate(fec1)*modulation_types[ms].bps;
+    }
+
+    std::string description(void) const override
+    {
+        constexpr size_t BUFSIZE = 200;
+        char             buf[BUFSIZE];
+
+        snprintf(buf, BUFSIZE, "(%s, %s, %s, %s)",
+            crc_scheme_str[check][0],
+            fec_scheme_str[fec0][0],
+            fec_scheme_str[fec1][0],
+            modulation_types[ms].name);
+
+        return std::string(buf);
+    }
+};
+
+inline void mcs2genprops(const MCS &mcs, ofdmflexframegenprops_s &props)
+{
+    props.check = mcs.check;
+    props.fec0 = mcs.fec0;
+    props.fec1 = mcs.fec1;
+    props.mod_scheme = mcs.ms;
+}
+
+inline void mcs2genprops(const MCS &mcs, origflexframegenprops_s &props)
+{
+    props.check = mcs.check;
+    props.fec0 = mcs.fec0;
+    props.fec1 = mcs.fec1;
+    props.mod_scheme = mcs.ms;
+}
+
+inline void mcs2genprops(const MCS &mcs, flexframegenprops_s &props)
+{
+    props.check = mcs.check;
+    props.fec0 = mcs.fec0;
+    props.fec1 = mcs.fec1;
+    props.mod_scheme = mcs.ms;
+}
+
 class Modulator : public ::Modulator {
 public:
     Modulator(const MCS &header_mcs)

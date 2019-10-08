@@ -51,7 +51,7 @@ public:
     virtual void stop(void) = 0;
 
     /** @brief Notify queue of new MCS */
-    virtual void updateMCS(NodeId id, const MCS &mcs) = 0;
+    virtual void updateMCS(NodeId id, const MCS *mcs) = 0;
 
     /** @brief Set whether or not a node's send window is open */
     void setSendWindowStatus(NodeId id, bool isOpen)

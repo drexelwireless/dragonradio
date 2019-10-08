@@ -1,6 +1,7 @@
 #include "Logger.hh"
 #include "SlottedMAC.hh"
 #include "Util.hh"
+#include "liquid/Modem.hh"
 
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
@@ -311,16 +312,17 @@ void SlottedMAC::txNotifier(void)
                 hdr.seq = (*it)->pkt->hdr.seq;
 
                 std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
-                const MCS              &mcs = phy_->mcs_table[(*it)->pkt->mcsidx].mcs;
+                // XXX We assume a liquid PHY here!
+                const Liquid::MCS *mcs = reinterpret_cast<const Liquid::MCS*>(phy_->mcs_table[(*it)->pkt->mcsidx].mcs);
 
                 logger_->logSend(Clock::to_wall_time(samples->timestamp),
                                  hdr,
                                  (*it)->pkt->ehdr().src,
                                  (*it)->pkt->ehdr().dest,
-                                 mcs.check,
-                                 mcs.fec0,
-                                 mcs.fec1,
-                                 mcs.ms,
+                                 mcs->check,
+                                 mcs->fec0,
+                                 mcs->fec1,
+                                 mcs->ms,
                                  tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
                                  tx_rate_,
                                  (*it)->pkt->size(),

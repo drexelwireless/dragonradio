@@ -72,8 +72,8 @@ void exportLiquidPHYs(py::module &m)
     py::class_<Liquid::FlexFrame, Liquid::PHY, std::shared_ptr<Liquid::FlexFrame>>(m, "FlexFrame")
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
-                      const MCS&,
-                      const std::vector<std::pair<MCS, AutoGain>>&,
+                      const Liquid::MCS&,
+                      const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
                       bool,
                       bool>())
         ;
@@ -82,8 +82,8 @@ void exportLiquidPHYs(py::module &m)
     py::class_<Liquid::NewFlexFrame, Liquid::PHY, std::shared_ptr<Liquid::NewFlexFrame>>(m, "NewFlexFrame")
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
-                      const MCS&,
-                      const std::vector<std::pair<MCS, AutoGain>>&,
+                      const Liquid::MCS&,
+                      const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
                       bool,
                       bool>())
         ;
@@ -92,8 +92,8 @@ void exportLiquidPHYs(py::module &m)
     py::class_<Liquid::OFDM, Liquid::PHY, std::shared_ptr<Liquid::OFDM>>(m, "OFDM")
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
-                      const MCS&,
-                      const std::vector<std::pair<MCS, AutoGain>>&,
+                      const Liquid::MCS&,
+                      const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
                       bool,
                       bool,
                       unsigned int,
