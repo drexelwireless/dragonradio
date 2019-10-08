@@ -1290,9 +1290,6 @@ class Radio(object):
 
     def deleteMAC(self):
         """Delete the current MAC"""
-        if isinstance(self.controller, dragonradio.SmartController):
-            self.controller.mac = None
-
         self.mac.stop()
         self.mac = None
 
@@ -1325,8 +1322,6 @@ class Radio(object):
             # could start transmitting a packet halfway into a slot + epsilon.
             self.channelizer.prev_demod = 0.5*config.slot_size
             self.channelizer.cur_demod = config.slot_size
-
-        self.finishConfiguringMAC()
 
     def configureTDMA(self, nslots):
         """Configures a TDMA MAC with 'nslots' slots.
@@ -1372,12 +1367,6 @@ class Radio(object):
                 self.channelizer.prev_demod = config.demod_overlap_size
                 self.channelizer.cur_demod = \
                     config.slot_size - config.guard_size + config.demod_overlap_size
-
-        self.finishConfiguringMAC()
-
-    def finishConfiguringMAC(self):
-        if self.config.arq:
-            self.controller.mac = self.mac
 
     def setALOHAChannel(self, channel_idx):
         """Set the transmission channel for the ALOHA MAC."""

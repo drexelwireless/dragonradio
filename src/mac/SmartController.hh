@@ -359,22 +359,6 @@ public:
         netq_ = q;
     }
 
-    /** @brief Get the controller's MAC. */
-    std::shared_ptr<MAC> getMAC(void)
-    {
-        std::lock_guard<std::mutex> lock(mac_mutex_);
-
-        return mac_;
-    }
-
-    /** @brief Set the controller's MAC. */
-    void setMAC(std::shared_ptr<MAC> mac)
-    {
-        std::lock_guard<std::mutex> lock(mac_mutex_);
-
-        mac_ = mac;
-    }
-
     /** @brief Get minimum number of samples in a transmission slot */
     size_t getMinSamplesPerSlot(void) const
     {
@@ -729,12 +713,6 @@ public:
 protected:
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
-
-    /** @brief Mutex protecting the MAC. */
-    std::mutex mac_mutex_;
-
-    /** @brief Our MAC. */
-    std::shared_ptr<MAC> mac_;
 
     /** @brief Mutex to serialize access to the network */
     std::mutex net_mutex_;

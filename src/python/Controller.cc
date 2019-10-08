@@ -32,9 +32,6 @@ void exportControllers(py::module &m)
         .def_property("net_queue",
             &SmartController::getNetQueue,
             &SmartController::setNetQueue)
-        .def_property("mac",
-            &SmartController::getMAC,
-            &SmartController::setMAC)
         .def_readwrite("broadcast_gain",
             &SmartController::broadcast_gain,
             py::return_value_policy::reference_internal)

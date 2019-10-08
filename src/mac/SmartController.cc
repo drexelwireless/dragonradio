@@ -39,7 +39,6 @@ SmartController::SmartController(std::shared_ptr<Net> net,
                                  const std::vector<evm_thresh_t> &evm_thresholds)
   : Controller(net)
   , phy_(phy)
-  , mac_(nullptr)
   , netq_(nullptr)
   , slot_size_(slot_size)
   , max_sendwin_(max_sendwin)
