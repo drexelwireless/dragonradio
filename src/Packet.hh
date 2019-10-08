@@ -487,9 +487,6 @@ struct RadioPacket : public Packet
 
     /** @brief Channel the packet was received on */
     Channel channel;
-
-    /** @brief MCS used for this packet by transmitter */
-    MCS mcs;
 };
 
 /** @brief Compute the size of the specified control message. */
