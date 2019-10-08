@@ -61,7 +61,7 @@ public:
                               payload_len);
     }
 
-    virtual unsigned getOversampleRate(void)
+    unsigned getOversampleRate(void) override
     {
         return 2;
     }
@@ -143,7 +143,7 @@ public:
     NewFlexFrameDemodulator &operator==(const NewFlexFrameDemodulator &) = delete;
     NewFlexFrameDemodulator &operator!=(const NewFlexFrameDemodulator &) = delete;
 
-    virtual unsigned getOversampleRate(void)
+    unsigned getOversampleRate(void) override
     {
         return 2;
     }
