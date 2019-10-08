@@ -877,6 +877,9 @@ class Radio(object):
                                                           config.arq_window,
                                                           evm_thresholds)
 
+            # Add MCU to MTU
+            dragonradio.rc.mtu += config.arq_mcu
+
             # ARQ parameters
             self.controller.enforce_ordering = config.arq_enforce_ordering
             self.controller.max_retransmissions = config.arq_max_retransmissions
@@ -887,7 +890,6 @@ class Radio(object):
             self.controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
             self.controller.selective_ack = config.arq_selective_ack
             self.controller.selective_ack_feedback_delay = config.arq_selective_ack_feedback_delay
-            self.controller.mcu = config.arq_mcu
             self.controller.move_along = config.arq_move_along
             self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
             self.controller.ack_gain.dB = config.arq_ack_gain_db

@@ -66,7 +66,6 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , max_retransmissions_({})
   , demod_always_ordered_(false)
   , enforce_ordering_(false)
-  , mcu_(0)
   , move_along_(true)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
@@ -84,7 +83,7 @@ SmartController::~SmartController()
 
 size_t SmartController::getMaxPacketsPerSlot(mcsidx_t mcsidx)
 {
-    size_t max_pkt_size = rc.mtu + mcu_ + sizeof(struct ether_header);
+    size_t max_pkt_size = rc.mtu + sizeof(struct ether_header);
     size_t max_mod_size = phy_->getModulatedSize(mcsidx, max_pkt_size);
 
     return min_samples_per_slot_/max_mod_size;
@@ -1003,13 +1002,13 @@ void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
 
     // If we have too many selective ACK's, keep as many as we can, but keep the
     // *latest* selective ACKs.
-    if (pkt.size() > rc.mtu + mcu_) {
+    if (pkt.size() > rc.mtu) {
         // How many SACK's do we need to remove?
         constexpr size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
         int              nremove;
         int              nkeep;
 
-        nremove = (pkt.size() - (rc.mtu + mcu_) + sack_size - 1) /
+        nremove = (pkt.size() - rc.mtu + sack_size - 1) /
                       sack_size;
 
         if (nremove > nsacks)
