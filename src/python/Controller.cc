@@ -14,6 +14,10 @@ void exportControllers(py::module &m)
         .def_property_readonly("net_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_out); } )
         .def_property_readonly("radio_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_in); } )
         .def_property_readonly("radio_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_out); } )
+        .def_property("min_channel_bandwidth",
+            nullptr,
+            &Controller::setMinChannelBandwidth,
+            "Minimum channel bandwidth")
         ;
 
     // Export class DummyController to Python
@@ -38,22 +42,18 @@ void exportControllers(py::module &m)
         .def_readwrite("ack_gain",
             &SmartController::ack_gain,
             py::return_value_policy::reference_internal)
-        .def_property("min_samples_per_slot",
-            &SmartController::getMinSamplesPerSlot,
-            &SmartController::setMinSamplesPerSlot,
-            "Minimum number of samples in a transmission slot")
-        .def_property("short_per_nslots",
-            &SmartController::getShortPERNSlots,
-            &SmartController::setShortPERNSlots,
-            "Number of slots worth of packets we use to calculate short-term PER")
-        .def_property("long_per_nslots",
-            &SmartController::getLongPERNSlots,
-            &SmartController::setLongPERNSlots,
-            "Number of slots worth of packets we use to calculate long-term PER")
-        .def_property("long_stats_nslots",
-            &SmartController::getLongStatsNSlots,
-            &SmartController::setLongStatsNSlots,
-            "Number of slots worth of packets we use to calculate long-term statistics")
+        .def_property("short_per_window",
+            &SmartController::getShortPERWindow,
+            &SmartController::setShortPERWindow,
+            "Time window used to calculate short-term PER")
+        .def_property("long_per_window",
+            &SmartController::getLongPERWindow,
+            &SmartController::setLongPERWindow,
+            "Time window used to calculate long-term PE")
+        .def_property("long_stats_window",
+            &SmartController::getLongStatsWindow,
+            &SmartController::setLongStatsWindow,
+            "Time window used to calculate long-term statistics, e.g., EVM and RSSI")
         .def_property("mcsidx_broadcast",
             &SmartController::getBroadcastMCSIndex,
             &SmartController::setBroadcastMCSIndex,

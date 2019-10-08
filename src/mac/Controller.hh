@@ -21,11 +21,18 @@ public:
       , radio_in(*this, nullptr, nullptr, std::bind(&Controller::received, this, _1))
       , radio_out(*this, nullptr, nullptr)
       , net_(net)
+      , min_channel_bandwidth_(0)
     {
     }
     virtual ~Controller() = default;
 
     Controller() = delete;
+
+    /** @brief Set minimum channel bandwidth */
+    virtual void setMinChannelBandwidth(double min_bw)
+    {
+        min_channel_bandwidth_ = min_bw;
+    }
 
     /** @brief Pull a packet from the network to be sent next over the radio. */
     /** This function is automatically called when a packet is requested from
@@ -73,6 +80,9 @@ public:
 protected:
     /** @brief The Net we're attached to */
     std::shared_ptr<Net> net_;
+
+    /** @brief Bandwidth of the smallest channel */
+    double min_channel_bandwidth_;
 };
 
 #endif /* CONTROLLER_H_ */

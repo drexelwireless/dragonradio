@@ -217,9 +217,9 @@ class Config(object):
         # AMC options
         self.amc = False
         self.amc_table = None
-        self.amc_short_per_nslots = 2
-        self.amc_long_per_nslots = 8
-        self.amc_long_stats_nslots = 8
+        self.amc_short_per_window = 100e-3
+        self.amc_long_per_window = 400e-3
+        self.amc_long_stats_window = 400e-3
         self.amc_mcsidx_broadcast = 0
         self.amc_mcsidx_min = 0
         self.amc_mcsidx_max = 0
@@ -604,15 +604,15 @@ class Config(object):
         parser.add_argument('--no-amc', action='store_const', const=False,
                             dest='amc',
                             help='disable AMC')
-        parser.add_argument('--short-per-nslots', action='store', type=int,
-                            dest='amc_short_per_nslots',
-                            help='set number of TX slots worth of packets we use to calculate short-term PER')
-        parser.add_argument('--long-per-nslots', action='store', type=int,
-                            dest='amc_long_per_nslots',
-                            help='set number of TX slots worth of packets we use to calculate long-term PER')
-        parser.add_argument('--long-stats-nslots', action='store', type=int,
-                            dest='amc_long_stats_nslots',
-                            help='set number of TX slots worth of packets we use to calculate long-term statistics, e.g., EVM and RSSI')
+        parser.add_argument('--short-per-window', action='store', type=float,
+                            dest='amc_short_per_window',
+                            help='time window used to calculate short-term PER')
+        parser.add_argument('--long-per-window', action='store', type=float,
+                            dest='amc_long_per_window',
+                            help='time window used to calculate long-term PER')
+        parser.add_argument('--long-stats-window', action='store', type=float,
+                            dest='amc_long_stats_window',
+                            help='time window used to calculate long-term statistics, e.g., EVM and RSSI')
         parser.add_argument('--mcsidx-up-per-threshold', action='store', type=float,
                             dest='amc_mcsidx_up_per_threshold',
                             help='set PER threshold for increasing modulation level')
@@ -895,9 +895,9 @@ class Radio(object):
             self.controller.ack_gain.dB = config.arq_ack_gain_db
 
             # AMC parameters
-            self.controller.short_per_nslots = config.amc_short_per_nslots
-            self.controller.long_per_nslots = config.amc_long_per_nslots
-            self.controller.long_stats_nslots = config.amc_long_stats_nslots
+            self.controller.short_per_window = config.amc_short_per_window
+            self.controller.long_per_window = config.amc_long_per_window
+            self.controller.long_stats_window = config.amc_long_stats_window
             self.controller.mcsidx_broadcast = config.amc_mcsidx_broadcast
             self.controller.mcsidx_min = config.amc_mcsidx_min
             self.controller.mcsidx_max = config.amc_mcsidx_max
@@ -1082,8 +1082,7 @@ class Radio(object):
         if self.mac is not None:
             self.mac.min_channel_bandwidth = min_channel_bandwidth
 
-        if isinstance(self.controller, dragonradio.SmartController):
-            self.controller.min_samples_per_slot = int(min_channel_bandwidth*(config.slot_size - config.guard_size))
+        self.controller.min_channel_bandwidth = min_channel_bandwidth
 
     def configureValidDecimationRates(self):
         """Determine valid decimation and interpolation rates"""

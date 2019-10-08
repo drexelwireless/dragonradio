@@ -359,52 +359,40 @@ public:
         netq_ = q;
     }
 
-    /** @brief Get minimum number of samples in a transmission slot */
-    size_t getMinSamplesPerSlot(void) const
-    {
-        return min_samples_per_slot_;
-    }
-
-    /** @brief Set minimum number of samples in a transmission slot */
-    void setMinSamplesPerSlot(size_t min_samples_per_slot)
-    {
-        min_samples_per_slot_ = min_samples_per_slot;
-    }
-
     /** @brief Get short time window over which to calculate PER (sec) */
-    unsigned getShortPERNSlots(void)
+    double getShortPERWindow(void)
     {
-        return short_per_nslots_;
+        return short_per_window_;
     }
 
     /** @brief Set short time window over which to calculate PER (sec) */
-    void setShortPERNSlots(unsigned nslots)
+    void setShortPERWindow(double window)
     {
-        short_per_nslots_ = nslots;
+        short_per_window_ = window;
     }
 
     /** @brief Get long time window over which to calculate PER (sec) */
-    unsigned getLongPERNSlots(void)
+    double getLongPERWindow(void)
     {
-        return long_per_nslots_;
+        return long_per_window_;
     }
 
     /** @brief Set long time window over which to calculate PER (sec) */
-    void setLongPERNSlots(unsigned nslots)
+    void setLongPERWindow(double window)
     {
-        long_per_nslots_ = nslots;
+        long_per_window_ = window;
     }
 
     /** @brief Get time window for statistics collection (sec) */
-    unsigned getLongStatsNSlots(void)
+    double getLongStatsWindow(void)
     {
-        return long_stats_nslots_;
+        return long_stats_window_;
     }
 
     /** @brief Set time window for statistics collection (sec) */
-    void setLongStatsNSlots(unsigned nslots)
+    void setLongStatsWindow(double window)
     {
-        long_stats_nslots_ = nslots;
+        long_stats_window_ = window;
     }
 
     /** @brief Get broadcast MCS index */
@@ -676,13 +664,6 @@ public:
         return echoed_timestamps_;
     }
 
-    /** @brief Return maximum number of packets per slot.
-     * @param mcsidx The MCS index
-     * @returns The number of packets of maximum size that can fit in one slot
-     *          with the given modulation scheme.
-     */
-    size_t getMaxPacketsPerSlot(mcsidx_t mcsidx);
-
     bool pull(std::shared_ptr<NetPacket> &pkt) override;
 
     void received(std::shared_ptr<RadioPacket> &&pkt) override;
@@ -744,22 +725,20 @@ protected:
     /** @brief Timer queue */
     TimerQueue timer_queue_;
 
-    /** @brief Minimum number of samples in a transmission slot */
-    size_t min_samples_per_slot_;
+    /** @brief Samples in modulated packet of max size at each MCS */
+    std::vector<size_t> max_packet_samples_;
 
     /** @brief EVM thresholds */
     std::vector<evm_thresh_t> evm_thresholds_;
 
-    /** @brief Number of slots worth of packets we use to calculate short-term PER */
-    unsigned short_per_nslots_;
+    /** @brief Time window used to calculate short-term PER */
+    double short_per_window_;
 
-    /** @brief Number of slots worth of packets we use to calculate long-term PER */
-    unsigned long_per_nslots_;
+    /** @brief Time window used to calculate long-term PER */
+    double long_per_window_;
 
-    /** @brief Number of slots worth of packets we use to calculate long-term
-     * statistics
-     */
-    unsigned long_stats_nslots_;
+    /** @brief Time window used to calculate long-term statistics */
+    double long_stats_window_;
 
     /** @brief Broadcast MCS index */
     mcsidx_t mcsidx_broadcast_;

@@ -43,11 +43,10 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , slot_size_(slot_size)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
-  , min_samples_per_slot_(0)
   , evm_thresholds_(evm_thresholds)
-  , short_per_nslots_(2)
-  , long_per_nslots_(8)
-  , long_stats_nslots_(8)
+  , short_per_window_(100e-3)
+  , long_per_window_(400e-3)
+  , long_stats_window_(400e-3)
   , mcsidx_min_(0)
   , mcsidx_max_(0)
   , mcsidx_init_(0)
@@ -72,20 +71,21 @@ SmartController::SmartController(std::shared_ptr<Net> net,
     if (evm_thresholds.size() != phy->mcs_table.size())
         throw std::out_of_range("EVM threshold table and PHY MCS table must be the same size");
 
+    // Calculate samples needed to modulate the largest packet we will ever see
+    // at each MCS
+    size_t max_pkt_size = rc.mtu + sizeof(struct ether_header);
+
+    max_packet_samples_.resize(phy->mcs_table.size());
+
+    for (mcsidx_t mcsidx = 0; mcsidx < phy->mcs_table.size(); ++mcsidx)
+        max_packet_samples_[mcsidx] =  phy->getModulatedSize(mcsidx, max_pkt_size);
+
     timer_queue_.start();
 }
 
 SmartController::~SmartController()
 {
     timer_queue_.stop();
-}
-
-size_t SmartController::getMaxPacketsPerSlot(mcsidx_t mcsidx)
-{
-    size_t max_pkt_size = rc.mtu + sizeof(struct ether_header);
-    size_t max_mod_size = phy_->getModulatedSize(mcsidx, max_pkt_size);
-
-    return min_samples_per_slot_/max_mod_size;
 }
 
 bool SmartController::pull(std::shared_ptr<NetPacket> &pkt)
@@ -1430,14 +1430,10 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 
 void SmartController::resetPEREstimates(SendWindow &sendw)
 {
-    size_t max_packets_per_slot = getMaxPacketsPerSlot(sendw.mcsidx);
-
-    assert(max_packets_per_slot > 0);
-
-    sendw.short_per.setWindowSize(short_per_nslots_*max_packets_per_slot);
+    sendw.short_per.setWindowSize(std::max(1.0, short_per_window_*min_channel_bandwidth_/max_packet_samples_[sendw.mcsidx]));
     sendw.short_per.reset(0);
 
-    sendw.long_per.setWindowSize(long_per_nslots_*max_packets_per_slot);
+    sendw.long_per.setWindowSize(std::max(1.0, long_per_window_*min_channel_bandwidth_/max_packet_samples_[sendw.mcsidx]));
     sendw.long_per.reset(0);
 }
 
@@ -1620,8 +1616,8 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
                                       std::forward_as_tuple(node_id),
                                       std::forward_as_tuple(src, *this, seq, recvwin_, explicit_nak_win_)).first->second;
 
-    recvw.long_evm.setTimeWindow(long_stats_nslots_*slot_size_);
-    recvw.long_rssi.setTimeWindow(long_stats_nslots_*slot_size_);
+    recvw.long_evm.setTimeWindow(long_stats_window_);
+    recvw.long_rssi.setTimeWindow(long_stats_window_);
 
     return recvw;
 }
