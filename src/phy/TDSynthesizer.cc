@@ -1,7 +1,6 @@
 #include "RadioConfig.hh"
 #include "phy/PHY.hh"
 #include "phy/TDSynthesizer.hh"
-#include "phy/TXParams.hh"
 #include "stats/Estimator.hh"
 
 TDSynthesizer::TDSynthesizer(std::shared_ptr<PHY> phy,
@@ -146,16 +145,18 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
              * mutex before modulation to ensure slot->nsamples doesn't change
              * out from under us.
              */
+            float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
+
             if (pkt->internal_flags.is_timestamp) {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
                 pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->length())/phy_->getTXRate());
 
-                mod->modulate(std::move(pkt), *mpkt);
+                mod->modulate(std::move(pkt), g, *mpkt);
 
                 pushed = slot->push(mpkt, chanidx, overfill);
             } else {
-                mod->modulate(std::move(pkt), *mpkt);
+                mod->modulate(std::move(pkt), g, *mpkt);
 
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
@@ -195,9 +196,10 @@ void TDSynthesizer::ChannelState::reset(void)
 }
 
 void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
+                                           float g,
                                            ModPacket &mpkt)
 {
-    const float g = pkt->g;
+    const float g_effective = pkt->g*g;
 
     // Upsample if needed
     if (getFreqShift() != 0.0 || getRate() != 1.0) {
@@ -215,7 +217,7 @@ void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         auto     iqbuf_up = std::make_shared<IQBuf>(neededOut(iqbuf->size()));
         unsigned nw;
 
-        nw = resampleMixUp(iqbuf->data(), iqbuf->size(), g, iqbuf_up->data());
+        nw = resampleMixUp(iqbuf->data(), iqbuf->size(), g_effective, iqbuf_up->data());
         assert(nw <= iqbuf_up->size());
         iqbuf_up->resize(nw);
 
@@ -228,7 +230,7 @@ void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         mpkt.samples = std::move(iqbuf_up);
     } else
         // Modulate packet and apply gain
-        mod_->modulate(std::move(pkt), g, mpkt);
+        mod_->modulate(std::move(pkt), g_effective, mpkt);
 
     // Set channel
     mpkt.channel = channel_;

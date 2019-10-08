@@ -96,6 +96,9 @@ inline void mcs2genprops(const MCS &mcs, flexframegenprops_s &props)
     props.mod_scheme = mcs.ms;
 }
 
+/** @brief An index into the PHY's MCS table */
+typedef unsigned mcsidx_t;
+
 class Modulator {
 public:
     Modulator() = default;

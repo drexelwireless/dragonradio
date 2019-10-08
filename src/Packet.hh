@@ -20,7 +20,7 @@
 #include "Header.hh"
 #include "net/mgen.h"
 #include "phy/Channel.hh"
-#include "phy/TXParams.hh"
+#include "phy/Modem.hh"
 
 /** @brief A time */
 struct Time {
@@ -435,7 +435,6 @@ struct NetPacket : public Packet
 
     explicit NetPacket(size_t n)
       : Packet(n)
-      , tx_params(nullptr)
       , g(1.0)
     {
     }
@@ -443,8 +442,8 @@ struct NetPacket : public Packet
     /** @brief Packet delivery deadline */
     std::optional<MonoClock::time_point> deadline;
 
-    /** @brief TX parameters */
-    TXParams *tx_params;
+    /** @brief MCS to use, given as an index into PHY's MCS table */
+    mcsidx_t mcsidx;
 
     /** @brief Multiplicative TX gain. */
     float g;

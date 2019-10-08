@@ -1,11 +1,5 @@
 #include "DummyController.hh"
 
-DummyController::DummyController(std::shared_ptr<Net> net,
-                                 const std::vector<TXParams> &tx_params)
-  : Controller(net, tx_params)
-{
-}
-
 bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
 {
     if (net_in.pull(pkt)) {
@@ -24,8 +18,8 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
                 }
             }
 
-            pkt->tx_params = &tx_params_[0];
-            pkt->g = tx_params_[0].getSoftTXGain() * nexthop.g;
+            pkt->mcsidx = 0;
+            pkt->g = nexthop.g;
 
             pkt->internal_flags.has_seq = 1;
         }

@@ -6,32 +6,6 @@
 
 void exportRadioNet(py::module &m)
 {
-    // Export class TXParams to Python
-    py::class_<TXParams, std::shared_ptr<TXParams>>(m, "TXParams")
-        .def(py::init<MCS>())
-        .def(py::init<MCS, std::optional<double>>())
-        .def_readonly("mcs",
-            &TXParams::mcs,
-            "Modulation and coding scheme")
-        .def_property("g_0dBFS",
-            &TXParams::getSoftTXGain,
-            &TXParams::setSoftTXGain,
-            "Soft TX gain (multiplicative factor)")
-        .def_property("soft_tx_gain_0dBFS",
-            &TXParams::getSoftTXGain0dBFS,
-            &TXParams::setSoftTXGain0dBFS,
-            "Soft TX gain (dBFS)")
-        .def_property("auto_soft_tx_gain_clip_frac",
-            &TXParams::getAutoSoftTXGainClipFrac,
-            &TXParams::setAutoSoftTXGainClipFrac,
-            "Clipping threshold for automatic TX soft gain")
-        .def("recalc0dBFSEstimate",
-            &TXParams::recalc0dBFSEstimate,
-            "Reset the 0dBFS estimate")
-        ;
-
-    py::bind_vector<std::vector<TXParams>>(m, "TXParamsVector");
-
     // Export class Node to Python
     py::class_<Node, std::shared_ptr<Node>>(m, "Node")
         .def_readonly("id",
@@ -50,14 +24,9 @@ void exportRadioNet(py::module &m)
             &Node::getSoftTXGain,
             &Node::setSoftTXGain,
             "Soft TX gain (dBFS)")
-        .def_property_readonly("tx_params",
-            [](Node &node) -> std::optional<TXParams> {
-                if (node.tx_params)
-                    return *node.tx_params;
-                else
-                    return std::nullopt;
-            },
-            "TX parameters")
+        .def_readonly("mcsidx",
+            &Node::mcsidx,
+            "MCS index")
         .def_property_readonly("timestamps",
             [](Node &node) {
                 std::lock_guard<std::mutex> lock(node.timestamps_mutex);

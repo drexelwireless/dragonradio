@@ -118,6 +118,7 @@ public:
     PHY(std::shared_ptr<SnapshotCollector> collector,
         NodeId node_id,
         const MCS &header_mcs,
+        const std::vector<std::pair<MCS, AutoGain>> &mcs_table,
         bool soft_header,
         bool soft_payload);
     virtual ~PHY() = default;
@@ -151,7 +152,7 @@ public:
         return soft_payload_;
     }
 
-    size_t getModulatedSize(const TXParams &params, size_t n) override;
+    size_t getModulatedSize(mcsidx_t mcsidx, size_t n) override;
 
 protected:
     /** @brief Modulation and coding scheme for headers. */

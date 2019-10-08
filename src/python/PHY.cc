@@ -19,8 +19,30 @@ void exportPHYs(py::module &m)
          })
         ;
 
+    // Export class AutoGain to Python
+    py::class_<AutoGain, std::shared_ptr<AutoGain>>(m, "AutoGain")
+        .def(py::init<>())
+        .def_property("g_0dBFS",
+            &AutoGain::getSoftTXGain,
+            &AutoGain::setSoftTXGain,
+            "Soft TX gain (multiplicative factor)")
+        .def_property("soft_tx_gain_0dBFS",
+            &AutoGain::getSoftTXGain0dBFS,
+            &AutoGain::setSoftTXGain0dBFS,
+            "Soft TX gain (dBFS)")
+        .def_property("auto_soft_tx_gain_clip_frac",
+            &AutoGain::getAutoSoftTXGainClipFrac,
+            &AutoGain::setAutoSoftTXGainClipFrac,
+            "Clipping threshold for automatic TX soft gain")
+        .def("recalc0dBFSEstimate",
+            &AutoGain::recalc0dBFSEstimate,
+            "Reset the 0dBFS estimate")
+        ;
+
     // Export class PHY to Python
     py::class_<PHY, std::shared_ptr<PHY>>(m, "PHY")
+        .def_readonly("mcs_table",
+            &PHY::mcs_table)
         .def_property_readonly("min_rx_rate_oversample",
             &PHY::getMinRXRateOversample)
         .def_property_readonly("min_tx_rate_oversample",
@@ -51,6 +73,7 @@ void exportLiquidPHYs(py::module &m)
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
                       const MCS&,
+                      const std::vector<std::pair<MCS, AutoGain>>&,
                       bool,
                       bool>())
         ;
@@ -60,6 +83,7 @@ void exportLiquidPHYs(py::module &m)
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
                       const MCS&,
+                      const std::vector<std::pair<MCS, AutoGain>>&,
                       bool,
                       bool>())
         ;
@@ -69,12 +93,13 @@ void exportLiquidPHYs(py::module &m)
         .def(py::init<std::shared_ptr<SnapshotCollector>,
                       NodeId,
                       const MCS&,
+                      const std::vector<std::pair<MCS, AutoGain>>&,
                       bool,
                       bool,
                       unsigned int,
                       unsigned int,
                       unsigned int,
-                      std::optional<std::string>&>())
+                      const std::optional<std::string>&>())
         .def_property_readonly("subcarriers",
             [](std::shared_ptr<Liquid::OFDM> self)
             {

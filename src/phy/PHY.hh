@@ -11,6 +11,7 @@
 #include "RadioConfig.hh"
 #include "SafeQueue.hh"
 #include "mac/Snapshot.hh"
+#include "phy/AutoGain.hh"
 
 /** @brief A modulated data packet to be sent over the radio */
 struct ModPacket
@@ -118,9 +119,21 @@ public:
     {
     }
 
+    PHY() = delete;
+
     virtual ~PHY() = default;
 
-    PHY() = delete;
+    /** @brief MCS entry */
+    struct MCSEntry {
+        /** @brief MCS */
+        MCS mcs;
+
+        /** @brief auto-gain for this MCS */
+        AutoGain autogain;
+    };
+
+    /** @brief MCS table */
+    std::vector<MCSEntry> mcs_table;
 
     /** @brief Get the snapshot collector */
     const std::shared_ptr<SnapshotCollector> &getSnapshotCollector(void) const
@@ -175,7 +188,7 @@ public:
     virtual unsigned getMinTXRateOversample(void) const = 0;
 
     /** @brief Calculate size of modulated data */
-    virtual size_t getModulatedSize(const TXParams &params, size_t n) = 0;
+    virtual size_t getModulatedSize(mcsidx_t mcsidx, size_t n) = 0;
 
     /** @brief Create a Modulator for this %PHY */
     virtual std::shared_ptr<PacketModulator> mkPacketModulator(void) = 0;

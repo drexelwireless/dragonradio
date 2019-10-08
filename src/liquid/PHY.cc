@@ -13,6 +13,7 @@ const size_t kInitialModbufSize = 16384;
 Liquid::PHY::PHY(std::shared_ptr<SnapshotCollector> collector,
                  NodeId node_id,
                  const MCS &header_mcs,
+                 const std::vector<std::pair<MCS, AutoGain>> &mcs_table_,
                  bool soft_header,
                  bool soft_payload)
   : ::PHY(collector, node_id)
@@ -20,14 +21,18 @@ Liquid::PHY::PHY(std::shared_ptr<SnapshotCollector> collector,
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
 {
+    mcs_table.resize(mcs_table_.size());
+
+    for (unsigned i = 0; i < mcs_table_.size(); ++i)
+        mcs_table[i] = { mcs_table_[i].first, mcs_table_[i].second };
 }
 
 void Liquid::PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
                                             const float g,
                                             ModPacket &mpkt)
 {
-    assert(pkt->tx_params);
-    setPayloadMCS(pkt->tx_params->mcs);
+    assert(pkt->mcsidx < phy_.mcs_table.size());
+    setPayloadMCS(phy_.mcs_table[pkt->mcsidx].mcs);
     assemble(&pkt->hdr, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples
@@ -64,9 +69,10 @@ void Liquid::PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     iqbuf->resize(nsamples);
 
     // Pass the modulated packet to the 0dBFS estimator if requested
-    assert(pkt->tx_params);
-    if (pkt->tx_params->needCalcAutoSoftGain0dBFS())
-        work_queue.submit(&TXParams::autoSoftGain0dBFS, pkt->tx_params, g, iqbuf);
+    AutoGain &autogain = phy_.mcs_table[pkt->mcsidx].autogain;
+
+    if (autogain.needCalcAutoSoftGain0dBFS())
+        work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
     // Fill in the ModPacket
     mpkt.offset = iqbuf->delay;
@@ -228,11 +234,12 @@ void Liquid::PHY::PacketDemodulator::demodulate(const std::complex<float>* data,
     sample_end_ += count;
 }
 
-size_t Liquid::PHY::getModulatedSize(const TXParams &params, size_t n)
+size_t Liquid::PHY::getModulatedSize(mcsidx_t mcsidx, size_t n)
 {
     std::unique_ptr<Liquid::Modulator> mod = mkLiquidModulator();
 
-    mod->setPayloadMCS(params.mcs);
+    assert(mcsidx < mcs_table.size());
+    mod->setPayloadMCS(mcs_table[mcsidx].mcs);
 
     Header                     hdr = {0};
     std::vector<unsigned char> body(sizeof(ExtendedHeader) + n);

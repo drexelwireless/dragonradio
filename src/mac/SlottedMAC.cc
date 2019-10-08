@@ -311,15 +311,16 @@ void SlottedMAC::txNotifier(void)
                 hdr.seq = (*it)->pkt->hdr.seq;
 
                 std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
+                const MCS              &mcs = phy_->mcs_table[(*it)->pkt->mcsidx].mcs;
 
                 logger_->logSend(Clock::to_wall_time(samples->timestamp),
                                  hdr,
                                  (*it)->pkt->ehdr().src,
                                  (*it)->pkt->ehdr().dest,
-                                 (*it)->pkt->tx_params->mcs.check,
-                                 (*it)->pkt->tx_params->mcs.fec0,
-                                 (*it)->pkt->tx_params->mcs.fec1,
-                                 (*it)->pkt->tx_params->mcs.ms,
+                                 mcs.check,
+                                 mcs.fec0,
+                                 mcs.fec1,
+                                 mcs.ms,
                                  tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
                                  tx_rate_,
                                  (*it)->pkt->size(),

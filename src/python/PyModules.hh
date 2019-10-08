@@ -6,14 +6,11 @@
 
 #include "net/Element.hh"
 #include "phy/Channel.hh"
-#include "phy/TXParams.hh"
 #include "python/capsule.hh"
 
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(Channels)
-
-PYBIND11_MAKE_OPAQUE(std::vector<TXParams>)
 
 template <class D, class P, class T>
 struct PortWrapper

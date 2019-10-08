@@ -5,7 +5,6 @@
 #include "Util.hh"
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/PHY.hh"
-#include "phy/TXParams.hh"
 #include "stats/Estimator.hh"
 
 MultichannelSynthesizer::MultichannelSynthesizer(std::shared_ptr<PHY> phy,
@@ -276,7 +275,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                     if (pkt->internal_flags.is_timestamp)
                         pkt->appendTimestamp(timestamp);
 
-                    const float g = pkt->g * g_nchan;
+                    float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain()*g_nchan;
 
                     mod.modulate(std::move(pkt), g, *mpkt);
                 }
@@ -445,8 +444,10 @@ void MultichannelSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> 
                                                      const float g,
                                                      ModPacket &mpkt)
 {
+    const float g_effective = pkt->g*g;
+
     // Modulate the packet
-    mod_->modulate(std::move(pkt), g, mpkt);
+    mod_->modulate(std::move(pkt), g_effective, mpkt);
 
     // Set channel
     mpkt.channel = channel_;

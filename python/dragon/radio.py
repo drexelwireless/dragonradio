@@ -18,7 +18,7 @@ import scipy.stats as stats
 import sys
 
 import dragonradio
-from dragonradio import Channel, Channels, MCS, TXParams, TXParamsVector
+from dragonradio import Channel, Channels, MCS
 
 import dragon.channels
 import dragon.schedule
@@ -147,17 +147,11 @@ class Config(object):
         self.fec1 = 'none'
         self.ms = 'qpsk'
 
-        # Header liquid modulation options
+        # Header MCS
         self.header_check = 'crc32'
         self.header_fec0 = 'none'
         self.header_fec1 = 'v29p78'
         self.header_ms = 'bpsk'
-
-        # Broadcast liquid modulation options
-        self.broadcast_check = 'crc32'
-        self.broadcast_fec0 = 'none'
-        self.broadcast_fec1 = 'v29p78'
-        self.broadcast_ms = 'bpsk'
 
         # Soft decoding options
         self.soft_header = True
@@ -225,6 +219,9 @@ class Config(object):
         self.amc_short_per_nslots = 2
         self.amc_long_per_nslots = 8
         self.amc_long_stats_nslots = 8
+        self.amc_mcsidx_broadcast = 0
+        self.amc_mcsidx_min = 0
+        self.amc_mcsidx_max = 0
         self.amc_mcsidx_init = 0
         self.amc_mcsidx_up_per_threshold = 0.04
         self.amc_mcsidx_down_per_threshold = 0.10
@@ -292,6 +289,10 @@ class Config(object):
 
     def __str__(self):
         return pformat(self.__dict__)
+
+    @property
+    def mcs_table(self):
+        return [(self.check, self.fec0, self.fec1, self.ms)]
 
     @property
     def logdir(self):
@@ -753,22 +754,31 @@ class Radio(object):
                          config.header_fec1,
                          config.header_ms)
 
+        # Construct MCS table
+        if config.amc and config.amc_table:
+            mcs_table = [(MCS(*mcs), self.mkAutoGain()) for (mcs, _evm_threshold) in config.amc_table]
+        else:
+            mcs_table = [(MCS(*mcs), self.mkAutoGain()) for mcs in config.mcs_table]
+
         if config.phy == 'flexframe':
             self.phy = dragonradio.liquid.FlexFrame(self.snapshot_collector,
                                                     self.node_id,
                                                     header_mcs,
+                                                    mcs_table,
                                                     config.soft_header,
                                                     config.soft_payload)
         elif config.phy == 'newflexframe':
             self.phy = dragonradio.liquid.NewFlexFrame(self.snapshot_collector,
                                                        self.node_id,
                                                        header_mcs,
+                                                       mcs_table,
                                                        config.soft_header,
                                                        config.soft_payload)
         elif config.phy == 'ofdm':
             self.phy = dragonradio.liquid.OFDM(self.snapshot_collector,
                                                self.node_id,
                                                header_mcs,
+                                               mcs_table,
                                                config.soft_header,
                                                config.soft_payload,
                                                config.M,
@@ -838,7 +848,7 @@ class Radio(object):
         # Configure the controller
         #
 
-        # Create TX parameters
+        # Configure EVM thresholds
         if config.amc and config.amc_table:
             def zeroToNone(x):
                 if x:
@@ -848,18 +858,9 @@ class Radio(object):
 
             # libconfig can't parse None, so we use zero to represent a
             # non-existant threshold (zero is not a valid EVM threshold)
-            tx_params = [TXParams(MCS(*mcs), zeroToNone(evm_threshold)) for (mcs, evm_threshold) in config.amc_table]
+            evm_thresholds = [zeroToNone(evm_threshold) for (_mcs, evm_threshold) in config.amc_table]
         else:
-            tx_params = [TXParams(MCS(config.check, config.fec0, config.fec1, config.ms))]
-
-        for p in tx_params:
-            self.configTXParamsSoftGain(p)
-
-        broadcast_tx_params = TXParams(MCS(config.broadcast_check,
-                                           config.broadcast_fec0,
-                                           config.broadcast_fec1,
-                                           config.broadcast_ms))
-        self.configTXParamsSoftGain(broadcast_tx_params)
+            evm_thresholds = [None for _ in config.mcs_table]
 
         if config.arq:
             self.controller = dragonradio.SmartController(self.net,
@@ -867,8 +868,7 @@ class Radio(object):
                                                           config.slot_size,
                                                           config.arq_window,
                                                           config.arq_window,
-                                                          TXParamsVector(tx_params),
-                                                          broadcast_tx_params)
+                                                          evm_thresholds)
 
             # ARQ parameters
             self.controller.enforce_ordering = config.arq_enforce_ordering
@@ -889,6 +889,9 @@ class Radio(object):
             self.controller.short_per_nslots = config.amc_short_per_nslots
             self.controller.long_per_nslots = config.amc_long_per_nslots
             self.controller.long_stats_nslots = config.amc_long_stats_nslots
+            self.controller.mcsidx_broadcast = config.amc_mcsidx_broadcast
+            self.controller.mcsidx_min = config.amc_mcsidx_min
+            self.controller.mcsidx_max = config.amc_mcsidx_max
             self.controller.mcsidx_init = config.amc_mcsidx_init
             self.controller.mcsidx_up_per_threshold = config.amc_mcsidx_up_per_threshold
             self.controller.mcsidx_down_per_threshold = config.amc_mcsidx_down_per_threshold
@@ -896,8 +899,7 @@ class Radio(object):
             self.controller.mcsidx_prob_floor = config.amc_mcsidx_prob_floor
 
         else:
-            self.controller = dragonradio.DummyController(self.net,
-                                                          TXParamsVector(tx_params))
+            self.controller = dragonradio.DummyController(self.net)
 
         #
         # Create flow performance measurement component
@@ -971,13 +973,17 @@ class Radio(object):
         if self.logger:
             self.logger.close()
 
-    def configTXParamsSoftGain(self, tx_params):
+    def mkAutoGain(self):
         config = self.config
 
-        tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
+        autogain = dragonradio.AutoGain()
+
+        autogain.soft_tx_gain_0dBFS = config.soft_tx_gain
         if config.auto_soft_tx_gain != None:
-            tx_params.recalc0dBFSEstimate(config.auto_soft_tx_gain)
-            tx_params.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
+            autogain.recalc0dBFSEstimate(config.auto_soft_tx_gain)
+            autogain.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
+
+        return autogain
 
     def setTXParams(self, crc, fec0, fec1, ms, g, clip=0.999):
         config = self.config

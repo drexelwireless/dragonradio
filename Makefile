@@ -86,6 +86,7 @@ SOURCES := \
     liquid/OFDM.cc \
     liquid/PHY.cc \
     liquid/Resample.cc \
+    phy/AutoGain.cc \
     phy/FDChannelizer.cc \
     phy/FDSynthesizer.cc \
     phy/MultichannelSynthesizer.cc \
@@ -93,8 +94,6 @@ SOURCES := \
     phy/RadioPacketQueue.cc \
     phy/TDChannelizer.cc \
     phy/TDSynthesizer.cc \
-    phy/TXParams.cc \
-    mac/Controller.cc \
     mac/DummyController.cc \
     mac/MAC.cc \
     mac/SmartController.cc \

@@ -337,13 +337,14 @@ class SmartController : public Controller
     friend class ReceiveWindowProxy;
 
 public:
+    using evm_thresh_t = std::optional<double>;
+
     SmartController(std::shared_ptr<Net> net,
                     std::shared_ptr<PHY> phy,
                     double slot_size,
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
-                    const std::vector<TXParams> &tx_params,
-                    const TXParams &broadcast_tx_params);
+                    const std::vector<evm_thresh_t> &evm_thresholds);
     virtual ~SmartController();
 
     /** @brief Get the controller's network queue. */
@@ -386,12 +387,6 @@ public:
         min_samples_per_slot_ = min_samples_per_slot;
     }
 
-    /** @brief Get broadcast TX params */
-    TXParams getBroadcastTXParams(void)
-    {
-        return broadcast_tx_params_;
-    }
-
     /** @brief Get short time window over which to calculate PER (sec) */
     unsigned getShortPERNSlots(void)
     {
@@ -428,17 +423,62 @@ public:
         long_stats_nslots_ = nslots;
     }
 
+    /** @brief Get broadcast MCS index */
+    mcsidx_t getBroadcastMCSIndex(void)
+    {
+        return mcsidx_broadcast_;
+    }
+
+    /** @brief Set broadcast MCS index */
+    void setBroadcastMCSIndex(mcsidx_t mcsidx)
+    {
+        if(mcsidx >= phy_->mcs_table.size())
+            throw std::out_of_range("MCS index out of range");
+
+        mcsidx_broadcast_ = mcsidx;
+    }
+
+    /** @brief Get minimum MCS index */
+    mcsidx_t getMinMCSIndex(void)
+    {
+        return mcsidx_min_;
+    }
+
+    /** @brief Set minimum MCS index */
+    void setMinMCSIndex(mcsidx_t mcsidx)
+    {
+        if(mcsidx >= phy_->mcs_table.size())
+            throw std::out_of_range("MCS index out of range");
+
+        mcsidx_min_ = mcsidx;
+    }
+
+    /** @brief Get maximum MCS index */
+    mcsidx_t getMaxMCSIndex(void)
+    {
+        return mcsidx_max_;
+    }
+
+    /** @brief Set maximum MCS index */
+    void setMaxMCSIndex(mcsidx_t mcsidx)
+    {
+        if(mcsidx >= phy_->mcs_table.size())
+            throw std::out_of_range("MCS index out of range");
+
+        mcsidx_max_ = mcsidx;
+    }
+
     /** @brief Get initial MCS index */
-    unsigned getInitialMCSIndex(void)
+    mcsidx_t getInitialMCSIndex(void)
     {
         return mcsidx_init_;
     }
 
     /** @brief Set initial MCS index */
-    void setInitialMCSIndex(unsigned mcsidx)
+    void setInitialMCSIndex(mcsidx_t mcsidx)
     {
-        if(mcsidx >= tx_params_.size())
-            throw std::out_of_range("Initial MCS index out of range");
+        if(mcsidx >= phy_->mcs_table.size())
+            throw std::out_of_range("MCS index out of range");
 
         mcsidx_init_ = mcsidx;
     }
@@ -637,11 +677,11 @@ public:
     }
 
     /** @brief Return maximum number of packets per slot.
-     * @param p The TXParams uses for modulation
+     * @param mcsidx The MCS index
      * @returns The number of packets of maximum size that can fit in one slot
      *          with the given modulation scheme.
      */
-    size_t getMaxPacketsPerSlot(const TXParams &p);
+    size_t getMaxPacketsPerSlot(mcsidx_t mcsidx);
 
     bool pull(std::shared_ptr<NetPacket> &pkt) override;
 
@@ -713,8 +753,8 @@ protected:
     /** @brief Minimum number of samples in a transmission slot */
     size_t min_samples_per_slot_;
 
-    /** @brief Broadcast TX params */
-    TXParams broadcast_tx_params_;
+    /** @brief EVM thresholds */
+    std::vector<evm_thresh_t> evm_thresholds_;
 
     /** @brief Number of slots worth of packets we use to calculate short-term PER */
     unsigned short_per_nslots_;
@@ -727,8 +767,17 @@ protected:
      */
     unsigned long_stats_nslots_;
 
+    /** @brief Broadcast MCS index */
+    mcsidx_t mcsidx_broadcast_;
+
+    /** @brief Minimum MCS index */
+    mcsidx_t mcsidx_min_;
+
+    /** @brief Maximum MCS index */
+    mcsidx_t mcsidx_max_;
+
     /** @brief Initial MCS index */
-    unsigned mcsidx_init_;
+    mcsidx_t mcsidx_init_;
 
     /** @brief PER threshold for increasing modulation level */
     double mcsidx_up_per_threshold_;

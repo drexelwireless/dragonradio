@@ -14,7 +14,6 @@
 #include "RadioConfig.hh"
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
-#include "phy/TXParams.hh"
 
 /** @brief A sprintf-style format string for internal network tun/tap IP
  * addresses.
@@ -48,7 +47,7 @@ struct Node {
       , is_gateway(false)
       , can_transmit(true)
       , g(1.0)
-      , tx_params(nullptr)
+      , mcsidx(0)
     {
     }
 
@@ -69,8 +68,8 @@ struct Node {
     /** @brief Multiplicative TX gain as measured against 0 dBFS. */
     float g;
 
-    /** @brief TX parameters for this node (may be null). */
-    const TXParams *tx_params;
+    /** @brief MCS for this node */
+    mcsidx_t mcsidx;
 
     /** @brief Mutex protecting timestamps */
     std::mutex timestamps_mutex;
