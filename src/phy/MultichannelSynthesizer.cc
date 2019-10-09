@@ -91,7 +91,9 @@ void MultichannelSynthesizer::reconfigure(void)
     // Wait for workers to be ready for reconfiguration
     reconfigure_sync_.wait();
 
-    // Make vopies of variables for thraad safety
+    // Make copies of variables for thread safety
+    // NOTE: The mutex protecting the synthesizer state is held when reconfigure
+    // is called.
     tx_rate_copy_ = tx_rate_;
     channels_copy_ = channels_;
     schedule_copy_ = schedule_;

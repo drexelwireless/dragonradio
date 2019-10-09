@@ -160,6 +160,8 @@ public:
      */
     virtual void setTXRate(double rate)
     {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
         tx_rate_ = rate;
         reconfigure();
     }
@@ -185,6 +187,8 @@ public:
     /** @brief Set channels */
     virtual void setChannels(const Channels &channels)
     {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
         channels_ = channels;
         reconfigure();
     }
@@ -198,6 +202,8 @@ public:
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule &schedule)
     {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
         schedule_ = schedule;
         reconfigure();
     }
@@ -205,6 +211,8 @@ public:
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule::sched_type &schedule)
     {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
         schedule_ = schedule;
         reconfigure();
     }
@@ -242,6 +250,9 @@ public:
 protected:
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
+
+    /** @brief Mutex for synthesizer state. */
+    spinlock_mutex mutex_;
 
     /** @brief TX sample rate */
     double tx_rate_;

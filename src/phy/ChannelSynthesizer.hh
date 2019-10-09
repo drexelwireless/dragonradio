@@ -26,30 +26,6 @@ public:
                        size_t nthreads);
     virtual ~ChannelSynthesizer();
 
-    void setTXRate(double rate) override
-    {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
-
-        tx_rate_ = rate;
-        reconfigure();
-    }
-
-    void setChannels(const Channels &channels) override
-    {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
-
-        channels_ = channels;
-        reconfigure();
-    }
-
-    void setSchedule(const Schedule::sched_type &schedule) override
-    {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
-
-        schedule_ = schedule;
-        reconfigure();
-    }
-
     void modulate(const std::shared_ptr<Slot> &slot) override;
 
     void reconfigure(void) override;
@@ -102,9 +78,6 @@ protected:
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
-
-    /** @brief Mutex for synthesizer state. */
-    spinlock_mutex mutex_;
 
     /** @brief Reconfiguration flags */
     std::vector<std::atomic<bool>> mod_reconfigure_;
