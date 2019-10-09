@@ -1,18 +1,11 @@
 #ifndef TDSYNTHESIZER_H_
 #define TDSYNTHESIZER_H_
 
-#include <atomic>
-#include <mutex>
-
 #include "dsp/Polyphase.hh"
-#include "dsp/TableNCO.hh"
-#include "phy/Channel.hh"
-#include "phy/PHY.hh"
-#include "phy/Synthesizer.hh"
-#include "net/Net.hh"
+#include "phy/ChannelSynthesizer.hh"
 
 /** @brief A time-domain synthesizer. */
-class TDSynthesizer : public Synthesizer
+class TDSynthesizer : public ChannelSynthesizer
 {
 public:
     using Upsampler = Dragon::MixingRationalResampler<C,C>;
@@ -20,63 +13,52 @@ public:
     TDSynthesizer(std::shared_ptr<PHY> phy,
                   double tx_rate,
                   const Channels &channels,
-                  size_t nthreads);
-    virtual ~TDSynthesizer();
+                  size_t nthreads)
+      : ChannelSynthesizer(phy, tx_rate, channels, nthreads)
+    {
+    }
 
-    void modulate(const std::shared_ptr<Slot> &slot) override;
-
-    void reconfigure(void) override;
-
-    /** @brief Stop modulating. */
-    void stop(void);
+    virtual ~TDSynthesizer() = default;
 
 private:
     /** @brief Channel state for time-domain modulation */
-    class ChannelState : private Upsampler {
+    class TDChannelState : public ChannelState, private Upsampler {
     public:
-        using C = std::complex<float>;
+        TDChannelState(PHY &phy,
+                       const Channel &channel,
+                       const std::vector<C> &taps,
+                       double tx_rate)
+          : ChannelState(phy, channel, taps, tx_rate)
+          , Upsampler(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw),
+                      taps)
+        {
+            setFreqShift(2*M_PI*channel.fc/tx_rate);
+        }
 
-        ChannelState(PHY &phy,
-                     const Channel &channel,
-                     const std::vector<C> &taps,
-                     double tx_rate);
+        void reset(void) override
+        {
+            Upsampler::reset();
+        }
 
-        ~ChannelState() = default;
+        TDChannelState() = delete;
 
-        /** @brief Reset internal state */
-        void reset(void);
+        virtual ~TDChannelState() = default;
 
-        /** @brief Modulate a packet to produce IQ samples.
-         * @param pkt The NetPacket to modulate.
-         * @param g Gain to apply.
-         * @param mpkt The ModPacket in which to place modulated samples.
-         */
         void modulate(std::shared_ptr<NetPacket> pkt,
                       float g,
-                      ModPacket &mpkt);
-
-    protected:
-        /** @brief Channel we are modulating */
-        Channel channel_;
-
-        /** @brief Our demodulator */
-        std::shared_ptr<PHY::PacketModulator> mod_;
+                      ModPacket &mpkt) override final;
     };
 
-    /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
-
-    /** @brief Reconfiguration flags */
-    std::vector<std::atomic<bool>> mod_reconfigure_;
-
-    /** @brief Current slot that need to be synthesized */
-    std::shared_ptr<Synthesizer::Slot> curslot_;
-
-    /** @brief Threads running modWorker */
-    std::vector<std::thread> mod_threads_;
-
-    /** @brief Thread modulating packets */
-    void modWorker(std::atomic<bool> &reconfig, unsigned tid);
+    std::unique_ptr<ChannelState>
+    mkChannelState(const Channel &channel,
+                   const std::vector<C> &taps,
+                   double tx_rate) override final
+    {
+        return std::unique_ptr<ChannelState>(new TDChannelState(*phy_,
+                                                                channel,
+                                                                taps,
+                                                                tx_rate));
+    }
 };
 
 #endif /* TDSYNTHESIZER_H_ */

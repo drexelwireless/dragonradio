@@ -87,6 +87,7 @@ SOURCES := \
     liquid/PHY.cc \
     liquid/Resample.cc \
     phy/AutoGain.cc \
+    phy/ChannelSynthesizer.cc \
     phy/FDChannelizer.cc \
     phy/FDSynthesizer.cc \
     phy/MultichannelSynthesizer.cc \
