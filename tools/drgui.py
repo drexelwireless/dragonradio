@@ -109,6 +109,7 @@ class SpecgramPlot:
         self.ax.set_aspect('auto')
         self.ax.set_xlabel('Time (sec)')
         self.ax.set_ylabel('Frequency (kHz)')
+        self.ax.set_ylim(-Fs/2, Fs/2)
         self.ax.xaxis.set_major_formatter(xticks)
         self.ax.yaxis.set_major_formatter(yticks)
         #self.ax.axis('tight')
