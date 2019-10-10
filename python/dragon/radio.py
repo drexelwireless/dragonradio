@@ -199,20 +199,35 @@ class Config(object):
 
         # ARQ options
         self.arq = False
+        """Should ARQ be enabled?"""
         self.arq_window = 1024
+        """ARQ window size"""
         self.arq_enforce_ordering = False
+        """Should ARQ enforce packet ordering?"""
         self.arq_max_retransmissions = None
+        """Maximum number of times a packet is allowed to be retransmitted"""
         self.arq_ack_delay = 100e-3
+        """Maximum delay before an explicit ACK is sent (sec)"""
         self.arq_retransmission_delay = 500e-3
+        """Duration of retransmission timer (sec)"""
         self.arq_sack_delay = 50e-3
+        """Maximum time to wait for a regular packet to have a SACK attached (sec)"""
         self.arq_explicit_nak_win = 10
+        """Maximum number of NAKs to send during NAK window"""
         self.arq_explicit_nak_win_duration = 0.1
+        """Duration of NAK window (sec)"""
         self.arq_selective_ack = True
+        """Send selective ACKs?"""
         self.arq_selective_ack_feedback_delay = 0.300
+        """Maximum time to wait before counting a selective NAK as a TX failure"""
         self.arq_mcu = 100
+        """Maximum number of extra bytes beyond MTU to be used for control information"""
         self.arq_move_along = True
+        """Move the send window along even when it's full"""
         self.arq_broadcast_gain_db = 0.0
+        """Gain to be applied to broadcast packets (dB)"""
         self.arq_ack_gain_db = 0.0
+        """Gain to be applied to ACK packets (dB)"""
 
         # AMC options
         self.amc = False
