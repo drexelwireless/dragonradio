@@ -202,8 +202,8 @@ private:
     /** @brief Radio schedule */
     Schedule schedule_copy_;
 
-    /** @brief Number of channels available in each slot index */
-    std::vector<unsigned> channel_count_;
+    /** @brief Gain necessary to compensate for simultaneous transmission */
+    float g_multichan_;
 
     /** @brief Thread modulating packets */
     void modWorker(unsigned tid);

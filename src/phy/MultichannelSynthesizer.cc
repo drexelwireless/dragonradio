@@ -98,20 +98,25 @@ void MultichannelSynthesizer::reconfigure(void)
     channels_copy_ = channels_;
     schedule_copy_ = schedule_;
 
-    // Count number of channels we may transmit on in each slot
-    if (schedule_.size() > 0) {
-        channel_count_.resize(schedule_[0].size());
-        std::fill(channel_count_.begin(), channel_count_.end(), 0);
+    // Compute gain necessary to compensate for maximum number of channels on
+    // which we may simultaneously transmit.
+    unsigned chancount = 0;
 
-        for (unsigned chanidx = 0; chanidx < schedule_.size(); ++chanidx) {
-            auto &slots = schedule_[chanidx];
+    for (unsigned chanidx = 0; chanidx < schedule_.size(); ++chanidx) {
+        auto &slots = schedule_[chanidx];
 
-            for (unsigned slotidx = 0; slotidx < slots.size(); ++slotidx) {
-                if (slots[slotidx])
-                    ++channel_count_[slotidx];
+        for (unsigned slotidx = 0; slotidx < slots.size(); ++slotidx) {
+            if (slots[slotidx]) {
+                ++chancount;
+                break;
             }
         }
     }
+
+    if (chancount == 0)
+        g_multichan_ = 1.0f;
+    else
+        g_multichan_ = 1.0f/static_cast<float>(chancount);
 
     // Now set the channels and reconfigure the channel state
     const unsigned nchannels = channels_copy_.size();
@@ -217,12 +222,6 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
             if (!slots[slot->slotidx])
                 continue;
 
-            // Determine gain factor to compensate for number of channels we can
-            // transmit on. We are conservative: if we can transmit on N
-            // channels in this slot, then we apply a multiplicative gain of 1/N
-            // to all packets whose transmission begins in this slot.
-            float g_nchan = 1.0f/static_cast<float>(channel_count_[slot->slotidx]);
-
             // We can overfill if we are allowed to transmit on the same channel
             // in the next slot in the schedule
             bool overfill = getSuperslots() && slots[(slot->slotidx + 1) % slots.size()];
@@ -277,7 +276,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                     if (pkt->internal_flags.is_timestamp)
                         pkt->appendTimestamp(timestamp);
 
-                    float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain()*g_nchan;
+                    float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain()*g_multichan_;
 
                     mod.modulate(std::move(pkt), g, *mpkt);
                 }
