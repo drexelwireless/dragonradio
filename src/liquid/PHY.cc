@@ -247,3 +247,30 @@ size_t Liquid::PHY::getModulatedSize(mcsidx_t mcsidx, size_t n)
 
     return mod->assembledSize();
 }
+
+void Liquid::PHY::logSend(Logger &logger,
+                          const std::shared_ptr<IQBuf> &first,
+                          const std::list<std::unique_ptr<ModPacket>> &mpkts,
+                          std::optional<double> fc_offset,
+                          double fs)
+{
+    for (auto it = mpkts.begin(); it != mpkts.end(); ++it) {
+        const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
+        const Liquid::MCS            *mcs = reinterpret_cast<const Liquid::MCS*>(mcs_table[(*it)->pkt->mcsidx].mcs);
+
+        logger.logSend(Clock::to_wall_time(samples->timestamp),
+                       (*it)->pkt->hdr,
+                       (*it)->pkt->ehdr().src,
+                       (*it)->pkt->ehdr().dest,
+                       mcs->check,
+                       mcs->fec0,
+                       mcs->fec1,
+                       mcs->ms,
+                       fc_offset ? *fc_offset : (*it)->channel.fc,
+                       fs,
+                       (*it)->pkt->size(),
+                       samples,
+                       (*it)->offset,
+                       (*it)->nsamples);
+    }
+}

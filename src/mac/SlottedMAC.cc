@@ -303,33 +303,11 @@ void SlottedMAC::txNotifier(void)
         if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
             std::shared_ptr<IQBuf> &first = slot->iqbufs.front();
 
-            // Log the sent packets
-            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
-                Header hdr;
-
-                hdr.curhop = (*it)->pkt->hdr.curhop;
-                hdr.nexthop = (*it)->pkt->hdr.nexthop;
-                hdr.seq = (*it)->pkt->hdr.seq;
-
-                std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
-                // XXX We assume a liquid PHY here!
-                const Liquid::MCS *mcs = reinterpret_cast<const Liquid::MCS*>(phy_->mcs_table[(*it)->pkt->mcsidx].mcs);
-
-                logger_->logSend(Clock::to_wall_time(samples->timestamp),
-                                 hdr,
-                                 (*it)->pkt->ehdr().src,
-                                 (*it)->pkt->ehdr().dest,
-                                 mcs->check,
-                                 mcs->fec0,
-                                 mcs->fec1,
-                                 mcs->ms,
-                                 tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
-                                 tx_rate_,
-                                 (*it)->pkt->size(),
-                                 samples,
-                                 (*it)->offset,
-                                 (*it)->nsamples);
-            }
+            phy_->logSend(*logger_,
+                          first,
+                          slot->mpkts,
+                          tx_fc_off_,
+                          tx_rate_);
         }
 
         // Inform the controller of the transmission

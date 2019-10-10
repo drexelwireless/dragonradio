@@ -196,6 +196,13 @@ public:
     /** @brief Create a Demodulator for this %PHY */
     virtual std::shared_ptr<PacketDemodulator> mkPacketDemodulator(void) = 0;
 
+    /** @brief Log sent packets */
+    virtual void logSend(Logger &logger,
+                         const std::shared_ptr<IQBuf> &first,
+                         const std::list<std::unique_ptr<ModPacket>> &mpkts,
+                         std::optional<double> fc_offset,
+                         double fs) = 0;
+
     /** @brief Return flag indicating whether or not we want the given packet */
     /** We only demodulate packets destined for us *unless* we are collecting
      * snapshots, in which case we demodulate everything so we can correctly

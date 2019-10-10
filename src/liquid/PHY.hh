@@ -154,6 +154,12 @@ public:
 
     size_t getModulatedSize(mcsidx_t mcsidx, size_t n) override;
 
+    void logSend(Logger &logger,
+                 const std::shared_ptr<IQBuf> &first,
+                 const std::list<std::unique_ptr<ModPacket>> &mpkts,
+                 std::optional<double> fc_offset,
+                 double fs) override;
+
 protected:
     /** @brief Modulation and coding scheme for headers. */
     MCS header_mcs_;
