@@ -164,7 +164,7 @@ private:
     unsigned nthreads_;
 
     /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
+    std::atomic<bool> done_;
 
     /** @brief Flag that is true when we are reconfiguring. */
     std::atomic<bool> reconfigure_;

@@ -77,7 +77,7 @@ protected:
     };
 
     /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
+    std::atomic<bool> done_;
 
     /** @brief Reconfiguration flags */
     std::vector<std::atomic<bool>> mod_reconfigure_;
