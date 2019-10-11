@@ -29,7 +29,6 @@ public:
          , max_samples(max_samples_)
          , delay(0)
          , nsamples(0)
-         , load(nchannels)
          , npartial(0)
         {
             nfinished.store(0, std::memory_order_relaxed);
@@ -68,9 +67,6 @@ public:
         /** @brief Number of samples in slot */
         size_t nsamples;
 
-        /** @brief Load per channel */
-        std::vector<size_t> load;
-
         /** @brief The list of IQ buffers */
         std::list<std::shared_ptr<IQBuf>> iqbufs;
 
@@ -102,7 +98,6 @@ public:
 
         /** @brief Push a modulated packet onto the slot
          * @param mpkt A reference to a modulated packet
-         * @param chanidx The channel on which the packet was modulated
          * @param overfill true if the slot can be overfilled
          * @return true if the packet was pushed, false if it didn't fit
          */
@@ -110,7 +105,6 @@ public:
          * takes ownership of the ModPacket.
          */
         bool push(std::unique_ptr<ModPacket> &mpkt,
-                  size_t chanidx,
                   bool overfill)
         {
             if (closed.load(std::memory_order_acquire))
@@ -125,9 +119,6 @@ public:
                 iqbufs.emplace_back(mpkt->samples);
                 mpkts.emplace_back(std::move(mpkt));
                 nsamples += n;
-
-                if (chanidx < load.size())
-                    load[chanidx] += n;
 
                 return true;
             } else

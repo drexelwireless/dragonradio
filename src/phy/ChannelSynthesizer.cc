@@ -165,13 +165,13 @@ void ChannelSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 
                 mod->modulate(std::move(pkt), g, *mpkt);
 
-                pushed = slot->push(mpkt, chanidx, overfill);
+                pushed = slot->push(mpkt, overfill);
             } else {
                 mod->modulate(std::move(pkt), g, *mpkt);
 
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-                pushed = slot->push(mpkt, chanidx, overfill);
+                pushed = slot->push(mpkt, overfill);
             }
 
             if (!pushed) {

@@ -329,9 +329,10 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                     // If we didn't push the packet, put the samples back into the
                     // modulated packet.
                     if (pushed) {
-                        if (mod.iqbufoff == mod.iqbuf->size())
+                        if (mod.iqbufoff == mod.iqbuf->size()) {
+                            assert(mod.iqbuf);
                             mod.iqbuf.reset();
-                        else
+                        } else
                             break;
                     } else {
                         logEvent("PHY: failed to add packet to slot: seq=%u",
