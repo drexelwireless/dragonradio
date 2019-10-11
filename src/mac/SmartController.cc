@@ -64,6 +64,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , selective_ack_(false)
   , selective_ack_feedback_delay_(0.0)
   , max_retransmissions_({})
+  , demod_always_ordered_(false)
   , enforce_ordering_(false)
   , mcu_(0)
   , move_along_(true)
@@ -307,10 +308,13 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         // Handle any NAK
         nak = handleNAK(*pkt, sendw);
 
-        // If we saw a NAK, look at feedback at least up to the sequence number
-        // that was NAK'ed. We add a tiny amount of slop, 0.001 sec, to make
-        // sure we *include* the NAK'ed packet.
-        if (nak)
+        // If packets are always demodulated in order, then when we see an
+        // explicit NAK, we can assume all packets up to and including the
+        // NAK'ed packet should have been received. In this case, look at
+        // feedback at least up to the sequence number that was NAK'ed. We add a
+        // tiny amount of slop, 0.001 sec, to make sure we *include* the NAK'ed
+        // packet.
+        if (demod_always_ordered_ && nak)
             tfeedback = std::max(tfeedback, sendw[*nak].timestamp + 0.001);
 
         // Handle ACK

@@ -120,6 +120,9 @@ void exportControllers(py::module &m)
         .def_property("max_retransmissions",
             &SmartController::getMaxRetransmissions,
             &SmartController::setMaxRetransmissions)
+        .def_property("demod_always_ordered",
+            &SmartController::getDemodAlwaysOrdered,
+            &SmartController::setDemodAlwaysOrdered)
         .def_property("enforce_ordering",
             &SmartController::getEnforceOrdering,
             &SmartController::setEnforceOrdering)

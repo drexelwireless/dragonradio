@@ -630,6 +630,22 @@ public:
         max_retransmissions_ = max_retransmissions;
     }
 
+    /** @brief Return flag indicating whether or not packets are always
+     * demodulated in order.
+     */
+    bool getDemodAlwaysOrdered(void)
+    {
+        return demod_always_ordered_;
+    }
+
+    /** @brief Set flag indicating whether or not packets are always
+     * demodulated in order.
+     */
+    void setDemodAlwaysOrdered(bool always_ordered)
+    {
+        demod_always_ordered_ = always_ordered;
+    }
+
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
@@ -822,6 +838,9 @@ protected:
     /** @brief Maximum number of retransmission attempts
      */
     std::optional<size_t> max_retransmissions_;
+
+    /** @brief Are packets always demodulated in order? */
+    bool demod_always_ordered_;
 
     /** @brief Should packets always be output in the order they were actually
      * received?
