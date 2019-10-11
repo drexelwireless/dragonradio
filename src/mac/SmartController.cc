@@ -27,7 +27,8 @@ void RecvWindow::operator()()
 
         dprintf("ARQ: starting full ACK timer: node=%u",
             (unsigned) node.id);
-        controller.timer_queue_.run_in(*this, controller.sack_delay_);
+        controller.timer_queue_.run_in(*this,
+            controller.ack_delay_ - controller.sack_delay_);
     }
 }
 
@@ -849,7 +850,7 @@ void SmartController::startSACKTimer(RecvWindow &recvw)
 
         recvw.need_selective_ack = false;
         recvw.timer_for_ack = false;
-        timer_queue_.run_in(recvw, ack_delay_ - sack_delay_);
+        timer_queue_.run_in(recvw, sack_delay_);
     }
 }
 

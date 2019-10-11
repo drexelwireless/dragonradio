@@ -515,6 +515,9 @@ public:
     /** @brief Set ACK delay. */
     void setACKDelay(double t)
     {
+        if (sack_delay_ >= ack_delay_)
+            throw(std::out_of_range("SACK delays must be < ACK delay"));
+
         ack_delay_ = t;
     }
 
@@ -539,6 +542,9 @@ public:
     /** @brief Set SACK delay. */
     void setSACKDelay(double t)
     {
+        if (sack_delay_ >= ack_delay_)
+            throw(std::out_of_range("SACK delays must be < ACK delay"));
+
         sack_delay_ = t;
     }
 
