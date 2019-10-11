@@ -1,5 +1,5 @@
-#ifndef FDCHANSYNTHESIZER_H_
-#define FDCHANSYNTHESIZER_H_
+#ifndef MULTICHANNELSYNTHESIZER_H_
+#define MULTICHANNELSYNTHESIZER_H_
 
 #include <atomic>
 #include <mutex>
@@ -7,19 +7,13 @@
 #include "barrier.hh"
 #include "dsp/FDResample.hh"
 #include "dsp/FFTW.hh"
-#include "dsp/Polyphase.hh"
-#include "dsp/TableNCO.hh"
-#include "phy/Channel.hh"
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
-#include "net/Net.hh"
 
 /** @brief A frequency-domain, per-channel synthesizer. */
 class MultichannelSynthesizer : public Synthesizer
 {
 public:
-    using C = std::complex<float>;
-
     /** @brief Filter length */
     /** We need two factors of 5 because we need to support 25MHz bandwidth.
      * The rest of the factors of 2 are for good measure.
@@ -209,4 +203,4 @@ private:
     void modWorker(unsigned tid);
 };
 
-#endif /* FDCHANSYNTHESIZER_H_ */
+#endif /* MULTICHANNELSYNTHESIZER_H_ */
