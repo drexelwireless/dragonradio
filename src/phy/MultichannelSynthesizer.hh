@@ -49,6 +49,7 @@ private:
     class ChannelState : private Upsampler {
     public:
         ChannelState(PHY &phy,
+                     unsigned chanidx,
                      const Channel &channel,
                      const std::vector<C> &taps,
                      double tx_rate);
@@ -144,6 +145,9 @@ private:
         size_t fdnsamples;
 
     protected:
+        /** @brief Index of channel we are modulating */
+        const unsigned chanidx_;
+
         /** @brief Channel we are modulating */
         const Channel channel_;
 

@@ -38,10 +38,12 @@ protected:
     class ChannelState {
     public:
         ChannelState(PHY &phy,
+                     unsigned chanidx,
                      const Channel &channel,
                      const std::vector<C> &taps,
                      double tx_rate)
-          : channel_(channel)
+          : chanidx_(chanidx)
+          , channel_(channel)
           // XXX Protected against channel with zero bandwidth
           , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
           , fshift_(channel.fc/tx_rate)
@@ -63,6 +65,9 @@ protected:
                               ModPacket &mpkt) = 0;
 
     protected:
+        /** @brief Index of channel we are modulating */
+        const unsigned chanidx_;
+
         /** @brief Channel we are modulating */
         const Channel channel_;
 
@@ -89,7 +94,8 @@ protected:
     std::vector<std::thread> mod_threads_;
 
     /** @brief Create a ChannelState */
-    virtual std::unique_ptr<ChannelState> mkChannelState(const Channel &channel,
+    virtual std::unique_ptr<ChannelState> mkChannelState(unsigned chanidx,
+                                                         const Channel &channel,
                                                          const std::vector<C> &taps,
                                                          double tx_rate) = 0;
 

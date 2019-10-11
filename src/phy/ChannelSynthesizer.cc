@@ -116,7 +116,8 @@ void ChannelSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             chanidx = slot_chanidx[slot->slotidx];
 
             // Reconfigure the modulator
-            mod = mkChannelState(channels[chanidx].first,
+            mod = mkChannelState(chanidx,
+                                 channels[chanidx].first,
                                  channels[chanidx].second,
                                  tx_rate);
         }

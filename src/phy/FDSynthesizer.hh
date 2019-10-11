@@ -34,10 +34,11 @@ private:
     class FDChannelState : public ChannelState, private Upsampler {
     public:
         FDChannelState(PHY &phy,
+                       unsigned chanidx,
                        const Channel &channel,
                        const std::vector<C> &taps,
                        double tx_rate)
-          : ChannelState(phy, channel, taps, tx_rate)
+          : ChannelState(phy, chanidx, channel, taps, tx_rate)
           , Upsampler(phy.getMinTXRateOversample(), tx_rate/channel.bw, N*(channel.fc/tx_rate))
         {
         }
@@ -56,11 +57,13 @@ private:
     };
 
     std::unique_ptr<ChannelState>
-    mkChannelState(const Channel &channel,
+    mkChannelState(unsigned chanidx,
+                   const Channel &channel,
                    const std::vector<C> &taps,
                    double tx_rate) override final
     {
         return std::unique_ptr<ChannelState>(new FDChannelState(*phy_,
+                                                                chanidx,
                                                                 channel,
                                                                 taps,
                                                                 tx_rate));

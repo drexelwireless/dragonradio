@@ -123,11 +123,12 @@ void MultichannelSynthesizer::reconfigure(void)
 
     mods_.resize(nchannels);
 
-    for (unsigned i = 0; i < nchannels; i++)
-        mods_[i] = std::make_unique<ChannelState>(*phy_,
-                                                  channels_copy_[i].first,
-                                                  channels_copy_[i].second,
-                                                  tx_rate_copy_);
+    for (unsigned chanidx = 0; chanidx < nchannels; chanidx++)
+        mods_[chanidx] = std::make_unique<ChannelState>(*phy_,
+                                                        chanidx,
+                                                        channels_copy_[chanidx].first,
+                                                        channels_copy_[chanidx].second,
+                                                        tx_rate_copy_);
 
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
@@ -369,6 +370,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 }
 
 MultichannelSynthesizer::ChannelState::ChannelState(PHY &phy,
+                                                    unsigned chanidx,
                                                     const Channel &channel,
                                                     const std::vector<C> &taps,
                                                     double tx_rate)
@@ -379,6 +381,7 @@ MultichannelSynthesizer::ChannelState::ChannelState(PHY &phy,
   , max_samples(0)
   , npartial(0)
   , fdnsamples(0)
+  , chanidx_(chanidx)
   , channel_(channel)
   // XXX Protected against channel with zero bandwidth
   , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
@@ -451,6 +454,7 @@ void MultichannelSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> 
     mod_->modulate(std::move(pkt), g_effective, mpkt);
 
     // Set channel
+    mpkt.chanidx = chanidx_;
     mpkt.channel = channel_;
 }
 

@@ -54,5 +54,6 @@ void FDSynthesizer::FDChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         mod_->modulate(std::move(pkt), pkt->g*g, mpkt);
 
     // Set channel
+    mpkt.chanidx = chanidx_;
     mpkt.channel = channel_;
 }

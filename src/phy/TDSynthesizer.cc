@@ -38,5 +38,6 @@ void TDSynthesizer::TDChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         mod_->modulate(std::move(pkt), g_effective, mpkt);
 
     // Set channel
+    mpkt.chanidx = chanidx_;
     mpkt.channel = channel_;
 }
