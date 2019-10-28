@@ -52,8 +52,11 @@ void MultichannelSynthesizer::finalize(Slot &slot)
         const Schedule::slot_type &slots = schedule_copy_[channelidx];
 
         // Skip this channel if we're not allowed to modulate
-        if (slots[slot.slotidx])
+        if (slots[slot.slotidx]) {
+            std::lock_guard<spinlock_mutex> lock(mods_[channelidx]->mutex);
+
             mods_[channelidx]->flush(slot);
+        }
     }
 
     // If we have any samples, our delay will always be less than nsamples, so
@@ -234,20 +237,24 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                     slot->max_samples = slot->full_slot_samples;
             }
 
-            // Modulate into a new slot
-            mod.nextSlot(prev_slot.get(), *slot, overfill);
+            {
+                std::lock_guard<spinlock_mutex> lock(mod.mutex);
 
-            // Do upsampling of leftover IQ buffer here
-            if (mod.iqbuf) {
-                mod.iqbufoff += mod.upsample();
+                // Modulate into a new slot
+                mod.nextSlot(prev_slot.get(), *slot, overfill);
 
-                // This should never happen!
-                if (mod.iqbufoff != mod.iqbuf->size())
-                    logEvent("PHY: leftover IQ buffer bigger than slot!");
+                // Do upsampling of leftover IQ buffer here
+                if (mod.iqbuf) {
+                    mod.iqbufoff += mod.upsample();
 
-                mod.iqbuf.reset();
-                assert(mod.pkt);
-                mod.pkt.reset();
+                    // This should never happen!
+                    if (mod.iqbufoff != mod.iqbuf->size())
+                        logEvent("PHY: leftover IQ buffer bigger than slot!");
+
+                    mod.iqbuf.reset();
+                    assert(mod.pkt);
+                    mod.pkt.reset();
+                }
             }
 
             // Modulate packets for the current slot
@@ -266,6 +273,8 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 // If the slot is closed, bail.
                 if (slot->closed.load(std::memory_order_relaxed))
                     break;
+
+                std::lock_guard<spinlock_mutex> lock(mod.mutex);
 
                 // If this is a timestamped packet, timestamp it. In any case,
                 // modulate it.

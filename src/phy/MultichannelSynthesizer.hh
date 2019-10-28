@@ -5,6 +5,7 @@
 #include <mutex>
 
 #include "barrier.hh"
+#include "spinlock_mutex.hh"
 #include "dsp/FDResample.hh"
 #include "dsp/FFTW.hh"
 #include "phy/PHY.hh"
@@ -106,6 +107,9 @@ private:
          * @param slot Current slot.
          */
         void flush(Slot &slot);
+
+        /** @brief Mutex for channel state */
+        spinlock_mutex mutex;
 
         /** @brief Packet whose modulated signal is the IQ buffer */
         std::shared_ptr<NetPacket> pkt;
