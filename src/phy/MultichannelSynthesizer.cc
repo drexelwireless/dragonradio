@@ -413,23 +413,41 @@ void MultichannelSynthesizer::ChannelState::nextSlot(const Slot *prev_slot,
     // Was a partial block output in the previous slot?
     if (prev_slot && prev_slot->npartial != 0) {
         if (npartial != 0) {
+            // We output a partial FFT block for the previous slot. There are
+            // two ways we may end up outputting a partial block:
+            //  1. We output a full upsampled block, but only part of it will
+            //     fit in the current slot.
+            //  2. We flushed the current upsampling buffer with zeroes, in
+            //     which case we'd like to "rewind" our FFT buffer to replace
+            //     the zeros with actual signal to avoid wasting space.
+
             // Any channel that outputs a partial block will have the same
             // number of partial samples.
             assert(npartial == prev_slot->npartial);
 
-            // Copy the previously output FFT block
-            upsampleBlock(fdbuf->data());
+            // If partial_fftoff is set, we flushed our FFT buffer to yield a
+            // partial block, so we need to rewind the FFT upsampler.
+            if (partial_fftoff) {
+                fftoff = *partial_fftoff;
 
-            // We start with a full FFT block of samples
-            nsamples = L;
-            fdnsamples = N;
+                nsamples = 0;
+                fdnsamples = 0;
+            } else {
+                // Copy the previously output FFT block
+                upsampleBlock(fdbuf->data());
+
+                // We start with a full FFT block of samples
+                nsamples = L;
+                fdnsamples = N;
+            }
         } else {
-            // We didn't output a partial block, but somebody else did. Leave
-            // the first frequency-domain output block empty---we didn't output
-            // any signal yet.
+            // We didn't output a partial block, but somebody else did. Our
+            // first prev_slot->npartial samples must be zero to account for the
+            // fact that we didn't output any signal for the final
+            // prev_slot->npartial samples of the previous slot.
 
-            // Set up the FFT buffer to reflect the fact that we didn't output
-            // any signal for the first npartial samples.
+            // This sets up the FFT buffer so that the first prev_slot->npartial
+            // samples we output will be zero.
             reset(X*prev_slot->npartial/I);
 
             nsamples = 0;
@@ -504,7 +522,9 @@ size_t MultichannelSynthesizer::ChannelState::upsample(void)
 
 void MultichannelSynthesizer::ChannelState::flush(Slot &slot)
 {
-    if (nsamples < delay + max_samples)
+    if (nsamples < delay + max_samples) {
+        partial_fftoff = fftoff;
+
         Upsampler::upsample(nullptr,
                             0,
                             fdbuf->data(),
@@ -513,6 +533,8 @@ void MultichannelSynthesizer::ChannelState::flush(Slot &slot)
                             nsamples,
                             delay + max_samples,
                             fdnsamples);
+    } else
+        partial_fftoff = std::nullopt;
 
     if (nsamples > delay + max_samples) {
         nsamples = delay + max_samples;

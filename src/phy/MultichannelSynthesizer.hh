@@ -144,6 +144,9 @@ private:
          */
         size_t npartial;
 
+        /** @brief FFT buffer offset before flush of partial block. */
+        std::optional<size_t> partial_fftoff;
+
         /** @brief Number of valid samples in the frequency-domain buffer */
         /** This will be a multiple of N */
         size_t fdnsamples;
