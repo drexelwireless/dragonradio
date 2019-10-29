@@ -440,7 +440,7 @@ void MultichannelSynthesizer::ChannelState::nextSlot(const Slot *prev_slot,
         npartial = 0;
     } else {
         // If we are NOT continuing modulation of a slot, re-initialize the FFT
-        // buffer. When a packet ends exactly on a slot boundar, npartial will
+        // buffer. When a packet ends exactly on a slot boundary, npartial will
         // be 0, but we DO NOT want to re-initialize the upsampler. We test for
         // this case by seeing if the number of samples output in the previous
         // slot is equal to the size of the slot.
