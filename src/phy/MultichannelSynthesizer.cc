@@ -474,7 +474,7 @@ bool MultichannelSynthesizer::ChannelState::fits(ModPacket &mpkt, const bool ove
     size_t n = I*(mpkt.samples->size() - mpkt.samples->delay)/X;
 
     if (nsamples + npending() + n <= delay + max_samples ||
-        (nsamples < delay + max_samples && overfill)) {
+        (nsamples + npending() < delay + max_samples && overfill)) {
         mpkt.start = nsamples;
         mpkt.nsamples = n;
 
