@@ -517,7 +517,8 @@ void MultichannelSynthesizer::ChannelState::flush(Slot &slot)
     if (nsamples > delay + max_samples) {
         nsamples = delay + max_samples;
         npartial = nsamples % L;
-    }
+    } else
+        npartial = 0;
 
     if (nsamples > slot.nsamples) {
         slot.delay = delay;
