@@ -111,9 +111,12 @@ void TDMA::txSlotWorker(void)
 
             // Find following slot. We divide slot_size_ by two to avoid
             // possible rounding issues where we mights end up skipping a slot.
-            bool hasFollowingSlot = findNextSlot(t_next_slot + slot_size_/2.0,
-                                                 t_following_slot,
-                                                 following_slotidx);
+            // If we reach this line of code, then findNextSlot must have
+            // returned true above, in which case we know it will return true
+            // here, so we do not need to check the result.
+            (void) findNextSlot(t_next_slot + slot_size_/2.0,
+                                t_following_slot,
+                                following_slotidx);
 
             // Schedule modulation of the following slot
             if (slot)
@@ -122,7 +125,7 @@ void TDMA::txSlotWorker(void)
                 noverfill = 0;
 
             // Schedule modulation of following slot
-            if (hasFollowingSlot && !approx(t_following_slot, t_prev_slot)) {
+            if (!approx(t_following_slot, t_prev_slot)) {
                 modulateSlot(q,
                              t_following_slot,
                              noverfill,
