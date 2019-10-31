@@ -78,15 +78,11 @@ private:
      * @param t Time at which to start looking for a TX slot
      * @param t_next The beginning of the next TX slot
      * @param next_slotidx Slot index of next slot
-     * @param t_following The beginning of the following TX slot
-     * @param following_slotidx Slot index of following slot
      * @returns True if a slot was found, false otherwise
      */
     bool findNextSlot(Clock::time_point t,
                       Clock::time_point &t_next,
-                      size_t &next_slotidx,
-                      Clock::time_point &t_following,
-                      size_t &following_slotidx);
+                      size_t &next_slotidx);
 };
 
 #endif /* TDMA_H_ */

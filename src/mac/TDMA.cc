@@ -75,12 +75,8 @@ void TDMA::reconfigure(void)
     Clock::time_point t_now = Clock::now();
     Clock::time_point t_next_slot;
     size_t            next_slotidx;
-    Clock::time_point t_following_slot;
-    size_t            following_slotidx;
 
-    can_transmit_ = findNextSlot(t_now,
-                                 t_next_slot, next_slotidx,
-                                 t_following_slot, following_slotidx);
+    can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
 }
 
 void TDMA::txSlotWorker(void)
@@ -103,9 +99,7 @@ void TDMA::txSlotWorker(void)
             // Figure out when our next send slot is.
             t_now = Clock::now();
 
-            if (!findNextSlot(t_now,
-                              t_next_slot, next_slotidx,
-                              t_following_slot, following_slotidx)) {
+            if (!findNextSlot(t_now, t_next_slot, next_slotidx)) {
                 // Sleep for 100ms if we don't yet have a slot
                 doze(100e-3);
                 continue;
@@ -115,6 +109,12 @@ void TDMA::txSlotWorker(void)
             // to the slot.
             auto slot = finalizeSlot(q, t_next_slot);
 
+            // Find following slot. We divide slot_size_ by two to avoid
+            // possible rounding issues where we mights end up skipping a slot.
+            bool hasFollowingSlot = findNextSlot(t_next_slot + slot_size_/2.0,
+                                                 t_following_slot,
+                                                 following_slotidx);
+
             // Schedule modulation of the following slot
             if (slot)
                 noverfill = slot->length() < slot->max_samples ? 0 : slot->length() - slot->max_samples;
@@ -122,7 +122,7 @@ void TDMA::txSlotWorker(void)
                 noverfill = 0;
 
             // Schedule modulation of following slot
-            if (!approx(t_following_slot, t_prev_slot)) {
+            if (hasFollowingSlot && !approx(t_following_slot, t_prev_slot)) {
                 modulateSlot(q,
                              t_following_slot,
                              noverfill,
@@ -158,9 +158,7 @@ void TDMA::txSlotWorker(void)
 
 bool TDMA::findNextSlot(Clock::time_point t,
                         Clock::time_point &t_next,
-                        size_t &next_slotidx,
-                        Clock::time_point &t_following,
-                        size_t &following_slotidx)
+                        size_t &next_slotidx)
 {
     double t_slot_pos; // Offset into the current slot (sec)
     size_t cur_slot;   // Current slot index
@@ -172,22 +170,10 @@ bool TDMA::findNextSlot(Clock::time_point t,
     for (tx_slot = 1; tx_slot <= nslots_; ++tx_slot) {
         if (tdma_schedule_[(cur_slot + tx_slot) % nslots_]) {
             t_next = t + (tx_slot*slot_size_ - t_slot_pos);
-            cur_slot = next_slotidx = (cur_slot + tx_slot) % nslots_;
-            goto following;
-        }
-    }
-
-    return false;
-
-following:
-    for (tx_slot = 1; tx_slot <= nslots_; ++tx_slot) {
-        if (tdma_schedule_[(cur_slot + tx_slot) % nslots_]) {
-            t_following = t_next + tx_slot*slot_size_;
-            following_slotidx = (cur_slot + tx_slot) % nslots_;
+            next_slotidx = (cur_slot + tx_slot) % nslots_;
             return true;
         }
     }
 
-    assert(false);
     return false;
 }
