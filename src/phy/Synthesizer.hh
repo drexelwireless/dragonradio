@@ -134,7 +134,6 @@ public:
       , tx_rate_(tx_rate)
       , superslots_(false)
       , channels_(channels)
-      , max_packet_size_(0)
     {
     }
 
@@ -208,18 +207,6 @@ public:
         reconfigure();
     }
 
-    /** @brief Get maximum packet size. */
-    size_t getMaxPacketSize(void)
-    {
-        return max_packet_size_;
-    }
-
-    /** @brief Set maximum packet size. */
-    void setMaxPacketSize(size_t max_packet_size)
-    {
-        max_packet_size_ = max_packet_size;
-    }
-
     /** @brief Modulate a slot. */
     virtual void modulate(const std::shared_ptr<Slot> &slot) = 0;
 
@@ -256,9 +243,6 @@ protected:
 
     /** @brief Radio schedule */
     Schedule schedule_;
-
-    /** @brief Maximum number of possible samples in a modulated packet. */
-    size_t max_packet_size_;
 };
 
 /** @brief Modulate packets for a channel. */

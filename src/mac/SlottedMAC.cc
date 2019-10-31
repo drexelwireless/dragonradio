@@ -66,8 +66,6 @@ void SlottedMAC::reconfigure(void)
         tx_fc_off_ = std::nullopt;
     else
         tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
-
-    synthesizer_->setMaxPacketSize(tx_slot_samps_);
 }
 
 void SlottedMAC::rxWorker(void)
