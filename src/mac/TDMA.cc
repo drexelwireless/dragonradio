@@ -83,7 +83,6 @@ void TDMA::txSlotWorker(void)
 {
     slot_queue        q;
     Clock::time_point t_now;              // Current time
-    Clock::time_point t_prev_slot;        // Previous, completed slot
     Clock::time_point t_next_slot;        // Time at which our next slot starts
     Clock::time_point t_following_slot;   // Time at which our following slot starts
     size_t            next_slotidx;       // Slot index of next slot
@@ -93,18 +92,20 @@ void TDMA::txSlotWorker(void)
     makeThisThreadHighPriority();
 
     while (!done_) {
-        t_prev_slot = Clock::time_point { 0.0 };
+        t_now = Clock::now();
 
-        while (!done_) {
-            // Figure out when our next send slot is.
-            t_now = Clock::now();
-
+        // If we missed a slot, find the next slot
+        if (t_now > t_next_slot) {
             if (!findNextSlot(t_now, t_next_slot, next_slotidx)) {
                 // Sleep for 100ms if we don't yet have a slot
                 doze(100e-3);
                 continue;
             }
+        }
 
+        // If we're less that one slot away from our next slot, finalize it
+        // and transmit it
+        if ((t_now - t_next_slot).get_real_secs() < slot_size_) {
             // Finalize next slot. After this returns, we have EXCLUSIVE access
             // to the slot.
             auto slot = finalizeSlot(q, t_next_slot);
@@ -126,35 +127,27 @@ void TDMA::txSlotWorker(void)
                 noverfill = 0;
 
             // Schedule modulation of following slot
-            if (!approx(t_following_slot, t_prev_slot)) {
-                modulateSlot(q,
-                             t_following_slot,
-                             noverfill,
-                             following_slotidx);
-
-                t_prev_slot = t_following_slot;
-            }
+            modulateSlot(q,
+                         t_following_slot,
+                         noverfill,
+                         following_slotidx);
 
             // Transmit next slot
             if (slot)
                 txSlot(std::move(slot));
 
-            // If we had a TX error, restart the TX loop
-            if (usrp_->getTXLateCount() != 0)
-                break;
-
-            // Sleep until it's time to send the following slot
-            double delta;
-
-            t_now = Clock::now();
-            delta = (t_following_slot - t_now).get_real_secs() - slot_send_lead_time_;
-            if (delta > 0.0)
-                doze(delta);
+            // The following slot is now the next slot
+            t_next_slot = t_following_slot;
+            next_slotidx = following_slotidx;
         }
 
-        // Attempt to deal with TX errors
-        logEvent("MAC: attempting to reset TX loop");
-        doze(slot_size_/2.0);
+        // Sleep until it's time to send the next slot
+        double delta;
+
+        t_now = Clock::now();
+        delta = (t_next_slot - t_now).get_real_secs() - slot_send_lead_time_;
+        if (delta > 0.0)
+            doze(delta);
     }
 
     missedRemainingSlots(q);
