@@ -181,6 +181,9 @@ protected:
     /** @brief Length of inter-slot guard (sec) */
     double guard_size_;
 
+    /** @brief The minimum channel bandwidth (Hz) */
+    double min_chan_bw_;
+
     /** @brief Lead time needed to modulate a slot's worth of data. */
     double slot_modulate_lead_time_;
 
