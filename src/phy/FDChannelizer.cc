@@ -273,7 +273,8 @@ void FDChannelizer::demodWorker(unsigned tid)
             // Timestamp the demodulated data
             demod.timestamp(fdbuf->timestamp,
                             snapshot_off,
-                            slot.fd_offset);
+                            slot.fd_offset,
+                            rx_rate_);
 
             // Demodulate the IQ buffer
             bool   received = false; // Have we received any packets?
@@ -394,12 +395,14 @@ void FDChannelizer::ChannelState::reset(void)
 
 void FDChannelizer::ChannelState::timestamp(const MonoClock::time_point &timestamp,
                                             std::optional<ssize_t> snapshot_off,
-                                            size_t offset)
+                                            size_t offset,
+                                            float rx_rate)
 {
     demod_->timestamp(timestamp,
                       snapshot_off,
                       offset,
-                      rate_);
+                      rate_,
+                      rx_rate);
 }
 
 void FDChannelizer::ChannelState::demodulate(const std::complex<float>* data,

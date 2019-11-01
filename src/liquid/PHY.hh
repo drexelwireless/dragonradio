@@ -59,7 +59,8 @@ public:
         void timestamp(const MonoClock::time_point &timestamp,
                        std::optional<ssize_t> snapshot_off,
                        ssize_t offset,
-                       float rate) override final;
+                       float rate,
+                       float rx_rate) override final;
 
         void demodulate(const std::complex<float>* data,
                         size_t count,
@@ -75,6 +76,9 @@ public:
         /** @brief Rate conversion from samples to full RX rate */
         /** This is used internally purely to properly timestamp packets. */
         double resamp_rate_;
+
+        /** @brief RX rate (Hz) */
+        double rx_rate_;
 
         /** @brief Internal resampling factor. */
         /** This is the factor by which the PHY internally oversamples, i.e., the

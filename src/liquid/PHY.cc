@@ -153,7 +153,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
     ssize_t start = offset_ + resamp_rate_*static_cast<signed>(frame_start - sample_start_);
     ssize_t end = offset_ + resamp_rate_*static_cast<signed>(frame_end - sample_start_);
 
-    pkt->timestamp = timestamp_ + start / phy_.getRXRate();
+    pkt->timestamp = timestamp_ + start / rx_rate_;
 
     callback_(std::move(pkt));
 
@@ -200,7 +200,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
                          stats_.rssi,
                          stats_.cfo,
                          channel_.fc,
-                         phy_.getRXRate(),
+                         rx_rate_,
                          (MonoClock::now() - timestamp_).get_real_secs(),
                          payload_len_,
                          std::move(buf));
@@ -226,9 +226,11 @@ void Liquid::PHY::PacketDemodulator::reset(const Channel &channel)
 void Liquid::PHY::PacketDemodulator::timestamp(const MonoClock::time_point &timestamp,
                                                std::optional<ssize_t> snapshot_off,
                                                ssize_t offset,
-                                               float rate)
+                                               float rate,
+                                               float rx_rate)
 {
     resamp_rate_ = internal_oversample_fact_/rate;
+    rx_rate_ = rx_rate;
     timestamp_ = timestamp;
     snapshot_off_ = snapshot_off;
     offset_ = offset;

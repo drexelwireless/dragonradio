@@ -146,7 +146,8 @@ void TDChannelizer::demodWorker(unsigned tid)
             // Timestamp the demodulated data
             demod.timestamp(iqbuf->timestamp,
                             snapshot_off,
-                            0);
+                            0,
+                            rx_rate_);
 
             // Demodulate the IQ buffer
             bool   received = false; // Have we received any packets?
@@ -238,12 +239,14 @@ void TDChannelizer::ChannelState::reset(void)
 
 void TDChannelizer::ChannelState::timestamp(const MonoClock::time_point &timestamp,
                                             std::optional<ssize_t> snapshot_off,
-                                            size_t offset)
+                                            size_t offset,
+                                            float rx_rate)
 {
     demod_->timestamp(timestamp,
                       snapshot_off,
                       offset,
-                      rate_);
+                      rate_,
+                      rx_rate);
 }
 
 void TDChannelizer::ChannelState::demodulate(IQBuf &resamp_buf,

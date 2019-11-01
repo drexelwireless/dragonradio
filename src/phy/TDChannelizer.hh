@@ -53,10 +53,12 @@ private:
          * @param snapshot_off The snapshot offset associated with the given
          * timestamp.
          * @param offset The offset of the first sample that will be demodulated.
+         * @param rx_rate RX rate (Hz)
          */
         void timestamp(const MonoClock::time_point &timestamp,
                        std::optional<ssize_t> snapshot_off,
-                       size_t offset);
+                       size_t offset,
+                       float rx_rate);
 
         /** @brief Demodulate data with given parameters */
         void demodulate(IQBuf &resamp_buf,

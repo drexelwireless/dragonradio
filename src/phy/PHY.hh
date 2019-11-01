@@ -92,11 +92,13 @@ public:
          * @param offset The offset of the first sample that will be demodulated.
          * @param rate The rate of the resampler applied before data is passed
          * to the demodulator.
+         * @param rx_rate The RX rate (Hz).
          */
         virtual void timestamp(const MonoClock::time_point &timestamp,
                                std::optional<ssize_t> snapshot_off,
                                ssize_t offset,
-                               float rate) = 0;
+                               float rate,
+                               float rx_rate) = 0;
 
         /** @brief Demodulate IQ samples.
          * @param data The IQ data to demodulate
