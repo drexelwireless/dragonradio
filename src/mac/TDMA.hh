@@ -49,6 +49,8 @@ public:
 
     void reconfigure(void) override;
 
+    bool isFDMA(void) const override;
+
 private:
     /** @brief Length of TDMA frame (sec) */
     double frame_size_;

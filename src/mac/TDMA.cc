@@ -79,6 +79,11 @@ void TDMA::reconfigure(void)
     can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
 }
 
+bool TDMA::isFDMA(void) const
+{
+    return schedule_.isFDMA();
+}
+
 void TDMA::txSlotWorker(void)
 {
     slot_queue        q;
@@ -87,7 +92,8 @@ void TDMA::txSlotWorker(void)
     Clock::time_point t_following_slot;   // Time at which our following slot starts
     size_t            next_slotidx;       // Slot index of next slot
     size_t            following_slotidx;  // Slot index of following slot
-    size_t            noverfill = 0;      // Number of overfilled samples;
+    size_t            noverfill = 0;      // Number of overfilled samples
+    size_t            noverfillslots = 0; // Number of overfilled slots
 
     makeThisThreadHighPriority();
 
@@ -110,21 +116,26 @@ void TDMA::txSlotWorker(void)
             // to the slot.
             auto slot = finalizeSlot(q, t_next_slot);
 
+            // Determine how many samples were sent beyond the end of the slot,
+            // i.e., the number of overfilled samples.
+            if (slot) {
+                noverfill = slot->length() < slot->max_samples ? 0 : slot->length() - slot->max_samples;
+
+                noverfill %= tx_full_slot_samps_;
+                noverfillslots = noverfill / tx_full_slot_samps_;
+            } else {
+                noverfill = 0;
+                noverfillslots = 0;
+            }
+
             // Find following slot. We divide slot_size_ by two to avoid
             // possible rounding issues where we mights end up skipping a slot.
             // If we reach this line of code, then findNextSlot must have
             // returned true above, in which case we know it will return true
             // here, so we do not need to check the result.
-            (void) findNextSlot(t_next_slot + slot_size_/2.0,
+            (void) findNextSlot(t_next_slot + noverfillslots*slot_size_ + slot_size_/2.0,
                                 t_following_slot,
                                 following_slotidx);
-
-            // Determine number of overfill samples for this slot, i.e., the
-            // number of samples transmitted past the end of the slot.
-            if (slot)
-                noverfill = slot->length() < slot->max_samples ? 0 : slot->length() - slot->max_samples;
-            else
-                noverfill = 0;
 
             // Schedule modulation of following slot
             modulateSlot(q,

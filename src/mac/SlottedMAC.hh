@@ -166,6 +166,12 @@ public:
 
     virtual void reconfigure(void) override;
 
+    /** @brief Is this MAC FDMA? */
+    virtual bool isFDMA(void) const
+    {
+        return false;
+    }
+
 protected:
     using slot_queue = std::queue<std::shared_ptr<Synthesizer::Slot>>;
 

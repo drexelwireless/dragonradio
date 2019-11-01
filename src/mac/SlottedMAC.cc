@@ -61,15 +61,21 @@ void SlottedMAC::reconfigure(void)
     else
         tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
 
-    // Compute the maximum number of samples that will fit in minimum-bandwidth
-    // channel and use this to mark valid MCS indices.
-    size_t max_samples = min_chan_bw_*(slot_size_ - guard_size_);
+    // If this is an FDMA MAC, all MCS entries are fair game
+    if (isFDMA()) {
+        for (mcsidx_t mcsidx = 0; mcsidx < phy_->mcs_table.size(); ++mcsidx)
+            phy_->mcs_table[mcsidx].valid = true;
+    } else {
+        // Compute the maximum number of samples that will fit in minimum-bandwidth
+        // channel and use this to mark valid MCS indices.
+        size_t max_samples = min_chan_bw_*(slot_size_ - guard_size_);
 
-    for (mcsidx_t mcsidx = 0; mcsidx < phy_->mcs_table.size(); ++mcsidx)
-        phy_->mcs_table[mcsidx].valid = phy_->getModulatedSize(mcsidx, rc.mtu) <= max_samples;
+        for (mcsidx_t mcsidx = 0; mcsidx < phy_->mcs_table.size(); ++mcsidx)
+            phy_->mcs_table[mcsidx].valid = phy_->getModulatedSize(mcsidx, rc.mtu) <= max_samples;
 
-    if (!phy_->mcs_table[phy_->mcs_table.size()-1].valid)
-        logEvent("MAC: WARNING: Slot size too small to support a full-sized packet!");
+        if (!phy_->mcs_table[phy_->mcs_table.size()-1].valid)
+            logEvent("MAC: WARNING: Slot size too small to support a full-sized packet!");
+    }
 }
 
 void SlottedMAC::rxWorker(void)
@@ -152,7 +158,6 @@ void SlottedMAC::modulateSlot(slot_queue &q,
                               size_t prev_overfill,
                               size_t slotidx)
 {
-    assert(prev_overfill <= tx_slot_samps_);
     assert(prev_overfill <= tx_full_slot_samps_);
 
     auto slot = std::make_shared<Synthesizer::Slot>(when,

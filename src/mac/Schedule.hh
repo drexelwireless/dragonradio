@@ -62,6 +62,19 @@ public:
          return false;
      }
 
+     /** @brief Is this an FDMA schedule? */
+     bool isFDMA(void) const
+     {
+         for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+             const slot_type &slots = schedule_[chan];
+
+             if (!std::equal(slots.begin() + 1, slots.end(), slots.begin()))
+                return false;
+         }
+
+         return true;
+     }
+
 private:
     /** @brief The slot schedule */
     sched_type schedule_;
