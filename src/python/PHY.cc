@@ -47,12 +47,6 @@ void exportPHYs(py::module &m)
             &PHY::getMinRXRateOversample)
         .def_property_readonly("min_tx_rate_oversample",
             &PHY::getMinTXRateOversample)
-        .def_property("rx_rate",
-            &PHY::getRXRate,
-            &PHY::setRXRate)
-        .def_property("tx_rate",
-            &PHY::getTXRate,
-            &PHY::setTXRate)
         ;
 }
 

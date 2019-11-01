@@ -1164,8 +1164,6 @@ class Radio(object):
             if self.rx_rate != want_rx_rate:
                 raise Exception('Wanted RX rate %g, but got %g' % (want_rx_rate, self.rx_rate))
 
-            self.phy.rx_rate = self.rx_rate
-
             self.channelizer.rx_rate = self.rx_rate
 
     def setTXRate(self, rate):
@@ -1190,8 +1188,6 @@ class Radio(object):
 
             if self.tx_rate != want_tx_rate:
                 raise Exception('Wanted TX rate %g, but got %g' % (want_tx_rate, self.tx_rate))
-
-            self.phy.tx_rate = self.tx_rate
 
             self.synthesizer.tx_rate = self.tx_rate
 

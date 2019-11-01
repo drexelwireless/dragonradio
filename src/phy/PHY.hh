@@ -119,8 +119,6 @@ public:
         NodeId node_id)
       : snapshot_collector_(collector)
       , node_id_(node_id)
-      , rx_rate_(0.0)
-      , tx_rate_(0.0)
     {
     }
 
@@ -153,34 +151,6 @@ public:
     NodeId getNodeId(void) const
     {
         return node_id_;
-    }
-
-    /** @brief Get the PHY's RX sample rate. */
-    double getRXRate(void)
-    {
-        return rx_rate_;
-    }
-
-    /** @brief Tell the PHY what RX sample rate we are running at.
-     * @param rate The rate.
-     */
-    void setRXRate(double rate)
-    {
-        rx_rate_ = rate;
-    }
-
-    /** @brief Get the PHY's TX sample rate. */
-    double getTXRate(void)
-    {
-        return tx_rate_;
-    }
-
-    /** @brief Tell the PHY what TX sample rate we are running at.
-     * @param rate The rate.
-     */
-    void setTXRate(double rate)
-    {
-        tx_rate_ = rate;
     }
 
     /** @brief Return the minimum oversample rate (with respect to PHY
@@ -274,12 +244,6 @@ protected:
 
     /** @brief Node ID */
     const NodeId node_id_;
-
-    /** @brief RX sample rate */
-    double rx_rate_;
-
-    /** @brief TX sample rate */
-    double tx_rate_;
 };
 
 #endif /* PHY_H_ */
