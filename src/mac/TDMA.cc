@@ -118,7 +118,8 @@ void TDMA::txSlotWorker(void)
                                 t_following_slot,
                                 following_slotidx);
 
-            // Schedule modulation of the following slot
+            // Determine number of overfill samples for this slot, i.e., the
+            // number of samples transmitted past the end of the slot.
             if (slot)
                 noverfill = slot->length() < slot->max_samples ? 0 : slot->length() - slot->max_samples;
             else
