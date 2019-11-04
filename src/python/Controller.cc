@@ -161,6 +161,12 @@ void exportControllers(py::module &m)
         .def_property_readonly("long_per",
             [](SendWindowProxy &proxy) { return proxy.getLongPER(); },
             "Long-term packet error rate (unitless)")
+        .def_property_readonly("long_evm",
+            [](SendWindowProxy &proxy) { return proxy.getLongEVM(); },
+            "Long-term EVM (dB)")
+        .def_property_readonly("long_rssi",
+            [](SendWindowProxy &proxy) { return proxy.getLongRSSI(); },
+            "Long-term RSSI (dB)")
         ;
 
     // Export class SendWindowsProxy to Python

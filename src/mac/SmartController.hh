@@ -956,6 +956,28 @@ public:
         return sendw.long_per.getValue();
     }
 
+    std::optional<double> getLongEVM(void)
+    {
+        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        if (sendw.long_evm)
+            return *sendw.long_evm;
+        else
+            return std::nullopt;
+    }
+
+    std::optional<double> getLongRSSI(void)
+    {
+        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+        if (sendw.long_rssi)
+            return *sendw.long_rssi;
+        else
+            return std::nullopt;
+    }
+
 private:
     /** @brief This send window's SmartController */
     std::shared_ptr<SmartController> controller_;
