@@ -18,9 +18,9 @@ public:
                        double tx_rate)
       : ChannelModulator(phy, chanidx, channel, taps, tx_rate)
       , upsampler_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw),
+                   2*M_PI*channel.fc/tx_rate,
                    taps)
     {
-        upsampler_.setFreqShift(2*M_PI*channel.fc/tx_rate);
     }
 
     TDChannelModulator() = delete;

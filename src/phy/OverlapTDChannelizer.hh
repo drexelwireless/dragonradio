@@ -95,9 +95,8 @@ private:
           , rx_rate_(rx_rate)
           , rx_oversample_(phy.getMinRXRateOversample())
           , resamp_buf_(0)
-          , resamp_(rate_, taps)
+          , resamp_(rate_, 2*M_PI*channel.fc/rx_rate, taps)
         {
-            resamp_.setFreqShift(2*M_PI*channel.fc/rx_rate);
         }
 
         OverlapTDChannelDemodulator() = default;

@@ -127,10 +127,11 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
                std::shared_ptr<Dragon::MixingRationalResampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       unsigned,
+                      double,
                       const std::vector<C>&>())
         .def(py::init<double,
+                      double,
                       const std::vector<C>&>())
-        .def(py::init<double>())
         .def_property("shift",
             &Dragon::MixingRationalResampler<T,C>::getFreqShift,
             &Dragon::MixingRationalResampler<T,C>::setFreqShift,

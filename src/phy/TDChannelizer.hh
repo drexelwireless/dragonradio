@@ -42,9 +42,8 @@ private:
           : ChannelDemodulator(phy, channel, taps, rx_rate)
           , seq_(0)
           , resamp_buf_(0)
-          , resamp_(rate_, taps)
+          , resamp_(rate_, 2*M_PI*channel.fc/rx_rate, taps)
         {
-            resamp_.setFreqShift(2*M_PI*channel.fc/rx_rate);
         }
 
         TDChannelDemodulator() = default;

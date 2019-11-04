@@ -415,9 +415,9 @@ public:
      * @param taps The taps for the prototype FIR filter. The filter must be
      * designed to run at the upsampler rater.
      */
-    MixingRationalResampler(unsigned l, unsigned m, const std::vector<C> &taps)
+    MixingRationalResampler(unsigned l, unsigned m, double rad, const std::vector<C> &taps)
       : RationalResampler<T,C>(l, m, taps)
-      , rad_(0.0)
+      , rad_(rad)
       , nco_(0.0)
     {
         reconfigure();
@@ -428,9 +428,9 @@ public:
      * @param taps The taps for the prototype FIR filter. The filter must be
      * designed to run at the upsampler rater.
      */
-    MixingRationalResampler(double r, const std::vector<C> &taps = {1.0})
+    MixingRationalResampler(double r, double rad, const std::vector<C> &taps)
       : RationalResampler<T,C>(r, taps)
-      , rad_(0.0)
+      , rad_(rad)
       , nco_(0.0)
     {
         reconfigure();
