@@ -58,44 +58,29 @@ private:
     static constexpr unsigned LOGR = 4;
 
     /** @brief Channel state for time-domain demodulation */
-    class ChannelState {
+    class FDChannelDemodulator : public ChannelDemodulator {
     public:
-        ChannelState(PHY &phy,
-                     const Channel &channel,
-                     const std::vector<C> &taps,
-                     double rate);
+        FDChannelDemodulator(PHY &phy,
+                             const Channel &channel,
+                             const std::vector<C> &taps,
+                             double rate);
 
-        ~ChannelState() = default;
+        FDChannelDemodulator() = default;
+
+        virtual ~FDChannelDemodulator() = default;
 
         /** @brief Update IQ buffer sequence number */
         void updateSeq(unsigned seq);
 
-        /** @brief Reset internal state */
-        void reset(void);
+        void reset(void) override;
 
-        /** @brief Set timestamp for demodulation
-         * @param timestamp The timestamp for future samples.
-         * @param snapshot_off The snapshot offset associated with the given
-         * timestamp.
-         * @param offset The offset of the first sample that will be demodulated.
-         * @param rx_rate RX rate (Hz)
-         */
-        void timestamp(const MonoClock::time_point &timestamp,
-                       std::optional<ssize_t> snapshot_off,
-                       size_t offset,
-                       float rx_rate);
-
-        /** @brief Demodulate data with given parameters */
         void demodulate(const std::complex<float>* data,
                         size_t count,
-                        std::function<void(std::unique_ptr<RadioPacket>)> callback);
+                        std::function<void(std::unique_ptr<RadioPacket>)> callback) override;
 
     protected:
-        /** @brief Channel we are demodulating */
-        Channel channel_;
-
-        /** @brief Resampling rate */
-        double rate_;
+        /** @brief Channel IQ buffer sequence number */
+        unsigned seq_;
 
         /** @brief Oversample factor */
         unsigned X_;
@@ -114,12 +99,6 @@ private:
 
         /** @brief Frequency-domain filter */
         fftw::vector<C> H_;
-
-        /** @brief Our demodulator */
-        std::shared_ptr<PHY::PacketDemodulator> demod_;
-
-        /** @brief Channel IQ buffer sequence number */
-        unsigned seq_;
     };
 
     /** @brief A demodulation slot */
@@ -165,7 +144,7 @@ private:
     spinlock_mutex demod_mutex_;
 
     /** @brief Channel state for demodulation. */
-    std::vector<std::unique_ptr<ChannelState>> demods_;
+    std::vector<std::unique_ptr<FDChannelDemodulator>> demods_;
 
     /** @brief Frequency-domain packets to demodulate */
     std::unique_ptr<ringbuffer<Slot, LOGR> []> slots_;

@@ -63,10 +63,10 @@ void FDChannelizer::reconfigure(void)
     slots_ = std::unique_ptr<ringbuffer<Slot, LOGR> []>(new ringbuffer<Slot, LOGR>[nchannels]);
 
     for (unsigned i = 0; i < nchannels; i++)
-        demods_[i] = std::make_unique<ChannelState>(*phy_,
-                                                    channels_[i].first,
-                                                    channels_[i].second,
-                                                    rx_rate_);
+        demods_[i] = std::make_unique<FDChannelDemodulator>(*phy_,
+                                                            channels_[i].first,
+                                                            channels_[i].second,
+                                                            rx_rate_);
 
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
@@ -341,19 +341,17 @@ void FDChannelizer::demodWorker(unsigned tid)
     }
 }
 
-FDChannelizer::ChannelState::ChannelState(PHY &phy,
-                                          const Channel &channel,
-                                          const std::vector<C> &taps,
-                                          double rx_rate)
-  : channel_(channel)
-  , rate_(phy.getMinRXRateOversample()*channel.bw/rx_rate)
+FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(PHY &phy,
+                                                          const Channel &channel,
+                                                          const std::vector<C> &taps,
+                                                          double rx_rate)
+  : ChannelDemodulator(phy, channel, taps, rx_rate)
+  , seq_(0)
   , X_(phy.getMinRXRateOversample())
   , D_(rx_rate/channel.bw)
   , ifft_(X_*N/D_, FFTW_BACKWARD, FFTW_MEASURE)
   , temp_(N)
   , H_(N)
-  , demod_(phy.mkPacketDemodulator())
-  , seq_(0)
 {
     // Number of FFT bins to rotate
     Nrot_ = N*channel.fc/rx_rate;
@@ -376,7 +374,7 @@ FDChannelizer::ChannelState::ChannelState(PHY &phy,
         [&](const auto& x) { return x*invN; });
 }
 
-void FDChannelizer::ChannelState::updateSeq(unsigned seq)
+void FDChannelizer::FDChannelDemodulator::updateSeq(unsigned seq)
 {
     // Reset state if we have a discontinuity or if we're not currently
     // receiving a frame
@@ -387,27 +385,15 @@ void FDChannelizer::ChannelState::updateSeq(unsigned seq)
     seq_ = seq;
 }
 
-void FDChannelizer::ChannelState::reset(void)
+void FDChannelizer::FDChannelDemodulator::reset(void)
 {
     demod_->reset(channel_);
     seq_ = 0;
 }
 
-void FDChannelizer::ChannelState::timestamp(const MonoClock::time_point &timestamp,
-                                            std::optional<ssize_t> snapshot_off,
-                                            size_t offset,
-                                            float rx_rate)
-{
-    demod_->timestamp(timestamp,
-                      snapshot_off,
-                      offset,
-                      rate_,
-                      rx_rate);
-}
-
-void FDChannelizer::ChannelState::demodulate(const std::complex<float>* data,
-                                             size_t count,
-                                             std::function<void(std::unique_ptr<RadioPacket>)> callback)
+void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* data,
+                                                     size_t count,
+                                                     std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
     const unsigned n = N/D_;
 

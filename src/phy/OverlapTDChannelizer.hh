@@ -85,60 +85,46 @@ public:
 
 private:
     /** @brief Channel state for time-domain demodulation */
-    class ChannelState {
+    class OverlapTDChannelDemodulator : public ChannelDemodulator {
     public:
-        ChannelState(PHY &phy,
-                     const Channel &channel,
-                     const std::vector<C> &taps,
-                     double rx_rate);
+        OverlapTDChannelDemodulator(PHY &phy,
+                                    const Channel &channel,
+                                    const std::vector<C> &taps,
+                                    double rx_rate)
+          : ChannelDemodulator(phy, channel, taps, rx_rate)
+          , rx_rate_(rx_rate)
+          , rx_oversample_(phy.getMinRXRateOversample())
+          , resamp_buf_(0)
+          , resamp_(rate_, taps)
+        {
+            resamp_.setFreqShift(2*M_PI*channel.fc/rx_rate);
+        }
 
-        ~ChannelState() = default;
+        OverlapTDChannelDemodulator() = default;
+
+        virtual ~OverlapTDChannelDemodulator() = default;
 
         /** @brief Set channel */
         void setChannel(const Channel &channel);
 
-        /** @brief Reset internal state */
-        void reset(void);
+        void reset(void) override;
 
-        /** @brief Set timestamp for demodulation
-         * @param timestamp The timestamp for future samples.
-         * @param snapshot_off The snapshot offset associated with the given
-         * timestamp.
-         * @param offset The offset of the first sample that will be demodulated.
-         * @param rx_rate RX rate (Hz)
-         */
-        void timestamp(const MonoClock::time_point &timestamp,
-                       std::optional<ssize_t> snapshot_off,
-                       size_t offset,
-                       float rx_rate);
-
-        /** @brief Demodulate data with given parameters */
-        void demodulate(IQBuf &resamp_buf,
-                        const std::complex<float>* data,
+        void demodulate(const std::complex<float>* data,
                         size_t count,
-                        std::function<void(std::unique_ptr<RadioPacket>)> callback);
+                        std::function<void(std::unique_ptr<RadioPacket>)> callback) override;
 
     protected:
-        /** @brief Channel we are demodulating */
-        Channel channel_;
-
         /** @brief RX rate */
-        double rx_rate_;
+        const double rx_rate_;
 
         /** @brief RX oversample factor */
-        unsigned rx_oversample_;
+        const unsigned rx_oversample_;
 
-        /** @brief Resampling rate */
-        double rate_;
-
-        /** @brief Frequency shift in radians, i.e., 2*M_PI*shift/Fs */
-        double rad_;
+        /** @brief Resampling buffer */
+        IQBuf resamp_buf_;
 
         /** @brief Resampler */
         Dragon::MixingRationalResampler<C,C> resamp_;
-
-        /** @brief Our demodulator */
-        std::shared_ptr<PHY::PacketDemodulator> demod_;
     };
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */

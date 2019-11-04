@@ -89,13 +89,12 @@ void OverlapTDChannelizer::stop(void)
 
 void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
 {
-    std::unique_ptr<ChannelState> demod;
-    RadioPacketQueue::barrier     b;
-    unsigned                      channelidx;
-    std::shared_ptr<IQBuf>        buf1;
-    std::shared_ptr<IQBuf>        buf2;
-    IQBuf                         resamp_buf(0);
-    bool                          received;
+    std::unique_ptr<OverlapTDChannelDemodulator> demod;
+    RadioPacketQueue::barrier                    b;
+    unsigned                                     channelidx;
+    std::shared_ptr<IQBuf>                       buf1;
+    std::shared_ptr<IQBuf>                       buf2;
+    bool                                         received;
 
     auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
         received = true;
@@ -127,10 +126,10 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
         // Either reconfigure or set current channel
         if (reconfig.load(std::memory_order_relaxed)) {
             assert(rx_rate_ != 0);
-            demod = std::make_unique<ChannelState>(*phy_,
-                                                   channels_[channelidx].first,
-                                                   channels_[channelidx].second,
-                                                   rx_rate_);
+            demod = std::make_unique<OverlapTDChannelDemodulator>(*phy_,
+                                                                  channels_[channelidx].first,
+                                                                  channels_[channelidx].second,
+                                                                  rx_rate_);
             reconfig.store(false, std::memory_order_relaxed);
         } else
             demod->setChannel(channels_[channelidx].first);
@@ -144,8 +143,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
                          buf1_off,
                          rx_rate_);
 
-        demod->demodulate(resamp_buf,
-                          buf1->data() + buf1_off,
+        demod->demodulate(buf1->data() + buf1_off,
                           buf1_nsamples,
                           callback);
 
@@ -185,8 +183,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
                 n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
 
                 if (n != 0) {
-                    demod->demodulate(resamp_buf,
-                                      &(*buf2)[ndemodulated],
+                    demod->demodulate(&(*buf2)[ndemodulated],
                                       n,
                                       callback);
 
@@ -269,71 +266,45 @@ void OverlapTDChannelizer::nextWindow(void)
     iq_next_channel_ = 0;
 }
 
-OverlapTDChannelizer::ChannelState::ChannelState(PHY &phy,
-                                                 const Channel &channel,
-                                                 const std::vector<C> &taps,
-                                                 double rx_rate)
-  : channel_(channel)
-  , rx_rate_(rx_rate)
-  , rx_oversample_(phy.getMinRXRateOversample())
-  , rate_(rx_oversample_*channel.bw/rx_rate)
-  , rad_(2*M_PI*channel.fc/rx_rate)
-  , resamp_(rate_, taps)
-  , demod_(phy.mkPacketDemodulator())
-{
-    resamp_.setFreqShift(rad_);
-}
-
-void OverlapTDChannelizer::ChannelState::setChannel(const Channel &channel)
+void OverlapTDChannelizer::OverlapTDChannelDemodulator::setChannel(const Channel &channel)
 {
     double new_rate = rx_oversample_*channel.bw/rx_rate_;
-    double new_rad = 2*M_PI*channel.fc/rx_rate_;
+    double new_fshift = channel.fc/rx_rate_;
+
+    channel_ = channel;
 
     if (new_rate != rate_) {
         rate_ = new_rate;
         resamp_.setRate(new_rate);
     }
 
-    if (new_rad != rad_) {
-        rad_ = new_rad;
-        resamp_.setFreqShift(new_rad);
+    if (new_fshift != fshift_) {
+        fshift_ = new_fshift;
+        resamp_.setFreqShift(2*M_PI*channel.fc/rx_rate_);
     }
 }
 
-void OverlapTDChannelizer::ChannelState::reset(void)
+void OverlapTDChannelizer::OverlapTDChannelDemodulator::reset(void)
 {
     resamp_.reset();
     demod_->reset(channel_);
 }
 
-void OverlapTDChannelizer::ChannelState::timestamp(const MonoClock::time_point &timestamp,
-                                                   std::optional<ssize_t> snapshot_off,
-                                                   size_t offset,
-                                                   float rx_rate)
+void OverlapTDChannelizer::OverlapTDChannelDemodulator::demodulate(const std::complex<float>* data,
+                                                                   size_t count,
+                                                                   std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
-    demod_->timestamp(timestamp,
-                      snapshot_off,
-                      offset,
-                      rate_,
-                      rx_rate);
-}
-
-void OverlapTDChannelizer::ChannelState::demodulate(IQBuf &resamp_buf,
-                                                    const std::complex<float>* data,
-                                                    size_t count,
-                                                    std::function<void(std::unique_ptr<RadioPacket>)> callback)
-{
-    if (rad_ != 0.0 || rate_ != 1.0) {
+    if (fshift_ != 0.0 || rate_ != 1.0) {
         // Resample. Note that we can't very well mix without a frequency shift,
         // so we are guaranteed that the resampler's rate is not 1 here.
         unsigned nw;
 
-        resamp_buf.resize(resamp_.neededOut(count));
-        nw = resamp_.resampleMixDown(data, count, resamp_buf.data());
-        resamp_buf.resize(nw);
+        resamp_buf_.resize(resamp_.neededOut(count));
+        nw = resamp_.resampleMixDown(data, count, resamp_buf_.data());
+        resamp_buf_.resize(nw);
 
         // Demodulate resampled data.
-        demod_->demodulate(resamp_buf.data(), resamp_buf.size(), callback);
+        demod_->demodulate(resamp_buf_.data(), resamp_buf_.size(), callback);
     } else
         demod_->demodulate(data, count, callback);
 }

@@ -63,10 +63,10 @@ void TDChannelizer::reconfigure(void)
     iqbufs_ = std::unique_ptr<ringbuffer<std::shared_ptr<IQBuf>, LOGN> []>(new ringbuffer<std::shared_ptr<IQBuf>, LOGN>[nchannels]);
 
     for (unsigned i = 0; i < nchannels; i++)
-        demods_[i] = std::make_unique<ChannelState>(*phy_,
-                                                    channels_[i].first,
-                                                    channels_[i].second,
-                                                    rx_rate_);
+        demods_[i] = std::make_unique<TDChannelDemodulator>(*phy_,
+                                                            channels_[i].first,
+                                                            channels_[i].second,
+                                                            rx_rate_);
 
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
@@ -91,7 +91,6 @@ void TDChannelizer::demodWorker(unsigned tid)
 {
     std::shared_ptr<IQBuf> prev_iqbuf;
     std::shared_ptr<IQBuf> iqbuf;
-    IQBuf                  resamp_buf(0);
     std::optional<ssize_t> next_snapshot_off;
 
     while (!done_) {
@@ -168,8 +167,7 @@ void TDChannelizer::demodWorker(unsigned tid)
                 n = iqbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
 
                 if (n != 0) {
-                    demod.demodulate(resamp_buf,
-                                     iqbuf->data() + ndemodulated,
+                    demod.demodulate(iqbuf->data() + ndemodulated,
                                      n,
                                      callback);
 
@@ -204,21 +202,7 @@ void TDChannelizer::demodWorker(unsigned tid)
     }
 }
 
-TDChannelizer::ChannelState::ChannelState(PHY &phy,
-                                          const Channel &channel,
-                                          const std::vector<C> &taps,
-                                          double rx_rate)
-  : channel_(channel)
-  , rate_(phy.getMinRXRateOversample()*channel.bw/rx_rate)
-  , rad_(2*M_PI*channel.fc/rx_rate)
-  , resamp_(rate_, taps)
-  , demod_(phy.mkPacketDemodulator())
-  , seq_(0)
-{
-    resamp_.setFreqShift(rad_);
-}
-
-void TDChannelizer::ChannelState::updateSeq(unsigned seq)
+void TDChannelizer::TDChannelDemodulator::updateSeq(unsigned seq)
 {
     // Reset state if we have a discontinuity or if we're not currently
     // receiving a frame
@@ -229,42 +213,28 @@ void TDChannelizer::ChannelState::updateSeq(unsigned seq)
     seq_ = seq;
 }
 
-/** @brief Reset internal state */
-void TDChannelizer::ChannelState::reset(void)
+void TDChannelizer::TDChannelDemodulator::reset(void)
 {
     resamp_.reset();
     demod_->reset(channel_);
     seq_ = 0;
 }
 
-void TDChannelizer::ChannelState::timestamp(const MonoClock::time_point &timestamp,
-                                            std::optional<ssize_t> snapshot_off,
-                                            size_t offset,
-                                            float rx_rate)
+void TDChannelizer::TDChannelDemodulator::demodulate(const std::complex<float>* data,
+                                                     size_t count,
+                                                     std::function<void(std::unique_ptr<RadioPacket>)> callback)
 {
-    demod_->timestamp(timestamp,
-                      snapshot_off,
-                      offset,
-                      rate_,
-                      rx_rate);
-}
-
-void TDChannelizer::ChannelState::demodulate(IQBuf &resamp_buf,
-                                             const std::complex<float>* data,
-                                             size_t count,
-                                             std::function<void(std::unique_ptr<RadioPacket>)> callback)
-{
-    if (rad_ != 0.0 || rate_ != 1.0) {
+    if (fshift_ != 0.0 || rate_ != 1.0) {
         // Resample. Note that we can't very well mix without a frequency shift,
         // so we are guaranteed that the resampler's rate is not 1 here.
         unsigned nw;
 
-        resamp_buf.resize(resamp_.neededOut(count));
-        nw = resamp_.resampleMixDown(data, count, resamp_buf.data());
-        resamp_buf.resize(nw);
+        resamp_buf_.resize(resamp_.neededOut(count));
+        nw = resamp_.resampleMixDown(data, count, resamp_buf_.data());
+        resamp_buf_.resize(nw);
 
         // Demodulate resampled data.
-        demod_->demodulate(resamp_buf.data(), resamp_buf.size(), callback);
+        demod_->demodulate(resamp_buf_.data(), resamp_buf_.size(), callback);
     } else
         demod_->demodulate(data, count, callback);
 }

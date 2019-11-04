@@ -72,4 +72,63 @@ protected:
     Channels channels_;
 };
 
+/** @brief Demodulate packets from a channel. */
+class ChannelDemodulator {
+public:
+    ChannelDemodulator(PHY &phy,
+                       const Channel &channel,
+                       const std::vector<C> &taps,
+                       double rx_rate)
+      : channel_(channel)
+      , rate_(phy.getMinRXRateOversample()*channel.bw/rx_rate)
+      , fshift_(channel.fc/rx_rate)
+      , demod_(phy.mkPacketDemodulator())
+    {
+    }
+
+    ChannelDemodulator() = delete;
+
+    virtual ~ChannelDemodulator() = default;
+
+    /** @brief Reset internal state */
+    virtual void reset(void) = 0;
+
+    /** @brief Set timestamp for demodulation
+     * @param timestamp The timestamp for future samples.
+     * @param snapshot_off The snapshot offset associated with the given
+     * timestamp.
+     * @param offset The offset of the first sample that will be demodulated.
+     * @param rx_rate RX rate (Hz)
+     */
+    void timestamp(const MonoClock::time_point &timestamp,
+                   std::optional<ssize_t> snapshot_off,
+                   size_t offset,
+                   float rx_rate)
+    {
+        demod_->timestamp(timestamp,
+                          snapshot_off,
+                          offset,
+                          rate_,
+                          rx_rate);
+    }
+
+    /** @brief Demodulate data with given parameters */
+    virtual void demodulate(const std::complex<float>* data,
+                            size_t count,
+                            std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
+
+protected:
+    /** @brief Channel we are demodulating */
+    Channel channel_;
+
+    /** @brief Resampling rate */
+    double rate_;
+
+    /** @brief Frequency shift */
+    double fshift_;
+
+    /** @brief Our demodulator */
+    std::shared_ptr<PHY::PacketDemodulator> demod_;
+};
+
 #endif /* CHANNELIZER_H_ */
