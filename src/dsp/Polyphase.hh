@@ -420,6 +420,7 @@ public:
       , rad_(0.0)
       , nco_(0.0)
     {
+        reconfigure();
     }
 
     /** @brief Construct a polyphase rational resampler
@@ -432,6 +433,7 @@ public:
       , rad_(0.0)
       , nco_(0.0)
     {
+        reconfigure();
     }
 
     MixingRationalResampler() = delete;
