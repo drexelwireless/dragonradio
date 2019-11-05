@@ -367,8 +367,10 @@ void SlottedMAC::missedSlot(Synthesizer::Slot &slot)
 
     // Re-queue packets that were modulated for this slot
     for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
-        if (!(*it)->pkt->internal_flags.is_timestamp)
-            controller_->missed(std::move((*it)->pkt));
+        if ((*it)->pkt->internal_flags.is_timestamp)
+            (*it)->pkt->removeTimestamp();
+
+        controller_->missed(std::move((*it)->pkt));
     }
 }
 
