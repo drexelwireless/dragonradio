@@ -21,8 +21,6 @@ public:
 
     void received(std::shared_ptr<RadioPacket> &&pkt) override;
 
-    void missed(std::shared_ptr<NetPacket> &&pkt) override;
-
     void transmitted(Synthesizer::Slot &slot) override;
 
 private:

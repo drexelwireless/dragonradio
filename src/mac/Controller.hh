@@ -72,7 +72,10 @@ public:
     /** This function is called by the MAC when a packet has missed its
      * transmission slot.
      */
-    virtual void missed(std::shared_ptr<NetPacket> &&pkt) = 0;
+    virtual void missed(std::shared_ptr<NetPacket> &&pkt)
+    {
+        netq_->repush(std::move(pkt));
+    }
 
     /** @brief Notify controller that slot has been transmitted. */
     /** This function is called by the MAC when a slot has been transmitted.

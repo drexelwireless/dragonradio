@@ -38,10 +38,6 @@ void DummyController::received(std::shared_ptr<RadioPacket> &&pkt)
         radio_out.push(std::move(pkt));
 }
 
-void DummyController::missed(std::shared_ptr<NetPacket> &&pkt)
-{
-}
-
 void DummyController::transmitted(Synthesizer::Slot &slot)
 {
 }

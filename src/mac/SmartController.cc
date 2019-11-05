@@ -507,11 +507,6 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 }
 
-void SmartController::missed(std::shared_ptr<NetPacket> &&pkt)
-{
-    netq_->repush(std::move(pkt));
-}
-
 void SmartController::transmitted(Synthesizer::Slot &slot)
 {
     for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
