@@ -818,6 +818,9 @@ class Radio(object):
         self.mac = None
         """The radio's MAC"""
 
+        self.mac_schedule = None
+        """Our MAC schedule"""
+
         #
         # Create tun/tap interface and net neighborhood
         #
@@ -1409,14 +1412,14 @@ class Radio(object):
         self.mac.slotidx = 0
 
         if self.config.tx_upsample:
-            self.my_schedule = np.identity(len(self.channels)).astype('bool')
+            self.mac_schedule = np.identity(len(self.channels)).astype('bool')
         else:
             self.setTXChannel(0)
 
-            self.my_schedule = [[1]]
+            self.mac_schedule = [[1]]
 
-        self.mac.schedule = self.my_schedule
-        self.synthesizer.schedule = self.my_schedule
+        self.mac.schedule = self.mac_schedule
+        self.synthesizer.schedule = self.mac_schedule
 
     def installMACSchedule(self, sched):
         """Install a MAC schedule.
@@ -1445,7 +1448,7 @@ class Radio(object):
 
         # If we are upsampling on TX, go ahead and install the schedule
         if config.tx_upsample:
-            self.my_schedule = (sched == self.node_id)
+            self.mac_schedule = (sched == self.node_id)
         # Otherwise we need to pick a channel we're allowed to send on and stick
         # to that
         else:
@@ -1457,10 +1460,10 @@ class Radio(object):
 
             self.setTXChannel(chan)
 
-            self.my_schedule = [sched[chan] == self.node_id]
+            self.mac_schedule = [sched[chan] == self.node_id]
 
-        self.mac.schedule = self.my_schedule
-        self.synthesizer.schedule = self.my_schedule
+        self.mac.schedule = self.mac_schedule
+        self.synthesizer.schedule = self.mac_schedule
 
     def configureSimpleMACSchedule(self):
         """
