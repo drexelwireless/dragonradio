@@ -13,7 +13,6 @@
 #include "Clock.hh"
 #include "RadioConfig.hh"
 #include "TimerQueue.hh"
-#include "net/Queue.hh"
 #include "mac/Controller.hh"
 #include "mac/MAC.hh"
 #include "phy/Gain.hh"
@@ -346,18 +345,6 @@ public:
                     Seq::uint_type recvwin,
                     const std::vector<evm_thresh_t> &evm_thresholds);
     virtual ~SmartController();
-
-    /** @brief Get the controller's network queue. */
-    std::shared_ptr<NetQueue> getNetQueue(void)
-    {
-        return netq_;
-    }
-
-    /** @brief Set the controller's network queue. */
-    void setNetQueue(std::shared_ptr<NetQueue> q)
-    {
-        netq_ = q;
-    }
 
     /** @brief Get short time window over which to calculate PER (sec) */
     double getShortPERWindow(void)
@@ -703,9 +690,6 @@ protected:
 
     /** @brief Mutex to serialize access to the network */
     std::mutex net_mutex_;
-
-    /** @brief Network queue with high-priority sub-queue. */
-    std::shared_ptr<NetQueue> netq_;
 
     /** @brief Slot size (sec) */
     double slot_size_;

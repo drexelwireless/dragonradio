@@ -8,6 +8,7 @@ using namespace std::placeholders;
 
 #include "net/Element.hh"
 #include "net/Net.hh"
+#include "net/Queue.hh"
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
 
@@ -21,12 +22,25 @@ public:
       , radio_in(*this, nullptr, nullptr, std::bind(&Controller::received, this, _1))
       , radio_out(*this, nullptr, nullptr)
       , net_(net)
+      , netq_(nullptr)
       , min_channel_bandwidth_(0)
     {
     }
     virtual ~Controller() = default;
 
     Controller() = delete;
+
+    /** @brief Get the controller's network queue. */
+    std::shared_ptr<NetQueue> getNetQueue(void)
+    {
+        return netq_;
+    }
+
+    /** @brief Set the controller's network queue. */
+    void setNetQueue(std::shared_ptr<NetQueue> q)
+    {
+        netq_ = q;
+    }
 
     /** @brief Set minimum channel bandwidth */
     virtual void setMinChannelBandwidth(double min_bw)
@@ -80,6 +94,9 @@ public:
 protected:
     /** @brief The Net we're attached to */
     std::shared_ptr<Net> net_;
+
+    /** @brief Network queue with high-priority sub-queue. */
+    std::shared_ptr<NetQueue> netq_;
 
     /** @brief Bandwidth of the smallest channel */
     double min_channel_bandwidth_;
