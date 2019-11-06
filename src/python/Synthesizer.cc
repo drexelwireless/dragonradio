@@ -4,10 +4,11 @@
 #include <pybind11/stl.h>
 
 #include "phy/Channel.hh"
-#include "phy/FDSynthesizer.hh"
+#include "phy/FDChannelModulator.hh"
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/Synthesizer.hh"
-#include "phy/TDSynthesizer.hh"
+#include "phy/TDChannelModulator.hh"
+#include "phy/UnichannelSynthesizer.inl"
 #include "python/PyModules.hh"
 
 void exportSynthesizers(py::module &m)
@@ -37,6 +38,8 @@ void exportSynthesizers(py::module &m)
         ;
 
     // Export class TDSynthesizer to Python
+    using TDSynthesizer = UnichannelSynthesizer<TDChannelModulator>;
+
     py::class_<TDSynthesizer, Synthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
         .def(py::init<std::shared_ptr<PHY>,
                       double,
@@ -45,6 +48,8 @@ void exportSynthesizers(py::module &m)
         ;
 
     // Export class FDSynthesizer to Python
+    using FDSynthesizer = UnichannelSynthesizer<FDChannelModulator>;
+
     py::class_<FDSynthesizer, Synthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
         .def(py::init<std::shared_ptr<PHY>,
                       double,

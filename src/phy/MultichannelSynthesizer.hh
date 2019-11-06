@@ -46,32 +46,27 @@ public:
     void stop(void);
 
 private:
-    /** @brief Channel state for time-domain modulation */
-    class ChannelState : private Upsampler {
+    /** @brief Channel modulator for multichannel modulation */
+    class MultichannelModulator : public ChannelModulator, private Upsampler {
     public:
-        ChannelState(PHY &phy,
-                     unsigned chanidx,
-                     const Channel &channel,
-                     const std::vector<C> &taps,
-                     double tx_rate);
-        ChannelState() = delete;
+        MultichannelModulator(PHY &phy,
+                              unsigned chanidx,
+                              const Channel &channel,
+                              const std::vector<C> &taps,
+                              double tx_rate);
+        MultichannelModulator() = delete;
 
-        ~ChannelState() = default;
+        ~MultichannelModulator() = default;
+
+        void modulate(std::shared_ptr<NetPacket> pkt,
+                      const float g,
+                      ModPacket &mpkt) override;
 
         /** @brief Specify the next slot to modulate.
          * @param slot The new slot
          * @param overfill true if this slot can be overfilled
          */
         void nextSlot(const Slot *prev_slot, Slot &slot, const bool overfill);
-
-        /** @brief Modulate a packet to produce IQ samples.
-         * @param pkt The NetPacket to modulate.
-         * @param g Soft (multiplicative) gain to apply to modulated signal.
-         * @param mpkt The ModPacket in which to place modulated samples.
-         */
-        void modulate(std::shared_ptr<NetPacket> pkt,
-                      const float g,
-                      ModPacket &mpkt);
 
         /** @brief Determine whether or not a modulated packet will fit in
          * the current frequency domain buffer.
@@ -150,19 +145,6 @@ private:
         /** @brief Number of valid samples in the frequency-domain buffer */
         /** This will be a multiple of N */
         size_t fdnsamples;
-
-    protected:
-        /** @brief Index of channel we are modulating */
-        const unsigned chanidx_;
-
-        /** @brief Channel we are modulating */
-        const Channel channel_;
-
-        /** @brief Resampling rate */
-        const double rate_;
-
-        /** @brief Our demodulator */
-        std::shared_ptr<PHY::PacketModulator> mod_;
     };
 
     /** @brief Number of synthesizer threads. */
@@ -187,10 +169,10 @@ private:
     spinlock_mutex mods_mutex_;
 
     /** @brief Channel state for demodulation. */
-    std::vector<std::unique_ptr<ChannelState>> mods_;
+    std::vector<std::unique_ptr<MultichannelModulator>> mods_;
 
     /** @brief Current slot that need to be synthesized */
-    std::shared_ptr<Synthesizer::Slot> curslot_;
+    std::shared_ptr<Slot> curslot_;
 
     /** @brief Threads running modWorker */
     std::vector<std::thread> mod_threads_;

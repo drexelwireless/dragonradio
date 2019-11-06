@@ -261,4 +261,54 @@ protected:
     size_t max_packet_size_;
 };
 
+/** @brief Modulate packets for a channel. */
+/** This class is responsible for modulating packets and synthesizing a channel
+ * from the modulated packet.
+ */
+class ChannelModulator {
+public:
+    ChannelModulator(PHY &phy,
+                     unsigned chanidx,
+                     const Channel &channel,
+                     const std::vector<C> &taps,
+                     double tx_rate)
+      : chanidx_(chanidx)
+      , channel_(channel)
+      // XXX Protected against channel with zero bandwidth
+      , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
+      , fshift_(channel.fc/tx_rate)
+      , mod_(phy.mkPacketModulator())
+    {
+    }
+
+    ChannelModulator() = delete;
+
+    virtual ~ChannelModulator() = default;
+
+    /** @brief Modulate a packet to produce IQ samples.
+     * @param pkt The NetPacket to modulate.
+     * @param g Gain to apply.
+     * @param mpkt The ModPacket in which to place modulated samples.
+     */
+    virtual void modulate(std::shared_ptr<NetPacket> pkt,
+                          float g,
+                          ModPacket &mpkt) = 0;
+
+protected:
+    /** @brief Index of channel we are modulating */
+    const unsigned chanidx_;
+
+    /** @brief Channel we are modulating */
+    const Channel channel_;
+
+    /** @brief Resampling rate */
+    const double rate_;
+
+    /** @brief Frequency shift */
+    const double fshift_;
+
+    /** @brief Packet modulator */
+    std::shared_ptr<PHY::PacketModulator> mod_;
+};
+
 #endif /* SYNTHESIZER_H_ */

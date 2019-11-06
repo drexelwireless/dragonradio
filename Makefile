@@ -87,14 +87,13 @@ SOURCES := \
     liquid/PHY.cc \
     liquid/Resample.cc \
     phy/AutoGain.cc \
-    phy/ChannelSynthesizer.cc \
+    phy/FDChannelModulator.cc \
     phy/FDChannelizer.cc \
-    phy/FDSynthesizer.cc \
     phy/MultichannelSynthesizer.cc \
     phy/OverlapTDChannelizer.cc \
     phy/RadioPacketQueue.cc \
+    phy/TDChannelModulator.cc \
     phy/TDChannelizer.cc \
-    phy/TDSynthesizer.cc \
     mac/DummyController.cc \
     mac/MAC.cc \
     mac/SmartController.cc \

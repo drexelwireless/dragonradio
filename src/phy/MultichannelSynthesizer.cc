@@ -127,11 +127,11 @@ void MultichannelSynthesizer::reconfigure(void)
     mods_.resize(nchannels);
 
     for (unsigned chanidx = 0; chanidx < nchannels; chanidx++)
-        mods_[chanidx] = std::make_unique<ChannelState>(*phy_,
-                                                        chanidx,
-                                                        channels_copy_[chanidx].first,
-                                                        channels_copy_[chanidx].second,
-                                                        tx_rate_copy_);
+        mods_[chanidx] = std::make_unique<MultichannelModulator>(*phy_,
+                                                                 chanidx,
+                                                                 channels_copy_[chanidx].first,
+                                                                 channels_copy_[chanidx].second,
+                                                                 tx_rate_copy_);
 
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
@@ -157,10 +157,10 @@ void MultichannelSynthesizer::stop(void)
 
 void MultichannelSynthesizer::modWorker(unsigned tid)
 {
-    std::shared_ptr<Synthesizer::Slot> prev_slot;
-    std::shared_ptr<Synthesizer::Slot> slot;
-    std::unique_ptr<ModPacket>         mpkt;
-    std::shared_ptr<NetPacket>         pkt;
+    std::shared_ptr<Slot>      prev_slot;
+    std::shared_ptr<Slot>      slot;
+    std::unique_ptr<ModPacket> mpkt;
+    std::shared_ptr<NetPacket> pkt;
 
     while (!done_) {
         // Wait for the next slot if we are starting at the first channel for
@@ -219,7 +219,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
         for (unsigned channelidx = tid; channelidx < channels_copy_.size(); channelidx += nthreads_) {
             // Get channel state for current channel
-            ChannelState              &mod = *mods_[channelidx];
+            MultichannelModulator     &mod = *mods_[channelidx];
             const Schedule::slot_type &slots = schedule_copy_[channelidx];
 
             // Skip this channel if we're not allowed to modulate
@@ -379,29 +379,39 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
     }
 }
 
-MultichannelSynthesizer::ChannelState::ChannelState(PHY &phy,
-                                                    unsigned chanidx,
-                                                    const Channel &channel,
-                                                    const std::vector<C> &taps,
-                                                    double tx_rate)
-  : Upsampler(phy.getMinTXRateOversample(), tx_rate/channel.bw, N*(channel.fc/tx_rate))
+MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(PHY &phy,
+                                                                      unsigned chanidx,
+                                                                      const Channel &channel,
+                                                                      const std::vector<C> &taps,
+                                                                      double tx_rate)
+  : ChannelModulator(phy, chanidx, channel, taps, tx_rate)
+  , Upsampler(phy.getMinTXRateOversample(), tx_rate/channel.bw, N*(channel.fc/tx_rate))
   , fdbuf(nullptr)
   , delay(0)
   , nsamples(0)
   , max_samples(0)
   , npartial(0)
   , fdnsamples(0)
-  , chanidx_(chanidx)
-  , channel_(channel)
-  // XXX Protected against channel with zero bandwidth
-  , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
-  , mod_(phy.mkPacketModulator())
 {
 }
 
-void MultichannelSynthesizer::ChannelState::nextSlot(const Slot *prev_slot,
-                                                     Slot &slot,
-                                                     const bool overfill)
+void MultichannelSynthesizer::MultichannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
+                                                              const float g,
+                                                              ModPacket &mpkt)
+{
+    const float g_effective = pkt->g*g;
+
+    // Modulate the packet
+    mod_->modulate(std::move(pkt), g_effective, mpkt);
+
+    // Set channel
+    mpkt.chanidx = chanidx_;
+    mpkt.channel = channel_;
+}
+
+void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_slot,
+                                                              Slot &slot,
+                                                              const bool overfill)
 {
     // It's safe to keep a plain old pointer since we will only keep this
     // pointer around as long as we have a reference to the slot, and the slot
@@ -472,21 +482,7 @@ void MultichannelSynthesizer::ChannelState::nextSlot(const Slot *prev_slot,
     }
 }
 
-void MultichannelSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
-                                                     const float g,
-                                                     ModPacket &mpkt)
-{
-    const float g_effective = pkt->g*g;
-
-    // Modulate the packet
-    mod_->modulate(std::move(pkt), g_effective, mpkt);
-
-    // Set channel
-    mpkt.chanidx = chanidx_;
-    mpkt.channel = channel_;
-}
-
-bool MultichannelSynthesizer::ChannelState::fits(ModPacket &mpkt, const bool overfill)
+bool MultichannelSynthesizer::MultichannelModulator::fits(ModPacket &mpkt, const bool overfill)
 {
     // This is the number of samples the upsampled signal will need
     size_t n = I*(mpkt.samples->size() - mpkt.samples->delay)/X;
@@ -501,14 +497,14 @@ bool MultichannelSynthesizer::ChannelState::fits(ModPacket &mpkt, const bool ove
         return false;
 }
 
-void MultichannelSynthesizer::ChannelState::setIQBuffer(std::shared_ptr<IQBuf> &&iqbuf_)
+void MultichannelSynthesizer::MultichannelModulator::setIQBuffer(std::shared_ptr<IQBuf> &&iqbuf_)
 {
     iqbuf = std::move(iqbuf_);
     iqbufoff = iqbuf->delay;
     pkt.reset();
 }
 
-size_t MultichannelSynthesizer::ChannelState::upsample(void)
+size_t MultichannelSynthesizer::MultichannelModulator::upsample(void)
 {
     return Upsampler::upsample(iqbuf->data() + iqbufoff,
                                iqbuf->size() - iqbufoff,
@@ -520,7 +516,7 @@ size_t MultichannelSynthesizer::ChannelState::upsample(void)
                                fdnsamples);
 }
 
-void MultichannelSynthesizer::ChannelState::flush(Slot &slot)
+void MultichannelSynthesizer::MultichannelModulator::flush(Slot &slot)
 {
     if (nsamples < delay + max_samples) {
         partial_fftoff = fftoff;

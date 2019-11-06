@@ -1,46 +1,44 @@
-#include <xsimd/xsimd.hpp>
-#include <xsimd/stl/algorithms.hpp>
+#include "UnichannelSynthesizer.hh"
 
-#include "RadioConfig.hh"
-#include "Util.hh"
-#include "phy/ChannelSynthesizer.hh"
-#include "phy/PHY.hh"
-#include "stats/Estimator.hh"
-
-ChannelSynthesizer::ChannelSynthesizer(std::shared_ptr<PHY> phy,
-                                       double tx_rate,
-                                       const Channels &channels,
-                                       size_t nthreads)
+template <class ChannelModulator>
+UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(std::shared_ptr<PHY> phy,
+                                                               double tx_rate,
+                                                               const Channels &channels,
+                                                               size_t nthreads)
   : Synthesizer(phy, tx_rate, channels)
   , done_(false)
   , mod_reconfigure_(nthreads)
 {
     for (size_t i = 0; i < nthreads; ++i) {
         mod_reconfigure_[i].store(true, std::memory_order_release);
-        mod_threads_.emplace_back(std::thread(&ChannelSynthesizer::modWorker,
+        mod_threads_.emplace_back(std::thread(&UnichannelSynthesizer::modWorker,
                                               this,
                                               std::ref(mod_reconfigure_[i]),
                                               i));
     }
 }
 
-ChannelSynthesizer::~ChannelSynthesizer()
+template <class ChannelModulator>
+UnichannelSynthesizer<ChannelModulator>::~UnichannelSynthesizer()
 {
     stop();
 }
 
-void ChannelSynthesizer::modulate(const std::shared_ptr<Slot> &slot)
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::modulate(const std::shared_ptr<Slot> &slot)
 {
     std::atomic_store_explicit(&curslot_, slot, std::memory_order_release);
 }
 
-void ChannelSynthesizer::reconfigure(void)
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::reconfigure(void)
 {
     for (auto &flag : mod_reconfigure_)
         flag.store(true, std::memory_order_release);
 }
 
-void ChannelSynthesizer::stop(void)
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::stop(void)
 {
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
@@ -53,14 +51,15 @@ void ChannelSynthesizer::stop(void)
     }
 }
 
-void ChannelSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 {
     Channels                           channels;
     Schedule                           schedule;
     double                             tx_rate = tx_rate_;
-    std::unique_ptr<ChannelState>      mod;
-    std::shared_ptr<Synthesizer::Slot> prev_slot;
-    std::shared_ptr<Synthesizer::Slot> slot;
+    std::unique_ptr<ChannelModulator>  mod;
+    std::shared_ptr<Slot>              prev_slot;
+    std::shared_ptr<Slot>              slot;
     std::vector<size_t>                slot_chanidx; // TX channel for each slot
     size_t                             chanidx = 0;  // Index of TX channel
     std::shared_ptr<NetPacket>         pkt;
@@ -116,10 +115,11 @@ void ChannelSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             chanidx = slot_chanidx[slot->slotidx];
 
             // Reconfigure the modulator
-            mod = mkChannelState(chanidx,
-                                 channels[chanidx].first,
-                                 channels[chanidx].second,
-                                 tx_rate);
+            mod = std::make_unique<ChannelModulator>(*phy_,
+                                                     chanidx,
+                                                     channels[chanidx].first,
+                                                     channels[chanidx].second,
+                                                     tx_rate);
         }
 
         // We can overfill if we are allowed to transmit on the same channel in

@@ -1,9 +1,13 @@
-#include "phy/FDSynthesizer.hh"
+#include "phy/FDChannelModulator.hh"
 
-void FDSynthesizer::FDChannelState::modulate(std::shared_ptr<NetPacket> pkt,
-                                             float g,
-                                             ModPacket &mpkt)
+void FDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
+                                  float g,
+                                  ModPacket &mpkt)
 {
+    const auto     Nrot = upsampler_.Nrot;
+    const auto     X = upsampler_.X;
+    const auto     L = upsampler_.L;
+    const auto     I = upsampler_.I;
     const unsigned Li = X*L/I; // Number of samples consumed per input block
     const float    g_effective = pkt->g*g;
 
@@ -27,15 +31,15 @@ void FDSynthesizer::FDChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         size_t fdnsamples = 0;
 
         fdbuf->zero();
-        reset();
-        upsample(iqbuf->data(),
-                 iqbuf->size(),
-                 fdbuf->data(),
-                 g_effective,
-                 true,
-                 nsamples,
-                 I*iqbuf->size()/X,
-                 fdnsamples);
+        upsampler_.reset();
+        upsampler_.upsample(iqbuf->data(),
+                            iqbuf->size(),
+                            fdbuf->data(),
+                            g_effective,
+                            true,
+                            nsamples,
+                            I*iqbuf->size()/X,
+                            fdnsamples);
         fdbuf->resize(fdnsamples);
 
         // Now convert upsampled signal back to time domain
