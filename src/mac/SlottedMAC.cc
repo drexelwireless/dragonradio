@@ -25,7 +25,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
   , tx_slot_samps_(0)
   , tx_full_slot_samps_(0)
   , stop_burst_(false)
-  , logger_(logger)
 {
 }
 
@@ -39,11 +38,6 @@ void SlottedMAC::reconfigure(void)
 
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
     tx_full_slot_samps_ = tx_rate_*slot_size_;
-
-    if (usrp_->getTXRate() == usrp_->getRXRate())
-        tx_fc_off_ = std::nullopt;
-    else
-        tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
 
     // If this is an FDMA MAC, all MCS entries are fair game
     if (isFDMA()) {

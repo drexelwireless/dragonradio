@@ -19,6 +19,7 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , rx_period_(rx_period)
   , rx_period_samps_(0)
   , rx_bufsize_(0)
+  , logger_(logger)
 {
     rx_rate_ = usrp->getRXRate();
     tx_rate_ = usrp->getTXRate();
@@ -28,6 +29,11 @@ void MAC::reconfigure(void)
 {
     rx_rate_ = usrp_->getRXRate();
     tx_rate_ = usrp_->getTXRate();
+
+    if (usrp_->getTXRate() == usrp_->getRXRate())
+        tx_fc_off_ = std::nullopt;
+    else
+        tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
 
     rx_period_samps_ = rx_rate_*rx_period_;
     rx_bufsize_ = usrp_->getRecommendedBurstRXSize(rx_period_samps_);

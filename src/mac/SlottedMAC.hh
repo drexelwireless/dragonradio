@@ -132,15 +132,6 @@ protected:
     /** @brief Do we need to stop the current burst? */
     std::atomic<bool> stop_burst_;
 
-    /** @brief TX center frequency offset from RX center frequency. */
-    /** If the TX and RX rates are different, this is non-empty and contains
-     * the frequency of the channel we transmit on.
-     */
-    std::optional<double> tx_fc_off_;
-
-    /** @brief A reference to the global logger */
-    std::shared_ptr<Logger> logger_;
-
     /** @brief Mutex for transmitted slots */
     std::mutex txed_slots_mutex_;
 

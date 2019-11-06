@@ -162,6 +162,15 @@ protected:
     /** @brief The minimum channel bandwidth (Hz) */
     double min_chan_bw_;
 
+    /** @brief TX center frequency offset from RX center frequency. */
+    /** If the TX and RX rates are different, this is non-empty and contains
+     * the frequency of the channel we transmit on.
+     */
+    std::optional<double> tx_fc_off_;
+
+    /** @brief A reference to the global logger */
+    std::shared_ptr<Logger> logger_;
+
     /** @brief Mutex for load */
     spinlock_mutex load_mutex_;
 
@@ -170,6 +179,9 @@ protected:
 
     /** @brief Worker receiving packets */
     void rxWorker(void);
+
+    /** @brief Worker handling notification for transmitted slots */
+    void txNotifier(void);
 };
 
 #endif /* MAC_H_ */
