@@ -247,7 +247,7 @@ void SlottedMAC::txNotifier(void)
         }
 
         // Inform the controller of the transmission
-        controller_->transmitted(*slot);
+        controller_->transmitted(slot->mpkts);
 
         // Tell the snapshot collector about local self-transmissions
         if (snapshot_collector_) {

@@ -37,7 +37,3 @@ void DummyController::received(std::shared_ptr<RadioPacket> &&pkt)
     if (pkt->ehdr().data_len != 0 && pkt->hdr.nexthop == net_->getMyNodeId())
         radio_out.push(std::move(pkt));
 }
-
-void DummyController::transmitted(Synthesizer::Slot &slot)
-{
-}

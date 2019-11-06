@@ -21,8 +21,6 @@ public:
 
     void received(std::shared_ptr<RadioPacket> &&pkt) override;
 
-    void transmitted(Synthesizer::Slot &slot) override;
-
 private:
     /** @brief Mutex for sequence numbers */
     spinlock_mutex seqs_mutex_;
