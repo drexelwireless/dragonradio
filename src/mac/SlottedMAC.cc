@@ -17,12 +17,11 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
         controller,
         collector,
         channelizer,
-        synthesizer)
+        synthesizer,
+        slot_size)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , slot_send_lead_time_(slot_send_lead_time)
-  , rx_slot_samps_(0)
-  , rx_bufsize_(0)
   , tx_slot_samps_(0)
   , tx_full_slot_samps_(0)
   , stop_burst_(false)
@@ -38,8 +37,6 @@ void SlottedMAC::reconfigure(void)
 {
     MAC::reconfigure();
 
-    rx_slot_samps_ = rx_rate_*slot_size_;
-    rx_bufsize_ = usrp_->getRecommendedBurstRXSize(rx_slot_samps_);
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
     tx_full_slot_samps_ = tx_rate_*slot_size_;
 
@@ -62,76 +59,6 @@ void SlottedMAC::reconfigure(void)
 
         if (!phy_->mcs_table[phy_->mcs_table.size()-1].valid)
             logEvent("MAC: WARNING: Slot size too small to support a full-sized packet!");
-    }
-}
-
-void SlottedMAC::rxWorker(void)
-{
-    Clock::time_point t_cur_slot;   // Time at which current slot starts
-    Clock::time_point t_next_slot;  // Time at which next slot starts
-    double            t_slot_pos;   // Offset into the current slot (sec)
-    unsigned          seq = 0;      // Current IQ buffer sequence number
-
-    makeThisThreadHighPriority();
-
-    while (!done_) {
-        // Wait for slot size to be known
-        if (rx_slot_samps_ == 0) {
-            doze(100e-3);
-            continue;
-        }
-
-        // Set up streaming starting at *next* slot
-        {
-            Clock::time_point t_now = Clock::now();
-
-            t_slot_pos = fmod(t_now, slot_size_);
-            t_next_slot = t_now + slot_size_ - t_slot_pos;
-        }
-
-        // Bump the sequence number to indicate a discontinuity
-        seq++;
-
-        usrp_->startRXStream(Clock::to_mono_time(t_next_slot));
-
-        while (!done_) {
-            // Update times
-            t_cur_slot = t_next_slot;
-            t_next_slot += slot_size_;
-
-            // Create buffer for slot
-            auto curSlot = std::make_shared<IQBuf>(rx_bufsize_);
-
-            curSlot->seq = seq++;
-
-            // Push the buffer if we're snapshotting
-            bool do_snapshot;
-
-            if (snapshot_collector_)
-                do_snapshot = snapshot_collector_->push(curSlot);
-            else
-                do_snapshot = false;
-
-            // Put the buffer into the channelizer's queue so it can start
-            // working now
-            channelizer_->push(curSlot);
-
-            // Read samples for current slot. The demodulator will do its thing
-            // as we continue to read samples.
-            bool ok = usrp_->burstRX(Clock::to_mono_time(t_cur_slot), rx_slot_samps_, *curSlot);
-
-            // Update snapshot offset by finalizing this snapshot slot
-            if (do_snapshot)
-                snapshot_collector_->finalizePush();
-
-            // If there was an RX error, break and set up the RX stream again.
-            if (!ok)
-                break;
-        }
-
-        // Attempt to deal with RX errors
-        logEvent("MAC: attempting to reset RX loop");
-        usrp_->stopRXStream();
     }
 }
 

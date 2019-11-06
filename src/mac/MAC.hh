@@ -41,7 +41,8 @@ public:
         std::shared_ptr<Controller> controller,
         std::shared_ptr<SnapshotCollector> collector,
         std::shared_ptr<Channelizer> channelizer,
-        std::shared_ptr<Synthesizer> synthesizer);
+        std::shared_ptr<Synthesizer> synthesizer,
+        double rx_period);
     virtual ~MAC() = default;
 
     MAC() = delete;
@@ -149,6 +150,15 @@ protected:
     /** @brief TX rate */
     double tx_rate_;
 
+    /** @brief Length of RX period (sec) */
+    double rx_period_;
+
+    /** @brief Number of RX samples in an RX period */
+    size_t rx_period_samps_;
+
+    /** @brief RX buffer size */
+    size_t rx_bufsize_;
+
     /** @brief The minimum channel bandwidth (Hz) */
     double min_chan_bw_;
 
@@ -157,6 +167,9 @@ protected:
 
     /** @brief Number of sent samples */
     Load load_;
+
+    /** @brief Worker receiving packets */
+    void rxWorker(void);
 };
 
 #endif /* MAC_H_ */

@@ -49,6 +49,7 @@ public:
      */
     virtual void setSlotSize(double t)
     {
+        rx_period_ = t;
         slot_size_ = t;
         reconfigure();
     }
@@ -122,12 +123,6 @@ protected:
     /** @brief The MAC schedule */
     Schedule schedule_;
 
-    /** @brief Number of RX samples in a full slot */
-    size_t rx_slot_samps_;
-
-    /** @brief RX buffer size */
-    size_t rx_bufsize_;
-
     /** @brief Number of TX samples in the non-guard portion of a slot */
     size_t tx_slot_samps_;
 
@@ -163,9 +158,6 @@ protected:
 
     /** @brief Worker handling notification for transmitted slots */
     void txNotifier(void);
-
-    /** @brief Worker receiving packets */
-    void rxWorker(void);
 
     /** @brief Schedule modulation of a slot
      * @param q The slot queue
