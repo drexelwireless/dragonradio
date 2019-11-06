@@ -27,8 +27,6 @@ public:
                std::shared_ptr<SnapshotCollector> collector,
                std::shared_ptr<Channelizer> channelizer,
                std::shared_ptr<Synthesizer> synthesizer,
-               bool pin_rx_worker,
-               bool pin_tx_worker,
                double slot_size,
                double guard_size,
                double slot_send_lead_time);
@@ -111,12 +109,6 @@ public:
 
 protected:
     using slot_queue = std::queue<std::shared_ptr<Synthesizer::Slot>>;
-
-    /** @brif Pin RX worker thread to CPU */
-    bool pin_rx_worker_;
-
-    /** @brif Pin TX worker thread to CPU */
-    bool pin_tx_worker_;
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;

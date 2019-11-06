@@ -172,10 +172,6 @@ class Config(object):
         self.synthesizer = 'freqdomain'
 
         # MAC parameters
-        self.pin_rx_worker = False
-        """Pin RX worker thread to CPU"""
-        self.pin_tx_worker = False
-        """Pin TX worker thread to CPU"""
         self.slot_size = .035
         """Total slot duration, including guard interval (seconds)"""
         self.guard_size = .01
@@ -559,12 +555,6 @@ class Config(object):
                             help='set synthesizer algorithm')
 
         # MAC parameters
-        parser.add_argument('--pin-rx-worker', action='store_const', const=True,
-                            dest='pin_rx_worker',
-                            help='pin RX worker thread to a CPU')
-        parser.add_argument('--pin-tx-worker', action='store_const', const=True,
-                            dest='pin_tx_worker',
-                            help='pin TX worker thread to a CPU')
         parser.add_argument('--slot-size', action='store', type=float,
                             dest='slot_size',
                             help='set MAC slot size (sec)')
@@ -1312,8 +1302,6 @@ class Radio(object):
                                             self.snapshot_collector,
                                             self.channelizer,
                                             self.synthesizer,
-                                            config.pin_rx_worker,
-                                            config.pin_tx_worker,
                                             config.slot_size,
                                             config.guard_size,
                                             config.slot_send_lead_time,
@@ -1355,8 +1343,6 @@ class Radio(object):
                                     self.snapshot_collector,
                                     self.channelizer,
                                     self.synthesizer,
-                                    config.pin_rx_worker,
-                                    config.pin_tx_worker,
                                     config.slot_size,
                                     config.guard_size,
                                     config.slot_send_lead_time,
