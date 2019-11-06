@@ -39,12 +39,6 @@ SlottedMAC::~SlottedMAC()
 {
 }
 
-void SlottedMAC::setMinChannelBandwidth(double min_bw)
-{
-    min_chan_bw_ = min_bw;
-    reconfigure();
-}
-
 void SlottedMAC::reconfigure(void)
 {
     MAC::reconfigure();

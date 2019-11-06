@@ -72,6 +72,8 @@ public:
     /** @brief Set minimum channel bandwidth */
     virtual void setMinChannelBandwidth(double min_bw)
     {
+        min_chan_bw_ = min_bw;
+        reconfigure();
     }
 
     /** @brief Get current load */
@@ -143,6 +145,9 @@ protected:
 
     /** @brief TX rate */
     double tx_rate_;
+
+    /** @brief The minimum channel bandwidth (Hz) */
+    double min_chan_bw_;
 
     /** @brief Mutex for load */
     spinlock_mutex load_mutex_;

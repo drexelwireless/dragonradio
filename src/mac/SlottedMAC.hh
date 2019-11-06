@@ -101,8 +101,6 @@ public:
         reconfigure();
     }
 
-    void setMinChannelBandwidth(double min_bw) override;
-
     virtual void reconfigure(void) override;
 
     /** @brief Is this MAC FDMA? */
@@ -125,9 +123,6 @@ protected:
 
     /** @brief Length of inter-slot guard (sec) */
     double guard_size_;
-
-    /** @brief The minimum channel bandwidth (Hz) */
-    double min_chan_bw_;
 
     /** @brief Lead time needed to send a slot's worth of data. */
     double slot_send_lead_time_;
