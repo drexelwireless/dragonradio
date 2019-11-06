@@ -10,9 +10,9 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , phy_(phy)
   , controller_(controller)
   , snapshot_collector_(collector)
-  , can_transmit_(true)
   , channelizer_(channelizer)
   , synthesizer_(synthesizer)
+  , can_transmit_(true)
 {
     rx_rate_ = usrp->getRXRate();
     tx_rate_ = usrp->getTXRate();

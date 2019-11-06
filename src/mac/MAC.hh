@@ -129,16 +129,16 @@ protected:
     /** @brief Our snapshot collector */
     std::shared_ptr<SnapshotCollector> snapshot_collector_;
 
-    /** @brief Flag indicating whether or not we can transmit */
-    /** This is used, in particular, for the TDMA MAC, which may not have a slot
-     */
-    bool can_transmit_;
-
     /** @brief Our channelizer. */
     std::shared_ptr<Channelizer> channelizer_;
 
     /** @brief Our synthesizer. */
     std::shared_ptr<Synthesizer> synthesizer_;
+
+    /** @brief Flag indicating whether or not we can transmit */
+    /** This is used, in particular, for the TDMA MAC, which may not have a slot
+     */
+    bool can_transmit_;
 
     /** @brief RX rate */
     double rx_rate_;
