@@ -62,10 +62,6 @@ void exportMACs(py::module &m)
             &SlottedMAC::getGuardSize,
             &SlottedMAC::setGuardSize,
             "Guard size (sec)")
-        .def_property("slot_modulate_lead_time",
-            &SlottedMAC::getSlotModulateLeadTime,
-            &SlottedMAC::setSlotModulateLeadTime,
-            "Slot modulation lead time (sec)")
         .def_property("slot_send_lead_time",
             &SlottedMAC::getSlotSendLeadTime,
             &SlottedMAC::setSlotSendLeadTime,
@@ -95,7 +91,6 @@ void exportMACs(py::module &m)
                       double,
                       double,
                       double,
-                      double,
                       size_t>())
         .def_property_readonly("nslots",
             &TDMA::getNSlots,
@@ -112,7 +107,6 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Synthesizer>,
                       bool,
                       bool,
-                      double,
                       double,
                       double,
                       double,

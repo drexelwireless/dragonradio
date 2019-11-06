@@ -49,7 +49,6 @@ public:
                bool pin_tx_worker,
                double slot_size,
                double guard_size,
-               double slot_modulate_lead_time,
                double slot_send_lead_time);
     virtual ~SlottedMAC();
 
@@ -86,17 +85,6 @@ public:
     virtual void setGuardSize(double t)
     {
         guard_size_ = t;
-        reconfigure();
-    }
-
-    virtual size_t getSlotModulateLeadTime(void)
-    {
-        return slot_modulate_lead_time_;
-    }
-
-    virtual void setSlotModulateLeadTime(size_t t)
-    {
-        slot_modulate_lead_time_ = t;
         reconfigure();
     }
 
@@ -189,9 +177,6 @@ protected:
 
     /** @brief The minimum channel bandwidth (Hz) */
     double min_chan_bw_;
-
-    /** @brief Lead time needed to modulate a slot's worth of data. */
-    double slot_modulate_lead_time_;
 
     /** @brief Lead time needed to send a slot's worth of data. */
     double slot_send_lead_time_;

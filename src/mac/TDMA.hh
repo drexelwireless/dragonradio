@@ -27,7 +27,6 @@ public:
          bool pin_tx_worker,
          double slot_size,
          double guard_size,
-         double slot_modulate_lead_time,
          double slot_send_lead_time,
          size_t nslots);
     virtual ~TDMA();

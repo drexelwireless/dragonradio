@@ -182,8 +182,6 @@ class Config(object):
         """Size of slot guard interval (seconds)"""
         self.demod_overlap_size = .005
         """Size of demodulation overlap if using the overlapping demodulator (seconds)"""
-        self.slot_modulate_lead_time = 30e-3
-        """Lead time needed for slot modulation (seconds)"""
         self.slot_send_lead_time = 5e-3
         """Lead time needed for slot transmission (seconds)"""
         self.aloha_prob = .1
@@ -1318,7 +1316,6 @@ class Radio(object):
                                             config.pin_tx_worker,
                                             config.slot_size,
                                             config.guard_size,
-                                            config.slot_modulate_lead_time,
                                             config.slot_send_lead_time,
                                             config.aloha_prob)
 
@@ -1362,7 +1359,6 @@ class Radio(object):
                                     config.pin_tx_worker,
                                     config.slot_size,
                                     config.guard_size,
-                                    config.slot_modulate_lead_time,
                                     config.slot_send_lead_time,
                                     nslots)
 

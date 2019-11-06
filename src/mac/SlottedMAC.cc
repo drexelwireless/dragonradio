@@ -13,7 +13,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        bool pin_tx_worker,
                        double slot_size,
                        double guard_size,
-                       double slot_modulate_lead_time,
                        double slot_send_lead_time)
   : MAC(usrp,
         phy,
@@ -25,7 +24,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
   , pin_tx_worker_(pin_tx_worker)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
-  , slot_modulate_lead_time_(slot_modulate_lead_time)
   , slot_send_lead_time_(slot_send_lead_time)
   , rx_slot_samps_(0)
   , rx_bufsize_(0)

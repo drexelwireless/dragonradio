@@ -13,7 +13,6 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            bool pin_tx_worker,
                            double slot_size,
                            double guard_size,
-                           double slot_modulate_lead_time,
                            double slot_send_lead_time,
                            double p)
   : SlottedMAC(usrp,
@@ -26,7 +25,6 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                pin_tx_worker,
                slot_size,
                guard_size,
-               slot_modulate_lead_time,
                slot_send_lead_time)
   , slotidx_(0)
   , p_(p)
