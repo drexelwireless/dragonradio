@@ -17,6 +17,25 @@
 class MAC
 {
 public:
+    /** @brief MAC load, measured as samples transmitted over time */
+    struct Load {
+        /** @brief Start of load measurement period */
+        Clock::time_point start;
+
+        /** @brief End of load measurement period */
+        Clock::time_point end;
+
+        /** @brief Load per channel measured in number of samples */
+        std::vector<size_t> nsamples;
+
+        void reset(size_t nchannels)
+        {
+            start = Clock::now();
+            nsamples.resize(nchannels);
+            std::fill(nsamples.begin(), nsamples.end(), 0);
+        }
+    };
+
     MAC(std::shared_ptr<USRP> usrp,
         std::shared_ptr<PHY> phy,
         std::shared_ptr<Controller> controller,
@@ -55,6 +74,40 @@ public:
     {
     }
 
+    /** @brief Get current load */
+    Load getLoad(void)
+    {
+        Load load;
+
+        {
+            std::lock_guard<spinlock_mutex> lock(load_mutex_);
+
+            load = load_;
+            load.end = std::max(load.end, Clock::now());
+        }
+
+        return load;
+    }
+
+    /** @brief Get current load and reset load counters */
+    Load popLoad(void)
+    {
+        Load load;
+
+        {
+            std::lock_guard<spinlock_mutex> lock(load_mutex_);
+
+            load = load_;
+            load.end = std::max(load.end, Clock::now());
+            if (synthesizer_)
+                load_.reset(synthesizer_->getChannels().size());
+            else
+                load_.reset(0);
+        }
+
+        return load;
+    }
+
     /** @brief Reconfigure the MAC when after parameters change */
     virtual void reconfigure(void);
 
@@ -90,6 +143,12 @@ protected:
 
     /** @brief TX rate */
     double tx_rate_;
+
+    /** @brief Mutex for load */
+    spinlock_mutex load_mutex_;
+
+    /** @brief Number of sent samples */
+    Load load_;
 };
 
 #endif /* MAC_H_ */

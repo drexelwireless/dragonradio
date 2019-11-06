@@ -21,24 +21,6 @@
 class SlottedMAC : public MAC
 {
 public:
-    struct Load {
-        /** @brief Start of load measurement period */
-        Clock::time_point start;
-
-        /** @brief End of load measurement period */
-        Clock::time_point end;
-
-        /** @brief Load per channel measured in number of samples */
-        std::vector<size_t> nsamples;
-
-        void reset(size_t nchannels)
-        {
-            start = Clock::now();
-            nsamples.resize(nchannels);
-            std::fill(nsamples.begin(), nsamples.end(), 0);
-        }
-    };
-
     SlottedMAC(std::shared_ptr<USRP> usrp,
                std::shared_ptr<PHY> phy,
                std::shared_ptr<Controller> controller,
@@ -119,37 +101,6 @@ public:
         reconfigure();
     }
 
-    /** @brief Get current load */
-    Load getLoad(void)
-    {
-        Load load;
-
-        {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
-
-            load = load_;
-            load.end = std::max(load.end, Clock::now());
-        }
-
-        return load;
-    }
-
-    /** @brief Get current load and reset load counters */
-    Load popLoad(void)
-    {
-        Load load;
-
-        {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
-
-            load = load_;
-            load.end = std::max(load.end, Clock::now());
-            load_.reset(schedule_.size());
-        }
-
-        return load;
-    }
-
     void setMinChannelBandwidth(double min_bw) override;
 
     virtual void reconfigure(void) override;
@@ -204,12 +155,6 @@ protected:
      * the frequency of the channel we transmit on.
      */
     std::optional<double> tx_fc_off_;
-
-    /** @brief Mutex for load */
-    spinlock_mutex load_mutex_;
-
-    /** @brief Number of sent samples */
-    Load load_;
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;

@@ -23,10 +23,16 @@ void exportMACs(py::module &m)
             nullptr,
             &MAC::setMinChannelBandwidth,
             "Minimum channel bandwidth")
+        .def("getLoad",
+            &SlottedMAC::getLoad,
+            "Get current load")
+        .def("popLoad",
+            &SlottedMAC::popLoad,
+            "Get current load and reset load counters")
         ;
 
-    // Export class SlottedMAC::Load to Python
-    using Load = SlottedMAC::Load;
+    // Export class MAC::Load to Python
+    using Load = MAC::Load;
 
     py::class_<Load, std::shared_ptr<Load>>(m, "Load")
         .def_property_readonly("start",
@@ -70,12 +76,6 @@ void exportMACs(py::module &m)
             &SlottedMAC::getSchedule,
             py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
             "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
-        .def("getLoad",
-            &SlottedMAC::getLoad,
-            "Get current load")
-        .def("popLoad",
-            &SlottedMAC::popLoad,
-            "Get current load and reset load counters")
         ;
 
     // Export class TDMA to Python
