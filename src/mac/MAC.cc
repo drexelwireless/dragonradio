@@ -108,3 +108,73 @@ void MAC::rxWorker(void)
         usrp_->stopRXStream();
     }
 }
+
+void MAC::txNotifier(void)
+{
+    TXRecord record;
+
+    while (!done_) {
+        // Get a slot
+        {
+            std::unique_lock<std::mutex> lock(tx_records_mutex_);
+
+            tx_records_cond_.wait(lock, [this]{ return done_ || !tx_records_.empty(); });
+
+            // If we're done, we're done
+            if (done_)
+                return;
+
+            record = std::move(tx_records_.front());
+            tx_records_.pop();
+        }
+
+        // Record the record's load
+        {
+            std::lock_guard<spinlock_mutex> lock(load_mutex_);
+
+            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
+                unsigned chanidx = (*it)->chanidx;
+
+                if (chanidx < load_.nsamples.size())
+                    load_.nsamples[chanidx] += (*it)->samples->size() - (*it)->samples->delay;
+            }
+
+            load_.end = record.deadline + (record.deadline_delay + record.nsamples)/tx_rate_;
+        }
+
+        // Log the transmissions
+        if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
+            std::shared_ptr<IQBuf> &first = record.iqbufs.front();
+
+            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
+                const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
+
+                logger_->logSend(Clock::to_wall_time(samples->timestamp),
+                                 (*it)->pkt->hdr,
+                                 (*it)->pkt->ehdr().src,
+                                 (*it)->pkt->ehdr().dest,
+                                 (*it)->pkt->mcsidx,
+                                 tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
+                                 tx_rate_,
+                                 (*it)->pkt->size(),
+                                 samples,
+                                 (*it)->offset,
+                                 (*it)->nsamples);
+            }
+        }
+
+        // Inform the controller of the transmission
+        controller_->transmitted(record.mpkts);
+
+        // Tell the snapshot collector about local self-transmissions
+        if (snapshot_collector_) {
+            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
+                snapshot_collector_->selfTX(Clock::to_mono_time(record.deadline) + (*it)->start/tx_rate_,
+                                            rx_rate_,
+                                            tx_rate_,
+                                            (*it)->channel.bw,
+                                            (*it)->nsamples,
+                                            tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc);
+        }
+    }
+}

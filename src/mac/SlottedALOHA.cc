@@ -45,7 +45,7 @@ void SlottedALOHA::stop(void)
 {
     done_ = true;
 
-    txed_slots_cond_.notify_all();
+    tx_records_cond_.notify_all();
 
     if (rx_thread_.joinable())
         rx_thread_.join();

@@ -177,6 +177,33 @@ protected:
     /** @brief Number of sent samples */
     Load load_;
 
+    /** @brief A transmission record */
+    struct TXRecord {
+        /** @brief TX deadline */
+        Clock::time_point deadline;
+
+        /** @brief Number of samples the deadline was delayed */
+        size_t deadline_delay;
+
+        /** @brief Number of samples transmitted */
+        size_t nsamples;
+
+        /** @brief Transmitted IQ buffers */
+        std::list<std::shared_ptr<IQBuf>> iqbufs;
+
+        /** @brief Transmitted modulated packets */
+        std::list<std::unique_ptr<ModPacket>> mpkts;
+    };
+
+    /** @brief Mutex for transmission records */
+    std::mutex tx_records_mutex_;
+
+    /** @brief Condition variable protecting transmission records */
+    std::condition_variable tx_records_cond_;
+
+    /** @brief Queue of transmission records */
+    std::queue<TXRecord> tx_records_;
+
     /** @brief Worker receiving packets */
     void rxWorker(void);
 

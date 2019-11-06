@@ -132,23 +132,11 @@ protected:
     /** @brief Do we need to stop the current burst? */
     std::atomic<bool> stop_burst_;
 
-    /** @brief Mutex for transmitted slots */
-    std::mutex txed_slots_mutex_;
-
-    /** @brief Condition variable protecting transmitted slots */
-    std::condition_variable txed_slots_cond_;
-
-    /** @brief Queue of transmitted slots */
-    std::queue<std::shared_ptr<Synthesizer::Slot>> txed_slots_q_;
-
     /** @brief Slots to transmit */
     ringbuffer<std::shared_ptr<Synthesizer::Slot>, 4> tx_slots_;
 
     /** @brief Worker transmitting slots */
     void txWorker(void);
-
-    /** @brief Worker handling notification for transmitted slots */
-    void txNotifier(void);
 
     /** @brief Schedule modulation of a slot
      * @param q The slot queue

@@ -175,84 +175,14 @@ void SlottedMAC::txWorker(void)
 
         next_slot_start_of_burst = end_of_burst;
 
-        // Hand-off slot to TX notification thread
+        // Hand-off TX record to TX notification thread
         {
-            std::lock_guard<std::mutex> lock(txed_slots_mutex_);
+            std::lock_guard<std::mutex> lock(tx_records_mutex_);
 
-            txed_slots_q_.emplace(std::move(slot));
+            tx_records_.emplace(TXRecord { slot->deadline, slot->deadline_delay, slot->nsamples, std::move(slot->iqbufs), std::move(slot->mpkts) });
         }
 
-        txed_slots_cond_.notify_one();
-    }
-}
-
-void SlottedMAC::txNotifier(void)
-{
-    std::shared_ptr<Synthesizer::Slot> slot;
-
-    while (!done_) {
-        // Get a slot
-        {
-            std::unique_lock<std::mutex> lock(txed_slots_mutex_);
-
-            txed_slots_cond_.wait(lock, [this]{ return done_ || !txed_slots_q_.empty(); });
-
-            // If we're done, we're done
-            if (done_)
-                return;
-
-            slot = std::move(txed_slots_q_.front());
-            txed_slots_q_.pop();
-        }
-
-        // Record the slot's load
-        {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
-
-            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
-                unsigned chanidx = (*it)->chanidx;
-
-                if (chanidx < load_.nsamples.size())
-                    load_.nsamples[chanidx] += (*it)->samples->size() - (*it)->samples->delay;
-            }
-
-            load_.end = slot->deadline + (slot->deadline_delay + slot->nsamples)/tx_rate_;
-        }
-
-        // Log the transmissions
-        if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
-            std::shared_ptr<IQBuf> &first = slot->iqbufs.front();
-
-            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
-                const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
-
-                logger_->logSend(Clock::to_wall_time(samples->timestamp),
-                                 (*it)->pkt->hdr,
-                                 (*it)->pkt->ehdr().src,
-                                 (*it)->pkt->ehdr().dest,
-                                 (*it)->pkt->mcsidx,
-                                 tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
-                                 tx_rate_,
-                                 (*it)->pkt->size(),
-                                 samples,
-                                 (*it)->offset,
-                                 (*it)->nsamples);
-            }
-        }
-
-        // Inform the controller of the transmission
-        controller_->transmitted(slot->mpkts);
-
-        // Tell the snapshot collector about local self-transmissions
-        if (snapshot_collector_) {
-            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it)
-                snapshot_collector_->selfTX(Clock::to_mono_time(slot->deadline) + (*it)->start/tx_rate_,
-                                            rx_rate_,
-                                            tx_rate_,
-                                            (*it)->channel.bw,
-                                            (*it)->nsamples,
-                                            tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc);
-        }
+        tx_records_cond_.notify_one();
     }
 }
 
