@@ -689,7 +689,7 @@ void SmartController::broadcastHello(void)
     if (netq_) {
         pkt->mcsidx = mcsidx_broadcast_;
         pkt->g = 1.0;
-        pkt->internal_flags.is_timestamp = 1;
+        pkt->internal_flags.timestamp = 1;
         netq_->push_hi(std::move(pkt));
     }
 }

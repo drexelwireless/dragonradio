@@ -191,8 +191,8 @@ struct Packet : public buffer<unsigned char>
         /** @brief Set if the packet contains a selective ACK */
         uint8_t has_selective_ack : 1;
 
-        /** @brief Set if this is a timestamp packet */
-        uint8_t is_timestamp : 1;
+        /** @brief Set if this packet should be timestamped */
+        uint8_t timestamp : 1;
     } internal_flags;
 
     /** @brief Get extended header */
