@@ -135,6 +135,9 @@ protected:
     /** @brief Our synthesizer. */
     std::shared_ptr<Synthesizer> synthesizer_;
 
+    /** @brief Flag indicating if we should stop processing packets */
+    bool done_;
+
     /** @brief Flag indicating whether or not we can transmit */
     /** This is used, in particular, for the TDMA MAC, which may not have a slot
      */

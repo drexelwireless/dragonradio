@@ -146,9 +146,6 @@ protected:
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;
 
-    /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
-
     /** @brief Mutex for transmitted slots */
     std::mutex txed_slots_mutex_;
 

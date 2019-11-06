@@ -12,6 +12,7 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , snapshot_collector_(collector)
   , channelizer_(channelizer)
   , synthesizer_(synthesizer)
+  , done_(false)
   , can_transmit_(true)
 {
     rx_rate_ = usrp->getRXRate();

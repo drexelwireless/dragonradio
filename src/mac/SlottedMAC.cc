@@ -27,7 +27,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
   , tx_full_slot_samps_(0)
   , stop_burst_(false)
   , logger_(logger)
-  , done_(false)
 {
 }
 
