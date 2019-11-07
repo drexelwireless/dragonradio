@@ -3,6 +3,8 @@
 #include "Util.hh"
 #include "liquid/Modem.hh"
 
+using Slot = Synthesizer::Slot;
+
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
                        std::shared_ptr<Controller> controller,
@@ -63,12 +65,12 @@ void SlottedMAC::modulateSlot(slot_queue &q,
 {
     assert(prev_overfill <= tx_full_slot_samps_);
 
-    auto slot = std::make_shared<Synthesizer::Slot>(when,
-                                                    prev_overfill,
-                                                    tx_slot_samps_ - prev_overfill,
-                                                    tx_full_slot_samps_ - prev_overfill,
-                                                    slotidx,
-                                                    schedule_.size());
+    auto slot = std::make_shared<Slot>(when,
+                                       prev_overfill,
+                                       tx_slot_samps_ - prev_overfill,
+                                       tx_full_slot_samps_ - prev_overfill,
+                                       slotidx,
+                                       schedule_.size());
 
     // Tell the synthesizer to synthesize for this slot
     synthesizer_->modulate(slot);
@@ -76,11 +78,11 @@ void SlottedMAC::modulateSlot(slot_queue &q,
     q.emplace(std::move(slot));
 }
 
-std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(slot_queue &q,
-                                                            Clock::time_point when)
+std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
+                                               Clock::time_point when)
 {
-    std::shared_ptr<Synthesizer::Slot> slot;
-    Clock::time_point                  deadline;
+    std::shared_ptr<Slot> slot;
+    Clock::time_point     deadline;
 
     for (;;) {
         // Get the next slot
@@ -135,8 +137,8 @@ std::shared_ptr<Synthesizer::Slot> SlottedMAC::finalizeSlot(slot_queue &q,
 
 void SlottedMAC::txWorker(void)
 {
-    std::shared_ptr<Synthesizer::Slot> slot;
-    bool                               next_slot_start_of_burst = true;
+    std::shared_ptr<Slot> slot;
+    bool                  next_slot_start_of_burst = true;
 
     makeThisThreadHighPriority();
 
@@ -186,7 +188,7 @@ void SlottedMAC::txWorker(void)
     }
 }
 
-void SlottedMAC::missedSlot(Synthesizer::Slot &slot)
+void SlottedMAC::missedSlot(Slot &slot)
 {
     std::lock_guard<spinlock_mutex> lock(slot.mutex);
 

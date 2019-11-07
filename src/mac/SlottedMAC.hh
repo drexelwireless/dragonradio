@@ -21,6 +21,8 @@
 class SlottedMAC : public MAC
 {
 public:
+    using Slot = Synthesizer::Slot;
+
     SlottedMAC(std::shared_ptr<USRP> usrp,
                std::shared_ptr<PHY> phy,
                std::shared_ptr<Controller> controller,
@@ -89,7 +91,7 @@ public:
     }
 
 protected:
-    using slot_queue = std::queue<std::shared_ptr<Synthesizer::Slot>>;
+    using slot_queue = std::queue<std::shared_ptr<Slot>>;
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;
@@ -110,7 +112,7 @@ protected:
     std::atomic<bool> stop_burst_;
 
     /** @brief Slots to transmit */
-    ringbuffer<std::shared_ptr<Synthesizer::Slot>, 4> tx_slots_;
+    ringbuffer<std::shared_ptr<Slot>, 4> tx_slots_;
 
     /** @brief Worker transmitting slots */
     void txWorker(void);
@@ -135,13 +137,13 @@ protected:
      * That is, it does not need to acquire the slot's lock to modify it,
      * because it is guaranteed exclusive access.
      */
-    std::shared_ptr<Synthesizer::Slot> finalizeSlot(slot_queue &q,
-                                                    Clock::time_point when);
+    std::shared_ptr<Slot> finalizeSlot(slot_queue &q,
+                                       Clock::time_point when);
 
     /** @brief Transmit a slot
      * @param slot The slot
      */
-    void txSlot(std::shared_ptr<Synthesizer::Slot> &&slot)
+    void txSlot(std::shared_ptr<Slot> &&slot)
     {
         tx_slots_.push(std::move(slot));
     }
@@ -149,7 +151,7 @@ protected:
     /** @brief Mark a slot as missed
      * @param slot The slot
      */
-    void missedSlot(Synthesizer::Slot &slot);
+    void missedSlot(Slot &slot);
 
     /** @brief Mark all remaining slots in qeueue as missed
      * @param q The slot queue
