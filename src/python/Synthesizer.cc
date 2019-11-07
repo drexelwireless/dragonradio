@@ -42,20 +42,20 @@ void exportSynthesizers(py::module &m)
             "Flag indicating whether or not to use superslots.")
         ;
 
-    // Export class TDSynthesizer to Python
-    using TDSynthesizer = UnichannelSynthesizer<TDChannelModulator>;
+    // Export class TDSlotSynthesizer to Python
+    using TDSlotSynthesizer = UnichannelSynthesizer<TDChannelModulator>;
 
-    py::class_<TDSynthesizer, SlotSynthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
+    py::class_<TDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<TDSlotSynthesizer>>(m, "TDSlotSynthesizer")
         .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,
                       unsigned int>())
         ;
 
-    // Export class FDSynthesizer to Python
-    using FDSynthesizer = UnichannelSynthesizer<FDChannelModulator>;
+    // Export class FDSlotSynthesizer to Python
+    using FDSlotSynthesizer = UnichannelSynthesizer<FDChannelModulator>;
 
-    py::class_<FDSynthesizer, SlotSynthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
+    py::class_<FDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<FDSlotSynthesizer>>(m, "FDSlotSynthesizer")
         .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,

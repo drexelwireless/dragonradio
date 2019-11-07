@@ -835,15 +835,15 @@ class Radio(object):
             raise Exception('Unknown channelizer: %s' % config.channelizer)
 
         if config.synthesizer == 'timedomain':
-            self.synthesizer = dragonradio.TDSynthesizer(self.phy,
-                                                         self.usrp.tx_rate,
-                                                         Channels([]),
-                                                         config.num_modulation_threads)
+            self.synthesizer = dragonradio.TDSlotSynthesizer(self.phy,
+                                                             self.usrp.tx_rate,
+                                                             Channels([]),
+                                                             config.num_modulation_threads)
         elif config.synthesizer == 'freqdomain':
-            self.synthesizer = dragonradio.FDSynthesizer(self.phy,
-                                                         self.usrp.tx_rate,
-                                                         Channels([]),
-                                                         config.num_modulation_threads)
+            self.synthesizer = dragonradio.FDSlotSynthesizer(self.phy,
+                                                             self.usrp.tx_rate,
+                                                             Channels([]),
+                                                             config.num_modulation_threads)
         elif config.synthesizer == 'multichannel':
             self.synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
                                                                    self.usrp.tx_rate,
