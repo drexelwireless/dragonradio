@@ -11,7 +11,7 @@ MultichannelSynthesizer::MultichannelSynthesizer(std::shared_ptr<PHY> phy,
                                                  double tx_rate,
                                                  const Channels &channels,
                                                  size_t nthreads)
-  : Synthesizer(phy, tx_rate, channels)
+  : SlotSynthesizer(phy, tx_rate, channels)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)

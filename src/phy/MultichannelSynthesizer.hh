@@ -9,10 +9,10 @@
 #include "dsp/FDResample.hh"
 #include "dsp/FFTW.hh"
 #include "phy/PHY.hh"
-#include "phy/Synthesizer.hh"
+#include "phy/SlotSynthesizer.hh"
 
 /** @brief A frequency-domain, per-channel synthesizer. */
-class MultichannelSynthesizer : public Synthesizer
+class MultichannelSynthesizer : public SlotSynthesizer
 {
 public:
     /** @brief Filter length */

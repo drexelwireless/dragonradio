@@ -3,14 +3,14 @@
 #include "Util.hh"
 #include "liquid/Modem.hh"
 
-using Slot = Synthesizer::Slot;
+using Slot = SlotSynthesizer::Slot;
 
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
                        std::shared_ptr<Controller> controller,
                        std::shared_ptr<SnapshotCollector> collector,
                        std::shared_ptr<Channelizer> channelizer,
-                       std::shared_ptr<Synthesizer> synthesizer,
+                       std::shared_ptr<SlotSynthesizer> synthesizer,
                        double slot_size,
                        double guard_size,
                        double slot_send_lead_time)
@@ -21,6 +21,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
         channelizer,
         synthesizer,
         slot_size)
+  , slot_synthesizer_(synthesizer)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , slot_send_lead_time_(slot_send_lead_time)
@@ -73,7 +74,7 @@ void SlottedMAC::modulateSlot(slot_queue &q,
                                        schedule_.size());
 
     // Tell the synthesizer to synthesize for this slot
-    synthesizer_->modulate(slot);
+    slot_synthesizer_->modulate(slot);
 
     q.emplace(std::move(slot));
 }
@@ -114,7 +115,7 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
         }
 
         // Finalize the slot
-        synthesizer_->finalize(*slot);
+        slot_synthesizer_->finalize(*slot);
 
         // If the slot's deadline has passed, try the next slot. Otherwise,
         // return the slot.

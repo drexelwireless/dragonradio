@@ -22,7 +22,7 @@ public:
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
-         std::shared_ptr<Synthesizer> synthesizer,
+         std::shared_ptr<SlotSynthesizer> synthesizer,
          double slot_size,
          double guard_size,
          double slot_send_lead_time,

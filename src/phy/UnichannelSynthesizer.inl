@@ -5,7 +5,7 @@ UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(std::shared_ptr<P
                                                                double tx_rate,
                                                                const Channels &channels,
                                                                size_t nthreads)
-  : Synthesizer(phy, tx_rate, channels)
+  : SlotSynthesizer(phy, tx_rate, channels)
   , done_(false)
   , mod_reconfigure_(nthreads)
 {

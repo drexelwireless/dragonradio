@@ -12,7 +12,7 @@
 #include "USRP.hh"
 #include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
-#include "phy/Synthesizer.hh"
+#include "phy/SlotSynthesizer.hh"
 #include "mac/MAC.hh"
 #include "mac/Schedule.hh"
 #include "net/Net.hh"
@@ -21,14 +21,14 @@
 class SlottedMAC : public MAC
 {
 public:
-    using Slot = Synthesizer::Slot;
+    using Slot = SlotSynthesizer::Slot;
 
     SlottedMAC(std::shared_ptr<USRP> usrp,
                std::shared_ptr<PHY> phy,
                std::shared_ptr<Controller> controller,
                std::shared_ptr<SnapshotCollector> collector,
                std::shared_ptr<Channelizer> channelizer,
-               std::shared_ptr<Synthesizer> synthesizer,
+               std::shared_ptr<SlotSynthesizer> synthesizer,
                double slot_size,
                double guard_size,
                double slot_send_lead_time);
@@ -92,6 +92,9 @@ public:
 
 protected:
     using slot_queue = std::queue<std::shared_ptr<Slot>>;
+
+    /** @brief Our slot synthesizer. */
+    std::shared_ptr<SlotSynthesizer> slot_synthesizer_;
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;
