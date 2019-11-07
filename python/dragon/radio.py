@@ -182,8 +182,6 @@ class Config(object):
         """Lead time needed for slot transmission (seconds)"""
         self.aloha_prob = .1
         """Probability of transmission in a given slot for ALOHA"""
-        self.fdma = False
-        """True if we should use FDMA MAC, False for pure TDMA"""
         self.tx_channel_idx = None
         """TX channel index"""
         self.superslots = False
@@ -564,9 +562,6 @@ class Config(object):
         parser.add_argument('--demod-overlap-size', action='store', type=float,
                             dest='demod_overlap_size',
                             help='set demodulation overlap interval (sec)')
-        parser.add_argument('--fdma', action='store_const', const=True,
-                            dest='fdma',
-                            help='use FDMA instead of TDMA')
         parser.add_argument('--superslots', action='store_const', const=True,
                             dest='superslots',
                             help='use TDMA superslots')
@@ -1016,10 +1011,10 @@ class Radio(object):
 
         bandwidth = self.bandwidth
 
-        if self.config.fdma:
-            cbw = config.channel_bandwidth
+        if config.channel_bandwidth is None:
+            cbw = bandwidth
         else:
-            cbw = config.bandwidth
+            cbw = config.channel_bandwidth
 
         channels = dragon.channels.defaultChannelPlan(bandwidth, cbw)
 
@@ -1455,13 +1450,13 @@ class Radio(object):
 
         nchannels = len(self.channels)
 
-        if config.fdma:
+        if nchannels == 1:
+            sched = dragon.schedule.pureTDMASchedule(nodes)
+        else:
             sched = dragon.schedule.fullChannelMACSchedule(nchannels,
                                                            1,
                                                            nodes,
                                                            3)
-        else:
-            sched = dragon.schedule.pureTDMASchedule(nodes)
 
         self.installMACSchedule(sched)
 
