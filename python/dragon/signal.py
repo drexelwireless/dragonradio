@@ -50,6 +50,26 @@ def remez1f(numtaps, bands, desired, weight=None, Hz=None, type='bandpass', maxi
     # Re-normalize taps
     return taps / np.sum(taps)
 
+def firpm1f(N, wp, ws, fs):
+    # Design a filter with 1/f^2 roll-off
+    bands = np.array([0, wp/2, ws/2, fs/2])
+    desired = [1, 1, 0, 0]
+    weights = [1, 1]
+
+    out = dragonradio.firpm1f(N, bands, desired, weights, fs=fs)
+
+    return out.h
+
+def firpm1f2(N, wp, ws, fs):
+    # Design a filter with 1/f^2 roll-off
+    bands = np.array([0, wp/2, ws/2, fs/2])
+    desired = [1, 1, 0, 0]
+    weights = [1, 1]
+
+    out = dragonradio.firpm1f2(N, bands, desired, weights, fs=fs)
+
+    return out.h
+
 @memoize
 def lowpass(wp, ws, fs):
     return lowpass_kaiser(wp, ws, fs, atten=60)
@@ -62,14 +82,7 @@ def lowpass_firpm1f(wp, ws, fs, Nmax=301):
     if N % 2 == 0:
         N = N + 1
 
-    # Design a filter with 1/f^2 roll-off
-    bands = np.array([0, wp/2, ws/2, fs/2])
-    desired = [1, 1, 0, 0]
-    weights = [1, 1]
-
-    out = dragonradio.firpm1f(N, bands, desired, weights, fs=fs)
-
-    return out.h
+    return firpm1f(N, wp, ws, fs)
 
 @memoize
 def lowpass_firpm1f2(wp, ws, fs, Nmax=301):
@@ -79,14 +92,7 @@ def lowpass_firpm1f2(wp, ws, fs, Nmax=301):
     if N % 2 == 0:
         N = N + 1
 
-    # Design a filter with 1/f^2 roll-off
-    bands = np.array([0, wp/2, ws/2, fs/2])
-    desired = [1, 1, 0, 0]
-    weights = [1, 1]
-
-    out = dragonradio.firpm1f2(N, bands, desired, weights, fs=fs)
-
-    return out.h
+    return firpm1f2(N, wp, ws, fs)
 
 def lowpass_kaiser(wp, ws, fs, atten=60):
     """Design a lowpass filter using a Kaiser window.
