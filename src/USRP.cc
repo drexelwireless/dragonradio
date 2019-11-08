@@ -20,6 +20,7 @@ USRP::USRP(const std::string& addr,
   , auto_dc_offset_(false)
   , done_(false)
 {
+    tx_underflow_count_.store(0, std::memory_order_release);
     tx_late_count_.store(0, std::memory_order_release);
 
     determineDeviceType();
@@ -311,6 +312,7 @@ void USRP::txErrorWorker(void)
 
                 case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
                     msg = "TX error: an internal send buffer has emptied";
+                    tx_underflow_count_.fetch_add(1, std::memory_order_relaxed);
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
@@ -324,6 +326,7 @@ void USRP::txErrorWorker(void)
 
                 case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
                     msg = "TX error: underflow occurred inside a packet";
+                    tx_underflow_count_.fetch_add(1, std::memory_order_relaxed);
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:

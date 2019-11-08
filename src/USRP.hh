@@ -235,6 +235,15 @@ public:
         return nsamps + 8*rx_max_samps_;
     }
 
+    /** @brief Get the TX underflow count.
+     * @return The number of TX underflow errors
+     */
+    /** Return the number of TX underflow errors and reset the counter */
+    uint64_t getTXUnderflowCount(void)
+    {
+        return tx_underflow_count_.exchange(0, std::memory_order_relaxed);
+    }
+
     /** @brief Get the TX late count.
      * @return The number of late TX packet errors
      */
@@ -287,6 +296,9 @@ private:
 
     /** @brief Flag indicating the we should stop processing data. */
     bool done_;
+
+    /** @brief TX underflow count. */
+    std::atomic<uint64_t> tx_underflow_count_;
 
     /** @brief TX late count. */
     std::atomic<uint64_t> tx_late_count_;
