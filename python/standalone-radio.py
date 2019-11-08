@@ -59,7 +59,7 @@ def main():
                         default=2,
                         help='set number of nodes in network')
     parser.add_argument('--mac', action='store',
-                        choices=['aloha', 'tdma', 'tdma-fdma'],
+                        choices=['aloha', 'tdma', 'tdma-fdma', 'fdma'],
                         dest='mac',
                         help='set MAC')
     parser.add_argument('--aloha', action='store_const', const='aloha',
@@ -68,6 +68,9 @@ def main():
     parser.add_argument('--tdma', action='store_const', const='tdma',
                         dest='mac',
                         help='use pure TDMA MAC')
+    parser.add_argument('--fdma', action='store_const', const='fdma',
+                        dest='mac',
+                        help='use FDMA MAC')
     parser.add_argument('--tdma-fdma', action='store_const', const='tdma-fdma',
                         dest='mac',
                         help='use TDMA/FDMA MAC')
@@ -100,20 +103,21 @@ def main():
         config.channel_bandwidth = None
 
     # Create the radio object
-    radio = dragon.radio.Radio(config)
+    radio = dragon.radio.Radio(config, slotted=(config.mac != 'fdma'))
 
-    #
-    # Configure the MAC
-    #
+    # Add all radio nodes to the network
     for i in range(0, config.num_nodes):
         radio.net.addNode(i+1)
 
+    # Configure the MAC
     if config.mac == 'aloha':
         radio.configureALOHA()
     elif config.mac == 'tdma':
         radio.configureSimpleMACSchedule()
     elif config.mac == 'tdma-fdma':
         radio.configureSimpleMACSchedule()
+    elif config.mac == 'fdma':
+        radio.configureSimpleFDMASchedule(use_fdma_mac=True)
     else:
         raise Exception("Unknown MAC: %s" % config.mac)
 

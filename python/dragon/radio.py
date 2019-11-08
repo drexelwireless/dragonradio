@@ -669,7 +669,7 @@ class Config(object):
         parser.set_defaults(**defaults)
 
 class Radio(object):
-    def __init__(self, config):
+    def __init__(self, config, slotted=True):
         self.config = config
         """Config object for radio"""
 
@@ -782,7 +782,7 @@ class Radio(object):
         self.channelizer = self.mkChannelizer()
 
         # Configure synthesizer
-        self.synthesizer = self.mkSynthesizer()
+        self.synthesizer = self.mkSynthesizer(slotted)
 
         # Configure EVM thresholds
         if config.amc and config.amc_table:
@@ -920,27 +920,43 @@ class Radio(object):
 
         return channelizer
 
-    def mkSynthesizer(self):
+    def mkSynthesizer(self, slotted):
         """Construct a Synthesizer according to configuration parameters"""
         config = self.config
 
-        if config.synthesizer == 'timedomain':
-            synthesizer = dragonradio.TDSlotSynthesizer(self.phy,
-                                                        self.usrp.tx_rate,
-                                                        Channels([]),
-                                                        config.num_modulation_threads)
-        elif config.synthesizer == 'freqdomain':
-            synthesizer = dragonradio.FDSlotSynthesizer(self.phy,
-                                                        self.usrp.tx_rate,
-                                                        Channels([]),
-                                                        config.num_modulation_threads)
-        elif config.synthesizer == 'multichannel':
-            synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
-                                                              self.usrp.tx_rate,
-                                                              Channels([]),
-                                                              config.num_modulation_threads)
+        if slotted:
+            if config.synthesizer == 'timedomain':
+                synthesizer = dragonradio.TDSlotSynthesizer(self.phy,
+                                                            self.usrp.tx_rate,
+                                                            Channels([]),
+                                                            config.num_modulation_threads)
+            elif config.synthesizer == 'freqdomain':
+                synthesizer = dragonradio.FDSlotSynthesizer(self.phy,
+                                                            self.usrp.tx_rate,
+                                                            Channels([]),
+                                                            config.num_modulation_threads)
+            elif config.synthesizer == 'multichannel':
+                synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
+                                                                  self.usrp.tx_rate,
+                                                                  Channels([]),
+                                                                  config.num_modulation_threads)
+            else:
+                raise Exception('Unknown synthesizer: %s' % config.synthesizer)
         else:
-            raise Exception('Unknown synthesizer: %s' % config.synthesizer)
+            if config.synthesizer == 'timedomain':
+                synthesizer = dragonradio.TDSynthesizer(self.phy,
+                                                        self.usrp.tx_rate,
+                                                        Channels([]),
+                                                        config.num_modulation_threads)
+            elif config.synthesizer == 'freqdomain':
+                synthesizer = dragonradio.FDSynthesizer(self.phy,
+                                                        self.usrp.tx_rate,
+                                                        Channels([]),
+                                                        config.num_modulation_threads)
+            elif config.synthesizer == 'multichannel':
+                raise Exception('Multichannel synthesizer can only be used with a slotted MAC')
+            else:
+                raise Exception('Unknown synthesizer: %s' % config.synthesizer)
 
         return synthesizer
 
@@ -1389,6 +1405,24 @@ class Radio(object):
 
         self.finishConfiguringMAC()
 
+    def configureFDMA(self):
+        """Configures a FDMA MAC.
+        """
+        config = self.config
+
+        if isinstance(self.mac, dragonradio.FDMA):
+            return
+
+        self.mac = dragonradio.FDMA(self.usrp,
+                                    self.phy,
+                                    self.controller,
+                                    self.snapshot_collector,
+                                    self.channelizer,
+                                    self.synthesizer,
+                                    config.slot_size)
+
+        self.finishConfiguringMAC()
+
     def finishConfiguringMAC(self):
         bws = [chan.bw for (chan, _taps) in self.synthesizer.channels]
         if len(bws) != 0:
@@ -1422,12 +1456,13 @@ class Radio(object):
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def installMACSchedule(self, sched):
+    def installMACSchedule(self, sched, use_fdma_mac=False):
         """Install a MAC schedule.
 
         Args:
             sched: The schedule, which is a nchannels X nslots array of node
                 IDs.
+            use_fdma_mac: If True, use the FDMA MAC
         """
         config = self.config
 
@@ -1437,7 +1472,12 @@ class Radio(object):
         (nchannels, nslots) = sched.shape
 
         # First configure the TDMA MAC for the desired number of slots
-        self.configureTDMA(nslots)
+        if use_fdma_mac:
+            if nslots != 1:
+                raise Exception("FDMA schedule has more than one slot: %s" % sched)
+            self.configureFDMA()
+        else:
+            self.configureTDMA(nslots)
 
         # Determine which nodes are allowed to transmit
         nodes_with_slot = set(sched.flatten())
@@ -1487,6 +1527,22 @@ class Radio(object):
                                                            3)
 
         self.installMACSchedule(sched)
+
+    def configureSimpleFDMASchedule(self, use_fdma_mac=False):
+        """
+        Set a simple, static FDMA schedule based on configuration parameters and
+        the given set of nodes.
+        """
+        config = self.config
+
+        nodes = list(self.net.nodes)
+        nodes.sort()
+
+        nchannels = len(self.channels)
+
+        sched = dragon.schedule.fullChannelMACSchedule(nchannels, 1, nodes, k=3)
+
+        self.installMACSchedule(sched, use_fdma_mac=use_fdma_mac)
 
     def synchronizeClock(self):
         """Use timestamps to syncrhonize our clock with the time master (the gateway)"""
