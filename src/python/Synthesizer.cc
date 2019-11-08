@@ -6,6 +6,7 @@
 #include "phy/Channel.hh"
 #include "phy/FDChannelModulator.hh"
 #include "phy/MultichannelSynthesizer.hh"
+#include "phy/ParallelChannelSynthesizer.inl"
 #include "phy/SlotSynthesizer.hh"
 #include "phy/Synthesizer.hh"
 #include "phy/TDChannelModulator.hh"
@@ -32,6 +33,35 @@ void exportSynthesizers(py::module &m)
             {
                 return exposePort(element, &element->sink);
             })
+        ;
+
+    // Export class ChannelSynthesizer to Python
+    py::class_<ChannelSynthesizer, Synthesizer, std::shared_ptr<ChannelSynthesizer>>(m, "ChannelSynthesizer")
+        .def_property("high_water_mark",
+            &ChannelSynthesizer::getHighWaterMark,
+            &ChannelSynthesizer::setHighWaterMark,
+            "Maximum number of modulated samples to queue.")
+        ;
+        ;
+
+    // Export class TDSynthesizer to Python
+    using TDSynthesizer = ParallelChannelSynthesizer<TDChannelModulator>;
+
+    py::class_<TDSynthesizer, ChannelSynthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
+        .def(py::init<std::shared_ptr<PHY>,
+                      double,
+                      const Channels&,
+                      unsigned int>())
+        ;
+
+    // Export class FDSynthesizer to Python
+    using FDSynthesizer = ParallelChannelSynthesizer<FDChannelModulator>;
+
+    py::class_<FDSynthesizer, ChannelSynthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
+        .def(py::init<std::shared_ptr<PHY>,
+                      double,
+                      const Channels&,
+                      unsigned int>())
         ;
 
     // Export class SlotSynthesizer to Python
