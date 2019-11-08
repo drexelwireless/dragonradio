@@ -64,6 +64,7 @@ void exportNet(py::module &m);
 void exportCIL(py::module &m);
 void exportFlow(py::module &m);
 void exportRadioNet(py::module &m);
+void exportHeader(py::module &m);
 void exportModem(py::module &m);
 void exportLiquid(py::module &m);
 void exportPHYs(py::module &m);

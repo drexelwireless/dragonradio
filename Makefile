@@ -115,6 +115,7 @@ SOURCES := \
     python/Estimator.cc \
     python/Filter.cc \
     python/Flow.cc \
+    python/Header.cc \
     python/IQBuffer.cc \
     python/IQCompression.cc \
     python/Liquid.cc \

@@ -97,21 +97,6 @@ void exportModem(py::module &m)
          })
     ;
 
-    // Export class Header to Python
-    py::class_<Header, std::shared_ptr<Header>>(m, "Header")
-        .def(py::init<>())
-        .def(py::init<uint8_t,
-                      uint8_t,
-                      uint16_t>())
-        .def_readwrite("curhop", &Header::curhop, "Current hop")
-        .def_readwrite("nexthop", &Header::nexthop, "Next hop")
-        .def_readwrite("seq", &Header::seq, "Packet sequence number")
-        .def("__repr__", [](const Header& self) {
-            return py::str("Header(curhop={}, nexthop={}, seq={})").\
-            format(self.curhop, self.nexthop, (unsigned) self.seq);
-         })
-        ;
-
     // Export class Modulator to Python
     py::class_<Modulator, std::shared_ptr<Modulator>>(m, "Modulator")
         .def("modulate",

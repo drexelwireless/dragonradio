@@ -31,7 +31,7 @@ struct Header {
     Seq seq;
 
     /** @brief Packet flags. */
-    struct {
+    struct Flags {
         /** @brief Set if the packet is the first in a new connection */
         uint8_t syn : 1;
 
