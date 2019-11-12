@@ -3,6 +3,10 @@
 #include <xsimd/xsimd.hpp>
 #include <xsimd/stl/algorithms.hpp>
 
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
+
 #include "phy/FDChannelizer.hh"
 #include "phy/PHY.hh"
 
@@ -77,6 +81,9 @@ void FDChannelizer::reconfigure(void)
 
 void FDChannelizer::stop(void)
 {
+    // Release the GIL in case we have Python-based demodulators
+    py::gil_scoped_release gil;
+
     done_ = true;
 
     wake_cond_.notify_all();

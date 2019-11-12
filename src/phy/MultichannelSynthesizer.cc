@@ -1,6 +1,10 @@
 #include <xsimd/xsimd.hpp>
 #include <xsimd/stl/algorithms.hpp>
 
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
+
 #include "RadioConfig.hh"
 #include "Util.hh"
 #include "phy/MultichannelSynthesizer.hh"
@@ -79,6 +83,9 @@ void MultichannelSynthesizer::finalize(Slot &slot)
 
 void MultichannelSynthesizer::stop(void)
 {
+    // Release the GIL in case we have Python-based demodulators
+    py::gil_scoped_release gil;
+
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
 

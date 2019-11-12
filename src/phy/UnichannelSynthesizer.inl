@@ -1,5 +1,9 @@
 #include "UnichannelSynthesizer.hh"
 
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
+
 template <class ChannelModulator>
 UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(std::shared_ptr<PHY> phy,
                                                                double tx_rate,
@@ -40,6 +44,9 @@ void UnichannelSynthesizer<ChannelModulator>::reconfigure(void)
 template <class ChannelModulator>
 void UnichannelSynthesizer<ChannelModulator>::stop(void)
 {
+    // Release the GIL in case we have Python-based demodulators
+    py::gil_scoped_release gil;
+
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
 
