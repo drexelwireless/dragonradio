@@ -198,15 +198,23 @@ void exportLiquid(py::module &m)
                          unsigned cp_len,
                          unsigned taper_len)
             {
-                return std::make_shared<Liquid::OFDMModulator>(header_mcs, M, cp_len, taper_len, std::nullopt);
+                return std::make_shared<Liquid::OFDMModulator>(header_mcs,
+                                                               M,
+                                                               cp_len,
+                                                               taper_len,
+                                                               std::nullopt);
             }))
         .def(py::init([](const Liquid::MCS &header_mcs,
                          unsigned M,
                          unsigned cp_len,
                          unsigned taper_len,
-                         const std::string &p)
+                         std::optional<const std::string> &p)
             {
-                return std::make_shared<Liquid::OFDMModulator>(header_mcs, M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
+                return std::make_shared<Liquid::OFDMModulator>(header_mcs,
+                                                               M,
+                                                               cp_len,
+                                                               taper_len,
+                                                               p ? std::make_optional(Liquid::OFDMSubcarriers(!p)) : std::nullopt);
             }))
         ;
 
@@ -221,7 +229,13 @@ void exportLiquid(py::module &m)
                          unsigned cp_len,
                          unsigned taper_len)
             {
-                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs, soft_header, soft_payload, M, cp_len, taper_len, std::nullopt);
+                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs,
+                                                                 soft_header,
+                                                                 soft_payload,
+                                                                 M,
+                                                                 cp_len,
+                                                                 taper_len,
+                                                                 std::nullopt);
             }))
         .def(py::init([](const Liquid::MCS &header_mcs,
                          bool soft_header,
@@ -229,9 +243,15 @@ void exportLiquid(py::module &m)
                          unsigned M,
                          unsigned cp_len,
                          unsigned taper_len,
-                         const std::string &p)
+                         std::optional<const std::string> &p)
             {
-                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs, soft_header, soft_payload, M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
+                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs,
+                                                                 soft_header,
+                                                                 soft_payload,
+                                                                 M,
+                                                                 cp_len,
+                                                                 taper_len,
+                                                                 p ? std::make_optional(Liquid::OFDMSubcarriers(!p)) : std::nullopt);
             }))
         ;
 
