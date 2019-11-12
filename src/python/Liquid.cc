@@ -126,7 +126,7 @@ void exportLiquid(py::module &m)
     ;
 
     // Export class FrameStats to Python
-    py::class_<FrameStats, std::shared_ptr<FrameStats>>(m, "FrameStats")
+    py::class_<FrameStats>(m, "FrameStats")
         .def(py::init<>())
         .def_readonly("evm", &FrameStats::evm, "Error Vector Magnitude (dB)")
         .def_readonly("rssi", &FrameStats::rssi, "Received Signal Strength Indicator (dB)")
