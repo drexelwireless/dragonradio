@@ -39,7 +39,7 @@ void exportIQBuffer(py::module &m)
                 else
                     return py::array_t<fc32>();
             },
-            [](IQBuf &iqbuf, py::array_t<fc32> data) {
+            [](IQBuf &iqbuf, py::array_t<fc32, py::array::c_style | py::array::forcecast> data) {
                 auto         buf = data.request();
                 buffer<fc32> copy(reinterpret_cast<fc32*>(buf.ptr), buf.size);
 
