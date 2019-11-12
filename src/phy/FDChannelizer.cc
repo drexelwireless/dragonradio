@@ -23,8 +23,8 @@ FDChannelizer::FDChannelizer(std::shared_ptr<PHY> phy,
 
     for (unsigned int tid = 0; tid < nthreads; ++tid)
         demod_threads_.emplace_back(std::thread(&FDChannelizer::demodWorker,
-                                    this,
-                                    tid));
+                                                this,
+                                                tid));
 
     reconfigure();
 }
