@@ -57,6 +57,17 @@ public:
         return false;
     }
 
+    /** @brief Return true if we can transmit on given channel (in any slot) */
+    bool canTransmitOnChannel(size_t chan) const
+    {
+        for (size_t slot = 0; slot < schedule_[0].size(); ++slot) {
+            if (schedule_[chan][slot])
+                return true;
+        }
+
+        return false;
+    }
+
     /** @brief Find the first channel index in which we can transmit in the
      * given slot.
      */
