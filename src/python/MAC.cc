@@ -19,6 +19,10 @@ void exportMACs(py::module &m)
         .def("reconfigure",
             &MAC::reconfigure,
             "Force the MAC to reconfigure after PHY parameters, e.g., TX rate, change.")
+        .def_property("schedule",
+            &SlottedMAC::getSchedule,
+            py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
+            "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         .def_property("min_channel_bandwidth",
             nullptr,
             &MAC::setMinChannelBandwidth,
@@ -72,10 +76,6 @@ void exportMACs(py::module &m)
             &SlottedMAC::getSlotSendLeadTime,
             &SlottedMAC::setSlotSendLeadTime,
             "Slot send lead time (sec)")
-        .def_property("schedule",
-            &SlottedMAC::getSchedule,
-            py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
-            "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         ;
 
     // Export class TDMA to Python

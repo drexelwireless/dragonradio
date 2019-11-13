@@ -70,6 +70,26 @@ public:
         return can_transmit_;
     }
 
+    /** @brief Get MAC schedule */
+    virtual const Schedule &getSchedule(void) const
+    {
+        return schedule_;
+    }
+
+    /** @brief Set MAC schedule */
+    virtual void setSchedule(const Schedule &schedule)
+    {
+        schedule_ = schedule;
+        reconfigure();
+    }
+
+    /** @brief Set MAC schedule */
+    virtual void setSchedule(const Schedule::sched_type &schedule)
+    {
+        schedule_ = schedule;
+        reconfigure();
+    }
+
     /** @brief Set minimum channel bandwidth */
     virtual void setMinChannelBandwidth(double min_bw)
     {
@@ -158,6 +178,9 @@ protected:
 
     /** @brief RX buffer size */
     size_t rx_bufsize_;
+
+    /** @brief The MAC schedule */
+    Schedule schedule_;
 
     /** @brief The minimum channel bandwidth (Hz) */
     double min_chan_bw_;

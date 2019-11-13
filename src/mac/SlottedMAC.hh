@@ -80,26 +80,6 @@ public:
         reconfigure();
     }
 
-    /** @brief Get MAC schedule */
-    virtual const Schedule &getSchedule(void) const
-    {
-        return schedule_;
-    }
-
-    /** @brief Set MAC schedule */
-    virtual void setSchedule(const Schedule &schedule)
-    {
-        schedule_ = schedule;
-        reconfigure();
-    }
-
-    /** @brief Set MAC schedule */
-    virtual void setSchedule(const Schedule::sched_type &schedule)
-    {
-        schedule_ = schedule;
-        reconfigure();
-    }
-
     virtual void reconfigure(void) override;
 
     /** @brief Is this MAC FDMA? */
@@ -119,9 +99,6 @@ protected:
 
     /** @brief Lead time needed to send a slot's worth of data. */
     double slot_send_lead_time_;
-
-    /** @brief The MAC schedule */
-    Schedule schedule_;
 
     /** @brief Number of TX samples in the non-guard portion of a slot */
     size_t tx_slot_samps_;
