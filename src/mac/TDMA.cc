@@ -61,7 +61,7 @@ void TDMA::reconfigure(void)
     SlottedMAC::reconfigure();
 
     for (size_t i = 0; i < nslots_; ++i)
-        tdma_schedule_[i] = schedule_.canTransmit(i);
+        tdma_schedule_[i] = schedule_.canTransmitInSlot(i);
 
     frame_size_ = nslots_*slot_size_;
 

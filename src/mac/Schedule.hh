@@ -47,7 +47,7 @@ public:
     }
 
     /** @brief Return true if we can transmit in given slot */
-    bool canTransmit(size_t slot) const
+    bool canTransmitInSlot(size_t slot) const
     {
         for (size_t chan = 0; chan < schedule_.size(); ++chan) {
             if (schedule_[chan][slot])
