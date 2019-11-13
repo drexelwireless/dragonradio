@@ -20,6 +20,17 @@ public:
 
     Schedule& operator=(const sched_type& schedule)
     {
+        if (schedule.size() == 0)
+            throw std::out_of_range("Schedule has no channels");
+
+        // Check that all channels have the same number of slot
+        size_t nslots = schedule[0].size();
+
+        for (size_t chan = 1; chan < schedule.size(); ++chan) {
+            if (schedule[chan].size() != nslots)
+                throw std::out_of_range("Schedule channels have differeing numbers of slots");
+        }
+
         schedule_ = schedule;
 
         return *this;
