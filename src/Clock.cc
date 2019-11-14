@@ -1,5 +1,9 @@
 #include <sys/time.h>
 
+#ifdef RANDOM_CLOCK_BIAS
+#include <random>
+#endif
+
 #include "Clock.hh"
 
 uhd::time_spec_t MonoClock::t0_(0.0);
@@ -22,7 +26,18 @@ void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
     usrp_ = usrp;
     t0_ = now;
 
+#ifdef RANDOM_CLOCK_BIAS
+    std::random_device rd;
+    std::mt19937       gen(rd());
+    std::uniform_real_distribution<> dist(0.0, 10.0);
+    double offset = dist(gen);
+
+    fprintf(stderr, "CLOCK: offset=%g\n", offset);
+
+    usrp->set_time_now(t0_ + offset);
+#else
     usrp->set_time_now(t0_);
+#endif
 }
 
 void Clock::releaseUSRP(void)
