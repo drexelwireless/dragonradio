@@ -1200,6 +1200,8 @@ class Controller(CILServer):
                 radio.synchronizeClock()
             except CancelledError:
                 return
+            except:
+                logging.exception("Exception when synchronizing clock")
 
     async def getHistoricalSpectrumUsage(self):
         """Get historical voxel usage from controller and convert it into CIL
