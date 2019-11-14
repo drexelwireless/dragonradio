@@ -1446,6 +1446,10 @@ class Radio(object):
         """
         self.mac.slotidx = 0
 
+        # All nodes can transmit
+        for (node_id, node) in self.net.nodes.items():
+            node.can_transmit = True
+
         if self.config.tx_upsample:
             self.mac_schedule = np.identity(len(self.channels)).astype('bool')
         else:
