@@ -920,7 +920,7 @@ void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
                 t_sent = it->timestamp.t_sent.to_mono_time();
                 t_recv = pkt.timestamp;
 
-		{
+                {
                     std::lock_guard<std::mutex> lock(node.timestamps_mutex);
 
                     node.timestamps.emplace_back(std::make_pair(t_sent, t_recv));
