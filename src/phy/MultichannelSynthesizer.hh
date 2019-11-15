@@ -40,10 +40,9 @@ public:
 
     void finalize(Slot &slot) override;
 
-    void reconfigure(void) override;
+    void stop(void) override;
 
-    /** @brief Stop modulating. */
-    void stop(void);
+    void reconfigure(void) override;
 
 private:
     /** @brief Channel modulator for multichannel modulation */

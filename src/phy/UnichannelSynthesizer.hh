@@ -23,8 +23,7 @@ public:
 
     void reconfigure(void) override;
 
-    /** @brief Stop modulating. */
-    void stop(void);
+    void stop(void) override;
 
 protected:
     /** @brief Flag indicating if we should stop processing packets */

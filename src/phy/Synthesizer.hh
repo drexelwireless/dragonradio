@@ -81,6 +81,9 @@ public:
         reconfigure();
     }
 
+    /** @brief Stop modulating. */
+    virtual void stop(void) = 0;
+
     /** @brief Reconfigure for new TX parameters */
     virtual void reconfigure(void) = 0;
 
