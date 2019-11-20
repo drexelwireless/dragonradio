@@ -730,12 +730,7 @@ class Radio(object):
             self.logger = dragonradio.Logger(path)
             self.logger.setAttribute('version', dragonradio.version)
             self.logger.setAttribute('node_id', self.node_id)
-            self.logger.setAttribute('soft_tx_gain', config.soft_tx_gain)
-            self.logger.setAttribute('tx_gain', config.tx_gain)
-            self.logger.setAttribute('rx_gain', config.rx_gain)
-            self.logger.setAttribute('M', config.M)
-            self.logger.setAttribute('cp_len', config.cp_len)
-            self.logger.setAttribute('taper_len', config.taper_len)
+            self.logger.setAttribute('config', str(config))
 
             if hasattr(config, 'log_sources'):
                 for source in config.log_sources:

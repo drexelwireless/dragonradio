@@ -147,6 +147,16 @@ class Node:
         return self.log_attrs['node_id']
 
     @property
+    def config(self):
+        """The node's configuration"""
+        if 'config' in self.log_attrs:
+            from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
+
+            return eval(self.log_attrs['config'], globals(), locals())
+        else:
+            return None
+
+    @property
     def start(self):
         """Time at which logging began (in seconds since the Epoch)"""
         return self.log_attrs['start']
