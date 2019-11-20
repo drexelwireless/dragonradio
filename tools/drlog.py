@@ -31,6 +31,8 @@ LIQUID_CRC = [ 'unknown'
 
 LIQUID_CRC_CAT = CategoricalDtype(range(0, len(LIQUID_CRC)))
 
+LIQUID_CRC_CAT_NAMED = CategoricalDtype(categories=LIQUID_CRC)
+
 LIQUID_FEC = [ 'unknown'
              , 'none'
              , 'rep3'
@@ -61,6 +63,8 @@ LIQUID_FEC = [ 'unknown'
              , 'rs8' ]
 
 LIQUID_FEC_CAT = CategoricalDtype(range(0, len(LIQUID_FEC)))
+
+LIQUID_FEC_CAT_NAMED = CategoricalDtype(categories=LIQUID_FEC)
 
 LIQUID_MS = [ 'unknown'
 
@@ -130,6 +134,8 @@ LIQUID_MS = [ 'unknown'
             , 'arb' ]
 
 LIQUID_MS_CAT = CategoricalDtype(range(0, len(LIQUID_MS)))
+
+LIQUID_MS_CAT_NAMED = CategoricalDtype(categories=LIQUID_MS)
 
 class Node:
     def __init__(self):
@@ -227,7 +233,7 @@ class Log:
             if self.load_recv:
                 df = loadDataSet(f['recv'])
 
-                self.fixMCS(df)
+                self.fixMCS(node, df)
 
                 df['start'] = df.timestamp + df.start_samples/df.bw
                 df['end'] = df.timestamp + df.end_samples/df.bw
@@ -238,7 +244,7 @@ class Log:
             if self.load_send:
                 df = loadDataSet(f['send'])
 
-                self.fixMCS(df)
+                self.fixMCS(node, df)
 
                 df['start'] = df.timestamp
                 df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
@@ -253,19 +259,39 @@ class Log:
 
             return node
 
-    def fixMCS(self, df):
+    def fixMCS(self, node, df):
         """Fix packet modulation and coding scheme"""
-        df.crc = df.crc.astype(LIQUID_CRC_CAT)
-        df.crc.cat.rename_categories(LIQUID_CRC, inplace=True)
+        if 'crc' in df:
+            df.crc = df.crc.astype(LIQUID_CRC_CAT)
+            df.crc.cat.rename_categories(LIQUID_CRC, inplace=True)
 
-        df.fec0 = df.fec0.astype(LIQUID_FEC_CAT)
-        df.fec0.cat.rename_categories(LIQUID_FEC, inplace=True)
+            df.fec0 = df.fec0.astype(LIQUID_FEC_CAT)
+            df.fec0.cat.rename_categories(LIQUID_FEC, inplace=True)
 
-        df.fec1 = df.fec1.astype(LIQUID_FEC_CAT)
-        df.fec1.cat.rename_categories(LIQUID_FEC, inplace=True)
+            df.fec1 = df.fec1.astype(LIQUID_FEC_CAT)
+            df.fec1.cat.rename_categories(LIQUID_FEC, inplace=True)
 
-        df.ms = df.ms.astype(LIQUID_MS_CAT)
-        df.ms.cat.rename_categories(LIQUID_MS, inplace=True)
+            df.ms = df.ms.astype(LIQUID_MS_CAT)
+            df.ms.cat.rename_categories(LIQUID_MS, inplace=True)
+        else:
+            config = node.config
+
+            if config['amc_table'] is not None:
+                mcs_table = pd.DataFrame( [mcs for (mcs, _) in config['amc_table']]
+                                        , columns=['crc', 'fec0', 'fec1', 'ms'])
+            else:
+                mcs_table = pd.DataFrame( [(config['check'], config['fec0'], config['fec1'], config['ms'])]
+                                        , columns=['crc', 'fec0', 'fec1', 'ms'])
+
+            mcs_table = mcs_table.astype({ 'crc': LIQUID_CRC_CAT_NAMED
+                                         , 'fec0': LIQUID_FEC_CAT_NAMED
+                                         , 'fec1': LIQUID_FEC_CAT_NAMED
+                                         , 'ms' : LIQUID_MS_CAT_NAMED
+                                         })
+            df['crc'] = mcs_table.iloc[df.mcsidx].crc.values
+            df['fec0'] = mcs_table.iloc[df.mcsidx].fec0.values
+            df['fec1'] = mcs_table.iloc[df.mcsidx].fec1.values
+            df['ms'] = mcs_table.iloc[df.mcsidx].ms.values
 
     def getReceivedPacketIQData(self, node, pkt):
         """

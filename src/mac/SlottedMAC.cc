@@ -303,11 +303,21 @@ void SlottedMAC::txNotifier(void)
         if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
             std::shared_ptr<IQBuf> &first = slot->iqbufs.front();
 
-            phy_->logSend(*logger_,
-                          first,
-                          slot->mpkts,
-                          tx_fc_off_,
-                          tx_rate_);
+            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
+                const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
+
+                logger_->logSend(Clock::to_wall_time(samples->timestamp),
+                                 (*it)->pkt->hdr,
+                                 (*it)->pkt->ehdr().src,
+                                 (*it)->pkt->ehdr().dest,
+                                 (*it)->pkt->mcsidx,
+                                 tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
+                                 tx_rate_,
+                                 (*it)->pkt->size(),
+                                 samples,
+                                 (*it)->offset,
+                                 (*it)->nsamples);
+            }
         }
 
         // Inform the controller of the transmission

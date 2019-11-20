@@ -173,6 +173,20 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
             memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
         }
 
+        // Find MCS index
+        Liquid::MCS             mcs(static_cast<crc_scheme>(stats_.check),
+                                    static_cast<fec_scheme>(stats_.fec0),
+                                    static_cast<fec_scheme>(stats_.fec1),
+                                    static_cast<modulation_scheme>(stats_.mod_scheme));
+        std::optional<mcsidx_t> mcsidx = 0;
+
+        for (mcsidx_t i = 0; i < phy_.mcs_table.size(); ++i) {
+            if (mcs == *reinterpret_cast<const MCS*>(phy_.mcs_table[i].mcs)) {
+                mcsidx = i;
+                break;
+            }
+        }
+
         logger_->logRecv(Clock::to_wall_time(timestamp_),
                          start,
                          end,
@@ -181,10 +195,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
                          *h,
                          h->curhop,
                          h->nexthop,
-                         static_cast<crc_scheme>(stats_.check),
-                         static_cast<fec_scheme>(stats_.fec0),
-                         static_cast<fec_scheme>(stats_.fec1),
-                         static_cast<modulation_scheme>(stats_.mod_scheme),
+                         mcsidx ? *mcsidx : 0,
                          stats_.evm,
                          stats_.rssi,
                          stats_.cfo,
@@ -246,31 +257,4 @@ size_t Liquid::PHY::getModulatedSize(mcsidx_t mcsidx, size_t n)
     mod->assemble(&hdr, body.data(), body.size());
 
     return mod->assembledSize();
-}
-
-void Liquid::PHY::logSend(Logger &logger,
-                          const std::shared_ptr<IQBuf> &first,
-                          const std::list<std::unique_ptr<ModPacket>> &mpkts,
-                          std::optional<double> fc_offset,
-                          double fs)
-{
-    for (auto it = mpkts.begin(); it != mpkts.end(); ++it) {
-        const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
-        const Liquid::MCS            *mcs = reinterpret_cast<const Liquid::MCS*>(mcs_table[(*it)->pkt->mcsidx].mcs);
-
-        logger.logSend(Clock::to_wall_time(samples->timestamp),
-                       (*it)->pkt->hdr,
-                       (*it)->pkt->ehdr().src,
-                       (*it)->pkt->ehdr().dest,
-                       mcs->check,
-                       mcs->fec0,
-                       mcs->fec1,
-                       mcs->ms,
-                       fc_offset ? *fc_offset : (*it)->channel.fc,
-                       fs,
-                       (*it)->pkt->size(),
-                       samples,
-                       (*it)->offset,
-                       (*it)->nsamples);
-    }
 }
