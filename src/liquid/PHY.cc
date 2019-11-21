@@ -168,7 +168,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
         (header_valid_ || rc.log_invalid_headers)) {
         std::shared_ptr<buffer<std::complex<float>>> buf = nullptr;
 
-        if (logger_->getCollectSource(Logger::kRecvData)) {
+        if (logger_->getCollectSource(Logger::kRecvSymbols)) {
             buf = std::make_shared<buffer<std::complex<float>>>(stats_.num_framesyms);
             memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
         }

@@ -397,7 +397,7 @@ class Config(object):
         parser.add_argument('-l', action='store',
                             dest='log_directory',
                             help='specify directory for log files')
-        parser.add_argument('--log-iq', action=ExtendAction, const=['log_slots', 'log_recv_data', 'log_sent_data'],
+        parser.add_argument('--log-iq', action=ExtendAction, const=['log_slots', 'log_recv_symbols', 'log_sent_iq'],
                             dest='log_sources',
                             help='log IQ data')
         parser.add_argument('--log-iface', action='append',

@@ -87,7 +87,7 @@ struct PacketRecvEntry {
     /** @brief Data size (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
-    hvl_t iq_data;
+    hvl_t symbols;
 };
 
 /** @brief Log entry for sent packets */
@@ -202,7 +202,7 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("bw", HOFFSET(PacketRecvEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("demod_latency", HOFFSET(PacketRecvEntry, demod_latency), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("size", HOFFSET(PacketRecvEntry, size), H5::PredType::NATIVE_UINT32);
-    h5_packet_recv.insertMember("iq_data", HOFFSET(PacketRecvEntry, iq_data), h5_iqdata);
+    h5_packet_recv.insertMember("symbols", HOFFSET(PacketRecvEntry, symbols), h5_iqdata);
 
     // H5 type for sent packets
     H5::CompType h5_packet_send(sizeof(PacketSendEntry));
@@ -467,7 +467,7 @@ void Logger::logRecv_(const Clock::time_point& t,
                       float bw,
                       float demod_latency,
                       uint32_t size,
-                      std::shared_ptr<buffer<std::complex<float>>> buf)
+                      std::shared_ptr<buffer<std::complex<float>>> symbols)
 {
     PacketRecvEntry entry;
 
@@ -489,12 +489,12 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.bw = bw;
     entry.demod_latency = demod_latency;
     entry.size = size;
-    if (getCollectSource(kRecvData)) {
-        entry.iq_data.p = buf->data();
-        entry.iq_data.len = buf->size();
+    if (getCollectSource(kRecvSymbols)) {
+        entry.symbols.p = symbols->data();
+        entry.symbols.len = symbols->size();
     } else {
-        entry.iq_data.p = nullptr;
-        entry.iq_data.len = 0;
+        entry.symbols.p = nullptr;
+        entry.symbols.len = 0;
     }
 
     recv_->write(&entry, 1);
@@ -524,7 +524,7 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.fc = fc;
     entry.bw = bw;
     entry.size = size;
-    if (buf && getCollectSource(kSentData)) {
+    if (buf && getCollectSource(kSentIQ)) {
         // It's possible that a packet's content is split across two successive
         // IQ buffers. If this happens, we won't have all of the packet's IQ
         // data, so we need to clamp nsamples.

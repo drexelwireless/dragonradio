@@ -248,6 +248,11 @@ class Log:
                 df['start'] = df.timestamp + df.start_samples/df.bw
                 df['end'] = df.timestamp + df.end_samples/df.bw
 
+                # For backwards compatibility; we used to store received symbols
+                # in an attribute name 'iq_data'.
+                if not 'symbols' in df:
+                    df['symbols'] = df.iq_data
+
                 self._recv[node.node_id] = df
 
             # Load sent packets

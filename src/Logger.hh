@@ -30,9 +30,9 @@ public:
     enum Source {
         kSlots = 0,
         kRecvPackets = 1,
-        kRecvData = 2,
+        kRecvSymbols = 2,
         kSentPackets = 3,
-        kSentData = 4,
+        kSentIQ = 4,
         kEvents = 5
     };
 

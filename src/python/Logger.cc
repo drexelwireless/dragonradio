@@ -51,8 +51,8 @@ void exportLogger(py::module &m)
 
     addLoggerSource(loggerCls, "log_slots", Logger::kSlots);
     addLoggerSource(loggerCls, "log_recv_packets", Logger::kRecvPackets);
-    addLoggerSource(loggerCls, "log_recv_data", Logger::kRecvData);
+    addLoggerSource(loggerCls, "log_recv_symbols", Logger::kRecvSymbols);
     addLoggerSource(loggerCls, "log_sent_packets", Logger::kSentPackets);
-    addLoggerSource(loggerCls, "log_sent_data", Logger::kSentData);
+    addLoggerSource(loggerCls, "log_sent_iq", Logger::kSentIQ);
     addLoggerSource(loggerCls, "log_events", Logger::kEvents);
 }

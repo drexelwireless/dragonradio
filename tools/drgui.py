@@ -278,7 +278,7 @@ class ReceivePlot:
             for t in slots.ts:
                 self.markSlot(self.specgram.ax, t-t0)
 
-            self.constellation.plot(self.pkt.iq_data)
+            self.constellation.plot(self.pkt.symbols)
             self.waveform.plot(sig)
             self.psd.plot(slots.bw, sig)
             self.papr.plot(sig)
