@@ -156,6 +156,7 @@ void MAC::txNotifier(void)
                                  (*it)->pkt->mcsidx,
                                  tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
                                  tx_rate_,
+                                 (*it)->mod_latency,
                                  (*it)->pkt->size(),
                                  samples,
                                  (*it)->offset,

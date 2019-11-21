@@ -111,6 +111,8 @@ struct PacketSendEntry {
     float fc;
     /** @brief Bandwidth [Hz] */
     float bw;
+    /** @brief Modulation latency [sec] */
+    double mod_latency;
     /** @brief Data size (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
@@ -216,6 +218,7 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("mcsidx", HOFFSET(PacketSendEntry, mcsidx), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_packet_send.insertMember("mod_latency", HOFFSET(PacketSendEntry, mod_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("size", HOFFSET(PacketSendEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
 
@@ -358,13 +361,14 @@ void Logger::logSend(const Clock::time_point& t,
                      unsigned mcsidx,
                      float fc,
                      float bw,
+                     double mod_latency,
                      uint32_t size,
                      std::shared_ptr<IQBuf> buf,
                      size_t offset,
                      size_t nsamples)
 {
     if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, mcsidx, fc, bw, size, buf, offset, nsamples); });
+        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
 }
 
 void Logger::logEvent(const Clock::time_point& t,
@@ -507,6 +511,7 @@ void Logger::logSend_(const Clock::time_point& t,
                       unsigned mcsidx,
                       float fc,
                       float bw,
+                      double mod_latency,
                       uint32_t size,
                       std::shared_ptr<IQBuf> buf,
                       size_t offset,
@@ -523,6 +528,7 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.mcsidx = mcsidx;
     entry.fc = fc;
     entry.bw = bw;
+    entry.mod_latency = mod_latency;
     entry.size = size;
     if (buf && getCollectSource(kSentIQ)) {
         // It's possible that a packet's content is split across two successive

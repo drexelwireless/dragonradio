@@ -578,6 +578,12 @@ class MetricPlot:
                 ylabel = 'Modulation Scheme'
                 cats = sent.ms.cat.categories
                 yticks = (range(0, len(cats)), list(cats))
+            elif metric == 'mod_latency':
+                sent = log.sent[node_id]
+                x = sent.timestamp + (log.nodes[node_id].start - start_min)
+                y = sent.mod_latency
+
+                ylabel = 'Modulation Latency (sec)'
             else:
                 raise ValueError('Cannot plot {}'.format(metric))
 
@@ -676,6 +682,9 @@ def main():
     parser.add_argument('--sent-ms', action='store_true',
                         dest='sent_ms',
                         help='plot modulation scheme of sent packets')
+    parser.add_argument('--mod-latency', action='store_true',
+                        dest='mod_latency',
+                        help='plot modulation latency')
     parser.add_argument('--nfft', action='store', type=int, default=256, dest='nfft',
                         metavar='N',
                         help='set number of FFT points')
@@ -743,6 +752,10 @@ def main():
 
     if args.sent_ms:
         metric = viewer.metricFig('sent_ms', args.include_invalid_packets)
+        metric.plot()
+
+    if args.mod_latency:
+        metric = viewer.metricFig('mod_latency', args.include_invalid_packets)
         metric.plot()
 
     plt.show()

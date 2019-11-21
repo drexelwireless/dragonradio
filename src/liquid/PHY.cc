@@ -34,6 +34,8 @@ void Liquid::PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
                                             const float g,
                                             ModPacket &mpkt)
 {
+    MonoClock::time_point now = MonoClock::now();
+
     assert(pkt->mcsidx < phy_.mcs_table.size());
     setPayloadMCS(*reinterpret_cast<const MCS*>(phy_.mcs_table[pkt->mcsidx].mcs));
     assemble(&pkt->hdr, pkt->data(), pkt->size());
@@ -80,6 +82,7 @@ void Liquid::PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     // Fill in the ModPacket
     mpkt.offset = iqbuf->delay;
     mpkt.nsamples = iqbuf->size() - iqbuf->delay;
+    mpkt.mod_latency = (MonoClock::now() - now).get_real_secs();
     mpkt.samples = std::move(iqbuf);
     mpkt.pkt = std::move(pkt);
 }

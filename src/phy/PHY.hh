@@ -33,6 +33,9 @@ struct ModPacket
     /** @brief Number of modulated samples */
     size_t nsamples;
 
+    /** @brief Modulation latency (sec) */
+    double mod_latency;
+
     /** @brief Buffer containing the modulated samples. */
     std::shared_ptr<IQBuf> samples;
 
