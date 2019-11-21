@@ -150,10 +150,11 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
 
     // The start and end variables contain full-rate sample offsets of the frame
     // start and end relative to the beginning of the slot.
-    ssize_t start = offset_ + resamp_rate_*static_cast<signed>(frame_start - sample_start_);
-    ssize_t end = offset_ + resamp_rate_*static_cast<signed>(frame_end - sample_start_);
+    ssize_t               start = offset_ + resamp_rate_*static_cast<signed>(frame_start - sample_start_);
+    ssize_t               end = offset_ + resamp_rate_*static_cast<signed>(frame_end - sample_start_);
+    MonoClock::time_point timestamp = timestamp_ + start / rx_rate_;
 
-    pkt->timestamp = timestamp_ + start / rx_rate_;
+    pkt->timestamp = timestamp;
 
     callback_(std::move(pkt));
 
@@ -201,7 +202,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
                          stats_.cfo,
                          channel_.fc,
                          rx_rate_,
-                         (MonoClock::now() - timestamp_).get_real_secs(),
+                         (MonoClock::now() - timestamp).get_real_secs(),
                          payload_len_,
                          std::move(buf));
     }
