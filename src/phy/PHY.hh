@@ -194,7 +194,7 @@ public:
     /** @brief Create a radio packet from a header and payload */
     std::unique_ptr<RadioPacket> mkRadioPacket(bool header_valid,
                                                bool payload_valid,
-                                               const Header *h,
+                                               const Header &h,
                                                size_t payload_len,
                                                unsigned char *payload_data)
     {
@@ -207,11 +207,11 @@ public:
 
             return nullptr;
         } else if (!payload_valid) {
-            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(*h);
+            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(h);
 
             pkt->internal_flags.invalid_payload = 1;
 
-            if (h->nexthop == node_id_) {
+            if (h.nexthop == node_id_) {
                 if (rc.verbose && !rc.debug)
                     fprintf(stderr, "PAYLOAD INVALID\n");
                 logEvent("PHY: invalid payload: curhop=%u; nexthop=%u; seq=%u",
@@ -222,7 +222,7 @@ public:
 
             return pkt;
         } else {
-            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(*h, payload_data, payload_len);
+            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(h, payload_data, payload_len);
 
             if (!pkt->integrityIntact()) {
                 pkt->internal_flags.invalid_payload = 1;

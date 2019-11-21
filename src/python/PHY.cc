@@ -308,9 +308,9 @@ void exportPHYs(py::module &m)
                 if (payload) {
                     std::string s = *payload;
 
-                    return self.mkRadioPacket(true, true, &hdr, s.size(), reinterpret_cast<unsigned char*>(s.data()));
+                    return self.mkRadioPacket(true, true, hdr, s.size(), reinterpret_cast<unsigned char*>(s.data()));
                 } else {
-                    return self.mkRadioPacket(true, false, &hdr, 0, nullptr);
+                    return self.mkRadioPacket(true, false, hdr, 0, nullptr);
                 }
             })
         .def("updateAutoGain",

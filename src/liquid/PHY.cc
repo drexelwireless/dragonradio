@@ -139,7 +139,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
     // Create the packet and fill it out
     std::unique_ptr<RadioPacket> pkt = phy_.mkRadioPacket(header_valid_,
                                                           payload_valid_,
-                                                          h,
+                                                          *h,
                                                           payload_len_,
                                                           payload_);
 
