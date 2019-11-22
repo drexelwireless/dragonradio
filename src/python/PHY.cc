@@ -174,7 +174,7 @@ public:
 
     void demodulate(const std::complex<float>* data,
                     size_t count,
-                    std::function<void(std::unique_ptr<RadioPacket>)> callback) override
+                    std::function<void(const std::shared_ptr<RadioPacket>&)> callback) override
     {
         py::gil_scoped_acquire gil;
         py::function           overload = py::get_overload(this, "demodulate");
@@ -186,11 +186,8 @@ public:
             for (py::handle pkt : pkts) {
                 std::shared_ptr<RadioPacket> rpkt = pkt.cast<std::shared_ptr<RadioPacket>>();
 
-                if (rpkt) {
-                    std::unique_ptr<RadioPacket> rpkt_copy = std::make_unique<RadioPacket>(*rpkt);
-
-                    callback(std::move(rpkt_copy));
-                }
+                if (rpkt)
+                    callback(rpkt);
             }
         }
     }

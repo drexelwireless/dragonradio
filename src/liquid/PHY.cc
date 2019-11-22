@@ -134,7 +134,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
     sample_ = frame_end;
 
     // Create the packet and fill it out
-    std::unique_ptr<RadioPacket> pkt = PHY::mkRadioPacket(header_valid_,
+    std::shared_ptr<RadioPacket> pkt = PHY::mkRadioPacket(header_valid_,
                                                           payload_valid_,
                                                           *h,
                                                           payload_len_,
@@ -240,7 +240,7 @@ void Liquid::PHY::PacketDemodulator::timestamp(const MonoClock::time_point &time
 
 void Liquid::PHY::PacketDemodulator::demodulate(const std::complex<float>* data,
                                                 size_t count,
-                                                std::function<void(std::unique_ptr<RadioPacket>)> callback)
+                                                std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
 {
     callback_ = callback;
     demodulateSamples(data, count);

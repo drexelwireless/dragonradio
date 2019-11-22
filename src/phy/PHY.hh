@@ -111,7 +111,7 @@ public:
          */
         virtual void demodulate(const std::complex<float>* data,
                                 size_t count,
-                                std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
+                                std::function<void(const std::shared_ptr<RadioPacket>&)> callback) = 0;
 
     protected:
         /** @brief Our PHY */
@@ -173,7 +173,7 @@ public:
     }
 
     /** @brief Create a radio packet from a header and payload */
-    static std::unique_ptr<RadioPacket> mkRadioPacket(bool header_valid,
+    static std::shared_ptr<RadioPacket> mkRadioPacket(bool header_valid,
                                                       bool payload_valid,
                                                       const Header &h,
                                                       size_t payload_len,
@@ -188,7 +188,7 @@ public:
 
             return nullptr;
         } else if (!payload_valid) {
-            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(h);
+            std::shared_ptr<RadioPacket> pkt = std::make_shared<RadioPacket>(h);
 
             pkt->internal_flags.invalid_payload = 1;
 
@@ -203,7 +203,7 @@ public:
 
             return pkt;
         } else {
-            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(h, payload_data, payload_len);
+            std::shared_ptr<RadioPacket> pkt = std::make_shared<RadioPacket>(h, payload_data, payload_len);
 
             if (!pkt->integrityIntact()) {
                 pkt->internal_flags.invalid_payload = 1;

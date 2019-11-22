@@ -110,7 +110,7 @@ private:
 
         void demodulate(const std::complex<float>* data,
                         size_t count,
-                        std::function<void(std::unique_ptr<RadioPacket>)> callback) override;
+                        std::function<void(const std::shared_ptr<RadioPacket>&)> callback) override;
 
     protected:
         /** @brief RX rate */

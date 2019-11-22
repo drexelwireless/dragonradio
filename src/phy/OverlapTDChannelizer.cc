@@ -96,13 +96,13 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
     std::shared_ptr<IQBuf>                       buf2;
     bool                                         received;
 
-    auto callback = [&] (std::unique_ptr<RadioPacket> pkt) {
+    auto callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
         received = true;
         if (pkt) {
             if (enforce_ordering_)
-                radio_q_.push(b, std::move(pkt));
+                radio_q_.push(b, pkt);
             else
-                source.push(std::move(pkt));
+                source.push(pkt);
         }
     };
 
@@ -210,7 +210,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
 
 void OverlapTDChannelizer::netWorker(void)
 {
-    std::unique_ptr<RadioPacket> pkt;
+    std::shared_ptr<RadioPacket> pkt;
 
     while (!done_) {
         if (radio_q_.pop(pkt))
@@ -292,7 +292,7 @@ void OverlapTDChannelizer::OverlapTDChannelDemodulator::reset(void)
 
 void OverlapTDChannelizer::OverlapTDChannelDemodulator::demodulate(const std::complex<float>* data,
                                                                    size_t count,
-                                                                   std::function<void(std::unique_ptr<RadioPacket>)> callback)
+                                                                   std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
 {
     if (fshift_ != 0.0 || rate_ != 1.0) {
         // Resample. Note that we can't very well mix without a frequency shift,

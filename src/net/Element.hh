@@ -132,6 +132,12 @@ public:
     virtual ~Port() = default;
 
     /** @brief Send a packet to the port. */
+    void send(const T& pkt)
+    {
+        send_(std::move(T(pkt)));
+    }
+
+    /** @brief Send a packet to the port. */
     void send(T&& pkt)
     {
         send_(std::move(pkt));
@@ -229,6 +235,13 @@ public:
     virtual ~Port()
     {
         disconnect();
+    }
+
+    /** @brief Push a packet out the port. */
+    void push(const T& pkt)
+    {
+        if (downstream_)
+            downstream_->send(pkt);
     }
 
     /** @brief Push a packet out the port. */

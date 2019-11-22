@@ -22,7 +22,7 @@
 class RadioPacketQueue {
 public:
     /** @brief A queue entry */
-    using entry = std::variant<std::monostate, std::unique_ptr<RadioPacket>>;
+    using entry = std::variant<std::monostate, std::shared_ptr<RadioPacket>>;
 
     /** @brief A barrier */
     using barrier = std::list<entry>::iterator;
@@ -39,13 +39,13 @@ public:
     /** @brief Add a RadioPacket to the queue.
      * @param pkt The packet to push onto the queue.
      */
-    void push(std::unique_ptr<RadioPacket> pkt);
+    void push(const std::shared_ptr<RadioPacket> &pkt);
 
     /** @brief Add a RadioPacket to the queue before a barrier.
      * @param b The barrier.
      * @param pkt The packet to push onto the queue.
      */
-    void push(barrier b, std::unique_ptr<RadioPacket> pkt);
+    void push(barrier b, const std::shared_ptr<RadioPacket> &pkt);
 
     /** @brief Push a barrier onto the queue.
      * @return A barrier.
@@ -61,7 +61,7 @@ public:
      * @param pkt The popped packet.
      * @return Return true if pop was successful, false otherwise.
      */
-    bool pop(std::unique_ptr<RadioPacket>& pkt);
+    bool pop(std::shared_ptr<RadioPacket> &pkt);
 
     /** @brief Stop processing this queue.*/
     void stop(void);

@@ -161,11 +161,11 @@ void TDChannelizer::demodWorker(unsigned tid)
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t n = 0;
 
-            auto callback = [&, channel=channels_[channelidx].first] (std::unique_ptr<RadioPacket> pkt) {
+            auto callback = [&, channel=channels_[channelidx].first] (const std::shared_ptr<RadioPacket> &pkt) {
                 received = true;
                 if (pkt) {
                     pkt->channel = channel;
-                    source.push(std::move(pkt));
+                    source.push(pkt);
                 }
             };
 
@@ -229,7 +229,7 @@ void TDChannelizer::TDChannelDemodulator::reset(void)
 
 void TDChannelizer::TDChannelDemodulator::demodulate(const std::complex<float>* data,
                                                      size_t count,
-                                                     std::function<void(std::unique_ptr<RadioPacket>)> callback)
+                                                     std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
 {
     if (fshift_ != 0.0 || rate_ != 1.0) {
         // Resample. Note that we can't very well mix without a frequency shift,
