@@ -75,6 +75,8 @@ protected:
 /** @brief Demodulate packets from a channel. */
 class ChannelDemodulator {
 public:
+    using callback_type = PHY::PacketDemodulator::callback_type;
+
     ChannelDemodulator(PHY &phy,
                        const Channel &channel,
                        const std::vector<C> &taps,
@@ -115,7 +117,7 @@ public:
     /** @brief Demodulate data with given parameters */
     virtual void demodulate(const std::complex<float>* data,
                             size_t count,
-                            std::function<void(const std::shared_ptr<RadioPacket>&)> callback) = 0;
+                            callback_type callback) = 0;
 
 protected:
     /** @brief Channel we are demodulating */

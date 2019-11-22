@@ -74,6 +74,8 @@ public:
     class PacketDemodulator
     {
     public:
+        using callback_type = std::function<void(const std::shared_ptr<RadioPacket>&)>;
+
         PacketDemodulator(PHY &phy) : phy_(phy) {}
         virtual ~PacketDemodulator() = default;
 
@@ -111,7 +113,7 @@ public:
          */
         virtual void demodulate(const std::complex<float>* data,
                                 size_t count,
-                                std::function<void(const std::shared_ptr<RadioPacket>&)> callback) = 0;
+                                callback_type callback) = 0;
 
     protected:
         /** @brief Our PHY */

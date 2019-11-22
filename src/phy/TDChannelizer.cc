@@ -229,7 +229,7 @@ void TDChannelizer::TDChannelDemodulator::reset(void)
 
 void TDChannelizer::TDChannelDemodulator::demodulate(const std::complex<float>* data,
                                                      size_t count,
-                                                     std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
+                                                     callback_type callback)
 {
     if (fshift_ != 0.0 || rate_ != 1.0) {
         // Resample. Note that we can't very well mix without a frequency shift,

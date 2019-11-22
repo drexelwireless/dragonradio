@@ -240,7 +240,7 @@ void Liquid::PHY::PacketDemodulator::timestamp(const MonoClock::time_point &time
 
 void Liquid::PHY::PacketDemodulator::demodulate(const std::complex<float>* data,
                                                 size_t count,
-                                                std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
+                                                callback_type callback)
 {
     callback_ = callback;
     demodulateSamples(data, count);

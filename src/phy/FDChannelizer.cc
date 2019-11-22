@@ -400,7 +400,7 @@ void FDChannelizer::FDChannelDemodulator::reset(void)
 
 void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* data,
                                                      size_t count,
-                                                     std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
+                                                     callback_type callback)
 {
     const unsigned n = N/D_;
 

@@ -64,11 +64,11 @@ public:
 
         void demodulate(const std::complex<float>* data,
                         size_t count,
-                        std::function<void(const std::shared_ptr<RadioPacket>&)> callback) override final;
+                        callback_type callback) override final;
 
     protected:
         /** @brief Callback for received packets. */
-        std::function<void(const std::shared_ptr<RadioPacket>&)> callback_;
+        callback_type callback_;
 
         /** @brief The channel being demodulated */
         Channel channel_;

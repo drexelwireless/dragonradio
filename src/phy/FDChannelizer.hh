@@ -76,7 +76,7 @@ private:
 
         void demodulate(const std::complex<float>* data,
                         size_t count,
-                        std::function<void(const std::shared_ptr<RadioPacket>&)> callback) override;
+                        callback_type callback) override;
 
     protected:
         /** @brief Channel IQ buffer sequence number */

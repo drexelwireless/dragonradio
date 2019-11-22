@@ -174,7 +174,7 @@ public:
 
     void demodulate(const std::complex<float>* data,
                     size_t count,
-                    std::function<void(const std::shared_ptr<RadioPacket>&)> callback) override
+                    callback_type callback) override
     {
         py::gil_scoped_acquire gil;
         py::function           overload = py::get_overload(this, "demodulate");
