@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "Packet.hh"
-#include "RadioConfig.hh"
 #include "SafeQueue.hh"
 #include "net/TunTap.hh"
 

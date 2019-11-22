@@ -1,6 +1,5 @@
 #include "Clock.hh"
 #include "USRP.hh"
-#include "RadioConfig.hh"
 #include "Util.hh"
 #include "mac/FDMA.hh"
 

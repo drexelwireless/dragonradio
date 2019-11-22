@@ -11,7 +11,6 @@
 #include "heap.hh"
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
-#include "RadioConfig.hh"
 #include "TimerQueue.hh"
 #include "mac/Controller.hh"
 #include "mac/MAC.hh"

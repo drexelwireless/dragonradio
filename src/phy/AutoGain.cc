@@ -1,4 +1,3 @@
-#include "RadioConfig.hh"
 #include "Logger.hh"
 #include "phy/AutoGain.hh"
 

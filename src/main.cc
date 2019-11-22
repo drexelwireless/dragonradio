@@ -8,7 +8,6 @@
 namespace py = pybind11;
 
 #include "Logger.hh"
-#include "RadioConfig.hh"
 
 #define MAXFRAMES 25
 

@@ -12,7 +12,6 @@
 #include <uhd/utils/thread_priority.hpp>
 
 #include "Logger.hh"
-#include "RadioConfig.hh"
 #include "Util.hh"
 
 int sys(const char *fmt, ...)

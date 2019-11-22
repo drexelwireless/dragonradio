@@ -5,7 +5,6 @@
 
 namespace py = pybind11;
 
-#include "RadioConfig.hh"
 #include "Util.hh"
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/PHY.hh"
