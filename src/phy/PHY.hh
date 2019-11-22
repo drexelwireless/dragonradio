@@ -9,7 +9,6 @@
 #include "Logger.hh"
 #include "Packet.hh"
 #include "RadioConfig.hh"
-#include "SafeQueue.hh"
 #include "mac/Snapshot.hh"
 #include "phy/AutoGain.hh"
 

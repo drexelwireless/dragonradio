@@ -5,7 +5,6 @@
 
 #include "spinlock_mutex.hh"
 #include "Header.hh"
-#include "SafeQueue.hh"
 #include "net/Element.hh"
 
 using namespace std::placeholders;

@@ -5,13 +5,13 @@
 
 #include <functional>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <queue>
 #include <thread>
 #include <vector>
 
 #include "Packet.hh"
-#include "SafeQueue.hh"
 #include "net/TunTap.hh"
 
 /** @brief A sprintf-style format string for internal network tun/tap IP
