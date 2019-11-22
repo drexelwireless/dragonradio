@@ -92,6 +92,12 @@ public:
 
     virtual ~ChannelDemodulator() = default;
 
+    /** @brief Set demodulation callback */
+    void setCallback(callback_type callback)
+    {
+        demod_->setCallback(callback);
+    }
+
     /** @brief Reset internal state */
     virtual void reset(void) = 0;
 
@@ -116,8 +122,7 @@ public:
 
     /** @brief Demodulate data with given parameters */
     virtual void demodulate(const std::complex<float>* data,
-                            size_t count,
-                            callback_type callback) = 0;
+                            size_t count) = 0;
 
 protected:
     /** @brief Channel we are demodulating */

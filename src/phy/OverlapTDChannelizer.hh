@@ -109,8 +109,7 @@ private:
         void reset(void) override;
 
         void demodulate(const std::complex<float>* data,
-                        size_t count,
-                        callback_type callback) override;
+                        size_t count) override;
 
     protected:
         /** @brief RX rate */

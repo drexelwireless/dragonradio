@@ -79,6 +79,12 @@ public:
         PacketDemodulator(PHY &phy) : phy_(phy) {}
         virtual ~PacketDemodulator() = default;
 
+        /** @brief Set demodulation callback */
+        void setCallback(callback_type callback)
+        {
+            callback_ = callback;
+        }
+
         /** @brief Is a frame currently being demodulated?
          * @return true if a frame is currently being demodulated, false
          * otherwise.
@@ -112,12 +118,14 @@ public:
          * a bad packet is received, the argument will be nullptr.
          */
         virtual void demodulate(const std::complex<float>* data,
-                                size_t count,
-                                callback_type callback) = 0;
+                                size_t count) = 0;
 
     protected:
         /** @brief Our PHY */
         PHY &phy_;
+
+        /** @brief Demodulation callback */
+        callback_type callback_;
     };
 
     PHY() = default;

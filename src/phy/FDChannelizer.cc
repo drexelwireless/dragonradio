@@ -251,6 +251,10 @@ void FDChannelizer::demodWorker(unsigned tid)
 
                 continue;
             }
+
+            // Set demodulator callbacks
+            for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_)
+                demods_[channelidx]->setCallback(callback);
         }
 
         for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
@@ -306,10 +310,7 @@ void FDChannelizer::demodWorker(unsigned tid)
                 n = fdbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
 
                 if (n != 0) {
-                    demod.demodulate(fdbuf->data() + ndemodulated,
-                                     n,
-                                     callback);
-
+                    demod.demodulate(fdbuf->data() + ndemodulated, n);
                     ndemodulated += n;
                 } else if (complete)
                     break;
@@ -403,8 +404,7 @@ void FDChannelizer::FDChannelDemodulator::reset(void)
 }
 
 void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* data,
-                                                     size_t count,
-                                                     callback_type callback)
+                                                     size_t count)
 {
     const unsigned n = N/D_;
 
@@ -441,6 +441,6 @@ void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* 
         ifft_.execute(temp_.data(), ifft_.out.data());
 
         // Demodulate
-        demod_->demodulate(ifft_.out.data() + X_*O/D_, X_*L/D_, callback);
+        demod_->demodulate(ifft_.out.data() + X_*O/D_, X_*L/D_);
     }
 }

@@ -63,13 +63,13 @@ public:
                        float rx_rate) override final;
 
         void demodulate(const std::complex<float>* data,
-                        size_t count,
-                        callback_type callback) override final;
+                        size_t count) override final
+        {
+            demodulateSamples(data, count);
+            sample_end_ += count;
+        }
 
     protected:
-        /** @brief Callback for received packets. */
-        callback_type callback_;
-
         /** @brief The channel being demodulated */
         Channel channel_;
 
