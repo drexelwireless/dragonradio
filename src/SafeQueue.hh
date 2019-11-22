@@ -11,11 +11,12 @@
  * has been invoked, elements can still be inserted, but any call to pop will
  * immediately return.
  */
-template<typename T>
+template<typename T, class Container = std::list<T>>
 class SafeQueue {
 public:
-    using iterator = typename std::list<T>::iterator;
-    using const_iterator = typename std::list<T>::const_iterator;
+    using container_type = Container;
+    using iterator = typename container_type::iterator;
+    using const_iterator = typename container_type::const_iterator;
 
     SafeQueue()
       : done_(false)
@@ -181,7 +182,7 @@ private:
     std::condition_variable cond_;
 
     /** @brief The queue itself. */
-    std::list<T> q_;
+    container_type q_;
 };
 
 #endif /* SAFEQUEUE_H_ */
