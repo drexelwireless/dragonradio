@@ -8,13 +8,17 @@ void exportRadioConfig(py::module &m)
     // Export class RadioConfig to Python
     py::class_<RadioConfig, std::shared_ptr<RadioConfig>>(m, "RadioConfig")
         .def(py::init())
-        .def_readwrite("verbose", &RadioConfig::verbose,
+        .def_readwrite("verbose",
+            &RadioConfig::verbose,
             "Output verbose messages to the console")
-        .def_readwrite("debug", &RadioConfig::debug,
+        .def_readwrite("debug",
+            &RadioConfig::debug,
             "Output debug messages to the console")
-        .def_readwrite("log_invalid_headers", &RadioConfig::log_invalid_headers,
+        .def_readwrite("log_invalid_headers",
+            &RadioConfig::log_invalid_headers,
             "Log invalid headers?")
-        .def_readwrite("mtu", &RadioConfig::mtu,
+        .def_readwrite("mtu",
+            &RadioConfig::mtu,
             "Maximum Transmission Unit (bytes)")
         .def_readwrite("verbose_packet_trace",
             &RadioConfig::verbose_packet_trace,
