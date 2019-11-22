@@ -119,9 +119,7 @@ public:
         using Liquid::Demodulator::reset;
     };
 
-    PHY(std::shared_ptr<SnapshotCollector> collector,
-        NodeId node_id,
-        const MCS &header_mcs,
+    PHY(const MCS &header_mcs,
         const std::vector<std::pair<MCS, AutoGain>> &mcs_table,
         bool soft_header,
         bool soft_payload);

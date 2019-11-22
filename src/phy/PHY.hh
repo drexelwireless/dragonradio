@@ -118,14 +118,7 @@ public:
         PHY &phy_;
     };
 
-    PHY(std::shared_ptr<SnapshotCollector> collector,
-        NodeId node_id)
-      : snapshot_collector_(collector)
-      , node_id_(node_id)
-    {
-    }
-
-    PHY() = delete;
+    PHY() = default;
 
     virtual ~PHY() = default;
 
@@ -143,18 +136,6 @@ public:
 
     /** @brief MCS table */
     std::vector<MCSEntry> mcs_table;
-
-    /** @brief Get the snapshot collector */
-    const std::shared_ptr<SnapshotCollector> &getSnapshotCollector(void) const
-    {
-        return snapshot_collector_;
-    }
-
-    /** @brief Get this node's ID. */
-    NodeId getNodeId(void) const
-    {
-        return node_id_;
-    }
 
     /** @brief Return the minimum oversample rate (with respect to PHY
      * bandwidth) needed for demodulation
@@ -185,10 +166,10 @@ public:
     bool wantPacket(bool header_valid, const Header *h)
     {
         return header_valid
-            && (h->curhop != node_id_)
+            && (h->curhop != rc.node_id)
             && ((h->nexthop == kNodeBroadcast) ||
-                (h->nexthop == node_id_) ||
-                (snapshot_collector_ && snapshot_collector_->active()));
+                (h->nexthop == rc.node_id) ||
+                (rc.snapshot_collector && rc.snapshot_collector->active()));
     }
 
     /** @brief Create a radio packet from a header and payload */
@@ -211,7 +192,7 @@ public:
 
             pkt->internal_flags.invalid_payload = 1;
 
-            if (h.nexthop == node_id_) {
+            if (h.nexthop == rc.node_id) {
                 if (rc.verbose && !rc.debug)
                     fprintf(stderr, "PAYLOAD INVALID\n");
                 logEvent("PHY: invalid payload: curhop=%u; nexthop=%u; seq=%u",
@@ -240,13 +221,6 @@ public:
             return pkt;
         }
     }
-
-protected:
-    /** @brief Our snapshot collector */
-    std::shared_ptr<SnapshotCollector> snapshot_collector_;
-
-    /** @brief Node ID */
-    const NodeId node_id_;
 };
 
 #endif /* PHY_H_ */

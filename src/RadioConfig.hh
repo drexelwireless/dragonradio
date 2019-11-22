@@ -4,7 +4,11 @@
 #include <complex>
 #include <memory>
 
+#include "Header.hh"
+
 class RadioConfig;
+
+class SnapshotCollector;
 
 /** @brief The global radio config. */
 extern RadioConfig rc;
@@ -20,6 +24,9 @@ public:
     RadioConfig& operator=(const RadioConfig&) = default;
     RadioConfig& operator=(RadioConfig&&) = default;
 
+    /** @brief The current node's ID */
+    NodeId node_id;
+
     /** @brief Output verbose messages to the console */
     bool verbose;
 
@@ -34,6 +41,9 @@ public:
 
     /** @brief Display packets written to tun/tap device? */
     bool verbose_packet_trace;
+
+    /** @brief Snapshot collector */
+    std::shared_ptr<SnapshotCollector> snapshot_collector;
 };
 
 #endif /* RADIOCONFIG_H_ */

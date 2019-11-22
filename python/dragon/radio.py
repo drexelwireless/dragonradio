@@ -676,6 +676,9 @@ class Radio(object):
         self.node_id = config.node_id
         """This node's ID"""
 
+        # Make sure RadioConfig has node id
+        dragonradio.rc.node_id = self.node_id
+
         self.logger = None
         """Our DragonRadio logger"""
 
@@ -745,6 +748,9 @@ class Radio(object):
             self.snapshot_collector = dragonradio.SnapshotCollector()
         else:
             self.snapshot_collector = None
+
+        # Make sure RadioConfig has snapshot collector
+        dragonradio.rc.snapshot_collector = self.snapshot_collector
 
         # Create header MCS
         header_mcs = MCS(config.header_check,
@@ -860,23 +866,17 @@ class Radio(object):
         config = self.config
 
         if config.phy == 'flexframe':
-            phy = dragonradio.liquid.FlexFrame(self.snapshot_collector,
-                                               self.node_id,
-                                               header_mcs,
+            phy = dragonradio.liquid.FlexFrame(header_mcs,
                                                mcs_table,
                                                config.soft_header,
                                                config.soft_payload)
         elif config.phy == 'newflexframe':
-            phy = dragonradio.liquid.NewFlexFrame(self.snapshot_collector,
-                                                  self.node_id,
-                                                  header_mcs,
+            phy = dragonradio.liquid.NewFlexFrame(header_mcs,
                                                   mcs_table,
                                                   config.soft_header,
                                                   config.soft_payload)
         elif config.phy == 'ofdm':
-            phy = dragonradio.liquid.OFDM(self.snapshot_collector,
-                                          self.node_id,
-                                          header_mcs,
+            phy = dragonradio.liquid.OFDM(header_mcs,
                                           mcs_table,
                                           config.soft_header,
                                           config.soft_payload,

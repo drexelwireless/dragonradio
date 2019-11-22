@@ -268,8 +268,7 @@ void exportPHYs(py::module &m)
 
     // Export class PHY to Python
     py::class_<PHY, PyPHY, std::shared_ptr<PHY>>(m, "PHY")
-        .def(py::init_alias<std::shared_ptr<SnapshotCollector>,
-                            NodeId>())
+        .def(py::init_alias<>())
         .def_property("mcs_table",
             [](PyPHY &self)
             {
@@ -280,12 +279,6 @@ void exportPHYs(py::module &m)
                 self.setMCSTable(table);
             },
             "Table of modulation and coding schemes")
-        .def_property_readonly("snapshot_collector",
-            &PHY::getSnapshotCollector,
-            "Snapshot collector")
-        .def_property_readonly("node_id",
-            &PHY::getNodeId,
-            "Node ID")
         .def_property_readonly("min_rx_rate_oversample",
             &PHY::getMinRXRateOversample,
             "Minimum oversample rate needed for RX")
@@ -358,9 +351,7 @@ void exportLiquidPHYs(py::module &m)
 
     // Export class FlexFrame to Python
     py::class_<Liquid::FlexFrame, Liquid::PHY, std::shared_ptr<Liquid::FlexFrame>>(m, "FlexFrame")
-        .def(py::init<std::shared_ptr<SnapshotCollector>,
-                      NodeId,
-                      const Liquid::MCS&,
+        .def(py::init<const Liquid::MCS&,
                       const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
                       bool,
                       bool>())
@@ -368,9 +359,7 @@ void exportLiquidPHYs(py::module &m)
 
     // Export class NewFlexFrame to Python
     py::class_<Liquid::NewFlexFrame, Liquid::PHY, std::shared_ptr<Liquid::NewFlexFrame>>(m, "NewFlexFrame")
-        .def(py::init<std::shared_ptr<SnapshotCollector>,
-                      NodeId,
-                      const Liquid::MCS&,
+        .def(py::init<const Liquid::MCS&,
                       const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
                       bool,
                       bool>())
@@ -378,9 +367,7 @@ void exportLiquidPHYs(py::module &m)
 
     // Export class OFDM to Python
     py::class_<Liquid::OFDM, Liquid::PHY, std::shared_ptr<Liquid::OFDM>>(m, "OFDM")
-        .def(py::init<std::shared_ptr<SnapshotCollector>,
-                      NodeId,
-                      const Liquid::MCS&,
+        .def(py::init<const Liquid::MCS&,
                       const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
                       bool,
                       bool,

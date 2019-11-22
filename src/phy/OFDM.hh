@@ -65,9 +65,7 @@ public:
      * @param p The subcarrier allocation (null, pilot, data). Should have
      * M entries.
      */
-    OFDM(std::shared_ptr<SnapshotCollector> collector,
-         NodeId node_id,
-         const MCS &header_mcs,
+    OFDM(const MCS &header_mcs,
          const std::vector<std::pair<MCS, AutoGain>> &mcs_table,
          bool soft_header,
          bool soft_payload,
@@ -75,9 +73,7 @@ public:
          unsigned int cp_len,
          unsigned int taper_len,
          const std::optional<std::string> &p)
-     : Liquid::PHY(collector,
-                   node_id,
-                   header_mcs,
+     : Liquid::PHY(header_mcs,
                    mcs_table,
                    soft_header,
                    soft_payload)

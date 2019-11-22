@@ -10,14 +10,11 @@
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;
 
-Liquid::PHY::PHY(std::shared_ptr<SnapshotCollector> collector,
-                 NodeId node_id,
-                 const MCS &header_mcs,
+Liquid::PHY::PHY(const MCS &header_mcs,
                  const std::vector<std::pair<MCS, AutoGain>> &mcstab,
                  bool soft_header,
                  bool soft_payload)
-  : ::PHY(collector, node_id)
-  , header_mcs_(header_mcs)
+  : header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
 {
@@ -162,10 +159,10 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
     callback_(std::move(pkt));
 
     if (snapshot_off_)
-        phy_.getSnapshotCollector()->selfTX(*snapshot_off_ + start,
-                                            *snapshot_off_ + end,
-                                            channel_.fc,
-                                            channel_.bw);
+        rc.snapshot_collector->selfTX(*snapshot_off_ + start,
+                                      *snapshot_off_ + end,
+                                      channel_.fc,
+                                      channel_.bw);
 
     if (logger_ &&
         logger_->getCollectSource(Logger::kRecvPackets) &&
