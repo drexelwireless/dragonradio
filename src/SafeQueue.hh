@@ -17,8 +17,15 @@ public:
     using iterator = typename std::list<T>::iterator;
     using const_iterator = typename std::list<T>::const_iterator;
 
-    SafeQueue();
-    ~SafeQueue();
+    SafeQueue()
+      : done_(false)
+    {
+    }
+
+    ~SafeQueue()
+    {
+        stop();
+    }
 
     SafeQueue(const SafeQueue&) = delete;
     SafeQueue(SafeQueue&&) = delete;
@@ -27,51 +34,196 @@ public:
     SafeQueue& operator=(SafeQueue&&) = delete;
 
     /** @brief Reset queue to empty state. */
-    void reset(void);
+    void reset(void)
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        return q_.empty();
+    }
 
     /** @brief Return true if the queue is empty. */
-    bool empty(void) const;
+    bool empty(void) const
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        return q_.empty();
+    }
 
     /** @brief Push an element on the end of the queue. */
-    void push(const T& val);
+    void push(const T& val)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            q_.push_back(val);
+        }
+
+        cond_.notify_one();
+    }
 
     /** @brief Push an element on the end of the queue. */
-    void push(T&& val);
+    void push(T&& val)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            q_.push_back(std::move(val));
+        }
+
+        cond_.notify_one();
+    }
 
     /** @brief Construct an element in-place on the end of the queue. */
-    void emplace(const T& val);
+    void emplace(const T& val)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            q_.emplace_back(val);
+        }
+
+        cond_.notify_one();
+    }
 
     /** @brief Construct an element in-place on the end of the queue. */
-    void emplace(T&& val);
+    void emplace(T&& val)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            q_.emplace_back(std::move(val));
+        }
+
+        cond_.notify_one();
+    }
 
     /** @brief Push an element on the front of the queue .*/
-    void push_front(const T& val);
+    void push_front(const T& val)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            q_.push_front(val);
+        }
+
+        cond_.notify_one();
+    }
 
     /** @brief Push an element on the front of the queue. */
-    void push_front(T&& val);
+    void push_front(T&& val)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            q_.push_front(std::move(val));
+        }
+
+        cond_.notify_one();
+    }
 
     /** @brief Construct an element in-place on the front of the queue. */
-    void emplace_front(const T& val);
+    void emplace_front(const T& val)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            q_.emplace_front(val);
+        }
+
+        cond_.notify_one();
+    }
 
     /** @brief Construct an element in-place on the front of the queue. */
-    void emplace_front(T&& val);
+    void emplace_front(T&& val)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            q_.emplace_front(std::move(val));
+        }
+
+        cond_.notify_one();
+    }
 
     /** @brief Access the first element of the queue and pop it.
      * @param val Reference to location where popped value should be copied.
      * @return true if a value was popped, false otherwise.
      */
-    bool pop(T& val);
+    bool pop(T& val)
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        cond_.wait(lock, [this]{ return done_ || !q_.empty(); });
+        if (q_.empty())
+            return false;
+        else {
+            val = std::move(q_.front());
+            q_.pop_front();
+            return true;
+        }
+    }
 
     /** @brief Transfer elements from a list to the front of this queue. */
-    void splice_front(std::list<T>& other);
-    void splice_front(std::list<T>&& other);
-    void splice_front(std::list<T>& other, const_iterator it);
-    void splice_front(std::list<T>&& other, const_iterator it);
-    void splice_front(std::list<T>& other, const_iterator first, const_iterator last);
-    void splice_front(std::list<T>&& other, const_iterator first, const_iterator last);
+    void splice_front(std::list<T>& other)
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        q_.splice(q_.begin(), other);
+
+        cond_.notify_all();
+    }
+
+    void splice_front(std::list<T>&& other)
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        q_.splice(q_.begin(), other);
+
+        cond_.notify_all();
+    }
+
+    void splice_front(std::list<T>& other, const_iterator it)
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        q_.splice(q_.begin(), other, it);
+
+        cond_.notify_all();
+    }
+
+    void splice_front(std::list<T>&& other, const_iterator it)
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        q_.splice(q_.begin(), other, it);
+
+        cond_.notify_all();
+    }
+
+    void splice_front(std::list<T>& other, const_iterator first, const_iterator last)
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        q_.splice(q_.begin(), other, first, last);
+
+        cond_.notify_all();
+    }
+
+    void splice_front(std::list<T>&& other, const_iterator first, const_iterator last)
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        q_.splice(q_.begin(), other, first, last);
+
+        cond_.notify_all();
+    }
 
     /** @brief Mark the queue as stopped. */
-    void stop(void);
+    void stop(void)
+    {
+        done_ = true;
+        cond_.notify_all();
+    }
 
 private:
     /** @brief Flag indicating that processing of the queue should stop. */
@@ -86,212 +238,5 @@ private:
     /** @brief The queue itself. */
     std::list<T> q_;
 };
-
-template<typename T>
-SafeQueue<T>::SafeQueue() : done_(false)
-{
-}
-
-template<typename T>
-SafeQueue<T>::~SafeQueue()
-{
-    stop();
-}
-
-template<typename T>
-void SafeQueue<T>::reset(void)
-{
-    std::lock_guard<std::mutex> lock(m_);
-    std::list<T> newq;
-
-    done_ = false;
-    q_.swap(newq);
-}
-
-template<typename T>
-bool SafeQueue<T>::empty(void) const
-{
-    std::lock_guard<std::mutex> lock(m_);
-
-    return q_.empty();
-}
-
-template<typename T>
-void SafeQueue<T>::push(const T& val)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.push_back(val);
-    }
-
-    cond_.notify_one();
-}
-
-template<typename T>
-void SafeQueue<T>::push(T&& val)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.push_back(std::move(val));
-    }
-
-    cond_.notify_one();
-}
-
-template<typename T>
-void SafeQueue<T>::emplace(const T& val)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.emplace_back(val);
-    }
-
-    cond_.notify_one();
-}
-
-template<typename T>
-void SafeQueue<T>::emplace(T&& val)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.emplace_back(std::move(val));
-    }
-
-    cond_.notify_one();
-}
-
-template<typename T>
-void SafeQueue<T>::push_front(const T& val)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.push_front(val);
-    }
-
-    cond_.notify_one();
-}
-
-template<typename T>
-void SafeQueue<T>::push_front(T&& val)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.push_front(std::move(val));
-    }
-
-    cond_.notify_one();
-}
-
-template<typename T>
-void SafeQueue<T>::emplace_front(const T& val)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.emplace_front(val);
-    }
-
-    cond_.notify_one();
-}
-
-template<typename T>
-void SafeQueue<T>::emplace_front(T&& val)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_);
-
-        q_.emplace_front(std::move(val));
-    }
-
-    cond_.notify_one();
-}
-
-template<typename T>
-bool SafeQueue<T>::pop(T& val)
-{
-    std::unique_lock<std::mutex> lock(m_);
-
-    cond_.wait(lock, [this]{ return done_ || !q_.empty(); });
-    if (q_.empty())
-        return false;
-    else {
-        val = std::move(q_.front());
-        q_.pop_front();
-        return true;
-    }
-}
-
-template<typename T>
-void SafeQueue<T>::splice_front(std::list<T>& other)
-{
-    std::unique_lock<std::mutex> lock(m_);
-
-    q_.splice(q_.begin(), other);
-
-    cond_.notify_all();
-}
-
-template<typename T>
-void SafeQueue<T>::splice_front(std::list<T>&& other)
-{
-    std::unique_lock<std::mutex> lock(m_);
-
-    q_.splice(q_.begin(), other);
-
-    cond_.notify_all();
-}
-
-template<typename T>
-void SafeQueue<T>::splice_front(std::list<T>& other, const_iterator it)
-{
-    std::unique_lock<std::mutex> lock(m_);
-
-    q_.splice(q_.begin(), other, it);
-
-    cond_.notify_all();
-}
-
-template<typename T>
-void SafeQueue<T>::splice_front(std::list<T>&& other, const_iterator it)
-{
-    std::unique_lock<std::mutex> lock(m_);
-
-    q_.splice(q_.begin(), other, it);
-
-    cond_.notify_all();
-}
-
-template<typename T>
-void SafeQueue<T>::splice_front(std::list<T>& other, const_iterator first, const_iterator last)
-{
-    std::unique_lock<std::mutex> lock(m_);
-
-    q_.splice(q_.begin(), other, first, last);
-
-    cond_.notify_all();
-}
-
-template<typename T>
-void SafeQueue<T>::splice_front(std::list<T>&& other, const_iterator first, const_iterator last)
-{
-    std::unique_lock<std::mutex> lock(m_);
-
-    q_.splice(q_.begin(), other, first, last);
-
-    cond_.notify_all();
-}
-
-template<typename T>
-void SafeQueue<T>::stop(void)
-{
-    done_ = true;
-    cond_.notify_all();
-}
 
 #endif /* SAFEQUEUE_H_ */
