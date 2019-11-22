@@ -4,8 +4,6 @@
 #include <complex>
 #include <memory>
 
-#include <liquid/liquid.h>
-
 class RadioConfig;
 
 /** @brief The global radio config. */
