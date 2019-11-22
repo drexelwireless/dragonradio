@@ -99,6 +99,16 @@ void TDChannelizer::demodWorker(unsigned tid)
     std::shared_ptr<IQBuf> prev_iqbuf;
     std::shared_ptr<IQBuf> iqbuf;
     std::optional<ssize_t> next_snapshot_off;
+    bool                   received = false; // Have we received any packets?
+    Channel                channel;          // Current channel being demodulated
+
+    PHY::PacketDemodulator::callback_type callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
+        received = true;
+        if (pkt) {
+            pkt->channel = channel;
+            source.push(pkt);
+        }
+    };
 
     while (!done_) {
         // If we are reconfiguring, wait until reconfiguration is done
@@ -156,18 +166,12 @@ void TDChannelizer::demodWorker(unsigned tid)
                             rx_rate_);
 
             // Demodulate the IQ buffer
-            bool   received = false; // Have we received any packets?
             bool   complete = false; // Is the buffer complete?
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t n = 0;
 
-            auto callback = [&, channel=channels_[channelidx].first] (const std::shared_ptr<RadioPacket> &pkt) {
-                received = true;
-                if (pkt) {
-                    pkt->channel = channel;
-                    source.push(pkt);
-                }
-            };
+            received = false;
+            channel = channels_[channelidx].first;
 
             for (;;) {
                 complete = iqbuf->complete.load(std::memory_order_acquire);

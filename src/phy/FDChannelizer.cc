@@ -223,6 +223,16 @@ void FDChannelizer::demodWorker(unsigned tid)
     Slot                   slot;
     std::optional<ssize_t> next_snapshot_off;
     unsigned               num_extra_snapshot_slots = 0;
+    bool                   received = false; // Have we received any packets?
+    Channel                channel;          // Current channel being demodulated
+
+    PHY::PacketDemodulator::callback_type callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
+        received = true;
+        if (pkt) {
+            pkt->channel = channel;
+            source.push(pkt);
+        }
+    };
 
     while (!done_) {
         // If we are reconfiguring, wait until reconfiguration is done
@@ -284,18 +294,12 @@ void FDChannelizer::demodWorker(unsigned tid)
                             rx_rate_);
 
             // Demodulate the IQ buffer
-            bool   received = false; // Have we received any packets?
             bool   complete = false; // Is the buffer complete?
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t n = 0;
 
-            auto callback = [&, channel=channels_[channelidx].first] (const std::shared_ptr<RadioPacket> &pkt) {
-                received = true;
-                if (pkt) {
-                    pkt->channel = channel;
-                    source.push(pkt);
-                }
-            };
+            received = false;
+            channel = channels_[channelidx].first;
 
             for (;;) {
                 complete = fdbuf->complete.load(std::memory_order_acquire);
