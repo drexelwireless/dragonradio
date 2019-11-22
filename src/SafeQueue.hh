@@ -163,61 +163,6 @@ public:
         }
     }
 
-    /** @brief Transfer elements from a list to the front of this queue. */
-    void splice_front(std::list<T>& other)
-    {
-        std::unique_lock<std::mutex> lock(m_);
-
-        q_.splice(q_.begin(), other);
-
-        cond_.notify_all();
-    }
-
-    void splice_front(std::list<T>&& other)
-    {
-        std::unique_lock<std::mutex> lock(m_);
-
-        q_.splice(q_.begin(), other);
-
-        cond_.notify_all();
-    }
-
-    void splice_front(std::list<T>& other, const_iterator it)
-    {
-        std::unique_lock<std::mutex> lock(m_);
-
-        q_.splice(q_.begin(), other, it);
-
-        cond_.notify_all();
-    }
-
-    void splice_front(std::list<T>&& other, const_iterator it)
-    {
-        std::unique_lock<std::mutex> lock(m_);
-
-        q_.splice(q_.begin(), other, it);
-
-        cond_.notify_all();
-    }
-
-    void splice_front(std::list<T>& other, const_iterator first, const_iterator last)
-    {
-        std::unique_lock<std::mutex> lock(m_);
-
-        q_.splice(q_.begin(), other, first, last);
-
-        cond_.notify_all();
-    }
-
-    void splice_front(std::list<T>&& other, const_iterator first, const_iterator last)
-    {
-        std::unique_lock<std::mutex> lock(m_);
-
-        q_.splice(q_.begin(), other, first, last);
-
-        cond_.notify_all();
-    }
-
     /** @brief Mark the queue as stopped. */
     void stop(void)
     {
