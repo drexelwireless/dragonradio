@@ -163,7 +163,7 @@ public:
      * snapshots, in which case we demodulate everything so we can correctly
      * record all known transmissions.
      */
-    bool wantPacket(bool header_valid, const Header *h)
+    static inline bool wantPacket(bool header_valid, const Header *h)
     {
         return header_valid
             && (h->curhop != rc.node_id)
@@ -173,11 +173,11 @@ public:
     }
 
     /** @brief Create a radio packet from a header and payload */
-    std::unique_ptr<RadioPacket> mkRadioPacket(bool header_valid,
-                                               bool payload_valid,
-                                               const Header &h,
-                                               size_t payload_len,
-                                               unsigned char *payload_data)
+    static std::unique_ptr<RadioPacket> mkRadioPacket(bool header_valid,
+                                                      bool payload_valid,
+                                                      const Header &h,
+                                                      size_t payload_len,
+                                                      unsigned char *payload_data)
     {
         if (!header_valid) {
             if (rc.log_invalid_headers) {

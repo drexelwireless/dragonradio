@@ -295,17 +295,6 @@ void exportPHYs(py::module &m)
             &PHY::mkPacketModulator)
         .def("mkPacketDemodulator",
             &PHY::mkPacketDemodulator)
-        .def("mkRadioPacket",
-            [](PHY &self, const Header &hdr, std::optional<py::bytes> payload) -> std::shared_ptr<RadioPacket>
-            {
-                if (payload) {
-                    std::string s = *payload;
-
-                    return self.mkRadioPacket(true, true, hdr, s.size(), reinterpret_cast<unsigned char*>(s.data()));
-                } else {
-                    return self.mkRadioPacket(true, false, hdr, 0, nullptr);
-                }
-            })
         .def("updateAutoGain",
             [](PyPHY &self,
                const std::shared_ptr<NetPacket> &pkt,
@@ -313,6 +302,17 @@ void exportPHYs(py::module &m)
                const std::shared_ptr<IQBuf> &iqbuf)
             {
                 self.updateAutoGain(pkt, g, iqbuf);
+            })
+        .def_static("mkRadioPacket",
+            [](const Header &hdr, std::optional<py::bytes> payload) -> std::shared_ptr<RadioPacket>
+            {
+                if (payload) {
+                    std::string s = *payload;
+
+                    return PHY::mkRadioPacket(true, true, hdr, s.size(), reinterpret_cast<unsigned char*>(s.data()));
+                } else {
+                    return PHY::mkRadioPacket(true, false, hdr, 0, nullptr);
+                }
             })
         ;
 

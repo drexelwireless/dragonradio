@@ -118,7 +118,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
 
     // Perform test to see if we want to continue demodulating this packet.
     if (header_test_) {
-        if (phy_.wantPacket(header_valid_, h))
+        if (PHY::wantPacket(header_valid_, h))
             return 1;
         else {
             // Update sample count. The framesync object is reset if we decline
@@ -134,7 +134,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
     sample_ = frame_end;
 
     // Create the packet and fill it out
-    std::unique_ptr<RadioPacket> pkt = phy_.mkRadioPacket(header_valid_,
+    std::unique_ptr<RadioPacket> pkt = PHY::mkRadioPacket(header_valid_,
                                                           payload_valid_,
                                                           *h,
                                                           payload_len_,
