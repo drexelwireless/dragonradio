@@ -91,6 +91,9 @@ public:
 
     buffer& operator=(buffer&& other) noexcept
     {
+        if (data_)
+            free(data_);
+
         data_ = other.data_;
         size_ = other.size_;
         capacity_ = other.size_;
