@@ -298,6 +298,18 @@ class Config:
         self.mandate_bonus_phase = True
         """Flag indicating whether or not to have a bonus phase"""
 
+        # RED queue options
+        self.red_gentle = True
+        "Gentle RED"
+        self.red_min_thresh = 5*1500
+        "RED minimum queue threshold"
+        self.red_max_thresh = 3*self.red_min_thresh
+        "RED maximum queue threshold"
+        self.red_max_p = 0.1
+        "RED maximum packet drop probability"
+        self.red_w_q = 0.002
+        "RED queue weight (for EWMA)"
+
         # Neighbor discover options
         # discovery_hello_interval is how often we send HELLO packets during
         # discovery, and standard_hello_interval is how often we send HELLO
@@ -833,7 +845,7 @@ class Config:
                          help='name of tap interface')
 
         net.add_argument('--queue', action='store',
-                         choices=['fifo', 'lifo', 'mandate'],
+                         choices=['fifo', 'lifo', 'mandate', 'red'],
                          dest='queue',
                          help='set network queuing algorithm')
         net.add_argument('--fifo', action='store_const', const='fifo',
@@ -842,6 +854,9 @@ class Config:
         net.add_argument('--lifo', action='store_const', const='lifo',
                          dest='queue',
                          help='use LIFO network queue algorithm')
+        net.add_argument('--red', action='store_const', const='red',
+                         dest='queue',
+                         help='use RED network queue algorithm')
 
         net.add_argument('--packet-compression', action='store_const', const=True,
                          dest='packet_compression',

@@ -498,6 +498,12 @@ class Radio(dragonradio.tasks.TaskManager):
         elif config.queue == 'mandate':
             netq = MandateQueue()
             netq.bonus_phase = config.mandate_bonus_phase
+        elif config.queue == 'red':
+            netq = REDQueue(config.red_gentle,
+                            config.red_min_thresh,
+                            config.red_max_thresh,
+                            config.red_max_p,
+                            config.red_w_q)
         else:
             raise ValueError('Unknown queue type: %s' % config.queue)
 
