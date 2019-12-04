@@ -9,7 +9,9 @@
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
 #include "net/PacketCompressor.hh"
+#include "net/REDQueue.hh"
 #include "net/SimpleQueue.hh"
+#include "net/SizedQueue.hh"
 #include "net/Queue.hh"
 #include "python/PyModules.hh"
 #include "util/net.hh"
@@ -74,6 +76,43 @@ void exportNet(py::module &m)
         .value("FIFO", SimpleNetQueue::FIFO)
         .value("LIFO", SimpleNetQueue::LIFO)
         .export_values();
+
+    // Export class SizedNetQueue to Python
+    py::class_<SizedNetQueue, NetQueue, std::shared_ptr<SizedNetQueue>>(m, "SizedQueue")
+        .def_property("hi_priority_flows",
+            &SizedNetQueue::getHiPriorityFlows,
+            &SizedNetQueue::setHiPriorityFlows,
+            "High-priority flows?")
+        ;
+
+    // Export class REDNetQueue to Python
+    py::class_<REDNetQueue, SizedNetQueue, std::shared_ptr<REDNetQueue>>(m, "REDQueue")
+        .def(py::init<bool,
+                      size_t,
+                      size_t,
+                      double,
+                      double>())
+        .def_property("gentle",
+            &REDNetQueue::getGentle,
+            &REDNetQueue::setGentle,
+            "Be gentle?")
+        .def_property("min_thresh",
+            &REDNetQueue::getMinThresh,
+            &REDNetQueue::setMinThresh,
+            "Minimum threshold (bytes)")
+        .def_property("max_thresh",
+            &REDNetQueue::getMaxThresh,
+            &REDNetQueue::setMaxThresh,
+            "Maximum threshold (bytes)")
+        .def_property("max_p",
+            &REDNetQueue::getMaxP,
+            &REDNetQueue::setMaxP,
+            "Maximum packet drop probability")
+        .def_property("w_q",
+            &REDNetQueue::getQueueWeight,
+            &REDNetQueue::setQueueWeight,
+            "Queue weight (for EWMA)")
+        ;
 
     // Export class MandateNetQueue to Python
     auto mandate_queue_class = py::class_<MandateNetQueue, NetQueue, std::shared_ptr<MandateNetQueue>>(m, "MandateQueue")
