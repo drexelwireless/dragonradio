@@ -105,6 +105,10 @@ class Config(object):
         self.tx_subdev = None
         self.rx_max_samps_factor = 8
         self.tx_max_samps_factor = 8
+        self.clock_source = None
+        """Clock source for the USRP device"""
+        self.time_source = None
+        """Time source for the USRP device"""
 
         # Frequency and bandwidth
         # Default frequency in the Colosseum is 1GHz
@@ -438,6 +442,12 @@ class Config(object):
         parser.add_argument('--tx-max-samps-factor', action='store', type=int,
                             dest='tx_max_samps_factor',
                             help='set multiplicative factor for tx_max_samps')
+        parser.add_argument('--clock-source', action='store',
+                            dest='clock_source',
+                            help='set clock source')
+        parser.add_argument('--time-source', action='store',
+                            dest='time_source',
+                            help='set time source')
 
         # Frequency and bandwidth
         parser.add_argument('-f', '--frequency', action='store', type=float,
@@ -708,6 +718,14 @@ class Radio(object):
                                      config.rx_antenna,
                                      config.tx_gain,
                                      config.rx_gain)
+
+        # Set USRP clock and time sources. If they were not specified in the
+        # configuration, we leave the default setting as-is.
+        if config.clock_source is not None:
+            self.usrp.clock_source = config.clock_source
+
+        if config.time_source is not None:
+            self.usrp.time_source = config.time_source
 
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
         self.usrp.tx_max_samps_factor = config.tx_max_samps_factor

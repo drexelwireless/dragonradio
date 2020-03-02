@@ -52,6 +52,24 @@ public:
         return usrp_->get_clock_source(0);
     }
 
+    /** @brief Set clock source. */
+    void setClockSource(const std::string clock_source)
+    {
+        return usrp_->set_clock_source(clock_source);
+    }
+
+    /** @brief Get time source. */
+    std::string getTimeSource(void)
+    {
+        return usrp_->get_time_source(0);
+    }
+
+    /** @brief Set time source. */
+    void setTimeSource(const std::string &time_source)
+    {
+        return usrp_->set_time_source(time_source);
+    }
+
     /** @brief Get master clock rate. */
     double getMasterClockRate(void)
     {
