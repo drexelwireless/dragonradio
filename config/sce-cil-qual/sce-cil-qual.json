@@ -85,7 +85,7 @@
         },
         {
             "RFNode_ID": 51,
-            "ImageName": "incumbent-passive-v2-2",
+            "ImageName": "incumbent-passive-v2-3",
             "ModemConfig": "Node51Incumbent_9991.json",
             "isGateway": true,
             "TrafficNode_ID": 51,
