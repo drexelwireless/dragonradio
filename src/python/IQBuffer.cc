@@ -33,16 +33,36 @@ void exportIQBuffer(py::module &m)
             &IQBuf::delay,
             "Signal delay")
         .def_property("data",
-            [](const IQBuf &iqbuf) {
-                return py::array_t<fc32>(iqbuf.size(), iqbuf.data());
+            [](const std::shared_ptr<IQBuf> &iqbuf) {
+                if (iqbuf->complete)
+                    return py::array_t<fc32>(iqbuf->size(), iqbuf->data(), sharedptr_capsule(iqbuf));
+                else
+                    return py::array_t<fc32>();
             },
-            [](IQBuf &iqbuf, py::array_t<fc32> data) {
+            [](IQBuf &iqbuf, py::array_t<fc32, py::array::c_style | py::array::forcecast> data) {
                 auto         buf = data.request();
                 buffer<fc32> copy(reinterpret_cast<fc32*>(buf.ptr), buf.size);
 
-                static_cast<buffer<fc32>&>(iqbuf) = copy;
+                static_cast<buffer<fc32>&>(iqbuf) = std::move(copy);
             },
             "IQ data")
+        .def("__getitem__",
+            [](const IQBuf &self, size_t i) {
+                if (i >= self.size())
+                    throw py::index_error();
+                return self[i];
+            })
+        .def("__setitem__",
+            [](IQBuf &self, size_t i, fc32 v) {
+                if (i >= self.size())
+                    throw py::index_error();
+                self[i] = v;
+            })
+        .def("__len__",
+            [](const IQBuf &self) -> size_t
+            {
+                return self.size();
+            })
         .def("__repr__",
             [](const IQBuf& self) {
 #if defined(NOUHD)
