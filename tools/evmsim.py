@@ -63,10 +63,10 @@ def awgn(sig, snr=None, db=None):
 def simulateMCS(crc, fec0, fec1, ms, pathloss_db=0, snr=None, db=None, pkt_size=1500, random=True, ntrials=100, Fs=10e6, cbw=1e6, Fc=4.5e6, mod=None, demod=None):
     """Simulate a single MCS"""
     if mod is None:
-        mod = dragonradio.OFDMModulator(HEADER_MCS, 48, 6, 4)
+        mod = dragonradio.liquid.OFDMModulator(HEADER_MCS, 48, 6, 4)
 
     if demod is None:
-        demod = dragonradio.OFDMDemodulator(HEADER_MCS, True, True, 48, 6, 4)
+        demod = dragonradio.liquid.OFDMDemodulator(HEADER_MCS, True, True, 48, 6, 4)
 
     mcs = dragonradio.MCS('crc32', 'rs8', 'v29p78', ms)
 
@@ -216,8 +216,8 @@ def main():
 
     # Run simulation
     if args.simulate:
-        mod = dragonradio.OFDMModulator(HEADER_MCS, 48, 6, 4)
-        demod = dragonradio.OFDMDemodulator(HEADER_MCS, True, True, 48, 6, 4)
+        mod = dragonradio.liquid.OFDMModulator(HEADER_MCS, 48, 6, 4)
+        demod = dragonradio.liquid.OFDMDemodulator(HEADER_MCS, True, True, 48, 6, 4)
 
         df = simulate(amc_table, snrs=snrs, pathloss_db=20, ntrials=args.ntrials, mod=mod, demod=demod)
 

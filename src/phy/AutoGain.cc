@@ -1,8 +1,8 @@
 #include "RadioConfig.hh"
 #include "Logger.hh"
-#include "phy/TXParams.hh"
+#include "phy/AutoGain.hh"
 
-void TXParams::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
+void AutoGain::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
 {
     {
         std::unique_lock<std::shared_mutex> lock(mutex_);

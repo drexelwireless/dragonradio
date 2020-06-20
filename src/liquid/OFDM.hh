@@ -8,7 +8,7 @@
 #include <liquid/liquid.h>
 
 #include "dsp/FFTW.hh"
-#include "liquid/PHY.hh"
+#include "liquid/Modem.hh"
 
 namespace Liquid {
 
@@ -91,13 +91,13 @@ public:
         ofdmflexframegen_print(fg_);
     }
 
-    void assemble(const void *header,
+    void assemble(const Header *header,
                   const void *payload,
                   const size_t payload_len) override
     {
         ofdmflexframegen_reset(fg_);
         ofdmflexframegen_assemble(fg_,
-                                  static_cast<unsigned char*>(const_cast<void*>(header)),
+                                  reinterpret_cast<unsigned char*>(const_cast<Header*>(header)),
                                   static_cast<unsigned char*>(const_cast<void*>(payload)),
                                   payload_len);
     }

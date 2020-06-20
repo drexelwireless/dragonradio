@@ -7,7 +7,7 @@
 #include <liquid/liquid.h>
 
 #include "dsp/FFTW.hh"
-#include "liquid/PHY.hh"
+#include "liquid/Modem.hh"
 
 namespace Liquid {
 
@@ -50,18 +50,18 @@ public:
         origflexframegen_print(fg_);
     }
 
-    void assemble(const void *header,
+    void assemble(const Header *header,
                   const void *payload,
                   const size_t payload_len) override
     {
         origflexframegen_reset(fg_);
         origflexframegen_assemble(fg_,
-                                  static_cast<unsigned char*>(const_cast<void*>(header)),
+                                  reinterpret_cast<unsigned char*>(const_cast<Header*>(header)),
                                   static_cast<unsigned char*>(const_cast<void*>(payload)),
                                   payload_len);
     }
 
-    virtual unsigned getOversampleRate(void)
+    unsigned getOversampleRate(void) override
     {
         return 2;
     }
@@ -143,7 +143,7 @@ public:
     FlexFrameDemodulator &operator==(const FlexFrameDemodulator &) = delete;
     FlexFrameDemodulator &operator!=(const FlexFrameDemodulator &) = delete;
 
-    virtual unsigned getOversampleRate(void)
+    unsigned getOversampleRate(void) override
     {
         return 2;
     }

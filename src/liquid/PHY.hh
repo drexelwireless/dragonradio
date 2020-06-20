@@ -3,206 +3,174 @@
 
 #include <complex>
 #include <functional>
+#include <type_traits>
 
 #include <liquid/liquid.h>
 
-#include "Header.hh"
-#include "liquid/Mutex.hh"
-#include "phy/MCS.hh"
+#include "Clock.hh"
+#include "Logger.hh"
+#include "Packet.hh"
+#include "dsp/TableNCO.hh"
+#include "liquid/Modem.hh"
+#include "liquid/Resample.hh"
+#include "phy/PHY.hh"
 
 namespace Liquid {
 
-class Modulator {
+class PHY : public ::PHY {
 public:
-    Modulator(const MCS &header_mcs)
-      : header_mcs_(header_mcs)
-    {
-    }
+    class PacketModulator : public ::PHY::PacketModulator, virtual protected Liquid::Modulator {
+    public:
+        PacketModulator(PHY &phy, const MCS &header_mcs)
+          : Liquid::Modulator(header_mcs)
+          , ::PHY::PacketModulator(phy)
+        {
+        }
 
-    Modulator() = delete;
+        virtual ~PacketModulator() = default;
 
-    virtual ~Modulator() = default;
+        PacketModulator(const PacketModulator&) = delete;
+        PacketModulator(PacketModulator&&) = delete;
 
+        PacketModulator& operator=(const PacketModulator&) = delete;
+        PacketModulator& operator=(PacketModulator&&) = delete;
+
+        void modulate(std::shared_ptr<NetPacket> pkt,
+                      const float g,
+                      ModPacket &mpkt) override final;
+    };
+
+    class PacketDemodulator : public ::PHY::PacketDemodulator, virtual protected Liquid::Demodulator {
+    public:
+        PacketDemodulator(PHY &phy,
+                          const MCS &header_mcs,
+                          bool soft_header,
+                          bool soft_payload);
+        virtual ~PacketDemodulator() = default;
+
+        PacketDemodulator(const PacketDemodulator&) = delete;
+        PacketDemodulator(PacketDemodulator&&) = delete;
+
+        PacketDemodulator& operator=(const PacketDemodulator&) = delete;
+        PacketDemodulator& operator=(PacketDemodulator&&) = delete;
+
+        void reset(const Channel &channel) override final;
+
+        void timestamp(const MonoClock::time_point &timestamp,
+                       std::optional<ssize_t> snapshot_off,
+                       ssize_t offset,
+                       float rate) override final;
+
+        void demodulate(const std::complex<float>* data,
+                        size_t count,
+                        std::function<void(std::unique_ptr<RadioPacket>)> callback) override final;
+
+    protected:
+        /** @brief Callback for received packets. */
+        std::function<void(std::unique_ptr<RadioPacket>)> callback_;
+
+        /** @brief The channel being demodulated */
+        Channel channel_;
+
+        /** @brief Rate conversion from samples to full RX rate */
+        /** This is used internally purely to properly timestamp packets. */
+        double resamp_rate_;
+
+        /** @brief Internal resampling factor. */
+        /** This is the factor by which the PHY internally oversamples, i.e., the
+         * samples seen by the Liquid demodulator are decimated by this amount. We
+         * need this quantity in order to properly track demod_off_ and friends.
+         */
+        unsigned int internal_oversample_fact_;
+
+        /** @brief Timestamp of current slot. */
+        MonoClock::time_point timestamp_;
+
+        /** @brief Snapshot offset of current slot. */
+        std::optional<ssize_t> snapshot_off_;
+
+        /** @brief Sample offset ffset of first provided sample from slot. */
+        ssize_t offset_;
+
+        /** @brief The sample number of the sample at offset in current slot */
+        unsigned sample_start_;
+
+        /** @brief The sample number of the last sample in current slot */
+        unsigned sample_end_;
+
+        /** @brief The sample counter. */
+        unsigned sample_;
+
+        /** @brief A reference to the global logger */
+        std::shared_ptr<Logger> logger_;
+
+        virtual int callback(unsigned char    *header_,
+                             int              header_valid_,
+                             int              header_test_,
+                             unsigned char    *payload_,
+                             unsigned int     payload_len_,
+                             int              payload_valid_,
+                             framesyncstats_s stats_) override;
+
+        using Liquid::Demodulator::reset;
+    };
+
+    PHY(std::shared_ptr<SnapshotCollector> collector,
+        NodeId node_id,
+        const MCS &header_mcs,
+        const std::vector<std::pair<MCS, AutoGain>> &mcs_table,
+        bool soft_header,
+        bool soft_payload);
+    virtual ~PHY() = default;
+
+    PHY() = delete;
+    PHY(const PHY&) = delete;
+    PHY(PHY&&) = delete;
+
+    PHY& operator=(const PHY&) = delete;
+    PHY& operator=(PHY&&) = delete;
+
+    /** @brief Return modulation and coding scheme used for headers. */
     const MCS &getHeaderMCS() const
     {
         return header_mcs_;
     }
 
-    void setHeaderMCS(const MCS &mcs)
-    {
-        if (mcs != header_mcs_) {
-            header_mcs_ = mcs;
-            reconfigureHeader();
-        }
-    }
-
-    const MCS &getPayloadMCS() const
-    {
-        return payload_mcs_;
-    }
-
-    void setPayloadMCS(const MCS &mcs)
-    {
-        if (mcs != payload_mcs_) {
-            payload_mcs_ = mcs;
-            reconfigurePayload();
-        }
-    }
-
-    virtual unsigned getOversampleRate(void)
-    {
-        return 1;
-    }
-
-    virtual void print(void) = 0;
-
-    virtual void assemble(const void *header,
-                          const void *payload,
-                          const size_t payload_len) = 0;
-
-    virtual size_t assembledSize(void) = 0;
-
-    virtual size_t maxModulatedSamples(void) = 0;
-
-    virtual bool modulateSamples(std::complex<float> *out, size_t &nw) = 0;
-
-protected:
-    /** @brief Header MCS */
-    MCS header_mcs_;
-
-    /** @brief Payload MCS */
-    MCS payload_mcs_;
-
-    /** @brief Reconfigure modulator based on new header parameters */
-    virtual void reconfigureHeader(void) = 0;
-
-    /** @brief Reconfigure modulator based on new payload parameters */
-    virtual void reconfigurePayload(void) = 0;
-};
-
-class Demodulator {
-public:
-    /** @brief The type of demodulation callbacks */
-    using callback_t = std::function<int(const Header*,
-                                         bool,
-                                         bool,
-                                         void*,
-                                         size_t,
-                                         bool,
-                                         framesyncstats_s)>;
-
-    Demodulator(const MCS &header_mcs,
-                bool soft_header,
-                bool soft_payload)
-      : header_mcs_(header_mcs)
-      , soft_header_(soft_header)
-      , soft_payload_(soft_payload)
-    {
-    }
-
-    Demodulator() = delete;
-
-    virtual ~Demodulator() = default;
-
-    const MCS &getHeaderMCS() const
-    {
-        return header_mcs_;
-    }
-
-    void setHeaderMCS(const MCS &mcs)
-    {
-        if (mcs != header_mcs_) {
-            header_mcs_ = mcs;
-            reconfigureHeader();
-        }
-    }
-
+    /** @brief Return flag indicating whether or not to use soft-decoding for
+      * headers.
+      */
     bool getSoftHeader() const
     {
         return soft_header_;
     }
 
-    void setSoftHeader(bool soft)
-    {
-        if (soft != soft_header_) {
-            soft_header_ = soft;
-            reconfigureSoftDecode();
-        }
-    }
-
+    /** @brief Return flag indicating whether or not to use soft-decoding for
+      * payload.
+      */
     bool getSoftPayload() const
     {
         return soft_payload_;
     }
 
-    void setSoftPayload(bool soft)
-    {
-        if (soft != soft_payload_) {
-            soft_payload_ = soft;
-            reconfigureSoftDecode();
-        }
-    }
-
-    virtual unsigned getOversampleRate(void)
-    {
-        return 1;
-    }
-
-    /** @brief Is a frame currently being demodulated?
-     * @return true if a frame is currently being demodulated, false
-     * otherwise.
-     */
-    virtual bool isFrameOpen(void) = 0;
-
-    virtual void print(void) = 0;
-
-    virtual void reset(void) = 0;
-
-    virtual void demodulate(const std::complex<float> *in,
-                            const size_t n,
-                            callback_t cb);
+    size_t getModulatedSize(mcsidx_t mcsidx, size_t n) override;
 
 protected:
-    /** @brief Header MCS */
+    /** @brief Modulation and coding scheme for headers. */
     MCS header_mcs_;
 
-    /** @brief Flag indicating whether or not to use soft decoding for header */
+    /** @brief MCS table */
+    std::vector<Liquid::MCS> mcs_table_;
+
+    /** @brief Flag indicating whether or not to use soft-decoding for headers.
+      */
     bool soft_header_;
 
-    /** @brief Flag indicating whether or not to use soft decoding for payload */
+    /** @brief Flag indicating whether or not to use soft-decoding for payload.
+      */
     bool soft_payload_;
 
-    /** @brief Demodulation callback */
-    callback_t cb_;
-
-    /** @brief Demodulate samples */
-    virtual void demodulateSamples(const std::complex<float> *in,
-                                   const size_t n) = 0;
-
-    /** @brief Callback function for liquid demodulator */
-    static int liquid_callback(unsigned char *  header_,
-                               int              header_valid_,
-                               int              header_test_,
-                               unsigned char *  payload_,
-                               unsigned int     payload_len_,
-                               int              payload_valid_,
-                               framesyncstats_s stats_,
-                               void *           userdata_);
-
-    /** @brief Callback function for liquid demodulator */
-    virtual int callback(unsigned char *  header_,
-                         int              header_valid_,
-                         int              header_test_,
-                         unsigned char *  payload_,
-                         unsigned int     payload_len_,
-                         int              payload_valid_,
-                         framesyncstats_s stats_);
-
-     /** @brief Reconfigure demodulator based on new header parameters */
-     virtual void reconfigureHeader(void) = 0;
-
-    /** @brief Reconfigure demodulator based on new soft decoding parameters */
-    virtual void reconfigureSoftDecode(void) = 0;
+    /** @brief Create underlying liquid modulator object */
+    virtual std::unique_ptr<Liquid::Modulator> mkLiquidModulator(void) = 0;
 };
 
 }

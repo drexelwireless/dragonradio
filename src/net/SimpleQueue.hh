@@ -162,7 +162,7 @@ public:
         cond_.notify_all();
     }
 
-    virtual void updateTXParams(NodeId id, const TXParams &tx_params) override
+    virtual void updateMCS(NodeId, const MCS*) override
     {
     }
 

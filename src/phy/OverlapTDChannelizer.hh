@@ -136,7 +136,7 @@ private:
         Dragon::MixingRationalResampler<C,C> resamp_;
 
         /** @brief Our demodulator */
-        std::shared_ptr<PHY::Demodulator> demod_;
+        std::shared_ptr<PHY::PacketDemodulator> demod_;
     };
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */

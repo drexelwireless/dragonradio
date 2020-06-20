@@ -81,20 +81,19 @@ SOURCES := \
     dsp/FIRDesign.cc \
     dsp/TableNCO.cc \
     liquid/Filter.cc \
+    liquid/Modem.cc \
     liquid/Mutex.cc \
     liquid/OFDM.cc \
     liquid/PHY.cc \
     liquid/Resample.cc \
+    phy/AutoGain.cc \
     phy/FDChannelizer.cc \
     phy/FDSynthesizer.cc \
-    phy/LiquidPHY.cc \
     phy/MultichannelSynthesizer.cc \
     phy/OverlapTDChannelizer.cc \
     phy/RadioPacketQueue.cc \
     phy/TDChannelizer.cc \
     phy/TDSynthesizer.cc \
-    phy/TXParams.cc \
-    mac/Controller.cc \
     mac/DummyController.cc \
     mac/MAC.cc \
     mac/SmartController.cc \
@@ -117,10 +116,10 @@ SOURCES := \
     python/Flow.cc \
     python/IQBuffer.cc \
     python/IQCompression.cc \
-    python/LiquidEnum.cc \
+    python/Liquid.cc \
     python/Logger.cc \
     python/MAC.cc \
-    python/MCS.cc \
+    python/Modem.cc \
     python/NCO.cc \
     python/Net.cc \
     python/PHY.cc \

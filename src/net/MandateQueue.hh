@@ -369,10 +369,10 @@ public:
         cond_.notify_all();
     }
 
-    virtual void updateTXParams(NodeId id, const TXParams &tx_params) override
+    virtual void updateMCS(NodeId id, const MCS *mcs) override
     {
         std::unique_lock<std::mutex> lock(m_);
-        double                       rate = tx_params.mcs.getRate();
+        double                       rate = mcs->getRate();
 
         node_rates_[id] = rate;
 

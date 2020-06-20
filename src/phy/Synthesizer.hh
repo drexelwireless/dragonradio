@@ -7,7 +7,6 @@
 #include "Logger.hh"
 #include "mac/Schedule.hh"
 #include "net/Net.hh"
-#include "phy/ModPacket.hh"
 #include "phy/PHY.hh"
 
 /** @brief Base class for synthesizers */

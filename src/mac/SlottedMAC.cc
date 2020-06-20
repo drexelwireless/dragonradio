@@ -1,6 +1,7 @@
 #include "Logger.hh"
 #include "SlottedMAC.hh"
 #include "Util.hh"
+#include "liquid/Modem.hh"
 
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<PHY> phy,
@@ -302,24 +303,14 @@ void SlottedMAC::txNotifier(void)
         if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
             std::shared_ptr<IQBuf> &first = slot->iqbufs.front();
 
-            // Log the sent packets
             for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
-                Header hdr;
-
-                hdr.curhop = (*it)->pkt->hdr.curhop;
-                hdr.nexthop = (*it)->pkt->hdr.nexthop;
-                hdr.seq = (*it)->pkt->hdr.seq;
-
-                std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
+                const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
 
                 logger_->logSend(Clock::to_wall_time(samples->timestamp),
-                                 hdr,
+                                 (*it)->pkt->hdr,
                                  (*it)->pkt->ehdr().src,
                                  (*it)->pkt->ehdr().dest,
-                                 (*it)->pkt->tx_params->mcs.check,
-                                 (*it)->pkt->tx_params->mcs.fec0,
-                                 (*it)->pkt->tx_params->mcs.fec1,
-                                 (*it)->pkt->tx_params->mcs.ms,
+                                 (*it)->pkt->mcsidx,
                                  tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
                                  tx_rate_,
                                  (*it)->pkt->size(),

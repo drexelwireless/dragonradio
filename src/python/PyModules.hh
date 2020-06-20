@@ -6,14 +6,11 @@
 
 #include "net/Element.hh"
 #include "phy/Channel.hh"
-#include "phy/TXParams.hh"
 #include "python/capsule.hh"
 
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(Channels)
-
-PYBIND11_MAKE_OPAQUE(std::vector<TXParams>)
 
 template <class D, class P, class T>
 struct PortWrapper
@@ -57,20 +54,20 @@ using RadioInPull = RadioInWrapper<Pull>;
 using RadioOutPush = RadioOutWrapper<Push>;
 using RadioOutPull = RadioOutWrapper<Pull>;
 
-void exportLiquidEnums(py::module &m);
-void exportLiquidModDemod(py::module &m);
 void exportClock(py::module &m);
 void exportLogger(py::module &m);
 void exportRadioConfig(py::module &m);
 void exportWorkQueue(py::module &m);
 void exportUSRP(py::module &m);
-void exportMCS(py::module &m);
 void exportEstimators(py::module &m);
 void exportNet(py::module &m);
 void exportCIL(py::module &m);
 void exportFlow(py::module &m);
 void exportRadioNet(py::module &m);
+void exportModem(py::module &m);
+void exportLiquid(py::module &m);
 void exportPHYs(py::module &m);
+void exportLiquidPHYs(py::module &m);
 void exportChannels(py::module &m);
 void exportChannelizers(py::module &m);
 void exportSynthesizers(py::module &m);

@@ -78,7 +78,7 @@ private:
         Dragon::MixingRationalResampler<C,C> resamp_;
 
         /** @brief Our demodulator */
-        std::shared_ptr<PHY::Demodulator> demod_;
+        std::shared_ptr<PHY::PacketDemodulator> demod_;
 
         /** @brief Channel IQ buffer sequence number */
         unsigned seq_;

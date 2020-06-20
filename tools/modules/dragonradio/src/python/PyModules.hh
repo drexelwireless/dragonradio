@@ -7,13 +7,12 @@
 
 namespace py = pybind11;
 
-void exportLiquidEnums(py::module &m);
-void exportLiquidModDemod(py::module &m);
-void exportMCS(py::module &m);
 void exportResamplers(py::module &m);
 void exportNCOs(py::module &m);
 void exportFilters(py::module &m);
 void exportIQBuffer(py::module &m);
 void exportIQCompression(py::module &m);
+void exportModem(py::module &m);
+void exportLiquid(py::module &m);
 
 #endif /* PYMODULES_H_ */

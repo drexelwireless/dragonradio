@@ -18,8 +18,7 @@ void exportControllers(py::module &m)
 
     // Export class DummyController to Python
     py::class_<DummyController, Controller, std::shared_ptr<DummyController>>(m, "DummyController")
-        .def(py::init<std::shared_ptr<Net>,
-                      const std::vector<TXParams>&>())
+        .def(py::init<std::shared_ptr<Net>>())
         ;
 
     // Export class SmartController to Python
@@ -29,17 +28,13 @@ void exportControllers(py::module &m)
                       double,
                       Seq::uint_type,
                       Seq::uint_type,
-                      const std::vector<TXParams>&,
-                      const TXParams&>())
+                      const std::vector<SmartController::evm_thresh_t>&>())
         .def_property("net_queue",
             &SmartController::getNetQueue,
             &SmartController::setNetQueue)
         .def_property("mac",
             &SmartController::getMAC,
             &SmartController::setMAC)
-        .def_property_readonly("broadcast_tx_params",
-            &SmartController::getBroadcastTXParams,
-            "Broadcast TX parameters")
         .def_readwrite("broadcast_gain",
             &SmartController::broadcast_gain,
             py::return_value_policy::reference_internal)
@@ -50,9 +45,6 @@ void exportControllers(py::module &m)
             &SmartController::getMinSamplesPerSlot,
             &SmartController::setMinSamplesPerSlot,
             "Minimum number of samples in a transmission slot")
-        .def_property_readonly("tx_params",
-            &SmartController::getTXParams,
-            "TX parameters")
         .def_property("short_per_nslots",
             &SmartController::getShortPERNSlots,
             &SmartController::setShortPERNSlots,
@@ -65,6 +57,18 @@ void exportControllers(py::module &m)
             &SmartController::getLongStatsNSlots,
             &SmartController::setLongStatsNSlots,
             "Number of slots worth of packets we use to calculate long-term statistics")
+        .def_property("mcsidx_broadcast",
+            &SmartController::getBroadcastMCSIndex,
+            &SmartController::setBroadcastMCSIndex,
+            "Broadcast MCS index")
+        .def_property("mcsidx_min",
+            &SmartController::getMinMCSIndex,
+            &SmartController::setMinMCSIndex,
+            "Minimum MCS index")
+        .def_property("mcsidx_max",
+            &SmartController::getMaxMCSIndex,
+            &SmartController::setMaxMCSIndex,
+            "Maximum MCS index")
         .def_property("mcsidx_init",
             &SmartController::getInitialMCSIndex,
             &SmartController::setInitialMCSIndex,

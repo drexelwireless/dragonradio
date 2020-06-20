@@ -5,7 +5,6 @@
 #include "Util.hh"
 #include "phy/FDSynthesizer.hh"
 #include "phy/PHY.hh"
-#include "phy/TXParams.hh"
 #include "stats/Estimator.hh"
 
 FDSynthesizer::FDSynthesizer(std::shared_ptr<PHY> phy,
@@ -157,16 +156,18 @@ void FDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
              * mutex before modulation to ensure slot->nsamples doesn't change
              * out from under us.
              */
+            float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
+
             if (pkt->internal_flags.is_timestamp) {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
                 pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/tx_rate_);
 
-                mod->modulate(std::move(pkt), *mpkt);
+                mod->modulate(std::move(pkt), g, *mpkt);
 
                 pushed = slot->push(mpkt, chanidx, overfill);
             } else {
-                mod->modulate(std::move(pkt), *mpkt);
+                mod->modulate(std::move(pkt), g, *mpkt);
 
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
@@ -195,15 +196,16 @@ FDSynthesizer::ChannelState::ChannelState(PHY &phy,
   , channel_(channel)
   // XXX Protected against channel with zero bandwidth
   , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
-  , mod_(phy.mkModulator())
+  , mod_(phy.mkPacketModulator())
 {
 }
 
 void FDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
+                                           float g,
                                            ModPacket &mpkt)
 {
     const unsigned Li = X*L/I; // Number of samples consumed per input block
-    float          g = pkt->g;
+    const float    g_effective = pkt->g*g;
 
     // Interpolate if needed
     if (Nrot != 0 || rate_ != 1.0) {
@@ -229,7 +231,7 @@ void FDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         upsample(iqbuf->data(),
                  iqbuf->size(),
                  fdbuf->data(),
-                 g,
+                 g_effective,
                  true,
                  nsamples,
                  I*iqbuf->size()/X,
@@ -249,7 +251,7 @@ void FDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
         mpkt.samples = std::move(iqbuf_up);
     } else
         // Modulate packet and apply gain
-        mod_->modulate(std::move(pkt), g, mpkt);
+        mod_->modulate(std::move(pkt), pkt->g*g, mpkt);
 
     // Set channel
     mpkt.channel = channel_;

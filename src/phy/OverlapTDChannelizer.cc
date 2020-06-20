@@ -277,7 +277,7 @@ OverlapTDChannelizer::ChannelState::ChannelState(PHY &phy,
   , rate_(rx_oversample_*channel.bw/rx_rate)
   , rad_(2*M_PI*channel.fc/rx_rate)
   , resamp_(rate_, taps)
-  , demod_(phy.mkDemodulator())
+  , demod_(phy.mkPacketDemodulator())
 {
     resamp_.setFreqShift(rad_);
 }

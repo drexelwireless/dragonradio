@@ -6,56 +6,48 @@
 #include <list>
 
 #include "IQBuffer.hh"
+#include "Logger.hh"
 #include "Packet.hh"
+#include "RadioConfig.hh"
 #include "SafeQueue.hh"
-#include "phy/ModPacket.hh"
+#include "mac/Snapshot.hh"
+#include "phy/AutoGain.hh"
+
+/** @brief A modulated data packet to be sent over the radio */
+struct ModPacket
+{
+    /** @brief Channel */
+    Channel channel;
+
+    /** @brief Offset of start of packet from start of slot, in number of
+     * samples.
+     */
+    size_t start;
+
+    /** @brief Offset of start of packet from beginning of sample buffer */
+    size_t offset;
+
+    /** @brief Number of modulated samples */
+    size_t nsamples;
+
+    /** @brief Buffer containing the modulated samples. */
+    std::shared_ptr<IQBuf> samples;
+
+    /** @brief The un-modulated packet. */
+    std::shared_ptr<NetPacket> pkt;
+};
 
 /** @brief A physical layer protocol that can provide a modulator and
  * demodulator.
  */
 class PHY {
 public:
-    /** @brief A modulator or demodulator, a.k.a a *ulator. */
-    class Ulator
+    /** @brief Modulate packets. */
+    class PacketModulator
     {
     public:
-        Ulator(PHY &phy)
-          : phy_(phy)
-          , pending_reconfigure_(false)
-          {
-          }
-
-        virtual ~Ulator() = default;
-
-        virtual void scheduleReconfigure(void)
-        {
-            pending_reconfigure_.store(true, std::memory_order_relaxed);
-        }
-
-    protected:
-        /** @brief Our PHY */
-        /** We keep a reference to our PHY so that we can query it for rate
-         * information.
-         */
-        PHY &phy_;
-
-        /** @brief A flag indicating that our configuration has changed, so we
-         * should update it
-         */
-        std::atomic<bool> pending_reconfigure_;
-
-        /** @brief Reconfigure the modulator/demodulator based on new PHY
-         * parameters.
-         */
-        virtual void reconfigure(void) = 0;
-    };
-
-    /** @brief Modulate IQ data. */
-    class Modulator : public Ulator
-    {
-    public:
-        Modulator(PHY &phy) : Ulator(phy) {};
-        virtual ~Modulator() = default;
+        PacketModulator(PHY &phy) : phy_(phy) {}
+        virtual ~PacketModulator() = default;
 
         /** @brief Modulate a packet to produce IQ samples.
          * @param pkt The NetPacket to modulate.
@@ -65,15 +57,19 @@ public:
         virtual void modulate(std::shared_ptr<NetPacket> pkt,
                               const float gain,
                               ModPacket &mpkt) = 0;
+
+    protected:
+        /** @brief Our PHY */
+        PHY &phy_;
     };
 
-    /** @brief Demodulate IQ data.
+    /** @brief Demodulate packets.
      */
-    class Demodulator : public Ulator
+    class PacketDemodulator
     {
     public:
-        Demodulator(PHY &phy) : Ulator(phy) {};
-        virtual ~Demodulator() = default;
+        PacketDemodulator(PHY &phy) : phy_(phy) {}
+        virtual ~PacketDemodulator() = default;
 
         /** @brief Is a frame currently being demodulated?
          * @return true if a frame is currently being demodulated, false
@@ -94,10 +90,10 @@ public:
          * @param rate The rate of the resampler applied before data is passed
          * to the demodulator.
          */
-         virtual void timestamp(const MonoClock::time_point &timestamp,
-                                std::optional<ssize_t> snapshot_off,
-                                ssize_t offset,
-                                float rate) = 0;
+        virtual void timestamp(const MonoClock::time_point &timestamp,
+                               std::optional<ssize_t> snapshot_off,
+                               ssize_t offset,
+                               float rate) = 0;
 
         /** @brief Demodulate IQ samples.
          * @param data The IQ data to demodulate
@@ -105,30 +101,54 @@ public:
          * @param callback The function to call with any demodulated packets. If
          * a bad packet is received, the argument will be nullptr.
          */
-         virtual void demodulate(const std::complex<float>* data,
-                                 size_t count,
-                                 std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
+        virtual void demodulate(const std::complex<float>* data,
+                                size_t count,
+                                std::function<void(std::unique_ptr<RadioPacket>)> callback) = 0;
+
+    protected:
+        /** @brief Our PHY */
+        PHY &phy_;
     };
 
-    PHY(NodeId node_id)
-      : node_id_(node_id)
+    PHY(std::shared_ptr<SnapshotCollector> collector,
+        NodeId node_id)
+      : snapshot_collector_(collector)
+      , node_id_(node_id)
       , rx_rate_(0.0)
       , tx_rate_(0.0)
     {
     }
 
-    virtual ~PHY() = default;
-
     PHY() = delete;
 
+    virtual ~PHY() = default;
+
+    /** @brief MCS entry */
+    struct MCSEntry {
+        /** @brief MCS */
+        const MCS *mcs;
+
+        /** @brief auto-gain for this MCS */
+        AutoGain autogain;
+    };
+
+    /** @brief MCS table */
+    std::vector<MCSEntry> mcs_table;
+
+    /** @brief Get the snapshot collector */
+    const std::shared_ptr<SnapshotCollector> &getSnapshotCollector(void) const
+    {
+        return snapshot_collector_;
+    }
+
     /** @brief Get this node's ID. */
-    NodeId getNodeId(void)
+    NodeId getNodeId(void) const
     {
         return node_id_;
     }
 
     /** @brief Get the PHY's RX sample rate. */
-    virtual double getRXRate(void)
+    double getRXRate(void)
     {
         return rx_rate_;
     }
@@ -136,14 +156,13 @@ public:
     /** @brief Tell the PHY what RX sample rate we are running at.
      * @param rate The rate.
      */
-    virtual void setRXRate(double rate)
+    void setRXRate(double rate)
     {
         rx_rate_ = rate;
-        reconfigureRX();
     }
 
     /** @brief Get the PHY's TX sample rate. */
-    virtual double getTXRate(void)
+    double getTXRate(void)
     {
         return tx_rate_;
     }
@@ -151,10 +170,9 @@ public:
     /** @brief Tell the PHY what TX sample rate we are running at.
      * @param rate The rate.
      */
-    virtual void setTXRate(double rate)
+    void setTXRate(double rate)
     {
         tx_rate_ = rate;
-        reconfigureTX();
     }
 
     /** @brief Return the minimum oversample rate (with respect to PHY
@@ -170,27 +188,82 @@ public:
     virtual unsigned getMinTXRateOversample(void) const = 0;
 
     /** @brief Calculate size of modulated data */
-    virtual size_t getModulatedSize(const TXParams &params, size_t n) = 0;
+    virtual size_t getModulatedSize(mcsidx_t mcsidx, size_t n) = 0;
 
     /** @brief Create a Modulator for this %PHY */
-    virtual std::shared_ptr<Modulator> mkModulator(void)
-    {
-        auto p = mkModulatorInternal();
-
-        modulators_.push_back(p);
-        return p;
-    }
+    virtual std::shared_ptr<PacketModulator> mkPacketModulator(void) = 0;
 
     /** @brief Create a Demodulator for this %PHY */
-    virtual std::shared_ptr<Demodulator> mkDemodulator(void)
-    {
-        auto p = mkDemodulatorInternal();
+    virtual std::shared_ptr<PacketDemodulator> mkPacketDemodulator(void) = 0;
 
-        demodulators_.push_back(p);
-        return p;
+    /** @brief Return flag indicating whether or not we want the given packet */
+    /** We only demodulate packets destined for us *unless* we are collecting
+     * snapshots, in which case we demodulate everything so we can correctly
+     * record all known transmissions.
+     */
+    bool wantPacket(bool header_valid, const Header *h)
+    {
+        return header_valid
+            && (h->curhop != node_id_)
+            && ((h->nexthop == kNodeBroadcast) ||
+                (h->nexthop == node_id_) ||
+                (snapshot_collector_ && snapshot_collector_->active()));
+    }
+
+    /** @brief Create a radio packet from a header and payload */
+    std::unique_ptr<RadioPacket> mkRadioPacket(bool header_valid,
+                                               bool payload_valid,
+                                               const Header *h,
+                                               size_t payload_len,
+                                               unsigned char *payload_data)
+    {
+        if (!header_valid) {
+            if (rc.log_invalid_headers) {
+                if (rc.verbose && !rc.debug)
+                    fprintf(stderr, "HEADER INVALID\n");
+                logEvent("PHY: invalid header");
+            }
+
+            return nullptr;
+        } else if (!payload_valid) {
+            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(*h);
+
+            pkt->internal_flags.invalid_payload = 1;
+
+            if (h->nexthop == node_id_) {
+                if (rc.verbose && !rc.debug)
+                    fprintf(stderr, "PAYLOAD INVALID\n");
+                logEvent("PHY: invalid payload: curhop=%u; nexthop=%u; seq=%u",
+                    pkt->hdr.curhop,
+                    pkt->hdr.nexthop,
+                    (unsigned) pkt->hdr.seq);
+            }
+
+            return pkt;
+        } else {
+            std::unique_ptr<RadioPacket> pkt = std::make_unique<RadioPacket>(*h, payload_data, payload_len);
+
+            if (!pkt->integrityIntact()) {
+                pkt->internal_flags.invalid_payload = 1;
+
+                if (rc.verbose && !rc.debug)
+                    fprintf(stderr, "PAYLOAD INTEGRITY VIOLATED\n");
+                logEvent("PHY: packet integrity not intact: seq=%u",
+                    (unsigned) pkt->hdr.seq);
+            }
+
+            // Cache payload size if this packet is not compressed
+            if (!pkt->hdr.flags.compressed)
+                pkt->payload_size = pkt->getPayloadSize();
+
+            return pkt;
+        }
     }
 
 protected:
+    /** @brief Our snapshot collector */
+    std::shared_ptr<SnapshotCollector> snapshot_collector_;
+
     /** @brief Node ID */
     const NodeId node_id_;
 
@@ -199,50 +272,6 @@ protected:
 
     /** @brief TX sample rate */
     double tx_rate_;
-
-    /** @brief Modulators */
-    std::list<std::weak_ptr<Modulator>> modulators_;
-
-    /** @brief Demodulators */
-    std::list<std::weak_ptr<Demodulator>> demodulators_;
-
-    /** @brief Create a Modulator for this %PHY */
-    virtual std::shared_ptr<Modulator> mkModulatorInternal(void) = 0;
-
-    /** @brief Create a Demodulator for this %PHY */
-    virtual std::shared_ptr<Demodulator> mkDemodulatorInternal(void) = 0;
-
-    /** @brief Reconfigure for new RX parameters */
-    virtual void reconfigureRX(void)
-    {
-        auto it = demodulators_.begin();
-
-        while (it != demodulators_.end()) {
-            auto p = it->lock();
-
-            if (p) {
-                p->scheduleReconfigure();
-                it++;
-            } else
-                it = demodulators_.erase(it);
-        }
-    }
-
-    /** @brief Reconfigure for new TX parameters */
-    virtual void reconfigureTX(void)
-    {
-        auto it = modulators_.begin();
-
-        while (it != modulators_.end()) {
-            auto p = it->lock();
-
-            if (p) {
-                p->scheduleReconfigure();
-                it++;
-            } else
-                it = modulators_.erase(it);
-        }
-    }
 };
 
 #endif /* PHY_H_ */

@@ -211,7 +211,7 @@ TDChannelizer::ChannelState::ChannelState(PHY &phy,
   , rate_(phy.getMinRXRateOversample()*channel.bw/rx_rate)
   , rad_(2*M_PI*channel.fc/rx_rate)
   , resamp_(rate_, taps)
-  , demod_(phy.mkDemodulator())
+  , demod_(phy.mkPacketDemodulator())
   , seq_(0)
 {
     resamp_.setFreqShift(rad_);
