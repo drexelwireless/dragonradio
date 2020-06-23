@@ -60,7 +60,7 @@ class Voxel(object):
         return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
 
 @handler(remote.Request)
-class Controller(TCPProtoServer):
+class Controller(object):
     def __init__(self, config):
         self.config = config
         """Our Config"""
@@ -139,6 +139,9 @@ class Controller(TCPProtoServer):
 
         self.scoring_point_threshold = 0
         """Scoring point threshold"""
+
+        self.remote_server = None
+        """Remote protocol server"""
 
         self.internal_server = None
         """Internal protocol server"""
@@ -266,8 +269,10 @@ class Controller(TCPProtoServer):
         self.loop.create_task(self.dummy())
 
         # Start the RPC server
-        self.remote_server = self.startServer(remote.Request, remote.REMOTE_HOST, remote.REMOTE_PORT)
-        self.loop.create_task(self.remote_server)
+        self.remote_server = TCPProtoServer(self, loop=self.loop)
+        self.remote_server.startServer(remote.Request,
+                                       remote.REMOTE_HOST,
+                                       remote.REMOTE_PORT)
 
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.

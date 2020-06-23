@@ -173,12 +173,13 @@ class TCPProto(object):
         return msg
 
 class TCPProtoServer(TCPProto):
-    def __init__(self, loop=None):
+    def __init__(self, handler, loop=None):
         super(TCPProtoServer, self).__init__()
+        self.handler = handler
         self.loop = loop
 
     def startServer(self, cls, listen_ip, listen_port):
-        return self.runServer(cls, listen_ip, listen_port)
+        self.loop.create_task(self.runServer(cls, listen_ip, listen_port))
 
     async def runServer(self, cls, listen_ip, listen_port):
         while True:
@@ -199,8 +200,8 @@ class TCPProtoServer(TCPProto):
                 if not req:
                     break
 
-                f = self.handlers[cls.__name__].message_handlers[req.WhichOneof('payload')]
-                resp = f(self, req)
+                f = self.handler.handlers[cls.__name__].message_handlers[req.WhichOneof('payload')]
+                resp = f(self.handler, req)
                 if resp:
                     await self.sendMessage(writer, resp)
             except KeyError as err:
