@@ -149,73 +149,141 @@ def send(cls):
 
     return sender_decorator
 
-class TCPProto(object):
-    def __init__(self):
-        pass
+class ProtobufProtocol(asyncio.Protocol):
+    def __init__(self, cls=None, handler=None, loop=None, **kwargs):
+        super().__init__(**kwargs)
 
-    async def sendMessage(self, writer, msg):
+        self.cls = cls
+        """Protobuf message class of messages received by server"""
+
+        self.handler = handler
+        """Protobuf message handler object"""
+
+        self.loop = loop
+        """asyncio loop"""
+
+        self.connected_event = asyncio.Event()
+        """Event set when connection is made"""
+
+        self.transport = None
+        """Transport associated with protocol"""
+
+        self.buffer = bytearray()
+        """Received bytes"""
+
+        self.buffer_lock = asyncio.Lock()
+        """Lock for buffer"""
+
+        self.buffer_cond = asyncio.Condition(lock=self.buffer_lock)
+        """Condition variable for buffer"""
+
+    def connection_made(self, transport):
+        self.transport = transport
+        self.connected_event.set()
+
+        if self.cls:
+            self.loop.create_task(self.server_loop())
+
+    def connection_lost(self, exc):
+        self.connected_event.clear()
+        self.transport = None
+
+    def data_received(self, data):
+        async def f():
+            with await self.buffer_lock:
+                self.buffer.extend(data)
+                self.buffer_cond.notify_all()
+
+        self.loop.create_task(f())
+
+    async def send(self, msg):
         """Serialize and send a protobuf message with its length prepended"""
-        logger.debug('Sending message {}'.format(msg))
+        # Wait until we are connected
+        await self.connected_event.wait()
+
+        logger.debug('Sending message {}'.format(pformat(msg)))
         data = msg.SerializeToString()
-        writer.write(struct.pack('!H', len(data)))
-        writer.write(data)
+        self.transport.write(struct.pack('!H', len(data)))
+        self.transport.write(data)
 
-    async def recvMessage(self, reader, cls):
-        """Receive and deserialize a protobuf message with its length prepended"""
-        datalen = await reader.read(2)
-        if len(datalen) != 2:
-            return None
-        datalen = struct.unpack('!H', datalen)[0]
-        data = await reader.read(datalen)
+    async def recv(self, cls):
+        """Receive a protobuf message of the given message class"""
+        # Get message length
+        datalen = await self.recv_bytes(2)
+        datalen, = struct.unpack('!H', datalen)
 
+        # Get message
+        data = await self.recv_bytes(datalen)
+
+        # Decode message
         msg = cls.FromString(data)
-        logger.debug('Received message: {}'.format(msg))
+        logger.debug('Received message: {}'.format(pformat(msg)))
+
         return msg
 
-class TCPProtoServer(TCPProto):
-    def __init__(self, handler, loop=None):
-        super(TCPProtoServer, self).__init__()
-        self.handler = handler
-        self.loop = loop
+    async def recv_bytes(self, count):
+        with await self.buffer_lock:
+            await self.buffer_cond.wait_for(lambda: len(self.buffer) >= count)
 
-    def startServer(self, cls, listen_ip, listen_port):
-        self.loop.create_task(self.runServer(cls, listen_ip, listen_port))
+            data = self.buffer[:count]
+            self.buffer = self.buffer[count:]
 
-    async def runServer(self, cls, listen_ip, listen_port):
+            return data
+
+    async def server_loop(self):
         while True:
             try:
-                server = await asyncio.start_server(partial(self.handle_request, cls),
-                                           listen_ip, listen_port,
-                                           loop=self.loop)
+                req = await self.recv(self.cls)
+                f = self.handler.handlers[self.cls.__name__].message_handlers[req.WhichOneof('payload')]
+                resp = f(self.handler, req)
+                if resp:
+                    await self.send(resp)
+            except KeyError as exc:
+                logger.error('Received unsupported message type: {}', exc)
+            except CancelledError:
+                return
+
+class TCPProtoServer(object):
+    def __init__(self, handler, loop=None):
+        self.handler = handler
+        """Protobuf message handler object"""
+
+        self.loop = loop
+        """asyncio loop"""
+
+    def start_server(self, cls, listen_ip, listen_port):
+        """Start a protobuf TCP server"""
+        self.loop.create_task(self.server_loop(cls, listen_ip, listen_port))
+
+    async def server_loop(self, cls, listen_ip, listen_port):
+        while True:
+            try:
+                server = await self.loop.create_server(partial(ProtobufProtocol,
+                                                                cls=cls,
+                                                                handler=self.handler,
+                                                                loop=self.loop),
+                                                        host=listen_ip,
+                                                        port=listen_port,
+                                                        reuse_address=True,
+                                                        reuse_port=True)
                 await server.wait_closed()
             except CancelledError:
                 return
             except:
                 logger.exception('Restarting TCP proto server')
 
-    async def handle_request(self, cls, reader, writer):
-        while True:
-            try:
-                req = await self.recvMessage(reader, cls)
-                if not req:
-                    break
+class TCPProtoClient(ProtobufProtocol):
+    def __init__(self, server_host=None, server_port=None, **kwargs):
+        super().__init__(**kwargs)
 
-                f = self.handler.handlers[cls.__name__].message_handlers[req.WhichOneof('payload')]
-                resp = f(self.handler, req)
-                if resp:
-                    await self.sendMessage(writer, resp)
-            except KeyError as err:
-                logger.error('Received unsupported message type: {}', err)
-            except CancelledError:
-                return
-
-class TCPProtoClient(TCPProto):
-    def __init__(self, loop=None, server_host=None, server_port=None):
-        super(TCPProtoClient, self).__init__()
-        self.loop = loop
         self.server_host = server_host
+        """Server hostname"""
+
         self.server_port = server_port
-        self.writer = None
+        """Server port"""
+
+    def __call__(self):
+        return self
 
     def __del__(self):
         self.close()
@@ -227,21 +295,17 @@ class TCPProtoClient(TCPProto):
         self.close()
 
     def open(self):
-        task = asyncio.open_connection(self.server_host,
-                                       self.server_port,
-                                       loop=self.loop)
-        self.reader, self.writer = self.loop.run_until_complete(task)
+        async def f():
+            self.transport, _protocol = await self.loop.create_connection(self,
+                                                                          host=self.server_host,
+                                                                          port=self.server_port)
+
+        self.loop.create_task(f())
 
     def close(self):
-        if self.writer:
-            self.writer.close()
-            self.writer = None
-
-    async def send(self, msg):
-        await self.sendMessage(self.writer, msg)
-
-    async def recv(self, cls):
-        return await self.recvMessage(self.reader, cls)
+        if self.transport:
+            self.transport.close()
+            self.transport = None
 
 def rpc(req_cls, resp_cls):
     """

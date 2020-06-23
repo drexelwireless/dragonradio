@@ -270,9 +270,9 @@ class Controller(object):
 
         # Start the RPC server
         self.remote_server = TCPProtoServer(self, loop=self.loop)
-        self.remote_server.startServer(remote.Request,
-                                       remote.REMOTE_HOST,
-                                       remote.REMOTE_PORT)
+        self.remote_server.start_server(remote.Request,
+                                        remote.REMOTE_HOST,
+                                        remote.REMOTE_PORT)
 
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
