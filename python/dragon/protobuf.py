@@ -334,41 +334,84 @@ def rpc(req_cls, resp_cls):
 
     return rpc_decorator
 
-class UDPProtoServer(object):
-    def __init__(self, loop=None):
-        self.loop = loop
+class ProtobufDatagramProtocol(asyncio.DatagramProtocol):
+    def __init__(self, cls=None, handler=None, loop=None, **kwargs):
+        super().__init__(**kwargs)
 
-    def startServer(self, cls, listen_ip, listen_port):
         self.cls = cls
-        task = self.loop.create_datagram_endpoint(lambda: self,
-                                                  local_addr=(listen_ip, listen_port),
-                                                  reuse_address=True,
-                                                  allow_broadcast=True)
-        (self.server_transport, self.protocol) = self.loop.run_until_complete(task)
+        """Protobuf message class of messages received by server"""
+
+        self.handler = handler
+        """Protobuf message handler object"""
+
+        self.loop = loop
+        """asyncio loop"""
+
+        self.connected_event = asyncio.Event()
+        """Event set when connection is made"""
+
+        self.transport = None
+        """Transport associated with protocol"""
 
     def connection_made(self, transport):
-        pass
+        self.transport = transport
+        self.connected_event.set()
 
     def connection_lost(self, exc):
-        pass
+        self.connected_event.clear()
+        self.transport = None
 
     def datagram_received(self, data, addr):
         try:
             msg = self.cls.FromString(data)
             logger.debug('Received message: {}'.format(pformat(msg)))
 
-            f = self.handlers[self.cls.__name__].message_handlers[msg.WhichOneof('payload')]
-            f(self, msg)
+            f = self.handler.handlers[self.cls.__name__].message_handlers[msg.WhichOneof('payload')]
+            f(self.handler, msg)
         except KeyError as err:
             logger.error('Received unsupported message type: {}', err)
 
-class UDPProtoClient(object):
-    def __init__(self, loop=None, server_host=None, server_port=None):
+    async def send(self, msg):
+        """Serialize and send a protobuf message with its length prepended"""
+        # Wait until we are connected
+        await self.connected_event.wait()
+
+        logger.debug('Sending message {}'.format(pformat(msg)))
+        self.transport.sendto(msg.SerializeToString(), addr=None)
+
+class UDPProtoServer(object):
+    def __init__(self, handler, loop=None):
+        self.handler = handler
+        """Protobuf message handler object"""
+
         self.loop = loop
+        """asyncio loop"""
+
+    def start_server(self, cls, listen_ip, listen_port):
+        """Start a protobuf UDP server"""
+        self.loop.create_task(self.server_loop(cls, listen_ip, listen_port))
+
+    async def server_loop(self, cls, listen_ip, listen_port):
+        await self.loop.create_datagram_endpoint(partial(ProtobufDatagramProtocol,
+                                                         cls=cls,
+                                                         handler=self.handler,
+                                                         loop=self.loop),
+                                                 local_addr=(listen_ip, listen_port),
+                                                 reuse_address=True,
+                                                 allow_broadcast=True)
+
+class UDPProtoClient(ProtobufDatagramProtocol):
+    def __init__(self, server_host=None, server_port=None, **kwargs):
+        super().__init__(**kwargs)
+
         self.server_host = server_host
+        """Server hostname"""
+
         self.server_port = server_port
-        self.transport = None
-        self.connected_event_ = asyncio.Event()
+        """Server port"""
+
+    def __call__(self):
+        return self
 
     def __enter__(self):
         self.open()
@@ -377,26 +420,15 @@ class UDPProtoClient(object):
         self.close()
 
     def open(self):
-        async def open_():
-            task = self.loop.create_datagram_endpoint(lambda: self,
-                                                      remote_addr=(self.server_host, self.server_port),
-                                                      reuse_address=True,
-                                                      allow_broadcast=True)
-            await task
+        async def f():
+            await self.loop.create_datagram_endpoint(lambda: self,
+                                                     remote_addr=(self.server_host, self.server_port),
+                                                     reuse_address=True,
+                                                     allow_broadcast=True)
 
-        self.loop.create_task(open_())
+        self.loop.create_task(f())
 
     def close(self):
-        self.transport.close()
-
-    def connection_made(self, transport):
-        self.transport = transport
-        self.connected_event_.set()
-
-    def connection_lost(self, exc):
-        self.connected_event_.clear()
-        self.transport = None
-
-    async def send(self, msg):
-        await self.connected_event_.wait()
-        self.transport.sendto(msg.SerializeToString(), addr=None)
+        if self.transport:
+            self.transport.close()
+            self.transport = None

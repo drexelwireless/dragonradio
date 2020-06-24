@@ -32,12 +32,12 @@ class InternalProtoServer(UDPProtoServer):
                  controller,
                  loop=None,
                  local_ip=None):
-        UDPProtoServer.__init__(self, loop=loop)
+        super().__init__(self, loop=loop)
 
         self.loop = loop
         self.controller = controller
 
-        self.startServer(internal.Message, local_ip, INTERNAL_PORT)
+        self.start_server(internal.Message, local_ip, INTERNAL_PORT)
 
     @handle('Message.status')
     def handle_status(self, msg):
