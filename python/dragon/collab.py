@@ -85,12 +85,27 @@ def sendCIL(f):
         await self.send(msg)
     return wrapper
 
+class RegistrationClient(ZMQProtoClient):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @send(registration.TalkToServer)
+    async def register(self, msg, local_ip):
+        msg.register.my_ip_address = ip_string_to_int(local_ip)
+
+    @send(registration.TalkToServer)
+    async def keepalive(self, msg, nonce):
+        msg.keepalive.my_nonce = nonce
+
+    @send(registration.TalkToServer)
+    async def leave(self, msg, nonce):
+        msg.leave.my_nonce = nonce
+
 class Peer(ZMQProtoClient):
     def __init__(self, collab_agent, peer_host, peer_port):
-        ZMQProtoClient.__init__(self,
-                                loop=collab_agent.loop,
-                                server_host=peer_host,
-                                server_port=peer_port)
+        super().__init__(loop=collab_agent.loop,
+                         server_host=peer_host,
+                         server_port=peer_port)
         self.collab_agent = collab_agent
         self.local_ip = collab_agent.local_ip
         self.msg_count = 1
@@ -132,7 +147,7 @@ class Peer(ZMQProtoClient):
 
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
-class CollabAgent(ZMQProtoServer, ZMQProtoClient):
+class CollabAgent(ZMQProtoServer, RegistrationClient):
     def __init__(self,
                  controller,
                  loop=None,
@@ -142,7 +157,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                  client_port=None,
                  peer_port=None):
         ZMQProtoServer.__init__(self, self, loop=loop)
-        ZMQProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=server_port)
+        RegistrationClient.__init__(self, loop=loop, server_host=server_host, server_port=server_port)
 
         self.controller = controller
 
@@ -164,7 +179,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
         self.send_spectrum_update = asyncio.Event()
 
-        loop.create_task(self.register())
+        loop.create_task(self.register(self.local_ip))
         loop.create_task(self.heartbeat())
         loop.create_task(self.location_update())
         loop.create_task(self.spectrum_usage())
@@ -200,14 +215,14 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     async def shutdown(self):
         if self.nonce:
-            await self.leave()
+            await self.leave(self.nonce)
 
     async def heartbeat(self):
         try:
             while not self.done:
                 if self.nonce:
                     try:
-                        await self.keepalive()
+                        await self.keepalive(self.nonce)
                     except:
                         logger.exception("heartbeat")
 
@@ -414,15 +429,3 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
     @handle('CilMessage.incumbent_notify')
     async def handle_incumbent_notify(self, msg):
         pass
-
-    @send(registration.TalkToServer)
-    async def register(self, msg):
-        msg.register.my_ip_address = ip_string_to_int(self.local_ip)
-
-    @send(registration.TalkToServer)
-    async def keepalive(self, msg):
-        msg.keepalive.my_nonce = self.nonce
-
-    @send(registration.TalkToServer)
-    async def leave(self, msg):
-        msg.leave.my_nonce = self.nonce
