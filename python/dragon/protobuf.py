@@ -99,9 +99,16 @@ class ZMQProtoServer(object):
 class ZMQProtoClient(object):
     def __init__(self, loop=None, server_host=None, server_port=None):
         self.loop = loop
+        """asyncio loop"""
+
         self.server_host = server_host
+        """Server hostname"""
+
         self.server_port = server_port
+        """Server port"""
+
         self.server_sock = None
+        """ZMQ server socket"""
 
     def __del__(self):
         self.close()
