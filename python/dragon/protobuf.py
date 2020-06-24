@@ -66,13 +66,17 @@ def handle(name):
     return handle_decorator
 
 class ZMQProtoServer(object):
-    def __init__(self, loop=None):
+    def __init__(self, handler=None, loop=None):
+        self.handler = handler
+        """Protobuf message handler object"""
+
         self.loop = loop
+        """asyncio loop"""
 
-    def startServer(self, cls, listen_ip, listen_port):
-        return self.loop.create_task(self.run(cls, listen_ip, listen_port))
+    def start_server(self, cls, listen_ip, listen_port):
+        return self.loop.create_task(self.server_loop(cls, listen_ip, listen_port))
 
-    async def run(self, cls, listen_ip, listen_port):
+    async def server_loop(self, cls, listen_ip, listen_port):
         try:
             ctx = zmq.asyncio.Context()
             listen_sock = ctx.socket(zmq.PULL)
@@ -84,8 +88,8 @@ class ZMQProtoServer(object):
                 logger.debug('Received message: {}'.format(pformat(msg)))
 
                 try:
-                    f = self.handlers[cls.__name__].message_handlers[msg.WhichOneof('payload')]
-                    self.loop.create_task(f(self, msg))
+                    f = self.handler.handlers[cls.__name__].message_handlers[msg.WhichOneof('payload')]
+                    self.loop.create_task(f(self.handler, msg))
                 except KeyError as err:
                     logger.error('Received unsupported message type: %s', err)
         except CancelledError:

@@ -141,7 +141,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                  server_port=None,
                  client_port=None,
                  peer_port=None):
-        ZMQProtoServer.__init__(self, loop=loop)
+        ZMQProtoServer.__init__(self, self, loop=loop)
         ZMQProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=server_port)
 
         self.controller = controller
@@ -158,8 +158,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         self.nonce = None
         self.max_keepalive = 30
 
-        self.startServer(cil.CilMessage, local_ip, peer_port)
-        self.startServer(registration.TellClient, local_ip, client_port)
+        self.start_server(cil.CilMessage, local_ip, peer_port)
+        self.start_server(registration.TellClient, local_ip, client_port)
         self.open()
 
         self.send_spectrum_update = asyncio.Event()
