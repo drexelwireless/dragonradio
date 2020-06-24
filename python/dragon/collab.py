@@ -305,8 +305,10 @@ class CollabAgent(ZMQProtoServer, RegistrationClient):
         """Get historical voxel usage from controller and convert it into CIL
         voxels for spectrum usage report"""
         voxels = await self.controller.getHistoricalSpectrumUsage()
+        rx_gain = self.controller.radio.usrp.rx_gain
+        tx_gain = self.controller.radio.usrp.tx_gain
 
-        return [self.voxel2CILVoxel(vox, start, end, True) for (start, end, vox) in voxels]
+        return [voxel2CILVoxel(vox, start, end, rx_gain, tx_gain, True) for (start, end, vox) in voxels]
 
     async def getPredictedSpectrumUsage(self, when):
         """Get predicated voxel usage from controller and convert it into CIL
@@ -317,41 +319,10 @@ class CollabAgent(ZMQProtoServer, RegistrationClient):
         start = when
         end = when + config.spec_future_period
         voxels = await self.controller.getPredictedSpectrumUsage()
+        rx_gain = self.controller.radio.usrp.rx_gain
+        tx_gain = self.controller.radio.usrp.tx_gain
 
-        return [self.voxel2CILVoxel(vox, start, end, False) for vox in voxels]
-
-    def voxel2CILVoxel(self, vox, start, end, measured):
-        controller = self.controller
-        config = controller.config
-
-        # Construct list of receivers for this voxel
-        receivers = []
-
-        for rx in vox.rx:
-            rx_info = cil.ReceiverInfo()
-            rx_info.radio_id = rx
-            rx_info.power_db.value = controller.radio.usrp.rx_gain
-
-            receivers.append(rx_info)
-
-        # Report future usage
-        usage = cil.SpectrumVoxelUsage()
-
-        usage.spectrum_voxel.freq_start = vox.f_start
-        usage.spectrum_voxel.freq_end = vox.f_end
-        usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
-        usage.spectrum_voxel.time_start.set_timestamp(start)
-        usage.spectrum_voxel.time_end.set_timestamp(end)
-
-        usage.transmitter_info.radio_id = vox.tx
-        usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
-        usage.transmitter_info.mac_cca = False
-
-        usage.measured_data = measured
-
-        usage.receiver_info.extend(receivers)
-
-        return usage
+        return [voxel2CILVoxel(vox, start, end, rx_gain, tx_gain, False) for vox in voxels]
 
     async def detailed_performance(self):
         controller = self.controller
@@ -429,3 +400,40 @@ class CollabAgent(ZMQProtoServer, RegistrationClient):
     @handle('CilMessage.incumbent_notify')
     async def handle_incumbent_notify(self, msg):
         pass
+
+def mkReceiverInfo(radio_id, rx_gain):
+    rx_info = cil.ReceiverInfo()
+    rx_info.radio_id = radio_id
+    rx_info.power_db.value = rx_gain
+
+    return rx_info
+
+def voxel2CILVoxel(vox, start, end, rx_gain, tx_gain, measured):
+    # Construct list of receivers for this voxel
+    receivers = []
+
+    for rx in vox.rx:
+        rx_info = cil.ReceiverInfo()
+        rx_info.radio_id = rx
+        rx_info.power_db.value = rx_gain
+
+        receivers.append(rx_info)
+
+    # Report future usage
+    usage = cil.SpectrumVoxelUsage()
+
+    usage.spectrum_voxel.freq_start = vox.f_start
+    usage.spectrum_voxel.freq_end = vox.f_end
+    usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
+    usage.spectrum_voxel.time_start.set_timestamp(start)
+    usage.spectrum_voxel.time_end.set_timestamp(end)
+
+    usage.transmitter_info.radio_id = vox.tx
+    usage.transmitter_info.power_db.value = tx_gain
+    usage.transmitter_info.mac_cca = False
+
+    usage.measured_data = measured
+
+    usage.receiver_info.extend(receivers)
+
+    return usage
