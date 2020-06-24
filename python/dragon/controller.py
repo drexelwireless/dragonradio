@@ -19,6 +19,7 @@ from dragon.collab import CollabAgent
 from dragon.gpsd import GPSDClient, GPSLocation
 import dragon.internal
 from dragon.internal import InternalProtoClient, InternalProtoServer, mkFlowStats, mkSpectrumStats
+import dragon.internal as internal
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
@@ -60,6 +61,7 @@ class Voxel(object):
         return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
 
 @handler(remote.Request)
+@handler(internal.Message)
 class Controller(object):
     def __init__(self, config):
         self.config = config
@@ -246,7 +248,7 @@ class Controller(object):
         # Start the internal protocol server
         self.internal_server = InternalProtoServer(self,
                                                    loop=self.loop,
-                                                   local_ip='0.0.0.0')
+                                                   listen_ip='0.0.0.0')
 
         # If we are the gateway, start an internal protocol client connected to
         # the broadcast address
@@ -796,7 +798,8 @@ class Controller(object):
                                                             spectrum)
                     # Otherwise, send statistics to the gateway
                     elif self.internal_client is not None:
-                        await self.internal_client.sendStatus(sources,
+                        await self.internal_client.sendStatus(self.thisNode(),
+                                                              sources,
                                                               sinks,
                                                               spectrum)
 
@@ -1021,7 +1024,10 @@ class Controller(object):
             if hasattr(node, 'internal_client'):
                 await node.internal_client.sendSchedule(self.schedule_seq,
                                                         self.schedule_nodes,
-                                                        self.schedule)
+                                                        self.schedule,
+                                                        self.config.frequency,
+                                                        self.config.bandwidth,
+                                                        self.scenario_start_time)
 
         # Now broadcast a few times for robustness
         for i in range(0, 10):
@@ -1047,7 +1053,10 @@ class Controller(object):
 
         await self.internal_client.sendSchedule(self.schedule_seq,
                                                 self.schedule_nodes,
-                                                self.schedule)
+                                                self.schedule,
+                                                self.config.frequency,
+                                                self.config.bandwidth,
+                                                self.scenario_start_time)
 
     async def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
         """Reconfigure bandwidth and frequency.
@@ -1249,3 +1258,50 @@ class Controller(object):
         resp.status.state = self.state
         resp.status.info = 'Environment updated'
         return resp
+
+    @handle('Message.status')
+    def handle_status(self, msg):
+        node_id = msg.status.radio_id
+
+        # Update node location
+        if node_id in self.nodes:
+            n = self.nodes[node_id]
+            loc = msg.status.loc
+
+            n.loc.lat = loc.location.latitude
+            n.loc.lon = loc.location.longitude
+            n.loc.alt = loc.location.elevation
+            n.loc.timestamp = loc.timestamp.get_timestamp()
+
+        # Update statistics
+        self.loop.create_task(self.updateFlowStatistics(node_id,
+                                                        msg.status.timestamp.get_timestamp(),
+                                                        msg.status.source_flows,
+                                                        msg.status.sink_flows))
+        self.loop.create_task(self.updateSpectrumStatistics(node_id,
+                                                            msg.status.timestamp.get_timestamp(),
+                                                            msg.status.spectrum_stats))
+
+    @handle('Message.schedule')
+    def handle_schedule(self, msg):
+        config = self.config
+        radio = self.radio
+
+        self.scenario_start_time = msg.schedule.scenario_start_time
+
+        if radio.node_id in msg.schedule.nodes:
+            if msg.schedule.bandwidth != config.bandwidth or \
+                msg.schedule.frequency != config.frequency:
+                logging.info('Not installing schedule with frequency parameters (bw={:g}; fc={:g}) different from ours (bw={:g}; fc={:g})'.\
+                    format(msg.schedule.bandwidth,
+                           msg.schedule.frequency,
+                           config.bandwidth,
+                           config.frequency))
+                return
+
+            nchannels = msg.schedule.nchannels
+            nslots = msg.schedule.nslots
+
+            sched = np.array(msg.schedule.schedule).reshape((nchannels, nslots))
+
+            self.loop.create_task(self.installMACSchedule(msg.schedule.seq, sched))

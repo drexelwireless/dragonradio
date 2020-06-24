@@ -29,82 +29,27 @@ internal.TimeStamp.get_timestamp = get_timestamp
 @handler(internal.Message)
 class InternalProtoServer(UDPProtoServer):
     def __init__(self,
-                 controller,
+                 handler,
                  loop=None,
-                 local_ip=None):
-        super().__init__(self, loop=loop)
+                 listen_ip=None):
+        super().__init__(handler, loop=loop)
 
-        self.loop = loop
-        self.controller = controller
-
-        self.start_server(internal.Message, local_ip, INTERNAL_PORT)
-
-    @handle('Message.status')
-    def handle_status(self, msg):
-        node_id = msg.status.radio_id
-
-        # Update node location
-        if node_id in self.controller.nodes:
-            n = self.controller.nodes[node_id]
-            loc = msg.status.loc
-
-            n.loc.lat = loc.location.latitude
-            n.loc.lon = loc.location.longitude
-            n.loc.alt = loc.location.elevation
-            n.loc.timestamp = loc.timestamp.get_timestamp()
-
-        # Update statistics
-        self.loop.create_task(self.controller.updateFlowStatistics(node_id,
-                                                                   msg.status.timestamp.get_timestamp(),
-                                                                   msg.status.source_flows,
-                                                                   msg.status.sink_flows))
-        self.loop.create_task(self.controller.updateSpectrumStatistics(node_id,
-                                                                       msg.status.timestamp.get_timestamp(),
-                                                                       msg.status.spectrum_stats))
-
-    @handle('Message.schedule')
-    def handle_schedule(self, msg):
-        config = self.controller.config
-        radio = self.controller.radio
-
-        self.controller.scenario_start_time = msg.schedule.scenario_start_time
-
-        if radio.node_id in msg.schedule.nodes:
-            if msg.schedule.bandwidth != config.bandwidth or \
-                msg.schedule.frequency != config.frequency:
-                logging.info('Not installing schedule with frequency parameters (bw={:g}; fc={:g}) different from ours (bw={:g}; fc={:g})'.\
-                    format(msg.schedule.bandwidth,
-                           msg.schedule.frequency,
-                           config.bandwidth,
-                           config.frequency))
-                return
-
-            nchannels = msg.schedule.nchannels
-            nslots = msg.schedule.nslots
-
-            sched = np.array(msg.schedule.schedule).reshape((nchannels, nslots))
-
-            self.loop.create_task(self.controller.installMACSchedule(msg.schedule.seq, sched))
+        self.start_server(internal.Message, listen_ip, INTERNAL_PORT)
 
 class InternalProtoClient(UDPProtoClient):
     def __init__(self,
                  controller,
-                 loop=None,
-                 server_host=None):
-        UDPProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=INTERNAL_PORT)
+                 server_host=None,
+                 **kwargs):
+        UDPProtoClient.__init__(self, server_host=server_host, server_port=INTERNAL_PORT, **kwargs)
 
-        self.loop = loop
         self.controller = controller
         self.server_host = server_host
 
         self.open()
 
     @send(internal.Message)
-    async def sendStatus(self, msg, sources, sinks, spectrum):
-        me = self.controller.thisNode()
-
-        radio = self.controller.radio
-
+    async def sendStatus(self, msg, me, sources, sinks, spectrum):
         msg.status.radio_id = me.id
         msg.status.timestamp.set_timestamp(time.time())
         msg.status.loc.location.latitude = me.loc.lat
@@ -118,14 +63,12 @@ class InternalProtoClient(UDPProtoClient):
         logging.debug("Sending status %s", msg)
 
     @send(internal.Message)
-    async def sendSchedule(self, msg, seq, nodes, sched):
-        config = self.controller.config
-
+    async def sendSchedule(self, msg, seq, nodes, sched, fc, bw, start_time):
         (nchannels, nslots) = sched.shape
 
-        msg.schedule.frequency = config.frequency
-        msg.schedule.bandwidth = config.bandwidth
-        msg.schedule.scenario_start_time = self.controller.scenario_start_time
+        msg.schedule.frequency = fc
+        msg.schedule.bandwidth = bw
+        msg.schedule.scenario_start_time = start_time
         msg.schedule.seq = seq
         msg.schedule.nchannels = nchannels
         msg.schedule.nslots = nslots
