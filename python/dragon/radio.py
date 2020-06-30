@@ -1024,41 +1024,42 @@ class Radio(object):
     def setChannels(self, channels):
         """Set current channels.
 
-        This function will also configure the RX and TX rates necessary for the
-        channels.
+        This function will configure the necessary RX and TX rates and
+        initialize the synthesizer and channelizer.
         """
         config = self.config
 
         self.channels = channels[:config.max_channels]
 
         #
-        # Set RX and TX rates
+        # Initialize channelizer
         #
         self.setRXRate(self.bandwidth)
 
-        if config.tx_upsample:
-            self.setTXRate(self.bandwidth)
-        else:
-            self.setTXRate(self.channels[self.tx_channel_idx].bw)
-
-        #
-        # Set channelizer and synthesizer channels and filters
-        #
-
-        # We need to do this *after* setting the USRP's TX and RX rates, because
-        # these rates are used to determine filter parameters
+        # We need to do this *after* setting the RX rate because it is used to
+        # determine filter parameters
         self.channelizer.channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in self.channels])
 
+        #
+        # Initialize synthesizer
+        #
         if config.tx_upsample:
-            self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in self.channels])
+            self.setTXRate(self.bandwidth)
+            self.setSynthesizerChannels(self.channels)
         else:
-            self.setSynthesizerTXChannel(self.channels[self.tx_channel_idx])
+            self.setTXChannel(self.tx_channel_idx)
 
         #
         # Reconfigure the MAC
         #
         if self.mac is not None:
             self.mac.reconfigure()
+
+    def setSynthesizerChannels(self, channels):
+        """Set synthesizer's channels."""
+        config = self.config
+
+        self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in channels])
 
         #
         # Tell the MAC the minimum number of samples in a slot
@@ -1130,7 +1131,7 @@ class Radio(object):
         logging.info("Setting TX frequency offset to %g", channel.fc)
         self.usrp.tx_frequency = self.frequency + channel.fc
 
-        self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in [Channel(0, channel.bw)]])
+        self.setSynthesizerChannels([Channel(0, channel.bw)])
 
     def setTXChannel(self, channel_idx):
         """Set the transmission channel.
