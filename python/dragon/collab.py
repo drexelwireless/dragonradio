@@ -19,6 +19,12 @@ CIL_VERSION = (3, 6, 0)
 
 MAX_LOCATION_AGE = 45
 
+MAX_SPECTRUM_USAGE_UPDATE_PERIOD = 30.5
+"""Maximum time allowed between spectrum updates"""
+
+MIN_SPECTRUM_USAGE_UPDATE_PERIOD = 0.5
+"""Minimum time allowed between spectrum updates"""
+
 #
 # Monkey patch Timestamp class to support setting timestamps using
 # floating-point seconds.
@@ -323,27 +329,40 @@ class CILServer(object):
         # Average load for last sample period
         last_avg_load = 0
 
+        # Timestamp of last spectrum update
+        timestamp = None
+
         while not self.done:
             try:
                 if self.scenario_started:
-                    now = time.time()
+                    timestamp = time.time()
 
                     voxels = await self.getHistoricalSpectrumUsage()
-                    voxels += await self.getPredictedSpectrumUsage(now)
+                    voxels += await self.getPredictedSpectrumUsage(timestamp)
 
                     # Send spectrum usage to all peers
                     if len(voxels) != 0:
                         logging.info('CIL: sending spectrum usage')
                         for ip, p in self.collab_peers.items():
                             try:
-                                asyncio.ensure_future(p.spectrum_usage(voxels, timestamp=now), loop=self.loop)
+                                asyncio.ensure_future(p.spectrum_usage(voxels, timestamp=timestamp), loop=self.loop)
                             except:
                                 logger.exception("spectrum_usage")
 
                 # Wait for either a spectrum update event or for the load check
                 # period
-                if await event_wait(self.collab_spectrum_update_event, config.spectrum_usage_update_period):
-                    self.collab_spectrum_update_event.clear()
+                delta = config.spectrum_usage_update_period
+
+                while not self.done:
+                    if await event_wait(self.collab_spectrum_update_event, delta):
+                        self.collab_spectrum_update_event.clear()
+
+                    now = time.time()
+
+                    if timestamp and now - timestamp < MIN_SPECTRUM_USAGE_UPDATE_PERIOD:
+                        delta = timestamp + 2*MIN_SPECTRUM_USAGE_UPDATE_PERIOD - now
+                    else:
+                        break
             except CancelledError:
                 return
             except:
