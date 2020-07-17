@@ -176,6 +176,9 @@ class ProtobufProtocol(asyncio.Protocol):
         self.connected_event = asyncio.Event()
         """Event set when connection is made"""
 
+        self.server_task = None
+        """Server loop task"""
+
         self.transport = None
         """Transport associated with protocol"""
 
@@ -193,11 +196,12 @@ class ProtobufProtocol(asyncio.Protocol):
         self.connected_event.set()
 
         if self.cls:
-            self.loop.create_task(self.server_loop())
+            self.server_task = self.loop.create_task(self.server_loop())
 
     def connection_lost(self, exc):
         self.connected_event.clear()
         self.transport = None
+        self.server_task.cancel()
 
     def data_received(self, data):
         async def f():
@@ -264,7 +268,7 @@ class TCPProtoServer(object):
 
     def start_server(self, cls, listen_ip, listen_port):
         """Start a protobuf TCP server"""
-        self.loop.create_task(self.server_loop(cls, listen_ip, listen_port))
+        return self.loop.create_task(self.server_loop(cls, listen_ip, listen_port))
 
     async def server_loop(self, cls, listen_ip, listen_port):
         while True:
@@ -400,7 +404,7 @@ class UDPProtoServer(object):
 
     def start_server(self, cls, listen_ip, listen_port):
         """Start a protobuf UDP server"""
-        self.loop.create_task(self.server_loop(cls, listen_ip, listen_port))
+        return self.loop.create_task(self.server_loop(cls, listen_ip, listen_port))
 
     async def server_loop(self, cls, listen_ip, listen_port):
         await self.loop.create_datagram_endpoint(partial(ProtobufDatagramProtocol,

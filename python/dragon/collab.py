@@ -228,11 +228,16 @@ class CILServer(object):
 
         # Leave the collaboration network
         if self.registration_nonce:
-            logger.info('Leaving collaboration network...')
+            logger.info('Leaving collaboration network')
             try:
                 await self.registration_client.leave(self.registration_nonce)
             except:
                 logger.exception('Could not gracefully terminate collaboration agent')
+
+        # Close collaboration clients
+        logger.info('Closing CIL peer connections')
+        for _, peer in self.collab_peers.items():
+            peer.close()
 
     def addPeer(self, peer_ip):
         self.collab_peers[peer_ip] = CILClient(self.collab_ip,

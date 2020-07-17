@@ -52,8 +52,8 @@ def configureLogging(config):
 
         return (fh, fout, ferr)
 
-def shutdown(controller, signum, frame):
-    asyncio.ensure_future(controller.stopRadio())
+def sighandler(controller, signum, frame):
+    asyncio.run_coroutine_threadsafe(controller.terminate(), controller.loop)
 
 def run(config):
     # Configure logging
@@ -63,7 +63,8 @@ def run(config):
     controller = Controller(config)
 
     if config.foreground:
-        signal.signal(signal.SIGINT, partial(shutdown, controller))
+        signal.signal(signal.SIGINT, partial(sighandler, controller))
+        signal.signal(signal.SIGTERM, partial(sighandler, controller))
 
         controller.setupRadio(bootstrap=config.bootstrap)
     else:
@@ -76,8 +77,9 @@ def run(config):
                                   detach_process=True,
                                   prevent_core=False,
                                   pidfile=daemon.pidfile.TimeoutPIDLockFile(config.pidfile),
-                                  signal_map={signal.SIGTERM: partial(shutdown, controller),
-                                              signal.SIGTSTP: partial(shutdown, controller)}):
+                                  signal_map={ signal.SIGINT: partial(sighandler, controller)
+                                             , signal.SIGTERM: partial(sighandler, controller)
+                                             }):
             controller.setupRadio(bootstrap=config.bootstrap)
 
     return 0

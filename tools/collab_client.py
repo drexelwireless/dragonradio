@@ -80,16 +80,9 @@ class DummyController(CILServer):
             logger.info('Stopping collaboration server')
             await self.stopCollab()
 
-            # Cancel remaining tasks
-            logger.info('Cancelling remaining tasks')
-
-            tasks = list(asyncio.Task.all_tasks())
-            tasks.remove(asyncio.Task.current_task())
-
-            for task in tasks:
-                task.cancel()
-
-            await asyncio.gather(*tasks, return_exceptions=True)
+            # Stop gpsd client
+            logger.info('Stopping gpsd client')
+            await self.gpsd_client.stop()
 
             # Stop event loop
             logging.info('Stopping event loop')

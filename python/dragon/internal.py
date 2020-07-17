@@ -33,17 +33,18 @@ class InternalProtoServer(UDPProtoServer):
                  loop=None,
                  listen_ip=None):
         super().__init__(handler, loop=loop)
+        self.listen_ip = listen_ip
+        """IP address on which to listen"""
 
-        self.start_server(internal.Message, listen_ip, INTERNAL_PORT)
+    def start(self):
+        return self.start_server(internal.Message, self.listen_ip, INTERNAL_PORT)
 
 class InternalProtoClient(UDPProtoClient):
     def __init__(self,
-                 controller,
                  server_host=None,
                  **kwargs):
         UDPProtoClient.__init__(self, server_host=server_host, server_port=INTERNAL_PORT, **kwargs)
 
-        self.controller = controller
         self.server_host = server_host
 
         self.open()

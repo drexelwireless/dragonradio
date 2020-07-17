@@ -17,7 +17,7 @@ import sc2.cil_pb2 as cil
 
 import dragonradio
 
-from dragon.collab import RegistrationClient, CILClient, CILServer, ip_int_to_string
+from dragon.collab import RegistrationClient, CILClient, CILServer
 import dragon.collab
 from dragon.gpsd import GPSDClient, GPSLocation
 import dragon.internal
@@ -168,14 +168,26 @@ class Controller(CILServer):
         self.scoring_point_threshold = 0
         """Scoring point threshold"""
 
+        self.gpsd_client = None
+        """gpsd client"""
+
         self.remote_server = None
         """Remote protocol server"""
+
+        self.remote_server_task = None
+        """Remote protocol server task"""
 
         self.internal_server = None
         """Internal protocol server"""
 
+        self.internal_server_task = None
+        """Internal protocol server task"""
+
         self.internal_client = None
         """Internal protocol client"""
+
+        self.radio_tasks = []
+        """asyncio tasks"""
 
         # Provide default start time
         self.scenario_start_time = math.floor(time.time())
@@ -214,12 +226,10 @@ class Controller(CILServer):
         # *before* we daemonize, and loop isn't valid after we fork
         self.loop = asyncio.get_event_loop()
 
-        #
         # Create Event we can use to trigger TDMA scheduler
-        #
         self.tdma_reschedule = asyncio.Event()
 
-        # Set center frequency and bandwidth. For now, we just use 5MHz, centered
+        # Set center frequency and bandwidth.
         if hasattr(self.config, 'center_frequency'):
             self.config.frequency = self.config.center_frequency
         else:
@@ -236,7 +246,7 @@ class Controller(CILServer):
 
         # Log snapshots if requested
         if self.config.log_snapshots != 0:
-            self.loop.create_task(radio.snapshotLogger())
+            self.radio_tasks.append(self.loop.create_task(radio.snapshotLogger()))
 
         # Capture interfaces
         for iface in self.config.log_interfaces:
@@ -263,12 +273,12 @@ class Controller(CILServer):
         self.internal_server = InternalProtoServer(self,
                                                    loop=self.loop,
                                                    listen_ip='0.0.0.0')
+        self.internal_server_task = self.internal_server.start()
 
         # If we are the gateway, start an internal protocol client connected to
         # the broadcast address
         if self.is_gateway:
-            self.internal_client = InternalProtoClient(self,
-                                                       loop=self.loop,
+            self.internal_client = InternalProtoClient(loop=self.loop,
                                                        server_host=INTERNAL_BCAST_ADDR)
 
         # If we are the gateway, start the scorer
@@ -278,17 +288,13 @@ class Controller(CILServer):
             self.voxel_lock = asyncio.Lock()
 
         # Start status update
-        self.loop.create_task(self.updateStatus())
-
-        # XXX we need *some* task to be running or else we run_forever can't be
-        # stopped!
-        self.loop.create_task(self.dummy())
+        self.radio_tasks.append(self.loop.create_task(self.updateStatus()))
 
         # Start the RPC server
         self.remote_server = TCPProtoServer(self, loop=self.loop)
-        self.remote_server.start_server(remote.Request,
-                                        remote.REMOTE_HOST,
-                                        remote.REMOTE_PORT)
+        self.remote_server_task = self.remote_server.start_server(remote.Request,
+                                                                  remote.REMOTE_HOST,
+                                                                  remote.REMOTE_PORT)
 
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
@@ -300,7 +306,7 @@ class Controller(CILServer):
         try:
             self.loop.run_forever()
         finally:
-            logger.info('done running forever')
+            logger.info('Controller terminated')
             self.loop.close()
 
     async def startRadio(self, timestamp=time.time()):
@@ -319,18 +325,21 @@ class Controller(CILServer):
                 # Create ALOHA MAC for HELLO messages
                 self.radio.configureALOHA()
 
-                self.loop.create_task(self.discoverNeighbors())
-                self.loop.create_task(self.addDiscoveredNeighbors())
-                self.loop.create_task(self.synchronizeClock())
+                self.radio_tasks.append(self.loop.create_task(self.discoverNeighbors()))
+                self.radio_tasks.append(self.loop.create_task(self.addDiscoveredNeighbors()))
+                self.radio_tasks.append(self.loop.create_task(self.synchronizeClock()))
 
                 if self.is_gateway:
-                    self.loop.create_task(self.bootstrapNetwork())
-                    self.loop.create_task(self.distributeScheduleViaBroadcast())
+                    self.radio_tasks.append(self.loop.create_task(self.bootstrapNetwork()))
+                    self.radio_tasks.append(self.loop.create_task(self.distributeScheduleViaBroadcast()))
 
                 self.state = remote.ACTIVE
 
     async def stopRadio(self):
         if not self.done:
+            self.done = True
+            self.state = remote.STOPPING
+
             # Stop the collaboration server
             if self.collab_server:
                 try:
@@ -338,8 +347,32 @@ class Controller(CILServer):
                 except:
                     logger.exception('Could not gracefully terminate collaboration agent')
 
+            # Stop radio tasks
+            logger.info('Stopping radio tasks')
+            for task in self.radio_tasks:
+                task.cancel()
+
+            await asyncio.gather(*self.radio_tasks, return_exceptions=True)
+
+            # Stop internal protocol server
+            if self.internal_server_task:
+                logger.info('Stopping internal protocol server')
+                self.internal_server_task.cancel()
+                await asyncio.gather(self.internal_server_task, return_exceptions=True)
+
+            # Close internal protocol client
+            if self.internal_client:
+                logger.info('Stopping internal protocol client')
+                self.internal_client.close()
+
+            # Stop the gpsd client
+            if self.gpsd_client:
+                logger.info('Stopping gpsd client')
+                await self.gpsd_client.stop()
+
             # Dump score data if we are the gateway
             if self.is_gateway:
+                logger.info('Dumping final scoring data')
                 try:
                     # Dump reported scores
                     self.saveReportedMandatePerformance()
@@ -347,9 +380,6 @@ class Controller(CILServer):
                     logger.exception('Could not dump scoring data')
 
             with await self.radio.lock:
-                self.done = True
-                self.state = remote.STOPPING
-
                 # Stop dumpcap processes
                 for p in self.dumpcap_procs:
                     try:
@@ -381,30 +411,39 @@ class Controller(CILServer):
                 for node_id in list(self.nodes):
                     self.removeNode(node_id)
 
-                # Cancel all remaining tasks
-                logger.info('Cancelling remaining tasks')
+            # Update radio state to FINISHED
+            self.state = remote.FINISHED
+            logger.info('Radio stopped')
 
-                tasks = list(asyncio.Task.all_tasks())
-                tasks.remove(asyncio.Task.current_task())
+    async def terminate(self):
+        logger.debug('Terminating')
+        await self.stopRadio()
 
-                for task in tasks:
-                    task.cancel()
+        # Stop remote server
+        logger.debug('Stopping remote protocol server')
+        self.remote_server_task.cancel()
+        await asyncio.gather(self.remote_server_task, return_exceptions=True)
 
-                await asyncio.gather(*tasks, return_exceptions=True)
+        # Log unfinished tasks
+        tasks = list(asyncio.Task.all_tasks())
+        tasks.remove(asyncio.Task.current_task())
 
-                # Stop event loop
-                logging.info('Stopping event loop')
-                self.loop.stop()
+        unfinished_tasks = [t for t in tasks if not t.done()]
 
-                self.state = remote.FINISHED
-                logging.info('Shutdown complete.')
+        if len(unfinished_tasks) != 0:
+            logger.debug('Unfinished tasks: %s', unfinished_tasks)
 
-    async def dummy(self):
-        while True:
-            try:
-                await asyncio.sleep(1)
-            except CancelledError:
-                return
+            # Cancel unfinished tasks
+            logger.info('Cancelling unfinished tasks')
+
+            for task in unfinished_tasks:
+                pass #task.cancel()
+
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Stop event loop
+        logger.info('Stopping event loop')
+        self.loop.stop()
 
     def dumpcap(self, iface):
         if iface in netifaces.interfaces():
@@ -431,15 +470,13 @@ class Controller(CILServer):
             # If new node is a gateway, connect to it and start sending status
             # updates
             if self.radio.net.nodes[node_id].is_gateway:
-                self.internal_client = InternalProtoClient(self,
-                                                           loop=self.loop,
+                self.internal_client = InternalProtoClient(loop=self.loop,
                                                            server_host=internalNodeIP(node_id))
 
             # If we are the gateway, connect an internal protocol client to the
             # new node's server
             if self.is_gateway:
-                node.internal_client = InternalProtoClient(self,
-                                                           loop=self.loop,
+                node.internal_client = InternalProtoClient(loop=self.loop,
                                                            server_host=internalNodeIP(node_id))
 
             # If we are the gateway, update the schedule
@@ -1079,7 +1116,7 @@ class Controller(CILServer):
                 logging.exception("Error while logging network info")
 
             # Start the schedule creation task
-            self.loop.create_task(self.createSchedule())
+            self.radio_tasks.append(self.loop.create_task(self.createSchedule()))
 
             # Trigger TDMA scheduler
             self.tdma_reschedule.set()

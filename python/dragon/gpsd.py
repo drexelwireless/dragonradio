@@ -31,9 +31,13 @@ class GPSDClient:
         self.reader = None
         self.writer = None
 
-        loop.create_task(self.run())
+        self.gpsd_task = loop.create_task(self.run())
 
-    def close(self):
+    async def stop(self):
+        self.gpsd_task.cancel()
+
+        await self.gpsd_task
+
         if self.writer:
             self.writer.close()
             self.writer = None
@@ -54,38 +58,39 @@ class GPSDClient:
         self.writer.write(bytes(command, encoding='utf-8'))
 
     async def run(self):
-        try:
-            while True:
-                try:
-                    await self.connect()
-                    await self.watch(True)
+        wait_to_connect = False
 
-                    while True:
-                        raw = await self.reader.readline()
-                        data = json.loads(raw.decode(encoding='utf-8'))
-                        if data['class'] == 'TPV':
+        while True:
+            try:
+                if wait_to_connect:
+                    await asyncio.sleep(1)
+                    wait_to_connect = False
+
+                await self.connect()
+                await self.watch(True)
+
+                while True:
+                    raw = await self.reader.readline()
+                    data = json.loads(raw.decode(encoding='utf-8'))
+                    if data['class'] == 'TPV':
+                        t = time.time()
+
+                        if 'time' in data:
+                            dt = dateutil.parser.parse(data['time'])
+                            t = time.mktime(dt.timetuple())
+                        else:
                             t = time.time()
 
-                            if 'time' in data:
-                                dt = dateutil.parser.parse(data['time'])
-                                t = time.mktime(dt.timetuple())
-                            else:
-                                t = time.time()
-
-                            for attr in ['lat', 'lon', 'alt']:
-                                if attr in data:
-                                    setattr(self.loc, attr, data[attr])
-                                    self.loc.timestamp = t
-                except ConnectionError:
-                    #logger.debug('Connection error')
-                    await asyncio.sleep(1)
-                except json.decoder.JSONDecodeError:
-                    #logger.debug('JSON decoding error')
-                    await asyncio.sleep(1)
-                except CancelledError:
-                    break
-                except Exception as e:
-                    logger.exception('Could not obtain GPS location')
-                    break
-        except CancelledError:
-            return
+                        for attr in ['lat', 'lon', 'alt']:
+                            if attr in data:
+                                setattr(self.loc, attr, data[attr])
+                                self.loc.timestamp = t
+            except ConnectionError:
+                wait_to_connect = True
+            except json.decoder.JSONDecodeError:
+                wait_to_connect = True
+            except CancelledError:
+                return
+            except Exception as e:
+                logger.exception('Could not obtain GPS location')
+                break
