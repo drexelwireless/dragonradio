@@ -15,7 +15,7 @@ import zmq.asyncio
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), '../python'))
 
 from dragon.protobuf import *
-from dragon.collab import CollabAgent
+from dragon.collab import CILServer
 from dragon.gpsd import GPSDClient, GPSLocation
 
 class Node(object):
@@ -37,36 +37,59 @@ class DummyRadio(object):
 
         self.mac = None
 
-class DummyController(object):
+class DummyController(CILServer):
     def __init__(self, node_id, loop):
+        CILServer.__init__(self)
+
         node = Node(node_id)
+
+        self.loop = loop
+        """Our event loop"""
+
         self.radio = DummyRadio(node_id)
-        self.mandated_outcomes = {}
+        """Our Radio"""
+
         self.scenario_started = False
+        """Have we received mandates?"""
+
+        self.done = False
+        """Is the radio done?"""
 
         self.nodes = {node.id : node}
-        self.gpsd = GPSDClient(node.loc, loop=loop)
+        """Nodes in our network"""
+
+        self.gpsd_client = GPSDClient(node.loc, loop=loop)
+        """gpsd client"""
 
         self.config = SimpleNamespace()
+        self.config.collab_server_port = 5556
+        self.config.collab_client_port = 5557
+        self.config.collab_peer_port = 5558
         self.config.location_update_period = 15
         self.config.spectrum_usage_update_period = 5
         self.config.detailed_performance_update_period = 5
 
+    def stop(self):
+        self.loop.create_task(self._stop())
+
+    async def _stop(self):
+        if not self.done:
+            self.done = True
+
+            # Stop collaboration server
+            logger.info('Stopping collaboration server')
+            await self.stopCollab()
+
+            # Stop gpsd client
+            logger.info('Stopping gpsd client')
+            await self.gpsd_client.stop()
+
+            # Stop event loop
+            logging.info('Stopping event loop')
+            self.loop.stop()
+
     def getVoxels(self):
         return []
-
-def shutdown(loop, agent):
-    async def shutdownGracefully():
-        logging.info('Leaving collaboration network...')
-        await agent.shutdown()
-        logging.info('Shutting down...')
-        loop.stop()
-
-    logging.info('Cancelling tasks...')
-    for task in asyncio.Task.all_tasks():
-        task.cancel()
-    logging.info('Stopping loop...')
-    loop.create_task(shutdownGracefully())
 
 def main():
     parser = argparse.ArgumentParser(description='Run CIL client.',
@@ -99,19 +122,14 @@ def main():
 
     loop = asyncio.get_event_loop()
 
-    myip = netifaces.ifaddresses(args.iface)[netifaces.AF_INET][0]['addr']
-
     controller = DummyController(args.id, loop)
 
-    agent = CollabAgent(controller,
-                        loop=loop,
-                        local_ip=myip,
-                        server_host=args.server_ip,
-                        server_port=5556,
-                        client_port=5557,
-                        peer_port=5558)
+    controller.collab_ip = netifaces.ifaddresses(args.iface)[netifaces.AF_INET][0]['addr']
+    controller.config.collab_server_ip = args.server_ip
 
-    loop.add_signal_handler(signal.SIGINT, functools.partial(shutdown, loop, agent))
+    controller.startCollab()
+
+    loop.add_signal_handler(signal.SIGINT, controller.stop)
 
     loop.run_forever()
     loop.close()

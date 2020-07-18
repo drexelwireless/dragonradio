@@ -13,12 +13,16 @@ import subprocess
 import sys
 import time
 
+import sc2.cil_pb2 as cil
+
 import dragonradio
 
-from dragon.collab import CollabAgent
+from dragon.collab import RegistrationClient, CILClient, CILServer
+import dragon.collab
 from dragon.gpsd import GPSDClient, GPSLocation
 import dragon.internal
 from dragon.internal import InternalProtoClient, InternalProtoServer, mkFlowStats, mkSpectrumStats
+import dragon.internal as internal
 from dragon.protobuf import *
 import dragon.radio
 import dragon.remote as remote
@@ -59,14 +63,41 @@ class Voxel(object):
     def __str__(self):
         return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
 
+    def toCILVoxel(self, start, end, rx_gain, tx_gain, measured):
+        usage = cil.SpectrumVoxelUsage()
+
+        usage.spectrum_voxel.freq_start = self.f_start
+        usage.spectrum_voxel.freq_end = self.f_end
+        usage.spectrum_voxel.duty_cycle.value = self.duty_cycle
+        usage.spectrum_voxel.time_start.set_timestamp(start)
+        usage.spectrum_voxel.time_end.set_timestamp(end)
+
+        usage.transmitter_info.radio_id = self.tx
+        usage.transmitter_info.power_db.value = tx_gain
+        usage.transmitter_info.mac_cca = False
+
+        usage.measured_data = measured
+
+        # Construct list of receivers for this voxel
+        receivers = [dragon.collab.mkReceiverInfo(radio_id, rx_gain) for radio_id in self.rx]
+        usage.receiver_info.extend(receivers)
+
+        return usage
+
 @handler(remote.Request)
-class Controller(TCPProtoServer):
+@handler(internal.Message)
+class Controller(CILServer):
     def __init__(self, config):
+        CILServer.__init__(self)
+
         self.config = config
         """Our Config"""
 
         self.radio = None
         """Our Radio"""
+
+        self.dumpcap_tasks = []
+        """dumpcap tasks"""
 
         self.dumpcap_procs = []
         """dumpcap procs we've started"""
@@ -140,11 +171,26 @@ class Controller(TCPProtoServer):
         self.scoring_point_threshold = 0
         """Scoring point threshold"""
 
+        self.gpsd_client = None
+        """gpsd client"""
+
+        self.remote_server = None
+        """Remote protocol server"""
+
+        self.remote_server_task = None
+        """Remote protocol server task"""
+
         self.internal_server = None
         """Internal protocol server"""
 
+        self.internal_server_task = None
+        """Internal protocol server task"""
+
         self.internal_client = None
         """Internal protocol client"""
+
+        self.radio_tasks = []
+        """asyncio tasks"""
 
         # Provide default start time
         self.scenario_start_time = math.floor(time.time())
@@ -183,12 +229,10 @@ class Controller(TCPProtoServer):
         # *before* we daemonize, and loop isn't valid after we fork
         self.loop = asyncio.get_event_loop()
 
-        #
         # Create Event we can use to trigger TDMA scheduler
-        #
         self.tdma_reschedule = asyncio.Event()
 
-        # Set center frequency and bandwidth. For now, we just use 5MHz, centered
+        # Set center frequency and bandwidth.
         if hasattr(self.config, 'center_frequency'):
             self.config.frequency = self.config.center_frequency
         else:
@@ -205,7 +249,7 @@ class Controller(TCPProtoServer):
 
         # Log snapshots if requested
         if self.config.log_snapshots != 0:
-            self.loop.create_task(radio.snapshotLogger())
+            self.radio_tasks.append(self.loop.create_task(radio.snapshotLogger()))
 
         # Capture interfaces
         for iface in self.config.log_interfaces:
@@ -219,22 +263,10 @@ class Controller(TCPProtoServer):
         self.gpsd_client = GPSDClient(self.nodes[radio.node_id].loc, loop=self.loop)
 
         # See if we are a gateway, and if so, start the collaboration agent
-        self.collab_agent = None
-
         if self.config.collab_iface in netifaces.interfaces() and self.config.collab_server_ip != None:
             radio.net.nodes[radio.node_id].is_gateway = True
-            collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
-
-            try:
-                self.collab_agent = CollabAgent(self,
-                                                loop=self.loop,
-                                                local_ip=collab_ip,
-                                                server_host=self.config.collab_server_ip,
-                                                server_port=self.config.collab_server_port,
-                                                client_port=self.config.collab_client_port,
-                                                peer_port=self.config.collab_peer_port)
-            except:
-                logger.exception('Could not create collaboration agent')
+            self.collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
+            self.startCollab()
 
         # We might also be forced to be the gateway...
         if self.config.force_gateway:
@@ -243,13 +275,13 @@ class Controller(TCPProtoServer):
         # Start the internal protocol server
         self.internal_server = InternalProtoServer(self,
                                                    loop=self.loop,
-                                                   local_ip='0.0.0.0')
+                                                   listen_ip='0.0.0.0')
+        self.internal_server_task = self.internal_server.start()
 
         # If we are the gateway, start an internal protocol client connected to
         # the broadcast address
         if self.is_gateway:
-            self.internal_client = InternalProtoClient(self,
-                                                       loop=self.loop,
+            self.internal_client = InternalProtoClient(loop=self.loop,
                                                        server_host=INTERNAL_BCAST_ADDR)
 
         # If we are the gateway, start the scorer
@@ -259,15 +291,13 @@ class Controller(TCPProtoServer):
             self.voxel_lock = asyncio.Lock()
 
         # Start status update
-        self.loop.create_task(self.updateStatus())
-
-        # XXX we need *some* task to be running or else we run_forever can't be
-        # stopped!
-        self.loop.create_task(self.dummy())
+        self.radio_tasks.append(self.loop.create_task(self.updateStatus()))
 
         # Start the RPC server
-        self.remote_server = self.startServer(remote.Request, remote.REMOTE_HOST, remote.REMOTE_PORT)
-        self.loop.create_task(self.remote_server)
+        self.remote_server = TCPProtoServer(self, loop=self.loop)
+        self.remote_server_task = self.remote_server.start_server(remote.Request,
+                                                                  remote.REMOTE_HOST,
+                                                                  remote.REMOTE_PORT)
 
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
@@ -279,7 +309,7 @@ class Controller(TCPProtoServer):
         try:
             self.loop.run_forever()
         finally:
-            logger.info('done running forever')
+            logger.info('Controller terminated')
             self.loop.close()
 
     async def startRadio(self, timestamp=time.time()):
@@ -298,114 +328,149 @@ class Controller(TCPProtoServer):
                 # Create ALOHA MAC for HELLO messages
                 self.radio.configureALOHA()
 
-                self.loop.create_task(self.discoverNeighbors())
-                self.loop.create_task(self.addDiscoveredNeighbors())
-                self.loop.create_task(self.synchronizeClock())
+                self.radio_tasks.append(self.loop.create_task(self.discoverNeighbors()))
+                self.radio_tasks.append(self.loop.create_task(self.addDiscoveredNeighbors()))
+                self.radio_tasks.append(self.loop.create_task(self.synchronizeClock()))
 
                 if self.is_gateway:
-                    self.loop.create_task(self.bootstrapNetwork())
-                    self.loop.create_task(self.distributeScheduleViaBroadcast())
+                    self.radio_tasks.append(self.loop.create_task(self.bootstrapNetwork()))
+                    self.radio_tasks.append(self.loop.create_task(self.distributeScheduleViaBroadcast()))
 
                 self.state = remote.ACTIVE
 
     async def stopRadio(self):
         if not self.done:
-            # Stop the collaboration agent
-            if self.collab_agent:
+            self.done = True
+            self.state = remote.STOPPING
+
+            # Stop the collaboration server
+            if self.collab_server:
                 try:
-                    self.collab_agent.stop()
+                    await self.stopCollab()
                 except:
                     logger.exception('Could not gracefully terminate collaboration agent')
 
+            # Stop radio tasks
+            logger.info('Stopping radio tasks')
+            for task in self.radio_tasks:
+                task.cancel()
+
+            await asyncio.gather(*self.radio_tasks, return_exceptions=True)
+
+            # Stop internal protocol server
+            if self.internal_server_task:
+                logger.info('Stopping internal protocol server')
+                self.internal_server_task.cancel()
+                await asyncio.gather(self.internal_server_task, return_exceptions=True)
+
+            # Close internal protocol client
+            if self.internal_client:
+                logger.info('Stopping internal protocol client')
+                self.internal_client.close()
+
+            # Stop the gpsd client
+            if self.gpsd_client:
+                logger.info('Stopping gpsd client')
+                await self.gpsd_client.stop()
+
             # Dump score data if we are the gateway
             if self.is_gateway:
+                logger.info('Dumping final scoring data')
                 try:
                     # Dump reported scores
                     self.saveReportedMandatePerformance()
                 except:
                     logger.exception('Could not dump scoring data')
 
+            # Terminate any packet captures
+            await self.cleanupDumpcap()
+
             with await self.radio.lock:
-                self.done = True
-                self.state = remote.STOPPING
-
-                #
-                # Stop dumpcap processes
-                #
-                for p in self.dumpcap_procs:
-                    try:
-                        p.terminate()
-                        p.wait()
-                    except:
-                        logger.exception('Could not terminate PID %d', p.pid)
-
-                #
-                # Compress pcap files
-                #
-                if self.config.compress_interface_logs:
-                    # Compressing large interface logs takes too long
-                    xzprocs = []
-                    for iface in self.config.log_interfaces:
-                        if iface in netifaces.interfaces():
-                            try:
-                                p = subprocess.Popen('xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
-                                                     stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
-                                xzprocs.append(p)
-                            except:
-                                logging.exception('Could not xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir))
-
-                    for p in xzprocs:
-                        try:
-                            p.wait()
-                        except:
-                            logger.exception('Failed to wait on xz PID %d', p.pid)
-
-                #
                 # Remove all nodes
-                #
                 for node_id in list(self.nodes):
                     self.removeNode(node_id)
 
-                #
-                # Leave the collaboration network
-                #
-                if self.collab_agent:
-                    logger.info('Leaving collaboration network...')
-                    try:
-                        await self.collab_agent.shutdown()
-                    except:
-                        logger.exception('Could not gracefully terminate collaboration agent')
+            # Update radio state to FINISHED
+            self.state = remote.FINISHED
+            logger.info('Radio stopped')
 
-                #
-                # Cancel all remaining tasks
-                #
-                tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
+    async def terminate(self):
+        logger.debug('Terminating')
+        await self.stopRadio()
 
-                logger.info('Cancelling tasks...')
-                for task in tasks:
-                    task.cancel()
-                    await task
+        # Stop remote server
+        logger.debug('Stopping remote protocol server')
+        self.remote_server_task.cancel()
+        await asyncio.gather(self.remote_server_task, return_exceptions=True)
 
-                #
-                # Stop the event loop
-                #
-                logger.info('Terminating event loop...')
-                self.loop.stop()
-                self.state = remote.FINISHED
-                logging.info('Shutdown complete.')
+        # Log unfinished tasks
+        tasks = list(asyncio.Task.all_tasks())
+        tasks.remove(asyncio.Task.current_task())
 
-    async def dummy(self):
-        while True:
-            try:
-                await asyncio.sleep(1)
-            except CancelledError:
-                return
+        unfinished_tasks = [t for t in tasks if not t.done()]
+
+        if len(unfinished_tasks) != 0:
+            logger.debug('Unfinished tasks: %s', unfinished_tasks)
+
+            # Cancel unfinished tasks
+            logger.info('Cancelling unfinished tasks')
+
+            for task in unfinished_tasks:
+                pass #task.cancel()
+
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Stop event loop
+        logger.info('Stopping event loop')
+        self.loop.stop()
 
     def dumpcap(self, iface):
         if iface in netifaces.interfaces():
-            p = subprocess.Popen('dumpcap -i {iface} -q -w {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
-                                 stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
-            self.dumpcap_procs.append(p)
+            async def f(controller):
+                p = await asyncio.create_subprocess_exec('dumpcap', '-i', iface, '-q', '-w', '{logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                    stdin=None, stdout=None, stderr=None, loop=self.loop)
+                controller.dumpcap_procs.append(p)
+
+            self.dumpcap_tasks.append(self.loop.create_task(f(self)))
+
+    async def cleanupDumpcap(self):
+        if len(self.dumpcap_tasks) != 0:
+            logger.info('Terminating pcap captures')
+
+            # Wait for dumpcap processes to be created
+            await asyncio.gather(*self.dumpcap_tasks, return_exceptions=True)
+
+            # Terminate dumpcap processes. For some reason the TERM signal
+            # doesn't always cause dumpcap to terminate, so we keep trying until
+            # it works
+            while True:
+                for p in self.dumpcap_procs:
+                    try:
+                        p.terminate()
+                    except:
+                        logger.exception('Could not terminate PID %d', p.pid)
+
+                _done, pending = await asyncio.wait([p.communicate() for p in self.dumpcap_procs],
+                    timeout=1)
+
+                if len(pending) == 0:
+                    break
+
+            # Compress pcap files
+            if self.config.compress_interface_logs:
+                # Compressing large interface logs takes too long
+                xzprocs = []
+
+                for iface in self.config.log_interfaces:
+                    if iface in netifaces.interfaces():
+                        try:
+                            p = await asyncio.create_subprocess_exec('xz', '{logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                                stdin=None, stdout=None, stderr=None, loop=self.loop)
+                            xzprocs.append(p)
+                        except:
+                            logging.exception('Could not xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir))
+
+                await asyncio.gather(*[p.communicate() for p in xzprocs])
 
     def thisNode(self):
         return self.nodes[self.radio.node_id]
@@ -426,15 +491,13 @@ class Controller(TCPProtoServer):
             # If new node is a gateway, connect to it and start sending status
             # updates
             if self.radio.net.nodes[node_id].is_gateway:
-                self.internal_client = InternalProtoClient(self,
-                                                           loop=self.loop,
+                self.internal_client = InternalProtoClient(loop=self.loop,
                                                            server_host=internalNodeIP(node_id))
 
             # If we are the gateway, connect an internal protocol client to the
             # new node's server
             if self.is_gateway:
-                node.internal_client = InternalProtoClient(self,
-                                                           loop=self.loop,
+                node.internal_client = InternalProtoClient(loop=self.loop,
                                                            server_host=internalNodeIP(node_id))
 
             # If we are the gateway, update the schedule
@@ -534,23 +597,6 @@ class Controller(TCPProtoServer):
                 self.schedule = sched
 
             self.schedule_seq = seq
-
-    async def getHistoricalSpectrumUsage(self):
-        with await self.voxel_lock:
-            usage = self.historical_voxel_usage
-            self.historical_voxel_usage = []
-
-        return usage
-
-    async def getPredictedSpectrumUsage(self):
-        mac = self.radio.mac
-
-        if mac is None:
-            return []
-        elif isinstance(mac, dragonradio.SlottedALOHA):
-            return await self.alohaToVoxels()
-        else:
-            return await self.scheduleToVoxels(self.schedule)
 
     async def updateVoxelUsage(self, vox):
         """Get voxel usage
@@ -791,7 +837,8 @@ class Controller(TCPProtoServer):
                                                             spectrum)
                     # Otherwise, send statistics to the gateway
                     elif self.internal_client is not None:
-                        await self.internal_client.sendStatus(sources,
+                        await self.internal_client.sendStatus(self.thisNode(),
+                                                              sources,
                                                               sinks,
                                                               spectrum)
 
@@ -1016,7 +1063,10 @@ class Controller(TCPProtoServer):
             if hasattr(node, 'internal_client'):
                 await node.internal_client.sendSchedule(self.schedule_seq,
                                                         self.schedule_nodes,
-                                                        self.schedule)
+                                                        self.schedule,
+                                                        self.config.frequency,
+                                                        self.config.bandwidth,
+                                                        self.scenario_start_time)
 
         # Now broadcast a few times for robustness
         for i in range(0, 10):
@@ -1042,7 +1092,10 @@ class Controller(TCPProtoServer):
 
         await self.internal_client.sendSchedule(self.schedule_seq,
                                                 self.schedule_nodes,
-                                                self.schedule)
+                                                self.schedule,
+                                                self.config.frequency,
+                                                self.config.bandwidth,
+                                                self.scenario_start_time)
 
     async def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
         """Reconfigure bandwidth and frequency.
@@ -1054,8 +1107,8 @@ class Controller(TCPProtoServer):
                 old_bandwidth = self.radio.bandwidth
 
                 self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
-                if self.collab_agent:
-                    self.collab_agent.push_spectrum_usage()
+                if self.collab_server:
+                    self.push_spectrum_usage()
 
                 # If only the center frequency has changed, keep the old
                 # schedule. Otherwise create a new schedule.
@@ -1084,7 +1137,7 @@ class Controller(TCPProtoServer):
                 logging.exception("Error while logging network info")
 
             # Start the schedule creation task
-            self.loop.create_task(self.createSchedule())
+            self.radio_tasks.append(self.loop.create_task(self.createSchedule()))
 
             # Trigger TDMA scheduler
             self.tdma_reschedule.set()
@@ -1139,6 +1192,37 @@ class Controller(TCPProtoServer):
                 radio.synchronizeClock()
             except CancelledError:
                 return
+
+    async def getHistoricalSpectrumUsage(self):
+        """Get historical voxel usage from controller and convert it into CIL
+        voxels for spectrum usage report"""
+        with await self.voxel_lock:
+            voxels = self.historical_voxel_usage
+            self.historical_voxel_usage = []
+
+        rx_gain = self.radio.usrp.rx_gain
+        tx_gain = self.radio.usrp.tx_gain
+
+        return [vox.toCILVoxel(start, end, rx_gain, tx_gain, True) for (start, end, vox) in voxels]
+
+    async def getPredictedSpectrumUsage(self, when):
+        """Get predicated voxel usage from controller and convert it into CIL
+        voxels for spectrum usage report"""
+        mac = self.radio.mac
+
+        if mac is None:
+            voxels = []
+        elif isinstance(mac, dragonradio.SlottedALOHA):
+            voxels = await self.alohaToVoxels()
+        else:
+            voxels = await self.scheduleToVoxels(self.schedule)
+
+        start = when
+        end = when + self.config.spec_future_period
+        rx_gain = self.radio.usrp.rx_gain
+        tx_gain = self.radio.usrp.tx_gain
+
+        return [vox.toCILVoxel(start, end, rx_gain, tx_gain, False) for vox in voxels]
 
     @handle('Request.radio_command')
     def radioCommand(self, req):
@@ -1244,3 +1328,50 @@ class Controller(TCPProtoServer):
         resp.status.state = self.state
         resp.status.info = 'Environment updated'
         return resp
+
+    @handle('Message.status')
+    def handle_status(self, msg):
+        node_id = msg.status.radio_id
+
+        # Update node location
+        if node_id in self.nodes:
+            n = self.nodes[node_id]
+            loc = msg.status.loc
+
+            n.loc.lat = loc.location.latitude
+            n.loc.lon = loc.location.longitude
+            n.loc.alt = loc.location.elevation
+            n.loc.timestamp = loc.timestamp.get_timestamp()
+
+        # Update statistics
+        self.loop.create_task(self.updateFlowStatistics(node_id,
+                                                        msg.status.timestamp.get_timestamp(),
+                                                        msg.status.source_flows,
+                                                        msg.status.sink_flows))
+        self.loop.create_task(self.updateSpectrumStatistics(node_id,
+                                                            msg.status.timestamp.get_timestamp(),
+                                                            msg.status.spectrum_stats))
+
+    @handle('Message.schedule')
+    def handle_schedule(self, msg):
+        config = self.config
+        radio = self.radio
+
+        self.scenario_start_time = msg.schedule.scenario_start_time
+
+        if radio.node_id in msg.schedule.nodes:
+            if msg.schedule.bandwidth != config.bandwidth or \
+                msg.schedule.frequency != config.frequency:
+                logging.info('Not installing schedule with frequency parameters (bw={:g}; fc={:g}) different from ours (bw={:g}; fc={:g})'.\
+                    format(msg.schedule.bandwidth,
+                           msg.schedule.frequency,
+                           config.bandwidth,
+                           config.frequency))
+                return
+
+            nchannels = msg.schedule.nchannels
+            nslots = msg.schedule.nslots
+
+            sched = np.array(msg.schedule.schedule).reshape((nchannels, nslots))
+
+            self.loop.create_task(self.installMACSchedule(msg.schedule.seq, sched))

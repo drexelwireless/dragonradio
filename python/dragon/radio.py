@@ -393,6 +393,9 @@ class Config(object):
         parser.add_argument('--log-iq', action=ExtendAction, const=['log_slots', 'log_recv_data', 'log_sent_data'],
                             dest='log_sources',
                             help='log IQ data')
+        parser.add_argument('--log-iface', action='append',
+                            dest='log_interfaces',
+                            help='log packets received on interface')
         parser.add_argument('--log-invalid-headers', action='store_const', const=True,
                             dest='log_invalid_headers',
                             help='log packets with invalid headers')
@@ -402,6 +405,9 @@ class Config(object):
         parser.add_argument('--log-protobuf', action='store_const', const=True,
                             dest='log_protobuf',
                             help='log protobuf')
+        parser.add_argument('--compress-iface-logs', action='store_const', const=True,
+                            dest='compress_interface_logs',
+                            help='compress interface logs')
 
         # USRP settings
         parser.add_argument('--addr', action='store',

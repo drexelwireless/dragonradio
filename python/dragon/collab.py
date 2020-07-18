@@ -19,6 +19,12 @@ CIL_VERSION = (3, 6, 0)
 
 MAX_LOCATION_AGE = 45
 
+MAX_SPECTRUM_USAGE_UPDATE_PERIOD = 30.5
+"""Maximum time allowed between spectrum updates"""
+
+MIN_SPECTRUM_USAGE_UPDATE_PERIOD = 0.5
+"""Minimum time allowed between spectrum updates"""
+
 #
 # Monkey patch Timestamp class to support setting timestamps using
 # floating-point seconds.
@@ -58,6 +64,12 @@ async def event_wait(evt, timeout):
 
     return evt.is_set()
 
+def mkReceiverInfo(radio_id, rx_gain):
+    rx_info = cil.ReceiverInfo()
+    rx_info.radio_id = radio_id
+    rx_info.power_db.value = rx_gain
+    return rx_info
+
 def sendCIL(f):
     """
     Automatically add support to a function for constructing and sending a
@@ -85,14 +97,29 @@ def sendCIL(f):
         await self.send(msg)
     return wrapper
 
-class Peer(ZMQProtoClient):
-    def __init__(self, collab_agent, peer_host, peer_port):
-        ZMQProtoClient.__init__(self,
-                                loop=collab_agent.loop,
-                                server_host=peer_host,
-                                server_port=peer_port)
-        self.collab_agent = collab_agent
-        self.local_ip = collab_agent.local_ip
+class RegistrationClient(ZMQProtoClient):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @send(registration.TalkToServer)
+    async def register(self, msg, local_ip):
+        msg.register.my_ip_address = ip_string_to_int(local_ip)
+
+    @send(registration.TalkToServer)
+    async def keepalive(self, msg, nonce):
+        msg.keepalive.my_nonce = nonce
+
+    @send(registration.TalkToServer)
+    async def leave(self, msg, nonce):
+        msg.leave.my_nonce = nonce
+
+class CILClient(ZMQProtoClient):
+    """A CIL protocol client. Used to communicate with CIL peers."""
+    def __init__(self, local_ip, peer_host, peer_port, **kwargs):
+        super().__init__(server_host=peer_host,
+                         server_port=peer_port,
+                         **kwargs)
+        self.local_ip = local_ip
         self.msg_count = 1
         self.open()
         self.loop.create_task(self.hello())
@@ -114,13 +141,14 @@ class Peer(ZMQProtoClient):
     @sendCIL
     async def detailed_performance(self,
                                    msg,
-                                   controller,
                                    performance,
+                                   timestamp,
                                    mandates_achieved,
-                                   total_score_achieved):
+                                   total_score_achieved,
+                                   scoring_point_threshold):
         msg.detailed_performance.mandate_count = len(performance)
-        if hasattr(controller, 'flow_mandates_timestamp') and controller.flow_mandates_timestamp is not None:
-            msg.detailed_performance.timestamp.set_timestamp(controller.flow_mandates_timestamp)
+        if timestamp is not None:
+            msg.detailed_performance.timestamp.set_timestamp(timestamp)
         else:
             # Pretend this performance metric is from 5 seconds ago
             msg.detailed_performance.timestamp.set_timestamp(time.time() - 5)
@@ -128,69 +156,106 @@ class Peer(ZMQProtoClient):
         msg.detailed_performance.mandates.extend(performance)
         msg.detailed_performance.mandates_achieved = mandates_achieved
         msg.detailed_performance.total_score_achieved = total_score_achieved
-        msg.detailed_performance.scoring_point_threshold = controller.scoring_point_threshold
+        msg.detailed_performance.scoring_point_threshold = scoring_point_threshold
 
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
-class CollabAgent(ZMQProtoServer, ZMQProtoClient):
-    def __init__(self,
-                 controller,
-                 loop=None,
-                 local_ip=None,
-                 server_host=None,
-                 server_port=None,
-                 client_port=None,
-                 peer_port=None):
-        ZMQProtoServer.__init__(self, loop=loop)
-        ZMQProtoClient.__init__(self, loop=loop, server_host=server_host, server_port=server_port)
+class CILServer(object):
+    """Base class for CIL server."""
+    def __init__(self):
+        self.registration_client = None
+        """Registration client"""
 
-        self.controller = controller
+        self.registration_nonce = None
+        """Registration server nonce"""
 
-        self.loop = loop
-        self.done = False
-        self.local_ip = local_ip
-        self.server_host = server_host
-        self.server_port = server_port
-        self.client_port = client_port
-        self.peer_port = peer_port
-        self.peers = {}
+        self.registration_max_keepalive = 30
+        """Maximum time between registration heartbeats"""
 
-        self.nonce = None
-        self.max_keepalive = 30
+        self.collab_server = None
+        """CIL server"""
 
-        self.startServer(cil.CilMessage, local_ip, peer_port)
-        self.startServer(registration.TellClient, local_ip, client_port)
-        self.open()
+        self.collab_ip = None
+        """Local IP address of collaboration server"""
 
-        self.send_spectrum_update = asyncio.Event()
+        self.collab_peers = {}
+        """CIL peers"""
 
-        loop.create_task(self.register())
-        loop.create_task(self.heartbeat())
-        loop.create_task(self.location_update())
-        loop.create_task(self.spectrum_usage())
-        loop.create_task(self.detailed_performance())
+        self.collab_spectrum_update_event = None
+        """Event used to signal CIL spectrum update"""
 
-    def stop(self):
-        self.done = True
+        self.collab_tasks = []
+        """asyncio tasks"""
 
+    def startCollab(self):
+        """Start CIL server"""
+        self.registration_client = RegistrationClient(loop=self.loop,
+                                                      server_host=self.config.collab_server_ip,
+                                                      server_port=self.config.collab_server_port)
+        self.registration_client.open()
+
+        self.collab_server = ZMQProtoServer(self, loop=self.loop)
+        self.collab_tasks.append(self.collab_server.start_server(cil.CilMessage,
+                                                                 self.collab_ip,
+                                                                 self.config.collab_peer_port))
+        self.collab_tasks.append(self.collab_server.start_server(registration.TellClient,
+                                                                 self.collab_ip,
+                                                                 self.config.collab_client_port))
+
+        self.collab_spectrum_update_event = asyncio.Event()
+
+        self.loop.create_task(self._startCollab())
+
+    async def _startCollab(self):
+        await self.registration_client.register(self.collab_ip)
+
+        self.collab_tasks.append(self.loop.create_task(self.heartbeat()))
+        self.collab_tasks.append(self.loop.create_task(self.location_update()))
+        self.collab_tasks.append(self.loop.create_task(self.spectrum_usage()))
+        self.collab_tasks.append(self.loop.create_task(self.detailed_performance()))
+
+    async def stopCollab(self):
+        """Stop CIL server"""
         # We must trigger the event, otherwise we will be stuck waiting on it
         # forever
-        self.send_spectrum_update.set()
+        self.collab_spectrum_update_event.set()
+
+        # Cancel collaboration server tasks
+        for task in self.collab_tasks:
+            task.cancel()
+
+        await asyncio.gather(*self.collab_tasks, return_exceptions=True)
+
+        # Leave the collaboration network
+        if self.registration_nonce:
+            logger.info('Leaving collaboration network')
+            try:
+                await self.registration_client.leave(self.registration_nonce)
+            except:
+                logger.exception('Could not gracefully terminate collaboration agent')
+
+        # Close collaboration clients
+        logger.info('Closing CIL peer connections')
+        for _, peer in self.collab_peers.items():
+            peer.close()
 
     def addPeer(self, peer_ip):
-        self.peers[peer_ip] = Peer(self, peer_ip, self.peer_port)
+        self.collab_peers[peer_ip] = CILClient(self.collab_ip,
+                                               peer_ip,
+                                               self.config.collab_peer_port,
+                                               loop=self.loop)
         logger.info('Adding peer {}'.format(peer_ip))
 
     def removePeer(self, peer_ip):
-        del self.peers[peer_ip]
+        del self.collab_peers[peer_ip]
         logger.info('Removing peer {}'.format(peer_ip))
 
     def setNeighbors(self, neighbors):
         neighbors = [ip_int_to_string(n) for n in neighbors]
 
-        old_neighbors = set(self.peers.keys())
+        old_neighbors = set(self.collab_peers.keys())
         new_neighbors = set(neighbors)
-        new_neighbors.remove(self.local_ip)
+        new_neighbors.remove(self.collab_ip)
 
         for p in old_neighbors - new_neighbors:
             self.removePeer(p)
@@ -198,32 +263,40 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
         for p in new_neighbors - old_neighbors:
             self.addPeer(p)
 
-    async def shutdown(self):
-        if self.nonce:
-            await self.leave()
+    async def getHistoricalSpectrumUsage(self):
+        """Get historical voxel usage"""
+        return []
+
+    async def getPredictedSpectrumUsage(self, when):
+        """Get predicated voxel usage"""
+        return []
+
+    async def getMandatePerformance(self,):
+        """Get mandate performance"""
+        return []
 
     async def heartbeat(self):
         try:
             while not self.done:
-                if self.nonce:
+                if self.registration_nonce:
                     try:
-                        await self.keepalive()
+                        await self.registration_client.keepalive(self.registration_nonce)
                     except:
                         logger.exception("heartbeat")
 
-                await asyncio.sleep(self.max_keepalive / 2)
+                await asyncio.sleep(self.registration_max_keepalive / 2)
         except CancelledError:
             pass
 
     async def location_update(self):
-        config = self.controller.config
+        config = self.config
 
         while not self.done:
             try:
                 # Calculate locations
                 locations = []
 
-                for id, n in self.controller.nodes.items():
+                for id, n in self.nodes.items():
                     if n.loc.timestamp > time.time() - MAX_LOCATION_AGE:
                         info = cil.LocationInfo()
                         info.radio_id = n.id
@@ -236,7 +309,7 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
                 # Send location update to all peers
                 logging.info('CIL: sending location update')
-                for ip, p in self.peers.items():
+                for ip, p in self.collab_peers.items():
                     try:
                         await p.location_update(locations)
                     except:
@@ -249,106 +322,65 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
                 logger.exception("location_updates")
 
     def push_spectrum_usage(self):
-        logging.debug('Forcing calculation of spectrum usage at time %f', time.time() - self.controller.scenario_start_time)
-        self.send_spectrum_update.set()
+        """Force a CIL spectrum usage update"""
+        logging.debug('Forcing calculation of spectrum usage at time %f',
+                      time.time() - self.scenario_start_time)
+        self.collab_spectrum_update_event.set()
 
     async def spectrum_usage(self):
-        controller = self.controller
-        config = controller.config
-        radio = controller.radio
+        config = self.config
+        radio = self.radio
 
         # Average load for last sample period
         last_avg_load = 0
 
+        # Timestamp of last spectrum update
+        timestamp = None
+
         while not self.done:
             try:
-                if controller.scenario_started:
-                    now = time.time()
+                if self.scenario_started:
+                    timestamp = time.time()
 
                     voxels = await self.getHistoricalSpectrumUsage()
-                    voxels += await self.getPredictedSpectrumUsage(now)
+                    voxels += await self.getPredictedSpectrumUsage(timestamp)
 
                     # Send spectrum usage to all peers
                     if len(voxels) != 0:
                         logging.info('CIL: sending spectrum usage')
-                        for ip, p in self.peers.items():
+                        for ip, p in self.collab_peers.items():
                             try:
-                                asyncio.ensure_future(p.spectrum_usage(voxels, timestamp=now), loop=self.loop)
+                                asyncio.ensure_future(p.spectrum_usage(voxels, timestamp=timestamp), loop=self.loop)
                             except:
                                 logger.exception("spectrum_usage")
 
                 # Wait for either a spectrum update event or for the load check
                 # period
-                if await event_wait(self.send_spectrum_update, config.spectrum_usage_update_period):
-                    self.send_spectrum_update.clear()
+                delta = config.spectrum_usage_update_period
+
+                while not self.done:
+                    if await event_wait(self.collab_spectrum_update_event, delta):
+                        self.collab_spectrum_update_event.clear()
+
+                    now = time.time()
+
+                    if timestamp and now - timestamp < MIN_SPECTRUM_USAGE_UPDATE_PERIOD:
+                        delta = timestamp + 2*MIN_SPECTRUM_USAGE_UPDATE_PERIOD - now
+                    else:
+                        break
             except CancelledError:
                 return
             except:
                 logger.exception("spectrum_usage")
 
-    async def getHistoricalSpectrumUsage(self):
-        """Get historical voxel usage from controller and convert it into CIL
-        voxels for spectrum usage report"""
-        voxels = await self.controller.getHistoricalSpectrumUsage()
-
-        return [self.voxel2CILVoxel(vox, start, end, True) for (start, end, vox) in voxels]
-
-    async def getPredictedSpectrumUsage(self, when):
-        """Get predicated voxel usage from controller and convert it into CIL
-        voxels for spectrum usage report"""
-        controller = self.controller
-        config = controller.config
-
-        start = when
-        end = when + config.spec_future_period
-        voxels = await self.controller.getPredictedSpectrumUsage()
-
-        return [self.voxel2CILVoxel(vox, start, end, False) for vox in voxels]
-
-    def voxel2CILVoxel(self, vox, start, end, measured):
-        controller = self.controller
-        config = controller.config
-
-        # Construct list of receivers for this voxel
-        receivers = []
-
-        for rx in vox.rx:
-            rx_info = cil.ReceiverInfo()
-            rx_info.radio_id = rx
-            rx_info.power_db.value = controller.radio.usrp.rx_gain
-
-            receivers.append(rx_info)
-
-        # Report future usage
-        usage = cil.SpectrumVoxelUsage()
-
-        usage.spectrum_voxel.freq_start = vox.f_start
-        usage.spectrum_voxel.freq_end = vox.f_end
-        usage.spectrum_voxel.duty_cycle.value = vox.duty_cycle
-        usage.spectrum_voxel.time_start.set_timestamp(start)
-        usage.spectrum_voxel.time_end.set_timestamp(end)
-
-        usage.transmitter_info.radio_id = vox.tx
-        usage.transmitter_info.power_db.value = controller.radio.usrp.tx_gain
-        usage.transmitter_info.mac_cca = False
-
-        usage.measured_data = measured
-
-        usage.receiver_info.extend(receivers)
-
-        return usage
-
     async def detailed_performance(self):
-        controller = self.controller
-        config = controller.config
-
         while not self.done:
             t1 = time.time()
 
             try:
                 # Only send mandates after the scenario has started
-                if controller.scenario_started:
-                    (mp, timestamp, mandates_achieved, total_score_achieved, mandates) = await controller.getMandatePerformance()
+                if self.scenario_started:
+                    (mp, timestamp, mandates_achieved, total_score_achieved, mandates) = await self.getMandatePerformance()
 
                     def mkMandatePerformance(mandate):
                         perf = cil.MandatePerformance()
@@ -365,18 +397,19 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
                     # Send mandates to all peers
                     logging.info('CIL: sending detailed performance')
-                    for ip, p in self.peers.items():
+                    for ip, p in self.collab_peers.items():
                         try:
-                            await p.detailed_performance(self.controller,
-                                                         new_performance,
+                            await p.detailed_performance(new_performance,
+                                                         timestamp,
                                                          mandates_achieved,
-                                                         total_score_achieved)
+                                                         total_score_achieved,
+                                                         self.scoring_point_threshold)
                         except:
                             logger.exception("detailed_performance")
 
                 t2 = time.time()
                 logger.info("Time to score: %f", t2 - t1)
-                delta = config.detailed_performance_update_period - (t2 - t1)
+                delta = self.config.detailed_performance_update_period - (t2 - t1)
 
                 if delta > 0:
                     await asyncio.sleep(delta)
@@ -387,8 +420,8 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
 
     @handle('TellClient.inform')
     async def handle_inform(self, msg):
-        self.nonce = msg.inform.client_nonce
-        self.max_keepalive = msg.inform.keepalive_seconds
+        self.registration_nonce = msg.inform.client_nonce
+        self.registration_max_keepalive = msg.inform.keepalive_seconds
         self.setNeighbors(msg.inform.neighbors)
 
     @handle('TellClient.notify')
@@ -414,15 +447,3 @@ class CollabAgent(ZMQProtoServer, ZMQProtoClient):
     @handle('CilMessage.incumbent_notify')
     async def handle_incumbent_notify(self, msg):
         pass
-
-    @send(registration.TalkToServer)
-    async def register(self, msg):
-        msg.register.my_ip_address = ip_string_to_int(self.local_ip)
-
-    @send(registration.TalkToServer)
-    async def keepalive(self, msg):
-        msg.keepalive.my_nonce = self.nonce
-
-    @send(registration.TalkToServer)
-    async def leave(self, msg):
-        msg.leave.my_nonce = self.nonce
