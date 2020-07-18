@@ -96,6 +96,9 @@ class Controller(CILServer):
         self.radio = None
         """Our Radio"""
 
+        self.dumpcap_tasks = []
+        """dumpcap tasks"""
+
         self.dumpcap_procs = []
         """dumpcap procs we've started"""
 
@@ -379,34 +382,10 @@ class Controller(CILServer):
                 except:
                     logger.exception('Could not dump scoring data')
 
+            # Terminate any packet captures
+            await self.cleanupDumpcap()
+
             with await self.radio.lock:
-                # Stop dumpcap processes
-                for p in self.dumpcap_procs:
-                    try:
-                        p.terminate()
-                        p.wait()
-                    except:
-                        logger.exception('Could not terminate PID %d', p.pid)
-
-                # Compress pcap files
-                if self.config.compress_interface_logs:
-                    # Compressing large interface logs takes too long
-                    xzprocs = []
-                    for iface in self.config.log_interfaces:
-                        if iface in netifaces.interfaces():
-                            try:
-                                p = subprocess.Popen('xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
-                                                     stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
-                                xzprocs.append(p)
-                            except:
-                                logging.exception('Could not xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir))
-
-                    for p in xzprocs:
-                        try:
-                            p.wait()
-                        except:
-                            logger.exception('Failed to wait on xz PID %d', p.pid)
-
                 # Remove all nodes
                 for node_id in list(self.nodes):
                     self.removeNode(node_id)
@@ -447,9 +426,51 @@ class Controller(CILServer):
 
     def dumpcap(self, iface):
         if iface in netifaces.interfaces():
-            p = subprocess.Popen('dumpcap -i {iface} -q -w {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
-                                 stdin=None, stdout=None, stderr=None, close_fds=True, shell=True)
-            self.dumpcap_procs.append(p)
+            async def f(controller):
+                p = await asyncio.create_subprocess_exec('dumpcap', '-i', iface, '-q', '-w', '{logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                    stdin=None, stdout=None, stderr=None, loop=self.loop)
+                controller.dumpcap_procs.append(p)
+
+            self.dumpcap_tasks.append(self.loop.create_task(f(self)))
+
+    async def cleanupDumpcap(self):
+        if len(self.dumpcap_tasks) != 0:
+            logger.info('Terminating pcap captures')
+
+            # Wait for dumpcap processes to be created
+            await asyncio.gather(*self.dumpcap_tasks, return_exceptions=True)
+
+            # Terminate dumpcap processes. For some reason the TERM signal
+            # doesn't always cause dumpcap to terminate, so we keep trying until
+            # it works
+            while True:
+                for p in self.dumpcap_procs:
+                    try:
+                        p.terminate()
+                    except:
+                        logger.exception('Could not terminate PID %d', p.pid)
+
+                _done, pending = await asyncio.wait([p.communicate() for p in self.dumpcap_procs],
+                    timeout=1)
+
+                if len(pending) == 0:
+                    break
+
+            # Compress pcap files
+            if self.config.compress_interface_logs:
+                # Compressing large interface logs takes too long
+                xzprocs = []
+
+                for iface in self.config.log_interfaces:
+                    if iface in netifaces.interfaces():
+                        try:
+                            p = await asyncio.create_subprocess_exec('xz', '{logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                                stdin=None, stdout=None, stderr=None, loop=self.loop)
+                            xzprocs.append(p)
+                        except:
+                            logging.exception('Could not xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir))
+
+                await asyncio.gather(*[p.communicate() for p in xzprocs])
 
     def thisNode(self):
         return self.nodes[self.radio.node_id]
