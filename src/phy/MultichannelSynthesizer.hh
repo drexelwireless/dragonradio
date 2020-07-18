@@ -1,25 +1,20 @@
-#ifndef FDCHANSYNTHESIZER_H_
-#define FDCHANSYNTHESIZER_H_
+#ifndef MULTICHANNELSYNTHESIZER_H_
+#define MULTICHANNELSYNTHESIZER_H_
 
 #include <atomic>
 #include <mutex>
 
 #include "barrier.hh"
+#include "spinlock_mutex.hh"
 #include "dsp/FDResample.hh"
 #include "dsp/FFTW.hh"
-#include "dsp/Polyphase.hh"
-#include "dsp/TableNCO.hh"
-#include "phy/Channel.hh"
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
-#include "net/Net.hh"
 
 /** @brief A frequency-domain, per-channel synthesizer. */
 class MultichannelSynthesizer : public Synthesizer
 {
 public:
-    using C = std::complex<float>;
-
     /** @brief Filter length */
     /** We need two factors of 5 because we need to support 25MHz bandwidth.
      * The rest of the factors of 2 are for good measure.
@@ -51,31 +46,27 @@ public:
     void stop(void);
 
 private:
-    /** @brief Channel state for time-domain modulation */
-    class ChannelState : private Upsampler {
+    /** @brief Channel modulator for multichannel modulation */
+    class MultichannelModulator : public ChannelModulator, private Upsampler {
     public:
-        ChannelState(PHY &phy,
-                     const Channel &channel,
-                     const std::vector<C> &taps,
-                     double tx_rate);
-        ChannelState() = delete;
+        MultichannelModulator(PHY &phy,
+                              unsigned chanidx,
+                              const Channel &channel,
+                              const std::vector<C> &taps,
+                              double tx_rate);
+        MultichannelModulator() = delete;
 
-        ~ChannelState() = default;
+        ~MultichannelModulator() = default;
+
+        void modulate(std::shared_ptr<NetPacket> pkt,
+                      const float g,
+                      ModPacket &mpkt) override;
 
         /** @brief Specify the next slot to modulate.
          * @param slot The new slot
          * @param overfill true if this slot can be overfilled
          */
         void nextSlot(const Slot *prev_slot, Slot &slot, const bool overfill);
-
-        /** @brief Modulate a packet to produce IQ samples.
-         * @param pkt The NetPacket to modulate.
-         * @param g Soft (multiplicative) gain to apply to modulated signal.
-         * @param mpkt The ModPacket in which to place modulated samples.
-         */
-        void modulate(std::shared_ptr<NetPacket> pkt,
-                      const float g,
-                      ModPacket &mpkt);
 
         /** @brief Determine whether or not a modulated packet will fit in
          * the current frequency domain buffer.
@@ -112,6 +103,9 @@ private:
          */
         void flush(Slot &slot);
 
+        /** @brief Mutex for channel state */
+        spinlock_mutex mutex;
+
         /** @brief Packet whose modulated signal is the IQ buffer */
         std::shared_ptr<NetPacket> pkt;
 
@@ -145,26 +139,19 @@ private:
          */
         size_t npartial;
 
+        /** @brief FFT buffer offset before flush of partial block. */
+        std::optional<size_t> partial_fftoff;
+
         /** @brief Number of valid samples in the frequency-domain buffer */
         /** This will be a multiple of N */
         size_t fdnsamples;
-
-    protected:
-        /** @brief Channel we are modulating */
-        const Channel channel_;
-
-        /** @brief Resampling rate */
-        const double rate_;
-
-        /** @brief Our demodulator */
-        std::shared_ptr<PHY::PacketModulator> mod_;
     };
 
     /** @brief Number of synthesizer threads. */
     unsigned nthreads_;
 
     /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
+    std::atomic<bool> done_;
 
     /** @brief Flag that is true when we are reconfiguring. */
     std::atomic<bool> reconfigure_;
@@ -182,10 +169,10 @@ private:
     spinlock_mutex mods_mutex_;
 
     /** @brief Channel state for demodulation. */
-    std::vector<std::unique_ptr<ChannelState>> mods_;
+    std::vector<std::unique_ptr<MultichannelModulator>> mods_;
 
     /** @brief Current slot that need to be synthesized */
-    std::shared_ptr<Synthesizer::Slot> curslot_;
+    std::shared_ptr<Slot> curslot_;
 
     /** @brief Threads running modWorker */
     std::vector<std::thread> mod_threads_;
@@ -202,11 +189,11 @@ private:
     /** @brief Radio schedule */
     Schedule schedule_copy_;
 
-    /** @brief Number of channels available in each slot index */
-    std::vector<unsigned> channel_count_;
+    /** @brief Gain necessary to compensate for simultaneous transmission */
+    float g_multichan_;
 
     /** @brief Thread modulating packets */
     void modWorker(unsigned tid);
 };
 
-#endif /* FDCHANSYNTHESIZER_H_ */
+#endif /* MULTICHANNELSYNTHESIZER_H_ */

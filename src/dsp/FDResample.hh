@@ -120,11 +120,12 @@ public:
                 std::copy(in + inoff,
                           in + inoff + avail,
                           fftin + fftoff);
-                std::fill(fft.in.begin() + fftoff + avail,
-                          fft.in.end(),
-                          0);
 
-                if (!flush) {
+                if (flush) {
+                    std::fill(fft.in.begin() + fftoff + avail,
+                              fft.in.end(),
+                              0);
+                } else {
                     inoff += avail;
                     fftoff += avail;
                     return inoff;

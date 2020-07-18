@@ -29,7 +29,6 @@ public:
          , max_samples(max_samples_)
          , delay(0)
          , nsamples(0)
-         , load(nchannels)
          , npartial(0)
         {
             nfinished.store(0, std::memory_order_relaxed);
@@ -68,9 +67,6 @@ public:
         /** @brief Number of samples in slot */
         size_t nsamples;
 
-        /** @brief Load per channel */
-        std::vector<size_t> load;
-
         /** @brief The list of IQ buffers */
         std::list<std::shared_ptr<IQBuf>> iqbufs;
 
@@ -102,7 +98,6 @@ public:
 
         /** @brief Push a modulated packet onto the slot
          * @param mpkt A reference to a modulated packet
-         * @param chanidx The channel on which the packet was modulated
          * @param overfill true if the slot can be overfilled
          * @return true if the packet was pushed, false if it didn't fit
          */
@@ -110,7 +105,6 @@ public:
          * takes ownership of the ModPacket.
          */
         bool push(std::unique_ptr<ModPacket> &mpkt,
-                  size_t chanidx,
                   bool overfill)
         {
             if (closed.load(std::memory_order_acquire))
@@ -125,9 +119,6 @@ public:
                 iqbufs.emplace_back(mpkt->samples);
                 mpkts.emplace_back(std::move(mpkt));
                 nsamples += n;
-
-                if (chanidx < load.size())
-                    load[chanidx] += n;
 
                 return true;
             } else
@@ -160,6 +151,8 @@ public:
      */
     virtual void setTXRate(double rate)
     {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
         tx_rate_ = rate;
         reconfigure();
     }
@@ -185,6 +178,8 @@ public:
     /** @brief Set channels */
     virtual void setChannels(const Channels &channels)
     {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
         channels_ = channels;
         reconfigure();
     }
@@ -198,6 +193,8 @@ public:
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule &schedule)
     {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
         schedule_ = schedule;
         reconfigure();
     }
@@ -205,6 +202,8 @@ public:
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule::sched_type &schedule)
     {
+        std::lock_guard<spinlock_mutex> lock(mutex_);
+
         schedule_ = schedule;
         reconfigure();
     }
@@ -243,6 +242,9 @@ protected:
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
 
+    /** @brief Mutex for synthesizer state. */
+    spinlock_mutex mutex_;
+
     /** @brief TX sample rate */
     double tx_rate_;
 
@@ -257,6 +259,56 @@ protected:
 
     /** @brief Maximum number of possible samples in a modulated packet. */
     size_t max_packet_size_;
+};
+
+/** @brief Modulate packets for a channel. */
+/** This class is responsible for modulating packets and synthesizing a channel
+ * from the modulated packet.
+ */
+class ChannelModulator {
+public:
+    ChannelModulator(PHY &phy,
+                     unsigned chanidx,
+                     const Channel &channel,
+                     const std::vector<C> &taps,
+                     double tx_rate)
+      : chanidx_(chanidx)
+      , channel_(channel)
+      // XXX Protected against channel with zero bandwidth
+      , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
+      , fshift_(channel.fc/tx_rate)
+      , mod_(phy.mkPacketModulator())
+    {
+    }
+
+    ChannelModulator() = delete;
+
+    virtual ~ChannelModulator() = default;
+
+    /** @brief Modulate a packet to produce IQ samples.
+     * @param pkt The NetPacket to modulate.
+     * @param g Gain to apply.
+     * @param mpkt The ModPacket in which to place modulated samples.
+     */
+    virtual void modulate(std::shared_ptr<NetPacket> pkt,
+                          float g,
+                          ModPacket &mpkt) = 0;
+
+protected:
+    /** @brief Index of channel we are modulating */
+    const unsigned chanidx_;
+
+    /** @brief Channel we are modulating */
+    const Channel channel_;
+
+    /** @brief Resampling rate */
+    const double rate_;
+
+    /** @brief Frequency shift */
+    const double fshift_;
+
+    /** @brief Packet modulator */
+    std::shared_ptr<PHY::PacketModulator> mod_;
 };
 
 #endif /* SYNTHESIZER_H_ */

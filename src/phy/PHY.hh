@@ -16,6 +16,9 @@
 /** @brief A modulated data packet to be sent over the radio */
 struct ModPacket
 {
+    /** @brief Index of channel */
+    unsigned chanidx;
+
     /** @brief Channel */
     Channel channel;
 

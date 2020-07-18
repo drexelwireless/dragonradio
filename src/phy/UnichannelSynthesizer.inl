@@ -1,42 +1,44 @@
-#include "RadioConfig.hh"
-#include "phy/PHY.hh"
-#include "phy/TDSynthesizer.hh"
-#include "stats/Estimator.hh"
+#include "UnichannelSynthesizer.hh"
 
-TDSynthesizer::TDSynthesizer(std::shared_ptr<PHY> phy,
-                             double tx_rate,
-                             const Channels &channels,
-                             size_t nthreads)
+template <class ChannelModulator>
+UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(std::shared_ptr<PHY> phy,
+                                                               double tx_rate,
+                                                               const Channels &channels,
+                                                               size_t nthreads)
   : Synthesizer(phy, tx_rate, channels)
   , done_(false)
   , mod_reconfigure_(nthreads)
 {
     for (size_t i = 0; i < nthreads; ++i) {
         mod_reconfigure_[i].store(true, std::memory_order_release);
-        mod_threads_.emplace_back(std::thread(&TDSynthesizer::modWorker,
+        mod_threads_.emplace_back(std::thread(&UnichannelSynthesizer::modWorker,
                                               this,
                                               std::ref(mod_reconfigure_[i]),
                                               i));
     }
 }
 
-TDSynthesizer::~TDSynthesizer()
+template <class ChannelModulator>
+UnichannelSynthesizer<ChannelModulator>::~UnichannelSynthesizer()
 {
     stop();
 }
 
-void TDSynthesizer::modulate(const std::shared_ptr<Slot> &slot)
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::modulate(const std::shared_ptr<Slot> &slot)
 {
     std::atomic_store_explicit(&curslot_, slot, std::memory_order_release);
 }
 
-void TDSynthesizer::reconfigure(void)
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::reconfigure(void)
 {
     for (auto &flag : mod_reconfigure_)
         flag.store(true, std::memory_order_release);
 }
 
-void TDSynthesizer::stop(void)
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::stop(void)
 {
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
@@ -49,14 +51,15 @@ void TDSynthesizer::stop(void)
     }
 }
 
-void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 {
     Channels                           channels;
     Schedule                           schedule;
-    double                             tx_rate;
-    std::unique_ptr<ChannelState>      mod;
-    std::shared_ptr<Synthesizer::Slot> prev_slot;
-    std::shared_ptr<Synthesizer::Slot> slot;
+    double                             tx_rate = tx_rate_;
+    std::unique_ptr<ChannelModulator>  mod;
+    std::shared_ptr<Slot>              prev_slot;
+    std::shared_ptr<Slot>              slot;
     std::vector<size_t>                slot_chanidx; // TX channel for each slot
     size_t                             chanidx = 0;  // Index of TX channel
     std::shared_ptr<NetPacket>         pkt;
@@ -73,15 +76,16 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_acquire)) {
+            std::lock_guard<spinlock_mutex> lock(mutex_);
+
             // Make local copies to ensure thread safety
             channels = channels_;
             schedule = schedule_;
             tx_rate = tx_rate_;
 
             // If we have no schedule or channels, yield and try again
-            if (schedule.size() == 0 ||
-                channels.size() == 0 ||
-                slot->slotidx >= schedule[0].size()) {
+            if (schedule.size() == 0 || channels.size() == 0) {
+                reconfig.store(false, std::memory_order_relaxed);
                 std::this_thread::yield();
                 continue;
             }
@@ -100,15 +104,22 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             reconfig.store(false, std::memory_order_relaxed);
         }
 
+        // Skip illegal slot indices
+        if (slot->slotidx >= slot_chanidx.size()) {
+            logEvent("PHY: Bad slot index");
+            continue;
+        }
+
         if (!mod || slot_chanidx[slot->slotidx] != chanidx) {
             // Update our channel index
             chanidx = slot_chanidx[slot->slotidx];
 
             // Reconfigure the modulator
-            mod = std::make_unique<ChannelState>(*phy_,
-                                                 channels[chanidx].first,
-                                                 channels[chanidx].second,
-                                                 tx_rate);
+            mod = std::make_unique<ChannelModulator>(*phy_,
+                                                     chanidx,
+                                                     channels[chanidx].first,
+                                                     channels[chanidx].second,
+                                                     tx_rate);
         }
 
         // We can overfill if we are allowed to transmit on the same channel in
@@ -150,17 +161,17 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
             if (pkt->internal_flags.is_timestamp) {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-                pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->length())/phy_->getTXRate());
+                pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/tx_rate_);
 
                 mod->modulate(std::move(pkt), g, *mpkt);
 
-                pushed = slot->push(mpkt, chanidx, overfill);
+                pushed = slot->push(mpkt, overfill);
             } else {
                 mod->modulate(std::move(pkt), g, *mpkt);
 
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
-                pushed = slot->push(mpkt, chanidx, overfill);
+                pushed = slot->push(mpkt, overfill);
             }
 
             if (!pushed) {
@@ -175,63 +186,4 @@ void TDSynthesizer::modWorker(std::atomic<bool> &reconfig, unsigned tid)
         // attempting to modulate anything
         prev_slot = std::move(slot);
     }
-}
-
-TDSynthesizer::ChannelState::ChannelState(PHY &phy,
-                                          const Channel &channel,
-                                          const std::vector<C> &taps,
-                                          double tx_rate)
-  : // XXX Protected against channel with zero bandwidth
-    Upsampler(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw),
-              taps)
-  , channel_(channel)
-  , mod_(phy.mkPacketModulator())
-{
-    setFreqShift(2*M_PI*channel.fc/tx_rate);
-}
-
-void TDSynthesizer::ChannelState::reset(void)
-{
-    Upsampler::reset();
-}
-
-void TDSynthesizer::ChannelState::modulate(std::shared_ptr<NetPacket> pkt,
-                                           float g,
-                                           ModPacket &mpkt)
-{
-    const float g_effective = pkt->g*g;
-
-    // Upsample if needed
-    if (getFreqShift() != 0.0 || getRate() != 1.0) {
-        // Modulate the packet, but don't paply gain yet. We will apply gain
-        // when we resample.
-        mod_->modulate(std::move(pkt), 1.0f, mpkt);
-
-        // Get samples from ModPacket
-        auto iqbuf = std::move(mpkt.samples);
-
-        // Append zeroes to compensate for delay
-        iqbuf->append(ceil(getDelay()));
-
-        // Resample and mix up
-        auto     iqbuf_up = std::make_shared<IQBuf>(neededOut(iqbuf->size()));
-        unsigned nw;
-
-        nw = resampleMixUp(iqbuf->data(), iqbuf->size(), g_effective, iqbuf_up->data());
-        assert(nw <= iqbuf_up->size());
-        iqbuf_up->resize(nw);
-
-        // Indicate delay
-        iqbuf_up->delay = floor(getRate()*getDelay());
-
-        // Put samples back into ModPacket
-        mpkt.offset = iqbuf_up->delay;
-        mpkt.nsamples = iqbuf_up->size() - iqbuf_up->delay;
-        mpkt.samples = std::move(iqbuf_up);
-    } else
-        // Modulate packet and apply gain
-        mod_->modulate(std::move(pkt), g_effective, mpkt);
-
-    // Set channel
-    mpkt.channel = channel_;
 }

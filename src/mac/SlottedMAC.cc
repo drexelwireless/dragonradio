@@ -303,10 +303,13 @@ void SlottedMAC::txNotifier(void)
         // Record the slot's load
         {
             std::lock_guard<spinlock_mutex> lock(load_mutex_);
-            size_t                          nchannels = std::min(load_.nsamples.size(), slot->load.size());
 
-            for (size_t i = 0; i < nchannels; ++i)
-                load_.nsamples[i] += slot->load[i];
+            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
+                unsigned chanidx = (*it)->chanidx;
+
+                if (chanidx < load_.nsamples.size())
+                    load_.nsamples[chanidx] += (*it)->samples->size() - (*it)->samples->delay;
+            }
 
             load_.end = slot->deadline + (slot->deadline_delay + slot->nsamples)/tx_rate_;
         }
