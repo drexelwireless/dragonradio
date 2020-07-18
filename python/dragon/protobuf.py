@@ -110,9 +110,6 @@ class ZMQProtoClient(object):
         self.server_sock = None
         """ZMQ server socket"""
 
-    def __del__(self):
-        self.close()
-
     def __enter__(self):
         self.open()
 
@@ -299,9 +296,6 @@ class TCPProtoClient(ProtobufProtocol):
 
     def __call__(self):
         return self
-
-    def __del__(self):
-        self.close()
 
     def __enter__(self):
         self.open()
