@@ -115,6 +115,7 @@ SOURCES := \
     python/Estimator.cc \
     python/Filter.cc \
     python/Flow.cc \
+    python/Header.cc \
     python/IQBuffer.cc \
     python/IQCompression.cc \
     python/Liquid.cc \
@@ -124,6 +125,7 @@ SOURCES := \
     python/NCO.cc \
     python/Net.cc \
     python/PHY.cc \
+    python/Packet.cc \
     python/Python.cc \
     python/RadioConfig.cc \
     python/RadioNet.cc \

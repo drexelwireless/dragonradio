@@ -79,8 +79,8 @@ void exportIQCompression(py::module &m)
         auto                 outbuf = outarr.request();
 
         convert2sc16(static_cast<fc32_t*>(inbuf.ptr),
-                        static_cast<sc16_t*>(outbuf.ptr),
-                        inbuf.size);
+                     static_cast<sc16_t*>(outbuf.ptr),
+                     inbuf.size);
 
         return outarr;
     }, "convert fc32 buffer to a sc16 buffer")
@@ -93,8 +93,8 @@ void exportIQCompression(py::module &m)
         auto                outbuf = outarr.request();
 
         convert2fc32(static_cast<sc16_t*>(inbuf.ptr),
-                          static_cast<fc32_t*>(outbuf.ptr),
-                          inbuf.size/2);
+                     static_cast<fc32_t*>(outbuf.ptr),
+                     inbuf.size/2);
 
         return outarr;
     }, "convert sc16 buffer to a fc32 buffer")

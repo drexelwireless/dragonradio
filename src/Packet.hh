@@ -175,7 +175,7 @@ struct Packet : public buffer<unsigned char>
     size_t payload_size;
 
     /** @brief Internal flags */
-    struct {
+    struct InternalFlags {
         /** @brief Set if the packet had invalid header */
         uint8_t invalid_header : 1;
 

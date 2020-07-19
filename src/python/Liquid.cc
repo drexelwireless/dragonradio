@@ -9,46 +9,66 @@
 
 using FrameStats = framesyncstats_s;
 
-using demod_vec = std::vector<std::tuple<std::optional<Header>,
-                              std::optional<py::bytes>,
-                              FrameStats>>;
+using Demod = std::tuple<std::optional<Header>,
+                         std::optional<py::bytes>,
+                         FrameStats>;
 
-demod_vec demodulate(Liquid::Demodulator &demod,
-                     py::array_t<std::complex<float>, py::array::c_style | py::array::forcecast> sig)
+std::vector<Demod> demodulate(Liquid::Demodulator &demod,
+                              py::array_t<std::complex<float>, py::array::c_style | py::array::forcecast> sig)
 {
-    demod_vec packets;
+    // We use std::string to store payloads and batch convert once demodulation
+    // is done
+    using LocalDemod = std::tuple<std::optional<Header>,
+                                  std::optional<std::string>,
+                                  FrameStats>;
 
+    std::vector<LocalDemod> local_pkts;
+
+    // Get the signal to demodulate
     auto buf = sig.request();
 
-    Demodulator::callback_t cb = [&](bool header_test,
-                                     bool header_valid,
-                                     bool payload_valid,
-                                     const Header* header,
-                                     void *payload,
-                                     size_t payload_len,
-                                     void *stats_)
+    // Release the GIL and demodulate
     {
-        std::optional<Header>    h;
-        std::optional<py::bytes> p;
-        framesyncstats_s         *stats = (framesyncstats_s*) stats_;
+        py::gil_scoped_release gil;
 
-        if (header_test)
-            return 1;
+        Demodulator::callback_t cb = [&](bool header_test,
+                                         bool header_valid,
+                                         bool payload_valid,
+                                         const Header* header,
+                                         void *payload,
+                                         size_t payload_len,
+                                         void *stats_)
+        {
+            std::optional<Header>      h;
+            std::optional<std::string> p;
+            framesyncstats_s           *stats = (framesyncstats_s*) stats_;
 
-        if (header_valid)
-            h = *((Header *) header);
+            if (header_test)
+                return 1;
 
-        if (payload_valid)
-            p = py::bytes(reinterpret_cast<char*>(payload), payload_len);
+            if (header_valid)
+                h = *((Header *) header);
 
-        packets.push_back(std::make_tuple(h, p, *stats));
+            if (payload_valid)
+                p = std::string(reinterpret_cast<char*>(payload), payload_len);
 
-        return 0;
-    };
+            local_pkts.emplace_back(std::make_tuple(h, p, *stats));
 
-    demod.demodulate(static_cast<std::complex<float>*>(buf.ptr), buf.size, cb);
+            return 0;
+        };
 
-    return packets;
+        demod.demodulate(static_cast<std::complex<float>*>(buf.ptr), buf.size, cb);
+    }
+
+    // Now we have the GIL, so we can convert payloads to Python bytes objects
+    {
+        std::vector<Demod> pkts;
+
+        for (auto [h, p, stats] : local_pkts)
+            pkts.emplace_back(std::make_tuple(std::move(h), p ? std::make_optional(py::bytes(*p)) : std::nullopt, std::move(stats)));
+
+        return pkts;
+    }
 }
 
 void exportLiquid(py::module &m)
@@ -126,7 +146,7 @@ void exportLiquid(py::module &m)
     ;
 
     // Export class FrameStats to Python
-    py::class_<FrameStats, std::shared_ptr<FrameStats>>(m, "FrameStats")
+    py::class_<FrameStats>(m, "FrameStats")
         .def(py::init<>())
         .def_readonly("evm", &FrameStats::evm, "Error Vector Magnitude (dB)")
         .def_readonly("rssi", &FrameStats::rssi, "Received Signal Strength Indicator (dB)")
@@ -198,15 +218,23 @@ void exportLiquid(py::module &m)
                          unsigned cp_len,
                          unsigned taper_len)
             {
-                return std::make_shared<Liquid::OFDMModulator>(header_mcs, M, cp_len, taper_len, std::nullopt);
+                return std::make_shared<Liquid::OFDMModulator>(header_mcs,
+                                                               M,
+                                                               cp_len,
+                                                               taper_len,
+                                                               std::nullopt);
             }))
         .def(py::init([](const Liquid::MCS &header_mcs,
                          unsigned M,
                          unsigned cp_len,
                          unsigned taper_len,
-                         const std::string &p)
+                         std::optional<const std::string> &p)
             {
-                return std::make_shared<Liquid::OFDMModulator>(header_mcs, M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
+                return std::make_shared<Liquid::OFDMModulator>(header_mcs,
+                                                               M,
+                                                               cp_len,
+                                                               taper_len,
+                                                               p ? std::make_optional(Liquid::OFDMSubcarriers(!p)) : std::nullopt);
             }))
         ;
 
@@ -221,7 +249,13 @@ void exportLiquid(py::module &m)
                          unsigned cp_len,
                          unsigned taper_len)
             {
-                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs, soft_header, soft_payload, M, cp_len, taper_len, std::nullopt);
+                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs,
+                                                                 soft_header,
+                                                                 soft_payload,
+                                                                 M,
+                                                                 cp_len,
+                                                                 taper_len,
+                                                                 std::nullopt);
             }))
         .def(py::init([](const Liquid::MCS &header_mcs,
                          bool soft_header,
@@ -229,9 +263,15 @@ void exportLiquid(py::module &m)
                          unsigned M,
                          unsigned cp_len,
                          unsigned taper_len,
-                         const std::string &p)
+                         std::optional<const std::string> &p)
             {
-                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs, soft_header, soft_payload, M, cp_len, taper_len, Liquid::OFDMSubcarriers(p));
+                return std::make_shared<Liquid::OFDMDemodulator>(header_mcs,
+                                                                 soft_header,
+                                                                 soft_payload,
+                                                                 M,
+                                                                 cp_len,
+                                                                 taper_len,
+                                                                 p ? std::make_optional(Liquid::OFDMSubcarriers(!p)) : std::nullopt);
             }))
         ;
 
