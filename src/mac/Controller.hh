@@ -77,10 +77,10 @@ public:
         netq_->repush(std::move(pkt));
     }
 
-    /** @brief Notify controller that slot has been transmitted. */
-    /** This function is called by the MAC when a slot has been transmitted.
-     */
-    virtual void transmitted(Synthesizer::Slot &slot) = 0;
+    /** @brief Notify controller of transmitted packets. */
+    virtual void transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
+    {
+    }
 
     /** @brief Input port for packets coming from the network. */
     NetIn<Pull> net_in;

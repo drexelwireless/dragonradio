@@ -661,7 +661,7 @@ public:
 
     void received(std::shared_ptr<RadioPacket> &&pkt) override;
 
-    void transmitted(Synthesizer::Slot &slot) override;
+    void transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts) override;
 
     /** @brief Retransmit a send window entry on timeout. */
     void retransmitOnTimeout(SendWindow::Entry &entry);

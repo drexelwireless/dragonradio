@@ -9,8 +9,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        std::shared_ptr<SnapshotCollector> collector,
                        std::shared_ptr<Channelizer> channelizer,
                        std::shared_ptr<Synthesizer> synthesizer,
-                       bool pin_rx_worker,
-                       bool pin_tx_worker,
                        double slot_size,
                        double guard_size,
                        double slot_send_lead_time)
@@ -19,19 +17,14 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
         controller,
         collector,
         channelizer,
-        synthesizer)
-  , pin_rx_worker_(pin_rx_worker)
-  , pin_tx_worker_(pin_tx_worker)
+        synthesizer,
+        slot_size)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
   , slot_send_lead_time_(slot_send_lead_time)
-  , rx_slot_samps_(0)
-  , rx_bufsize_(0)
   , tx_slot_samps_(0)
   , tx_full_slot_samps_(0)
   , stop_burst_(false)
-  , logger_(logger)
-  , done_(false)
 {
 }
 
@@ -39,25 +32,12 @@ SlottedMAC::~SlottedMAC()
 {
 }
 
-void SlottedMAC::setMinChannelBandwidth(double min_bw)
-{
-    min_chan_bw_ = min_bw;
-    reconfigure();
-}
-
 void SlottedMAC::reconfigure(void)
 {
     MAC::reconfigure();
 
-    rx_slot_samps_ = rx_rate_*slot_size_;
-    rx_bufsize_ = usrp_->getRecommendedBurstRXSize(rx_slot_samps_);
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
     tx_full_slot_samps_ = tx_rate_*slot_size_;
-
-    if (usrp_->getTXRate() == usrp_->getRXRate())
-        tx_fc_off_ = std::nullopt;
-    else
-        tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
 
     // If this is an FDMA MAC, all MCS entries are fair game
     if (isFDMA()) {
@@ -73,81 +53,6 @@ void SlottedMAC::reconfigure(void)
 
         if (!phy_->mcs_table[phy_->mcs_table.size()-1].valid)
             logEvent("MAC: WARNING: Slot size too small to support a full-sized packet!");
-    }
-}
-
-void SlottedMAC::rxWorker(void)
-{
-    Clock::time_point t_cur_slot;   // Time at which current slot starts
-    Clock::time_point t_next_slot;  // Time at which next slot starts
-    double            t_slot_pos;   // Offset into the current slot (sec)
-    unsigned          seq = 0;      // Current IQ buffer sequence number
-
-    makeThisThreadHighPriority();
-
-    if (pin_rx_worker_) {
-        logEvent("MAC: pinning RX worker to CPU");
-        pinThisThread();
-    }
-
-    while (!done_) {
-        // Wait for slot size to be known
-        if (rx_slot_samps_ == 0) {
-            doze(100e-3);
-            continue;
-        }
-
-        // Set up streaming starting at *next* slot
-        {
-            Clock::time_point t_now = Clock::now();
-
-            t_slot_pos = fmod(t_now, slot_size_);
-            t_next_slot = t_now + slot_size_ - t_slot_pos;
-        }
-
-        // Bump the sequence number to indicate a discontinuity
-        seq++;
-
-        usrp_->startRXStream(Clock::to_mono_time(t_next_slot));
-
-        while (!done_) {
-            // Update times
-            t_cur_slot = t_next_slot;
-            t_next_slot += slot_size_;
-
-            // Create buffer for slot
-            auto curSlot = std::make_shared<IQBuf>(rx_bufsize_);
-
-            curSlot->seq = seq++;
-
-            // Push the buffer if we're snapshotting
-            bool do_snapshot;
-
-            if (snapshot_collector_)
-                do_snapshot = snapshot_collector_->push(curSlot);
-            else
-                do_snapshot = false;
-
-            // Put the buffer into the channelizer's queue so it can start
-            // working now
-            channelizer_->push(curSlot);
-
-            // Read samples for current slot. The demodulator will do its thing
-            // as we continue to read samples.
-            bool ok = usrp_->burstRX(Clock::to_mono_time(t_cur_slot), rx_slot_samps_, *curSlot);
-
-            // Update snapshot offset by finalizing this snapshot slot
-            if (do_snapshot)
-                snapshot_collector_->finalizePush();
-
-            // If there was an RX error, break and set up the RX stream again.
-            if (!ok)
-                break;
-        }
-
-        // Attempt to deal with RX errors
-        logEvent("MAC: attempting to reset RX loop");
-        usrp_->stopRXStream();
     }
 }
 
@@ -235,11 +140,6 @@ void SlottedMAC::txWorker(void)
 
     makeThisThreadHighPriority();
 
-    if (pin_tx_worker_) {
-        logEvent("MAC: pinning TX worker to CPU");
-        pinThisThread();
-    }
-
     while (!done_) {
         if (tx_slots_.size() == 0)
             continue;
@@ -275,84 +175,14 @@ void SlottedMAC::txWorker(void)
 
         next_slot_start_of_burst = end_of_burst;
 
-        // Hand-off slot to TX notification thread
+        // Hand-off TX record to TX notification thread
         {
-            std::lock_guard<std::mutex> lock(txed_slots_mutex_);
+            std::lock_guard<std::mutex> lock(tx_records_mutex_);
 
-            txed_slots_q_.emplace(std::move(slot));
+            tx_records_.emplace(TXRecord { slot->deadline, slot->deadline_delay, slot->nsamples, std::move(slot->iqbufs), std::move(slot->mpkts) });
         }
 
-        txed_slots_cond_.notify_one();
-    }
-}
-
-void SlottedMAC::txNotifier(void)
-{
-    std::shared_ptr<Synthesizer::Slot> slot;
-
-    while (!done_) {
-        // Get a slot
-        {
-            std::unique_lock<std::mutex> lock(txed_slots_mutex_);
-
-            txed_slots_cond_.wait(lock, [this]{ return done_ || !txed_slots_q_.empty(); });
-
-            // If we're done, we're done
-            if (done_)
-                return;
-
-            slot = std::move(txed_slots_q_.front());
-            txed_slots_q_.pop();
-        }
-
-        // Record the slot's load
-        {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
-
-            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
-                unsigned chanidx = (*it)->chanidx;
-
-                if (chanidx < load_.nsamples.size())
-                    load_.nsamples[chanidx] += (*it)->samples->size() - (*it)->samples->delay;
-            }
-
-            load_.end = slot->deadline + (slot->deadline_delay + slot->nsamples)/tx_rate_;
-        }
-
-        // Log the transmissions
-        if (logger_ && logger_->getCollectSource(Logger::kSentPackets)) {
-            std::shared_ptr<IQBuf> &first = slot->iqbufs.front();
-
-            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it) {
-                const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
-
-                logger_->logSend(Clock::to_wall_time(samples->timestamp),
-                                 (*it)->pkt->hdr,
-                                 (*it)->pkt->ehdr().src,
-                                 (*it)->pkt->ehdr().dest,
-                                 (*it)->pkt->mcsidx,
-                                 tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
-                                 tx_rate_,
-                                 (*it)->pkt->size(),
-                                 samples,
-                                 (*it)->offset,
-                                 (*it)->nsamples);
-            }
-        }
-
-        // Inform the controller of the transmission
-        controller_->transmitted(*slot);
-
-        // Tell the snapshot collector about local self-transmissions
-        if (snapshot_collector_) {
-            for (auto it = slot->mpkts.begin(); it != slot->mpkts.end(); ++it)
-                snapshot_collector_->selfTX(Clock::to_mono_time(slot->deadline) + (*it)->start/tx_rate_,
-                                            rx_rate_,
-                                            tx_rate_,
-                                            (*it)->channel.bw,
-                                            (*it)->nsamples,
-                                            tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc);
-        }
+        tx_records_cond_.notify_one();
     }
 }
 

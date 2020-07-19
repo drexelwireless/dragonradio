@@ -21,32 +21,12 @@
 class SlottedMAC : public MAC
 {
 public:
-    struct Load {
-        /** @brief Start of load measurement period */
-        Clock::time_point start;
-
-        /** @brief End of load measurement period */
-        Clock::time_point end;
-
-        /** @brief Load per channel measured in number of samples */
-        std::vector<size_t> nsamples;
-
-        void reset(size_t nchannels)
-        {
-            start = Clock::now();
-            nsamples.resize(nchannels);
-            std::fill(nsamples.begin(), nsamples.end(), 0);
-        }
-    };
-
     SlottedMAC(std::shared_ptr<USRP> usrp,
                std::shared_ptr<PHY> phy,
                std::shared_ptr<Controller> controller,
                std::shared_ptr<SnapshotCollector> collector,
                std::shared_ptr<Channelizer> channelizer,
                std::shared_ptr<Synthesizer> synthesizer,
-               bool pin_rx_worker,
-               bool pin_tx_worker,
                double slot_size,
                double guard_size,
                double slot_send_lead_time);
@@ -69,6 +49,7 @@ public:
      */
     virtual void setSlotSize(double t)
     {
+        rx_period_ = t;
         slot_size_ = t;
         reconfigure();
     }
@@ -99,59 +80,6 @@ public:
         reconfigure();
     }
 
-    /** @brief Get MAC schedule */
-    virtual const Schedule &getSchedule(void) const
-    {
-        return schedule_;
-    }
-
-    /** @brief Set MAC schedule */
-    virtual void setSchedule(const Schedule &schedule)
-    {
-        schedule_ = schedule;
-        reconfigure();
-    }
-
-    /** @brief Set MAC schedule */
-    virtual void setSchedule(const Schedule::sched_type &schedule)
-    {
-        schedule_ = schedule;
-        reconfigure();
-    }
-
-    /** @brief Get current load */
-    Load getLoad(void)
-    {
-        Load load;
-
-        {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
-
-            load = load_;
-            load.end = std::max(load.end, Clock::now());
-        }
-
-        return load;
-    }
-
-    /** @brief Get current load and reset load counters */
-    Load popLoad(void)
-    {
-        Load load;
-
-        {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
-
-            load = load_;
-            load.end = std::max(load.end, Clock::now());
-            load_.reset(schedule_.size());
-        }
-
-        return load;
-    }
-
-    void setMinChannelBandwidth(double min_bw) override;
-
     virtual void reconfigure(void) override;
 
     /** @brief Is this MAC FDMA? */
@@ -163,32 +91,14 @@ public:
 protected:
     using slot_queue = std::queue<std::shared_ptr<Synthesizer::Slot>>;
 
-    /** @brif Pin RX worker thread to CPU */
-    bool pin_rx_worker_;
-
-    /** @brif Pin TX worker thread to CPU */
-    bool pin_tx_worker_;
-
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
     double slot_size_;
 
     /** @brief Length of inter-slot guard (sec) */
     double guard_size_;
 
-    /** @brief The minimum channel bandwidth (Hz) */
-    double min_chan_bw_;
-
     /** @brief Lead time needed to send a slot's worth of data. */
     double slot_send_lead_time_;
-
-    /** @brief The MAC schedule */
-    Schedule schedule_;
-
-    /** @brief Number of RX samples in a full slot */
-    size_t rx_slot_samps_;
-
-    /** @brief RX buffer size */
-    size_t rx_bufsize_;
 
     /** @brief Number of TX samples in the non-guard portion of a slot */
     size_t tx_slot_samps_;
@@ -199,44 +109,11 @@ protected:
     /** @brief Do we need to stop the current burst? */
     std::atomic<bool> stop_burst_;
 
-    /** @brief TX center frequency offset from RX center frequency. */
-    /** If the TX and RX rates are different, this is non-empty and contains
-     * the frequency of the channel we transmit on.
-     */
-    std::optional<double> tx_fc_off_;
-
-    /** @brief Mutex for load */
-    spinlock_mutex load_mutex_;
-
-    /** @brief Number of sent samples */
-    Load load_;
-
-    /** @brief A reference to the global logger */
-    std::shared_ptr<Logger> logger_;
-
-    /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
-
-    /** @brief Mutex for transmitted slots */
-    std::mutex txed_slots_mutex_;
-
-    /** @brief Condition variable protecting transmitted slots */
-    std::condition_variable txed_slots_cond_;
-
-    /** @brief Queue of transmitted slots */
-    std::queue<std::shared_ptr<Synthesizer::Slot>> txed_slots_q_;
-
     /** @brief Slots to transmit */
     ringbuffer<std::shared_ptr<Synthesizer::Slot>, 4> tx_slots_;
 
     /** @brief Worker transmitting slots */
     void txWorker(void);
-
-    /** @brief Worker handling notification for transmitted slots */
-    void txNotifier(void);
-
-    /** @brief Worker receiving packets */
-    void rxWorker(void);
 
     /** @brief Schedule modulation of a slot
      * @param q The slot queue

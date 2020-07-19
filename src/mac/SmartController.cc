@@ -507,9 +507,9 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 }
 
-void SmartController::transmitted(Synthesizer::Slot &slot)
+void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
 {
-    for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
+    for (auto it = mpkts.begin(); it != mpkts.end(); ++it) {
         NetPacket &pkt = *(*it)->pkt;
 
         if (pkt.hdr.nexthop != kNodeBroadcast && pkt.ehdr().data_len != 0) {

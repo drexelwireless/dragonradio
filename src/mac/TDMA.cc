@@ -10,8 +10,6 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
            std::shared_ptr<Synthesizer> synthesizer,
-           bool pin_rx_worker,
-           bool pin_tx_worker,
            double slot_size,
            double guard_size,
            double slot_send_lead_time,
@@ -22,8 +20,6 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
                collector,
                channelizer,
                synthesizer,
-               pin_rx_worker,
-               pin_tx_worker,
                slot_size,
                guard_size,
                slot_send_lead_time)
@@ -45,7 +41,7 @@ void TDMA::stop(void)
 {
     done_ = true;
 
-    txed_slots_cond_.notify_all();
+    tx_records_cond_.notify_all();
 
     if (rx_thread_.joinable())
         rx_thread_.join();
