@@ -95,6 +95,7 @@ SOURCES := \
     phy/TDChannelModulator.cc \
     phy/TDChannelizer.cc \
     mac/DummyController.cc \
+    mac/FDMA.cc \
     mac/MAC.cc \
     mac/SmartController.cc \
     mac/SlottedALOHA.cc \

@@ -115,7 +115,7 @@ void USRP::setRXFrequency(double freq)
     logEvent("USRP: RX frequency set to %f", freq);
 }
 
-void USRP::burstTX(MonoClock::time_point when,
+void USRP::burstTX(std::optional<MonoClock::time_point> when_,
                    bool start_of_burst,
                    bool end_of_burst,
                    std::list<std::shared_ptr<IQBuf>>& bufs)
@@ -124,11 +124,15 @@ void USRP::burstTX(MonoClock::time_point when,
     size_t             n;     // Size of next send
 
     if (start_of_burst) {
-        tx_md.time_spec = when.t;
-        tx_md.has_time_spec = true;
+        if (when_) {
+            tx_md.time_spec = when_->t;
+            tx_md.has_time_spec = true;
+        }
         tx_md.start_of_burst = true;
         tx_md.end_of_burst = false;
     }
+
+    MonoClock::time_point when = when_ ? *when_ : MonoClock::now();
 
     // We walk through the supplied queue of buffers and trasmit each in chunks
     // whose size is no more than tx_max_samps_ bytes, which is the maximum size

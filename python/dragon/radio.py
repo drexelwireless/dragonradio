@@ -669,7 +669,7 @@ class Config(object):
         parser.set_defaults(**defaults)
 
 class Radio(object):
-    def __init__(self, config):
+    def __init__(self, config, slotted=True):
         self.config = config
         """Config object for radio"""
 
@@ -751,9 +751,7 @@ class Radio(object):
         else:
             self.snapshot_collector = None
 
-        #
-        # Configure the PHY
-        #
+        # Create header MCS
         header_mcs = MCS(config.header_check,
                          config.header_fec0,
                          config.header_fec1,
@@ -765,96 +763,26 @@ class Radio(object):
         else:
             mcs_table = [(MCS(*mcs), self.mkAutoGain()) for mcs in config.mcs_table]
 
-        if config.phy == 'flexframe':
-            self.phy = dragonradio.liquid.FlexFrame(self.snapshot_collector,
-                                                    self.node_id,
-                                                    header_mcs,
-                                                    mcs_table,
-                                                    config.soft_header,
-                                                    config.soft_payload)
-        elif config.phy == 'newflexframe':
-            self.phy = dragonradio.liquid.NewFlexFrame(self.snapshot_collector,
-                                                       self.node_id,
-                                                       header_mcs,
-                                                       mcs_table,
-                                                       config.soft_header,
-                                                       config.soft_payload)
-        elif config.phy == 'ofdm':
-            self.phy = dragonradio.liquid.OFDM(self.snapshot_collector,
-                                               self.node_id,
-                                               header_mcs,
-                                               mcs_table,
-                                               config.soft_header,
-                                               config.soft_payload,
-                                               config.M,
-                                               config.cp_len,
-                                               config.taper_len,
-                                               config.subcarriers)
-        else:
-            fail('Bad PHY: {}'.format(config.phy))
+        # Create the PHY
+        self.phy = self.mkPHY(header_mcs, mcs_table)
 
-        #
-        # Configure the MAC
-        #
         # We start out without a MAC
-        #
         self.mac = None
         """The radio's MAC"""
 
         self.mac_schedule = None
         """Our MAC schedule"""
 
-        #
         # Create tun/tap interface and net neighborhood
-        #
         self.tuntap = dragonradio.TunTap('tap0', False, self.config.mtu, self.node_id)
 
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 
-        #
-        # Configure the channelization
-        #
-        if config.channelizer == 'overlap':
-            self.channelizer = dragonradio.OverlapTDChannelizer(self.phy,
-                                                                self.usrp.rx_rate,
-                                                                Channels([]),
-                                                                config.num_demodulation_threads)
+        # Configure channelizer
+        self.channelizer = self.mkChannelizer()
 
-            self.channelizer.enforce_ordering = config.channelizer_enforce_ordering
-        elif config.channelizer == 'timedomain':
-            self.channelizer = dragonradio.TDChannelizer(self.phy,
-                                                         self.usrp.rx_rate,
-                                                         Channels([]),
-                                                         config.num_demodulation_threads)
-        elif config.channelizer == 'freqdomain':
-            self.channelizer = dragonradio.FDChannelizer(self.phy,
-                                                         self.usrp.rx_rate,
-                                                         Channels([]),
-                                                         config.num_demodulation_threads)
-        else:
-            raise Exception('Unknown channelizer: %s' % config.channelizer)
-
-        if config.synthesizer == 'timedomain':
-            self.synthesizer = dragonradio.TDSynthesizer(self.phy,
-                                                         self.usrp.tx_rate,
-                                                         Channels([]),
-                                                         config.num_modulation_threads)
-        elif config.synthesizer == 'freqdomain':
-            self.synthesizer = dragonradio.FDSynthesizer(self.phy,
-                                                         self.usrp.tx_rate,
-                                                         Channels([]),
-                                                         config.num_modulation_threads)
-        elif config.synthesizer == 'multichannel':
-            self.synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
-                                                                   self.usrp.tx_rate,
-                                                                   Channels([]),
-                                                                   config.num_modulation_threads)
-        else:
-            raise Exception('Unknown synthesizer: %s' % config.synthesizer)
-
-        #
-        # Configure the controller
-        #
+        # Configure synthesizer
+        self.synthesizer = self.mkSynthesizer(slotted)
 
         # Configure EVM thresholds
         if config.amc and config.amc_table:
@@ -870,46 +798,8 @@ class Radio(object):
         else:
             evm_thresholds = [None for _ in config.mcs_table]
 
-        if config.arq:
-            self.controller = dragonradio.SmartController(self.net,
-                                                          self.phy,
-                                                          config.slot_size,
-                                                          config.arq_window,
-                                                          config.arq_window,
-                                                          evm_thresholds)
-
-            # Add MCU to MTU
-            dragonradio.rc.mtu += config.arq_mcu
-
-            # ARQ parameters
-            self.controller.enforce_ordering = config.arq_enforce_ordering
-            self.controller.max_retransmissions = config.arq_max_retransmissions
-            self.controller.ack_delay = config.arq_ack_delay
-            self.controller.retransmission_delay = config.arq_retransmission_delay
-            self.controller.sack_delay = config.arq_sack_delay
-            self.controller.explicit_nak_window = config.arq_explicit_nak_win
-            self.controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
-            self.controller.selective_ack = config.arq_selective_ack
-            self.controller.selective_ack_feedback_delay = config.arq_selective_ack_feedback_delay
-            self.controller.move_along = config.arq_move_along
-            self.controller.broadcast_gain.dB = config.arq_broadcast_gain_db
-            self.controller.ack_gain.dB = config.arq_ack_gain_db
-
-            # AMC parameters
-            self.controller.short_per_window = config.amc_short_per_window
-            self.controller.long_per_window = config.amc_long_per_window
-            self.controller.long_stats_window = config.amc_long_stats_window
-            self.controller.mcsidx_broadcast = config.amc_mcsidx_broadcast
-            self.controller.mcsidx_min = config.amc_mcsidx_min
-            self.controller.mcsidx_max = config.amc_mcsidx_max
-            self.controller.mcsidx_init = config.amc_mcsidx_init
-            self.controller.mcsidx_up_per_threshold = config.amc_mcsidx_up_per_threshold
-            self.controller.mcsidx_down_per_threshold = config.amc_mcsidx_down_per_threshold
-            self.controller.mcsidx_alpha = config.amc_mcsidx_alpha
-            self.controller.mcsidx_prob_floor = config.amc_mcsidx_prob_floor
-
-        else:
-            self.controller = dragonradio.DummyController(self.net)
+        # Configure the controller
+        self.controller = self.mkController(evm_thresholds)
 
         #
         # Create flow performance measurement component
@@ -942,16 +832,7 @@ class Radio(object):
         #
         self.netfilter = dragonradio.NetFilter(self.net)
         self.netfirewall = dragonradio.NetFirewall()
-
-        if config.queue == 'fifo':
-            self.netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.FIFO)
-        elif config.queue == 'lifo':
-            self.netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.LIFO)
-        elif config.queue == 'mandate':
-            self.netq = dragonradio.MandateQueue()
-            self.netq.bonus_phase = config.mandate_bonus_phase
-        else:
-            raise Exception('Unknown queue type: %s' % config.queue)
+        self.netq = self.mkNetQueue()
 
         self.tuntap.source >> self.netfilter.input
 
@@ -978,6 +859,169 @@ class Radio(object):
     def __del__(self):
         if self.logger:
             self.logger.close()
+
+    def mkPHY(self, header_mcs, mcs_table):
+        """Construct a PHY from configuration parameters"""
+        config = self.config
+
+        if config.phy == 'flexframe':
+            phy = dragonradio.liquid.FlexFrame(self.snapshot_collector,
+                                               self.node_id,
+                                               header_mcs,
+                                               mcs_table,
+                                               config.soft_header,
+                                               config.soft_payload)
+        elif config.phy == 'newflexframe':
+            phy = dragonradio.liquid.NewFlexFrame(self.snapshot_collector,
+                                                  self.node_id,
+                                                  header_mcs,
+                                                  mcs_table,
+                                                  config.soft_header,
+                                                  config.soft_payload)
+        elif config.phy == 'ofdm':
+            phy = dragonradio.liquid.OFDM(self.snapshot_collector,
+                                          self.node_id,
+                                          header_mcs,
+                                          mcs_table,
+                                          config.soft_header,
+                                          config.soft_payload,
+                                          config.M,
+                                          config.cp_len,
+                                          config.taper_len,
+                                          config.subcarriers)
+        else:
+            fail('Bad PHY: {}'.format(config.phy))
+
+        return phy
+
+    def mkChannelizer(self):
+        """Construct a Channelizer according to configuration parameters"""
+        config = self.config
+
+        if config.channelizer == 'overlap':
+            channelizer = dragonradio.OverlapTDChannelizer(self.phy,
+                                                           self.usrp.rx_rate,
+                                                           Channels([]),
+                                                           config.num_demodulation_threads)
+
+            channelizer.enforce_ordering = config.channelizer_enforce_ordering
+        elif config.channelizer == 'timedomain':
+            channelizer = dragonradio.TDChannelizer(self.phy,
+                                                    self.usrp.rx_rate,
+                                                    Channels([]),
+                                                    config.num_demodulation_threads)
+        elif config.channelizer == 'freqdomain':
+            channelizer = dragonradio.FDChannelizer(self.phy,
+                                                    self.usrp.rx_rate,
+                                                    Channels([]),
+                                                    config.num_demodulation_threads)
+        else:
+            raise Exception('Unknown channelizer: %s' % config.channelizer)
+
+        return channelizer
+
+    def mkSynthesizer(self, slotted):
+        """Construct a Synthesizer according to configuration parameters"""
+        config = self.config
+
+        if slotted:
+            if config.synthesizer == 'timedomain':
+                synthesizer = dragonradio.TDSlotSynthesizer(self.phy,
+                                                            self.usrp.tx_rate,
+                                                            Channels([]),
+                                                            config.num_modulation_threads)
+            elif config.synthesizer == 'freqdomain':
+                synthesizer = dragonradio.FDSlotSynthesizer(self.phy,
+                                                            self.usrp.tx_rate,
+                                                            Channels([]),
+                                                            config.num_modulation_threads)
+            elif config.synthesizer == 'multichannel':
+                synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
+                                                                  self.usrp.tx_rate,
+                                                                  Channels([]),
+                                                                  config.num_modulation_threads)
+            else:
+                raise Exception('Unknown synthesizer: %s' % config.synthesizer)
+        else:
+            if config.synthesizer == 'timedomain':
+                synthesizer = dragonradio.TDSynthesizer(self.phy,
+                                                        self.usrp.tx_rate,
+                                                        Channels([]),
+                                                        config.num_modulation_threads)
+            elif config.synthesizer == 'freqdomain':
+                synthesizer = dragonradio.FDSynthesizer(self.phy,
+                                                        self.usrp.tx_rate,
+                                                        Channels([]),
+                                                        config.num_modulation_threads)
+            elif config.synthesizer == 'multichannel':
+                raise Exception('Multichannel synthesizer can only be used with a slotted MAC')
+            else:
+                raise Exception('Unknown synthesizer: %s' % config.synthesizer)
+
+        return synthesizer
+
+    def mkController(self, evm_thresholds):
+        """Construct a Controller according to configuration parameters"""
+        config = self.config
+
+        if config.arq:
+            controller = dragonradio.SmartController(self.net,
+                                                     self.phy,
+                                                     config.slot_size,
+                                                     config.arq_window,
+                                                     config.arq_window,
+                                                     evm_thresholds)
+
+            # Add MCU to MTU
+            dragonradio.rc.mtu += config.arq_mcu
+
+            # ARQ parameters
+            controller.enforce_ordering = config.arq_enforce_ordering
+            controller.max_retransmissions = config.arq_max_retransmissions
+            controller.ack_delay = config.arq_ack_delay
+            controller.retransmission_delay = config.arq_retransmission_delay
+            controller.sack_delay = config.arq_sack_delay
+            controller.explicit_nak_window = config.arq_explicit_nak_win
+            controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
+            controller.selective_ack = config.arq_selective_ack
+            controller.selective_ack_feedback_delay = config.arq_selective_ack_feedback_delay
+            controller.move_along = config.arq_move_along
+            controller.broadcast_gain.dB = config.arq_broadcast_gain_db
+            controller.ack_gain.dB = config.arq_ack_gain_db
+
+            # AMC parameters
+            controller.short_per_window = config.amc_short_per_window
+            controller.long_per_window = config.amc_long_per_window
+            controller.long_stats_window = config.amc_long_stats_window
+            controller.mcsidx_broadcast = config.amc_mcsidx_broadcast
+            controller.mcsidx_min = config.amc_mcsidx_min
+            controller.mcsidx_max = config.amc_mcsidx_max
+            controller.mcsidx_init = config.amc_mcsidx_init
+            controller.mcsidx_up_per_threshold = config.amc_mcsidx_up_per_threshold
+            controller.mcsidx_down_per_threshold = config.amc_mcsidx_down_per_threshold
+            controller.mcsidx_alpha = config.amc_mcsidx_alpha
+            controller.mcsidx_prob_floor = config.amc_mcsidx_prob_floor
+
+        else:
+            controller = dragonradio.DummyController(self.net)
+
+        return controller
+
+    def mkNetQueue(self):
+        """Construct a network queue according to configuration parameters"""
+        config = self.config
+
+        if config.queue == 'fifo':
+            netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.FIFO)
+        elif config.queue == 'lifo':
+            netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.LIFO)
+        elif config.queue == 'mandate':
+            netq = dragonradio.MandateQueue()
+            netq.bonus_phase = config.mandate_bonus_phase
+        else:
+            raise Exception('Unknown queue type: %s' % config.queue)
+
+        return netq
 
     def mkAutoGain(self):
         config = self.config
@@ -1361,6 +1405,24 @@ class Radio(object):
 
         self.finishConfiguringMAC()
 
+    def configureFDMA(self):
+        """Configures a FDMA MAC.
+        """
+        config = self.config
+
+        if isinstance(self.mac, dragonradio.FDMA):
+            return
+
+        self.mac = dragonradio.FDMA(self.usrp,
+                                    self.phy,
+                                    self.controller,
+                                    self.snapshot_collector,
+                                    self.channelizer,
+                                    self.synthesizer,
+                                    config.slot_size)
+
+        self.finishConfiguringMAC()
+
     def finishConfiguringMAC(self):
         bws = [chan.bw for (chan, _taps) in self.synthesizer.channels]
         if len(bws) != 0:
@@ -1394,12 +1456,13 @@ class Radio(object):
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def installMACSchedule(self, sched):
+    def installMACSchedule(self, sched, use_fdma_mac=False):
         """Install a MAC schedule.
 
         Args:
             sched: The schedule, which is a nchannels X nslots array of node
                 IDs.
+            use_fdma_mac: If True, use the FDMA MAC
         """
         config = self.config
 
@@ -1409,7 +1472,12 @@ class Radio(object):
         (nchannels, nslots) = sched.shape
 
         # First configure the TDMA MAC for the desired number of slots
-        self.configureTDMA(nslots)
+        if use_fdma_mac:
+            if nslots != 1:
+                raise Exception("FDMA schedule has more than one slot: %s" % sched)
+            self.configureFDMA()
+        else:
+            self.configureTDMA(nslots)
 
         # Determine which nodes are allowed to transmit
         nodes_with_slot = set(sched.flatten())
@@ -1459,6 +1527,22 @@ class Radio(object):
                                                            3)
 
         self.installMACSchedule(sched)
+
+    def configureSimpleFDMASchedule(self, use_fdma_mac=False):
+        """
+        Set a simple, static FDMA schedule based on configuration parameters and
+        the given set of nodes.
+        """
+        config = self.config
+
+        nodes = list(self.net.nodes)
+        nodes.sort()
+
+        nchannels = len(self.channels)
+
+        sched = dragon.schedule.fullChannelMACSchedule(nchannels, 1, nodes, k=3)
+
+        self.installMACSchedule(sched, use_fdma_mac=use_fdma_mac)
 
     def synchronizeClock(self):
         """Use timestamps to syncrhonize our clock with the time master (the gateway)"""

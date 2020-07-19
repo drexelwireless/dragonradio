@@ -4,6 +4,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#include "mac/FDMA.hh"
 #include "mac/SlottedALOHA.hh"
 #include "mac/SlottedMAC.hh"
 #include "mac/TDMA.hh"
@@ -62,6 +63,17 @@ void exportMACs(py::module &m)
             "Load per channel measured in number of samples")
         ;
 
+    // Export class FDMA to Python
+    py::class_<FDMA, MAC, std::shared_ptr<FDMA>>(m, "FDMA")
+        .def(py::init<std::shared_ptr<USRP>,
+                      std::shared_ptr<PHY>,
+                      std::shared_ptr<Controller>,
+                      std::shared_ptr<SnapshotCollector>,
+                      std::shared_ptr<Channelizer>,
+                      std::shared_ptr<ChannelSynthesizer>,
+                      double>())
+        ;
+
     // Export class SlottedMAC to Python
     py::class_<SlottedMAC, MAC, std::shared_ptr<SlottedMAC>>(m, "SlottedMAC")
         .def_property("slot_size",
@@ -85,7 +97,7 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
-                      std::shared_ptr<Synthesizer>,
+                      std::shared_ptr<SlotSynthesizer>,
                       double,
                       double,
                       double,
@@ -102,7 +114,7 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
-                      std::shared_ptr<Synthesizer>,
+                      std::shared_ptr<SlotSynthesizer>,
                       double,
                       double,
                       double,

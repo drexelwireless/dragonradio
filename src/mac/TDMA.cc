@@ -9,7 +9,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
-           std::shared_ptr<Synthesizer> synthesizer,
+           std::shared_ptr<SlotSynthesizer> synthesizer,
            double slot_size,
            double guard_size,
            double slot_send_lead_time,
@@ -61,7 +61,7 @@ void TDMA::reconfigure(void)
     SlottedMAC::reconfigure();
 
     for (size_t i = 0; i < nslots_; ++i)
-        tdma_schedule_[i] = schedule_.canTransmit(i);
+        tdma_schedule_[i] = schedule_.canTransmitInSlot(i);
 
     frame_size_ = nslots_*slot_size_;
 

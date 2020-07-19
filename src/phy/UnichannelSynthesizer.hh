@@ -5,11 +5,11 @@
 
 #include "phy/Channel.hh"
 #include "phy/PHY.hh"
-#include "phy/Synthesizer.hh"
+#include "phy/SlotSynthesizer.hh"
 
 /** @brief A single-channel synthesizer. */
 template <class ChannelModulator>
-class UnichannelSynthesizer : public Synthesizer
+class UnichannelSynthesizer : public SlotSynthesizer
 {
 public:
     UnichannelSynthesizer(std::shared_ptr<PHY> phy,
@@ -23,8 +23,7 @@ public:
 
     void reconfigure(void) override;
 
-    /** @brief Stop modulating. */
-    void stop(void);
+    void stop(void) override;
 
 protected:
     /** @brief Flag indicating if we should stop processing packets */

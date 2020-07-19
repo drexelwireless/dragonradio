@@ -20,6 +20,17 @@ public:
 
     Schedule& operator=(const sched_type& schedule)
     {
+        if (schedule.size() == 0)
+            throw std::out_of_range("Schedule has no channels");
+
+        // Check that all channels have the same number of slot
+        size_t nslots = schedule[0].size();
+
+        for (size_t chan = 1; chan < schedule.size(); ++chan) {
+            if (schedule[chan].size() != nslots)
+                throw std::out_of_range("Schedule channels have differeing numbers of slots");
+        }
+
         schedule_ = schedule;
 
         return *this;
@@ -36,9 +47,20 @@ public:
     }
 
     /** @brief Return true if we can transmit in given slot */
-    bool canTransmit(size_t slot) const
+    bool canTransmitInSlot(size_t slot) const
     {
         for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+            if (schedule_[chan][slot])
+                return true;
+        }
+
+        return false;
+    }
+
+    /** @brief Return true if we can transmit on given channel (in any slot) */
+    bool canTransmitOnChannel(size_t chan) const
+    {
+        for (size_t slot = 0; slot < schedule_[0].size(); ++slot) {
             if (schedule_[chan][slot])
                 return true;
         }

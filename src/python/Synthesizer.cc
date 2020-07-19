@@ -6,6 +6,8 @@
 #include "phy/Channel.hh"
 #include "phy/FDChannelModulator.hh"
 #include "phy/MultichannelSynthesizer.hh"
+#include "phy/ParallelChannelSynthesizer.inl"
+#include "phy/SlotSynthesizer.hh"
 #include "phy/Synthesizer.hh"
 #include "phy/TDChannelModulator.hh"
 #include "phy/UnichannelSynthesizer.inl"
@@ -18,17 +20,13 @@ void exportSynthesizers(py::module &m)
         .def_property("tx_rate",
             &Synthesizer::getTXRate,
             &Synthesizer::setTXRate)
-        .def_property("superslots",
-            &Synthesizer::getSuperslots,
-            &Synthesizer::setSuperslots,
-            "Flag indicating whether or not to use superslots.")
         .def_property("channels",
             &Synthesizer::getChannels,
             &Synthesizer::setChannels,
             "TX channels")
         .def_property("schedule",
-            &Synthesizer::getSchedule,
-            py::overload_cast<const Schedule::sched_type &>(&Synthesizer::setSchedule),
+            &SlotSynthesizer::getSchedule,
+            py::overload_cast<const Schedule::sched_type &>(&SlotSynthesizer::setSchedule),
             "MAC schedule")
         .def_property_readonly("sink",
             [](std::shared_ptr<Synthesizer> element)
@@ -37,10 +35,19 @@ void exportSynthesizers(py::module &m)
             })
         ;
 
-    // Export class TDSynthesizer to Python
-    using TDSynthesizer = UnichannelSynthesizer<TDChannelModulator>;
+    // Export class ChannelSynthesizer to Python
+    py::class_<ChannelSynthesizer, Synthesizer, std::shared_ptr<ChannelSynthesizer>>(m, "ChannelSynthesizer")
+        .def_property("high_water_mark",
+            &ChannelSynthesizer::getHighWaterMark,
+            &ChannelSynthesizer::setHighWaterMark,
+            "Maximum number of modulated samples to queue.")
+        ;
+        ;
 
-    py::class_<TDSynthesizer, Synthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
+    // Export class TDSynthesizer to Python
+    using TDSynthesizer = ParallelChannelSynthesizer<TDChannelModulator>;
+
+    py::class_<TDSynthesizer, ChannelSynthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
         .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,
@@ -48,9 +55,37 @@ void exportSynthesizers(py::module &m)
         ;
 
     // Export class FDSynthesizer to Python
-    using FDSynthesizer = UnichannelSynthesizer<FDChannelModulator>;
+    using FDSynthesizer = ParallelChannelSynthesizer<FDChannelModulator>;
 
-    py::class_<FDSynthesizer, Synthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
+    py::class_<FDSynthesizer, ChannelSynthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
+        .def(py::init<std::shared_ptr<PHY>,
+                      double,
+                      const Channels&,
+                      unsigned int>())
+        ;
+
+    // Export class SlotSynthesizer to Python
+    py::class_<SlotSynthesizer, Synthesizer, std::shared_ptr<SlotSynthesizer>>(m, "SlotSynthesizer")
+        .def_property("superslots",
+            &SlotSynthesizer::getSuperslots,
+            &SlotSynthesizer::setSuperslots,
+            "Flag indicating whether or not to use superslots.")
+        ;
+
+    // Export class TDSlotSynthesizer to Python
+    using TDSlotSynthesizer = UnichannelSynthesizer<TDChannelModulator>;
+
+    py::class_<TDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<TDSlotSynthesizer>>(m, "TDSlotSynthesizer")
+        .def(py::init<std::shared_ptr<PHY>,
+                      double,
+                      const Channels&,
+                      unsigned int>())
+        ;
+
+    // Export class FDSlotSynthesizer to Python
+    using FDSlotSynthesizer = UnichannelSynthesizer<FDChannelModulator>;
+
+    py::class_<FDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<FDSlotSynthesizer>>(m, "FDSlotSynthesizer")
         .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,
@@ -58,7 +93,7 @@ void exportSynthesizers(py::module &m)
         ;
 
     // Export class MultichannelSynthesizer to Python
-    py::class_<MultichannelSynthesizer, Synthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
+    py::class_<MultichannelSynthesizer, SlotSynthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
         .def(py::init<std::shared_ptr<PHY>,
                       double,
                       const Channels&,

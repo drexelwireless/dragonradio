@@ -11,7 +11,7 @@ MultichannelSynthesizer::MultichannelSynthesizer(std::shared_ptr<PHY> phy,
                                                  double tx_rate,
                                                  const Channels &channels,
                                                  size_t nthreads)
-  : Synthesizer(phy, tx_rate, channels)
+  : SlotSynthesizer(phy, tx_rate, channels)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)
@@ -77,6 +77,21 @@ void MultichannelSynthesizer::finalize(Slot &slot)
     slot.iqbufs.emplace_back(std::move(iqbuf));
 }
 
+void MultichannelSynthesizer::stop(void)
+{
+    // XXX We must disconnect the sink in order to stop the modulator threads.
+    sink.disconnect();
+
+    done_ = true;
+
+    wake_cond_.notify_all();
+
+    for (size_t i = 0; i < mod_threads_.size(); ++i) {
+        if (mod_threads_[i].joinable())
+            mod_threads_[i].join();
+    }
+}
+
 void MultichannelSynthesizer::reconfigure(void)
 {
     std::lock_guard<spinlock_mutex> lock(mods_mutex_);
@@ -138,21 +153,6 @@ void MultichannelSynthesizer::reconfigure(void)
 
     // Wait for workers to resume
     reconfigure_sync_.wait();
-}
-
-void MultichannelSynthesizer::stop(void)
-{
-    // XXX We must disconnect the sink in order to stop the modulator threads.
-    sink.disconnect();
-
-    done_ = true;
-
-    wake_cond_.notify_all();
-
-    for (size_t i = 0; i < mod_threads_.size(); ++i) {
-        if (mod_threads_[i].joinable())
-            mod_threads_[i].join();
-    }
 }
 
 void MultichannelSynthesizer::modWorker(unsigned tid)
