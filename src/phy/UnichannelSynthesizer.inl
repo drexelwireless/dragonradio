@@ -158,7 +158,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
              */
             float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
-            if (pkt->internal_flags.is_timestamp) {
+            if (pkt->internal_flags.timestamp) {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
                 pkt->appendTimestamp(Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/tx_rate_);
@@ -177,7 +177,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             if (!pushed) {
                 pkt = std::move(mpkt->pkt);
 
-                if (pkt->internal_flags.is_timestamp)
+                if (pkt->internal_flags.timestamp)
                     pkt->removeTimestamp();
             }
         }

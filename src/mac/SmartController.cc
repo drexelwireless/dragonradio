@@ -40,7 +40,6 @@ SmartController::SmartController(std::shared_ptr<Net> net,
                                  const std::vector<evm_thresh_t> &evm_thresholds)
   : Controller(net)
   , phy_(phy)
-  , netq_(nullptr)
   , slot_size_(slot_size)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
@@ -508,11 +507,6 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 }
 
-void SmartController::missed(std::shared_ptr<NetPacket> &&pkt)
-{
-    netq_->repush(std::move(pkt));
-}
-
 void SmartController::transmitted(Synthesizer::Slot &slot)
 {
     for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
@@ -695,7 +689,7 @@ void SmartController::broadcastHello(void)
     if (netq_) {
         pkt->mcsidx = mcsidx_broadcast_;
         pkt->g = 1.0;
-        pkt->internal_flags.is_timestamp = 1;
+        pkt->internal_flags.timestamp = 1;
         netq_->push_hi(std::move(pkt));
     }
 }

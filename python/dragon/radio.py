@@ -984,12 +984,8 @@ class Radio(object):
 
         self.controller.net_out >> self.synthesizer.sink
 
-        #
-        # If we are using a SmartController, tell it about the network queue is
-        # so that it can add high-priority packets.
-        #
-        if isinstance(self.controller, dragonradio.SmartController):
-            self.controller.net_queue = self.netq
+        # Allow Controller access to the network queue
+        self.controller.net_queue = self.netq
 
         #
         # Configure channels

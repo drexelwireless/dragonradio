@@ -14,6 +14,9 @@ void exportControllers(py::module &m)
         .def_property_readonly("net_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_out); } )
         .def_property_readonly("radio_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_in); } )
         .def_property_readonly("radio_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_out); } )
+        .def_property("net_queue",
+            &Controller::getNetQueue,
+            &Controller::setNetQueue)
         .def_property("min_channel_bandwidth",
             nullptr,
             &Controller::setMinChannelBandwidth,
@@ -33,9 +36,6 @@ void exportControllers(py::module &m)
                       Seq::uint_type,
                       Seq::uint_type,
                       const std::vector<SmartController::evm_thresh_t>&>())
-        .def_property("net_queue",
-            &SmartController::getNetQueue,
-            &SmartController::setNetQueue)
         .def_readwrite("broadcast_gain",
             &SmartController::broadcast_gain,
             py::return_value_policy::reference_internal)
