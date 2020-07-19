@@ -63,13 +63,13 @@ public:
                        float rx_rate) override final;
 
         void demodulate(const std::complex<float>* data,
-                        size_t count,
-                        std::function<void(const std::shared_ptr<RadioPacket>&)> callback) override final;
+                        size_t count) override final
+        {
+            demodulateSamples(data, count);
+            sample_end_ += count;
+        }
 
     protected:
-        /** @brief Callback for received packets. */
-        std::function<void(const std::shared_ptr<RadioPacket>&)> callback_;
-
         /** @brief The channel being demodulated */
         Channel channel_;
 

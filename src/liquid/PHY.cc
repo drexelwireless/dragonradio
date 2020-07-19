@@ -238,15 +238,6 @@ void Liquid::PHY::PacketDemodulator::timestamp(const MonoClock::time_point &time
     sample_start_ = sample_end_;
 }
 
-void Liquid::PHY::PacketDemodulator::demodulate(const std::complex<float>* data,
-                                                size_t count,
-                                                std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
-{
-    callback_ = callback;
-    demodulateSamples(data, count);
-    sample_end_ += count;
-}
-
 size_t Liquid::PHY::getModulatedSize(mcsidx_t mcsidx, size_t n)
 {
     std::unique_ptr<Liquid::Modulator> mod = mkLiquidModulator();

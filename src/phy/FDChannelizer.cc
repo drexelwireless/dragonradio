@@ -223,6 +223,16 @@ void FDChannelizer::demodWorker(unsigned tid)
     Slot                   slot;
     std::optional<ssize_t> next_snapshot_off;
     unsigned               num_extra_snapshot_slots = 0;
+    bool                   received = false; // Have we received any packets?
+    Channel                channel;          // Current channel being demodulated
+
+    PHY::PacketDemodulator::callback_type callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
+        received = true;
+        if (pkt) {
+            pkt->channel = channel;
+            source.push(pkt);
+        }
+    };
 
     while (!done_) {
         // If we are reconfiguring, wait until reconfiguration is done
@@ -241,6 +251,10 @@ void FDChannelizer::demodWorker(unsigned tid)
 
                 continue;
             }
+
+            // Set demodulator callbacks
+            for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_)
+                demods_[channelidx]->setCallback(callback);
         }
 
         for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
@@ -284,28 +298,19 @@ void FDChannelizer::demodWorker(unsigned tid)
                             rx_rate_);
 
             // Demodulate the IQ buffer
-            bool   received = false; // Have we received any packets?
             bool   complete = false; // Is the buffer complete?
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t n = 0;
 
-            auto callback = [&, channel=channels_[channelidx].first] (const std::shared_ptr<RadioPacket> &pkt) {
-                received = true;
-                if (pkt) {
-                    pkt->channel = channel;
-                    source.push(pkt);
-                }
-            };
+            received = false;
+            channel = channels_[channelidx].first;
 
             for (;;) {
                 complete = fdbuf->complete.load(std::memory_order_acquire);
                 n = fdbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
 
                 if (n != 0) {
-                    demod.demodulate(fdbuf->data() + ndemodulated,
-                                     n,
-                                     callback);
-
+                    demod.demodulate(fdbuf->data() + ndemodulated, n);
                     ndemodulated += n;
                 } else if (complete)
                     break;
@@ -399,8 +404,7 @@ void FDChannelizer::FDChannelDemodulator::reset(void)
 }
 
 void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* data,
-                                                     size_t count,
-                                                     std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
+                                                     size_t count)
 {
     const unsigned n = N/D_;
 
@@ -437,6 +441,6 @@ void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* 
         ifft_.execute(temp_.data(), ifft_.out.data());
 
         // Demodulate
-        demod_->demodulate(ifft_.out.data() + X_*O/D_, X_*L/D_, callback);
+        demod_->demodulate(ifft_.out.data() + X_*O/D_, X_*L/D_);
     }
 }

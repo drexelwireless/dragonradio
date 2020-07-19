@@ -130,6 +130,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
                                                                   channels_[channelidx].first,
                                                                   channels_[channelidx].second,
                                                                   rx_rate_);
+            demod->setCallback(callback);
             reconfig.store(false, std::memory_order_relaxed);
         } else
             demod->setChannel(channels_[channelidx].first);
@@ -144,8 +145,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
                          rx_rate_);
 
         demod->demodulate(buf1->data() + buf1_off,
-                          buf1_nsamples,
-                          callback);
+                          buf1_nsamples);
 
         // Wait for the second buffer to start to fill. If demodulation is very
         // fast, it is possible for us to finish demodulating the first buffer
@@ -184,8 +184,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
 
                 if (n != 0) {
                     demod->demodulate(&(*buf2)[ndemodulated],
-                                      n,
-                                      callback);
+                                      n);
 
                     ndemodulated += n;
                     nwanted -= n;
@@ -291,8 +290,7 @@ void OverlapTDChannelizer::OverlapTDChannelDemodulator::reset(void)
 }
 
 void OverlapTDChannelizer::OverlapTDChannelDemodulator::demodulate(const std::complex<float>* data,
-                                                                   size_t count,
-                                                                   std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
+                                                                   size_t count)
 {
     if (fshift_ != 0.0 || rate_ != 1.0) {
         // Resample. Note that we can't very well mix without a frequency shift,
@@ -304,7 +302,7 @@ void OverlapTDChannelizer::OverlapTDChannelDemodulator::demodulate(const std::co
         resamp_buf_.resize(nw);
 
         // Demodulate resampled data.
-        demod_->demodulate(resamp_buf_.data(), resamp_buf_.size(), callback);
+        demod_->demodulate(resamp_buf_.data(), resamp_buf_.size());
     } else
-        demod_->demodulate(data, count, callback);
+        demod_->demodulate(data, count);
 }

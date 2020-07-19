@@ -99,6 +99,16 @@ void TDChannelizer::demodWorker(unsigned tid)
     std::shared_ptr<IQBuf> prev_iqbuf;
     std::shared_ptr<IQBuf> iqbuf;
     std::optional<ssize_t> next_snapshot_off;
+    bool                   received = false; // Have we received any packets?
+    Channel                channel;          // Current channel being demodulated
+
+    PHY::PacketDemodulator::callback_type callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
+        received = true;
+        if (pkt) {
+            pkt->channel = channel;
+            source.push(pkt);
+        }
+    };
 
     while (!done_) {
         // If we are reconfiguring, wait until reconfiguration is done
@@ -117,6 +127,10 @@ void TDChannelizer::demodWorker(unsigned tid)
 
                 continue;
             }
+
+            // Set demodulator callbacks
+            for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_)
+                demods_[channelidx]->setCallback(callback);
         }
 
         for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
@@ -156,28 +170,19 @@ void TDChannelizer::demodWorker(unsigned tid)
                             rx_rate_);
 
             // Demodulate the IQ buffer
-            bool   received = false; // Have we received any packets?
             bool   complete = false; // Is the buffer complete?
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t n = 0;
 
-            auto callback = [&, channel=channels_[channelidx].first] (const std::shared_ptr<RadioPacket> &pkt) {
-                received = true;
-                if (pkt) {
-                    pkt->channel = channel;
-                    source.push(pkt);
-                }
-            };
+            received = false;
+            channel = channels_[channelidx].first;
 
             for (;;) {
                 complete = iqbuf->complete.load(std::memory_order_acquire);
                 n = iqbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
 
                 if (n != 0) {
-                    demod.demodulate(iqbuf->data() + ndemodulated,
-                                     n,
-                                     callback);
-
+                    demod.demodulate(iqbuf->data() + ndemodulated, n);
                     ndemodulated += n;
                 } else if (complete)
                     break;
@@ -228,8 +233,7 @@ void TDChannelizer::TDChannelDemodulator::reset(void)
 }
 
 void TDChannelizer::TDChannelDemodulator::demodulate(const std::complex<float>* data,
-                                                     size_t count,
-                                                     std::function<void(const std::shared_ptr<RadioPacket>&)> callback)
+                                                     size_t count)
 {
     if (fshift_ != 0.0 || rate_ != 1.0) {
         // Resample. Note that we can't very well mix without a frequency shift,
@@ -241,7 +245,7 @@ void TDChannelizer::TDChannelDemodulator::demodulate(const std::complex<float>* 
         resamp_buf_.resize(nw);
 
         // Demodulate resampled data.
-        demod_->demodulate(resamp_buf_.data(), resamp_buf_.size(), callback);
+        demod_->demodulate(resamp_buf_.data(), resamp_buf_.size());
     } else
-        demod_->demodulate(data, count, callback);
+        demod_->demodulate(data, count);
 }
