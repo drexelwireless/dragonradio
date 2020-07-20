@@ -110,7 +110,8 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
                                              int              payload_valid_,
                                              framesyncstats_s stats_)
 {
-    Header* h = reinterpret_cast<Header*>(header_);
+    Header*         hdr = reinterpret_cast<Header*>(header_);
+    ExtendedHeader* ehdr = reinterpret_cast<ExtendedHeader*>(payload_);
 
     // Save samples of frame start and end
     unsigned frame_start = sample_ + stats_.start_counter;
@@ -118,7 +119,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
 
     // Perform test to see if we want to continue demodulating this packet.
     if (header_test_) {
-        if (PHY::wantPacket(header_valid_, h))
+        if (PHY::wantPacket(header_valid_, hdr))
             return 1;
         else {
             // Update sample count. The framesync object is reset if we decline
@@ -136,7 +137,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
     // Create the packet and fill it out
     std::shared_ptr<RadioPacket> pkt = PHY::mkRadioPacket(header_valid_,
                                                           payload_valid_,
-                                                          *h,
+                                                          *hdr,
                                                           payload_len_,
                                                           payload_);
 
@@ -193,9 +194,8 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
                          end,
                          header_valid_,
                          payload_valid_,
-                         *h,
-                         h->curhop,
-                         h->nexthop,
+                         *hdr,
+                         *ehdr,
                          mcsidx ? *mcsidx : 0,
                          stats_.evm,
                          stats_.rssi,

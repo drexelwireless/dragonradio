@@ -338,8 +338,7 @@ void Logger::logRecv(const Clock::time_point& t,
                      bool header_valid,
                      bool payload_valid,
                      const Header& hdr,
-                     NodeId src,
-                     NodeId dest,
+                     const ExtendedHeader& ehdr,
                      unsigned mcsidx,
                      float evm,
                      float rssi,
@@ -351,13 +350,12 @@ void Logger::logRecv(const Clock::time_point& t,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
     if (getCollectSource(kRecvPackets))
-        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, src, dest, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
+        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
                      const Header& hdr,
-                     NodeId src,
-                     NodeId dest,
+                     const ExtendedHeader& ehdr,
                      unsigned mcsidx,
                      float fc,
                      float bw,
@@ -368,7 +366,7 @@ void Logger::logSend(const Clock::time_point& t,
                      size_t nsamples)
 {
     if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, hdr, src, dest, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
+        log_q_.emplace([=](){ logSend_(t, hdr, ehdr, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
 }
 
 void Logger::logEvent(const Clock::time_point& t,
@@ -461,8 +459,7 @@ void Logger::logRecv_(const Clock::time_point& t,
                       bool header_valid,
                       bool payload_valid,
                       const Header& hdr,
-                      NodeId src,
-                      NodeId dest,
+                      const ExtendedHeader& ehdr,
                       unsigned mcsidx,
                       float evm,
                       float rssi,
@@ -483,8 +480,8 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
-    entry.src = src;
-    entry.dest = dest;
+    entry.src = ehdr.src;
+    entry.dest = ehdr.dest;
     entry.mcsidx = mcsidx;
     entry.evm = evm;
     entry.rssi = rssi;
@@ -506,8 +503,7 @@ void Logger::logRecv_(const Clock::time_point& t,
 
 void Logger::logSend_(const Clock::time_point& t,
                       const Header& hdr,
-                      NodeId src,
-                      NodeId dest,
+                      const ExtendedHeader& ehdr,
                       unsigned mcsidx,
                       float fc,
                       float bw,
@@ -523,8 +519,8 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
-    entry.src = src;
-    entry.dest = dest;
+    entry.src = ehdr.src;
+    entry.dest = ehdr.dest;
     entry.mcsidx = mcsidx;
     entry.fc = fc;
     entry.bw = bw;

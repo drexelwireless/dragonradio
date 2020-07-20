@@ -151,8 +151,7 @@ void MAC::txNotifier(void)
 
                 logger_->logSend(Clock::to_wall_time(samples->timestamp),
                                  (*it)->pkt->hdr,
-                                 (*it)->pkt->ehdr().src,
-                                 (*it)->pkt->ehdr().dest,
+                                 (*it)->pkt->ehdr(),
                                  (*it)->pkt->mcsidx,
                                  tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
                                  tx_rate_,
