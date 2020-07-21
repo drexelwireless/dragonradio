@@ -199,7 +199,7 @@ public:
                     // Remove packet from the default queue
                     std::shared_ptr<NetPacket> pkt = std::move(*it);
 
-                    it = erase(defaultq_, it);
+                    it = erase(defaultq_, pkt, it);
 
                     // Update packet deadline
                     if (mandate->second.mandated_latency)
@@ -325,7 +325,7 @@ public:
                         } else if (canPop(*it)) {
                             if (bonus || subq.bucketHasTokensFor(**it)) {
                                 pkt = std::move(*it);
-                                erase(subq, it);
+                                erase(subq, pkt, it);
 
                                 if (bonus)
                                     bonus_idx_ = idx+1;
@@ -349,7 +349,7 @@ public:
                         } else if (canPop(*it)) {
                             if (bonus || subq.bucketHasTokensFor(**it)) {
                                 pkt = std::move(*it);
-                                erase(subq, std::next(it).base());
+                                erase(subq, pkt, std::next(it).base());
 
                                 if (bonus)
                                     bonus_idx_ = idx+1;
@@ -449,6 +449,7 @@ protected:
           : priority(priority_)
           , qtype(qtype_)
           , active(false)
+          , nbytes(0)
         {
         }
 
@@ -459,6 +460,7 @@ protected:
           , qtype(qtype_)
           , active(false)
           , mandate(mandate_)
+          , nbytes(0)
         {
             if (mandate_.min_throughput_bps)
                 updateMinThroughputBps(*(mandate_.min_throughput_bps)/8);
@@ -494,6 +496,9 @@ protected:
 
         /** @brief Burst counter */
         std::optional<Burst> burst;
+
+        /** @brief Bytes in queue */
+        size_t nbytes;
 
         bool operator >(const SubQueue &other) const
         {
@@ -651,21 +656,32 @@ protected:
 
         typename container_type::iterator erase(typename container_type::const_iterator pos)
         {
+            nbytes -= (*pos)->payload_size;
+            return q_.erase(pos);
+        }
+
+        typename container_type::iterator erase(const T &pkt, typename container_type::const_iterator pos)
+        {
+            nbytes -= pkt->payload_size;
             return q_.erase(pos);
         }
 
         void emplace_front(T &&pkt)
         {
+            nbytes += pkt->payload_size;
             q_.emplace_front(std::move(pkt));
         }
 
         void emplace_back(T &&pkt)
         {
+            nbytes += pkt->payload_size;
             q_.emplace_back(std::move(pkt));
         }
 
         void splice(typename container_type::const_iterator pos, SubQueue& other)
         {
+            nbytes += other.nbytes;
+            other.nbytes = 0;
             q_.splice(pos, other.q_);
         }
 
@@ -676,6 +692,7 @@ protected:
 
         void clear()
         {
+            nbytes = 0;
             q_.clear();
         }
 
@@ -728,6 +745,14 @@ protected:
     {
         nitems_--;
         return subq.erase(pos);
+    }
+
+    typename SubQueue::container_type::iterator erase(SubQueue &subq,
+                                                      const T &pkt,
+                                                      typename SubQueue::container_type::const_iterator pos)
+    {
+        nitems_--;
+        return subq.erase(pkt, pos);
     }
 
     /** @brief Deactivate all queues */
