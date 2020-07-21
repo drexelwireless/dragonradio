@@ -189,6 +189,30 @@ public:
             }
         }
 
+        // Look in the default queue for packets that arrived before the mandate
+        // was specified. They need to be re-inserted in the correct queue.
+        for (auto it = defaultq_.q.begin(); it != defaultq_.q.end(); ) {
+            if ((*it)->flow_uid) {
+                auto mandate = mandates.find(*(*it)->flow_uid);
+
+                if (mandate != mandates.end()) {
+                    // Remove packet from the default queue
+                    std::shared_ptr<NetPacket> pkt = std::move(*it);
+
+                    it = erase(defaultq_, it);
+
+                    // Update packet deadline
+                    if (mandate->second.mandated_latency)
+                        pkt->deadline = pkt->timestamp + *mandate->second.mandated_latency;
+
+                    // Place packet in the correct queue
+                    emplace_back(queue_for(pkt), std::move(pkt));
+                } else
+                    it++;
+            } else
+                it++;
+        }
+
         // Record mandates
         mandates_ = mandates;
     }
