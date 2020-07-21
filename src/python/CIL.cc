@@ -41,6 +41,9 @@ void exportCIL(py::module &m)
     .def_readwrite("scalar_performance",
         &Mandate::scalar_performace,
         "Scalar performance")
+    .def_readonly("mandated_latency",
+        &Mandate::mandated_latency,
+        "Maximum latency (sec)")
     .def_readwrite("radio_ids",
         &Mandate::radio_ids,
         "Nodes in flow")
