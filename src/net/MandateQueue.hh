@@ -141,7 +141,7 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        // Deactive queues that have a mandate but aren't in the new set of
+        // Deactivate queues that have a mandate but aren't in the new set of
         // mandates
         for (auto it = qs_.begin(); it != qs_.end(); ) {
             SubQueue &subq = *it;
