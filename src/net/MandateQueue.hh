@@ -158,7 +158,7 @@ public:
             if (it->second.mandate && mandates.find(it->first) == mandates.end()) {
                 // Append the items in the queue we are deleting to the end of
                 // the default queue.
-                defaultq_.q.splice(defaultq_.q.end(), it->second.q);
+                defaultq_.splice(defaultq_.end(), it->second);
 
                 // Delete the queue that not longer has a mandate.
                 it = flow_qs_.erase(it);
@@ -191,7 +191,7 @@ public:
 
         // Look in the default queue for packets that arrived before the mandate
         // was specified. They need to be re-inserted in the correct queue.
-        for (auto it = defaultq_.q.begin(); it != defaultq_.q.end(); ) {
+        for (auto it = defaultq_.begin(); it != defaultq_.end(); ) {
             if ((*it)->flow_uid) {
                 auto mandate = mandates.find(*(*it)->flow_uid);
 
@@ -309,8 +309,7 @@ public:
         // can send "bonus" traffic. We do this in round-robin fashion.
     retry:
         do {
-            SubQueue                          &subq = qs_[idx];
-            typename SubQueue::container_type &q = subq.q;
+            SubQueue &subq = qs_[idx];
 
             if (!bonus)
                 subq.fillBucket(now);
@@ -318,9 +317,9 @@ public:
             switch (subq.qtype) {
                 case FIFO:
                 {
-                    auto it = q.begin();
+                    auto it = subq.begin();
 
-                    while (it != q.end()) {
+                    while (it != subq.end()) {
                         if ((*it)->shouldDrop(now)) {
                             it = erase(subq, it);
                         } else if (canPop(*it)) {
@@ -342,9 +341,9 @@ public:
 
                 case LIFO:
                 {
-                    auto it = q.rbegin();
+                    auto it = subq.rbegin();
 
-                    while (it != q.rend()) {
+                    while (it != subq.rend()) {
                         if ((*it)->shouldDrop(now)) {
                             it = decltype(it){ erase(subq, std::next(it).base()) };
                         } else if (canPop(*it)) {
@@ -474,9 +473,6 @@ protected:
 
         /** @brief Queue type. */
         QueueType qtype;
-
-        /** @brief The queue. */
-        container_type q;
 
         /** @brief Is this queue active? */
         bool active;
@@ -633,10 +629,59 @@ protected:
             return false;
         }
 
+        typename container_type::iterator begin(void)
+        {
+            return q_.begin();
+        }
+
+        typename container_type::iterator end(void)
+        {
+            return q_.end();
+        }
+
+        typename container_type::reverse_iterator rbegin(void)
+        {
+            return q_.rbegin();
+        }
+
+        typename container_type::reverse_iterator rend(void)
+        {
+            return q_.rend();
+        }
+
+        typename container_type::iterator erase(typename container_type::const_iterator pos)
+        {
+            return q_.erase(pos);
+        }
+
+        void emplace_front(T &&pkt)
+        {
+            q_.emplace_front(std::move(pkt));
+        }
+
+        void emplace_back(T &&pkt)
+        {
+            q_.emplace_back(std::move(pkt));
+        }
+
+        void splice(typename container_type::const_iterator pos, SubQueue& other)
+        {
+            q_.splice(pos, other.q_);
+        }
+
+        typename container_type::size_type size() const
+        {
+            return q_.size();
+        }
+
         void clear()
         {
-            return q.clear();
+            q_.clear();
         }
+
+protected:
+        /** @brief The queue. */
+        container_type q_;
     };
 
     /** @brief Flag indicating that processing of the queue should stop. */
@@ -679,10 +724,10 @@ protected:
     unsigned bonus_idx_;
 
     typename SubQueue::container_type::iterator erase(SubQueue &subq,
-                                                      typename SubQueue::container_type::iterator pos)
+                                                      typename SubQueue::container_type::const_iterator pos)
     {
         nitems_--;
-        return subq.q.erase(pos);
+        return subq.erase(pos);
     }
 
     /** @brief Deactivate all queues */
@@ -692,7 +737,7 @@ protected:
             SubQueue &subq = it.get();
 
             // Remove the queue's items from the total count
-            nitems_ -= subq.q.size();
+            nitems_ -= subq.size();
 
             // Mark the queue as not active
             subq.active = false;
@@ -721,7 +766,7 @@ protected:
                        std::ref(subq));
 
             // Add the queue's items to the total count
-            nitems_ += subq.q.size();
+            nitems_ += subq.size();
 
             // And now the queue is active...
             subq.active = true;
@@ -761,7 +806,7 @@ protected:
         if (subq.updateBurst(*pkt))
             need_sort_ = true;
 
-        subq.q.emplace_front(std::move(pkt));
+        subq.emplace_front(std::move(pkt));
         nitems_++;
     }
 
@@ -772,7 +817,7 @@ protected:
         if (subq.updateBurst(*pkt))
             need_sort_ = true;
 
-        subq.q.emplace_back(std::move(pkt));
+        subq.emplace_back(std::move(pkt));
         nitems_++;
     }
 
