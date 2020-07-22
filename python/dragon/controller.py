@@ -390,6 +390,9 @@ class Controller(CILServer):
                 for node_id in list(self.nodes):
                     self.removeNode(node_id)
 
+            # Close the logger
+            self.radio.logger.close()
+
             # Update radio state to FINISHED
             self.state = remote.FINISHED
             logger.info('Radio stopped')
