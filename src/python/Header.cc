@@ -27,6 +27,10 @@ void exportHeader(py::module &m)
             [](Header::Flags &self) { return self.compressed; },
             [](Header::Flags &self, uint8_t f) { self.compressed = f; },
             "Is packet compressed?")
+        .def("__repr__", [](const Header::Flags& self) {
+            return py::str("HeaderFlags(syn={:d}, ack={:d}, has_data={:d}, has_control=={:d}, compressed=={:d})").\
+            format(self.syn, self.ack, self.has_data, self.has_control, self.compressed);
+         })
         ;
 
     // Export class Header to Python
