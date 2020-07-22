@@ -505,6 +505,21 @@ protected:
             return priority > other.priority;
         }
 
+        /** @brief Return true if this queue handles a throughput mandate flow
+         */
+        bool isThroughput() const
+        {
+            return mandate && mandate->isThroughput();
+        }
+
+        /** @brief Return true if this queue handles a file transfer mandate
+         * flow
+         */
+        bool isFileTransfer() const
+        {
+            return mandate && mandate->isFileTransfer();
+        }
+
         void setMandate(const Mandate &new_mandate)
         {
             mandate = new_mandate;

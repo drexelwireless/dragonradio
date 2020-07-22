@@ -32,6 +32,18 @@ struct Mandate {
 
     ~Mandate() = default;
 
+    /** @brief Is this a throughput mandate? */
+    bool isThroughput() const
+    {
+        return min_throughput_bps.has_value();
+    }
+
+    /** @brief Is this a file transfer mandate? */
+    bool isFileTransfer() const
+    {
+        return file_transfer_deadline_s.has_value();
+    }
+
     /** @brief Flow UID */
     FlowUID flow_uid;
 
