@@ -53,8 +53,7 @@ def modulate(hdr, mcs, payload, cbw, Fc, Fs):
     Returns:
         Modulated and mixed signals.
     """
-    mod = dragonradio.OFDMModulator(48, 6, 4)
-    mod.header_mcs = HEADER_MCS
+    mod = dragonradio.liquid.OFDMModulator(HEADER_MCS, 48, 6, 4)
     mod.payload_mcs = mcs
 
     sig = mod.modulate(hdr, payload)
@@ -107,8 +106,7 @@ def demodulate(sig, cbw, Fc, Fs, plot=False):
         fig.plot(cbw, downsampled, title='PSD of downsampled Signal')
 
     # Demodulate mixed, down-sampled signal
-    demod = dragonradio.OFDMDemodulator(True, False, 48, 6, 4)
-    demod.header_mcs = HEADER_MCS
+    demod = dragonradio.liquid.OFDMDemodulator(HEADER_MCS, True, False, 48, 6, 4)
 
     return demod.demodulate(downsampled)
 
@@ -126,8 +124,7 @@ def modulateMix(hdr, mcs, payload, cbw, Fc, Fs):
     Returns:
         Modulated and mixed signals.
     """
-    mod = dragonradio.OFDMModulator(48, 6, 4)
-    mod.header_mcs = HEADER_MCS
+    mod = dragonradio.liquid.OFDMModulator(HEADER_MCS, 48, 6, 4)
     mod.payload_mcs = mcs
 
     sig = mod.modulate(hdr, payload)
@@ -136,9 +133,9 @@ def modulateMix(hdr, mcs, payload, cbw, Fc, Fs):
     wp = cbw-100e3
     ws = cbw+100e3
 
-    upsamp = dragonradio.MixingRationalResamplerCCC(Fs/cbw)
-    upsamp.taps = lowpass(wp, ws, upsamp.down_rate*Fs, atten=90)
-    upsamp.shift = 2*math.pi*Fc/Fs
+    fshift = 2*math.pi*Fc/Fs
+    taps = lowpass(wp, ws, Fs, atten=90)
+    upsamp = dragonradio.MixingRationalResamplerCCC(Fs/cbw, fshift, taps)
 
     upsampled = upsamp.resampleMixUp(np.append(sig, np.zeros(math.ceil(upsamp.delay))))
     upsampled = upsampled[math.floor(upsamp.rate*upsamp.delay):]
@@ -161,9 +158,9 @@ def demodulateMix(sig, cbw, Fc, Fs, plot=False):
     wp = cbw-100e3
     ws = cbw+100e3
 
-    downsamp = dragonradio.MixingRationalResamplerCCC(cbw/Fs)
-    downsamp.taps = lowpass(wp, ws, downsamp.up_rate*Fs, atten=90)
-    downsamp.shift = 2*math.pi*Fc/Fs
+    fshift = 2*math.pi*Fc/Fs
+    taps = lowpass(wp, ws, Fs, atten=90)
+    downsamp = dragonradio.MixingRationalResamplerCCC(cbw/Fs, fshift, taps)
 
     downsampled = downsamp.resampleMixDown(np.append(sig, np.zeros(math.ceil(downsamp.delay))))
     downsampled = downsampled[math.floor(downsamp.rate*downsamp.delay):]
@@ -174,8 +171,7 @@ def demodulateMix(sig, cbw, Fc, Fs, plot=False):
         fig.plot(Fs, downsampled, title='PSD of Downsampled Signal')
 
     # Demodulate mixed, down-sampled signal
-    demod = dragonradio.OFDMDemodulator(True, False, 48, 6, 4)
-    demod.header_mcs = HEADER_MCS
+    demod = dragonradio.liquid.OFDMDemodulator(HEADER_MCS, True, False, 48, 6, 4)
 
     return demod.demodulate(downsampled)
 
@@ -207,8 +203,7 @@ def modulateFast(hdr, mcs, payload, cbw, Fc, Fs, mod=None):
     """
     # Modulate signal
     if mod is None:
-        mod = dragonradio.OFDMModulator(48, 6, 4)
-    mod.header_mcs = HEADER_MCS
+        mod = dragonradio.liquid.OFDMModulator(HEADER_MCS, 48, 6, 4)
     mod.payload_mcs = mcs
 
     sig = mod.modulate(hdr, payload)
@@ -325,8 +320,7 @@ def demodulateFast(sig, cbw, Fc, Fs, plot=False, demod=None):
 
     # Demodulate mixed, down-sampled signal
     if demod is None:
-        demod = dragonradio.OFDMDemodulator(True, False, 48, 6, 4)
-    demod.header_mcs = HEADER_MCS
+        demod = dragonradio.liquid.OFDMDemodulator(HEADER_MCS, True, False, 48, 6, 4)
 
     return demod.demodulate(downsampled)
 

@@ -19,7 +19,7 @@ import drgui
 
 import dragonsignal
 
-HEADER_MCS = dragonradio.MCS('crc32', 'none', 'v29p78', 'bpsk')\
+HEADER_MCS = dragonradio.liquid.MCS('crc32', 'none', 'v29p78', 'bpsk')
 
 def float_dtype(dt):
     if dt == np.complex64:
@@ -68,7 +68,7 @@ def simulateMCS(crc, fec0, fec1, ms, pathloss_db=0, snr=None, db=None, pkt_size=
     if demod is None:
         demod = dragonradio.liquid.OFDMDemodulator(HEADER_MCS, True, True, 48, 6, 4)
 
-    mcs = dragonradio.MCS('crc32', 'rs8', 'v29p78', ms)
+    mcs = dragonradio.liquid.MCS('crc32', 'rs8', 'v29p78', ms)
 
     # Compute multiplicative "gain" from pathloss dB
     g = dragonsignal.dB2gain(-pathloss_db)
@@ -250,7 +250,7 @@ def main():
         for (crc, fec0, fec1, ms) in amc_table:
             df_ms = df[(df.crc == crc) & (df.fec0 == fec0) & (df.fec1 == fec1) & (df.ms == ms)]
             max_evm = df_ms.loc[df.prob_received > args.per].evm.max()
-            rate = dragonradio.MCS(crc, fec0, fec1, ms).rate
+            rate = dragonradio.liquid.MCS(crc, fec0, fec1, ms).rate
             print("{},{},{},{:1.1f},{:f}".format(ms, fec0, fec1, rate, max_evm))
 
     # Compute soft gain thresholds
@@ -260,7 +260,7 @@ def main():
         for (crc, fec0, fec1, ms) in amc_table:
             df_ms = df[(df.crc == crc) & (df.fec0 == fec0) & (df.fec1 == fec1) & (df.ms == ms)]
             As = df_ms.A
-            rate = dragonradio.MCS(crc, fec0, fec1, ms).rate
+            rate = dragonradio.liquid.MCS(crc, fec0, fec1, ms).rate
             print("{},{},{},{:1.1f},{:f},{:f}".format(ms, fec0, fec1, rate, dragonsignal.gain2dB(1/As.mean()), dragonsignal.gain2dB(1/As.max())))
 
 if __name__ == '__main__':
