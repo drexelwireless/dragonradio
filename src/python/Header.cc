@@ -36,6 +36,9 @@ void exportHeader(py::module &m)
     // Export class Header to Python
     py::class_<Header, std::shared_ptr<Header>>(m, "Header")
         .def(py::init<>())
+        .def(py::init([](NodeId curhop, NodeId nexthop, Seq::uint_type seq){
+            return Header{ curhop, nexthop, Seq{seq}, 0};
+        }))
         .def_readwrite("curhop",
             &Header::curhop,
             "Current hop")
