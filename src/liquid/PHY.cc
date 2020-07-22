@@ -157,6 +157,13 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
 
     pkt->timestamp = timestamp;
 
+    // Save MGEN info for logging
+    pkt->initMGENInfo();
+
+    uint32_t mgen_flow_uid = pkt->mgen_flow_uid.value_or(0);
+    uint32_t mgen_seqno = pkt->mgen_seqno.value_or(0);
+
+    // Call callback with received packet
     callback_(std::move(pkt));
 
     if (snapshot_off_)
@@ -196,6 +203,8 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
                          payload_valid_,
                          *hdr,
                          *ehdr,
+                         mgen_flow_uid,
+                         mgen_seqno,
                          mcsidx ? *mcsidx : 0,
                          stats_.evm,
                          stats_.rssi,
