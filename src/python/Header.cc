@@ -51,5 +51,9 @@ void exportHeader(py::module &m)
         .def_readwrite("flags",
             &Header::flags,
             "Flag")
+        .def("__repr__", [](const Header& self) {
+            return py::str("Header(curhop={:d}, nexthop={:d}, seq={:d}, flags={})").\
+            format(self.curhop, self.nexthop, static_cast<Seq::uint_type>(self.seq), self.flags);
+         })
         ;
 }
