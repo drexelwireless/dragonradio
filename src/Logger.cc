@@ -99,6 +99,8 @@ struct PacketSendEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
     double timestamp;
+    /** @brief Was this packet dropped? */
+    uint8_t dropped;
     /** @brief Packet current hop. */
     uint8_t curhop;
     /** @brief Packet next hop. */
@@ -220,6 +222,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_packet_send(sizeof(PacketSendEntry));
 
     h5_packet_send.insertMember("timestamp", HOFFSET(PacketSendEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("dropped", HOFFSET(PacketSendEntry, dropped), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("curhop", HOFFSET(PacketSendEntry, curhop), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("nexthop", HOFFSET(PacketSendEntry, nexthop), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("seq", HOFFSET(PacketSendEntry, seq), H5::PredType::NATIVE_UINT16);
@@ -382,7 +385,19 @@ void Logger::logSend(const Clock::time_point& t,
                      size_t nsamples)
 {
     if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
+        log_q_.emplace([=](){ logSend_(t, false, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
+}
+
+void Logger::logDrop(const Clock::time_point& t,
+                     const Header& hdr,
+                     const ExtendedHeader& ehdr,
+                     uint32_t mgen_flow_uid,
+                     uint32_t mgen_seqno,
+                     unsigned mcsidx,
+                     uint32_t size)
+{
+    if (getCollectSource(kSentPackets))
+        log_q_.emplace([=](){ logSend_(t, true, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
 }
 
 void Logger::logEvent(const Clock::time_point& t,
@@ -522,6 +537,7 @@ void Logger::logRecv_(const Clock::time_point& t,
 }
 
 void Logger::logSend_(const Clock::time_point& t,
+                      bool dropped,
                       const Header& hdr,
                       const ExtendedHeader& ehdr,
                       uint32_t mgen_flow_uid,
@@ -538,6 +554,7 @@ void Logger::logSend_(const Clock::time_point& t,
     PacketSendEntry entry;
 
     entry.timestamp = (t - t_start_).get_real_secs();
+    entry.dropped = dropped ? 1 : 0;
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;

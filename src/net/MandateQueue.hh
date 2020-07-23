@@ -321,6 +321,7 @@ public:
 
                     while (it != subq.end()) {
                         if ((*it)->shouldDrop(now)) {
+                            drop(**it);
                             it = erase(subq, it);
                         } else if (canPop(*it)) {
                             if (bonus || subq.bucketHasTokensFor(**it)) {
@@ -345,6 +346,7 @@ public:
 
                     while (it != subq.rend()) {
                         if ((*it)->shouldDrop(now)) {
+                            drop(**it);
                             it = decltype(it){ erase(subq, std::next(it).base()) };
                         } else if (canPop(*it)) {
                             if (bonus || subq.bucketHasTokensFor(**it)) {
@@ -754,6 +756,18 @@ protected:
 
     /** @brief Position of last-served queue during bonus time */
     unsigned bonus_idx_;
+
+    void drop(const NetPacket &pkt) const
+    {
+        if (logger)
+            logger->logDrop(Clock::now(),
+                            pkt.hdr,
+                            pkt.ehdr(),
+                            pkt.mgen_flow_uid.value_or(0),
+                            pkt.mgen_seqno.value_or(0),
+                            pkt.mcsidx,
+                            pkt.size());
+    }
 
     typename SubQueue::container_type::iterator erase(SubQueue &subq,
                                                       typename SubQueue::container_type::const_iterator pos)
