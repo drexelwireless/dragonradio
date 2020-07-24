@@ -435,6 +435,7 @@ struct NetPacket : public Packet
 
     explicit NetPacket(size_t n)
       : Packet(n)
+      , mcsidx(0)
       , g(1.0)
     {
     }
