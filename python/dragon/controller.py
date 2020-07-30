@@ -700,15 +700,20 @@ class Controller(CILServer):
             if self.in_colosseum:
                 node_id = self.radio.node_id
 
-                for i in range (1, 255):
-                    ip = '192.168.{:d}.{:d}'.format(node_id+100, i)
-                    ether = '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.format(192, 168, node_id+100, i)
+                async def mkARPTask(peer_id):
+                    ip = '192.168.{:d}.{:d}'.format(node_id+100, peer_id)
+                    ether = '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.format(192, 168, node_id+100, peer_id)
 
                     p = await asyncio.create_subprocess_exec(
                             'arp', '-s', ip, ether,
                             stdout=asyncio.subprocess.PIPE,
                             stderr=asyncio.subprocess.PIPE)
-                    await p.communicate()
+
+                    (stdout_data, stderr_data) = await p.communicate()
+                    return (ip, stdout_data, stderr_data)
+
+                tasks = [mkARPTask(peer_id) for peer_id in range(1, 255)]
+                await asyncio.gather(*tasks, return_exceptions=True)
         except CancelledError:
             return
 
