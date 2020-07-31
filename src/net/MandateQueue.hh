@@ -158,7 +158,7 @@ public:
             if (it->second.mandate && mandates.find(it->first) == mandates.end()) {
                 // Append the items in the queue we are deleting to the end of
                 // the default queue.
-                defaultq_.splice(defaultq_.end(), it->second);
+                defaultq_.append(it->second);
 
                 // Delete the queue that not longer has a mandate.
                 it = flow_qs_.erase(it);
@@ -695,11 +695,11 @@ protected:
             q_.emplace_back(std::move(pkt));
         }
 
-        void splice(typename container_type::const_iterator pos, SubQueue& other)
+        void append(SubQueue& other)
         {
             nbytes += other.nbytes;
             other.nbytes = 0;
-            q_.splice(pos, other.q_);
+            q_.splice(q_.end(), other.q_);
         }
 
         typename container_type::size_type size() const
