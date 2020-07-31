@@ -1,6 +1,7 @@
 #ifndef MANDATEQUEUE_HH_
 #define MANDATEQUEUE_HH_
 
+#include <deque>
 #include <optional>
 #include <unordered_map>
 
@@ -442,7 +443,7 @@ protected:
     };
 
     struct SubQueue {
-        using container_type = std::list<T>;
+        using container_type = std::deque<T>;
 
         SubQueue() = delete;
 
@@ -699,7 +700,10 @@ protected:
         {
             nbytes += other.nbytes;
             other.nbytes = 0;
-            q_.splice(q_.end(), other.q_);
+            q_.insert(q_.end(),
+                      std::make_move_iterator(other.q_.begin()),
+                      std::make_move_iterator(other.q_.end()));
+            other.q_.resize(0);
         }
 
         typename container_type::size_type size() const
