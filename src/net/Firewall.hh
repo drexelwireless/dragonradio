@@ -21,10 +21,9 @@
 #include "net/Processor.hh"
 #include "stats/TimeWindowEstimator.hh"
 
-using PortSet = std::unordered_set<uint16_t>;
-
 /** @brief A flow processor. */
-template <class T>
+template <class T,
+          class Set = std::unordered_set<uint16_t>>
 class Firewall : public Processor<T>
 {
 public:
@@ -61,7 +60,7 @@ public:
     }
 
     /** @brief Get allowed ports */
-    PortSet getAllowedPorts(void)
+    Set getAllowedPorts(void)
     {
         std::lock_guard<spinlock_mutex> lock(mutex_);
 
@@ -69,7 +68,7 @@ public:
     }
 
     /** @brief Set allowed ports */
-    void setAllowedPorts(const PortSet &allowed)
+    void setAllowedPorts(const Set &allowed)
     {
         std::lock_guard<spinlock_mutex> lock(mutex_);
 
@@ -87,7 +86,7 @@ protected:
     bool allow_broadcasts_;
 
     /** @brief allowed ports */
-    PortSet allowed_;
+    Set allowed_;
 
     /** @brief Filter a packet */
     virtual bool process(T &pkt) override
