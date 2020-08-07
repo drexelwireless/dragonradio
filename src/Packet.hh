@@ -459,6 +459,9 @@ struct NetPacket : public Packet
     /** @brief Multiplicative TX gain. */
     float g;
 
+    /** @brief Measurement period to which this packet belongs. */
+    std::optional<unsigned> mp;
+
     /** @brief Return true if the packet's deadline has passed, false otherwise */
     bool deadlinePassed(const MonoClock::time_point &now)
     {
