@@ -53,7 +53,7 @@ public:
     virtual void updateMCS(NodeId id, const MCS *mcs) = 0;
 
     /** @brief Set whether or not a node's send window is open */
-    void setSendWindowStatus(NodeId id, bool isOpen)
+    virtual void setSendWindowStatus(NodeId id, bool isOpen)
     {
         std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
 
