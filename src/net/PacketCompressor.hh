@@ -14,7 +14,7 @@ public:
 
     virtual ~PacketCompressor() = default;
 
-    /** @brief Get enabled flagd */
+    /** @brief Get enabled flag */
     bool getEnabled(void)
     {
         return enabled_;
