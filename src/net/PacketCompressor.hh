@@ -54,11 +54,17 @@ protected:
     /** @brief External IP network mask */
     in_addr_t ext_netmask_;
 
-    /** @brief Handle a network packet */
+    /** @brief Process a network packet */
     void netPush(std::shared_ptr<NetPacket> &&pkt);
 
-    /** @brief Handle a radio packet */
+    /** @brief Process a radio packet */
     void radioPush(std::shared_ptr<RadioPacket> &&pkt);
+
+    /** @brief Compress a network packet */
+    void compress(NetPacket &pkt);
+
+    /** @brief Decompress a radio packet */
+    void decompress(RadioPacket &pkt);
 };
 
 #endif /* NET_PACKETCOMPRESSOR_HH_ */

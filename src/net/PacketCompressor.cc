@@ -197,6 +197,22 @@ PacketCompressor::PacketCompressor(bool enabled)
     ext_netmask_ = ntohl(in.s_addr);
 }
 
+void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
+{
+    if (enabled_)
+        compress(*pkt);
+
+    net_out.push(std::move(pkt));
+}
+
+void PacketCompressor::radioPush(std::shared_ptr<RadioPacket> &&pkt)
+{
+    if (pkt->hdr.flags.compressed)
+        decompress(*pkt);
+
+    radio_out.push(std::move(pkt));
+}
+
 enum Type {
     /** @brief Uncompressed packet */
     kUncompressed = 0,
@@ -310,43 +326,38 @@ public:
     size_t outoff;
 };
 
-void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
+void PacketCompressor::compress(NetPacket &pkt)
 {
-    if (!enabled_) {
-        net_out.push(std::move(pkt));
-        return;
-    }
-
-    CompressionBuffer buf(*pkt);
+    CompressionBuffer buf(pkt);
 
     // Test for compressible Ethernet header
     {
         ether_addr         eaddr = { { 0xc6, 0xff, 0xff, 0xff, 0xff, 0x00 } };
-        const ether_header *ehdr = pkt->getEthernetHdr();
+        const ether_header *ehdr = pkt.getEthernetHdr();
 
         if (ehdr == nullptr)
-            goto no_compression;
+            return;
 
         // Test source address
-        eaddr.ether_addr_octet[5] = pkt->hdr.curhop;
+        eaddr.ether_addr_octet[5] = pkt.hdr.curhop;
 
         if (memcmp(&(eaddr.ether_addr_octet[0]), &(ehdr->ether_shost[0]), 6) != 0) {
             logCompress("Ethernet source doesn't match");
-            goto no_compression;
+            return;
         }
 
         // Test destination address
-        eaddr.ether_addr_octet[5] = pkt->hdr.nexthop;
+        eaddr.ether_addr_octet[5] = pkt.hdr.nexthop;
 
         if (memcmp(eaddr.ether_addr_octet, ehdr->ether_dhost, sizeof(ether_addr)) != 0) {
             logCompress("Ethernet destination doesn't match");
-            goto no_compression;
+            return;
         }
 
         // Make sure this is an IP packet
         if (ntohs(ehdr->ether_type) != ETHERTYPE_IP) {
             logCompress("Not IP");
-            goto no_compression;
+            return;
         }
     }
 
@@ -354,12 +365,12 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
     buf.inoff += sizeof(struct ether_header);
     buf.flags.type = kEthernet;
 
-    pkt->hdr.flags.compressed = 1;
+    pkt.hdr.flags.compressed = 1;
 
     // Get IP header
     {
-        const struct ip *iph = pkt->getIPHdr();
-        size_t          ip_len = sizeof(ExtendedHeader) + pkt->ehdr().data_len - buf.inoff;
+        const struct ip *iph = pkt.getIPHdr();
+        size_t          ip_len = sizeof(ExtendedHeader) + pkt.ehdr().data_len - buf.inoff;
 
         // Must be IPv4
         if (iph->ip_v != 4) {
@@ -386,7 +397,7 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
         }
 
         // Must have valid checksum
-        uint16_t cksum = ip_checksum(pkt->data() + buf.inoff, 4*iph->ip_hl);
+        uint16_t cksum = ip_checksum(pkt.data() + buf.inoff, 4*iph->ip_hl);
 
         if (iph->ip_sum == 0xffffff || cksum != 0) {
             logCompress("Bad IP checksum");
@@ -407,15 +418,15 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
 
             // Internal network has the form 10.10.10.<NODE>
             if ((saddr & int_netmask_) == int_net_ &&
-                (saddr & 0xff) == pkt->ehdr().src &&
+                (saddr & 0xff) == pkt.ehdr().src &&
                 (daddr & int_netmask_) == int_net_ &&
-                (daddr & 0xff) == pkt->ehdr().dest) {
+                (daddr & 0xff) == pkt.ehdr().dest) {
                 buf.flags.ipaddr_type = kIPInternal;
             // External network has the form 192.168.(100 + <NODE>).N
             } else if ((saddr & ext_netmask_) == int_net_ &&
-                       ((saddr >> 8) & 0xff) == 100u + pkt->ehdr().src &&
+                       ((saddr >> 8) & 0xff) == 100u + pkt.ehdr().src &&
                        (daddr & int_netmask_) == int_net_ &&
-                       ((daddr >> 8) & 0xff) == 100u + pkt->ehdr().dest) {
+                       ((daddr >> 8) & 0xff) == 100u + pkt.ehdr().dest) {
                 buf.copyOut(static_cast<uint8_t>(saddr & 0xff));
                 buf.copyOut(static_cast<uint8_t>(daddr & 0xff));
                 buf.flags.ipaddr_type = kIPExternal;
@@ -431,8 +442,8 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
 
         //Handle UDP
         if (iph->ip_p == IPPROTO_UDP) {
-            const struct udphdr *udph = pkt->getUDPHdr();
-            size_t              udp_len = sizeof(ExtendedHeader) + pkt->ehdr().data_len - buf.inoff;
+            const struct udphdr *udph = pkt.getUDPHdr();
+            size_t              udp_len = sizeof(ExtendedHeader) + pkt.ehdr().data_len - buf.inoff;
 
             // Length must match packet data length
             if (ntohs(udph->uh_ulen) != udp_len) {
@@ -458,13 +469,13 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
             buf.flags.type = kUDP;
 
             // Handle MGEN
-            const struct mgenhdr *mgenh = pkt->getMGENHdr();
+            const struct mgenhdr *mgenh = pkt.getMGENHdr();
 
             if (mgenh == nullptr)
                 goto done;
 
             // Length must match packet data length
-            size_t  mgen_len = sizeof(ExtendedHeader) + pkt->ehdr().data_len - buf.inoff;
+            size_t  mgen_len = sizeof(ExtendedHeader) + pkt.ehdr().data_len - buf.inoff;
             ssize_t mgen_padlen = 0;
 
             if (mgenh->version == MGEN_VERSION)
@@ -627,9 +638,6 @@ void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
 
 done:
     buf.flush();
-
-no_compression:
-    net_out.push(std::move(pkt));
 }
 
 class DecompressionBuffer : public buffer<unsigned char>
@@ -697,14 +705,9 @@ public:
     size_t outoff;
 };
 
-void PacketCompressor::radioPush(std::shared_ptr<RadioPacket> &&pkt)
+void PacketCompressor::decompress(RadioPacket &pkt)
 {
-    if (!pkt->hdr.flags.compressed) {
-        radio_out.push(std::move(pkt));
-        return;
-    }
-
-    DecompressionBuffer buf(*pkt);
+    DecompressionBuffer buf(pkt);
 
     // Test for compressed Ethernet header
     if (buf.flags.type < kEthernet)
@@ -712,8 +715,8 @@ void PacketCompressor::radioPush(std::shared_ptr<RadioPacket> &&pkt)
 
     // Decompress Ethernet header
     {
-        ether_header ehdr = { { 0xc6, 0xff, 0xff, 0xff, 0xff, pkt->hdr.nexthop }
-                            , { 0xc6, 0xff, 0xff, 0xff, 0xff, pkt->hdr.curhop }
+        ether_header ehdr = { { 0xc6, 0xff, 0xff, 0xff, 0xff, pkt.hdr.nexthop }
+                            , { 0xc6, 0xff, 0xff, 0xff, 0xff, pkt.hdr.curhop }
                             , htons(ETHERTYPE_IP)
                             };
 
@@ -747,11 +750,11 @@ void PacketCompressor::radioPush(std::shared_ptr<RadioPacket> &&pkt)
         iph.ip_src.s_addr = buf.read<in_addr_t>();
         iph.ip_dst.s_addr = buf.read<in_addr_t>();
     } else if (buf.flags.ipaddr_type == kIPInternal) {
-        iph.ip_src.s_addr = htonl(int_net_ + pkt->ehdr().src);
-        iph.ip_dst.s_addr = htonl(int_net_ + pkt->ehdr().dest);
+        iph.ip_src.s_addr = htonl(int_net_ + pkt.ehdr().src);
+        iph.ip_dst.s_addr = htonl(int_net_ + pkt.ehdr().dest);
     } else /* buf.flags.ipaddr_type == kIPExternal */ {
-        iph.ip_src.s_addr = htonl(ext_net_ + ((100 + pkt->ehdr().src) << 8) + buf.read<uint8_t>());
-        iph.ip_dst.s_addr = htonl(ext_net_ + ((100 + pkt->ehdr().dest) << 8) + buf.read<uint8_t>());
+        iph.ip_src.s_addr = htonl(ext_net_ + ((100 + pkt.ehdr().src) << 8) + buf.read<uint8_t>());
+        iph.ip_dst.s_addr = htonl(ext_net_ + ((100 + pkt.ehdr().dest) << 8) + buf.read<uint8_t>());
     }
 
     buf.copyOut(iph);
@@ -847,7 +850,7 @@ void PacketCompressor::radioPush(std::shared_ptr<RadioPacket> &&pkt)
 
     if (buf.flags.type == kMGEN || buf.flags.type == kMGEN_DARPA) {
         // Copy out MGEN padding
-        size_t mgen_padlen = sizeof(ExtendedHeader) + pkt->ehdr().data_len - buf.inoff;
+        size_t mgen_padlen = sizeof(ExtendedHeader) + pkt.ehdr().data_len - buf.inoff;
 
         buf.copyBytesOut(mgen_padlen);
 
@@ -860,10 +863,10 @@ done:
 
     // Fix up MGEN length and checksum
     if (buf.flags.type == kMGEN || buf.flags.type == kMGEN_DARPA) {
-        struct udphdr  *udph = pkt->getUDPHdr();
+        struct udphdr  *udph = pkt.getUDPHdr();
         struct mgenhdr *mgenh = reinterpret_cast<struct mgenhdr*>(reinterpret_cast<char*>(udph) + sizeof(struct udphdr));
         char           *mgen_data = reinterpret_cast<char*>(mgenh);
-        size_t         mgen_len = pkt->ehdr().data_len - (sizeof(ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
+        size_t         mgen_len = pkt.ehdr().data_len - (sizeof(ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
 
         mgenh->messageSize = htons(mgen_len);
 
@@ -874,9 +877,9 @@ done:
 
     // Fix up UDP length and checksum
     if (buf.flags.type >= kUDP) {
-        struct ip     *iph = pkt->getIPHdr();
-        struct udphdr *udph = pkt->getUDPHdr();
-        size_t        udp_len = pkt->ehdr().data_len - (sizeof(ether_header) + sizeof(struct ip));
+        struct ip     *iph = pkt.getIPHdr();
+        struct udphdr *udph = pkt.getUDPHdr();
+        size_t        udp_len = pkt.ehdr().data_len - (sizeof(ether_header) + sizeof(struct ip));
 
         udph->uh_ulen = htons(udp_len);
         udph->uh_sum = udp_checksum(iph, udph, udp_len);
@@ -884,15 +887,13 @@ done:
 
     // Fix up IP length and checksum
     if (buf.flags.type >= kIP) {
-        struct ip *iph = pkt->getIPHdr();
-        size_t    ip_len = pkt->ehdr().data_len - sizeof(ether_header);
+        struct ip *iph = pkt.getIPHdr();
+        size_t    ip_len = pkt.ehdr().data_len - sizeof(ether_header);
 
         iph->ip_len = htons(ip_len);
         iph->ip_sum = ip_checksum(iph, sizeof(struct ip));
     }
 
     // Cache payload size
-    pkt->payload_size = pkt->getPayloadSize();
-
-    radio_out.push(std::move(pkt));
+    pkt.payload_size = pkt.getPayloadSize();
 }
