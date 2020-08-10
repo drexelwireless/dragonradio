@@ -296,3 +296,80 @@ size_t Packet::getPayloadSize(void) const
 
     return 0;
 }
+
+
+void Packet::initMGENInfo(void)
+{
+    if (hdr.flags.compressed) {
+        unsigned off = sizeof(ExtendedHeader);
+
+        // Get compression flags
+        CompressionFlags flags;
+
+        if (off + sizeof(CompressionFlags) > size())
+            return;
+
+        memcpy(&flags, data() + off, sizeof(CompressionFlags));
+        off += sizeof(CompressionFlags);
+
+        if (flags.type == kMGEN || flags.type == kDARPAMGEN) {
+            //
+            // IP header
+            //
+
+            off += sizeof(u_int8_t); // TOS
+            off += sizeof(u_short); // IP id
+            if (flags.read_ttl)
+                off += sizeof(uint8_t); // TTL
+
+            // Skip IP source and destination addresses
+            switch (flags.ipaddr_type) {
+                case kIPUncompressed:
+                    off += 2*sizeof(in_addr_t);
+                    break;
+
+                case kIPExternal:
+                    off += 2*sizeof(uint8_t);
+                    break;
+            }
+
+            //
+            // UDP header
+            //
+
+            off += sizeof(u_int16_t); // Source port
+
+            // UDP destination port is also the flow id.
+            u_int16_t dport;
+
+            if (off + sizeof(u_int16_t) > size())
+                return;
+
+            memcpy(&dport, data() + off, sizeof(u_int16_t));
+            off += sizeof(u_int16_t);
+
+            flow_uid = mgen_flow_uid = ntohs(dport);
+
+            //
+            // MGEN header
+            //
+
+            // MGEN sequence number is next
+            uint32_t seqno;
+
+            if (off + sizeof(uint32_t) > size())
+                return;
+
+            memcpy(&seqno, data() + off, sizeof(uint32_t));
+
+            mgen_seqno = ntohl(seqno);
+        }
+    } else {
+         const struct mgenhdr *mgenh = getMGENHdr();
+
+         if (mgenh) {
+             flow_uid = mgen_flow_uid = mgenh->getFlowId();
+             mgen_seqno = mgenh->getSequenceNumber();
+         }
+    }
+}

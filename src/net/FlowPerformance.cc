@@ -64,28 +64,8 @@ void FlowPerformance::setMandates(const MandateMap &mandates)
 
 void FlowPerformance::netPush(std::shared_ptr<NetPacket> &&pkt)
 {
-    // Set packet's flow uid
-    const struct ip *iph = pkt->getIPHdr();
-
-    switch (iph->ip_p) {
-        case IPPROTO_UDP:
-        {
-            const struct udphdr *udph = pkt->getUDPHdr();
-
-            if (udph)
-                pkt->flow_uid = ntohs(udph->uh_dport);
-        }
-        break;
-
-        case IPPROTO_TCP:
-        {
-            const struct tcphdr *tcph = pkt->getTCPHdr();
-
-            if (tcph)
-                pkt->flow_uid = ntohs(tcph->th_dport);
-        }
-        break;
-    }
+    // Initialize flow info
+    pkt->initMGENInfo();
 
     if (pkt->flow_uid) {
         std::lock_guard<spinlock_mutex> lock(sources_mutex_);
