@@ -528,4 +528,51 @@ static_assert(ctrlsize(ControlMsg::kNak) == 3);
 static_assert(ctrlsize(ControlMsg::kSelectiveAck) == 5);
 static_assert(ctrlsize(ControlMsg::kSetUnack) == 3);
 
+enum CompressionType {
+    /** @brief Uncompressed packet */
+    kUncompressed = 0,
+
+    /** @brief Compressed Ethernet packet */
+    kEthernet,
+
+    /** @brief Compressed IP packet */
+    kIP,
+
+    /** @brief Compressed UDP packet */
+    kUDP,
+
+    /** @brief Compressed (UDP) MGEN version 2 packet */
+    kMGEN,
+
+    /** @brief Compressed (UDP) DARPA MGEN version 4 packet */
+    kDARPAMGEN
+};
+
+/** @brief Type of IP address compression used */
+enum CompressedIPAddress {
+    /** @brief Uncompressed IP address */
+    kIPUncompressed = 0,
+
+    /** @brief Internal network IP address */
+    kIPInternal,
+
+    /** @brief External network IP address */
+    kIPExternal
+};
+
+/** @brief Packet compression flags */
+struct CompressionFlags {
+    /** @brief Type of compression used */
+    uint8_t type : 3;
+
+    /** @brief Type of IP address compression used */
+    uint8_t ipaddr_type : 2;
+
+    /** @brief Read IP TTL field */
+    uint8_t read_ttl : 1;
+
+    /** @brief Unused flags */
+    uint8_t unused : 2;
+};
+
 #endif /* PACKET_HH_ */

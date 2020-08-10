@@ -213,53 +213,6 @@ void PacketCompressor::radioPush(std::shared_ptr<RadioPacket> &&pkt)
     radio_out.push(std::move(pkt));
 }
 
-enum Type {
-    /** @brief Uncompressed packet */
-    kUncompressed = 0,
-
-    /** @brief Compressed Ethernet packet */
-    kEthernet,
-
-    /** @brief Compressed IP packet */
-    kIP,
-
-    /** @brief Compressed UDP packet */
-    kUDP,
-
-    /** @brief Compressed (UDP) MGEN version 2 packet */
-    kMGEN,
-
-    /** @brief Compressed (UDP) MGEN DARPA version 4 packet */
-    kMGEN_DARPA
-};
-
-/** @brief Type of IP address compression used */
-enum IPAddress {
-    /** @brief Uncompressed IP address */
-    kIPUncompressed = 0,
-
-    /** @brief Internal network IP address */
-    kIPInternal,
-
-    /** @brief External network IP address */
-    kIPExternal
-};
-
-/** @brief Packet compression flags */
-struct Flags {
-    /** @brief Type of compression used */
-    uint8_t type : 3;
-
-    /** @brief Type of IP address compression used */
-    uint8_t ipaddr_type : 2;
-
-    /** @brief Read IP TTL field */
-    uint8_t read_ttl : 1;
-
-    /** @brief Unused flags */
-    uint8_t unused : 2;
-};
-
 const u_int8_t kExpectedTTL = 254;
 
 const int32_t kExpectedLatitude = htonl((999+180)*60000);
@@ -272,7 +225,7 @@ public:
     CompressionBuffer() = delete;
 
     CompressionBuffer(NetPacket &pkt_)
-      : buffer(pkt_.size() + sizeof(Flags))
+      : buffer(pkt_.size() + sizeof(CompressionFlags))
       , pkt(pkt_)
       , flags({0})
       , inoff(0)
@@ -285,7 +238,7 @@ public:
         copyBytesOut(sizeof(ExtendedHeader));
 
         // Reserve room for flags
-        outoff += sizeof(Flags);
+        outoff += sizeof(CompressionFlags);
     }
 
     void copyBytesOut(size_t count)
@@ -311,7 +264,7 @@ public:
         logCompress("%ld bytes saved", saved);
 
         copyBytesOut(pkt.size() - inoff);
-        memcpy(data() + sizeof(ExtendedHeader), &flags, sizeof(Flags));
+        memcpy(data() + sizeof(ExtendedHeader), &flags, sizeof(CompressionFlags));
         pkt.swap(*this);
         pkt.ehdr().data_len = static_cast<ssize_t>(pkt.ehdr().data_len) - saved;
         pkt.resize(outoff);
@@ -319,7 +272,7 @@ public:
 
     NetPacket &pkt;
 
-    Flags flags;
+    CompressionFlags flags;
 
     size_t inoff;
 
@@ -341,7 +294,9 @@ void PacketCompressor::compress(NetPacket &pkt)
         // Test source address
         eaddr.ether_addr_octet[5] = pkt.hdr.curhop;
 
-        if (memcmp(&(eaddr.ether_addr_octet[0]), &(ehdr->ether_shost[0]), 6) != 0) {
+        if (memcmp(eaddr.ether_addr_octet,
+                   ehdr->ether_shost,
+                   sizeof(ether_addr)) != 0) {
             logCompress("Ethernet source doesn't match");
             return;
         }
@@ -349,7 +304,9 @@ void PacketCompressor::compress(NetPacket &pkt)
         // Test destination address
         eaddr.ether_addr_octet[5] = pkt.hdr.nexthop;
 
-        if (memcmp(eaddr.ether_addr_octet, ehdr->ether_dhost, sizeof(ether_addr)) != 0) {
+        if (memcmp(eaddr.ether_addr_octet,
+                   ehdr->ether_dhost,
+                   sizeof(ether_addr)) != 0) {
             logCompress("Ethernet destination doesn't match");
             return;
         }
@@ -622,7 +579,7 @@ void PacketCompressor::compress(NetPacket &pkt)
                 buf.copyOut(darpa_mgenh->txTimeMicroseconds);
 
                 buf.inoff += sizeof(struct darpa_mgenhdr) + sizeof(mgenstdaddr) + sizeof(darpa_mgenrest);
-                buf.flags.type = kMGEN_DARPA;
+                buf.flags.type = kDARPAMGEN;
             }
 
             // Copy out padding
@@ -656,8 +613,8 @@ public:
         copyBytesOut(sizeof(ExtendedHeader));
 
         // Read flags
-        memcpy(&flags, pkt.data() + inoff, sizeof(Flags));
-        inoff += sizeof(Flags);
+        memcpy(&flags, pkt.data() + inoff, sizeof(CompressionFlags));
+        inoff += sizeof(CompressionFlags);
     }
 
     void copyBytesOut(size_t count)
@@ -698,7 +655,7 @@ public:
 
     RadioPacket &pkt;
 
-    Flags flags;
+    CompressionFlags flags;
 
     size_t inoff;
 
@@ -809,7 +766,7 @@ void PacketCompressor::decompress(RadioPacket &pkt)
         mgenrest.reserved = 0;
         mgenrest.payloadLen = 0;
         buf.copyOut(mgenrest);
-    } else if (buf.flags.type == kMGEN_DARPA) {
+    } else if (buf.flags.type == kDARPAMGEN) {
         // Compress MGEN header
         struct darpa_mgenhdr mgenh;
 
@@ -848,7 +805,7 @@ void PacketCompressor::decompress(RadioPacket &pkt)
         buf.copyOut(mgenrest);
     }
 
-    if (buf.flags.type == kMGEN || buf.flags.type == kMGEN_DARPA) {
+    if (buf.flags.type == kMGEN || buf.flags.type == kDARPAMGEN) {
         // Copy out MGEN padding
         size_t mgen_padlen = sizeof(ExtendedHeader) + pkt.ehdr().data_len - buf.inoff;
 
@@ -862,7 +819,7 @@ done:
     buf.flush();
 
     // Fix up MGEN length and checksum
-    if (buf.flags.type == kMGEN || buf.flags.type == kMGEN_DARPA) {
+    if (buf.flags.type == kMGEN || buf.flags.type == kDARPAMGEN) {
         struct udphdr  *udph = pkt.getUDPHdr();
         struct mgenhdr *mgenh = reinterpret_cast<struct mgenhdr*>(reinterpret_cast<char*>(udph) + sizeof(struct udphdr));
         char           *mgen_data = reinterpret_cast<char*>(mgenh);
