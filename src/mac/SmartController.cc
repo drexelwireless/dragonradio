@@ -78,6 +78,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , demod_always_ordered_(false)
   , enforce_ordering_(false)
   , move_along_(true)
+  , decrease_retrans_mcsidx_(false)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
 {
@@ -209,7 +210,18 @@ get_packet:
         // Apply TX params. If the destination can transmit, proceed as usual.
         // Otherwise, use the default MCS.
         if (dest.can_transmit) {
-            pkt->mcsidx = sendw.mcsidx;
+            // If this is a retransmission, the packet has a deadline, and it
+            // was transmitted at the current MCS, decrease the MCS in the hope
+            // that we can get this packet through before its deadline passes.
+            if (decrease_retrans_mcsidx_ &&
+                pkt->internal_flags.retransmission &&
+                pkt->deadline &&
+                pkt->mcsidx == sendw.mcsidx &&
+                pkt->mcsidx > mcsidx_min_)
+                --pkt->mcsidx;
+            else
+                pkt->mcsidx = sendw.mcsidx;
+
             pkt->g = dest.g;
         } else {
             pkt->mcsidx = mcsidx_init_;

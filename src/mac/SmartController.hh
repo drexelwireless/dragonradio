@@ -707,6 +707,18 @@ public:
         move_along_ = move_along;
     }
 
+    /** @brief Get whether or not we decrease the MCS index of retransmitted packets with a deadline. */
+    bool getDecreaseRetransMCSIdx(void)
+    {
+        return decrease_retrans_mcsidx_;
+    }
+
+    /** @brief Set whether or not we decrease the MCS index of retransmitted packets with a deadline. */
+    void setDecreaseRetransMCSIdx(bool decrease_retrans_mcsidx)
+    {
+        decrease_retrans_mcsidx_ = decrease_retrans_mcsidx;
+    }
+
     /** @brief Get echoed timestamps */
     timestamp_vector getEchoedTimestamps(void)
     {
@@ -864,6 +876,9 @@ protected:
 
     /** @brief Always move the send window along, even if it's full */
     bool move_along_;
+
+    /** @brief Decrease MCS index of retransmitted packets with a deadline */
+    bool decrease_retrans_mcsidx_;
 
     /** @brief Mutex for timestamps */
     std::mutex echoed_timestamps_mutex_;

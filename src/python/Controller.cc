@@ -143,6 +143,10 @@ void exportControllers(py::module &m)
             &SmartController::getMoveAlong,
             &SmartController::setMoveAlong,
             "Should we always move the send window along even if it's full?")
+        .def_property("decrease_retrans_mcsidx",
+            &SmartController::getDecreaseRetransMCSIdx,
+            &SmartController::setDecreaseRetransMCSIdx,
+            "Should we decrease the MCS index of retransmitted packets with a deadline?")
         .def_property_readonly("echoed_timestamps",
             &SmartController::getEchoedTimestamps,
             "Our timestamps echoed by the time master")

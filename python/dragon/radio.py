@@ -226,6 +226,8 @@ class Config(object):
         """Maximum number of extra bytes beyond MTU to be used for control information"""
         self.arq_move_along = True
         """Move the send window along even when it's full"""
+        self.arq_decrease_retrans_mcsidx = False
+        """Decrease MCS index for retransmitted packets with a deadline"""
         self.arq_broadcast_gain_db = 0.0
         """Gain to be applied to broadcast packets (dB)"""
         self.arq_ack_gain_db = 0.0
@@ -1008,6 +1010,7 @@ class Radio(object):
             controller.selective_ack = config.arq_selective_ack
             controller.selective_ack_feedback_delay = config.arq_selective_ack_feedback_delay
             controller.move_along = config.arq_move_along
+            controller.decrease_retrans_mcsidx = config.arq_decrease_retrans_mcsidx
             controller.broadcast_gain.dB = config.arq_broadcast_gain_db
             controller.ack_gain.dB = config.arq_ack_gain_db
 
