@@ -100,7 +100,10 @@ struct SendWindow {
 
     using vector_type = std::vector<Entry>;
 
-    SendWindow(Node &n, SmartController &controller, Seq::uint_type maxwin)
+    SendWindow(Node &n,
+               SmartController &controller,
+               Seq::uint_type maxwin,
+               double retransmission_delay_)
       : node(n)
       , controller(controller)
       , seq({0})
@@ -116,6 +119,8 @@ struct SendWindow {
       , prev_long_per(1)
       , short_per(1)
       , long_per(1)
+      , retransmission_delay(retransmission_delay_)
+      , ack_delay(1.0)
       , entries_(maxwin, *this)
     {
     }
@@ -183,11 +188,20 @@ struct SendWindow {
     /** @brief Long-term RSSI, as reported by receiver */
     std::optional<double> long_rssi;
 
+    /** @brief Duration of retransmission timer */
+    double retransmission_delay;
+
+    /** @brief ACK delay estimator */
+    TimeWindowMax<MonoClock, double> ack_delay;
+
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
         return entries_[seq % entries_.size()];
     }
+
+    /** @brief Record a packet ACK */
+    void recordACK(const MonoClock::time_point &tx_time);
 
 private:
     /** @brief Unacknowledged packets in our send window. */
@@ -507,6 +521,27 @@ public:
         ack_delay_ = t;
     }
 
+    /** @brief Get ACK delay estimation window (sec). */
+    double getACKDelayEstimationWindow(void) const
+    {
+        return ack_delay_estimation_window_;
+    }
+
+    /** @brief Set ACK delay estimation window (sec). */
+    void setACKDelayEstimationWindow(double t)
+    {
+        ack_delay_estimation_window_ = t;
+
+        std::lock_guard<spinlock_mutex> lock(send_mutex_);
+
+        for (auto &&it : send_) {
+            SendWindow                      &sendw = it.second;
+            std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+
+            sendw.ack_delay.setTimeWindow(t);
+        }
+    }
+
     /** @brief Get retransmission delay. */
     double getRetransmissionDelay(void)
     {
@@ -517,6 +552,30 @@ public:
     void setRetransmissionDelay(double t)
     {
         retransmission_delay_ = t;
+    }
+
+    /** @brief Get minimum retransmission delay. */
+    double getMinRetransmissionDelay(void)
+    {
+        return min_retransmission_delay_;
+    }
+
+    /** @brief Set minimum retransmission delay. */
+    void setMinRetransmissionDelay(double t)
+    {
+        min_retransmission_delay_ = t;
+    }
+
+    /** @brief Get retransmission delay safety factor. */
+    double getRetransmissionDelaySlop(void)
+    {
+        return retransmission_delay_slop_;
+    }
+
+    /** @brief Set retransmission delay safety factor. */
+    void setRetransmissionDelaySlop(double k)
+    {
+        retransmission_delay_slop_ = k;
     }
 
     /** @brief Get SACK delay. */
@@ -756,8 +815,17 @@ protected:
     /** @brief ACK delay in seconds */
     double ack_delay_;
 
+    /** @brief ACK delay estimation window (sec) */
+    double ack_delay_estimation_window_;
+
     /** @brief Packet re-transmission delay in seconds */
     double retransmission_delay_;
+
+    /** @brief Minimum packet re-transmission delay in seconds */
+    double min_retransmission_delay_;
+
+    /** @brief Safety factor for retransmission timer estimator */
+    double retransmission_delay_slop_;
 
     /** @brief SACK delay (sec) */
     /** @brief Amount of time we wait for a regular packet to have a SACK

@@ -90,10 +90,22 @@ void exportControllers(py::module &m)
             &SmartController::getACKDelay,
             &SmartController::setACKDelay,
             "ACK delay (sec)")
+        .def_property("ack_delay_estimation_window",
+            &SmartController::getACKDelayEstimationWindow,
+            &SmartController::setACKDelayEstimationWindow,
+            "ACK delay estimation window (sec)")
         .def_property("retransmission_delay",
             &SmartController::getRetransmissionDelay,
             &SmartController::setRetransmissionDelay,
             "Retransmission delay (sec)")
+        .def_property("min_retransmission_delay",
+            &SmartController::getMinRetransmissionDelay,
+            &SmartController::setMinRetransmissionDelay,
+            "Minimum retransmission delay (sec)")
+        .def_property("retransmission_delay_slop",
+            &SmartController::getRetransmissionDelaySlop,
+            &SmartController::setRetransmissionDelaySlop,
+            "Retransmission delay safety factor")
         .def_property("sack_delay",
             &SmartController::getSACKDelay,
             &SmartController::setSACKDelay,

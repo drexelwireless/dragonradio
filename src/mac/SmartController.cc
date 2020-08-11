@@ -15,6 +15,16 @@ void SendWindow::Entry::operator()()
     sendw.controller.retransmitOnTimeout(*this);
 }
 
+void SendWindow::recordACK(const MonoClock::time_point &tx_time)
+{
+    auto now = MonoClock::now();
+
+    ack_delay.update(now, (now - tx_time).get_real_secs());
+
+    retransmission_delay = std::max(controller.getMinRetransmissionDelay(),
+        controller.getRetransmissionDelaySlop()*ack_delay.getValue());
+}
+
 void RecvWindow::operator()()
 {
     std::lock_guard<spinlock_mutex> lock(this->mutex);
@@ -55,7 +65,10 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , mcsidx_alpha_(0.5)
   , mcsidx_prob_floor_(0.1)
   , ack_delay_(100e-3)
+  , ack_delay_estimation_window_(1)
   , retransmission_delay_(500e-3)
+  , min_retransmission_delay_(200e-3)
+  , retransmission_delay_slop_(1.1)
   , sack_delay_(50e-3)
   , explicit_nak_win_(0)
   , explicit_nak_win_duration_(0.0)
@@ -840,7 +853,7 @@ void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
         dprintf("ARQ: starting retransmission timer: node=%u; seq=%u",
             (unsigned) entry.sendw.node.id,
             (unsigned) entry.pkt->hdr.seq);
-        timer_queue_.run_in(entry, retransmission_delay_);
+        timer_queue_.run_in(entry, entry.sendw.retransmission_delay);
     }
 }
 
@@ -1081,6 +1094,9 @@ void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
 
         return;
     }
+
+    // Record ACK delay
+    sendw.recordACK(entry.timestamp);
 
     // Cancel retransmission timer for ACK'ed packet
     timer_queue_.cancel(entry);
@@ -1556,7 +1572,10 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
         Node       &dest = (*net_)[node_id];
         SendWindow &sendw = send_.emplace(std::piecewise_construct,
                                           std::forward_as_tuple(node_id),
-                                          std::forward_as_tuple(dest, *this, max_sendwin_)).first->second;
+                                          std::forward_as_tuple(dest,
+                                                                *this,
+                                                                max_sendwin_,
+                                                                retransmission_delay_)).first->second;
 
         sendw.mcsidx = mcsidx_init_;
         sendw.mcsidx_prob.resize(phy_->mcs_table.size(), 1.0);

@@ -204,8 +204,14 @@ class Config(object):
         """Maximum number of times a packet is allowed to be retransmitted"""
         self.arq_ack_delay = 100e-3
         """Maximum delay before an explicit ACK is sent (sec)"""
+        self.arq_ack_delay_estimation_window = 1
+        """Time window over which to estimate ACK delay (sec)"""
         self.arq_retransmission_delay = 500e-3
-        """Duration of retransmission timer (sec)"""
+        """Default duration of retransmission timer (sec)"""
+        self.arq_min_retransmission_delay = 200e-3
+        """Minimum duration of retransmission timer (sec)"""
+        self.arq_retransmission_delay_slop = 1.1
+        """Safety factor for retransmission timer estimator"""
         self.arq_sack_delay = 50e-3
         """Maximum time to wait for a regular packet to have a SACK attached (sec)"""
         self.arq_explicit_nak_win = 10
@@ -992,7 +998,10 @@ class Radio(object):
             controller.enforce_ordering = config.arq_enforce_ordering
             controller.max_retransmissions = config.arq_max_retransmissions
             controller.ack_delay = config.arq_ack_delay
+            controller.ack_delay_estimation_window = config.arq_ack_delay_estimation_window
             controller.retransmission_delay = config.arq_retransmission_delay
+            controller.min_retransmission_delay = config.arq_min_retransmission_delay
+            controller.retransmission_delay_slop = config.arq_retransmission_delay_slop
             controller.sack_delay = config.arq_sack_delay
             controller.explicit_nak_window = config.arq_explicit_nak_win
             controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
