@@ -27,7 +27,6 @@ struct SendWindow {
           : sendw(sendw)
           , pkt(nullptr)
           , timestamp(0.0)
-          , mcsidx(0)
           , nretrans(0)
          {
          };
@@ -89,9 +88,6 @@ struct SendWindow {
 
         /** @brief Timestamp of last transmission of this packet. */
         MonoClock::time_point timestamp;
-
-        /** @brief Modulation index used for last transmission of this packet */
-        size_t mcsidx;
 
         /** @brief Number of retransmissions for this packet. */
         /** The retransmission count will be 0 on the first transmission. */

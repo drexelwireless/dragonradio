@@ -186,7 +186,6 @@ get_packet:
         // Save the packet in our send window.
         sendw[pkt->hdr.seq] = pkt;
         sendw[pkt->hdr.seq].timestamp = MonoClock::now();
-        sendw[pkt->hdr.seq].mcsidx = sendw.mcsidx;
 
         // If this packet is a retransmission, increment the retransmission
         // count, otherwise set it to 0.
@@ -387,17 +386,18 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             // If the NAK is for a retransmitted packet, count it as a
             // transmission failure. We need to check for this case because a
             // NAK for a retransmitted packet will have already been counted
-            // toward our PER the first time the packet was NAK'ed.
+            // toward our PER the first time the packet was NAK'ed. If the
+            // packet has already been re-transmitted, don't record a failure.
             if (nak) {
                 SendWindow::Entry &entry = sendw[*nak];
 
-                if (sendw.mcsidx >= entry.mcsidx && entry.nretrans > 0) {
+                if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.nretrans > 0) {
                     txFailure(sendw);
 
                     logEvent("ARQ: txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
                         (unsigned) node.id,
                         (unsigned) *nak,
-                        (unsigned) entry.mcsidx);
+                        (unsigned) entry.pkt->mcsidx);
                 }
             }
 
@@ -567,13 +567,13 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     }
 
     // Record the packet error as long as receiving node can transmit
-    if (sendw.node.can_transmit && sendw.mcsidx >= entry.mcsidx) {
+    if (sendw.node.can_transmit && sendw.mcsidx >= entry.pkt->mcsidx) {
         txFailure(sendw);
 
         logEvent("AMC: txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
             (unsigned) sendw.node.id,
             (unsigned) entry.pkt->hdr.seq,
-            (unsigned) entry.mcsidx,
+            (unsigned) entry.pkt->mcsidx,
             sendw.short_per.getValue());
 
         updateMCS(sendw);
@@ -766,7 +766,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     logEvent("ARQ: retransmit: node=%u; seq=%u; mcsidx=%u",
         (unsigned) entry.pkt->hdr.nexthop,
         (unsigned) entry.pkt->hdr.seq,
-        (unsigned) entry.mcsidx);
+        (unsigned) entry.pkt->mcsidx);
 
     // The retransmit timer will be restarted when the packet is actually sent,
     // so don't re-start it here! Doing so can lead to a cascade of retransmit
