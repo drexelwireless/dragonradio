@@ -71,6 +71,10 @@ class LoadConfigAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         namespace.loadConfig(values)
 
+def parser():
+    """Return the default configuration parser."""
+    return Config().parser()
+
 class Config:
     """Radio configuration"""
     # pylint: disable=too-many-instance-attributes

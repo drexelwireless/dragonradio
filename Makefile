@@ -138,7 +138,6 @@ all : $(TARGETS) $(GENERATED)
 .PHONY : clean
 clean :
 	$(RM) $(OBJECTS) $(TARGETS)
-	$(RMRF) docs/html
 
 .PHONY : distclean
 distclean : clean
@@ -157,12 +156,6 @@ python/dragonradio/sc2/%_pb2.py : proto/%.proto
 
 python/dragonradio/dragonradio/%_pb2.py : proto/%.proto
 	protoc -I proto --python_out=$(dir $@) $(notdir $<)
-
-.PHONY : html
-html : docs/doxygen/html/index.html
-
-docs/doxygen/html/index.html : docs/doxygen/Doxyfile $(ALLSOURCES) $(ALLINCLUDES)
-	doxygen $<
 
 #
 # Print an arbitrary makefile variable

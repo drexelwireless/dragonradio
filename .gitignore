@@ -2,7 +2,8 @@
 __pycache__/
 /flexframedemod
 /dragonradio
-docs/doxygen/html/
+docs/build/
+docs/doxygen/
 obj/
 python/dragonradio/.eggs
 python/dragonradio/build
