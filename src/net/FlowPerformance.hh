@@ -71,10 +71,7 @@ struct FlowStats {
     /** @brief Set a flow's mandates */
     void setMandate(const Mandate &mandate)
     {
-        if (mandate.max_latency_s)
-            mandated_latency = *mandate.max_latency_s;
-        else if (mandate.file_transfer_deadline_s)
-            mandated_latency = *mandate.file_transfer_deadline_s;
+        mandated_latency = mandate.mandated_latency;
     }
 };
 

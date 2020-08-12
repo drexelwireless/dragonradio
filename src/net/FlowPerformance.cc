@@ -85,6 +85,8 @@ void FlowPerformance::netPush(std::shared_ptr<NetPacket> &&pkt)
             if (start_ && ts > *start_) {
                 unsigned mp = (ts - *start_) / mp_;
 
+                pkt->mp = mp;
+
                 stats.record(*pkt, mp);
 
                 logMgen("MGEN: send flow %d seq %d",

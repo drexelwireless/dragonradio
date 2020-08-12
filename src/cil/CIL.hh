@@ -24,9 +24,25 @@ struct Mandate {
       , achieved_duration(0)
       , scalar_performace(0.0)
     {
+        if (max_latency_s)
+            mandated_latency = *max_latency_s;
+        else if (file_transfer_deadline_s)
+            mandated_latency = *file_transfer_deadline_s;
     }
 
     ~Mandate() = default;
+
+    /** @brief Is this a throughput mandate? */
+    bool isThroughput() const
+    {
+        return min_throughput_bps.has_value();
+    }
+
+    /** @brief Is this a file transfer mandate? */
+    bool isFileTransfer() const
+    {
+        return file_transfer_deadline_s.has_value();
+    }
 
     /** @brief Flow UID */
     FlowUID flow_uid;
@@ -51,6 +67,9 @@ struct Mandate {
 
     /** @brief Scalar performance */
     double scalar_performace;
+
+    /** @brief Flow mandated latency */
+    std::optional<double> mandated_latency;
 
     /** @brief Nodes in flow */
     std::vector<NodeId> radio_ids;

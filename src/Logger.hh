@@ -98,6 +98,14 @@ public:
                  size_t offset,
                  size_t nsamples);
 
+    void logDrop(const Clock::time_point& t,
+                 const Header& hdr,
+                 const ExtendedHeader& ehdr,
+                 uint32_t mgen_flow_uid,
+                 uint32_t mgen_seqno,
+                 unsigned mcsidx,
+                 uint32_t size);
+
     void logEvent(const Clock::time_point& t,
                   const std::string& event);
 
@@ -162,6 +170,7 @@ private:
                   std::shared_ptr<buffer<std::complex<float>>> buf);
 
     void logSend_(const Clock::time_point& t,
+                  bool dropped,
                   const Header& hdr,
                   const ExtendedHeader& ehdr,
                   uint32_t mgen_flow_uid,
