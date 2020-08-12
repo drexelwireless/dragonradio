@@ -166,6 +166,12 @@ struct Packet : public buffer<unsigned char>
     /** @brief Flow UID */
     std::optional<FlowUID> flow_uid;
 
+    /** @brief MGEN flow UID */
+    std::optional<uint32_t> mgen_flow_uid;
+
+    /** @brief MGEN sequence number */
+    std::optional<uint32_t> mgen_seqno;
+
     /** @brief Packet timestamp */
     MonoClock::time_point timestamp;
 
@@ -426,6 +432,10 @@ struct Packet : public buffer<unsigned char>
     {
         return isIPProto(IPPROTO_UDP);
     }
+
+    /** @brief Initialize MGEN info */
+    /** Initialize flow and MGEN sequence number info */
+    void initMGENInfo(void);
 };
 
 /** @brief A packet received from the network. */

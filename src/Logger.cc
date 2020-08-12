@@ -70,6 +70,10 @@ struct PacketRecvEntry {
     uint8_t src;
     /** @brief Packet destination. */
     uint8_t dest;
+    /** @brief MGEN flow UID. */
+    uint32_t mgen_flow_uid;
+    /** @brief MGEN sequence number. */
+    uint32_t mgen_seqno;
     /** @brief MCS Index. */
     uint8_t mcsidx;
     /** @brief EVM [dB]. */
@@ -105,6 +109,10 @@ struct PacketSendEntry {
     uint8_t src;
     /** @brief Packet destination. */
     uint8_t dest;
+    /** @brief MGEN flow UID. */
+    uint32_t mgen_flow_uid;
+    /** @brief MGEN sequence number. */
+    uint32_t mgen_seqno;
     /** @brief MCS Index. */
     uint8_t mcsidx;
     /** @brief Center frequency [Hz] */
@@ -196,6 +204,8 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("seq", HOFFSET(PacketRecvEntry, seq), H5::PredType::NATIVE_UINT16);
     h5_packet_recv.insertMember("src", HOFFSET(PacketRecvEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("dest", HOFFSET(PacketRecvEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("mgen_flow_uid", HOFFSET(PacketRecvEntry, mgen_flow_uid), H5::PredType::NATIVE_UINT32);
+    h5_packet_recv.insertMember("mgen_seqno", HOFFSET(PacketRecvEntry, mgen_seqno), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("mcsidx", HOFFSET(PacketRecvEntry, mcsidx), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("evm", HOFFSET(PacketRecvEntry, evm), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("rssi", HOFFSET(PacketRecvEntry, rssi), H5::PredType::NATIVE_FLOAT);
@@ -215,6 +225,8 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("seq", HOFFSET(PacketSendEntry, seq), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("src", HOFFSET(PacketSendEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("dest", HOFFSET(PacketSendEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_send.insertMember("mgen_flow_uid", HOFFSET(PacketSendEntry, mgen_flow_uid), H5::PredType::NATIVE_UINT32);
+    h5_packet_send.insertMember("mgen_seqno", HOFFSET(PacketSendEntry, mgen_seqno), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("mcsidx", HOFFSET(PacketSendEntry, mcsidx), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
@@ -339,6 +351,8 @@ void Logger::logRecv(const Clock::time_point& t,
                      bool payload_valid,
                      const Header& hdr,
                      const ExtendedHeader& ehdr,
+                     uint32_t mgen_flow_uid,
+                     uint32_t mgen_seqno,
                      unsigned mcsidx,
                      float evm,
                      float rssi,
@@ -350,12 +364,14 @@ void Logger::logRecv(const Clock::time_point& t,
                      std::shared_ptr<buffer<std::complex<float>>> buf)
 {
     if (getCollectSource(kRecvPackets))
-        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
+        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
 }
 
 void Logger::logSend(const Clock::time_point& t,
                      const Header& hdr,
                      const ExtendedHeader& ehdr,
+                     uint32_t mgen_flow_uid,
+                     uint32_t mgen_seqno,
                      unsigned mcsidx,
                      float fc,
                      float bw,
@@ -366,7 +382,7 @@ void Logger::logSend(const Clock::time_point& t,
                      size_t nsamples)
 {
     if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, hdr, ehdr, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
+        log_q_.emplace([=](){ logSend_(t, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
 }
 
 void Logger::logEvent(const Clock::time_point& t,
@@ -460,6 +476,8 @@ void Logger::logRecv_(const Clock::time_point& t,
                       bool payload_valid,
                       const Header& hdr,
                       const ExtendedHeader& ehdr,
+                      uint32_t mgen_flow_uid,
+                      uint32_t mgen_seqno,
                       unsigned mcsidx,
                       float evm,
                       float rssi,
@@ -482,6 +500,8 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.seq = hdr.seq;
     entry.src = ehdr.src;
     entry.dest = ehdr.dest;
+    entry.mgen_flow_uid = mgen_flow_uid;
+    entry.mgen_seqno = mgen_seqno;
     entry.mcsidx = mcsidx;
     entry.evm = evm;
     entry.rssi = rssi;
@@ -504,6 +524,8 @@ void Logger::logRecv_(const Clock::time_point& t,
 void Logger::logSend_(const Clock::time_point& t,
                       const Header& hdr,
                       const ExtendedHeader& ehdr,
+                      uint32_t mgen_flow_uid,
+                      uint32_t mgen_seqno,
                       unsigned mcsidx,
                       float fc,
                       float bw,
@@ -521,6 +543,8 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.seq = hdr.seq;
     entry.src = ehdr.src;
     entry.dest = ehdr.dest;
+    entry.mgen_flow_uid = mgen_flow_uid;
+    entry.mgen_seqno = mgen_seqno;
     entry.mcsidx = mcsidx;
     entry.fc = fc;
     entry.bw = bw;
