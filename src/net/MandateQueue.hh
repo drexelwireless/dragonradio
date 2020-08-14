@@ -822,6 +822,7 @@ protected:
         {
             if (logger)
                 logger->logDrop(Clock::now(),
+                                pkt.nretrans,
                                 pkt.hdr,
                                 pkt.ehdr(),
                                 pkt.mgen_flow_uid.value_or(0),

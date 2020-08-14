@@ -85,6 +85,7 @@ public:
                  std::shared_ptr<buffer<std::complex<float>>> buf);
 
     void logSend(const Clock::time_point& t,
+                 unsigned nretrans,
                  const Header& hdr,
                  const ExtendedHeader& ehdr,
                  uint32_t mgen_flow_uid,
@@ -99,6 +100,7 @@ public:
                  size_t nsamples);
 
     void logDrop(const Clock::time_point& t,
+                 unsigned nretrans,
                  const Header& hdr,
                  const ExtendedHeader& ehdr,
                  uint32_t mgen_flow_uid,
@@ -171,6 +173,7 @@ private:
 
     void logSend_(const Clock::time_point& t,
                   bool dropped,
+                  unsigned nretrans,
                   const Header& hdr,
                   const ExtendedHeader& ehdr,
                   uint32_t mgen_flow_uid,

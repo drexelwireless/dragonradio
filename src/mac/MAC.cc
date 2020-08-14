@@ -150,6 +150,7 @@ void MAC::txNotifier(void)
                 const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
 
                 logger_->logSend(Clock::to_wall_time(samples->timestamp),
+                                 (*it)->pkt->nretrans,
                                  (*it)->pkt->hdr,
                                  (*it)->pkt->ehdr(),
                                  (*it)->pkt->mgen_flow_uid.value_or(0),
