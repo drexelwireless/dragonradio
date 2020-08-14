@@ -27,7 +27,6 @@ struct SendWindow {
           : sendw(sendw)
           , pkt(nullptr)
           , timestamp(0.0)
-          , nretrans(0)
          {
          };
 
@@ -74,7 +73,7 @@ struct SendWindow {
         inline bool shouldDrop(const std::optional<size_t> &max_retransmissions)
         {
             return !pkt->hdr.flags.syn &&
-                 (  (max_retransmissions && nretrans >= *max_retransmissions)
+                 (  (max_retransmissions && pkt->nretrans >= *max_retransmissions)
                  || pkt->deadlinePassed(MonoClock::now()));
         }
 
@@ -88,10 +87,6 @@ struct SendWindow {
 
         /** @brief Timestamp of last transmission of this packet. */
         MonoClock::time_point timestamp;
-
-        /** @brief Number of retransmissions for this packet. */
-        /** The retransmission count will be 0 on the first transmission. */
-        size_t nretrans;
     };
 
     using vector_type = std::vector<Entry>;

@@ -447,6 +447,7 @@ struct NetPacket : public Packet
       : Packet(n)
       , mcsidx(0)
       , g(1.0)
+      , nretrans(0)
     {
     }
 
@@ -458,6 +459,9 @@ struct NetPacket : public Packet
 
     /** @brief Multiplicative TX gain. */
     float g;
+
+    /** @brief Number of retransmissions. */
+    unsigned nretrans;
 
     /** @brief Measurement period to which this packet belongs. */
     std::optional<unsigned> mp;

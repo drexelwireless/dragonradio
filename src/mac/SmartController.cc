@@ -190,9 +190,7 @@ get_packet:
         // If this packet is a retransmission, increment the retransmission
         // count, otherwise set it to 0.
         if (pkt->internal_flags.retransmission)
-            ++sendw[pkt->hdr.seq].nretrans;
-        else
-            sendw[pkt->hdr.seq].nretrans = 0;
+            ++pkt->nretrans;
 
         // Update send window metrics
         if (pkt->hdr.seq > sendw.max)
@@ -391,7 +389,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             if (nak) {
                 SendWindow::Entry &entry = sendw[*nak];
 
-                if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.nretrans > 0) {
+                if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0) {
                     txFailure(sendw);
 
                     logEvent("ARQ: txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
