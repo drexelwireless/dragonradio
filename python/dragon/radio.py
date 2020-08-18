@@ -1290,7 +1290,11 @@ class Radio(object):
         config.frequency = frequency
 
         self.usrp.rx_frequency = self.frequency
-        self.usrp.tx_frequency = self.frequency
+
+        # If we are upsampling on TX, set TX frequency. Otherwise the call to
+        # setTXChannel below will set the appropriate TX frequency.
+        if config.tx_upsample:
+            self.usrp.tx_frequency = self.frequency
 
         # If the bandwidth has changed, re-configure channels. Otherwise just
         # set the current channel---we need to re-set the channel after a
