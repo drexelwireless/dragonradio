@@ -1393,9 +1393,6 @@ void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
 
     assert(sendw.mcsidx >= n);
 
-    sendw.mcsidx -= n;
-    sendw.per_end = sendw.seq;
-
     logEvent("AMC: Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
@@ -1403,13 +1400,9 @@ void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());
 
-    resetPEREstimates(sendw);
-
-    node.mcsidx = sendw.mcsidx;
+    setMCS(sendw, sendw.mcsidx - n);
 
     const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
-
-    netq_->updateMCS(node.id, mcs);
 
     logEvent("AMC: Moved down modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
@@ -1428,12 +1421,6 @@ void SmartController::moveUpMCS(SendWindow &sendw)
     if (rc.verbose && !rc.debug)
         fprintf(stderr, "Moving up modulation scheme\n");
 
-    ++sendw.mcsidx;
-    sendw.per_end = sendw.seq;
-
-    assert(sendw.mcsidx >= 0);
-    assert(sendw.mcsidx < phy_->mcs_table.size());
-
     logEvent("AMC: Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
@@ -1441,13 +1428,9 @@ void SmartController::moveUpMCS(SendWindow &sendw)
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());
 
-    resetPEREstimates(sendw);
-
-    node.mcsidx = sendw.mcsidx;
+    setMCS(sendw, sendw.mcsidx + 1);
 
     const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
-
-    netq_->updateMCS(node.id, mcs);
 
     logEvent("AMC: Moved up modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
@@ -1457,6 +1440,29 @@ void SmartController::moveUpMCS(SendWindow &sendw)
         (unsigned) sendw.per_end,
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());
+}
+
+void SmartController::setMCS(SendWindow &sendw, size_t mcsidx)
+{
+    Node &node = sendw.node;
+
+    assert(mcsidx >= 0);
+    assert(mcsidx < phy_->mcs_table.size());
+
+    // Move MCS up until we reach a valid MCS
+    while (mcsidx < phy_->mcs_table.size() - 1 && !phy_->mcs_table[mcsidx].valid)
+        ++mcsidx;
+
+    sendw.mcsidx = mcsidx;
+    sendw.per_end = sendw.seq;
+
+    resetPEREstimates(sendw);
+
+    node.mcsidx = sendw.mcsidx;
+
+    const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
+
+    netq_->updateMCS(node.id, mcs);
 }
 
 void SmartController::resetPEREstimates(SendWindow &sendw)
@@ -1588,19 +1594,9 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
                                                                 max_sendwin_,
                                                                 retransmission_delay_)).first->second;
 
-        sendw.mcsidx = mcsidx_init_;
         sendw.mcsidx_prob.resize(phy_->mcs_table.size(), 1.0);
-        sendw.per_end = sendw.seq;
 
-        // Move MCS up until we reach a valid MCS
-        while (sendw.mcsidx < phy_->mcs_table.size() - 1 && !phy_->mcs_table[sendw.mcsidx].valid)
-            ++sendw.mcsidx;
-
-        resetPEREstimates(sendw);
-
-        dest.mcsidx = sendw.mcsidx;
-
-        netq_->updateMCS(dest.id, phy_->mcs_table[sendw.mcsidx].mcs);
+        setMCS(sendw, mcsidx_init_);
 
         return sendw;
     }

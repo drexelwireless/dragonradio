@@ -954,6 +954,9 @@ protected:
     /** @brief Move up one MCS level */
     void moveUpMCS(SendWindow &sendw);
 
+    /** @brief Set MCS */
+    void setMCS(SendWindow &sendw, size_t mcsidx);
+
     /** @brief Reconfigure a node's PER estimates */
     void resetPEREstimates(SendWindow &sendw);
 
