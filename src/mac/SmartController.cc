@@ -389,7 +389,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             if (nak) {
                 SendWindow::Entry &entry = sendw[*nak];
 
-                if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0) {
+                if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0 && *nak >= sendw.per_cutoff) {
                     txFailure(sendw);
 
                     logEvent("ARQ: txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
@@ -565,7 +565,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     }
 
     // Record the packet error as long as receiving node can transmit
-    if (sendw.node.can_transmit && sendw.mcsidx >= entry.pkt->mcsidx) {
+    if (sendw.node.can_transmit && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->hdr.seq >= sendw.per_cutoff) {
         txFailure(sendw);
 
         logEvent("AMC: txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
@@ -725,9 +725,16 @@ void SmartController::resetMCSTransitionProbabilities(void)
         SendWindow                      &sendw = it->second;
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
+        // Set all MCS transition probabilities to 1.0
         std::vector<double>&v = sendw.mcsidx_prob;
 
         std::fill(v.begin(), v.end(), 1.0);
+
+        // Set MCS index to initial default
+        setMCS(sendw, mcsidx_init_);
+
+        // Don't use previously-sent packets to calculate PER.
+        sendw.per_cutoff = sendw.seq;
     }
 }
 
@@ -846,6 +853,10 @@ void SmartController::advanceSendWindow(SendWindow &sendw)
     // Advance send window if we can
     while (sendw.unack <= sendw.max && !sendw[sendw.unack])
         ++sendw.unack;
+
+    // Update PER cutoff
+    if (sendw.unack > sendw.per_cutoff)
+        sendw.per_cutoff = sendw.unack;
 
     // Increase the send window. We really only need to do this after the
     // initial ACK, but it doesn't hurt to do it every time...
@@ -1188,11 +1199,13 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
                             if (sendw[seq]) {
                                 if (sendw[seq].timestamp < tfeedback) {
                                     // Record TX failure for PER
-                                    txFailure(sendw);
+                                    if (seq >= sendw.per_cutoff) {
+                                        txFailure(sendw);
 
-                                    logEvent("ARQ: txFailure selective nak: node=%u; seq=%u",
-                                        (unsigned) node.id,
-                                        (unsigned) seq);
+                                        logEvent("ARQ: txFailure selective nak: node=%u; seq=%u",
+                                            (unsigned) node.id,
+                                            (unsigned) seq);
+                                    }
 
                                     // Retransmit the NAK'ed packet
                                     retransmit(sendw[seq]);

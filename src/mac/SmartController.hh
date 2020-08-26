@@ -106,6 +106,7 @@ struct SendWindow {
       , maxwin(maxwin)
       , mcsidx(0)
       , mcsidx_prob(0)
+      , per_cutoff({0})
       , prev_short_per(1)
       , prev_long_per(1)
       , short_per(1)
@@ -154,6 +155,14 @@ struct SendWindow {
 
     /** @brief The probability of moving to a given MCS */
     std::vector<double> mcsidx_prob;
+
+    /** @brief First sequence that can possibly be used to calculate PER. */
+    /** The packet with this sequence number is the first that can possibly be
+      * used to calculate PER. We use this when the environment has changed and
+      * previously-sent packets should not be used to calculate PER in the new
+      * environment.
+     */
+    Seq per_cutoff;
 
     /** @brief End of the current PER window PER. */
     /** Every packet up to, but not including, this sequence number has already been
