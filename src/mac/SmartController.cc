@@ -58,6 +58,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , long_per_window_(400e-3)
   , long_stats_window_(400e-3)
   , mcsidx_broadcast_(0)
+  , mcsidx_ack_(0)
   , mcsidx_min_(0)
   , mcsidx_max_(phy->mcs_table.size()-1)
   , mcsidx_init_(0)
@@ -227,8 +228,8 @@ get_packet:
             pkt->g = dest.g;
         }
     } else {
-        // Apply broadcast TX params
-        pkt->mcsidx = mcsidx_broadcast_;
+        // Apply ACK TX params
+        pkt->mcsidx = mcsidx_ack_;
         pkt->g = ack_gain.getLinearGain();
     }
 

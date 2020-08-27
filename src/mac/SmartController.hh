@@ -408,6 +408,21 @@ public:
         mcsidx_broadcast_ = mcsidx;
     }
 
+    /** @brief Get ACK MCS index */
+    mcsidx_t getAckMCSIndex(void)
+    {
+        return mcsidx_ack_;
+    }
+
+    /** @brief Set ACK MCS index */
+    void setAckMCSIndex(mcsidx_t mcsidx)
+    {
+        if(mcsidx >= phy_->mcs_table.size())
+            throw std::out_of_range("MCS index out of range");
+
+        mcsidx_ack_ = mcsidx;
+    }
+
     /** @brief Get minimum MCS index */
     mcsidx_t getMinMCSIndex(void)
     {
@@ -798,6 +813,9 @@ protected:
 
     /** @brief Broadcast MCS index */
     mcsidx_t mcsidx_broadcast_;
+
+    /** @brief ACK MCS index */
+    mcsidx_t mcsidx_ack_;
 
     /** @brief Minimum MCS index */
     mcsidx_t mcsidx_min_;

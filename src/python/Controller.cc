@@ -58,6 +58,10 @@ void exportControllers(py::module &m)
             &SmartController::getBroadcastMCSIndex,
             &SmartController::setBroadcastMCSIndex,
             "Broadcast MCS index")
+        .def_property("mcsidx_ack",
+            &SmartController::getAckMCSIndex,
+            &SmartController::setAckMCSIndex,
+            "ACK MCS index")
         .def_property("mcsidx_min",
             &SmartController::getMinMCSIndex,
             &SmartController::setMinMCSIndex,

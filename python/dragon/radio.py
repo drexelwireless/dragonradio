@@ -240,6 +240,7 @@ class Config(object):
         self.amc_long_per_window = 400e-3
         self.amc_long_stats_window = 400e-3
         self.amc_mcsidx_broadcast = 0
+        self.amc_mcsidx_ack = 0
         self.amc_mcsidx_min = 0
         self.amc_mcsidx_max = 0
         self.amc_mcsidx_init = 0
@@ -1019,6 +1020,7 @@ class Radio(object):
             controller.long_per_window = config.amc_long_per_window
             controller.long_stats_window = config.amc_long_stats_window
             controller.mcsidx_broadcast = config.amc_mcsidx_broadcast
+            controller.mcsidx_ack = config.amc_mcsidx_ack
             controller.mcsidx_min = config.amc_mcsidx_min
             controller.mcsidx_max = config.amc_mcsidx_max
             controller.mcsidx_init = config.amc_mcsidx_init
