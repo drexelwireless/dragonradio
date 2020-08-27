@@ -57,6 +57,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
   , short_per_window_(100e-3)
   , long_per_window_(400e-3)
   , long_stats_window_(400e-3)
+  , mcsidx_broadcast_(0)
   , mcsidx_min_(0)
   , mcsidx_max_(phy->mcs_table.size()-1)
   , mcsidx_init_(0)
