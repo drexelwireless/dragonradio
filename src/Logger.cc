@@ -66,10 +66,16 @@ struct PacketRecvEntry {
     uint8_t nexthop;
     /** @brief Packet sequence number. */
     uint16_t seq;
+    /** @brief Packet header flags. */
+    uint8_t flags;
     /** @brief Packet source. */
     uint8_t src;
     /** @brief Packet destination. */
     uint8_t dest;
+    /** @brief ACK'ed sequence number. */
+    uint16_t ack;
+    /** @brief Data length. */
+    uint16_t data_len;
     /** @brief MGEN flow UID. */
     uint32_t mgen_flow_uid;
     /** @brief MGEN sequence number. */
@@ -109,10 +115,16 @@ struct PacketSendEntry {
     uint8_t nexthop;
     /** @brief Packet sequence number. */
     uint16_t seq;
+    /** @brief Packet header flags. */
+    uint8_t flags;
     /** @brief Packet source. */
     uint8_t src;
     /** @brief Packet destination. */
     uint8_t dest;
+    /** @brief ACK'ed sequence number. */
+    uint16_t ack;
+    /** @brief Data length. */
+    uint16_t data_len;
     /** @brief MGEN flow UID. */
     uint32_t mgen_flow_uid;
     /** @brief MGEN sequence number. */
@@ -206,8 +218,11 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("curhop", HOFFSET(PacketRecvEntry, curhop), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("nexthop", HOFFSET(PacketRecvEntry, nexthop), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("seq", HOFFSET(PacketRecvEntry, seq), H5::PredType::NATIVE_UINT16);
+    h5_packet_recv.insertMember("flags", HOFFSET(PacketRecvEntry, flags), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("src", HOFFSET(PacketRecvEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_recv.insertMember("dest", HOFFSET(PacketRecvEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_recv.insertMember("ack", HOFFSET(PacketRecvEntry, ack), H5::PredType::NATIVE_UINT16);
+    h5_packet_recv.insertMember("data_len", HOFFSET(PacketRecvEntry, data_len), H5::PredType::NATIVE_UINT16);
     h5_packet_recv.insertMember("mgen_flow_uid", HOFFSET(PacketRecvEntry, mgen_flow_uid), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("mgen_seqno", HOFFSET(PacketRecvEntry, mgen_seqno), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("mcsidx", HOFFSET(PacketRecvEntry, mcsidx), H5::PredType::NATIVE_UINT8);
@@ -229,8 +244,11 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("curhop", HOFFSET(PacketSendEntry, curhop), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("nexthop", HOFFSET(PacketSendEntry, nexthop), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("seq", HOFFSET(PacketSendEntry, seq), H5::PredType::NATIVE_UINT16);
+    h5_packet_send.insertMember("flags", HOFFSET(PacketSendEntry, flags), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("src", HOFFSET(PacketSendEntry, src), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("dest", HOFFSET(PacketSendEntry, dest), H5::PredType::NATIVE_UINT8);
+    h5_packet_send.insertMember("ack", HOFFSET(PacketSendEntry, ack), H5::PredType::NATIVE_UINT16);
+    h5_packet_send.insertMember("data_len", HOFFSET(PacketSendEntry, data_len), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("mgen_flow_uid", HOFFSET(PacketSendEntry, mgen_flow_uid), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("mgen_seqno", HOFFSET(PacketSendEntry, mgen_seqno), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("mcsidx", HOFFSET(PacketSendEntry, mcsidx), H5::PredType::NATIVE_UINT8);
@@ -489,6 +507,11 @@ void Logger::logSelfTX_(Clock::time_point timestamp,
     selftx_->write(&entry, 1);
 }
 
+typedef union {
+    Header::Flags flags;
+    uint8_t bits;
+} u_flags;
+
 void Logger::logRecv_(const Clock::time_point& t,
                       int32_t start_samples,
                       int32_t end_samples,
@@ -509,6 +532,9 @@ void Logger::logRecv_(const Clock::time_point& t,
                       std::shared_ptr<buffer<std::complex<float>>> symbols)
 {
     PacketRecvEntry entry;
+    u_flags         u;
+
+    u.flags = hdr.flags;
 
     entry.timestamp = (t - t_start_).get_real_secs();
     entry.start_samples = start_samples;
@@ -518,8 +544,11 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
+    entry.flags = u.bits;
     entry.src = ehdr.src;
     entry.dest = ehdr.dest;
+    entry.ack = ehdr.ack;
+    entry.data_len = ehdr.data_len;
     entry.mgen_flow_uid = mgen_flow_uid;
     entry.mgen_seqno = mgen_seqno;
     entry.mcsidx = mcsidx;
@@ -558,6 +587,9 @@ void Logger::logSend_(const Clock::time_point& t,
                       size_t nsamples)
 {
     PacketSendEntry entry;
+    u_flags         u;
+
+    u.flags = hdr.flags;
 
     entry.timestamp = (t - t_start_).get_real_secs();
     entry.dropped = dropped ? 1 : 0;
@@ -565,8 +597,11 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
+    entry.flags = u.bits;
     entry.src = ehdr.src;
     entry.dest = ehdr.dest;
+    entry.ack = ehdr.ack;
+    entry.data_len = ehdr.data_len;
     entry.mgen_flow_uid = mgen_flow_uid;
     entry.mgen_seqno = mgen_seqno;
     entry.mcsidx = mcsidx;
