@@ -239,10 +239,10 @@ class Config(object):
         self.amc_short_per_window = 100e-3
         self.amc_long_per_window = 400e-3
         self.amc_long_stats_window = 400e-3
-        self.amc_mcsidx_broadcast = 0
-        self.amc_mcsidx_ack = 0
-        self.amc_mcsidx_min = 0
-        self.amc_mcsidx_max = 0
+        self.amc_mcsidx_broadcast = None
+        self.amc_mcsidx_ack = None
+        self.amc_mcsidx_min = None
+        self.amc_mcsidx_max = None
         self.amc_mcsidx_init = 0
         self.amc_mcsidx_up_per_threshold = 0.04
         self.amc_mcsidx_down_per_threshold = 0.10
@@ -1019,10 +1019,14 @@ class Radio(object):
             controller.short_per_window = config.amc_short_per_window
             controller.long_per_window = config.amc_long_per_window
             controller.long_stats_window = config.amc_long_stats_window
-            controller.mcsidx_broadcast = config.amc_mcsidx_broadcast
-            controller.mcsidx_ack = config.amc_mcsidx_ack
-            controller.mcsidx_min = config.amc_mcsidx_min
-            controller.mcsidx_max = config.amc_mcsidx_max
+            if config.amc_mcsidx_broadcast is not None:
+                controller.mcsidx_broadcast = config.amc_mcsidx_broadcast
+            if config.amc_mcsidx_ack is not None:
+                controller.mcsidx_ack = config.amc_mcsidx_ack
+            if config.amc_mcsidx_min is not None:
+                controller.mcsidx_min = config.amc_mcsidx_min
+            if config.amc_mcsidx_max is not None:
+                controller.mcsidx_max = config.amc_mcsidx_max
             controller.mcsidx_init = config.amc_mcsidx_init
             controller.mcsidx_up_per_threshold = config.amc_mcsidx_up_per_threshold
             controller.mcsidx_down_per_threshold = config.amc_mcsidx_down_per_threshold
