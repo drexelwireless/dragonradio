@@ -977,10 +977,10 @@ void SmartController::handleCtrlTimestampEchos(RadioPacket &pkt, Node &node)
     }
 }
 
-inline void apendSelectiveACK(NetPacket &pkt,
-                              RecvWindow &recvw,
-                              Seq begin,
-                              Seq end)
+inline void appendSelectiveACK(NetPacket &pkt,
+                               RecvWindow &recvw,
+                               Seq begin,
+                               Seq end)
 {
     logEvent("ARQ: send selective ack: node=%u; seq=[%u, %u)",
         (unsigned) recvw.node.id,
@@ -1019,7 +1019,7 @@ void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
             end = seq;
         } else {
             if (in_run) {
-                apendSelectiveACK(pkt, recvw, begin, end + 1);
+                appendSelectiveACK(pkt, recvw, begin, end + 1);
                 nsacks++;
 
                 in_run = false;
@@ -1029,7 +1029,7 @@ void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
 
     // Close out any final run
     if (in_run) {
-        apendSelectiveACK(pkt, recvw, begin, end + 1);
+        appendSelectiveACK(pkt, recvw, begin, end + 1);
         nsacks++;
     }
 
@@ -1037,7 +1037,7 @@ void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
     // end up our received packets. This will inform the sender that the last
     // stretch of packets WAS NOT received.
     if (end < recvw.max) {
-        apendSelectiveACK(pkt, recvw, recvw.max+1, recvw.max+1);
+        appendSelectiveACK(pkt, recvw, recvw.max+1, recvw.max+1);
         nsacks++;
     }
 
