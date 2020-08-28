@@ -45,12 +45,34 @@ void exportUSRP(py::module &m)
         .def_property("rx_gain",
             &USRP::getRXGain,
             &USRP::setRXGain)
+        .def_property_readonly("clock_sources",
+            [](std::shared_ptr<USRP> self)
+            {
+                return self->getClockSources();
+            })
         .def_property("clock_source",
-            &USRP::getClockSource,
-            &USRP::setClockSource)
+            [](std::shared_ptr<USRP> self)
+            {
+                return self->getClockSource();
+            },
+            [](std::shared_ptr<USRP> self, const std::string &clock_src)
+            {
+                return self->setClockSource(clock_src);
+            })
+        .def_property_readonly("time_sources",
+            [](std::shared_ptr<USRP> self)
+            {
+                return self->getTimeSources();
+            })
         .def_property("time_source",
-            &USRP::getTimeSource,
-            &USRP::setTimeSource)
+            [](std::shared_ptr<USRP> self)
+            {
+                return self->getTimeSource();
+            },
+            [](std::shared_ptr<USRP> self, const std::string &time_src)
+            {
+                return self->setTimeSource(time_src);
+            })
         .def_property("tx_max_samps",
             &USRP::getMaxTXSamps,
             &USRP::setMaxTXSamps)
@@ -66,5 +88,13 @@ void exportUSRP(py::module &m)
         .def_property("auto_dc_offset",
             &USRP::getAutoDCOffset,
             &USRP::setAutoDCOffset)
+        .def("getClockSource",
+            &USRP::getClockSource)
+        .def("setClockSource",
+            &USRP::setClockSource)
+        .def("getTimeSource",
+            &USRP::getTimeSource)
+        .def("setTimeSource",
+            &USRP::setTimeSource)
         ;
 }

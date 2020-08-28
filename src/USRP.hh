@@ -46,28 +46,42 @@ public:
         return device_type_;
     }
 
-    /** @brief Get clock source. */
-    std::string getClockSource(void)
+    /** @brief Get clock sources. */
+    std::vector<std::string> getClockSources(const size_t mboard = 0)
     {
-        return usrp_->get_clock_source(0);
+        return usrp_->get_clock_sources(mboard);
+    }
+
+    /** @brief Get clock source. */
+    std::string getClockSource(const size_t mboard = 0)
+    {
+        return usrp_->get_clock_source(mboard);
     }
 
     /** @brief Set clock source. */
-    void setClockSource(const std::string clock_source)
+    void setClockSource(const std::string clock_source,
+                        const size_t mboard = uhd::usrp::multi_usrp::ALL_MBOARDS)
     {
-        return usrp_->set_clock_source(clock_source);
+        return usrp_->set_clock_source(clock_source, mboard);
+    }
+
+    /** @brief Get time sources. */
+    std::vector<std::string> getTimeSources(const size_t mboard = 0)
+    {
+        return usrp_->get_time_sources(mboard);
     }
 
     /** @brief Get time source. */
-    std::string getTimeSource(void)
+    std::string getTimeSource(const size_t mboard = 0)
     {
-        return usrp_->get_time_source(0);
+        return usrp_->get_time_source(mboard);
     }
 
     /** @brief Set time source. */
-    void setTimeSource(const std::string &time_source)
+    void setTimeSource(const std::string &time_source,
+                       const size_t mboard = uhd::usrp::multi_usrp::ALL_MBOARDS)
     {
-        return usrp_->set_time_source(time_source);
+        return usrp_->set_time_source(time_source, mboard);
     }
 
     /** @brief Get master clock rate. */
