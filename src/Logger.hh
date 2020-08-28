@@ -99,7 +99,7 @@ public:
                  float bw,
                  float demod_latency,
                  uint32_t size,
-                 std::shared_ptr<buffer<std::complex<float>>> buf)
+                 buffer<std::complex<float>> *buf)
     {
         if (getCollectSource(kRecvPackets))
             log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
@@ -213,7 +213,7 @@ private:
                   float bw,
                   float demod_latency,
                   uint32_t size,
-                  std::shared_ptr<buffer<std::complex<float>>> buf);
+                  buffer<std::complex<float>> *buf);
 
     enum DropType {
         kNotDropped = 0,

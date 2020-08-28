@@ -443,7 +443,7 @@ void Logger::logRecv_(const Clock::time_point& t,
                       float bw,
                       float demod_latency,
                       uint32_t size,
-                      std::shared_ptr<buffer<std::complex<float>>> symbols)
+                      buffer<std::complex<float>> *symbols)
 {
     PacketRecvEntry entry;
     u_flags         u;
@@ -473,7 +473,7 @@ void Logger::logRecv_(const Clock::time_point& t,
     entry.bw = bw;
     entry.demod_latency = demod_latency;
     entry.size = size;
-    if (getCollectSource(kRecvSymbols)) {
+    if (symbols) {
         entry.symbols.p = symbols->data();
         entry.symbols.len = symbols->size();
     } else {
@@ -482,6 +482,9 @@ void Logger::logRecv_(const Clock::time_point& t,
     }
 
     recv_->write(&entry, 1);
+
+    if (symbols)
+        delete symbols;
 }
 
 void Logger::logSend_(const Clock::time_point& t,
