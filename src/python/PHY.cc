@@ -186,7 +186,7 @@ public:
                 std::shared_ptr<RadioPacket> rpkt = pkt.cast<std::shared_ptr<RadioPacket>>();
 
                 if (rpkt)
-                    callback_(rpkt);
+                    callback_(std::move(rpkt));
             }
         }
     }

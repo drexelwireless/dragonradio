@@ -226,11 +226,11 @@ void FDChannelizer::demodWorker(unsigned tid)
     bool                   received = false; // Have we received any packets?
     Channel                channel;          // Current channel being demodulated
 
-    PHY::PacketDemodulator::callback_type callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
+    PHY::PacketDemodulator::callback_type callback = [&] (std::shared_ptr<RadioPacket> &&pkt) {
         received = true;
         if (pkt) {
             pkt->channel = channel;
-            source.push(pkt);
+            source.push(std::move(pkt));
         }
     };
 
