@@ -280,6 +280,16 @@ void Logger::open(const std::string& filename)
     is_open_ = true;
 }
 
+void Logger::stop(void)
+{
+    done_ = true;
+
+    log_q_.stop();
+
+    if (worker_thread_.joinable())
+        worker_thread_.join();
+}
+
 void Logger::close(void)
 {
     if (is_open_) {
@@ -293,19 +303,6 @@ void Logger::close(void)
         file_.close();
         is_open_ = false;
     }
-}
-
-bool Logger::getCollectSource(Source src)
-{
-    return sources_ & (1 << src);
-}
-
-void Logger::setCollectSource(Source src, bool collect)
-{
-    if (collect)
-        sources_ |= 1 << src;
-    else
-        sources_ &= ~(1 << src);
 }
 
 void Logger::setAttribute(const std::string& name, const std::string& val)
@@ -355,57 +352,6 @@ void Logger::logSlot(std::shared_ptr<IQBuf> buf,
             t_last_slot_ = buf->timestamp;
         }
     }
-}
-
-void Logger::logSnapshot(std::shared_ptr<IQBuf> buf)
-{
-    log_q_.emplace([=](){ logSnapshot_(buf); });
-}
-
-void Logger::logSelfTX(Clock::time_point t,
-                       SelfTX selftx)
-{
-    log_q_.emplace([=](){ logSelfTX_(t, selftx); });
-}
-
-void Logger::logRecv(const Clock::time_point& t,
-                     int32_t start_samples,
-                     int32_t end_samples,
-                     bool header_valid,
-                     bool payload_valid,
-                     const Header& hdr,
-                     const ExtendedHeader& ehdr,
-                     uint32_t mgen_flow_uid,
-                     uint32_t mgen_seqno,
-                     unsigned mcsidx,
-                     float evm,
-                     float rssi,
-                     float cfo,
-                     float fc,
-                     float bw,
-                     float demod_latency,
-                     uint32_t size,
-                     std::shared_ptr<buffer<std::complex<float>>> buf)
-{
-    if (getCollectSource(kRecvPackets))
-        log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
-}
-
-void Logger::logEvent(const Clock::time_point& t,
-                      const std::string& s)
-{
-    if (getCollectSource(kEvents))
-        log_q_.emplace([=](){ logEvent_(t, s); });
-}
-
-void Logger::stop(void)
-{
-    done_ = true;
-
-    log_q_.stop();
-
-    if (worker_thread_.joinable())
-        worker_thread_.join();
 }
 
 void Logger::worker(void)

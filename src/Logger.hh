@@ -47,10 +47,21 @@ public:
     Logger& operator=(Logger&&) = delete;
 
     void open(const std::string& filename);
+    void stop(void);
     void close(void);
 
-    bool getCollectSource(Source src);
-    void setCollectSource(Source src, bool collect);
+    bool getCollectSource(Source src)
+    {
+        return sources_ & (1 << src);
+    }
+
+    void setCollectSource(Source src, bool collect)
+    {
+        if (collect)
+            sources_ |= 1 << src;
+        else
+            sources_ &= ~(1 << src);
+    }
 
     void setAttribute(const std::string& name, const std::string& val);
     void setAttribute(const std::string& name, uint8_t val);
@@ -60,10 +71,16 @@ public:
     void logSlot(std::shared_ptr<IQBuf> buf,
                  float bw);
 
-    void logSnapshot(std::shared_ptr<IQBuf> buf);
+    void logSnapshot(std::shared_ptr<IQBuf> buf)
+    {
+        log_q_.emplace([=](){ logSnapshot_(buf); });
+    }
 
-    void logSelfTX(Clock::time_point timestamp,
-                   SelfTX pkt);
+    void logSelfTX(Clock::time_point t,
+                   SelfTX selftx)
+    {
+        log_q_.emplace([=](){ logSelfTX_(t, selftx); });
+    }
 
     void logRecv(const Clock::time_point& t,
                  int32_t start_samples,
@@ -82,7 +99,11 @@ public:
                  float bw,
                  float demod_latency,
                  uint32_t size,
-                 std::shared_ptr<buffer<std::complex<float>>> buf);
+                 std::shared_ptr<buffer<std::complex<float>>> buf)
+    {
+        if (getCollectSource(kRecvPackets))
+            log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
+    }
 
     void logSend(const Clock::time_point& t,
                  unsigned nretrans,
@@ -130,9 +151,11 @@ public:
     }
 
     void logEvent(const Clock::time_point& t,
-                  const std::string& event);
-
-    void stop(void);
+                  const std::string& event)
+    {
+        if (getCollectSource(kEvents))
+            log_q_.emplace([=](){ logEvent_(t, event); });
+    }
 
 private:
     bool is_open_;
