@@ -105,7 +105,7 @@ struct PacketSendEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
     double timestamp;
-    /** @brief Was this packet dropped? */
+    /** @brief Was this packet dropped, and if so, why was it dropped? */
     uint8_t dropped;
     /** @brief Number of packet retransmissions. */
     uint16_t nretrans;
@@ -391,38 +391,6 @@ void Logger::logRecv(const Clock::time_point& t,
         log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
 }
 
-void Logger::logSend(const Clock::time_point& t,
-                     unsigned nretrans,
-                     const Header& hdr,
-                     const ExtendedHeader& ehdr,
-                     uint32_t mgen_flow_uid,
-                     uint32_t mgen_seqno,
-                     unsigned mcsidx,
-                     float fc,
-                     float bw,
-                     double mod_latency,
-                     uint32_t size,
-                     std::shared_ptr<IQBuf> buf,
-                     size_t offset,
-                     size_t nsamples)
-{
-    if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, false, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
-}
-
-void Logger::logDrop(const Clock::time_point& t,
-                     unsigned nretrans,
-                     const Header& hdr,
-                     const ExtendedHeader& ehdr,
-                     uint32_t mgen_flow_uid,
-                     uint32_t mgen_seqno,
-                     unsigned mcsidx,
-                     uint32_t size)
-{
-    if (getCollectSource(kSentPackets))
-        log_q_.emplace([=](){ logSend_(t, true, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
-}
-
 void Logger::logEvent(const Clock::time_point& t,
                       const std::string& s)
 {
@@ -571,7 +539,7 @@ void Logger::logRecv_(const Clock::time_point& t,
 }
 
 void Logger::logSend_(const Clock::time_point& t,
-                      bool dropped,
+                      DropType dropped,
                       unsigned nretrans,
                       const Header& hdr,
                       const ExtendedHeader& ehdr,
@@ -592,7 +560,7 @@ void Logger::logSend_(const Clock::time_point& t,
     u.flags = hdr.flags;
 
     entry.timestamp = (t - t_start_).get_real_secs();
-    entry.dropped = dropped ? 1 : 0;
+    entry.dropped = dropped;
     entry.nretrans = nretrans;
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;

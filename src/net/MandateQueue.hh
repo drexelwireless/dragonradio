@@ -821,14 +821,14 @@ protected:
         void drop(const NetPacket &pkt) const
         {
             if (logger)
-                logger->logDrop(Clock::now(),
-                                pkt.nretrans,
-                                pkt.hdr,
-                                pkt.ehdr(),
-                                pkt.mgen_flow_uid.value_or(0),
-                                pkt.mgen_seqno.value_or(0),
-                                pkt.mcsidx,
-                                pkt.size());
+                logger->logQueueDrop(Clock::now(),
+                                     pkt.nretrans,
+                                     pkt.hdr,
+                                     pkt.ehdr(),
+                                     pkt.mgen_flow_uid.value_or(0),
+                                     pkt.mgen_seqno.value_or(0),
+                                     pkt.mcsidx,
+                                     pkt.size());
         }
 
         void updateFileTransferThroughput(void)

@@ -97,16 +97,37 @@ public:
                  uint32_t size,
                  std::shared_ptr<IQBuf> buf,
                  size_t offset,
-                 size_t nsamples);
+                 size_t nsamples)
+    {
+        if (getCollectSource(kSentPackets))
+            log_q_.emplace([=](){ logSend_(t, kNotDropped, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
+    }
 
-    void logDrop(const Clock::time_point& t,
-                 unsigned nretrans,
-                 const Header& hdr,
-                 const ExtendedHeader& ehdr,
-                 uint32_t mgen_flow_uid,
-                 uint32_t mgen_seqno,
-                 unsigned mcsidx,
-                 uint32_t size);
+    void logLinkLayerDrop(const Clock::time_point& t,
+                          unsigned nretrans,
+                          const Header& hdr,
+                          const ExtendedHeader& ehdr,
+                          uint32_t mgen_flow_uid,
+                          uint32_t mgen_seqno,
+                          unsigned mcsidx,
+                          uint32_t size)
+    {
+        if (getCollectSource(kSentPackets))
+            log_q_.emplace([=](){ logSend_(t, kLinkLayerDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
+    }
+
+    void logQueueDrop(const Clock::time_point& t,
+                      unsigned nretrans,
+                      const Header& hdr,
+                      const ExtendedHeader& ehdr,
+                      uint32_t mgen_flow_uid,
+                      uint32_t mgen_seqno,
+                      unsigned mcsidx,
+                      uint32_t size)
+    {
+        if (getCollectSource(kSentPackets))
+            log_q_.emplace([=](){ logSend_(t, kQueueDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
+    }
 
     void logEvent(const Clock::time_point& t,
                   const std::string& event);
@@ -171,8 +192,14 @@ private:
                   uint32_t size,
                   std::shared_ptr<buffer<std::complex<float>>> buf);
 
+    enum DropType {
+        kNotDropped = 0,
+        kLinkLayerDrop,
+        kQueueDrop
+    };
+
     void logSend_(const Clock::time_point& t,
-                  bool dropped,
+                  DropType dropped,
                   unsigned nretrans,
                   const Header& hdr,
                   const ExtendedHeader& ehdr,
