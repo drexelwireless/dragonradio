@@ -1619,6 +1619,7 @@ class Radio(object):
             if math.isfinite(delta) and math.isfinite(sigma):
                 dragonradio.clock.offset = dragonradio.MonoTimePoint(delta)
                 dragonradio.clock.skew = sigma
+                self.logger.logEvent("TIMESYNC: set skew and offset: sigma={:g}; delta={:g}".format(sigma, delta))
 
     def timestampRegression(self, echoed, master):
         """Perform a linear regression on timestamps to determine clock skew and delta"""
