@@ -271,7 +271,8 @@ class Config(object):
 
         # Clock synchronization
         self.clock_sync_interval = 10.0
-        self.clock_gpsdo = False
+        self.clock_noskew = False
+        """Assume no clock skew relative to master"""
 
         # Measurement options
         self.measurement_period = 1.0
@@ -1605,7 +1606,7 @@ class Radio(object):
 
         if len(echoed) > 1 and len(master) > 1:
             # If we have a GPSDO, then assume skew is zero
-            if config.clock_gpsdo:
+            if config.clock_noskew or (self.usrp.clock_source == 'external' and self.usrp.time_source == 'external'):
                 (sigma, delta, tau) = self.timestampRegressionNoSkew(echoed, master)
             else:
                 (sigma, delta, tau) = self.timestampRegression(echoed, master)
