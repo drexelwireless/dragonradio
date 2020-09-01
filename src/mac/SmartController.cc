@@ -132,7 +132,7 @@ get_packet:
         // The packet we are ACK'ing had better be no more than 1 more than the
         // max sequence number we've received.
         if(recvw.ack > recvw.max + 1)
-            logEvent("ARQ: INVARIANT VIOLATED: received packet outside window: ack=%u; mac=%u",
+            logEvent("ARQ: INVARIANT VIOLATED: received packet outside window: ack=%u; max=%u",
                 (unsigned) recvw.ack,
                 (unsigned) recvw.max);
 
