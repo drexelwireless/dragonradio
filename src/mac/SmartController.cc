@@ -267,6 +267,11 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         // contain data. We can't do anything else with the packet.
         if (pkt->internal_flags.invalid_payload) {
             if (pkt->hdr.nexthop != kNodeBroadcast) {
+                // If the packet is after our receive window, we need to advance
+                // the receive window.
+                if (pkt->hdr.seq >= recvw.ack + recvw.win)
+                    advanceRecvWindow(pkt->hdr.seq, recvw);
+
                 // Update the max seq number we've received
                 if (pkt->hdr.seq > recvw.max) {
                     recvw.max = pkt->hdr.seq;
@@ -463,31 +468,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // If the packet is after our receive window, we need to advance the receive
     // window.
     if (pkt->hdr.seq >= recvw.ack + recvw.win) {
-        logEvent("ARQ: recv OUTSIDE WINDOW (ADVANCE): node=%u; seq=%u",
-            (unsigned) prevhop,
-            (unsigned) pkt->hdr.seq);
-
-        // We want to slide the window forward so pkt->hdr.seq is the new max
-        // packet. We therefore need to "forget" all packets in our current
-        // window with sequence numbers less than pkt->hdr.seq - recvw.win. It's
-        // possible this number is greater than our max received sequence
-        // number, so we must account for that as well!
-        Seq new_ack = pkt->hdr.seq + 1 - recvw.win;
-        Seq forget = new_ack > recvw.max ? recvw.max + 1 : new_ack;
-
-        // Go ahead and deliver packets that will be left outside our window.
-        for (auto seq = recvw.ack; seq < forget; ++seq) {
-            RecvWindow::Entry &entry = recvw[seq];
-
-            // Go ahead and deliver the packet
-            if (entry.pkt && !entry.delivered)
-                radio_out.push(std::move(entry.pkt));
-
-            // Release the packet
-            entry.reset();
-        }
-
-        recvw.ack = new_ack;
+        advanceRecvWindow(pkt->hdr.seq, recvw);
     } else if (recvw[pkt->hdr.seq].received) {
         // Drop this packet if we have already received it
         dprintf("ARQ: recv DUP: node=%u; seq=%u",
@@ -870,6 +851,38 @@ void SmartController::advanceSendWindow(SendWindow &sendw)
     // Indicate that this node's send window is now open
     if (sendw.seq < sendw.unack + sendw.win)
         netq_->setSendWindowStatus(sendw.node.id, true);
+}
+
+void SmartController::advanceRecvWindow(Seq seq, RecvWindow &recvw)
+{
+    logEvent("ARQ: recv OUTSIDE WINDOW (ADVANCE): node=%u; seq=%u; ack=%u; max=%u; new_ack=%u",
+        (unsigned) recvw.node.id,
+        (unsigned) seq,
+        (unsigned) recvw.ack,
+        (unsigned) recvw.max,
+        (unsigned) (seq + 1 - recvw.win));
+
+    // We want to slide the window forward so pkt->hdr.seq is the new max
+    // packet. We therefore need to "forget" all packets in our current
+    // window with sequence numbers less than pkt->hdr.seq - recvw.win. It's
+    // possible this number is greater than our max received sequence
+    // number, so we must account for that as well!
+    Seq new_ack = seq + 1 - recvw.win;
+    Seq forget = new_ack > recvw.max ? recvw.max + 1 : new_ack;
+
+    // Go ahead and deliver packets that will be left outside our window.
+    for (auto seq = recvw.ack; seq < forget; ++seq) {
+        RecvWindow::Entry &entry = recvw[seq];
+
+        // Go ahead and deliver the packet
+        if (entry.pkt && !entry.delivered)
+            radio_out.push(std::move(entry.pkt));
+
+        // Release the packet
+        entry.reset();
+    }
+
+    recvw.ack = new_ack;
 }
 
 void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
