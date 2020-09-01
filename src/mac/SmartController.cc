@@ -278,7 +278,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             // We're done with this packet since it has a bad payload
             return;
         }
-    } else  {
+    } else {
         RecvWindow *recvwptr = maybeGetReceiveWindow(prevhop);
 
         // Update metrics. EVM and RSSI should be valid as long as the header is
