@@ -263,17 +263,19 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         recvw.long_evm.update(pkt->timestamp, pkt->evm);
         recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
 
-        // Immediately NAK data packets with a bad payload if they contain data.
-        // We can't do anything else with the packet.
+        // Immediately NAK non-broadcast data packets with a bad payload if they
+        // contain data. We can't do anything else with the packet.
         if (pkt->internal_flags.invalid_payload) {
-            // Update the max seq number we've received
-            if (pkt->hdr.seq > recvw.max) {
-                recvw.max = pkt->hdr.seq;
-                recvw.max_timestamp = pkt->timestamp;
-            }
+            if (pkt->hdr.nexthop != kNodeBroadcast) {
+                // Update the max seq number we've received
+                if (pkt->hdr.seq > recvw.max) {
+                    recvw.max = pkt->hdr.seq;
+                    recvw.max_timestamp = pkt->timestamp;
+                }
 
-            // Send a NAK
-            nak(recvw, pkt->hdr.seq);
+                // Send a NAK
+                nak(recvw, pkt->hdr.seq);
+            }
 
             // We're done with this packet since it has a bad payload
             return;
