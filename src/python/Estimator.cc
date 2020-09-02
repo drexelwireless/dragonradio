@@ -45,7 +45,7 @@ void exportWindowedMeanEstimator(py::module &m, const char *name)
         ;
 }
 
-template <class T>
+template <class Clock, class T>
 void exportTimeWindowEstimator(py::module &m, const char *name)
 {
     py::class_<TimeWindowEstimator<Clock, T>, Estimator<T>, std::shared_ptr<TimeWindowEstimator<Clock, T>>>(m, "TimeWindowEstimator")
@@ -68,28 +68,28 @@ void exportTimeWindowEstimator(py::module &m, const char *name)
         ;
 }
 
-template <class T>
+template <class Clock, class T>
 void exportTimeWindowMeanEstimator(py::module &m, const char *name)
 {
     py::class_<TimeWindowMean<Clock, T>, TimeWindowEstimator<Clock, T>, std::shared_ptr<TimeWindowMean<Clock, T>>>(m, name)
         ;
 }
 
-template <class T>
+template <class Clock, class T>
 void exportTimeWindowMeanRateEstimator(py::module &m, const char *name)
 {
     py::class_<TimeWindowMeanRate<Clock, T>, TimeWindowMean<Clock, T>, std::shared_ptr<TimeWindowMeanRate<Clock, T>>>(m, name)
         ;
 }
 
-template <class T>
+template <class Clock, class T>
 void exportTimeWindowMinEstimator(py::module &m, const char *name)
 {
     py::class_<TimeWindowMin<Clock, T>, TimeWindowEstimator<Clock, T>, std::shared_ptr<TimeWindowMin<Clock, T>>>(m, name)
         ;
 }
 
-template <class T>
+template <class Clock, class T>
 void exportTimeWindowMaxEstimator(py::module &m, const char *name)
 {
     py::class_<TimeWindowMax<Clock, T>, TimeWindowEstimator<Clock, T>, std::shared_ptr<TimeWindowMax<Clock, T>>>(m, name)
@@ -107,9 +107,9 @@ void exportEstimators(py::module &m)
     exportWindowedMeanEstimator<float>(m, "FloatWindowedMean");
     exportWindowedMeanEstimator<double>(m, "DoubleWindowedMean");
 
-    exportTimeWindowEstimator<double>(m, "TimeWindowEstimator");
-    exportTimeWindowMeanEstimator<double>(m, "TimeWindowMean");
-    exportTimeWindowMeanRateEstimator<double>(m, "TimeWindowMeanRate");
-    exportTimeWindowMinEstimator<double>(m, "TimeWindowMin");
-    exportTimeWindowMaxEstimator<double>(m, "TimeWindowMax");
+    exportTimeWindowEstimator<Clock, double>(m, "TimeWindowEstimator");
+    exportTimeWindowMeanEstimator<Clock, double>(m, "TimeWindowMean");
+    exportTimeWindowMeanRateEstimator<Clock, double>(m, "TimeWindowMeanRate");
+    exportTimeWindowMinEstimator<Clock, double>(m, "TimeWindowMin");
+    exportTimeWindowMaxEstimator<Clock, double>(m, "TimeWindowMax");
 }
