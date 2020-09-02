@@ -51,6 +51,7 @@ public:
     MandateQueue()
       : Queue<T>()
       , done_(false)
+      , transmission_delay_(0.0)
       , bonus_phase_(false)
       , hiq_(*this, kHiQueuePriority, FIFO)
       , defaultq_(*this, kDefaultQueuePriority, FIFO)
@@ -375,6 +376,16 @@ public:
             if (subq.nexthop == id)
                 subq.updateRate(rate);
         }
+    }
+
+    virtual void setTransmissionDelay(double t) override
+    {
+        transmission_delay_ = t;
+    }
+
+    virtual double getTransmissionDelay(void) const override
+    {
+        return transmission_delay_;
     }
 
 protected:
@@ -767,7 +778,8 @@ protected:
 
                 // Add deadline based on mandate.
                 if (mandate->max_latency_s)
-                    pkt->deadline = pkt->timestamp + *mandate->max_latency_s;
+                    pkt->deadline = pkt->timestamp + *mandate->max_latency_s -
+                        mq_.transmission_delay_;
             }
 
             // If the queue is inactive, activate it if either the queue is
@@ -890,6 +902,9 @@ protected:
 
     /** @brief Flag indicating that processing of the queue should stop. */
     bool done_;
+
+    /** @brief Packet transmission delay in seconds */
+    double transmission_delay_;
 
     /** @brief Flag indicating whether or not to have a bonus phase. */
     bool bonus_phase_;
