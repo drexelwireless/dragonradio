@@ -52,6 +52,17 @@ public:
     /** @brief Notify queue of new MCS */
     virtual void updateMCS(NodeId id, const MCS *mcs) = 0;
 
+    /** @brief Set transmission delay. */
+    virtual void setTransmissionDelay(double t)
+    {
+    }
+
+    /** @brief Get transmission delay. */
+    virtual double getTransmissionDelay(void) const
+    {
+        return 0.0;
+    }
+
     /** @brief Set whether or not a node's send window is open */
     virtual void setSendWindowStatus(NodeId id, bool isOpen)
     {
