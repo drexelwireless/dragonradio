@@ -112,4 +112,10 @@ void exportEstimators(py::module &m)
     exportTimeWindowMeanRateEstimator<Clock, double>(m, "TimeWindowMeanRate");
     exportTimeWindowMinEstimator<Clock, double>(m, "TimeWindowMin");
     exportTimeWindowMaxEstimator<Clock, double>(m, "TimeWindowMax");
+
+    exportTimeWindowEstimator<MonoClock, double>(m, "MonoTimeWindowEstimator");
+    exportTimeWindowMeanEstimator<MonoClock, double>(m, "MonoTimeWindowMean");
+    exportTimeWindowMeanRateEstimator<MonoClock, double>(m, "MonoTimeWindowMeanRate");
+    exportTimeWindowMinEstimator<MonoClock, double>(m, "MonoTimeWindowMin");
+    exportTimeWindowMaxEstimator<MonoClock, double>(m, "MonoTimeWindowMax");
 }
