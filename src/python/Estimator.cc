@@ -48,7 +48,7 @@ void exportWindowedMeanEstimator(py::module &m, const char *name)
 template <class Clock, class T>
 void exportTimeWindowEstimator(py::module &m, const char *name)
 {
-    py::class_<TimeWindowEstimator<Clock, T>, Estimator<T>, std::shared_ptr<TimeWindowEstimator<Clock, T>>>(m, "TimeWindowEstimator")
+    py::class_<TimeWindowEstimator<Clock, T>, Estimator<T>, std::shared_ptr<TimeWindowEstimator<Clock, T>>>(m, name)
         .def_property("time_window",
             &TimeWindowEstimator<Clock, T>::getTimeWindow,
             &TimeWindowEstimator<Clock, T>::setTimeWindow,
