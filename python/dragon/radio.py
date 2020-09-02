@@ -258,7 +258,9 @@ class Config(object):
         self.queue = 'fifo'
         self.packet_compression = False
 
-        # mandate queue
+        # Queue options
+        self.transmission_delay = 0
+        """Estimated packet transmission delay (seconds)"""
         self.mandate_bonus_phase = True
         """Flag indicating whether or not to have a bonus phase"""
 
@@ -1052,6 +1054,8 @@ class Radio(object):
             netq.bonus_phase = config.mandate_bonus_phase
         else:
             raise Exception('Unknown queue type: %s' % config.queue)
+
+        netq.transmission_delay = config.transmission_delay
 
         return netq
 
