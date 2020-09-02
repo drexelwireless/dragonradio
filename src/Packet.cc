@@ -361,8 +361,30 @@ void Packet::initMGENInfo(void)
                 return;
 
             memcpy(&seqno, data() + off, sizeof(uint32_t));
+            off += sizeof(uint32_t);
 
             mgen_seqno = ntohl(seqno);
+
+            // Skip reserved field
+            if (flags.type == kDARPAMGEN)
+                off += sizeof(uint32_t);
+
+            // Read timestamp
+            uint32_t mgen_secs;
+            uint32_t mgen_usecs;
+            int64_t  secs;
+            int32_t  usecs;
+
+            memcpy(&mgen_usecs, data() + off, sizeof(uint32_t));
+            off += sizeof(uint32_t);
+
+            memcpy(&mgen_usecs, data() + off, sizeof(uint32_t));
+            off += sizeof(uint32_t);
+
+            secs = ntohl(mgen_secs);
+            usecs = ntohl(mgen_usecs);
+
+            wall_timestamp = Clock::time_point{static_cast<int64_t>(secs), usecs/1e6};
         }
     } else {
          const struct mgenhdr *mgenh = getMGENHdr();
@@ -370,6 +392,7 @@ void Packet::initMGENInfo(void)
          if (mgenh) {
              flow_uid = mgen_flow_uid = mgenh->getFlowId();
              mgen_seqno = mgenh->getSequenceNumber();
+             wall_timestamp = mgenh->getTimestamp();
          }
     }
 }

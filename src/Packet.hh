@@ -173,7 +173,19 @@ struct Packet : public buffer<unsigned char>
     std::optional<uint32_t> mgen_seqno;
 
     /** @brief Packet timestamp */
+    /** This timestamp is the (monotonic) time at which the packet entered the
+     * system. For network packets, it is the time the packet was read from the
+     * tun/tap interface, and for radio packets, it is the time at which the
+     * packet's IQ data was read by the radio.
+     */
     MonoClock::time_point timestamp;
+
+    /** @brief Wall-clock packet timestamp */
+    /** This timestamp is the wall-clock time at which the packet was *created*.
+     * Unlike the timestamp field, this field represents the time at which the
+     * packet was originally sent.
+     */
+    std::optional<Clock::time_point> wall_timestamp;
 
     /** @brief Payload size
      * @return The size of the data portion of a UDP or TCP packet.
