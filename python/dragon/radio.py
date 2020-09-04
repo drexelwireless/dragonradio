@@ -271,7 +271,8 @@ class Config(object):
 
         # Clock synchronization
         self.clock_sync_interval = 10.0
-        self.clock_gpsdo = False
+        self.clock_noskew = False
+        """Assume no clock skew relative to master"""
 
         # Measurement options
         self.measurement_period = 1.0
@@ -1584,7 +1585,7 @@ class Radio(object):
         self.installMACSchedule(sched, use_fdma_mac=use_fdma_mac)
 
     def synchronizeClock(self):
-        """Use timestamps to syncrhonize our clock with the time master (the gateway)"""
+        """Use timestamps to synchronize our clock with the time master (the gateway)"""
         config = self.config
 
         if self.net.time_master is None:
@@ -1593,70 +1594,84 @@ class Radio(object):
         t0 = dragonradio.clock.t0
 
         # Perform linear regression on all timestamps
-        echoed = [((us-t0).secs, (them-t0).secs) for (us, them) in self.controller.echoed_timestamps]
+        echoed = [((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in self.controller.echoed_timestamps]
         logging.debug("TIMESYNC: echoed timestamps: %s", echoed)
         if len(echoed) == 0:
             return
 
-        master = [((us-t0).secs, (them-t0).secs) for (them, us) in self.net.nodes[self.net.time_master].timestamps]
+        master = [((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in self.net.nodes[self.net.time_master].timestamps]
         logging.debug("TIMESYNC: time master's timestamps: %s", master)
         if len(master) == 0:
             return
 
         if len(echoed) > 1 and len(master) > 1:
             # If we have a GPSDO, then assume skew is zero
-            if config.clock_gpsdo:
-                (sigma, delta, epsilon) = self.timetampRegressionNoSkew(echoed, master)
+            if config.clock_noskew or (self.usrp.clock_source == 'external' and self.usrp.time_source == 'external'):
+                (sigma, delta, tau) = self.timestampRegressionNoSkew(echoed, master)
             else:
-                (sigma, delta, epsilon) = self.timetampRegression(echoed, master)
+                (sigma, delta, tau) = self.timestampRegression(echoed, master)
 
-            logging.debug("TIMESYNC: regression parameters: sigma=%f; delta=%f; epsilon=%f", sigma, delta, epsilon)
+            old_sigma = dragonradio.clock.skew
+            old_delta = dragonradio.clock.offset.secs
+
+            logging.debug("TIMESYNC: regression parameters: old_sigma=%g; old_delta=%g; sigma=%g; delta=%g; tau=%g", old_sigma, old_delta, sigma, delta, tau)
 
             if math.isfinite(delta) and math.isfinite(sigma):
                 dragonradio.clock.offset = dragonradio.MonoTimePoint(delta)
                 dragonradio.clock.skew = sigma
+                self.logger.logEvent("TIMESYNC: set skew and offset: sigma={:g}; delta={:g}".format(sigma, delta))
 
-    def timetampRegression(self, echoed, master):
+    def timestampRegression(self, echoed, master):
         """Perform a linear regression on timestamps to determine clock skew and delta"""
-        xs = [x for (x, _) in echoed]
-        ys = [y for (_, y) in echoed]
+        avec = [a for (a, _) in echoed]
+        bvec = [b for (_, b) in echoed]
 
-        ss = [s for (_, s) in master]
-        ts = [t for (t, _) in master]
+        cvec = [c for (c, _) in master]
+        dvec = [d for (_, d) in master]
 
-        xbar = np.mean(xs)
-        ybar = np.mean(ys)
+        abar = np.mean(avec)
+        bbar = np.mean(bvec)
 
-        sbar = np.mean(ss)
-        tbar = np.mean(ts)
+        cbar = np.mean(cvec)
+        dbar = np.mean(dvec)
 
-        sigma = (sum([(x - xbar)*(y - ybar) for (x, y) in echoed]) + sum([(s - sbar)*(t - tbar) for (t, s) in master])) / (sum([(x-xbar)**2.0 for x in xs]) + sum([(s-sbar)**2.0 for s in ss]))
+        covab = sum([(a - abar)*(b - bbar) for (a, b) in echoed])
+        vara = sum([(a - abar)**2.0 for a in avec])
 
-        delta = (tbar - sigma*sbar + sigma*ybar - sigma**2.0*xbar)/(1.0 + sigma)
+        covcd = sum([(c - cbar)*(d - dbar) for (c, d) in master])
+        vard = sum([(d - dbar)**2.0 for d in dvec])
 
-        epsilon = (ybar - sigma*xbar - tbar + sigma*sbar)/(1.0 + sigma)
+        sigma = (covab + covcd)/(vara + vard)
 
-        return (sigma, delta, epsilon)
+        deltaPlusTau = bbar - sigma*abar
+        deltaMinusTau = cbar - sigma*dbar
 
-    def timetampRegressionNoSkew(self, echoed, master):
+        delta = (deltaPlusTau + deltaMinusTau) / 2.0
+        tau = (deltaPlusTau - deltaMinusTau) / 2.0
+
+        return (sigma, delta, tau)
+
+    def timestampRegressionNoSkew(self, echoed, master):
         """Perform a linear regression on timestamps to determine clock delta (assuming no skew)"""
-        xs = [x for (x, _) in echoed]
-        ys = [y for (_, y) in echoed]
+        avec = [a for (a, _) in echoed]
+        bvec = [b for (_, b) in echoed]
 
-        ss = [s for (_, s) in master]
-        ts = [t for (t, _) in master]
+        cvec = [c for (c, _) in master]
+        dvec = [d for (_, d) in master]
 
-        xbar = np.mean(xs)
-        ybar = np.mean(ys)
+        abar = np.mean(avec)
+        bbar = np.mean(bvec)
 
-        sbar = np.mean(ss)
-        tbar = np.mean(ts)
+        cbar = np.mean(cvec)
+        dbar = np.mean(dvec)
 
-        delta = (ybar - xbar + tbar - sbar)/2.0
+        deltaPlusTau = bbar - abar
+        deltaMinusTau = cbar - dbar
 
-        epsilon = (ybar - xbar - tbar + sbar)/2.0
+        delta = (deltaPlusTau + deltaMinusTau) / 2.0
+        tau = (deltaPlusTau - deltaMinusTau) / 2.0
 
-        return (1.0, delta, epsilon)
+        return (1.0, delta, tau)
 
     def getRadioLogPath(self):
         """
