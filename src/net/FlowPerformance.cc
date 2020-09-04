@@ -71,10 +71,6 @@ void FlowPerformance::netPush(std::shared_ptr<NetPacket> &&pkt)
         std::lock_guard<spinlock_mutex> lock(sources_mutex_);
         FlowStats                       &stats = findFlow(sources_, *pkt);
 
-        // Add deadline based on mandate
-        if (stats.mandated_latency)
-            pkt->deadline = pkt->timestamp + *stats.mandated_latency;
-
         // Record sent MGEN packet
         const struct mgenhdr *mgenhdr = pkt->getMGENHdr();
 

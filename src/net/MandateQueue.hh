@@ -51,6 +51,7 @@ public:
     MandateQueue()
       : Queue<T>()
       , done_(false)
+      , transmission_delay_(0.0)
       , bonus_phase_(false)
       , hiq_(*this, kHiQueuePriority, FIFO)
       , defaultq_(*this, kDefaultQueuePriority, FIFO)
@@ -217,10 +218,6 @@ public:
 
                     it = defaultq_.erase(pkt, it);
 
-                    // Update packet deadline
-                    if (mandate->second.mandated_latency)
-                        pkt->deadline = pkt->timestamp + *mandate->second.mandated_latency;
-
                     // Place packet in the correct queue
                     queue_for(pkt).emplace_back(std::move(pkt));
                 } else
@@ -379,6 +376,16 @@ public:
             if (subq.nexthop == id)
                 subq.updateRate(rate);
         }
+    }
+
+    virtual void setTransmissionDelay(double t) override
+    {
+        transmission_delay_ = t;
+    }
+
+    virtual double getTransmissionDelay(void) const override
+    {
+        return transmission_delay_;
     }
 
 protected:
@@ -764,10 +771,16 @@ protected:
 
         void preEmplace(const T &pkt)
         {
-            // If the queue has a mandate, set its next hop so we can use node
-            // rate information to update the queue's priority.
-            if (mandate)
+            if (mandate) {
+                // If the queue has a mandate, set its next hop so we can use
+                // node rate information to update the queue's priority.
                 nexthop = pkt->hdr.nexthop;
+
+                // Add deadline based on mandate.
+                if (mandate->max_latency_s)
+                    pkt->deadline = pkt->timestamp + *mandate->max_latency_s -
+                        mq_.transmission_delay_;
+            }
 
             // If the queue is inactive, activate it if either the queue is
             // empty or if this packet should be sent. If the queue is empty, we
@@ -889,6 +902,9 @@ protected:
 
     /** @brief Flag indicating that processing of the queue should stop. */
     bool done_;
+
+    /** @brief Packet transmission delay in seconds */
+    double transmission_delay_;
 
     /** @brief Flag indicating whether or not to have a bonus phase. */
     bool bonus_phase_;

@@ -51,6 +51,10 @@ void exportNet(py::module &m)
 
     // Export class NetQueue to Python
     py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "Queue")
+        .def_property("transmission_delay",
+            &NetQueue::getTransmissionDelay,
+            &NetQueue::setTransmissionDelay,
+            "Transmission delay (sec)")
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
         ;
