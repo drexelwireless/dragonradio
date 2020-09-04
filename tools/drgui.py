@@ -89,11 +89,15 @@ def addCheckboxWidget(fig, lines):
     return check
 
 class SpecgramPlot:
-    def __init__(self, fig, ax, nfft=256, scale=1e3, cmap=plt.get_cmap('viridis')):
+    def __init__(self, fig, ax, nfft=256, noverlap=128, scale=1e3, cmap=plt.get_cmap('viridis')):
+        if noverlap >= nfft:
+            noverlap = nfft/2
+
         self.fig = fig
         self.ax = ax
         self.scale = scale # kHz
         self.nfft = nfft
+        self.noverlap = noverlap
         self.cmap = cmap
         self.cb = None
 
@@ -104,7 +108,9 @@ class SpecgramPlot:
         self.ax.clear()
         if self.cb:
             self.cb.remove()
-        pxx, freq, t, cax = self.ax.specgram(w, NFFT=self.nfft, Fs=Fs, cmap=self.cmap)
+
+        pxx, freq, t, cax = self.ax.specgram(w, NFFT=self.nfft, noverlap=self.noverlap, Fs=Fs, cmap=self.cmap)
+
         self.cb = self.fig.colorbar(cax, ax=self.ax)
         self.cb.set_label('Intensity (dB)')
         self.ax.set_aspect('auto')
