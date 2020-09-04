@@ -922,6 +922,12 @@ protected:
      */
     void advanceSendWindow(SendWindow &sendw);
 
+    /** @brief Advance the receive window.
+     * @param seq The sequence number received
+     * @param recv The receive window to advance
+     */
+    void advanceRecvWindow(Seq seq, RecvWindow &recv);
+
     /** @brief Start the re-transmission timer if it is not set. */
     void startRetransmissionTimer(SendWindow::Entry &entry);
 
