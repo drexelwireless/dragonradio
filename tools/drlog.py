@@ -382,26 +382,20 @@ class Log:
         if not idx.any():
             return None
 
-        i = slots.index[idx].tolist()[0]
+        i_start = i_end = slots.index[idx].values[0]
+        bw = slots[idx].bw.iloc[0]
+
         offset = 0
 
-        if pkt.end_samples < 0:
-            i -= 2
-        elif pkt.start_samples < 0:
-            i -= 1
+        while offset + pkt.start_samples < 0:
+            i_start -= 1
+            offset += len(slots.iloc[i_start].iq_data)
 
-        slot1 = slots.iloc[i]
-        slot2 = slots.iloc[i+1]
+        slots = slots.iloc[i_start:i_end+1]
+        ts = list(slots.timestamp)
+        data = np.concatenate(list(slots.iq_data))
 
-        if pkt.end_samples < 0:
-            offset = len(slot1.iq_data) + len(slot2.iq_data)
-        elif pkt.start_samples < 0:
-            offset = len(slot1.iq_data)
-
-        ts = [slot1.timestamp, slot2.timestamp]
-        data = np.concatenate((slot1.iq_data, slot2.iq_data))
-
-        return Slots(ts, data, offset, slot1.bw)
+        return Slots(ts, data, offset, bw)
 
     def findReceivedPacketIndex(self, node, seq):
         """
