@@ -28,7 +28,7 @@ virtualenv -p python3 env
 
 pip install -Ur requirements.txt
 
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 sudo apt-get update
 sudo apt-get install -y gcc-8 g++-8
 
