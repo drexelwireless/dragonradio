@@ -78,6 +78,13 @@ int main(int argc, char** argv)
 
         printf("Done!\n");
         ret = EXIT_SUCCESS;
+    } catch (const py::error_already_set& e) {
+        if (e.matches(py::module::import("builtins").attr("SystemExit"))) {
+            auto args = py::tuple(e.value().attr("args"));
+
+            ret = py::cast<int>(args[0]);
+        } else
+            throw;
     } catch (const std::exception &e) {
         fprintf(stderr, "Python exception: %s\n", e.what());
         ret = EXIT_FAILURE;
