@@ -8,6 +8,7 @@ from matplotlib.text import OffsetFrom
 import matplotlib.patches as patches
 from matplotlib.widgets import Button, CheckButtons, Slider
 import matplotlib.pyplot as plt
+from matplotlib.transforms import blended_transform_factory
 import numpy as np
 import scipy.signal as signal
 import sys
@@ -319,8 +320,6 @@ class ReceivePlot:
         t_start = pkt.start - t0
         t_end = pkt.end - t0
 
-        (ymin, ymax) = ax.get_ylim()
-
         # If the packet we are marking is the current packet, its label appears
         # in red. Otherwise, its label appears in black.
         if pkt.seq == self.pkt.seq:
@@ -333,13 +332,22 @@ class ReceivePlot:
         else:
             color = 'r'
 
-        ax.annotate('',
-                    xy=(t_start, ymax),
-                    xytext=(t_end, ymax),
-                    xycoords='data',
-                    arrowprops=dict(arrowstyle='<->', connectionstyle='bar, fraction=0.2', ec='k'))
+        # See:
+        #   https://stackoverflow.com/questions/30311809/is-it-possible-to-anchor-a-matplotlib-annotation-to-a-data-coordinate-in-the-x-a
+        tform = blended_transform_factory(ax.transData, ax.transAxes)
 
-        ax.text((t_start + t_end) / 2, ymax + 0.1*(ymax - ymin), str(pkt.seq),
+        ax.annotate('',
+                    xy=(t_start, 1),
+                    xytext=(t_end, 1),
+                    xycoords=tform,
+                    arrowprops=dict(arrowstyle='<->',
+                                    connectionstyle='bar, armA=20.0, armB=20.0, fraction=0.0',
+                                    ec='k'))
+
+        ax.text((t_start + t_end) / 2,
+                1.1,
+                str(pkt.seq),
+                transform=tform,
                 ha='center',
                 va='bottom',
                 weight=weight,
