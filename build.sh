@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+umask 022
+
 sudo apt install -y autoconf automake
 sudo apt install -y libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils cmake build-essential libncurses5-dev
 sudo apt install -y libfftw3-dev
