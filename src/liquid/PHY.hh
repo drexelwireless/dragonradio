@@ -93,7 +93,7 @@ public:
         /** @brief Snapshot offset of current slot. */
         std::optional<ssize_t> snapshot_off_;
 
-        /** @brief Sample offset ffset of first provided sample from slot. */
+        /** @brief Sample offset of first provided sample from slot. */
         ssize_t offset_;
 
         /** @brief The sample number of the sample at offset in current slot */
