@@ -23,6 +23,7 @@ std::vector<Demod> demodulate(Liquid::Demodulator &demod,
                                   FrameStats>;
 
     std::vector<LocalDemod> local_pkts;
+    size_t                  sample_offset = 0;
 
     // Get the signal to demodulate
     auto buf = sig.request();
@@ -41,7 +42,7 @@ std::vector<Demod> demodulate(Liquid::Demodulator &demod,
         {
             std::optional<Header>      h;
             std::optional<std::string> p;
-            framesyncstats_s           *stats = (framesyncstats_s*) stats_;
+            framesyncstats_s           stats = *((framesyncstats_s*) stats_);
 
             if (header_test)
                 return 1;
@@ -52,7 +53,11 @@ std::vector<Demod> demodulate(Liquid::Demodulator &demod,
             if (payload_valid)
                 p = std::string(reinterpret_cast<char*>(payload), payload_len);
 
-            local_pkts.emplace_back(std::make_tuple(h, p, *stats));
+            stats.start_counter += sample_offset;
+            stats.end_counter += sample_offset;
+            sample_offset += stats.sample_counter;
+
+            local_pkts.emplace_back(std::make_tuple(h, p, stats));
 
             return 0;
         };
@@ -164,14 +169,22 @@ void exportLiquid(py::module &m)
         .def_property_readonly("fec1",
             [](const FrameStats &stats) { return static_cast<fec_scheme>(stats.fec1); },
             "Forward Error-Correction (outer)")
+        .def_readonly("start_counter",
+            &FrameStats::start_counter,
+            "Sample offset of start of demodulated packet")
+        .def_readonly("end_counter",
+            &FrameStats::end_counter,
+            "Sample offset of end of demodulated packet")
         .def("__repr__", [](const FrameStats& self) {
-            return py::str("FrameStats(evm={:0.2g}, rssi={:0.2g}, cfo={:0.2g}, mod_scheme={}, mod_bps={}, check={}, fec0={}, fec1={})").\
+            return py::str("FrameStats(evm={:0.2g}, rssi={:0.2g}, cfo={:0.2g}, mod_scheme={}, mod_bps={}, check={}, fec0={}, fec1={}, start={}, end={})").\
             format(self.evm, self.rssi, self.cfo,
                    static_cast<modulation_scheme>(self.mod_scheme),
                    self.mod_bps,
                    static_cast<crc_scheme>(self.check),
                    static_cast<fec_scheme>(self.fec0),
-                   static_cast<fec_scheme>(self.fec1));
+                   static_cast<fec_scheme>(self.fec1),
+                   self.start_counter,
+                   self.end_counter);
          })
         ;
 
