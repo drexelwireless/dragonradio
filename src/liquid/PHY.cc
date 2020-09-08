@@ -91,6 +91,7 @@ Liquid::PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
   : Liquid::Demodulator(header_mcs, soft_header, soft_payload)
   , ::PHY::PacketDemodulator(phy)
   , channel_()
+  , delay_(0)
   , resamp_rate_(1.0)
   , internal_oversample_fact_(1)
   , timestamp_(0.0)
@@ -152,8 +153,8 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
 
     // The start and end variables contain full-rate sample offsets of the frame
     // start and end relative to the beginning of the slot.
-    ssize_t               start = offset_ + resamp_rate_*static_cast<signed>(frame_start - sample_start_);
-    ssize_t               end = offset_ + resamp_rate_*static_cast<signed>(frame_end - sample_start_);
+    ssize_t               start = offset_ - delay_ + resamp_rate_*static_cast<signed>(frame_start - sample_start_);
+    ssize_t               end = offset_ - delay_ + resamp_rate_*static_cast<signed>(frame_end - sample_start_);
     MonoClock::time_point timestamp = timestamp_ + start / rx_rate_;
 
     pkt->timestamp = timestamp;
@@ -229,6 +230,7 @@ void Liquid::PHY::PacketDemodulator::reset(const Channel &channel)
     timestamp_ = MonoClock::time_point { 0.0 };
     snapshot_off_ = std::nullopt;
     offset_ = 0;
+    delay_ = 0;
     sample_start_ = 0;
     sample_end_ = 0;
     sample_ = 0;
@@ -237,6 +239,7 @@ void Liquid::PHY::PacketDemodulator::reset(const Channel &channel)
 void Liquid::PHY::PacketDemodulator::timestamp(const MonoClock::time_point &timestamp,
                                                std::optional<ssize_t> snapshot_off,
                                                ssize_t offset,
+                                               size_t delay,
                                                float rate,
                                                float rx_rate)
 {
@@ -245,6 +248,7 @@ void Liquid::PHY::PacketDemodulator::timestamp(const MonoClock::time_point &time
     timestamp_ = timestamp;
     snapshot_off_ = snapshot_off;
     offset_ = offset;
+    delay_ = delay;
     sample_start_ = sample_end_;
 }
 

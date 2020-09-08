@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include <functional>
 
 #include <xsimd/xsimd.hpp>
@@ -378,6 +380,9 @@ FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(PHY &phy,
     std::copy(taps.begin(), taps.end(), fft.in.begin());
     fft.execute(fft.in.data(), H_.data());
 
+    // Compute filter delay
+    delay_ = round((taps.size() - 1) / 2.0);
+
     // Apply 1/(N*D) factor to filter since FFTW doesn't multiply by 1/N for
     // IFFT, and we need to compensate for summation during decimation.
     const C invN = 1.0/(N*D_);
@@ -401,6 +406,19 @@ void FDChannelizer::FDChannelDemodulator::reset(void)
 {
     demod_->reset(channel_);
     seq_ = 0;
+}
+
+void FDChannelizer::FDChannelDemodulator::timestamp(const MonoClock::time_point &timestamp,
+                                                    std::optional<ssize_t> snapshot_off,
+                                                    ssize_t offset,
+                                                    float rx_rate)
+{
+     demod_->timestamp(timestamp,
+                       snapshot_off,
+                       offset,
+                       delay_,
+                       rate_,
+                       rx_rate);
 }
 
 void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* data,

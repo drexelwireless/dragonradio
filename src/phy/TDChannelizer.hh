@@ -1,6 +1,8 @@
 #ifndef TDCHANNELIZER_H_
 #define TDCHANNELIZER_H_
 
+#include <math.h>
+
 #include <condition_variable>
 #include <functional>
 #include <list>
@@ -41,6 +43,7 @@ private:
                      double rx_rate)
           : ChannelDemodulator(phy, channel, taps, rx_rate)
           , seq_(0)
+          , delay_(round((taps.size() - 1)/2.0))
           , resamp_buf_(0)
           , resamp_(rate_, 2*M_PI*channel.fc/rx_rate, taps)
         {
@@ -55,12 +58,20 @@ private:
 
         void reset(void) override;
 
+        void timestamp(const MonoClock::time_point &timestamp,
+                       std::optional<ssize_t> snapshot_off,
+                       ssize_t offset,
+                       float rx_rate) override;
+
         void demodulate(const std::complex<float>* data,
                         size_t count) override;
 
     protected:
         /** @brief Channel IQ buffer sequence number */
         unsigned seq_;
+
+        /** @brief Filter delay */
+        size_t delay_;
 
         /** @brief Resampling buffer */
         IQBuf resamp_buf_;

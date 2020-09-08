@@ -74,6 +74,11 @@ private:
 
         void reset(void) override;
 
+        void timestamp(const MonoClock::time_point &timestamp,
+                       std::optional<ssize_t> snapshot_off,
+                       ssize_t offset,
+                       float rx_rate) override;
+
         void demodulate(const std::complex<float>* data,
                         size_t count) override;
 
@@ -89,6 +94,9 @@ private:
 
         /** @brief Number of FFT bins to rotate */
         int Nrot_;
+
+        /** @brief Filter delay */
+        size_t delay_;
 
         /** @brief IFFT */
         fftw::FFT<C> ifft_;

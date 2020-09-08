@@ -106,19 +106,13 @@ public:
      * @param snapshot_off The snapshot offset associated with the given
      * timestamp.
      * @param offset The offset of the first sample that will be demodulated.
+     * Can be negative!
      * @param rx_rate RX rate (Hz)
      */
-    void timestamp(const MonoClock::time_point &timestamp,
-                   std::optional<ssize_t> snapshot_off,
-                   size_t offset,
-                   float rx_rate)
-    {
-        demod_->timestamp(timestamp,
-                          snapshot_off,
-                          offset,
-                          rate_,
-                          rx_rate);
-    }
+    virtual void timestamp(const MonoClock::time_point &timestamp,
+                           std::optional<ssize_t> snapshot_off,
+                           ssize_t offset,
+                           float rx_rate) = 0;
 
     /** @brief Demodulate data with given parameters */
     virtual void demodulate(const std::complex<float>* data,

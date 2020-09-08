@@ -59,7 +59,7 @@ class OFDMDemodulator(dragonradio.PacketDemodulator):
         self.channel = channel
         self.demod.reset()
 
-    def timestamp(self, timestamp, snapshot_off, offset, rate, rx_rate):
+    def timestamp(self, timestamp, snapshot_off, offset, delay, rate, rx_rate):
         self.t = timestamp
 
     def demodulate(self, iqbuf):
