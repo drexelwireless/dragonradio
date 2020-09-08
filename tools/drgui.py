@@ -140,7 +140,7 @@ class WaveformPlot:
         self.fig = fig
         self.ax = ax
 
-    def plot(self, sig, title='Waveform'):
+    def plot(self, sig, title='Waveform', sigslop=0):
         self.ax.clear()
         self.ax.plot(np.real(sig))
         self.ax.plot(np.imag(sig))
@@ -148,6 +148,10 @@ class WaveformPlot:
             self.ax.set_title(title)
         self.ax.set_xlabel('Time (samples)')
         #self.ax.axis('tight')
+
+        if sigslop:
+            self.ax.axvline(sigslop, color='r')
+            self.ax.axvline(len(sig)-sigslop, color='r')
 
         self.fig.canvas.mpl_connect('scroll_event', zoom_factory(self.fig, self.ax, base_scale=2.0))
 
@@ -195,11 +199,12 @@ class PAPRPlot:
         self.fig.canvas.mpl_connect('scroll_event', zoom_factory(self.fig, self.ax, base_scale=2.0))
 
 class ReceivePlot:
-    def __init__(self, log, node, show_header_invalid=False, nfft=256, viewer=None):
+    def __init__(self, log, node, show_header_invalid=False, nfft=256, viewer=None, sigslop=0):
         self.log = log
         self.node = node
         self.viewer = viewer
         self.show_header_invalid = show_header_invalid
+        self.sigslop = sigslop
 
         self.pktidx = 0
 
@@ -256,7 +261,7 @@ class ReceivePlot:
                 logging.warning("Cannot find slots for packet at timestamp %f", self.pkt.timestamp)
                 return
 
-            sig = slots.sigrange(self.pkt.start_samples, self.pkt.end_samples)
+            sig = slots.sigrange(self.pkt.start_samples-self.sigslop, self.pkt.end_samples+self.sigslop)
 
             if not self.pkt.header_valid:
                 msg = 'INVALID HEADER'
@@ -286,7 +291,7 @@ class ReceivePlot:
                 self.markSlot(self.specgram.ax, t-t0)
 
             self.constellation.plot(self.pkt.symbols)
-            self.waveform.plot(sig)
+            self.waveform.plot(sig, sigslop=self.sigslop)
             self.psd.plot(slots.bw, sig)
             self.papr.plot(sig)
 
@@ -629,11 +634,11 @@ class LogViewer:
         self.snapshotFigs = {}
         self.metricFigs = {}
 
-    def rxFig(self, node, nfft=256, show_header_invalid=False):
+    def rxFig(self, node, nfft=256, show_header_invalid=False, sigslop=0):
         if node.node_id in self.rxFigs:
             return self.rxFigs[node.node_id]
         else:
-            fig = ReceivePlot(self.log, node, nfft=nfft, show_header_invalid=show_header_invalid, viewer=self)
+            fig = ReceivePlot(self.log, node, nfft=nfft, show_header_invalid=show_header_invalid, viewer=self, sigslop=sigslop)
             fig.fig.show()
             return fig
 
@@ -702,6 +707,9 @@ def main():
     parser.add_argument('--nfft', action='store', type=int, default=256, dest='nfft',
                         metavar='N',
                         help='set number of FFT points')
+    parser.add_argument('--sigslop', action='store', type=int, default=0,
+                        metavar='N',
+                        help='set number of extra samples to plot surrounding received packet')
     parser.add_argument('--show-invalid-headers', action='store_true', default=False, dest='show_invalid_headers',
                         help='show invalid headers when displaying RX log')
     parser.add_argument('--include-invalid-packets',
@@ -733,7 +741,7 @@ def main():
         if not node:
             print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
         else:
-            rx = viewer.rxFig(node, nfft=args.nfft, show_header_invalid=args.show_invalid_headers)
+            rx = viewer.rxFig(node, nfft=args.nfft, show_header_invalid=args.show_invalid_headers, sigslop=args.sigslop)
             rx.plot(0)
 
     for node_id in args.snapshots:
