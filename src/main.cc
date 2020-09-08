@@ -7,6 +7,8 @@
 
 namespace py = pybind11;
 
+using namespace pybind11::literals;
+
 #include "Logger.hh"
 
 #define MAXFRAMES 25
@@ -32,6 +34,34 @@ extern "C" void backtraceHandler(int signum, siginfo_t *si, void *ptr)
     raise(signum);
 }
 
+/** @brief Activate Python virtual environment */
+/** If the environmement variable VIRTUAL_ENV is set, use the associated
+ * virtualenv. This allows us to use the virtualenv even through the dragonradio
+ * binary is not located in the virtual environment's bin directory.
+ */
+void activateVirtualenv(void)
+{
+    char *venv = getenv("VIRTUAL_ENV");
+
+    if (venv) {
+        py::object join = py::module::import("os").attr("path").attr("join");
+        py::object path = join(venv, "bin", "activate_this.py");
+
+        py::eval_file(path, py::globals(), py::dict("__file__"_a=path));
+    }
+}
+
+/** @brief Set Python sys.argv */
+void setPythonArgv(int argc, char** argv)
+{
+    py::list args(argc);
+
+    for (int i = 0; i < argc; ++i)
+        args[i] = argv[i];
+
+    py::module::import("sys").attr("argv") = args;
+}
+
 int main(int argc, char** argv)
 {
     if (argc == 1) {
@@ -50,18 +80,13 @@ int main(int argc, char** argv)
     // Start the interpreter and keep it alive
     py::scoped_interpreter guard{};
 
-    // Evaluate in scope of main module
-    py::object scope = py::module::import("__main__").attr("__dict__");
+    // Activate any Python virtual environment
+    activateVirtualenv();
 
     // Stuff our arguments into Python's sys.argv, but skip the first argument,
     // which is the name of this binary. Instead, Python will see the name of
     // the script we run as the first argument.
-    py::list args(argc-1);
-
-    for (int i = 1; i < argc; ++i)
-        args[i-1] = argv[i];
-
-    py::module::import("sys").attr("argv") = args;
+    setPythonArgv(argc-1, argv+1);
 
     // Add the directory where the script lives to sys.path
     py::exec(R"(
@@ -74,9 +99,7 @@ int main(int argc, char** argv)
     int ret;
 
     try {
-        py::eval_file(argv[1], scope);
-
-        printf("Done!\n");
+        py::eval_file(argv[1]);
         ret = EXIT_SUCCESS;
     } catch (const py::error_already_set& e) {
         if (e.matches(py::module::import("builtins").attr("SystemExit"))) {
