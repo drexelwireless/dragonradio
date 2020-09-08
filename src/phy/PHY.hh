@@ -99,7 +99,9 @@ public:
          * @param timestamp The timestamp for future samples.
          * @param snapshot_off The snapshot offset associated with the given
          * timestamp.
-         * @param offset The offset of the first sample that will be demodulated.
+         * @param offset The offset of the first sample that will be
+         * demodulated. Can be negative!
+         * @param delay Filter delay
          * @param rate The rate of the resampler applied before data is passed
          * to the demodulator.
          * @param rx_rate The RX rate (Hz).
@@ -107,6 +109,7 @@ public:
         virtual void timestamp(const MonoClock::time_point &timestamp,
                                std::optional<ssize_t> snapshot_off,
                                ssize_t offset,
+                               size_t delay,
                                float rate,
                                float rx_rate) = 0;
 

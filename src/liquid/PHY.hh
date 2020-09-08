@@ -59,6 +59,7 @@ public:
         void timestamp(const MonoClock::time_point &timestamp,
                        std::optional<ssize_t> snapshot_off,
                        ssize_t offset,
+                       size_t delay,
                        float rate,
                        float rx_rate) override final;
 
@@ -72,6 +73,9 @@ public:
     protected:
         /** @brief The channel being demodulated */
         Channel channel_;
+
+        /** @brief Filter delay */
+        ssize_t delay_;
 
         /** @brief Rate conversion from samples to full RX rate */
         /** This is used internally purely to properly timestamp packets. */
@@ -93,7 +97,7 @@ public:
         /** @brief Snapshot offset of current slot. */
         std::optional<ssize_t> snapshot_off_;
 
-        /** @brief Sample offset ffset of first provided sample from slot. */
+        /** @brief Sample offset of first provided sample from slot. */
         ssize_t offset_;
 
         /** @brief The sample number of the sample at offset in current slot */

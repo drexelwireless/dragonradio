@@ -232,6 +232,19 @@ void TDChannelizer::TDChannelDemodulator::reset(void)
     seq_ = 0;
 }
 
+void TDChannelizer::TDChannelDemodulator::timestamp(const MonoClock::time_point &timestamp,
+                                                    std::optional<ssize_t> snapshot_off,
+                                                    ssize_t offset,
+                                                    float rx_rate)
+{
+    demod_->timestamp(timestamp,
+                      snapshot_off,
+                      offset,
+                      delay_,
+                      rate_,
+                      rx_rate);
+}
+
 void TDChannelizer::TDChannelDemodulator::demodulate(const std::complex<float>* data,
                                                      size_t count)
 {

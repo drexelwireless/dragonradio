@@ -289,6 +289,20 @@ void OverlapTDChannelizer::OverlapTDChannelDemodulator::reset(void)
     demod_->reset(channel_);
 }
 
+
+void OverlapTDChannelizer::OverlapTDChannelDemodulator::timestamp(const MonoClock::time_point &timestamp,
+                                                                  std::optional<ssize_t> snapshot_off,
+                                                                  ssize_t offset,
+                                                                  float rx_rate)
+{
+    demod_->timestamp(timestamp,
+                      snapshot_off,
+                      offset,
+                      delay_,
+                      rate_,
+                      rx_rate);
+}
+
 void OverlapTDChannelizer::OverlapTDChannelDemodulator::demodulate(const std::complex<float>* data,
                                                                    size_t count)
 {

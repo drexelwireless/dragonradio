@@ -1,6 +1,8 @@
 #ifndef OVERLAPTDCHANNELIZER_H_
 #define OVERLAPTDCHANNELIZER_H_
 
+#include <math.h>
+
 #include <condition_variable>
 #include <functional>
 #include <list>
@@ -92,6 +94,7 @@ private:
                                     const std::vector<C> &taps,
                                     double rx_rate)
           : ChannelDemodulator(phy, channel, taps, rx_rate)
+          , delay_(round((taps.size() - 1)/2.0))
           , rx_rate_(rx_rate)
           , rx_oversample_(phy.getMinRXRateOversample())
           , resamp_buf_(0)
@@ -108,10 +111,18 @@ private:
 
         void reset(void) override;
 
+        void timestamp(const MonoClock::time_point &timestamp,
+                       std::optional<ssize_t> snapshot_off,
+                       ssize_t offset,
+                       float rx_rate) override;
+
         void demodulate(const std::complex<float>* data,
                         size_t count) override;
 
     protected:
+        /** @brief Filter delay */
+        size_t delay_;
+
         /** @brief RX rate */
         const double rx_rate_;
 
