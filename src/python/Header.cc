@@ -56,4 +56,23 @@ void exportHeader(py::module &m)
             format(self.curhop, self.nexthop, static_cast<Seq::uint_type>(self.seq), self.flags);
          })
         ;
+
+    // Export class ExtendedHeader to Python
+    py::class_<ExtendedHeader, std::shared_ptr<ExtendedHeader>>(m, "ExtendedHeader")
+        .def(py::init([](NodeId src, NodeId dest, Seq::uint_type ack, uint16_t data_len){
+            return ExtendedHeader{ src, dest, Seq{ack}, data_len};
+        }))
+        .def_readwrite("src",
+            &ExtendedHeader::src,
+            "Source node")
+        .def_readwrite("dest",
+            &ExtendedHeader::dest,
+            "Destination node")
+        .def_readwrite("ack",
+            &ExtendedHeader::dest,
+            "Sequence number being ACK'ed")
+        .def_readwrite("data_len",
+            &ExtendedHeader::data_len,
+            "Length of packet data")
+        ;
 }

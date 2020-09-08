@@ -38,22 +38,6 @@ void exportPacket(py::module &m)
             "Set if packet should be timestamped")
         ;
 
-    // Export class ExtendedHeader to Python
-    py::class_<ExtendedHeader, std::shared_ptr<ExtendedHeader>>(m, "ExtendedHeader")
-        .def_readwrite("src",
-            &ExtendedHeader::src,
-            "Source node")
-        .def_readwrite("dest",
-            &ExtendedHeader::dest,
-            "Destination node")
-        .def_readwrite("ack",
-            &ExtendedHeader::dest,
-            "Sequence number being ACK'ed")
-        .def_readwrite("data_len",
-            &ExtendedHeader::data_len,
-            "Length of packet data")
-        ;
-
     // Export class Packet to Python
     py::class_<Packet, std::shared_ptr<Packet>>(m, "Packet")
         .def_readwrite("hdr",
