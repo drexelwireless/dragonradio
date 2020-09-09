@@ -119,7 +119,7 @@ def stop(config):
 RADIOCONF_PATH = '/root/radio_api/radio.conf'
 
 def main():
-    config = dradragonradiogon.radio.Config()
+    config = dragonradio.radio.Config()
 
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)

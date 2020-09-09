@@ -1,2 +1,3 @@
 #!/bin/sh
-exec /root/dragonradio/python/radio-client.py update-outcomes "$@"
+. /root/dragonradio/env/bin/activate
+exec dragonradio-client update-outcomes "$@"

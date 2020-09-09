@@ -12,9 +12,7 @@ import time
 
 import zmq
 
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), '../python/sc2'))
-
-import registration_pb2 as reg
+import sc2.registration_pb2 as reg
 
 from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
@@ -104,7 +102,7 @@ class CollabServer(object):
 
         # initialize the main listening socket
         self.listen_socket.bind("tcp://%s:%s" % (self.host,self.server_port))
-        self.log.info("Collaboration Server listening on host %s and port %i", 
+        self.log.info("Collaboration Server listening on host %s and port %i",
                       self.host, self.server_port)
 
         # set up the poller
@@ -155,10 +153,10 @@ class CollabServer(object):
         # is ready, send the message. If we reach the timeout before a client socket appears to be
         # ready, give up on the message and log an error
         while tock-tick < timeout and success == False:
-            
+
             self.log.debug("Trying to send message")
             socks = dict(self.poller.poll())
-        
+
             if sock in socks and socks[sock] == zmq.POLLOUT:
                 self.log.debug("Socket ready, sending")
                 sock.send(message.SerializeToString())
@@ -222,7 +220,7 @@ class CollabServer(object):
         message.inform.neighbors.extend(client_addresses)
 
         self.log.debug("sending inform message to client: %s", message)
-        
+
         # send message INFORM message to new client
         self.send_with_timeout(client_socket, message, self.message_timeout)
 
@@ -262,7 +260,7 @@ class CollabServer(object):
         self.log.info("Received Register message: IP address was %s", ip_string)
 
         self.add_client(ip)
-        
+
         return
 
     def handle_keepalive(self, message):
@@ -273,7 +271,7 @@ class CollabServer(object):
 
         nonce = message.keepalive.my_nonce
         client_ip_str = ip_int_to_string(self.clients[nonce]["ip_address"])
-        self.log.info("Received Keepalive message with nonce %i, client IP %s. Resetting timer", 
+        self.log.info("Received Keepalive message with nonce %i, client IP %s. Resetting timer",
                       nonce, client_ip_str)
 
         self.clients[nonce]["keepalive_counter"] = self.keepalive
@@ -310,7 +308,7 @@ class CollabServer(object):
         for nonce, client in self.clients.items():
 
             self.send_with_timeout(client["socket"], message, self.message_timeout)
-            
+
             self.log.debug("message sent to client at ip %s",
                            ip_int_to_string(client["ip_address"]))
 
@@ -400,11 +398,11 @@ def handle_sigterm(signal, frame):
 
 def main(argv=None):
 
-    print("Collaboration Server starting, CTRL-C to exit")    
+    print("Collaboration Server starting, CTRL-C to exit")
 
     # parse command line args
-    args = parse_args(argv)       
-   
+    args = parse_args(argv)
+
     collab_server = CollabServer(host=args["server_ip"],
                                  server_port=args["server_port"],
                                  client_port=args["client_port"],
@@ -426,4 +424,3 @@ def main(argv=None):
 if __name__ == "__main__":
 
     main()
-

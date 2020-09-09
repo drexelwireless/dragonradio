@@ -1,2 +1,3 @@
 #!/bin/sh
-exec /root/dragonradio/dragonradio /root/dragonradio/python/sc2-radio.py "$@"
+. /root/dragonradio/env/bin/activate
+exec /root/dragonradio/dragonradio /root/dragonradio/scripts/sc2-radio.py "$@"
