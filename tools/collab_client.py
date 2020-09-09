@@ -14,9 +14,9 @@ import zmq.asyncio
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), '../python'))
 
-from dragon.protobuf import *
-from dragon.collab import CILServer
-from dragon.gpsd import GPSDClient, GPSLocation
+from dragonradio.protobuf import *
+from dragonradio.collab import CILServer
+from dragonradio.gpsd import GPSDClient, GPSLocation
 
 class Node(object):
     def __init__(self, id):

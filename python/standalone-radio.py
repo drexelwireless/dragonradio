@@ -10,7 +10,7 @@ import signal
 import sys
 
 import dragonradio
-import dragon.radio
+import dragonradio.radio
 
 def cycle_algorithm(desc):
     if desc == 'sequential':
@@ -47,7 +47,7 @@ def cancel_loop():
     loop.create_task(cancel_tasks(loop))
 
 def main():
-    config = dragon.radio.Config()
+    config = dragonradio.radio.Config()
 
     # Default to TDMA
     config.mac = 'tdma'
@@ -103,7 +103,7 @@ def main():
         config.channel_bandwidth = None
 
     # Create the radio object
-    radio = dragon.radio.Radio(config, slotted=(config.mac != 'fdma'))
+    radio = dragonradio.radio.Radio(config, slotted=(config.mac != 'fdma'))
 
     # Add all radio nodes to the network
     for i in range(0, config.num_nodes):

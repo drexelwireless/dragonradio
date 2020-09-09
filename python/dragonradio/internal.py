@@ -4,9 +4,9 @@ import numpy as np
 import struct
 import time
 
-from dragon.protobuf import *
-from dragon.internal_pb2 import *
-import dragon.internal_pb2 as internal
+from dragonradio.protobuf import *
+from dragonradio.internal_pb2 import *
+import dragonradio.internal_pb2 as internal
 
 logger = logging.getLogger('internal')
 

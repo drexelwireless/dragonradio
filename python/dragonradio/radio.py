@@ -21,9 +21,9 @@ import dragonradio
 from dragonradio import Channel, Channels
 from dragonradio.liquid import MCS
 
-import dragon.channels
-import dragon.schedule
-from dragon.signal import *
+import dragonradio.channels
+import dragonradio.schedule
+from dragonradio.signal import *
 
 logger = logging.getLogger('radio')
 
@@ -1096,7 +1096,7 @@ class Radio(object):
         else:
             cbw = config.channel_bandwidth
 
-        channels = dragon.channels.defaultChannelPlan(bandwidth, cbw)
+        channels = dragonradio.channels.defaultChannelPlan(bandwidth, cbw)
 
         logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g)",
             list(channels),
@@ -1538,7 +1538,7 @@ class Radio(object):
         # to that
         else:
             try:
-                chan = dragon.schedule.bestScheduleChannel(sched, self.node_id)
+                chan = dragonradio.schedule.bestScheduleChannel(sched, self.node_id)
             except:
                 logging.error('No MAC schedule entry for radio %d', self.node_id)
                 chan = 0
@@ -1563,9 +1563,9 @@ class Radio(object):
         nchannels = len(self.channels)
 
         if nchannels == 1:
-            sched = dragon.schedule.pureTDMASchedule(nodes)
+            sched = dragonradio.schedule.pureTDMASchedule(nodes)
         else:
-            sched = dragon.schedule.fullChannelMACSchedule(nchannels,
+            sched = dragonradio.schedule.fullChannelMACSchedule(nchannels,
                                                            1,
                                                            nodes,
                                                            3)
@@ -1584,7 +1584,7 @@ class Radio(object):
 
         nchannels = len(self.channels)
 
-        sched = dragon.schedule.fullChannelMACSchedule(nchannels, 1, nodes, k=3)
+        sched = dragonradio.schedule.fullChannelMACSchedule(nchannels, 1, nodes, k=3)
 
         self.installMACSchedule(sched, use_fdma_mac=use_fdma_mac)
 

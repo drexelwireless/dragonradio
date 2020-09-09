@@ -17,16 +17,16 @@ import sc2.cil_pb2 as cil
 
 import dragonradio
 
-from dragon.collab import RegistrationClient, CILClient, CILServer
-import dragon.collab
-from dragon.gpsd import GPSDClient, GPSLocation
-import dragon.internal
-from dragon.internal import InternalProtoClient, InternalProtoServer, mkFlowStats, mkSpectrumStats
-import dragon.internal as internal
-from dragon.protobuf import *
-import dragon.radio
-import dragon.remote as remote
-import dragon.schedule
+from dragonradio.collab import RegistrationClient, CILClient, CILServer
+import dragonradio.collab
+from dragonradio.gpsd import GPSDClient, GPSLocation
+import dragonradio.internal
+from dragonradio.internal import InternalProtoClient, InternalProtoServer, mkFlowStats, mkSpectrumStats
+import dragonradio.internal as internal
+from dragonradio.protobuf import *
+import dragonradio.radio
+import dragonradio.remote as remote
+import dragonradio.schedule
 
 logger = logging.getLogger('controller')
 
@@ -79,7 +79,7 @@ class Voxel(object):
         usage.measured_data = measured
 
         # Construct list of receivers for this voxel
-        receivers = [dragon.collab.mkReceiverInfo(radio_id, rx_gain) for radio_id in self.rx]
+        receivers = [dragonradio.collab.mkReceiverInfo(radio_id, rx_gain) for radio_id in self.rx]
         usage.receiver_info.extend(receivers)
 
         return usage
@@ -244,7 +244,7 @@ class Controller(CILServer):
             logger.warning('Bandwidth not specified; using %f', self.config.bandwidth)
 
         # Create the radio object
-        radio = dragon.radio.Radio(self.config)
+        radio = dragonradio.radio.Radio(self.config)
         self.radio = radio
 
         # Log snapshots if requested
@@ -1043,7 +1043,7 @@ class Controller(CILServer):
 
                 # Create the schedule
                 nchannels = len(radio.channels)
-                sched = dragon.schedule.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
+                sched = dragonradio.schedule.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
                 if not np.array_equal(sched, self.schedule):
                     await self.installMACSchedule(self.schedule_seq + 1, sched)
                     await self.distributeSchedule()
@@ -1296,8 +1296,8 @@ class Controller(CILServer):
             radio.netq.mandates = mandates
 
             # Make internal traffic very high priority
-            radio.netq.setFlowQueuePriority(dragon.internal.INTERNAL_PORT, (99, 0.0))
-            radio.netq.setFlowQueueType(dragon.internal.INTERNAL_PORT, dragonradio.MandateQueue.FIFO)
+            radio.netq.setFlowQueuePriority(dragonradio.internal.INTERNAL_PORT, (99, 0.0))
+            radio.netq.setFlowQueueType(dragonradio.internal.INTERNAL_PORT, dragonradio.MandateQueue.FIFO)
         else:
             # Set allowed flows
             self.setAllowedFlows([flow_uid for (flow_uid, _mandate) in mandates.items()])
@@ -1311,7 +1311,7 @@ class Controller(CILServer):
         radio = self.radio
 
         allowed = set(flows)
-        allowed.add(dragon.internal.INTERNAL_PORT)
+        allowed.add(dragonradio.internal.INTERNAL_PORT)
 
         radio.netfirewall.allow_broadcasts = True
         radio.netfirewall.allowed = allowed

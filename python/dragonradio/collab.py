@@ -8,7 +8,7 @@ import sys
 import time
 import zmq.asyncio
 
-from dragon.protobuf import *
+from dragonradio.protobuf import *
 
 import sc2.cil_pb2 as cil
 import sc2.registration_pb2 as registration

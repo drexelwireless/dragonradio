@@ -57,8 +57,8 @@ ALLSOURCES := $(shell find $(SRCDIR) -name '*.cc')
 ALLINCLUDES := $(shell find  $(SRCDIR) -name '*.hh')
 
 GENERATED += \
-	python/dragon/internal_pb2.py \
-	python/dragon/remote_pb2.py \
+	python/dragonradio/internal_pb2.py \
+	python/dragonradio/remote_pb2.py \
 	python/sc2/cil_pb2.py \
 	python/sc2/registration_pb2.py
 
@@ -163,7 +163,7 @@ flexframedemod : util/flexframedemod.cc
 python/sc2/%_pb2.py : proto/%.proto
 	protoc -I proto --python_out=$(dir $@) $(notdir $<)
 
-python/dragon/%_pb2.py : proto/%.proto
+python/dragonradio/%_pb2.py : proto/%.proto
 	protoc -I proto --python_out=$(dir $@) $(notdir $<)
 
 .PHONY : html
