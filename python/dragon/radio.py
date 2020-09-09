@@ -707,7 +707,7 @@ class Radio(object):
         self.lock = asyncio.Lock()
         """Lock protecting radio configuration"""
 
-        logger.info('Radio version: %s', dragonradio.version)
+        logger.info('Radio version: %s', dragonradio.__version__)
         logger.info('Radio configuration:\n%s', str(config))
 
         # Copy configuration settings to the C++ RadioConfig object
@@ -761,7 +761,7 @@ class Radio(object):
             path = self.getRadioLogPath()
 
             self.logger = dragonradio.Logger(path)
-            self.logger.setAttribute('version', dragonradio.version)
+            self.logger.setAttribute('version', dragonradio.__version__)
             self.logger.setAttribute('node_id', self.node_id)
             self.logger.setAttribute('config', str(config))
 
