@@ -15,7 +15,7 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     auto mliquid = m.def_submodule("liquid");
 
     // Export DragonRadio version
-    m.attr("version") = TOSTRING(VERSION);
+    m.attr("__version__") = TOSTRING(VERSION);
 
     exportClock(m);
     exportLogger(m);

@@ -190,7 +190,7 @@ def main():
     #
     # Output parameters
     #
-    writer.writerow(('# version %s' % dragonradio.version,))
+    writer.writerow(('# version %s' % dragonradio.__version__,))
 
     for attr in ['len', 'bw', 'duration']:
         writer.writerow(('# %s %s' % (attr, getattr(config, attr)),))
