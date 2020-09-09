@@ -8,7 +8,7 @@ import signal
 import sys
 
 import dragonradio
-import dragon.radio
+import dragonradio.radio
 
 class OFDMModulator(dragonradio.PacketModulator):
     def __init__(self,
@@ -139,9 +139,9 @@ class OFDM(dragonradio.PHY):
                                self.taper_len,
                                self.subcarriers)
 
-class Radio(dragon.radio.Radio):
+class Radio(dragonradio.radio.Radio):
     def __init__(self, *args, **kwargs):
-        dragon.radio.Radio.__init__(self, *args, **kwargs)
+        dragonradio.radio.Radio.__init__(self, *args, **kwargs)
 
     def mkPHY(self, header_mcs, mcs_table):
         return OFDM(self.snapshot_collector,
@@ -168,7 +168,7 @@ def cancel_loop():
     loop.create_task(cancel_tasks(loop))
 
 def main():
-    config = dragon.radio.Config()
+    config = dragonradio.radio.Config()
 
     # Default to TDMA
     config.mac = 'tdma'

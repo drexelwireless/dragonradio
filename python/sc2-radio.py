@@ -14,8 +14,8 @@ import signal
 import sys
 
 import dragonradio
-import dragon.radio
-from dragon.controller import Controller
+import dragonradio.radio
+from dragonradio.controller import Controller
 
 def configureLogging(config):
     logger = logging.getLogger()
@@ -119,7 +119,7 @@ def stop(config):
 RADIOCONF_PATH = '/root/radio_api/radio.conf'
 
 def main():
-    config = dragon.radio.Config()
+    config = dradragonradiogon.radio.Config()
 
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)

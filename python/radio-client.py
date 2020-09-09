@@ -8,8 +8,8 @@ import psutil
 import sys
 import time
 
-from dragon.protobuf import *
-import dragon.remote as remote
+from dragonradio.protobuf import *
+import dragonradio.remote as remote
 
 def main():
     parser = argparse.ArgumentParser(description='Interact with dragonradio.',

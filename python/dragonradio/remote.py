@@ -2,9 +2,9 @@ import functools
 import struct
 import time
 
-from dragon.protobuf import *
-from dragon.remote_pb2 import *
-import dragon.remote_pb2 as remote
+from dragonradio.protobuf import *
+from dragonradio.remote_pb2 import *
+import dragonradio.remote_pb2 as remote
 
 REMOTE_HOST = '127.0.0.1'
 REMOTE_PORT = 8888

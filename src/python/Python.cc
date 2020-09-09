@@ -10,7 +10,7 @@ namespace py = pybind11;
 #define TOSTRING2(s) #s
 #define TOSTRING(s) TOSTRING2(s)
 
-PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
+PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     // Create submodule for liquid
     auto mliquid = m.def_submodule("liquid");
 
