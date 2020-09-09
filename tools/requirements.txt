@@ -1,12 +1,5 @@
 cairocffi==1.1.0
 h5py==2.10.0
-ipython==7.9.0
 jupyter==1.0.0
-libconf==2.0.1
-matplotlib==3.0.3
-numpy==1.18.5
-pandas==0.24.2
-pybind11==2.5.0
 PyGObject==3.36.1
 requests==2.24.0
-scipy==1.4.1

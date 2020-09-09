@@ -1,7 +1,0 @@
-*.so
-*.py[cod]
-*.egg-info
-dist
-build
-tmp
-
