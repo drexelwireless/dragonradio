@@ -1,5 +1,4 @@
 import asyncio
-from concurrent.futures import CancelledError
 import logging
 import math
 import socket
@@ -57,7 +56,7 @@ async def event_wait(evt, timeout):
     """Wait for an event with a timeout"""
     try:
         await asyncio.wait_for(evt.wait(), timeout)
-    except CancelledError:
+    except asyncio.CancelledError:
         raise
     except asyncio.TimeoutError:
         pass
@@ -285,7 +284,7 @@ class CILServer(object):
                         logger.exception("heartbeat")
 
                 await asyncio.sleep(self.registration_max_keepalive / 2)
-        except CancelledError:
+        except asyncio.CancelledError:
             pass
 
     async def location_update(self):
@@ -316,7 +315,7 @@ class CILServer(object):
                         logger.exception("location_update")
 
                 await asyncio.sleep(config.location_update_period)
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
             except:
                 logger.exception("location_updates")
@@ -368,7 +367,7 @@ class CILServer(object):
                         delta = timestamp + 2*MIN_SPECTRUM_USAGE_UPDATE_PERIOD - now
                     else:
                         break
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
             except:
                 logger.exception("spectrum_usage")
@@ -413,7 +412,7 @@ class CILServer(object):
 
                 if delta > 0:
                     await asyncio.sleep(delta)
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
             except:
                 logger.exception("detailed_performance")

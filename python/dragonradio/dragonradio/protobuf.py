@@ -1,5 +1,4 @@
 import asyncio
-from concurrent.futures import CancelledError
 from functools import partial, wraps
 import inspect
 import logging
@@ -92,7 +91,7 @@ class ZMQProtoServer(object):
                     self.loop.create_task(f(self.handler, msg))
                 except KeyError as err:
                     logger.error('Received unsupported message type: %s', err)
-        except CancelledError:
+        except asyncio.CancelledError:
             listen_sock.close()
             ctx.term()
 
@@ -252,7 +251,7 @@ class ProtobufProtocol(asyncio.Protocol):
                     await self.send(resp)
             except KeyError as exc:
                 logger.error('Received unsupported message type: {}', exc)
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
 
 class TCPProtoServer(object):
@@ -276,10 +275,9 @@ class TCPProtoServer(object):
                                                                 loop=self.loop),
                                                         host=listen_ip,
                                                         port=listen_port,
-                                                        reuse_address=True,
                                                         reuse_port=True)
                 await server.wait_closed()
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
             except:
                 logger.exception('Restarting TCP proto server')
@@ -406,7 +404,6 @@ class UDPProtoServer(object):
                                                          handler=self.handler,
                                                          loop=self.loop),
                                                  local_addr=(listen_ip, listen_port),
-                                                 reuse_address=True,
                                                  allow_broadcast=True)
 
 class UDPProtoClient(ProtobufDatagramProtocol):
@@ -432,7 +429,6 @@ class UDPProtoClient(ProtobufDatagramProtocol):
         async def f():
             await self.loop.create_datagram_endpoint(lambda: self,
                                                      remote_addr=(self.server_host, self.server_port),
-                                                     reuse_address=True,
                                                      allow_broadcast=True)
 
         self.loop.create_task(f())

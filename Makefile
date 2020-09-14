@@ -24,9 +24,10 @@ LIBS += \
 	-lsz -lz -ldl
 
 # Needed for Python
-CPPFLAGS += -I/usr/include/python3.5 -Idependencies/pybind11/include
+PYTHONVER = 3.8
 
-LIBS += -lpython3.5m
+CPPFLAGS += -I/usr/include/python$(PYTHONVER) -Idependencies/pybind11/include
+LIBS += -lpython$(PYTHONVER)
 
 # Needed for FLAC
 LIBS += -lFLAC++ -lFLAC

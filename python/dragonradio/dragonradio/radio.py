@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-from concurrent.futures import CancelledError
 import configparser
 from fractions import Fraction
 import io
@@ -1738,7 +1737,7 @@ class Radio(object):
                             self.logger.logSelfTX(snapshot.timestamp.wall_time, e)
 
                 await asyncio.sleep(config.snapshot_period)
-        except CancelledError:
+        except asyncio.CancelledError:
             return
 
     @property

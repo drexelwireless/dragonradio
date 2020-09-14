@@ -1,5 +1,4 @@
 import asyncio
-from concurrent.futures import CancelledError
 import json
 import logging
 import math
@@ -714,7 +713,7 @@ class Controller(CILServer):
 
                 tasks = [mkARPTask(peer_id) for peer_id in range(1, 255)]
                 await asyncio.gather(*tasks, return_exceptions=True)
-        except CancelledError:
+        except asyncio.CancelledError:
             return
 
     async def getMandatePerformance(self):
@@ -851,7 +850,7 @@ class Controller(CILServer):
                                                               spectrum)
 
                 await asyncio.sleep(config.status_update_period)
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
             except:
                 logging.exception('Exception in updateStatus')
@@ -1047,7 +1046,7 @@ class Controller(CILServer):
                 if not np.array_equal(sched, self.schedule):
                     await self.installMACSchedule(self.schedule_seq + 1, sched)
                     await self.distributeSchedule()
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
 
     async def distributeSchedule(self):
@@ -1087,7 +1086,7 @@ class Controller(CILServer):
             try:
                 await asyncio.sleep(10)
                 await self.broadcastSchedule()
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
 
     async def broadcastSchedule(self):
@@ -1149,7 +1148,7 @@ class Controller(CILServer):
 
             # Trigger TDMA scheduler
             self.tdma_reschedule.set()
-        except CancelledError:
+        except asyncio.CancelledError:
             return
 
     async def discoverNeighbors(self):
@@ -1177,7 +1176,7 @@ class Controller(CILServer):
                 radio.controller.broadcastHello()
 
                 await asyncio.sleep(period - delta)
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
 
     async def addDiscoveredNeighbors(self):
@@ -1186,7 +1185,7 @@ class Controller(CILServer):
             try:
                 await asyncio.sleep(1)
                 self.addRadioNodes()
-            except CancelledError:
+            except asyncio.asyncio.CancelledError:
                 return
 
     async def synchronizeClock(self):
@@ -1198,7 +1197,7 @@ class Controller(CILServer):
                 await asyncio.sleep(config.clock_sync_interval)
 
                 radio.synchronizeClock()
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
             except:
                 logging.exception("Exception when synchronizing clock")

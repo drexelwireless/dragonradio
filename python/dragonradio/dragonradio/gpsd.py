@@ -1,5 +1,4 @@
 import asyncio
-from concurrent.futures import CancelledError
 import dateutil.parser
 import json
 import json.decoder
@@ -89,7 +88,7 @@ class GPSDClient:
                 wait_to_connect = True
             except json.decoder.JSONDecodeError:
                 wait_to_connect = True
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
             except Exception as e:
                 logger.exception('Could not obtain GPS location')
