@@ -4,10 +4,23 @@ namespace py = pybind11;
 
 #include "python/PyModules.hh"
 
+#if defined(PYMODULE)
+PYBIND11_MODULE(_dragonradio, m) {
+#else /* !defined(PYMODULE) */
 PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
+#endif /* !defined(PYMODULE) */
     // Create submodule for liquid
     auto mliquid = m.def_submodule("liquid");
 
+#if defined(PYMODULE)
+    exportResamplers(m);
+    exportNCOs(m);
+    exportFilters(m);
+    exportIQCompression(m);
+    exportHeader(m);
+    exportModem(m);
+    exportLiquid(mliquid);
+#else /* !defined(PYMODULE) */
     exportClock(m);
     exportLogger(m);
     exportRadioConfig(m);
@@ -35,4 +48,5 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportIQBuffer(m);
     exportIQCompression(m);
     exportSnapshot(m);
+#endif /* !defined(PYMODULE) */
 }

@@ -61,8 +61,7 @@ def cpp_flag(compiler):
 ext_modules = [
     Extension(
         '_dragonradio',
-        ['src/main.cpp',
-         os.path.join(SRC, 'IQCompression.cc'),
+        [os.path.join(SRC, 'IQCompression.cc'),
          os.path.join(SRC, 'IQCompression/FLAC.cc'),
          os.path.join(SRC, 'Math.cc'),
          os.path.join(SRC, 'dsp/FIRDesign.cc'),
@@ -80,8 +79,9 @@ ext_modules = [
          os.path.join(SRC, 'python/Liquid.cc'),
          os.path.join(SRC, 'python/Modem.cc'),
          os.path.join(SRC, 'python/NCO.cc'),
+         os.path.join(SRC, 'python/Python.cc'),
          os.path.join(SRC, 'python/Resample.cc')],
-        define_macros=[('NOUHD', '1')],
+        define_macros=[('NOUHD', '1'), ('PYMODULE', '1')],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
