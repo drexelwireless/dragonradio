@@ -1,40 +1,48 @@
-import functools
-import struct
+"""Support for remote radio protocol"""
 import time
 
-from dragonradio.protobuf import *
-from dragonradio.remote_pb2 import *
+from dragonradio.protobuf import rpc
+from dragonradio.protobuf import TCPProtoClient
+from dragonradio.remote_pb2 import * # pylint: disable=wildcard-import,unused-wildcard-import
 import dragonradio.remote_pb2 as remote
 
 REMOTE_HOST = '127.0.0.1'
 REMOTE_PORT = 8888
 
 class RemoteClient(TCPProtoClient):
+    """Remove radio protocol client"""
     def __init__(self, *args, server_host=REMOTE_HOST, server_port=REMOTE_PORT, **kwargs):
-        super(RemoteClient, self).__init__(*args, server_host=server_host, server_port=server_port, **kwargs)
+        super().__init__(server_host=server_host,
+                         server_port=server_port,
+                         *args, **kwargs)
 
     @rpc(remote.Request, remote.Response)
     def start(self, req, timestamp=time.time()):
+        """Tell radio to start"""
         req.timestamp = timestamp
         req.radio_command = remote.START
 
     @rpc(remote.Request, remote.Response)
     def stop(self, req, timestamp=time.time()):
+        """Tell radio to stop"""
         req.timestamp = timestamp
         req.radio_command = remote.STOP
 
     @rpc(remote.Request, remote.Response)
     def status(self, req, timestamp=time.time()):
+        """Get radio status"""
         req.timestamp = timestamp
         req.radio_command = remote.STATUS
 
     @rpc(remote.Request, remote.Response)
     def updateMandatedOutcomes(self, req, goals, timestamp=time.time()):
+        """Update mandated outcomes"""
         req.timestamp = timestamp
         req.update_mandated_outcomes.goals = goals
 
     @rpc(remote.Request, remote.Response)
     def updateEnvironment(self, req, env, timestamp=time.time()):
+        """Update radio environment"""
         req.timestamp = timestamp
         req.update_environment.environment = env
 
@@ -48,6 +56,7 @@ state_map = { remote.OFF: 'OFF'
             }
 
 def stateToString(state):
+    """Convert remote radio state to a string"""
     return state_map[state]
 
 def parseMandatedOutcomes(data):

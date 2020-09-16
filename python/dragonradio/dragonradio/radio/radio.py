@@ -1,45 +1,36 @@
-import argparse
+"""Radio class for managing the radio."""
 import asyncio
-import configparser
-from fractions import Fraction
-import io
-import libconf
 import logging
 import math
-import numpy as np
 import os
-from pprint import pformat
-import platform
 import random
-import re
-import scipy.signal as signal
-import scipy.stats as stats
-import sys
+
+import numpy as np
 
 import dragonradio
-from dragonradio import Channel, Channels
-from dragonradio.liquid import MCS
-
+from dragonradio import Channel, Channels # pylint: disable=no-name-in-module
 import dragonradio.channels
+from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
 import dragonradio.schedule
-from dragonradio.signal import *
+import dragonradio.signal
 
 logger = logging.getLogger('radio')
 
-def fail(msg):
-    print(msg, file=sys.stderr)
-    sys.exit(1)
+class Radio:
+    """Radio configuration, setup, and maintenance"""
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=no-member
 
-class Radio(object):
     def __init__(self, config, slotted=True):
+        logger.info('Radio version: %s', dragonradio.__version__)
+        logger.info('Radio configuration:\n%s', str(config))
+
         self.config = config
         """Config object for radio"""
 
         self.node_id = config.node_id
         """This node's ID"""
-
-        # Make sure RadioConfig has node id
-        dragonradio.rc.node_id = self.node_id
 
         self.logger = None
         """Our DragonRadio logger"""
@@ -47,19 +38,78 @@ class Radio(object):
         self.lock = asyncio.Lock()
         """Lock protecting radio configuration"""
 
-        logger.info('Radio version: %s', dragonradio.__version__)
-        logger.info('Radio configuration:\n%s', str(config))
+        # Set the TX and RX rates to None to ensure they are properly set
+        # everywhere by setTXRate and setRXRate the first time those two
+        # functions are called.
+        self.tx_rate = None
+        """Current TX rate. None if not yet set."""
 
-        # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose', 'debug', 'mtu', 'verbose_packet_trace']:
-            if hasattr(config, attr):
-                setattr(dragonradio.rc, attr, getattr(config, attr))
+        self.rx_rate = None
+        """Current RX rate. None if not yet set."""
+
+        self.tx_channel_idx = 0
+        """Default TX channel index"""
+
+        self.mac = None
+        """The radio's MAC"""
+
+        self.mac_schedule = None
+        """Our MAC schedule"""
+
+        self.channels = []
+        """Channels"""
+
+        # Copy configuration to RadioConfig
+        self.configureRadioConfig()
 
         # Add global work queue workers
         dragonradio.work_queue.addThreads(1)
 
-        # Set default TX channel index
-        self.tx_channel_idx = 0
+        # Initialize USRP
+        self.configureUSRP()
+
+        # Configure valid decimation rates
+        self.configureValidDecimationRates()
+
+        # Create the logger *after* we create the USRP so that we have a global
+        # clock
+        self.configureLogging()
+
+        # Configure snapshots
+        self.configureSnapshots()
+
+        # Create the PHY
+        self.phy = self.mkPHY(self.header_mcs, self.mcs_table)
+
+        # Configure channelizer
+        self.channelizer = self.mkChannelizer()
+
+        # Configure synthesizer
+        self.synthesizer = self.mkSynthesizer(slotted)
+
+        # Hook up the radio components
+        self.configureComponents()
+
+        # Configure channels
+        self.configureDefaultChannels()
+
+    def __del__(self):
+        if self.logger:
+            self.logger.close()
+
+    def configureRadioConfig(self):
+        """Configure the singleton RadioConfig object"""
+        # Make sure RadioConfig has node id
+        dragonradio.rc.node_id = self.node_id
+
+        # Copy configuration settings to the C++ RadioConfig object
+        for attr in ['verbose', 'debug', 'mtu', 'verbose_packet_trace']:
+            if hasattr(self.config, attr):
+                setattr(dragonradio.rc, attr, getattr(self.config, attr))
+
+    def configureUSRP(self):
+        """Construct USRP object from configuration parameters"""
+        config = self.config
 
         # Create the USRP
         self.usrp = dragonradio.USRP(config.addr,
@@ -82,22 +132,11 @@ class Radio(object):
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
         self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
 
-        # Configure valid decimation rates
-        self.configureValidDecimationRates()
+    def configureLogging(self):
+        """Configure radio logging"""
+        config = self.config
 
-        # Set the TX and RX rates to None to ensure they are properly set
-        # everywhere by setTXRate and setRXRate the first time those two
-        # functions are called.
-        self.tx_rate = None
-        """Current TX rate. None if not yet set."""
-
-        self.rx_rate = None
-        """Current RX rate. None if not yet set."""
-
-        # Create the logger *after* we create the USRP so that we have a global
-        # clock
-        logdir = config.logdir
-        if logdir:
+        if config.logdir:
             path = self.getRadioLogPath()
 
             self.logger = dragonradio.Logger(path)
@@ -111,9 +150,10 @@ class Radio(object):
 
             dragonradio.Logger.singleton = self.logger
 
-        #
-        # Configure snapshots
-        #
+    def configureSnapshots(self):
+        """Configure snapshots"""
+        config = self.config
+
         if config.snapshot_period is not None:
             self.snapshot_collector = dragonradio.SnapshotCollector()
         else:
@@ -122,55 +162,18 @@ class Radio(object):
         # Make sure RadioConfig has snapshot collector
         dragonradio.rc.snapshot_collector = self.snapshot_collector
 
-        # Create header MCS
-        header_mcs = MCS(config.header_check,
-                         config.header_fec0,
-                         config.header_fec1,
-                         config.header_ms)
-
-        # Construct MCS table
-        if config.amc and config.amc_table:
-            mcs_table = [(MCS(*mcs), self.mkAutoGain()) for (mcs, _evm_threshold) in config.amc_table]
-        else:
-            mcs_table = [(MCS(*mcs), self.mkAutoGain()) for mcs in config.mcs_table]
-
-        # Create the PHY
-        self.phy = self.mkPHY(header_mcs, mcs_table)
-
-        # We start out without a MAC
-        self.mac = None
-        """The radio's MAC"""
-
-        self.mac_schedule = None
-        """Our MAC schedule"""
+    def configureComponents(self):
+        """Hook up all the radio components"""
+        # pylint: disable=pointless-statement
+        config = self.config
 
         # Create tun/tap interface and net neighborhood
         self.tuntap = dragonradio.TunTap('tap0', False, self.config.mtu, self.node_id)
 
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 
-        # Configure channelizer
-        self.channelizer = self.mkChannelizer()
-
-        # Configure synthesizer
-        self.synthesizer = self.mkSynthesizer(slotted)
-
-        # Configure EVM thresholds
-        if config.amc and config.amc_table:
-            def zeroToNone(x):
-                if x:
-                    return x
-                else:
-                    return None
-
-            # libconfig can't parse None, so we use zero to represent a
-            # non-existant threshold (zero is not a valid EVM threshold)
-            evm_thresholds = [zeroToNone(evm_threshold) for (_mcs, evm_threshold) in config.amc_table]
-        else:
-            evm_thresholds = [None for _ in config.mcs_table]
-
         # Configure the controller
-        self.controller = self.mkController(evm_thresholds)
+        self.controller = self.mkController(self.evm_thresholds)
 
         #
         # Create flow performance measurement component
@@ -199,7 +202,8 @@ class Radio(object):
         # Configure packet path from tun/tap to the synthesizer
         #
         # The path is:
-        #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall -> PacketCompressor.net -> NetQueue -> controller -> synthesizer
+        #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall ->
+        #       PacketCompressor.net -> NetQueue -> controller -> synthesizer
         #
         self.netfilter = dragonradio.NetFilter(self.net)
         self.netfirewall = dragonradio.NetFirewall()
@@ -221,15 +225,6 @@ class Radio(object):
 
         # Allow Controller access to the network queue
         self.controller.net_queue = self.netq
-
-        #
-        # Configure channels
-        #
-        self.configureDefaultChannels()
-
-    def __del__(self):
-        if self.logger:
-            self.logger.close()
 
     def mkPHY(self, header_mcs, mcs_table):
         """Construct a PHY from configuration parameters"""
@@ -255,7 +250,7 @@ class Radio(object):
                                           config.taper_len,
                                           config.subcarriers)
         else:
-            fail('Bad PHY: {}'.format(config.phy))
+            raise ValueError('Unknown PHY: %s' % config.phy)
 
         return phy
 
@@ -281,7 +276,7 @@ class Radio(object):
                                                     Channels([]),
                                                     config.num_demodulation_threads)
         else:
-            raise Exception('Unknown channelizer: %s' % config.channelizer)
+            raise ValueError('Unknown channelizer: %s' % config.channelizer)
 
         return channelizer
 
@@ -306,7 +301,7 @@ class Radio(object):
                                                                   Channels([]),
                                                                   config.num_modulation_threads)
             else:
-                raise Exception('Unknown synthesizer: %s' % config.synthesizer)
+                raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
         else:
             if config.synthesizer == 'timedomain':
                 synthesizer = dragonradio.TDSynthesizer(self.phy,
@@ -319,9 +314,9 @@ class Radio(object):
                                                         Channels([]),
                                                         config.num_modulation_threads)
             elif config.synthesizer == 'multichannel':
-                raise Exception('Multichannel synthesizer can only be used with a slotted MAC')
+                raise ValueError('Multichannel synthesizer can only be used with a slotted MAC')
             else:
-                raise Exception('Unknown synthesizer: %s' % config.synthesizer)
+                raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
 
         return synthesizer
 
@@ -393,37 +388,24 @@ class Radio(object):
             netq = dragonradio.MandateQueue()
             netq.bonus_phase = config.mandate_bonus_phase
         else:
-            raise Exception('Unknown queue type: %s' % config.queue)
+            raise ValueError('Unknown queue type: %s' % config.queue)
 
         netq.transmission_delay = config.transmission_delay
 
         return netq
 
     def mkAutoGain(self):
+        """Construct an AutoGain object according to configuration parameters"""
         config = self.config
 
         autogain = dragonradio.AutoGain()
 
         autogain.soft_tx_gain_0dBFS = config.soft_tx_gain
-        if config.auto_soft_tx_gain != None:
+        if config.auto_soft_tx_gain is not None:
             autogain.recalc0dBFSEstimate(config.auto_soft_tx_gain)
             autogain.auto_soft_tx_gain_clip_frac = config.auto_soft_tx_gain_clip_frac
 
         return autogain
-
-    def setTXParams(self, crc, fec0, fec1, ms, g, clip=0.999):
-        config = self.config
-
-        tx_params = TXParams(MCS(crc, fec0, fec1, ms))
-
-        if g == 'auto':
-            tx_params.soft_tx_gain_0dBFS = config.soft_tx_gain
-            tx_params.recalc0dBFSEstimate(100)
-            tx_params.auto_soft_tx_gain_clip_frac = clip
-        else:
-            tx_params.soft_tx_gain_0dBFS = g
-
-        self.net.tx_params = TXParamsVector([tx_params])
 
     def configureDefaultChannels(self):
         """Configure default channels"""
@@ -438,7 +420,11 @@ class Radio(object):
 
         channels = dragonradio.channels.defaultChannelPlan(bandwidth, cbw)
 
-        logging.debug("Channels: %s (bandwidth=%g; rx_oversample=%d; tx_oversample=%d; channel bandwidth=%g)",
+        logger.debug(("Channels: %s "
+                      "(bandwidth=%g; "
+                      "rx_oversample=%d; "
+                      "tx_oversample=%d; "
+                      "channel bandwidth=%g)"),
             list(channels),
             bandwidth,
             config.rx_oversample_factor,
@@ -483,13 +469,13 @@ class Radio(object):
 
     def setChannelizerChannels(self, channels):
         """Set channelizer's channels."""
-        self.channelizer.channels = Channels([(chan, self.genChannelizerTaps(chan)) for chan in channels])
+        self.channelizer.channels = \
+            Channels([(chan, self.genChannelizerTaps(chan)) for chan in channels])
 
     def setSynthesizerChannels(self, channels):
         """Set synthesizer's channels."""
-        config = self.config
-
-        self.synthesizer.channels = Channels([(chan, self.genSynthesizerTaps(chan)) for chan in channels])
+        self.synthesizer.channels = \
+            Channels([(chan, self.genSynthesizerTaps(chan)) for chan in channels])
 
         #
         # Tell the MAC the minimum number of samples in a slot
@@ -531,7 +517,7 @@ class Radio(object):
         # Compute decimation rate
         dec_rate = math.floor(clock_rate/min_rate)
 
-        logging.debug('Desired decimation rate: %g', dec_rate)
+        logger.debug('Desired decimation rate: %g', dec_rate)
 
         # Otherwise, make sure we use a safe decimation rate
         if dec_rate != 1:
@@ -540,7 +526,7 @@ class Radio(object):
                     dec_rate = rate
                     break
 
-        logging.debug('Actual decimation rate: %g', dec_rate)
+        logger.debug('Actual decimation rate: %g', dec_rate)
 
         return clock_rate/dec_rate
 
@@ -564,7 +550,7 @@ class Radio(object):
             self.rx_rate = self.usrp.rx_rate
 
             if self.rx_rate != want_rx_rate:
-                raise Exception('Wanted RX rate %g, but got %g' % (want_rx_rate, self.rx_rate))
+                raise ValueError('Wanted RX rate %g, but got %g' % (want_rx_rate, self.rx_rate))
 
             self.channelizer.rx_rate = self.rx_rate
 
@@ -589,7 +575,7 @@ class Radio(object):
             self.tx_rate = self.usrp.tx_rate
 
             if self.tx_rate != want_tx_rate:
-                raise Exception('Wanted TX rate %g, but got %g' % (want_tx_rate, self.tx_rate))
+                raise ValueError('Wanted TX rate %g, but got %g' % (want_tx_rate, self.tx_rate))
 
             self.synthesizer.tx_rate = self.tx_rate
 
@@ -599,7 +585,7 @@ class Radio(object):
         This function creates an appropriate filter and sets the USRP's TX
         frequency for single-channel synthesis.
         """
-        logging.info("Setting TX frequency offset to %g", channel.fc)
+        logger.info("Setting TX frequency offset to %g", channel.fc)
         self.usrp.tx_frequency = self.frequency + channel.fc
 
         self.setSynthesizerChannels([Channel(0, channel.bw)])
@@ -627,9 +613,7 @@ class Radio(object):
                 self.mac.reconfigure()
 
     def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
-        """
-        Reconfigure the radio for the given bandwidth and frequency
-        """
+        """Reconfigure the radio for the given bandwidth and frequency"""
         config = self.config
 
         if bandwidth == config.bandwidth and frequency == config.frequency:
@@ -670,21 +654,22 @@ class Radio(object):
         # Calculate channelizer taps
         if channel.bw == self.usrp.rx_rate:
             return [1]
-        elif config.channelizer == 'freqdomain':
+
+        if config.channelizer == 'freqdomain':
             wp = 0.95*channel.bw
             ws = channel.bw
             fs = self.usrp.rx_rate
 
-            h = lowpass_firpm1f2(wp, ws, fs, Nmax=dragonradio.FDChannelizer.P)
+            h = dragonradio.signal.lowpass(wp, ws, fs, ftype='firpm1f2', Nmax=dragonradio.FDChannelizer.P)
         else:
             wp = 0.9*channel.bw
             ws = 1.1*channel.bw
             fs = self.usrp.rx_rate
 
-            h = lowpass(wp, ws, fs)
+            h = dragonradio.signal.lowpass(wp, ws, fs)
 
-        logging.debug('Created prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g',
-                      len(h), wp, ws, fs)
+        logger.debug('Created prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g',
+                     len(h), wp, ws, fs)
         return h
 
     def genSynthesizerTaps(self, channel):
@@ -693,18 +678,19 @@ class Radio(object):
 
         if channel.bw == self.usrp.tx_rate:
             return [1]
-        elif config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
+
+        if config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
             # Frequency-space synthesizers don't apply a filter
             return [1]
-        else:
-            wp = 0.9*channel.bw
-            ws = 1.1*channel.bw
-            fs = self.usrp.tx_rate
 
-            h = lowpass(wp, ws, fs)
+        wp = 0.9*channel.bw
+        ws = 1.1*channel.bw
+        fs = self.usrp.tx_rate
 
-        logging.debug('Created prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g',
-                      len(h), wp, ws, fs)
+        h = dragonradio.signal.lowpass(wp, ws, fs)
+
+        logger.debug('Created prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g',
+                     len(h), wp, ws, fs)
         return h
 
     def deleteMAC(self):
@@ -713,6 +699,7 @@ class Radio(object):
         self.mac = None
 
     def configureALOHA(self):
+        """Configure ALOHA MAC"""
         config = self.config
 
         self.mac = dragonradio.SlottedALOHA(self.usrp,
@@ -786,8 +773,7 @@ class Radio(object):
         self.finishConfiguringMAC()
 
     def configureFDMA(self):
-        """Configures a FDMA MAC.
-        """
+        """Configures a FDMA MAC."""
         config = self.config
 
         if isinstance(self.mac, dragonradio.FDMA):
@@ -804,6 +790,7 @@ class Radio(object):
         self.finishConfiguringMAC()
 
     def finishConfiguringMAC(self):
+        """Finish configuring MAC"""
         bws = [chan.bw for (chan, _taps) in self.synthesizer.channels]
         if len(bws) != 0:
             self.mac.min_channel_bandwidth = min(bws)
@@ -811,7 +798,7 @@ class Radio(object):
     def setALOHAChannel(self, channel_idx):
         """Set the transmission channel for the ALOHA MAC."""
         if not isinstance(self.mac, dragonradio.SlottedALOHA):
-            logging.debug("Cannot change ALOHA channel for non-ALOHA MAC")
+            logger.debug("Cannot change ALOHA channel for non-ALOHA MAC")
 
         if self.config.tx_upsample:
             self.mac.slotidx = channel_idx
@@ -827,7 +814,7 @@ class Radio(object):
         self.mac.slotidx = 0
 
         # All nodes can transmit
-        for (node_id, node) in self.net.nodes.items():
+        for (_node_id, node) in self.net.nodes.items():
             node.can_transmit = True
 
         if self.config.tx_upsample:
@@ -850,15 +837,15 @@ class Radio(object):
         """
         config = self.config
 
-        logging.debug('Installing MAC schedule:\n%s', sched)
+        logger.debug('Installing MAC schedule:\n%s', sched)
 
         # Get number of channels and slots
-        (nchannels, nslots) = sched.shape
+        (_nchannels, nslots) = sched.shape
 
         # First configure the TDMA MAC for the desired number of slots
         if use_fdma_mac:
             if nslots != 1:
-                raise Exception("FDMA schedule has more than one slot: %s" % sched)
+                raise ValueError("FDMA schedule has more than one slot: %s" % sched)
             self.configureFDMA()
         else:
             self.configureTDMA(nslots)
@@ -879,8 +866,8 @@ class Radio(object):
         else:
             try:
                 chan = dragonradio.schedule.bestScheduleChannel(sched, self.node_id)
-            except:
-                logging.error('No MAC schedule entry for radio %d', self.node_id)
+            except ValueError:
+                logger.error('No MAC schedule entry for radio %d', self.node_id)
                 chan = 0
 
             self.setTXChannel(chan)
@@ -895,8 +882,6 @@ class Radio(object):
         Set a simple, static TDMA/FDMA schedule based on configuration
         parameters and the given set of nodes.
         """
-        config = self.config
-
         nodes = list(self.net.nodes)
         nodes.sort()
 
@@ -917,8 +902,6 @@ class Radio(object):
         Set a simple, static FDMA schedule based on configuration parameters and
         the given set of nodes.
         """
-        config = self.config
-
         nodes = list(self.net.nodes)
         nodes.sort()
 
@@ -938,84 +921,41 @@ class Radio(object):
         t0 = dragonradio.clock.t0
 
         # Perform linear regression on all timestamps
-        echoed = [((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in self.controller.echoed_timestamps]
-        logging.debug("TIMESYNC: echoed timestamps: %s", echoed)
+        echoed = _relativizeTimestamps(t0, self.controller.echoed_timestamps)
+        logger.debug("TIMESYNC: echoed timestamps: %s", echoed)
         if len(echoed) == 0:
             return
 
-        master = [((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in self.net.nodes[self.net.time_master].timestamps]
-        logging.debug("TIMESYNC: time master's timestamps: %s", master)
+        master = _relativizeTimestamps(t0, self.net.nodes[self.net.time_master].timestamps)
+        logger.debug("TIMESYNC: time master's timestamps: %s", master)
         if len(master) == 0:
             return
 
         if len(echoed) > 1 and len(master) > 1:
             # If we have a GPSDO, then assume skew is zero
-            if config.clock_noskew or (self.usrp.clock_source == 'external' and self.usrp.time_source == 'external'):
-                (sigma, delta, tau) = self.timestampRegressionNoSkew(echoed, master)
+            if config.clock_noskew or \
+                (self.usrp.clock_source == 'external' and self.usrp.time_source == 'external'):
+                (sigma, delta, tau) = timestampRegressionNoSkew(echoed, master)
             else:
-                (sigma, delta, tau) = self.timestampRegression(echoed, master)
+                (sigma, delta, tau) = timestampRegression(echoed, master)
 
             old_sigma = dragonradio.clock.skew
             old_delta = dragonradio.clock.offset.secs
 
-            logging.debug("TIMESYNC: regression parameters: old_sigma=%g; old_delta=%g; sigma=%g; delta=%g; tau=%g", old_sigma, old_delta, sigma, delta, tau)
+            logger.debug(("TIMESYNC: regression parameters: "
+                          "old_sigma=%g; "
+                          "old_delta=%g; "
+                          "sigma=%g; "
+                          "delta=%g; "
+                          "tau=%g"),
+                old_sigma, old_delta, sigma, delta, tau)
 
             if math.isfinite(delta) and math.isfinite(sigma):
                 dragonradio.clock.offset = dragonradio.MonoTimePoint(delta)
                 dragonradio.clock.skew = sigma
-                self.logger.logEvent("TIMESYNC: set skew and offset: sigma={:g}; delta={:g}".format(sigma, delta))
-
-    def timestampRegression(self, echoed, master):
-        """Perform a linear regression on timestamps to determine clock skew and delta"""
-        avec = [a for (a, _) in echoed]
-        bvec = [b for (_, b) in echoed]
-
-        cvec = [c for (c, _) in master]
-        dvec = [d for (_, d) in master]
-
-        abar = np.mean(avec)
-        bbar = np.mean(bvec)
-
-        cbar = np.mean(cvec)
-        dbar = np.mean(dvec)
-
-        covab = sum([(a - abar)*(b - bbar) for (a, b) in echoed])
-        vara = sum([(a - abar)**2.0 for a in avec])
-
-        covcd = sum([(c - cbar)*(d - dbar) for (c, d) in master])
-        vard = sum([(d - dbar)**2.0 for d in dvec])
-
-        sigma = (covab + covcd)/(vara + vard)
-
-        deltaPlusTau = bbar - sigma*abar
-        deltaMinusTau = cbar - sigma*dbar
-
-        delta = (deltaPlusTau + deltaMinusTau) / 2.0
-        tau = (deltaPlusTau - deltaMinusTau) / 2.0
-
-        return (sigma, delta, tau)
-
-    def timestampRegressionNoSkew(self, echoed, master):
-        """Perform a linear regression on timestamps to determine clock delta (assuming no skew)"""
-        avec = [a for (a, _) in echoed]
-        bvec = [b for (_, b) in echoed]
-
-        cvec = [c for (c, _) in master]
-        dvec = [d for (_, d) in master]
-
-        abar = np.mean(avec)
-        bbar = np.mean(bvec)
-
-        cbar = np.mean(cvec)
-        dbar = np.mean(dvec)
-
-        deltaPlusTau = bbar - abar
-        deltaMinusTau = cbar - dbar
-
-        delta = (deltaPlusTau + deltaMinusTau) / 2.0
-        tau = (deltaPlusTau - deltaMinusTau) / 2.0
-
-        return (1.0, delta, tau)
+                self.logger.logEvent(("TIMESYNC: set skew and offset: "
+                                      "sigma={:g}; "
+                                      "delta={:g}").format(sigma, delta))
 
     def getRadioLogPath(self):
         """
@@ -1035,6 +975,7 @@ class Radio(object):
             i += 1
 
     async def snapshotLogger(self):
+        """Snapshot logging task"""
         if not self.logger:
             return
 
@@ -1066,7 +1007,8 @@ class Radio(object):
                     fc = slots[0].fc
                     fs = slots[0].fs
 
-                    if all([slot.fc == fc for slot in slots]) and all([slot.fs == fs for slot in slots]):
+                    if all([slot.fc == fc for slot in slots]) and \
+                        all([slot.fs == fs for slot in slots]):
                         # Get concatenated IQ buffer for all slots
                         iqbuf = dragonradio.IQBuf(np.concatenate([slot.data for slot in slots]))
                         iqbuf.timestamp = t
@@ -1083,8 +1025,110 @@ class Radio(object):
 
     @property
     def frequency(self):
+        """Center frequency"""
         return self.config.frequency
 
     @property
     def bandwidth(self):
+        """Bandwidth"""
         return min(self.config.bandwidth, self.config.max_bandwidth)
+
+    @property
+    def header_mcs(self):
+        "Header MCS"
+        return MCS(self.config.header_check,
+                   self.config.header_fec0,
+                   self.config.header_fec1,
+                   self.config.header_ms)
+
+    @property
+    def mcs_table(self):
+        """MCS table"""
+        # pylint: disable=no-else-return
+
+        config = self.config
+
+        if config.amc and config.amc_table:
+            return [(MCS(*mcs), self.mkAutoGain()) for (mcs, _thresh) in config.amc_table]
+        else:
+            mcs = MCS(config.check, config.fec0, config.fec1, config.ms)
+
+            return [(mcs, self.mkAutoGain())]
+
+    @property
+    def evm_thresholds(self):
+        """EVM thresholds for each MCS"""
+        # pylint: disable=no-else-return
+
+        def zeroToNone(x):
+            if x != 0:
+                return x
+
+            return None
+
+        config = self.config
+
+        if config.amc and config.amc_table:
+            # libconfig can't parse None, so we use zero to represent a
+            # non-existant threshold (zero is not a valid EVM threshold)
+            return [zeroToNone(thresh) for (_mcs, thresh) in config.amc_table]
+        else:
+            return [None for _ in self.mcs_table]
+
+def _relativizeTimestamps(t0, ts):
+    """Make (t_send, t_recv) timestamps relative to t0"""
+    return [((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in ts]
+
+def timestampRegression(echoed, master):
+    """Perform a linear regression on timestamps to determine clock skew and delta"""
+    # pylint: disable=too-many-locals
+
+    avec = [a for (a, _) in echoed]
+    bvec = [b for (_, b) in echoed]
+
+    cvec = [c for (c, _) in master]
+    dvec = [d for (_, d) in master]
+
+    abar = np.mean(avec)
+    bbar = np.mean(bvec)
+
+    cbar = np.mean(cvec)
+    dbar = np.mean(dvec)
+
+    covab = sum([(a - abar)*(b - bbar) for (a, b) in echoed])
+    vara = sum([(a - abar)**2.0 for a in avec])
+
+    covcd = sum([(c - cbar)*(d - dbar) for (c, d) in master])
+    vard = sum([(d - dbar)**2.0 for d in dvec])
+
+    sigma = (covab + covcd)/(vara + vard)
+
+    delta_plus_tau = bbar - sigma*abar
+    delta_minus_tau = cbar - sigma*dbar
+
+    delta = (delta_plus_tau + delta_minus_tau) / 2.0
+    tau = (delta_plus_tau - delta_minus_tau) / 2.0
+
+    return (sigma, delta, tau)
+
+def timestampRegressionNoSkew(echoed, master):
+    """Perform a linear regression on timestamps to determine clock delta (assuming no skew)"""
+    avec = [a for (a, _) in echoed]
+    bvec = [b for (_, b) in echoed]
+
+    cvec = [c for (c, _) in master]
+    dvec = [d for (_, d) in master]
+
+    abar = np.mean(avec)
+    bbar = np.mean(bvec)
+
+    cbar = np.mean(cvec)
+    dbar = np.mean(dvec)
+
+    delta_plus_tau = bbar - abar
+    delta_minus_tau = cbar - dbar
+
+    delta = (delta_plus_tau + delta_minus_tau) / 2.0
+    tau = (delta_plus_tau - delta_minus_tau) / 2.0
+
+    return (1.0, delta, tau)

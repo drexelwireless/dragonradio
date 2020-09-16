@@ -1,17 +1,13 @@
-import argparse
 import asyncio
-import daemon
-import daemon.pidfile
 from functools import partial
 import io
-import libconf
-import lockfile
 import logging
-import netifaces
 import os
-import random
 import signal
 import sys
+
+import daemon
+import daemon.pidfile
 
 import dragonradio
 import dragonradio.radio
@@ -36,7 +32,7 @@ def configureLogging(config):
         sh.setLevel(config.loglevel)
         logger.addHandler(sh)
 
-        return (None, None, None)
+        (fh, fout, ferr) = (None, None, None)
     else:
         logdir = config.logdir
 
@@ -50,9 +46,9 @@ def configureLogging(config):
         fout = io.open(os.path.join(logdir, 'stdout.log'), 'a')
         ferr = io.open(os.path.join(logdir, 'stderr.log'), 'a')
 
-        return (fh, fout, ferr)
+    return (fh, fout, ferr)
 
-def sighandler(controller, signum, frame):
+def sighandler(controller, _signum, _frame):
     asyncio.run_coroutine_threadsafe(controller.terminate(), controller.loop)
 
 def run(config):
@@ -120,21 +116,21 @@ RADIOCONF_PATH = '/root/radio_api/radio.conf'
 
 def main():
     config = dragonradio.radio.Config()
+    parser = config.parser()
 
-    parser = argparse.ArgumentParser(description='Run dragonradio.',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    config.addArguments(parser, allow_defaults=False)
-    parser.add_argument('--foreground', action='store_true', dest='foreground',
-                        default=False,
-                        help='run as a foreground process')
-    parser.add_argument('--colosseum-ini', action='store', dest='colosseum_ini_path',
-                        default='/root/radio_api/colosseum_config.ini',
-                        help='specify Colosseum ini file')
-    parser.add_argument('--pidfile', action='store', dest='pidfile',
-                        default='/var/run/dragonradio.pid',
-                        help='specify PID file')
-    parser.add_argument('--bootstrap', action='store_true', default=False,
-                        help='immediately bootstrap the radio')
+    sc2 = parser.add_argument_group('SC2 radio options')
+    sc2.add_argument('--bootstrap', action='store_true', default=False,
+                     help='immediately bootstrap the radio')
+    sc2.add_argument('--foreground', action='store_true', dest='foreground',
+                     default=False,
+                     help='run as a foreground process')
+    sc2.add_argument('--colosseum-ini', action='store', dest='colosseum_ini_path',
+                     default='/root/radio_api/colosseum_config.ini',
+                     help='specify Colosseum ini file')
+    sc2.add_argument('--pidfile', action='store', dest='pidfile',
+                     default='/var/run/dragonradio.pid',
+                     help='specify PID file')
+
     parser.add_argument('action', choices=['start', 'stop', 'restart', 'status'])
 
     if os.path.exists(RADIOCONF_PATH):
@@ -142,9 +138,10 @@ def main():
 
     try:
         parser.parse_args(namespace=config)
-    except SystemExit as ex:
-        return ex.code
+    except SystemExit as err:
+        return err.code
 
+    # pylint: disable=no-member
     config.loadColosseumIni(config.colosseum_ini_path)
 
     if config.action == 'start':

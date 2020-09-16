@@ -1,28 +1,44 @@
+"""Support for communicating with gpsd using asyncio"""
 import asyncio
-import dateutil.parser
 import json
 import json.decoder
 import logging
 import time
-import traceback
+
+import dateutil.parser
 
 logger = logging.getLogger('gpsd')
 
 DEFAULT_GPSD_SERVER = '127.0.0.1'
 DEFAULT_GPSD_PORT = 6000
 
-class GPSLocation(object):
+class GPSLocation:
+    """A GPS location"""
+    # pylint: disable=too-few-public-methods
+
     def __init__(self):
         self.lat = 0
+        """Latitude"""
+
         self.lon = 0
+        """Longitude"""
+
         self.alt = 0
+        """Altitude"""
+
         self.timestamp = 0
+        """Timestamp of last update"""
 
     def __str__(self):
-        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.format(self.lat, self.lon, self.alt, self.timestamp)
+        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.\
+            format(self.lat, self.lon, self.alt, self.timestamp)
 
 class GPSDClient:
-    def __init__(self, loc, loop=None, server_host=DEFAULT_GPSD_SERVER, server_port=DEFAULT_GPSD_PORT):
+    """A client for communicating with gpsd"""
+    def __init__(self, loc,
+                 loop=None,
+                 server_host=DEFAULT_GPSD_SERVER,
+                 server_port=DEFAULT_GPSD_PORT):
         self.loc = loc
         self.loop = loop
         self.server_host = server_host
@@ -33,6 +49,7 @@ class GPSDClient:
         self.gpsd_task = loop.create_task(self.run())
 
     async def stop(self):
+        """Stop gpsd reader"""
         self.gpsd_task.cancel()
 
         await self.gpsd_task
@@ -42,11 +59,13 @@ class GPSDClient:
             self.writer = None
 
     async def connect(self):
+        """Connect to gpsd"""
         self.reader, self.writer = await asyncio.open_connection(self.server_host,
                                                                  self.server_port,
                                                                  loop=self.loop)
 
     async def watch(self, enable):
+        """Set whether or not to watch GPS info"""
         if enable:
             e = 'true'
         else:
@@ -57,6 +76,7 @@ class GPSDClient:
         self.writer.write(bytes(command, encoding='utf-8'))
 
     async def run(self):
+        """Run gpsd listener"""
         wait_to_connect = False
 
         while True:
@@ -90,6 +110,6 @@ class GPSDClient:
                 wait_to_connect = True
             except asyncio.CancelledError:
                 return
-            except Exception as e:
+            except: # pylint: disable=bare-except
                 logger.exception('Could not obtain GPS location')
                 break

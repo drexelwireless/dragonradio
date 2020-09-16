@@ -1,44 +1,40 @@
-import functools
-import numpy as np
-import struct
+"""Support for internal DragonRadio protocol"""
+import logging
 import time
 
-from dragonradio.protobuf import *
-from dragonradio.internal_pb2 import *
+from dragonradio.protobuf import getTimestamp, setTimestamp
+from dragonradio.protobuf import UDPProtoClient, UDPProtoServer
+from dragonradio.protobuf import handler, send
+from dragonradio.internal_pb2 import * # pylint: disable=wildcard-import,unused-wildcard-import
 import dragonradio.internal_pb2 as internal
 
 logger = logging.getLogger('internal')
 
 INTERNAL_PORT = 4096
+"""Port for internal control protocol messages"""
 
-#
 # Monkey patch Timestamp class to support setting timestamps using
-# floating-point seconds.
-#
-def set_timestamp(self, ts):
-    self.seconds = int(ts)
-    self.picoseconds = int(ts % 1 * 1e12)
-
-def get_timestamp(self):
-    return self.seconds + self.picoseconds*1e-12
-
-internal.TimeStamp.set_timestamp = set_timestamp
-internal.TimeStamp.get_timestamp = get_timestamp
+# floating-point seconds
+internal.TimeStamp.set_timestamp = setTimestamp
+internal.TimeStamp.get_timestamp = getTimestamp
 
 @handler(internal.Message)
 class InternalProtoServer(UDPProtoServer):
+    """Server for internal protocol"""
     def __init__(self,
-                 handler,
+                 handler_obj,
                  loop=None,
                  listen_ip=None):
-        super().__init__(handler, loop=loop)
+        super().__init__(handler_obj, loop=loop)
         self.listen_ip = listen_ip
         """IP address on which to listen"""
 
     def start(self):
-        return self.start_server(internal.Message, self.listen_ip, INTERNAL_PORT)
+        """Start internal protocol server"""
+        return self.startServer(internal.Message, self.listen_ip, INTERNAL_PORT)
 
 class InternalProtoClient(UDPProtoClient):
+    """Client for internal protocol"""
     def __init__(self,
                  server_host=None,
                  **kwargs):
@@ -50,6 +46,7 @@ class InternalProtoClient(UDPProtoClient):
 
     @send(internal.Message)
     async def sendStatus(self, msg, me, sources, sinks, spectrum):
+        """Send a status message"""
         msg.status.radio_id = me.id
         msg.status.timestamp.set_timestamp(time.time())
         msg.status.loc.location.latitude = me.loc.lat
@@ -60,10 +57,11 @@ class InternalProtoClient(UDPProtoClient):
         msg.status.sink_flows.extend(sinks)
         msg.status.spectrum_stats.extend(spectrum)
 
-        logging.debug("Sending status %s", msg)
+        logger.debug("Sending status %s", msg)
 
     @send(internal.Message)
     async def sendSchedule(self, msg, seq, nodes, sched, fc, bw, start_time):
+        """Send a schedule message"""
         (nchannels, nslots) = sched.shape
 
         msg.schedule.frequency = fc
