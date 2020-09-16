@@ -227,7 +227,7 @@ def main():
     elif config.mac == 'tdma-fdma':
         radio.configureSimpleMACSchedule()
     elif config.mac == 'fdma':
-        radio.configureSimpleFDMASchedule(use_fdma_mac=True)
+        radio.configureSimpleMACSchedule(fdma_mac=True)
     else:
         raise Exception("Unknown MAC: %s" % config.mac)
 

@@ -825,13 +825,13 @@ class Radio:
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def installMACSchedule(self, sched, use_fdma_mac=False):
+    def installMACSchedule(self, sched, fdma_mac=False):
         """Install a MAC schedule.
 
         Args:
             sched: The schedule, which is a nchannels X nslots array of node
                 IDs.
-            use_fdma_mac: If True, use the FDMA MAC
+            fdma_mac: If True, use FDMA MAC
         """
         config = self.config
 
@@ -841,7 +841,7 @@ class Radio:
         (_nchannels, nslots) = sched.shape
 
         # First configure the TDMA MAC for the desired number of slots
-        if use_fdma_mac:
+        if fdma_mac:
             if nslots != 1:
                 raise ValueError("FDMA schedule has more than one slot: %s" % sched)
             self.configureFDMA()
@@ -875,39 +875,20 @@ class Radio:
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def configureSimpleMACSchedule(self):
-        """
-        Set a simple, static TDMA/FDMA schedule based on configuration
-        parameters and the given set of nodes.
-        """
-        nodes = list(self.net.nodes)
-        nodes.sort()
-
+    def configureSimpleMACSchedule(self, fdma_mac=False):
+        """Set a simple static schedule."""
         nchannels = len(self.channels)
+        nodes = sorted(list(self.net.nodes))
 
         if nchannels == 1:
             sched = dragonradio.schedule.pureTDMASchedule(nodes)
         else:
             sched = dragonradio.schedule.fullChannelMACSchedule(nchannels,
-                                                           1,
-                                                           nodes,
-                                                           3)
+                                                                1,
+                                                                nodes,
+                                                                3)
 
-        self.installMACSchedule(sched)
-
-    def configureSimpleFDMASchedule(self, use_fdma_mac=False):
-        """
-        Set a simple, static FDMA schedule based on configuration parameters and
-        the given set of nodes.
-        """
-        nodes = list(self.net.nodes)
-        nodes.sort()
-
-        nchannels = len(self.channels)
-
-        sched = dragonradio.schedule.fullChannelMACSchedule(nchannels, 1, nodes, k=3)
-
-        self.installMACSchedule(sched, use_fdma_mac=use_fdma_mac)
+        self.installMACSchedule(sched, fdma_mac=fdma_mac)
 
     def synchronizeClock(self):
         """Use timestamps to synchronize our clock with the time master (the gateway)"""
