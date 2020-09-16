@@ -56,22 +56,6 @@ def main():
     parser.add_argument('-n', action='store', type=int, dest='num_nodes',
                         default=2,
                         help='set number of nodes in network')
-    parser.add_argument('--mac', action='store',
-                        choices=['aloha', 'tdma', 'tdma-fdma', 'fdma'],
-                        dest='mac',
-                        help='set MAC')
-    parser.add_argument('--aloha', action='store_const', const='aloha',
-                        dest='mac',
-                        help='use slotted ALOHA MAC')
-    parser.add_argument('--tdma', action='store_const', const='tdma',
-                        dest='mac',
-                        help='use pure TDMA MAC')
-    parser.add_argument('--fdma', action='store_const', const='fdma',
-                        dest='mac',
-                        help='use FDMA MAC')
-    parser.add_argument('--tdma-fdma', action='store_const', const='tdma-fdma',
-                        dest='mac',
-                        help='use TDMA/FDMA MAC')
     parser.add_argument('--interactive',
                         action='store_true', dest='interactive',
                         help='enter interactive shell after radio is configured')
@@ -95,29 +79,15 @@ def main():
     if config.log_directory:
         config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events']
 
-    # If we are in TDMA mode, set channel bandwidth to None so we use a single
-    # channel
-    if config.mac == 'tdma':
-        config.channel_bandwidth = None
-
     # Create the radio object
-    radio = dragonradio.radio.Radio(config, slotted=(config.mac != 'fdma'))
+    radio = dragonradio.radio.Radio(config, config.mac)
 
     # Add all radio nodes to the network
     for i in range(0, config.num_nodes):
         radio.net.addNode(i+1)
 
     # Configure the MAC
-    if config.mac == 'aloha':
-        radio.configureALOHA()
-    elif config.mac == 'tdma':
-        radio.configureSimpleMACSchedule()
-    elif config.mac == 'tdma-fdma':
-        radio.configureSimpleMACSchedule()
-    elif config.mac == 'fdma':
-        radio.configureSimpleMACSchedule(fdma_mac=True)
-    else:
-        raise Exception("Unknown MAC: %s" % config.mac)
+    radio.configureMAC(config.mac)
 
     #
     # Start IPython shell if we are in interactive mode. Otherwise, run the

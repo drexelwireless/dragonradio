@@ -16,13 +16,22 @@ import dragonradio.signal
 
 logger = logging.getLogger('radio')
 
+_MACS = { 'aloha': True
+        , 'tdma': True
+        , 'tdma-fdma': True
+        , 'fdma': False
+        }
+
+def _isSlottedMAC(mac):
+    return _MACS.get(mac, ValueError("Unknown MAC %s", mac))
+
 class Radio:
     """Radio configuration, setup, and maintenance"""
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=no-member
 
-    def __init__(self, config, slotted=True):
+    def __init__(self, config, mac):
         logger.info('Radio version: %s', dragonradio.__version__)
         logger.info('Radio configuration:\n%s', str(config))
 
@@ -85,10 +94,15 @@ class Radio:
         self.channelizer = self.mkChannelizer()
 
         # Configure synthesizer
-        self.synthesizer = self.mkSynthesizer(slotted)
+        self.synthesizer = self.mkSynthesizer(_isSlottedMAC(mac))
 
         # Hook up the radio components
         self.configureComponents()
+
+        # If we are in TDMA mode, set channel bandwidth to None so we use a
+        # single channel. After this, we must re-configure our channels.
+        if mac == 'tdma':
+            config.channel_bandwidth = None
 
         # Configure channels
         self.configureDefaultChannels()
@@ -691,6 +705,19 @@ class Radio:
                      len(h), wp, ws, fs)
         return h
 
+    def configureMAC(self, mac):
+        """Configure MAC"""
+        if mac == 'aloha':
+            self.configureALOHA()
+        elif mac == 'tdma':
+            self.configureSimpleMACSchedule()
+        elif mac == 'tdma-fdma':
+            self.configureSimpleMACSchedule()
+        elif mac == 'fdma':
+            self.configureSimpleMACSchedule(fdma_mac=True)
+        else:
+            raise ValueError("Unknown MAC: {}".format(mac))
+
     def deleteMAC(self):
         """Delete the current MAC"""
         self.mac.stop()
@@ -831,7 +858,7 @@ class Radio:
         Args:
             sched: The schedule, which is a nchannels X nslots array of node
                 IDs.
-            fdma_mac: If True, use FDMA MAC
+            fdma_mac: If True, use the FDMA MAC
         """
         config = self.config
 

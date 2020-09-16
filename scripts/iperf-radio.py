@@ -175,7 +175,7 @@ def main():
         writer = csv.writer(sys.stdout)
 
     # Create the radio object
-    radio = dragonradio.radio.Radio(config)
+    radio = dragonradio.radio.Radio(config, 'tdma')
 
     #
     # Configure the MAC

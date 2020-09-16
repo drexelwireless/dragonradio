@@ -175,6 +175,8 @@ class Config:
         self.subcarriers = None
 
         # MAC parameters
+        self.mac = 'tdma-fdma'
+        """Mac"""
         self.slot_size = .035
         """Total slot duration, including guard interval (seconds)"""
         self.guard_size = .01
@@ -635,6 +637,23 @@ class Config:
 
         # MAC parameters
         mac = parser.add_argument_group('MAC')
+
+        mac.add_argument('--mac', action='store',
+                         choices=['aloha', 'tdma', 'tdma-fdma', 'fdma'],
+                         dest='mac',
+                         help='set MAC')
+        mac.add_argument('--aloha', action='store_const', const='aloha',
+                         dest='mac',
+                         help='use slotted ALOHA MAC')
+        mac.add_argument('--tdma', action='store_const', const='tdma',
+                         dest='mac',
+                         help='use pure TDMA MAC')
+        mac.add_argument('--fdma', action='store_const', const='fdma',
+                         dest='mac',
+                         help='use FDMA MAC')
+        mac.add_argument('--tdma-fdma', action='store_const', const='tdma-fdma',
+                         dest='mac',
+                         help='use TDMA/FDMA MAC')
 
         mac.add_argument('--slot-size', action='store', type=float,
                          dest='slot_size',

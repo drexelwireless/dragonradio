@@ -261,7 +261,7 @@ class Controller(CILServer):
             logger.warning('Bandwidth not specified; using %f', self.config.bandwidth)
 
         # Create the radio object
-        radio = dragonradio.radio.Radio(self.config)
+        radio = dragonradio.radio.Radio(self.config, 'aloha')
         self.radio = radio
 
         # Log snapshots if requested
