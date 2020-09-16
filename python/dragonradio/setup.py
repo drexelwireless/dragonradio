@@ -21,6 +21,7 @@ setup(
     long_description='',
     packages=['dragonradio'
              ,'dragonradio.liquid'
+             ,'dragonradio.radio'
              ,'sc2'
              ],
     scripts=['scripts/dragonradio-client'],
