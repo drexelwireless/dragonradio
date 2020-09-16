@@ -579,33 +579,31 @@ class Radio:
 
             self.synthesizer.tx_rate = self.tx_rate
 
-    def setSynthesizerTXChannel(self, channel):
-        """Set the synthesizer's transmission channel.
-
-        This function creates an appropriate filter and sets the USRP's TX
-        frequency for single-channel synthesis.
-        """
-        logger.info("Setting TX frequency offset to %g", channel.fc)
-        self.usrp.tx_frequency = self.frequency + channel.fc
-
-        self.setSynthesizerChannels([Channel(0, channel.bw)])
-
     def setTXChannel(self, channel_idx):
         """Set the transmission channel.
 
-        If we are upsampling on TX, this is a no-op. Otherwise we set the
-        radio's frequency to transmit on the current channel and configure the
-        synthesizer for a single channel.
+        If we are upsampling on TX, this is a no-op. Otherwise we configure the
+        radio's frequency and bandwidth and synthesizer for the new, single
+        channel.
         """
         config = self.config
 
-        if not config.tx_upsample:
+        if config.tx_upsample:
+            logger.warning('Attempt to set TX channel when upsampling')
+        else:
+            # Determine TX channel from index
             self.tx_channel_idx = min(channel_idx, len(self.channels) - 1)
-
             channel = self.channels[self.tx_channel_idx]
 
+            # Set TX rate
             self.setTXRate(channel.bw)
-            self.setSynthesizerTXChannel(channel)
+
+            # Set TX frequency
+            logger.info("Setting TX frequency offset to %g", channel.fc)
+            self.usrp.tx_frequency = self.frequency + channel.fc
+
+            # Set synthesizer channel
+            self.setSynthesizerChannels([Channel(0, channel.bw)])
 
             # Allow the MAC to figure out the TX offset so snapshot self
             # tranmissions are correctly logged
