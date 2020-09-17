@@ -12,6 +12,7 @@ import sc2.registration_pb2 as registration
 from dragonradio.protobuf import handle, handler, send
 from dragonradio.protobuf import getTimestamp, setTimestamp
 from dragonradio.protobuf import ZMQProtoClient, ZMQProtoServer
+import dragonradio.tasks
 
 logger = logging.getLogger('collab')
 
@@ -217,10 +218,7 @@ class CILServer:
 
     async def stopCollabTasks(self):
         """Cancel all collaboration tasks and wait for them to finish"""
-        for task in self.collab_tasks:
-            task.cancel()
-
-        await asyncio.gather(*self.collab_tasks, return_exceptions=True)
+        await dragonradio.tasks.stopTasks(self.collab_tasks)
 
     def startCollab(self):
         """Start CIL server"""
