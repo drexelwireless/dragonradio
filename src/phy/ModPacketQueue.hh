@@ -101,16 +101,16 @@ public:
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
-        producer_cond_.wait(lock, [this]{ return done_ || kicked_ || !high_water_mark_ || nsamples_ < *high_water_mark_; });
-
-        if (kicked_)
-            kicked_.store(false, std::memory_order_release);
-
         nsamples_ += mpkt->nsamples;
 
         queue_.push_back(std::move(mpkt));
 
         consumer_cond_.notify_one();
+
+        producer_cond_.wait(lock, [this]{ return done_ || kicked_ || !high_water_mark_ || nsamples_ < *high_water_mark_; });
+
+        if (kicked_)
+            kicked_.store(false, std::memory_order_release);
     }
 
     /** @brief Kick the queue to force progress */
