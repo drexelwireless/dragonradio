@@ -720,8 +720,9 @@ class Radio:
 
     def deleteMAC(self):
         """Delete the current MAC"""
-        self.mac.stop()
-        self.mac = None
+        if self.mac is not None:
+            self.mac.stop()
+            self.mac = None
 
     def configureALOHA(self):
         """Configure ALOHA MAC"""
