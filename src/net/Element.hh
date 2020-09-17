@@ -73,7 +73,7 @@ public:
     }
 
 protected:
-    /** @brief The Element to which this Port is atatched. */
+    /** @brief The Element to which this Port is attached. */
     Element& element_;
 
     /** @brief This Port%'s partner Port. */
