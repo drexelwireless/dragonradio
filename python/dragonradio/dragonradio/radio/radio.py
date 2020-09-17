@@ -453,33 +453,34 @@ class Radio:
         This function will configure the necessary RX and TX rates and
         initialize the synthesizer and channelizer.
         """
-        config = self.config
+        self.channels = channels[:self.config.max_channels]
 
-        self.channels = channels[:config.max_channels]
+        # Initialize RX chain
+        self.setRXChannels(channels)
 
-        #
+        # Initialize TX chain
+        self.setTXChannels(channels)
+
+        # Reconfigure the MAC
+        if self.mac is not None:
+            self.mac.reconfigure()
+
+    def setRXChannels(self, channels):
+        """Configure RX chain for channels"""
         # Initialize channelizer
-        #
         self.setRXRate(self.bandwidth)
 
         # We need to do this *after* setting the RX rate because it is used to
         # determine filter parameters
-        self.setChannelizerChannels(self.channels)
+        self.setChannelizerChannels(channels)
 
-        #
-        # Initialize synthesizer
-        #
-        if config.tx_upsample:
+    def setTXChannels(self, channels):
+        """Configure TX chain for channels"""
+        if self.config.tx_upsample:
             self.setTXRate(self.bandwidth)
-            self.setSynthesizerChannels(self.channels)
+            self.setSynthesizerChannels(channels)
         else:
             self.setTXChannel(self.tx_channel_idx)
-
-        #
-        # Reconfigure the MAC
-        #
-        if self.mac is not None:
-            self.mac.reconfigure()
 
     def setChannelizerChannels(self, channels):
         """Set channelizer's channels."""
@@ -769,6 +770,13 @@ class Radio:
         if isinstance(self.mac, dragonradio.TDMA) and self.mac.nslots == nslots:
             return
 
+        # Replace the synthesizer if it is not a SlotSynthesizer
+        if not isinstance(self.synthesizer, dragonradio.SlotSynthesizer):
+            self.replaceSynthesizer(False)
+
+        # Replace the MAC
+        self.deleteMAC()
+
         self.mac = dragonradio.TDMA(self.usrp,
                                     self.phy,
                                     self.controller,
@@ -805,6 +813,13 @@ class Radio:
         if isinstance(self.mac, dragonradio.FDMA):
             return
 
+        # Replace the synthesizer if it is not a ChannelSynthesizer
+        if not isinstance(self.synthesizer, dragonradio.ChannelSynthesizer):
+            self.replaceSynthesizer(False)
+
+        # Replace the MAC
+        self.deleteMAC()
+
         self.mac = dragonradio.FDMA(self.usrp,
                                     self.phy,
                                     self.controller,
@@ -820,6 +835,33 @@ class Radio:
         bws = [chan.bw for (chan, _taps) in self.synthesizer.channels]
         if len(bws) != 0:
             self.mac.min_channel_bandwidth = min(bws)
+
+    def replaceSynthesizer(self, slotted):
+        """Replace the synthesizer"""
+        # pylint: disable=pointless-statement
+
+        # Disconnect synthesizer. When the controller is disconnected from the
+        # old synthesizer, it disconnects itself from the upstream queue, so we
+        # must re-reconnect the queue to the controller too. We go ahead and
+        # disconnect everything here to prevent issues with disconnect/connect
+        # order during re-connection. The network queue is disconnected first to
+        # ensure we don't lose any network packets during the transition.
+        self.netq.pop.disconnect()
+        self.controller.net_in.disconnect()
+
+        self.controller.net_out.disconnect()
+        self.synthesizer.sink.disconnect()
+
+        # Replace synthesizer
+        self.synthesizer = self.mkSynthesizer(slotted)
+
+        # Reconnect the controller to the synthesizer.
+        self.netq.pop >> self.controller.net_in
+
+        self.controller.net_out >> self.synthesizer.sink
+
+        # Re-configure TX chain, which includes synthesizer
+        self.setTXChannels(self.channels)
 
     def setALOHAChannel(self, channel_idx):
         """Set the transmission channel for the ALOHA MAC."""
