@@ -47,6 +47,7 @@ public:
              std::function<void(void)> connected,
              std::function<void(void)> disconnected)
       : element_(element)
+      , partner_(nullptr)
       , connected_(connected)
       , disconnected_(disconnected)
     {
