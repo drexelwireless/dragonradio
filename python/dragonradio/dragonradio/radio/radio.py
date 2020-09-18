@@ -1,5 +1,6 @@
 """Radio class for managing the radio."""
 import asyncio
+import ipaddress
 import logging
 import math
 import os
@@ -182,7 +183,15 @@ class Radio:
         config = self.config
 
         # Create tun/tap interface and net neighborhood
-        self.tuntap = dragonradio.TunTap('tap0', False, self.config.mtu, self.node_id)
+        tap_net = ipaddress.IPv4Network(config.tap_ipnet)
+
+        self.tuntap = dragonradio.TunTap(config.tap_iface,
+                                         config.tap_ipaddr,
+                                         str(tap_net.netmask),
+                                         config.tap_macaddr,
+                                         False,
+                                         self.config.mtu,
+                                         self.node_id)
 
         self.net = dragonradio.Net(self.tuntap, self.node_id)
 

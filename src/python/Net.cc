@@ -105,6 +105,9 @@ void exportNet(py::module &m)
     // Export class TunTap to Python
     py::class_<TunTap, std::shared_ptr<TunTap>>(m, "TunTap")
         .def(py::init<const std::string&,
+                      const std::string&,
+                      const std::string&,
+                      const std::string&,
                       bool,
                       size_t,
                       uint8_t>())

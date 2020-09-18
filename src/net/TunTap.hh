@@ -16,13 +16,19 @@ class TunTap : public Element
 {
 public:
     /** @brief Create a tun/tap device.
-     * @param tapdev The name of the tun/tap device to create.
+     * @param tap_iface The name of the tun/tap device to create.
+     * @param tap_ipaddr IP address for tap interface.
+     * @param tap_ipnetmask Netmask for tap interface
+     * @param tap_macaddr MAC address for tap interface.
      * @param persistent Is this device persistent, or should we create it now and
      * destroy it when we are destructed?
      * @param mtu MTU size for interface.
      * @param node_id Node ID
      */
-    TunTap(const std::string& tapdev,
+    TunTap(const std::string& tap_iface,
+           const std::string& tap_ipaddr,
+           const std::string& tap_ipnetmask,
+           const std::string& tap_macaddr,
            bool persistent,
            size_t mtu,
            uint8_t node_id);
@@ -52,7 +58,16 @@ private:
     bool persistent_;
 
     /** @brief The name of the tun/tap device */
-    std::string tapdev_;
+    std::string tap_iface_;
+
+    /** @brief The name of the tun/tap device */
+    std::string tap_ipaddr_;
+
+    /** @brief The name of the tun/tap device */
+    std::string tap_ipnetmask_;
+
+    /** @brief The name of the tun/tap device */
+    std::string tap_macaddr_;
 
     /** @brief MTU of the interface */
     size_t mtu_;
