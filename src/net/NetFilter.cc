@@ -12,27 +12,6 @@
 #include "net/NetFilter.hh"
 #include "net/NetUtil.hh"
 
-NetFilter::NetFilter(std::shared_ptr<Net> net) : net_(net)
-{
-    struct in_addr in;
-
-    assert(inet_aton(kIntIPNet, &in) != 0);
-    int_net_ = ntohl(in.s_addr);
-
-    assert(inet_aton(kIntIPNetmask, &in) != 0);
-    int_netmask_ = ntohl(in.s_addr);
-
-    int_broadcast_ = mkBroadcastAddress(int_net_, int_netmask_);
-
-    assert(inet_aton(kExtIPNet, &in) != 0);
-    ext_net_ = ntohl(in.s_addr);
-
-    assert(inet_aton(kExtIPNetmask, &in) != 0);
-    ext_netmask_ = ntohl(in.s_addr);
-
-    ext_broadcast_ = mkBroadcastAddress(ext_net_, ext_netmask_);
-}
-
 bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 {
     if (pkt->size() == 0) {

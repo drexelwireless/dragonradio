@@ -130,7 +130,13 @@ void exportNet(py::module &m)
 
     // Export class NetFilter to Python
     py::class_<NetFilter, NetProcessor, std::shared_ptr<NetFilter>>(m, "NetFilter")
-        .def(py::init<std::shared_ptr<Net>>())
+        .def(py::init<std::shared_ptr<Net>,
+                      in_addr_t,
+                      in_addr_t,
+                      in_addr_t,
+                      in_addr_t,
+                      in_addr_t,
+                      in_addr_t>())
         ;
 
     // Export class NetNoop to Python
@@ -146,10 +152,11 @@ void exportNet(py::module &m)
 
     // Export class Compress to Python
     py::class_<PacketCompressor, std::shared_ptr<PacketCompressor>>(m, "PacketCompressor")
-        .def(py::init([]() {
-                return std::make_shared<PacketCompressor>(false);
-            }))
-        .def(py::init<bool>())
+        .def(py::init<bool,
+                      in_addr_t,
+                      in_addr_t,
+                      in_addr_t,
+                      in_addr_t>())
         .def_property("enabled",
             &PacketCompressor::getEnabled,
             &PacketCompressor::setEnabled,

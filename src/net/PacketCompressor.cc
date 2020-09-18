@@ -175,28 +175,6 @@ uint32_t crc32(const void *data_, size_t count)
     return (result ^ CRC32_XOROT);
 }
 
-PacketCompressor::PacketCompressor(bool enabled)
-  : net_in(*this, nullptr, nullptr, std::bind(&PacketCompressor::netPush, this, _1))
-  , net_out(*this, nullptr, nullptr)
-  , radio_in(*this, nullptr, nullptr, std::bind(&PacketCompressor::radioPush, this, _1))
-  , radio_out(*this, nullptr, nullptr)
-  , enabled_(enabled)
-{
-    struct in_addr in;
-
-    assert(inet_aton(kIntIPNet, &in) != 0);
-    int_net_ = ntohl(in.s_addr);
-
-    assert(inet_aton(kIntIPNetmask, &in) != 0);
-    int_netmask_ = ntohl(in.s_addr);
-
-    assert(inet_aton(kExtIPNet, &in) != 0);
-    ext_net_ = ntohl(in.s_addr);
-
-    assert(inet_aton(kExtIPNetmask, &in) != 0);
-    ext_netmask_ = ntohl(in.s_addr);
-}
-
 void PacketCompressor::netPush(std::shared_ptr<NetPacket> &&pkt)
 {
     if (enabled_)

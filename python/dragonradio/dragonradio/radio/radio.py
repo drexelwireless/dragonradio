@@ -182,12 +182,14 @@ class Radio:
         # pylint: disable=pointless-statement
         config = self.config
 
-        # Create tun/tap interface and net neighborhood
-        tap_net = ipaddress.IPv4Network(config.tap_ipnet)
+        # Create object representing internal and external IP networks
+        int_net = ipaddress.IPv4Network(config.internal_net)
+        ext_net = ipaddress.IPv4Network(config.external_net)
 
+        # Create tun/tap interface and net neighborhood
         self.tuntap = dragonradio.TunTap(config.tap_iface,
                                          config.tap_ipaddr,
-                                         str(tap_net.netmask),
+                                         str(int_net.netmask),
                                          config.tap_macaddr,
                                          False,
                                          self.config.mtu,
@@ -206,7 +208,12 @@ class Radio:
         #
         # Create packet compression component
         #
-        self.packet_compressor = dragonradio.PacketCompressor(config.packet_compression)
+        self.packet_compressor = \
+            dragonradio.PacketCompressor(config.packet_compression,
+                                         int(int_net.network_address),
+                                         int(int_net.netmask),
+                                         int(ext_net.network_address),
+                                         int(ext_net.netmask))
 
         #
         # Configure packet path from channelizer to tun/tap
@@ -228,7 +235,13 @@ class Radio:
         #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall ->
         #       PacketCompressor.net -> NetQueue -> controller -> synthesizer
         #
-        self.netfilter = dragonradio.NetFilter(self.net)
+        self.netfilter = dragonradio.NetFilter(self.net,
+                                               int(int_net.network_address),
+                                               int(int_net.netmask),
+                                               int(int_net.broadcast_address),
+                                               int(ext_net.network_address),
+                                               int(ext_net.netmask),
+                                               int(ext_net.broadcast_address))
         self.netfirewall = dragonradio.NetFirewall()
         self.netq = self.mkNetQueue()
 

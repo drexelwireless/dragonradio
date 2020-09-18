@@ -2,6 +2,7 @@
 # pylint: disable=no-member
 
 import asyncio
+import ipaddress
 import json
 import logging
 import math
@@ -302,8 +303,11 @@ class Controller(CILServer):
         # If we are the gateway, start an internal protocol client connected to
         # the broadcast address
         if self.is_gateway:
-            self.internal_client = InternalProtoClient(loop=self.loop,
-                                                       server_host=INTERNAL_BCAST_ADDR)
+            int_net = ipaddress.IPv4Network(self.config.internal_net)
+
+            self.internal_client = \
+                InternalProtoClient(loop=self.loop,
+                                    server_host=str(int_net.broadcast_address))
 
         # If we are the gateway, start the scorer
         if self.is_gateway:

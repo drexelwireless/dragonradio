@@ -258,10 +258,14 @@ class Config:
         self.mtu = 1500
         """"Maximum Transmission Unit"""
 
+        self.internal_net = '10.10.10.0/24'
+        """IP network for internal radio network"""
+
+        self.external_net = '192.168.0.0/16'
+        """IP network for external network"""
+
         self.tap_iface = 'tap0'
         """Tap interface to use"""
-        self.tap_ipnet = '10.10.10.0/24'
-        """IP network to use for tap interface"""
         self.tap_ipaddr = '10.10.10.%d'
         """printf-style string specifying node IP address"""
         self.tap_macaddr = 'c6:ff:ff:ff:ff:%02x'
