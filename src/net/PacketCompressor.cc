@@ -358,9 +358,9 @@ void PacketCompressor::compress(NetPacket &pkt)
                 (daddr & 0xff) == pkt.ehdr().dest) {
                 buf.flags.ipaddr_type = kIPInternal;
             // External network has the form 192.168.(100 + <NODE>).N
-            } else if ((saddr & ext_netmask_) == int_net_ &&
+            } else if ((saddr & ext_netmask_) == ext_net_ &&
                        ((saddr >> 8) & 0xff) == 100u + pkt.ehdr().src &&
-                       (daddr & int_netmask_) == int_net_ &&
+                       (daddr & int_netmask_) == ext_net_ &&
                        ((daddr >> 8) & 0xff) == 100u + pkt.ehdr().dest) {
                 buf.copyOut(static_cast<uint8_t>(saddr & 0xff));
                 buf.copyOut(static_cast<uint8_t>(daddr & 0xff));
