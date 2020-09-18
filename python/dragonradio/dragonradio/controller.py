@@ -43,6 +43,15 @@ def darpaNodeNet(node_id):
     """Return IP subnet of radio node on DARPA's network."""
     return '192.168.{:d}.0/24'.format(node_id+100)
 
+def darpaNodeIP(node_id, octet=0):
+    """Return IP address of radio node on DARPA's network."""
+    return '192.168.{:d}.{:d}'.format(node_id+100, octet)
+
+def darpaNodeMAC(node_id, octet=0):
+    """Return MAC address of radio node on DARPA's network."""
+    return  '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.\
+        format(192, 168, node_id+100, octet)
+
 class Node:
     """A radio node"""
     # pylint: disable=too-few-public-methods
@@ -585,7 +594,7 @@ class Controller(CILServer):
         # Log routes
         for node_id in list(self.nodes):
             for octet in [1]:
-                ip = '192.168.{:d}.{:d}'.format(node_id+100, octet)
+                ip = darpaNodeIP(node_id, octet)
 
                 p = await asyncio.create_subprocess_exec('ip', 'route', 'get', ip,
                     stdout=asyncio.subprocess.PIPE,
@@ -748,11 +757,10 @@ class Controller(CILServer):
                 node_id = self.radio.node_id
 
                 async def mkARPTask(peer_id):
-                    ip = '192.168.{:d}.{:d}'.format(node_id+100, peer_id)
-                    ether = '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.\
-                        format(192, 168, node_id+100, peer_id)
+                    ip = darpaNodeIP(node_id, peer_id)
+                    mac = darpaNodeMAC(node_id, peer_id)
 
-                    p = await asyncio.create_subprocess_exec('arp', '-s', ip, ether,
+                    p = await asyncio.create_subprocess_exec('arp', '-s', ip, mac,
                             stdout=asyncio.subprocess.PIPE,
                             stderr=asyncio.subprocess.PIPE)
 
