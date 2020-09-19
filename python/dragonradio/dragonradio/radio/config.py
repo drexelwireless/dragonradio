@@ -187,8 +187,6 @@ class Config:
         """Lead time needed for slot transmission (seconds)"""
         self.aloha_prob = .1
         """Probability of transmission in a given slot for ALOHA"""
-        self.tx_channel_idx = None
-        """TX channel index"""
         self.superslots = False
         """True if slots should be combined into superslots"""
         self.neighbor_discovery_period = 12
