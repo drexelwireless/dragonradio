@@ -25,7 +25,8 @@ public:
       , out(*this,
             std::bind(&Queue<T>::reset, this),
             std::bind(&Queue<T>::stop, this),
-            std::bind(&Queue<T>::pop, this, _1))
+            std::bind(&Queue<T>::pop, this, _1),
+            std::bind(&Queue<T>::kick, this))
     {
     }
 
@@ -45,6 +46,9 @@ public:
 
     /** @brief Pop an element from the queue. */
     virtual bool pop(T& val) = 0;
+
+    /** @brief Kick the queue. */
+    virtual void kick(void) = 0;
 
     /** @brief Stop processing queue elements. */
     virtual void stop(void) = 0;
