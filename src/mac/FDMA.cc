@@ -5,10 +5,6 @@
 #include "USRP.hh"
 #include "mac/FDMA.hh"
 
-// Set to 1 to transmit bursts immediately. The down side of setting this to 1
-// is that we will have less accurate TX timestamps.
-#define TX_IMMEDIATE 1
-
 FDMA::FDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PHY> phy,
            std::shared_ptr<Controller> controller,
@@ -24,6 +20,8 @@ FDMA::FDMA(std::shared_ptr<USRP> usrp,
         synthesizer,
         period)
   , premod_(period)
+  , accurate_tx_timestamps_(false)
+  , timed_tx_delay_(500e-6)
   , channel_synthesizer_(synthesizer)
 {
     rx_thread_ = std::thread(&FDMA::rxWorker, this);
@@ -113,13 +111,9 @@ void FDMA::txWorker(void)
 
         // Send IQ buffers
         if (next_slot_start_of_burst)
-            t_next_tx = MonoClock::now() + 200e-6;
+            t_next_tx = MonoClock::now() + timed_tx_delay_;
 
-#if TX_IMMEDIATE
-        usrp_->burstTX(std::nullopt,
-#else
-        usrp_->burstTX(t_next_tx,
-#endif
+        usrp_->burstTX(accurate_tx_timestamps_ ? std::optional(t_next_tx) : std::nullopt,
                        next_slot_start_of_burst,
                        false,
                        iqbufs);

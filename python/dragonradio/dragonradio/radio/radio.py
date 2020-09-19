@@ -923,6 +923,9 @@ class Radio(dragonradio.tasks.TaskManager):
                         self.synthesizer,
                         config.slot_size)
 
+        self.mac.accurate_tx_timestamps = config.mac_accurate_tx_timestamps
+        self.mac.timed_tx_delay = config.mac_timed_tx_delay
+
         self.finishConfiguringMAC()
 
     def finishConfiguringMAC(self):

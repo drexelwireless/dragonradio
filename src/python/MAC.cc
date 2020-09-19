@@ -75,6 +75,14 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Channelizer>,
                       std::shared_ptr<ChannelSynthesizer>,
                       double>())
+        .def_property("accurate_tx_timestamps",
+            &FDMA::getAccurateTXTimestamps,
+            &FDMA::setAccurateTXTimestamps,
+            "Increase timestamp accuracy at a potential cost to performance")
+        .def_property("timed_tx_delay",
+            &FDMA::getTimedTXDelay,
+            &FDMA::setTimedTXDelay,
+            "Delay for timed TX (sec)")
         ;
 
     // Export class SlottedMAC to Python
