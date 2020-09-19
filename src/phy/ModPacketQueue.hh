@@ -17,6 +17,7 @@ public:
 
     ModPacketQueue()
       : done_(false)
+      , kicked_(false)
       , nsamples_(0)
     {
     }
@@ -79,7 +80,12 @@ public:
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
-        consumer_cond_.wait(lock, [this]{ return done_ || nsamples_ > 0; });
+        consumer_cond_.wait(lock, [this]{ return done_ || kicked_ || nsamples_ > 0; });
+
+        if (kicked_) {
+            kicked_.store(true, std::memory_order_release);
+            return 0;
+        }
 
         size_t nsamples = nsamples_;
 
@@ -95,7 +101,10 @@ public:
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
-        producer_cond_.wait(lock, [this]{ return done_ || !high_water_mark_ || nsamples_ < *high_water_mark_; });
+        producer_cond_.wait(lock, [this]{ return done_ || kicked_ || !high_water_mark_ || nsamples_ < *high_water_mark_; });
+
+        if (kicked_)
+            kicked_.store(false, std::memory_order_release);
 
         nsamples_ += mpkt->nsamples;
 
@@ -104,9 +113,21 @@ public:
         consumer_cond_.notify_one();
     }
 
+    /** @brief Kick the queue to force progress */
+    void kick(void)
+    {
+        kicked_.store(true, std::memory_order_release);
+
+        producer_cond_.notify_all();
+        consumer_cond_.notify_all();
+    }
+
 protected:
     /** @brief Are we done with the queue? */
     std::atomic<bool> done_;
+
+    /** @brief Is the queue being kicked? */
+    std::atomic<bool> kicked_;
 
     /** @brief Maximum number of IQ samples the queue may contain */
     std::optional<size_t> high_water_mark_;
