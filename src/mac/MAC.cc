@@ -140,7 +140,7 @@ void MAC::txNotifier(void)
                     load_.nsamples[chanidx] += (*it)->samples->size() - (*it)->samples->delay;
             }
 
-            load_.end = record.deadline + (record.deadline_delay + record.nsamples)/tx_rate_;
+            load_.end = WallClock::to_wall_time(record.deadline) + (record.deadline_delay + record.nsamples)/tx_rate_;
         }
 
         // Log the transmissions
@@ -173,7 +173,7 @@ void MAC::txNotifier(void)
         // Tell the snapshot collector about local self-transmissions
         if (snapshot_collector_) {
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
-                snapshot_collector_->selfTX(WallClock::to_mono_time(record.deadline) + (*it)->start/tx_rate_,
+                snapshot_collector_->selfTX(record.deadline + (*it)->start/tx_rate_,
                                             rx_rate_,
                                             tx_rate_,
                                             (*it)->channel.bw,

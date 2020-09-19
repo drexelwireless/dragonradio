@@ -80,8 +80,8 @@ void FDMA::reconfigure(void)
 
 void FDMA::txWorker(void)
 {
-    WallClock::time_point t_now;
-    WallClock::time_point t_next_tx; // Time at which next transmission starts
+    MonoClock::time_point t_now;
+    MonoClock::time_point t_next_tx; // Time at which next transmission starts
     bool                  next_slot_start_of_burst = true;
 
     while (!done_) {
@@ -113,12 +113,12 @@ void FDMA::txWorker(void)
 
         // Send IQ buffers
         if (next_slot_start_of_burst)
-            t_next_tx = WallClock::now() + 200e-6;
+            t_next_tx = MonoClock::now() + 200e-6;
 
 #if TX_IMMEDIATE
         usrp_->burstTX(std::nullopt,
 #else
-        usrp_->burstTX(WallClock::to_mono_time(t_next_tx),
+        usrp_->burstTX(t_next_tx,
 #endif
                        next_slot_start_of_burst,
                        false,

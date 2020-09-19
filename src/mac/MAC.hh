@@ -206,7 +206,7 @@ protected:
     /** @brief A transmission record */
     struct TXRecord {
         /** @brief TX deadline */
-        WallClock::time_point deadline;
+        MonoClock::time_point deadline;
 
         /** @brief Number of samples the deadline was delayed */
         size_t deadline_delay;

@@ -183,7 +183,7 @@ void SlottedMAC::txWorker(void)
         {
             std::lock_guard<std::mutex> lock(tx_records_mutex_);
 
-            tx_records_.emplace(TXRecord { slot->deadline, slot->deadline_delay, slot->nsamples, std::move(slot->iqbufs), std::move(slot->mpkts) });
+            tx_records_.emplace(TXRecord { WallClock::to_mono_time(slot->deadline), slot->deadline_delay, slot->nsamples, std::move(slot->iqbufs), std::move(slot->mpkts) });
         }
 
         tx_records_cond_.notify_one();
