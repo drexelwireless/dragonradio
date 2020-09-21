@@ -103,17 +103,31 @@ void FDMA::txWorker(void)
             continue;
         }
 
-        // Collect IQ buffers
+        // Collect IQ buffers. We keep track of whether or not this batch of
+        // modulate packets needs an accurate timestamp.
         std::list<std::shared_ptr<IQBuf>> iqbufs;
+        bool accurate_timestamp = accurate_tx_timestamps_;
 
-        for (auto it = mpkts.begin(); it != mpkts.end(); ++it)
+        for (auto it = mpkts.begin(); it != mpkts.end(); ++it) {
+            if ((*it)->pkt->internal_flags.timestamp)
+                accurate_timestamp = true;
+
             iqbufs.emplace_back((*it)->samples);
+        }
+
+        // Determine time of next transmission. If this is *not* the start of a
+        // burst, then t_next_tx has already been updated. Otherwise, we
+        // initialize it with the current time since we are starting a new
+        // burst. If we need an accurate timestamp, we use a timed burst, in
+        // which case we need to add a slight delay to the transmission time.
+        if (next_slot_start_of_burst) {
+            t_next_tx = MonoClock::now();
+            if (accurate_timestamp)
+                t_next_tx += timed_tx_delay_;
+        }
 
         // Send IQ buffers
-        if (next_slot_start_of_burst)
-            t_next_tx = MonoClock::now() + timed_tx_delay_;
-
-        usrp_->burstTX(accurate_tx_timestamps_ ? std::optional(t_next_tx) : std::nullopt,
+        usrp_->burstTX(accurate_timestamp ? std::optional(t_next_tx) : std::nullopt,
                        next_slot_start_of_burst,
                        false,
                        iqbufs);
@@ -129,7 +143,7 @@ void FDMA::txWorker(void)
 
         tx_records_cond_.notify_one();
 
-        // Handle TX underflow
+        // Start a new TX burst if there was an underflow
         if (usrp_->getTXUnderflowCount() != 0) {
             usrp_->stopTXBurst();
             next_slot_start_of_burst = true;
