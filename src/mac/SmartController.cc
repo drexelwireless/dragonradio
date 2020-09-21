@@ -695,12 +695,10 @@ void SmartController::broadcastHello(void)
         });
 
     // Send a timestamped HELLO
-    if (netq_) {
-        pkt->mcsidx = mcsidx_broadcast_;
-        pkt->g = 1.0;
-        pkt->internal_flags.timestamp = 1;
-        netq_->push_hi(std::move(pkt));
-    }
+    pkt->mcsidx = mcsidx_broadcast_;
+    pkt->g = 1.0;
+    pkt->internal_flags.timestamp = 1;
+    netq_->push_hi(std::move(pkt));
 }
 
 void SmartController::resetMCSTransitionProbabilities(void)
