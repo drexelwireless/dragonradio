@@ -297,7 +297,6 @@ size_t Packet::getPayloadSize(void) const
     return 0;
 }
 
-
 void Packet::initMGENInfo(void)
 {
     if (hdr.flags.compressed) {
