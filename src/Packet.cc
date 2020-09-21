@@ -42,13 +42,13 @@ bool Packet::iterator::operator !=(const iterator& other)
 
 Packet::iterator& Packet::iterator::operator ++()
 {
-    if (ctrl_len_ < sizeof(ControlMsg::Type)) {
+    if (ctrl_len_ < sizeof(ControlMsg::type)) {
         ctrl_len_ = 0;
         ctrl_ptr_ = nullptr;
         return *this;
     }
 
-    memcpy(&ctrl_.type, ctrl_ptr_, sizeof(ControlMsg::Type));
+    memcpy(&ctrl_.type, ctrl_ptr_, sizeof(ControlMsg::type));
 
     if (ctrl_len_ < ctrlsize(ctrl_.type)) {
         ctrl_len_ = 0;
