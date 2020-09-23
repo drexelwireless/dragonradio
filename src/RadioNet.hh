@@ -9,6 +9,8 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #include <optional>
 #include <queue>
 #include <thread>
@@ -35,11 +37,14 @@ struct GPSLocation {
     double timestamp;
 };
 
+/** @brief Map from timestamp sequence number to timestamp. */
+using timestamp_map = std::unordered_map<TimestampSeq, MonoClock::time_point>;
+
+/** @brief Map from timestamp sequence number to pair of sent, received timestamps. */
+using timestamps_map = std::unordered_map<TimestampSeq, std::pair<MonoClock::time_point, MonoClock::time_point>>;
+
 /** @brief Vector of pairs of timestamps. */
-/** The first timestamp is the transmitter's timestamp, and the second timestamp
- * is the local time at which the timestamp was received.
- */
-using timestamp_vector = std::vector<std::pair<MonoClock::time_point, MonoClock::time_point>>;
+using timestampseq_set = std::unordered_set<TimestampSeq>;
 
 struct Node {
     explicit Node(NodeId id)
@@ -77,8 +82,17 @@ struct Node {
     /** @brief Mutex protecting timestamps */
     std::mutex timestamps_mutex;
 
+    /** @brief Timestamp sequences sent by this node */
+    timestamp_map timestamps_sent;
+
+    /** @brief Timestamp sequences received from this node */
+    timestamp_map timestamps_recv;
+
+    /** @brief Echoed timestamp sequences */
+    timestampseq_set timestamps_echoed;
+
     /** @brief Timestamps received from this node */
-    timestamp_vector timestamps;
+    timestamps_map timestamps;
 
     /** @brief Set soft TX gain.
      * @param dB The soft gain (dBFS).

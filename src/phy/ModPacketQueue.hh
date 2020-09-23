@@ -104,6 +104,7 @@ public:
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
+        mpkt->start = nsamples_;
         nsamples_ += mpkt->nsamples;
 
         queue_.push_back(std::move(mpkt));

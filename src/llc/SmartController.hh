@@ -736,14 +736,6 @@ public:
         decrease_retrans_mcsidx_ = decrease_retrans_mcsidx;
     }
 
-    /** @brief Get echoed timestamps */
-    timestamp_vector getEchoedTimestamps(void)
-    {
-        std::lock_guard<std::mutex> lock(echoed_timestamps_mutex_);
-
-        return echoed_timestamps_;
-    }
-
     bool pull(std::shared_ptr<NetPacket> &pkt) override;
 
     void received(std::shared_ptr<RadioPacket> &&pkt) override;
@@ -900,11 +892,8 @@ protected:
     /** @brief Decrease MCS index of retransmitted packets with a deadline */
     bool decrease_retrans_mcsidx_;
 
-    /** @brief Mutex for timestamps */
-    std::mutex echoed_timestamps_mutex_;
-
-    /** @brief Our timestamps as received by time master */
-    timestamp_vector echoed_timestamps_;
+    /** @brief Current timestamp sequence number */
+    std::atomic<TimestampSeq> timestamp_seq_;
 
     /** @brief Random number generator */
     std::mt19937 gen_;
@@ -938,11 +927,11 @@ protected:
     /** @brief Start the selective ACK timer if it is not set. */
     void startSACKTimer(RecvWindow &recvw);
 
-    /** @brief Handle HELLO and timestamp control messages. */
+    /** @brief Handle HELLO control messages. */
     void handleCtrlHello(RadioPacket &pkt, Node &node);
 
-    /** @brief Handle timestampecho control messages. */
-    void handleCtrlTimestampEchos(RadioPacket &pkt, Node &node);
+    /** @brief Handle timestamp control messages. */
+    void handleCtrlTimestamp(RadioPacket &pkt, Node &node);
 
     /** @brief Append control messages for feedback to sender. */
     /** This method appends feedback to the receiver in the form of both

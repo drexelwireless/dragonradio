@@ -109,7 +109,7 @@ void FDMA::txWorker(void)
         bool accurate_timestamp = accurate_tx_timestamps_;
 
         for (auto it = mpkts.begin(); it != mpkts.end(); ++it) {
-            if ((*it)->pkt->internal_flags.timestamp)
+            if ((*it)->pkt->timestamp_seq)
                 accurate_timestamp = true;
 
             iqbufs.emplace_back((*it)->samples);

@@ -1063,10 +1063,13 @@ class Radio(dragonradio.tasks.TaskManager):
         if self.radionet.time_master is None:
             return
 
-        timesync.synchronize(self.config,
-                             self,
-                             self.controller.echoed_timestamps,
-                             self.radionet.nodes[self.radionet.time_master].timestamps)
+        if self.node_id == self.radionet.time_master:
+            return
+
+        me = self.radionet.this_node
+        master = self.radionet.nodes[self.radionet.time_master]
+
+        timesync.synchronize(self.config, self, master, me)
 
     def getRadioLogPath(self):
         """

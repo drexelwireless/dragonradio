@@ -142,26 +142,28 @@ void Packet::appendHello(const ControlMsg::Hello &hello)
     appendControl(msg);
 }
 
-void Packet::appendTimestamp(const MonoClock::time_point &t_sent)
+void Packet::appendTimestampSent(TimestampSeq tseq,
+                                 const MonoClock::time_point &t_sent)
 {
     ControlMsg msg;
 
-    msg.type = ControlMsg::Type::kTimestamp;
-    msg.timestamp.t_sent.from_mono_time(t_sent);
+    msg.type = ControlMsg::Type::kTimestampSent;
+    msg.timestamp_sent.tseq = tseq;
+    msg.timestamp_sent.t_sent.from_mono_time(t_sent);
 
     appendControl(msg);
 }
 
-void Packet::appendTimestampEcho(NodeId node_id,
-                                const MonoClock::time_point &t_sent,
-                                const MonoClock::time_point &t_recv)
+void Packet::appendTimestampRecv(NodeId node_id,
+                                 TimestampSeq tseq,
+                                 const MonoClock::time_point &t_recv)
 {
     ControlMsg msg;
 
-    msg.type = ControlMsg::Type::kTimestampEcho;
-    msg.timestamp_echo.node = node_id;
-    msg.timestamp_echo.t_sent.from_mono_time(t_sent);
-    msg.timestamp_echo.t_recv.from_mono_time(t_recv);
+    msg.type = ControlMsg::Type::kTimestampRecv;
+    msg.timestamp_recv.node = node_id;
+    msg.timestamp_recv.tseq = tseq;
+    msg.timestamp_recv.t_recv.from_mono_time(t_recv);
 
     appendControl(msg);
 }
@@ -397,4 +399,16 @@ void Packet::initMGENInfo(void)
              wall_timestamp = mgenh->getTimestamp();
          }
     }
+}
+
+void NetPacket::appendTimestamp(TimestampSeq tseq)
+{
+    timestamp_seq = tseq;
+
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kTimestamp;
+    msg.timestamp.tseq = tseq;
+
+    appendControl(msg);
 }

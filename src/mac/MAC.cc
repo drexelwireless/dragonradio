@@ -115,7 +115,7 @@ void MAC::txNotifier(void)
     TXRecord record;
 
     while (!done_) {
-        // Get a slot
+        // Get TX record
         {
             std::unique_lock<std::mutex> lock(tx_records_mutex_);
 
@@ -129,6 +129,10 @@ void MAC::txNotifier(void)
             tx_records_.pop();
         }
 
+        // Timestamp packets
+        for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
+            (*it)->pkt->timestamp = record.deadline + (record.deadline_delay + (*it)->start)/tx_rate_;
+
         // Record the record's load
         {
             std::lock_guard<spinlock_mutex> lock(load_mutex_);
@@ -137,7 +141,7 @@ void MAC::txNotifier(void)
                 unsigned chanidx = (*it)->chanidx;
 
                 if (chanidx < load_.nsamples.size())
-                    load_.nsamples[chanidx] += (*it)->samples->size() - (*it)->samples->delay;
+                    load_.nsamples[chanidx] += (*it)->nsamples;
             }
 
             load_.end = WallClock::to_wall_time(record.deadline) + (record.deadline_delay + record.nsamples)/tx_rate_;
@@ -150,7 +154,7 @@ void MAC::txNotifier(void)
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
                 const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
 
-                logger_->logSend(WallClock::to_wall_time(samples->timestamp),
+                logger_->logSend(WallClock::to_wall_time((*it)->pkt->timestamp),
                                  (*it)->pkt->nretrans,
                                  (*it)->pkt->hdr,
                                  (*it)->pkt->ehdr(),
@@ -172,13 +176,16 @@ void MAC::txNotifier(void)
 
         // Tell the snapshot collector about local self-transmissions
         if (snapshot_collector_) {
-            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
-                snapshot_collector_->selfTX(record.deadline + (*it)->start/tx_rate_,
+            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
+                MonoClock::time_point timestamp = record.deadline + (*it)->start/tx_rate_;
+
+                snapshot_collector_->selfTX(timestamp,
                                             rx_rate_,
                                             tx_rate_,
                                             (*it)->channel.bw,
                                             (*it)->nsamples,
                                             tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc);
+            }
         }
     }
 }

@@ -35,10 +35,6 @@ void exportPacket(py::module &m)
             [](Packet::InternalFlags &self) { return self.has_selective_ack; },
             [](Packet::InternalFlags &self, uint8_t f) { self.has_selective_ack = f; },
             "Set if packet contains a selective ACK")
-        .def_property("timestamp",
-            [](Packet::InternalFlags &self) { return self.timestamp; },
-            [](Packet::InternalFlags &self, uint8_t f) { self.timestamp = f; },
-            "Set if packet should be timestamped")
         ;
 
     // Export class Packet to Python

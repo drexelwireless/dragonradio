@@ -15,28 +15,29 @@ except:
 
 logger = logging.getLogger('timesync')
 
-def synchronize(config, radio, echoed_timestamps, master_timestamps):
+def synchronize(config, radio, master, me):
     """Use timestamps to synchronize our clock with the time master (the gateway)"""
     t0 = clock.t0
 
     # Perform linear regression on all timestamps
-    echoed = _relativizeTimestamps(t0, echoed_timestamps)
-    logger.debug("TIMESYNC: echoed timestamps: %s", echoed)
-    if len(echoed) == 0:
+    me_timestamps = _relativizeTimestamps(t0, me.timestamps.values())
+    if len(me_timestamps) == 0:
         return
 
-    master = _relativizeTimestamps(t0, master_timestamps)
-    logger.debug("TIMESYNC: time master's timestamps: %s", master)
-    if len(master) == 0:
+    master_timestamps = _relativizeTimestamps(t0, master.timestamps.values())
+    if len(master_timestamps) == 0:
         return
 
-    if len(echoed) > 1 and len(master) > 1:
-        # If we have a GPSDO, then assume skew is zero
-        if config.clock_noskew or \
-            (self.usrp.clock_source == 'external' and self.usrp.time_source == 'external'):
-            (sigma, delta, tau) = timestampRegressionNoSkew(echoed, master)
-        else:
-            (sigma, delta, tau) = timestampRegression(echoed, master)
+    if True:
+        logger.debug("TIMESYNC: our timestamps:\n%s", pformat(me_timestamps))
+        logger.debug("TIMESYNC: time master's timestamps:\n%s", pformat(master_timestamps))
+
+    # If we have a GPSDO, then assume skew is zero
+    if config.clock_noskew or \
+        (radio.usrp.clock_source == 'external' and radio.usrp.time_source == 'external'):
+        (sigma, delta, tau) = timestampRegressionNoSkew(me_timestamps, master_timestamps)
+    else:
+        (sigma, delta, tau) = timestampRegression(me_timestamps, master_timestamps)
 
     old_sigma = clock.skew
     old_delta = clock.offset.secs
@@ -58,7 +59,7 @@ def synchronize(config, radio, echoed_timestamps, master_timestamps):
 
 def _relativizeTimestamps(t0, ts):
     """Make (t_send, t_recv) timestamps relative to t0"""
-    return [((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in ts]
+    return sorted([((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in ts], key=lambda ts: ts[0])
 
 def timestampRegression(echoed, master):
     """Perform a linear regression on timestamps to determine clock skew and delta"""
