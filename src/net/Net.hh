@@ -14,26 +14,6 @@
 #include "Packet.hh"
 #include "net/TunTap.hh"
 
-/** @brief A sprintf-style format string for internal network tun/tap IP
- * addresses.
- */
-const std::string kIntIPFmt = "10.10.10.%d";
-
-/** @brief A sprintf-style format string for tun/tap MAC addresses */
-const std::string kMACFmt = "c6:ff:ff:ff:ff:%02x";
-
-/** @brief Internal IP network. */
-extern const char *kIntIPNet;
-
-/** @brief Internal IP network mask. */
-extern const char *kIntIPNetmask;
-
-/** @brief External IP network. */
-extern const char *kExtIPNet;
-
-/** @brief External IP network mask. */
-extern const char *kExtIPNetmask;
-
 /** @brief Vector of pairs of timestamps. */
 /** The first timestamp is the transmitter's timestamp, and the second timestamp
  * is the local time at which the timestamp was received.

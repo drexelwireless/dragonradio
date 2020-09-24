@@ -31,53 +31,69 @@ using namespace std::placeholders;
  * without attribution.
  */
 
-TunTap::TunTap(const std::string& tapdev,
+TunTap::TunTap(const std::string& tap_iface,
+               const std::string& tap_ipaddr,
+               const std::string& tap_ipnetmask,
+               const std::string& tap_macaddr,
                bool persistent,
                size_t mtu,
-               uint8_t node_id) :
-    sink(*this,
+               uint8_t node_id)
+  : sink(*this,
          nullptr,
          nullptr,
-         std::bind(&TunTap::send, this, _1)),
-    source(*this,
+         std::bind(&TunTap::send, this, _1))
+  , source(*this,
            std::bind(&TunTap::start, this),
-           std::bind(&TunTap::stop, this)),
-    persistent_(persistent),
-    tapdev_(tapdev),
-    mtu_(mtu),
-    done_(true)
+           std::bind(&TunTap::stop, this))
+  , persistent_(persistent)
+  , tap_iface_(tap_iface)
+  , tap_ipaddr_(tap_ipaddr)
+  , tap_ipnetmask_(tap_ipnetmask)
+  , tap_macaddr_(tap_macaddr)
+  , mtu_(mtu)
+  , done_(true)
 {
     if (rc.verbose)
-        printf("Creating tap interface %s\n", tapdev.c_str());
+        printf("Creating tap interface %s\n", tap_iface.c_str());
 
     if (!persistent_) {
         // Check if tap is already up
-        if (sys("ifconfig %s > /dev/null 2>&1", tapdev_.c_str()) != 0) {
+        if (sys("ifconfig %s > /dev/null 2>&1", tap_iface_.c_str()) != 0) {
             //Get active user
             passwd *user_name = getpwuid(getuid());
 
-            if (sys("ip tuntap add dev %s mode tap user %s", tapdev_.c_str(), user_name->pw_name) < 0)
+            if (sys("ip tuntap add dev %s mode tap user %s",
+                    tap_iface_.c_str(),
+                    user_name->pw_name) < 0)
                 logEvent("TUNTAP: Could not add user to tap device");
         }
 
         // Set MTU size to 1500
-        if (sys("ifconfig %s mtu %u", tapdev_.c_str(), (unsigned) mtu) < 0)
-            logEvent("TUNTAP: system() - ifconfig mtu");
+        if (sys("ifconfig %s mtu %u",
+                tap_iface_.c_str(),
+                (unsigned) mtu) < 0)
+            logEvent("TUNTAP: Error configuring mtu");
 
         // Assign mac address
-        if (sys(("ifconfig %s hw ether " + kMACFmt).c_str(), tapdev_.c_str(), node_id) < 0)
-            logEvent("TUNTAP: Error configuring mac address.");
+        if (sys(("ifconfig %s hw ether " + tap_macaddr_).c_str(),
+                tap_iface_.c_str(),
+                node_id) < 0)
+            logEvent("TUNTAP: Error configuring MAC address");
 
         // Assign IP address
-        if (sys(("ifconfig %s " + kIntIPFmt + " netmask 255.255.255.0").c_str(), tapdev_.c_str(), node_id) < 0)
-            logEvent("TUNTAP: system() - ifconfig");
+        if (sys(("ifconfig %s " + tap_ipaddr_ + " netmask %s").c_str(),
+                tap_iface_.c_str(),
+                node_id,
+                tap_ipnetmask_.c_str()) < 0)
+            logEvent("TUNTAP: Error configuring IP address");
 
         // Bring up the interface in case it's not up yet
-        if (sys("ifconfig %s up", tapdev_.c_str()) < 0)
-            logEvent("TUNTAP: system() - error bringing interface up");
+        if (sys("ifconfig %s up",
+                tap_iface_.c_str()) < 0)
+            logEvent("TUNTAP: Error bringing ip interface");
     }
 
-    openTap(tapdev_, IFF_TAP | IFF_NO_PI);
+    openTap(tap_iface_, IFF_TAP | IFF_NO_PI);
 }
 
 TunTap::~TunTap(void)
@@ -93,13 +109,16 @@ size_t TunTap::getMTU(void)
 
 void TunTap::addARPEntry(uint8_t node_id)
 {
-    if (sys(("arp -i %s -s " + kIntIPFmt + " " + kMACFmt).c_str(), tapdev_.c_str(), node_id, node_id) < 0)
+    if (sys(("arp -i %s -s " + tap_ipaddr_ + " " + tap_macaddr_).c_str(),
+             tap_iface_.c_str(),
+             node_id,
+             node_id) < 0)
         logEvent("TUNTAP: Error adding ARP entry for last octet %d.", node_id);
 }
 
 void TunTap::deleteARPEntry(uint8_t node_id)
 {
-    if (sys(("arp -d " + kIntIPFmt).c_str(), node_id) < 0)
+    if (sys(("arp -d " + tap_ipaddr_).c_str(), node_id) < 0)
         logEvent("TUNTAP: Error deleting ARP entry for last octet %d.", node_id);
 }
 
@@ -112,7 +131,7 @@ void TunTap::openTap(std::string& dev, int flags)
 
     /* open the clone device */
     if((fd_ = open(clonedev, O_RDWR)) < 0) {
-        logEvent("TUNTAP: Error connecting to tap interface %s", tapdev_.c_str());
+        logEvent("TUNTAP: Error connecting to tap interface %s", tap_iface_.c_str());
         exit(1);
     }
 
@@ -126,7 +145,7 @@ void TunTap::openTap(std::string& dev, int flags)
     if ((err = ioctl(fd_, TUNSETIFF, (void *) &ifr)) < 0 ) {
         perror("ioctl()");
         close(fd_);
-        logEvent("TUNTAP: Error connecting to tap interface %s", tapdev_.c_str());
+        logEvent("TUNTAP: Error connecting to tap interface %s", tap_iface_.c_str());
         exit(1);
     }
 
@@ -145,7 +164,7 @@ void TunTap::closeTap(void)
     close(fd_);
 
     if (!persistent_) {
-        if (sys("ip tuntap del dev %s mode tap", tapdev_.c_str()) < 0)
+        if (sys("ip tuntap del dev %s mode tap", tap_iface_.c_str()) < 0)
             logEvent("TUNTAP: Error deleting tap.");
     }
 }

@@ -256,8 +256,26 @@ class Config:
 
         # Network options
         self.mtu = 1500
+        """"Maximum Transmission Unit"""
+
+        self.internal_net = '10.10.10.0/24'
+        """IP network for internal radio network"""
+
+        self.external_net = '192.168.0.0/16'
+        """IP network for external network"""
+
+        self.tap_iface = 'tap0'
+        """Tap interface to use"""
+        self.tap_ipaddr = '10.10.10.%d'
+        """printf-style string specifying node IP address"""
+        self.tap_macaddr = 'c6:ff:ff:ff:ff:%02x'
+        """printf-style string specifying node MAC address"""
+
         self.queue = 'fifo'
+        """Network queue to use"""
+
         self.packet_compression = False
+        """Enable packet compression?"""
 
         # Queue options
         self.transmission_delay = 0
@@ -768,6 +786,12 @@ class Config:
                          dest='mtu',
                          metavar='BYTES',
                          help='set Maximum Transmission Unit (bytes)')
+
+        net.add_argument('--tap', action='store', type=str,
+                         dest='tap_iface',
+                         metavar='IFACE',
+                         help='name of tap interface')
+
         net.add_argument('--queue', action='store',
                          choices=['fifo', 'lifo', 'mandate'],
                          dest='queue',

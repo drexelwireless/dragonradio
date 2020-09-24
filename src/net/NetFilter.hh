@@ -11,7 +11,23 @@ using namespace std::placeholders;
 class NetFilter : public Processor<std::shared_ptr<NetPacket>>
 {
 public:
-    NetFilter(std::shared_ptr<Net> net);
+    NetFilter(std::shared_ptr<Net> net,
+              in_addr_t int_net,
+              in_addr_t int_netmask,
+              in_addr_t int_broadcast,
+              in_addr_t ext_net,
+              in_addr_t ext_netmask,
+              in_addr_t ext_broadcast)
+      : net_(net)
+      , int_net_(int_net)
+      , int_netmask_(int_netmask)
+      , int_broadcast_(int_broadcast)
+      , ext_net_(ext_net)
+      , ext_netmask_(ext_netmask)
+      , ext_broadcast_(ext_broadcast)
+    {
+    }
+
     virtual ~NetFilter() = default;
 
 protected:
