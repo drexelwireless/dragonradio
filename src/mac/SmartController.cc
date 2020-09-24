@@ -822,18 +822,14 @@ void SmartController::drop(SendWindow::Entry &entry)
     entry.reset();
 
     // Advance send window if we can
-    Seq old_unack = sendw.unack;
-
     advanceSendWindow(sendw);
-
-    // See if we locally updated the send window. If so, we need to tell the
-    // receiver we've updated our unack
-    if (sendw.unack > old_unack)
-        sendw.send_set_unack = true;
 }
 
 void SmartController::advanceSendWindow(SendWindow &sendw)
 {
+    // Save current unack
+    Seq old_unack = sendw.unack;
+
     // Advance send window if we can
     while (sendw.unack <= sendw.max && !sendw[sendw.unack])
         ++sendw.unack;
@@ -849,6 +845,11 @@ void SmartController::advanceSendWindow(SendWindow &sendw)
     // Indicate that this node's send window is now open
     if (sendw.seq < sendw.unack + sendw.win)
         netq_->setSendWindowStatus(sendw.node.id, true);
+
+    // See if we locally updated the send window. If so, we need to tell the
+    // receiver we've updated our unack
+    if (sendw.unack > old_unack)
+        sendw.send_set_unack = true;
 }
 
 void SmartController::advanceRecvWindow(Seq seq, RecvWindow &recvw)
