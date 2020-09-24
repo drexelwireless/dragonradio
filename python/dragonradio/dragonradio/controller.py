@@ -1,69 +1,98 @@
+"""Controller for intelligent radio functionality"""
+# pylint: disable=no-member
+
 import asyncio
-from concurrent.futures import CancelledError
 import json
 import logging
 import math
-import netifaces
-import numpy as np
 import os
-import pandas as pd
 import random
-import signal
 import subprocess
-import sys
 import time
+
+import numpy as np
+import pandas as pd
+
+import netifaces
 
 import sc2.cil_pb2 as cil
 
 import dragonradio
-
-from dragon.collab import RegistrationClient, CILClient, CILServer
-import dragon.collab
-from dragon.gpsd import GPSDClient, GPSLocation
-import dragon.internal
-from dragon.internal import InternalProtoClient, InternalProtoServer, mkFlowStats, mkSpectrumStats
-import dragon.internal as internal
-from dragon.protobuf import *
-import dragon.radio
-import dragon.remote as remote
-import dragon.schedule
+from dragonradio.collab import CILServer
+import dragonradio.collab
+from dragonradio.gpsd import GPSDClient, GPSLocation
+import dragonradio.internal as internal
+from dragonradio.internal import InternalProtoClient, InternalProtoServer
+from dragonradio.internal import mkFlowStats, mkSpectrumStats
+from dragonradio.protobuf import handle, handler, TCPProtoServer
+import dragonradio.radio
+import dragonradio.remote as remote
+import dragonradio.schedule
+import dragonradio.tasks
 
 logger = logging.getLogger('controller')
 
 INTERNAL_BCAST_ADDR = '10.10.10.255'
 
 def internalNodeIP(node_id):
-    """
-    Return IP address of radio node on internal network
-    """
+    """Return IP address of radio node on internal network"""
     return '10.10.10.{:d}'.format(node_id)
 
 def darpaNodeNet(node_id):
-    """
-    Return IP subnet of radio node on DARPA's network.
-    """
+    """Return IP subnet of radio node on DARPA's network."""
     return '192.168.{:d}.0/24'.format(node_id+100)
 
-class Node(object):
-    def __init__(self, id):
-        self.id = id
+class Node:
+    """A radio node"""
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self, node_id):
+        self.id = node_id
+        """Nod ID"""
+
         self.loc = GPSLocation()
+        """Node GPS location"""
+
+        self.internal_client = None
+        """Internal client, if this is an intranet node"""
 
     def __str__(self):
         return 'Node(loc={})'.format(self.loc)
 
-class Voxel(object):
+class Voxel:
+    """A voxel"""
     def __init__(self):
         self.f_start = 0
+        """Frequency start"""
+
         self.f_end = 0
+        """Frequency end"""
+
         self.tx = None
+        """"Transmitting node"""
         self.rx = []
+        """Receiving nodes"""
+
         self.duty_cycle = 1.0
+        """Duty cycle (fraction)"""
 
     def __str__(self):
-        return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
+        return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.\
+            format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
 
     def toCILVoxel(self, start, end, rx_gain, tx_gain, measured):
+        """Convert Voxel to a CIL voxel.
+
+        Arguments:
+            start: timestamp of start of voxel
+            end: timestamp of end of voxel
+            rx_gain: RX gain (dB)
+            tx_gain: TX gain (dB)
+            measured: Whether this voxel was measured (True) or not (False)
+
+        Return:
+            A CIL SpectrumVoxelUsage
+        """
         usage = cil.SpectrumVoxelUsage()
 
         usage.spectrum_voxel.freq_start = self.f_start
@@ -79,7 +108,7 @@ class Voxel(object):
         usage.measured_data = measured
 
         # Construct list of receivers for this voxel
-        receivers = [dragon.collab.mkReceiverInfo(radio_id, rx_gain) for radio_id in self.rx]
+        receivers = [dragonradio.collab.mkReceiverInfo(radio_id, rx_gain) for radio_id in self.rx]
         usage.receiver_info.extend(receivers)
 
         return usage
@@ -87,11 +116,18 @@ class Voxel(object):
 @handler(remote.Request)
 @handler(internal.Message)
 class Controller(CILServer):
+    """High-level radio controller.
+
+    This class implements all high-level control necessary for the Colosseum.
+    """
     def __init__(self, config):
         CILServer.__init__(self)
 
         self.config = config
         """Our Config"""
+
+        self.loop = None
+        """Event loop"""
 
         self.radio = None
         """Our Radio"""
@@ -107,12 +143,6 @@ class Controller(CILServer):
 
         self.started = False
         """Has the radio been started?"""
-
-        self.scenario_started = False
-        """Have we received mandates?"""
-
-        self.__scenario_start_time = None
-        """RF scenario start time, in seconds since the epoch"""
 
         self.done = False
         """Is the radio done?"""
@@ -153,6 +183,9 @@ class Controller(CILServer):
         self.voxel_lock = None
         """Lock on voxel usage"""
 
+        self.tdma_reschedule = None
+        """Event to trigger rescheduling"""
+
         self.schedule = None
         """Current TDMA schedule"""
 
@@ -164,12 +197,6 @@ class Controller(CILServer):
 
         self.mandates = {}
         """Current mandated outcomes"""
-
-        self.scoring_percent_threshold = 0
-        """Scoring percent threshold"""
-
-        self.scoring_point_threshold = 0
-        """Scoring point threshold"""
 
         self.gpsd_client = None
         """gpsd client"""
@@ -189,33 +216,22 @@ class Controller(CILServer):
         self.internal_client = None
         """Internal protocol client"""
 
-        self.radio_tasks = []
-        """asyncio tasks"""
+        self.controller_tasks = []
+        """Controller tasks"""
 
         # Provide default start time
         self.scenario_start_time = math.floor(time.time())
 
     @property
     def is_gateway(self):
+        """Is this the gateway?"""
         radio = self.radio
 
         return radio.net.nodes[radio.node_id].is_gateway
 
-    @property
-    def scenario_start_time(self):
-        """RF scenario start time, in seconds since the epoch"""
-        return self.__scenario_start_time
-
-    @scenario_start_time.setter
-    def scenario_start_time(self, t):
-        logging.info('RF scenario start time set: %f', t)
-        self.__scenario_start_time = t
-        if self.radio is not None:
-            self.radio.flowperf.start = t
-
     def timeToMP(self, t, closest=False):
         """Convert time (in seconds since the epoch) to a measurement period"""
-        if closest:
+        if closest: # pylint: disable=no-else-return
             return int(round(t - self.scenario_start_time) / self.config.measurement_period)
         else:
             return int((t - self.scenario_start_time) / self.config.measurement_period)
@@ -225,11 +241,13 @@ class Controller(CILServer):
         return self.timeToMP(time.time())
 
     def setupRadio(self, bootstrap=False):
+        """Set up the SC2 radio"""
         # We cannot do this in __init__ because the controller is created
         # *before* we daemonize, and loop isn't valid after we fork
         self.loop = asyncio.get_event_loop()
 
-        # Create Event we can use to trigger TDMA scheduler
+        # Create Event we can use to trigger TDMA scheduler. This must also be
+        # done after any fork.
         self.tdma_reschedule = asyncio.Event()
 
         # Set center frequency and bandwidth.
@@ -244,12 +262,12 @@ class Controller(CILServer):
             logger.warning('Bandwidth not specified; using %f', self.config.bandwidth)
 
         # Create the radio object
-        radio = dragon.radio.Radio(self.config)
+        radio = dragonradio.radio.Radio(self.config, 'aloha')
         self.radio = radio
 
         # Log snapshots if requested
         if self.config.log_snapshots != 0:
-            self.radio_tasks.append(self.loop.create_task(radio.snapshotLogger()))
+            self.createControllerTask(radio.snapshotLogger())
 
         # Capture interfaces
         for iface in self.config.log_interfaces:
@@ -263,9 +281,12 @@ class Controller(CILServer):
         self.gpsd_client = GPSDClient(self.nodes[radio.node_id].loc, loop=self.loop)
 
         # See if we are a gateway, and if so, start the collaboration agent
-        if self.config.collab_iface in netifaces.interfaces() and self.config.collab_server_ip != None:
+        if self.haveCollabInterface() and self.config.collab_server_ip is not None:
             radio.net.nodes[radio.node_id].is_gateway = True
-            self.collab_ip = netifaces.ifaddresses(self.config.collab_iface)[netifaces.AF_INET][0]['addr']
+
+            collab_addrs = netifaces.ifaddresses(self.config.collab_iface)
+            self.collab_ip = collab_addrs[netifaces.AF_INET][0]['addr']
+
             self.startCollab()
 
         # We might also be forced to be the gateway...
@@ -291,13 +312,13 @@ class Controller(CILServer):
             self.voxel_lock = asyncio.Lock()
 
         # Start status update
-        self.radio_tasks.append(self.loop.create_task(self.updateStatus()))
+        self.createControllerTask(self.updateStatus())
 
         # Start the RPC server
         self.remote_server = TCPProtoServer(self, loop=self.loop)
-        self.remote_server_task = self.remote_server.start_server(remote.Request,
-                                                                  remote.REMOTE_HOST,
-                                                                  remote.REMOTE_PORT)
+        self.remote_server_task = self.remote_server.startServer(remote.Request,
+                                                                 remote.REMOTE_HOST,
+                                                                 remote.REMOTE_PORT)
 
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
@@ -313,8 +334,9 @@ class Controller(CILServer):
             self.loop.close()
 
     async def startRadio(self, timestamp=time.time()):
+        """Start the radio"""
         if not self.started:
-            logging.info('Starting radio: now=%f; timestamp=%f',
+            logger.info('Starting radio: now=%f; timestamp=%f',
                 time.time(),
                 timestamp)
 
@@ -328,17 +350,21 @@ class Controller(CILServer):
                 # Create ALOHA MAC for HELLO messages
                 self.radio.configureALOHA()
 
-                self.radio_tasks.append(self.loop.create_task(self.discoverNeighbors()))
-                self.radio_tasks.append(self.loop.create_task(self.addDiscoveredNeighbors()))
-                self.radio_tasks.append(self.loop.create_task(self.synchronizeClock()))
+                self.createControllerTask(self.discoverNeighbors())
+                self.createControllerTask(self.addDiscoveredNeighbors())
+                self.createControllerTask(self.synchronizeClock())
 
                 if self.is_gateway:
-                    self.radio_tasks.append(self.loop.create_task(self.bootstrapNetwork()))
-                    self.radio_tasks.append(self.loop.create_task(self.distributeScheduleViaBroadcast()))
+                    self.createControllerTask(self.bootstrapNetwork())
+                    self.createControllerTask(self.distributeScheduleViaBroadcast())
 
                 self.state = remote.ACTIVE
 
     async def stopRadio(self):
+        """Stop the radio.
+
+        This stops the radio, but the remote API will continue to function.
+        """
         if not self.done:
             self.done = True
             self.state = remote.STOPPING
@@ -347,15 +373,12 @@ class Controller(CILServer):
             if self.collab_server:
                 try:
                     await self.stopCollab()
-                except:
+                except: # pylint: disable=bare-except
                     logger.exception('Could not gracefully terminate collaboration agent')
 
-            # Stop radio tasks
-            logger.info('Stopping radio tasks')
-            for task in self.radio_tasks:
-                task.cancel()
-
-            await asyncio.gather(*self.radio_tasks, return_exceptions=True)
+            # Stop controller tasks
+            logger.info('Stopping controller tasks')
+            await self.stopControllerTasks()
 
             # Stop internal protocol server
             if self.internal_server_task:
@@ -379,7 +402,7 @@ class Controller(CILServer):
                 try:
                     # Dump reported scores
                     self.saveReportedMandatePerformance()
-                except:
+                except: # pylint: disable=bare-except
                     logger.exception('Could not dump scoring data')
 
             # Terminate any packet captures
@@ -398,6 +421,7 @@ class Controller(CILServer):
             logger.info('Radio stopped')
 
     async def terminate(self):
+        """Terminate the radio"""
         logger.debug('Terminating')
         await self.stopRadio()
 
@@ -418,7 +442,7 @@ class Controller(CILServer):
             # Cancel unfinished tasks
             logger.info('Cancelling unfinished tasks')
 
-            for task in unfinished_tasks:
+            for _task in unfinished_tasks:
                 pass #task.cancel()
 
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -427,16 +451,31 @@ class Controller(CILServer):
         logger.info('Stopping event loop')
         self.loop.stop()
 
+    def haveCollabInterface(self):
+        """Determine whether or not we have a colaboration interface"""
+        return self.config.collab_iface in netifaces.interfaces()
+
+    def createControllerTask(self, task):
+        """Add an asyncio task to event loop"""
+        self.controller_tasks.append(self.loop.create_task(task))
+
+    async def stopControllerTasks(self):
+        """Cancel all controller tasks and wait for them to finish"""
+        await dragonradio.tasks.stopTasks(self.controller_tasks)
+
     def dumpcap(self, iface):
+        """Start a dumpcap process for and interface"""
         if iface in netifaces.interfaces():
             async def f(controller):
-                p = await asyncio.create_subprocess_exec('dumpcap', '-i', iface, '-q', '-w', '{logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                p = await asyncio.create_subprocess_exec(
+                    'dumpcap', '-i', iface, '-q', '-w', self.pcapFile(iface),
                     stdin=None, stdout=None, stderr=None, loop=self.loop)
                 controller.dumpcap_procs.append(p)
 
             self.dumpcap_tasks.append(self.loop.create_task(f(self)))
 
     async def cleanupDumpcap(self):
+        """Terminate all dumpcap processes"""
         if len(self.dumpcap_tasks) != 0:
             logger.info('Terminating pcap captures')
 
@@ -450,7 +489,7 @@ class Controller(CILServer):
                 for p in self.dumpcap_procs:
                     try:
                         p.terminate()
-                    except:
+                    except: # pylint: disable=bare-except
                         logger.exception('Could not terminate PID %d', p.pid)
 
                 _done, pending = await asyncio.wait([p.communicate() for p in self.dumpcap_procs],
@@ -467,18 +506,25 @@ class Controller(CILServer):
                 for iface in self.config.log_interfaces:
                     if iface in netifaces.interfaces():
                         try:
-                            p = await asyncio.create_subprocess_exec('xz', '{logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir),
+                            p = await asyncio.create_subprocess_exec('xz', self.pcapFile(iface),
                                 stdin=None, stdout=None, stderr=None, loop=self.loop)
                             xzprocs.append(p)
-                        except:
-                            logging.exception('Could not xz {logdir}/{iface}.pcapng'.format(iface=iface, logdir=self.config.logdir))
+                        except: # pylint: disable=bare-except
+                            logger.exception('Could not xz %s', self.pcapFile(iface))
 
                 await asyncio.gather(*[p.communicate() for p in xzprocs])
 
+    def pcapFile(self, iface):
+        """Get path to pcap file for interface"""
+        return '{logdir}/{iface}.pcapng'.format(iface=iface,
+                                                logdir=self.config.logdir)
+
     def thisNode(self):
+        """Return the current node"""
         return self.nodes[self.radio.node_id]
 
     def addNode(self, node_id):
+        """Add a node"""
         if node_id != self.radio.node_id and node_id not in self.nodes:
             logger.info('Adding node %d', node_id)
             node = Node(node_id)
@@ -487,9 +533,11 @@ class Controller(CILServer):
             # Add a route for the new node
             if self.in_colosseum:
                 try:
-                    subprocess.check_call('ip route add {} via {}'.format(darpaNodeNet(node_id), internalNodeIP(node_id)), shell=True)
-                except:
-                    logger.exception('Could not add route to node {}'.format(node_id))
+                    subprocess.check_call([ 'ip', 'route'
+                                          , 'add', darpaNodeNet(node_id)
+                                          , 'via', internalNodeIP(node_id)])
+                except: # pylint: disable=bare-except
+                    logger.exception('Could not add route to node %s', node_id)
 
             # If new node is a gateway, connect to it and start sending status
             # updates
@@ -508,25 +556,26 @@ class Controller(CILServer):
                 self.tdma_reschedule.set()
 
     async def logNetworkInfo(self):
+        """Log useful network information"""
         # Log ARP table
         p = await asyncio.create_subprocess_exec('arp', '-an',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await p.communicate()
+        stdout, _stderr = await p.communicate()
         logger.info('ARP table:\n%s', stdout.decode('utf-8'))
 
         # Log routes
         p = await asyncio.create_subprocess_exec('ip', 'route',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await p.communicate()
+        stdout, _stderr = await p.communicate()
         logger.info('Routing table:\n%s', stdout.decode('utf-8'))
 
         # Log ip links
         p = await asyncio.create_subprocess_exec('ip', 'a',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await p.communicate()
+        stdout, _stderr = await p.communicate()
         logger.info('IP links:\n%s', stdout.decode('utf-8'))
 
         # Log routes
@@ -537,24 +586,24 @@ class Controller(CILServer):
                 p = await asyncio.create_subprocess_exec('ip', 'route', 'get', ip,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE)
-                stdout, stderr = await p.communicate()
+                stdout, _stderr = await p.communicate()
                 logger.info('IP route for %s:\n%s', ip, stdout.decode('utf-8'))
 
     def removeNode(self, node_id):
+        """Remove a node"""
         if node_id != self.radio.node_id and node_id in self.nodes:
             logger.info('Removing node %d', node_id)
 
             if self.in_colosseum:
                 try:
-                    subprocess.check_call('ip route del {}'.format(darpaNodeNet(node_id)), shell=True)
-                except:
-                    logger.exception('Could not remove route to node {}'.format(node_id))
+                    subprocess.check_call(['ip', 'route', 'del', darpaNodeNet(node_id)])
+                except: # pylint: disable=bare-except
+                    logger.exception('Could not remove route to node %s', node_id)
 
             del self.nodes[node_id]
 
     def addRadioNodes(self):
         """Add nodes discovered by the radio to our local list of nodes"""
-        config = self.config
         radio = self.radio
 
         # Get a sorted list of discovered nodes
@@ -579,7 +628,6 @@ class Controller(CILServer):
     async def installMACSchedule(self, seq, sched):
         """Install a new MAC schedule"""
         with await self.radio.lock:
-            config = self.config
             radio = self.radio
 
             if self.schedule_seq is not None and seq <= self.schedule_seq:
@@ -588,7 +636,7 @@ class Controller(CILServer):
                 return
 
             if not np.array_equal(sched, self.schedule):
-                (nchannels, nslots) = sched.shape
+                (_nchannels, nslots) = sched.shape
 
                 if not self.bootstrapped:
                     logger.info('Switching to TDMA MAC with %s slots', nslots)
@@ -630,11 +678,7 @@ class Controller(CILServer):
 
     async def alohaToVoxels(self):
         """Determine voxel usage for ALOHA"""
-        config = self.config
         radio = self.radio
-
-        nnodes = len(self.nodes)
-        nchannels = len(radio.channels)
 
         voxels = []
 
@@ -659,10 +703,9 @@ class Controller(CILServer):
 
     async def scheduleToVoxels(self, sched):
         """Determine voxel usage from schedule"""
-        config = self.config
         radio = self.radio
 
-        (nchannels, nslots) = sched.shape
+        (nchannels, _nslots) = sched.shape
 
         voxels = []
 
@@ -702,10 +745,10 @@ class Controller(CILServer):
 
                 async def mkARPTask(peer_id):
                     ip = '192.168.{:d}.{:d}'.format(node_id+100, peer_id)
-                    ether = '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.format(192, 168, node_id+100, peer_id)
+                    ether = '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.\
+                        format(192, 168, node_id+100, peer_id)
 
-                    p = await asyncio.create_subprocess_exec(
-                            'arp', '-s', ip, ether,
+                    p = await asyncio.create_subprocess_exec('arp', '-s', ip, ether,
                             stdout=asyncio.subprocess.PIPE,
                             stderr=asyncio.subprocess.PIPE)
 
@@ -714,10 +757,11 @@ class Controller(CILServer):
 
                 tasks = [mkARPTask(peer_id) for peer_id in range(1, 255)]
                 await asyncio.gather(*tasks, return_exceptions=True)
-        except CancelledError:
+        except asyncio.CancelledError:
             return
 
     async def getMandatePerformance(self):
+        """Compute mandate performance metrics"""
         config = self.config
 
         # Determine which measurement period to use. We use the latest MP for
@@ -759,7 +803,13 @@ class Controller(CILServer):
             # Get score for this flow at this MP
             score = scores[flow_uid][mp]
 
-            logging.debug("Score: flow_uid=%s; mp=%s; update_timestamp_sent=%s; npackets_sent=%s; update_timestamp_recv=%s; npackets_recv=%s",
+            logger.debug(("Score: "
+                          "flow_uid=%s; "
+                          "mp=%s; "
+                          "update_timestamp_sent=%s; "
+                          "npackets_sent=%s; "
+                          "update_timestamp_recv=%s; "
+                          "npackets_recv=%s"),
                 flow_uid,
                 mp,
                 score.update_timestamp_sent,
@@ -791,13 +841,14 @@ class Controller(CILServer):
             try:
                 df = pd.DataFrame(self.reported_mandate_performance,
                                   columns=['mp', 'mandates_achieved', 'total_score_achieved'])
-                logging.info('Logging scores to %s', 'score_reported.csv')
+                logger.info('Logging scores to %s', 'score_reported.csv')
                 df.to_csv(os.path.join(config.logdir, 'score_reported.csv'))
-            except:
-                logging.exception('Exception when saving reported mandated performance')
+            except: # pylint: disable=bare-except
+                logger.exception('Exception when saving reported mandated performance')
 
-    def updateGoals(self, goals, timestamp):
-        logging.debug('Updating goals')
+    def updateGoals(self, goals, _timestamp):
+        """Update mandate goals"""
+        logger.debug('Updating goals')
 
         # Update mandated outcomes
         mandates = dragonradio.MandateMap()
@@ -851,10 +902,10 @@ class Controller(CILServer):
                                                               spectrum)
 
                 await asyncio.sleep(config.status_update_period)
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
-            except:
-                logging.exception('Exception in updateStatus')
+            except: # pylint: disable=bare-except
+                logger.exception('Exception when updating status')
 
     async def getFlowStatistics(self):
         """Get flow statistics for this node.
@@ -873,13 +924,14 @@ class Controller(CILServer):
         self.max_reported_mp = max_mp
 
         # Get local flow statistics
-        if self.is_gateway or self.internal_client is not None:
-            reset_stats = True
-        else:
-            reset_stats = False
+        reset_stats = self.is_gateway or self.internal_client is not None
 
-        sources = [mkFlowStats(min_mp, max_mp, p) for p in radio.flowperf.getSources(reset_stats).values() if p.low_mp is not None]
-        sinks = [mkFlowStats(min_mp, max_mp, p) for p in radio.flowperf.getSinks(reset_stats).values() if p.low_mp is not None]
+        sources = [mkFlowStats(min_mp, max_mp, p) \
+            for p in radio.flowperf.getSources(reset_stats).values() \
+            if p.low_mp is not None]
+        sinks = [mkFlowStats(min_mp, max_mp, p) \
+            for p in radio.flowperf.getSinks(reset_stats).values() \
+            if p.low_mp is not None]
 
         return (sources, sinks)
 
@@ -938,7 +990,15 @@ class Controller(CILServer):
                 max_mp = flow.first_mp + min(len(flow.npackets), len(flow.nbytes)) - 1
                 self.stats_max_mp[node_id] = max(self.stats_max_mp.get(node_id, 0), max_mp)
 
-                logger.info("Updating source flow statistics: node=%d; flow=%d; timestamp=%f; current mp=%d; first_mp=%d; max_mp=%d; npackets=%s; nbytes=%s",
+                logger.info(("Updating source flow statistics: "
+                             "node=%d; "
+                             "flow=%d; "
+                             "timestamp=%f; "
+                             "current mp=%d; "
+                             "first_mp=%d; "
+                             "max_mp=%d; "
+                             "npackets=%s; "
+                             "nbytes=%s"),
                     node_id,
                     flow.flow_uid,
                     timestamp,
@@ -963,7 +1023,15 @@ class Controller(CILServer):
                 max_mp = flow.first_mp + min(len(flow.npackets), len(flow.nbytes)) - 1
                 self.stats_max_mp[node_id] = max(self.stats_max_mp.get(node_id, 0), max_mp)
 
-                logger.info("Updating sink flow statistics: node=%d; flow=%d; timestamp=%f; current mp=%d; first_mp=%d; max_mp=%d; npackets=%s; nbytes=%s",
+                logger.info(("Updating sink flow statistics: "
+                             "node=%d; "
+                             "flow=%d; "
+                             "timestamp=%f; "
+                             "current mp=%d; "
+                             "first_mp=%d; "
+                             "max_mp=%d; "
+                             "npackets=%s; "
+                             "nbytes=%s"),
                     node_id,
                     flow.flow_uid,
                     timestamp,
@@ -983,11 +1051,8 @@ class Controller(CILServer):
                                                      flow.npackets,
                                                      flow.nbytes)
 
-    async def updateSpectrumStatistics(self, node_id, timestamp, reports):
+    async def updateSpectrumStatistics(self, node_id, _timestamp, reports):
         """Update flow statistics from reported source and sink stats"""
-        radio = self.radio
-        channels = radio.channels
-
         load = {}
         historical_usage = []
 
@@ -1006,7 +1071,7 @@ class Controller(CILServer):
 
                 load[(vox.f_start, vox.f_end)] = usage.duty_cycle
 
-                logging.debug("Spectrum usage: start=%s; end=%s; voxel=%s",
+                logger.debug("Spectrum usage: start=%s; end=%s; voxel=%s",
                     spectrum.start.get_timestamp(),
                     spectrum.end.get_timestamp(),
                     vox)
@@ -1015,11 +1080,8 @@ class Controller(CILServer):
             self.historical_voxel_usage += historical_usage
             self.current_voxel_usage[node_id] = load
 
-    async def createSchedule(self):
+    async def createSchedule(self, nslots=10):
         """Create a new TDMA schedule"""
-        NSLOTS = 10
-
-        config = self.config
         radio = self.radio
 
         while not self.done:
@@ -1027,7 +1089,7 @@ class Controller(CILServer):
                 await self.tdma_reschedule.wait()
                 self.tdma_reschedule.clear()
 
-                logging.debug('Creating schedule')
+                logger.debug('Creating schedule')
 
                 # Make sure we know about all nodes
                 self.addRadioNodes()
@@ -1043,18 +1105,21 @@ class Controller(CILServer):
 
                 # Create the schedule
                 nchannels = len(radio.channels)
-                sched = dragon.schedule.fairMACSchedule(nchannels, NSLOTS, self.schedule_nodes, 3)
+                sched = dragonradio.schedule.fairMACSchedule(nchannels,
+                                                             nslots,
+                                                             self.schedule_nodes,
+                                                             3)
+
                 if not np.array_equal(sched, self.schedule):
                     await self.installMACSchedule(self.schedule_seq + 1, sched)
                     await self.distributeSchedule()
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
+            except: # pylint: disable=bare-except
+                logger.exception('Exception while creating schedule')
 
     async def distributeSchedule(self):
         """Distribute the TDMA schedule to known nodes"""
-        config = self.config
-        radio = self.radio
-
         if self.schedule is None:
             return
 
@@ -1068,7 +1133,7 @@ class Controller(CILServer):
 
         for node_id in nodes_with_slot:
             node = self.nodes[node_id]
-            if hasattr(node, 'internal_client'):
+            if node.internal_client is not None:
                 await node.internal_client.sendSchedule(self.schedule_seq,
                                                         self.schedule_nodes,
                                                         self.schedule,
@@ -1077,7 +1142,7 @@ class Controller(CILServer):
                                                         self.scenario_start_time)
 
         # Now broadcast a few times for robustness
-        for i in range(0, 10):
+        for _ in range(0, 10):
             await asyncio.sleep(0.5)
             await self.broadcastSchedule()
 
@@ -1087,14 +1152,13 @@ class Controller(CILServer):
             try:
                 await asyncio.sleep(10)
                 await self.broadcastSchedule()
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
+            except: # pylint: disable=bare-except
+                logger.exception('Exception when broadcasting schedule')
 
     async def broadcastSchedule(self):
         """Broadcast the TDMA schedule"""
-        config = self.config
-        radio = self.radio
-
         if self.schedule is None:
             return
 
@@ -1116,7 +1180,7 @@ class Controller(CILServer):
 
                 self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
                 if self.collab_server:
-                    self.push_spectrum_usage()
+                    self.forceSpectrumUsageUpdate()
 
                 # If only the center frequency has changed, keep the old
                 # schedule. Otherwise create a new schedule.
@@ -1130,9 +1194,8 @@ class Controller(CILServer):
                         self.tdma_reschedule.set()
 
     async def bootstrapNetwork(self):
-        loop = self.loop
+        """Task to bootstrap the network after neighbor discovery"""
         config = self.config
-        radio = self.radio
 
         try:
             # Sleep for the discovery interval
@@ -1141,19 +1204,22 @@ class Controller(CILServer):
             # Log network info
             try:
                 await self.logNetworkInfo()
-            except:
-                logging.exception("Error while logging network info")
+            except: #pylint: disable=bare-except
+                logger.exception('Error while logging network info')
 
             # Start the schedule creation task
-            self.radio_tasks.append(self.loop.create_task(self.createSchedule()))
+            self.createControllerTask(self.createSchedule())
 
             # Trigger TDMA scheduler
             self.tdma_reschedule.set()
-        except CancelledError:
+        except asyncio.CancelledError:
             return
+        except:
+            logger.exception('Exception while bootstrapping network')
+            raise
 
     async def discoverNeighbors(self):
-        loop = self.loop
+        """Task to discover neighbors"""
         radio = self.radio
 
         #
@@ -1177,8 +1243,10 @@ class Controller(CILServer):
                 radio.controller.broadcastHello()
 
                 await asyncio.sleep(period - delta)
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
+            except: # pylint: disable=bare-except
+                logger.exception('Exception while discovering neighbors')
 
     async def addDiscoveredNeighbors(self):
         """Periodically add nodes discovered by the radio to our local list of nodes"""
@@ -1186,10 +1254,13 @@ class Controller(CILServer):
             try:
                 await asyncio.sleep(1)
                 self.addRadioNodes()
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
+            except: # pylint: disable=bare-except
+                logger.exception('Exception while adding discovered neighbors')
 
     async def synchronizeClock(self):
+        """Task to synchronize clock with the gateway node"""
         radio = self.radio
         config = self.config
 
@@ -1198,10 +1269,10 @@ class Controller(CILServer):
                 await asyncio.sleep(config.clock_sync_interval)
 
                 radio.synchronizeClock()
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
-            except:
-                logging.exception("Exception when synchronizing clock")
+            except: # pylint: disable=bare-except
+                logger.exception('Exception while synchronizing clock')
 
     async def getHistoricalSpectrumUsage(self):
         """Get historical voxel usage from controller and convert it into CIL
@@ -1235,19 +1306,20 @@ class Controller(CILServer):
         return [vox.toCILVoxel(start, end, rx_gain, tx_gain, False) for vox in voxels]
 
     @handle('Request.radio_command')
-    def radioCommand(self, req):
+    def _handleRadioCommand(self, req):
+        """Handle a remote radio command"""
         info = ''
 
         if req.radio_command == remote.START:
             if self.state == remote.READY:
-                logging.info("Radio start: timestamp=%f",
+                logger.info("Radio start: timestamp=%f",
                     req.timestamp)
 
                 self.loop.create_task(self.startRadio(timestamp=req.timestamp))
                 info = 'Radio started'
         elif req.radio_command == remote.STOP:
             if self.state == remote.READY or self.state == remote.ACTIVE:
-                logging.info("Radio stop: timestamp=%f",
+                logger.info("Radio stop: timestamp=%f",
                     req.timestamp)
 
                 self.loop.create_task(self.stopRadio())
@@ -1259,7 +1331,8 @@ class Controller(CILServer):
         return resp
 
     @handle('Request.update_mandated_outcomes')
-    def updateMandatedOutcomes(self, req):
+    def _handleUpdateMandatedOutcomes(self, req):
+        """Handle mandated outcomes update"""
         logger.info('Update mandated outcomes: timestamp=%f\n%s',
             req.timestamp,
             req.update_mandated_outcomes.goals)
@@ -1277,7 +1350,6 @@ class Controller(CILServer):
 
     def setMandates(self, mandates):
         """Set our mandated outcomes and update flowperf"""
-        config = self.config
         radio = self.radio
 
         # Set our mandated outcomes
@@ -1296,8 +1368,8 @@ class Controller(CILServer):
             radio.netq.mandates = mandates
 
             # Make internal traffic very high priority
-            radio.netq.setFlowQueuePriority(dragon.internal.INTERNAL_PORT, (99, 0.0))
-            radio.netq.setFlowQueueType(dragon.internal.INTERNAL_PORT, dragonradio.MandateQueue.FIFO)
+            radio.netq.setFlowQueuePriority(internal.INTERNAL_PORT, (99, 0.0))
+            radio.netq.setFlowQueueType(internal.INTERNAL_PORT, dragonradio.MandateQueue.FIFO)
         else:
             # Set allowed flows
             self.setAllowedFlows([flow_uid for (flow_uid, _mandate) in mandates.items()])
@@ -1311,14 +1383,15 @@ class Controller(CILServer):
         radio = self.radio
 
         allowed = set(flows)
-        allowed.add(dragon.internal.INTERNAL_PORT)
+        allowed.add(internal.INTERNAL_PORT)
 
         radio.netfirewall.allow_broadcasts = True
         radio.netfirewall.allowed = allowed
         radio.netfirewall.enabled = True
 
     @handle('Request.update_environment')
-    def updateEnvironment(self, req):
+    def _handleUpdateEnvironment(self, req):
+        """Handle an environment update"""
         logger.info('Update environment: timestamp=%f\n%s',
             req.timestamp,
             req.update_environment.environment)
@@ -1340,7 +1413,8 @@ class Controller(CILServer):
         return resp
 
     @handle('Message.status')
-    def handle_status(self, msg):
+    def _handleStatus(self, msg):
+        """Handle a status message from another node"""
         node_id = msg.status.radio_id
 
         # Update node location
@@ -1363,7 +1437,8 @@ class Controller(CILServer):
                                                             msg.status.spectrum_stats))
 
     @handle('Message.schedule')
-    def handle_schedule(self, msg):
+    def _handleSchedule(self, msg):
+        """Handle a schedule message from gateway."""
         config = self.config
         radio = self.radio
 
@@ -1372,11 +1447,13 @@ class Controller(CILServer):
         if radio.node_id in msg.schedule.nodes:
             if msg.schedule.bandwidth != config.bandwidth or \
                 msg.schedule.frequency != config.frequency:
-                logging.info('Not installing schedule with frequency parameters (bw={:g}; fc={:g}) different from ours (bw={:g}; fc={:g})'.\
-                    format(msg.schedule.bandwidth,
-                           msg.schedule.frequency,
-                           config.bandwidth,
-                           config.frequency))
+                logger.info(("Not installing schedule with frequency parameters "
+                             "(bw=%g; fc=%g) "
+                             "different from ours (bw=%g; fc=%g)"),
+                            msg.schedule.bandwidth,
+                            msg.schedule.frequency,
+                            config.bandwidth,
+                            config.frequency)
                 return
 
             nchannels = msg.schedule.nchannels

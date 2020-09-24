@@ -13,7 +13,7 @@ import sys
 import time
 
 import dragonradio
-import dragon.radio
+import dragonradio.radio
 
 IPERF_PORT = 5000
 
@@ -112,7 +112,7 @@ def parseHuman(n):
     return float(m.group(1))* SUFFIX[m.group(2).lower()]
 
 def main():
-    config = dragon.radio.Config()
+    config = dragonradio.radio.Config()
 
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -175,7 +175,7 @@ def main():
         writer = csv.writer(sys.stdout)
 
     # Create the radio object
-    radio = dragon.radio.Radio(config)
+    radio = dragonradio.radio.Radio(config, 'tdma')
 
     #
     # Configure the MAC
@@ -190,7 +190,7 @@ def main():
     #
     # Output parameters
     #
-    writer.writerow(('# version %s' % dragonradio.version,))
+    writer.writerow(('# version %s' % dragonradio.__version__,))
 
     for attr in ['len', 'bw', 'duration']:
         writer.writerow(('# %s %s' % (attr, getattr(config, attr)),))

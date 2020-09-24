@@ -1,2 +1,3 @@
 #!/bin/sh
-exec /root/dragonradio/python/radio-client.py start "$@"
+. /root/dragonradio/env/bin/activate
+exec dragonradio-client start "$@"

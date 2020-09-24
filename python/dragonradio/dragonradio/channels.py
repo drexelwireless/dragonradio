@@ -1,8 +1,11 @@
+"""Channel planning"""
 from dragonradio import Channel
 
-def defaultChannelPlan(bandwidth, cbw, cgbw=0, egbw=0, maximize_channel_guard_bandwidth=True):
-    """
-    Generate a default channel plan.
+def defaultChannelPlan(bandwidth, cbw,
+                       cgbw=0,
+                       egbw=0,
+                       maximize_channel_guard_bandwidth=True):
+    """Generate a default channel plan.
 
     Arguments:
         bandwidth: total bandwidth
@@ -20,7 +23,12 @@ def defaultChannelPlan(bandwidth, cbw, cgbw=0, egbw=0, maximize_channel_guard_ba
     n = 1 + int((bandwidth-cbw-2*egbw)/(cbw+cgbw))
 
     if n < 1:
-        raise Exception("No channels (bandwidth={:g}; channel bandwidth={:g}; channel guard={:g}; edge guard={:g})".format(bandwidth, cbw, cgbw, egbw))
+        raise ValueError(("No channels "
+                          "(bandwidth={:g}; "
+                          "channel bandwidth={:g}; "
+                          "channel guard={:g}; "
+                          "edge guard={:g})").\
+            format(bandwidth, cbw, cgbw, egbw))
 
     # We use the leftover space to space channels as far apart as possible.
     #    (n-1)*cgbw + 2*egbw + n*cbw = bandwidth

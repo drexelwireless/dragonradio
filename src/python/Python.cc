@@ -4,19 +4,23 @@ namespace py = pybind11;
 
 #include "python/PyModules.hh"
 
-// UGH. See:
-//   https://stackoverflow.com/questions/240353/convert-a-preprocessor-token-to-a-string
-
-#define TOSTRING2(s) #s
-#define TOSTRING(s) TOSTRING2(s)
-
-PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
+#if defined(PYMODULE)
+PYBIND11_MODULE(_dragonradio, m) {
+#else /* !defined(PYMODULE) */
+PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
+#endif /* !defined(PYMODULE) */
     // Create submodule for liquid
     auto mliquid = m.def_submodule("liquid");
 
-    // Export DragonRadio version
-    m.attr("version") = TOSTRING(VERSION);
-
+#if defined(PYMODULE)
+    exportResamplers(m);
+    exportNCOs(m);
+    exportFilters(m);
+    exportIQCompression(m);
+    exportHeader(m);
+    exportModem(m);
+    exportLiquid(mliquid);
+#else /* !defined(PYMODULE) */
     exportClock(m);
     exportLogger(m);
     exportRadioConfig(m);
@@ -44,4 +48,5 @@ PYBIND11_EMBEDDED_MODULE(dragonradio, m) {
     exportIQBuffer(m);
     exportIQCompression(m);
     exportSnapshot(m);
+#endif /* !defined(PYMODULE) */
 }

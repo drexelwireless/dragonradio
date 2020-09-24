@@ -1,3 +1,4 @@
+"""MAC schedule construction"""
 import numpy as np
 
 def bestScheduleChannel(sched, node_id):
@@ -15,9 +16,9 @@ def bestScheduleChannel(sched, node_id):
         The best channel to transmit on
     """
     if not (sched == node_id).any():
-        raise Exception("No slot for node {}".format(node_id))
-    else:
-        return (sched == node_id).sum(axis=1).argmax()
+        raise ValueError("No slot for node {}".format(node_id))
+
+    return (sched == node_id).sum(axis=1).argmax()
 
 def pureTDMASchedule(nodes):
     """Create a pure TDMA schedule that gives each node a single slot.
@@ -31,8 +32,8 @@ def pureTDMASchedule(nodes):
     nslots = len(nodes)
     sched = np.zeros((1, nslots), dtype=int)
 
-    for i in range(0, len(nodes)):
-        sched[0][i] = nodes[i]
+    for i, node in enumerate(nodes):
+        sched[0][i] = node
 
     return sched
 
@@ -84,16 +85,14 @@ def fairMACSchedule(nchannels, nslots, nodes, k):
 
     chan = 0
 
-    for nodeidx in range(0, len(nodes)):
-        node = nodes[nodeidx]
-
+    for i, node in enumerate(nodes):
         while chan < nchannels:
-            if len(channels[chan]) == nodeidx // nchannels:
+            if len(channels[chan]) == i // nchannels:
                 channels[chan].append(node)
                 chan += k
                 break
-            else:
-                chan += 1
+
+            chan += 1
 
         if chan >= nchannels:
             chan = 0

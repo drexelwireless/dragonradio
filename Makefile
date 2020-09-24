@@ -24,9 +24,10 @@ LIBS += \
 	-lsz -lz -ldl
 
 # Needed for Python
-CPPFLAGS += -I/usr/include/python3.5 -Idependencies/pybind11/include
+PYTHONVER = 3.8
 
-LIBS += -lpython3.5m
+CPPFLAGS += -I/usr/include/python$(PYTHONVER) -Idependencies/pybind11/include
+LIBS += -lpython$(PYTHONVER)
 
 # Needed for FLAC
 LIBS += -lFLAC++ -lFLAC
@@ -40,15 +41,6 @@ CPPFLAGS += -Idependencies/xsimd/include
 # Needed for firpm
 LIBS += -lfirpm
 
-# Version information
-GIT_HASH=$(shell git rev-parse HEAD^{} | cut -c1-8)
-
-GIT_REVNAME=$(shell git name-rev --name-only HEAD | grep -v "~")
-
-DATE=$(shell date +%Y%m%d)
-
-CPPFLAGS += -DVERSION=$(GIT_REVNAME)-$(DATE)-$(GIT_HASH)
-
 SRCDIR = src
 OBJDIR = obj
 
@@ -57,10 +49,10 @@ ALLSOURCES := $(shell find $(SRCDIR) -name '*.cc')
 ALLINCLUDES := $(shell find  $(SRCDIR) -name '*.hh')
 
 GENERATED += \
-	python/dragon/internal_pb2.py \
-	python/dragon/remote_pb2.py \
-	python/sc2/cil_pb2.py \
-	python/sc2/registration_pb2.py
+	python/dragonradio/dragonradio/internal_pb2.py \
+	python/dragonradio/dragonradio/remote_pb2.py \
+	python/dragonradio/sc2/cil_pb2.py \
+	python/dragonradio/sc2/registration_pb2.py
 
 SOURCES := \
     Clock.cc \
@@ -160,10 +152,10 @@ flexframedemod : util/flexframedemod.cc
 
 -include $(patsubst %.cc,$(OBJDIR)/%.dep,$(SOURCES))
 
-python/sc2/%_pb2.py : proto/%.proto
+python/dragonradio/sc2/%_pb2.py : proto/%.proto
 	protoc -I proto --python_out=$(dir $@) $(notdir $<)
 
-python/dragon/%_pb2.py : proto/%.proto
+python/dragonradio/dragonradio/%_pb2.py : proto/%.proto
 	protoc -I proto --python_out=$(dir $@) $(notdir $<)
 
 .PHONY : html

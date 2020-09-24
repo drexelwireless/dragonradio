@@ -4,3 +4,8 @@ __pycache__/
 /dragonradio
 docs/doxygen/html/
 obj/
+python/dragonradio/.eggs
+python/dragonradio/build
+python/dragonradio/dragonradio/version.py
+python/dragonradio/dragonradio.egg-info
+python/dragonradio/tmp

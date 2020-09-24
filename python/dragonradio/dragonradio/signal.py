@@ -1,22 +1,10 @@
-import functools
-import logging
+"""Filter design"""
+from functools import lru_cache
 import math
 import numpy as np
 import scipy.signal as signal
 
 import dragonradio
-
-def memoize(func):
-    cache = {}
-
-    @functools.wraps(func)
-    def memoized_func(*args, **kwargs):
-        key = str((args, kwargs))
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
-
-    return memoized_func
 
 def bellangerord(delta1, delta2, fs, deltaf):
     """Estimate filter order.
@@ -34,14 +22,20 @@ def bellangerord(delta1, delta2, fs, deltaf):
     """
     return int(math.ceil(2/3*math.log(1/(10*delta1*delta2))*fs/deltaf))
 
-def remez1f(numtaps, bands, desired, weight=None, Hz=None, type='bandpass', maxiter=25, grid_density=16, fs=None):
+def remez1f(numtaps, bands, desired,
+            weight=None,
+            Hz=None,
+            ftype='bandpass',
+            maxiter=25,
+            grid_density=16,
+            fs=None):
     """Calculate the minimax optimal filter using the Remez exchange algorithm,
-    but with 1/f rolloff.
+    but with $1/f$ rolloff.
 
     See:
       https://dsp.stackexchange.com/questions/37709/convert-a-park-mcclellan-fir-solution-to-achieve-stop-band-roll-off
     """
-    taps = signal.remez(numtaps, bands, desired, weight=weight, Hz=Hz, type=type, maxiter=maxiter, grid_density=grid_density, fs=fs)
+    taps = signal.remez(numtaps, bands, desired, weight=weight, Hz=Hz, type=ftype, maxiter=maxiter, grid_density=grid_density, fs=fs)
 
     # Adjust to get roll-off.
     taps[0] = taps[1] / 2
@@ -51,7 +45,17 @@ def remez1f(numtaps, bands, desired, weight=None, Hz=None, type='bandpass', maxi
     return taps / np.sum(taps)
 
 def firpm1f(N, wp, ws, fs):
-    # Design a filter with 1/f^2 roll-off
+    """Use firpm library to calculate minimax optimal low-pass filter with $1/f$ rolloff.
+
+    Args:
+        N: number of taps
+        wp: Passband frequency
+        ws: Stopband frequency
+        fs: Sample rate
+
+    Returns:
+        Filter taps.
+    """
     bands = np.array([0, wp/2, ws/2, fs/2])
     desired = [1, 1, 0, 0]
     weights = [1, 1]
@@ -61,7 +65,16 @@ def firpm1f(N, wp, ws, fs):
     return out.h
 
 def firpm1f2(N, wp, ws, fs):
-    # Design a filter with 1/f^2 roll-off
+    """Use firpm library to calculate minimax optimal low-pass filter with $1/{f^2}$ rolloff.
+
+    Args:
+        N: number of taps
+        wp: Passband frequency
+        ws: Stopband frequency
+        fs: Sample rate
+
+    Returns:
+        Filter taps."""
     bands = np.array([0, wp/2, ws/2, fs/2])
     desired = [1, 1, 0, 0]
     weights = [1, 1]
@@ -70,60 +83,54 @@ def firpm1f2(N, wp, ws, fs):
 
     return out.h
 
-@memoize
-def lowpass(wp, ws, fs):
-    return lowpass_kaiser(wp, ws, fs, atten=60)
-
-@memoize
-def lowpass_firpm1f(wp, ws, fs, Nmax=301):
-    # Use Bellanger's estimation of filter order
-    N = bellangerord(0.001, 0.001, fs, ws-wp)
-    N = min(Nmax, N)
-    if N % 2 == 0:
-        N = N + 1
-
-    return firpm1f(N, wp, ws, fs)
-
-@memoize
-def lowpass_firpm1f2(wp, ws, fs, Nmax=301):
-    # Use Bellanger's estimation of filter order
-    N = bellangerord(0.001, 0.001, fs, ws-wp)
-    N = min(Nmax, N)
-    if N % 2 == 0:
-        N = N + 1
-
-    return firpm1f2(N, wp, ws, fs)
-
-def lowpass_kaiser(wp, ws, fs, atten=60):
-    """Design a lowpass filter using a Kaiser window.
+@lru_cache
+def lowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
+    """Calculate a low-pass filter, estimating the number of taps needed.
 
     Args:
         wp: Passband frequency
         ws: Stopband frequency
-        fs: Sample rate
+        ftype: Type of filter. One of 'kaiser', 'firpm1f', or 'firpm1f2'
         atten: desired attenuation (dB)
+        Nmax: Maximum number of taps
 
     Returns:
         Filter taps.
-    """
-    N, beta = signal.kaiserord(atten, (ws-wp)/fs)
+        """
+    # Use Kaiser window
+    if ftype == 'kaiser':
+        N, beta = signal.kaiserord(atten, (ws-wp)/fs)
+        if N % 2 == 0:
+            N += 1
+
+        return signal.firwin(N, ws/2,
+                            window=('kaiser', beta),
+                            fs=fs,
+                            pass_zero=True,
+                            scale=True)
+
+    # Use firpm
+    N = bellangerord(0.001, 0.001, fs, ws-wp)
+    N = min(Nmax, N)
     if N % 2 == 0:
-        N += 1
+        N = N + 1
 
-    return signal.firwin(N, ws/2,
-                         window=('kaiser', beta),
-                         fs=fs,
-                         pass_zero=True,
-                         scale=True)
+    if ftype == 'firpm1f':
+        return firpm1f(N, wp, ws, fs)
+    elif ftype == 'firpm1f2':
+        return firpm1f2(N, wp, ws, fs)
+    else:
+        raise ValueError('Unknown filter type {}'.format(ftype))
 
-def lowpass_iter(wp, ws, fs, f, atten=90, n_max=400):
-    """Design a lowpass filter using ftaps by iterating to minimize the number
+def lowpassIter(wp, ws, fs, f, atten=90, n_max=400):
+    """Design a lowpass filter using f by iterating to minimize the number
     of taps needed.
 
     Args:
         wp: Passband frequency
         ws: Stopband frequency
         fs: Sample rate
+        f: Function to design filter
         atten: desired attenuation (dB)
         n_max: Maximum semi-length of filter
 
