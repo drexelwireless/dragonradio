@@ -644,7 +644,7 @@ class Controller(CILServer):
                     radio.deleteMAC()
                     radio.configureTDMA(nslots)
 
-                radio.installMACSchedule(sched)
+                radio.installMACSchedule(sched, fdma_mac=(self.config.mac == 'fdma'))
                 self.schedule = sched
 
             self.schedule_seq = seq
@@ -1083,6 +1083,9 @@ class Controller(CILServer):
     async def createSchedule(self, nslots=10):
         """Create a new TDMA schedule"""
         radio = self.radio
+
+        if self.config.mac == 'fdma':
+            nslots = 1
 
         while not self.done:
             try:

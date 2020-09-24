@@ -23,6 +23,7 @@ public:
     SimpleQueue(QueueType type)
       : Queue<T>()
       , done_(false)
+      , kicked_(false)
       , type_(type)
     {
     }
@@ -100,7 +101,12 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        cond_.wait(lock, [this]{ return done_ || !hiq_.empty() || !q_.empty(); });
+        cond_.wait(lock, [this]{ return done_ || kicked_ || !hiq_.empty() || !q_.empty(); });
+
+        if (kicked_) {
+            kicked_.store(false, std::memory_order_release);
+            return false;
+        }
 
         // If we're done, we're done
         if (done_)
@@ -156,6 +162,12 @@ public:
         return false;
     }
 
+    virtual void kick(void) override
+    {
+        kicked_.store(true, std::memory_order_release);
+        cond_.notify_all();
+    }
+
     virtual void stop(void) override
     {
         done_ = true;
@@ -169,6 +181,9 @@ public:
 protected:
     /** @brief Flag indicating that processing of the queue should stop. */
     bool done_;
+
+    /** @brief Is the queue being kicked? */
+    std::atomic<bool> kicked_;
 
     /** @brief Mutex protecting the queues. */
     std::mutex m_;

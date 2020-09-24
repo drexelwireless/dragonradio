@@ -112,6 +112,9 @@ void MultichannelSynthesizer::reconfigure(void)
         wake_cond_.notify_all();
     }
 
+    // Kick the sink
+    sink.kick();
+
     // Wait for workers to be ready for reconfiguration
     reconfigure_sync_.wait();
 

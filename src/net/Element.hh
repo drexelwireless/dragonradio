@@ -47,6 +47,7 @@ public:
              std::function<void(void)> connected,
              std::function<void(void)> disconnected)
       : element_(element)
+      , partner_(nullptr)
       , connected_(connected)
       , disconnected_(disconnected)
     {
@@ -180,6 +181,13 @@ public:
             return false;
     }
 
+    /** @brief Kick the port. */
+    void kick(void)
+    {
+        if (upstream_)
+            return upstream_->kick();
+    }
+
     /** @brief Connect the port to an upstream pull port. */
     void connect(std::shared_ptr<Element> element, Port<Out, Pull, T>* p)
     {
@@ -300,9 +308,11 @@ public:
     Port(Element& element,
          std::function<void(void)> connected,
          std::function<void(void)> disconnected,
-         std::function<bool(T&)> recv)
+         std::function<bool(T&)> recv,
+         std::function<void(void)> kick)
       : BasePort<Out, Pull, T>(element, connected, disconnected)
       , recv_(recv)
+      , kick_(kick)
     {
     }
 
@@ -314,9 +324,18 @@ public:
         return recv_(pkt);
     }
 
+    /** @brief Kick the port. */
+    void kick(void)
+    {
+        kick_();
+    }
+
 protected:
     /** @brief Called to receive a packet. */
     std::function<bool(T&)> recv_;
+
+    /** @brief Called to kick. */
+    std::function<void(void)> kick_;
 };
 
 template <typename D>

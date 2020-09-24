@@ -18,8 +18,13 @@ class Controller : public Element
 public:
     Controller(std::shared_ptr<Net> net)
       : net_in(*this, nullptr, nullptr)
-      , net_out(*this, nullptr, std::bind(&Controller::disconnect, this), std::bind(&Controller::pull, this, _1))
-      , radio_in(*this, nullptr, nullptr, std::bind(&Controller::received, this, _1))
+      , net_out(*this,
+                nullptr,
+                std::bind(&Controller::disconnect, this),
+                std::bind(&Controller::pull, this, _1),
+                std::bind(&Controller::kick, this))
+      , radio_in(*this,nullptr, nullptr,
+                 std::bind(&Controller::received, this, _1))
       , radio_out(*this, nullptr, nullptr)
       , net_(net)
       , netq_(nullptr)
@@ -53,6 +58,12 @@ public:
      * the net_out port.
      */
     virtual bool pull(std::shared_ptr<NetPacket> &pkt) = 0;
+
+    /** @brief Kick the controller. */
+    virtual void kick(void)
+    {
+        net_in.kick();
+    }
 
     /** @brief Process demodulated packets. */
     /** This function is automatically called to process packets received on
