@@ -252,7 +252,11 @@ class Config:
 
         # Snapshot options
         self.snapshot_period = None
+        """How often to take a snapshot (sec)"""
         self.snapshot_duration = 0.5
+        """Duration of each snapshot (sec)"""
+        self.snapshot_finish_wait = 200e-3
+        """How long to wait for demodulation to finish after stopping a snapshot (sec)"""
 
         # Network options
         self.mtu = 1500

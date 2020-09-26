@@ -1130,9 +1130,11 @@ class Radio(dragonradio.tasks.TaskManager):
                 # Stop collecting slots
                 collector.stop()
 
-                # Wait 200ms for remaining packets in snapshot to be demodulated and
+                # Wait for remaining packets in snapshot to be demodulated and
                 # get the snapshot
-                await asyncio.sleep(0.2)
+                if config.snapshot_finish_wait != 0:
+                    await asyncio.sleep(config.snapshot_finish_wait)
+
                 snapshot = collector.finish()
 
                 # Log the snapshot
