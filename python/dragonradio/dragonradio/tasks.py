@@ -1,19 +1,58 @@
-"""Utilities for managing tasks"""
+"""Utilities for managing asyncio tasks"""
 import asyncio
 import io
 import logging
 
-async def stopTasks(tasks, logger=logging.getLogger()):
-    """Cancel tasks and wait for them to finish"""
-    for task in tasks:
-        task.cancel()
+class TaskManager:
+    """Manage a list of asyncio tasks"""
+    def __init__(self, loop=None):
+        self.loop = loop
+        """asyncio event loop"""
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+        self.tasks = []
+        """A list of asyncio tasks"""
 
-    for task in tasks:
-        if task.exception() is not None:
-            f = io.StringIO()
-            task.print_stack(file=f)
-            logger.error(f.getvalue())
+    def createTask(self, task, name=None):
+        """Create and add a task to event loop"""
+        self.addTask(self.loop.create_task(task, name=name))
 
-    return results
+    def addTask(self, task):
+        """Add a task to event loop"""
+        self.tasks.append(task)
+
+    async def stopTasks(self, logger=logging.getLogger()):
+        """Cancel all tasks and wait for them to finish"""
+        for task in self.tasks:
+            task.cancel()
+
+        results = await asyncio.gather(*self.tasks, return_exceptions=True)
+
+        for task in self.tasks:
+            if not task.cancelled and task.exception() is not None:
+                f = io.StringIO()
+                task.print_stack(file=f)
+                logger.error(f.getvalue())
+
+        return results
+
+async def stopEventLoop(loop, logger=logging.getLogger()):
+    """Wait for tasks to finish and then stop the event loop"""
+    tasks = list(asyncio.all_tasks(loop))
+    tasks.remove(asyncio.current_task(loop))
+
+    unfinished_tasks = [t for t in tasks if not t.done()]
+
+    if len(unfinished_tasks) != 0:
+        logger.debug('Unfinished tasks: %s', unfinished_tasks)
+
+        # Cancel unfinished tasks
+        logger.info('Cancelling unfinished tasks')
+
+        for _task in unfinished_tasks:
+            pass #task.cancel()
+
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Stop event loop
+    logger.info('Stopping event loop')
+    loop.stop()

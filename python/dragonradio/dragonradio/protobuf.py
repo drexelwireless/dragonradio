@@ -91,7 +91,8 @@ class ZMQProtoServer:
 
     def startServer(self, cls, listen_ip, listen_port):
         """Start server"""
-        return self.loop.create_task(self._serverLoop(cls, listen_ip, listen_port))
+        return self.loop.create_task(self._serverLoop(cls, listen_ip, listen_port),
+                                     name='ZMQ {}'.format(cls.__name__))
 
     async def _serverLoop(self, cls, listen_ip, listen_port):
         try:
@@ -296,7 +297,8 @@ class TCPProtoServer:
 
     def startServer(self, cls, listen_ip, listen_port):
         """Start a protobuf TCP server"""
-        return self.loop.create_task(self._serverLoop(cls, listen_ip, listen_port))
+        return self.loop.create_task(self._serverLoop(cls, listen_ip, listen_port),
+                                     name='TCP {}'.format(cls.__name__))
 
     async def _serverLoop(self, cls, listen_ip, listen_port):
         while True:
@@ -434,7 +436,8 @@ class UDPProtoServer:
 
     def startServer(self, cls, listen_ip, listen_port):
         """Start a protobuf UDP server"""
-        return self.loop.create_task(self._serverLoop(cls, listen_ip, listen_port))
+        return self.loop.create_task(self._serverLoop(cls, listen_ip, listen_port),
+                                     name='UDP {}'.format(cls.__name__))
 
     async def _serverLoop(self, cls, listen_ip, listen_port):
         """Create server endpoint"""

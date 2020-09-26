@@ -156,9 +156,11 @@ class CILClient(ZMQProtoClient):
 
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
-class CILServer:
+class CILServer(dragonradio.tasks.TaskManager):
     """Base class for CIL server."""
     def __init__(self):
+        super().__init__()
+
         self.registration_client = None
         """Registration client"""
 
@@ -208,18 +210,6 @@ class CILServer:
         if self.radio is not None:
             self.radio.flowperf.start = t
 
-    def createCollabTask(self, task):
-        """Create and add a collaboration task to event loop"""
-        self.addCollabTask(self.loop.create_task(task))
-
-    def addCollabTask(self, task):
-        """Add a collaboration task to event loop"""
-        self.collab_tasks.append(task)
-
-    async def stopCollabTasks(self):
-        """Cancel all collaboration tasks and wait for them to finish"""
-        await dragonradio.tasks.stopTasks(self.collab_tasks)
-
     def startCollab(self):
         """Start CIL server"""
         self.registration_client = RegistrationClient(loop=self.loop,
@@ -228,34 +218,31 @@ class CILServer:
         self.registration_client.open()
 
         self.collab_server = ZMQProtoServer(self, loop=self.loop)
-        self.addCollabTask(self.collab_server.startServer(cil.CilMessage,
-                                                          self.collab_ip,
-                                                          self.config.collab_peer_port))
-        self.addCollabTask(self.collab_server.startServer(registration.TellClient,
-                                                          self.collab_ip,
-                                                          self.config.collab_client_port))
+        self.addTask(self.collab_server.startServer(cil.CilMessage,
+                                                    self.collab_ip,
+                                                    self.config.collab_peer_port))
+        self.addTask(self.collab_server.startServer(registration.TellClient,
+                                                    self.collab_ip,
+                                                    self.config.collab_client_port))
 
         self.collab_spectrum_update_event = asyncio.Event()
 
-        self.loop.create_task(self.startCollabTask())
+        self.loop.create_task(self.startCollabTasks())
 
-    async def startCollabTask(self):
+    async def startCollabTasks(self):
         """Register with the CIL server and then start collaboration tasks"""
         await self.registration_client.register(self.collab_ip)
 
-        self.createCollabTask(self._heartbeatTask())
-        self.createCollabTask(self._locationUpdateTask())
-        self.createCollabTask(self._spectrumUsageTask())
-        self.createCollabTask(self._detailedPerformanceTask())
+        self.createTask(self._heartbeatTask(), name='heartbeat')
+        self.createTask(self._locationUpdateTask(), name='location update')
+        self.createTask(self._spectrumUsageTask(), name='spectrum usage')
+        self.createTask(self._detailedPerformanceTask(), name='detailed performance')
 
     async def stopCollab(self):
         """Stop CIL server"""
         # We must trigger the event, otherwise we will be stuck waiting on it
         # forever
         self.collab_spectrum_update_event.set()
-
-        # Cancel collaboration server tasks
-        await self.stopCollabTasks()
 
         # Leave the collaboration network
         if self.registration_nonce:

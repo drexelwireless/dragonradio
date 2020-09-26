@@ -131,13 +131,10 @@ class Controller(CILServer):
     This class implements all high-level control necessary for the Colosseum.
     """
     def __init__(self, config):
-        CILServer.__init__(self)
+        super().__init__()
 
         self.config = config
         """Our Config"""
-
-        self.loop = None
-        """Event loop"""
 
         self.radio = None
         """Our Radio"""
@@ -277,7 +274,7 @@ class Controller(CILServer):
 
         # Log snapshots if requested
         if self.config.log_snapshots != 0:
-            self.createControllerTask(radio.snapshotLogger())
+            self.createTask(radio.snapshotLogger())
 
         # Capture interfaces
         for iface in self.config.log_interfaces:
@@ -325,7 +322,7 @@ class Controller(CILServer):
             self.voxel_lock = asyncio.Lock()
 
         # Start status update
-        self.createControllerTask(self.updateStatus())
+        self.createTask(self.updateStatus(), name='update status')
 
         # Start the RPC server
         self.remote_server = TCPProtoServer(self, loop=self.loop)
@@ -363,13 +360,18 @@ class Controller(CILServer):
                 # Create ALOHA MAC for HELLO messages
                 self.radio.configureALOHA()
 
-                self.createControllerTask(self.discoverNeighbors())
-                self.createControllerTask(self.addDiscoveredNeighbors())
-                self.createControllerTask(self.synchronizeClock())
+                self.createTask(self.discoverNeighbors(),
+                                name='discover neighbors')
+                self.createTask(self.addDiscoveredNeighbors(),
+                                name='add neighbors')
+                self.createTask(self.synchronizeClock(),
+                                name='synchronize clock')
 
                 if self.is_gateway:
-                    self.createControllerTask(self.bootstrapNetwork())
-                    self.createControllerTask(self.distributeScheduleViaBroadcast())
+                    self.createTask(self.bootstrapNetwork(),
+                                    name='bootstrap network')
+                    self.createTask(self.distributeScheduleViaBroadcast(),
+                                    name='distribute schedule')
 
                 self.state = remote.ACTIVE
 
@@ -389,9 +391,9 @@ class Controller(CILServer):
                 except: # pylint: disable=bare-except
                     logger.exception('Could not gracefully terminate collaboration agent')
 
-            # Stop controller tasks
-            logger.info('Stopping controller tasks')
-            await self.stopControllerTasks()
+            # Stop tasks
+            logger.info('Stopping tasks')
+            await self.stopTasks()
 
             # Stop internal protocol server
             if self.internal_server_task:
@@ -443,38 +445,12 @@ class Controller(CILServer):
         self.remote_server_task.cancel()
         await asyncio.gather(self.remote_server_task, return_exceptions=True)
 
-        # Log unfinished tasks
-        tasks = list(asyncio.Task.all_tasks())
-        tasks.remove(asyncio.Task.current_task())
-
-        unfinished_tasks = [t for t in tasks if not t.done()]
-
-        if len(unfinished_tasks) != 0:
-            logger.debug('Unfinished tasks: %s', unfinished_tasks)
-
-            # Cancel unfinished tasks
-            logger.info('Cancelling unfinished tasks')
-
-            for _task in unfinished_tasks:
-                pass #task.cancel()
-
-        await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Stop event loop
-        logger.info('Stopping event loop')
-        self.loop.stop()
+        # Wait for remaining tasks and stop the event loop
+        await dragonradio.tasks.stopEventLoop(self.loop, logger)
 
     def haveCollabInterface(self):
         """Determine whether or not we have a colaboration interface"""
         return self.config.collab_iface in netifaces.interfaces()
-
-    def createControllerTask(self, task):
-        """Add an asyncio task to event loop"""
-        self.controller_tasks.append(self.loop.create_task(task))
-
-    async def stopControllerTasks(self):
-        """Cancel all controller tasks and wait for them to finish"""
-        await dragonradio.tasks.stopTasks(self.controller_tasks)
 
     def dumpcap(self, iface):
         """Start a dumpcap process for and interface"""
@@ -1223,7 +1199,7 @@ class Controller(CILServer):
                 logger.exception('Error while logging network info')
 
             # Start the schedule creation task
-            self.createControllerTask(self.createSchedule())
+            self.createTask(self.createSchedule(), name='create schedule')
 
             # Trigger TDMA scheduler
             self.tdma_reschedule.set()
