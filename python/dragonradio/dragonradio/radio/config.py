@@ -418,6 +418,7 @@ class Config:
         # Node ID
         parser.add_argument('-i', action='store', type=int,
                             dest='node_id',
+                            metavar='ID',
                             help='set node ID')
 
         # Load configuration file
@@ -444,6 +445,7 @@ class Config:
 
         log.add_argument('-l', action='store',
                          dest='log_directory',
+                         metavar='PATH',
                          help='specify directory for log files')
         log.add_argument('--log-iq', action=ExtendAction,
                          const=['log_slots', 'log_recv_symbols', 'log_sent_iq'],
@@ -452,6 +454,7 @@ class Config:
                          help='log IQ data')
         log.add_argument('--log-iface', action='append',
                          dest='log_interfaces',
+                         metavar='IFACE',
                          help='log packets received on interface')
         log.add_argument('--log-invalid-headers', action='store_const', const=True,
                          dest='log_invalid_headers',
