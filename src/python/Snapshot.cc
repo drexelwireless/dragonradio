@@ -4,6 +4,8 @@
 #include "mac/Snapshot.hh"
 #include "python/PyModules.hh"
 
+PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
+
 void exportSnapshot(py::module &m)
 {
     // Export class Snapshot to Python
@@ -17,6 +19,9 @@ void exportSnapshot(py::module &m)
         .def_readonly("selftx",
             &Snapshot::selftx,
             "Self-transmission events")
+        .def_property_readonly("combined_slots",
+            &Snapshot::getCombinedSlots,
+            "Combined IQ data for all slots in snapshot")
         .def("__repr__", [](const Snapshot& self) {
             return py::str("Snapshot(timestamp={})").format(self.timestamp);
          })

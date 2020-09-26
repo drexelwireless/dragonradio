@@ -1,6 +1,11 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
 #include "Clock.hh"
 #include "Logger.hh"
 #include "python/PyModules.hh"
+
+PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
 {
@@ -44,9 +49,6 @@ void exportLogger(py::module &m)
         .def("logSnapshot",
             &Logger::logSnapshot,
             "Log a snapshot")
-        .def("logSelfTX",
-            &Logger::logSelfTX,
-            "Log a self-transmission")
         ;
 
     addLoggerSource(loggerCls, "log_slots", Logger::kSlots);

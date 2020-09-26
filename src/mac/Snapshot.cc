@@ -2,6 +2,38 @@
 
 #include "mac/Snapshot.hh"
 
+std::optional<std::shared_ptr<IQBuf>> Snapshot::getCombinedSlots(void) const
+{
+    if (slots.empty())
+        return std::nullopt;
+
+    size_t size = 0;
+    float  fc = slots[0]->fc;
+    float  fs = slots[0]->fs;
+
+    for (auto it = slots.begin(); it != slots.end() && (*it)->fc == fc && (*it)->fs == fs; ++it) {
+        assert((*it)->complete);
+        size += (*it)->size();
+    }
+
+    std::shared_ptr<IQBuf> buf = std::make_shared<IQBuf>(size);
+    size_t                 off = 0;
+
+    buf->timestamp = timestamp;
+    buf->fc = fc;
+    buf->fs = fs;
+
+    using C = std::complex<float>;
+
+    for (auto it = slots.begin(); it != slots.end() && (*it)->fc == fc && (*it)->fs == fs; ++it) {
+        assert(off + (*it)->size() <= buf->size());
+        memcpy(buf->data() + off, (*it)->data(), (*it)->size()*sizeof(C));
+        off += (*it)->size();
+    }
+
+    return buf;
+}
+
 SnapshotCollector::SnapshotCollector()
   : last_local_tx_start_(0.0)
 {
@@ -11,7 +43,7 @@ void SnapshotCollector::start(void)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
-    snapshot_ = std::make_shared<Snapshot>();
+    snapshot_ = std::make_unique<Snapshot>();
     // Set *provisional* snapshot timestamp. Eventually, we will set this to the
     // timestamp of the first collected slot.
     snapshot_->timestamp = MonoClock::now();
@@ -74,7 +106,7 @@ bool SnapshotCollector::push(const std::shared_ptr<IQBuf> &buf)
 
     if (snapshot_ && snapshot_collect_) {
         buf->snapshot_off = snapshot_off_;
-        snapshot_->slots.emplace_back(buf);
+        curbuf_ = buf;
         return true;
     } else
         return false;
@@ -85,10 +117,10 @@ void SnapshotCollector::finalizePush(void)
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
     if (snapshot_) {
-        auto it = snapshot_->slots.rbegin();
-
-        snapshot_off_ += (*it)->size();
-    }
+        snapshot_off_ += curbuf_->size();
+        snapshot_->slots.emplace_back(std::move(curbuf_));
+    } else
+        curbuf_.reset();
 }
 
 void SnapshotCollector::selfTX(ssize_t start, ssize_t end, float fc, float fs)

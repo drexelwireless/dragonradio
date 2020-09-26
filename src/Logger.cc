@@ -390,35 +390,35 @@ void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
     slots_->write(&entry, 1);
 }
 
-void Logger::logSnapshot_(std::shared_ptr<IQBuf> buf)
+void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
 {
-    SnapshotEntry entry;
-    buffer<char>  data;
+    if (snapshot->slots.empty())
+        return;
 
-    data = compressFLAC(8, buf->data(), buf->size());
+    SnapshotEntry          entry;
+    double                 timestamp = (Clock::to_wall_time(snapshot->timestamp) - t_start_).get_real_secs();
+    std::shared_ptr<IQBuf> buf = *(snapshot->getCombinedSlots());
+    buffer<char>           data = compressFLAC(8, buf->data(), buf->size());
 
-    entry.timestamp = (Clock::to_wall_time(buf->timestamp) - t_start_).get_real_secs();
+    entry.timestamp = timestamp;
     entry.fs = buf->fs;
-
     entry.iq_data.p = data.data();
     entry.iq_data.len = data.size();
 
     snapshots_->write(&entry, 1);
-}
 
-void Logger::logSelfTX_(Clock::time_point timestamp,
-                        SelfTX selftx)
-{
-    SelfTXEntry entry;
+    SelfTXEntry selftx_entry;
 
-    entry.timestamp = (timestamp - t_start_).get_real_secs();
-    entry.is_local = selftx.is_local;
-    entry.start = selftx.start;
-    entry.end = selftx.end;
-    entry.fc = selftx.fc;
-    entry.fs = selftx.fs;
+    for (auto&& selftx : snapshot->selftx) {
+        selftx_entry.timestamp = timestamp;
+        selftx_entry.is_local = selftx.is_local;
+        selftx_entry.start = selftx.start;
+        selftx_entry.end = selftx.end;
+        selftx_entry.fc = selftx.fc;
+        selftx_entry.fs = selftx.fs;
 
-    selftx_->write(&entry, 1);
+        selftx_->write(&selftx_entry, 1);
+    }
 }
 
 typedef union {

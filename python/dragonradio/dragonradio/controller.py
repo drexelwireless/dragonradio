@@ -272,9 +272,9 @@ class Controller(CILServer):
         radio = dragonradio.radio.Radio(self.config, 'aloha', loop=self.loop)
         self.radio = radio
 
-        # Log snapshots if requested
-        if self.config.log_snapshots != 0:
-            radio.startSnapshotLogger()
+        # Collect snapshots if requested
+        if self.config.snapshot_period is not None:
+            radio.startSnapshots()
 
         # Capture interfaces
         for iface in self.config.log_interfaces:
