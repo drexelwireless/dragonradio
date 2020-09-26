@@ -14,6 +14,7 @@ import dragonradio.channels
 from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
 import dragonradio.schedule
 import dragonradio.signal
+import dragonradio.tasks
 
 logger = logging.getLogger('radio')
 
@@ -26,13 +27,18 @@ _MACS = { 'aloha': True
 def _isSlottedMAC(mac):
     return _MACS.get(mac, ValueError("Unknown MAC %s", mac))
 
-class Radio:
+class Radio(dragonradio.tasks.TaskManager):
     """Radio configuration, setup, and maintenance"""
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=no-member
 
-    def __init__(self, config, mac):
+    def __init__(self, config, mac, loop=None):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+
+        super().__init__(loop)
+
         logger.info('Radio version: %s', dragonradio.__version__)
         logger.info('Radio configuration:\n%s', str(config))
 
@@ -1045,7 +1051,11 @@ class Radio:
                 return path
             i += 1
 
-    async def snapshotLogger(self):
+    def startSnapshotLogger(self):
+        """Start the snapshot logger"""
+        self.createTask(self.snapshotLoggerTask(), name='snapshot logger')
+
+    async def snapshotLoggerTask(self):
         """Snapshot logging task"""
         if not self.logger:
             return

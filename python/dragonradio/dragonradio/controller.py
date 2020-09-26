@@ -269,12 +269,12 @@ class Controller(CILServer):
             logger.warning('Bandwidth not specified; using %f', self.config.bandwidth)
 
         # Create the radio object
-        radio = dragonradio.radio.Radio(self.config, 'aloha')
+        radio = dragonradio.radio.Radio(self.config, 'aloha', loop=self.loop)
         self.radio = radio
 
         # Log snapshots if requested
         if self.config.log_snapshots != 0:
-            self.createTask(radio.snapshotLogger())
+            radio.startSnapshotLogger()
 
         # Capture interfaces
         for iface in self.config.log_interfaces:
@@ -422,6 +422,10 @@ class Controller(CILServer):
 
             # Terminate any packet captures
             await self.cleanupDumpcap()
+
+            # Stop radio tasks
+            logger.info('Stopping radio tasks')
+            await self.radio.stopTasks()
 
             with await self.radio.lock:
                 # Remove all nodes

@@ -204,7 +204,7 @@ def main():
     loop = asyncio.get_event_loop()
 
     if config.log_snapshots != 0:
-        loop.create_task(radio.snapshotLogger())
+        radio.startSnapshotLogger()
 
     for sig in [signal.SIGINT, signal.SIGTERM]:
         loop.add_signal_handler(sig, cancel_loop)
