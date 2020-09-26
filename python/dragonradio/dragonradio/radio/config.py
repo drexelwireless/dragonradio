@@ -83,6 +83,8 @@ class Config:
         self.verbose = False
         self.debug = False
         self.node_id = getNodeIdFromHostname()
+        self.num_nodes = None
+        self.interactive = False
 
         # Log parameters
         self.log_directory = None
@@ -420,6 +422,12 @@ class Config:
                             dest='node_id',
                             metavar='ID',
                             help='set node ID')
+        parser.add_argument('-n', action='store', type=int, dest='num_nodes',
+                            metavar='N',
+                            help='set number of nodes in network')
+        parser.add_argument('--interactive', action='store_const', const=True,
+                            dest='interactive',
+                            help='enter interactive shell after radio is started')
 
         # Load configuration file
         parser.add_argument('--config', action=LoadConfigAction,

@@ -5,6 +5,7 @@ import logging
 import math
 import os
 import random
+import signal
 
 import numpy as np
 
@@ -117,6 +118,59 @@ class Radio(dragonradio.tasks.TaskManager):
     def __del__(self):
         if self.logger:
             self.logger.close()
+
+    def start(self, user_ns=locals()):
+        """Start the radio"""
+        # Start logging snapshots
+        if self.config.log_snapshots:
+            self.startSnapshotLogger()
+
+        # Add radio nodes to the network if number of nodes was specified
+        if self.config.num_nodes is not None:
+            for i in range(0, self.config.num_nodes):
+                self.net.addNode(i+1)
+
+        # Configure the MAC
+        self.configureMAC(self.config.mac)
+
+        # Either start the interactive loop or run the loop ourselves
+        if self.config.interactive:
+            import IPython.terminal.embed
+            from traitlets.config import Config
+            c = Config()
+
+            c.TerminalInteractiveShell.loop_runner = 'asyncio'
+            c.TerminalInteractiveShell.autoawait = True
+
+            user_ns['radio'] = self
+
+            shell = IPython.terminal.embed.InteractiveShellEmbed(config=c, user_ns=user_ns)
+            shell.enable_gui('asyncio')
+            shell()
+
+            self.stop()
+        else:
+            for sig in [signal.SIGINT, signal.SIGTERM]:
+                self.loop.add_signal_handler(sig, self.stop)
+
+            try:
+                self.loop.run_forever()
+            finally:
+                self.loop.close()
+
+        return 0
+
+    def stop(self):
+        """Stop the radio and all associated tasks"""
+        self.loop.create_task(self._stop())
+
+    async def _stop(self):
+        """Task to stop the radio and all associated tasks"""
+        # Stop radio tasks
+        await self.stopTasks()
+
+        # Wait for remaining tasks and stop the event loop
+        await dragonradio.tasks.stopEventLoop(self.loop, logger)
 
     def configureRadioConfig(self):
         """Configure the singleton RadioConfig object"""

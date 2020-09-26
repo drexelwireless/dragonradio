@@ -168,15 +168,14 @@ def cancel_loop():
     loop.create_task(cancel_tasks(loop))
 
 def main():
+    # Create configuration and set defaults
     config = dragonradio.radio.Config()
-    parser = config.parser()
 
-    # Default to TDMA
     config.mac = 'tdma'
+    config.num_nodes = 2
 
-    parser.add_argument('-n', action='store', type=int, dest='num_nodes',
-                        default=2,
-                        help='set number of nodes in network')
+    # Create command-line argument parser
+    parser = config.parser()
 
     # Parse arguments
     try:
@@ -188,33 +187,15 @@ def main():
     logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
                         level=config.loglevel)
 
+    # If a log directory is set, log packets and events
     if config.log_directory:
         config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events']
 
-    # Create the radio object
-    radio = Radio(config, config.mac)
+    # Create the radio
+    radio = dragonradio.radio.Radio(config, config.mac)
 
-    # Add all radio nodes to the network
-    for i in range(0, config.num_nodes):
-        radio.net.addNode(i+1)
-
-    # Configure the MAC
-    radio.configureMAC(config.mac)
-
-    loop = asyncio.get_event_loop()
-
-    if config.log_snapshots != 0:
-        radio.startSnapshotLogger()
-
-    for sig in [signal.SIGINT, signal.SIGTERM]:
-        loop.add_signal_handler(sig, cancel_loop)
-
-    try:
-        loop.run_forever()
-    finally:
-        loop.close()
-
-    return 0
+    # Run the radio
+    return radio.start()
 
 if __name__ == '__main__':
     main()

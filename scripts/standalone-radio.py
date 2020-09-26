@@ -1,120 +1,125 @@
-import argparse
 import asyncio
 from concurrent.futures import CancelledError
-import IPython
 from itertools import chain, cycle, starmap
 import logging
-import os
 import random
-import signal
-import sys
 
 import dragonradio
 import dragonradio.radio
 
-def cycle_algorithm(desc):
-    if desc == 'sequential':
-        return cycle(chain(range(25, -1, -1), range(1, 25, 1)))
-    elif desc == 'discontinuous':
-        return cycle(range(25, -1, -5))
-    elif desc == 'random':
-        def f():
-            return random.randint(0, 25)
+class CycleTXGain:
+    """Class for managing TX gain cycling"""
+    def __init__(self, algorithm, period):
+        self._algorithm = None
+        """Gain-cycling algorithm"""
 
-        return starmap(f, cycle([[]]))
-    else:
-        return []
+        self._generator = None
+        """Gain-cycling algorithm"""
 
-async def cycle_tx_gain(radio, period, gains):
-    try:
-        for g in gains:
-            radio.usrp.tx_gain = g
-            print("Gain: ", radio.usrp.tx_gain)
-            await asyncio.sleep(period)
-    except CancelledError:
-        pass
+        self._new_generator = False
+        """Use new generator"""
 
-async def cancel_tasks(loop):
-    tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
-    for task in tasks:
-        task.cancel()
-        await task
+        self.algorithm = algorithm
 
-    loop.stop()
+        self.period = period
+        """Gain-cycling period (sec)"""
 
-def cancel_loop():
-    loop = asyncio.get_event_loop()
-    loop.create_task(cancel_tasks(loop))
+        self.verbose = True
+        """Be verbose"""
+
+    @property
+    def algorithm(self):
+        """Gain-cycling algorithm. One of 'sequential', 'discontinuous', or 'random'"""
+        return self._algorithm
+
+    @algorithm.setter
+    def algorithm(self, algorithm):
+        new_generator = self._generator is not None
+
+        if algorithm == 'sequential':
+            self._generator = cycle(chain(range(25, -1, -1), range(1, 25, 1)))
+        elif algorithm == 'discontinuous':
+            self._generator = cycle(range(25, -1, -5))
+        elif algorithm == 'random':
+            def f():
+                return random.randint(0, 25)
+
+            self._generator = starmap(f, cycle([[]]))
+        else:
+            raise ValueError('Unknown gain cycling algorithm %s' % self.algorithm)
+
+        self._algorithm = algorithm
+        self._new_generator = new_generator
+
+    async def cycleTXGainTask(self, radio):
+        try:
+            while True:
+                for gain in self._generator:
+                    # Switch to new generator if needed
+                    if self._new_generator:
+                        self._new_generator = False
+                        break
+
+                    radio.usrp.tx_gain = gain
+
+                    if self.verbose:
+                        print("Gain: ", radio.usrp.tx_gain)
+
+                    await asyncio.sleep(self.period)
+
+        except CancelledError:
+            pass
 
 def main():
+    # Create configuration and set defaults
     config = dragonradio.radio.Config()
+
+    config.mac = 'tdma'
+    config.num_nodes = 2
+
+    # Create command-line argument parser
     parser = config.parser()
 
-    # Default to TDMA
-    config.mac = 'tdma'
+    gain_cycle = parser.add_argument_group('TX Gain cycling')
 
-    parser.add_argument('-n', action='store', type=int, dest='num_nodes',
-                        default=2,
-                        help='set number of nodes in network')
-    parser.add_argument('--interactive',
-                        action='store_true', dest='interactive',
-                        help='enter interactive shell after radio is configured')
-    parser.add_argument('--cycle-tx-gain', action='store',
-                        choices=['sequential', 'discontinuous', 'random'],
-                        help='enable TX gain cycling')
-    parser.add_argument('--cycle-tx-gain-period', type=float,
-                        default=10,
-                        help='TX gain cycling period')
+    gain_cycle.add_argument('--cycle-tx-gain', action='store',
+                            choices=['sequential', 'discontinuous', 'random'],
+                            help='enable TX gain cycling')
+    gain_cycle.add_argument('--cycle-tx-gain-period', type=float,
+                            default=10,
+                            metavar='SEC',
+                            help='TX gain cycling period')
 
     # Parse arguments
     try:
         parser.parse_args(namespace=config)
-    except SystemExit as ex:
-        return ex.code
+    except SystemExit as err:
+        return err.code
 
     # Set up logging
     logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
                         level=config.loglevel)
 
+    # If a log directory is set, log packets and events
     if config.log_directory:
         config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events']
 
-    # Create the radio object
+    # Create the radio
     radio = dragonradio.radio.Radio(config, config.mac)
 
-    # Add all radio nodes to the network
-    for i in range(0, config.num_nodes):
-        radio.net.addNode(i+1)
+    # Start TX gain cycling task
+    user_ns = {}
 
-    # Configure the MAC
-    radio.configureMAC(config.mac)
+    if config.cycle_tx_gain is not None:
+        tx_gain_cycler = CycleTXGain(config.cycle_tx_gain,
+                                     config.cycle_tx_gain_period)
+        user_ns['tx_gain_cycler'] = tx_gain_cycler
 
-    #
-    # Start IPython shell if we are in interactive mode. Otherwise, run the
-    # event loop.
-    #
-    if config.interactive:
-        IPython.embed()
-    else:
-        loop = asyncio.get_event_loop()
+        radio.createTask(tx_gain_cycler.cycleTXGainTask(radio),
+                         name='cycle TX gain')
 
-        if config.log_snapshots != 0:
-            radio.startSnapshotLogger()
-
-        if config.cycle_tx_gain is not None:
-            loop.create_task(cycle_tx_gain(radio,
-                                           config.cycle_tx_gain_period,
-                                           cycle_algorithm(config.cycle_tx_gain)))
-
-        for sig in [signal.SIGINT, signal.SIGTERM]:
-            loop.add_signal_handler(sig, cancel_loop)
-
-        try:
-            loop.run_forever()
-        finally:
-            loop.close()
-
-    return 0
+    # Run the radio
+    return radio.start(user_ns=user_ns)
 
 if __name__ == '__main__':
     main()
