@@ -1,0 +1,20 @@
+- name: Install packages needed for gpsd {{version}}
+  apt:
+    state: present
+    pkg:
+      - scons
+
+- name: Download gpsd {{version}}
+  unarchive:
+      src: https://download-mirror.savannah.gnu.org/releases/gpsd/gpsd-{{version}}.tar.gz
+      dest: /tmp
+      remote_src: yes
+      extra_opts: --no-same-owner
+
+- name: Install gpsd {{version}}
+  shell: "{{item}}"
+  args:
+    chdir: /tmp/gpsd-{{version}}
+  with_items:
+    - scons
+    - scons udev-install

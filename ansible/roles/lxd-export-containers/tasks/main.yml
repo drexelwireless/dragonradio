@@ -1,0 +1,22 @@
+- name: Stop containers
+  connection: local
+  become: false
+  shell: lxc stop -f "{{item}}"
+  with_items: "{{containers}}"
+
+- name: Publish containers
+  connection: local
+  become: false
+  shell: lxc publish "{{item}}" --alias "{{item}}"
+  with_items: "{{containers}}"
+
+- name: Create image export directory
+  file:
+    path: "{{lxd_export_dir}}"
+    state: directory
+
+- name: Export containers
+  connection: local
+  become: false
+  shell: lxc image export "{{item}}" "{{lxd_export_dir}}"/"{{item}}"
+  with_items: "{{containers}}"

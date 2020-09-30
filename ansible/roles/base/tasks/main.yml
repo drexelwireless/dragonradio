@@ -1,0 +1,24 @@
+- name: Install miscellaneous packages
+  apt:
+    state: present
+    pkg:
+      # Misc
+      - curl
+      - gdb
+      - git
+      - openssh-server
+      - tmux
+      - wget
+      - zsh
+      # Editors
+      - emacs-nox
+      - vim-nox
+      # Network tools
+      - iperf
+      - iperf3
+      - netcat-openbsd
+      - nmap
+      - socat
+      - tcpdump
+      - traceroute
+      - tshark

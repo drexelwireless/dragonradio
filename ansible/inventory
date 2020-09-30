@@ -1,0 +1,5 @@
+[containers]
+dragonradio-1604-base alias=base-1604-nocuda
+
+[containers:vars]
+ansible_connection=lxd

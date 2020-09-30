@@ -1,0 +1,7 @@
+- name: Change passwords
+  user:
+    name: "{{ item }}"
+    password: "{{ password }}"
+  with_items:
+    - root
+    - srn-user

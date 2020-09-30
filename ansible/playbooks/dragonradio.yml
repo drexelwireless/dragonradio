@@ -1,0 +1,30 @@
+- hosts: localhost
+  connection: local
+  roles:
+    - role: lxd-create-containers
+      containers:
+        - dragonradio-1604-base
+
+- hosts: dragonradio-1604-base
+  connection: local
+  become: false
+  roles:
+    - update
+    - base
+    - dragonradio-base
+    - passwd
+    - colosseum-cli
+    - mgen
+    - role: gpsd
+      version: 3.17
+    - role: protobuf
+      version: 3.13.0
+    - clean
+
+- hosts: localhost
+  connection: local
+  roles:
+    - role: lxd-export-containers
+      containers:
+        - dragonradio-1604-base
+      lxd_export_dir: ../../images

@@ -1,0 +1,35 @@
+- name: Install packages needed for protobuf {{version}}
+  apt:
+    state: present
+    pkg:
+      - autoconf
+      - automake
+      - libtool
+      - curl
+      - make
+      - g++
+      - unzip
+
+- name: Fetch protobuf {{version}}
+  unarchive:
+    src: https://github.com/google/protobuf/releases/download/v{{version}}/protobuf-python-{{version}}.tar.gz
+    dest: /tmp
+    remote_src: yes
+    extra_opts: --no-same-owner
+
+- name: Install protobuf {{version}}
+  shell: "{{item}}"
+  args:
+    chdir: /tmp/protobuf-{{version}}
+  with_items:
+    - ./configure
+    - make
+    - make install
+    - ldconfig
+
+- name: Remove protobuf {{version}} leftovers
+  file:
+    state: absent
+    path: /tmp/{{item}}
+  with_items:
+    - /tmp/protobuf-{{version}}

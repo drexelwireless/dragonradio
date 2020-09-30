@@ -1,0 +1,73 @@
+- name: Create LXD Container from Remote Image
+  connection: local
+  become: false
+  lxd_container:
+    name: "{{item}}"
+    source:
+      type: image
+      mode: pull
+      server: "{{hostvars[item]['server']}}"
+      protocol: simplestreams
+      alias: "{{hostvars[item]['alias']}}"
+    wait_for_ipv4_addresses: true
+    timeout: 600
+  when: "'server' in hostvars[item]"
+  with_items: "{{containers}}"
+
+- name: Create LXD Container from Local Image
+  connection: local
+  become: false
+  lxd_container:
+    name: "{{item}}"
+    source:
+      type: image
+      alias: "{{hostvars[item]['alias']}}"
+    wait_for_ipv4_addresses: true
+    timeout: 600
+  when: "'server' not in hostvars[item]"
+  with_items: "{{containers}}"
+
+- name: Set auto start
+  connection: local
+  become: false
+  shell: "lxc config set {{item}} boot.autostart {{ hostvars[item]['autostart'] }}"
+  when: "'autostart' in hostvars[item]"
+  with_items: "{{containers}}"
+
+- name: Set MAC address
+  connection: local
+  become: false
+  lxd_container:
+    name: "{{item}}"
+    config:
+      volatile.eth0.hwaddr: "{{hostvars[item]['macaddr']}}"
+  when: "'macaddr' in hostvars[item]"
+  with_items: "{{containers}}"
+
+- name: Enable security.nesting
+  connection: local
+  become: false
+  shell: "lxc config set {{item}} security.nesting {{ hostvars[item]['nesting'] }}"
+  when: "'nesting' in hostvars[item]"
+  with_items: "{{containers}}"
+
+- name: Enable security.privileged
+  connection: local
+  become: false
+  shell: "lxc config set {{item}} security.privileged {{ hostvars[item]['nesting'] }}"
+  when: "'nesting' in hostvars[item]"
+  with_items: "{{containers}}"
+
+- name: Set IPv4 address
+  connection: local
+  become: false
+  lxd_container:
+    name: "{{item}}"
+    devices:
+      eth0:
+        nictype: bridged
+        parent: lxdbr0
+        type: nic
+        ipv4.address: "{{hostvars[item]['ipv4']}}"
+  when: "'ipv4' in hostvars[item]"
+  with_items: "{{containers}}"

@@ -1,0 +1,13 @@
+- name: Update and upgrade apt packages
+  block:
+    - name: Wait for dpkg lock
+      shell: while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 1; done;
+
+    - name: Update and upgrade apt packages
+      become: true
+      apt:
+        upgrade: 'yes'
+        update_cache: yes
+        autoremove: yes
+  rescue:
+    - include_tasks: main.yml

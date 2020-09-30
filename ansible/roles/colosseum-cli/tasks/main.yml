@@ -1,0 +1,32 @@
+# See:
+#   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220365-colosseum-cli
+- name: Copy colosseumcli files to destination
+  unarchive:
+    src: files/{{item}}
+    dest: /tmp
+    extra_opts: '--no-same-owner'
+  with_items:
+    - colosseumcli-18.05.0-2.tar.gz
+    - colosseum_cli_prereqs.tar.gz
+
+- name: Copy pip requirements
+  copy:
+    src: files/requirements.txt
+    dest: /tmp/colosseumcli-requirements.txt
+
+- name: Install colosseumcli requirements
+  shell: pip3 install -r /tmp/colosseumcli-requirements.txt
+
+- name: Install colosseumcli
+  shell: python3 setup.py install
+  args:
+    chdir: /tmp/colosseumcli-18.05.0
+
+- name: Remove colosseumcli leftovers
+  file:
+    state: absent
+    path: /tmp/{{item}}
+  with_items:
+    - colosseumcli-18.05.0
+    - colosseum_cli_prereqs
+    - colosseumcli-requirements.txt

@@ -1,0 +1,10 @@
+#PyYAML==3.12
+appdirs==1.4.3
+#cliff==2.4.0
+#cmd2==0.7.0
+packaging==16.8
+pbr==2.0.0
+prettytable==0.7.2
+pyparsing==2.2.0
+six==1.10.0
+stevedore==1.21.0
