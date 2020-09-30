@@ -5,7 +5,9 @@
 #include "Logger.hh"
 #include "python/PyModules.hh"
 
+#if !defined(DOXYGEN)
 PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
+#endif /* !defined(DOXYGEN) */
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
 {

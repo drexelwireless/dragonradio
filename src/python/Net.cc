@@ -10,7 +10,9 @@
 #include "net/Queue.hh"
 #include "python/PyModules.hh"
 
+#if !defined(DOXYGEN)
 PYBIND11_MAKE_OPAQUE(MandateMap)
+#endif /* !defined(DOXYGEN) */
 
 void exportNet(py::module &m)
 {

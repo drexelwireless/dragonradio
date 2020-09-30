@@ -4,6 +4,10 @@
 #include "liquid/OFDM.hh"
 #include "liquid/PHY.hh"
 
+#if defined(DOXYGEN)
+#define final
+#endif /* defined(DOXYGEN) */
+
 namespace Liquid {
 
 /** @brief A %PHY thats uses the liquid-usrp ofdmflexframegen code. */
@@ -59,6 +63,10 @@ public:
     };
 
     /** @brief Construct an OFDM PHY.
+     * @param header_mcs The MCS used to the packet header
+     * @param mcs_table The MCS table
+     * @param soft_header True if soft decoding should be used for header
+     * @param soft_payload True if soft decoding should be used for payload
      * @param M The number of subcarriers.
      * @param cp_len The cyclic prefix length
      * @param taper_len The taper length (OFDM symbol overlap)

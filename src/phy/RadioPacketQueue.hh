@@ -11,9 +11,9 @@
 #include "Packet.hh"
 
 /** @brief A thread-safe queue of network packets. Handles barriers. */
-/** This is a specialized queue for RadioPacket@s that handles barrier packets. A
+/** This is a specialized queue for RadioPackets that handles barrier packets. A
  * barrier packet is a special packet that will not be removed from a queue---
- * seeing a barrier packet is like seeign the end of the queue. Barriers allow
+ * seeing a barrier packet is like seeing the end of the queue. Barriers allow
  * proper ordering: a producer can insert a barrier, insert packets before the
  * barrier, then remove the barrier when it is done producing, thereby
  * guaranteeing that packets inserted *after* the barrier will not be read from
@@ -53,7 +53,7 @@ public:
     barrier pushBarrier(void);
 
     /** @brief Erase a barrier from the queue.
-     * @param The barrier.
+     * @param b The barrier.
      */
     void eraseBarrier(barrier b);
 
@@ -79,6 +79,5 @@ private:
     /** @brief The queue of packets. */
     std::list<entry> q_;
 };
-
 
 #endif /* RADIOPACKETQUEUE_H_ */

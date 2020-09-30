@@ -5,7 +5,9 @@
 #include "cil/Scorer.hh"
 #include "python/PyModules.hh"
 
+#if !defined(DOXYGEN)
 PYBIND11_MAKE_OPAQUE(MandateMap)
+#endif /* !defined(DOXYGEN) */
 
 void exportCIL(py::module &m)
 {

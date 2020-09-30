@@ -22,6 +22,13 @@
 #include "phy/Channel.hh"
 #include "phy/Modem.hh"
 
+#if defined(DOXYGEN)
+#define PACKED
+#error PACKED
+#else /* !DOXYGEN */
+#define PACKED __attribute__((packed))
+#endif /* !DOXYGEN */
+
 /** @brief A time */
 struct Time {
     uint64_t secs;
@@ -67,7 +74,7 @@ struct ControlMsg {
         Time t_sent;
         /** @brief Receiver's timestamp of packet */
         Time t_recv;
-    } __attribute__((packed));
+    } PACKED;
 
     struct ReceiverStats {
         /** @brief Long-term EVM at receiver */
@@ -100,7 +107,7 @@ struct ControlMsg {
         SelectiveAck ack;
         SetUnack unack;
     };
-} __attribute__((packed));
+} PACKED;
 
 /** @brief A flow UID. */
 typedef uint16_t FlowUID;

@@ -234,7 +234,11 @@ private:
 
 void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap);
 
-void logEventAt(const Clock::time_point& t, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+void logEventAt(const Clock::time_point& t, const char *fmt, ...)
+#if !defined(DOXYGEN)
+__attribute__((format(printf, 2, 3)))
+#endif
+;
 
 inline void logEventAt(const Clock::time_point& t, const char *fmt, ...)
 {
@@ -245,7 +249,11 @@ inline void logEventAt(const Clock::time_point& t, const char *fmt, ...)
     va_end(ap);
 }
 
-void logEvent(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void logEvent(const char *fmt, ...)
+#if !defined(DOXYGEN)
+__attribute__((format(printf, 1, 2)))
+#endif
+;
 
 inline void logEvent(const char *fmt, ...)
 {

@@ -9,7 +9,13 @@
 #include "IQCompression/FLAC.hh"
 #include "python/PyModules.hh"
 
-class __attribute__ ((visibility("hidden"))) PyArrayEncoder : public FLACMemoryEncoder {
+#if defined(DOXYGEN)
+#define HIDDEN
+#else /* !DOXYGEN */
+#define HIDDEN __attribute__ ((visibility("hidden")))
+#endif /* !DOXYGEN */
+
+class HIDDEN PyArrayEncoder : public FLACMemoryEncoder {
 public:
     PyArrayEncoder()
     {
@@ -39,7 +45,7 @@ protected:
     }
 };
 
-class __attribute__ ((visibility("hidden"))) PyArrayDecoder : public FLACMemoryDecoder {
+class HIDDEN PyArrayDecoder : public FLACMemoryDecoder {
 public:
     PyArrayDecoder(const char *encoded, size_t n)
         : FLACMemoryDecoder(encoded, n)

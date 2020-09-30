@@ -21,7 +21,7 @@ void RadioPacketQueue::push(const std::shared_ptr<RadioPacket> &pkt)
     cond_.notify_one();
 }
 
-void RadioPacketQueue::push(RadioPacketQueue::barrier b,
+void RadioPacketQueue::push(barrier b,
                             const std::shared_ptr<RadioPacket> &pkt)
 {
     {

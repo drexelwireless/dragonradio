@@ -8,7 +8,11 @@
 /** @brief Execute a shell command specified with a printf-style format using
  * system.
  */
-int sys(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+int sys(const char *fmt, ...)
+#if !defined(DOXYGEN)
+__attribute__((format(printf, 1, 2)))
+#endif
+;
 
 /** @brief Make thread have real-time priority. */
 void setRealtimePriority(void);

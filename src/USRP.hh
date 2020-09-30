@@ -200,7 +200,7 @@ public:
 
     /** @brief Receive specified number of samples at the given time
      * @param when The time at which to start receiving.
-     * @param The number of samples to receive.
+     * @param nsamps The number of samples to receive.
      * @param buf The IQBuf to hold received IQ samples. The buffer should be at
      * least getRecommendedBurstRXSize(nsamps) bytes.
      * @returns Returns true if the burst was successfully received, false

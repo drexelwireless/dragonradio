@@ -5,7 +5,9 @@
 #include "net/FlowPerformance.hh"
 #include "python/PyModules.hh"
 
+#if !defined(DOXYGEN)
 PYBIND11_MAKE_OPAQUE(MandateMap)
+#endif /* !defined(DOXYGEN) */
 
 void exportFlow(py::module &m)
 {

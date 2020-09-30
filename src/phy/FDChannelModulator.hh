@@ -4,6 +4,10 @@
 #include "dsp/FDResample.hh"
 #include "phy/Synthesizer.hh"
 
+#if defined(DOXYGEN)
+#define final
+#endif /* defined(DOXYGEN) */
+
 /** @brief Channel state for frequency-domain modulation */
 class FDChannelModulator : public ChannelModulator {
 public:

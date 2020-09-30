@@ -47,6 +47,9 @@ struct Channel {
     double bw;
 };
 
+#if !defined(DOXYGEN)
+// Doxygen complains:
+// warning: Internal inconsistency: scope for class std::hash< Channel > not found!
 template<>
 struct std::hash<Channel> {
     size_t operator()(const Channel &chan)
@@ -57,6 +60,7 @@ struct std::hash<Channel> {
         return h;
     }
 };
+#endif /* !defined(DOXYGEN) */
 
 using C = std::complex<float>;
 

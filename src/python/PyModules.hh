@@ -10,7 +10,9 @@
 
 namespace py = pybind11;
 
+#if !defined(DOXYGEN)
 PYBIND11_MAKE_OPAQUE(Channels)
+#endif /* !defined(DOXYGEN) */
 
 template <class D, class P, class T>
 struct PortWrapper

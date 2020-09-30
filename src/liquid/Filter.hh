@@ -9,6 +9,10 @@
 
 #include "dsp/Filter.hh"
 
+#if defined(DOXYGEN)
+#define final
+#endif /* defined(DOXYGEN) */
+
 namespace Liquid {
 
 using C = std::complex<float>;

@@ -165,9 +165,6 @@ class EMA : public Estimator<T> {
 public:
     /** @brief Create and EMA estimator
      * @param alpha The weight used to update the EMA
-     * @param initial_value The initial value of the EMA
-     * @param mean_until The number of samples before which we estimate using
-     * a mean instead of an EMA
      */
     explicit EMA(T alpha)
       : value_(0.0)
@@ -177,6 +174,12 @@ public:
     {
     }
 
+    /** @brief Create and EMA estimator
+     * @param alpha The weight used to update the EMA
+     * @param initial_value The initial value of the EMA
+     * @param mean_until The number of samples before which we estimate using
+     * a mean instead of an EMA
+     */
     EMA(T alpha, T initial_value, unsigned mean_until)
       : value_(initial_value)
       , nsamples_(0)

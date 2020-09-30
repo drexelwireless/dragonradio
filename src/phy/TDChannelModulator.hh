@@ -4,6 +4,10 @@
 #include "dsp/Polyphase.hh"
 #include "phy/Synthesizer.hh"
 
+#if defined(DOXYGEN)
+#define final
+#endif /* defined(DOXYGEN) */
+
 /** @brief Channel state for time-domain modulation */
 class TDChannelModulator : public ChannelModulator {
 public:

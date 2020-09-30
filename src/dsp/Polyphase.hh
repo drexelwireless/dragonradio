@@ -13,6 +13,10 @@
 #include "dsp/TableNCO.hh"
 #include "dsp/Window.hh"
 
+#if defined(DOXYGEN)
+#define final
+#endif /* defined(DOXYGEN) */
+
 namespace Dragon {
 
 /** @brief A polyphase filter bank */
@@ -412,6 +416,7 @@ public:
     /** @brief Construct a polyphase rational resampler
      * @param l The upsampling rate
      * @param m The downsampling rate
+     * @param rad The frequency shift (radians)
      * @param taps The taps for the prototype FIR filter. The filter must be
      * designed to run at the upsampler rater.
      */
@@ -425,6 +430,7 @@ public:
 
     /** @brief Construct a polyphase rational resampler
      * @param r The resampler rate
+     * @param rad Frequency shift (radians)
      * @param taps The taps for the prototype FIR filter. The filter must be
      * designed to run at the upsampler rater.
      */

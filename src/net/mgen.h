@@ -7,6 +7,12 @@
 
 #include "Clock.hh"
 
+#if defined(DOXYGEN)
+#define PACKED
+#else /* !DOXYGEN */
+#define PACKED __attribute__((packed))
+#endif /* !DOXYGEN */
+
 enum {
     /** @brief MGEN version number */
     MGEN_VERSION = 2,
@@ -42,7 +48,7 @@ typedef uint32_t mgen_secs_t;
 typedef uint32_t mgen_usecs_t;
 
 /** @brief A DARPA-variant MGEN packet header */
-struct __attribute__((__packed__)) darpa_mgenhdr {
+struct PACKED darpa_mgenhdr {
    uint16_t messageSize;
    uint8_t version;
    uint8_t flags;
@@ -57,7 +63,7 @@ struct __attribute__((__packed__)) darpa_mgenhdr {
 /** See:
  * https://downloads.pf.itd.nrl.navy.mil/docs/mgen/mgen.html
  */
-struct __attribute__((__packed__)) mgenhdr {
+struct PACKED mgenhdr {
     uint16_t messageSize;
     uint8_t version;
     uint8_t flags;
@@ -117,13 +123,13 @@ struct __attribute__((__packed__)) mgenhdr {
     }
 };
 
-struct __attribute__((__packed__)) mgenaddr {
+struct PACKED mgenaddr {
     uint16_t dstPort;
     uint8_t dstAddrType;
     uint8_t dstAddrLen;
 };
 
-struct __attribute__((__packed__)) mgenstdaddr {
+struct PACKED mgenstdaddr {
     uint16_t dstPort;
     uint8_t dstAddrType;
     uint8_t dstAddrLen;
@@ -133,7 +139,7 @@ struct __attribute__((__packed__)) mgenstdaddr {
     uint8_t hostAddrLen;
 };
 
-struct __attribute__((__packed__)) mgenrest {
+struct PACKED mgenrest {
     int32_t latitude;
     int32_t longitude;
     int32_t altitude;
@@ -142,7 +148,7 @@ struct __attribute__((__packed__)) mgenrest {
     uint16_t payloadLen;
 };
 
-struct __attribute__((__packed__)) darpa_mgenrest {
+struct PACKED darpa_mgenrest {
     int8_t tos;
     int32_t latitude;
     int32_t longitude;

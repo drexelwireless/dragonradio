@@ -94,7 +94,7 @@ struct AutoGain {
     }
 
     /** @brief Set soft TX gain (multiplicative factor).
-     * @param dB The soft gain (multiplicative factor).
+     * @param g The soft gain (multiplicative factor).
      */
     void setSoftTXGain(float g)
     {
@@ -142,7 +142,7 @@ struct AutoGain {
     }
 
     /** @brief Calculate soft TX gain necessary for 0 dBFS.
-     * @param tx_params The PHY TX parameters we are measuring against.
+     * @param g Gain applied to buf.
      * @param buf The IQ buffer for which we are calculating soft gain.
      */
     void autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf);

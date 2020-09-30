@@ -72,7 +72,7 @@ public:
 
     /** @brief Compute dot product of window
      * @param ys The second argument to the dot product
-     * @param tag An xsimd alignment tag indicating the alignment of ys.
+     * @param _tag An xsimd alignment tag indicating the alignment of ys.
      */
     /** The array `ys` must have an integral multiple of `xsimd::simd_type<C>`
      * elements. Any elements in `ys` beyond the first `n`, where `n` is the
@@ -80,7 +80,7 @@ public:
      * product very efficiently with vector instructions.
      */
     template<class C, class Tag>
-    T dotprod(const C *ys, Tag)
+    T dotprod(const C *ys, Tag _tag)
     {
         using tvec_t = xsimd::simd_type<T>;
         using cvec_t = xsimd::simd_type<C>;

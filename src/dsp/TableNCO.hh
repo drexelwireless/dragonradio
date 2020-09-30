@@ -4,6 +4,10 @@
 #include "dsp/sintab.hh"
 #include "dsp/NCO.hh"
 
+#if defined(DOXYGEN)
+#define final
+#endif /* defined(DOXYGEN) */
+
 using namespace std::complex_literals;
 
 constexpr int INTBITS = 12;

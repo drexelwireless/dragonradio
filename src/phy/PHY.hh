@@ -56,7 +56,7 @@ public:
 
         /** @brief Modulate a packet to produce IQ samples.
          * @param pkt The NetPacket to modulate.
-         * @param g Soft (multiplicative) gain to apply to modulated signal.
+         * @param gain Soft (multiplicative) gain to apply to modulated signal.
          * @param mpkt The ModPacket in which to place modulated samples.
          */
         virtual void modulate(std::shared_ptr<NetPacket> pkt,
@@ -116,8 +116,6 @@ public:
         /** @brief Demodulate IQ samples.
          * @param data The IQ data to demodulate
          * @param count The number of samples to demodulate
-         * @param callback The function to call with any demodulated packets. If
-         * a bad packet is received, the argument will be nullptr.
          */
         virtual void demodulate(const std::complex<float>* data,
                                 size_t count) = 0;

@@ -19,6 +19,12 @@ typedef uint8_t NodeId;
 
 const NodeId kNodeBroadcast = 255;
 
+#if defined(DOXYGEN)
+#define PACKED
+#else /* !DOXYGEN */
+#define PACKED __attribute__((packed))
+#endif /* !DOXYGEN */
+
 /** @brief %PHY packet header. */
 struct Header {
     /** @brief Current hop. */
@@ -50,7 +56,7 @@ struct Header {
         /** @brief Unused flags */
         uint8_t unused : 3;
     } flags;
-} __attribute__((packed));
+} PACKED;
 
 /** @brief Extended header that appears in radio payload. */
 struct ExtendedHeader {

@@ -62,6 +62,7 @@ private:
                       ModPacket &mpkt) override;
 
         /** @brief Specify the next slot to modulate.
+         * @param prev_slot The previous slot
          * @param slot The new slot
          * @param overfill true if this slot can be overfilled
          */

@@ -4,7 +4,9 @@
 #include "mac/Snapshot.hh"
 #include "python/PyModules.hh"
 
+#if !defined(DOXYGEN)
 PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
+#endif /* !defined(DOXYGEN) */
 
 void exportSnapshot(py::module &m)
 {
