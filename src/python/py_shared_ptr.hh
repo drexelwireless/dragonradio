@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 // See:
 //   https://pybind11.readthedocs.io/en/stable/advanced/cast/custom.html
 //   https://github.com/pybind/pybind11/issues/1145

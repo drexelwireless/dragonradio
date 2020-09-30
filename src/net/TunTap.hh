@@ -1,8 +1,6 @@
-/* TunTap.hh
- *
- * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited)
- *
- */
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef TUNTAP_HH_
 #define TUNTAP_HH_
 

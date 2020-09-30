@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef POLYPHASE_H_
 #define POLYPHASE_H_
 
@@ -35,7 +38,10 @@ public:
       , w_(1)
     {
         reconfigure();
-    }
+    }// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
+
 
     Pfb() = delete;
 

@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef IQCOMPRESSION_FLAC_H_
 #define IQCOMPRESSION_FLAC_H_
 

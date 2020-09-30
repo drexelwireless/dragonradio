@@ -1,3 +1,6 @@
+# Copyright 2018-2020 Drexel University
+# Author: Geoffrey Mainland <mainland@drexel.edu>
+
 """MAC schedule construction"""
 import numpy as np
 

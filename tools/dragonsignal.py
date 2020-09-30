@@ -1,3 +1,6 @@
+# Copyright 2018-2020 Drexel University
+# Author: Geoffrey Mainland <mainland@drexel.edu>
+
 from fractions import Fraction
 import math
 import matplotlib as mp

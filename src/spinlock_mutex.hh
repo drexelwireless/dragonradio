@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef SPINLOCK_MUTEX_HH
 #define SPINLOCK_MUTEX_HH
 

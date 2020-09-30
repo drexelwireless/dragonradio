@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef LIQUID_NCO_HH_
 #define LIQUID_NCO_HH_
 

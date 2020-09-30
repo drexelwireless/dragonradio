@@ -1,3 +1,6 @@
+# Copyright 2018-2020 Drexel University
+# Author: Geoffrey Mainland <mainland@drexel.edu>
+
 """Collaboration support"""
 import asyncio
 from functools import (wraps)

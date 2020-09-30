@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #include "phy/FDChannelModulator.hh"
 
 void FDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,

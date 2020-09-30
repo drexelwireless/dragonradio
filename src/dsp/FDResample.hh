@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef FDRESAMPLE_HH_
 #define FDRESAMPLE_HH_
 

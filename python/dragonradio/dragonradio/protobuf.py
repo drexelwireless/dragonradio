@@ -1,3 +1,6 @@
+# Copyright 2018-2020 Drexel University
+# Author: Geoffrey Mainland <mainland@drexel.edu>
+
 """Support for protobuf over UDP, TCP, and ZMQ"""
 import asyncio
 from functools import partial, wraps

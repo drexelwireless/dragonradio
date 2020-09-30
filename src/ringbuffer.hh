@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef _RINGBUFFER_HH_
 #define _RINGBUFFER_HH_
 

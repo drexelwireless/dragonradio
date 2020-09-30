@@ -1,4 +1,6 @@
 #!/bin/sh
+# Copyright 2018-2020 Drexel University
+# Author: Geoffrey Mainland <mainland@drexel.edu>
 CONTAINER=$1; shift
 
 UID=$(id -u)

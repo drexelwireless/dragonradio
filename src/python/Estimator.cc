@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #include "Clock.hh"
 #include "python/PyModules.hh"
 #include "stats/Estimator.hh"

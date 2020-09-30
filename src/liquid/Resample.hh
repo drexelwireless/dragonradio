@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef LIQUID_RESAMPLE_HH_
 #define LIQUID_RESAMPLE_HH_
 

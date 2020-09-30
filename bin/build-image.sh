@@ -1,4 +1,6 @@
 #!/bin/sh
+# Copyright 2018-2020 Drexel University
+# Author: Geoffrey Mainland <mainland@drexel.edu>
 set -e
 
 usage() { echo "Usage: $0 [-s] REV" 1>&2; exit 1; }

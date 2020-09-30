@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #include "ParallelChannelSynthesizer.hh"
 
 #include <pybind11/pybind11.h>

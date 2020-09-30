@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef FDCHANNELMODULATOR_H_
 #define FDCHANNELMODULATOR_H_
 

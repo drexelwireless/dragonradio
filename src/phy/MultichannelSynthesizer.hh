@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef MULTICHANNELSYNTHESIZER_H_
 #define MULTICHANNELSYNTHESIZER_H_
 

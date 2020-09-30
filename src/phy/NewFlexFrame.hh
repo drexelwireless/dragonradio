@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef NEWFLEXFRAME_H_
 #define NEWFLEXFRAME_H_
 

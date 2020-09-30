@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #include <sys/types.h>
 #include <netinet/if_ether.h>
 #include <netinet/in.h>

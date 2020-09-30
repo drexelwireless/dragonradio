@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef TIMEWINDOWESTIMATOR_HH_
 #define TIMEWINDOWESTIMATOR_HH_
 

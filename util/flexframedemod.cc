@@ -1,3 +1,6 @@
+// Copyright 2018 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

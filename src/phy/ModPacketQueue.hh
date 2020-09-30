@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef MODPACKETQUEUE_HH_
 #define MODPACKETQUEUE_HH_
 
