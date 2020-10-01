@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
 
-import dragonradio
+import dragonradio.radio
 
 import drlog
 import drgui
@@ -65,14 +65,14 @@ def modulate(hdr, mcs, payload, cbw, Fc, Fs):
     wp = cbw-100e3
     ws = cbw+100e3
 
-    upsamp = dragonradio.RationalResamplerCCC(Fs/cbw)
+    upsamp = dragonradio.radio.RationalResamplerCCC(Fs/cbw)
     upsamp.taps = lowpass(wp, ws, upsamp.down_rate*Fs, atten=90)
 
     upsampled = upsamp.resample(np.append(sig, np.zeros(math.ceil(upsamp.delay))))
     upsampled = upsampled[math.floor(upsamp.rate*upsamp.delay):]
 
     # Frequency shift
-    nco = dragonradio.TableNCO(2*math.pi*Fc/Fs)
+    nco = dragonradio.radio.TableNCO(2*math.pi*Fc/Fs)
     mixed = nco.mix_up(upsampled)
 
     return mixed
@@ -90,14 +90,14 @@ def demodulate(sig, cbw, Fc, Fs, plot=False):
         Modulated and mixed signals.
     """
     # Frequency shift
-    nco = dragonradio.TableNCO(2*math.pi*Fc/Fs)
+    nco = dragonradio.radio.TableNCO(2*math.pi*Fc/Fs)
     mixed = nco.mix_down(sig)
 
     # Downsample
     wp = cbw-100e3
     ws = cbw+100e3
 
-    downsamp = dragonradio.RationalResamplerCCC(cbw/Fs)
+    downsamp = dragonradio.radio.RationalResamplerCCC(cbw/Fs)
     downsamp.taps = lowpass(wp, ws, downsamp.up_rate*Fs, atten=90)
 
     downsampled = downsamp.resample(np.append(mixed, np.zeros(math.ceil(downsamp.delay))))
@@ -138,7 +138,7 @@ def modulateMix(hdr, mcs, payload, cbw, Fc, Fs):
 
     fshift = 2*math.pi*Fc/Fs
     taps = lowpass(wp, ws, Fs, atten=90)
-    upsamp = dragonradio.MixingRationalResamplerCCC(Fs/cbw, fshift, taps)
+    upsamp = dragonradio.radio.MixingRationalResamplerCCC(Fs/cbw, fshift, taps)
 
     upsampled = upsamp.resampleMixUp(np.append(sig, np.zeros(math.ceil(upsamp.delay))))
     upsampled = upsampled[math.floor(upsamp.rate*upsamp.delay):]
@@ -163,7 +163,7 @@ def demodulateMix(sig, cbw, Fc, Fs, plot=False):
 
     fshift = 2*math.pi*Fc/Fs
     taps = lowpass(wp, ws, Fs, atten=90)
-    downsamp = dragonradio.MixingRationalResamplerCCC(cbw/Fs, fshift, taps)
+    downsamp = dragonradio.radio.MixingRationalResamplerCCC(cbw/Fs, fshift, taps)
 
     downsampled = downsamp.resampleMixDown(np.append(sig, np.zeros(math.ceil(downsamp.delay))))
     downsampled = downsampled[math.floor(downsamp.rate*downsamp.delay):]

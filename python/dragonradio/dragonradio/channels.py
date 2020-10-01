@@ -2,7 +2,10 @@
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Channel planning"""
-from dragonradio import Channel
+try:
+  from _dragonradio.radio import Channel
+except:
+  pass
 
 def defaultChannelPlan(bandwidth, cbw,
                        cgbw=0,

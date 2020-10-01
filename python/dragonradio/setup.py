@@ -27,7 +27,7 @@ setup(
     scripts=['scripts/dragonradio-client'],
     use_scm_version = {
         'root': ROOT,
-        'write_to': os.path.join(ROOT, 'python/dragonradio/dragonradio/version.py')
+        'write_to': os.path.join(ROOT, 'python/dragonradio/dragonradio/radio/version.py')
     },
     setup_requires=['setuptools_scm'],
     install_requires=['ipython==7.18.1'

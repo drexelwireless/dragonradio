@@ -7,6 +7,6 @@ docs/doxygen/
 obj/
 python/dragonradio/.eggs
 python/dragonradio/build
-python/dragonradio/dragonradio/version.py
+python/dragonradio/dragonradio/radio/version.py
 python/dragonradio/dragonradio.egg-info
 python/dragonradio/tmp

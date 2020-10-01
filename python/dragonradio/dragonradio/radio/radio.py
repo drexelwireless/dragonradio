@@ -12,13 +12,18 @@ import signal
 
 import numpy as np
 
-import dragonradio
-from dragonradio import Channel, Channels # pylint: disable=no-name-in-module
+try:
+  from _dragonradio.radio import *
+except:
+  pass
+
 import dragonradio.channels
 from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
 import dragonradio.schedule
 import dragonradio.signal
 import dragonradio.tasks
+
+from .version import version as __version__
 
 logger = logging.getLogger('radio')
 
@@ -43,7 +48,7 @@ class Radio(dragonradio.tasks.TaskManager):
 
         super().__init__(loop)
 
-        logger.info('Radio version: %s', dragonradio.__version__)
+        logger.info('Radio version: %s', __version__)
         logger.info('Radio configuration:\n%s', str(config))
 
         self.config = config
@@ -83,7 +88,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.configureRadioConfig()
 
         # Add global work queue workers
-        dragonradio.work_queue.addThreads(1)
+        work_queue.addThreads(1)
 
         # Initialize USRP
         self.configureUSRP()
@@ -178,26 +183,26 @@ class Radio(dragonradio.tasks.TaskManager):
     def configureRadioConfig(self):
         """Configure the singleton RadioConfig object"""
         # Make sure RadioConfig has node id
-        dragonradio.rc.node_id = self.node_id
+        rc.node_id = self.node_id
 
         # Copy configuration settings to the C++ RadioConfig object
         for attr in ['verbose', 'debug', 'mtu', 'verbose_packet_trace']:
             if hasattr(self.config, attr):
-                setattr(dragonradio.rc, attr, getattr(self.config, attr))
+                setattr(rc, attr, getattr(self.config, attr))
 
     def configureUSRP(self):
         """Construct USRP object from configuration parameters"""
         config = self.config
 
         # Create the USRP
-        self.usrp = dragonradio.USRP(config.addr,
-                                     config.tx_subdev,
-                                     config.rx_subdev,
-                                     self.frequency,
-                                     config.tx_antenna,
-                                     config.rx_antenna,
-                                     config.tx_gain,
-                                     config.rx_gain)
+        self.usrp = USRP(config.addr,
+                         config.tx_subdev,
+                         config.rx_subdev,
+                         self.frequency,
+                         config.tx_antenna,
+                         config.rx_antenna,
+                         config.tx_gain,
+                         config.rx_gain)
 
         # Set USRP clock and time sources. If they were not specified in the
         # configuration, we leave the default setting as-is.
@@ -217,8 +222,8 @@ class Radio(dragonradio.tasks.TaskManager):
         if config.logdir:
             path = self.getRadioLogPath()
 
-            self.logger = dragonradio.Logger(path)
-            self.logger.setAttribute('version', dragonradio.__version__)
+            self.logger = Logger(path)
+            self.logger.setAttribute('version', __version__)
             self.logger.setAttribute('node_id', self.node_id)
             self.logger.setAttribute('config', str(config))
 
@@ -226,19 +231,19 @@ class Radio(dragonradio.tasks.TaskManager):
                 for source in config.log_sources:
                     setattr(self.logger, source, True)
 
-            dragonradio.Logger.singleton = self.logger
+            Logger.singleton = self.logger
 
     def configureSnapshots(self):
         """Configure snapshots"""
         config = self.config
 
         if config.snapshot_period is not None:
-            self.snapshot_collector = dragonradio.SnapshotCollector()
+            self.snapshot_collector = SnapshotCollector()
         else:
             self.snapshot_collector = None
 
         # Make sure RadioConfig has snapshot collector
-        dragonradio.rc.snapshot_collector = self.snapshot_collector
+        rc.snapshot_collector = self.snapshot_collector
 
     def configureComponents(self):
         """Hook up all the radio components"""
@@ -250,15 +255,15 @@ class Radio(dragonradio.tasks.TaskManager):
         ext_net = ipaddress.IPv4Network(config.external_net)
 
         # Create tun/tap interface and net neighborhood
-        self.tuntap = dragonradio.TunTap(config.tap_iface,
-                                         config.tap_ipaddr,
-                                         str(int_net.netmask),
-                                         config.tap_macaddr,
-                                         False,
-                                         self.config.mtu,
-                                         self.node_id)
+        self.tuntap = TunTap(config.tap_iface,
+                             config.tap_ipaddr,
+                             str(int_net.netmask),
+                             config.tap_macaddr,
+                             False,
+                             self.config.mtu,
+                             self.node_id)
 
-        self.net = dragonradio.Net(self.tuntap, self.node_id)
+        self.net = Net(self.tuntap, self.node_id)
 
         # Configure the controller
         self.controller = self.mkController(self.evm_thresholds)
@@ -266,17 +271,16 @@ class Radio(dragonradio.tasks.TaskManager):
         #
         # Create flow performance measurement component
         #
-        self.flowperf = dragonradio.FlowPerformance(config.measurement_period)
+        self.flowperf = FlowPerformance(config.measurement_period)
 
         #
         # Create packet compression component
         #
-        self.packet_compressor = \
-            dragonradio.PacketCompressor(config.packet_compression,
-                                         int(int_net.network_address),
-                                         int(int_net.netmask),
-                                         int(ext_net.network_address),
-                                         int(ext_net.netmask))
+        self.packet_compressor = PacketCompressor(config.packet_compression,
+                                                  int(int_net.network_address),
+                                                  int(int_net.netmask),
+                                                  int(ext_net.network_address),
+                                                  int(ext_net.netmask))
 
         #
         # Configure packet path from channelizer to tun/tap
@@ -298,14 +302,14 @@ class Radio(dragonradio.tasks.TaskManager):
         #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall ->
         #       PacketCompressor.net -> NetQueue -> controller -> synthesizer
         #
-        self.netfilter = dragonradio.NetFilter(self.net,
-                                               int(int_net.network_address),
-                                               int(int_net.netmask),
-                                               int(int_net.broadcast_address),
-                                               int(ext_net.network_address),
-                                               int(ext_net.netmask),
-                                               int(ext_net.broadcast_address))
-        self.netfirewall = dragonradio.NetFirewall()
+        self.netfilter = NetFilter(self.net,
+                                   int(int_net.network_address),
+                                   int(int_net.netmask),
+                                   int(int_net.broadcast_address),
+                                   int(ext_net.network_address),
+                                   int(ext_net.netmask),
+                                   int(ext_net.broadcast_address))
+        self.netfirewall = NetFirewall()
         self.netq = self.mkNetQueue()
 
         self.tuntap.source >> self.netfilter.input
@@ -358,22 +362,22 @@ class Radio(dragonradio.tasks.TaskManager):
         config = self.config
 
         if config.channelizer == 'overlap':
-            channelizer = dragonradio.OverlapTDChannelizer(self.phy,
-                                                           self.usrp.rx_rate,
-                                                           Channels([]),
-                                                           config.num_demodulation_threads)
+            channelizer = OverlapTDChannelizer(self.phy,
+                                               self.usrp.rx_rate,
+                                               Channels([]),
+                                               config.num_demodulation_threads)
 
             channelizer.enforce_ordering = config.channelizer_enforce_ordering
         elif config.channelizer == 'timedomain':
-            channelizer = dragonradio.TDChannelizer(self.phy,
-                                                    self.usrp.rx_rate,
-                                                    Channels([]),
-                                                    config.num_demodulation_threads)
+            channelizer = TDChannelizer(self.phy,
+                                        self.usrp.rx_rate,
+                                        Channels([]),
+                                        config.num_demodulation_threads)
         elif config.channelizer == 'freqdomain':
-            channelizer = dragonradio.FDChannelizer(self.phy,
-                                                    self.usrp.rx_rate,
-                                                    Channels([]),
-                                                    config.num_demodulation_threads)
+            channelizer = FDChannelizer(self.phy,
+                                        self.usrp.rx_rate,
+                                        Channels([]),
+                                        config.num_demodulation_threads)
         else:
             raise ValueError('Unknown channelizer: %s' % config.channelizer)
 
@@ -385,33 +389,33 @@ class Radio(dragonradio.tasks.TaskManager):
 
         if slotted:
             if config.synthesizer == 'timedomain':
-                synthesizer = dragonradio.TDSlotSynthesizer(self.phy,
-                                                            self.usrp.tx_rate,
-                                                            Channels([]),
-                                                            config.num_modulation_threads)
+                synthesizer = TDSlotSynthesizer(self.phy,
+                                                self.usrp.tx_rate,
+                                                Channels([]),
+                                                config.num_modulation_threads)
             elif config.synthesizer == 'freqdomain':
-                synthesizer = dragonradio.FDSlotSynthesizer(self.phy,
-                                                            self.usrp.tx_rate,
-                                                            Channels([]),
-                                                            config.num_modulation_threads)
+                synthesizer = FDSlotSynthesizer(self.phy,
+                                                self.usrp.tx_rate,
+                                                Channels([]),
+                                                config.num_modulation_threads)
             elif config.synthesizer == 'multichannel':
-                synthesizer = dragonradio.MultichannelSynthesizer(self.phy,
-                                                                  self.usrp.tx_rate,
-                                                                  Channels([]),
-                                                                  config.num_modulation_threads)
+                synthesizer = MultichannelSynthesizer(self.phy,
+                                                      self.usrp.tx_rate,
+                                                      Channels([]),
+                                                      config.num_modulation_threads)
             else:
                 raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
         else:
             if config.synthesizer == 'timedomain':
-                synthesizer = dragonradio.TDSynthesizer(self.phy,
-                                                        self.usrp.tx_rate,
-                                                        Channels([]),
-                                                        config.num_modulation_threads)
+                synthesizer = TDSynthesizer(self.phy,
+                                            self.usrp.tx_rate,
+                                            Channels([]),
+                                            config.num_modulation_threads)
             elif config.synthesizer == 'freqdomain':
-                synthesizer = dragonradio.FDSynthesizer(self.phy,
-                                                        self.usrp.tx_rate,
-                                                        Channels([]),
-                                                        config.num_modulation_threads)
+                synthesizer = FDSynthesizer(self.phy,
+                                            self.usrp.tx_rate,
+                                            Channels([]),
+                                            config.num_modulation_threads)
             elif config.synthesizer == 'multichannel':
                 raise ValueError('Multichannel synthesizer can only be used with a slotted MAC')
             else:
@@ -424,15 +428,15 @@ class Radio(dragonradio.tasks.TaskManager):
         config = self.config
 
         if config.arq:
-            controller = dragonradio.SmartController(self.net,
-                                                     self.phy,
-                                                     config.slot_size,
-                                                     config.arq_window,
-                                                     config.arq_window,
-                                                     evm_thresholds)
+            controller = SmartController(self.net,
+                                         self.phy,
+                                         config.slot_size,
+                                         config.arq_window,
+                                         config.arq_window,
+                                         evm_thresholds)
 
             # Add MCU to MTU
-            dragonradio.rc.mtu += config.arq_mcu
+            rc.mtu += config.arq_mcu
 
             # ARQ parameters
             controller.enforce_ordering = config.arq_enforce_ordering
@@ -471,7 +475,7 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.mcsidx_prob_floor = config.amc_mcsidx_prob_floor
 
         else:
-            controller = dragonradio.DummyController(self.net)
+            controller = DummyController(self.net)
 
         return controller
 
@@ -480,11 +484,11 @@ class Radio(dragonradio.tasks.TaskManager):
         config = self.config
 
         if config.queue == 'fifo':
-            netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.FIFO)
+            netq = SimpleQueue(SimpleQueue.FIFO)
         elif config.queue == 'lifo':
-            netq = dragonradio.SimpleQueue(dragonradio.SimpleQueue.LIFO)
+            netq = SimpleQueue(SimpleQueue.LIFO)
         elif config.queue == 'mandate':
-            netq = dragonradio.MandateQueue()
+            netq = MandateQueue()
             netq.bonus_phase = config.mandate_bonus_phase
         else:
             raise ValueError('Unknown queue type: %s' % config.queue)
@@ -497,7 +501,7 @@ class Radio(dragonradio.tasks.TaskManager):
         """Construct an AutoGain object according to configuration parameters"""
         config = self.config
 
-        autogain = dragonradio.AutoGain()
+        autogain = AutoGain()
 
         autogain.soft_tx_gain_0dBFS = config.soft_tx_gain
         if config.auto_soft_tx_gain is not None:
@@ -742,7 +746,7 @@ class Radio(dragonradio.tasks.TaskManager):
 
         # When the environment changes, we reset MCS transition probabilities
         # because we need to re-explore to find the best MCS.
-        if isinstance(self.controller, dragonradio.SmartController):
+        if isinstance(self.controller, SmartController):
             self.controller.resetMCSTransitionProbabilities()
 
     def genChannelizerTaps(self, channel):
@@ -758,7 +762,7 @@ class Radio(dragonradio.tasks.TaskManager):
             ws = channel.bw
             fs = self.usrp.rx_rate
 
-            h = dragonradio.signal.lowpass(wp, ws, fs, ftype='firpm1f2', Nmax=dragonradio.FDChannelizer.P)
+            h = dragonradio.signal.lowpass(wp, ws, fs, ftype='firpm1f2', Nmax=FDChannelizer.P)
         else:
             wp = 0.9*channel.bw
             ws = 1.1*channel.bw
@@ -814,16 +818,16 @@ class Radio(dragonradio.tasks.TaskManager):
         """Configure ALOHA MAC"""
         config = self.config
 
-        self.mac = dragonradio.SlottedALOHA(self.usrp,
-                                            self.phy,
-                                            self.controller,
-                                            self.snapshot_collector,
-                                            self.channelizer,
-                                            self.synthesizer,
-                                            config.slot_size,
-                                            config.guard_size,
-                                            config.slot_send_lead_time,
-                                            config.aloha_prob)
+        self.mac = SlottedALOHA(self.usrp,
+                                self.phy,
+                                self.controller,
+                                self.snapshot_collector,
+                                self.channelizer,
+                                self.synthesizer,
+                                config.slot_size,
+                                config.guard_size,
+                                config.slot_send_lead_time,
+                                config.aloha_prob)
 
         # Install slot-per-channel schedule for ALOHA MAC
         self.installALOHASchedule()
@@ -832,7 +836,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.synthesizer.superslots = False
 
         # Set up overlap channelizer
-        if isinstance(self.channelizer, dragonradio.OverlapTDChannelizer):
+        if isinstance(self.channelizer, OverlapTDChannelizer):
             # We need to demodulate half the previous slot because a sender
             # could start transmitting a packet halfway into a slot + epsilon.
             self.channelizer.prev_demod = 0.5*config.slot_size
@@ -852,32 +856,32 @@ class Radio(dragonradio.tasks.TaskManager):
         """
         config = self.config
 
-        if isinstance(self.mac, dragonradio.TDMA) and self.mac.nslots == nslots:
+        if isinstance(self.mac, TDMA) and self.mac.nslots == nslots:
             return
 
         # Replace the synthesizer if it is not a SlotSynthesizer
-        if not isinstance(self.synthesizer, dragonradio.SlotSynthesizer):
+        if not isinstance(self.synthesizer, SlotSynthesizer):
             self.replaceSynthesizer(False)
 
         # Replace the MAC
         self.deleteMAC()
 
-        self.mac = dragonradio.TDMA(self.usrp,
-                                    self.phy,
-                                    self.controller,
-                                    self.snapshot_collector,
-                                    self.channelizer,
-                                    self.synthesizer,
-                                    config.slot_size,
-                                    config.guard_size,
-                                    config.slot_send_lead_time,
-                                    nslots)
+        self.mac = TDMA(self.usrp,
+                        self.phy,
+                        self.controller,
+                        self.snapshot_collector,
+                        self.channelizer,
+                        self.synthesizer,
+                        config.slot_size,
+                        config.guard_size,
+                        config.slot_send_lead_time,
+                        nslots)
 
         # We may use superslots with the TDMA MAC
         self.synthesizer.superslots = config.superslots
 
         # Set up overlap channelizer
-        if isinstance(self.channelizer, dragonradio.OverlapTDChannelizer):
+        if isinstance(self.channelizer, OverlapTDChannelizer):
             # When using superslots, we need to demodulate half the previous
             # slot because a sender could start transmitting a packet halfway
             # into a slot + epsilon.
@@ -895,23 +899,23 @@ class Radio(dragonradio.tasks.TaskManager):
         """Configures a FDMA MAC."""
         config = self.config
 
-        if isinstance(self.mac, dragonradio.FDMA):
+        if isinstance(self.mac, FDMA):
             return
 
         # Replace the synthesizer if it is not a ChannelSynthesizer
-        if not isinstance(self.synthesizer, dragonradio.ChannelSynthesizer):
+        if not isinstance(self.synthesizer, ChannelSynthesizer):
             self.replaceSynthesizer(False)
 
         # Replace the MAC
         self.deleteMAC()
 
-        self.mac = dragonradio.FDMA(self.usrp,
-                                    self.phy,
-                                    self.controller,
-                                    self.snapshot_collector,
-                                    self.channelizer,
-                                    self.synthesizer,
-                                    config.slot_size)
+        self.mac = FDMA(self.usrp,
+                        self.phy,
+                        self.controller,
+                        self.snapshot_collector,
+                        self.channelizer,
+                        self.synthesizer,
+                        config.slot_size)
 
         self.finishConfiguringMAC()
 
@@ -950,7 +954,7 @@ class Radio(dragonradio.tasks.TaskManager):
 
     def setALOHAChannel(self, channel_idx):
         """Set the transmission channel for the ALOHA MAC."""
-        if not isinstance(self.mac, dragonradio.SlottedALOHA):
+        if not isinstance(self.mac, SlottedALOHA):
             logger.debug("Cannot change ALOHA channel for non-ALOHA MAC")
 
         if self.config.tx_upsample:
@@ -1052,7 +1056,7 @@ class Radio(dragonradio.tasks.TaskManager):
         if self.net.time_master is None:
             return
 
-        t0 = dragonradio.clock.t0
+        t0 = clock.t0
 
         # Perform linear regression on all timestamps
         echoed = _relativizeTimestamps(t0, self.controller.echoed_timestamps)
@@ -1073,8 +1077,8 @@ class Radio(dragonradio.tasks.TaskManager):
             else:
                 (sigma, delta, tau) = timestampRegression(echoed, master)
 
-            old_sigma = dragonradio.clock.skew
-            old_delta = dragonradio.clock.offset.secs
+            old_sigma = clock.skew
+            old_delta = clock.offset.secs
 
             logger.debug(("TIMESYNC: regression parameters: "
                           "old_sigma=%g; "
@@ -1085,8 +1089,8 @@ class Radio(dragonradio.tasks.TaskManager):
                 old_sigma, old_delta, sigma, delta, tau)
 
             if math.isfinite(delta) and math.isfinite(sigma):
-                dragonradio.clock.offset = dragonradio.MonoTimePoint(delta)
-                dragonradio.clock.skew = sigma
+                clock.offset = MonoTimePoint(delta)
+                clock.skew = sigma
                 self.logger.logEvent(("TIMESYNC: set skew and offset: "
                                       "sigma={:g}; "
                                       "delta={:g}").format(sigma, delta))

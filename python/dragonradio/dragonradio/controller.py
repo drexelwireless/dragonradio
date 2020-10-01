@@ -21,7 +21,6 @@ import netifaces
 
 import sc2.cil_pb2 as cil
 
-import dragonradio
 from dragonradio.collab import CILServer
 import dragonradio.collab
 from dragonradio.gpsd import GPSDClient, GPSLocation
@@ -320,7 +319,7 @@ class Controller(CILServer):
 
         # If we are the gateway, start the scorer
         if self.is_gateway:
-            self.scorer = dragonradio.Scorer()
+            self.scorer = dragonradio.radio.Scorer()
             self.scorer_lock = asyncio.Lock()
             self.voxel_lock = asyncio.Lock()
 
@@ -846,7 +845,7 @@ class Controller(CILServer):
         logger.debug('Updating goals')
 
         # Update mandated outcomes
-        mandates = dragonradio.MandateMap()
+        mandates = dragonradio.radio.MandateMap()
 
         for goal in goals:
             flow_uid = goal['flow_uid']
@@ -856,12 +855,12 @@ class Controller(CILServer):
             min_throughput_bps = goal['requirements'].get('min_throughput_bps', None)
             file_transfer_deadline_s = goal['requirements'].get('file_transfer_deadline_s', None)
 
-            mandates[flow_uid] = dragonradio.Mandate(flow_uid,
-                                                     hold_period,
-                                                     point_value,
-                                                     max_latency_s,
-                                                     min_throughput_bps,
-                                                     file_transfer_deadline_s)
+            mandates[flow_uid] = dragonradio.radio.Mandate(flow_uid,
+                                                           hold_period,
+                                                           point_value,
+                                                           max_latency_s,
+                                                           min_throughput_bps,
+                                                           file_transfer_deadline_s)
 
         self.setMandates(mandates)
 
@@ -1291,7 +1290,7 @@ class Controller(CILServer):
 
         if mac is None:
             voxels = []
-        elif isinstance(mac, dragonradio.SlottedALOHA):
+        elif isinstance(mac, dragonradio.radio.SlottedALOHA):
             voxels = await self.alohaToVoxels()
         else:
             voxels = await self.scheduleToVoxels(self.schedule)
@@ -1361,13 +1360,13 @@ class Controller(CILServer):
             self.scorer.setMandates(mandates)
 
         # Update Mandate queue
-        if isinstance(radio.netq, dragonradio.MandateQueue):
+        if isinstance(radio.netq, dragonradio.radio.MandateQueue):
             # Add mandates
             radio.netq.mandates = mandates
 
             # Make internal traffic very high priority
             radio.netq.setFlowQueuePriority(internal.INTERNAL_PORT, (99, 0.0))
-            radio.netq.setFlowQueueType(internal.INTERNAL_PORT, dragonradio.MandateQueue.FIFO)
+            radio.netq.setFlowQueueType(internal.INTERNAL_PORT, dragonradio.radio.MandateQueue.FIFO)
         else:
             # Set allowed flows
             self.setAllowedFlows([flow_uid for (flow_uid, _mandate) in mandates.items()])

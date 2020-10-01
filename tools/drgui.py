@@ -16,7 +16,7 @@ import numpy as np
 import scipy.signal as signal
 import sys
 
-import dragonradio
+import dragonradio.radio
 import drlog
 
 # See:
@@ -509,7 +509,7 @@ class SnapshotPlot:
             snapshot = self.snapshots.iloc[idx]
             self.spos.set_val(idx)
 
-            sig = dragonradio.decompressFLAC(snapshot.iq_data)
+            sig = dragonradio.radio.decompressFLAC(snapshot.iq_data)
 
             self.fig.canvas.set_window_title('Snapshot at {}'.format(str(snapshot.timestamp)))
 

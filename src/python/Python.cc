@@ -12,45 +12,45 @@ PYBIND11_MODULE(_dragonradio, m) {
 #else /* !defined(PYMODULE) */
 PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
 #endif /* !defined(PYMODULE) */
-    // Create submodule for liquid
     auto mliquid = m.def_submodule("liquid");
+    auto mradio = m.def_submodule("radio");
 
 #if defined(PYMODULE)
-    exportResamplers(m);
-    exportNCOs(m);
-    exportFilters(m);
-    exportIQCompression(m);
-    exportChannels(m);
-    exportHeader(m);
-    exportModem(m);
+    exportResamplers(mradio);
+    exportNCOs(mradio);
+    exportFilters(mradio);
+    exportIQCompression(mradio);
+    exportChannels(mradio);
+    exportHeader(mradio);
+    exportModem(mradio);
     exportLiquid(mliquid);
 #else /* !defined(PYMODULE) */
-    exportClock(m);
-    exportLogger(m);
-    exportRadioConfig(m);
-    exportWorkQueue(m);
-    exportUSRP(m);
-    exportEstimators(m);
-    exportNet(m);
-    exportCIL(m);
-    exportFlow(m);
-    exportRadioNet(m);
-    exportHeader(m);
-    exportPacket(m);
-    exportModem(m);
-    exportPHYs(m);
+    exportClock(mradio);
+    exportLogger(mradio);
+    exportRadioConfig(mradio);
+    exportWorkQueue(mradio);
+    exportUSRP(mradio);
+    exportEstimators(mradio);
+    exportNet(mradio);
+    exportCIL(mradio);
+    exportFlow(mradio);
+    exportRadioNet(mradio);
+    exportHeader(mradio);
+    exportPacket(mradio);
+    exportModem(mradio);
+    exportPHYs(mradio);
     exportLiquid(mliquid);
     exportLiquidPHYs(mliquid);
-    exportChannels(m);
-    exportChannelizers(m);
-    exportSynthesizers(m);
-    exportControllers(m);
-    exportMACs(m);
-    exportResamplers(m);
-    exportNCOs(m);
-    exportFilters(m);
-    exportIQBuffer(m);
-    exportIQCompression(m);
-    exportSnapshot(m);
+    exportChannels(mradio);
+    exportChannelizers(mradio);
+    exportSynthesizers(mradio);
+    exportControllers(mradio);
+    exportMACs(mradio);
+    exportResamplers(mradio);
+    exportNCOs(mradio);
+    exportFilters(mradio);
+    exportIQBuffer(mradio);
+    exportIQCompression(mradio);
+    exportSnapshot(mradio);
 #endif /* !defined(PYMODULE) */
 }

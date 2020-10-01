@@ -7,7 +7,7 @@ import math
 import numpy as np
 import scipy.signal as signal
 
-import dragonradio
+import dragonradio.radio
 
 def bellangerord(delta1, delta2, fs, deltaf):
     """Estimate filter order.
@@ -63,7 +63,7 @@ def firpm1f(N, wp, ws, fs):
     desired = [1, 1, 0, 0]
     weights = [1, 1]
 
-    out = dragonradio.firpm1f(N, bands, desired, weights, fs=fs)
+    out = dragonradio.radio.firpm1f(N, bands, desired, weights, fs=fs)
 
     return out.h
 
@@ -82,7 +82,7 @@ def firpm1f2(N, wp, ws, fs):
     desired = [1, 1, 0, 0]
     weights = [1, 1]
 
-    out = dragonradio.firpm1f2(N, bands, desired, weights, fs=fs)
+    out = dragonradio.radio.firpm1f2(N, bands, desired, weights, fs=fs)
 
     return out.h
 
