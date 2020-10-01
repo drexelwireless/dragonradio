@@ -5,7 +5,7 @@
 
 #include "liquid/Filter.hh"
 
-namespace Liquid {
+namespace liquid {
 
 std::vector<float> parks_mcclellan(unsigned int n,
                                    float        fc,

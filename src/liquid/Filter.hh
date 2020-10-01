@@ -16,7 +16,7 @@
 #define final
 #endif /* defined(DOXYGEN) */
 
-namespace Liquid {
+namespace liquid {
 
 using C = std::complex<float>;
 using F = float;
@@ -30,62 +30,62 @@ public:
 
     FIR(FIR &&f)
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     FIR(const std::vector<C> &h)
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     virtual ~FIR()
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     FIR& operator=(const std::vector<C> &h)
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     FIR& operator=(FIR &&f)
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     FIR& operator=(const FIR &) = delete;
 
     float getGroupDelay(float fc) const override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
         return 0;
     }
 
     void reset(void) override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     /** @brief Execute the filter */
     void execute(const I *in, O *out, size_t n) override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     float getDelay(void) const override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
         return 0;
     }
 
     const std::vector<C> &getTaps(void) const override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     void setTaps(const std::vector<C> &taps) override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     /** @brief Get output scaling for filter
@@ -93,7 +93,7 @@ public:
      */
     C getScale() const
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
         return 0;
     }
 
@@ -102,13 +102,13 @@ public:
      */
     void setScale(C scale)
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 
     /** @brief Print filter object information to stdout */
     void print(void) const
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::FIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::FIR can be used");
     }
 };
 
@@ -246,25 +246,25 @@ public:
 
     IIR(IIR &&f)
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::IIR can be used");
     }
 
     /** @brief Initialize filter with feedforward and feedback constants */
     IIR(const C *b, unsigned Nb,
         const C *a, unsigned Na)
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::IIR can be used");
     }
 
     /** @brief Initialize filter with second-order-sections */
     IIR(const C *sos, unsigned N)
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::IIR can be used");
     }
 
     virtual ~IIR()
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::IIR can be used");
     }
 
     IIR& operator=(const IIR &) = delete;
@@ -272,24 +272,24 @@ public:
 
     float getGroupDelay(float fc) const override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::IIR can be used");
         return 0;
     }
 
     void reset(void) override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::IIR can be used");
     }
 
     void execute(const C *in, C *out, size_t n) override final
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::IIR can be used");
     }
 
     /** @brief Print filter object information to stdout */
     void print(void) const
     {
-        static_assert(sizeof(I) == 0, "Only specializations of Liquid::IIR can be used");
+        static_assert(sizeof(I) == 0, "Only specializations of liquid::IIR can be used");
     }
 };
 

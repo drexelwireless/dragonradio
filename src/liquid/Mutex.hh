@@ -6,7 +6,7 @@
 
 #include <mutex>
 
-namespace Liquid {
+namespace liquid {
 
 /** @brief Creation of liquid objects is not re-rentrant, so we need to protect
  * access with a mutex.

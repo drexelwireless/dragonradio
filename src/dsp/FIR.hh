@@ -15,7 +15,7 @@
 #define final
 #endif /* defined(DOXYGEN) */
 
-namespace Dragon {
+namespace dragonradio::signal {
 
 template <class T, class C>
 class FIR : public ::FIR<T,T,C>

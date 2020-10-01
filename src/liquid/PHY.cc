@@ -10,13 +10,15 @@
 #include "dsp/NCO.hh"
 #include "liquid/PHY.hh"
 
+namespace liquid {
+
 // Initial modulation buffer size
 const size_t kInitialModbufSize = 16384;
 
-Liquid::PHY::PHY(const MCS &header_mcs,
-                 const std::vector<std::pair<MCS, AutoGain>> &mcstab,
-                 bool soft_header,
-                 bool soft_payload)
+PHY::PHY(const MCS &header_mcs,
+         const std::vector<std::pair<MCS, AutoGain>> &mcstab,
+         bool soft_header,
+         bool soft_payload)
   : header_mcs_(header_mcs)
   , soft_header_(soft_header)
   , soft_payload_(soft_payload)
@@ -30,9 +32,9 @@ Liquid::PHY::PHY(const MCS &header_mcs,
     }
 }
 
-void Liquid::PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
-                                            const float g,
-                                            ModPacket &mpkt)
+void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
+                                    const float g,
+                                    ModPacket &mpkt)
 {
     MonoClock::time_point now = MonoClock::now();
 
@@ -87,11 +89,11 @@ void Liquid::PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     mpkt.pkt = std::move(pkt);
 }
 
-Liquid::PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
-                                                  const MCS &header_mcs,
-                                                  bool soft_header,
-                                                  bool soft_payload)
-  : Liquid::Demodulator(header_mcs, soft_header, soft_payload)
+PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
+                                          const MCS &header_mcs,
+                                          bool soft_header,
+                                          bool soft_payload)
+  : Demodulator(header_mcs, soft_header, soft_payload)
   , ::PHY::PacketDemodulator(phy)
   , channel_()
   , delay_(0)
@@ -106,13 +108,13 @@ Liquid::PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
 {
 }
 
-int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
-                                             int              header_valid_,
-                                             int              header_test_,
-                                             unsigned char *  payload_,
-                                             unsigned int     payload_len_,
-                                             int              payload_valid_,
-                                             framesyncstats_s stats_)
+int PHY::PacketDemodulator::callback(unsigned char *  header_,
+                                     int              header_valid_,
+                                     int              header_test_,
+                                     unsigned char *  payload_,
+                                     unsigned int     payload_len_,
+                                     int              payload_valid_,
+                                     framesyncstats_s stats_)
 {
     Header*         hdr = reinterpret_cast<Header*>(header_);
     ExtendedHeader* ehdr = reinterpret_cast<ExtendedHeader*>(payload_);
@@ -188,7 +190,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
         }
 
         // Find MCS index
-        Liquid::MCS             mcs(static_cast<crc_scheme>(stats_.check),
+        MCS                     mcs(static_cast<crc_scheme>(stats_.check),
                                     static_cast<fec_scheme>(stats_.fec0),
                                     static_cast<fec_scheme>(stats_.fec1),
                                     static_cast<modulation_scheme>(stats_.mod_scheme));
@@ -224,7 +226,7 @@ int Liquid::PHY::PacketDemodulator::callback(unsigned char *  header_,
     return 0;
 }
 
-void Liquid::PHY::PacketDemodulator::reset(const Channel &channel)
+void PHY::PacketDemodulator::reset(const Channel &channel)
 {
     reset();
 
@@ -239,12 +241,12 @@ void Liquid::PHY::PacketDemodulator::reset(const Channel &channel)
     sample_ = 0;
 }
 
-void Liquid::PHY::PacketDemodulator::timestamp(const MonoClock::time_point &timestamp,
-                                               std::optional<ssize_t> snapshot_off,
-                                               ssize_t offset,
-                                               size_t delay,
-                                               float rate,
-                                               float rx_rate)
+void PHY::PacketDemodulator::timestamp(const MonoClock::time_point &timestamp,
+                                       std::optional<ssize_t> snapshot_off,
+                                       ssize_t offset,
+                                       size_t delay,
+                                       float rate,
+                                       float rx_rate)
 {
     resamp_rate_ = internal_oversample_fact_/rate;
     rx_rate_ = rx_rate;
@@ -255,9 +257,9 @@ void Liquid::PHY::PacketDemodulator::timestamp(const MonoClock::time_point &time
     sample_start_ = sample_end_;
 }
 
-size_t Liquid::PHY::getModulatedSize(mcsidx_t mcsidx, size_t n)
+size_t PHY::getModulatedSize(mcsidx_t mcsidx, size_t n)
 {
-    std::unique_ptr<Liquid::Modulator> mod = mkLiquidModulator();
+    std::unique_ptr<Modulator> mod = mkLiquidModulator();
 
     assert(mcsidx < mcs_table.size());
     mod->setPayloadMCS(mcs_table_[mcsidx]);
@@ -268,4 +270,6 @@ size_t Liquid::PHY::getModulatedSize(mcsidx_t mcsidx, size_t n)
     mod->assemble(&hdr, body.data(), body.size());
 
     return mod->assembledSize();
+}
+
 }

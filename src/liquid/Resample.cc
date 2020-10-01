@@ -5,7 +5,7 @@
 
 #include "liquid/Resample.hh"
 
-namespace Liquid {
+namespace liquid {
 
 size_t MultiStageResampler<C,C,F>::resample(const C *in, size_t count, C *out)
 {

@@ -80,7 +80,7 @@ private:
         IQBuf resamp_buf_;
 
         /** @brief Resampler */
-        Dragon::MixingRationalResampler<C,C> resamp_;
+        dragonradio::signal::MixingRationalResampler<C,C> resamp_;
     };
 
     static const unsigned LOGN = 4;

@@ -14,7 +14,7 @@
 #define final
 #endif /* defined(DOXYGEN) */
 
-namespace Liquid {
+namespace liquid {
 
 class BaseNCO : public ::NCO
 {

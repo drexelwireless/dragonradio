@@ -53,16 +53,16 @@ void exportNCOs(py::module &m)
         ;
 
     // Export class LiquidNCOBase to Python
-    py::class_<Liquid::BaseNCO, NCO, std::shared_ptr<Liquid::BaseNCO>>(m, "LiquidBaseNCO")
+    py::class_<liquid::BaseNCO, NCO, std::shared_ptr<liquid::BaseNCO>>(m, "LiquidBaseNCO")
         ;
 
     // Export class LiquidNCO to Python
-    py::class_<Liquid::NCO, Liquid::BaseNCO, std::shared_ptr<Liquid::NCO>>(m, "LiquidNCO")
+    py::class_<liquid::NCO, liquid::BaseNCO, std::shared_ptr<liquid::NCO>>(m, "LiquidNCO")
         .def(py::init<double>())
         ;
 
     // Export class LiquidVCO to Python
-    py::class_<Liquid::VCO, Liquid::BaseNCO, std::shared_ptr<Liquid::VCO>>(m, "LiquidVCO")
+    py::class_<liquid::VCO, liquid::BaseNCO, std::shared_ptr<liquid::VCO>>(m, "LiquidVCO")
         .def(py::init<double>())
         ;
 

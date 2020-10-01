@@ -47,7 +47,7 @@ void exportFilter(py::module &m, const char *name)
 template <class I, class O, class C>
 void exportLiquidFIR(py::module &m, const char *name)
 {
-    py::class_<Liquid::FIR<I,O,C>, Filter<I,O>, std::unique_ptr<Liquid::FIR<I,O,C>>>(m, name)
+    py::class_<liquid::FIR<I,O,C>, Filter<I,O>, std::unique_ptr<liquid::FIR<I,O,C>>>(m, name)
         .def(py::init<const std::vector<C>&>())
         .def_property_readonly("delay",
             &FIR<I,O,C>::getDelay,
@@ -64,7 +64,7 @@ void exportLiquidIIR(py::module &m, const char *name)
 {
     using pyarray_C = py::array_t<C, py::array::c_style | py::array::forcecast>;
 
-    py::class_<Liquid::IIR<I,O,C>, Filter<I,O>, std::unique_ptr<Liquid::IIR<I,O,C>>>(m, name)
+    py::class_<liquid::IIR<I,O,C>, Filter<I,O>, std::unique_ptr<liquid::IIR<I,O,C>>>(m, name)
         .def(py::init([](pyarray_C b, pyarray_C a) {
             py::buffer_info b_buf = b.request();
             py::buffer_info a_buf = b.request();
@@ -75,7 +75,7 @@ void exportLiquidIIR(py::module &m, const char *name)
             if (a_buf.size != b_buf.size)
                 throw std::runtime_error("Input shapes must match");
 
-            return Liquid::IIR<I,O,C>(static_cast<C*>(b_buf.ptr), b_buf.size,
+            return liquid::IIR<I,O,C>(static_cast<C*>(b_buf.ptr), b_buf.size,
                                       static_cast<C*>(a_buf.ptr), a_buf.size);
         }))
         .def(py::init([](pyarray_C sos) {
@@ -84,7 +84,7 @@ void exportLiquidIIR(py::module &m, const char *name)
             if (sos_buf.ndim != 2 || sos_buf.shape[1] != 6)
                 throw std::runtime_error("SOS array must have shape Nx6");
 
-            return Liquid::IIR<I,O,C>(static_cast<C*>(sos_buf.ptr), sos_buf.size/6);
+            return liquid::IIR<I,O,C>(static_cast<C*>(sos_buf.ptr), sos_buf.size/6);
         }))
         ;
 }
@@ -92,14 +92,14 @@ void exportLiquidIIR(py::module &m, const char *name)
 template <class T, class C>
 void exportDragonFIR(py::module &m, const char *name)
 {
-    py::class_<Dragon::FIR<T,C>, Filter<T,T>, std::unique_ptr<Dragon::FIR<T,C>>>(m, name)
+    py::class_<dragonradio::signal::FIR<T,C>, Filter<T,T>, std::unique_ptr<dragonradio::signal::FIR<T,C>>>(m, name)
         .def(py::init<const std::vector<C>&>())
         .def_property_readonly("delay",
-            &Dragon::FIR<T,C>::getDelay,
+            &dragonradio::signal::FIR<T,C>::getDelay,
             "Return filter delay")
         .def_property("taps",
-            &Dragon::FIR<T,C>::getTaps,
-            &Dragon::FIR<T,C>::setTaps,
+            &dragonradio::signal::FIR<T,C>::getTaps,
+            &dragonradio::signal::FIR<T,C>::setTaps,
             "Filter taps")
         ;
 }
@@ -138,11 +138,11 @@ void exportFilters(py::module &m)
     exportLiquidFIR<C,C,C>(m, "LiquidFIRCCC");
     exportLiquidIIR<C,C,C>(m, "LiquidIIRCCC");
 
-    m.def("parks_mcclellan", &Liquid::parks_mcclellan);
+    m.def("parks_mcclellan", &liquid::parks_mcclellan);
 
-    m.def("kaiser", &Liquid::kaiser);
+    m.def("kaiser", &liquid::kaiser);
 
-    m.def("butter_lowpass", &Liquid::butter_lowpass);
+    m.def("butter_lowpass", &liquid::butter_lowpass);
 
     py::class_<PMOutput>(m, "PMOutput")
         .def_readonly("h",
@@ -166,7 +166,7 @@ void exportFilters(py::module &m)
         ;
 
     m.def("firpm",
-        &Dragon::firpm,
+        &dragonradio::signal::firpm,
         "Use the Remez exchange algorithm to design an equiripple filter",
         py::arg("numtaps"),
         py::arg("bands"),
@@ -177,7 +177,7 @@ void exportFilters(py::module &m)
         py::arg("Nmax") = 4);
 
     m.def("firpm1f",
-        &Dragon::firpm1f,
+        &dragonradio::signal::firpm1f,
         "Use the Remez exchange algorithm to design a filter with 1/f rolloff",
         py::arg("numtaps"),
         py::arg("bands"),
@@ -188,7 +188,7 @@ void exportFilters(py::module &m)
         py::arg("Nmax") = 4);
 
     m.def("firpm1f2",
-        &Dragon::firpm1f2,
+        &dragonradio::signal::firpm1f2,
         "Use the Remez exchange algorithm to design a filter with 1/f^2 rolloff",
         py::arg("numtaps"),
         py::arg("bands"),

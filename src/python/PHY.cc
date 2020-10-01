@@ -340,36 +340,36 @@ void exportPHYs(py::module &m)
 
 void exportLiquidPHYs(py::module &m)
 {
-    // Export class Liquid::PHY to Python
-    py::class_<Liquid::PHY, PHY, std::shared_ptr<Liquid::PHY>>(m, "LiquidPHY")
+    // Export class liquid::PHY to Python
+    py::class_<liquid::PHY, PHY, std::shared_ptr<liquid::PHY>>(m, "LiquidPHY")
         .def_property_readonly("header_mcs",
-            &Liquid::PHY::getHeaderMCS)
+            &liquid::PHY::getHeaderMCS)
         .def_property_readonly("soft_header",
-            &Liquid::PHY::getSoftHeader)
+            &liquid::PHY::getSoftHeader)
         .def_property_readonly("soft_payload",
-            &Liquid::PHY::getSoftPayload)
+            &liquid::PHY::getSoftPayload)
         ;
 
     // Export class FlexFrame to Python
-    py::class_<Liquid::FlexFrame, Liquid::PHY, std::shared_ptr<Liquid::FlexFrame>>(m, "FlexFrame")
-        .def(py::init<const Liquid::MCS&,
-                      const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
+    py::class_<liquid::FlexFrame, liquid::PHY, std::shared_ptr<liquid::FlexFrame>>(m, "FlexFrame")
+        .def(py::init<const liquid::MCS&,
+                      const std::vector<std::pair<liquid::MCS, AutoGain>>&,
                       bool,
                       bool>())
         ;
 
     // Export class NewFlexFrame to Python
-    py::class_<Liquid::NewFlexFrame, Liquid::PHY, std::shared_ptr<Liquid::NewFlexFrame>>(m, "NewFlexFrame")
-        .def(py::init<const Liquid::MCS&,
-                      const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
+    py::class_<liquid::NewFlexFrame, liquid::PHY, std::shared_ptr<liquid::NewFlexFrame>>(m, "NewFlexFrame")
+        .def(py::init<const liquid::MCS&,
+                      const std::vector<std::pair<liquid::MCS, AutoGain>>&,
                       bool,
                       bool>())
         ;
 
     // Export class OFDM to Python
-    py::class_<Liquid::OFDM, Liquid::PHY, std::shared_ptr<Liquid::OFDM>>(m, "OFDM")
-        .def(py::init<const Liquid::MCS&,
-                      const std::vector<std::pair<Liquid::MCS, AutoGain>>&,
+    py::class_<liquid::OFDM, liquid::PHY, std::shared_ptr<liquid::OFDM>>(m, "OFDM")
+        .def(py::init<const liquid::MCS&,
+                      const std::vector<std::pair<liquid::MCS, AutoGain>>&,
                       bool,
                       bool,
                       unsigned int,
@@ -377,7 +377,7 @@ void exportLiquidPHYs(py::module &m)
                       unsigned int,
                       const std::optional<std::string>&>())
         .def_property_readonly("subcarriers",
-            [](std::shared_ptr<Liquid::OFDM> self)
+            [](std::shared_ptr<liquid::OFDM> self)
             {
                 return static_cast<std::string>(self->getSubcarriers());
             })

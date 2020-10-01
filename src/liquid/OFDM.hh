@@ -13,7 +13,7 @@
 #include "dsp/FFTW.hh"
 #include "liquid/Modem.hh"
 
-namespace Liquid {
+namespace liquid {
 
 class OFDMSubcarriers : public std::vector<char> {
 public:
@@ -56,7 +56,7 @@ public:
             p_ = *p;
         }
 
-        std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+        std::lock_guard<std::mutex> liquid_lock(liquid::mutex);
         std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         ofdmflexframegenprops_s props;
@@ -74,7 +74,7 @@ public:
     virtual ~OFDMModulator()
     {
         if (fg_) {
-            std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+            std::lock_guard<std::mutex> liquid_lock(liquid::mutex);
             std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
             ofdmflexframegen_destroy(fg_);
@@ -186,7 +186,7 @@ public:
             p_ = *p;
         }
 
-        std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+        std::lock_guard<std::mutex> liquid_lock(liquid::mutex);
         std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         fs_ = ofdmflexframesync_create(M_,
@@ -203,7 +203,7 @@ public:
     virtual ~OFDMDemodulator()
     {
         if (fs_) {
-            std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+            std::lock_guard<std::mutex> liquid_lock(liquid::mutex);
             std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
             ofdmflexframesync_destroy(fs_);

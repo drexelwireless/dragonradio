@@ -17,7 +17,7 @@
 #define final
 #endif /* defined(DOXYGEN) */
 
-namespace Liquid {
+namespace liquid {
 
 using C = std::complex<float>;
 using F = float;

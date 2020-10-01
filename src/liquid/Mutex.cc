@@ -3,4 +3,4 @@
 
 #include "liquid/Mutex.hh"
 
-std::mutex Liquid::mutex;
+std::mutex liquid::mutex;

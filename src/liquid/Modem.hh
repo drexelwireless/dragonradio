@@ -13,7 +13,7 @@
 #include "liquid/Mutex.hh"
 #include "phy/Modem.hh"
 
-namespace Liquid {
+namespace liquid {
 
 /** @brief A liquid modulation and coding scheme. */
 struct MCS : public ::MCS {

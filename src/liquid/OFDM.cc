@@ -3,7 +3,7 @@
 
 #include "liquid/OFDM.hh"
 
-namespace Liquid {
+namespace liquid {
 
 OFDMSubcarriers::OFDMSubcarriers(unsigned int M)
   : std::vector<char>(M, OFDMFRAME_SCTYPE_NULL)

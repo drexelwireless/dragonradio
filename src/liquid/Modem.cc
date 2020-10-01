@@ -3,14 +3,16 @@
 
 #include "liquid/Modem.hh"
 
-int Liquid::Demodulator::liquid_callback(unsigned char *  header_,
-                                         int              header_valid_,
-                                         int              header_test_,
-                                         unsigned char *  payload_,
-                                         unsigned int     payload_len_,
-                                         int              payload_valid_,
-                                         framesyncstats_s stats_,
-                                         void *           userdata_)
+namespace liquid {
+
+int Demodulator::liquid_callback(unsigned char *  header_,
+                                 int              header_valid_,
+                                 int              header_test_,
+                                 unsigned char *  payload_,
+                                 unsigned int     payload_len_,
+                                 int              payload_valid_,
+                                 framesyncstats_s stats_,
+                                 void *           userdata_)
 {
     if (userdata_) {
         Demodulator *demod = static_cast<Demodulator*>(userdata_);
@@ -26,13 +28,13 @@ int Liquid::Demodulator::liquid_callback(unsigned char *  header_,
         return 0;
 }
 
-int Liquid::Demodulator::callback(unsigned char *  header_,
-                                  int              header_valid_,
-                                  int              header_test_,
-                                  unsigned char *  payload_,
-                                  unsigned int     payload_len_,
-                                  int              payload_valid_,
-                                  framesyncstats_s stats_)
+int Demodulator::callback(unsigned char *  header_,
+                          int              header_valid_,
+                          int              header_test_,
+                          unsigned char *  payload_,
+                          unsigned int     payload_len_,
+                          int              payload_valid_,
+                          framesyncstats_s stats_)
 {
     return cb_(header_test_,
                header_valid_,
@@ -43,9 +45,9 @@ int Liquid::Demodulator::callback(unsigned char *  header_,
                reinterpret_cast<void*>(&stats_)) ? 1 : 0;
 }
 
-void Liquid::Demodulator::demodulate(const std::complex<float> *in,
-                                     const size_t n,
-                                     callback_t cb)
+void Demodulator::demodulate(const std::complex<float> *in,
+                             const size_t n,
+                             callback_t cb)
 {
     cb_ = cb;
 
@@ -57,4 +59,6 @@ void Liquid::Demodulator::demodulate(const std::complex<float> *in,
     }
 
     cb_ = nullptr;
+}
+
 }

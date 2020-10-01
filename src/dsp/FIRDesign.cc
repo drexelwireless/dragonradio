@@ -5,7 +5,7 @@
 
 #include "FIRDesign.hh"
 
-namespace Dragon {
+namespace dragonradio::signal {
 
 PMOutput firpm(std::size_t N,
                std::vector<double>const& f0,

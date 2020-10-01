@@ -20,7 +20,7 @@
 #define final
 #endif /* defined(DOXYGEN) */
 
-namespace Dragon {
+namespace dragonradio::signal {
 
 /** @brief A polyphase filter bank */
 template <class T, class C>

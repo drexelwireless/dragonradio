@@ -12,14 +12,14 @@
 #include "dsp/FFTW.hh"
 #include "liquid/Modem.hh"
 
-namespace Liquid {
+namespace liquid {
 
 class NewFlexFrameModulator : virtual public Modulator {
 public:
     NewFlexFrameModulator(const MCS &header_mcs)
       : Modulator(header_mcs)
     {
-        std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+        std::lock_guard<std::mutex> liquid_lock(liquid::mutex);
         std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         flexframegenprops_s props;
@@ -33,7 +33,7 @@ public:
     virtual ~NewFlexFrameModulator()
     {
         if (fg_) {
-            std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+            std::lock_guard<std::mutex> liquid_lock(liquid::mutex);
             std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
             flexframegen_destroy(fg_);
@@ -118,7 +118,7 @@ public:
                             bool soft_payload)
       : Demodulator(header_mcs, soft_header, soft_payload)
     {
-        std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+        std::lock_guard<std::mutex> liquid_lock(liquid::mutex);
         std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
         fs_ = flexframesync_create(&Demodulator::liquid_callback,
@@ -131,7 +131,7 @@ public:
     virtual ~NewFlexFrameDemodulator()
     {
         if (fs_) {
-            std::lock_guard<std::mutex> liquid_lock(Liquid::mutex);
+            std::lock_guard<std::mutex> liquid_lock(liquid::mutex);
             std::lock_guard<std::mutex> fftw_lock(fftw::mutex);
 
             flexframesync_destroy(fs_);

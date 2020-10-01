@@ -136,7 +136,7 @@ private:
         IQBuf resamp_buf_;
 
         /** @brief Resampler */
-        Dragon::MixingRationalResampler<C,C> resamp_;
+        dragonradio::signal::MixingRationalResampler<C,C> resamp_;
     };
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */

@@ -51,7 +51,7 @@ void exportResampler(py::module &m, const char *name)
 template <class I, class O, class C>
 void exportLiquidMSResamp(py::module &m, const char *name)
 {
-    py::class_<Liquid::MultiStageResampler<I,O,C>, Resampler<I,O>, std::shared_ptr<Liquid::MultiStageResampler<I,O,C>>>(m, name)
+    py::class_<liquid::MultiStageResampler<I,O,C>, Resampler<I,O>, std::shared_ptr<liquid::MultiStageResampler<I,O,C>>>(m, name)
         .def(py::init<double,
                       unsigned,
                       double,
@@ -63,19 +63,19 @@ void exportLiquidMSResamp(py::module &m, const char *name)
 template <class T, class C>
 void exportDragonPfb(py::module &m, const char *name)
 {
-    py::class_<Dragon::Pfb<T,C>, std::shared_ptr<Dragon::Pfb<T,C>>>(m, name)
+    py::class_<dragonradio::signal::Pfb<T,C>, std::shared_ptr<dragonradio::signal::Pfb<T,C>>>(m, name)
         .def(py::init<unsigned,
                       const std::vector<C>&>())
         .def_property("nchannels",
-            &Dragon::Pfb<T,C>::getNumChannels,
-            &Dragon::Pfb<T,C>::setNumChannels,
+            &dragonradio::signal::Pfb<T,C>::getNumChannels,
+            &dragonradio::signal::Pfb<T,C>::setNumChannels,
             "Number of channels")
         .def_property("taps",
-            &Dragon::Pfb<T,C>::getTaps,
-            &Dragon::Pfb<T,C>::setTaps,
+            &dragonradio::signal::Pfb<T,C>::getTaps,
+            &dragonradio::signal::Pfb<T,C>::setTaps,
             "Prototype filter taps")
         .def_property_readonly("channel_taps",
-            &Dragon::Pfb<T,C>::getChannelTaps,
+            &dragonradio::signal::Pfb<T,C>::getChannelTaps,
             "Per-channel taps (reversed)")
         ;
 }
@@ -83,7 +83,7 @@ void exportDragonPfb(py::module &m, const char *name)
 template <class T, class C>
 void exportDragonUpsampler(py::module &m, const char *name)
 {
-    py::class_<Dragon::Upsampler<T,C>, Dragon::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<Dragon::Upsampler<T,C>>>(m, name)
+    py::class_<dragonradio::signal::Upsampler<T,C>, dragonradio::signal::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<dragonradio::signal::Upsampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       const std::vector<C>&>())
         ;
@@ -92,7 +92,7 @@ void exportDragonUpsampler(py::module &m, const char *name)
 template <class T, class C>
 void exportDragonDownsampler(py::module &m, const char *name)
 {
-    py::class_<Dragon::Downsampler<T,C>, Dragon::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<Dragon::Downsampler<T,C>>>(m, name)
+    py::class_<dragonradio::signal::Downsampler<T,C>, dragonradio::signal::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<dragonradio::signal::Downsampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       const std::vector<C>&>())
         ;
@@ -101,7 +101,7 @@ void exportDragonDownsampler(py::module &m, const char *name)
 template <class T, class C>
 void exportDragonRationalResampler(py::module &m, const char *name)
 {
-    py::class_<Dragon::RationalResampler<T,C>, Dragon::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<Dragon::RationalResampler<T,C>>>(m, name)
+    py::class_<dragonradio::signal::RationalResampler<T,C>, dragonradio::signal::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<dragonradio::signal::RationalResampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       unsigned,
                       const std::vector<C>&>())
@@ -109,10 +109,10 @@ void exportDragonRationalResampler(py::module &m, const char *name)
                       const std::vector<C>&>())
         .def(py::init<double>())
         .def_property_readonly("up_rate",
-            &Dragon::RationalResampler<T,C>::getUpRate,
+            &dragonradio::signal::RationalResampler<T,C>::getUpRate,
             "Upsample rate")
         .def_property_readonly("down_rate",
-            &Dragon::RationalResampler<T,C>::getDownRate,
+            &dragonradio::signal::RationalResampler<T,C>::getDownRate,
             "Downsample rate")
         ;
 }
@@ -125,9 +125,9 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
     using pyarray_I = py::array_t<I, py::array::c_style | py::array::forcecast>;
     using pyarray_O = py::array_t<O>;
 
-    py::class_<Dragon::MixingRationalResampler<T,C>,
-               Dragon::RationalResampler<T,C>,
-               std::shared_ptr<Dragon::MixingRationalResampler<T,C>>>(m, name)
+    py::class_<dragonradio::signal::MixingRationalResampler<T,C>,
+               dragonradio::signal::RationalResampler<T,C>,
+               std::shared_ptr<dragonradio::signal::MixingRationalResampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       unsigned,
                       double,
@@ -136,14 +136,14 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
                       double,
                       const std::vector<C>&>())
         .def_property("shift",
-            &Dragon::MixingRationalResampler<T,C>::getFreqShift,
-            &Dragon::MixingRationalResampler<T,C>::setFreqShift,
+            &dragonradio::signal::MixingRationalResampler<T,C>::getFreqShift,
+            &dragonradio::signal::MixingRationalResampler<T,C>::setFreqShift,
             "Mixing frequency shift")
         .def_property_readonly("bandpass_taps",
-            &Dragon::MixingRationalResampler<T,C>::getBandpassTaps,
+            &dragonradio::signal::MixingRationalResampler<T,C>::getBandpassTaps,
             "Prototype bandpass filter taps")
         .def("resampleMixUp",
-          [](Dragon::MixingRationalResampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
+          [](dragonradio::signal::MixingRationalResampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
           {
               auto      inbuf = sig.request();
               pyarray_O outarr(resamp.neededOut(inbuf.size));
@@ -161,7 +161,7 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
           },
           "Mix up and resample signal")
         .def("resampleMixDown",
-          [](Dragon::MixingRationalResampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
+          [](dragonradio::signal::MixingRationalResampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
           {
               auto      inbuf = sig.request();
               pyarray_O outarr(resamp.neededOut(inbuf.size));
