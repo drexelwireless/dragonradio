@@ -7,9 +7,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl_bind.h>
 
-#include "net/Element.hh"
 #include "phy/Channel.hh"
 #include "python/capsule.hh"
+
+#if !defined(PYMODULE)
+#include "net/Element.hh"
+#endif /* !defined(PYMODULE) */
 
 namespace py = pybind11;
 
@@ -17,6 +20,7 @@ namespace py = pybind11;
 PYBIND11_MAKE_OPAQUE(Channels)
 #endif /* !defined(DOXYGEN) */
 
+#if !defined(PYMODULE)
 template <class D, class P, class T>
 struct PortWrapper
 {
@@ -58,6 +62,7 @@ using RadioInPush = RadioInWrapper<Push>;
 using RadioInPull = RadioInWrapper<Pull>;
 using RadioOutPush = RadioOutWrapper<Push>;
 using RadioOutPull = RadioOutWrapper<Pull>;
+#endif /* !defined(PYMODULE) */
 
 void exportClock(py::module &m);
 void exportLogger(py::module &m);
