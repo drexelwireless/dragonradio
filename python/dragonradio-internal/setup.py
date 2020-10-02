@@ -72,6 +72,7 @@ ext_modules = [
          os.path.join(SRC, 'liquid/Mutex.cc'),
          os.path.join(SRC, 'liquid/OFDM.cc'),
          os.path.join(SRC, 'liquid/Resample.cc'),
+         os.path.join(SRC, 'python/Channels.cc'),
          os.path.join(SRC, 'python/Filter.cc'),
          os.path.join(SRC, 'python/Header.cc'),
          os.path.join(SRC, 'python/IQBuffer.cc'),
