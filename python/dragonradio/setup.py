@@ -32,10 +32,10 @@ setup(
     setup_requires=['setuptools_scm'],
     install_requires=['ipython==7.18.1'
                      ,'libconf==2.0.1'
-                     ,'matplotlib==3.3.1'
+                     ,'matplotlib==3.3.2'
                      ,'netifaces==0.10.9'
                      ,'numpy==1.19.2'
-                     ,'pandas==1.1.2'
+                     ,'pandas==1.1.3'
                      ,'protobuf==3.13.0'
                      ,'psutil==5.7.2'
                      ,'python-daemon==2.2.4'

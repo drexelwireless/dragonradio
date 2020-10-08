@@ -1,46 +1,39 @@
 # Copyright 2018-2020 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
-from fractions import Fraction
 import math
-import matplotlib as mp
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
 
 import dragonradio.radio
-
-import drlog
-import drgui
+from dragonradio.tools.plot.radio import PSDPlot
 
 HEADER_MCS = dragonradio.liquid.MCS('crc32', 'secded7264', 'h84', 'bpsk')
 """MCS used for packet headers"""
 
-def dB2gain(dB):
-    """Convert dB to multiplicative gain"""
-    return 10.0**(dB/20.0)
-
-def gain2dB(g):
-    """Convert multiplicative gain to dB"""
-    return 20.0*math.log(g)/math.log(10.0)
-
-def mixUp(sig, theta):
-    """Mix a signal up.
+def lowpass(wp, ws, fs, atten=60):
+    """Design a lowpass filter using a Kaiser window.
 
     Args:
-        sig: Signal to mix
-        theta: Frequency to mix. Should be of the form 2*np.pi*shift.
-    """
-    return sig*np.exp(1j*(np.arange(0,len(sig))))
+        wp: Passband frequency
+        ws: Stopband frequency
+        fs: Sample rate
+        atten: desired attenuation (dB)
 
-def mixDown(sig, theta):
-    """Mix a signal down.
-
-    Args:
-        sig: Signal to mix
-        theta: Frequency to mix. Should be of the form 2*np.pi*shift.
+    Returns:
+        Filter taps.
     """
-    return sig*np.exp(-1j*(np.arange(0,len(sig))))
+    N, beta = signal.kaiserord(atten, (ws-wp)/fs)
+    if N % 2 == 0:
+        N += 1
+
+    return signal.firwin(N, ws/2,
+                         window=('kaiser', beta),
+                         fs=fs,
+                         pass_zero=True,
+                         scale=True)
 
 def modulate(hdr, mcs, payload, cbw, Fc, Fs):
     """Modulate a packet using OFDM.
@@ -77,7 +70,7 @@ def modulate(hdr, mcs, payload, cbw, Fc, Fs):
 
     return mixed
 
-def demodulate(sig, cbw, Fc, Fs, plot=False):
+def demodulate(sig: np.ndarray, cbw: float, Fc: float, Fs: float, plot=False):
     """Demodulate an OFDM signal.
 
     Args:
@@ -105,7 +98,7 @@ def demodulate(sig, cbw, Fc, Fs, plot=False):
 
     # Plot PSD of downsampled signal
     if plot:
-        fig = drgui.PSDPlot(*plt.subplots(), nfft=1024)
+        fig = PSDPlot(*plt.subplots(), nfft=1024)
         fig.plot(cbw, downsampled, title='PSD of downsampled Signal')
 
     # Demodulate mixed, down-sampled signal
@@ -170,7 +163,7 @@ def demodulateMix(sig, cbw, Fc, Fs, plot=False):
 
     # Plot PSD of modulated signal
     if plot:
-        fig = drgui.PSDPlot(*plt.subplots(), nfft=1024)
+        fig = PSDPlot(*plt.subplots(), nfft=1024)
         fig.plot(Fs, downsampled, title='PSD of Downsampled Signal')
 
     # Demodulate mixed, down-sampled signal
@@ -318,7 +311,7 @@ def demodulateFast(sig, cbw, Fc, Fs, plot=False, demod=None):
 
     # Plot PSD of modulated signal
     if plot:
-        fig = drgui.PSDPlot(*plt.subplots(), nfft=1024)
+        fig = PSDPlot(*plt.subplots(), nfft=1024)
         fig.plot(Fs, downsampled, title='PSD of Downsampled Signal')
 
     # Demodulate mixed, down-sampled signal
@@ -326,73 +319,3 @@ def demodulateFast(sig, cbw, Fc, Fs, plot=False, demod=None):
         demod = dragonradio.liquid.OFDMDemodulator(HEADER_MCS, True, False, 48, 6, 4)
 
     return demod.demodulate(downsampled)
-
-def lowpass(wp, ws, fs, atten=60):
-    """Design a lowpass filter using a Kaiser window.
-
-    Args:
-        wp: Passband frequency
-        ws: Stopband frequency
-        fs: Sample rate
-        atten: desired attenuation (dB)
-
-    Returns:
-        Filter taps.
-    """
-    N, beta = signal.kaiserord(atten, (ws-wp)/fs)
-    if N % 2 == 0:
-        N += 1
-
-    return signal.firwin(N, ws/2,
-                         window=('kaiser', beta),
-                         fs=fs,
-                         pass_zero=True,
-                         scale=True)
-
-def plotWaveform(sig, title='Waveform'):
-    """Plot waveform."""
-    plt.figure()
-    plt.plot(sig)
-    plt.title(title)
-
-def plotCoefficients(taps, title):
-    """Plot filter tap coefficients.
-
-    Args:
-        taps: Filter taps
-        title: Plot title
-    """
-    plt.figure()
-    plt.plot(taps, 'bo-', linewidth=2)
-    plt.title('Filter Coefficients %s (%d taps)' % (title, len(taps)))
-    plt.grid(True)
-
-def plotResponse(taps, fs, wp=None, ws=None, alpha=1.0):
-    """Plot filter response for one or more filters.
-
-    Args:
-        taps: List of (title, filter tap) pairs
-        fs: Sampel rate
-        wp: Pass-band frequency (optional)
-        ws: Stop-band frequency (optional))
-        alpha: Transparency for response plots (default 1.0)
-    """
-    plt.figure()
-
-    for (h, title) in taps:
-        w, h = signal.freqz(h, worN=8000)
-
-        plt.plot(0.5*fs*w/np.pi, 20*np.log10(np.abs(h)), label=title, alpha=alpha)
-
-    if wp is not None:
-        plt.axvline(x=0.5*wp, linestyle='dashed', label='Passband')
-
-    if ws is not None:
-        plt.axvline(x=0.5*ws, linestyle='dashed', label='Stopband')
-
-    plt.xlim(0, 0.5*fs)
-    plt.grid(True)
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Gain (dB)')
-    plt.legend()
-    plt.title('Frequency Response')

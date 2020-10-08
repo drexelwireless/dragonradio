@@ -1,4 +1,7 @@
+fastparquet==0.5.0
 h5py==2.10.0
 jupyter==1.0.0
+pycairo==1.19
 PyGObject==3.38.0
+python-snappy==0.6.0
 requests==2.24.0
