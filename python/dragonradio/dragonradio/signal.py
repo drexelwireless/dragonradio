@@ -107,10 +107,10 @@ def lowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
             N += 1
 
         return signal.firwin(N, ws/2,
-                            window=('kaiser', beta),
-                            fs=fs,
-                            pass_zero=True,
-                            scale=True)
+                             window=('kaiser', beta),
+                             fs=fs,
+                             pass_zero=True,
+                             scale=True)
 
     # Use firpm
     N = bellangerord(0.001, 0.001, fs, ws-wp)
