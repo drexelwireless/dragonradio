@@ -103,6 +103,7 @@ def lowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
     # Use Kaiser window
     if ftype == 'kaiser':
         N, beta = signal.kaiserord(atten, (ws-wp)/fs)
+        N = min(Nmax, N)
         if N % 2 == 0:
             N += 1
 
