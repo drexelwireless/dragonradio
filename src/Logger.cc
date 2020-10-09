@@ -77,7 +77,7 @@ struct PacketRecvEntry {
     uint8_t dest;
     /** @brief ACK'ed sequence number. */
     uint16_t ack;
-    /** @brief Data length. */
+    /** @brief Size of data portion of packet (bytes). */
     uint16_t data_len;
     /** @brief MGEN flow UID. */
     uint32_t mgen_flow_uid;
@@ -97,7 +97,7 @@ struct PacketRecvEntry {
     float bw;
     /** @brief Demodulation latency (sec) */
     float demod_latency;
-    /** @brief Data size (bytes). */
+    /** @brief Size of packet (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
     hvl_t symbols;
@@ -126,7 +126,7 @@ struct PacketSendEntry {
     uint8_t dest;
     /** @brief ACK'ed sequence number. */
     uint16_t ack;
-    /** @brief Data length. */
+    /** @brief Size of data portion of packet (bytes). */
     uint16_t data_len;
     /** @brief MGEN flow UID. */
     uint32_t mgen_flow_uid;
@@ -140,7 +140,7 @@ struct PacketSendEntry {
     float bw;
     /** @brief Modulation latency [sec] */
     double mod_latency;
-    /** @brief Data size (bytes). */
+    /** @brief Size of packet (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
     hvl_t iq_data;
