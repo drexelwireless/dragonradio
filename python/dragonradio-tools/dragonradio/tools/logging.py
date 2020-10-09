@@ -197,7 +197,11 @@ class Log:
         # Add packet start and end times based on slot timestamp, bandwidth, and
         # sample start and end.
         df['start'] = df.timestamp
-        df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
+
+        if 'nsamples' in df:
+            df['end'] = df.timestamp + df.nsamples/df.bw
+        else:
+            df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
 
         return df
 

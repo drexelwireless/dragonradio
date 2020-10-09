@@ -142,6 +142,8 @@ struct PacketSendEntry {
     double mod_latency;
     /** @brief Size of packet (bytes). */
     uint32_t size;
+    /** @brief Number of IQ samples. */
+    int32_t nsamples;
     /** @brief Raw IQ data. */
     hvl_t iq_data;
 };
@@ -259,6 +261,7 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("mod_latency", HOFFSET(PacketSendEntry, mod_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("size", HOFFSET(PacketSendEntry, size), H5::PredType::NATIVE_UINT32);
+    h5_packet_send.insertMember("nsamples", HOFFSET(PacketSendEntry, nsamples), H5::PredType::NATIVE_INT32);
     h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
 
     // H5 type for events
@@ -529,6 +532,7 @@ void Logger::logSend_(const Clock::time_point& t,
     entry.bw = bw;
     entry.mod_latency = mod_latency;
     entry.size = size;
+    entry.nsamples = nsamples;
     if (buf && getCollectSource(kSentIQ)) {
         // It's possible that a packet's content is split across two successive
         // IQ buffers. If this happens, we won't have all of the packet's IQ
