@@ -37,7 +37,7 @@ protected:
     bool process(std::shared_ptr<NetPacket>& pkt) override;
 
 private:
-    /* @brief The Net we use to filter packets */
+    /** @brief The Net we use to filter packets */
     std::shared_ptr<Net> net_;
 
     /** @brief Internal IP network */
