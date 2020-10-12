@@ -105,7 +105,7 @@ void MAC::rxWorker(void)
         }
 
         // Attempt to deal with RX errors
-        logEvent("MAC: attempting to reset RX loop");
+        logMAC(LOGERROR, "attempting to reset RX loop");
         usrp_->stopRXStream();
     }
 }

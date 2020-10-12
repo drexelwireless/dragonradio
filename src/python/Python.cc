@@ -14,6 +14,7 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
 #endif /* !defined(PYMODULE) */
     auto mliquid = m.def_submodule("liquid");
     auto mradio = m.def_submodule("radio");
+    auto mlogging = m.def_submodule("logging");
 
 #if defined(PYMODULE)
     exportResamplers(mradio);
@@ -26,7 +27,7 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportLiquid(mliquid);
 #else /* !defined(PYMODULE) */
     exportClock(mradio);
-    exportLogger(mradio);
+    exportLogger(mlogging);
     exportRadioConfig(mradio);
     exportWorkQueue(mradio);
     exportUSRP(mradio);

@@ -4,6 +4,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "logging.hh"
 #include "Clock.hh"
 #include "Logger.hh"
 #include "python/PyModules.hh"
@@ -32,6 +33,40 @@ void addLoggerSource(py::class_<Logger, std::shared_ptr<Logger>>& cls, const std
 
 void exportLogger(py::module &m)
 {
+    // Create enum type EventCategory for logger categories
+    py::enum_<EventCategory> event_cat(m, "EventCategory");
+
+    event_cat.def(py::init([](std::string value) -> EventCategory {
+            return string2EventCategory(value);
+        }));
+
+    py::implicitly_convertible<py::str, EventCategory>();
+
+    for (unsigned i = 0; i < kNumEvents; ++i) {
+        EventCategory cat = static_cast<EventCategory>(i);
+
+        event_cat.value(eventCategory2string(cat).c_str(), cat);
+    }
+
+    event_cat.export_values();
+
+    // Export log level functions
+    m.def("isLogLevelEnabled",
+        &isLogLevelEnabled,
+        "Return True if log level is enabled");
+
+    m.def("setLogLevel",
+        &setLogLevel,
+        "Set log level");
+
+    m.def("isPrintLogLevelEnabled",
+        &isPrintLogLevelEnabled,
+        "Return True if printing log level is enabled");
+
+    m.def("setPrintLogLevel",
+        &setPrintLogLevel,
+        "Set printing log level");
+
     // Export class Logger to Python
     py::class_<Logger, std::shared_ptr<Logger>> loggerCls(m, "Logger");
 

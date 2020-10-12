@@ -15,21 +15,12 @@ void exportRadioConfig(py::module &m)
         .def_readwrite("node_id",
             &RadioConfig::node_id,
             "Current node's ID")
-        .def_readwrite("verbose",
-            &RadioConfig::verbose,
-            "Output verbose messages to the console")
-        .def_readwrite("debug",
-            &RadioConfig::debug,
-            "Output debug messages to the console")
         .def_readwrite("log_invalid_headers",
             &RadioConfig::log_invalid_headers,
             "Log invalid headers?")
         .def_readwrite("mtu",
             &RadioConfig::mtu,
             "Maximum Transmission Unit (bytes)")
-        .def_readwrite("verbose_packet_trace",
-            &RadioConfig::verbose_packet_trace,
-            "Display packets written to tun/tap device?")
         .def_readwrite("snapshot_collector",
             &RadioConfig::snapshot_collector,
             "Snapshot collector")

@@ -29,6 +29,7 @@ extern std::shared_ptr<Logger> logger;
 
 class Logger {
 public:
+    /** @brief Logging sources */
     enum Source {
         kSlots = 0,
         kRecvPackets = 1,
@@ -52,7 +53,7 @@ public:
     void stop(void);
     void close(void);
 
-    bool getCollectSource(Source src)
+    inline bool getCollectSource(Source src)
     {
         return sources_ & (1 << src);
     }

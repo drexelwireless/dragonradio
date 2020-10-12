@@ -70,7 +70,7 @@ EVENTS = [(re.compile(r), k, c) for (r, k, c) in
             , [r'^ARQ: txFailure', 'ARQ', 'y']
             , [r'^PHY: invalid payload', 'PHY', 'r']
             , [r'^TIMESYNC:', 'TIMESYNC', 'k']
-            , [r'^(RX|TX) error:', 'USRP', 'r']
+            , [r'^USRP: (RX|TX) error:', 'USRP', 'r']
             , [r'^USRP:', 'USRP', 'k']
             , [r'^QUEUE:', 'QUEUE', 'k']
             , [r'^MAC:', 'MAC', 'r']

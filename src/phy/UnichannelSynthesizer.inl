@@ -119,7 +119,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
 
         // Skip illegal slot indices
         if (slot->slotidx >= slot_chanidx.size()) {
-            logEvent("PHY: Bad slot index");
+            logPHY(LOGDEBUG, "Bad slot index");
             continue;
         }
 

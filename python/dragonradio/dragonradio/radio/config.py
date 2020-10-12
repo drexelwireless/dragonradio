@@ -87,8 +87,7 @@ class Config:
 
         # Set some default values
         self.loglevel = logging.WARNING
-        self.verbose = False
-        self.debug = False
+        self.verbose_packet_trace = False
         self.node_id = getNodeIdFromHostname()
         self.num_nodes = None
         self.interactive = False

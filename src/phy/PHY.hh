@@ -193,11 +193,8 @@ public:
                                                       unsigned char *payload_data)
     {
         if (!header_valid) {
-            if (rc.log_invalid_headers) {
-                if (rc.verbose && !rc.debug)
-                    fprintf(stderr, "HEADER INVALID\n");
-                logEvent("PHY: invalid header");
-            }
+            if (rc.log_invalid_headers)
+                logPHY(LOGINFO, "invalid header");
 
             return nullptr;
         } else if (!payload_valid) {
@@ -205,14 +202,11 @@ public:
 
             pkt->internal_flags.invalid_payload = 1;
 
-            if (h.nexthop == rc.node_id) {
-                if (rc.verbose && !rc.debug)
-                    fprintf(stderr, "PAYLOAD INVALID\n");
-                logEvent("PHY: invalid payload: curhop=%u; nexthop=%u; seq=%u",
+            if (h.nexthop == rc.node_id)
+                logPHY(LOGINFO, "invalid payload: curhop=%u; nexthop=%u; seq=%u",
                     pkt->hdr.curhop,
                     pkt->hdr.nexthop,
                     (unsigned) pkt->hdr.seq);
-            }
 
             return pkt;
         } else {
@@ -221,9 +215,7 @@ public:
             if (!pkt->integrityIntact()) {
                 pkt->internal_flags.invalid_payload = 1;
 
-                if (rc.verbose && !rc.debug)
-                    fprintf(stderr, "PAYLOAD INTEGRITY VIOLATED\n");
-                logEvent("PHY: packet integrity not intact: seq=%u",
+                logPHY(LOGINFO, "packet integrity not intact: seq=%u",
                     (unsigned) pkt->hdr.seq);
             }
 

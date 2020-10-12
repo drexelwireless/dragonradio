@@ -14,6 +14,7 @@ import numpy as np
 
 try:
   from _dragonradio.radio import *
+  from _dragonradio.logging import Logger, EventCategory, setLogLevel, setPrintLogLevel
 except:
   pass
 
@@ -186,7 +187,7 @@ class Radio(dragonradio.tasks.TaskManager):
         rc.node_id = self.node_id
 
         # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['verbose', 'debug', 'mtu', 'verbose_packet_trace']:
+        for attr in ['mtu']:
             if hasattr(self.config, attr):
                 setattr(rc, attr, getattr(self.config, attr))
 
@@ -230,6 +231,14 @@ class Radio(dragonradio.tasks.TaskManager):
             if hasattr(config, 'log_sources'):
                 for source in config.log_sources:
                     setattr(self.logger, source, True)
+
+            for cat in EventCategory.__members__.keys():
+                setLogLevel(cat, logging.DEBUG)
+                setPrintLogLevel(cat, config.loglevel)
+
+            if config.verbose_packet_trace:
+                setPrintLogLevel('NET', logging.DEBUG-1)
+                setPrintLogLevel('TUNTAP', logging.DEBUG-1)
 
             Logger.singleton = self.logger
 

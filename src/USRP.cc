@@ -99,7 +99,7 @@ void USRP::setTXFrequency(double freq)
 
     tx_freq_ = usrp_->get_tx_freq();
 
-    logEvent("USRP: TX frequency set to %f", freq);
+    logUSRP(LOGDEBUG, "TX frequency set to %f", freq);
 }
 
 void USRP::setRXFrequency(double freq)
@@ -115,7 +115,7 @@ void USRP::setRXFrequency(double freq)
 
     rx_freq_ = usrp_->get_rx_freq();
 
-    logEvent("USRP: RX frequency set to %f", freq);
+    logUSRP(LOGDEBUG, "RX frequency set to %f", freq);
 }
 
 void USRP::burstTX(std::optional<MonoClock::time_point> when_,
@@ -212,9 +212,10 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
             if (rx_md.has_time_spec)
-                logEventAt(Clock::to_wall_time(MonoClock::time_point { rx_md.time_spec }), "RX error: %s", rx_md.strerror().c_str());
+                logUSRPAt(Clock::to_wall_time(MonoClock::time_point { rx_md.time_spec }),
+                          LOGWARNING, "RX error: %s", rx_md.strerror().c_str());
             else
-                logEvent("RX error: %s", rx_md.strerror().c_str());
+                logUSRP(LOGWARNING, "RX error: %s", rx_md.strerror().c_str());
 
             if (rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT) {
                 // Mark the buffer as complete.
@@ -268,7 +269,8 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
             // leads to us *missing samples*, which is BAD BAD BAD, but we can't
             // dynamically resize the IQ buffer.
             if (buf.size() < ndelivered + rx_max_samps_) {
-                logEvent("USRP: WARNING: buffer too small to read entire slot: bufsize=%lu, ndelivered=%lu; rx_max_samps=%lu",
+                logUSRP(LOGERROR,
+                    "WARNING: buffer too small to read entire slot: bufsize=%lu, ndelivered=%lu; rx_max_samps=%lu",
                     buf.size(),
                     ndelivered,
                     rx_max_samps_);
@@ -347,12 +349,11 @@ void USRP::txErrorWorker(void)
         }
 
         if (msg) {
-            if (rc.verbose && !rc.debug)
-                fprintf(stderr, "%s\n", msg);
             if (async_md.has_time_spec)
-                logEventAt(Clock::to_wall_time(MonoClock::time_point { async_md.time_spec }), "%s", msg);
+                logUSRPAt(Clock::to_wall_time(MonoClock::time_point { async_md.time_spec }),
+                          LOGWARNING, "%s", msg);
             else
-                logEvent("%s", msg);
+                logUSRP(LOGWARNING, "%s", msg);
         }
     }
 }

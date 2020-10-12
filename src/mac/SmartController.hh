@@ -319,9 +319,9 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
     {
-#if defined(DEBUG)
+#if defined(LOGDEBUG)
         assert(seq >= ack && seq <= ack + win && max <= ack + win);
-#endif /* defined(DEBUG) */
+#endif /* defined(LOGDEBUG) */
         return entries_[seq % entries_.size()];
     }
 
