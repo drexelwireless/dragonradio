@@ -14,7 +14,7 @@
 
 #include <uhd/utils/thread_priority.hpp>
 
-#include "Logger.hh"
+#include "logging.hh"
 #include "Util.hh"
 
 int sys(const char *fmt, ...)

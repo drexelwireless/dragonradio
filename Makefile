@@ -60,6 +60,7 @@ SOURCES := \
     IQCompression.cc \
     IQCompression/FLAC.cc \
     Logger.cc \
+    logging.cc \
     main.cc \
     Math.cc \
     Packet.cc \

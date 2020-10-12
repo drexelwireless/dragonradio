@@ -8,8 +8,8 @@
 #include <functional>
 #include <list>
 
+#include "logging.hh"
 #include "IQBuffer.hh"
-#include "Logger.hh"
 #include "Packet.hh"
 #include "RadioConfig.hh"
 #include "mac/Snapshot.hh"

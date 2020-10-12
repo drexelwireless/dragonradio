@@ -1,7 +1,7 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#include "Logger.hh"
+#include "logging.hh"
 #include "phy/AutoGain.hh"
 
 void AutoGain::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)

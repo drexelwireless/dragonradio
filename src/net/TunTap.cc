@@ -19,7 +19,7 @@
 
 #include <functional>
 
-#include "Logger.hh"
+#include "logging.hh"
 #include "RadioConfig.hh"
 #include "Util.hh"
 #include "net/Net.hh"

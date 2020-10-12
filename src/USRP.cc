@@ -6,8 +6,8 @@
 
 #include <atomic>
 
+#include "logging.hh"
 #include "Clock.hh"
-#include "Logger.hh"
 #include "RadioConfig.hh"
 #include "USRP.hh"
 

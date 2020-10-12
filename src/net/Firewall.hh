@@ -16,9 +16,9 @@
 #include <mutex>
 #include <unordered_set>
 
+#include "logging.hh"
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
-#include "Logger.hh"
 #include "Packet.hh"
 #include "cil/CIL.hh"
 #include "net/Processor.hh"
