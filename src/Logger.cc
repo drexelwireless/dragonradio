@@ -404,12 +404,12 @@ void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
     SnapshotEntry          entry;
     double                 timestamp = (Clock::to_wall_time(snapshot->timestamp) - t_start_).get_real_secs();
     std::shared_ptr<IQBuf> buf = *(snapshot->getCombinedSlots());
-    buffer<char>           data = compressFLAC(8, buf->data(), buf->size());
+    buffer<char>           compressed = compressIQData(buf->data(), buf->size());
 
     entry.timestamp = timestamp;
     entry.fs = buf->fs;
-    entry.iq_data.p = data.data();
-    entry.iq_data.len = data.size();
+    entry.iq_data.p = compressed.data();
+    entry.iq_data.len = compressed.size();
 
     snapshots_->write(&entry, 1);
 

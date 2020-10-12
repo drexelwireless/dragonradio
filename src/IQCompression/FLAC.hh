@@ -33,12 +33,10 @@ protected:
 
 class FLACMemoryEncoder : public FLAC::Encoder::Stream {
 public:
-    FLACMemoryEncoder();
+    FLACMemoryEncoder() = default;
     virtual ~FLACMemoryEncoder() = default;
 
-    virtual void encode(unsigned compression_level,
-                        const fc32_t *sig,
-                        size_t n);
+    virtual void encode(const fc32_t *sig, size_t n);
 
 protected:
     /** @brief Offset into buffer at which to write data */
@@ -53,6 +51,18 @@ protected:
     /** @brief Resize buffer holding encoded data */
     virtual void resize(size_t size) = 0;
 
+    inline void check(bool ok)
+    {
+        if (!ok)
+            get_state().resolved_as_cstring(*this);
+    }
+
+    inline void checkInit(FLAC__StreamEncoderInitStatus status)
+    {
+        if(status != FLAC__STREAM_ENCODER_INIT_STATUS_OK)
+		    throw FLACException(FLAC__StreamEncoderInitStatusString[status]);
+    }
+
     FLAC__StreamEncoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) override;
 
     FLAC__StreamEncoderWriteStatus write_callback(const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame) override;
@@ -66,10 +76,10 @@ protected:
 
 class FLACMemoryDecoder : public FLAC::Decoder::Stream {
 public:
-    FLACMemoryDecoder(const char *encoded, size_t n);
+    FLACMemoryDecoder();
     virtual ~FLACMemoryDecoder() = default;
 
-    virtual void decode(void);
+    virtual void decode(const char *encoded, size_t n);
 
 protected:
     /** @brief Buffer holding encoded data */
@@ -88,10 +98,22 @@ protected:
     virtual size_t size(void) = 0;
 
     /** @brief Get pointer to buffer holding decoded data */
-    virtual float *data(void) = 0;
+    virtual fc32_t *data(void) = 0;
 
     /** @brief Resize buffer holding decoded data */
     virtual void resize(size_t size) = 0;
+
+    inline void check(bool ok)
+    {
+        if (!ok)
+            get_state().resolved_as_cstring(*this);
+    }
+
+    inline void checkInit(FLAC__StreamDecoderInitStatus status)
+    {
+        if(status != FLAC__STREAM_DECODER_INIT_STATUS_OK)
+		    throw FLACException(FLAC__StreamDecoderInitStatusString[status]);
+    }
 
     FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) override;
 

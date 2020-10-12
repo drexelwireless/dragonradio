@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.transforms import blended_transform_factory
 
 import dragonradio.radio
+from dragonradio.radio import decompressIQData
 import dragonradio.tools.logging
 from dragonradio.tools.plot.radio import ConstellationPlot, PAPRPlot, PSDPlot, SpecgramPlot, WaveformPlot
 
@@ -332,7 +333,7 @@ class SnapshotView(LogView):
             snapshot = self.snapshots.iloc[idx]
             self.spos.set_val(idx)
 
-            sig = dragonradio.radio.decompressFLAC(snapshot.iq_data)
+            sig = decompressIQData(snapshot.iq_data)
 
             self.fig.canvas.set_window_title('Snapshot at {}'.format(str(snapshot.timestamp)))
 
