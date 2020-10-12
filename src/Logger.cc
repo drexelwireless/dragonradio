@@ -193,7 +193,7 @@ void Logger::open(const std::string& filename)
 
     h5_slot.insertMember("timestamp", HOFFSET(SlotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_slot.insertMember("bw", HOFFSET(SlotEntry, bw), H5::PredType::NATIVE_FLOAT);
-    h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_iqdata);
+    h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_compressed_iqdata);
 
     // H5 type for snapshots
     H5::CompType h5_snapshot(sizeof(SnapshotEntry));
@@ -386,12 +386,13 @@ H5::Attribute Logger::createOrOpenAttribute(const std::string &name,
 void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
                       float bw)
 {
-    SlotEntry entry;
+    SlotEntry    entry;
+    buffer<char> compressed = compressIQData(buf->data(), buf->size());
 
     entry.timestamp = (Clock::to_wall_time(buf->timestamp) - t_start_).get_real_secs();
     entry.bw = bw;
-    entry.iq_data.p = &(*buf)[0];
-    entry.iq_data.len = buf->size();
+    entry.iq_data.p = compressed.data();
+    entry.iq_data.len = compressed.size();
 
     slots_->write(&entry, 1);
 }
