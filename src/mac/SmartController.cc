@@ -2,7 +2,6 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "Logger.hh"
-#include "RadioConfig.hh"
 #include "mac/SmartController.hh"
 
 #define DEBUG 0

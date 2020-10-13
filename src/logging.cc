@@ -4,7 +4,6 @@
 
 #include "logging.hh"
 #include "Logger.hh"
-#include "RadioConfig.hh"
 
 loglevel loglevels[kNumEvents] = {0};
 

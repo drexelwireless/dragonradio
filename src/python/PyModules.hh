@@ -66,7 +66,6 @@ using RadioOutPull = RadioOutWrapper<Pull>;
 
 void exportClock(py::module &m);
 void exportLogger(py::module &m);
-void exportRadioConfig(py::module &m);
 void exportWorkQueue(py::module &m);
 void exportUSRP(py::module &m);
 void exportEstimators(py::module &m);

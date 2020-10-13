@@ -10,7 +10,6 @@
 #include "Clock.hh"
 #include "IQCompression.hh"
 #include "Logger.hh"
-#include "RadioConfig.hh"
 
 std::shared_ptr<Logger> logger;
 

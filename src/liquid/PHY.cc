@@ -5,7 +5,6 @@
 #include <xsimd/stl/algorithms.hpp>
 
 #include "Logger.hh"
-#include "RadioConfig.hh"
 #include "WorkQueue.hh"
 #include "dsp/NCO.hh"
 #include "liquid/PHY.hh"

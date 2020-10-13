@@ -11,7 +11,6 @@
 #include "logging.hh"
 #include "IQBuffer.hh"
 #include "Packet.hh"
-#include "RadioConfig.hh"
 #include "mac/Snapshot.hh"
 #include "net/Net.hh"
 #include "phy/AutoGain.hh"

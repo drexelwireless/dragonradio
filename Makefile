@@ -64,7 +64,6 @@ SOURCES := \
     main.cc \
     Math.cc \
     Packet.cc \
-    RadioConfig.cc \
     TimerQueue.cc \
     USRP.cc \
     Util.cc \
@@ -121,7 +120,6 @@ SOURCES := \
     python/PHY.cc \
     python/Packet.cc \
     python/Python.cc \
-    python/RadioConfig.cc \
     python/RadioNet.cc \
     python/Resample.cc \
     python/Snapshot.cc \
