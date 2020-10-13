@@ -315,6 +315,10 @@ void exportPHYs(py::module &m)
                     return PHY::mkRadioPacket(true, false, hdr, 0, nullptr);
                 }
             })
+        .def_property_static("team",
+            [](py::object) { return PHY::getTeam(); },
+            [](py::object, uint8_t team) { PHY::setTeam(team); },
+            "Team")
         .def_property_static("node_id",
             [](py::object) { return PHY::getNodeId(); },
             [](py::object, NodeId id) { PHY::setNodeId(id); },

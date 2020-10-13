@@ -57,7 +57,7 @@ struct Header {
         uint8_t compressed : 1;
 
         /** @brief Unused flags */
-        uint8_t unused : 3;
+        uint8_t team : 3;
     } flags;
 } PACKED;
 

@@ -37,8 +37,14 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
 {
     MonoClock::time_point now = MonoClock::now();
 
+    // Set team in header
+    pkt->hdr.flags.team = team_;
+
+    // Set MCS based on MCS index
     assert(pkt->mcsidx < phy_.mcs_table.size());
     setPayloadMCS(*reinterpret_cast<const MCS*>(phy_.mcs_table[pkt->mcsidx].mcs));
+
+    // Assemble the modulated packet
     assemble(&pkt->hdr, pkt->data(), pkt->size());
 
     // Buffer holding generated IQ samples

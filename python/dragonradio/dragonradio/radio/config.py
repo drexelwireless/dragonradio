@@ -88,6 +88,7 @@ class Config:
         # Set some default values
         self.loglevel = logging.WARNING
         self.verbose_packet_trace = False
+        self.team = 0
         self.node_id = getNodeIdFromHostname()
         self.num_nodes = None
         self.interactive = False
@@ -428,6 +429,10 @@ class Config:
             return ', '.join(sorted(cls.__members__.keys()))
 
         # Node ID
+        parser.add_argument('--team', action='store', type=int,
+                            dest='team',
+                            metavar='ID',
+                            help='set team ID')
         parser.add_argument('-i', action='store', type=int,
                             dest='node_id',
                             metavar='ID',

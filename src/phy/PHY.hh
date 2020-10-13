@@ -179,6 +179,7 @@ public:
     static inline bool wantPacket(bool header_valid, const Header *h)
     {
         return header_valid
+            && (h->flags.team == team_)
             && (h->curhop != node_id_)
             && ((h->nexthop == kNodeBroadcast) ||
                 (h->nexthop == node_id_) ||
@@ -228,6 +229,18 @@ public:
     }
 
     /** @brief Get this node's ID */
+    static NodeId getTeam()
+    {
+        return team_;
+    }
+
+    /** @brief Set this node's ID */
+    static void setTeam(uint8_t team)
+    {
+        team_ = team;
+    }
+
+    /** @brief Get this node's ID */
     static NodeId getNodeId()
     {
         return node_id_;
@@ -258,6 +271,9 @@ public:
     }
 
 protected:
+    /** @brief This node's team */
+    static uint8_t team_;
+
     /** @brief This node's ID */
     static NodeId node_id_;
 

@@ -102,6 +102,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.configureSnapshots()
 
         # Create the PHY
+        PHY.team = config.team
         PHY.node_id = config.node_id
         self.phy = self.mkPHY(self.header_mcs, self.mcs_table)
 
