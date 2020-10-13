@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "spinlock_mutex.hh"
-#include "mac/Controller.hh"
+#include "llc/Controller.hh"
 
 /** @brief A Dummy MAC controller that just passes packets. */
 class DummyController : public Controller

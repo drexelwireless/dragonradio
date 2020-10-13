@@ -2,7 +2,7 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "Logger.hh"
-#include "mac/SmartController.hh"
+#include "llc/SmartController.hh"
 
 #define DEBUG 0
 

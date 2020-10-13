@@ -4,9 +4,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "mac/Controller.hh"
-#include "mac/DummyController.hh"
-#include "mac/SmartController.hh"
+#include "llc/Controller.hh"
+#include "llc/DummyController.hh"
+#include "llc/SmartController.hh"
 #include "python/PyModules.hh"
 
 void exportControllers(py::module &m)

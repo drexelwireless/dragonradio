@@ -87,10 +87,10 @@ SOURCES := \
     phy/RadioPacketQueue.cc \
     phy/TDChannelModulator.cc \
     phy/TDChannelizer.cc \
-    mac/DummyController.cc \
+    llc/DummyController.cc \
+    llc/SmartController.cc \
     mac/FDMA.cc \
     mac/MAC.cc \
-    mac/SmartController.cc \
     mac/SlottedALOHA.cc \
     mac/SlottedMAC.cc \
     mac/Snapshot.cc \

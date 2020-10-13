@@ -8,13 +8,13 @@
 #include <memory>
 
 #include "USRP.hh"
+#include "llc/Controller.hh"
+#include "mac/MAC.hh"
+#include "mac/Snapshot.hh"
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
-#include "mac/Controller.hh"
-#include "mac/MAC.hh"
-#include "mac/Snapshot.hh"
 
 /** @brief A MAC protocol. */
 class MAC

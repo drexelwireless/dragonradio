@@ -15,7 +15,7 @@
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "TimerQueue.hh"
-#include "mac/Controller.hh"
+#include "llc/Controller.hh"
 #include "mac/MAC.hh"
 #include "phy/Gain.hh"
 #include "phy/PHY.hh"
