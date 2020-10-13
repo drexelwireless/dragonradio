@@ -315,6 +315,10 @@ void exportPHYs(py::module &m)
                     return PHY::mkRadioPacket(true, false, hdr, 0, nullptr);
                 }
             })
+        .def_property_static("node_id",
+            [](py::object) { return PHY::getNodeId(); },
+            [](py::object, NodeId id) { PHY::setNodeId(id); },
+            "Node ID")
         .def_property_static("log_invalid_headers",
             [](py::object) { return PHY::getLogInvalidHeaders(); },
             [](py::object, bool log) { PHY::setLogInvalidHeaders(log); },

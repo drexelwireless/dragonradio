@@ -85,9 +85,6 @@ class Radio(dragonradio.tasks.TaskManager):
         self.channels = []
         """Channels"""
 
-        # Copy configuration to RadioConfig
-        self.configureRadioConfig()
-
         # Add global work queue workers
         work_queue.addThreads(1)
 
@@ -105,6 +102,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.configureSnapshots()
 
         # Create the PHY
+        PHY.node_id = config.node_id
         self.phy = self.mkPHY(self.header_mcs, self.mcs_table)
 
         # Configure channelizer
@@ -180,11 +178,6 @@ class Radio(dragonradio.tasks.TaskManager):
 
         # Wait for remaining tasks and stop the event loop
         await dragonradio.tasks.stopEventLoop(self.loop, logger)
-
-    def configureRadioConfig(self):
-        """Configure the singleton RadioConfig object"""
-        # Make sure RadioConfig has node id
-        rc.node_id = self.node_id
 
     def configureUSRP(self):
         """Construct USRP object from configuration parameters"""

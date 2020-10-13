@@ -4,8 +4,3 @@
 #include "RadioConfig.hh"
 
 RadioConfig rc;
-
-RadioConfig::RadioConfig()
-  : node_id(0)
-{
-}

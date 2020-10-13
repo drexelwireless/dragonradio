@@ -18,7 +18,7 @@ extern RadioConfig rc;
 
 class RadioConfig {
 public:
-    RadioConfig();
+    RadioConfig() = default;
     RadioConfig(const RadioConfig&) = default;
     RadioConfig(RadioConfig&&) = default;
 
@@ -26,9 +26,6 @@ public:
 
     RadioConfig& operator=(const RadioConfig&) = default;
     RadioConfig& operator=(RadioConfig&&) = default;
-
-    /** @brief The current node's ID */
-    NodeId node_id;
 
     /** @brief Snapshot collector */
     std::shared_ptr<SnapshotCollector> snapshot_collector;

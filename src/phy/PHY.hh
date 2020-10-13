@@ -13,6 +13,7 @@
 #include "Packet.hh"
 #include "RadioConfig.hh"
 #include "mac/Snapshot.hh"
+#include "net/Net.hh"
 #include "phy/AutoGain.hh"
 
 /** @brief A modulated data packet to be sent over the radio */
@@ -179,9 +180,9 @@ public:
     static inline bool wantPacket(bool header_valid, const Header *h)
     {
         return header_valid
-            && (h->curhop != rc.node_id)
+            && (h->curhop != node_id_)
             && ((h->nexthop == kNodeBroadcast) ||
-                (h->nexthop == rc.node_id) ||
+                (h->nexthop == node_id_) ||
                 (rc.snapshot_collector && rc.snapshot_collector->active()));
     }
 
@@ -202,7 +203,7 @@ public:
 
             pkt->internal_flags.invalid_payload = 1;
 
-            if (h.nexthop == rc.node_id)
+            if (h.nexthop == node_id_)
                 logPHY(LOGINFO, "invalid payload: curhop=%u; nexthop=%u; seq=%u",
                     pkt->hdr.curhop,
                     pkt->hdr.nexthop,
@@ -227,6 +228,18 @@ public:
         }
     }
 
+    /** @brief Get this node's ID */
+    static NodeId getNodeId()
+    {
+        return node_id_;
+    }
+
+    /** @brief Set this node's ID */
+    static void setNodeId(NodeId id)
+    {
+        node_id_ = id;
+    }
+
     /** @brief Get whether or not invalid headers should be logged */
     static bool getLogInvalidHeaders()
     {
@@ -240,6 +253,9 @@ public:
     }
 
 protected:
+    /** @brief This node's ID */
+    static NodeId node_id_;
+
     /** @brief Log invalid headers? */
     static bool log_invalid_headers_;
 };
