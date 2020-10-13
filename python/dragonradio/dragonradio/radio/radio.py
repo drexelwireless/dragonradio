@@ -429,6 +429,9 @@ class Radio(dragonradio.tasks.TaskManager):
         """Construct a Controller according to configuration parameters"""
         config = self.config
 
+        if config.amc and not config.arq:
+            raise ValueError('AMC requires ARQ')
+
         if config.arq:
             controller = SmartController(self.net,
                                          # Add MCU to MTU
