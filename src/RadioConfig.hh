@@ -11,8 +11,6 @@
 
 class RadioConfig;
 
-class SnapshotCollector;
-
 /** @brief The global radio config. */
 extern RadioConfig rc;
 
@@ -26,9 +24,6 @@ public:
 
     RadioConfig& operator=(const RadioConfig&) = default;
     RadioConfig& operator=(RadioConfig&&) = default;
-
-    /** @brief Snapshot collector */
-    std::shared_ptr<SnapshotCollector> snapshot_collector;
 };
 
 #endif /* RADIOCONFIG_H_ */

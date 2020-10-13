@@ -241,8 +241,8 @@ class Radio(dragonradio.tasks.TaskManager):
         else:
             self.snapshot_collector = None
 
-        # Make sure RadioConfig has snapshot collector
-        rc.snapshot_collector = self.snapshot_collector
+        # Make sure PHY has snapshot collector
+        PHY.snapshot_collector = self.snapshot_collector
 
     def configureComponents(self):
         """Hook up all the radio components"""

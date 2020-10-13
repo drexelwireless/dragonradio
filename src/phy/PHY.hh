@@ -183,7 +183,7 @@ public:
             && (h->curhop != node_id_)
             && ((h->nexthop == kNodeBroadcast) ||
                 (h->nexthop == node_id_) ||
-                (rc.snapshot_collector && rc.snapshot_collector->active()));
+                (snapshot_collector_ && snapshot_collector_->active()));
     }
 
     /** @brief Create a radio packet from a header and payload */
@@ -252,12 +252,21 @@ public:
         log_invalid_headers_ = log;
     }
 
+    /** @brief Set snapshot collector */
+    static void setSnapshotCollector(std::shared_ptr<SnapshotCollector> collector)
+    {
+        snapshot_collector_ = collector;
+    }
+
 protected:
     /** @brief This node's ID */
     static NodeId node_id_;
 
     /** @brief Log invalid headers? */
     static bool log_invalid_headers_;
+
+    /** @brief Snapshot collector */
+    static std::shared_ptr<SnapshotCollector> snapshot_collector_;
 };
 
 #endif /* PHY_H_ */

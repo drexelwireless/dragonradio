@@ -174,10 +174,10 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     callback_(std::move(pkt));
 
     if (snapshot_off_)
-        rc.snapshot_collector->selfTX(*snapshot_off_ + start,
-                                      *snapshot_off_ + end,
-                                      channel_.fc,
-                                      channel_.bw);
+        snapshot_collector_->selfTX(*snapshot_off_ + start,
+                                    *snapshot_off_ + end,
+                                    channel_.fc,
+                                    channel_.bw);
 
     if (logger_ &&
         logger_->getCollectSource(Logger::kRecvPackets) &&

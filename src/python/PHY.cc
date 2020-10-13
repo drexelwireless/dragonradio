@@ -323,6 +323,10 @@ void exportPHYs(py::module &m)
             [](py::object) { return PHY::getLogInvalidHeaders(); },
             [](py::object, bool log) { PHY::setLogInvalidHeaders(log); },
             "Log invalid headers?")
+        .def_property_static("snapshot_collector",
+            nullptr,
+            [](py::object, std::shared_ptr<SnapshotCollector> collector) { PHY::setSnapshotCollector(collector); },
+            "Snapshot collector")
         ;
 
     // Export class PacketModulator to Python

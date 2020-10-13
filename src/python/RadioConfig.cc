@@ -12,9 +12,6 @@ void exportRadioConfig(py::module &m)
     // Export class RadioConfig to Python
     py::class_<RadioConfig, std::shared_ptr<RadioConfig>>(m, "RadioConfig")
         .def(py::init())
-        .def_readwrite("snapshot_collector",
-            &RadioConfig::snapshot_collector,
-            "Snapshot collector")
         ;
 
     // Export our global RadioConfig
