@@ -57,12 +57,15 @@ void exportSnapshot(py::module &m)
         .def("start",
             &SnapshotCollector::start,
             "Start snapshot collection")
+        .def("next",
+            &SnapshotCollector::next,
+            "Get current snapshot and start a new snapshot immediately")
         .def("stop",
             &SnapshotCollector::stop,
             "Stop snapshot collection")
-        .def("finish",
-            &SnapshotCollector::finish,
-            "Finish snapshot collection, returning the collected snapshot")
+        .def("finalize",
+            &SnapshotCollector::finalize,
+            "Finalize snapshot collection, returning the collected snapshot")
         .def_property_readonly("active",
             &SnapshotCollector::active,
             "Is snapshot collection active?")

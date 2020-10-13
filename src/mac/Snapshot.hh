@@ -55,8 +55,17 @@ public:
     /** @brief Stop snapshot collection */
     void stop(void);
 
-    /** @brief Finish snapshot collection */
-    std::shared_ptr<Snapshot> finish(void);
+    /** @brief Finalize snapshot collection */
+    /** Snapshot collection should be stopped before finalize is called. Waiting
+     * for a small amount of time between stopping snapshot collection and
+     * finalizing a snapshot allows pending packets demodulation to finish,
+     * which provides more complete information about self-transmissions during
+     * the snapshot.
+     */
+    std::shared_ptr<Snapshot> finalize(void);
+
+    /** @brief Get current snapshot and start a new snapshot immediately */
+    std::shared_ptr<Snapshot> next(void);
 
     /** @brief Add IQ buffer to the snapshot
      * @return true if snapshots are being collected
@@ -125,6 +134,12 @@ protected:
 
     /** @brief Last local TX */
     SelfTX last_local_tx_;
+
+    /** @brief Start a new snapshot */
+    void newSnapshot(void);
+
+    /** @brief Fix timestamps in current snapshot */
+    void fixSnapshotTimestamps(void);
 };
 
 #endif /* SNAPSHOT_H_ */

@@ -129,7 +129,7 @@ class Radio(dragonradio.tasks.TaskManager):
     def start(self, user_ns=locals()):
         """Start the radio"""
         # Collect snapshots if requested
-        if self.config.snapshot_period is not None:
+        if self.config.snapshot_frequency is not None:
             self.startSnapshots()
 
         # Add radio nodes to the network if number of nodes was specified
@@ -236,7 +236,10 @@ class Radio(dragonradio.tasks.TaskManager):
         """Configure snapshots"""
         config = self.config
 
-        if config.snapshot_period is not None:
+        if config.snapshot_frequency is not None:
+            if config.snapshot_frequency < config.snapshot_duration:
+                raise ValueError("Snapshot duration frequency must be no greater than snapshot frequency")
+
             self.snapshot_collector = SnapshotCollector()
         else:
             self.snapshot_collector = None
@@ -1123,30 +1126,36 @@ class Radio(dragonradio.tasks.TaskManager):
         collector = self.snapshot_collector
 
         try:
-            # Sleep a random amount to de-synchronize with other radios collecting
-            # snapshots.
-            await asyncio.sleep(random.uniform(0, config.snapshot_duration))
+            if config.snapshot_duration != config.snapshot_frequency:
+                # Sleep a random amount to de-synchronize with other radios
+                # collecting snapshots.
+                await asyncio.sleep(random.uniform(0, config.snapshot_duration))
 
             while True:
                 # Collecting snapshot for config.snapshot_duration
                 collector.start()
                 await asyncio.sleep(config.snapshot_duration)
 
-                # Stop collecting slots
-                collector.stop()
+                if config.snapshot_duration == config.snapshot_frequency:
+                    snapshot = collector.next()
+                else:
+                    # Stop collecting slots
+                    collector.stop()
 
-                # Wait for remaining packets in snapshot to be demodulated and
-                # get the snapshot
-                if config.snapshot_finish_wait != 0:
-                    await asyncio.sleep(config.snapshot_finish_wait)
+                    # Wait for remaining packets in snapshot to be demodulated and
+                    # get the snapshot
+                    if config.snapshot_finalize_wait != 0:
+                        await asyncio.sleep(config.snapshot_finalize_wait)
 
-                snapshot = collector.finish()
+                    # Finalize the snapshot
+                    snapshot = collector.finalize()
 
                 # Log the snapshot
                 if config.log_snapshots:
                     self.logger.logSnapshot(snapshot)
 
-                await asyncio.sleep(config.snapshot_period)
+                if config.snapshot_duration != config.snapshot_frequency:
+                    await asyncio.sleep(config.snapshot_frequency - (config.snapshot_duration + config.snapshot_finalize_wait))
         except asyncio.CancelledError:
             return
 

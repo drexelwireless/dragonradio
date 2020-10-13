@@ -257,11 +257,11 @@ class Config:
         self.amc_mcsidx_prob_floor = 0.1
 
         # Snapshot options
-        self.snapshot_period = None
+        self.snapshot_frequency = None
         """How often to take a snapshot (sec)"""
         self.snapshot_duration = 0.5
         """Duration of each snapshot (sec)"""
-        self.snapshot_finish_wait = 200e-3
+        self.snapshot_finalize_wait = 200e-3
         """How long to wait for demodulation to finish after stopping a snapshot (sec)"""
 
         # Network options
@@ -789,10 +789,10 @@ class Config:
         # Snapshot options
         snapshot = parser.add_argument_group('Snapshots')
 
-        snapshot.add_argument('--snapshot-period', action='store', type=float,
-                              dest='snapshot_period',
+        snapshot.add_argument('--snapshot-frequency', action='store', type=float,
+                              dest='snapshot_frequency',
                               metavar='SEC',
-                              help='set snapshot period (sec)')
+                              help='set snapshot frequency (sec)')
         snapshot.add_argument('--snapshot-duration', action='store', type=float,
                               dest='snapshot_duration',
                               metavar='SEC',

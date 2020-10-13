@@ -46,25 +46,7 @@ void SnapshotCollector::start(void)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
-    snapshot_ = std::make_unique<Snapshot>();
-    // Set *provisional* snapshot timestamp. Eventually, we will set this to the
-    // timestamp of the first collected slot.
-    snapshot_->timestamp = MonoClock::now();
-    snapshot_collect_ = true;
-    snapshot_off_ = 0;
-
-    // Log last TX if it is in progress
-    float                 fs = last_local_tx_fs_rx_;
-    MonoClock::time_point end = last_local_tx_start_ + last_local_tx_.end/fs;
-
-    if (snapshot_->timestamp < end) {
-        ssize_t actual_start = (snapshot_->timestamp - last_local_tx_start_).get_real_secs()*fs;
-
-        last_local_tx_.start -= actual_start;
-        last_local_tx_.end -= actual_start;
-
-        snapshot_->selftx.emplace_back(last_local_tx_);
-    }
+    newSnapshot();
 }
 
 void SnapshotCollector::stop(void)
@@ -74,33 +56,26 @@ void SnapshotCollector::stop(void)
     snapshot_collect_ = false;
 }
 
-std::shared_ptr<Snapshot> SnapshotCollector::finish(void)
+std::shared_ptr<Snapshot> SnapshotCollector::finalize(void)
 {
     std::lock_guard<spinlock_mutex> lock(mutex_);
 
-    if (!snapshot_->slots.empty()) {
-        float                 fs = snapshot_->slots[0]->fs;
-        MonoClock::time_point provisional_timestamp = snapshot_->timestamp;
-        MonoClock::time_point actual_timestamp = snapshot_->slots[0]->timestamp;
-        ssize_t               delta = (actual_timestamp - provisional_timestamp).get_real_secs()*fs;
+    fixSnapshotTimestamps();
 
-        // Make snapshot timestamp the timestamp of the first collected slot
-        snapshot_->timestamp = actual_timestamp;
+    return std::move(snapshot_);
+}
 
-        // Update all offsets of local self-tranmissions, i.e., transmissions
-        // *this* node has made during snapshot collection. Before we fix them
-        // up here, they are relative to the *provisional* snapshot timestamp.
-        for (auto &selftx : snapshot_->selftx) {
-            if (selftx.is_local) {
-                selftx.start -= delta;
-                selftx.end -= delta;
-            }
-        }
-    }
+std::shared_ptr<Snapshot> SnapshotCollector::next(void)
+{
+    std::lock_guard<spinlock_mutex> lock(mutex_);
 
-    std::shared_ptr<Snapshot> result = std::move(snapshot_);
+    fixSnapshotTimestamps();
 
-    return result;
+    auto snapshot = std::move(snapshot_);
+
+    newSnapshot();
+
+    return snapshot;
 }
 
 bool SnapshotCollector::push(const std::shared_ptr<IQBuf> &buf)
@@ -163,5 +138,51 @@ void SnapshotCollector::selfTX(MonoClock::time_point when,
         last_local_tx_.end = scaled_nsamples;
         last_local_tx_.fc = fc;
         last_local_tx_.fs = fs_tx;
+    }
+}
+
+void SnapshotCollector::newSnapshot(void)
+{
+    snapshot_ = std::make_unique<Snapshot>();
+    // Set *provisional* snapshot timestamp. Eventually, we will set this to the
+    // timestamp of the first collected slot.
+    snapshot_->timestamp = MonoClock::now();
+    snapshot_collect_ = true;
+    snapshot_off_ = 0;
+
+    // Log last TX if it is in progress
+    float                 fs = last_local_tx_fs_rx_;
+    MonoClock::time_point end = last_local_tx_start_ + last_local_tx_.end/fs;
+
+    if (snapshot_->timestamp < end) {
+        ssize_t actual_start = (snapshot_->timestamp - last_local_tx_start_).get_real_secs()*fs;
+
+        last_local_tx_.start -= actual_start;
+        last_local_tx_.end -= actual_start;
+
+        snapshot_->selftx.emplace_back(last_local_tx_);
+    }
+}
+
+void SnapshotCollector::fixSnapshotTimestamps(void)
+{
+    if (!snapshot_->slots.empty()) {
+        float                 fs = snapshot_->slots[0]->fs;
+        MonoClock::time_point provisional_timestamp = snapshot_->timestamp;
+        MonoClock::time_point actual_timestamp = snapshot_->slots[0]->timestamp;
+        ssize_t               delta = (actual_timestamp - provisional_timestamp).get_real_secs()*fs;
+
+        // Make snapshot timestamp the timestamp of the first collected slot
+        snapshot_->timestamp = actual_timestamp;
+
+        // Update all offsets of local self-tranmissions, i.e., transmissions
+        // *this* node has made during snapshot collection. Before we fix them
+        // up here, they are relative to the *provisional* snapshot timestamp.
+        for (auto &selftx : snapshot_->selftx) {
+            if (selftx.is_local) {
+                selftx.start -= delta;
+                selftx.end -= delta;
+            }
+        }
     }
 }

@@ -275,7 +275,7 @@ class Controller(CILServer):
         self.radio = radio
 
         # Collect snapshots if requested
-        if self.config.snapshot_period is not None:
+        if self.config.snapshot_frequency is not None:
             radio.startSnapshots()
 
         # Capture interfaces
