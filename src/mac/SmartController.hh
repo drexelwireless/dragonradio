@@ -353,6 +353,7 @@ public:
     using evm_thresh_t = std::optional<double>;
 
     SmartController(std::shared_ptr<Net> net,
+                    size_t mtu,
                     std::shared_ptr<PHY> phy,
                     double slot_size,
                     Seq::uint_type max_sendwin,

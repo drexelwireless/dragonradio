@@ -15,9 +15,6 @@ void exportRadioConfig(py::module &m)
         .def_readwrite("node_id",
             &RadioConfig::node_id,
             "Current node's ID")
-        .def_readwrite("mtu",
-            &RadioConfig::mtu,
-            "Maximum Transmission Unit (bytes)")
         .def_readwrite("snapshot_collector",
             &RadioConfig::snapshot_collector,
             "Snapshot collector")

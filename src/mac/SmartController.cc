@@ -46,12 +46,13 @@ void RecvWindow::operator()()
 }
 
 SmartController::SmartController(std::shared_ptr<Net> net,
+                                 size_t mtu,
                                  std::shared_ptr<PHY> phy,
                                  double slot_size,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
                                  const std::vector<evm_thresh_t> &evm_thresholds)
-  : Controller(net)
+  : Controller(net, mtu)
   , phy_(phy)
   , slot_size_(slot_size)
   , max_sendwin_(max_sendwin)
@@ -92,7 +93,7 @@ SmartController::SmartController(std::shared_ptr<Net> net,
 
     // Calculate samples needed to modulate the largest packet we will ever see
     // at each MCS
-    size_t max_pkt_size = rc.mtu + sizeof(struct ether_header);
+    size_t max_pkt_size = getMTU() + sizeof(struct ether_header);
 
     max_packet_samples_.resize(phy->mcs_table.size());
 
@@ -1060,13 +1061,13 @@ void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
 
     // If we have too many selective ACK's, keep as many as we can, but keep the
     // *latest* selective ACKs.
-    if (pkt.size() > rc.mtu) {
+    if (pkt.size() > getMTU()) {
         // How many SACK's do we need to remove?
         constexpr size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
         int              nremove;
         int              nkeep;
 
-        nremove = (pkt.size() - rc.mtu + sack_size - 1) /
+        nremove = (pkt.size() - getMTU() + sack_size - 1) /
                       sack_size;
 
         if (nremove > nsacks)

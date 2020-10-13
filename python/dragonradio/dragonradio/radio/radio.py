@@ -186,11 +186,6 @@ class Radio(dragonradio.tasks.TaskManager):
         # Make sure RadioConfig has node id
         rc.node_id = self.node_id
 
-        # Copy configuration settings to the C++ RadioConfig object
-        for attr in ['mtu']:
-            if hasattr(self.config, attr):
-                setattr(rc, attr, getattr(self.config, attr))
-
     def configureUSRP(self):
         """Construct USRP object from configuration parameters"""
         config = self.config
@@ -271,7 +266,7 @@ class Radio(dragonradio.tasks.TaskManager):
                              str(int_net.netmask),
                              config.tap_macaddr,
                              False,
-                             self.config.mtu,
+                             config.mtu,
                              self.node_id)
 
         self.net = Net(self.tuntap, self.node_id)
@@ -440,14 +435,13 @@ class Radio(dragonradio.tasks.TaskManager):
 
         if config.arq:
             controller = SmartController(self.net,
+                                         # Add MCU to MTU
+                                         config.mtu + config.arq_mcu,
                                          self.phy,
                                          config.slot_size,
                                          config.arq_window,
                                          config.arq_window,
                                          evm_thresholds)
-
-            # Add MCU to MTU
-            rc.mtu += config.arq_mcu
 
             # ARQ parameters
             controller.enforce_ordering = config.arq_enforce_ordering
@@ -486,7 +480,7 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.mcsidx_prob_floor = config.amc_mcsidx_prob_floor
 
         else:
-            controller = DummyController(self.net)
+            controller = DummyController(self.net, config.mtu)
 
         return controller
 

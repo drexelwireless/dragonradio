@@ -7,6 +7,5 @@ RadioConfig rc;
 
 RadioConfig::RadioConfig()
   : node_id(0)
-  , mtu(1500)
 {
 }

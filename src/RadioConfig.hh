@@ -30,9 +30,6 @@ public:
     /** @brief The current node's ID */
     NodeId node_id;
 
-    /** @brief Maximum Transmission Unit (bytes) */
-    unsigned mtu;
-
     /** @brief Snapshot collector */
     std::shared_ptr<SnapshotCollector> snapshot_collector;
 };
