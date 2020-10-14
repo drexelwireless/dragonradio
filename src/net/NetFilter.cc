@@ -11,7 +11,6 @@
 #include <cstddef>
 
 #include "logging.hh"
-#include "RadioConfig.hh"
 #include "net/NetFilter.hh"
 #include "net/NetUtil.hh"
 

@@ -8,7 +8,6 @@
 
 #include "logging.hh"
 #include "Clock.hh"
-#include "RadioConfig.hh"
 #include "USRP.hh"
 
 USRP::USRP(const std::string& addr,

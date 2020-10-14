@@ -315,6 +315,18 @@ void exportPHYs(py::module &m)
                     return PHY::mkRadioPacket(true, false, hdr, 0, nullptr);
                 }
             })
+        .def_property_static("node_id",
+            [](py::object) { return PHY::getNodeId(); },
+            [](py::object, NodeId id) { PHY::setNodeId(id); },
+            "Node ID")
+        .def_property_static("log_invalid_headers",
+            [](py::object) { return PHY::getLogInvalidHeaders(); },
+            [](py::object, bool log) { PHY::setLogInvalidHeaders(log); },
+            "Log invalid headers?")
+        .def_property_static("snapshot_collector",
+            nullptr,
+            [](py::object, std::shared_ptr<SnapshotCollector> collector) { PHY::setSnapshotCollector(collector); },
+            "Snapshot collector")
         ;
 
     // Export class PacketModulator to Python

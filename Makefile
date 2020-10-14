@@ -64,7 +64,6 @@ SOURCES := \
     main.cc \
     Math.cc \
     Packet.cc \
-    RadioConfig.cc \
     TimerQueue.cc \
     USRP.cc \
     Util.cc \
@@ -84,6 +83,7 @@ SOURCES := \
     phy/FDChannelizer.cc \
     phy/MultichannelSynthesizer.cc \
     phy/OverlapTDChannelizer.cc \
+    phy/PHY.cc \
     phy/RadioPacketQueue.cc \
     phy/TDChannelModulator.cc \
     phy/TDChannelizer.cc \
@@ -120,7 +120,6 @@ SOURCES := \
     python/PHY.cc \
     python/Packet.cc \
     python/Python.cc \
-    python/RadioConfig.cc \
     python/RadioNet.cc \
     python/Resample.cc \
     python/Snapshot.cc \

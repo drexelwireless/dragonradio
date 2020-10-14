@@ -19,7 +19,8 @@ using namespace std::placeholders;
 class Controller : public Element
 {
 public:
-    Controller(std::shared_ptr<Net> net)
+    Controller(std::shared_ptr<Net> net,
+               size_t mtu)
       : net_in(*this, nullptr, nullptr)
       , net_out(*this,
                 nullptr,
@@ -31,6 +32,7 @@ public:
       , radio_out(*this, nullptr, nullptr)
       , net_(net)
       , netq_(nullptr)
+      , mtu_(mtu)
       , min_channel_bandwidth_(0)
     {
     }
@@ -48,6 +50,12 @@ public:
     void setNetQueue(std::shared_ptr<NetQueue> q)
     {
         netq_ = q;
+    }
+
+    /** @brief Get MTU */
+    size_t getMTU() const
+    {
+        return mtu_;
     }
 
     /** @brief Set minimum channel bandwidth */
@@ -114,6 +122,9 @@ protected:
 
     /** @brief Network queue with high-priority sub-queue. */
     std::shared_ptr<NetQueue> netq_;
+
+    /** @brief Network MTU */
+    size_t mtu_;
 
     /** @brief Bandwidth of the smallest channel */
     double min_channel_bandwidth_;

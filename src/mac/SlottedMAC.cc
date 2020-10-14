@@ -55,7 +55,7 @@ void SlottedMAC::reconfigure(void)
         size_t max_samples = min_chan_bw_*(slot_size_ - guard_size_);
 
         for (mcsidx_t mcsidx = 0; mcsidx < phy_->mcs_table.size(); ++mcsidx)
-            phy_->mcs_table[mcsidx].valid = phy_->getModulatedSize(mcsidx, rc.mtu) <= max_samples;
+            phy_->mcs_table[mcsidx].valid = phy_->getModulatedSize(mcsidx, controller_->getMTU()) <= max_samples;
 
         if (!phy_->mcs_table[phy_->mcs_table.size()-1].valid)
             logMAC(LOGWARNING, "WARNING: Slot size too small to support a full-sized packet!");

@@ -28,7 +28,6 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
 #else /* !defined(PYMODULE) */
     exportClock(mradio);
     exportLogger(mlogging);
-    exportRadioConfig(mradio);
     exportWorkQueue(mradio);
     exportUSRP(mradio);
     exportEstimators(mradio);

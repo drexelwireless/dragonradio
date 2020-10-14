@@ -5,7 +5,6 @@
 #include <xsimd/stl/algorithms.hpp>
 
 #include "Logger.hh"
-#include "RadioConfig.hh"
 #include "WorkQueue.hh"
 #include "dsp/NCO.hh"
 #include "liquid/PHY.hh"
@@ -174,14 +173,14 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     callback_(std::move(pkt));
 
     if (snapshot_off_)
-        rc.snapshot_collector->selfTX(*snapshot_off_ + start,
-                                      *snapshot_off_ + end,
-                                      channel_.fc,
-                                      channel_.bw);
+        snapshot_collector_->selfTX(*snapshot_off_ + start,
+                                    *snapshot_off_ + end,
+                                    channel_.fc,
+                                    channel_.bw);
 
     if (logger_ &&
         logger_->getCollectSource(Logger::kRecvPackets) &&
-        (header_valid_ || rc.log_invalid_headers)) {
+        (header_valid_ || log_invalid_headers_)) {
         buffer<std::complex<float>> *buf = nullptr;
 
         if (logger_->getCollectSource(Logger::kRecvSymbols)) {
