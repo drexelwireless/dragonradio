@@ -26,78 +26,67 @@ void convert2fc32(const sc16_t *from, fc32_t *to, size_t n)
 
 class BufferEncoder : public FLACMemoryEncoder {
 public:
-    BufferEncoder()
-    {
-    }
+    BufferEncoder() = default;
 
     virtual ~BufferEncoder() = default;
 
-    /** @brief Buffer for encoded data */
-    buffer<char> encoded_bytes;
+    class buffer<char> encoded;
 
 protected:
     size_t size(void) override
     {
-        return encoded_bytes.size();
+        return encoded.size();
     }
 
     char *data(void) override
     {
-        return encoded_bytes.data();
+        return encoded.data();
     }
 
     void resize(size_t size) override
     {
-        encoded_bytes.resize(size);
+        encoded.resize(size);
     }
 };
 
 class BufferDecoder : public FLACMemoryDecoder {
 public:
-    BufferDecoder(const char *encoded, size_t n)
-      : FLACMemoryDecoder(encoded, n)
-    {
-    }
+    BufferDecoder() = default;
 
     virtual ~BufferDecoder() = default;
 
-    /** @brief Buffer for decoded signal */
-    buffer<fc32_t> decoded_sig;
+    buffer<fc32_t> decoded;
 
 protected:
     size_t size(void) override
     {
-        return decoded_sig.size();
+        return decoded.size();
     }
 
-    float *data(void) override
+    fc32_t *data(void) override
     {
-        return reinterpret_cast<float*>(decoded_sig.data());
+        return decoded.data();
     }
 
     void resize(size_t size) override
     {
-        decoded_sig.resize(size);
+        decoded.resize(size);
     }
 };
 
-buffer<char> compressFLAC(unsigned compression_level, const fc32_t *data, size_t n)
+buffer<char> compressIQData(const fc32_t *data, size_t n)
 {
-    BufferEncoder encoder;
+    static BufferEncoder encoder;
 
-    encoder.encode(compression_level,
-                   data,
-                   n);
+    encoder.encode(data, n);
 
-    return encoder.encoded_bytes;
+    return std::move(encoder.encoded);
 }
 
-/** @brief Decompress FLAC-encoded fc32 data */
-buffer<fc32_t> decompressFLAC(const char *data, size_t n)
+buffer<fc32_t> decompressIQData(const char *data, size_t n)
 {
-    BufferDecoder decoder(data, n);
+    static BufferDecoder decoder;
 
-    decoder.decode();
-
-    return decoder.decoded_sig;
+    decoder.decode(data, n);
+    return std::move(decoder.decoded);
 }

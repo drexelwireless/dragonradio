@@ -25,10 +25,10 @@ void convert2sc16(const fc32_t *from, sc16_t *to, size_t n);
 /** @brief Convert sc16 format to fc32 */
 void convert2fc32(const sc16_t *from, fc32_t *to, size_t n);
 
-/** @brief Compress fc32 data with FLAC */
-buffer<char> compressFLAC(unsigned compression_level, const fc32_t *data, size_t n);
+/** @brief Compress fc32 IQ data */
+buffer<char> compressIQData(const fc32_t *data, size_t n);
 
-/** @brief Decompress FLAC-encoded fc32 data */
-buffer<fc32_t> decompressFLAC(const char *data, size_t n);
+/** @brief Decompress fc32 IQ data */
+buffer<fc32_t> decompressIQData(const char *data, size_t n);
 
 #endif /* IQCOMPRESSION_H_ */

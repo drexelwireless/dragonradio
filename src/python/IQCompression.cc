@@ -20,62 +20,55 @@
 
 class HIDDEN PyArrayEncoder : public FLACMemoryEncoder {
 public:
-    PyArrayEncoder()
-    {
-    }
+    PyArrayEncoder() = default;
 
     virtual ~PyArrayEncoder() = default;
 
-    /** @brief Buffer for encoded data */
-    py::array_t<char> encoded_bytes;
+    py::array_t<char> encoded;
 
 protected:
     size_t size(void) override
     {
-        return encoded_bytes.size();
+        return encoded.size();
     }
 
     char *data(void) override
     {
-        auto buf = encoded_bytes.request();
+        auto buf = encoded.request();
 
         return reinterpret_cast<char*>(buf.ptr);
     }
 
     void resize(size_t size) override
     {
-        encoded_bytes.resize({size});
+        encoded.resize({size});
     }
 };
 
 class HIDDEN PyArrayDecoder : public FLACMemoryDecoder {
 public:
-    PyArrayDecoder(const char *encoded, size_t n)
-        : FLACMemoryDecoder(encoded, n)
-    {
-    }
+    PyArrayDecoder() = default;
 
     virtual ~PyArrayDecoder() = default;
 
-    /** @brief Buffer for decoded signal */
-    py::array_t<fc32_t> decoded_sig;
+    py::array_t<fc32_t> decoded;
 
 protected:
     size_t size(void) override
     {
-        return decoded_sig.size();
+        return decoded.size();
     }
 
-    float *data(void) override
+    fc32_t *data(void) override
     {
-        auto buf = decoded_sig.request();
+        auto buf = decoded.request();
 
-        return reinterpret_cast<float*>(buf.ptr);
+        return reinterpret_cast<fc32_t*>(buf.ptr);
     }
 
     void resize(size_t size) override
     {
-        decoded_sig.resize({size});
+        decoded.resize({size});
     }
 };
 
@@ -109,25 +102,21 @@ void exportIQCompression(py::module &m)
     }, "convert sc16 buffer to a fc32 buffer")
     ;
 
-    m.def("compressFLAC", [](unsigned compression_level, py::array_t<fc32_t> sig) -> py::bytes {
+    m.def("compressIQData", [](py::array_t<fc32_t> sig) -> py::bytes {
         PyArrayEncoder encoder;
         auto           sigbuf = sig.request();
 
-        encoder.encode(compression_level,
-                       reinterpret_cast<fc32_t*>(sigbuf.ptr),
-                       sig.size());
-
-        return encoder.encoded_bytes;
-    }, "compress fc32 samples using FLAC")
+        encoder.encode(reinterpret_cast<fc32_t*>(sigbuf.ptr), sig.size());
+        return std::move(encoder.encoded);
+    }, "compress fc32 samples")
     ;
 
-    m.def("decompressFLAC", [](py::array_t<char> data) -> py::array_t<fc32_t> {
+    m.def("decompressIQData", [](py::array_t<char> data) -> py::array_t<fc32_t> {
+        PyArrayDecoder decoder;
         auto           buf = data.request();
-        PyArrayDecoder decoder(reinterpret_cast<char*>(buf.ptr), buf.size);
 
-        decoder.decode();
-
-        return decoder.decoded_sig;
-    }, "decompress fc32 samples using FLAC")
+        decoder.decode(reinterpret_cast<char*>(buf.ptr), buf.size);
+        return std::move(decoder.decoded);
+    }, "decompress fc32 samples")
     ;
 }

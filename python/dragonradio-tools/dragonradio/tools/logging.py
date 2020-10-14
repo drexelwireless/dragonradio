@@ -14,6 +14,7 @@ from pandas.api.types import CategoricalDtype
 import h5py
 
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
+from dragonradio.radio import decompressIQData
 from dragonradio.tools.colosseum.logging import ReservationLog
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class Slots:
         self.ts = list(slots.timestamp)
         """Timestamps of slots in the set"""
 
-        self.iq_data = np.concatenate(list(slots.iq_data))
+        self.iq_data = np.concatenate([decompressIQData(sig) for sig in slots.iq_data])
         """Combined IQ data of slots in the set"""
 
         self.offset = offset
