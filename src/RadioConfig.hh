@@ -30,9 +30,6 @@ public:
     /** @brief The current node's ID */
     NodeId node_id;
 
-    /** @brief Log invalid headers? */
-    bool log_invalid_headers;
-
     /** @brief Maximum Transmission Unit (bytes) */
     unsigned mtu;
 

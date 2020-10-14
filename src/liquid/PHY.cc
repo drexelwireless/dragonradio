@@ -181,7 +181,7 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
 
     if (logger_ &&
         logger_->getCollectSource(Logger::kRecvPackets) &&
-        (header_valid_ || rc.log_invalid_headers)) {
+        (header_valid_ || log_invalid_headers_)) {
         buffer<std::complex<float>> *buf = nullptr;
 
         if (logger_->getCollectSource(Logger::kRecvSymbols)) {

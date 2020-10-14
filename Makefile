@@ -84,6 +84,7 @@ SOURCES := \
     phy/FDChannelizer.cc \
     phy/MultichannelSynthesizer.cc \
     phy/OverlapTDChannelizer.cc \
+    phy/PHY.cc \
     phy/RadioPacketQueue.cc \
     phy/TDChannelModulator.cc \
     phy/TDChannelizer.cc \

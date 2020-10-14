@@ -315,6 +315,10 @@ void exportPHYs(py::module &m)
                     return PHY::mkRadioPacket(true, false, hdr, 0, nullptr);
                 }
             })
+        .def_property_static("log_invalid_headers",
+            [](py::object) { return PHY::getLogInvalidHeaders(); },
+            [](py::object, bool log) { PHY::setLogInvalidHeaders(log); },
+            "Log invalid headers?")
         ;
 
     // Export class PacketModulator to Python

@@ -15,9 +15,6 @@ void exportRadioConfig(py::module &m)
         .def_readwrite("node_id",
             &RadioConfig::node_id,
             "Current node's ID")
-        .def_readwrite("log_invalid_headers",
-            &RadioConfig::log_invalid_headers,
-            "Log invalid headers?")
         .def_readwrite("mtu",
             &RadioConfig::mtu,
             "Maximum Transmission Unit (bytes)")

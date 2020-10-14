@@ -242,6 +242,8 @@ class Radio(dragonradio.tasks.TaskManager):
 
             Logger.singleton = self.logger
 
+        PHY.log_invalid_headers = config.log_invalid_headers
+
     def configureSnapshots(self):
         """Configure snapshots"""
         config = self.config

@@ -193,7 +193,7 @@ public:
                                                       unsigned char *payload_data)
     {
         if (!header_valid) {
-            if (rc.log_invalid_headers)
+            if (log_invalid_headers_)
                 logPHY(LOGINFO, "invalid header");
 
             return nullptr;
@@ -226,6 +226,22 @@ public:
             return pkt;
         }
     }
+
+    /** @brief Get whether or not invalid headers should be logged */
+    static bool getLogInvalidHeaders()
+    {
+        return log_invalid_headers_;
+    }
+
+    /** @brief Set whether or not invalid headers should be logged */
+    static void setLogInvalidHeaders(bool log)
+    {
+        log_invalid_headers_ = log;
+    }
+
+protected:
+    /** @brief Log invalid headers? */
+    static bool log_invalid_headers_;
 };
 
 #endif /* PHY_H_ */
