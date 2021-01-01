@@ -9,8 +9,6 @@
 #include "Neighborhood.hh"
 #include "net/Processor.hh"
 
-using namespace std::placeholders;
-
 class NetFilter : public Processor<std::shared_ptr<NetPacket>>
 {
 public:
