@@ -25,8 +25,6 @@
 #include "util/ssprintf.hh"
 #include "util/threads.hh"
 
-using namespace std::placeholders;
-
 /** @file TunTap.cc
  * This code has been heavily modified from the version included in the
  * reference SC2 radio. That code appears to have been taken from this
@@ -44,7 +42,7 @@ TunTap::TunTap(const std::string& tap_iface,
   : sink(*this,
          nullptr,
          nullptr,
-         std::bind(&TunTap::send, this, _1))
+         std::bind(&TunTap::send, this, std::placeholders::_1))
   , source(*this,
            std::bind(&TunTap::start, this),
            std::bind(&TunTap::stop, this))

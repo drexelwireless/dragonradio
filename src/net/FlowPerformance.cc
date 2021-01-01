@@ -23,10 +23,20 @@
 #endif /* !DEBUG */
 
 FlowPerformance::FlowPerformance(double mp)
-  : net_in(*this, nullptr, nullptr, std::bind(&FlowPerformance::netPush, this, _1))
-  , net_out(*this, nullptr, nullptr)
-  , radio_in(*this, nullptr, nullptr, std::bind(&FlowPerformance::radioPush, this, _1))
-  , radio_out(*this, nullptr, nullptr)
+  : net_in(*this,
+           nullptr,
+           nullptr,
+           std::bind(&FlowPerformance::netPush, this, std::placeholders::_1))
+  , net_out(*this,
+            nullptr,
+            nullptr)
+  , radio_in(*this,
+             nullptr,
+             nullptr,
+             std::bind(&FlowPerformance::radioPush, this, std::placeholders::_1))
+  , radio_out(*this,
+              nullptr,
+              nullptr)
   , mp_(mp)
 {
 }

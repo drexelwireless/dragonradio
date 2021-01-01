@@ -8,15 +8,18 @@
 
 #include "net/Element.hh"
 
-using namespace std::placeholders;
-
 /** @brief Packet-processor. */
 template <class T>
 class Processor : public Element {
 public:
     Processor()
-      : in(*this, nullptr, nullptr, std::bind(&Processor<T>::push, this, _1))
-      , out(*this, nullptr, nullptr)
+      : in(*this,
+           nullptr,
+           nullptr,
+           std::bind(&Processor<T>::push, this, std::placeholders::_1))
+      , out(*this,
+            nullptr,
+            nullptr)
     {
     }
 

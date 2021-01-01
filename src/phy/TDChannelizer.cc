@@ -11,8 +11,6 @@ namespace py = pybind11;
 #include "phy/PHY.hh"
 #include "phy/TDChannelizer.hh"
 
-using namespace std::placeholders;
-
 TDChannelizer::TDChannelizer(const std::vector<PHYChannel> &channels,
                              double rx_rate,
                              unsigned int nthreads)
