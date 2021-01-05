@@ -79,8 +79,6 @@ void SlottedALOHA::txSlotWorker(void)
     Clock::time_point t_following_slot; // Time at which the following slot starts
     double            t_slot_pos;       // Offset into the current slot (sec)
 
-    makeThisThreadHighPriority();
-
     while (!done_) {
         // Figure out when our next send slot is.
         t_now = Clock::now();

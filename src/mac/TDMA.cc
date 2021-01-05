@@ -91,8 +91,6 @@ void TDMA::txSlotWorker(void)
     size_t            noverfill = 0;      // Number of overfilled samples
     size_t            noverfillslots = 0; // Number of overfilled slots
 
-    makeThisThreadHighPriority();
-
     while (!done_) {
         t_now = Clock::now();
 

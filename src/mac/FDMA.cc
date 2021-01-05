@@ -85,8 +85,6 @@ void FDMA::txWorker(void)
     Clock::time_point t_next_tx; // Time at which next transmission starts
     bool              next_slot_start_of_burst = true;
 
-    makeThisThreadHighPriority();
-
     while (!done_) {
         ChannelSynthesizer::container_type mpkts;
         size_t                             nsamples;

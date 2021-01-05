@@ -49,8 +49,6 @@ void MAC::rxWorker(void)
     double            t_period_pos;   // Offset into the current period (sec)
     unsigned          seq = 0;        // Current IQ buffer sequence number
 
-    makeThisThreadHighPriority();
-
     while (!done_) {
         // Wait for period to be known
         if (rx_period_samps_ == 0) {
