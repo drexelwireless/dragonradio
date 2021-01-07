@@ -3,9 +3,9 @@
   roles:
     - role: lxd-create-containers
       containers:
-        - dragonradio-1604-base
+        - dragonradio-2004-base
 
-- hosts: dragonradio-1604-base
+- hosts: dragonradio-2004-base
   connection: local
   become: false
   roles:
@@ -14,9 +14,8 @@
     - dragonradio-base
     - passwd
     - colosseum-cli
-    - mgen
     - role: gpsd
-      version: 3.17
+      version: 3.21
     - role: protobuf
       version: 3.13.0
     - clean
@@ -26,5 +25,5 @@
   roles:
     - role: lxd-export-containers
       containers:
-        - dragonradio-1604-base
+        - dragonradio-2004-base
       lxd_export_dir: ../../images

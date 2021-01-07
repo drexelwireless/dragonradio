@@ -1,7 +1,7 @@
 Building the radio
 ==================
 
-DragonRadio is developed under Ubuntu 16.04, the distribution used to the Colosseum. Running the top-level ``build.sh`` script in a base Ubuntu 16.04 installation installs all necessary prerequisites and builds DragonRadio.
+DragonRadio is developed under Ubuntu 20.04. Running the top-level ``build.sh`` script in a base Ubuntu 20.04 installation installs all necessary prerequisites and builds DragonRadio.
 
 .. _building a container:
 
@@ -21,14 +21,6 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
 
    You will also need to edit ``/etc/subuid`` and ``/etc/subgid``. The Colosseum instructions on how to `prepare a container`_ will be helpful.
 
-#. Obtain the Colosseum base image
-
-   Follow the Colosseum instructions to obtain the `base image`_, ``base-1604-nocuda.tar.gz``, and import it. The ``--alias`` argument is important!
-
-   .. code-block:: bash
-
-     lxc import base-1604-nocuda.tar.gz --alias base-1604-nocuda
-
 #. Build base DragonRadio image
 
    The image built in this step serves as the base image for all DragonRadio builds. It includes generally useful tools, the `Colosseum CLI`_, and additional software, like ``gpsd``, that are necessary to run the radio in batch mode in the Colosseum. The build is automated using ansible:
@@ -37,7 +29,7 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
 
       cd ansible && ansible-playbook -i inventory playbooks/dragonradio.yml
 
-   This will result in a ``dragonradio-1604-base`` image in the top-level ``images`` directory. The password for the ``root`` and ``srn-user`` users in this image is ``dragonradio``.
+   This will result in a ``dragonradio-2004-base`` image in the top-level ``images`` directory. The password for the ``root`` and ``srn-user`` users in this image is ``dragonradio``.
 
 #. Build a DragonRadio image
 
