@@ -6,7 +6,7 @@
     dest: /tmp
     extra_opts: '--no-same-owner'
   with_items:
-    - colosseumcli-18.05.0-2.tar.gz
+    - colosseumcli-18.05.0-3.tar.gz
     - colosseum_cli_prereqs.tar.gz
 
 - name: Copy pip requirements
