@@ -143,7 +143,7 @@ void TunTap::openTap(std::string& dev, int flags)
 
     ifr.ifr_flags = flags;
 
-    strncpy(ifr.ifr_name, dev.c_str(), IFNAMSIZ);
+    strncpy(ifr.ifr_name, dev.c_str(), IFNAMSIZ-1);
 
     if ((err = ioctl(fd_, TUNSETIFF, (void *) &ifr)) < 0 ) {
         perror("ioctl()");

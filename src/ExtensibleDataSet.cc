@@ -9,7 +9,7 @@ constexpr size_t GRANULARITY = 4*1024*1024;
 /** @brief We chunk in multiples of this. */
 constexpr size_t CHUNK_GRANULARITY = 4*1024*1024;
 
-ExtensibleDataSet::ExtensibleDataSet(const H5::CommonFG& loc, const std::string& name, const H5::DataType &dt)
+ExtensibleDataSet::ExtensibleDataSet(const Group& loc, const std::string& name, const H5::DataType &dt)
   : dt_(dt)
   , size_(0)
   , capacity_(0)

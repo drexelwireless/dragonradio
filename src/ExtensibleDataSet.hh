@@ -8,9 +8,15 @@
 
 #include <H5Cpp.h>
 
+#if H5_VERSION_GE(1, 10, 0)
+using Group = H5::Group;
+#else
+using Group = H5::CommonFG;
+#endif
+
 class ExtensibleDataSet {
 public:
-    ExtensibleDataSet(const H5::CommonFG& loc, const std::string& name, const H5::DataType &dt);
+    ExtensibleDataSet(const Group& loc, const std::string& name, const H5::DataType &dt);
     ~ExtensibleDataSet();
 
     void reserve(size_t size);

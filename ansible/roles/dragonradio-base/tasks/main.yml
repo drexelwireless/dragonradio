@@ -4,27 +4,23 @@
     pkg:
       - autoconf
       - automake
-      # For libconfig
-      #- libconfig-dev
-      #- bison
-      #- flex
-      #- texinfo
-      # For UHD
-      - libboost-all-dev
-      - libusb-1.0-0-dev
-      - python-mako
-      - doxygen
-      - python-docutils
-      - cmake
       - build-essential
+      - cmake
+      # For UHD
+      - libboost-dev
+      - libboost-date-time-dev
+      - libboost-filesystem-dev
+      - libboost-program-options-dev
+      - libboost-regex-dev
+      - libboost-system-dev
+      - libboost-serialization-dev
+      - libboost-test-dev
+      - libboost-thread-dev
       # For liquid-dsp
       - libncurses5-dev
       - libfftw3-dev
       # For HDF5
       - libhdf5-dev
-      - libhdf5-doc
-      - libhdf5-cpp-11
-      - libhdf5-cpp-11-dbg
       # For FLAC
       - libflac8
       - libflac-dev
@@ -33,42 +29,26 @@
       - libeigen3-dev
       # For python
       - python3
+      - python3-dev
+      - python3-distutils
       - python3-pip
       - python3-virtualenv
+      - virtualenv
+      # For gpsd
+      - scons
+      # For dragonradio tun/tap
+      - net-tools
 
-- name: Add ubuntu-toolchain-r PPA
-  apt_repository:
-    repo: ppa:ubuntu-toolchain-r/test
-    state: present
-    update_cache: yes
-
-- name: Update and upgrade apt packages
+- name: Remove unneeded packages
   apt:
-    upgrade: 'yes'
-    update_cache: yes
-
-- name: Install gcc 8
-  apt:
-    state: present
+    state: absent
     pkg:
-      - gcc-8
-      - g++-8
+      - snapd
+      - squashfs-tools
 
-- name: Add deadsnakes PPA
-  apt_repository:
-    repo: ppa:deadsnakes/ppa
-    state: present
-    update_cache: yes
-
-- name: Update and upgrade apt packages
-  apt:
-    upgrade: 'yes'
-    update_cache: yes
-
-- name: Install python 3.8
-  apt:
-    state: present
-    pkg:
-      - python3.8
-      - python3.8-dev
-      - python3.8-distutils
+- name: Remove unneeded directories
+  file:
+    path: "{{item}}"
+    state: absent
+  with_items:
+    - /var/snap

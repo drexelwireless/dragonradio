@@ -61,7 +61,7 @@ CONTAINER="$REVNAME-$DATE-$HASH"
 #
 echo "Creating container $CONTAINER"
 
-lxc launch dragonradio-1604-base "$CONTAINER"
+lxc launch dragonradio-2004-base "$CONTAINER"
 
 # XXX Wait for the container to come up
 sleep 10

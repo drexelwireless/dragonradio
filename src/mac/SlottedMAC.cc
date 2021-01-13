@@ -144,8 +144,6 @@ void SlottedMAC::txWorker(void)
     std::shared_ptr<Slot> slot;
     bool                  next_slot_start_of_burst = true;
 
-    makeThisThreadHighPriority();
-
     while (!done_) {
         if (tx_slots_.size() == 0)
             continue;
