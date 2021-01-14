@@ -9,8 +9,6 @@
 
 #include <uhd/usrp/multi_usrp.hpp>
 
-#include "Seq.hh"
-
 template <class T>
 struct time_point_t {
     uhd::time_spec_t t;
