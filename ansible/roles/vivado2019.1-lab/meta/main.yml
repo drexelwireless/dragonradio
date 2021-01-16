@@ -1,0 +1,4 @@
+dependencies:
+  - role: vivado-lab
+    vivado_version: 2019.1
+    vivado_installer: Xilinx_Vivado_Lab_Lin_2019.1_0524_1430

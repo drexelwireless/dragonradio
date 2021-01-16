@@ -1,0 +1,93 @@
+- name: Check for Vivado {{vivado_version}} files
+  stat:
+    path: /opt/Xilinx/Vivado/{{vivado_version}}/bin/vivado
+  register: vivado_files
+
+- name: Install Vivado {{vivado_version}}
+  block:
+    - name: Install packages needed by Vivado
+      apt:
+        state: present
+        pkg:
+          - libncurses5
+
+    - name: Install packages needed by Vivado GUI
+      apt:
+        state: present
+        pkg:
+          - libfontconfig1
+          - libxi6
+          - libxrender1
+          - libxtst6
+          - x11-common
+      when: vivado_gui
+
+    - name: Copy installer configuration
+      template:
+        src: install_config.txt.j2
+        dest: /tmp/install_config.txt
+
+    - name: Copy Vivado {{vivado_version}} installer
+      unarchive:
+        src: files/{{vivado_installer}}.tar.gz
+        dest: /tmp
+        extra_opts: '--no-same-owner'
+        creates: /tmp/{{vivado_installer}}/xsetup
+
+    - name: Run Vivado {{vivado_version}} installer
+      shell: ./xsetup --agree XilinxEULA,3rdPartyEULA,WebTalkTerms --batch Install --config /tmp/install_config.txt
+      args:
+        chdir: /tmp/{{vivado_installer}}
+
+    - name: Remove architectures that are not virtex7
+      file:
+        path: "/opt/Xilinx/Vivado_Lab/{{vivado_version}}/data/parts/xilinx/{{item}}"
+        state: absent
+      with_items:
+        - artix7
+        # - common
+        - kintex7
+        - kintexu
+        - kintexuplus
+        - spartan3
+        - spartan3a
+        - spartan3adsp
+        - spartan3e
+        - spartan6
+        - spartan7
+        # - templates
+        - versal
+        - virtex4
+        - virtex5
+        - virtex6
+        # - virtex7
+        - virtexu
+        - virtexuplus
+        - virtexuplus58g
+        - virtexuplusHBM
+        - zynq
+        - zynquplus
+
+    - name: Remove xic
+      file:
+        path: /opt/Xilinx/xic
+        state: absent
+
+    - name: Remove .xinstall
+      file:
+        path: /opt/Xilinx/.xinstall
+        state: absent
+
+    - name: Add Vivado shell settings
+      template:
+        src: vivado.sh.j2
+        dest: /etc/profile.d/vivado{{vivado_version}}.sh
+
+    - name: Cleanup Vivado {{vivado_version}} installer
+      file:
+        path: /tmp/{{item}}
+        state: absent
+      with_items:
+        - "{{vivado_installer}}"
+
+  when: vivado_files.stat.exists == False
