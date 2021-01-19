@@ -1,7 +1,9 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#include <sys/time.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 #ifdef RANDOM_CLOCK_BIAS
 #include <random>
@@ -20,11 +22,15 @@ uhd::time_spec_t Clock::offset_(0.0);
 void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 {
     // Set offset relative to system NTP time
-    timeval tv;
+    struct timespec t;
+    int    err;
 
-    gettimeofday(&tv, NULL);
+    if ((err = clock_gettime(CLOCK_REALTIME, &t)) != 0) {
+        fprintf(stderr, "clock_gettime failed: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
 
-    uhd::time_spec_t now(tv.tv_sec, ((double)tv.tv_usec)/1e6);
+    uhd::time_spec_t now(t.tv_sec, ((double)t.tv_nsec)/1e9);
 
     usrp_ = usrp;
     t0_ = now;
