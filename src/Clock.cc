@@ -19,7 +19,7 @@ double Clock::skew_(1.0);
 
 uhd::time_spec_t Clock::offset_(0.0);
 
-void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
+void MonoClock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 {
     // Set offset relative to system NTP time
     struct timespec t;
@@ -49,7 +49,7 @@ void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 #endif
 }
 
-void Clock::releaseUSRP(void)
+void MonoClock::releaseUSRP(void)
 {
     usrp_.reset();
 }

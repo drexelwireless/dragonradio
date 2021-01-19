@@ -113,6 +113,14 @@ public:
         return time_point { getTimeNow() };
     }
 
+    /** @brief Set the USRP used for clock operations.
+     * @param usrp The USRP.
+     */
+    static void setUSRP(uhd::usrp::multi_usrp::sptr usrp);
+
+    /** @brief Release the USRP used for clock operations. */
+    static void releaseUSRP(void);
+
 protected:
     /** @brief Time zero, for purposes of linear fit. */
     static uhd::time_spec_t t0_;
@@ -198,14 +206,6 @@ public:
     {
         return time_point { t0_ + offset_ + skew_*(t.t - t0_).get_real_secs() };
     }
-
-    /** @brief Set the USRP used for clock operations.
-     * @param usrp The USRP.
-     */
-    static void setUSRP(uhd::usrp::multi_usrp::sptr usrp);
-
-    /** @brief Release the USRP used for clock operations. */
-    static void releaseUSRP(void);
 
 private:
     /** @brief The offset between the USRP's clock and wall-clock time. */
