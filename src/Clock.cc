@@ -37,9 +37,9 @@ void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 
     fprintf(stderr, "CLOCK: offset=%g\n", offset);
 
-    usrp->set_time_now(t0_ + offset);
+    Clock::setTimeNow(t0_ + offset);
 #else
-    usrp->set_time_now(t0_);
+    Clock::setTimeNow(t0_);
 #endif
 }
 

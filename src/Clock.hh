@@ -110,13 +110,7 @@ public:
     /** @brief Get the current time. Guaranteed to be monotonic. */
     static time_point now() noexcept
     {
-        while (true) {
-            try {
-                return time_point { usrp_->get_time_now() };
-            } catch (uhd::io_error &err) {
-                fprintf(stderr, "USRP: get_time_now: %s", err.what());
-            }
-        }
+        return time_point { getTimeNow() };
     }
 
 protected:
@@ -125,6 +119,26 @@ protected:
 
     /** @brief The USRP used for clock operations. */
     static uhd::usrp::multi_usrp::sptr usrp_;
+
+    /** @brief Get the current UHD time. */
+    static uhd::time_spec_t getTimeNow() noexcept
+    {
+        while (true) {
+            try {
+                return usrp_->get_time_now();
+            } catch (uhd::io_error &err) {
+                fprintf(stderr, "USRP: get_time_now: %s", err.what());
+            }
+        }
+    }
+
+    /** @brief Set the current UHD time.
+     * @param now Current UHD time
+     */
+    static void setTimeNow(const uhd::time_spec_t &now) noexcept
+    {
+        usrp_->set_time_now(now);
+    }
 };
 
 /** @brief A wall-clock clock */
@@ -168,15 +182,9 @@ public:
     /** @brief Get the current wall-clock time. */
     static time_point now() noexcept
     {
-        while (true) {
-            try {
-                uhd::time_spec_t now = usrp_->get_time_now();
+        uhd::time_spec_t now = getTimeNow();
 
-                return time_point { t0_ + offset_ + skew_*(now - t0_).get_real_secs() };
-            } catch (uhd::io_error &err) {
-                fprintf(stderr, "USRP: get_time_now: %s", err.what());
-            }
-        }
+        return time_point { t0_ + offset_ + skew_*(now - t0_).get_real_secs() };
     }
 
     /** @brief Return the monotonic time corresponding to wall-clock time. */
