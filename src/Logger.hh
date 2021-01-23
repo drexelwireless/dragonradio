@@ -149,8 +149,21 @@ public:
     void logEvent(const Clock::time_point& t,
                   const std::string& event)
     {
+        if (getCollectSource(kEvents)){
+            std::unique_ptr<char[]> buf(new char[event.length() + 1]);
+
+            event.copy(&buf[0], event.length(), 0);
+            buf[event.length()] = '\0';
+
+            log_q_.emplace([=, event = buf.release()](){ logEvent_(t, event); });
+        }
+    }
+
+    void logEvent(const Clock::time_point& t,
+                  std::unique_ptr<char[]> event)
+    {
         if (getCollectSource(kEvents))
-            log_q_.emplace([=](){ logEvent_(t, event); });
+            log_q_.emplace([=, event = event.release()](){ logEvent_(t, event); });
     }
 
 private:
@@ -231,7 +244,7 @@ private:
                   size_t nsamples);
 
      void logEvent_(const Clock::time_point& t,
-                    const std::string& event);
+                    char *event);
 };
 
 #endif /* LOGGER_H_ */

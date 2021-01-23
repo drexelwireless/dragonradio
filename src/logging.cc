@@ -5,34 +5,23 @@
 #include "Logger.hh"
 #include "RadioConfig.hh"
 
-void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap0)
+constexpr size_t MAXLEN = 1024;
+
+void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap)
 {
     std::shared_ptr<Logger> l = logger;
 
     if (rc.debug || (l && l->getCollectSource(Logger::kEvents))) {
-        int                     n = 2 * strlen(fmt);
-        std::unique_ptr<char[]> buf;
-        va_list                 ap;
+        std::unique_ptr<char[]> buf(new char[MAXLEN]);
 
-        for (;;) {
-            buf.reset(new char[n]);
+        if (vsnprintf(&buf[0], MAXLEN, fmt, ap) > 0) {
+            if (rc.debug) {
+                fputs(buf.get(), stderr);
+                putc('\n', stderr);
+            }
 
-            va_copy(ap, ap0);
-            int count = vsnprintf(&buf[0], n, fmt, ap);
-            va_end(ap);
-
-            if (count < 0 || count >= n)
-                n *= 2;
-            else
-                break;
+            if (l && l->getCollectSource(Logger::kEvents))
+                l->logEvent(t, std::move(buf));
         }
-
-        std::string s { buf.get() };
-
-        if (rc.debug)
-            fprintf(stderr, "%s\n", s.c_str());
-
-        if (l && l->getCollectSource(Logger::kEvents))
-            l->logEvent(t, s);
     }
 }

@@ -550,12 +550,14 @@ void Logger::logSend_(const Clock::time_point& t,
 }
 
 void Logger::logEvent_(const Clock::time_point& t,
-                       const std::string& s)
+                       char *event)
 {
     EventEntry entry;
 
     entry.timestamp = (t - t_start_).get_real_secs();
-    entry.event = s.c_str();
+    entry.event = event;
 
     event_->write(&entry, 1);
+
+    delete[] event;
 }
