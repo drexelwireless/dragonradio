@@ -239,7 +239,7 @@ bool OverlapTDChannelizer::pop(RadioPacketQueue::barrier& b,
         MonoClock::time_point now = MonoClock::now();
 
         if ((now - last_overflow_log).get_full_secs() >= 1) {
-            logEvent("PHY: Large demodulation queue: size=%lu",
+            logPHY(LOGWARNING, "Large demodulation queue: size=%lu",
                 iq_size_);
             last_overflow_log = now;
         }

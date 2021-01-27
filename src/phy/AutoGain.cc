@@ -1,7 +1,7 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#include "Logger.hh"
+#include "logging.hh"
 #include "phy/AutoGain.hh"
 
 void AutoGain::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
@@ -56,5 +56,5 @@ void AutoGain::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
         g_0dBFS_.store(g_0dBFS_estimate_.getValue(), std::memory_order_relaxed);
     }
 
-    logEvent("AMC: updated auto-gain %0.1f", (double) getSoftTXGain0dBFS());
+    logAMC(LOGDEBUG-1, "updated auto-gain %0.1f", (double) getSoftTXGain0dBFS());
 }

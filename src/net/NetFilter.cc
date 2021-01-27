@@ -10,7 +10,7 @@
 
 #include <cstddef>
 
-#include "Logger.hh"
+#include "logging.hh"
 #include "RadioConfig.hh"
 #include "net/NetFilter.hh"
 #include "net/NetUtil.hh"
@@ -18,7 +18,7 @@
 bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 {
     if (pkt->size() == 0) {
-        logEvent("NET: dropped size zero packet");
+        logNet(LOGDEBUG, "dropped size zero packet");
         return false;
     }
 
@@ -61,7 +61,7 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
             if (dest_addr == ext_broadcast_)
                 pkt->hdr.nexthop = kNodeBroadcast;
         } else {
-            logEvent("NET: dropped IP packet from unknown subnet %d.%d.%d.%d",
+            logNet(LOGDEBUG, "dropped IP packet from unknown subnet %d.%d.%d.%d",
                 (src_addr >> 24) & 0xff,
                 (src_addr >> 16) & 0xff,
                 (src_addr >> 8) & 0xff,
@@ -81,15 +81,14 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
         // Cache payload size
         pkt->payload_size = pkt->getPayloadSize();
 
-        if (rc.verbose_packet_trace)
-            printf("Read %lu bytes from %u to %u\n",
-                (unsigned long) pkt->ehdr().data_len,
-                (unsigned) pkt->hdr.curhop,
-                (unsigned) pkt->hdr.nexthop);
+        logNet(LOGDEBUG-1, "Read %lu bytes from %u to %u",
+            (unsigned long) pkt->ehdr().data_len,
+            (unsigned) pkt->hdr.curhop,
+            (unsigned) pkt->hdr.nexthop);
 
         return true;
     } else {
-        logEvent("NET: dropped unknown packet: ether_type=0x%x; shost=%u; dhost=%u",
+        logNet(LOGDEBUG, "dropped unknown packet: ether_type=0x%x; shost=%u; dhost=%u",
             ntohs(eth->ether_type),
             eth->ether_shost[5],
             eth->ether_dhost[5]);

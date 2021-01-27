@@ -11,10 +11,10 @@
 
 #include <uhd/usrp/multi_usrp.hpp>
 
+#include "logging.hh"
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "IQBuffer.hh"
-#include "Logger.hh"
 
 /** @brief A USRP. */
 class USRP
@@ -125,7 +125,7 @@ public:
     void setTXRate(double rate)
     {
         usrp_->set_tx_rate(rate);
-        logEvent("USRP: TX rate set to %f", rate);
+        logUSRP(LOGDEBUG, "TX rate set to %f", rate);
         tx_rate_ = usrp_->get_tx_rate();
     }
 
@@ -139,7 +139,7 @@ public:
     void setRXRate(double rate)
     {
         usrp_->set_rx_rate(rate);
-        logEvent("USRP: RX rate set to %f", rate);
+        logUSRP(LOGDEBUG, "RX rate set to %f", rate);
         rx_rate_ = usrp_->get_rx_rate();
     }
 
@@ -225,7 +225,7 @@ public:
     void setMaxRXSamps(size_t count)
     {
         rx_max_samps_ = count;
-        logEvent("USRP: rx_max_samps_=%lu", rx_max_samps_);
+        logUSRP(LOGDEBUG, "rx_max_samps_=%lu", rx_max_samps_);
     }
 
     /** @brief Set the multiplier for the maximum number of samples we will read
@@ -250,7 +250,7 @@ public:
     void setMaxTXSamps(size_t count)
     {
         tx_max_samps_ = count;
-        logEvent("USRP: tx_max_samps_=%lu", tx_max_samps_);
+        logUSRP(LOGDEBUG, "tx_max_samps_=%lu", tx_max_samps_);
     }
 
     /** @brief Set the multiplier for the maximum number of samples we will read

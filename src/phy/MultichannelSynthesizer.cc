@@ -261,7 +261,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
                     // This should never happen!
                     if (mod.iqbufoff != mod.iqbuf->size())
-                        logEvent("PHY: leftover IQ buffer bigger than slot!");
+                        logPHY(LOGERROR, "leftover IQ buffer bigger than slot!");
 
                     mod.iqbuf.reset();
                     assert(mod.pkt);
@@ -356,7 +356,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                         } else
                             break;
                     } else {
-                        logEvent("PHY: failed to add packet to slot: seq=%u",
+                        logPHY(LOGDEBUG, "failed to add packet to slot: seq=%u",
                             (unsigned) mpkt->pkt->hdr.seq);
                         mpkt->samples = std::move(mod.iqbuf);
                     }

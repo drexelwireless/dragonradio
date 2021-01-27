@@ -19,8 +19,7 @@
 
 #include <functional>
 
-#include "Logger.hh"
-#include "RadioConfig.hh"
+#include "logging.hh"
 #include "Util.hh"
 #include "net/Net.hh"
 #include "net/TunTap.hh"
@@ -56,8 +55,7 @@ TunTap::TunTap(const std::string& tap_iface,
   , mtu_(mtu)
   , done_(true)
 {
-    if (rc.verbose)
-        printf("Creating tap interface %s\n", tap_iface.c_str());
+    logTunTap(LOGINFO, "Creating tap interface %s", tap_iface.c_str());
 
     if (!persistent_) {
         // Check if tap is already up
@@ -68,32 +66,32 @@ TunTap::TunTap(const std::string& tap_iface,
             if (sys("ip tuntap add dev %s mode tap user %s",
                     tap_iface_.c_str(),
                     user_name->pw_name) < 0)
-                logEvent("TUNTAP: Could not add user to tap device");
+                logTunTap(LOGERROR, "Could not add user to tap device");
         }
 
         // Set MTU size to 1500
         if (sys("ifconfig %s mtu %u",
                 tap_iface_.c_str(),
                 (unsigned) mtu) < 0)
-            logEvent("TUNTAP: Error configuring mtu");
+            logTunTap(LOGERROR, "Error configuring mtu");
 
         // Assign mac address
         if (sys(("ifconfig %s hw ether " + tap_macaddr_).c_str(),
                 tap_iface_.c_str(),
                 node_id) < 0)
-            logEvent("TUNTAP: Error configuring MAC address");
+            logTunTap(LOGERROR, "Error configuring MAC address");
 
         // Assign IP address
         if (sys(("ifconfig %s " + tap_ipaddr_ + " netmask %s").c_str(),
                 tap_iface_.c_str(),
                 node_id,
                 tap_ipnetmask_.c_str()) < 0)
-            logEvent("TUNTAP: Error configuring IP address");
+            logTunTap(LOGERROR, "Error configuring IP address");
 
         // Bring up the interface in case it's not up yet
         if (sys("ifconfig %s up",
                 tap_iface_.c_str()) < 0)
-            logEvent("TUNTAP: Error bringing ip interface");
+            logTunTap(LOGERROR, "Error bringing ip interface");
     }
 
     openTap(tap_iface_, IFF_TAP | IFF_NO_PI);
@@ -116,13 +114,13 @@ void TunTap::addARPEntry(uint8_t node_id)
              tap_iface_.c_str(),
              node_id,
              node_id) < 0)
-        logEvent("TUNTAP: Error adding ARP entry for last octet %d.", node_id);
+        logTunTap(LOGERROR, "Error adding ARP entry for last octet %d.", node_id);
 }
 
 void TunTap::deleteARPEntry(uint8_t node_id)
 {
     if (sys(("arp -d " + tap_ipaddr_).c_str(), node_id) < 0)
-        logEvent("TUNTAP: Error deleting ARP entry for last octet %d.", node_id);
+        logTunTap(LOGERROR, "Error deleting ARP entry for last octet %d.", node_id);
 }
 
 const char *clonedev = "/dev/net/tun";
@@ -134,7 +132,7 @@ void TunTap::openTap(std::string& dev, int flags)
 
     /* open the clone device */
     if((fd_ = open(clonedev, O_RDWR)) < 0) {
-        logEvent("TUNTAP: Error connecting to tap interface %s", tap_iface_.c_str());
+        logTunTap(LOGERROR, "Error connecting to tap interface %s", tap_iface_.c_str());
         exit(1);
     }
 
@@ -148,7 +146,7 @@ void TunTap::openTap(std::string& dev, int flags)
     if ((err = ioctl(fd_, TUNSETIFF, (void *) &ifr)) < 0 ) {
         perror("ioctl()");
         close(fd_);
-        logEvent("TUNTAP: Error connecting to tap interface %s", tap_iface_.c_str());
+        logTunTap(LOGERROR, "Error connecting to tap interface %s", tap_iface_.c_str());
         exit(1);
     }
 
@@ -160,15 +158,14 @@ void TunTap::openTap(std::string& dev, int flags)
 
 void TunTap::closeTap(void)
 {
-    if (rc.verbose)
-        printf("Closing tap interface\n");
+    logTunTap(LOGINFO, "Closing tap interface");
 
     // Detach Tap Interface
     close(fd_);
 
     if (!persistent_) {
         if (sys("ip tuntap del dev %s mode tap", tap_iface_.c_str()) < 0)
-            logEvent("TUNTAP: Error deleting tap.");
+            logTunTap(LOGERROR, "Error deleting tap.");
     }
 }
 
@@ -177,7 +174,7 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
     ssize_t nwrite;
 
     if ((nwrite = write(fd_, pkt->data() + sizeof(ExtendedHeader), pkt->ehdr().data_len)) < 0) {
-        logEvent("NET: tun/tap write failure: errno=%s (%d); nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
+        logTunTap(LOGERROR, "tun/tap write failure: errno=%s (%d); nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
             strerror(errno),
             errno,
             nwrite,
@@ -188,7 +185,7 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
     }
 
     if ((size_t) nwrite != pkt->ehdr().data_len) {
-        logEvent("NET: tun/tap incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
+        logTunTap(LOGERROR, "tun/tap incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
             nwrite,
             (unsigned) pkt->size(),
             (unsigned) pkt->hdr.seq,
@@ -196,14 +193,13 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
         return;
     }
 
-    if (rc.verbose_packet_trace)
-        printf("Wrote %lu bytes (seq# %u) from %u to %u (evm = %.2f; rssi = %.2f)\n",
-            (unsigned long) nwrite,
-            (unsigned int) pkt->hdr.seq,
-            (unsigned int) pkt->ehdr().src,
-            (unsigned int) pkt->ehdr().dest,
-            pkt->evm,
-            pkt->rssi);
+    logTunTap(LOGDEBUG-1, "Wrote %lu bytes (seq# %u) from %u to %u (evm = %.2f; rssi = %.2f)",
+        (unsigned long) nwrite,
+        (unsigned int) pkt->hdr.seq,
+        (unsigned int) pkt->ehdr().src,
+        (unsigned int) pkt->ehdr().dest,
+        pkt->evm,
+        pkt->rssi);
 }
 
 void TunTap::start(void)

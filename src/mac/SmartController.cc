@@ -8,7 +8,7 @@
 #define DEBUG 0
 
 #if DEBUG
-#define dprintf(...) logEvent(__VA_ARGS__)
+#define dprintf(...) logARQ(LOGINFO, __VA_ARGS__)
 #else /* !dprintf */
 #define dprintf(...)
 #endif /* !DEBUG */
@@ -38,7 +38,7 @@ void RecvWindow::operator()()
         need_selective_ack = true;
         timer_for_ack = true;
 
-        dprintf("ARQ: starting full ACK timer: node=%u",
+        dprintf("starting full ACK timer: node=%u",
             (unsigned) node.id);
         controller.timer_queue_.run_in(*this,
             controller.ack_delay_ - controller.sack_delay_);
@@ -135,7 +135,7 @@ get_packet:
         // The packet we are ACK'ing had better be no more than 1 more than the
         // max sequence number we've received.
         if(recvw.ack > recvw.max + 1)
-            logEvent("ARQ: INVARIANT VIOLATED: received packet outside window: ack=%u; max=%u",
+            logARQ(LOGERROR, "INVARIANT VIOLATED: received packet outside window: ack=%u; max=%u",
                 (unsigned) recvw.ack,
                 (unsigned) recvw.max);
 
@@ -144,11 +144,11 @@ get_packet:
 
 #if DEBUG
         if (pkt->ehdr().data_len == 0)
-            dprintf("ARQ: send delayed ack: node=%u; ack=%u",
+            dprintf("send delayed ack: node=%u; ack=%u",
                 (unsigned) nexthop,
                 (unsigned) recvw.ack);
         else
-            dprintf("ARQ: send ack: node=%u; ack=%u",
+            dprintf("send ack: node=%u; ack=%u",
                 (unsigned) nexthop,
                 (unsigned) recvw.ack);
 #endif
@@ -157,7 +157,7 @@ get_packet:
         if (recvw.need_selective_ack)
             appendFeedback(*pkt, recvw);
     } else if (pkt->ehdr().data_len != 0)
-        dprintf("ARQ: send: node=%u; seq=%u",
+        dprintf("send: node=%u; seq=%u",
             (unsigned) nexthop,
             (unsigned) pkt->hdr.seq);
 
@@ -179,7 +179,7 @@ get_packet:
         // This checks that the sequence number of the packet we are sending is
         // in our send window.
         if (pkt->hdr.seq < sendw.unack || pkt->hdr.seq >= sendw.unack + sendw.win) {
-            logEvent("ARQ: INVARIANT VIOLATED: asked to send packet outside window: nexthop=%u; seq=%u; unack=%u; win=%u",
+            logARQ(LOGERROR, "INVARIANT VIOLATED: asked to send packet outside window: nexthop=%u; seq=%u; unack=%u; win=%u",
                 (unsigned) nexthop,
                 (unsigned) pkt->hdr.seq,
                 (unsigned) sendw.unack,
@@ -203,7 +203,7 @@ get_packet:
 
         // If we have locally updated our send window, tell the receiver.
         if (sendw.send_set_unack) {
-            logEvent("ARQ: send set unack: nexthop=%u; unack=%u",
+            logARQ(LOGDEBUG, "send set unack: nexthop=%u; unack=%u",
                 (unsigned) nexthop,
                 (unsigned) sendw.unack);
             pkt->appendSetUnack(sendw.unack);
@@ -358,7 +358,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             handleReceiverStats(*pkt, sendw);
 
             if (pkt->ehdr().ack > sendw.unack) {
-                dprintf("ARQ: ack: node=%u; seq=[%u,%u)",
+                dprintf("ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
                     (unsigned) sendw.unack,
                     (unsigned) pkt->ehdr().ack);
@@ -405,7 +405,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
                 if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0 && *nak >= sendw.per_cutoff) {
                     txFailure(sendw);
 
-                    logEvent("ARQ: txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
+                    logARQ(LOGDEBUG, "txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
                         (unsigned) node.id,
                         (unsigned) *nak,
                         (unsigned) entry.pkt->mcsidx);
@@ -425,7 +425,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // If this packet doesn't contain any data, we are done
     if (pkt->ehdr().data_len == 0) {
-        dprintf("ARQ: recv: node=%u; ack=%u",
+        dprintf("recv: node=%u; ack=%u",
             (unsigned) prevhop,
             (unsigned) pkt->ehdr().ack);
         return;
@@ -433,12 +433,12 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
 #if DEBUG
     if (hdr.flags.ack)
-        dprintf("ARQ: recv: node=%u; seq=%u; ack=%u",
+        dprintf("recv: node=%u; seq=%u; ack=%u",
             (unsigned) prevhop,
             (unsigned) pkt->hdr.seq,
             (unsigned) pkt->ehdr().ack);
     else
-        dprintf("ARQ: recv: node=%u; seq=%u",
+        dprintf("recv: node=%u; seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->hdr.seq);
 #endif
@@ -462,7 +462,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // Drop this packet if it is before our receive window
     if (pkt->hdr.seq < recvw.ack) {
-        dprintf("ARQ: recv OUTSIDE WINDOW (DUP): node=%u; seq=%u",
+        dprintf("recv OUTSIDE WINDOW (DUP): node=%u; seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->hdr.seq);
         return;
@@ -474,7 +474,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         advanceRecvWindow(pkt->hdr.seq, recvw);
     } else if (recvw[pkt->hdr.seq].received) {
         // Drop this packet if we have already received it
-        dprintf("ARQ: recv DUP: node=%u; seq=%u",
+        dprintf("recv DUP: node=%u; seq=%u",
             (unsigned) prevhop,
             (unsigned) pkt->hdr.seq);
         return;
@@ -548,7 +548,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
     if (!entry.pkt) {
-        logEvent("AMC: attempted to retransmit ACK'ed packet on timeout: node=%u",
+        logAMC(LOGDEBUG, "attempted to retransmit ACK'ed packet on timeout: node=%u",
             (unsigned) sendw.node.id);
         return;
     }
@@ -557,7 +557,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     if (sendw.node.can_transmit && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->hdr.seq >= sendw.per_cutoff) {
         txFailure(sendw);
 
-        logEvent("AMC: txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
+        logAMC(LOGDEBUG, "txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
             (unsigned) sendw.node.id,
             (unsigned) entry.pkt->hdr.seq,
             (unsigned) entry.pkt->mcsidx,
@@ -621,7 +621,7 @@ void SmartController::nak(RecvWindow &recvw, Seq seq)
     recvw.explicit_nak_idx = (recvw.explicit_nak_idx + 1) % explicit_nak_win_;
 
     // Send the explicit NAK
-    logEvent("ARQ: send nak: node=%u; nak=%u",
+    logARQ(LOGDEBUG, "send nak: node=%u; nak=%u",
         (unsigned) recvw.node.id,
         (unsigned) seq);
 
@@ -657,7 +657,7 @@ void SmartController::broadcastHello(void)
     if (!net_->me().can_transmit)
         return;
 
-    dprintf("ARQ: broadcast HELLO");
+    dprintf("broadcast HELLO");
 
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
@@ -686,7 +686,7 @@ void SmartController::broadcastHello(void)
             auto                        last_timestamp = node.timestamps.rbegin();
 
             if (node.id != net_->getMyNodeId() && last_timestamp != node.timestamps.rend()) {
-                logEvent("TIMESYNC: Echoing timestamp: node=%u; t_sent=%f; t_recv=%f",
+                logTimeSync(LOGDEBUG, "Echoing timestamp: node=%u; t_sent=%f; t_recv=%f",
                     (unsigned) node.id,
                     (double) last_timestamp->first.get_real_secs(),
                     (double) last_timestamp->second.get_real_secs());
@@ -751,11 +751,11 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     }
 
     if (!entry.pkt) {
-        logEvent("AMC: attempted to retransmit ACK'ed packet");
+        logAMC(LOGDEBUG, "attempted to retransmit ACK'ed packet");
         return;
     }
 
-    logEvent("ARQ: retransmit: node=%u; seq=%u; mcsidx=%u",
+    logARQ(LOGDEBUG, "retransmit: node=%u; seq=%u; mcsidx=%u",
         (unsigned) entry.pkt->hdr.nexthop,
         (unsigned) entry.pkt->hdr.seq,
         (unsigned) entry.pkt->mcsidx);
@@ -814,7 +814,7 @@ void SmartController::drop(SendWindow::Entry &entry)
                                  entry.pkt->mcsidx,
                                  entry.pkt->size());
 
-    logEvent("ARQ: dropping packet: node=%u; seq=%u",
+    logARQ(LOGDEBUG, "dropping packet: node=%u; seq=%u",
         (unsigned) sendw.node.id,
         (unsigned) entry.pkt->hdr.seq);
 
@@ -857,7 +857,7 @@ void SmartController::advanceSendWindow(SendWindow &sendw)
 
 void SmartController::advanceRecvWindow(Seq seq, RecvWindow &recvw)
 {
-    logEvent("ARQ: recv OUTSIDE WINDOW (ADVANCE): node=%u; seq=%u; ack=%u; max=%u; new_ack=%u",
+    logARQ(LOGDEBUG, "recv OUTSIDE WINDOW (ADVANCE): node=%u; seq=%u; ack=%u; max=%u; new_ack=%u",
         (unsigned) recvw.node.id,
         (unsigned) seq,
         (unsigned) recvw.ack,
@@ -892,7 +892,7 @@ void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
     // Start the retransmit timer if the packet has not already been ACK'ed and
     // the timer is not already running
     if (entry.pkt && !timer_queue_.running(entry)) {
-        dprintf("ARQ: starting retransmission timer: node=%u; seq=%u",
+        dprintf("starting retransmission timer: node=%u; seq=%u",
             (unsigned) entry.sendw.node.id,
             (unsigned) entry.pkt->hdr.seq);
         timer_queue_.run_in(entry, entry.sendw.retransmission_delay);
@@ -903,7 +903,7 @@ void SmartController::startSACKTimer(RecvWindow &recvw)
 {
     // Start the selective ACK timer if it is not already running.
     if (!timer_queue_.running(recvw)) {
-        dprintf("ARQ: starting SACK timer: node=%u",
+        dprintf("starting SACK timer: node=%u",
             (unsigned) recvw.node.id);
 
         recvw.need_selective_ack = false;
@@ -920,10 +920,10 @@ void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
             {
                 node.is_gateway = it->hello.is_gateway;
 
-                dprintf("ARQ: HELLO: node=%u",
+                dprintf("HELLO: node=%u",
                     (unsigned) pkt.hdr.curhop);
 
-                logEvent("ARQ: Discovered neighbor: node=%u; gateway=%s",
+                logARQ(LOGDEBUG, "Discovered neighbor: node=%u; gateway=%s",
                     (unsigned) pkt.hdr.curhop,
                     node.is_gateway ? "true" : "false");
             }
@@ -943,7 +943,7 @@ void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
                     node.timestamps.emplace_back(std::make_pair(t_sent, t_recv));
                 }
 
-                logEvent("TIMESYNC: Timestamp: node=%u; t_sent=%f; t_recv=%f",
+                logTimeSync(LOGDEBUG, "Timestamp: node=%u; t_sent=%f; t_recv=%f",
                     (unsigned) pkt.hdr.curhop,
                     (double) t_sent.get_real_secs(),
                     (double) t_recv.get_real_secs());
@@ -979,7 +979,7 @@ void SmartController::handleCtrlTimestampEchos(RadioPacket &pkt, Node &node)
                             echoed_timestamps_.emplace_back(std::make_pair(t_sent, t_recv));
                         }
 
-                        logEvent("TIMESYNC: Timestamp echo: node=%u; t_sent=%f; t_recv=%f",
+                        logTimeSync(LOGDEBUG, "Timestamp echo: node=%u; t_sent=%f; t_recv=%f",
                             (unsigned) pkt.hdr.curhop,
                             (double) t_sent.get_real_secs(),
                             (double) t_recv.get_real_secs());
@@ -999,7 +999,7 @@ inline void appendSelectiveACK(NetPacket &pkt,
                                Seq begin,
                                Seq end)
 {
-    logEvent("ARQ: send selective ack: node=%u; seq=[%u, %u)",
+    logARQ(LOGDEBUG, "send selective ack: node=%u; seq=[%u, %u)",
         (unsigned) recvw.node.id,
         (unsigned) begin,
         (unsigned) end);
@@ -1075,7 +1075,7 @@ void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
         if (nremove > 0) {
             nkeep = nsacks - nremove;
 
-            logEvent("ARQ: pruning SACKs: node=%u; nremove=%d; nkeep=%d",
+            logARQ(LOGDEBUG, "pruning SACKs: node=%u; nremove=%d; nkeep=%d",
                 (unsigned) recvw.node.id,
                 nremove,
                 nkeep);
@@ -1119,7 +1119,7 @@ void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
 
     // If this packet is outside our send window, we're done.
     if (seq < sendw.unack || seq >= sendw.unack + sendw.win) {
-        logEvent("ARQ: ack for packet outside send window: node=%u; seq=%u; unack=%u; end=%u",
+        logARQ(LOGDEBUG, "ack for packet outside send window: node=%u; seq=%u; unack=%u; end=%u",
             (unsigned) sendw.node.id,
             (unsigned) seq,
             (unsigned) sendw.unack,
@@ -1130,7 +1130,7 @@ void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
 
     // If this packet has already been ACK'ed, we're done.
     if (!entry.pkt) {
-        dprintf("ARQ: ack for already ACK'ed packet: node=%u; seq=%u",
+        dprintf("ack for already ACK'ed packet: node=%u; seq=%u",
             (unsigned) sendw.node.id,
             (unsigned) seq);
 
@@ -1160,19 +1160,19 @@ std::optional<Seq> SmartController::handleNAK(RadioPacket &pkt,
 
                 // If this packet is outside our send window, ignore the NAK.
                 if (it->nak < sendw.unack || it->nak >= sendw.unack + sendw.win || !entry.pkt) {
-                    logEvent("ARQ: nak for packet outside send window: node=%u; seq=%u; unack=%u; end=%u",
+                    logARQ(LOGDEBUG, "nak for packet outside send window: node=%u; seq=%u; unack=%u; end=%u",
                         (unsigned) sendw.node.id,
                         (unsigned) it->nak,
                         (unsigned) sendw.unack,
                         (unsigned) sendw.unack + sendw.win);
                 // If this packet has already been ACK'ed, ignore the NAK.
                 } else if (!entry.pkt) {
-                    logEvent("ARQ: nak for already ACK'ed packet: node=%u; seq=%u",
+                    logARQ(LOGDEBUG, "nak for already ACK'ed packet: node=%u; seq=%u",
                         (unsigned) sendw.node.id,
                         (unsigned) it->nak);
                 } else {
                     // Log the NAK
-                    logEvent("ARQ: nak: node=%u; seq=%u",
+                    logARQ(LOGDEBUG, "nak: node=%u; seq=%u",
                         (unsigned) sendw.node.id,
                         (unsigned) it->nak);
 
@@ -1203,7 +1203,7 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
             {
                 // Handle first selective ACK
                 if (!sawACKRun) {
-                    logEvent("ARQ: selective ack: node=%u; per_end=%u",
+                    logARQ(LOGDEBUG, "selective ack: node=%u; per_end=%u",
                         (unsigned) node.id,
                         (unsigned) sendw.per_end);
 
@@ -1216,7 +1216,7 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
                 // Record the gap between the last packet in the previous ACK
                 // run and the first packet in this ACK run as failures.
                 if (nextSeq < it->ack.begin) {
-                    logEvent("ARQ: selective nak: node=%u; seq=[%u,%u)",
+                    logARQ(LOGDEBUG, "selective nak: node=%u; seq=[%u,%u)",
                         (unsigned) node.id,
                         (unsigned) nextSeq,
                         (unsigned) it->ack.begin);
@@ -1229,7 +1229,7 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
                                     if (seq >= sendw.per_cutoff) {
                                         txFailure(sendw);
 
-                                        logEvent("ARQ: txFailure selective nak: node=%u; seq=%u",
+                                        logARQ(LOGDEBUG, "txFailure selective nak: node=%u; seq=%u",
                                             (unsigned) node.id,
                                             (unsigned) seq);
                                     }
@@ -1248,7 +1248,7 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
                 }
 
                 // Mark every packet in this ACK run as a success.
-                logEvent("ARQ: selective ack: node=%u; seq=[%u,%u)",
+                logARQ(LOGDEBUG, "selective ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
                     (unsigned) it->ack.begin,
                     (unsigned) it->ack.end);
@@ -1288,7 +1288,7 @@ void SmartController::handleSetUnack(RadioPacket &pkt, RecvWindow &recvw)
             {
                 Seq next_ack = it->unack.unack;
 
-                logEvent("ARQ: set unack: node=%u; cur_ack=%u; unack=%u",
+                logARQ(LOGDEBUG, "set unack: node=%u; cur_ack=%u; unack=%u",
                     (unsigned) recvw.node.id,
                     (unsigned) recvw.ack,
                     (unsigned) next_ack);
@@ -1327,7 +1327,7 @@ void SmartController::updateMCS(SendWindow &sendw)
     double long_per = sendw.long_per.getValue();
 
     if (short_per != sendw.prev_short_per || long_per != sendw.prev_long_per) {
-        logEvent("AMC: updateMCS: node=%u; short per=%f (%u samples); long per=%f (%u samples)",
+        logAMC(LOGDEBUG, "updateMCS: node=%u; short per=%f (%u samples); long per=%f (%u samples)",
             node.id,
             short_per,
             sendw.short_per.getNSamples(),
@@ -1347,7 +1347,7 @@ void SmartController::updateMCS(SendWindow &sendw)
             std::max(sendw.mcsidx_prob[sendw.mcsidx]*mcsidx_alpha_,
                      mcsidx_prob_floor_);
 
-        logEvent("AMC: Transition probability for MCS: node=%u; index=%u; prob=%f",
+        logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%f",
             node.id,
             (unsigned) sendw.mcsidx,
             sendw.mcsidx_prob[sendw.mcsidx]);
@@ -1385,7 +1385,7 @@ void SmartController::updateMCS(SendWindow &sendw)
         sendw.mcsidx_prob[sendw.mcsidx] = 1.0;
 
         if (sendw.mcsidx_prob[sendw.mcsidx] != old_prob)
-            logEvent("AMC: Transition probability for MCS: node=%u; index=%u; prob=%f",
+            logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%f",
                 node.id,
                 (unsigned) sendw.mcsidx,
                 sendw.mcsidx_prob[sendw.mcsidx]);
@@ -1413,7 +1413,7 @@ bool SmartController::mayMoveUpMCS(const SendWindow &sendw)
 
     if (next_evm_threshold) {
         if (sendw.long_evm) {
-            logEvent("ARQ: EVM threshold: evm_threshold=%f, evm=%f",
+            logARQ(LOGDEBUG, "EVM threshold: evm_threshold=%f, evm=%f",
                 *next_evm_threshold,
                 *sendw.long_evm);
 
@@ -1429,12 +1429,11 @@ void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
 {
     Node &node = sendw.node;
 
-    if (rc.verbose && !rc.debug)
-        fprintf(stderr, "Moving down modulation scheme\n");
-
     assert(sendw.mcsidx >= n);
 
-    logEvent("AMC: Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
+    logAMC(LOGINFO, "Moving down modulation scheme");
+
+    logAMC(LOGDEBUG, "Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
         sendw.short_per.getValue(),
@@ -1445,7 +1444,7 @@ void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
 
     const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
 
-    logEvent("AMC: Moved down modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+    logAMC(LOGDEBUG, "Moved down modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
         mcs->description().c_str(),
@@ -1459,10 +1458,9 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 {
     Node &node = sendw.node;
 
-    if (rc.verbose && !rc.debug)
-        fprintf(stderr, "Moving up modulation scheme\n");
+    logAMC(LOGINFO, "Moving up modulation scheme");
 
-    logEvent("AMC: Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
+    logAMC(LOGDEBUG, "Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
         sendw.long_per.getValue(),
@@ -1473,7 +1471,7 @@ void SmartController::moveUpMCS(SendWindow &sendw)
 
     const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
 
-    logEvent("AMC: Moved up modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+    logAMC(LOGDEBUG, "Moved up modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
         mcs->description().c_str(),
@@ -1549,7 +1547,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // by dropping the oldest packet.
             if (   sendw.seq >= sendw.unack + sendw.win
                 && sendw[sendw.unack].mayDrop(max_retransmissions_)) {
-                logEvent("ARQ: MOVING WINDOW ALONG: node=%u",
+                logARQ(LOGDEBUG, "MOVING WINDOW ALONG: node=%u",
                     (unsigned) pkt->hdr.nexthop);
                 drop(sendw[sendw.unack]);
             }
@@ -1581,10 +1579,10 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
                 continue;
             }
 
-            // Otherwise it had better be in our window becasue we added it back
+            // Otherwise it had better be in our window because we added it back
             // when our window expanded due to an ACK!
             if(pkt->hdr.seq >= sendw.unack + sendw.win) {
-                logEvent("ARQ: INVARIANT VIOLATED: got packet outside window: seq=%u; unack=%u; win=%u",
+                logARQ(LOGERROR, "INVARIANT VIOLATED: got packet outside window: seq=%u; unack=%u; win=%u",
                     (unsigned) pkt->hdr.seq,
                     (unsigned) sendw.unack,
                     (unsigned) sendw.win);

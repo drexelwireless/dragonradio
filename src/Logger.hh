@@ -4,7 +4,6 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
-#include <stdarg.h>
 #include <time.h>
 
 #include <memory>
@@ -30,6 +29,7 @@ extern std::shared_ptr<Logger> logger;
 
 class Logger {
 public:
+    /** @brief Logging sources */
     enum Source {
         kSlots = 0,
         kRecvPackets = 1,
@@ -53,7 +53,7 @@ public:
     void stop(void);
     void close(void);
 
-    bool getCollectSource(Source src)
+    inline bool getCollectSource(Source src)
     {
         return sources_ & (1 << src);
     }
@@ -150,8 +150,21 @@ public:
     void logEvent(const Clock::time_point& t,
                   const std::string& event)
     {
+        if (getCollectSource(kEvents)){
+            std::unique_ptr<char[]> buf(new char[event.length() + 1]);
+
+            event.copy(&buf[0], event.length(), 0);
+            buf[event.length()] = '\0';
+
+            log_q_.emplace([=, event = buf.release()](){ logEvent_(t, event); });
+        }
+    }
+
+    void logEvent(const Clock::time_point& t,
+                  std::unique_ptr<char[]> event)
+    {
         if (getCollectSource(kEvents))
-            log_q_.emplace([=](){ logEvent_(t, event); });
+            log_q_.emplace([=, event = event.release()](){ logEvent_(t, event); });
     }
 
 private:
@@ -232,39 +245,7 @@ private:
                   size_t nsamples);
 
      void logEvent_(const Clock::time_point& t,
-                    const std::string& event);
+                    char *event);
 };
-
-void vlogEvent(const Clock::time_point& t, const char *fmt, va_list ap);
-
-void logEventAt(const Clock::time_point& t, const char *fmt, ...)
-#if !defined(DOXYGEN)
-__attribute__((format(printf, 2, 3)))
-#endif
-;
-
-inline void logEventAt(const Clock::time_point& t, const char *fmt, ...)
-{
-    va_list ap;
-
-    va_start(ap, fmt);
-    vlogEvent(t, fmt, ap);
-    va_end(ap);
-}
-
-void logEvent(const char *fmt, ...)
-#if !defined(DOXYGEN)
-__attribute__((format(printf, 1, 2)))
-#endif
-;
-
-inline void logEvent(const char *fmt, ...)
-{
-    va_list ap;
-
-    va_start(ap, fmt);
-    vlogEvent(Clock::now(), fmt, ap);
-    va_end(ap);
-}
 
 #endif /* LOGGER_H_ */

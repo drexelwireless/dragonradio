@@ -16,9 +16,9 @@
 #include <mutex>
 #include <unordered_set>
 
+#include "logging.hh"
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
-#include "Logger.hh"
 #include "Packet.hh"
 #include "cil/CIL.hh"
 #include "net/Processor.hh"
@@ -120,7 +120,7 @@ protected:
                 if (allowed_.find(ntohs(udph->uh_dport)) != allowed_.end())
                     return true;
                 else {
-                    logEvent("NET: firewall dropping packet: curhop=%u; nexthop=%u; flow=%u",
+                    logNet(LOGDEBUG, "firewall dropping packet: curhop=%u; nexthop=%u; flow=%u",
                         pkt->hdr.curhop,
                         pkt->hdr.nexthop,
                         ntohs(udph->uh_dport));
@@ -136,7 +136,7 @@ protected:
                 if (allowed_.find(ntohs(tcph->th_dport)) != allowed_.end())
                     return true;
                 else {
-                    logEvent("NET: firewall dropping packet: curhop=%u; nexthop=%u; flow=%u",
+                    logNet(LOGDEBUG, "firewall dropping packet: curhop=%u; nexthop=%u; flow=%u",
                         pkt->hdr.curhop,
                         pkt->hdr.nexthop,
                         ntohs(tcph->th_dport));

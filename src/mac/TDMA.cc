@@ -97,7 +97,7 @@ void TDMA::txSlotWorker(void)
         // If we missed a slot, find the next slot
         if (t_now > t_next_slot) {
             if (!findNextSlot(t_now, t_next_slot, next_slotidx)) {
-                logEvent("MAC: NO SLOT");
+                logMAC(LOGDEBUG, "NO SLOT");
                 // Sleep for 100ms if we don't yet have a slot
                 doze(100e-3);
                 continue;

@@ -30,20 +30,11 @@ public:
     /** @brief The current node's ID */
     NodeId node_id;
 
-    /** @brief Output verbose messages to the console */
-    bool verbose;
-
-    /** @brief Output debug messages to the console */
-    bool debug;
-
     /** @brief Log invalid headers? */
     bool log_invalid_headers;
 
     /** @brief Maximum Transmission Unit (bytes) */
     unsigned mtu;
-
-    /** @brief Display packets written to tun/tap device? */
-    bool verbose_packet_trace;
 
     /** @brief Snapshot collector */
     std::shared_ptr<SnapshotCollector> snapshot_collector;

@@ -58,7 +58,7 @@ void SlottedMAC::reconfigure(void)
             phy_->mcs_table[mcsidx].valid = phy_->getModulatedSize(mcsidx, rc.mtu) <= max_samples;
 
         if (!phy_->mcs_table[phy_->mcs_table.size()-1].valid)
-            logEvent("MAC: WARNING: Slot size too small to support a full-sized packet!");
+            logMAC(LOGWARNING, "WARNING: Slot size too small to support a full-sized packet!");
     }
 }
 
@@ -125,7 +125,7 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
         if (approx(deadline, when)) {
             return slot;
         } else {
-            logEvent("MAC: MISSED SLOT DEADLINE: desired slot=%f; slot=%f; now=%f",
+            logMAC(LOGWARNING, "MISSED SLOT DEADLINE: desired slot=%f; slot=%f; now=%f",
                 (double) when.get_real_secs(),
                 (double) deadline.get_real_secs(),
                 (double) Clock::now().get_real_secs());

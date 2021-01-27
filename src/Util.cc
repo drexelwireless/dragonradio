@@ -14,7 +14,7 @@
 
 #include <uhd/utils/thread_priority.hpp>
 
-#include "Logger.hh"
+#include "logging.hh"
 #include "Util.hh"
 
 int sys(const char *fmt, ...)
@@ -29,7 +29,7 @@ int sys(const char *fmt, ...)
 
     res = system(cmd);
 
-    logEvent("SYSTEM: %s (%d)", cmd, res);
+    logSystem(LOGDEBUG, "%s (%d)", cmd, res);
 
     return res;
 }
@@ -42,7 +42,7 @@ void setRealtimePriority(pthread_t t)
 
     ret = sched_get_priority_max(policy);
     if (ret == -1) {
-        logEvent("SCHEDULER: sched_get_priority_max: %s; error=%d",
+        logScheduler(LOGERROR, "sched_get_priority_max: %s; error=%d",
             strerror(errno),
             errno);
         return;
@@ -52,7 +52,7 @@ void setRealtimePriority(pthread_t t)
 
     ret = pthread_setschedparam(t, policy, &params);
     if (ret != 0)
-        logEvent("SCHEDULER: pthread_setschedparam: %s; error=%d",
+        logScheduler(LOGERROR, "pthread_setschedparam: %s; error=%d",
             strerror(ret),
             ret);
 }
@@ -72,7 +72,7 @@ void pinThreadToCPU(pthread_t t, int cpu_num)
 
     ret = pthread_setaffinity_np(t, sizeof(cpu_set_t), &cpuset);
     if (ret != 0)
-        logEvent("SCHEDULER: pthread_setaffinity_np: %s; error=%d",
+        logScheduler(LOGERROR, "pthread_setaffinity_np: %s; error=%d",
             strerror(ret),
             ret);
 }
