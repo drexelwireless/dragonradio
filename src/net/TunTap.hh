@@ -73,6 +73,9 @@ private:
     /** @brief File descriptor for tun/tap device */
     int fd_;
 
+    /** @brief Flag indicating whether or not we are done receiving */
+    bool done_;
+
     /** @brief Create and open a tun/tap device.
      * @param dev The name of the device to open; may be the empty string. This
      * string will be assigned the actual device's name once it is created.
@@ -84,11 +87,14 @@ private:
     /** @brief Close the tun/tap device. */
     void closeTap(void);
 
+    /** @brief Get MAC address for node. */
+    std::string nodeMACAddress(uint8_t node_id);
+
+    /** @brief Get IP address for node. */
+    std::string nodeIPAddress(uint8_t node_id);
+
     /** @brief Send a packet to the tun/tap device */
     void send(std::shared_ptr<RadioPacket>&& pkt);
-
-    /** @brief Flag indicating whether or not we are done receiving */
-    bool done_;
 
     /** @brief Start the receive worker */
     void start(void);

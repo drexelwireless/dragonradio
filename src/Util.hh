@@ -8,14 +8,15 @@
 
 #include <thread>
 
-/** @brief Execute a shell command specified with a printf-style format using
- * system.
- */
-int sys(const char *fmt, ...)
+/** @brief sprintf to a std::string. */
+std::string sprintf(const char *fmt, ...)
 #if !defined(DOXYGEN)
 __attribute__((format(printf, 1, 2)))
 #endif
 ;
+
+/** @brief Exec a command. */
+int exec(const std::vector<std::string>&);
 
 /** @brief Make thread have real-time priority. */
 void setRealtimePriority(void);

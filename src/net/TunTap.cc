@@ -59,38 +59,28 @@ TunTap::TunTap(const std::string& tap_iface,
 
     if (!persistent_) {
         // Check if tap is already up
-        if (sys("ifconfig %s > /dev/null 2>&1", tap_iface_.c_str()) != 0) {
+        if (exec({"ifconfig", tap_iface}) != 0) {
             //Get active user
             passwd *user_name = getpwuid(getuid());
 
-            if (sys("ip tuntap add dev %s mode tap user %s",
-                    tap_iface_.c_str(),
-                    user_name->pw_name) < 0)
+            if (exec({"ip", "tuntap", "add", "dev", tap_iface_, "mode", "tap", "user", user_name->pw_name}) < 0)
                 logTunTap(LOGERROR, "Could not add user to tap device");
         }
 
         // Set MTU size to 1500
-        if (sys("ifconfig %s mtu %u",
-                tap_iface_.c_str(),
-                (unsigned) mtu) < 0)
+        if (exec({"ifconfig", tap_iface_, "mtu", sprintf("%u", (unsigned) mtu)}) < 0)
             logTunTap(LOGERROR, "Error configuring mtu");
 
         // Assign mac address
-        if (sys(("ifconfig %s hw ether " + tap_macaddr_).c_str(),
-                tap_iface_.c_str(),
-                node_id) < 0)
+        if (exec({"ifconfig", tap_iface_, "hw", "ether", nodeMACAddress(node_id)}) < 0)
             logTunTap(LOGERROR, "Error configuring MAC address");
 
         // Assign IP address
-        if (sys(("ifconfig %s " + tap_ipaddr_ + " netmask %s").c_str(),
-                tap_iface_.c_str(),
-                node_id,
-                tap_ipnetmask_.c_str()) < 0)
+        if (exec({"ifconfig", tap_iface_, nodeIPAddress(node_id), "netmask", tap_ipnetmask_}) < 0)
             logTunTap(LOGERROR, "Error configuring IP address");
 
         // Bring up the interface in case it's not up yet
-        if (sys("ifconfig %s up",
-                tap_iface_.c_str()) < 0)
+        if (exec({"ifconfig", tap_iface_, "up"}) < 0)
             logTunTap(LOGERROR, "Error bringing ip interface");
     }
 
@@ -110,16 +100,13 @@ size_t TunTap::getMTU(void)
 
 void TunTap::addARPEntry(uint8_t node_id)
 {
-    if (sys(("arp -i %s -s " + tap_ipaddr_ + " " + tap_macaddr_).c_str(),
-             tap_iface_.c_str(),
-             node_id,
-             node_id) < 0)
+    if (exec({"arp", "-i", tap_iface_, "-s", nodeIPAddress(node_id), nodeMACAddress(node_id)}) < 0)
         logTunTap(LOGERROR, "Error adding ARP entry for last octet %d.", node_id);
 }
 
 void TunTap::deleteARPEntry(uint8_t node_id)
 {
-    if (sys(("arp -d " + tap_ipaddr_).c_str(), node_id) < 0)
+    if (exec({"arp", "-d", nodeIPAddress(node_id)}) < 0)
         logTunTap(LOGERROR, "Error deleting ARP entry for last octet %d.", node_id);
 }
 
@@ -164,9 +151,19 @@ void TunTap::closeTap(void)
     close(fd_);
 
     if (!persistent_) {
-        if (sys("ip tuntap del dev %s mode tap", tap_iface_.c_str()) < 0)
+        if (exec({"ip", "tuntap", "del", "dev", tap_iface_, "mode", "tap"}) < 0)
             logTunTap(LOGERROR, "Error deleting tap.");
     }
+}
+
+std::string TunTap::nodeMACAddress(uint8_t node_id)
+{
+    return sprintf(tap_macaddr_.c_str(), node_id);
+}
+
+std::string TunTap::nodeIPAddress(uint8_t node_id)
+{
+    return sprintf(tap_ipaddr_.c_str(), node_id);
 }
 
 void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)

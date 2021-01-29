@@ -2,12 +2,15 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <sys/types.h>
+#include <sys/wait.h>
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <signal.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <thread>
@@ -17,21 +20,62 @@
 #include "logging.hh"
 #include "Util.hh"
 
-int sys(const char *fmt, ...)
+std::string sprintf(const char *fmt, ...)
 {
-    va_list ap;
-    char    cmd[80];
-    int     res;
+    int                     n = 1024;
+    std::unique_ptr<char[]> buf;
+    va_list                 ap;
 
-    va_start(ap, fmt);
-    vsnprintf(cmd, sizeof(cmd), fmt, ap);
-    va_end(ap);
+    for (;;) {
+        buf.reset(new char[n]);
 
-    res = system(cmd);
+        va_start(ap, fmt);
+        int count = vsnprintf(&buf[0], n, fmt, ap);
+        va_end(ap);
 
-    logSystem(LOGDEBUG, "%s (%d)", cmd, res);
+        if (count < 0 || count >= n)
+            n *= 2;
+        else
+            break;
+    }
 
-    return res;
+    return std::string(buf.get());
+}
+
+int exec(const std::vector<std::string>& args)
+{
+    std::string command(args[0]);
+    pid_t       pid;
+    int         wstatus;
+
+    for (auto arg = ++args.begin(); arg != args.end(); arg++) {
+        command += " ";
+        command += *arg;
+    }
+
+    logSystem(LOGDEBUG, "%s", command.c_str());
+
+    if ((pid = fork()) < 0) {
+        throw std::runtime_error(strerror(errno));
+    } else if (pid == 0) {
+        std::vector<const char*> cargs(args.size() + 1);
+
+        for (std::vector<const char*>::size_type i = 0; i < args.size(); ++i)
+            cargs[i] = args[i].c_str();
+
+        if (execvp(cargs[0], const_cast<char* const*>(&cargs[0])) < 0) {
+            throw std::runtime_error(strerror(errno));
+        }
+
+        return 0;
+    } else {
+        waitpid(pid, &wstatus, 0);
+
+        if (wstatus != 0)
+            logSystem(LOGDEBUG, "%s (%d)", command.c_str(), wstatus);
+
+        return wstatus;
+    }
 }
 
 void setRealtimePriority(pthread_t t)
