@@ -4,6 +4,9 @@
 #ifndef TUNTAP_HH_
 #define TUNTAP_HH_
 
+#include <sys/ioctl.h>
+#include <net/if.h>
+
 #include <string>
 #include <thread>
 #include <vector>
@@ -35,11 +38,11 @@ public:
     /** @brief Return the MTU of this interface */
     size_t getMTU(void);
 
-    /** @brief Add an ARP table entry with the given last octet */
-    void addARPEntry(uint8_t last_octet);
+    /** @brief Add a static ARP table entry to tap device for node */
+    void addARPEntry(uint8_t node_id);
 
-    /** @brief Delete an ARP table entry with the given last octet */
-    void deleteARPEntry(uint8_t last_octet);
+    /** @brief Delete ARP table entryfrom tap device for node */
+    void deleteARPEntry(uint8_t node_id);
 
     /** @brief Sink for radio packets. Packets written here are sent to the
      * tun/tap device.
@@ -72,6 +75,12 @@ private:
 
     /** @brief File descriptor for tun/tap device */
     int fd_;
+
+    /** @brief File descriptor to manipulate tun/tap device */
+    int sockfd_;
+
+    /** @brief ifreq for configuring tap interface  */
+    struct ifreq ifr_;
 
     /** @brief Flag indicating whether or not we are done receiving */
     bool done_;
