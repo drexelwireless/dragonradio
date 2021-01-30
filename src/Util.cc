@@ -80,6 +80,7 @@ int exec(const std::vector<std::string>& args)
 
 void setRealtimePriority(pthread_t t)
 {
+    RaiseCaps          caps({CAP_SYS_NICE});
     int                ret;
     constexpr int      policy = SCHED_RR;
     struct sched_param params;
@@ -103,13 +104,16 @@ void setRealtimePriority(pthread_t t)
 
 void makeThisThreadHighPriority(void)
 {
+    RaiseCaps caps({CAP_SYS_NICE});
+
     uhd::set_thread_priority_safe();
 }
 
 void pinThreadToCPU(pthread_t t, int cpu_num)
 {
-    int       ret;
+    RaiseCaps caps({CAP_SYS_NICE});
     cpu_set_t cpuset;
+    int       ret;
 
     CPU_ZERO(&cpuset);
     CPU_SET(cpu_num, &cpuset);

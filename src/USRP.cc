@@ -9,6 +9,7 @@
 #include "logging.hh"
 #include "Clock.hh"
 #include "USRP.hh"
+#include "Util.hh"
 
 USRP::USRP(const std::string& addr,
            const std::optional<std::string>& tx_subdev,
@@ -18,10 +19,13 @@ USRP::USRP(const std::string& addr,
            const std::string& rx_ant,
            float tx_gain,
            float rx_gain)
-  : usrp_(uhd::usrp::multi_usrp::make(addr))
-  , auto_dc_offset_(false)
+  : auto_dc_offset_(false)
   , done_(false)
 {
+    RaiseCaps caps({CAP_SYS_NICE});
+
+    usrp_ = uhd::usrp::multi_usrp::make(addr);
+
     tx_underflow_count_.store(0, std::memory_order_release);
     tx_late_count_.store(0, std::memory_order_release);
 

@@ -83,6 +83,9 @@ TunTap::TunTap(const std::string& tap_iface,
 
     openTap(tap_iface_, IFF_TAP | IFF_NO_PI);
 
+    // Set network interface options
+    RaiseCaps caps({CAP_NET_ADMIN});
+
     // Copy interface name to ifr_ for later use
     strncpy(ifr_.ifr_name, tap_iface_.c_str(), IFNAMSIZ-1);
 
@@ -157,6 +160,7 @@ size_t TunTap::getMTU(void)
 
 void TunTap::addARPEntry(uint8_t node_id)
 {
+    RaiseCaps     caps({CAP_NET_ADMIN});
     struct arpreq req = {0};
 
     strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
@@ -174,6 +178,7 @@ void TunTap::addARPEntry(uint8_t node_id)
 
 void TunTap::deleteARPEntry(uint8_t node_id)
 {
+    RaiseCaps     caps({CAP_NET_ADMIN});
     struct arpreq req = {0};
 
     strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
@@ -190,6 +195,7 @@ static const char *clonedev = "/dev/net/tun";
 
 void TunTap::openTap(std::string& dev, int flags)
 {
+    RaiseCaps    caps({CAP_NET_ADMIN});
     struct ifreq ifr = {0};
 
     // Open the clone device
@@ -216,6 +222,8 @@ void TunTap::openTap(std::string& dev, int flags)
 
 void TunTap::closeTap(void)
 {
+    RaiseCaps caps({CAP_NET_ADMIN});
+
     logTunTap(LOGINFO, "Closing tap interface");
 
     // If the interface isn't persistent, bring it down
