@@ -61,13 +61,6 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     do {
         last_symbol = modulateSamples(&(*iqbuf)[nsamples], nw);
 
-        // Apply soft gain.
-        if (g != 1.0)
-            xsimd::transform(iqbuf->data() + nsamples,
-                             iqbuf->data() + nsamples + nw,
-                             iqbuf->data() + nsamples,
-                [&](const auto& x) { return x*g; });
-
         // We have nw additional samples
         nsamples += nw;
 
@@ -79,6 +72,13 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     // Resize the final buffer to the number of samples generated.
     iqbuf->resize(nsamples);
+
+    // Apply soft gain.
+    if (g != 1.0)
+        xsimd::transform(iqbuf->data(),
+                         iqbuf->data() + nsamples,
+                         iqbuf->data(),
+                         [&](const auto& x) { return x*g; });
 
     // Pass the modulated packet to the 0dBFS estimator if requested
     AutoGain &autogain = phy_.mcs_table[pkt->mcsidx].autogain;
