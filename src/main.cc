@@ -94,37 +94,47 @@ int main(int argc, char** argv)
     sigemptyset(&s.sa_mask);
     sigaction(SIGSEGV, &s, 0);
 
-    // Start the interpreter and keep it alive
-    py::scoped_interpreter guard{};
-
-    // Activate any Python virtual environment
-    activateVirtualenv();
-
-    // Stuff our arguments into Python's sys.argv, but skip the first argument,
-    // which is the name of this binary. Instead, Python will see the name of
-    // the script we run as the first argument.
-    setPythonArgv(argc-1, argv+1);
-
-    // Evaluate the Python script
+    // Result returned by Python
     int ret;
 
-    try {
-        py::eval_file(argv[1]);
-        ret = EXIT_SUCCESS;
-    } catch (const py::error_already_set& e) {
-        if (e.matches(py::module::import("builtins").attr("SystemExit"))) {
-            auto args = py::tuple(e.value().attr("args"));
+    // Start the Python interpreter
+    {
+        py::scoped_interpreter guard{};
 
-            ret = py::cast<int>(args[0]);
-        } else
-            throw;
-    } catch (const std::exception &e) {
-        fprintf(stderr, "Python exception: %s\n", e.what());
-        ret = EXIT_FAILURE;
+        // Activate any Python virtual environment
+        activateVirtualenv();
+
+        // Stuff our arguments into Python's sys.argv, but skip the first argument,
+        // which is the name of this binary. Instead, Python will see the name of
+        // the script we run as the first argument.
+        setPythonArgv(argc-1, argv+1);
+
+        // Evaluate the Python script
+        try {
+            py::eval_file(argv[1]);
+            ret = EXIT_SUCCESS;
+        } catch (const py::error_already_set& e) {
+            if (e.matches(py::module::import("builtins").attr("SystemExit"))) {
+                auto args = py::tuple(e.value().attr("args"));
+
+                ret = py::cast<int>(args[0]);
+            } else {
+                fprintf(stderr, "Python exception: %s\n", e.what());
+                ret = EXIT_FAILURE;
+            }
+        } catch (const std::exception &e) {
+            fprintf(stderr, "Python exception: %s\n", e.what());
+            ret = EXIT_FAILURE;
+        }
     }
 
+    // Ensure logger is gracefully closed
     if (logger)
         logger.reset();
+
+    // Release USRP from Clock. Leaving the release to the Clock's static member
+    // variable's destructor makes UHD unhappy (i.e., crash).
+    Clock::releaseUSRP();
 
     return ret;
 }
