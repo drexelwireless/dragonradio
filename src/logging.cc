@@ -66,7 +66,7 @@ EventCategory string2EventCategory(const std::string &s)
 
 constexpr size_t MAXLEN = 1024;
 
-void vlogEvent(const Clock::time_point& t,
+void vlogEvent(const WallClock::time_point& t,
                EventCategory cat,
                loglevel lvl,
                const char *fmt,

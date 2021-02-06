@@ -793,7 +793,7 @@ protected:
 
                 // Add deadline based on mandate.
                 if (mandate->max_latency_s)
-                    pkt->deadline = (pkt->wall_timestamp ? Clock::to_mono_time(*pkt->wall_timestamp) : pkt->timestamp) +
+                    pkt->deadline = (pkt->wall_timestamp ? WallClock::to_mono_time(*pkt->wall_timestamp) : pkt->timestamp) +
                         *mandate->max_latency_s - mq_.transmission_delay_;
             }
 
@@ -849,7 +849,7 @@ protected:
         void drop(const NetPacket &pkt) const
         {
             if (logger)
-                logger->logQueueDrop(Clock::now(),
+                logger->logQueueDrop(WallClock::now(),
                                      pkt.nretrans,
                                      pkt.hdr,
                                      pkt.ehdr(),

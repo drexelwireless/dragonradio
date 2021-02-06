@@ -208,7 +208,7 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
             }
         }
 
-        logger_->logRecv(Clock::to_wall_time(timestamp_),
+        logger_->logRecv(WallClock::to_wall_time(timestamp_),
                          start,
                          end,
                          header_valid_,

@@ -15,9 +15,9 @@ uhd::time_spec_t MonoClock::t0_(0.0);
 
 uhd::usrp::multi_usrp::sptr MonoClock::usrp_;
 
-double Clock::skew_(1.0);
+double WallClock::skew_(1.0);
 
-uhd::time_spec_t Clock::offset_(0.0);
+uhd::time_spec_t WallClock::offset_(0.0);
 
 void MonoClock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 {
@@ -43,9 +43,9 @@ void MonoClock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 
     fprintf(stderr, "CLOCK: offset=%g\n", offset);
 
-    Clock::setTimeNow(t0_ + offset);
+    WallClock::setTimeNow(t0_ + offset);
 #else
-    Clock::setTimeNow(t0_);
+    WallClock::setTimeNow(t0_);
 #endif
 }
 

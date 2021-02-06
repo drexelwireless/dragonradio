@@ -45,30 +45,30 @@ exportTimePoint(py::module &m, const char *name)
 
 void exportClock(py::module &m)
 {
-    exportTimePoint<Clock::time_point>(m, "TimePoint")
+    exportTimePoint<WallClock::time_point>(m, "WallTimePoint")
       .def_property_readonly("mono_time",
-          [](Clock::time_point &t) {
-              return Clock::to_mono_time(t);
+          [](WallClock::time_point &t) {
+              return WallClock::to_mono_time(t);
           });
 
     exportTimePoint<MonoClock::time_point>(m, "MonoTimePoint")
       .def_property_readonly("wall_time",
           [](MonoClock::time_point &t) {
-              return Clock::to_wall_time(t);
+              return WallClock::to_wall_time(t);
           });
 
-    py::class_<Clock, std::shared_ptr<Clock>>(m, "Clock")
+    py::class_<WallClock, std::shared_ptr<WallClock>>(m, "WallClock")
       .def_property_readonly("t0",
-          [](Clock &clock) {
+          [](WallClock &clock) {
               return clock.getTimeZero();
           })
       .def_property("offset",
-          &Clock::getTimeOffset,
-          &Clock::setTimeOffset)
+          &WallClock::getTimeOffset,
+          &WallClock::setTimeOffset)
       .def_property("skew",
-          &Clock::getSkew,
-          &Clock::setSkew)
+          &WallClock::getSkew,
+          &WallClock::setSkew)
       ;
 
-    m.attr("clock") = std::make_shared<Clock>();
+    m.attr("clock") = std::make_shared<WallClock>();
 }

@@ -130,7 +130,7 @@ protected:
      * @param slotidx Index of the slot to modulated
      */
     void modulateSlot(slot_queue &q,
-                      Clock::time_point when,
+                      WallClock::time_point when,
                       size_t prev_overfill,
                       size_t slotidx);
 
@@ -144,7 +144,7 @@ protected:
      * because it is guaranteed exclusive access.
      */
     std::shared_ptr<Slot> finalizeSlot(slot_queue &q,
-                                       Clock::time_point when);
+                                       WallClock::time_point when);
 
     /** @brief Transmit a slot
      * @param slot The slot

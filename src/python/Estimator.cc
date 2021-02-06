@@ -110,11 +110,11 @@ void exportEstimators(py::module &m)
     exportWindowedMeanEstimator<float>(m, "FloatWindowedMean");
     exportWindowedMeanEstimator<double>(m, "DoubleWindowedMean");
 
-    exportTimeWindowEstimator<Clock, double>(m, "TimeWindowEstimator");
-    exportTimeWindowMeanEstimator<Clock, double>(m, "TimeWindowMean");
-    exportTimeWindowMeanRateEstimator<Clock, double>(m, "TimeWindowMeanRate");
-    exportTimeWindowMinEstimator<Clock, double>(m, "TimeWindowMin");
-    exportTimeWindowMaxEstimator<Clock, double>(m, "TimeWindowMax");
+    exportTimeWindowEstimator<WallClock, double>(m, "WallTimeWindowEstimator");
+    exportTimeWindowMeanEstimator<WallClock, double>(m, "WallTimeWindowMean");
+    exportTimeWindowMeanRateEstimator<WallClock, double>(m, "WallTimeWindowMeanRate");
+    exportTimeWindowMinEstimator<WallClock, double>(m, "WallTimeWindowMin");
+    exportTimeWindowMaxEstimator<WallClock, double>(m, "WallTimeWindowMax");
 
     exportTimeWindowEstimator<MonoClock, double>(m, "MonoTimeWindowEstimator");
     exportTimeWindowMeanEstimator<MonoClock, double>(m, "MonoTimeWindowMean");

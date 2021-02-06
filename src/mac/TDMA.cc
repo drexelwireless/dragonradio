@@ -68,9 +68,9 @@ void TDMA::reconfigure(void)
     frame_size_ = nslots_*slot_size_;
 
     // Determine whether or not we have a slot
-    Clock::time_point t_now = Clock::now();
-    Clock::time_point t_next_slot;
-    size_t            next_slotidx;
+    WallClock::time_point t_now = WallClock::now();
+    WallClock::time_point t_next_slot;
+    size_t                next_slotidx;
 
     can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
 }
@@ -82,17 +82,17 @@ bool TDMA::isFDMA(void) const
 
 void TDMA::txSlotWorker(void)
 {
-    slot_queue        q;
-    Clock::time_point t_now;              // Current time
-    Clock::time_point t_next_slot;        // Time at which our next slot starts
-    Clock::time_point t_following_slot;   // Time at which our following slot starts
-    size_t            next_slotidx;       // Slot index of next slot
-    size_t            following_slotidx;  // Slot index of following slot
-    size_t            noverfill = 0;      // Number of overfilled samples
-    size_t            noverfillslots = 0; // Number of overfilled slots
+    slot_queue            q;
+    WallClock::time_point t_now;              // Current time
+    WallClock::time_point t_next_slot;        // Time at which our next slot starts
+    WallClock::time_point t_following_slot;   // Time at which our following slot starts
+    size_t                next_slotidx;       // Slot index of next slot
+    size_t                following_slotidx;  // Slot index of following slot
+    size_t                noverfill = 0;      // Number of overfilled samples
+    size_t                noverfillslots = 0; // Number of overfilled slots
 
     while (!done_) {
-        t_now = Clock::now();
+        t_now = WallClock::now();
 
         // If we missed a slot, find the next slot
         if (t_now > t_next_slot) {
@@ -150,7 +150,7 @@ void TDMA::txSlotWorker(void)
         // Sleep until it's time to send the next slot
         double delta;
 
-        t_now = Clock::now();
+        t_now = WallClock::now();
         delta = (t_next_slot - t_now).get_real_secs() - slot_send_lead_time_;
         if (delta > 0.0)
             doze(delta);
@@ -159,8 +159,8 @@ void TDMA::txSlotWorker(void)
     missedRemainingSlots(q);
 }
 
-bool TDMA::findNextSlot(Clock::time_point t,
-                        Clock::time_point &t_next,
+bool TDMA::findNextSlot(WallClock::time_point t,
+                        WallClock::time_point &t_next,
                         size_t &next_slotidx)
 {
     double t_slot_pos; // Offset into the current slot (sec)

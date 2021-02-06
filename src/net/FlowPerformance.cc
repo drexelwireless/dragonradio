@@ -78,8 +78,8 @@ void FlowPerformance::netPush(std::shared_ptr<NetPacket> &&pkt)
         const struct mgenhdr *mgenhdr = pkt->getMGENHdr();
 
         if (mgenhdr) {
-            Clock::time_point ts_epoch = mgenhdr->getTimestamp();
-            double            ts = ts_epoch.get_real_secs();
+            WallClock::time_point ts_epoch = mgenhdr->getTimestamp();
+            double                ts = ts_epoch.get_real_secs();
 
             if (start_ && ts > *start_) {
                 unsigned mp = (ts - *start_) / mp_;
@@ -133,9 +133,9 @@ void FlowPerformance::radioPush(std::shared_ptr<RadioPacket> &&pkt)
         if (mgenhdr) {
             std::lock_guard<spinlock_mutex> lock(sinks_mutex_);
             FlowStats                       &stats = findFlow(sinks_, *pkt);
-            Clock::time_point               ts_epoch = mgenhdr->getTimestamp();
+            WallClock::time_point           ts_epoch = mgenhdr->getTimestamp();
             double                          ts = ts_epoch.get_real_secs();
-            double                          latency = (Clock::now() - ts_epoch).get_real_secs();
+            double                          latency = (WallClock::now() - ts_epoch).get_real_secs();
 
             if (start_ && ts > *start_) {
                 unsigned mp = (ts - *start_) / mp_;
@@ -168,7 +168,7 @@ FlowStatsMap FlowPerformance::getFlowStatsMap(FlowStatsMap &stats,
                                               bool reset)
 {
     // Get current MP
-    unsigned current_mp = (Clock::now().get_real_secs() - *start_) / mp_;
+    unsigned current_mp = (WallClock::now().get_real_secs() - *start_) / mp_;
 
     // Get a copy of the statistics
     FlowStatsMap result;

@@ -23,17 +23,17 @@ public:
     /** @brief MAC load, measured as samples transmitted over time */
     struct Load {
         /** @brief Start of load measurement period */
-        Clock::time_point start;
+        WallClock::time_point start;
 
         /** @brief End of load measurement period */
-        Clock::time_point end;
+        WallClock::time_point end;
 
         /** @brief Load per channel measured in number of samples */
         std::vector<size_t> nsamples;
 
         void reset(size_t nchannels)
         {
-            start = Clock::now();
+            start = WallClock::now();
             nsamples.resize(nchannels);
             std::fill(nsamples.begin(), nsamples.end(), 0);
         }
@@ -109,7 +109,7 @@ public:
             std::lock_guard<spinlock_mutex> lock(load_mutex_);
 
             load = load_;
-            load.end = std::max(load.end, Clock::now());
+            load.end = std::max(load.end, WallClock::now());
         }
 
         return load;
@@ -124,7 +124,7 @@ public:
             std::lock_guard<spinlock_mutex> lock(load_mutex_);
 
             load = load_;
-            load.end = std::max(load.end, Clock::now());
+            load.end = std::max(load.end, WallClock::now());
             if (synthesizer_)
                 load_.reset(synthesizer_->getChannels().size());
             else
@@ -206,7 +206,7 @@ protected:
     /** @brief A transmission record */
     struct TXRecord {
         /** @brief TX deadline */
-        Clock::time_point deadline;
+        WallClock::time_point deadline;
 
         /** @brief Number of samples the deadline was delayed */
         size_t deadline_delay;

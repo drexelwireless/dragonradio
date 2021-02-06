@@ -102,7 +102,7 @@ struct PACKED mgenhdr {
         return ntohl(temp);
     }
 
-    Clock::time_point getTimestamp(void) const
+    WallClock::time_point getTimestamp(void) const
     {
         mgen_secs_t  hdr_secs;
         mgen_usecs_t hdr_usecs;
@@ -122,7 +122,7 @@ struct PACKED mgenhdr {
         secs = ntohl(hdr_secs);
         usecs = ntohl(hdr_usecs);
 
-        return Clock::time_point{static_cast<int64_t>(secs), usecs/1e6};
+        return WallClock::time_point{static_cast<int64_t>(secs), usecs/1e6};
     }
 };
 

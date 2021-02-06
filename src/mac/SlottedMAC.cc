@@ -63,7 +63,7 @@ void SlottedMAC::reconfigure(void)
 }
 
 void SlottedMAC::modulateSlot(slot_queue &q,
-                              Clock::time_point when,
+                              WallClock::time_point when,
                               size_t prev_overfill,
                               size_t slotidx)
 {
@@ -83,10 +83,10 @@ void SlottedMAC::modulateSlot(slot_queue &q,
 }
 
 std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
-                                               Clock::time_point when)
+                                               WallClock::time_point when)
 {
     std::shared_ptr<Slot> slot;
-    Clock::time_point     deadline;
+    WallClock::time_point deadline;
 
     for (;;) {
         // Get the next slot
@@ -128,7 +128,7 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
             logMAC(LOGWARNING, "MISSED SLOT DEADLINE: desired slot=%f; slot=%f; now=%f",
                 (double) when.get_real_secs(),
                 (double) deadline.get_real_secs(),
-                (double) Clock::now().get_real_secs());
+                (double) WallClock::now().get_real_secs());
 
             // Stop any current TX burst.
             stop_burst_.store(true, std::memory_order_relaxed);
@@ -172,7 +172,7 @@ void SlottedMAC::txWorker(void)
         // Transmit the packets via the USRP
         bool end_of_burst = slot->length() < slot->full_slot_samples;
 
-        usrp_->burstTX(Clock::to_mono_time(slot->deadline) + slot->deadline_delay/tx_rate_,
+        usrp_->burstTX(WallClock::to_mono_time(slot->deadline) + slot->deadline_delay/tx_rate_,
                        next_slot_start_of_burst,
                        end_of_burst,
                        slot->iqbufs);

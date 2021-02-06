@@ -386,7 +386,7 @@ void Packet::initMGENInfo(void)
             secs = ntohl(mgen_secs);
             usecs = ntohl(mgen_usecs);
 
-            wall_timestamp = Clock::time_point{static_cast<int64_t>(secs), usecs/1e6};
+            wall_timestamp = WallClock::time_point{static_cast<int64_t>(secs), usecs/1e6};
         }
     } else {
          const struct mgenhdr *mgenh = getMGENHdr();

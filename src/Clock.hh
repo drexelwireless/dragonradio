@@ -150,7 +150,7 @@ protected:
 };
 
 /** @brief A wall-clock clock */
-class Clock : public MonoClock
+class WallClock : public MonoClock
 {
 private:
     struct wall_tag;

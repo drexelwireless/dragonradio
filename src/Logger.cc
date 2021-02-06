@@ -153,7 +153,7 @@ struct EventEntry {
     const char *event;
 };
 
-Logger::Logger(Clock::time_point t_start)
+Logger::Logger(WallClock::time_point t_start)
   : is_open_(false)
   , t_start_(t_start)
   , t_last_slot_((time_t) 0)
@@ -388,7 +388,7 @@ void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
     SlotEntry    entry;
     buffer<char> compressed = compressIQData(buf->data(), buf->size());
 
-    entry.timestamp = (Clock::to_wall_time(buf->timestamp) - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(buf->timestamp) - t_start_).get_real_secs();
     entry.bw = bw;
     entry.iq_data.p = compressed.data();
     entry.iq_data.len = compressed.size();
@@ -402,7 +402,7 @@ void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
         return;
 
     SnapshotEntry          entry;
-    double                 timestamp = (Clock::to_wall_time(snapshot->timestamp) - t_start_).get_real_secs();
+    double                 timestamp = (WallClock::to_wall_time(snapshot->timestamp) - t_start_).get_real_secs();
     std::shared_ptr<IQBuf> buf = *(snapshot->getCombinedSlots());
     buffer<char>           compressed = compressIQData(buf->data(), buf->size());
 
@@ -432,7 +432,7 @@ typedef union {
     uint8_t bits;
 } u_flags;
 
-void Logger::logRecv_(const Clock::time_point& t,
+void Logger::logRecv_(const WallClock::time_point& t,
                       int32_t start_samples,
                       int32_t end_samples,
                       bool header_valid,
@@ -493,7 +493,7 @@ void Logger::logRecv_(const Clock::time_point& t,
         delete symbols;
 }
 
-void Logger::logSend_(const Clock::time_point& t,
+void Logger::logSend_(const WallClock::time_point& t,
                       DropType dropped,
                       unsigned nretrans,
                       const Header& hdr,
@@ -548,7 +548,7 @@ void Logger::logSend_(const Clock::time_point& t,
     send_->write(&entry, 1);
 }
 
-void Logger::logEvent_(const Clock::time_point& t,
+void Logger::logEvent_(const WallClock::time_point& t,
                        char *event)
 {
     EventEntry entry;

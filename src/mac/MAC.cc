@@ -44,10 +44,10 @@ void MAC::reconfigure(void)
 
 void MAC::rxWorker(void)
 {
-    Clock::time_point t_cur_period;   // Time at which current period starts
-    Clock::time_point t_next_period;  // Time at which next period starts
-    double            t_period_pos;   // Offset into the current period (sec)
-    unsigned          seq = 0;        // Current IQ buffer sequence number
+    WallClock::time_point t_cur_period;   // Time at which current period starts
+    WallClock::time_point t_next_period;  // Time at which next period starts
+    double                t_period_pos;   // Offset into the current period (sec)
+    unsigned              seq = 0;        // Current IQ buffer sequence number
 
     while (!done_) {
         // Wait for period to be known
@@ -58,7 +58,7 @@ void MAC::rxWorker(void)
 
         // Set up streaming starting at *next* period
         {
-            Clock::time_point t_now = Clock::now();
+            WallClock::time_point t_now = WallClock::now();
 
             t_period_pos = fmod(t_now, rx_period_);
             t_next_period = t_now + rx_period_ - t_period_pos;
@@ -67,7 +67,7 @@ void MAC::rxWorker(void)
         // Bump the sequence number to indicate a discontinuity
         seq++;
 
-        usrp_->startRXStream(Clock::to_mono_time(t_next_period));
+        usrp_->startRXStream(WallClock::to_mono_time(t_next_period));
 
         while (!done_) {
             // Update times
@@ -93,7 +93,7 @@ void MAC::rxWorker(void)
 
             // Read samples for current period. The demodulator will do its
             // thing as we continue to read samples.
-            bool ok = usrp_->burstRX(Clock::to_mono_time(t_cur_period), rx_period_samps_, *iqbuf);
+            bool ok = usrp_->burstRX(WallClock::to_mono_time(t_cur_period), rx_period_samps_, *iqbuf);
 
             // Update snapshot offset by finalizing this snapshot
             if (do_snapshot)
@@ -150,7 +150,7 @@ void MAC::txNotifier(void)
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
                 const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
 
-                logger_->logSend(Clock::to_wall_time(samples->timestamp),
+                logger_->logSend(WallClock::to_wall_time(samples->timestamp),
                                  (*it)->pkt->nretrans,
                                  (*it)->pkt->hdr,
                                  (*it)->pkt->ehdr(),
@@ -173,7 +173,7 @@ void MAC::txNotifier(void)
         // Tell the snapshot collector about local self-transmissions
         if (snapshot_collector_) {
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
-                snapshot_collector_->selfTX(Clock::to_mono_time(record.deadline) + (*it)->start/tx_rate_,
+                snapshot_collector_->selfTX(WallClock::to_mono_time(record.deadline) + (*it)->start/tx_rate_,
                                             rx_rate_,
                                             tx_rate_,
                                             (*it)->channel.bw,

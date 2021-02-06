@@ -195,7 +195,7 @@ struct Packet : public buffer<unsigned char>
      * Unlike the timestamp field, this field represents the time at which the
      * packet was originally sent.
      */
-    std::optional<Clock::time_point> wall_timestamp;
+    std::optional<WallClock::time_point> wall_timestamp;
 
     /** @brief Payload size
      * @return The size of the data portion of a UDP or TCP packet.
