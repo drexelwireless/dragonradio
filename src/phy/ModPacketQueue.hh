@@ -86,7 +86,7 @@ public:
         consumer_cond_.wait(lock, [this]{ return done_ || kicked_ || nsamples_ > 0; });
 
         if (kicked_) {
-            kicked_.store(true, std::memory_order_release);
+            kicked_.store(false, std::memory_order_release);
             return 0;
         }
 
