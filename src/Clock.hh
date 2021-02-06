@@ -87,32 +87,10 @@ bool approx(const time_point_t<T> &t1, const time_point_t<T> &t2)
     return fabs((t1 - t2).get_real_secs()) < 1e-6;
 }
 
-/** @brief A monotonic clock */
-class MonoClock
+/** @brief A clock */
+class Clock
 {
-private:
-    struct mono_tag;
-
 public:
-    using duration   = std::chrono::seconds;
-    using rep        = duration::rep;
-    using period     = duration::period;
-    using time_point = time_point_t<mono_tag>;
-
-    static const bool is_steady = true;
-
-    /** @brief Get time 0, for purposes of linear fit. */
-    MonoClock::time_point getTimeZero(void)
-    {
-        return time_point { t0_ };
-    }
-
-    /** @brief Get the current time. Guaranteed to be monotonic. */
-    static time_point now() noexcept
-    {
-        return time_point { getTimeNow() };
-    }
-
     /** @brief Set the USRP used for clock operations.
      * @param usrp The USRP.
      */
@@ -122,11 +100,11 @@ public:
     static void releaseUSRP(void);
 
 protected:
-    /** @brief Time zero, for purposes of linear fit. */
-    static uhd::time_spec_t t0_;
-
     /** @brief The USRP used for clock operations. */
     static uhd::usrp::multi_usrp::sptr usrp_;
+
+    /** @brief Time zero. */
+    static uhd::time_spec_t t0_;
 
     /** @brief Get the current UHD time. */
     static uhd::time_spec_t getTimeNow() noexcept
@@ -149,8 +127,29 @@ protected:
     }
 };
 
+/** @brief A monotonic clock */
+class MonoClock : public Clock
+{
+private:
+    struct mono_tag;
+
+public:
+    using duration   = std::chrono::seconds;
+    using rep        = duration::rep;
+    using period     = duration::period;
+    using time_point = time_point_t<mono_tag>;
+
+    static const bool is_steady = true;
+
+    /** @brief Get the current time. Guaranteed to be monotonic. */
+    static time_point now() noexcept
+    {
+        return time_point { getTimeNow() };
+    }
+};
+
 /** @brief A wall-clock clock */
-class WallClock : public MonoClock
+class WallClock : public Clock
 {
 private:
     struct wall_tag;
@@ -162,6 +161,12 @@ public:
     using time_point = time_point_t<wall_tag>;
 
     static const bool is_steady = false;
+
+    /** @brief Get time 0 for purposes of linear fit. */
+    MonoClock::time_point getTimeZero(void)
+    {
+        return MonoClock::time_point { t0_ };
+    }
 
     /** @brief Get time offset. */
     MonoClock::time_point getTimeOffset(void)

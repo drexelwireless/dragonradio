@@ -11,15 +11,15 @@
 
 #include "Clock.hh"
 
-uhd::time_spec_t MonoClock::t0_(0.0);
+uhd::usrp::multi_usrp::sptr Clock::usrp_;
 
-uhd::usrp::multi_usrp::sptr MonoClock::usrp_;
+uhd::time_spec_t Clock::t0_(0.0);
 
 double WallClock::skew_(1.0);
 
 uhd::time_spec_t WallClock::offset_(0.0);
 
-void MonoClock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
+void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 {
     // Set offset relative to system NTP time
     struct timespec t;
@@ -43,13 +43,13 @@ void MonoClock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 
     fprintf(stderr, "CLOCK: offset=%g\n", offset);
 
-    WallClock::setTimeNow(t0_ + offset);
+    Clock::setTimeNow(t0_ + offset);
 #else
-    WallClock::setTimeNow(t0_);
+    Clock::setTimeNow(t0_);
 #endif
 }
 
-void MonoClock::releaseUSRP(void)
+void Clock::releaseUSRP(void)
 {
     usrp_.reset();
 }

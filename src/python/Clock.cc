@@ -57,10 +57,13 @@ void exportClock(py::module &m)
               return WallClock::to_wall_time(t);
           });
 
-    py::class_<WallClock, std::shared_ptr<WallClock>>(m, "WallClock")
+    py::class_<Clock, std::shared_ptr<Clock>>(m, "Clock")
+      ;
+
+    py::class_<WallClock, Clock, std::shared_ptr<WallClock>>(m, "WallClock")
       .def_property_readonly("t0",
-          [](WallClock &clock) {
-              return clock.getTimeZero();
+          [](WallClock &self) {
+              return self.getTimeZero();
           })
       .def_property("offset",
           &WallClock::getTimeOffset,

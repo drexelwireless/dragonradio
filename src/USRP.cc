@@ -41,7 +41,7 @@ USRP::USRP(const std::string& addr,
         usrp_->set_rx_subdev_spec(*rx_subdev);
 
     // Set up clock
-    MonoClock::setUSRP(usrp_);
+    Clock::setUSRP(usrp_);
 
     // Set RX and TX frequencies
     setRXFrequency(freq);
