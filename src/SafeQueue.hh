@@ -1,3 +1,6 @@
+// Copyright 2018-2020 Drexel University
+// Author: Geoffrey Mainland <mainland@drexel.edu>
+
 #ifndef SAFEQUEUE_H_
 #define SAFEQUEUE_H_
 
@@ -33,9 +36,6 @@ public:
 
     SafeQueue& operator=(const SafeQueue&) = delete;
     SafeQueue& operator=(SafeQueue&&) = delete;
-// Copyright 2018-2020 Drexel University
-// Author: Geoffrey Mainland <mainland@drexel.edu>
-
 
     /** @brief Reset queue to empty state. */
     void reset(void)
