@@ -10,10 +10,9 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <netinet/if_ether.h>
-#include <linux/if.h>
 #include <linux/if_tun.h>
+
 #include <fcntl.h>
-#include <pwd.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -25,6 +24,28 @@
 #include "net/TunTap.hh"
 
 using namespace std::placeholders;
+
+static void parseMAC(const std::string &s, struct sockaddr &addr)
+{
+    addr.sa_family = ARPHRD_ETHER;
+
+    if (sscanf(s.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+               (unsigned char*) &addr.sa_data[0],
+               (unsigned char*) &addr.sa_data[1],
+               (unsigned char*) &addr.sa_data[2],
+               (unsigned char*) &addr.sa_data[3],
+               (unsigned char*) &addr.sa_data[4],
+               (unsigned char*) &addr.sa_data[5]) != 6)
+        throw std::domain_error("Illegally formatted MAC address");
+}
+
+static void parseIP(const std::string &s, struct sockaddr &addr)
+{
+    addr.sa_family = AF_INET;
+
+    if (inet_pton(AF_INET, s.c_str(), &((struct sockaddr_in*) &addr)->sin_addr) == 0)
+        throw std::domain_error("Illegally formatted IP address");
+}
 
 /** @file TunTap.cc
  * This code has been heavily modified from the version included in the
@@ -53,54 +74,83 @@ TunTap::TunTap(const std::string& tap_iface,
   , tap_ipnetmask_(tap_ipnetmask)
   , tap_macaddr_(tap_macaddr)
   , mtu_(mtu)
+  , fd_(0)
+  , sockfd_(0)
+  , ifr_({0})
   , done_(true)
 {
     logTunTap(LOGINFO, "Creating tap interface %s", tap_iface.c_str());
 
-    if (!persistent_) {
-        // Check if tap is already up
-        if (sys("ifconfig %s > /dev/null 2>&1", tap_iface_.c_str()) != 0) {
-            //Get active user
-            passwd *user_name = getpwuid(getuid());
+    openTap(tap_iface_, IFF_TAP | IFF_NO_PI);
 
-            if (sys("ip tuntap add dev %s mode tap user %s",
-                    tap_iface_.c_str(),
-                    user_name->pw_name) < 0)
-                logTunTap(LOGERROR, "Could not add user to tap device");
-        }
+    // Set network interface options
+    RaiseCaps caps({CAP_NET_ADMIN});
 
-        // Set MTU size to 1500
-        if (sys("ifconfig %s mtu %u",
-                tap_iface_.c_str(),
-                (unsigned) mtu) < 0)
-            logTunTap(LOGERROR, "Error configuring mtu");
+    // Copy interface name to ifr_ for later use
+    strncpy(ifr_.ifr_name, tap_iface_.c_str(), IFNAMSIZ-1);
 
-        // Assign mac address
-        if (sys(("ifconfig %s hw ether " + tap_macaddr_).c_str(),
-                tap_iface_.c_str(),
-                node_id) < 0)
-            logTunTap(LOGERROR, "Error configuring MAC address");
+    // Set tap device ownership
+    if (ioctl(fd_, TUNSETOWNER, getuid()) < 0)
+        logTunTap(LOGERROR, "Could not set owner: %s", strerror(errno));
 
-        // Assign IP address
-        if (sys(("ifconfig %s " + tap_ipaddr_ + " netmask %s").c_str(),
-                tap_iface_.c_str(),
-                node_id,
-                tap_ipnetmask_.c_str()) < 0)
-            logTunTap(LOGERROR, "Error configuring IP address");
+    if (ioctl(fd_, TUNSETGROUP, getgid()) < 0)
+        logTunTap(LOGERROR, "Could not set group: %s", strerror(errno));
 
-        // Bring up the interface in case it's not up yet
-        if (sys("ifconfig %s up",
-                tap_iface_.c_str()) < 0)
-            logTunTap(LOGERROR, "Error bringing ip interface");
+    // Make tap device persistent
+    if (persistent) {
+        if (ioctl(fd_, TUNSETPERSIST, 1) < 0)
+            logTunTap(LOGERROR, "Could not make tap device persistent: %s", strerror(errno));
     }
 
-    openTap(tap_iface_, IFF_TAP | IFF_NO_PI);
+    // Create socket for use with ioctl
+    if ((sockfd_ = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        logTunTap(LOGERROR, "Could not create socket: %s", strerror(errno));
+
+    // Set MTU to 1500
+    ifr_.ifr_mtu = mtu;
+
+    if (ioctl(sockfd_, SIOCSIFMTU, &ifr_) < 0)
+        logTunTap(LOGERROR, "Error configuring mtu: %s", strerror(errno));
+
+    // Set MAC address
+    ifr_.ifr_hwaddr = {0};
+
+    parseMAC(nodeMACAddress(node_id), ifr_.ifr_hwaddr);
+
+    if (ioctl(sockfd_, SIOCSIFHWADDR, &ifr_) < 0)
+        logTunTap(LOGERROR, "Error setting MAC address: %s", strerror(errno));
+
+    // Set IP address
+    ifr_.ifr_addr = {0};
+
+    parseIP(nodeIPAddress(node_id), ifr_.ifr_addr);
+
+    if (ioctl(sockfd_, SIOCSIFADDR, &ifr_) < 0)
+        logTunTap(LOGERROR, "Error setting IP address: %s", strerror(errno));
+
+    // Set netmask
+    ifr_.ifr_addr = {0};
+
+    parseIP(tap_ipnetmask_, ifr_.ifr_addr);
+
+    if (ioctl(sockfd_, SIOCSIFNETMASK, &ifr_) < 0)
+        logTunTap(LOGERROR, "Error setting IP netmask: %s", strerror(errno));
+
+    // Bring up interface
+    if (ioctl(sockfd_, SIOCGIFFLAGS, &ifr_) < 0)
+        logTunTap(LOGERROR, "Error bringing up interface: %s", strerror(errno));
+
+    ifr_.ifr_flags |= IFF_UP | IFF_RUNNING;
+
+    if (ioctl(sockfd_, SIOCSIFFLAGS, &ifr_) < 0)
+        logTunTap(LOGERROR, "Error bringing up interface: %s", strerror(errno));
 }
 
 TunTap::~TunTap(void)
 {
     stop();
     closeTap();
+    close(sockfd_);
 }
 
 size_t TunTap::getMTU(void)
@@ -110,63 +160,90 @@ size_t TunTap::getMTU(void)
 
 void TunTap::addARPEntry(uint8_t node_id)
 {
-    if (sys(("arp -i %s -s " + tap_ipaddr_ + " " + tap_macaddr_).c_str(),
-             tap_iface_.c_str(),
-             node_id,
-             node_id) < 0)
-        logTunTap(LOGERROR, "Error adding ARP entry for last octet %d.", node_id);
+    RaiseCaps     caps({CAP_NET_ADMIN});
+    struct arpreq req = {0};
+
+    strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
+
+    parseIP(nodeIPAddress(node_id), req.arp_pa);
+    parseMAC(nodeMACAddress(node_id), req.arp_ha);
+
+    req.arp_flags = ATF_PERM | ATF_COM;
+
+    if (ioctl(sockfd_, SIOCSARP, &req) < 0)
+        logTunTap(LOGERROR, "Error adding ARP entry for node %d: %s", node_id, strerror(errno));
+    else
+        logTunTap(LOGDEBUG, "Added ARP entry for node %d", node_id);
 }
 
 void TunTap::deleteARPEntry(uint8_t node_id)
 {
-    if (sys(("arp -d " + tap_ipaddr_).c_str(), node_id) < 0)
-        logTunTap(LOGERROR, "Error deleting ARP entry for last octet %d.", node_id);
+    RaiseCaps     caps({CAP_NET_ADMIN});
+    struct arpreq req = {0};
+
+    strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
+
+    parseIP(nodeIPAddress(node_id), req.arp_pa);
+
+    if (ioctl(sockfd_, SIOCDARP, &req) < 0)
+        logTunTap(LOGERROR, "Error deleting ARP entry for node %d: %s", node_id, strerror(errno));
+    else
+        logTunTap(LOGDEBUG, "Deleted ARP entry for node %d", node_id);
 }
 
-const char *clonedev = "/dev/net/tun";
+static const char *clonedev = "/dev/net/tun";
 
 void TunTap::openTap(std::string& dev, int flags)
 {
-    struct ifreq ifr;
-    int err;
+    RaiseCaps    caps({CAP_NET_ADMIN});
+    struct ifreq ifr = {0};
 
-    /* open the clone device */
+    // Open the clone device
     if((fd_ = open(clonedev, O_RDWR)) < 0) {
-        logTunTap(LOGERROR, "Error connecting to tap interface %s", tap_iface_.c_str());
+        logTunTap(LOGERROR, "Error connecting to tap interface %s: %s", tap_iface_.c_str(), strerror(errno));
         exit(1);
     }
 
-    /* prepare the struct ifr, of type struct ifreq */
-    memset(&ifr, 0, sizeof(ifr));
-
+    // Create the tap interface
     ifr.ifr_flags = flags;
 
     strncpy(ifr.ifr_name, dev.c_str(), IFNAMSIZ-1);
 
-    if ((err = ioctl(fd_, TUNSETIFF, (void *) &ifr)) < 0 ) {
-        perror("ioctl()");
+    if ((ioctl(fd_, TUNSETIFF, &ifr)) < 0 ) {
         close(fd_);
-        logTunTap(LOGERROR, "Error connecting to tap interface %s", tap_iface_.c_str());
+        logTunTap(LOGERROR, "Error connecting to tap interface %s: %s", tap_iface_.c_str(), strerror(errno));
         exit(1);
     }
 
-    /* if ioctl succeded, write back the name to the variable "dev"
-     * so the caller can know it.
-     */
+    // If ioctl succeeded, write the interface name back to the variable dev so
+    // the caller knows what it is.
     dev = ifr.ifr_name;
 }
 
 void TunTap::closeTap(void)
 {
+    RaiseCaps caps({CAP_NET_ADMIN});
+
     logTunTap(LOGINFO, "Closing tap interface");
 
-    // Detach Tap Interface
-    close(fd_);
-
+    // If the interface isn't persistent, bring it down
     if (!persistent_) {
-        if (sys("ip tuntap del dev %s mode tap", tap_iface_.c_str()) < 0)
-            logTunTap(LOGERROR, "Error deleting tap.");
+        if (ioctl(fd_, TUNSETPERSIST, 0) < 0)
+            logTunTap(LOGERROR, "Error deleting tap: %s", strerror(errno));
     }
+
+    // Close Tap Interface
+    close(fd_);
+}
+
+std::string TunTap::nodeMACAddress(uint8_t node_id)
+{
+    return sprintf(tap_macaddr_.c_str(), node_id);
+}
+
+std::string TunTap::nodeIPAddress(uint8_t node_id)
+{
+    return sprintf(tap_ipaddr_.c_str(), node_id);
 }
 
 void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)

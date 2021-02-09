@@ -13,6 +13,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 #include "Logger.hh"
+#include "Util.hh"
 
 #define MAXFRAMES 25
 
@@ -70,6 +71,19 @@ int main(int argc, char** argv)
     if (argc == 1) {
         fprintf(stderr, "Must specify Python script to run.\n");
         exit(EXIT_FAILURE);
+    }
+
+    // Drop capabilities
+    Caps caps(cap_get_proc());
+
+    caps.clear();
+    caps.set_flag(CAP_PERMITTED, {CAP_SYS_NICE, CAP_NET_ADMIN});
+    caps.set_proc();
+
+    // Drop euid
+    if (geteuid() != getuid()) {
+        if (seteuid(getuid()) < 0)
+            throw std::runtime_error(strerror(errno));
     }
 
     // Install backtrace signal handler

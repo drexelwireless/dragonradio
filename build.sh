@@ -11,6 +11,9 @@ sudo apt install -y libhdf5-dev
 sudo apt install -y libflac8 libflac-dev libflac++-dev
 sudo apt install -y libeigen3-dev
 
+# For capabilities
+sudo apt install -y libcap-dev
+
 # Install Python 3.8
 sudo apt install -y python3 python3-dev python3-distutils python3-pip
 
