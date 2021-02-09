@@ -291,7 +291,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 // If this is a timestamped packet, timestamp it. In any case,
                 // modulate it.
                 if (!mpkt->pkt) {
-                    MonoClock::time_point timestamp = Clock::to_mono_time(slot->deadline) + (slot->deadline_delay + mod.nsamples - mod.delay)/tx_rate_copy_;
+                    MonoClock::time_point timestamp = WallClock::to_mono_time(slot->deadline) + (slot->deadline_delay + mod.nsamples - mod.delay)/tx_rate_copy_;
 
                     pkt->timestamp = timestamp;
 

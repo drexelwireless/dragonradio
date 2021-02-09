@@ -12,7 +12,7 @@ class SlotSynthesizer : public Synthesizer
 public:
     /** @brief A time slot that needs to be synthesized */
     struct Slot {
-        Slot(const Clock::time_point &deadline_,
+        Slot(const WallClock::time_point &deadline_,
              size_t deadline_delay_,
              size_t max_samples_,
              size_t full_slot_samples_,
@@ -36,7 +36,7 @@ public:
         ~Slot() = default;
 
         /** @brief Synthesis deadline. Slot must be ready at this time! */
-        const Clock::time_point deadline;
+        const WallClock::time_point deadline;
 
         /** @brief Number of samples to delay the deadline */
         const size_t deadline_delay;

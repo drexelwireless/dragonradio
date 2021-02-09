@@ -39,7 +39,7 @@ public:
         kEvents = 5
     };
 
-    Logger(Clock::time_point t_start);
+    Logger(WallClock::time_point t_start);
     ~Logger();
 
     Logger() = delete;
@@ -79,7 +79,7 @@ public:
         log_q_.emplace([=](){ logSnapshot_(snapshot); });
     }
 
-    void logRecv(const Clock::time_point& t,
+    void logRecv(const WallClock::time_point& t,
                  int32_t start_samples,
                  int32_t end_samples,
                  bool header_valid,
@@ -102,7 +102,7 @@ public:
             log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
     }
 
-    void logSend(const Clock::time_point& t,
+    void logSend(const WallClock::time_point& t,
                  unsigned nretrans,
                  const Header& hdr,
                  const ExtendedHeader& ehdr,
@@ -121,7 +121,7 @@ public:
             log_q_.emplace([=](){ logSend_(t, kNotDropped, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
     }
 
-    void logLinkLayerDrop(const Clock::time_point& t,
+    void logLinkLayerDrop(const WallClock::time_point& t,
                           unsigned nretrans,
                           const Header& hdr,
                           const ExtendedHeader& ehdr,
@@ -134,7 +134,7 @@ public:
             log_q_.emplace([=](){ logSend_(t, kLinkLayerDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
     }
 
-    void logQueueDrop(const Clock::time_point& t,
+    void logQueueDrop(const WallClock::time_point& t,
                       unsigned nretrans,
                       const Header& hdr,
                       const ExtendedHeader& ehdr,
@@ -147,7 +147,7 @@ public:
             log_q_.emplace([=](){ logSend_(t, kQueueDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
     }
 
-    void logEvent(const Clock::time_point& t,
+    void logEvent(const WallClock::time_point& t,
                   const std::string& event)
     {
         if (getCollectSource(kEvents)){
@@ -160,7 +160,7 @@ public:
         }
     }
 
-    void logEvent(const Clock::time_point& t,
+    void logEvent(const WallClock::time_point& t,
                   std::unique_ptr<char[]> event)
     {
         if (getCollectSource(kEvents))
@@ -176,7 +176,7 @@ private:
     std::unique_ptr<ExtensibleDataSet> recv_;
     std::unique_ptr<ExtensibleDataSet> send_;
     std::unique_ptr<ExtensibleDataSet> event_;
-    Clock::time_point t_start_;
+    WallClock::time_point t_start_;
     MonoClock::time_point t_last_slot_;
 
     /** @brief Data sources we collect. */
@@ -203,7 +203,7 @@ private:
 
     void logSnapshot_(std::shared_ptr<Snapshot> snapshot);
 
-    void logRecv_(const Clock::time_point& t,
+    void logRecv_(const WallClock::time_point& t,
                   int32_t start_samples,
                   int32_t end_samples,
                   bool header_valid,
@@ -228,7 +228,7 @@ private:
         kQueueDrop
     };
 
-    void logSend_(const Clock::time_point& t,
+    void logSend_(const WallClock::time_point& t,
                   DropType dropped,
                   unsigned nretrans,
                   const Header& hdr,
@@ -244,7 +244,7 @@ private:
                   size_t offset,
                   size_t nsamples);
 
-     void logEvent_(const Clock::time_point& t,
+     void logEvent_(const WallClock::time_point& t,
                     char *event);
 };
 

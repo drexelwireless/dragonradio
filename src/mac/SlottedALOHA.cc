@@ -73,15 +73,15 @@ void SlottedALOHA::reconfigure(void)
 
 void SlottedALOHA::txSlotWorker(void)
 {
-    slot_queue        q;
-    Clock::time_point t_now;            // Current time
-    Clock::time_point t_next_slot;      // Time at which our next slot starts
-    Clock::time_point t_following_slot; // Time at which the following slot starts
-    double            t_slot_pos;       // Offset into the current slot (sec)
+    slot_queue            q;
+    WallClock::time_point t_now;            // Current time
+    WallClock::time_point t_next_slot;      // Time at which our next slot starts
+    WallClock::time_point t_following_slot; // Time at which the following slot starts
+    double                t_slot_pos;       // Offset into the current slot (sec)
 
     while (!done_) {
         // Figure out when our next send slot is.
-        t_now = Clock::now();
+        t_now = WallClock::now();
         t_slot_pos = fmod(t_now, slot_size_);
         t_next_slot = t_now + (slot_size_ - t_slot_pos);
         t_following_slot = t_next_slot + slot_size_;
@@ -100,7 +100,7 @@ void SlottedALOHA::txSlotWorker(void)
         // Sleep until TX time for following slot
         double delta;
 
-        t_now = Clock::now();
+        t_now = WallClock::now();
         delta = (t_following_slot - t_now).get_real_secs() - slot_send_lead_time_;
         if (delta > 0.0)
             doze(delta);

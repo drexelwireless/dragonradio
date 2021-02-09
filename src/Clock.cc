@@ -1,7 +1,9 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#include <sys/time.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 #ifdef RANDOM_CLOCK_BIAS
 #include <random>
@@ -9,22 +11,26 @@
 
 #include "Clock.hh"
 
-uhd::time_spec_t MonoClock::t0_(0.0);
+uhd::usrp::multi_usrp::sptr Clock::usrp_;
 
-uhd::usrp::multi_usrp::sptr MonoClock::usrp_;
+uhd::time_spec_t Clock::t0_(0.0);
 
-double Clock::skew_(1.0);
+double WallClock::skew_(1.0);
 
-uhd::time_spec_t Clock::offset_(0.0);
+uhd::time_spec_t WallClock::offset_(0.0);
 
 void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 {
     // Set offset relative to system NTP time
-    timeval tv;
+    struct timespec t;
+    int    err;
 
-    gettimeofday(&tv, NULL);
+    if ((err = clock_gettime(CLOCK_REALTIME, &t)) != 0) {
+        fprintf(stderr, "clock_gettime failed: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
 
-    uhd::time_spec_t now(tv.tv_sec, ((double)tv.tv_usec)/1e6);
+    uhd::time_spec_t now(t.tv_sec, ((double)t.tv_nsec)/1e9);
 
     usrp_ = usrp;
     t0_ = now;
@@ -37,9 +43,9 @@ void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
 
     fprintf(stderr, "CLOCK: offset=%g\n", offset);
 
-    usrp->set_time_now(t0_ + offset);
+    Clock::setTimeNow(t0_ + offset);
 #else
-    usrp->set_time_now(t0_);
+    Clock::setTimeNow(t0_);
 #endif
 }
 

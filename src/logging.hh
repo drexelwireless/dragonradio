@@ -58,7 +58,7 @@ bool isPrintLogLevelEnabled(EventCategory, loglevel);
 void setPrintLogLevel(EventCategory, loglevel);
 
 /** @brief Log an event */
-void vlogEvent(const Clock::time_point& t,
+void vlogEvent(const WallClock::time_point& t,
                EventCategory cat,
                loglevel lvl,
                const char *fmt,
@@ -81,13 +81,13 @@ inline void logEvent(EventCategory cat,
         va_list ap;
 
         va_start(ap, fmt);
-        vlogEvent(Clock::now(), cat, lvl, fmt, ap);
+        vlogEvent(WallClock::now(), cat, lvl, fmt, ap);
         va_end(ap);
     }
 }
 
 /** @brief Log an event at specific time */
-void logEventAt(const Clock::time_point& t,
+void logEventAt(const WallClock::time_point& t,
                 EventCategory cat,
                 loglevel lvl,
                 const char *fmt, ...)
@@ -96,7 +96,7 @@ __attribute__((format(printf, 4, 5)))
 #endif
 ;
 
-inline void logEventAt(const Clock::time_point& t,
+inline void logEventAt(const WallClock::time_point& t,
                        EventCategory cat,
                        loglevel lvl,
                        const char *fmt, ...)

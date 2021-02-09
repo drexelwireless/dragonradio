@@ -82,8 +82,8 @@ private:
      * @param next_slotidx Slot index of next slot
      * @returns True if a slot was found, false otherwise
      */
-    bool findNextSlot(Clock::time_point t,
-                      Clock::time_point &t_next,
+    bool findNextSlot(WallClock::time_point t,
+                      WallClock::time_point &t_next,
                       size_t &next_slotidx);
 };
 

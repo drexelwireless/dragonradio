@@ -9,8 +9,6 @@
 
 #include <uhd/usrp/multi_usrp.hpp>
 
-#include "Seq.hh"
-
 template <class T>
 struct time_point_t {
     uhd::time_spec_t t;
@@ -89,8 +87,48 @@ bool approx(const time_point_t<T> &t1, const time_point_t<T> &t2)
     return fabs((t1 - t2).get_real_secs()) < 1e-6;
 }
 
+/** @brief A clock */
+class Clock
+{
+public:
+    /** @brief Set the USRP used for clock operations.
+     * @param usrp The USRP.
+     */
+    static void setUSRP(uhd::usrp::multi_usrp::sptr usrp);
+
+    /** @brief Release the USRP used for clock operations. */
+    static void releaseUSRP(void);
+
+protected:
+    /** @brief The USRP used for clock operations. */
+    static uhd::usrp::multi_usrp::sptr usrp_;
+
+    /** @brief Time zero. */
+    static uhd::time_spec_t t0_;
+
+    /** @brief Get the current UHD time. */
+    static uhd::time_spec_t getTimeNow() noexcept
+    {
+        while (true) {
+            try {
+                return usrp_->get_time_now();
+            } catch (uhd::io_error &err) {
+                fprintf(stderr, "USRP: get_time_now: %s", err.what());
+            }
+        }
+    }
+
+    /** @brief Set the current UHD time.
+     * @param now Current UHD time
+     */
+    static void setTimeNow(const uhd::time_spec_t &now) noexcept
+    {
+        usrp_->set_time_now(now);
+    }
+};
+
 /** @brief A monotonic clock */
-class MonoClock
+class MonoClock : public Clock
 {
 private:
     struct mono_tag;
@@ -103,34 +141,15 @@ public:
 
     static const bool is_steady = true;
 
-    /** @brief Get time 0, for purposes of linear fit. */
-    MonoClock::time_point getTimeZero(void)
-    {
-        return time_point { t0_ };
-    }
-
     /** @brief Get the current time. Guaranteed to be monotonic. */
     static time_point now() noexcept
     {
-        while (true) {
-            try {
-                return time_point { usrp_->get_time_now() };
-            } catch (uhd::io_error &err) {
-                fprintf(stderr, "USRP: get_time_now: %s", err.what());
-            }
-        }
+        return time_point { getTimeNow() };
     }
-
-protected:
-    /** @brief Time zero, for purposes of linear fit. */
-    static uhd::time_spec_t t0_;
-
-    /** @brief The USRP used for clock operations. */
-    static uhd::usrp::multi_usrp::sptr usrp_;
 };
 
 /** @brief A wall-clock clock */
-class Clock : public MonoClock
+class WallClock : public Clock
 {
 private:
     struct wall_tag;
@@ -142,6 +161,12 @@ public:
     using time_point = time_point_t<wall_tag>;
 
     static const bool is_steady = false;
+
+    /** @brief Get time 0 for purposes of linear fit. */
+    MonoClock::time_point getTimeZero(void)
+    {
+        return MonoClock::time_point { t0_ };
+    }
 
     /** @brief Get time offset. */
     MonoClock::time_point getTimeOffset(void)
@@ -170,15 +195,9 @@ public:
     /** @brief Get the current wall-clock time. */
     static time_point now() noexcept
     {
-        while (true) {
-            try {
-                uhd::time_spec_t now = usrp_->get_time_now();
+        uhd::time_spec_t now = getTimeNow();
 
-                return time_point { t0_ + offset_ + skew_*(now - t0_).get_real_secs() };
-            } catch (uhd::io_error &err) {
-                fprintf(stderr, "USRP: get_time_now: %s", err.what());
-            }
-        }
+        return time_point { t0_ + offset_ + skew_*(now - t0_).get_real_secs() };
     }
 
     /** @brief Return the monotonic time corresponding to wall-clock time. */
@@ -192,14 +211,6 @@ public:
     {
         return time_point { t0_ + offset_ + skew_*(t.t - t0_).get_real_secs() };
     }
-
-    /** @brief Set the USRP used for clock operations.
-     * @param usrp The USRP.
-     */
-    static void setUSRP(uhd::usrp::multi_usrp::sptr usrp);
-
-    /** @brief Release the USRP used for clock operations. */
-    static void releaseUSRP(void);
 
 private:
     /** @brief The offset between the USRP's clock and wall-clock time. */

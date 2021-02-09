@@ -15,8 +15,8 @@ PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
 {
-    Clock::time_point t_start = Clock::time_point(Clock::now().get_full_secs());
-    auto              log = std::make_shared<Logger>(t_start);
+    WallClock::time_point t_start = WallClock::time_point(WallClock::now().get_full_secs());
+    auto                  log = std::make_shared<Logger>(t_start);
 
     log->open(path);
     log->setAttribute("start", (uint32_t) t_start.get_full_secs());
@@ -83,7 +83,7 @@ void exportLogger(py::module &m)
         .def("logEvent",
             [](Logger &self, const std::string &msg)
             {
-                return self.logEvent(Clock::now(), msg);
+                return self.logEvent(WallClock::now(), msg);
             },
             "Log an event")
         .def("logSnapshot",

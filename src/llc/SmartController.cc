@@ -805,7 +805,7 @@ void SmartController::drop(SendWindow::Entry &entry)
 
     // Drop the packet
     if (logger)
-        logger->logLinkLayerDrop(Clock::now(),
+        logger->logLinkLayerDrop(WallClock::now(),
                                  entry.pkt->nretrans,
                                  entry.pkt->hdr,
                                  entry.pkt->ehdr(),
