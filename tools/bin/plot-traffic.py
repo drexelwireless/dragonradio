@@ -63,6 +63,8 @@ def main():
                         help='plot MCS index instead of packet sequence number')
     parser.add_argument('--mac-errors', action='store_true',
                         help='show MAC errors')
+    parser.add_argument('--by-flow', action='store_true',
+                        help='show traffic by flow')
 
     parser.add_argument('paths', nargs='*')
 
@@ -123,6 +125,7 @@ def main():
     plot = TrafficPlot(plt.figure(), logs, src, dest,
                        y=args.y,
                        filt=filt,
+                       by_flow=args.by_flow,
                        mac_errors=args.mac_errors)
     plot.plot()
 

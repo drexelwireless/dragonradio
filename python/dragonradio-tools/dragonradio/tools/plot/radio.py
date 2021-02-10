@@ -351,6 +351,7 @@ class TrafficPlot(AnnotatedPlot):
                  dest: Optional[int],
                  y: str='seq',
                  filt=lambda x : x,
+                 by_flow: bool=True,
                  mac_errors: bool=False):
         super().__init__(fig, sticky=True)
 
@@ -382,12 +383,12 @@ class TrafficPlot(AnnotatedPlot):
             recv_ax = self.fig.add_subplot(1,1,1)
 
         if src is not None:
-            self.plotSentTraffic(sent_ax, src, dest, y)
+            self.plotSentTraffic(sent_ax, src, dest, y, by_flow=by_flow)
             if mac_errors:
                 self.plotMACErrors(sent_ax, src, r'^(MAC: (NO SLOT|MISSED))')
 
         if dest is not None:
-            self.plotRecvTraffic(recv_ax, src, dest, y)
+            self.plotRecvTraffic(recv_ax, src, dest, y, by_flow=by_flow)
             if mac_errors:
                 self.plotMACErrors(recv_ax, dest, r'^(MAC: (attempting))')
 
@@ -434,7 +435,7 @@ class TrafficPlot(AnnotatedPlot):
         line.ppr = ppr
         self.addLine(ax, line)
 
-    def plotSentTraffic(self, ax, src, dest, y):
+    def plotSentTraffic(self, ax, src, dest, y, by_flow=True):
         self.addAnnotation(ax)
 
         delta = self.log[src].delta
@@ -453,18 +454,27 @@ class TrafficPlot(AnnotatedPlot):
         def plotSend(df, color='k', alpha=0.85, label=None):
             self.plotTraffic(ax, df, y, delta, pprSentPacket, color, alpha, label)
 
-        plotSend(send_df[(send_df.dropped == 'transmitted') & (send_df.nretrans == 0)],
-                 label='delivered')
-        plotSend(send_df[(send_df.dropped == 'transmitted') & (send_df.nretrans != 0)],
-                 color='b',
-                 label='redelivered')
-        plotSend(send_df[send_df.dropped == 'll_drop'],
-                 color='r',
-                 label='link-layer drop')
-        plotSend(send_df[send_df.dropped == 'queue_drop'],
-                 color='0.5',
-                 alpha=0.1,
-                 label='queue drop')
+        if by_flow:
+            flows = send_df.mgen_flow_uid[send_df.mgen_flow_uid != 0].unique()
+            flows.sort()
+
+            for flow in flows:
+                plotSend(send_df[send_df.mgen_flow_uid == flow],
+                         color=None,
+                         label=str(flow))
+        else:
+            plotSend(send_df[(send_df.dropped == 'transmitted') & (send_df.nretrans == 0)],
+                    label='delivered')
+            plotSend(send_df[(send_df.dropped == 'transmitted') & (send_df.nretrans != 0)],
+                    color='b',
+                    label='redelivered')
+            plotSend(send_df[send_df.dropped == 'll_drop'],
+                    color='r',
+                    label='link-layer drop')
+            plotSend(send_df[send_df.dropped == 'queue_drop'],
+                    color='0.5',
+                    alpha=0.1,
+                    label='queue drop')
 
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
@@ -475,7 +485,7 @@ class TrafficPlot(AnnotatedPlot):
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_ylabel(self.Y_LABELS[y])
 
-    def plotRecvTraffic(self, ax, src, dest, y):
+    def plotRecvTraffic(self, ax, src, dest, y, by_flow=False):
         self.addAnnotation(ax)
 
         delta = self.log[dest].delta
@@ -494,12 +504,21 @@ class TrafficPlot(AnnotatedPlot):
         def plotRecv(df, color='k', alpha=0.85, label=None):
             self.plotTraffic(ax, df, y, delta, pprReceivedPacket, color, alpha, label)
 
-        plotRecv(recv_df[(recv_df.header_valid == 1) & (recv_df.payload_valid == 1)],
-                 color='k',
-                 label='valid')
-        plotRecv(recv_df[(recv_df.header_valid == 1) & (recv_df.payload_valid != 1)],
-                 color='r',
-                 label='invalid payload')
+        if by_flow:
+            flows = recv_df.mgen_flow_uid[recv_df.mgen_flow_uid != 0].unique()
+            flows.sort()
+
+            for flow in flows:
+                plotRecv(recv_df[recv_df.mgen_flow_uid == flow],
+                         color=None,
+                         label=str(flow))
+        else:
+            plotRecv(recv_df[(recv_df.header_valid == 1) & (recv_df.payload_valid == 1)],
+                    color='k',
+                    label='valid')
+            plotRecv(recv_df[(recv_df.header_valid == 1) & (recv_df.payload_valid != 1)],
+                    color='r',
+                    label='invalid payload')
 
         ax.set_title('Received Packets (Node {})'.format(dest))
 
