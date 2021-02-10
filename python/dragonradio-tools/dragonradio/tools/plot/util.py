@@ -175,6 +175,11 @@ def addCheckboxWidget(fig, lines,
 
     if ax:
         bbox = ax.get_position()
+
+        max_height = bbox.y1 - bbox.y0
+        if height > max_height:
+            height = max_height
+
         bottom = bbox.y1 - height
     else:
         bottom = 0.92 - height
