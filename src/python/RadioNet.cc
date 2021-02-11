@@ -43,8 +43,11 @@ void exportRadioNet(py::module &m)
     py::class_<RadioNet, std::shared_ptr<RadioNet>>(m, "RadioNet")
         .def(py::init<std::shared_ptr<TunTap>,
                       NodeId>())
-        .def_property_readonly("my_node_id",
-            &RadioNet::getMyNodeId)
+        .def_property_readonly("this_node_id",
+            &RadioNet::getThisNodeId)
+        .def_property_readonly("this_node",
+            &RadioNet::getThisNode,
+            py::return_value_policy::reference_internal)
         .def_property_readonly("nodes",
             &RadioNet::getNodes,
             "Nodes in the network")

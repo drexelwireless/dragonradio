@@ -82,9 +82,11 @@ public:
     RadioNet() = delete;
 
     RadioNet(std::shared_ptr<TunTap> tuntap,
-             NodeId nodeId)
+             NodeId this_node_id)
       : tuntap_(tuntap)
-      , my_node_id_(nodeId)
+      , this_node_id_(this_node_id)
+      , this_node_(std::make_shared<Node>(this_node_id))
+      , nodes_({ {this_node_id_, this_node_} })
     {
     }
 
@@ -97,17 +99,23 @@ public:
     RadioNet& operator=(RadioNet&&) = delete;
 
     /** @brief Get this node's ID */
-    NodeId getMyNodeId(void) const
+    inline NodeId getThisNodeId(void) const
     {
-        return my_node_id_;
+        return this_node_id_;
+    }
+
+    /** @brief Get the entry for this node */
+    inline Node& getThisNode(void)
+    {
+        return *this_node_;
     }
 
     /** @brief Return true if node is in the network, false otherwise */
-    bool contains(NodeId nodeId)
+    bool contains(NodeId node_id)
     {
         std::lock_guard<std::mutex> lock(nodes_mutex_);
 
-        return nodes_.find(nodeId) != nodes_.end();
+        return nodes_.find(node_id) != nodes_.end();
     }
 
     /** @brief Get nodes */
@@ -119,37 +127,29 @@ public:
         return nodes_;
     }
 
-    /** @brief Get the entry for this node */
-    Node &me(void)
-    {
-        std::lock_guard<std::mutex> lock(nodes_mutex_);
-
-        return *nodes_.at(getMyNodeId());
-    }
-
     /** @brief Get the entry for a particular node in the network */
-    std::shared_ptr<Node> getNode(NodeId nodeId)
+    std::shared_ptr<Node> getNode(NodeId node_id)
     {
         std::lock_guard<std::mutex> lock(nodes_mutex_);
-        auto                        entry = nodes_.try_emplace(nodeId, nullptr);
+        auto                        entry = nodes_.try_emplace(node_id, nullptr);
 
         // If the entry is new, construct the shared_ptr. We pass nullptr above
         // to avoid creating a shared_ptr even if the entry already exists.
         if (entry.second) {
-            entry.first->second = std::make_shared<Node>(nodeId);
+            entry.first->second = std::make_shared<Node>(node_id);
 
             // Add ARP entry
-            if (nodeId != my_node_id_)
-                tuntap_->addARPEntry(nodeId);
+            if (node_id != this_node_id_)
+                tuntap_->addARPEntry(node_id);
         }
 
         return entry.first->second;
     }
 
     /** @brief Get the entry for a particular node in the network */
-    Node& operator[](NodeId nodeId)
+    Node& operator[](NodeId node_id)
     {
-        return *getNode(nodeId);
+        return *getNode(node_id);
     }
 
     /** @brief Apply a function to each node */
@@ -169,7 +169,10 @@ private:
     std::shared_ptr<TunTap> tuntap_;
 
     /** @brief This node's ID */
-    const NodeId my_node_id_;
+    const NodeId this_node_id_;
+
+    /** @brief This node */
+    std::shared_ptr<Node> this_node_;
 
     /** @brief Mutex protecting nodes in the network */
     std::mutex nodes_mutex_;
