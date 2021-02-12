@@ -627,6 +627,14 @@ class Controller(CILServer):
                     radio.deleteMAC()
                     radio.configureTDMA(nslots)
 
+                # Make sure the RadioNet is aware of all nodes in the schedule
+                nodes_with_slot = set(sched.flatten())
+                if 0 in nodes_with_slot:
+                    nodes_with_slot.remove(0)
+
+                for node_id in nodes_with_slot:
+                    self.radio.radionet.addNode(node_id)
+
                 radio.installMACSchedule(sched, fdma_mac=(self.config.mac == 'fdma'))
                 self.schedule = sched
 
