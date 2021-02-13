@@ -129,6 +129,7 @@ SOURCES := \
     python/USRP.cc \
     python/WorkQueue.cc \
     util/exec.cc \
+    util/net.cc \
     util/threads.cc \
     util/sprintf.cc
 
