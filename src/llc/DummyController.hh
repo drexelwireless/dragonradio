@@ -13,9 +13,9 @@
 class DummyController : public Controller
 {
 public:
-    DummyController(std::shared_ptr<Net> net,
+    DummyController(std::shared_ptr<RadioNet> radionet,
                     size_t mtu)
-      : Controller(net, mtu)
+      : Controller(radionet, mtu)
     {
     }
 

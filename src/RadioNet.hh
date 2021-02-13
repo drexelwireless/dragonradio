@@ -1,8 +1,8 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#ifndef NET_HH_
-#define NET_HH_
+#ifndef RADIONET_HH_
+#define RADIONET_HH_
 
 #include <math.h>
 
@@ -74,27 +74,27 @@ struct Node {
     }
 };
 
-class Net
+class RadioNet
 {
 public:
     using NodeMap = std::map<NodeId, std::shared_ptr<Node>>;
 
-    Net() = delete;
+    RadioNet() = delete;
 
-    Net(std::shared_ptr<TunTap> tuntap,
-        NodeId nodeId)
+    RadioNet(std::shared_ptr<TunTap> tuntap,
+             NodeId nodeId)
       : tuntap_(tuntap)
       , my_node_id_(nodeId)
     {
     }
 
-    ~Net() = default;
+    ~RadioNet() = default;
 
-    Net(const Net&) = delete;
-    Net(Net&&) = delete;
+    RadioNet(const RadioNet&) = delete;
+    RadioNet(RadioNet&&) = delete;
 
-    Net& operator=(const Net&) = delete;
-    Net& operator=(Net&&) = delete;
+    RadioNet& operator=(const RadioNet&) = delete;
+    RadioNet& operator=(RadioNet&&) = delete;
 
     /** @brief Get this node's ID */
     NodeId getMyNodeId(void) const
@@ -178,4 +178,4 @@ private:
     NodeMap nodes_;
 };
 
-#endif /* NET_HH_ */
+#endif /* RADIONET_HH_ */

@@ -19,8 +19,8 @@
 #include <functional>
 
 #include "logging.hh"
+#include "RadioNet.hh"
 #include "Util.hh"
-#include "net/Net.hh"
 #include "net/TunTap.hh"
 
 using namespace std::placeholders;

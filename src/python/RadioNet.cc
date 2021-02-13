@@ -4,7 +4,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "net/Net.hh"
+#include "RadioNet.hh"
 #include "python/PyModules.hh"
 
 void exportRadioNet(py::module &m)
@@ -39,19 +39,19 @@ void exportRadioNet(py::module &m)
             "Timestamps received from this node")
         ;
 
-    // Export class Net to Python
-    py::class_<Net, std::shared_ptr<Net>>(m, "Net")
+    // Export class RadioNet to Python
+    py::class_<RadioNet, std::shared_ptr<RadioNet>>(m, "RadioNet")
         .def(py::init<std::shared_ptr<TunTap>,
                       NodeId>())
         .def_property_readonly("my_node_id",
-            &Net::getMyNodeId)
+            &RadioNet::getMyNodeId)
         .def_property_readonly("nodes",
-            &Net::getNodes,
+            &RadioNet::getNodes,
             "Nodes in the network")
         .def_property_readonly("time_master",
-            &Net::getTimeMaster)
+            &RadioNet::getTimeMaster)
         .def("addNode",
-            [](Net &net, NodeId id) { return net.getNode(id); },
+            [](RadioNet &radionet, NodeId id) { return radionet.getNode(id); },
             py::return_value_policy::reference_internal)
         ;
 }

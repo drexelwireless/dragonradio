@@ -7,7 +7,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
 {
     if (net_in.pull(pkt)) {
         if (!pkt->internal_flags.has_seq) {
-            Node &nexthop = (*net_)[pkt->hdr.nexthop];
+            Node &nexthop = (*radionet_)[pkt->hdr.nexthop];
 
             {
                 std::lock_guard<spinlock_mutex> lock(seqs_mutex_);
@@ -37,6 +37,6 @@ void DummyController::received(std::shared_ptr<RadioPacket> &&pkt)
     if (pkt->internal_flags.invalid_header || pkt->internal_flags.invalid_payload)
         return;
 
-    if (pkt->ehdr().data_len != 0 && pkt->hdr.nexthop == net_->getMyNodeId())
+    if (pkt->ehdr().data_len != 0 && pkt->hdr.nexthop == radionet_->getMyNodeId())
         radio_out.push(std::move(pkt));
 }

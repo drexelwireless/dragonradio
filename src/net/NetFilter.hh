@@ -6,7 +6,7 @@
 
 #include <functional>
 
-#include "net/Net.hh"
+#include "RadioNet.hh"
 #include "net/Processor.hh"
 
 using namespace std::placeholders;
@@ -14,14 +14,14 @@ using namespace std::placeholders;
 class NetFilter : public Processor<std::shared_ptr<NetPacket>>
 {
 public:
-    NetFilter(std::shared_ptr<Net> net,
+    NetFilter(std::shared_ptr<RadioNet> radionet,
               in_addr_t int_net,
               in_addr_t int_netmask,
               in_addr_t int_broadcast,
               in_addr_t ext_net,
               in_addr_t ext_netmask,
               in_addr_t ext_broadcast)
-      : net_(net)
+      : radionet_(radionet)
       , int_net_(int_net)
       , int_netmask_(int_netmask)
       , int_broadcast_(int_broadcast)
@@ -38,7 +38,7 @@ protected:
 
 private:
     /** @brief The Net we use to filter packets */
-    std::shared_ptr<Net> net_;
+    std::shared_ptr<RadioNet> radionet_;
 
     /** @brief Internal IP network */
     in_addr_t int_net_;

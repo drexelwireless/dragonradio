@@ -236,7 +236,7 @@ class Controller(CILServer):
         """Is this the gateway?"""
         radio = self.radio
 
-        return radio.net.nodes[radio.node_id].is_gateway
+        return radio.radionet.nodes[radio.node_id].is_gateway
 
     def timeToMP(self, t, closest=False):
         """Convert time (in seconds since the epoch) to a measurement period"""
@@ -284,14 +284,14 @@ class Controller(CILServer):
 
         # Add us as a node
         self.nodes[radio.node_id] = Node(radio.node_id)
-        radio.net.addNode(radio.node_id)
+        radio.radionet.addNode(radio.node_id)
 
         # Start reading GPS info and attach it to this node
         self.gpsd_client = GPSDClient(self.nodes[radio.node_id].loc, loop=self.loop)
 
         # See if we are a gateway, and if so, start the collaboration agent
         if self.haveCollabInterface() and self.config.collab_server_ip is not None:
-            radio.net.nodes[radio.node_id].is_gateway = True
+            radio.radionet.nodes[radio.node_id].is_gateway = True
 
             collab_addrs = netifaces.ifaddresses(self.config.collab_iface)
             self.collab_ip = collab_addrs[netifaces.AF_INET][0]['addr']
@@ -300,7 +300,7 @@ class Controller(CILServer):
 
         # We might also be forced to be the gateway...
         if self.config.force_gateway:
-            radio.net.nodes[radio.node_id].is_gateway = True
+            radio.radionet.nodes[radio.node_id].is_gateway = True
 
         # Start the internal protocol server
         self.internal_server = InternalProtoServer(self,
@@ -536,7 +536,7 @@ class Controller(CILServer):
 
             # If new node is a gateway, connect to it and start sending status
             # updates
-            if self.radio.net.nodes[node_id].is_gateway:
+            if self.radio.radionet.nodes[node_id].is_gateway:
                 self.internal_client = InternalProtoClient(loop=self.loop,
                                                            server_host=internalNodeIP(node_id))
 
@@ -602,7 +602,7 @@ class Controller(CILServer):
         radio = self.radio
 
         # Get a sorted list of discovered nodes
-        nodes = list(radio.net.nodes)
+        nodes = list(radio.radionet.nodes)
 
         # Add discovered nodes
         for n in nodes:

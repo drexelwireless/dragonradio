@@ -7,13 +7,13 @@
 #include <random>
 #include <vector>
 
+#include "RadioNet.hh"
 #include "USRP.hh"
 #include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
 #include "mac/MAC.hh"
 #include "mac/SlottedMAC.hh"
-#include "net/Net.hh"
 
 /** @brief A Slotted ALOHA MAC. */
 class SlottedALOHA : public SlottedMAC

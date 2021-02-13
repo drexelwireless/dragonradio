@@ -67,6 +67,7 @@ SOURCES := \
     main.cc \
     Math.cc \
     Packet.cc \
+    RadioNet.cc \
     TimerQueue.cc \
     USRP.cc \
     Util.cc \
@@ -99,7 +100,6 @@ SOURCES := \
     mac/Snapshot.cc \
     mac/TDMA.cc \
     net/FlowPerformance.cc \
-    net/Net.cc \
     net/NetFilter.cc \
     net/PacketCompressor.cc \
     net/TunTap.cc \

@@ -8,8 +8,8 @@
 
 #include "spinlock_mutex.hh"
 #include "Logger.hh"
+#include "RadioNet.hh"
 #include "mac/Schedule.hh"
-#include "net/Net.hh"
 #include "phy/PHY.hh"
 
 /** @brief Base class for synthesizers */

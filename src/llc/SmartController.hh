@@ -352,7 +352,7 @@ class SmartController : public Controller
 public:
     using evm_thresh_t = std::optional<double>;
 
-    SmartController(std::shared_ptr<Net> net,
+    SmartController(std::shared_ptr<RadioNet> radionet_,
                     size_t mtu,
                     std::shared_ptr<PHY> phy,
                     double slot_size,

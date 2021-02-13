@@ -44,14 +44,14 @@ void RecvWindow::operator()()
     }
 }
 
-SmartController::SmartController(std::shared_ptr<Net> net,
+SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
                                  size_t mtu,
                                  std::shared_ptr<PHY> phy,
                                  double slot_size,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
                                  const std::vector<evm_thresh_t> &evm_thresholds)
-  : Controller(net, mtu)
+  : Controller(radionet, mtu)
   , phy_(phy)
   , slot_size_(slot_size)
   , max_sendwin_(max_sendwin)
@@ -164,7 +164,7 @@ get_packet:
     // Update our send window if this packet has data
     if (pkt->ehdr().data_len != 0) {
         SendWindow                      &sendw = getSendWindow(nexthop);
-        Node                            &dest = (*net_)[nexthop];
+        Node                            &dest = (*radionet_)[nexthop];
         std::lock_guard<spinlock_mutex> lock(sendw.mutex);
 
         // It is possible that the send window shifts after we pull a packet
@@ -247,12 +247,12 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // Skip packets that aren't for us
     if (pkt->hdr.nexthop != kNodeBroadcast &&
-        pkt->hdr.nexthop != net_->getMyNodeId())
+        pkt->hdr.nexthop != radionet_->getMyNodeId())
         return;
 
     // Get a reference to the sending node. This will add a new node to the
     // network if it doesn't already exist.
-    Node &node = (*net_)[pkt->hdr.curhop];
+    Node &node = (*radionet_)[pkt->hdr.curhop];
 
     // Get node ID of source
     NodeId prevhop = pkt->hdr.curhop;
@@ -326,7 +326,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
     // If this packet was not destined for us, we are done
-    if (pkt->hdr.nexthop != net_->getMyNodeId())
+    if (pkt->hdr.nexthop != radionet_->getMyNodeId())
         return;
 
     // Handle ACK/NAK
@@ -575,7 +575,7 @@ void SmartController::ack(RecvWindow &recvw)
     if (!netq_)
         return;
 
-    if (!net_->me().can_transmit)
+    if (!radionet_->me().can_transmit)
         return;
 
     // Create an ACK-only packet. Why don't we set the ACK field here!? Because
@@ -585,12 +585,12 @@ void SmartController::ack(RecvWindow &recvw)
     // queue.
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
-    pkt->hdr.curhop = net_->getMyNodeId();
+    pkt->hdr.curhop = radionet_->getMyNodeId();
     pkt->hdr.nexthop = recvw.node.id;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
-    pkt->ehdr().src = net_->getMyNodeId();
+    pkt->ehdr().src = radionet_->getMyNodeId();
     pkt->ehdr().dest = recvw.node.id;
 
     // Append selective ACK control messages
@@ -604,7 +604,7 @@ void SmartController::nak(RecvWindow &recvw, Seq seq)
     if (!netq_)
         return;
 
-    if (!net_->me().can_transmit)
+    if (!radionet_->me().can_transmit)
         return;
 
     // If we have a zero-sized NAK window, don't send any NAK's.
@@ -632,12 +632,12 @@ void SmartController::nak(RecvWindow &recvw, Seq seq)
     // queue.
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
-    pkt->hdr.curhop = net_->getMyNodeId();
+    pkt->hdr.curhop = radionet_->getMyNodeId();
     pkt->hdr.nexthop = recvw.node.id;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
-    pkt->ehdr().src = net_->getMyNodeId();
+    pkt->ehdr().src = radionet_->getMyNodeId();
     pkt->ehdr().dest = recvw.node.id;
 
     // Append NAK control message
@@ -654,38 +654,38 @@ void SmartController::broadcastHello(void)
     if (!netq_)
         return;
 
-    if (!net_->me().can_transmit)
+    if (!radionet_->me().can_transmit)
         return;
 
     dprintf("broadcast HELLO");
 
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
-    pkt->hdr.curhop = net_->getMyNodeId();
+    pkt->hdr.curhop = radionet_->getMyNodeId();
     pkt->hdr.nexthop = kNodeBroadcast;
     pkt->hdr.flags = {0};
     pkt->hdr.seq = {0};
     pkt->ehdr().data_len = 0;
-    pkt->ehdr().src = net_->getMyNodeId();
+    pkt->ehdr().src = radionet_->getMyNodeId();
     pkt->ehdr().dest = kNodeBroadcast;
 
     // Append hello message
     ControlMsg::Hello msg;
-    Node              &me = net_->me();
+    Node              &me = radionet_->me();
 
     msg.is_gateway = me.is_gateway;
 
     pkt->appendHello(msg);
 
     // Echo most recently heard timestamps if we are the time master
-    std::optional<NodeId> time_master = net_->getTimeMaster();
+    std::optional<NodeId> time_master = radionet_->getTimeMaster();
 
-    if (time_master && *time_master == net_->getMyNodeId())
-        net_->foreach([&] (Node &node) {
+    if (time_master && *time_master == radionet_->getMyNodeId())
+        radionet_->foreach([&] (Node &node) {
             std::lock_guard<std::mutex> lock(node.timestamps_mutex);
             auto                        last_timestamp = node.timestamps.rbegin();
 
-            if (node.id != net_->getMyNodeId() && last_timestamp != node.timestamps.rend()) {
+            if (node.id != radionet_->getMyNodeId() && last_timestamp != node.timestamps.rend()) {
                 logTimeSync(LOGDEBUG, "Echoing timestamp: node=%u; t_sent=%f; t_recv=%f",
                     (unsigned) node.id,
                     (double) last_timestamp->first.get_real_secs(),
@@ -776,7 +776,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // packet, but instead just restart the retransmission timer.
     timer_queue_.cancel(entry);
 
-    if (net_->me().can_transmit) {
+    if (radionet_->me().can_transmit) {
         // We need to make an explicit new reference to the shared_ptr because
         // push takes ownership of its argument.
         std::shared_ptr<NetPacket> pkt = entry;
@@ -959,14 +959,14 @@ void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
 void SmartController::handleCtrlTimestampEchos(RadioPacket &pkt, Node &node)
 {
     // If the transmitter is the time master, record our echoed timestamps.
-    std::optional<NodeId> time_master = net_->getTimeMaster();
+    std::optional<NodeId> time_master = radionet_->getTimeMaster();
 
-    if (node.id != net_->getMyNodeId() && time_master && node.id == *time_master) {
+    if (node.id != radionet_->getMyNodeId() && time_master && node.id == *time_master) {
         for(auto it = pkt.begin(); it != pkt.end(); ++it) {
             switch (it->type) {
                 case ControlMsg::Type::kTimestampEcho:
                 {
-                    if (it->timestamp_echo.node == net_->getMyNodeId()) {
+                    if (it->timestamp_echo.node == radionet_->getMyNodeId()) {
                         MonoClock::time_point t_sent;
                         MonoClock::time_point t_recv;
 
@@ -1625,7 +1625,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
     if (it != send_.end())
         return it->second;
     else {
-        Node       &dest = (*net_)[node_id];
+        Node       &dest = (*radionet_)[node_id];
         SendWindow &sendw = send_.emplace(std::piecewise_construct,
                                           std::forward_as_tuple(node_id),
                                           std::forward_as_tuple(dest,
@@ -1680,7 +1680,7 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
         }
     }
 
-    Node       &src = (*net_)[node_id];
+    Node       &src = (*radionet_)[node_id];
     RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
                                       std::forward_as_tuple(node_id),
                                       std::forward_as_tuple(src, *this, seq, recvwin_, explicit_nak_win_)).first->second;
