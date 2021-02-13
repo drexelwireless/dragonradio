@@ -74,7 +74,11 @@ void interleave<xsimd::simd_type<float>>(const xsimd::simd_type<float> &x, const
 /** @brief Convert non-interleaved int32 format to fc32 */
 void convert2fc32(const int32_t *const in[], const size_t size, fc32_t *out_)
 {
+#if defined(__AVX2__)
+    using vec_type = xsimd::batch<float, 8>;
+#else /* !defined(__AVX2__) */
     using vec_type = xsimd::simd_type<float>;
+#endif /* !defined(__AVX2__) */
 
     constexpr float k = 1.f/(1 << (kBits - 1));
     const vec_type  kvec(k);
@@ -83,8 +87,11 @@ void convert2fc32(const int32_t *const in[], const size_t size, fc32_t *out_)
     size_t vec_size = size - size % inc;
 
     for (size_t i = 0; i < vec_size; i += inc) {
-        vec_type rvec = xsimd::load_unaligned<int32_t, float>(&in[0][i]);
-        vec_type ivec = xsimd::load_unaligned<int32_t, float>(&in[1][i]);
+        vec_type rvec;
+        vec_type ivec;
+
+        rvec.load_unaligned(&in[0][i]);
+        ivec.load_unaligned(&in[1][i]);
 
         interleave(kvec*rvec, kvec*ivec, reinterpret_cast<vec_type*>(&out_[i]));
     }
