@@ -17,11 +17,15 @@ class TaskManager:
 
     def createTask(self, task, name=None):
         """Create and add a task to event loop"""
-        self.addTask(self.loop.create_task(task, name=name))
+        def f():
+            self.addTask(self.loop.create_task(task, name=name))
+
+        self.loop.call_soon_threadsafe(f)
 
     def addTask(self, task):
         """Add a task to event loop"""
-        self.tasks.append(task)
+        # We call ensure_future to catch any illegal "tasks" earlier
+        self.tasks.append(asyncio.ensure_future(task))
 
     async def stopTasks(self, logger=logging.getLogger()):
         """Cancel all tasks and wait for them to finish"""
