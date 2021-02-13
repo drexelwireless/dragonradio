@@ -17,7 +17,28 @@ import zmq.asyncio
 
 from dragonradio.protobuf import *
 from dragonradio.collab import CILServer
-from dragonradio.gpsd import GPSDClient, GPSLocation
+from dragonradio.gpsd import GPSDClient
+
+class GPSLocation:
+    """A GPS location"""
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self):
+        self.lat = 0
+        """Latitude"""
+
+        self.lon = 0
+        """Longitude"""
+
+        self.alt = 0
+        """Altitude"""
+
+        self.timestamp = 0
+        """Timestamp of last update"""
+
+    def __str__(self):
+        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.\
+            format(self.lat, self.lon, self.alt, self.timestamp)
 
 class Node(object):
     def __init__(self, id):

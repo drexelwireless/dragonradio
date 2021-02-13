@@ -15,27 +15,6 @@ logger = logging.getLogger('gpsd')
 DEFAULT_GPSD_SERVER = '127.0.0.1'
 DEFAULT_GPSD_PORT = 6000
 
-class GPSLocation:
-    """A GPS location"""
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self):
-        self.lat = 0
-        """Latitude"""
-
-        self.lon = 0
-        """Longitude"""
-
-        self.alt = 0
-        """Altitude"""
-
-        self.timestamp = 0
-        """Timestamp of last update"""
-
-    def __str__(self):
-        return 'GPSLocation(lat={},lon={},alt={},timestamp={})'.\
-            format(self.lat, self.lon, self.alt, self.timestamp)
-
 class GPSDClient:
     """A client for communicating with gpsd"""
     def __init__(self, loc,

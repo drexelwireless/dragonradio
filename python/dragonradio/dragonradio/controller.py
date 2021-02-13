@@ -11,7 +11,6 @@ import logging
 import math
 import os
 import random
-import subprocess
 import time
 
 import numpy as np
@@ -23,7 +22,7 @@ import sc2.cil_pb2 as cil
 
 from dragonradio.collab import CILServer
 import dragonradio.collab
-from dragonradio.gpsd import GPSDClient, GPSLocation
+from dragonradio.gpsd import GPSDClient
 import dragonradio.internal as internal
 from dragonradio.internal import InternalProtoClient, InternalProtoServer
 from dragonradio.internal import mkFlowStats, mkSpectrumStats
@@ -53,23 +52,6 @@ def darpaNodeMAC(node_id, octet=0):
     """Return MAC address of radio node on DARPA's network."""
     return  '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.\
         format(192, 168, node_id+100, octet)
-
-class Node:
-    """A radio node"""
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self, node_id):
-        self.id = node_id
-        """Nod ID"""
-
-        self.loc = GPSLocation()
-        """Node GPS location"""
-
-        self.internal_client = None
-        """Internal client, if this is an intranet node"""
-
-    def __str__(self):
-        return 'Node(loc={})'.format(self.loc)
 
 class Voxel:
     """A voxel"""
@@ -162,9 +144,6 @@ class Controller(CILServer):
         self.in_colosseum = 'tr0' in netifaces.interfaces()
         """Are we in the Colosseum?"""
 
-        self.nodes = {}
-        """Nodes in our network"""
-
         self.scorer = None
         """Match scorer"""
 
@@ -228,15 +207,11 @@ class Controller(CILServer):
         self.controller_tasks = []
         """Controller tasks"""
 
+        self.node_internal_clients = {}
+        """Node internal protocol clients"""
+
         # Provide default start time
         self.scenario_start_time = math.floor(time.time())
-
-    @property
-    def is_gateway(self):
-        """Is this the gateway?"""
-        radio = self.radio
-
-        return radio.radionet.nodes[radio.node_id].is_gateway
 
     def timeToMP(self, t, closest=False):
         """Convert time (in seconds since the epoch) to a measurement period"""
@@ -274,6 +249,9 @@ class Controller(CILServer):
         radio = dragonradio.radio.Radio(self.config, 'aloha', loop=self.loop)
         self.radio = radio
 
+        # Set new node callback
+        radio.radionet.new_node_callback = self.newNodeCallback
+
         # Collect snapshots if requested
         if self.config.snapshot_frequency is not None:
             radio.startSnapshots()
@@ -282,16 +260,12 @@ class Controller(CILServer):
         for iface in self.config.log_interfaces:
             self.dumpcap(iface)
 
-        # Add us as a node
-        self.nodes[radio.node_id] = Node(radio.node_id)
-        radio.radionet.addNode(radio.node_id)
-
         # Start reading GPS info and attach it to this node
-        self.gpsd_client = GPSDClient(self.nodes[radio.node_id].loc, loop=self.loop)
+        self.gpsd_client = GPSDClient(self.this_node.loc, loop=self.loop)
 
         # See if we are a gateway, and if so, start the collaboration agent
         if self.haveCollabInterface() and self.config.collab_server_ip is not None:
-            radio.radionet.nodes[radio.node_id].is_gateway = True
+            self.this_node.is_gateway = True
 
             collab_addrs = netifaces.ifaddresses(self.config.collab_iface)
             self.collab_ip = collab_addrs[netifaces.AF_INET][0]['addr']
@@ -300,7 +274,7 @@ class Controller(CILServer):
 
         # We might also be forced to be the gateway...
         if self.config.force_gateway:
-            radio.radionet.nodes[radio.node_id].is_gateway = True
+            self.this_node.is_gateway = True
 
         # Start the internal protocol server
         self.internal_server = InternalProtoServer(self,
@@ -364,8 +338,6 @@ class Controller(CILServer):
 
                 self.createTask(self.discoverNeighbors(),
                                 name='discover neighbors')
-                self.createTask(self.addDiscoveredNeighbors(),
-                                name='add neighbors')
                 self.createTask(self.synchronizeClock(),
                                 name='synchronize clock')
 
@@ -432,8 +404,8 @@ class Controller(CILServer):
 
                 with await self.radio.lock:
                     # Remove all nodes
-                    for node_id in list(self.nodes):
-                        self.removeNode(node_id)
+                    for node in self.nodes.values():
+                        await self.removeNode(node)
 
                 # Close the logger
                 self.radio.logger.close()
@@ -448,6 +420,10 @@ class Controller(CILServer):
         """Terminate the radio"""
         logger.debug('Terminating')
         await self.stopRadio()
+
+        # Clear new node callback. I don't know if this matters, but I want to
+        # be sure we don't retain a reference to a Python object.
+        self.radio.radionet.new_node_callback = None
 
         # Stop remote server
         logger.debug('Stopping remote protocol server')
@@ -517,41 +493,74 @@ class Controller(CILServer):
         return '{logdir}/{iface}.pcapng'.format(iface=iface,
                                                 logdir=self.config.logdir)
 
-    def thisNode(self):
+    @property
+    def this_node(self):
         """Return the current node"""
-        return self.nodes[self.radio.node_id]
+        return self.radio.radionet.this_node
 
-    def addNode(self, node_id):
+    @property
+    def is_gateway(self):
+        """Is this the gateway?"""
+        return self.this_node.is_gateway
+
+    @property
+    def nodes(self):
+        """Return known nodes"""
+        return self.radio.radionet.nodes
+
+    def newNodeCallback(self, node):
+        self.createTask(self.addNode(node), f"Add node {node.id:}")
+
+    async def addNode(self, node):
         """Add a node"""
-        if node_id != self.radio.node_id and node_id not in self.nodes:
-            logger.info('Adding node %d', node_id)
-            node = Node(node_id)
-            self.nodes[node_id] = node
+        logger.info('Adding node %d', node.id)
 
-            # Add a route for the new node
-            if self.in_colosseum:
-                try:
-                    subprocess.check_call([ 'ip', 'route'
-                                          , 'add', darpaNodeNet(node_id)
-                                          , 'via', internalNodeIP(node_id)])
-                except: # pylint: disable=bare-except
-                    logger.exception('Could not add route to node %s', node_id)
+        # Add a route for the new node
+        if self.in_colosseum:
+            self.createTask(self.addNodeRoute(node))
 
-            # If new node is a gateway, connect to it and start sending status
-            # updates
-            if self.radio.radionet.nodes[node_id].is_gateway:
-                self.internal_client = InternalProtoClient(loop=self.loop,
-                                                           server_host=internalNodeIP(node_id))
+        # If new node is a gateway, connect to it and start sending status
+        # updates
+        if node.is_gateway:
+            self.internal_client = InternalProtoClient(server_host=internalNodeIP(node.id),
+                                                       loop=self.loop)
 
-            # If we are the gateway, connect an internal protocol client to the
-            # new node's server
-            if self.is_gateway:
-                node.internal_client = InternalProtoClient(loop=self.loop,
-                                                           server_host=internalNodeIP(node_id))
+        # If we are the gateway, connect an internal protocol client to the
+        # new node's server
+        if self.is_gateway:
+            internal_client = InternalProtoClient(server_host=internalNodeIP(node.id),
+                                                  loop=self.loop)
+            self.node_internal_clients[node.id] = internal_client
 
-            # If we are the gateway, update the schedule
-            if self.is_gateway:
-                self.tdma_reschedule.set()
+        # If we are the gateway, update the schedule
+        if self.is_gateway:
+            self.tdma_reschedule.set()
+
+    async def removeNode(self, node):
+        """Remove a node"""
+        logger.info('Removing node %d', node.id)
+
+        if self.in_colosseum:
+            self.createTask(self.removeNodeRoute(node))
+
+    async def addNodeRoute(self, node):
+        p = await asyncio.create_subprocess_exec( 'ip', 'route'
+                                                , 'add', darpaNodeNet(node.id)
+                                                , 'via', internalNodeIP(node.id),
+                                                stdout=asyncio.subprocess.PIPE,
+                                                stderr=asyncio.subprocess.STDOUT)
+        stdout, _stderr = await p.communicate()
+        if p.returncode != 0:
+            logger.error('Could not add route to node %s\n%s', node.id, stdout)
+
+    async def removeNodeRoute(self, node):
+        p = await asyncio.create_subprocess_exec( 'ip', 'route'
+                                                , 'del', darpaNodeNet(node.id),
+                                                stdout=asyncio.subprocess.PIPE,
+                                                stderr=asyncio.subprocess.STDOUT)
+        stdout, _stderr = await p.communicate()
+        if p.returncode != 0:
+            logger.error('Could not remove route to node %s\n%s', node.id, stdout)
 
     async def logNetworkInfo(self):
         """Log useful network information"""
@@ -577,7 +586,7 @@ class Controller(CILServer):
         logger.info('IP links:\n%s', stdout.decode('utf-8'))
 
         # Log routes
-        for node_id in list(self.nodes):
+        for node_id in self.nodes:
             for octet in [1]:
                 ip = darpaNodeIP(node_id, octet)
 
@@ -586,30 +595,6 @@ class Controller(CILServer):
                     stderr=asyncio.subprocess.PIPE)
                 stdout, _stderr = await p.communicate()
                 logger.info('IP route for %s:\n%s', ip, stdout.decode('utf-8'))
-
-    def removeNode(self, node_id):
-        """Remove a node"""
-        if node_id != self.radio.node_id and node_id in self.nodes:
-            logger.info('Removing node %d', node_id)
-
-            if self.in_colosseum:
-                try:
-                    subprocess.check_call(['ip', 'route', 'del', darpaNodeNet(node_id)])
-                except: # pylint: disable=bare-except
-                    logger.exception('Could not remove route to node %s', node_id)
-
-            del self.nodes[node_id]
-
-    def addRadioNodes(self):
-        """Add nodes discovered by the radio to our local list of nodes"""
-        radio = self.radio
-
-        # Get a sorted list of discovered nodes
-        nodes = list(radio.radionet.nodes)
-
-        # Add discovered nodes
-        for n in nodes:
-            self.addNode(n)
 
     def getDestinations(self, node_id):
         """Return a list of nodes given node transmits to"""
@@ -893,7 +878,7 @@ class Controller(CILServer):
                                                             spectrum)
                     # Otherwise, send statistics to the gateway
                     elif self.internal_client is not None:
-                        await self.internal_client.sendStatus(self.thisNode(),
+                        await self.internal_client.sendStatus(self.this_node,
                                                               sources,
                                                               sinks,
                                                               spectrum)
@@ -1094,9 +1079,6 @@ class Controller(CILServer):
 
                 logger.debug('Creating schedule')
 
-                # Make sure we know about all nodes
-                self.addRadioNodes()
-
                 # Get all nodes we know about
                 self.schedule_nodes = list(self.nodes.keys())
                 self.schedule_nodes.sort()
@@ -1135,14 +1117,17 @@ class Controller(CILServer):
             nodes_with_slot.remove(0)
 
         for node_id in nodes_with_slot:
-            node = self.nodes[node_id]
-            if node.internal_client is not None:
-                await node.internal_client.sendSchedule(self.schedule_seq,
-                                                        self.schedule_nodes,
-                                                        self.schedule,
-                                                        self.config.frequency,
-                                                        self.config.bandwidth,
-                                                        self.scenario_start_time)
+            if node_id not in self.node_internal_clients:
+                logger.error('No internal protocol client for node %d', node_id)
+                continue
+
+            internal_client = self.node_internal_clients[node_id]
+            await internal_client.sendSchedule(self.schedule_seq,
+                                               self.schedule_nodes,
+                                               self.schedule,
+                                               self.config.frequency,
+                                               self.config.bandwidth,
+                                               self.scenario_start_time)
 
         # Now broadcast a few times for robustness
         for _ in range(0, 10):
@@ -1250,17 +1235,6 @@ class Controller(CILServer):
                 return
             except: # pylint: disable=bare-except
                 logger.exception('Exception while discovering neighbors')
-
-    async def addDiscoveredNeighbors(self):
-        """Periodically add nodes discovered by the radio to our local list of nodes"""
-        while not self.done:
-            try:
-                await asyncio.sleep(1)
-                self.addRadioNodes()
-            except asyncio.CancelledError:
-                return
-            except: # pylint: disable=bare-except
-                logger.exception('Exception while adding discovered neighbors')
 
     async def synchronizeClock(self):
         """Task to synchronize clock with the gateway node"""
