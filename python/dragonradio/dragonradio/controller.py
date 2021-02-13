@@ -383,63 +383,66 @@ class Controller(CILServer):
         This stops the radio, but the remote API will continue to function.
         """
         if not self.done:
-            self.done = True
-            self.state = remote.STOPPING
+            try:
+                self.done = True
+                self.state = remote.STOPPING
 
-            # Stop the collaboration server
-            if self.collab_server:
-                try:
-                    await self.stopCollab()
-                except: # pylint: disable=bare-except
-                    logger.exception('Could not gracefully terminate collaboration agent')
+                # Stop the collaboration server
+                if self.collab_server:
+                    try:
+                        await self.stopCollab()
+                    except: # pylint: disable=bare-except
+                        logger.exception('Could not gracefully terminate collaboration agent')
 
-            # Stop tasks
-            logger.info('Stopping tasks')
-            await self.stopTasks()
+                # Stop tasks
+                logger.info('Stopping tasks')
+                await self.stopTasks()
 
-            # Stop internal protocol server
-            if self.internal_server_task:
-                logger.info('Stopping internal protocol server')
-                self.internal_server_task.cancel()
-                await asyncio.gather(self.internal_server_task, return_exceptions=True)
+                # Stop internal protocol server
+                if self.internal_server_task:
+                    logger.info('Stopping internal protocol server')
+                    self.internal_server_task.cancel()
+                    await asyncio.gather(self.internal_server_task, return_exceptions=True)
 
-            # Close internal protocol client
-            if self.internal_client:
-                logger.info('Stopping internal protocol client')
-                self.internal_client.close()
+                # Close internal protocol client
+                if self.internal_client:
+                    logger.info('Stopping internal protocol client')
+                    self.internal_client.close()
 
-            # Stop the gpsd client
-            if self.gpsd_client:
-                logger.info('Stopping gpsd client')
-                await self.gpsd_client.stop()
+                # Stop the gpsd client
+                if self.gpsd_client:
+                    logger.info('Stopping gpsd client')
+                    await self.gpsd_client.stop()
 
-            # Dump score data if we are the gateway
-            if self.is_gateway:
-                logger.info('Dumping final scoring data')
-                try:
-                    # Dump reported scores
-                    self.saveReportedMandatePerformance()
-                except: # pylint: disable=bare-except
-                    logger.exception('Could not dump scoring data')
+                # Dump score data if we are the gateway
+                if self.is_gateway:
+                    logger.info('Dumping final scoring data')
+                    try:
+                        # Dump reported scores
+                        self.saveReportedMandatePerformance()
+                    except: # pylint: disable=bare-except
+                        logger.exception('Could not dump scoring data')
 
-            # Terminate any packet captures
-            await self.cleanupDumpcap()
+                # Terminate any packet captures
+                await self.cleanupDumpcap()
 
-            # Stop radio tasks
-            logger.info('Stopping radio tasks')
-            await self.radio.stopTasks()
+                # Stop radio tasks
+                logger.info('Stopping radio tasks')
+                await self.radio.stopTasks()
 
-            with await self.radio.lock:
-                # Remove all nodes
-                for node_id in list(self.nodes):
-                    self.removeNode(node_id)
+                with await self.radio.lock:
+                    # Remove all nodes
+                    for node_id in list(self.nodes):
+                        self.removeNode(node_id)
 
-            # Close the logger
-            self.radio.logger.close()
+                # Close the logger
+                self.radio.logger.close()
 
-            # Update radio state to FINISHED
-            self.state = remote.FINISHED
-            logger.info('Radio stopped')
+                # Update radio state to FINISHED
+                self.state = remote.FINISHED
+                logger.info('Radio stopped')
+            except:
+                logger.exception('Exception when stopping radio')
 
     async def terminate(self):
         """Terminate the radio"""
