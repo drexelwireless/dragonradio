@@ -17,6 +17,24 @@
 #include "Packet.hh"
 #include "net/TunTap.hh"
 
+struct GPSLocation {
+    GPSLocation() : lat(0.0), lon(0.0), alt(0.0), timestamp(0.0)
+    {
+    }
+
+    /** @brief Latitude */
+    double lat;
+
+    /** @brief Longitude */
+    double lon;
+
+    /** @brief Altitude */
+    double alt;
+
+    /** @brief Timestamp of last update */
+    double timestamp;
+};
+
 /** @brief Vector of pairs of timestamps. */
 /** The first timestamp is the transmitter's timestamp, and the second timestamp
  * is the local time at which the timestamp was received.
@@ -40,6 +58,9 @@ struct Node {
 
     /** @brief Node ID */
     const NodeId id;
+
+    /** @brief Location */
+    GPSLocation loc;
 
     /** @brief Flag indicating whether or not this node is the gateway */
     bool is_gateway;
