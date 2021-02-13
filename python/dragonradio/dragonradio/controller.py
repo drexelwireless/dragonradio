@@ -1081,6 +1081,9 @@ class Controller(CILServer):
         if self.config.mac == 'fdma':
             nslots = 1
 
+        # We start out without any channel assignments
+        assignments = {}
+
         while not self.done:
             try:
                 await self.tdma_reschedule.wait()
@@ -1102,10 +1105,10 @@ class Controller(CILServer):
 
                 # Create the schedule
                 nchannels = len(radio.channels)
-                sched = dragonradio.schedule.fairMACSchedule(nchannels,
-                                                             nslots,
-                                                             self.schedule_nodes,
-                                                             3)
+                sched, assignments = dragonradio.schedule.fairMACSchedule(nchannels,
+                                                                          nslots,
+                                                                          self.schedule_nodes,
+                                                                          assignments=assignments)
 
                 if not np.array_equal(sched, self.schedule):
                     await self.installMACSchedule(self.schedule_seq + 1, sched)
