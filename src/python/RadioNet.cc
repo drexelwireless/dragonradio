@@ -53,8 +53,12 @@ void exportRadioNet(py::module &m)
             "Nodes in the network")
         .def_property_readonly("time_master",
             &RadioNet::getTimeMaster)
-        .def("addNode",
-            [](RadioNet &radionet, NodeId id) { return radionet.getNode(id); },
+        .def("__getitem__",
+            [](RadioNet &self, size_t i) -> Node& { return self[i]; },
             py::return_value_policy::reference_internal)
+        .def("getNode",
+            [](RadioNet &self, NodeId id) { return self.getNode(id); })
+        .def("addNode",
+            [](RadioNet &self, NodeId id) { return self.getNode(id); })
         ;
 }
