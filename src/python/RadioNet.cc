@@ -2,6 +2,7 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
 #include <pybind11/stl.h>
 
 #include "RadioNet.hh"
@@ -53,6 +54,9 @@ void exportRadioNet(py::module &m)
             "Nodes in the network")
         .def_property_readonly("time_master",
             &RadioNet::getTimeMaster)
+        .def_property("new_node_callback",
+            nullptr,
+            &RadioNet::setNewNodeCallback)
         .def("__getitem__",
             [](RadioNet &self, size_t i) -> Node& { return self[i]; },
             py::return_value_policy::reference_internal)
