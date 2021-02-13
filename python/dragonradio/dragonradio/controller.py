@@ -309,7 +309,7 @@ class Controller(CILServer):
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
         if bootstrap:
-            self.loop.create_task(self.startRadio())
+            self.createTask(self.startRadio(), "Start radio")
 
         self.state = remote.READY
 
@@ -327,7 +327,7 @@ class Controller(CILServer):
                 timestamp)
 
             # Start task to get traffic interface addresses into ARP cache
-            self.loop.create_task(self.cacheTrafficInterfaceARP())
+            self.createTask(self.cacheTrafficInterfaceARP(), "Cache traffic interface ARP")
 
             with await self.radio.lock:
                 self.started = True
@@ -1300,7 +1300,7 @@ class Controller(CILServer):
                 logger.info("Radio start: timestamp=%f",
                     req.timestamp)
 
-                self.loop.create_task(self.startRadio(timestamp=req.timestamp))
+                self.createTask(self.startRadio(timestamp=req.timestamp), "Start radio")
                 info = 'Radio started'
         elif req.radio_command == remote.STOP:
             if self.state == remote.READY or self.state == remote.ACTIVE:
@@ -1390,7 +1390,8 @@ class Controller(CILServer):
             self.scoring_percent_threshold = env.get('scoring_percent_threshold', 0)
             self.scoring_point_threshold = env.get('scoring_point_threshold', 0)
 
-            self.loop.create_task(self.reconfigureBandwidthAndFrequency(bandwidth, frequency))
+            self.createTask(self.reconfigureBandwidthAndFrequency(bandwidth, frequency),
+                            "Reconfigure bandwidth and frequency")
 
         resp = remote.Response()
         resp.status.state = self.state
@@ -1413,13 +1414,13 @@ class Controller(CILServer):
             n.loc.timestamp = loc.timestamp.get_timestamp()
 
         # Update statistics
-        self.loop.create_task(self.updateFlowStatistics(node_id,
-                                                        msg.status.timestamp.get_timestamp(),
-                                                        msg.status.source_flows,
-                                                        msg.status.sink_flows))
-        self.loop.create_task(self.updateSpectrumStatistics(node_id,
-                                                            msg.status.timestamp.get_timestamp(),
-                                                            msg.status.spectrum_stats))
+        self.createTask(self.updateFlowStatistics(node_id,
+                                                  msg.status.timestamp.get_timestamp(),
+                                                  msg.status.source_flows,
+                                                  msg.status.sink_flows))
+        self.createTask(self.updateSpectrumStatistics(node_id,
+                                                      msg.status.timestamp.get_timestamp(),
+                                                      msg.status.spectrum_stats))
 
     @handle('Message.schedule')
     def _handleSchedule(self, msg):
@@ -1446,4 +1447,4 @@ class Controller(CILServer):
 
             sched = np.array(msg.schedule.schedule).reshape((nchannels, nslots))
 
-            self.loop.create_task(self.installMACSchedule(msg.schedule.seq, sched))
+            self.createTask(self.installMACSchedule(msg.schedule.seq, sched), "Install MAC schedule")
