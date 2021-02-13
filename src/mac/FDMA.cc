@@ -3,7 +3,6 @@
 
 #include "Clock.hh"
 #include "USRP.hh"
-#include "Util.hh"
 #include "mac/FDMA.hh"
 
 // Set to 1 to transmit bursts immediately. The down side of setting this to 1

@@ -20,8 +20,10 @@
 
 #include "logging.hh"
 #include "RadioNet.hh"
-#include "Util.hh"
 #include "net/TunTap.hh"
+#include "util/capabilities.hh"
+#include "util/sprintf.hh"
+#include "util/threads.hh"
 
 using namespace std::placeholders;
 

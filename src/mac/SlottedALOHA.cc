@@ -3,8 +3,8 @@
 
 #include "Clock.hh"
 #include "USRP.hh"
-#include "Util.hh"
 #include "mac/SlottedALOHA.hh"
+#include "util/threads.hh"
 
 SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            std::shared_ptr<PHY> phy,

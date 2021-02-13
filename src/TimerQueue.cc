@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "TimerQueue.hh"
-#include "Util.hh"
+#include "util/threads.hh"
 
 TimerQueue::TimerQueue() : done_(true)
 {

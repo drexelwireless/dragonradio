@@ -2,7 +2,7 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "mac/MAC.hh"
-#include "Util.hh"
+#include "util/threads.hh"
 
 MAC::MAC(std::shared_ptr<USRP> usrp,
          std::shared_ptr<PHY> phy,

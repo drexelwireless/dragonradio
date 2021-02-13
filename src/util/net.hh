@@ -1,8 +1,8 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#ifndef NETUTIL_HH_
-#define NETUTIL_HH_
+#ifndef UTIL_NET_HH_
+#define UTIL_NET_HH_
 
 #include <sys/types.h>
 #include <string.h>
@@ -21,4 +21,4 @@ inline bool isEthernetBroadcast(const u_char *host)
     return memcmp(host, "\xff\xff\xff\xff\xff\xff", 6) == 0;
 }
 
-#endif /* NETUTIL_HH_ */
+#endif /* UTIL_NET_HH_ */
