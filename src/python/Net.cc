@@ -189,5 +189,11 @@ void exportNetUtil(py::module &m)
         "Add a static ARP table entry")
      .def("deleteARPEntry",
         &deleteARPEntry,
-        "Delete an ARP table entry");
+        "Delete an ARP table entry")
+     .def("addRoute",
+        &addRoute,
+        "Add an IP route")
+     .def("deleteRoute",
+        &deleteRoute,
+        "Delete an IP route");
 }
