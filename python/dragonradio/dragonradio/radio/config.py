@@ -341,6 +341,10 @@ class Config:
         self.spec_chan_trim_hi = 0.05
         """Trim this fraction of the bandwidth from the high edge of channel when predicting"""
 
+        # Traffic options
+        self.traffic_iface = 'tr0'
+        """Name of Colosseum traffic interface"""
+
     def __str__(self):
         return pformat(self.__dict__)
 

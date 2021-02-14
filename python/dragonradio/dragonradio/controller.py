@@ -146,8 +146,8 @@ class Controller(CILServer):
         self.bootstrapped = False
         """Has the radio already been bootstrapped?"""
 
-        self.in_colosseum = 'tr0' in netifaces.interfaces()
-        """Are we in the Colosseum?"""
+        self.has_traffic_iface = config.traffic_iface in netifaces.interfaces()
+        """Do we have a Colosseum traffic interface?"""
 
         self.scorer = None
         """Match scorer"""
@@ -521,7 +521,7 @@ class Controller(CILServer):
         logger.info('Adding node %d', node.id)
 
         # Add a route for the new node
-        if self.in_colosseum:
+        if self.has_traffic_iface:
             self.addNodeRoute(node)
 
         # If new node is a gateway, connect to it and start sending status
@@ -545,8 +545,8 @@ class Controller(CILServer):
         """Remove a node"""
         logger.info('Removing node %d', node.id)
 
-        if self.in_colosseum:
-            if node.id != self.this_node_id:
+        if self.has_traffic_iface:
+            if node.id != self.this_node.id:
                 self.removeNodeRoute(node)
 
     def addNodeRoute(self, node):
@@ -736,7 +736,7 @@ class Controller(CILServer):
         See:
             https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220402-traffic-generation
         """
-        if self.in_colosseum:
+        if self.has_traffic_iface:
             logger.debug('Caching ARP table entries for traffic interface')
 
             node_id = self.radio.node_id
@@ -746,7 +746,7 @@ class Controller(CILServer):
                 mac = darpaNodeMAC(node_id, peer_id)
 
                 try:
-                    dragonradio.net.addStaticARPEntry('tr0', ip, mac)
+                    dragonradio.net.addStaticARPEntry(self.config.traffic_iface, ip, mac)
                 except:
                     logger.exception('Could not cache ARP table entry: %s %s', ip, mac)
 
