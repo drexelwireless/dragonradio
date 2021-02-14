@@ -33,6 +33,12 @@ void addStaticARPEntry(const std::optional<std::string> &dev, const std::string 
 /** @brief Delete a static ARP table entry */
 void deleteARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr);
 
+/** @brief Add an IP route */
+void addRoute(const std::string &dst, const std::string &mask, const std::string &gateway);
+
+/** @brief Delete an IP route */
+void deleteRoute(const std::string &dst, const std::string &mask);
+
 class Socket {
 public:
     Socket() : fd_(0)

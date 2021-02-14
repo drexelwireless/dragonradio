@@ -7,6 +7,7 @@
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <net/route.h>
 #include <netinet/if_ether.h>
 
 struct sockaddr parseMAC(const std::string &s)
@@ -71,5 +72,35 @@ void deleteARPEntry(const std::optional<std::string> &dev, const std::string &ip
     Socket sockfd(AF_INET, SOCK_DGRAM, 0);
 
     if (ioctl(sockfd, SIOCDARP, &req) < 0)
+        throw std::runtime_error(strerror(errno));
+}
+
+void addRoute(const std::string &dst, const std::string &mask, const std::string &gateway)
+{
+    RaiseCaps          caps({CAP_NET_ADMIN});
+    struct rtentry     route = {0};
+
+    route.rt_dst = parseIP(dst);
+    route.rt_gateway = parseIP(gateway);
+    route.rt_genmask = parseIP(mask);
+    route.rt_flags = RTF_UP | RTF_GATEWAY;
+
+    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
+
+    if (ioctl(sockfd, SIOCADDRT, &route) < 0)
+        throw std::runtime_error(strerror(errno));
+}
+
+void deleteRoute(const std::string &dst, const std::string &mask)
+{
+    RaiseCaps          caps({CAP_NET_ADMIN});
+    struct rtentry     route = {0};
+
+    route.rt_dst = parseIP(dst);
+    route.rt_genmask = parseIP(mask);
+
+    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
+
+    if (ioctl(sockfd, SIOCDELRT, &route) < 0)
         throw std::runtime_error(strerror(errno));
 }
