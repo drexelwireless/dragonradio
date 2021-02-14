@@ -27,6 +27,12 @@ struct sockaddr parseMAC(const std::string &s);
 /** @brief Parse an IP address */
 struct sockaddr parseIP(const std::string &s);
 
+/** @brief Add a static ARP table entry */
+void addStaticARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr, const std::string &macaddr);
+
+/** @brief Delete a static ARP table entry */
+void deleteARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr);
+
 class Socket {
 public:
     Socket() : fd_(0)

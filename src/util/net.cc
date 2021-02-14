@@ -1,6 +1,8 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include "logging.hh"
+#include "util/capabilities.hh"
 #include "util/net.hh"
 
 #include <sys/types.h>
@@ -35,4 +37,39 @@ struct sockaddr parseIP(const std::string &s)
         throw std::domain_error("Illegally formatted IP address");
 
     return addr;
+}
+
+void addStaticARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr, const std::string &macaddr)
+{
+    RaiseCaps     caps({CAP_NET_ADMIN});
+    struct arpreq req = {0};
+
+    if (dev)
+        strncpy(req.arp_dev, dev->c_str(), sizeof(req.arp_dev)-1);
+
+    req.arp_pa = parseIP(ipaddr);
+    req.arp_ha = parseMAC(macaddr);
+
+    req.arp_flags = ATF_PERM | ATF_COM;
+
+    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
+
+    if (ioctl(sockfd, SIOCSARP, &req) < 0)
+        throw std::runtime_error(strerror(errno));
+}
+
+void deleteARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr)
+{
+    RaiseCaps     caps({CAP_NET_ADMIN});
+    struct arpreq req = {0};
+
+    if (dev)
+        strncpy(req.arp_dev, dev->c_str(), sizeof(req.arp_dev)-1);
+
+    req.arp_pa = parseIP(ipaddr);
+
+    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
+
+    if (ioctl(sockfd, SIOCDARP, &req) < 0)
+        throw std::runtime_error(strerror(errno));
 }
