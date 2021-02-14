@@ -26,6 +26,7 @@ from dragonradio.gpsd import GPSDClient
 import dragonradio.internal as internal
 from dragonradio.internal import InternalProtoClient, InternalProtoServer
 from dragonradio.internal import mkFlowStats, mkSpectrumStats
+import dragonradio.net
 from dragonradio.protobuf import handle, handler, TCPProtoServer
 import dragonradio.radio
 import dragonradio.remote as remote
@@ -306,6 +307,9 @@ class Controller(CILServer):
                                                                  remote.REMOTE_HOST,
                                                                  remote.REMOTE_PORT)
 
+        # Cache ARP table entries for Colosseum traffic interface
+        self.cacheTrafficInterfaceARP()
+
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
         if bootstrap:
@@ -325,9 +329,6 @@ class Controller(CILServer):
             logger.info('Starting radio: now=%f; timestamp=%f',
                 time.time(),
                 timestamp)
-
-            # Start task to get traffic interface addresses into ARP cache
-            self.createTask(self.cacheTrafficInterfaceARP(), "Cache traffic interface ARP")
 
             with await self.radio.lock:
                 self.started = True
@@ -723,32 +724,26 @@ class Controller(CILServer):
 
         return voxels
 
-    async def cacheTrafficInterfaceARP(self):
+    def cacheTrafficInterfaceARP(self):
         """Get all addresses on the traffic interface's subnet into the ARP
         cache.
 
         See:
             https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220402-traffic-generation
         """
-        try:
-            if self.in_colosseum:
-                node_id = self.radio.node_id
+        if self.in_colosseum:
+            logger.debug('Caching ARP table entries for traffic interface')
 
-                async def mkARPTask(peer_id):
-                    ip = darpaNodeIP(node_id, peer_id)
-                    mac = darpaNodeMAC(node_id, peer_id)
+            node_id = self.radio.node_id
 
-                    p = await asyncio.create_subprocess_exec('arp', '-s', ip, mac,
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE)
+            for peer_id in range(1, 255):
+                ip = darpaNodeIP(node_id, peer_id)
+                mac = darpaNodeMAC(node_id, peer_id)
 
-                    (stdout_data, stderr_data) = await p.communicate()
-                    return (ip, stdout_data, stderr_data)
-
-                tasks = [mkARPTask(peer_id) for peer_id in range(1, 255)]
-                await asyncio.gather(*tasks, return_exceptions=True)
-        except asyncio.CancelledError:
-            return
+                try:
+                    dragonradio.net.addStaticARPEntry('tr0', ip, mac)
+                except:
+                    logger.exception('Could not cache ARP table entry: %s %s', ip, mac)
 
     async def getMandatePerformance(self):
         """Compute mandate performance metrics"""
