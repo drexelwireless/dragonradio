@@ -12,6 +12,7 @@
 #include "net/SimpleQueue.hh"
 #include "net/Queue.hh"
 #include "python/PyModules.hh"
+#include "util/net.hh"
 
 #if !defined(DOXYGEN)
 PYBIND11_MAKE_OPAQUE(MandateMap)
@@ -179,4 +180,14 @@ void exportNet(py::module &m)
             [](std::shared_ptr<PacketCompressor> element) { return exposePort(element, &element->radio_out); },
             "Radio packet output port")
         ;
+}
+
+void exportNetUtil(py::module &m)
+{
+    m.def("addStaticARPEntry",
+        &addStaticARPEntry,
+        "Add a static ARP table entry")
+     .def("deleteARPEntry",
+        &deleteARPEntry,
+        "Delete an ARP table entry");
 }
