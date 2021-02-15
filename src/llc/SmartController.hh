@@ -310,7 +310,7 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Explicit NAK window index */
     size_t explicit_nak_idx;
 
-    /** @brief Long-term packet error rate */
+    /** @brief Long-term packet EVM */
     TimeWindowMean<MonoClock, double> long_evm;
 
     /** @brief Long-term packet RSSI */

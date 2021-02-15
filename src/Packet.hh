@@ -62,6 +62,7 @@ struct ControlMsg {
     };
 
     struct Hello {
+        /** @brief Set to true if this is the gateway node */
         bool is_gateway;
     };
 
