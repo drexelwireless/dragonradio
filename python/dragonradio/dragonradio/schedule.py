@@ -3,6 +3,7 @@
 
 """MAC schedule construction"""
 import numpy as np
+from typing import Dict, List
 
 def bestScheduleChannel(sched, node_id):
     """Choose the best single channel for the given node to use from the
@@ -71,34 +72,42 @@ def fullChannelMACSchedule(nchannels, nslots, nodes, k):
 
     return sched
 
-def fairMACSchedule(nchannels, nslots, nodes, k):
+def fairMACSchedule(nchannels : int, nslots : int, nodes : List[int], k : int=3, assignments : Dict[int, int]={}):
     """Create a schedule that distributes slots evenly amongst nodes.
 
     Args:
-        nchannels: The number of channels
-        nslots: The number of time slots
-        nodes: The nodes
-        k: The desired channel separation
+        nchannels (int): The number of channels
+        nslots (int): The number of time slots
+        nodes (List[int]): The nodes
+        k (int, optional): The desired channel separation. Defaults to 3.
+        assignments (Dict[int, int], optional): Map from nodes to assigned channels. Defaults to {}.
 
     Returns:
-        A schedule consisting of a nchannels X nslots array of node IDs.
+        [type]: A schedule consisting of a nchannels X nslots array of node IDs.
     """
-    # Assign nodes to channels
+    # Create list of nodes assigned to each channel.
     channels = [[] for _ in range(0, nchannels)]
 
-    chan = 0
+    # Add existing assignments
+    for node, chan in assignments.items():
+        channels[chan].append(node)
 
-    for i, node in enumerate(nodes):
-        while chan < nchannels:
-            if len(channels[chan]) == i // nchannels:
+    # Assign nodes to channels
+    basechan = 0
+
+    for nodeidx, node in enumerate(nodes):
+        # Skip nodes we've already assigned
+        if node in assignments:
+            continue
+
+        for i in range(0, nchannels):
+            chan = (basechan + i) % nchannels
+
+            if len(channels[chan]) <= nodeidx // nchannels:
                 channels[chan].append(node)
-                chan += k
+                assignments[node] = chan
+                basechan = chan + k
                 break
-
-            chan += 1
-
-        if chan >= nchannels:
-            chan = 0
 
     # Create a schedule where nodes alternate slots in their assigned channel
     sched = np.zeros((nchannels, nslots), dtype=int)
@@ -110,4 +119,4 @@ def fairMACSchedule(nchannels, nslots, nodes, k):
             for slot in range (0, nslots):
                 sched[chan,slot] = nodes[slot % len(nodes)]
 
-    return sched
+    return sched, assignments
