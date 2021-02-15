@@ -9,7 +9,7 @@
 #include "logging.hh"
 #include "Clock.hh"
 #include "USRP.hh"
-#include "Util.hh"
+#include "util/capabilities.hh"
 
 USRP::USRP(const std::string& addr,
            const std::optional<std::string>& tx_subdev,

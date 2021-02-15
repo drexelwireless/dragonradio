@@ -8,7 +8,6 @@
 
 namespace py = pybind11;
 
-#include "Util.hh"
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/PHY.hh"
 #include "stats/Estimator.hh"

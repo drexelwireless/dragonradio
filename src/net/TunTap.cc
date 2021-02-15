@@ -20,32 +20,13 @@
 
 #include "logging.hh"
 #include "RadioNet.hh"
-#include "Util.hh"
 #include "net/TunTap.hh"
+#include "util/capabilities.hh"
+#include "util/net.hh"
+#include "util/sprintf.hh"
+#include "util/threads.hh"
 
 using namespace std::placeholders;
-
-static void parseMAC(const std::string &s, struct sockaddr &addr)
-{
-    addr.sa_family = ARPHRD_ETHER;
-
-    if (sscanf(s.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-               (unsigned char*) &addr.sa_data[0],
-               (unsigned char*) &addr.sa_data[1],
-               (unsigned char*) &addr.sa_data[2],
-               (unsigned char*) &addr.sa_data[3],
-               (unsigned char*) &addr.sa_data[4],
-               (unsigned char*) &addr.sa_data[5]) != 6)
-        throw std::domain_error("Illegally formatted MAC address");
-}
-
-static void parseIP(const std::string &s, struct sockaddr &addr)
-{
-    addr.sa_family = AF_INET;
-
-    if (inet_pton(AF_INET, s.c_str(), &((struct sockaddr_in*) &addr)->sin_addr) == 0)
-        throw std::domain_error("Illegally formatted IP address");
-}
 
 /** @file TunTap.cc
  * This code has been heavily modified from the version included in the
@@ -75,7 +56,6 @@ TunTap::TunTap(const std::string& tap_iface,
   , tap_macaddr_(tap_macaddr)
   , mtu_(mtu)
   , fd_(0)
-  , sockfd_(0)
   , ifr_({0})
   , done_(true)
 {
@@ -103,46 +83,45 @@ TunTap::TunTap(const std::string& tap_iface,
     }
 
     // Create socket for use with ioctl
-    if ((sockfd_ = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        logTunTap(LOGERROR, "Could not create socket: %s", strerror(errno));
+    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
 
     // Set MTU to 1500
     ifr_.ifr_mtu = mtu;
 
-    if (ioctl(sockfd_, SIOCSIFMTU, &ifr_) < 0)
+    if (ioctl(sockfd, SIOCSIFMTU, &ifr_) < 0)
         logTunTap(LOGERROR, "Error configuring mtu: %s", strerror(errno));
 
     // Set MAC address
     ifr_.ifr_hwaddr = {0};
 
-    parseMAC(nodeMACAddress(node_id), ifr_.ifr_hwaddr);
+    ifr_.ifr_hwaddr = parseMAC(nodeMACAddress(node_id));
 
-    if (ioctl(sockfd_, SIOCSIFHWADDR, &ifr_) < 0)
+    if (ioctl(sockfd, SIOCSIFHWADDR, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting MAC address: %s", strerror(errno));
 
     // Set IP address
     ifr_.ifr_addr = {0};
 
-    parseIP(nodeIPAddress(node_id), ifr_.ifr_addr);
+    ifr_.ifr_addr = parseIP(nodeIPAddress(node_id));
 
-    if (ioctl(sockfd_, SIOCSIFADDR, &ifr_) < 0)
+    if (ioctl(sockfd, SIOCSIFADDR, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting IP address: %s", strerror(errno));
 
     // Set netmask
     ifr_.ifr_addr = {0};
 
-    parseIP(tap_ipnetmask_, ifr_.ifr_addr);
+    ifr_.ifr_addr = parseIP(tap_ipnetmask_);
 
-    if (ioctl(sockfd_, SIOCSIFNETMASK, &ifr_) < 0)
+    if (ioctl(sockfd, SIOCSIFNETMASK, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting IP netmask: %s", strerror(errno));
 
     // Bring up interface
-    if (ioctl(sockfd_, SIOCGIFFLAGS, &ifr_) < 0)
+    if (ioctl(sockfd, SIOCGIFFLAGS, &ifr_) < 0)
         logTunTap(LOGERROR, "Error bringing up interface: %s", strerror(errno));
 
     ifr_.ifr_flags |= IFF_UP | IFF_RUNNING;
 
-    if (ioctl(sockfd_, SIOCSIFFLAGS, &ifr_) < 0)
+    if (ioctl(sockfd, SIOCSIFFLAGS, &ifr_) < 0)
         logTunTap(LOGERROR, "Error bringing up interface: %s", strerror(errno));
 }
 
@@ -150,7 +129,6 @@ TunTap::~TunTap(void)
 {
     stop();
     closeTap();
-    close(sockfd_);
 }
 
 size_t TunTap::getMTU(void)
@@ -165,12 +143,14 @@ void TunTap::addARPEntry(uint8_t node_id)
 
     strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
 
-    parseIP(nodeIPAddress(node_id), req.arp_pa);
-    parseMAC(nodeMACAddress(node_id), req.arp_ha);
+    req.arp_pa = parseIP(nodeIPAddress(node_id));
+    req.arp_ha = parseMAC(nodeMACAddress(node_id));
 
     req.arp_flags = ATF_PERM | ATF_COM;
 
-    if (ioctl(sockfd_, SIOCSARP, &req) < 0)
+    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
+
+    if (ioctl(sockfd, SIOCSARP, &req) < 0)
         logTunTap(LOGERROR, "Error adding ARP entry for node %d: %s", node_id, strerror(errno));
     else
         logTunTap(LOGDEBUG, "Added ARP entry for node %d", node_id);
@@ -183,9 +163,11 @@ void TunTap::deleteARPEntry(uint8_t node_id)
 
     strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
 
-    parseIP(nodeIPAddress(node_id), req.arp_pa);
+    req.arp_pa = parseIP(nodeIPAddress(node_id));
 
-    if (ioctl(sockfd_, SIOCDARP, &req) < 0)
+    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
+
+    if (ioctl(sockfd, SIOCDARP, &req) < 0)
         logTunTap(LOGERROR, "Error deleting ARP entry for node %d: %s", node_id, strerror(errno));
     else
         logTunTap(LOGDEBUG, "Deleted ARP entry for node %d", node_id);

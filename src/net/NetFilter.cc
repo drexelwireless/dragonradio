@@ -12,7 +12,7 @@
 
 #include "logging.hh"
 #include "net/NetFilter.hh"
-#include "net/NetUtil.hh"
+#include "util/net.hh"
 
 bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
 {

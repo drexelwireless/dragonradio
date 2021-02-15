@@ -3,8 +3,8 @@
 
 #include "Logger.hh"
 #include "SlottedMAC.hh"
-#include "Util.hh"
 #include "liquid/Modem.hh"
+#include "util/threads.hh"
 
 using Slot = SlotSynthesizer::Slot;
 

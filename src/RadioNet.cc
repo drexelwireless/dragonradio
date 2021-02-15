@@ -10,7 +10,6 @@
 #include <cstring>
 #include <functional>
 
-#include "Util.hh"
 #include "RadioNet.hh"
 
 std::optional<NodeId> RadioNet::getTimeMaster(void)

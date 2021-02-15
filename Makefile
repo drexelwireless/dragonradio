@@ -70,7 +70,6 @@ SOURCES := \
     RadioNet.cc \
     TimerQueue.cc \
     USRP.cc \
-    Util.cc \
     WorkQueue.cc \
     cil/Scorer.cc \
     dsp/FFTW.cc \
@@ -128,7 +127,11 @@ SOURCES := \
     python/Snapshot.cc \
     python/Synthesizer.cc \
     python/USRP.cc \
-    python/WorkQueue.cc
+    python/WorkQueue.cc \
+    util/exec.cc \
+    util/net.cc \
+    util/threads.cc \
+    util/sprintf.cc
 
 OBJECTS := $(patsubst %.cc,$(OBJDIR)/%.o,$(SOURCES))
 

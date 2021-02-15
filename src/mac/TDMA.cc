@@ -3,8 +3,8 @@
 
 #include "Clock.hh"
 #include "USRP.hh"
-#include "Util.hh"
 #include "mac/TDMA.hh"
+#include "util/threads.hh"
 
 TDMA::TDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PHY> phy,

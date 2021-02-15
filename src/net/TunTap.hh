@@ -76,9 +76,6 @@ private:
     /** @brief File descriptor for tun/tap device */
     int fd_;
 
-    /** @brief File descriptor to manipulate tun/tap device */
-    int sockfd_;
-
     /** @brief ifreq for configuring tap interface  */
     struct ifreq ifr_;
 

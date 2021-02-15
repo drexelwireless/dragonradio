@@ -26,6 +26,7 @@ from dragonradio.gpsd import GPSDClient
 import dragonradio.internal as internal
 from dragonradio.internal import InternalProtoClient, InternalProtoServer
 from dragonradio.internal import mkFlowStats, mkSpectrumStats
+import dragonradio.net
 from dragonradio.protobuf import handle, handler, TCPProtoServer
 import dragonradio.radio
 import dragonradio.remote as remote
@@ -42,7 +43,11 @@ def internalNodeIP(node_id):
 
 def darpaNodeNet(node_id):
     """Return IP subnet of radio node on DARPA's network."""
-    return '192.168.{:d}.0/24'.format(node_id+100)
+    return '192.168.{:d}.0'.format(node_id+100)
+
+def darpaNodeNetmask():
+    """Return IP subnet mask of radio node on DARPA's network."""
+    return '255.255.255.0'
 
 def darpaNodeIP(node_id, octet=0):
     """Return IP address of radio node on DARPA's network."""
@@ -141,8 +146,8 @@ class Controller(CILServer):
         self.bootstrapped = False
         """Has the radio already been bootstrapped?"""
 
-        self.in_colosseum = 'tr0' in netifaces.interfaces()
-        """Are we in the Colosseum?"""
+        self.has_traffic_iface = config.traffic_iface in netifaces.interfaces()
+        """Do we have a Colosseum traffic interface?"""
 
         self.scorer = None
         """Match scorer"""
@@ -306,6 +311,9 @@ class Controller(CILServer):
                                                                  remote.REMOTE_HOST,
                                                                  remote.REMOTE_PORT)
 
+        # Cache ARP table entries for Colosseum traffic interface
+        self.cacheTrafficInterfaceARP()
+
         # Bootstrap the radio if we've been asked to. Otherwise, we will not
         # bootstrap until a radio API client tells us to.
         if bootstrap:
@@ -325,9 +333,6 @@ class Controller(CILServer):
             logger.info('Starting radio: now=%f; timestamp=%f',
                 time.time(),
                 timestamp)
-
-            # Start task to get traffic interface addresses into ARP cache
-            self.createTask(self.cacheTrafficInterfaceARP(), "Cache traffic interface ARP")
 
             with await self.radio.lock:
                 self.started = True
@@ -516,8 +521,8 @@ class Controller(CILServer):
         logger.info('Adding node %d', node.id)
 
         # Add a route for the new node
-        if self.in_colosseum:
-            self.createTask(self.addNodeRoute(node))
+        if self.has_traffic_iface:
+            self.addNodeRoute(node)
 
         # If new node is a gateway, connect to it and start sending status
         # updates
@@ -540,27 +545,28 @@ class Controller(CILServer):
         """Remove a node"""
         logger.info('Removing node %d', node.id)
 
-        if self.in_colosseum:
-            self.createTask(self.removeNodeRoute(node))
+        if self.has_traffic_iface:
+            if node.id != self.this_node.id:
+                self.removeNodeRoute(node)
 
-    async def addNodeRoute(self, node):
-        p = await asyncio.create_subprocess_exec( 'ip', 'route'
-                                                , 'add', darpaNodeNet(node.id)
-                                                , 'via', internalNodeIP(node.id),
-                                                stdout=asyncio.subprocess.PIPE,
-                                                stderr=asyncio.subprocess.STDOUT)
-        stdout, _stderr = await p.communicate()
-        if p.returncode != 0:
-            logger.error('Could not add route to node %s\n%s', node.id, stdout)
+    def addNodeRoute(self, node):
+        dst = darpaNodeNet(node.id)
+        mask = darpaNodeNetmask()
+        nexthop = internalNodeIP(node.id)
 
-    async def removeNodeRoute(self, node):
-        p = await asyncio.create_subprocess_exec( 'ip', 'route'
-                                                , 'del', darpaNodeNet(node.id),
-                                                stdout=asyncio.subprocess.PIPE,
-                                                stderr=asyncio.subprocess.STDOUT)
-        stdout, _stderr = await p.communicate()
-        if p.returncode != 0:
-            logger.error('Could not remove route to node %s\n%s', node.id, stdout)
+        try:
+            dragonradio.net.addRoute(dst, mask, nexthop)
+        except:
+            logger.exception('Could not add route: %s/%s %s', dst, mask, nexthop)
+
+    def removeNodeRoute(self, node):
+        dst = darpaNodeNet(node.id)
+        mask = darpaNodeNetmask()
+
+        try:
+            dragonradio.net.deleteRoute(dst, mask)
+        except:
+            logger.exception('Could not delete route: %s', dst)
 
     async def logNetworkInfo(self):
         """Log useful network information"""
@@ -723,32 +729,26 @@ class Controller(CILServer):
 
         return voxels
 
-    async def cacheTrafficInterfaceARP(self):
+    def cacheTrafficInterfaceARP(self):
         """Get all addresses on the traffic interface's subnet into the ARP
         cache.
 
         See:
             https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220402-traffic-generation
         """
-        try:
-            if self.in_colosseum:
-                node_id = self.radio.node_id
+        if self.has_traffic_iface:
+            logger.debug('Caching ARP table entries for traffic interface')
 
-                async def mkARPTask(peer_id):
-                    ip = darpaNodeIP(node_id, peer_id)
-                    mac = darpaNodeMAC(node_id, peer_id)
+            node_id = self.radio.node_id
 
-                    p = await asyncio.create_subprocess_exec('arp', '-s', ip, mac,
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE)
+            for peer_id in range(1, 255):
+                ip = darpaNodeIP(node_id, peer_id)
+                mac = darpaNodeMAC(node_id, peer_id)
 
-                    (stdout_data, stderr_data) = await p.communicate()
-                    return (ip, stdout_data, stderr_data)
-
-                tasks = [mkARPTask(peer_id) for peer_id in range(1, 255)]
-                await asyncio.gather(*tasks, return_exceptions=True)
-        except asyncio.CancelledError:
-            return
+                try:
+                    dragonradio.net.addStaticARPEntry(self.config.traffic_iface, ip, mac)
+                except:
+                    logger.exception('Could not cache ARP table entry: %s %s', ip, mac)
 
     async def getMandatePerformance(self):
         """Compute mandate performance metrics"""

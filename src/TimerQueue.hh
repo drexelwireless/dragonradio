@@ -5,12 +5,12 @@
 #include <functional>
 #include <mutex>
 #include <queue>
+#include <thread>
 #include <unordered_map>
 
 #include "heap.hh"
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
-#include "Util.hh"
 
 class TimerQueue
 {
