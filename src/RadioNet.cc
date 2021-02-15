@@ -11,9 +11,9 @@
 #include <functional>
 
 #include "Util.hh"
-#include "net/Net.hh"
+#include "RadioNet.hh"
 
-std::optional<NodeId> Net::getTimeMaster(void)
+std::optional<NodeId> RadioNet::getTimeMaster(void)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
     std::optional<NodeId>       master;

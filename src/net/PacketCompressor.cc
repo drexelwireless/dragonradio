@@ -14,7 +14,7 @@
 #include <functional>
 
 #include "Logger.hh"
-#include "net/Net.hh"
+#include "RadioNet.hh"
 #include "net/PacketCompressor.hh"
 
 #define DEBUG 0

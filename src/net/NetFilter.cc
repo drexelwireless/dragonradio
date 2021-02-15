@@ -30,7 +30,7 @@ bool NetFilter::process(std::shared_ptr<NetPacket>& pkt)
     // Only transmit IP packets that are either broadcast packets or where we
     // are the source and we know of the destination.
     if (ntohs(eth->ether_type) == ETHERTYPE_IP &&
-        (isEthernetBroadcast(eth->ether_dhost) || (curhop_id == net_->getMyNodeId() && net_->contains(nexthop_id)))) {
+        (isEthernetBroadcast(eth->ether_dhost) || (curhop_id == radionet_->getThisNodeId() && radionet_->contains(nexthop_id)))) {
         struct ip* iph = reinterpret_cast<struct ip*>(pkt->data() + sizeof(ExtendedHeader) + sizeof(struct ether_header));
         in_addr    ip_src;
         in_addr    ip_dst;

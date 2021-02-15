@@ -12,13 +12,13 @@
 #include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "Logger.hh"
+#include "RadioNet.hh"
 #include "USRP.hh"
 #include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
 #include "phy/SlotSynthesizer.hh"
 #include "mac/MAC.hh"
 #include "mac/Schedule.hh"
-#include "net/Net.hh"
 
 /** @brief A slotted MAC. */
 class SlottedMAC : public MAC

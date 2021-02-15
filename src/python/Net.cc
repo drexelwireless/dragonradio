@@ -4,8 +4,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "RadioNet.hh"
 #include "net/MandateQueue.hh"
-#include "net/Net.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
 #include "net/PacketCompressor.hh"
@@ -135,7 +135,7 @@ void exportNet(py::module &m)
 
     // Export class NetFilter to Python
     py::class_<NetFilter, NetProcessor, std::shared_ptr<NetFilter>>(m, "NetFilter")
-        .def(py::init<std::shared_ptr<Net>,
+        .def(py::init<std::shared_ptr<RadioNet>,
                       in_addr_t,
                       in_addr_t,
                       in_addr_t,

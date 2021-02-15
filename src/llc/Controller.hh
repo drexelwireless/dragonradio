@@ -9,8 +9,8 @@
 
 using namespace std::placeholders;
 
+#include "RadioNet.hh"
 #include "net/Element.hh"
-#include "net/Net.hh"
 #include "net/Queue.hh"
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
@@ -19,7 +19,7 @@ using namespace std::placeholders;
 class Controller : public Element
 {
 public:
-    Controller(std::shared_ptr<Net> net,
+    Controller(std::shared_ptr<RadioNet> radionet,
                size_t mtu)
       : net_in(*this, nullptr, nullptr)
       , net_out(*this,
@@ -30,7 +30,7 @@ public:
       , radio_in(*this,nullptr, nullptr,
                  std::bind(&Controller::received, this, _1))
       , radio_out(*this, nullptr, nullptr)
-      , net_(net)
+      , radionet_(radionet)
       , netq_(nullptr)
       , mtu_(mtu)
       , min_channel_bandwidth_(0)
@@ -118,7 +118,7 @@ public:
 
 protected:
     /** @brief The Net we're attached to */
-    std::shared_ptr<Net> net_;
+    std::shared_ptr<RadioNet> radionet_;
 
     /** @brief Network queue with high-priority sub-queue. */
     std::shared_ptr<NetQueue> netq_;

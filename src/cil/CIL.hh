@@ -7,7 +7,7 @@
 #include <optional>
 #include <unordered_map>
 
-#include "net/Net.hh"
+#include "RadioNet.hh"
 
 struct Mandate {
     Mandate() = delete;

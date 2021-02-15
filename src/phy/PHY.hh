@@ -11,8 +11,8 @@
 #include "logging.hh"
 #include "IQBuffer.hh"
 #include "Packet.hh"
+#include "RadioNet.hh"
 #include "mac/Snapshot.hh"
-#include "net/Net.hh"
 #include "phy/AutoGain.hh"
 
 /** @brief A modulated data packet to be sent over the radio */

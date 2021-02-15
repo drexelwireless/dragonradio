@@ -28,13 +28,13 @@ void exportControllers(py::module &m)
 
     // Export class DummyController to Python
     py::class_<DummyController, Controller, std::shared_ptr<DummyController>>(m, "DummyController")
-        .def(py::init<std::shared_ptr<Net>,
+        .def(py::init<std::shared_ptr<RadioNet>,
                       size_t>())
         ;
 
     // Export class SmartController to Python
     py::class_<SmartController, Controller, std::shared_ptr<SmartController>>(m, "SmartController")
-        .def(py::init<std::shared_ptr<Net>,
+        .def(py::init<std::shared_ptr<RadioNet>,
                       size_t,
                       std::shared_ptr<PHY>,
                       double,
