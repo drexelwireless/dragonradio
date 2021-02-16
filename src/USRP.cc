@@ -147,7 +147,7 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
         IQBuf& iqbuf = **it; // Current buffer we are sending
 
-        iqbuf.timestamp = when;
+        iqbuf.timestamp = when - iqbuf.delay/tx_rate_;
 
         for (size_t off = iqbuf.delay; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
