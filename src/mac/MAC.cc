@@ -129,22 +129,24 @@ void MAC::txNotifier(void)
             tx_records_.pop();
         }
 
-        // Timestamp packets
-        for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
-            (*it)->pkt->timestamp = record.deadline + (record.deadline_delay + (*it)->start)/tx_rate_;
+        if (record.deadline) {
+            // Timestamp packets
+            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
+                (*it)->pkt->timestamp = *record.deadline + (record.deadline_delay + (*it)->start)/tx_rate_;
 
-        // Record the record's load
-        {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
+            // Record the record's load
+            {
+                std::lock_guard<spinlock_mutex> lock(load_mutex_);
 
-            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
-                unsigned chanidx = (*it)->chanidx;
+                for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
+                    unsigned chanidx = (*it)->chanidx;
 
-                if (chanidx < load_.nsamples.size())
-                    load_.nsamples[chanidx] += (*it)->nsamples;
+                    if (chanidx < load_.nsamples.size())
+                        load_.nsamples[chanidx] += (*it)->nsamples;
+                }
+
+                load_.end = WallClock::to_wall_time(*record.deadline) + (record.deadline_delay + record.nsamples)/tx_rate_;
             }
-
-            load_.end = WallClock::to_wall_time(record.deadline) + (record.deadline_delay + record.nsamples)/tx_rate_;
         }
 
         // Log the transmissions
@@ -175,9 +177,9 @@ void MAC::txNotifier(void)
         controller_->transmitted(record.mpkts);
 
         // Tell the snapshot collector about local self-transmissions
-        if (snapshot_collector_) {
+        if (snapshot_collector_ && record.deadline) {
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
-                MonoClock::time_point timestamp = record.deadline + (*it)->start/tx_rate_;
+                MonoClock::time_point timestamp = *record.deadline + (*it)->start/tx_rate_;
 
                 snapshot_collector_->selfTX(timestamp,
                                             rx_rate_,
