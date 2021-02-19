@@ -169,7 +169,7 @@ void SnapshotCollector::fixSnapshotTimestamps(void)
     if (!snapshot_->slots.empty()) {
         float                 fs = snapshot_->slots[0]->fs;
         MonoClock::time_point provisional_timestamp = snapshot_->timestamp;
-        MonoClock::time_point actual_timestamp = snapshot_->slots[0]->timestamp;
+        MonoClock::time_point actual_timestamp = *snapshot_->slots[0]->timestamp;
         ssize_t               delta = (actual_timestamp - provisional_timestamp).get_real_secs()*fs;
 
         // Make snapshot timestamp the timestamp of the first collected slot

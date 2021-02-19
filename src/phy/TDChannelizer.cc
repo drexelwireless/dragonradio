@@ -167,7 +167,7 @@ void TDChannelizer::demodWorker(unsigned tid)
             demod.updateSeq(iqbuf->seq);
 
             // Timestamp the demodulated data
-            demod.timestamp(iqbuf->timestamp,
+            demod.timestamp(*iqbuf->timestamp,
                             snapshot_off,
                             0,
                             rx_rate_);

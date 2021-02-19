@@ -133,7 +133,7 @@ void FDChannelizer::fftWorker(void)
 
         // Create a frequency-domain buffer
         fdbuf = std::make_shared<IQBuf>(N*(1 + (iqbuf->size() + L - 1)/L));
-        fdbuf->timestamp = iqbuf->timestamp;
+        fdbuf->timestamp = *iqbuf->timestamp;
         fdbuf->seq = iqbuf->seq;
         fdbuf->fc = iqbuf->fc;
         fdbuf->fs = iqbuf->fs;
@@ -297,7 +297,7 @@ void FDChannelizer::demodWorker(unsigned tid)
             demod.updateSeq(fdbuf->seq);
 
             // Timestamp the demodulated data
-            demod.timestamp(fdbuf->timestamp,
+            demod.timestamp(*fdbuf->timestamp,
                             snapshot_off,
                             slot.fd_offset,
                             rx_rate_);

@@ -142,7 +142,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
         demod->reset();
 
         // Demodulate the last part of the guard interval of the previous slots
-        demod->timestamp(buf1->timestamp,
+        demod->timestamp(*buf1->timestamp,
                          buf1->snapshot_off,
                          buf1_off,
                          rx_rate_);
@@ -174,7 +174,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
             else if (buf1->snapshot_off)
                 snapshot_off = *buf1->snapshot_off + buf1->size();
 
-            demod->timestamp(buf2->timestamp,
+            demod->timestamp(*buf2->timestamp,
                              snapshot_off,
                              0,
                              rx_rate_);
