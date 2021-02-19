@@ -129,10 +129,10 @@ void MAC::txNotifier(void)
             tx_records_.pop();
         }
 
-        if (record.deadline) {
+        if (record.timestamp) {
             // Timestamp packets
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
-                (*it)->pkt->timestamp = *record.deadline + (record.deadline_delay + (*it)->start)/tx_rate_;
+                (*it)->pkt->timestamp = *record.timestamp + (record.delay + (*it)->start)/tx_rate_;
 
             // Record the record's load
             {
@@ -145,7 +145,7 @@ void MAC::txNotifier(void)
                         load_.nsamples[chanidx] += (*it)->nsamples;
                 }
 
-                load_.end = WallClock::to_wall_time(*record.deadline) + (record.deadline_delay + record.nsamples)/tx_rate_;
+                load_.end = WallClock::to_wall_time(*record.timestamp) + (record.delay + record.nsamples)/tx_rate_;
             }
         }
 
@@ -177,9 +177,9 @@ void MAC::txNotifier(void)
         controller_->transmitted(record.mpkts);
 
         // Tell the snapshot collector about local self-transmissions
-        if (snapshot_collector_ && record.deadline) {
+        if (snapshot_collector_ && record.timestamp) {
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
-                MonoClock::time_point timestamp = *record.deadline + (*it)->start/tx_rate_;
+                MonoClock::time_point timestamp = *record.timestamp + (*it)->start/tx_rate_;
 
                 snapshot_collector_->selfTX(timestamp,
                                             rx_rate_,
