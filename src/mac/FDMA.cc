@@ -78,9 +78,8 @@ void FDMA::reconfigure(void)
 
 void FDMA::txWorker(void)
 {
-    MonoClock::time_point t_now;
-    MonoClock::time_point t_next_tx; // Time at which next transmission starts
-    bool                  next_slot_start_of_burst = true;
+    std::optional<MonoClock::time_point> t_next_tx; // Time at which next transmission starts
+    bool                                 next_slot_start_of_burst = true;
 
     while (!done_) {
         ChannelSynthesizer::container_type mpkts;
@@ -120,14 +119,13 @@ void FDMA::txWorker(void)
         // initialize it with the current time since we are starting a new
         // burst. If we need an accurate timestamp, we use a timed burst, in
         // which case we need to add a slight delay to the transmission time.
-        if (next_slot_start_of_burst) {
-            t_next_tx = MonoClock::now();
-            if (accurate_timestamp)
-                t_next_tx += timed_tx_delay_;
-        }
+        if (next_slot_start_of_burst && accurate_timestamp)
+            t_next_tx = MonoClock::now() + timed_tx_delay_;
+        else
+            t_next_tx = usrp_->getNextTXTime();
 
         // Send IQ buffers
-        usrp_->burstTX(accurate_timestamp ? std::optional(t_next_tx) : std::nullopt,
+        usrp_->burstTX(next_slot_start_of_burst && accurate_timestamp ? t_next_tx : std::nullopt,
                        next_slot_start_of_burst,
                        false,
                        iqbufs);
@@ -147,7 +145,6 @@ void FDMA::txWorker(void)
         if (usrp_->getTXUnderflowCount() != 0) {
             usrp_->stopTXBurst();
             next_slot_start_of_burst = true;
-        } else
-            t_next_tx += nsamples / tx_rate_;
+        }
     }
 }
