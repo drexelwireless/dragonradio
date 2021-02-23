@@ -23,8 +23,11 @@ void SendWindow::recordACK(const MonoClock::time_point &tx_time)
 
     ack_delay.update(now, (now - tx_time).get_real_secs());
 
-    retransmission_delay = std::max(controller.getMinRetransmissionDelay(),
-        controller.getRetransmissionDelaySlop()*ack_delay.getValue());
+    if (ack_delay)
+        retransmission_delay = std::max(controller.getMinRetransmissionDelay(),
+                                        controller.getRetransmissionDelaySlop()*(*ack_delay));
+    else
+        retransmission_delay = controller.getMinRetransmissionDelay();
 }
 
 void RecvWindow::operator()()
@@ -576,7 +579,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
             (unsigned) sendw.node.id,
             (unsigned) entry.pkt->hdr.seq,
             (unsigned) entry.pkt->mcsidx,
-            sendw.short_per.getValue());
+            sendw.short_per.value_or(0.0));
 
         updateMCS(sendw);
     }
@@ -1075,7 +1078,8 @@ inline void appendSelectiveACK(NetPacket &pkt,
 void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
 {
     // Append statistics
-    pkt.appendReceiverStats(recvw.long_evm.getValue(), recvw.long_rssi.getValue());
+    if (recvw.long_evm && recvw.long_rssi)
+        pkt.appendReceiverStats(*recvw.long_evm, *recvw.long_rssi);
 
     // Append selective ACKs
     if (!selective_ack_)
@@ -1388,25 +1392,29 @@ void SmartController::txFailure(SendWindow &sendw)
 
 void SmartController::updateMCS(SendWindow &sendw)
 {
-    Node   &node = sendw.node;
-    double short_per = sendw.short_per.getValue();
-    double long_per = sendw.long_per.getValue();
+    Node &node = sendw.node;
+    bool changed = false;
 
-    if (short_per != sendw.prev_short_per || long_per != sendw.prev_long_per) {
-        logAMC(LOGDEBUG, "updateMCS: node=%u; short per=%f (%u samples); long per=%f (%u samples)",
-            node.id,
-            short_per,
-            sendw.short_per.getNSamples(),
-            long_per,
-            sendw.long_per.getNSamples());
-
-        sendw.prev_short_per = short_per;
-        sendw.prev_long_per = long_per;
+    if (sendw.short_per && *sendw.short_per != sendw.prev_short_per) {
+        sendw.prev_short_per = *sendw.short_per;
+        changed = true;
     }
 
+    if (sendw.long_per && *sendw.long_per != sendw.prev_long_per) {
+        sendw.prev_long_per = *sendw.long_per;
+        changed = true;
+    }
+
+    if (changed)
+        logAMC(LOGDEBUG, "updateMCS: node=%u; short per=%f (%lu samples); long per=%f (%lu samples)",
+            node.id,
+            sendw.short_per.value_or(0),
+            sendw.short_per.size(),
+            sendw.long_per.value_or(0),
+            sendw.long_per.size());
+
     // First for high PER, then test for low PER
-    if (   sendw.short_per.getNSamples() >= sendw.short_per.getWindowSize()
-        && short_per > mcsidx_down_per_threshold_) {
+    if (sendw.short_per && *sendw.short_per > mcsidx_down_per_threshold_) {
         // Perform hysteresis on future MCS increases by decreasing the
         // probability that we will transition to this MCS index.
         sendw.mcsidx_prob[sendw.mcsidx] =
@@ -1442,8 +1450,7 @@ void SmartController::updateMCS(SendWindow &sendw)
             moveDownMCS(sendw, n);
         else
             resetPEREstimates(sendw);
-    } else if (   sendw.long_per.getNSamples() >= sendw.long_per.getWindowSize()
-               && long_per < mcsidx_up_per_threshold_) {
+    } else if (sendw.long_per && *sendw.long_per < mcsidx_up_per_threshold_) {
         double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
 
         // Set transition probability of current MCS index to 1.0 since we
@@ -1502,7 +1509,7 @@ void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
     logAMC(LOGDEBUG, "Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
-        sendw.short_per.getValue(),
+        sendw.short_per.value_or(0.0),
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());
 
@@ -1529,7 +1536,7 @@ void SmartController::moveUpMCS(SendWindow &sendw)
     logAMC(LOGDEBUG, "Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
         node.id,
         (unsigned) sendw.mcsidx,
-        sendw.long_per.getValue(),
+        sendw.long_per.value_or(0.0),
         sendw.short_per.getWindowSize(),
         sendw.long_per.getWindowSize());
 
@@ -1573,10 +1580,10 @@ void SmartController::setMCS(SendWindow &sendw, size_t mcsidx)
 void SmartController::resetPEREstimates(SendWindow &sendw)
 {
     sendw.short_per.setWindowSize(std::max(1.0, short_per_window_*min_channel_bandwidth_/max_packet_samples_[sendw.mcsidx]));
-    sendw.short_per.reset(0);
+    sendw.short_per.reset();
 
     sendw.long_per.setWindowSize(std::max(1.0, long_per_window_*min_channel_bandwidth_/max_packet_samples_[sendw.mcsidx]));
-    sendw.long_per.reset(0);
+    sendw.long_per.reset();
 }
 
 bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)

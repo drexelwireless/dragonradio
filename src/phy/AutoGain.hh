@@ -104,7 +104,7 @@ struct AutoGain {
         std::lock_guard<std::shared_mutex> lock(mutex_);
 
         g_0dBFS_estimate_.reset(g);
-        g_0dBFS_.store(g_0dBFS_estimate_.getValue(), std::memory_order_relaxed);
+        g_0dBFS_.store(*g_0dBFS_estimate_, std::memory_order_relaxed);
     }
 
     /** @brief Get soft TX gain (dB). */
@@ -121,7 +121,7 @@ struct AutoGain {
         std::lock_guard<std::shared_mutex> lock(mutex_);
 
         g_0dBFS_estimate_.reset(powf(10.0f, dB/20.0f));
-        g_0dBFS_.store(g_0dBFS_estimate_.getValue(), std::memory_order_relaxed);
+        g_0dBFS_.store(*g_0dBFS_estimate_, std::memory_order_relaxed);
     }
 
     /** @brief Recalculate the 0dBFS estimate
@@ -131,8 +131,8 @@ struct AutoGain {
     {
         std::lock_guard<std::shared_mutex> lock(mutex_);
 
-        g_0dBFS_estimate_.reset(g_0dBFS_estimate_.getValue());
-        g_0dBFS_.store(g_0dBFS_estimate_.getValue(), std::memory_order_relaxed);
+        g_0dBFS_estimate_.reset(*g_0dBFS_estimate_);
+        g_0dBFS_.store(*g_0dBFS_estimate_, std::memory_order_relaxed);
         nestimates_0dBFS_ = nsamples;
     }
 

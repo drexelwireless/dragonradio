@@ -1021,20 +1021,20 @@ public:
             throw std::out_of_range("No send window for node");
     }
 
-    double getShortPER(void)
+    std::optional<double> getShortPER(void)
     {
         SendWindow                  &sendw = controller_->getSendWindow(node_id_);
         std::lock_guard<std::mutex> lock(sendw.mutex);
 
-        return sendw.short_per.getValue();
+        return sendw.short_per.value();
     }
 
-    double getLongPER(void)
+    std::optional<double> getLongPER(void)
     {
         SendWindow                  &sendw = controller_->getSendWindow(node_id_);
         std::lock_guard<std::mutex> lock(sendw.mutex);
 
-        return sendw.long_per.getValue();
+        return sendw.long_per.value();
     }
 
     std::optional<double> getLongEVM(void)
@@ -1102,20 +1102,20 @@ public:
             throw std::out_of_range("No receive window for node");
     }
 
-    double getLongEVM(void)
+    std::optional<double> getLongEVM(void)
     {
         RecvWindow                  &recvw = *controller_->maybeGetReceiveWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
-        return recvw.long_evm.getValue();
+        return recvw.long_evm.value();
     }
 
-    double getLongRSSI(void)
+    std::optional<double> getLongRSSI(void)
     {
         RecvWindow                  &recvw = *controller_->maybeGetReceiveWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
-        return recvw.long_rssi.getValue();
+        return recvw.long_rssi.value();
     }
 
 private:

@@ -53,7 +53,7 @@ void AutoGain::autoSoftGain0dBFS(float g, std::shared_ptr<IQBuf> buf)
         std::unique_lock<std::shared_mutex> lock(mutex_);
 
         g_0dBFS_estimate_.update(g*g_estimate);
-        g_0dBFS_.store(g_0dBFS_estimate_.getValue(), std::memory_order_relaxed);
+        g_0dBFS_.store(*g_0dBFS_estimate_, std::memory_order_relaxed);
     }
 
     logAMC(LOGDEBUG-1, "updated auto-gain %0.1f", (double) getSoftTXGain0dBFS());

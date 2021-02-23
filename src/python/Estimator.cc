@@ -11,14 +11,11 @@ void exportEstimator(py::module &m, const char *name)
 {
     py::class_<Estimator<T>, std::shared_ptr<Estimator<T>>>(m, name)
         .def_property_readonly("value",
-            &Estimator<T>::getValue,
+            &Estimator<T>::value,
             "The value of the estimator")
-        .def_property_readonly("nsamples",
-            &Estimator<T>::getNSamples,
+        .def_property_readonly("size",
+            &Estimator<T>::size,
             "The number of samples used in the estimate")
-        .def("reset",
-            &Estimator<T>::reset,
-            "Reset the estimate")
         .def("update",
             &Estimator<T>::update,
             "Update the estimate")
@@ -31,6 +28,9 @@ void exportMeanEstimator(py::module &m, const char *name)
     py::class_<Mean<T>, Estimator<T>, std::shared_ptr<Mean<T>>>(m, name)
         .def(py::init<>())
         .def(py::init<T>())
+        .def("reset",
+            &Mean<T>::reset,
+            "Reset the estimate")
         .def("remove",
             &Mean<T>::remove,
             "Remove a value used to estimate the mean")
@@ -45,6 +45,9 @@ void exportWindowedMeanEstimator(py::module &m, const char *name)
             &WindowedMean<T>::getWindowSize,
             &WindowedMean<T>::setWindowSize,
             "Number of samples in window")
+        .def("reset",
+            &WindowedMean<T>::reset,
+            "Reset the estimate")
         ;
 }
 
@@ -57,17 +60,30 @@ void exportTimeWindowEstimator(py::module &m, const char *name)
             &TimeWindowEstimator<Clock, T>::setTimeWindow,
             "The time window (sec)")
         .def_property_readonly("start",
-            [](TimeWindowEstimator<Clock, T> &self)
+            [](TimeWindowEstimator<Clock, T> &self) -> std::optional<double>
             {
-                return self.getTimeWindowStart().get_real_secs();
+                auto value = self.getTimeWindowStart();
+
+                if (value)
+                    return value->get_real_secs();
+                else
+                    return std::nullopt;
             },
             "The start of the time window (sec)")
         .def_property_readonly("end",
-            [](TimeWindowEstimator<Clock, T> &self)
+            [](TimeWindowEstimator<Clock, T> &self) -> std::optional<double>
             {
-                return self.getTimeWindowEnd().get_real_secs();
+                auto value = self.getTimeWindowEnd();
+
+                if (value)
+                    return value->get_real_secs();
+                else
+                    return std::nullopt;
             },
             "The end of the time window (sec)")
+        .def("reset",
+            &TimeWindowEstimator<Clock, T>::reset,
+            "Reset the estimate")
         ;
 }
 

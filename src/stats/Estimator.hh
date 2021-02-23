@@ -14,14 +14,20 @@ class Estimator {
 public:
     virtual ~Estimator() = default;
 
+    /** @brief Does the estimator have a value? */
+    virtual operator bool() const = 0;
+
     /** @brief Return the value of the estimator */
-    virtual T getValue(void) const = 0;
+    virtual T operator *() const = 0;
+
+    /** @brief Return the value of the estimator */
+    virtual std::optional<T> value(void) const = 0;
+
+    /** @brief Return the value of the estimator or a default */
+    virtual T value_or(T&& default_value) const = 0;
 
     /** @brief Return the number of samples used in the estimate */
-    virtual unsigned getNSamples(void) const = 0;
-
-    /** @brief Reset the estimator with an initial value */
-    virtual void reset(T x) = 0;
+    virtual size_t size(void) const = 0;
 
     /** @brief Update the estimator with a new value */
     virtual void update(T x) = 0;
@@ -43,17 +49,33 @@ public:
     {
     }
 
-    T getValue(void) const override
+    operator bool() const override
+    {
+        return true;
+    }
+
+    T operator *() const override
     {
         return value_;
     }
 
-    unsigned getNSamples(void) const override
+    std::optional<T> value(void) const override
+    {
+        return value_;
+    }
+
+    T value_or(T&& default_value) const override
+    {
+        return value_;
+    }
+
+    size_t size(void) const override
     {
         return nsamples_;
     }
 
-    void reset(T x) override
+    /** @brief Reset the estimator with an initial value */
+    void reset(T x)
     {
         value_ = x;
         nsamples_ = 0;
@@ -118,24 +140,41 @@ public:
         sum_ = 0;
     }
 
-    T getValue(void) const override
+    operator bool() const override
     {
-        if (i_ == 0 || window_.size() == 0)
-            return sum_;
-        else
-            return sum_/std::min(i_, window_.size());
+        return window_.size() != 0 && i_ >= window_.size();
     }
 
-    unsigned getNSamples(void) const override
+    T operator *() const override
+    {
+        return sum_/std::min(i_, window_.size());
+    }
+
+    std::optional<T> value(void) const override
+    {
+        if (window_.size() != 0 && i_ >= window_.size())
+            return sum_/std::min(i_, window_.size());
+        else
+            return std::nullopt;
+    }
+
+    T value_or(T&& default_value) const override
+    {
+        if (window_.size() != 0 && i_ >= window_.size())
+            return sum_/std::min(i_, window_.size());
+        else
+            return default_value;
+    }
+
+    size_t size(void) const override
     {
         return std::min(i_, window_.size());
     }
 
-    void reset(T x) override
+    void reset(void)
     {
         std::fill(window_.begin(), window_.end(), 0);
         i_ = 0;
-        sum_ = x;
     }
 
     void update(T x) override

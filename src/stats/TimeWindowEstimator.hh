@@ -35,29 +35,56 @@ public:
     }
 
     /** @brief Get start of window */
-    virtual typename Clock::time_point getTimeWindowStart() const
+    virtual std::optional<typename Clock::time_point> getTimeWindowStart() const
     {
         if (window_.size() == 0)
-            return typename Clock::time_point();
+            return std::nullopt;
         else
             return window_.begin()->first;
     }
 
     /** @brief Get end of window */
-    virtual typename Clock::time_point getTimeWindowEnd() const
+    virtual std::optional<typename Clock::time_point> getTimeWindowEnd() const
     {
         if (window_.size() == 0)
-            return typename Clock::time_point();
+            return std::nullopt;
         else
             return window_.rbegin()->first;
     }
 
-    virtual unsigned getNSamples(void) const override
+    virtual operator bool() const override
+    {
+        purge(Clock::now());
+
+        return window_.size() != 0;
+    }
+
+    virtual std::optional<T> value(void) const override
+    {
+        purge(Clock::now());
+
+        if (window_.size() == 0)
+            return std::nullopt;
+        else
+            return *this;
+    }
+
+    T value_or(T&& default_value) const override
+    {
+        purge(Clock::now());
+
+        if (window_.size() == 0)
+            return default_value;
+        else
+            return *this;
+    }
+
+    virtual size_t size(void) const override
     {
         return window_.size();
     }
 
-    virtual void reset(T x) override
+    virtual void reset()
     {
         window_.clear();
     }
@@ -76,6 +103,9 @@ protected:
 
     /** @brief Values in our window */
     mutable std::deque<entry> window_;
+
+    /** @brief Remove elements outside the time window */
+    virtual void purge(typename Clock::time_point t) const = 0;
 };
 
 /** @brief Compute mean over a time window */
@@ -93,19 +123,15 @@ public:
 
     virtual ~TimeWindowMean() = default;
 
-    virtual T getValue(void) const override
+    virtual T operator *() const override
     {
-        purge(Clock::now());
-        if (window_.size() == 0)
-            return std::numeric_limits<double>::quiet_NaN();
-        else
-            return sum_/static_cast<T>(window_.size());
+        return sum_/static_cast<T>(window_.size());
     }
 
-    virtual void reset(T x) override
+    virtual void reset(void) override
     {
-        TimeWindowEstimator<Clock, T>::reset(x);
-        sum_ = x;
+        TimeWindowEstimator<Clock, T>::reset();
+        sum_ = 0;
     }
 
     void update(typename Clock::time_point t, T x) override
@@ -120,8 +146,7 @@ protected:
     /** @brief Sum of values in our window */
     mutable T sum_;
 
-    /** @brief Remove elements outside the time window */
-    void purge(typename Clock::time_point t) const
+    void purge(typename Clock::time_point t) const override
     {
         // Pop first element of buffer as long as it falls before our window
         while (!window_.empty() && window_.front().first + twindow_ < t) {
@@ -147,9 +172,8 @@ public:
 
     virtual ~TimeWindowMeanRate() = default;
 
-    virtual T getValue(void) const override
+    virtual T operator *() const override
     {
-        purge(Clock::now());
         return sum_/twindow_;
     }
 };
@@ -169,20 +193,9 @@ public:
 
     virtual ~TimeWindowMin() = default;
 
-    virtual T getValue(void) const override
+    virtual T operator *() const override
     {
-        purge(Clock::now());
-
-        if (window_.size() == 0)
-            return std::numeric_limits<double>::quiet_NaN();
-        else
-            return min_;
-    }
-
-    virtual void reset(T x) override
-    {
-        TimeWindowEstimator<Clock, T>::reset(x);
-        min_ = x;
+        return min_;
     }
 
     void update(typename Clock::time_point t, T x) override
@@ -201,8 +214,7 @@ protected:
     /** @brief Minimum value in our window */
     mutable T min_;
 
-    /** @brief Remove elements outside the time window */
-    void purge(typename Clock::time_point t) const
+    void purge(typename Clock::time_point t) const override
     {
         bool recalc = false;
 
@@ -246,20 +258,9 @@ public:
 
     virtual ~TimeWindowMax() = default;
 
-    virtual T getValue(void) const override
+    virtual T operator *() const override
     {
-        purge(Clock::now());
-
-        if (window_.size() == 0)
-            return std::numeric_limits<double>::quiet_NaN();
-        else
-            return max_;
-    }
-
-    virtual void reset(T x) override
-    {
-        TimeWindowEstimator<Clock, T>::reset(x);
-        max_ = x;
+        return max_;
     }
 
     void update(typename Clock::time_point t, T x) override
@@ -278,8 +279,7 @@ protected:
     /** @brief Maximum value in our window */
     mutable T max_;
 
-    /** @brief Remove elements outside the time window */
-    void purge(typename Clock::time_point t) const
+    void purge(typename Clock::time_point t) const override
     {
         bool recalc = false;
 
