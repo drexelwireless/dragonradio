@@ -62,6 +62,13 @@ void SlottedMAC::reconfigure(void)
     }
 }
 
+void SlottedMAC::stop(void)
+{
+    done_ = true;
+
+    tx_slots_.stop();
+}
+
 void SlottedMAC::modulateSlot(slot_queue &q,
                               WallClock::time_point when,
                               size_t prev_overfill,
@@ -145,12 +152,13 @@ void SlottedMAC::txWorker(void)
     bool                  next_slot_start_of_burst = true;
 
     while (!done_) {
-        if (tx_slots_.size() == 0)
-            continue;
-
         // Get a slot
-        slot = std::move(tx_slots_.front());
-        tx_slots_.pop();
+        if (!tx_slots_.pop(slot)) {
+            if (done_)
+                return;
+
+            continue;
+        }
 
         // If the slot doesn't contain any IQ data to send, we're done
         if (slot->mpkts.empty()) {

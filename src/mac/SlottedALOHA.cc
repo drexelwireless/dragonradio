@@ -46,7 +46,7 @@ SlottedALOHA::~SlottedALOHA()
 
 void SlottedALOHA::stop(void)
 {
-    done_ = true;
+    SlottedMAC::stop();
 
     tx_records_cond_.notify_all();
 

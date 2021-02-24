@@ -9,10 +9,10 @@
 #include <optional>
 #include <queue>
 
-#include "ringbuffer.hh"
 #include "Clock.hh"
 #include "Logger.hh"
 #include "RadioNet.hh"
+#include "SafeQueue.hh"
 #include "USRP.hh"
 #include "phy/Channelizer.hh"
 #include "phy/PHY.hh"
@@ -85,13 +85,15 @@ public:
         reconfigure();
     }
 
-    virtual void reconfigure(void) override;
-
     /** @brief Is this MAC FDMA? */
     virtual bool isFDMA(void) const
     {
         return false;
     }
+
+    void reconfigure(void) override;
+
+    void stop(void) override;
 
 protected:
     using slot_queue = std::queue<std::shared_ptr<Slot>>;
@@ -118,7 +120,7 @@ protected:
     std::atomic<bool> stop_burst_;
 
     /** @brief Slots to transmit */
-    ringbuffer<std::shared_ptr<Slot>, 4> tx_slots_;
+    SafeQueue<std::shared_ptr<Slot>> tx_slots_;
 
     /** @brief Worker transmitting slots */
     void txWorker(void);
