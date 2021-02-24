@@ -11,7 +11,6 @@
 
 #include "barrier.hh"
 #include "ringbuffer.hh"
-#include "spinlock_mutex.hh"
 #include "Logger.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Polyphase.hh"
@@ -151,7 +150,7 @@ private:
     ringbuffer<std::shared_ptr<IQBuf>, LOGR> tdbufs_;
 
     /** @brief Mutex for demodulation state. */
-    spinlock_mutex demod_mutex_;
+    std::mutex demod_mutex_;
 
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<FDChannelDemodulator>> demods_;

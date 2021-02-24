@@ -10,8 +10,8 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
             Node &nexthop = (*radionet_)[pkt->hdr.nexthop];
 
             {
-                std::lock_guard<spinlock_mutex> lock(seqs_mutex_);
-                auto                            it = seqs_.find(nexthop.id);
+                std::lock_guard<std::mutex> lock(seqs_mutex_);
+                auto                        it = seqs_.find(nexthop.id);
 
                 if (it != seqs_.end())
                     pkt->hdr.seq = ++(it->second);

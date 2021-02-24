@@ -5,8 +5,8 @@
 #define QUEUE_HH_
 
 #include <functional>
+#include <mutex>
 
-#include "spinlock_mutex.hh"
 #include "Header.hh"
 #include "net/Element.hh"
 
@@ -73,7 +73,7 @@ public:
     /** @brief Set whether or not a node's send window is open */
     virtual void setSendWindowStatus(NodeId id, bool isOpen)
     {
-        std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
+        std::lock_guard<std::mutex> lock(send_window_status_mutex_);
 
         send_window_status_[id] = isOpen;
     }
@@ -86,7 +86,7 @@ public:
 
 protected:
     /** @brief Mutex protecting the send window status */
-    spinlock_mutex send_window_status_mutex_;
+    std::mutex send_window_status_mutex_;
 
     /** @brief Nodes' send window statuses */
     std::unordered_map<NodeId, bool> send_window_status_;
@@ -97,8 +97,8 @@ protected:
         if (pkt->hdr.nexthop == kNodeBroadcast || pkt->internal_flags.has_seq)
             return true;
 
-        std::lock_guard<spinlock_mutex> lock(send_window_status_mutex_);
-        auto                            it = send_window_status_.find(pkt->hdr.nexthop);
+        std::lock_guard<std::mutex> lock(send_window_status_mutex_);
+        auto                        it = send_window_status_.find(pkt->hdr.nexthop);
 
         if (it != send_window_status_.end())
             return it->second;

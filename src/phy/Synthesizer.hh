@@ -5,8 +5,8 @@
 #define SYNTHESIZER_H_
 
 #include <atomic>
+#include <mutex>
 
-#include "spinlock_mutex.hh"
 #include "Logger.hh"
 #include "RadioNet.hh"
 #include "mac/Schedule.hh"
@@ -39,7 +39,7 @@ public:
      */
     virtual void setTXRate(double rate)
     {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         tx_rate_ = rate;
         reconfigure();
@@ -54,7 +54,7 @@ public:
     /** @brief Set channels */
     virtual void setChannels(const Channels &channels)
     {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         channels_ = channels;
         reconfigure();
@@ -69,7 +69,7 @@ public:
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule &schedule)
     {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         schedule_ = schedule;
         reconfigure();
@@ -78,7 +78,7 @@ public:
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule::sched_type &schedule)
     {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         schedule_ = schedule;
         reconfigure();
@@ -98,7 +98,7 @@ protected:
     std::shared_ptr<PHY> phy_;
 
     /** @brief Mutex for synthesizer state. */
-    spinlock_mutex mutex_;
+    std::mutex mutex_;
 
     /** @brief TX sample rate */
     double tx_rate_;

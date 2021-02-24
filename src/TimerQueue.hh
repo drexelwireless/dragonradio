@@ -9,7 +9,6 @@
 #include <unordered_map>
 
 #include "heap.hh"
-#include "spinlock_mutex.hh"
 #include "Clock.hh"
 
 class TimerQueue
@@ -64,7 +63,7 @@ public:
 
 private:
     /** @brief Mutex protecting event queue. */
-    spinlock_mutex mutex_;
+    std::mutex mutex_;
 
     /** @brief Event queue. */
     heap<Timer> timer_queue_;

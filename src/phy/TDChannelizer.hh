@@ -13,7 +13,6 @@
 
 #include "barrier.hh"
 #include "ringbuffer.hh"
-#include "spinlock_mutex.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
@@ -104,7 +103,7 @@ private:
     std::condition_variable wake_cond_;
 
     /** @brief Mutex for demodulation state. */
-    spinlock_mutex demod_mutex_;
+    std::mutex demod_mutex_;
 
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<TDChannelDemodulator>> demods_;

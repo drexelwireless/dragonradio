@@ -11,7 +11,6 @@
 #include <list>
 #include <mutex>
 
-#include "spinlock_mutex.hh"
 #include "Logger.hh"
 #include "RadioPacketQueue.hh"
 #include "dsp/Polyphase.hh"

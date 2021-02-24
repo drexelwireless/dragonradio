@@ -112,7 +112,7 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
         // as a barrier. After this, no synthesizer will touch the slot, so we
         // are guaranteed exclusive access.
         {
-            std::lock_guard<spinlock_mutex> lock(slot->mutex);
+            std::lock_guard<std::mutex> lock(slot->mutex);
 
             slot->closed.store(true, std::memory_order_relaxed);
         }
@@ -192,7 +192,7 @@ void SlottedMAC::txWorker(void)
 
 void SlottedMAC::missedSlot(Slot &slot)
 {
-    std::lock_guard<spinlock_mutex> lock(slot.mutex);
+    std::lock_guard<std::mutex> lock(slot.mutex);
 
     // Close the slot
     slot.closed.store(true, std::memory_order_relaxed);

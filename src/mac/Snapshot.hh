@@ -6,8 +6,8 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 
-#include "spinlock_mutex.hh"
 #include "IQBuffer.hh"
 
 /** @brief A self transmission event within a snapshot. */
@@ -112,7 +112,7 @@ public:
 
 protected:
     /** @brief Mutex protecting access to the snapshot */
-    spinlock_mutex mutex_;
+    std::mutex mutex_;
 
     /** @brief The current snapshot */
     std::unique_ptr<Snapshot> snapshot_;

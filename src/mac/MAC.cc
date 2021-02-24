@@ -136,7 +136,7 @@ void MAC::txNotifier(void)
 
             // Record the record's load
             {
-                std::lock_guard<spinlock_mutex> lock(load_mutex_);
+                std::lock_guard<std::mutex> lock(load_mutex_);
 
                 for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
                     unsigned chanidx = (*it)->chanidx;

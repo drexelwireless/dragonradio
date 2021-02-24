@@ -50,7 +50,7 @@ void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 
 void FDChannelizer::reconfigure(void)
 {
-    std::lock_guard<spinlock_mutex> lock(demod_mutex_);
+    std::lock_guard<std::mutex> lock(demod_mutex_);
 
     // Tell workers we are reconfiguring
     reconfigure_.store(true, std::memory_order_release);
@@ -141,8 +141,8 @@ void FDChannelizer::fftWorker(void)
 
         // Make the frequency-domain buffer available to the individual channels
         {
-            std::lock_guard<spinlock_mutex> lock(demod_mutex_);
-            unsigned                        nchannels = channels_.size();
+            std::lock_guard<std::mutex> lock(demod_mutex_);
+            unsigned                    nchannels = channels_.size();
 
             for (unsigned i = 0; i < nchannels; ++i)
                 slots_[i].push({iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O)});

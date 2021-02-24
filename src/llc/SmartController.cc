@@ -29,7 +29,7 @@ void SendWindow::recordACK(const MonoClock::time_point &tx_time)
 
 void RecvWindow::operator()()
 {
-    std::lock_guard<spinlock_mutex> lock(this->mutex);
+    std::lock_guard<std::mutex> lock(this->mutex);
 
     if (timer_for_ack) {
         controller.ack(*this);
@@ -130,8 +130,8 @@ get_packet:
     RecvWindow *recvwptr = maybeGetReceiveWindow(nexthop);
 
     if (recvwptr) {
-        RecvWindow                      &recvw = *recvwptr;
-        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+        RecvWindow                  &recvw = *recvwptr;
+        std::lock_guard<std::mutex> lock(recvw.mutex);
 
         // The packet we are ACK'ing had better be no more than 1 more than the
         // max sequence number we've received.
@@ -164,9 +164,9 @@ get_packet:
 
     // Update our send window if this packet has data
     if (pkt->ehdr().data_len != 0) {
-        SendWindow                      &sendw = getSendWindow(nexthop);
-        Node                            &dest = (*radionet_)[nexthop];
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+        SendWindow                  &sendw = getSendWindow(nexthop);
+        Node                        &dest = (*radionet_)[nexthop];
+        std::lock_guard<std::mutex> lock(sendw.mutex);
 
         // It is possible that the send window shifts after we pull a packet
         // but before we get to this point. For example, an ACK could be
@@ -259,8 +259,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     NodeId prevhop = pkt->hdr.curhop;
 
     if (pkt->hdr.flags.has_data) {
-        RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
-        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+        RecvWindow                  &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
+        std::lock_guard<std::mutex> lock(recvw.mutex);
 
         // Update metrics. EVM and RSSI should be valid as long as the header is
         // valid.
@@ -296,8 +296,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         // valid. We won't create a receive window if we don't already have one
         // because this packet has no data payload.
         if (recvwptr) {
-            RecvWindow                      &recvw = *recvwptr;
-            std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+            RecvWindow                  &recvw = *recvwptr;
+            std::lock_guard<std::mutex> lock(recvw.mutex);
 
             recvw.long_evm.update(pkt->timestamp, pkt->evm);
             recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
@@ -334,10 +334,10 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     SendWindow *sendwptr = maybeGetSendWindow(prevhop);
 
     if (sendwptr) {
-        SendWindow                      &sendw = *sendwptr;
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
-        MonoClock::time_point           tfeedback = MonoClock::now() - selective_ack_feedback_delay_;
-        std::optional<Seq>              nak;
+        SendWindow                  &sendw = *sendwptr;
+        std::lock_guard<std::mutex> lock(sendw.mutex);
+        MonoClock::time_point       tfeedback = MonoClock::now() - selective_ack_feedback_delay_;
+        std::optional<Seq>          nak;
 
         // Handle any NAK
         nak = handleNAK(*pkt, sendw);
@@ -445,8 +445,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 #endif
 
     // Fill our receive window
-    RecvWindow                      &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
-    std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+    RecvWindow                  &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
+    std::lock_guard<std::mutex> lock(recvw.mutex);
 
     // If this is a SYN packet, ACK immediately to open up the window.
     //
@@ -526,8 +526,8 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
         NetPacket &pkt = *(*it)->pkt;
 
         if (pkt.hdr.nexthop != kNodeBroadcast && pkt.ehdr().data_len != 0) {
-            SendWindow                      &sendw = getSendWindow(pkt.hdr.nexthop);
-            std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+            SendWindow                  &sendw = getSendWindow(pkt.hdr.nexthop);
+            std::lock_guard<std::mutex> lock(sendw.mutex);
 
             // Start the retransmit timer if it is not already running.
             startRetransmissionTimer(sendw[pkt.hdr.seq]);
@@ -535,8 +535,8 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
 
         // Cancel the selective ACK timer when we actually have sent a selective ACK
         if (pkt.internal_flags.has_selective_ack) {
-            RecvWindow                      &recvw = *maybeGetReceiveWindow(pkt.hdr.nexthop);
-            std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+            RecvWindow                  &recvw = *maybeGetReceiveWindow(pkt.hdr.nexthop);
+            std::lock_guard<std::mutex> lock(recvw.mutex);
 
             timer_queue_.cancel(recvw);
         }
@@ -559,8 +559,8 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
 
 void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 {
-    SendWindow                      &sendw = entry.sendw;
-    std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+    SendWindow                  &sendw = entry.sendw;
+    std::lock_guard<std::mutex> lock(sendw.mutex);
 
     if (!entry.pkt) {
         logAMC(LOGDEBUG, "attempted to retransmit ACK'ed packet on timeout: node=%u",
@@ -745,11 +745,11 @@ void SmartController::broadcastHello(void)
 
 void SmartController::resetMCSTransitionProbabilities(void)
 {
-    std::lock_guard<spinlock_mutex> lock(send_mutex_);
+    std::lock_guard<std::mutex> lock(send_mutex_);
 
     for (auto it = send_.begin(); it != send_.end(); ++it) {
-        SendWindow                      &sendw = it->second;
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+        SendWindow                  &sendw = it->second;
+        std::lock_guard<std::mutex> lock(sendw.mutex);
 
         // Set all MCS transition probabilities to 1.0
         std::vector<double>&v = sendw.mcsidx_prob;
@@ -1599,8 +1599,8 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         if (pkt->hdr.nexthop == kNodeBroadcast)
             return true;
 
-        SendWindow                      &sendw = getSendWindow(pkt->hdr.nexthop);
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+        SendWindow                  &sendw = getSendWindow(pkt->hdr.nexthop);
+        std::lock_guard<std::mutex> lock(sendw.mutex);
 
         // If packet has no payload, we can always send it---it has control
         // information.
@@ -1674,8 +1674,8 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 
 SendWindow *SmartController::maybeGetSendWindow(NodeId node_id)
 {
-    std::lock_guard<spinlock_mutex> lock(send_mutex_);
-    auto                            it = send_.find(node_id);
+    std::lock_guard<std::mutex> lock(send_mutex_);
+    auto                        it = send_.find(node_id);
 
     if (it != send_.end())
         return &(it->second);
@@ -1685,8 +1685,8 @@ SendWindow *SmartController::maybeGetSendWindow(NodeId node_id)
 
 SendWindow &SmartController::getSendWindow(NodeId node_id)
 {
-    std::lock_guard<spinlock_mutex> lock(send_mutex_);
-    auto                            it = send_.find(node_id);
+    std::lock_guard<std::mutex> lock(send_mutex_);
+    auto                        it = send_.find(node_id);
 
     if (it != send_.end())
         return it->second;
@@ -1709,8 +1709,8 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
 
 RecvWindow *SmartController::maybeGetReceiveWindow(NodeId node_id)
 {
-    std::lock_guard<spinlock_mutex> lock(recv_mutex_);
-    auto                            it = recv_.find(node_id);
+    std::lock_guard<std::mutex> lock(recv_mutex_);
+    auto                        it = recv_.find(node_id);
 
     if (it != recv_.end())
         return &(it->second);
@@ -1720,8 +1720,8 @@ RecvWindow *SmartController::maybeGetReceiveWindow(NodeId node_id)
 
 RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSYN)
 {
-    std::lock_guard<spinlock_mutex> lock(recv_mutex_);
-    auto                            it = recv_.find(node_id);
+    std::lock_guard<std::mutex> lock(recv_mutex_);
+    auto                        it = recv_.find(node_id);
 
     // XXX If we have a receive window for this source use it. The exception is
     // when we either see a SYN packet or a sequence number that is outside the
@@ -1731,8 +1731,8 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
     // not happen because the sender will only open up its window if it has seen
     // its SYN packet ACK'ed.
     if (it != recv_.end()) {
-        RecvWindow                      &recvw = it->second;
-        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+        RecvWindow                  &recvw = it->second;
+        std::lock_guard<std::mutex> lock(recvw.mutex);
 
         if (!isSYN || (seq >= recvw.max - recvw.win && seq < recvw.ack + recvw.win))
             return recvw;

@@ -12,7 +12,6 @@
 #include <random>
 
 #include "heap.hh"
-#include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "TimerQueue.hh"
 #include "llc/Controller.hh"
@@ -127,7 +126,7 @@ struct SendWindow {
     SmartController &controller;
 
     /** @brief Mutex for the send window */
-    spinlock_mutex mutex;
+    std::mutex mutex;
 
     /** @brief Current sequence number for this destination */
     Seq seq;
@@ -272,7 +271,7 @@ struct RecvWindow : public TimerQueue::Timer  {
     SmartController &controller;
 
     /** @brief Mutex for the receive window */
-    spinlock_mutex mutex;
+    std::mutex mutex;
 
     /** @brief Next sequence number we should ACK. */
     /** We have received (or given up) on all packets with sequence numbers <
@@ -549,11 +548,11 @@ public:
     {
         ack_delay_estimation_window_ = t;
 
-        std::lock_guard<spinlock_mutex> lock(send_mutex_);
+        std::lock_guard<std::mutex> lock(send_mutex_);
 
         for (auto &&it : send_) {
-            SendWindow                      &sendw = it.second;
-            std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+            SendWindow                  &sendw = it.second;
+            std::lock_guard<std::mutex> lock(sendw.mutex);
 
             sendw.ack_delay.setTimeWindow(t);
         }
@@ -778,13 +777,13 @@ protected:
     Seq::uint_type recvwin_;
 
     /** @brief Mutex for the send windows */
-    spinlock_mutex send_mutex_;
+    std::mutex send_mutex_;
 
     /** @brief Send windows */
     std::map<NodeId, SendWindow> send_;
 
     /** @brief Mutex for the receive windows */
-    spinlock_mutex recv_mutex_;
+    std::mutex recv_mutex_;
 
     /** @brief Receive windows */
     std::map<NodeId, RecvWindow> recv_;
@@ -1024,24 +1023,24 @@ public:
 
     double getShortPER(void)
     {
-        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<std::mutex> lock(sendw.mutex);
 
         return sendw.short_per.getValue();
     }
 
     double getLongPER(void)
     {
-        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<std::mutex> lock(sendw.mutex);
 
         return sendw.long_per.getValue();
     }
 
     std::optional<double> getLongEVM(void)
     {
-        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<std::mutex> lock(sendw.mutex);
 
         if (sendw.long_evm)
             return *sendw.long_evm;
@@ -1051,8 +1050,8 @@ public:
 
     std::optional<double> getLongRSSI(void)
     {
-        SendWindow                      &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<spinlock_mutex> lock(sendw.mutex);
+        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<std::mutex> lock(sendw.mutex);
 
         if (sendw.long_rssi)
             return *sendw.long_rssi;
@@ -1105,16 +1104,16 @@ public:
 
     double getLongEVM(void)
     {
-        RecvWindow                      &recvw = *controller_->maybeGetReceiveWindow(node_id_);
-        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+        RecvWindow                  &recvw = *controller_->maybeGetReceiveWindow(node_id_);
+        std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.long_evm.getValue();
     }
 
     double getLongRSSI(void)
     {
-        RecvWindow                      &recvw = *controller_->maybeGetReceiveWindow(node_id_);
-        std::lock_guard<spinlock_mutex> lock(recvw.mutex);
+        RecvWindow                  &recvw = *controller_->maybeGetReceiveWindow(node_id_);
+        std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.long_rssi.getValue();
     }

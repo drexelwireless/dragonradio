@@ -5,11 +5,11 @@
 #define SLOTTEDMAC_H_
 
 #include <atomic>
+#include <mutex>
 #include <optional>
 #include <queue>
 
 #include "ringbuffer.hh"
-#include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "Logger.hh"
 #include "RadioNet.hh"

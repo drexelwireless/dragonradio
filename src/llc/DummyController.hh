@@ -4,9 +4,9 @@
 #ifndef DUMMYCONTROLLER_H_
 #define DUMMYCONTROLLER_H_
 
+#include <mutex>
 #include <unordered_map>
 
-#include "spinlock_mutex.hh"
 #include "llc/Controller.hh"
 
 /** @brief A Dummy MAC controller that just passes packets. */
@@ -27,7 +27,7 @@ public:
 
 private:
     /** @brief Mutex for sequence numbers */
-    spinlock_mutex seqs_mutex_;
+    std::mutex seqs_mutex_;
 
     /** @brief Receive windows */
     std::unordered_map<NodeId, Seq> seqs_;

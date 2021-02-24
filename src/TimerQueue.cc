@@ -22,7 +22,7 @@ void TimerQueue::run_in(Timer &t, const double &delta)
 
 void TimerQueue::run_at(Timer &t, const time_type &when)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     t.deadline = when;
 
@@ -39,14 +39,14 @@ void TimerQueue::run_at(Timer &t, const time_type &when)
 
 bool TimerQueue::running(const Timer& t)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     return t.in_heap();
 }
 
 void TimerQueue::cancel(Timer &t)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     if (t.in_heap())
         timer_queue_.remove(t);
@@ -56,7 +56,7 @@ void TimerQueue::run(void)
 {
     time_type now = MonoClock::now();
 
-    std::unique_lock<spinlock_mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     while (!timer_queue_.empty() && (timer_queue_.top().deadline < now)) {
         Timer &t = timer_queue_.top();
@@ -98,7 +98,7 @@ void TimerQueue::timer_worker(void)
         time_type now = MonoClock::now();
 
         // Run all pending timers
-        std::unique_lock<spinlock_mutex> lock(mutex_);
+        std::unique_lock<std::mutex> lock(mutex_);
 
         while (!timer_queue_.empty() && (timer_queue_.top().deadline < now)) {
             Timer &t = timer_queue_.top();

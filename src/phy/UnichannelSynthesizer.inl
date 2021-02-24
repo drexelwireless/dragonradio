@@ -89,7 +89,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
 
         // Reconfigure if necessary
         if (reconfig.load(std::memory_order_acquire)) {
-            std::lock_guard<spinlock_mutex> lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
 
             // Make local copies to ensure thread safety
             channels = channels_;
@@ -143,7 +143,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
         bool overfill = getSuperslots() && slots[(slot->slotidx + 1) % slots.size()];
 
         if (overfill) {
-            std::lock_guard<spinlock_mutex> lock(slot->mutex);
+            std::lock_guard<std::mutex> lock(slot->mutex);
 
             slot->max_samples = slot->full_slot_samples;
         }
@@ -171,7 +171,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             mod->modulate(std::move(pkt), g, *mpkt);
 
             {
-                std::lock_guard<spinlock_mutex> lock(slot->mutex);
+                std::lock_guard<std::mutex> lock(slot->mutex);
 
                 pushed = slot->push(mpkt, overfill);
             }

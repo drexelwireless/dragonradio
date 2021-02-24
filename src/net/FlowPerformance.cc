@@ -35,14 +35,14 @@ void FlowPerformance::setMandates(const MandateMap &mandates)
 {
     // Set mandates
     {
-        std::lock_guard<spinlock_mutex> lock(mandates_mutex_);
+        std::lock_guard<std::mutex> lock(mandates_mutex_);
 
         mandates_ = mandates;
     }
 
     // Update source mandates
     {
-        std::lock_guard<spinlock_mutex> lock(sources_mutex_);
+        std::lock_guard<std::mutex> lock(sources_mutex_);
 
         for (auto mandate = mandates.begin(); mandate != mandates.end(); ++mandate) {
             auto it = sources_.find(mandate->first);
@@ -54,7 +54,7 @@ void FlowPerformance::setMandates(const MandateMap &mandates)
 
     // Update sink mandates
     {
-        std::lock_guard<spinlock_mutex> lock(sinks_mutex_);
+        std::lock_guard<std::mutex> lock(sinks_mutex_);
 
         for (auto mandate = mandates.begin(); mandate != mandates.end(); ++mandate) {
             auto it = sinks_.find(mandate->first);
@@ -71,8 +71,8 @@ void FlowPerformance::netPush(std::shared_ptr<NetPacket> &&pkt)
     pkt->initMGENInfo();
 
     if (pkt->flow_uid) {
-        std::lock_guard<spinlock_mutex> lock(sources_mutex_);
-        FlowStats                       &stats = findFlow(sources_, *pkt);
+        std::lock_guard<std::mutex> lock(sources_mutex_);
+        FlowStats                   &stats = findFlow(sources_, *pkt);
 
         // Record sent MGEN packet
         const struct mgenhdr *mgenhdr = pkt->getMGENHdr();
@@ -131,11 +131,11 @@ void FlowPerformance::radioPush(std::shared_ptr<RadioPacket> &&pkt)
         const struct mgenhdr *mgenhdr = pkt->getMGENHdr();
 
         if (mgenhdr) {
-            std::lock_guard<spinlock_mutex> lock(sinks_mutex_);
-            FlowStats                       &stats = findFlow(sinks_, *pkt);
-            WallClock::time_point           ts_epoch = mgenhdr->getTimestamp();
-            double                          ts = ts_epoch.get_real_secs();
-            double                          latency = (WallClock::now() - ts_epoch).get_real_secs();
+            std::lock_guard<std::mutex> lock(sinks_mutex_);
+            FlowStats                   &stats = findFlow(sinks_, *pkt);
+            WallClock::time_point       ts_epoch = mgenhdr->getTimestamp();
+            double                      ts = ts_epoch.get_real_secs();
+            double                      latency = (WallClock::now() - ts_epoch).get_real_secs();
 
             if (start_ && ts > *start_) {
                 unsigned mp = (ts - *start_) / mp_;
@@ -164,7 +164,7 @@ void FlowPerformance::radioPush(std::shared_ptr<RadioPacket> &&pkt)
 }
 
 FlowStatsMap FlowPerformance::getFlowStatsMap(FlowStatsMap &stats,
-                                              spinlock_mutex &mutex,
+                                              std::mutex &mutex,
                                               bool reset)
 {
     // Get current MP
@@ -174,7 +174,7 @@ FlowStatsMap FlowPerformance::getFlowStatsMap(FlowStatsMap &stats,
     FlowStatsMap result;
 
     {
-        std::lock_guard<spinlock_mutex> lock(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
 
         // Expand stats to include current MP
         for (auto it = stats.begin(); it != stats.end(); ++it)
@@ -207,8 +207,8 @@ FlowStats &FlowPerformance::findFlow(FlowStatsMap &stats, Packet &pkt)
 
     // If we inserted a new flow, add its mandated latency
     if (it.second) {
-        std::lock_guard<spinlock_mutex> lock(mandates_mutex_);
-        auto                            mandate = mandates_.find(flow_uid);
+        std::lock_guard<std::mutex> lock(mandates_mutex_);
+        auto                        mandate = mandates_.find(flow_uid);
 
         if (mandate != mandates_.end())
             flow.setMandate(mandate->second);
