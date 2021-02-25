@@ -179,16 +179,16 @@ void exportControllers(py::module &m)
     // Export class SendWindowsProxy to Python
     py::class_<SendWindowProxy, std::unique_ptr<SendWindowProxy>>(m, "SendWindow")
         .def_property_readonly("short_per",
-            [](SendWindowProxy &proxy) { return proxy.getShortPER(); },
+            &SendWindowProxy::getShortPER,
             "Short-term packet error rate (unitless)")
         .def_property_readonly("long_per",
-            [](SendWindowProxy &proxy) { return proxy.getLongPER(); },
+            &SendWindowProxy::getLongPER,
             "Long-term packet error rate (unitless)")
         .def_property_readonly("long_evm",
-            [](SendWindowProxy &proxy) { return proxy.getLongEVM(); },
+            &SendWindowProxy::getLongEVM,
             "Long-term EVM (dB)")
         .def_property_readonly("long_rssi",
-            [](SendWindowProxy &proxy) { return proxy.getLongRSSI(); },
+            &SendWindowProxy::getLongRSSI,
             "Long-term RSSI (dB)")
         ;
 
@@ -208,10 +208,10 @@ void exportControllers(py::module &m)
     // Export class ReceiveWindowProxy to Python
     py::class_<ReceiveWindowProxy, std::unique_ptr<ReceiveWindowProxy>>(m, "ReceiveWindow")
         .def_property_readonly("long_evm",
-            [](ReceiveWindowProxy &proxy) { return proxy.getLongEVM(); },
+            &ReceiveWindowProxy::getLongEVM,
             "Long-term EVM (dB)")
         .def_property_readonly("long_rssi",
-            [](ReceiveWindowProxy &proxy) { return proxy.getLongRSSI(); },
+            &ReceiveWindowProxy::getLongRSSI,
             "Long-term RSSI (dB)")
         ;
 
