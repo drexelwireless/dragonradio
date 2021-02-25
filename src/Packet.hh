@@ -49,12 +49,16 @@ struct Time {
     }
 };
 
+/** @brief Timestamp sequence number */
+using TimestampSeq = uint16_t;
+
 /** @brief A Control message */
 struct ControlMsg {
     enum Type {
         kHello,
         kTimestamp,
-        kTimestampEcho,
+        kTimestampSent,
+        kTimestampRecv,
         kReceiverStats,
         kNak,
         kSelectiveAck,
@@ -67,15 +71,22 @@ struct ControlMsg {
     };
 
     struct Timestamp {
-        /** @brief Transmission time of this packet at the transmitter */
-        Time t_sent;
+        /** @brief Timestamp sequence of transmitted packet */
+        TimestampSeq tseq;
     };
 
-    struct TimestampEcho {
+    struct TimestampSent {
+        /** @brief Timestamp sequence of transmitted packet */
+        TimestampSeq tseq;
+        /** @brief Sent packet's timestamp */
+        Time t_sent;
+    } PACKED;
+
+    struct TimestampRecv {
         /** @brief Node ID of original timestamp transmitter */
         NodeId node;
-        /** @brief Transmitter's timestamp on sent packet */
-        Time t_sent;
+        /** @brief Timestamp sequence of transmitted packet */
+        TimestampSeq tseq;
         /** @brief Receiver's timestamp of packet */
         Time t_recv;
     } PACKED;
@@ -105,7 +116,8 @@ struct ControlMsg {
     union {
         Hello hello;
         Timestamp timestamp;
-        TimestampEcho timestamp_echo;
+        TimestampSent timestamp_sent;
+        TimestampRecv timestamp_recv;
         ReceiverStats receiver_stats;
         Nak nak;
         SelectiveAck ack;
@@ -219,9 +231,6 @@ struct Packet : public buffer<unsigned char>
 
         /** @brief Set if the packet contains a selective ACK */
         uint8_t has_selective_ack : 1;
-
-        /** @brief Set if this packet should be timestamped */
-        uint8_t timestamp : 1;
     } internal_flags;
 
     /** @brief Get extended header */
@@ -278,18 +287,13 @@ struct Packet : public buffer<unsigned char>
     /** @brief Append a Hello control message to a packet */
     void appendHello(const ControlMsg::Hello &hello);
 
-    /** @brief Append a Timestamp control message to a packet */
-    void appendTimestamp(const MonoClock::time_point &t_sent);
+    /** @brief Append a Timestamp Sent control message to a packet */
+    void appendTimestampSent(TimestampSeq tseq,
+                             const MonoClock::time_point &t_recv);
 
-    /** @brief Remove a Timestamp control message from the end of a packet */
-    void removeTimestamp(void)
-    {
-        removeLastControl(ControlMsg::Type::kTimestamp);
-    }
-
-    /** @brief Append a Timestamp Echo control message to a packet */
-    void appendTimestampEcho(NodeId node_id,
-                             const MonoClock::time_point &t_sent,
+    /** @brief Append a Timestamp Received control message to a packet */
+    void appendTimestampRecv(NodeId node_id,
+                             TimestampSeq tseq,
                              const MonoClock::time_point &t_recv);
 
     /** @brief Append receiver statistics control message to a packet */
@@ -489,6 +493,9 @@ struct NetPacket : public Packet
     /** @brief Measurement period to which this packet belongs. */
     std::optional<unsigned> mp;
 
+    /** @brief Packet timestamp */
+    std::optional<TimestampSeq> timestamp_seq;
+
     /** @brief Return true if the packet's deadline has passed, false otherwise */
     bool deadlinePassed(const MonoClock::time_point &now)
     {
@@ -500,6 +507,9 @@ struct NetPacket : public Packet
     {
         return !hdr.flags.syn && deadlinePassed(now);
     }
+
+    /** @brief Append a Timestamp control message to a packet */
+    void appendTimestamp(TimestampSeq tseq);
 };
 
 /** @brief A packet received from the radio. */
@@ -540,8 +550,11 @@ constexpr size_t ctrlsize(uint8_t ty)
         case ControlMsg::kTimestamp:
             return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);
 
-        case ControlMsg::kTimestampEcho:
-            return offsetof(ControlMsg, timestamp_echo) + sizeof(ControlMsg::TimestampEcho);
+        case ControlMsg::kTimestampSent:
+            return offsetof(ControlMsg, timestamp_sent) + sizeof(ControlMsg::TimestampSent);
+
+        case ControlMsg::kTimestampRecv:
+            return offsetof(ControlMsg, timestamp_recv) + sizeof(ControlMsg::TimestampRecv);
 
         case ControlMsg::kReceiverStats:
             return offsetof(ControlMsg, receiver_stats) + sizeof(ControlMsg::ReceiverStats);
@@ -561,8 +574,9 @@ constexpr size_t ctrlsize(uint8_t ty)
 }
 
 static_assert(ctrlsize(ControlMsg::kHello) == 2);
-static_assert(ctrlsize(ControlMsg::kTimestamp) == 17);
-static_assert(ctrlsize(ControlMsg::kTimestampEcho) == 34);
+static_assert(ctrlsize(ControlMsg::kTimestamp) == 3);
+static_assert(ctrlsize(ControlMsg::kTimestampSent) == 19);
+static_assert(ctrlsize(ControlMsg::kTimestampRecv) == 20);
 static_assert(ctrlsize(ControlMsg::kReceiverStats) == 17);
 static_assert(ctrlsize(ControlMsg::kNak) == 3);
 static_assert(ctrlsize(ControlMsg::kSelectiveAck) == 5);

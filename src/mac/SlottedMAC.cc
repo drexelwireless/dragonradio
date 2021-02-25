@@ -183,7 +183,7 @@ void SlottedMAC::txWorker(void)
         {
             std::lock_guard<std::mutex> lock(tx_records_mutex_);
 
-            tx_records_.emplace(TXRecord { slot->deadline, slot->deadline_delay, slot->nsamples, std::move(slot->iqbufs), std::move(slot->mpkts) });
+            tx_records_.emplace(TXRecord { WallClock::to_mono_time(slot->deadline), slot->deadline_delay, slot->nsamples, std::move(slot->iqbufs), std::move(slot->mpkts) });
         }
 
         tx_records_cond_.notify_one();
@@ -198,12 +198,8 @@ void SlottedMAC::missedSlot(Slot &slot)
     slot.closed.store(true, std::memory_order_relaxed);
 
     // Re-queue packets that were modulated for this slot
-    for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
-        if ((*it)->pkt->internal_flags.timestamp)
-            (*it)->pkt->removeTimestamp();
-
+    for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it)
         controller_->missed(std::move((*it)->pkt));
-    }
 }
 
 void SlottedMAC::missedRemainingSlots(slot_queue &q)

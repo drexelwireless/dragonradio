@@ -287,16 +287,8 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
                 std::lock_guard<spinlock_mutex> lock(mod.mutex);
 
-                // If this is a timestamped packet, timestamp it. In any case,
-                // modulate it.
+                // Modulate the packet
                 if (!mpkt->pkt) {
-                    MonoClock::time_point timestamp = WallClock::to_mono_time(slot->deadline) + (slot->deadline_delay + mod.nsamples - mod.delay)/tx_rate_copy_;
-
-                    pkt->timestamp = timestamp;
-
-                    if (pkt->internal_flags.timestamp)
-                        pkt->appendTimestamp(timestamp);
-
                     float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain()*g_multichan_;
 
                     mod.modulate(std::move(pkt), g, *mpkt);
@@ -361,15 +353,11 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                     }
                 }
 
-                // If we couldn't add the packet to the slot and it is a timestamped
-                // packet, we need to strip it of its (now-inaccurate) timestamp and
-                // re-modulate it when we get a slot for it.
+                // If we didn't successfully push the packet, we are done with
+                // this slot and will attempt to add the packet to th next slot.
                 if (!pushed) {
-                    if (mpkt->pkt->internal_flags.timestamp) {
-                        pkt = std::move(mpkt->pkt);
-                        pkt->removeTimestamp();
-                        mpkt.reset();
-                    }
+                    pkt = std::move(mpkt->pkt);
+                    mpkt.reset();
                     break;
                 }
             }

@@ -165,34 +165,20 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             std::unique_ptr<ModPacket> mpkt = std::make_unique<ModPacket>();
             bool                       pushed;
 
-            /* If the packet requires a timestamp, we must acquire the slot's
-             * mutex before modulation to ensure slot->nsamples doesn't change
-             * out from under us.
-             */
+            // Modulate the packet
             float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
-            if (pkt->internal_flags.timestamp) {
-                std::lock_guard<spinlock_mutex> lock(slot->mutex);
+            mod->modulate(std::move(pkt), g, *mpkt);
 
-                pkt->appendTimestamp(WallClock::to_mono_time(slot->deadline) + (slot->deadline_delay + slot->nsamples)/tx_rate_);
-
-                mod->modulate(std::move(pkt), g, *mpkt);
-
-                pushed = slot->push(mpkt, overfill);
-            } else {
-                mod->modulate(std::move(pkt), g, *mpkt);
-
+            {
                 std::lock_guard<spinlock_mutex> lock(slot->mutex);
 
                 pushed = slot->push(mpkt, overfill);
             }
 
-            if (!pushed) {
+            // If we didn't successfully push the packet, try again next time
+            if (!pushed)
                 pkt = std::move(mpkt->pkt);
-
-                if (pkt->internal_flags.timestamp)
-                    pkt->removeTimestamp();
-            }
         }
 
         // Remember previous slot so we can wait for a new slot before

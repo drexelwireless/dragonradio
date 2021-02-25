@@ -55,6 +55,20 @@ void exportRadioNet(py::module &m)
         .def_readonly("mcsidx",
             &Node::mcsidx,
             "MCS index")
+        .def_property_readonly("timestamps_sent",
+            [](Node &node) {
+                std::lock_guard<std::mutex> lock(node.timestamps_mutex);
+
+                return node.timestamps_sent;
+            },
+            "Timestamps sent by this node")
+        .def_property_readonly("timestamps_recv",
+            [](Node &node) {
+                std::lock_guard<std::mutex> lock(node.timestamps_mutex);
+
+                return node.timestamps_recv;
+            },
+            "Timestamps received by this node")
         .def_property_readonly("timestamps",
             [](Node &node) {
                 std::lock_guard<std::mutex> lock(node.timestamps_mutex);

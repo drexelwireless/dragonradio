@@ -31,6 +31,26 @@ public:
     FDMA& operator=(const FDMA&) = delete;
     FDMA& operator=(FDMA&&) = delete;
 
+    bool getAccurateTXTimestamps(void) const
+    {
+        return accurate_tx_timestamps_;
+    }
+
+    void setAccurateTXTimestamps(bool accurate)
+    {
+        accurate_tx_timestamps_ = accurate;
+    }
+
+    double getTimedTXDelay(void) const
+    {
+        return timed_tx_delay_;
+    }
+
+    void setTimedTXDelay(double t)
+    {
+        timed_tx_delay_ = t;
+    }
+
     /** @brief Stop processing packets */
     void stop(void) override;
 
@@ -39,6 +59,13 @@ public:
 private:
     /** @brief Amount of data to pre-modulate (sec) */
     double premod_;
+
+    /** @brief Provide more accurate TX timestamps */
+    /** Providing more accurate TX timestamps may increase latency. */
+    bool accurate_tx_timestamps_;
+
+    /** @brief Delay for timed TX (sec) */
+    double timed_tx_delay_;
 
     /** @brief Out channel synthesizer */
     std::shared_ptr<ChannelSynthesizer> channel_synthesizer_;

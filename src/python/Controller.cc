@@ -156,9 +156,6 @@ void exportControllers(py::module &m)
             &SmartController::getDecreaseRetransMCSIdx,
             &SmartController::setDecreaseRetransMCSIdx,
             "Should we decrease the MCS index of retransmitted packets with a deadline?")
-        .def_property_readonly("echoed_timestamps",
-            &SmartController::getEchoedTimestamps,
-            "Our timestamps echoed by the time master")
         .def_property_readonly("send",
             [](std::shared_ptr<SmartController> controller) -> std::unique_ptr<SendWindowsProxy>
             {

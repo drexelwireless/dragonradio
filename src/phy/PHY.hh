@@ -24,9 +24,7 @@ struct ModPacket
     /** @brief Channel */
     Channel channel;
 
-    /** @brief Offset of start of packet from start of slot, in number of
-     * samples.
-     */
+    /** @brief Offset of start of packet from beginning of TX record */
     size_t start;
 
     /** @brief Offset of start of packet from beginning of sample buffer */

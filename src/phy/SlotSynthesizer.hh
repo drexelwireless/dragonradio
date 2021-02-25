@@ -107,11 +107,10 @@ public:
             if (closed.load(std::memory_order_acquire))
                 return false;
 
-            size_t n = mpkt->samples->size() - mpkt->samples->delay;
+            size_t n = mpkt->nsamples;
 
             if (nsamples + n <= delay + max_samples || (nsamples < delay + max_samples && overfill)) {
                 mpkt->start = deadline_delay + nsamples;
-                mpkt->nsamples = n;
 
                 iqbufs.emplace_back(mpkt->samples);
                 mpkts.emplace_back(std::move(mpkt));

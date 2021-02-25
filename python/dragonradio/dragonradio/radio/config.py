@@ -198,6 +198,10 @@ class Config:
         """Probability of transmission in a given slot for ALOHA"""
         self.superslots = False
         """True if slots should be combined into superslots"""
+        self.mac_accurate_tx_timestamps = False
+        """True if MAC should provide more accurate TX timestamps at a potential performance cost"""
+        self.mac_timed_tx_delay = 500e-6
+        """Delay for timed TX"""
         self.neighbor_discovery_period = 12
         """Neighbor discovery period at radio startup (sec)"""
 
@@ -716,6 +720,14 @@ class Config:
         mac.add_argument('--superslots', action='store_const', const=True,
                          dest='superslots',
                          help='use TDMA superslots')
+
+        mac.add_argument('--accurate-mac-tx-timestamps', action='store_const', const=True,
+                         dest='mac_accurate_tx_timestamps',
+                         help='provide more accurate TX timestamps at a potential performance cost')
+        mac.add_argument('--mac-timed-tx-delay', action='store', type=float,
+                         dest='mac_timed_tx_delay',
+                         metavar='SEC',
+                         help='delay for timed TX (sec)')
 
         # ARQ options
         arq = parser.add_argument_group('ARQ')
