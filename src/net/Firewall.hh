@@ -17,7 +17,6 @@
 #include <unordered_set>
 
 #include "logging.hh"
-#include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "Packet.hh"
 #include "cil/CIL.hh"
@@ -65,7 +64,7 @@ public:
     /** @brief Get allowed ports */
     Set getAllowedPorts(void)
     {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         return allowed_;
     }
@@ -73,14 +72,14 @@ public:
     /** @brief Set allowed ports */
     void setAllowedPorts(const Set &allowed)
     {
-        std::lock_guard<spinlock_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         allowed_ = allowed;
     }
 
 protected:
     /** @brief Mutex for ports */
-    spinlock_mutex mutex_;
+    std::mutex mutex_;
 
     /** @brief Is the fireweall enabled? */
     bool enabled_;
@@ -106,8 +105,8 @@ protected:
             return true;
 
         // Then look at the port
-        std::lock_guard<spinlock_mutex> lock(mutex_);
-        const struct ip                 *iph = pkt->getIPHdr();
+        std::lock_guard<std::mutex> lock(mutex_);
+        const struct ip             *iph = pkt->getIPHdr();
 
         if (!iph)
             return true;

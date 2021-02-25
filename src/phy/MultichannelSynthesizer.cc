@@ -58,7 +58,7 @@ void MultichannelSynthesizer::finalize(Slot &slot)
 
         // Skip this channel if we're not allowed to modulate
         if (slots[slot.slotidx]) {
-            std::lock_guard<spinlock_mutex> lock(mods_[channelidx]->mutex);
+            std::lock_guard<std::mutex> lock(mods_[channelidx]->mutex);
 
             mods_[channelidx]->flush(slot);
         }
@@ -102,7 +102,7 @@ void MultichannelSynthesizer::stop(void)
 
 void MultichannelSynthesizer::reconfigure(void)
 {
-    std::lock_guard<spinlock_mutex> lock(mods_mutex_);
+    std::lock_guard<std::mutex> lock(mods_mutex_);
 
     // Tell workers we are reconfiguring
     reconfigure_.store(true, std::memory_order_release);
@@ -214,7 +214,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
         // Get the frequency-domain buffer for the slot, creating it if it does
         // not yet exist
         {
-            std::lock_guard<spinlock_mutex> lock(slot->mutex);
+            std::lock_guard<std::mutex> lock(slot->mutex);
 
             // We allocate (and zero) a frequency-domain buffer for everyone to
             // use if we are the first to get access to this slot.
@@ -242,14 +242,14 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
             bool overfill = getSuperslots() && slots[(slot->slotidx + 1) % slots.size()];
 
             {
-                std::lock_guard<spinlock_mutex> lock(slot->mutex);
+                std::lock_guard<std::mutex> lock(slot->mutex);
 
                 if (overfill)
                     slot->max_samples = slot->full_slot_samples;
             }
 
             {
-                std::lock_guard<spinlock_mutex> lock(mod.mutex);
+                std::lock_guard<std::mutex> lock(mod.mutex);
 
                 // Modulate into a new slot
                 mod.nextSlot(prev_slot.get(), *slot, overfill);
@@ -285,7 +285,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 if (slot->closed.load(std::memory_order_relaxed))
                     break;
 
-                std::lock_guard<spinlock_mutex> lock(mod.mutex);
+                std::lock_guard<std::mutex> lock(mod.mutex);
 
                 // Modulate the packet
                 if (!mpkt->pkt) {
@@ -307,7 +307,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                     size_t n = mod.upsample();
 
                     {
-                        std::lock_guard<spinlock_mutex> lock(slot->mutex);
+                        std::lock_guard<std::mutex> lock(slot->mutex);
 
                         if (!slot->closed.load(std::memory_order_acquire)) {
                             // Set modulated packet's start and number of
@@ -366,7 +366,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
         // We are done with this slot. Finalize it if everyone else has finished
         // too.
         if (slot->nfinished.fetch_add(std::memory_order_relaxed) == nthreads_ - 1) {
-            std::lock_guard<spinlock_mutex> lock(slot->mutex);
+            std::lock_guard<std::mutex> lock(slot->mutex);
 
             if (!slot->closed.load(std::memory_order_acquire))
                 finalize(*slot);

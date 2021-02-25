@@ -8,7 +8,6 @@
 #include <mutex>
 
 #include "barrier.hh"
-#include "spinlock_mutex.hh"
 #include "dsp/FDResample.hh"
 #include "dsp/FFTW.hh"
 #include "phy/PHY.hh"
@@ -107,7 +106,7 @@ private:
         void flush(Slot &slot);
 
         /** @brief Mutex for channel state */
-        spinlock_mutex mutex;
+        std::mutex mutex;
 
         /** @brief Packet whose modulated signal is the IQ buffer */
         std::shared_ptr<NetPacket> pkt;
@@ -169,7 +168,7 @@ private:
     std::condition_variable wake_cond_;
 
     /** @brief Mutex for demodulation state. */
-    spinlock_mutex mods_mutex_;
+    std::mutex mods_mutex_;
 
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<MultichannelModulator>> mods_;

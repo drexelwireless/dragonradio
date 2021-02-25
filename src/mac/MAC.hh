@@ -106,7 +106,7 @@ public:
         Load load;
 
         {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
+            std::lock_guard<std::mutex> lock(load_mutex_);
 
             load = load_;
             load.end = std::max(load.end, WallClock::now());
@@ -121,7 +121,7 @@ public:
         Load load;
 
         {
-            std::lock_guard<spinlock_mutex> lock(load_mutex_);
+            std::lock_guard<std::mutex> lock(load_mutex_);
 
             load = load_;
             load.end = std::max(load.end, WallClock::now());
@@ -198,7 +198,7 @@ protected:
     std::shared_ptr<Logger> logger_;
 
     /** @brief Mutex for load */
-    spinlock_mutex load_mutex_;
+    std::mutex load_mutex_;
 
     /** @brief Number of sent samples */
     Load load_;

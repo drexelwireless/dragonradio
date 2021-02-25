@@ -10,9 +10,8 @@
 #include <mutex>
 
 #include "barrier.hh"
-#include "ringbuffer.hh"
-#include "spinlock_mutex.hh"
 #include "Logger.hh"
+#include "SafeQueue.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
@@ -148,16 +147,16 @@ private:
     std::condition_variable wake_cond_;
 
     /** @brief Time-domain IQ buffers to demodulate */
-    ringbuffer<std::shared_ptr<IQBuf>, LOGR> tdbufs_;
+    SafeQueue<std::shared_ptr<IQBuf>> tdbufs_;
 
     /** @brief Mutex for demodulation state. */
-    spinlock_mutex demod_mutex_;
+    std::mutex demod_mutex_;
 
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<FDChannelDemodulator>> demods_;
 
     /** @brief Frequency-domain packets to demodulate */
-    std::unique_ptr<ringbuffer<Slot, LOGR> []> slots_;
+    std::vector<std::unique_ptr<SafeQueue<Slot>>> slots_;
 
     /** @brief FFT worker thread. */
     std::thread fft_thread_;

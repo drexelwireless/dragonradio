@@ -50,7 +50,7 @@ void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 
 void FDChannelizer::reconfigure(void)
 {
-    std::lock_guard<spinlock_mutex> lock(demod_mutex_);
+    std::lock_guard<std::mutex> lock(demod_mutex_);
 
     // Tell workers we are reconfiguring
     reconfigure_.store(true, std::memory_order_release);
@@ -69,13 +69,17 @@ void FDChannelizer::reconfigure(void)
     unsigned nchannels = channels_.size();
 
     demods_.resize(nchannels);
-    slots_ = std::unique_ptr<ringbuffer<Slot, LOGR> []>(new ringbuffer<Slot, LOGR>[nchannels]);
+    slots_.resize(nchannels);
 
-    for (unsigned i = 0; i < nchannels; i++)
+    for (unsigned i = 0; i < nchannels; i++) {
+        if (!slots_[i])
+            slots_[i] = std::make_unique<SafeQueue<Slot>>();
+
         demods_[i] = std::make_unique<FDChannelDemodulator>(*phy_,
                                                             channels_[i].first,
                                                             channels_[i].second,
                                                             rx_rate_);
+    }
 
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
@@ -91,6 +95,13 @@ void FDChannelizer::stop(void)
 
     done_ = true;
 
+    // Stop all IQ buffer queues
+    tdbufs_.stop();
+
+    for (unsigned int i = 0; i < slots_.size(); ++i)
+        slots_[i]->stop();
+
+    // Join on all threads
     wake_cond_.notify_all();
 
     if (fft_thread_.joinable())
@@ -111,13 +122,13 @@ void FDChannelizer::fftWorker(void)
     size_t                 fftoff = O;
 
     while (!done_) {
-        if (tdbufs_.size() == 0)
-            continue;
-
         // Get a time-domain IQ buffer
-        iqbuf = std::move(tdbufs_.front());
-        assert(iqbuf);
-        tdbufs_.pop();
+        if (!tdbufs_.pop(iqbuf)) {
+            if (done_)
+                return;
+
+            continue;
+        }
 
         // Reset FFT state on buffer discontinuity. We detect a discontinuity
         // via a gap in the time-domain IQ buffer sequence number.
@@ -141,11 +152,11 @@ void FDChannelizer::fftWorker(void)
 
         // Make the frequency-domain buffer available to the individual channels
         {
-            std::lock_guard<spinlock_mutex> lock(demod_mutex_);
-            unsigned                        nchannels = channels_.size();
+            std::lock_guard<std::mutex> lock(demod_mutex_);
+            unsigned                    nchannels = channels_.size();
 
             for (unsigned i = 0; i < nchannels; ++i)
-                slots_[i].push({iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O)});
+                slots_[i]->push({iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O)});
         }
 
         // Perform overlap-save on input buffer as data becomes available
@@ -264,15 +275,15 @@ void FDChannelizer::demodWorker(unsigned tid)
 
         for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
             auto &demod = *demods_[channelidx];
-            auto &slots = slots_[channelidx];
+            auto &slots = *slots_[channelidx];
 
-            if (slots.size() == 0)
+            // Get a slot
+            if (!slots.pop(slot)) {
+                if (done_)
+                    return;
+
                 continue;
-
-            slot = std::move(slots.front());
-            assert(slot.iqbuf);
-            assert(slot.fdbuf);
-            slots.pop();
+            }
 
             auto &fdbuf = slot.fdbuf;
             auto &iqbuf = slot.iqbuf;

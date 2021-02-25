@@ -53,7 +53,7 @@ public:
         std::atomic<bool> closed;
 
         /** @brief Mutex protecting slot info */
-        spinlock_mutex mutex;
+        std::mutex mutex;
 
         /** @brief Maximum number of samples in this slot */
         size_t max_samples;

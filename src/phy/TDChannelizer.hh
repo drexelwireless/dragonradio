@@ -12,8 +12,6 @@
 #include <mutex>
 
 #include "barrier.hh"
-#include "ringbuffer.hh"
-#include "spinlock_mutex.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
@@ -104,13 +102,13 @@ private:
     std::condition_variable wake_cond_;
 
     /** @brief Mutex for demodulation state. */
-    spinlock_mutex demod_mutex_;
+    std::mutex demod_mutex_;
 
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<TDChannelDemodulator>> demods_;
 
     /** @brief Packets to demodulate */
-    std::unique_ptr<ringbuffer<std::shared_ptr<IQBuf>, LOGN> []> iqbufs_;
+    std::vector<std::unique_ptr<SafeQueue<std::shared_ptr<IQBuf>>>> iqbufs_;
 
     /** @brief Demodulation worker threads. */
     std::vector<std::thread> demod_threads_;

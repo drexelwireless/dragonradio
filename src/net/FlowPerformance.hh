@@ -8,7 +8,6 @@
 #include <optional>
 #include <unordered_map>
 
-#include "spinlock_mutex.hh"
 #include "Clock.hh"
 #include "Packet.hh"
 #include "cil/CIL.hh"
@@ -123,7 +122,7 @@ public:
     /** @brief Get mandates */
     MandateMap getMandates(void)
     {
-        std::lock_guard<spinlock_mutex> lock(mandates_mutex_);
+        std::lock_guard<std::mutex> lock(mandates_mutex_);
 
         return mandates_;
     }
@@ -151,19 +150,19 @@ protected:
     std::optional<double> start_;
 
     /** @brief Mutex for sources */
-    spinlock_mutex sources_mutex_;
+    std::mutex sources_mutex_;
 
     /** @brief Flow source info */
     FlowStatsMap sources_;
 
     /** @brief Mutex for sinks */
-    spinlock_mutex sinks_mutex_;
+    std::mutex sinks_mutex_;
 
     /** @brief Flow sink info */
     FlowStatsMap sinks_;
 
     /** @brief Mandates mutex */
-    spinlock_mutex mandates_mutex_;
+    std::mutex mandates_mutex_;
 
     /** @brief Mandates */
     MandateMap mandates_;
@@ -176,7 +175,7 @@ protected:
 
     /** @brief Return a copy of a FlowStatsMap, resetting it if necessary */
     FlowStatsMap getFlowStatsMap(FlowStatsMap &stats,
-                                 spinlock_mutex &mutex,
+                                 std::mutex &mutex,
                                  bool reset);
 
     /** @brief Find a flow's entry in statistics map */

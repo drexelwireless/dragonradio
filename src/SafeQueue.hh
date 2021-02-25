@@ -167,6 +167,23 @@ public:
         }
     }
 
+    /** @brief Access the first element of the queue and pop it without waiting.
+     * @param val Reference to location where popped value should be copied.
+     * @return true if a value was popped, false otherwise.
+     */
+    bool try_pop(T& val)
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        if (done_ || q_.empty())
+            return false;
+        else {
+            val = std::move(q_.front());
+            q_.pop_front();
+            return true;
+        }
+    }
+
     /** @brief Mark the queue as stopped. */
     void stop(void)
     {

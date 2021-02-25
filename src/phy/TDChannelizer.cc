@@ -39,16 +39,16 @@ TDChannelizer::~TDChannelizer()
 
 void TDChannelizer::push(const std::shared_ptr<IQBuf> &iqbuf)
 {
-    std::lock_guard<spinlock_mutex> lock(demod_mutex_);
-    unsigned                        nchannels = channels_.size();
+    std::lock_guard<std::mutex> lock(demod_mutex_);
+    unsigned                    nchannels = channels_.size();
 
     for (unsigned i = 0; i < nchannels; ++i)
-        iqbufs_[i].push(iqbuf);
+        iqbufs_[i]->push(iqbuf);
 }
 
 void TDChannelizer::reconfigure(void)
 {
-    std::lock_guard<spinlock_mutex> lock(demod_mutex_);
+    std::lock_guard<std::mutex> lock(demod_mutex_);
 
     // Tell workers we are reconfiguring
     reconfigure_.store(true, std::memory_order_release);
@@ -67,13 +67,17 @@ void TDChannelizer::reconfigure(void)
     unsigned nchannels = channels_.size();
 
     demods_.resize(nchannels);
-    iqbufs_ = std::unique_ptr<ringbuffer<std::shared_ptr<IQBuf>, LOGN> []>(new ringbuffer<std::shared_ptr<IQBuf>, LOGN>[nchannels]);
+    iqbufs_.resize(nchannels);
 
-    for (unsigned i = 0; i < nchannels; i++)
+    for (unsigned i = 0; i < nchannels; i++) {
+        if (!iqbufs_[i])
+            iqbufs_[i] = std::make_unique<SafeQueue<std::shared_ptr<IQBuf>>>();
+
         demods_[i] = std::make_unique<TDChannelDemodulator>(*phy_,
                                                             channels_[i].first,
                                                             channels_[i].second,
                                                             rx_rate_);
+    }
 
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
@@ -89,6 +93,11 @@ void TDChannelizer::stop(void)
 
     done_ = true;
 
+    // Stop all IQ buffer queues
+    for (unsigned int i = 0; i < iqbufs_.size(); ++i)
+        iqbufs_[i]->stop();
+
+    // Join on all threads
     wake_cond_.notify_all();
 
     for (unsigned int i = 0; i < demod_threads_.size(); ++i) {
@@ -138,14 +147,15 @@ void TDChannelizer::demodWorker(unsigned tid)
 
         for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
             auto &demod = *demods_[channelidx];
-            auto &iqbufs = iqbufs_[channelidx];
+            auto &iqbufs = *iqbufs_[channelidx];
 
-            if (iqbufs.size() == 0)
+            // Get an IQ buffer
+            if (!iqbufs.pop(iqbuf)) {
+                if (done_)
+                    return;
+
                 continue;
-
-            iqbuf = std::move(iqbufs.front());
-            assert(iqbuf);
-            iqbufs.pop();
+            }
 
             // Wait for the buffer to start to fill.
             iqbuf->waitToStartFilling();

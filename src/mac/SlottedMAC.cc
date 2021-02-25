@@ -62,6 +62,13 @@ void SlottedMAC::reconfigure(void)
     }
 }
 
+void SlottedMAC::stop(void)
+{
+    done_ = true;
+
+    tx_slots_.stop();
+}
+
 void SlottedMAC::modulateSlot(slot_queue &q,
                               WallClock::time_point when,
                               size_t prev_overfill,
@@ -112,7 +119,7 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
         // as a barrier. After this, no synthesizer will touch the slot, so we
         // are guaranteed exclusive access.
         {
-            std::lock_guard<spinlock_mutex> lock(slot->mutex);
+            std::lock_guard<std::mutex> lock(slot->mutex);
 
             slot->closed.store(true, std::memory_order_relaxed);
         }
@@ -145,12 +152,13 @@ void SlottedMAC::txWorker(void)
     bool                  next_slot_start_of_burst = true;
 
     while (!done_) {
-        if (tx_slots_.size() == 0)
-            continue;
-
         // Get a slot
-        slot = std::move(tx_slots_.front());
-        tx_slots_.pop();
+        if (!tx_slots_.pop(slot)) {
+            if (done_)
+                return;
+
+            continue;
+        }
 
         // If the slot doesn't contain any IQ data to send, we're done
         if (slot->mpkts.empty()) {
@@ -192,7 +200,7 @@ void SlottedMAC::txWorker(void)
 
 void SlottedMAC::missedSlot(Slot &slot)
 {
-    std::lock_guard<spinlock_mutex> lock(slot.mutex);
+    std::lock_guard<std::mutex> lock(slot.mutex);
 
     // Close the slot
     slot.closed.store(true, std::memory_order_relaxed);

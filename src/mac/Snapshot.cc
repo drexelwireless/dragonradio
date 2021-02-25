@@ -44,21 +44,21 @@ SnapshotCollector::SnapshotCollector()
 
 void SnapshotCollector::start(void)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     newSnapshot();
 }
 
 void SnapshotCollector::stop(void)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     snapshot_collect_ = false;
 }
 
 std::shared_ptr<Snapshot> SnapshotCollector::finalize(void)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     fixSnapshotTimestamps();
 
@@ -67,7 +67,7 @@ std::shared_ptr<Snapshot> SnapshotCollector::finalize(void)
 
 std::shared_ptr<Snapshot> SnapshotCollector::next(void)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     fixSnapshotTimestamps();
 
@@ -80,7 +80,7 @@ std::shared_ptr<Snapshot> SnapshotCollector::next(void)
 
 bool SnapshotCollector::push(const std::shared_ptr<IQBuf> &buf)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     if (snapshot_ && snapshot_collect_) {
         buf->snapshot_off = snapshot_off_;
@@ -92,7 +92,7 @@ bool SnapshotCollector::push(const std::shared_ptr<IQBuf> &buf)
 
 void SnapshotCollector::finalizePush(void)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     if (snapshot_) {
         snapshot_off_ += curbuf_->size();
@@ -103,7 +103,7 @@ void SnapshotCollector::finalizePush(void)
 
 void SnapshotCollector::selfTX(ssize_t start, ssize_t end, float fc, float fs)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     if (snapshot_)
         snapshot_->selftx.emplace_back(SelfTX{false, start, end, fc, fs});
@@ -116,8 +116,8 @@ void SnapshotCollector::selfTX(MonoClock::time_point when,
                                unsigned nsamples,
                                float fc)
 {
-    std::lock_guard<spinlock_mutex> lock(mutex_);
-    ssize_t                         scaled_nsamples;
+    std::lock_guard<std::mutex> lock(mutex_);
+    ssize_t                     scaled_nsamples;
 
     scaled_nsamples = static_cast<ssize_t>(nsamples*fs_rx/fs_tx);
 
