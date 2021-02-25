@@ -148,22 +148,30 @@ struct SendWindow {
 
         virtual ~Entry() = default;
 
-        void operator =(std::shared_ptr<NetPacket>& p)
-        {
-            pkt = p;
-        }
-
-        operator bool()
+        /** @brief Does this entry have a pending packet to be sent? */
+        inline bool pending()
         {
             return (bool) pkt;
         }
 
-        operator std::shared_ptr<NetPacket>()
+        /** @brief Set packet in send window entry
+         * @param p The packet.
+         */
+        inline void set(const std::shared_ptr<NetPacket>& p)
+        {
+            pkt = p;
+        }
+
+        /** @brief Get packet in send window entry
+         * @return The packet.
+         */
+        inline std::shared_ptr<NetPacket> get()
         {
             return pkt;
         }
 
-        void reset(void)
+        /** @brief Release packet */
+        inline void reset(void)
         {
             pkt.reset();
         }
@@ -202,6 +210,10 @@ struct SendWindow {
         std::shared_ptr<NetPacket> pkt;
 
         /** @brief Timestamp of last transmission of this packet. */
+        /** This is the time at which the packet was queued for transmission,
+         * not the actual time at which it was transmitted, which is instead
+         * recorded in the packet itself.
+         */
         MonoClock::time_point timestamp;
     };
 
@@ -300,7 +312,10 @@ struct RecvWindow : public TimerQueue::Timer  {
     struct Entry {
         Entry() : received(false), delivered(false), pkt(nullptr) {};
 
-        void operator =(std::shared_ptr<RadioPacket>&& p)
+        /** @brief Set packet in receive window entry.
+         * @param p The packet.
+         */
+        inline void set(std::shared_ptr<RadioPacket>&& p)
         {
             received = true;
             delivered = false;

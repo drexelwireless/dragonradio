@@ -193,7 +193,7 @@ get_packet:
         }
 
         // Save the packet in our send window.
-        sendw[pkt->hdr.seq] = pkt;
+        sendw[pkt->hdr.seq].set(pkt);
         sendw[pkt->hdr.seq].timestamp = MonoClock::now();
 
         // If this packet is a retransmission, increment the retransmission
@@ -505,7 +505,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         recvw[pkt->hdr.seq].alreadyDelivered();
     } else {
         // Insert the packet into our receive window
-        recvw[pkt->hdr.seq] = std::move(pkt);
+        recvw[pkt->hdr.seq].set(std::move(pkt));
     }
 
     // Now drain the receive window until we reach a hole
@@ -821,7 +821,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     if (radionet_->getThisNode().can_transmit) {
         // We need to make an explicit new reference to the shared_ptr because
         // push takes ownership of its argument.
-        std::shared_ptr<NetPacket> pkt = entry;
+        std::shared_ptr<NetPacket> pkt = entry.get();
 
         // Clear any control information in the packet
         pkt->clearControl();
@@ -842,7 +842,7 @@ void SmartController::drop(SendWindow::Entry &entry)
     SendWindow &sendw = entry.sendw;
 
     // If the packet has already been ACK'd, forget it
-    if (!entry)
+    if (!entry.pending())
         return;
 
     // Drop the packet
@@ -876,7 +876,7 @@ void SmartController::advanceSendWindow(SendWindow &sendw)
     Seq old_unack = sendw.unack;
 
     // Advance send window if we can
-    while (sendw.unack <= sendw.max && !sendw[sendw.unack])
+    while (sendw.unack <= sendw.max && !sendw[sendw.unack].pending())
         ++sendw.unack;
 
     // Update PER cutoff
@@ -1293,7 +1293,7 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
 
                     for (Seq seq = nextSeq; seq < it->ack.begin; ++seq) {
                         if (seq >= sendw.per_end) {
-                            if (sendw[seq]) {
+                            if (sendw[seq].pending()) {
                                 if (sendw[seq].timestamp < tfeedback) {
                                     // Record TX failure for PER
                                     if (seq >= sendw.per_cutoff) {
@@ -1639,7 +1639,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // "move along." However, if the send window is only 1 packet,
             // ALWAYS close it since we're waiting for the ACK to our SYN!
             if (   sendw.seq >= sendw.unack + sendw.win
-                && ((sendw[sendw.unack] && !sendw[sendw.unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
+                && ((sendw[sendw.unack].pending() && !sendw[sendw.unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
                 netq_->setSendWindowStatus(pkt->hdr.nexthop, false);
 
             return true;
