@@ -334,96 +334,97 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         return;
 
     // Handle ACK/NAK
-    SendWindow *sendwptr = maybeGetSendWindow(prevhop);
-
-    if (sendwptr) {
-        SendWindow                  &sendw = *sendwptr;
+    {
+        SendWindow                  &sendw = getSendWindow(prevhop);
         std::lock_guard<std::mutex> lock(sendw.mutex);
-        MonoClock::time_point       tfeedback = MonoClock::now() - selective_ack_feedback_delay_;
-        std::optional<Seq>          nak;
 
-        // Handle any NAK
-        nak = handleNAK(*pkt, sendw);
+        if (!sendw.new_window) {
+            MonoClock::time_point tfeedback = MonoClock::now() - selective_ack_feedback_delay_;
+            std::optional<Seq>    nak;
 
-        // If packets are always demodulated in order, then when we see an
-        // explicit NAK, we can assume all packets up to and including the
-        // NAK'ed packet should have been received. In this case, look at
-        // feedback at least up to the sequence number that was NAK'ed. We add a
-        // tiny amount of slop, 0.001 sec, to make sure we *include* the NAK'ed
-        // packet.
-        if (demod_always_ordered_ && nak)
-            tfeedback = std::max(tfeedback, sendw[*nak].timestamp + 0.001);
+            // Handle any NAK
+            nak = handleNAK(*pkt, sendw);
 
-        // Handle ACK
-        if (pkt->hdr.flags.ack) {
-            // Handle statistics reported by the receiver. We do this before
-            // looking at ACK's because we use the statistics to decide whether
-            // to move up our MCS.
-            handleReceiverStats(*pkt, sendw);
+            // If packets are always demodulated in order, then when we see an
+            // explicit NAK, we can assume all packets up to and including the
+            // NAK'ed packet should have been received. In this case, look at
+            // feedback at least up to the sequence number that was NAK'ed. We add a
+            // tiny amount of slop, 0.001 sec, to make sure we *include* the NAK'ed
+            // packet.
+            if (demod_always_ordered_ && nak)
+                tfeedback = std::max(tfeedback, sendw[*nak].timestamp + 0.001);
 
-            if (pkt->ehdr().ack > sendw.unack) {
-                dprintf("ack: node=%u; seq=[%u,%u)",
-                    (unsigned) node.id,
-                    (unsigned) sendw.unack,
-                    (unsigned) pkt->ehdr().ack);
+            // Handle ACK
+            if (pkt->hdr.flags.ack) {
+                // Handle statistics reported by the receiver. We do this before
+                // looking at ACK's because we use the statistics to decide whether
+                // to move up our MCS.
+                handleReceiverStats(*pkt, sendw);
 
-                // Don't assert this because the sender could crash us with bad
-                // data! We protected against this case in the following loop.
-                //assert(pkt->ehdr().ack <= sendw.max + 1);
-
-                // Move the send window along. It's possible the sender sends an
-                // ACK for something we haven't sent, so we must guard against
-                // that here as well
-                for (; sendw.unack < pkt->ehdr().ack && sendw.unack <= sendw.max; ++sendw.unack) {
-                    // Handle the ACK
-                    handleACK(sendw, sendw.unack);
-
-                    // Update our packet error rate to reflect successful TX
-                    if (sendw.unack >= sendw.per_end)
-                        txSuccess(sendw);
-                }
-
-                // unack is the NEXT un-ACK'ed packet, i.e., the packet we  are
-                // waiting to hear about next. Note that it is possible for the
-                // sender to ACK a packet we've already decided was bad, e.g., a
-                // retranmission, so we must be careful not to "rewind" the PER
-                // window here by blindly setting sendw.per_end = unack without
-                // the test.
-                if (sendw.unack > sendw.per_end)
-                    sendw.per_end = sendw.unack;
-            }
-
-            // Handle selective ACK. We do this *after* handling the ACK,
-            // because a selective ACK tells us about packets *beyond* that
-            // which was ACK'ed.
-            handleSelectiveACK(*pkt, sendw, tfeedback);
-
-            // If the NAK is for a retransmitted packet, count it as a
-            // transmission failure. We need to check for this case because a
-            // NAK for a retransmitted packet will have already been counted
-            // toward our PER the first time the packet was NAK'ed. If the
-            // packet has already been re-transmitted, don't record a failure.
-            if (nak) {
-                SendWindow::Entry &entry = sendw[*nak];
-
-                if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0 && *nak >= sendw.per_cutoff) {
-                    txFailure(sendw);
-
-                    logARQ(LOGDEBUG, "txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
+                if (pkt->ehdr().ack > sendw.unack) {
+                    dprintf("ack: node=%u; seq=[%u,%u)",
                         (unsigned) node.id,
-                        (unsigned) *nak,
-                        (unsigned) entry.pkt->mcsidx);
+                        (unsigned) sendw.unack,
+                        (unsigned) pkt->ehdr().ack);
+
+                    // Don't assert this because the sender could crash us with bad
+                    // data! We protected against this case in the following loop.
+                    //assert(pkt->ehdr().ack <= sendw.max + 1);
+
+                    // Move the send window along. It's possible the sender sends an
+                    // ACK for something we haven't sent, so we must guard against
+                    // that here as well
+                    for (; sendw.unack < pkt->ehdr().ack && sendw.unack <= sendw.max; ++sendw.unack) {
+                        // Handle the ACK
+                        handleACK(sendw, sendw.unack);
+
+                        // Update our packet error rate to reflect successful TX
+                        if (sendw.unack >= sendw.per_end)
+                            txSuccess(sendw);
+                    }
+
+                    // unack is the NEXT un-ACK'ed packet, i.e., the packet we  are
+                    // waiting to hear about next. Note that it is possible for the
+                    // sender to ACK a packet we've already decided was bad, e.g., a
+                    // retranmission, so we must be careful not to "rewind" the PER
+                    // window here by blindly setting sendw.per_end = unack without
+                    // the test.
+                    if (sendw.unack > sendw.per_end)
+                        sendw.per_end = sendw.unack;
                 }
+
+                // Handle selective ACK. We do this *after* handling the ACK,
+                // because a selective ACK tells us about packets *beyond* that
+                // which was ACK'ed.
+                handleSelectiveACK(*pkt, sendw, tfeedback);
+
+                // If the NAK is for a retransmitted packet, count it as a
+                // transmission failure. We need to check for this case because a
+                // NAK for a retransmitted packet will have already been counted
+                // toward our PER the first time the packet was NAK'ed. If the
+                // packet has already been re-transmitted, don't record a failure.
+                if (nak) {
+                    SendWindow::Entry &entry = sendw[*nak];
+
+                    if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0 && *nak >= sendw.per_cutoff) {
+                        txFailure(sendw);
+
+                        logARQ(LOGDEBUG, "txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
+                            (unsigned) node.id,
+                            (unsigned) *nak,
+                            (unsigned) entry.pkt->mcsidx);
+                    }
+                }
+
+                // Update MCS based on new PER
+                updateMCS(sendw);
+
+                // Advance the send window. It is possible that packets immediately
+                // after the packet that the sender just ACK'ed have timed out and
+                // been dropped, so advanceSendWindow must look for dropped packets
+                // and attempt to push the send window up towards max.
+                advanceSendWindow(sendw);
             }
-
-            // Update MCS based on new PER
-            updateMCS(sendw);
-
-            // Advance the send window. It is possible that packets immediately
-            // after the packet that the sender just ACK'ed have timed out and
-            // been dropped, so advanceSendWindow must look for dropped packets
-            // and attempt to push the send window up towards max.
-            advanceSendWindow(sendw);
         }
     }
 
@@ -1677,17 +1678,6 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             return true;
         }
     }
-}
-
-SendWindow *SmartController::maybeGetSendWindow(NodeId node_id)
-{
-    std::lock_guard<std::mutex> lock(send_mutex_);
-    auto                        it = send_.find(node_id);
-
-    if (it != send_.end())
-        return &(it->second);
-    else
-        return nullptr;
 }
 
 SendWindow &SmartController::getSendWindow(NodeId node_id)

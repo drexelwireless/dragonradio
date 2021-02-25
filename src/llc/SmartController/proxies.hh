@@ -15,8 +15,6 @@ public:
       : controller_(controller)
       , node_id_(node_id)
     {
-        if (controller_->maybeGetSendWindow(node_id_) == nullptr)
-            throw std::out_of_range("No send window for node");
     }
 
     std::optional<double> getShortPER(void)

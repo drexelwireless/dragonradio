@@ -34,14 +34,14 @@ struct SendWindow {
                double retransmission_delay_)
       : node(n)
       , controller(controller)
+      , mcsidx(0)
+      , new_window(true)
       , seq({0})
       , unack({0})
       , max({0})
-      , new_window(true)
       , send_set_unack(false)
       , win(1)
       , maxwin(maxwin)
-      , mcsidx(0)
       , mcsidx_prob(0)
       , per_cutoff({0})
       , prev_short_per(1)
@@ -63,6 +63,18 @@ struct SendWindow {
     /** @brief Mutex for the send window */
     std::mutex mutex;
 
+    /** @brief Modulation index */
+    size_t mcsidx;
+
+    /** @brief Long-term EVM, as reported by receiver */
+    std::optional<double> long_evm;
+
+    /** @brief Long-term RSSI, as reported by receiver */
+    std::optional<double> long_rssi;
+
+    /** @brief Is this a new window? */
+    bool new_window;
+
     /** @brief Current sequence number for this destination */
     Seq seq;
 
@@ -73,9 +85,6 @@ struct SendWindow {
     /** INVARIANT: max < unack + win */
     Seq max;
 
-    /** @brief Is this a new window? */
-    bool new_window;
-
     /** @brief Do we need to send a set unack control message? */
     bool send_set_unack;
 
@@ -84,9 +93,6 @@ struct SendWindow {
 
     /** @brief Maximum window size */
     Seq::uint_type maxwin;
-
-    /** @brief Modulation index */
-    size_t mcsidx;
 
     /** @brief The probability of moving to a given MCS */
     std::vector<double> mcsidx_prob;
@@ -116,12 +122,6 @@ struct SendWindow {
 
     /** @brief Long-term packet error rate */
     WindowedMean<double> long_per;
-
-    /** @brief Long-term EVM, as reported by receiver */
-    std::optional<double> long_evm;
-
-    /** @brief Long-term RSSI, as reported by receiver */
-    std::optional<double> long_rssi;
 
     /** @brief Duration of retransmission timer */
     double retransmission_delay;
@@ -1001,12 +1001,6 @@ protected:
 
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);
-
-    /** @brief Get a node's send window.
-     * @param node_id The node whose window to get
-     * @returns A pointer to the window or nullptr if one doesn't exist.
-     */
-    SendWindow *maybeGetSendWindow(NodeId node_id);
 
     /** @brief Get a node's send window */
     SendWindow &getSendWindow(Node &node);
