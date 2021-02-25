@@ -9,6 +9,7 @@
 #include <deque>
 #include <memory>
 #include <optional>
+#include <thread>
 #include <vector>
 
 #include <xsimd/xsimd.hpp>
@@ -140,9 +141,18 @@ public:
     /** @brief Wait for the buffer to start filling. */
     void waitToStartFilling(void)
     {
-        while (nsamples.load(std::memory_order_acquire) == 0 &&
-               !complete.load(std::memory_order_acquire))
-            ;
+        for (int spin_count = 0;; ++spin_count) {
+            if (nsamples.load(std::memory_order_relaxed) != 0 ||
+                complete.load(std::memory_order_relaxed))
+                break;
+
+            if (spin_count < 16)
+                _mm_pause();
+            else {
+                std::this_thread::yield();
+                spin_count = 0;
+            }
+        }
     }
 
     /** @brief Zero all data in the buffer */
