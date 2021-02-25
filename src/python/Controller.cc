@@ -7,6 +7,7 @@
 #include "llc/Controller.hh"
 #include "llc/DummyController.hh"
 #include "llc/SmartController.hh"
+#include "llc/SmartController/proxies.hh"
 #include "python/PyModules.hh"
 
 void exportControllers(py::module &m)
