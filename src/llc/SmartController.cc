@@ -12,41 +12,6 @@
 #define dprintf(...)
 #endif /* !DEBUG */
 
-void SendWindow::Entry::operator()()
-{
-    sendw.controller.retransmitOnTimeout(*this);
-}
-
-void SendWindow::recordACK(const MonoClock::time_point &tx_time)
-{
-    auto now = MonoClock::now();
-
-    ack_delay.update(now, (now - tx_time).get_real_secs());
-
-    if (ack_delay)
-        retransmission_delay = std::max(controller.getMinRetransmissionDelay(),
-                                        controller.getRetransmissionDelaySlop()*(*ack_delay));
-    else
-        retransmission_delay = controller.getMinRetransmissionDelay();
-}
-
-void RecvWindow::operator()()
-{
-    std::lock_guard<std::mutex> lock(this->mutex);
-
-    if (timer_for_ack) {
-        controller.ack(*this);
-    } else {
-        need_selective_ack = true;
-        timer_for_ack = true;
-
-        dprintf("starting full ACK timer: node=%u",
-            (unsigned) node.id);
-        controller.timer_queue_.run_in(*this,
-            controller.ack_delay_ - controller.sack_delay_);
-    }
-}
-
 SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
                                  size_t mtu,
                                  std::shared_ptr<PHY> phy,
@@ -380,7 +345,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
                         // Update our packet error rate to reflect successful TX
                         if (sendw.unack >= sendw.per_end)
-                            txSuccess(sendw);
+                            sendw.txSuccess();
                     }
 
                     // unack is the NEXT un-ACK'ed packet, i.e., the packet we  are
@@ -407,7 +372,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
                     SendWindow::Entry &entry = sendw[*nak];
 
                     if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0 && *nak >= sendw.per_cutoff) {
-                        txFailure(sendw);
+                        sendw.txFailure();
 
                         logARQ(LOGDEBUG, "txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
                             (unsigned) node.id,
@@ -417,7 +382,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
                 }
 
                 // Update MCS based on new PER
-                updateMCS(sendw);
+                sendw.updateMCS();
 
                 // Advance the send window. It is possible that packets immediately
                 // after the packet that the sender just ACK'ed have timed out and
@@ -574,7 +539,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 
     // Record the packet error as long as receiving node can transmit
     if (sendw.node.can_transmit && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->hdr.seq >= sendw.per_cutoff) {
-        txFailure(sendw);
+        sendw.txFailure();
 
         logAMC(LOGDEBUG, "txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
             (unsigned) sendw.node.id,
@@ -582,7 +547,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
             (unsigned) entry.pkt->mcsidx,
             sendw.short_per.value_or(0.0));
 
-        updateMCS(sendw);
+        sendw.updateMCS();
     }
 
     // Actually retransmit (or drop) the packet
@@ -761,7 +726,7 @@ void SmartController::resetMCSTransitionProbabilities(void)
         std::fill(v.begin(), v.end(), 1.0);
 
         // Set MCS index to initial default
-        setMCS(sendw, mcsidx_init_);
+        sendw.setMCS(mcsidx_init_);
 
         // Don't use previously-sent packets to calculate PER.
         sendw.per_cutoff = sendw.seq;
@@ -1209,7 +1174,7 @@ void SmartController::handleACK(SendWindow &sendw, const Seq &seq)
     }
 
     // Record ACK delay
-    sendw.recordACK(entry.timestamp);
+    sendw.ack(entry.timestamp);
 
     // Cancel retransmission timer for ACK'ed packet
     timer_queue_.cancel(entry);
@@ -1298,7 +1263,7 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
                                 if (sendw[seq].timestamp < tfeedback) {
                                     // Record TX failure for PER
                                     if (seq >= sendw.per_cutoff) {
-                                        txFailure(sendw);
+                                        sendw.txFailure();
 
                                         logARQ(LOGDEBUG, "txFailure selective nak: node=%u; seq=%u",
                                             (unsigned) node.id,
@@ -1332,7 +1297,7 @@ void SmartController::handleSelectiveACK(RadioPacket &pkt,
                     // Update our packet error rate to reflect successful TX
                     if (seq >= sendw.per_end && sendw[seq].timestamp < tfeedback) {
                         // Record TX success for PER
-                        txSuccess(sendw);
+                        sendw.txSuccess();
 
                         // Move PER window forward
                         sendw.per_end = seq + 1;
@@ -1377,214 +1342,6 @@ void SmartController::handleSetUnack(RadioPacket &pkt, RecvWindow &recvw)
                 break;
         }
     }
-}
-
-void SmartController::txSuccess(SendWindow &sendw)
-{
-    sendw.short_per.update(0.0);
-    sendw.long_per.update(0.0);
-}
-
-void SmartController::txFailure(SendWindow &sendw)
-{
-    sendw.short_per.update(1.0);
-    sendw.long_per.update(1.0);
-}
-
-void SmartController::updateMCS(SendWindow &sendw)
-{
-    Node &node = sendw.node;
-    bool changed = false;
-
-    if (sendw.short_per && *sendw.short_per != sendw.prev_short_per) {
-        sendw.prev_short_per = *sendw.short_per;
-        changed = true;
-    }
-
-    if (sendw.long_per && *sendw.long_per != sendw.prev_long_per) {
-        sendw.prev_long_per = *sendw.long_per;
-        changed = true;
-    }
-
-    if (changed)
-        logAMC(LOGDEBUG, "updateMCS: node=%u; short per=%f (%lu samples); long per=%f (%lu samples)",
-            node.id,
-            sendw.short_per.value_or(0),
-            sendw.short_per.size(),
-            sendw.long_per.value_or(0),
-            sendw.long_per.size());
-
-    // First for high PER, then test for low PER
-    if (sendw.short_per && *sendw.short_per > mcsidx_down_per_threshold_) {
-        // Perform hysteresis on future MCS increases by decreasing the
-        // probability that we will transition to this MCS index.
-        sendw.mcsidx_prob[sendw.mcsidx] =
-            std::max(sendw.mcsidx_prob[sendw.mcsidx]*mcsidx_alpha_,
-                     mcsidx_prob_floor_);
-
-        logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%f",
-            node.id,
-            (unsigned) sendw.mcsidx,
-            sendw.mcsidx_prob[sendw.mcsidx]);
-
-        // Decrease MCS until we hit rock bottom or we hit an MCS that produces
-        // packets too large to fit in a slot.
-        unsigned n = 0; // Number of MCS levels to decrease
-
-        while (sendw.mcsidx > n &&
-               sendw.mcsidx - n > mcsidx_min_ &&
-               phy_->mcs_table[sendw.mcsidx-(n+1)].valid) {
-            // Increment number of MCS levels we will move down
-            ++n;
-
-            // If we don't have both an EVM threshold and EVM feedback from the
-            // sender, stop. Otherwise, use our EVM information to decide if we
-            // should decrease the MCS level further.
-            evm_thresh_t &next_evm_threshold = evm_thresholds_[sendw.mcsidx-n];
-
-            if (!next_evm_threshold || !sendw.long_evm || (*sendw.long_evm < *next_evm_threshold))
-                break;
-        }
-
-        // Move down n MCS levels
-        if (n != 0)
-            moveDownMCS(sendw, n);
-        else
-            resetPEREstimates(sendw);
-    } else if (sendw.long_per && *sendw.long_per < mcsidx_up_per_threshold_) {
-        double old_prob = sendw.mcsidx_prob[sendw.mcsidx];
-
-        // Set transition probability of current MCS index to 1.0 since we
-        // successfully passed the long PER test
-        sendw.mcsidx_prob[sendw.mcsidx] = 1.0;
-
-        if (sendw.mcsidx_prob[sendw.mcsidx] != old_prob)
-            logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%f",
-                node.id,
-                (unsigned) sendw.mcsidx,
-                sendw.mcsidx_prob[sendw.mcsidx]);
-
-        // Now we see if we can actually increase the MCS index.
-        if (mayMoveUpMCS(sendw))
-            moveUpMCS(sendw);
-        else
-            resetPEREstimates(sendw);
-    }
-}
-
-bool SmartController::mayMoveUpMCS(const SendWindow &sendw)
-{
-    // We can't move up if we're at the top of the MCS hierarchy...
-    if (sendw.mcsidx == mcsidx_max_ || sendw.mcsidx == phy_->mcs_table.size() - 1)
-        return false;
-
-    // There are two cases where we may move up an MCS level:
-    //
-    // 1) The next-higher MCS has an EVM threshold that we meet
-    // 2) The next-higher MCS *does not* have an EVM threshold, but we pass
-    //    the probabilistic transition test.
-    evm_thresh_t &next_evm_threshold = evm_thresholds_[sendw.mcsidx+1];
-
-    if (next_evm_threshold) {
-        if (sendw.long_evm) {
-            logARQ(LOGDEBUG, "EVM threshold: evm_threshold=%f, evm=%f",
-                *next_evm_threshold,
-                *sendw.long_evm);
-
-            return *sendw.long_evm < *next_evm_threshold;
-        } else
-            return false;
-    }
-
-    return dist_(gen_) < sendw.mcsidx_prob[sendw.mcsidx+1];
-}
-
-void SmartController::moveDownMCS(SendWindow &sendw, unsigned n)
-{
-    Node &node = sendw.node;
-
-    assert(sendw.mcsidx >= n);
-
-    logAMC(LOGINFO, "Moving down modulation scheme");
-
-    logAMC(LOGDEBUG, "Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
-        node.id,
-        (unsigned) sendw.mcsidx,
-        sendw.short_per.value_or(0.0),
-        sendw.short_per.getWindowSize(),
-        sendw.long_per.getWindowSize());
-
-    setMCS(sendw, sendw.mcsidx - n);
-
-    const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
-
-    logAMC(LOGDEBUG, "Moved down modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
-        node.id,
-        (unsigned) sendw.mcsidx,
-        mcs->description().c_str(),
-        (unsigned) sendw.unack,
-        (unsigned) sendw.per_end,
-        sendw.short_per.getWindowSize(),
-        sendw.long_per.getWindowSize());
-}
-
-void SmartController::moveUpMCS(SendWindow &sendw)
-{
-    Node &node = sendw.node;
-
-    logAMC(LOGINFO, "Moving up modulation scheme");
-
-    logAMC(LOGDEBUG, "Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
-        node.id,
-        (unsigned) sendw.mcsidx,
-        sendw.long_per.value_or(0.0),
-        sendw.short_per.getWindowSize(),
-        sendw.long_per.getWindowSize());
-
-    setMCS(sendw, sendw.mcsidx + 1);
-
-    const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
-
-    logAMC(LOGDEBUG, "Moved up modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
-        node.id,
-        (unsigned) sendw.mcsidx,
-        mcs->description().c_str(),
-        (unsigned) sendw.unack,
-        (unsigned) sendw.per_end,
-        sendw.short_per.getWindowSize(),
-        sendw.long_per.getWindowSize());
-}
-
-void SmartController::setMCS(SendWindow &sendw, size_t mcsidx)
-{
-    Node &node = sendw.node;
-
-    assert(mcsidx >= 0);
-    assert(mcsidx < phy_->mcs_table.size());
-
-    // Move MCS up until we reach a valid MCS
-    while (mcsidx < phy_->mcs_table.size() - 1 && !phy_->mcs_table[mcsidx].valid)
-        ++mcsidx;
-
-    sendw.mcsidx = mcsidx;
-    sendw.per_end = sendw.seq;
-
-    resetPEREstimates(sendw);
-
-    node.mcsidx = sendw.mcsidx;
-
-    const MCS *mcs = phy_->mcs_table[sendw.mcsidx].mcs;
-
-    netq_->updateMCS(node.id, mcs);
-}
-
-void SmartController::resetPEREstimates(SendWindow &sendw)
-{
-    sendw.short_per.setWindowSize(std::max(1.0, short_per_window_*min_channel_bandwidth_/max_packet_samples_[sendw.mcsidx]));
-    sendw.short_per.reset();
-
-    sendw.long_per.setWindowSize(std::max(1.0, long_per_window_*min_channel_bandwidth_/max_packet_samples_[sendw.mcsidx]));
-    sendw.long_per.reset();
 }
 
 bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
@@ -1688,19 +1445,14 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
     if (it != send_.end())
         return it->second;
     else {
-        Node       &dest = (*radionet_)[node_id];
-        SendWindow &sendw = send_.emplace(std::piecewise_construct,
-                                          std::forward_as_tuple(node_id),
-                                          std::forward_as_tuple(dest,
-                                                                *this,
-                                                                max_sendwin_,
-                                                                retransmission_delay_)).first->second;
+        auto result = send_.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(node_id),
+                                    std::forward_as_tuple((*radionet_)[node_id],
+                                                          *this,
+                                                          max_sendwin_,
+                                                          retransmission_delay_));
 
-        sendw.mcsidx_prob.resize(phy_->mcs_table.size(), 1.0);
-
-        setMCS(sendw, mcsidx_init_);
-
-        return sendw;
+        return result.first->second;
     }
 }
 
@@ -1752,4 +1504,265 @@ RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSY
     recvw.long_rssi.setTimeWindow(long_stats_window_);
 
     return recvw;
+}
+
+SendWindow::SendWindow(Node &n,
+                       SmartController &controller,
+                       Seq::uint_type maxwin,
+                       double retransmission_delay_)
+    : node(n)
+    , controller(controller)
+    , mcs_table(controller.phy_->mcs_table)
+    , mcsidx(0)
+    , new_window(true)
+    , seq({0})
+    , unack({0})
+    , max({0})
+    , send_set_unack(false)
+    , win(1)
+    , maxwin(maxwin)
+    , mcsidx_prob(controller.phy_->mcs_table.size(), 1.0)
+    , per_cutoff({0})
+    , prev_short_per(1)
+    , prev_long_per(1)
+    , short_per(1)
+    , long_per(1)
+    , retransmission_delay(retransmission_delay_)
+    , ack_delay(1.0)
+    , entries_(maxwin, *this)
+{
+    setMCS(controller.mcsidx_init_);
+}
+
+void SendWindow::ack(const MonoClock::time_point &tx_time)
+{
+    auto now = MonoClock::now();
+
+    ack_delay.update(now, (now - tx_time).get_real_secs());
+
+    if (ack_delay)
+        retransmission_delay = std::max(controller.getMinRetransmissionDelay(),
+                                        controller.getRetransmissionDelaySlop()*(*ack_delay));
+    else
+        retransmission_delay = controller.getMinRetransmissionDelay();
+}
+
+void SendWindow::txSuccess(void)
+{
+    short_per.update(0.0);
+    long_per.update(0.0);
+}
+
+void SendWindow::txFailure(void)
+{
+    short_per.update(1.0);
+    long_per.update(1.0);
+}
+
+void SendWindow::updateMCS(void)
+{
+    bool changed = false;
+
+    if (short_per && *short_per != prev_short_per) {
+        prev_short_per = *short_per;
+        changed = true;
+    }
+
+    if (long_per && *long_per != prev_long_per) {
+        prev_long_per = *long_per;
+        changed = true;
+    }
+
+    if (changed)
+        logAMC(LOGDEBUG, "updateMCS: node=%u; short per=%f (%lu samples); long per=%f (%lu samples)",
+            node.id,
+            short_per.value_or(0),
+            short_per.size(),
+            long_per.value_or(0),
+            long_per.size());
+
+    // First for high PER, then test for low PER
+    if (short_per && *short_per > controller.mcsidx_down_per_threshold_) {
+        // Perform hysteresis on future MCS increases by decreasing the
+        // probability that we will transition to this MCS index.
+        mcsidx_prob[mcsidx] =
+            std::max(mcsidx_prob[mcsidx]*controller.mcsidx_alpha_,
+                     controller.mcsidx_prob_floor_);
+
+        logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%f",
+            node.id,
+            (unsigned) mcsidx,
+            mcsidx_prob[mcsidx]);
+
+        // Decrease MCS until we hit rock bottom or we hit an MCS that produces
+        // packets too large to fit in a slot.
+        unsigned n = 0; // Number of MCS levels to decrease
+
+        while (mcsidx > n &&
+               mcsidx - n > controller.mcsidx_min_ &&
+               mcs_table[mcsidx-(n+1)].valid) {
+            // Increment number of MCS levels we will move down
+            ++n;
+
+            // If we don't have both an EVM threshold and EVM feedback from the
+            // sender, stop. Otherwise, use our EVM information to decide if we
+            // should decrease the MCS level further.
+            SmartController::evm_thresh_t &next_evm_threshold = controller.evm_thresholds_[mcsidx-n];
+
+            if (!next_evm_threshold || !long_evm || (*long_evm < *next_evm_threshold))
+                break;
+        }
+
+        // Move down n MCS levels
+        if (n != 0)
+            moveDownMCS(n);
+        else
+            resetPEREstimates();
+    } else if (long_per && *long_per < controller.mcsidx_up_per_threshold_) {
+        double old_prob = mcsidx_prob[mcsidx];
+
+        // Set transition probability of current MCS index to 1.0 since we
+        // successfully passed the long PER test
+        mcsidx_prob[mcsidx] = 1.0;
+
+        if (mcsidx_prob[mcsidx] != old_prob)
+            logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%f",
+                node.id,
+                (unsigned) mcsidx,
+                mcsidx_prob[mcsidx]);
+
+        // Now we see if we can actually increase the MCS index.
+        if (mayMoveUpMCS())
+            moveUpMCS();
+        else
+            resetPEREstimates();
+    }
+}
+
+bool SendWindow::mayMoveUpMCS(void) const
+{
+    // We can't move up if we're at the top of the MCS hierarchy...
+    if (mcsidx == controller.mcsidx_max_ || mcsidx == mcs_table.size() - 1)
+        return false;
+
+    // There are two cases where we may move up an MCS level:
+    //
+    // 1) The next-higher MCS has an EVM threshold that we meet
+    // 2) The next-higher MCS *does not* have an EVM threshold, but we pass
+    //    the probabilistic transition test.
+    SmartController::evm_thresh_t &next_evm_threshold = controller.evm_thresholds_[mcsidx+1];
+
+    if (next_evm_threshold) {
+        if (long_evm) {
+            logARQ(LOGDEBUG, "EVM threshold: evm_threshold=%f, evm=%f",
+                *next_evm_threshold,
+                *long_evm);
+
+            return *long_evm < *next_evm_threshold;
+        } else
+            return false;
+    }
+
+    return controller.dist_(controller.gen_) < mcsidx_prob[mcsidx+1];
+}
+
+void SendWindow::moveDownMCS(unsigned n)
+{
+    assert(mcsidx >= n);
+
+    logAMC(LOGINFO, "Moving down modulation scheme");
+
+    logAMC(LOGDEBUG, "Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
+        node.id,
+        (unsigned) mcsidx,
+        short_per ? *short_per : 0.0,
+        short_per.getWindowSize(),
+        long_per.getWindowSize());
+
+    setMCS(mcsidx - n);
+
+    logAMC(LOGDEBUG, "Moved down modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+        node.id,
+        (unsigned) mcsidx,
+         mcs_table[mcsidx].mcs->description().c_str(),
+        (unsigned) unack,
+        (unsigned) per_end,
+        short_per.getWindowSize(),
+        long_per.getWindowSize());
+}
+
+void SendWindow::moveUpMCS(void)
+{
+    logAMC(LOGINFO, "Moving up modulation scheme");
+
+    logAMC(LOGDEBUG, "Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
+        node.id,
+        (unsigned) mcsidx,
+        long_per ? *long_per : .0,
+        short_per.getWindowSize(),
+        long_per.getWindowSize());
+
+    setMCS(mcsidx + 1);
+
+    logAMC(LOGDEBUG, "Moved up modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+        node.id,
+        (unsigned) mcsidx,
+        mcs_table[mcsidx].mcs->description().c_str(),
+        (unsigned) unack,
+        (unsigned) per_end,
+        short_per.getWindowSize(),
+        long_per.getWindowSize());
+}
+
+void SendWindow::setMCS(size_t new_mcsidx)
+{
+    assert(new_mcsidx >= 0);
+    assert(new_mcsidx < mcs_table.size());
+
+    // Move MCS up until we reach a valid MCS
+    while (new_mcsidx < mcs_table.size() - 1 &&
+           !mcs_table[new_mcsidx].valid)
+        ++new_mcsidx;
+
+    mcsidx = new_mcsidx;
+    per_end = seq;
+
+    resetPEREstimates();
+
+    node.mcsidx = new_mcsidx;
+
+    const MCS *mcs = controller.phy_->mcs_table[new_mcsidx].mcs;
+
+    controller.netq_->updateMCS(node.id, mcs);
+}
+
+void SendWindow::resetPEREstimates(void)
+{
+    short_per.setWindowSize(std::max(1.0, controller.short_per_window_*controller.min_channel_bandwidth_/controller.max_packet_samples_[mcsidx]));
+    short_per.reset();
+
+    long_per.setWindowSize(std::max(1.0, controller.long_per_window_*controller.min_channel_bandwidth_/controller.max_packet_samples_[mcsidx]));
+    long_per.reset();
+}
+
+void SendWindow::Entry::operator()()
+{
+    sendw.controller.retransmitOnTimeout(*this);
+}
+
+void RecvWindow::operator()()
+{
+    std::lock_guard<std::mutex> lock(this->mutex);
+
+    if (timer_for_ack) {
+        controller.ack(*this);
+    } else {
+        need_selective_ack = true;
+        timer_for_ack = true;
+
+        dprintf("starting full ACK timer: node=%u",
+            (unsigned) node.id);
+        controller.timer_queue_.run_in(*this,
+            controller.ack_delay_ - controller.sack_delay_);
+    }
 }

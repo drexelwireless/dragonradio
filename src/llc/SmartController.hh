@@ -31,34 +31,16 @@ struct SendWindow {
     SendWindow(Node &n,
                SmartController &controller,
                Seq::uint_type maxwin,
-               double retransmission_delay_)
-      : node(n)
-      , controller(controller)
-      , mcsidx(0)
-      , new_window(true)
-      , seq({0})
-      , unack({0})
-      , max({0})
-      , send_set_unack(false)
-      , win(1)
-      , maxwin(maxwin)
-      , mcsidx_prob(0)
-      , per_cutoff({0})
-      , prev_short_per(1)
-      , prev_long_per(1)
-      , short_per(1)
-      , long_per(1)
-      , retransmission_delay(retransmission_delay_)
-      , ack_delay(1.0)
-      , entries_(maxwin, *this)
-    {
-    }
+               double retransmission_delay_);
 
     /** @brief Destination node. */
     Node &node;
 
     /** @brief Our controller. */
     SmartController &controller;
+
+    /** @brief PHY's MCS table */
+    std::vector<PHY::MCSEntry> &mcs_table;
 
     /** @brief Mutex for the send window */
     std::mutex mutex;
@@ -136,7 +118,31 @@ struct SendWindow {
     }
 
     /** @brief Record a packet ACK */
-    void recordACK(const MonoClock::time_point &tx_time);
+    void ack(const MonoClock::time_point &tx_time);
+
+    /** @brief Update PER as a result of successful packet transmission. */
+    void txSuccess(void);
+
+    /** @brief Update PER as a result of unsuccessful packet transmission. */
+    void txFailure(void);
+
+    /** @brief Update MCS based on current PER */
+    void updateMCS(void);
+
+    /** @brief Return true if we may move up one MCS level */
+    bool mayMoveUpMCS(void) const;
+
+    /** @brief Move down one MCS level */
+    void moveDownMCS(unsigned n);
+
+    /** @brief Move up one MCS level */
+    void moveUpMCS(void);
+
+    /** @brief Set MCS */
+    void setMCS(size_t mcsidx);
+
+    /** @brief Reconfigure a node's PER estimates */
+    void resetPEREstimates(void);
 
     struct Entry : public TimerQueue::Timer {
         Entry(SendWindow &sendw)
@@ -974,30 +980,6 @@ protected:
 
     /** @brief Handle sender setting unack */
     void handleSetUnack(RadioPacket &pkt, RecvWindow &recvw);
-
-    /** @brief Update PER as a result of successful packet transmission. */
-    void txSuccess(SendWindow &sendw);
-
-    /** @brief Update PER as a result of unsuccessful packet transmission. */
-    void txFailure(SendWindow &sendw);
-
-    /** @brief Update MCS based on current PER */
-    void updateMCS(SendWindow &sendw);
-
-    /** @brief Return true if we may move up one MCS level */
-    bool mayMoveUpMCS(const SendWindow &sendw);
-
-    /** @brief Move down one MCS level */
-    void moveDownMCS(SendWindow &sendw, unsigned n);
-
-    /** @brief Move up one MCS level */
-    void moveUpMCS(SendWindow &sendw);
-
-    /** @brief Set MCS */
-    void setMCS(SendWindow &sendw, size_t mcsidx);
-
-    /** @brief Reconfigure a node's PER estimates */
-    void resetPEREstimates(SendWindow &sendw);
 
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);
