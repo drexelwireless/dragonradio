@@ -24,72 +24,7 @@
 class SmartController;
 
 struct SendWindow {
-    struct Entry : public TimerQueue::Timer {
-        Entry(SendWindow &sendw)
-          : sendw(sendw)
-          , pkt(nullptr)
-          , timestamp(0.0)
-         {
-         };
-
-        virtual ~Entry() = default;
-
-        void operator =(std::shared_ptr<NetPacket>& p)
-        {
-            pkt = p;
-        }
-
-        operator bool()
-        {
-            return (bool) pkt;
-        }
-
-        operator std::shared_ptr<NetPacket>()
-        {
-            return pkt;
-        }
-
-        void reset(void)
-        {
-            pkt.reset();
-        }
-
-        /** @brief Return true if we MAY drop this window entry. */
-        /** We MAY drop an entry if:
-         * 1) It is NOT a SYN packet, because in that case it is needed to
-         * initiate a connection. We always retransmit SYN packets.
-         */
-        inline bool mayDrop(const std::optional<size_t> &max_retransmissions)
-        {
-            return !pkt->hdr.flags.syn;
-        }
-
-        /** @brief Return true if we SHOULD drop this window entry. */
-        /** We SHOULD drop an entry if:
-         * 1) It is NOT a SYN packet, because in that case it is needed to
-         * initiate a connection. We always retransmit SYN packets.
-         * AND
-         * 2) It has exceeded the maximum number of allowed retransmissions.
-         * 3) OR it has passed its deadline.
-         */
-        inline bool shouldDrop(const std::optional<size_t> &max_retransmissions)
-        {
-            return !pkt->hdr.flags.syn &&
-                 (  (max_retransmissions && pkt->nretrans >= *max_retransmissions)
-                 || pkt->deadlinePassed(MonoClock::now()));
-        }
-
-        void operator()() override;
-
-        /** @brief The send window. */
-        SendWindow &sendw;
-
-        /** @brief The packet received in this window entry. */
-        std::shared_ptr<NetPacket> pkt;
-
-        /** @brief Timestamp of last transmission of this packet. */
-        MonoClock::time_point timestamp;
-    };
+    struct Entry;
 
     using vector_type = std::vector<Entry>;
 
@@ -203,6 +138,73 @@ struct SendWindow {
     /** @brief Record a packet ACK */
     void recordACK(const MonoClock::time_point &tx_time);
 
+    struct Entry : public TimerQueue::Timer {
+        Entry(SendWindow &sendw)
+          : sendw(sendw)
+          , pkt(nullptr)
+          , timestamp(0.0)
+         {
+         };
+
+        virtual ~Entry() = default;
+
+        void operator =(std::shared_ptr<NetPacket>& p)
+        {
+            pkt = p;
+        }
+
+        operator bool()
+        {
+            return (bool) pkt;
+        }
+
+        operator std::shared_ptr<NetPacket>()
+        {
+            return pkt;
+        }
+
+        void reset(void)
+        {
+            pkt.reset();
+        }
+
+        /** @brief Return true if we MAY drop this window entry. */
+        /** We MAY drop an entry if:
+         * 1) It is NOT a SYN packet, because in that case it is needed to
+         * initiate a connection. We always retransmit SYN packets.
+         */
+        inline bool mayDrop(const std::optional<size_t> &max_retransmissions)
+        {
+            return !pkt->hdr.flags.syn;
+        }
+
+        /** @brief Return true if we SHOULD drop this window entry. */
+        /** We SHOULD drop an entry if:
+         * 1) It is NOT a SYN packet, because in that case it is needed to
+         * initiate a connection. We always retransmit SYN packets.
+         * AND
+         * 2) It has exceeded the maximum number of allowed retransmissions.
+         * 3) OR it has passed its deadline.
+         */
+        inline bool shouldDrop(const std::optional<size_t> &max_retransmissions)
+        {
+            return !pkt->hdr.flags.syn &&
+                 (  (max_retransmissions && pkt->nretrans >= *max_retransmissions)
+                 || pkt->deadlinePassed(MonoClock::now()));
+        }
+
+        void operator()() override;
+
+        /** @brief The send window. */
+        SendWindow &sendw;
+
+        /** @brief The packet received in this window entry. */
+        std::shared_ptr<NetPacket> pkt;
+
+        /** @brief Timestamp of last transmission of this packet. */
+        MonoClock::time_point timestamp;
+    };
+
 private:
     /** @brief Unacknowledged packets in our send window. */
     /** INVARIANT: unack <= N <= max < unack + win */
@@ -210,38 +212,7 @@ private:
 };
 
 struct RecvWindow : public TimerQueue::Timer  {
-    struct Entry {
-        Entry() : received(false), delivered(false), pkt(nullptr) {};
-
-        void operator =(std::shared_ptr<RadioPacket>&& p)
-        {
-            received = true;
-            delivered = false;
-            pkt = std::move(p);
-        }
-
-        void alreadyDelivered(void)
-        {
-            received = true;
-            delivered = true;
-        }
-
-        void reset(void)
-        {
-            received = false;
-            delivered = false;
-            pkt.reset();
-        }
-
-        /** @brief Was this entry in the window received? */
-        bool received;
-
-        /** @brief Was this entry in the window delivered? */
-        bool delivered;
-
-        /** @brief The packet received in this window entry. */
-        std::shared_ptr<RadioPacket> pkt;
-    };
+    struct Entry;
 
     using vector_type = std::vector<Entry>;
 
@@ -325,6 +296,39 @@ struct RecvWindow : public TimerQueue::Timer  {
     }
 
     void operator()() override;
+
+    struct Entry {
+        Entry() : received(false), delivered(false), pkt(nullptr) {};
+
+        void operator =(std::shared_ptr<RadioPacket>&& p)
+        {
+            received = true;
+            delivered = false;
+            pkt = std::move(p);
+        }
+
+        void alreadyDelivered(void)
+        {
+            received = true;
+            delivered = true;
+        }
+
+        void reset(void)
+        {
+            received = false;
+            delivered = false;
+            pkt.reset();
+        }
+
+        /** @brief Was this entry in the window received? */
+        bool received;
+
+        /** @brief Was this entry in the window delivered? */
+        bool delivered;
+
+        /** @brief The packet received in this window entry. */
+        std::shared_ptr<RadioPacket> pkt;
+    };
 
 private:
     /** @brief All packets with sequence numbers N such that
