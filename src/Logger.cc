@@ -354,7 +354,7 @@ void Logger::logSlot(std::shared_ptr<IQBuf> buf,
         // a slot that is older than the youngest slot we've ever logged.
         if (buf->timestamp > t_last_slot_) {
             log_q_.emplace([=](){ logSlot_(buf, bw); });
-            t_last_slot_ = buf->timestamp;
+            t_last_slot_ = *buf->timestamp;
         }
     }
 }
@@ -388,7 +388,7 @@ void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
     SlotEntry    entry;
     buffer<char> compressed = compressIQData(buf->data(), buf->size());
 
-    entry.timestamp = (WallClock::to_wall_time(buf->timestamp) - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(*buf->timestamp) - t_start_).get_real_secs();
     entry.bw = bw;
     entry.iq_data.p = compressed.data();
     entry.iq_data.len = compressed.size();

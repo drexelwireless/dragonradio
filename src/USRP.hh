@@ -173,6 +173,12 @@ public:
         return auto_dc_offset_;
     }
 
+    /** @brief Get time at which next transmission will occur */
+    std::optional<MonoClock::time_point> getNextTXTime()
+    {
+        return t_next_tx_;
+    }
+
     /** @brief Set automatic DC offset correction. */
     void setAutoDCOffset(bool enable)
     {
@@ -323,6 +329,9 @@ private:
     /** @brief Maximum number of samples we will read at a time during burstRX.
      */
     size_t rx_max_samps_;
+
+    /** @brief Time at which next transmission will occur */
+    std::optional<MonoClock::time_point> t_next_tx_;
 
     /** @brief Flag indicating whether or not to enable automatic DC offset
      * correction.

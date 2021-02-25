@@ -100,7 +100,7 @@ public:
 
 #if !defined(NOUHD)
     /** @brief Timestamp of the first sample */
-    MonoClock::time_point timestamp;
+    std::optional<MonoClock::time_point> timestamp;
 #endif /* !defined(NOUHD) */
 
     /** @brief Sequence number of current slot */

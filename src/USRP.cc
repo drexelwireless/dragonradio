@@ -133,12 +133,13 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
         if (when_) {
             tx_md.time_spec = when_->t;
             tx_md.has_time_spec = true;
+
+            t_next_tx_ = *when_;
         }
+
         tx_md.start_of_burst = true;
         tx_md.end_of_burst = false;
     }
-
-    MonoClock::time_point when = when_ ? *when_ : MonoClock::now();
 
     // We walk through the supplied queue of buffers and trasmit each in chunks
     // whose size is no more than tx_max_samps_ bytes, which is the maximum size
@@ -147,7 +148,8 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
     for (auto it = bufs.begin(); it != bufs.end(); ++it) {
         IQBuf& iqbuf = **it; // Current buffer we are sending
 
-        iqbuf.timestamp = when;
+        if (t_next_tx_)
+            iqbuf.timestamp = *t_next_tx_ - iqbuf.delay/tx_rate_;
 
         for (size_t off = iqbuf.delay; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
@@ -169,7 +171,8 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
             tx_md.start_of_burst = false;
         }
 
-        when += static_cast<double>(iqbuf.size() - iqbuf.delay)/tx_rate_;
+        if (t_next_tx_)
+            *t_next_tx_ += static_cast<double>(iqbuf.size() - iqbuf.delay)/tx_rate_;
     }
 }
 
@@ -180,6 +183,8 @@ void USRP::stopTXBurst(void)
     tx_md.end_of_burst = true;
 
     tx_stream_->send((char *) nullptr, 0, tx_md);
+
+    t_next_tx_ = std::nullopt;
 }
 
 void USRP::startRXStream(MonoClock::time_point when)
