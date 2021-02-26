@@ -95,40 +95,40 @@ get_packet:
     NodeId nexthop = pkt->hdr.nexthop;
 
     // If we have received a packet from the destination, add an ACK.
-    RecvWindow *recvwptr = maybeGetReceiveWindow(nexthop);
-
-    if (recvwptr) {
-        RecvWindow                  &recvw = *recvwptr;
+    {
+        RecvWindow                  &recvw = getReceiveWindow(nexthop);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
-        // The packet we are ACK'ing had better be no more than 1 more than the
-        // max sequence number we've received.
-        if(recvw.ack > recvw.max + 1)
-            logARQ(LOGERROR, "INVARIANT VIOLATED: received packet outside window: ack=%u; max=%u",
-                (unsigned) recvw.ack,
-                (unsigned) recvw.max);
+        if (recvw.active) {
+            // The packet we are ACK'ing had better be no more than 1 more than the
+            // max sequence number we've received.
+            if(recvw.ack > recvw.max + 1)
+                logARQ(LOGERROR, "INVARIANT VIOLATED: received packet outside window: ack=%u; max=%u",
+                    (unsigned) recvw.ack,
+                    (unsigned) recvw.max);
 
-        pkt->hdr.flags.ack = 1;
-        pkt->ehdr().ack = recvw.ack;
+            pkt->hdr.flags.ack = 1;
+            pkt->ehdr().ack = recvw.ack;
 
 #if DEBUG
-        if (pkt->ehdr().data_len == 0)
-            dprintf("send delayed ack: node=%u; ack=%u",
-                (unsigned) nexthop,
-                (unsigned) recvw.ack);
-        else
-            dprintf("send ack: node=%u; ack=%u",
-                (unsigned) nexthop,
-                (unsigned) recvw.ack);
+            if (pkt->ehdr().data_len == 0)
+                dprintf("send delayed ack: node=%u; ack=%u",
+                    (unsigned) nexthop,
+                    (unsigned) recvw.ack);
+            else
+                dprintf("send ack: node=%u; ack=%u",
+                    (unsigned) nexthop,
+                    (unsigned) recvw.ack);
 #endif
 
-        // Append selective ACK if needed
-        if (recvw.need_selective_ack)
-            appendFeedback(*pkt, recvw);
-    } else if (pkt->ehdr().data_len != 0)
-        dprintf("send: node=%u; seq=%u",
-            (unsigned) nexthop,
-            (unsigned) pkt->hdr.seq);
+            // Append selective ACK if needed
+            if (recvw.need_selective_ack)
+                appendFeedback(*pkt, recvw);
+        } else if (pkt->ehdr().data_len != 0)
+            dprintf("send: node=%u; seq=%u",
+                (unsigned) nexthop,
+                (unsigned) pkt->hdr.seq);
+    }
 
     // Update our send window if this packet has data
     if (pkt->ehdr().data_len != 0) {
@@ -215,19 +215,20 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         return;
 
     // Skip packets that aren't for us
+    NodeId this_node_id = radionet_->getThisNodeId();
+
     if (pkt->hdr.nexthop != kNodeBroadcast &&
-        pkt->hdr.nexthop != radionet_->getThisNodeId())
+        pkt->hdr.nexthop != this_node_id)
         return;
 
     // Get a reference to the sending node. This will add a new node to the
     // network if it doesn't already exist.
-    Node &node = (*radionet_)[pkt->hdr.curhop];
+    NodeId     prevhop = pkt->hdr.curhop;
+    Node       &node = (*radionet_)[prevhop];
+    RecvWindow &recvw = getReceiveWindow(prevhop);
 
-    // Get node ID of source
-    NodeId prevhop = pkt->hdr.curhop;
-
-    if (pkt->hdr.flags.has_data) {
-        RecvWindow                  &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
+    // Activate receive window and send NAK for bad packet
+    {
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         // Update metrics. EVM and RSSI should be valid as long as the header is
@@ -235,45 +236,51 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         recvw.long_evm.update(pkt->timestamp, pkt->evm);
         recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
 
-        // Immediately NAK non-broadcast data packets with a bad payload if they
-        // contain data. We can't do anything else with the packet.
-        if (pkt->internal_flags.invalid_payload) {
-            if (pkt->hdr.nexthop != kNodeBroadcast) {
-                // If the packet is after our receive window, we need to advance
-                // the receive window.
-                if (pkt->hdr.seq >= recvw.ack + recvw.win)
-                    advanceRecvWindow(pkt->hdr.seq, recvw);
+        if (pkt->hdr.flags.has_data) {
+            // Activate the receive window if it is not yet active. If this is a
+            // SYN packet or if the sequence number is outside the receive
+            // window, assume the sender restarted and reset the receive window.
+            // This could cause an issue if we see a re-transmission of the
+            // first packet after the sender has advanced its window. This
+            // should not happen because the sender will only open up its window
+            // if it has seen its SYN packet ACK'ed.
+            if ((pkt->hdr.nexthop == this_node_id) &&
+                (!recvw.active || pkt->hdr.flags.syn || !recvw.contains(pkt->hdr.seq))) {
+                // This is a new connection, so cancel selective ACK timer for the
+                // old receive window
+                timer_queue_.cancel(recvw);
 
-                // Update the max seq number we've received
-                if (pkt->hdr.seq > recvw.max) {
-                    recvw.max = pkt->hdr.seq;
-                    recvw.max_timestamp = pkt->timestamp;
-                }
-
-                // Send a NAK
-                nak(recvw, pkt->hdr.seq);
+                // Reset the receive window
+                recvw.reset(pkt->hdr.seq);
             }
 
-            // We're done with this packet since it has a bad payload
-            return;
+            // Immediately NAK non-broadcast data packets with a bad payload if
+            // they contain data. We can't do anything else with the packet.
+            if (pkt->internal_flags.invalid_payload) {
+                if (pkt->hdr.nexthop != kNodeBroadcast) {
+                    // If the packet is after our receive window, we need to advance
+                    // the receive window.
+                    if (pkt->hdr.seq >= recvw.ack + recvw.win)
+                        advanceRecvWindow(pkt->hdr.seq, recvw);
+
+                    // Update the max seq number we've received
+                    if (pkt->hdr.seq > recvw.max) {
+                        recvw.max = pkt->hdr.seq;
+                        recvw.max_timestamp = pkt->timestamp;
+                    }
+
+                    // Send a NAK
+                    nak(recvw, pkt->hdr.seq);
+                }
+
+                // We're done with this packet since it has a bad payload
+                return;
+            }
+        } else {
+            // We're done with this packet if it has a bad payload
+            if (pkt->internal_flags.invalid_payload)
+                return;
         }
-    } else {
-        RecvWindow *recvwptr = maybeGetReceiveWindow(prevhop);
-
-        // Update metrics. EVM and RSSI should be valid as long as the header is
-        // valid. We won't create a receive window if we don't already have one
-        // because this packet has no data payload.
-        if (recvwptr) {
-            RecvWindow                  &recvw = *recvwptr;
-            std::lock_guard<std::mutex> lock(recvw.mutex);
-
-            recvw.long_evm.update(pkt->timestamp, pkt->evm);
-            recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
-        }
-
-        // We're done with this packet if it has a bad payload
-        if (pkt->internal_flags.invalid_payload)
-            return;
     }
 
     // Process control info
@@ -294,9 +301,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         return;
     }
 
-    // If this packet was not destined for us, we are done
-    if (pkt->hdr.nexthop != radionet_->getThisNodeId())
-        return;
+    // At this point, the packet must have been sent to us.
 
     // Handle ACK/NAK
     {
@@ -414,7 +419,6 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 #endif
 
     // Fill our receive window
-    RecvWindow                  &recvw = getReceiveWindow(prevhop, pkt->hdr.seq, pkt->hdr.flags.syn);
     std::lock_guard<std::mutex> lock(recvw.mutex);
 
     // If this is a SYN packet, ACK immediately to open up the window.
@@ -504,7 +508,7 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
 
         // Cancel the selective ACK timer when we actually have sent a selective ACK
         if (pkt.internal_flags.has_selective_ack) {
-            RecvWindow                  &recvw = *maybeGetReceiveWindow(pkt.hdr.nexthop);
+            RecvWindow                  &recvw = getReceiveWindow(pkt.hdr.nexthop);
             std::lock_guard<std::mutex> lock(recvw.mutex);
 
             timer_queue_.cancel(recvw);
@@ -1456,54 +1460,23 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
     }
 }
 
-RecvWindow *SmartController::maybeGetReceiveWindow(NodeId node_id)
+RecvWindow &SmartController::getReceiveWindow(NodeId node_id)
 {
     std::lock_guard<std::mutex> lock(recv_mutex_);
     auto                        it = recv_.find(node_id);
 
     if (it != recv_.end())
-        return &(it->second);
-    else
-        return nullptr;
-}
+        return it->second;
+    else {
+        auto result = recv_.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(node_id),
+                                    std::forward_as_tuple((*radionet_)[node_id],
+                                                          *this,
+                                                          recvwin_,
+                                                          explicit_nak_win_));
 
-RecvWindow &SmartController::getReceiveWindow(NodeId node_id, Seq seq, bool isSYN)
-{
-    std::lock_guard<std::mutex> lock(recv_mutex_);
-    auto                        it = recv_.find(node_id);
-
-    // XXX If we have a receive window for this source use it. The exception is
-    // when we either see a SYN packet or a sequence number that is outside the
-    // receive window. In that case, assume the sender restarted and re-create
-    // the receive window. This could cause an issue if we see a re-transmission
-    // of the first packet after the sender has advanced its window. This should
-    // not happen because the sender will only open up its window if it has seen
-    // its SYN packet ACK'ed.
-    if (it != recv_.end()) {
-        RecvWindow                  &recvw = it->second;
-        std::lock_guard<std::mutex> lock(recvw.mutex);
-
-        if (!isSYN || (seq >= recvw.max - recvw.win && seq < recvw.ack + recvw.win))
-            return recvw;
-        else {
-            // This is a new connection, so cancel selective ACK timer for the
-            // old receive window
-            timer_queue_.cancel(recvw);
-
-            // Delete the old receive window
-            recv_.erase(it);
-        }
+        return result.first->second;
     }
-
-    Node       &src = (*radionet_)[node_id];
-    RecvWindow &recvw = recv_.emplace(std::piecewise_construct,
-                                      std::forward_as_tuple(node_id),
-                                      std::forward_as_tuple(src, *this, seq, recvwin_, explicit_nak_win_)).first->second;
-
-    recvw.long_evm.setTimeWindow(long_stats_window_);
-    recvw.long_rssi.setTimeWindow(long_stats_window_);
-
-    return recvw;
 }
 
 SendWindow::SendWindow(Node &n,
@@ -1748,6 +1721,45 @@ void SendWindow::resetPEREstimates(void)
 void SendWindow::Entry::operator()()
 {
     sendw.controller.retransmitOnTimeout(*this);
+}
+
+RecvWindow::RecvWindow(Node &n,
+                       SmartController &controller,
+                       Seq::uint_type win,
+                       size_t nak_win)
+    : node(n)
+    , controller(controller)
+    , active(false)
+    , ack({0})
+    , max({0})
+    , win(win)
+    , need_selective_ack(false)
+    , timer_for_ack(false)
+    , explicit_nak_win(nak_win)
+    , explicit_nak_idx(0)
+    , entries_(win)
+{
+    long_evm.setTimeWindow(controller.long_stats_window_);
+    long_rssi.setTimeWindow(controller.long_stats_window_);
+}
+
+void RecvWindow::reset(Seq seq)
+{
+    active = true;
+
+    ack = seq;
+    max = seq - 1;
+    need_selective_ack = false;
+    timer_for_ack = false;
+
+    auto nak_win = explicit_nak_win.size();
+
+    explicit_nak_win.clear();
+    explicit_nak_win.resize(nak_win);
+    explicit_nak_idx = 0;
+
+    entries_.clear();
+    entries_.resize(win);
 }
 
 void RecvWindow::operator()()

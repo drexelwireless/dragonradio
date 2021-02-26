@@ -94,13 +94,11 @@ public:
       : controller_(controller)
       , node_id_(node_id)
     {
-        if (controller_->maybeGetReceiveWindow(node_id_) == nullptr)
-            throw std::out_of_range("No receive window for node");
     }
 
     std::optional<double> getLongEVM(void)
     {
-        RecvWindow                  &recvw = *controller_->maybeGetReceiveWindow(node_id_);
+        RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.long_evm.value();
@@ -108,7 +106,7 @@ public:
 
     std::optional<double> getLongRSSI(void)
     {
-        RecvWindow                  &recvw = *controller_->maybeGetReceiveWindow(node_id_);
+        RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.long_rssi.value();

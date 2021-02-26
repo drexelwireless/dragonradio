@@ -236,22 +236,8 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     RecvWindow(Node &n,
                SmartController &controller,
-               Seq seq,
                Seq::uint_type win,
-               size_t nak_win)
-      : node(n)
-      , controller(controller)
-      , ack(seq)
-      , max(seq-1)
-      , win(win)
-      , need_selective_ack(false)
-      , timer_for_ack(false)
-      , explicit_nak_win(nak_win)
-      , explicit_nak_idx(0)
-      , long_evm(0)
-      , long_rssi(0)
-      , entries_(win)
-    {}
+               size_t nak_win);
 
     /** @brief Sender node. */
     Node &node;
@@ -261,6 +247,15 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     /** @brief Mutex for the receive window */
     std::mutex mutex;
+
+    /** @brief Long-term packet EVM */
+    TimeWindowMean<MonoClock, double> long_evm;
+
+    /** @brief Long-term packet RSSI */
+    TimeWindowMean<MonoClock, double> long_rssi;
+
+    /** @brief True when this is an active window that has received a packet */
+    bool active;
 
     /** @brief Next sequence number we should ACK. */
     /** We have received (or given up) on all packets with sequence numbers <
@@ -298,11 +293,14 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Explicit NAK window index */
     size_t explicit_nak_idx;
 
-    /** @brief Long-term packet EVM */
-    TimeWindowMean<MonoClock, double> long_evm;
+    /** @brief Return true if sequence number is in the receive window */
+    inline bool contains(Seq seq)
+    {
+        return seq >= max - win && seq < ack + win;
+    }
 
-    /** @brief Long-term packet RSSI */
-    TimeWindowMean<MonoClock, double> long_rssi;
+    /** @brief Reset the receive window */
+    void reset(Seq seq);
 
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
@@ -985,19 +983,13 @@ protected:
     bool getPacket(std::shared_ptr<NetPacket>& pkt);
 
     /** @brief Get a node's send window */
-    SendWindow &getSendWindow(Node &node);
-
-    /** @brief Get a node's send window */
     SendWindow &getSendWindow(NodeId node_id);
 
-    /** @brief Get a node's receive window.
+    /** @brief Get a node's receive window
      * @param node_id The node whose window to get
-     * @returns A pointer to the window or nullptr if one doesn't exist.
+     * @returns The receive window
      */
-    RecvWindow *maybeGetReceiveWindow(NodeId node_id);
-
-    /** @brief Get a node's receive window */
-    RecvWindow &getReceiveWindow(NodeId node_id, Seq seq, bool isSYN);
+    RecvWindow &getReceiveWindow(NodeId node_id);
 };
 
 #endif /* SMARTCONTROLLER_H_ */
