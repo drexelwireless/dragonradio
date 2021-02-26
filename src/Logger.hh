@@ -89,49 +89,24 @@ public:
             log_q_.push([=, pkt = std::shared_ptr<RadioPacket>(pkt)]() { logRecv_(*pkt); });
     }
 
-    void logSend(const MonoClock::time_point& t,
-                 unsigned nretrans,
-                 const Header& hdr,
-                 const ExtendedHeader& ehdr,
-                 uint32_t mgen_flow_uid,
-                 uint32_t mgen_seqno,
-                 unsigned mcsidx,
-                 float fc,
-                 float bw,
-                 double mod_latency,
-                 uint32_t size,
-                 std::shared_ptr<IQBuf> buf,
-                 size_t offset,
-                 size_t nsamples)
+    void logSend(const std::shared_ptr<NetPacket> &pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=](){ logSend_(t, kNotDropped, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)]() { logSend_(pkt->timestamp, kNotDropped, *pkt); });
     }
 
     void logLinkLayerDrop(const MonoClock::time_point& t,
-                          unsigned nretrans,
-                          const Header& hdr,
-                          const ExtendedHeader& ehdr,
-                          uint32_t mgen_flow_uid,
-                          uint32_t mgen_seqno,
-                          unsigned mcsidx,
-                          uint32_t size)
+                          const std::shared_ptr<NetPacket> &pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=](){ logSend_(t, kLinkLayerDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kLinkLayerDrop, *pkt); });
     }
 
     void logQueueDrop(const MonoClock::time_point& t,
-                      unsigned nretrans,
-                      const Header& hdr,
-                      const ExtendedHeader& ehdr,
-                      uint32_t mgen_flow_uid,
-                      uint32_t mgen_seqno,
-                      unsigned mcsidx,
-                      uint32_t size)
+                      const std::shared_ptr<NetPacket> &pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=](){ logSend_(t, kQueueDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kQueueDrop, *pkt); });
     }
 
     void logEvent(const MonoClock::time_point& t,
@@ -259,19 +234,7 @@ private:
 
     void logSend_(const MonoClock::time_point& t,
                   DropType dropped,
-                  unsigned nretrans,
-                  const Header& hdr,
-                  const ExtendedHeader& ehdr,
-                  uint32_t mgen_flow_uid,
-                  uint32_t mgen_seqno,
-                  unsigned mcsidx,
-                  float fc,
-                  float bw,
-                  double mod_latency,
-                  uint32_t size,
-                  std::shared_ptr<IQBuf> buf,
-                  size_t offset,
-                  size_t nsamples);
+                  NetPacket &pkt);
 
     void logEvent_(const MonoClock::time_point& t,
                    char *event);

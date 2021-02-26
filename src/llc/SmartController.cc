@@ -865,14 +865,7 @@ void SmartController::drop(SendWindow::Entry &entry)
 
     // Drop the packet
     if (logger)
-        logger->logLinkLayerDrop(MonoClock::now(),
-                                 entry.pkt->nretrans,
-                                 entry.pkt->hdr,
-                                 entry.pkt->ehdr(),
-                                 entry.pkt->mgen_flow_uid.value_or(0),
-                                 entry.pkt->mgen_seqno.value_or(0),
-                                 entry.pkt->mcsidx,
-                                 entry.pkt->size());
+        logger->logLinkLayerDrop(MonoClock::now(), entry.pkt);
 
     dprintf("dropping packet: node=%u; seq=%u",
         (unsigned) sendw.node.id,

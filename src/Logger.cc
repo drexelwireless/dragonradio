@@ -563,21 +563,11 @@ void Logger::logRecv_(RadioPacket &pkt)
 
 void Logger::logSend_(const MonoClock::time_point& t,
                       DropType dropped,
-                      unsigned nretrans,
-                      const Header& hdr,
-                      const ExtendedHeader& ehdr,
-                      uint32_t mgen_flow_uid,
-                      uint32_t mgen_seqno,
-                      unsigned mcsidx,
-                      float fc,
-                      float bw,
-                      double mod_latency,
-                      uint32_t size,
-                      std::shared_ptr<IQBuf> buf,
-                      size_t offset,
-                      size_t nsamples)
+                      NetPacket &pkt)
 {
     PacketSendEntry entry;
+    Header          &hdr = pkt.hdr;
+    ExtendedHeader  &ehdr = pkt.ehdr();
     u_flags         u;
 
     u.flags = hdr.flags;
@@ -585,7 +575,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
     entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
     entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
     entry.dropped = dropped;
-    entry.nretrans = nretrans;
+    entry.nretrans = pkt.nretrans;
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
@@ -594,22 +584,34 @@ void Logger::logSend_(const MonoClock::time_point& t,
     entry.dest = ehdr.dest;
     entry.ack = ehdr.ack;
     entry.data_len = ehdr.data_len;
-    entry.mgen_flow_uid = mgen_flow_uid;
-    entry.mgen_seqno = mgen_seqno;
-    entry.mcsidx = mcsidx;
-    entry.fc = fc;
-    entry.bw = bw;
-    entry.mod_latency = mod_latency;
-    entry.size = size;
-    entry.nsamples = nsamples;
-    if (buf && getCollectSource(kSentIQ)) {
-        // It's possible that a packet's content is split across two successive
-        // IQ buffers. If this happens, we won't have all of the packet's IQ
-        // data, so we need to clamp nsamples.
-        assert(offset <= buf->size());
-        entry.iq_data.p = buf->data() + offset;
-        entry.iq_data.len = std::min(nsamples, (unsigned) buf->size() - offset);
+    entry.mgen_flow_uid =  pkt.mgen_flow_uid.value_or(0);
+    entry.mgen_seqno =  pkt.mgen_seqno.value_or(0);
+    entry.mcsidx =  pkt.mcsidx;
+
+    if (dropped == kNotDropped) {
+        entry.fc = pkt.fc;
+        entry.bw = pkt.bw;
+        entry.mod_latency = pkt.mod_latency;
+        entry.size = pkt.size();
+        entry.nsamples = pkt.nsamples;
+        if (pkt.samples && getCollectSource(kSentIQ)) {
+            // It's possible that a packet's content is split across two successive
+            // IQ buffers. If this happens, we won't have all of the packet's IQ
+            // data, so we need to clamp nsamples.
+            assert(pkt.offset <= pkt.samples->size());
+            entry.iq_data.p = pkt.samples->data() + pkt.offset;
+            entry.iq_data.len = std::min(pkt.nsamples,
+                                        (unsigned) pkt.samples->size() - pkt.offset);
+        } else {
+            entry.iq_data.p = nullptr;
+            entry.iq_data.len = 0;
+        }
     } else {
+        entry.fc = 0;
+        entry.bw = 0;
+        entry.mod_latency = 0;
+        entry.size = 0;
+        entry.nsamples = 0;
         entry.iq_data.p = nullptr;
         entry.iq_data.len = 0;
     }

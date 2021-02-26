@@ -21,6 +21,7 @@
 #include "buffer.hh"
 #include "Clock.hh"
 #include "Header.hh"
+#include "IQBuffer.hh"
 #include "net/mgen.h"
 #include "phy/Channel.hh"
 #include "phy/Modem.hh"
@@ -494,6 +495,12 @@ struct NetPacket : public Packet
     /** @brief Multiplicative TX gain. */
     float g;
 
+    /** @brief Center frequency (Hz) */
+    float fc;
+
+    /** @brief Bandwidth (Hz) */
+    float bw;
+
     /** @brief Number of retransmissions. */
     unsigned nretrans;
 
@@ -502,6 +509,18 @@ struct NetPacket : public Packet
 
     /** @brief Packet timestamp */
     std::optional<TimestampSeq> timestamp_seq;
+
+    /** @brief Modulation latency */
+    double mod_latency;
+
+    /** @brief Offset of start of packet from beginning of sample buffer */
+    size_t offset;
+
+    /** @brief Number of modulated samples */
+    size_t nsamples;
+
+    /** @brief IQ sample buffer containing modulated packet */
+    std::shared_ptr<IQBuf> samples;
 
     /** @brief Return true if the packet's deadline has passed, false otherwise */
     bool deadlinePassed(const MonoClock::time_point &now)
