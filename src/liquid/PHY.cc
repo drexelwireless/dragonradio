@@ -113,6 +113,23 @@ PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
 {
 }
 
+/** @brief Get MCS index of MCS in frame stats */
+inline mcsidx_t getMCSIndex(const std::vector<PHY::MCSEntry> &mcs_table,
+                            const framesyncstats_s &stats_)
+{
+    MCS mcs(static_cast<crc_scheme>(stats_.check),
+            static_cast<fec_scheme>(stats_.fec0),
+            static_cast<fec_scheme>(stats_.fec1),
+            static_cast<modulation_scheme>(stats_.mod_scheme));
+
+    for (mcsidx_t i = 0; i < mcs_table.size(); ++i) {
+        if (mcs == *reinterpret_cast<const MCS*>(mcs_table[i].mcs))
+            return i;
+    }
+
+    return 0;
+}
+
 int PHY::PacketDemodulator::callback(unsigned char *  header_,
                                      int              header_valid_,
                                      int              header_test_,
@@ -194,20 +211,6 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
             memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
         }
 
-        // Find MCS index
-        MCS                     mcs(static_cast<crc_scheme>(stats_.check),
-                                    static_cast<fec_scheme>(stats_.fec0),
-                                    static_cast<fec_scheme>(stats_.fec1),
-                                    static_cast<modulation_scheme>(stats_.mod_scheme));
-        std::optional<mcsidx_t> mcsidx = 0;
-
-        for (mcsidx_t i = 0; i < phy_.mcs_table.size(); ++i) {
-            if (mcs == *reinterpret_cast<const MCS*>(phy_.mcs_table[i].mcs)) {
-                mcsidx = i;
-                break;
-            }
-        }
-
         logger_->logRecv(timestamp_,
                          start,
                          end,
@@ -217,7 +220,7 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
                          *ehdr,
                          mgen_flow_uid,
                          mgen_seqno,
-                         mcsidx ? *mcsidx : 0,
+                         getMCSIndex(phy_.mcs_table, stats_),
                          stats_.evm,
                          stats_.rssi,
                          stats_.cfo,
