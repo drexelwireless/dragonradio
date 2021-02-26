@@ -517,36 +517,21 @@ typedef union {
     uint8_t bits;
 } u_flags;
 
-void Logger::logRecv_(const MonoClock::time_point& t,
-                      int32_t start_samples,
-                      int32_t end_samples,
-                      bool header_valid,
-                      bool payload_valid,
-                      const Header& hdr,
-                      const ExtendedHeader& ehdr,
-                      uint32_t mgen_flow_uid,
-                      uint32_t mgen_seqno,
-                      unsigned mcsidx,
-                      float evm,
-                      float rssi,
-                      float cfo,
-                      float fc,
-                      float bw,
-                      float demod_latency,
-                      uint32_t size,
-                      buffer<std::complex<float>> *symbols)
+void Logger::logRecv_(RadioPacket &pkt)
 {
     PacketRecvEntry entry;
+    Header          &hdr = pkt.hdr;
+    ExtendedHeader  &ehdr = pkt.ehdr();
     u_flags         u;
 
     u.flags = hdr.flags;
 
-    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
-    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
-    entry.start_samples = start_samples;
-    entry.end_samples = end_samples;
-    entry.header_valid = header_valid;
-    entry.payload_valid = payload_valid;
+    entry.timestamp = (WallClock::to_wall_time(pkt.slot_timestamp) - t_start_).get_real_secs();
+    entry.mono_timestamp = (pkt.slot_timestamp - mono_t_start_).get_real_secs();
+    entry.start_samples = pkt.start_samples;
+    entry.end_samples = pkt.end_samples;
+    entry.header_valid = !pkt.internal_flags.invalid_header;
+    entry.payload_valid = !pkt.internal_flags.invalid_payload;
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
@@ -555,28 +540,25 @@ void Logger::logRecv_(const MonoClock::time_point& t,
     entry.dest = ehdr.dest;
     entry.ack = ehdr.ack;
     entry.data_len = ehdr.data_len;
-    entry.mgen_flow_uid = mgen_flow_uid;
-    entry.mgen_seqno = mgen_seqno;
-    entry.mcsidx = mcsidx;
-    entry.evm = evm;
-    entry.rssi = rssi;
-    entry.cfo = cfo;
-    entry.fc = fc;
-    entry.bw = bw;
-    entry.demod_latency = demod_latency;
-    entry.size = size;
-    if (symbols) {
-        entry.symbols.p = symbols->data();
-        entry.symbols.len = symbols->size();
+    entry.mgen_flow_uid = pkt.mgen_flow_uid.value_or(0);
+    entry.mgen_seqno = pkt.mgen_seqno.value_or(0);
+    entry.mcsidx = pkt.mcsidx;
+    entry.evm = pkt.evm;
+    entry.rssi = pkt.rssi;
+    entry.cfo = pkt.cfo;
+    entry.fc = pkt.channel.fc;
+    entry.bw = pkt.bw;
+    entry.demod_latency = pkt.demod_latency;
+    entry.size = pkt.payload_len;
+    if (pkt.symbols && getCollectSource(kRecvSymbols)) {
+        entry.symbols.p = pkt.symbols->data();
+        entry.symbols.len = pkt.symbols->size();
     } else {
         entry.symbols.p = nullptr;
         entry.symbols.len = 0;
     }
 
     recv_->write(&entry, 1);
-
-    if (symbols)
-        delete symbols;
 }
 
 void Logger::logSend_(const MonoClock::time_point& t,

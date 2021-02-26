@@ -83,27 +83,10 @@ public:
         log_q_.push([=](){ logSnapshot_(snapshot); });
     }
 
-    void logRecv(const MonoClock::time_point& t,
-                 int32_t start_samples,
-                 int32_t end_samples,
-                 bool header_valid,
-                 bool payload_valid,
-                 const Header& hdr,
-                 const ExtendedHeader& ehdr,
-                 uint32_t mgen_flow_uid,
-                 uint32_t mgen_seqno,
-                 unsigned mcsidx,
-                 float evm,
-                 float rssi,
-                 float cfo,
-                 float fc,
-                 float bw,
-                 float demod_latency,
-                 uint32_t size,
-                 buffer<std::complex<float>> *buf)
+    void logRecv(const std::shared_ptr<RadioPacket> &pkt)
     {
         if (getCollectSource(kRecvPackets))
-            log_q_.push([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
+            log_q_.push([=, pkt = std::shared_ptr<RadioPacket>(pkt)]() { logRecv_(*pkt); });
     }
 
     void logSend(const MonoClock::time_point& t,
@@ -266,24 +249,7 @@ private:
 
     void logSnapshot_(std::shared_ptr<Snapshot> snapshot);
 
-    void logRecv_(const MonoClock::time_point& t,
-                  int32_t start_samples,
-                  int32_t end_samples,
-                  bool header_valid,
-                  bool payload_valid,
-                  const Header& hdr,
-                  const ExtendedHeader& ehdr,
-                  uint32_t mgen_flow_uid,
-                  uint32_t mgen_seqno,
-                  unsigned mcsidx,
-                  float evm,
-                  float rssi,
-                  float cfo,
-                  float fc,
-                  float bw,
-                  float demod_latency,
-                  uint32_t size,
-                  buffer<std::complex<float>> *buf);
+    void logRecv_(RadioPacket &pkt);
 
     enum DropType {
         kNotDropped = 0,

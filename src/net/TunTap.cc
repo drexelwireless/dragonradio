@@ -245,24 +245,7 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
     }
 
     if (logger_ && logger_->getCollectSource(Logger::kRecvPackets))
-        logger_->logRecv(pkt->slot_timestamp,
-                         pkt->start_samples,
-                         pkt->end_samples,
-                         !pkt->internal_flags.invalid_header,
-                         !pkt->internal_flags.invalid_payload,
-                         pkt->hdr,
-                         pkt->ehdr(),
-                         pkt->mgen_flow_uid.value_or(0),
-                         pkt->mgen_seqno.value_or(0),
-                         pkt->mcsidx,
-                         pkt->evm,
-                         pkt->rssi,
-                         pkt->cfo,
-                         pkt->channel.fc,
-                         pkt->bw,
-                         pkt->demod_latency,
-                         pkt->payload_len,
-                         nullptr);
+        logger_->logRecv(pkt);
 
     if ((size_t) nwrite != pkt->ehdr().data_len) {
         logTunTap(LOGERROR, "incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u",
