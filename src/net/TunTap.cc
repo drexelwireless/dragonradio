@@ -49,6 +49,7 @@ TunTap::TunTap(const std::string& tap_iface,
   , source(*this,
            std::bind(&TunTap::start, this),
            std::bind(&TunTap::stop, this))
+  , logger_(logger)
   , persistent_(persistent)
   , tap_iface_(tap_iface)
   , tap_ipaddr_(tap_ipaddr)
@@ -242,6 +243,26 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
             (unsigned) pkt->ehdr().data_len);
         return;
     }
+
+    if (logger_ && logger_->getCollectSource(Logger::kRecvPackets))
+        logger_->logRecv(pkt->slot_timestamp,
+                         pkt->start_samples,
+                         pkt->end_samples,
+                         !pkt->internal_flags.invalid_header,
+                         !pkt->internal_flags.invalid_payload,
+                         pkt->hdr,
+                         pkt->ehdr(),
+                         pkt->mgen_flow_uid.value_or(0),
+                         pkt->mgen_seqno.value_or(0),
+                         pkt->mcsidx,
+                         pkt->evm,
+                         pkt->rssi,
+                         pkt->cfo,
+                         pkt->channel.fc,
+                         pkt->bw,
+                         pkt->demod_latency,
+                         pkt->payload_len,
+                         nullptr);
 
     if ((size_t) nwrite != pkt->ehdr().data_len) {
         logTunTap(LOGERROR, "incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u",

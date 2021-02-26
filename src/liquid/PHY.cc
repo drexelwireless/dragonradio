@@ -138,8 +138,8 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
                                      int              payload_valid_,
                                      framesyncstats_s stats_)
 {
-    Header*         hdr = reinterpret_cast<Header*>(header_);
-    ExtendedHeader* ehdr = reinterpret_cast<ExtendedHeader*>(payload_);
+    auto    now = MonoClock::now();
+    Header* hdr = reinterpret_cast<Header*>(header_);
 
     // Save samples of frame start and end
     unsigned sample_end = sample_ + stats_.sample_counter;
@@ -173,10 +173,18 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     if (!pkt)
         return 0;
 
+    // Save MGEN info for logging
+    pkt->initMGENInfo();
+
+    // Save CSI
     pkt->evm = stats_.evm;
     pkt->rssi = stats_.rssi;
     pkt->cfo = stats_.cfo;
+
+    // Save channel info
     pkt->channel = channel_;
+    pkt->bw = rx_rate_;
+    pkt->mcsidx = getMCSIndex(phy_.mcs_table, stats_);
 
     // The start and end variables contain full-rate sample offsets of the frame
     // start and end relative to the beginning of the slot.
@@ -185,12 +193,19 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     MonoClock::time_point timestamp = timestamp_ + start / rx_rate_;
 
     pkt->timestamp = timestamp;
+    pkt->slot_timestamp = timestamp_;
+    pkt->start_samples = start;
+    pkt->end_samples = end;
 
-    // Save MGEN info for logging
-    pkt->initMGENInfo();
+    pkt->demod_latency = (now - timestamp).get_real_secs();
 
-    uint32_t mgen_flow_uid = pkt->mgen_flow_uid.value_or(0);
-    uint32_t mgen_seqno = pkt->mgen_seqno.value_or(0);
+    pkt->payload_len = payload_len_;
+
+    if (logger_ &&
+        logger_->getCollectSource(Logger::kRecvPackets) &&
+        logger_->getCollectSource(Logger::kRecvSymbols) &&
+        (header_valid_ || log_invalid_headers_))
+        pkt->symbols = std::make_unique<std::vector<std::complex<float>>>(stats_.framesyms, stats_.framesyms + stats_.num_framesyms);
 
     // Call callback with received packet
     callback_(std::move(pkt));
@@ -200,36 +215,6 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
                                     *snapshot_off_ + end,
                                     channel_.fc,
                                     channel_.bw);
-
-    if (logger_ &&
-        logger_->getCollectSource(Logger::kRecvPackets) &&
-        (header_valid_ || log_invalid_headers_)) {
-        buffer<std::complex<float>> *buf = nullptr;
-
-        if (logger_->getCollectSource(Logger::kRecvSymbols)) {
-            buf = new buffer<std::complex<float>>(stats_.num_framesyms);
-            memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
-        }
-
-        logger_->logRecv(timestamp_,
-                         start,
-                         end,
-                         header_valid_,
-                         payload_valid_,
-                         *hdr,
-                         *ehdr,
-                         mgen_flow_uid,
-                         mgen_seqno,
-                         getMCSIndex(phy_.mcs_table, stats_),
-                         stats_.evm,
-                         stats_.rssi,
-                         stats_.cfo,
-                         channel_.fc,
-                         rx_rate_,
-                         (MonoClock::now() - timestamp).get_real_secs(),
-                         payload_len_,
-                         std::move(buf));
-    }
 
     return 0;
 }

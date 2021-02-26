@@ -11,6 +11,7 @@
 #include <thread>
 #include <vector>
 
+#include "Logger.hh"
 #include "net/Element.hh"
 
 class TunTap : public Element
@@ -55,6 +56,9 @@ public:
     NetOut<Push> source;
 
 private:
+    /** @brief A reference to the global logger */
+    std::shared_ptr<Logger> logger_;
+
     /** @brief Flag indicating whether or not the interface is persistent. */
     bool persistent_;
 

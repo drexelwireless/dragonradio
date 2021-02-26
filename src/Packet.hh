@@ -545,6 +545,30 @@ struct RadioPacket : public Packet
 
     /** @brief Channel the packet was received on */
     Channel channel;
+
+    /** @brief Bandwidth (Hz) of entire received signal */
+    float bw;
+
+    /** @brief MCS index of packet */
+    mcsidx_t mcsidx;
+
+    /** @brief Timestamp of MAC slot containing this packet */
+    MonoClock::time_point slot_timestamp;
+
+    /** @brief Offset of start of packet from MAC slot */
+    size_t start_samples;
+
+    /** @brief Offset of end of packet from MAC slot */
+    size_t end_samples;
+
+    /** @brief Demodulation latency */
+    double demod_latency;
+
+    /** @brief Size of received payload, including controll information */
+    size_t payload_len;
+
+    /** @brief Symbols */
+    std::unique_ptr<std::vector<std::complex<float>>> symbols;
 };
 
 /** @brief Compute the size of the specified control message. */
