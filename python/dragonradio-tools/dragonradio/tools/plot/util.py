@@ -4,6 +4,7 @@ from matplotlib.lines import Line2D
 from matplotlib.widgets import CheckButtons
 
 import numpy as np
+import scipy.signal as signal
 
 # See:
 #   http://stanford.edu/~raejoon/blog/2017/05/16/python-recipes-for-cdfs.html
