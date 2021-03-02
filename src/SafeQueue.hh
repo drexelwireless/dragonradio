@@ -5,7 +5,7 @@
 #define SAFEQUEUE_H_
 
 #include <condition_variable>
-#include <list>
+#include <deque>
 #include <mutex>
 
 /** @brief A thread-safe queue. */
@@ -14,7 +14,7 @@
  * has been invoked, elements can still be inserted, but any call to pop will
  * immediately return.
  */
-template<typename T, class Container = std::list<T>>
+template<typename T, class Container = std::deque<T>>
 class SafeQueue {
 public:
     using container_type = Container;
