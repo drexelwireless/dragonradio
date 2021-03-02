@@ -180,7 +180,8 @@ class RadioMetricPlot(AnnotatedPlot):
                  nodes=None,
                  checkboxes=True,
                  only_invalid_packets=False,
-                 include_invalid_packets=False):
+                 include_invalid_packets=False,
+                 filt=lambda x : x):
         super().__init__(fig, ax)
 
         self.metric = metric
@@ -207,6 +208,9 @@ class RadioMetricPlot(AnnotatedPlot):
                 df = df.loc[(df.header_valid == 1) & (df.payload_valid == 0)]
             elif include_invalid_packets:
                 df = df.loc[(df.header_valid == 1) & (df.payload_valid == 1)]
+
+            # Apply DataFrame filter
+            df = filt(df)
 
             # Use time delta to align node's timestamps with collective start of
             # log.

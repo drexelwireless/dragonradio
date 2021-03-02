@@ -3,6 +3,7 @@
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 import argparse
 import datetime
+from functools import reduce
 import logging
 import pytz
 
@@ -36,6 +37,10 @@ def main():
                         default=None,
                         metavar='NODE',
                         help='include node')
+    parser.add_argument('--flow', type=int, action='append',
+                        dest='flows',
+                        metavar='FLOW',
+                        help='Restrict to given flow')
 
     parser.add_argument('--cfo', action='store_const', const='cfo',
                         dest='metric',
@@ -86,6 +91,16 @@ def main():
     else:
         start = None
 
+    filters = []
+
+    if args.flows:
+        filters.append(lambda df: df[df.mgen_flow_uid.isin(args.flows)])
+
+    def compose(f, g):
+        return lambda x : f(g(x))
+
+    filt = reduce(compose, filters, lambda x : x)
+
     # Load logs
     logs = dragonradio.tools.logging.LogCollection(start=start)
     logs.load(args.paths)
@@ -95,6 +110,7 @@ def main():
 
     RadioMetricPlot(fig, ax, logs, args.metric,
                     nodes=args.nodes,
+                    filt=filt,
                     include_invalid_packets=args.include_invalid_packets)
 
     plt.show()
