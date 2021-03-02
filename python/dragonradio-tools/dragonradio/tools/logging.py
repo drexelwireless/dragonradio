@@ -417,12 +417,12 @@ class LogCollection:
         self.reservation = None
         """Colosseum reservation associate with this log collection"""
 
-    def load(self, path):
+    def load(self, path, srns=None):
         """Load a log into the collection"""
         if isinstance(path, list):
             for onepath in path:
                 try:
-                    self.load(onepath)
+                    self.load(onepath, srns=srns)
                 except:
                     logger.exception('Could not load %s', onepath)
         elif os.path.isdir(path):
@@ -437,14 +437,15 @@ class LogCollection:
             self._start = self.reservation.rf_start_time
 
             for srn in self.reservation.our_srns:
-                try:
-                    path = os.path.join(self.reservation.node_logs[srn],
-                                        f'node-{srn:03d}',
-                                        'radio.h5')
-                    log = Log(path, log_collection=self)
-                    self.logs[log.node_id] = log
-                except OSError:
-                    logging.exception("Could not open HDF5 log file %s", path)
+                if srns is None or srn in srns:
+                    try:
+                        path = os.path.join(self.reservation.node_logs[srn],
+                                            f'node-{srn:03d}',
+                                            'radio.h5')
+                        log = Log(path, log_collection=self)
+                        self.logs[log.node_id] = log
+                    except OSError:
+                        logging.exception("Could not open HDF5 log file %s", path)
         else:
             log = Log(path, log_collection=self)
             self.logs[log.node_id] = log

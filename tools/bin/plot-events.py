@@ -64,6 +64,9 @@ def main():
                         default=None,
                         metavar='DIR',
                         help='directory where node logs are located')
+    parser.add_argument('--srn', type=int, action='append',
+                        dest='srns',
+                        metavar='NODE')
 
     parser.add_argument('--send', action='store_true',
                         default=False,
@@ -122,7 +125,7 @@ def main():
 
     # Load logs
     logs = dragonradio.tools.logging.LogCollection(start=start)
-    logs.load(args.paths)
+    logs.load(args.paths, srns=args.srns)
 
     plot = EventPlot(logs)
 
