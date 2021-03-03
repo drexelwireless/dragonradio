@@ -166,7 +166,7 @@ void FDChannelizer::fftWorker(void)
         size_t inoff = 0;           // Offset into input buffer
         size_t outoff = 0;          // Offset into output buffer
 
-        for (;;) {
+        for (int spin_count = 0;; ++spin_count) {
             complete = iqbuf->complete.load(std::memory_order_acquire);
             nsamples = iqbuf->nsamples.load(std::memory_order_acquire);
 
@@ -176,9 +176,18 @@ void FDChannelizer::fftWorker(void)
             if (nsamples - inoff < needed) {
                 if (complete)
                     break;
-                else
-                    continue;
+
+                if (spin_count < 16)
+                    _mm_pause();
+                else {
+                    std::this_thread::yield();
+                    spin_count = 0;
+                }
+
+                continue;
             }
+
+            spin_count = 0;
 
             // Use needed samples from the input buffer
             assert(fftoff + needed == N);
@@ -318,18 +327,25 @@ void FDChannelizer::demodWorker(unsigned tid)
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t n = 0;
 
+            // Set parameters for the callback
             received = false;
             channel = channels_[channelidx].first;
 
-            for (;;) {
+            // Demodulate data as it is received
+            for (int spin_count = 0; !complete; ++spin_count) {
                 complete = fdbuf->complete.load(std::memory_order_acquire);
                 n = fdbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
 
                 if (n != 0) {
                     demod.demodulate(fdbuf->data() + ndemodulated, n);
                     ndemodulated += n;
-                } else if (complete)
-                    break;
+                    spin_count = 0;
+                } else if (spin_count < 16) {
+                    _mm_pause();
+                } else {
+                    std::this_thread::yield();
+                    spin_count = 0;
+                }
             }
 
             // Save the snapshot offset of the next IQ buffer here if we know
