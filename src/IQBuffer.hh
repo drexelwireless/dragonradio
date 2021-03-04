@@ -51,7 +51,7 @@ public:
             std::memory_order_release);
     }
 
-    IQBuf(IQBuf &&other)
+    IQBuf(IQBuf &&other) noexcept
       : buffer(std::move(other))
       , delay(other.delay)
       , snapshot_off(other.snapshot_off)
