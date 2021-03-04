@@ -36,12 +36,12 @@ void WorkQueue::stop(void)
 
 void WorkQueue::submit(const std::function<void(void)>& item)
 {
-    work_q_.emplace(item);
+    work_q_.push(item);
 }
 
 void WorkQueue::submit(std::function<void(void)>&& item)
 {
-    work_q_.emplace(std::move(item));
+    work_q_.push(std::move(item));
 }
 
 void WorkQueue::run_worker(void)

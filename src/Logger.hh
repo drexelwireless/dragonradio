@@ -76,7 +76,7 @@ public:
 
     void logSnapshot(std::shared_ptr<Snapshot> snapshot)
     {
-        log_q_.emplace([=](){ logSnapshot_(snapshot); });
+        log_q_.push([=](){ logSnapshot_(snapshot); });
     }
 
     void logRecv(const WallClock::time_point& t,
@@ -99,7 +99,7 @@ public:
                  buffer<std::complex<float>> *buf)
     {
         if (getCollectSource(kRecvPackets))
-            log_q_.emplace([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
+            log_q_.push([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
     }
 
     void logSend(const WallClock::time_point& t,
@@ -118,7 +118,7 @@ public:
                  size_t nsamples)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.emplace([=](){ logSend_(t, kNotDropped, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
+            log_q_.push([=](){ logSend_(t, kNotDropped, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
     }
 
     void logLinkLayerDrop(const WallClock::time_point& t,
@@ -131,7 +131,7 @@ public:
                           uint32_t size)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.emplace([=](){ logSend_(t, kLinkLayerDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
+            log_q_.push([=](){ logSend_(t, kLinkLayerDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
     }
 
     void logQueueDrop(const WallClock::time_point& t,
@@ -144,7 +144,7 @@ public:
                       uint32_t size)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.emplace([=](){ logSend_(t, kQueueDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
+            log_q_.push([=](){ logSend_(t, kQueueDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
     }
 
     void logEvent(const WallClock::time_point& t,
@@ -156,7 +156,7 @@ public:
             event.copy(&buf[0], event.length(), 0);
             buf[event.length()] = '\0';
 
-            log_q_.emplace([=, event = buf.release()](){ logEvent_(t, event); });
+            log_q_.push([=, event = buf.release()](){ logEvent_(t, event); });
         }
     }
 
@@ -164,7 +164,7 @@ public:
                   std::unique_ptr<char[]> event)
     {
         if (getCollectSource(kEvents))
-            log_q_.emplace([=, event = event.release()](){ logEvent_(t, event); });
+            log_q_.push([=, event = event.release()](){ logEvent_(t, event); });
     }
 
 private:

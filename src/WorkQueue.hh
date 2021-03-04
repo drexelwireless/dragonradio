@@ -35,7 +35,7 @@ public:
     template <typename F, typename... Args>
     void submit(F&& f, Args&&... args)
     {
-        work_q_.emplace(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+        work_q_.push(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
     }
 
     void submit(const std::function<void(void)>& item);

@@ -353,7 +353,7 @@ void Logger::logSlot(std::shared_ptr<IQBuf> buf,
         // Only log slots we haven't logged before. We should never be asked to log
         // a slot that is older than the youngest slot we've ever logged.
         if (buf->timestamp > t_last_slot_) {
-            log_q_.emplace([=](){ logSlot_(buf, bw); });
+            log_q_.push([=](){ logSlot_(buf, bw); });
             t_last_slot_ = *buf->timestamp;
         }
     }
