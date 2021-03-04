@@ -136,7 +136,7 @@ void FDMA::txWorker(void)
         {
             std::lock_guard<std::mutex> lock(tx_records_mutex_);
 
-            tx_records_.push(TXRecord { t_next_tx, 0, nsamples, std::move(iqbufs), std::move(mpkts) });
+            tx_records_.emplace(t_next_tx, 0, nsamples, std::move(iqbufs), std::move(mpkts));
         }
 
         tx_records_cond_.notify_one();
