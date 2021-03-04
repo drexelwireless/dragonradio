@@ -156,7 +156,7 @@ void FDChannelizer::fftWorker(void)
             unsigned                    nchannels = channels_.size();
 
             for (unsigned i = 0; i < nchannels; ++i)
-                slots_[i]->push({iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O)});
+                slots_[i]->emplace(iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O));
         }
 
         // Perform overlap-save on input buffer as data becomes available
