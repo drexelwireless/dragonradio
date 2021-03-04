@@ -19,7 +19,7 @@ WorkQueue::~WorkQueue()
 void WorkQueue::addThreads(unsigned int nthreads)
 {
     for (unsigned int i = 0; i < nthreads; ++i)
-        threads_.emplace_back(std::thread(&WorkQueue::run_worker, this));
+        threads_.emplace_back(&WorkQueue::run_worker, this);
 }
 
 void WorkQueue::stop(void)
