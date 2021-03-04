@@ -78,24 +78,13 @@ public:
     }
 
     /** @brief Construct an element in-place on the end of the queue. */
-    void emplace(const T& val)
+    template<class... Args>
+    void emplace(Args&&... args)
     {
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            q_.emplace_back(val);
-        }
-
-        cond_.notify_one();
-    }
-
-    /** @brief Construct an element in-place on the end of the queue. */
-    void emplace(T&& val)
-    {
-        {
-            std::lock_guard<std::mutex> lock(m_);
-
-            q_.emplace_back(std::move(val));
+            q_.emplace_back(std::forward<Args>(args)...);
         }
 
         cond_.notify_one();
@@ -126,24 +115,13 @@ public:
     }
 
     /** @brief Construct an element in-place on the front of the queue. */
-    void emplace_front(const T& val)
+    template<class... Args>
+    void emplace_front(Args&&... args)
     {
         {
             std::lock_guard<std::mutex> lock(m_);
 
-            q_.emplace_front(val);
-        }
-
-        cond_.notify_one();
-    }
-
-    /** @brief Construct an element in-place on the front of the queue. */
-    void emplace_front(T&& val)
-    {
-        {
-            std::lock_guard<std::mutex> lock(m_);
-
-            q_.emplace_front(std::move(val));
+            q_.emplace_front(std::forward<Args>(args)...);
         }
 
         cond_.notify_one();
