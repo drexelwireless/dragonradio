@@ -24,6 +24,126 @@
 class SmartController;
 
 struct SendWindow {
+    struct Entry;
+
+    using vector_type = std::vector<Entry>;
+
+    SendWindow(Node &n,
+               SmartController &controller,
+               Seq::uint_type maxwin,
+               double retransmission_delay_);
+
+    /** @brief Destination node. */
+    Node &node;
+
+    /** @brief Our controller. */
+    SmartController &controller;
+
+    /** @brief PHY's MCS table */
+    std::vector<PHY::MCSEntry> &mcs_table;
+
+    /** @brief Mutex for the send window */
+    std::mutex mutex;
+
+    /** @brief Modulation index */
+    size_t mcsidx;
+
+    /** @brief Long-term EVM, as reported by receiver */
+    std::optional<double> long_evm;
+
+    /** @brief Long-term RSSI, as reported by receiver */
+    std::optional<double> long_rssi;
+
+    /** @brief Is this a new window? */
+    bool new_window;
+
+    /** @brief Current sequence number for this destination */
+    Seq seq;
+
+    /** @brief First un-ACKed sequence number. */
+    Seq unack;
+
+    /** @brief Maximum sequence number we have sent. */
+    /** INVARIANT: max < unack + win */
+    Seq max;
+
+    /** @brief Do we need to send a set unack control message? */
+    bool send_set_unack;
+
+    /** @brief Send window size */
+    Seq::uint_type win;
+
+    /** @brief Maximum window size */
+    Seq::uint_type maxwin;
+
+    /** @brief The probability of moving to a given MCS */
+    std::vector<double> mcsidx_prob;
+
+    /** @brief First sequence that can possibly be used to calculate PER. */
+    /** The packet with this sequence number is the first that can possibly be
+      * used to calculate PER. We use this when the environment has changed and
+      * previously-sent packets should not be used to calculate PER in the new
+      * environment.
+     */
+    Seq per_cutoff;
+
+    /** @brief End of the current PER window PER. */
+    /** Every packet up to, but not including, this sequence number has already been
+     * used to calculate the current PER
+     */
+    Seq per_end;
+
+    /** @brief Previous short-term packet error rate */
+    double prev_short_per;
+
+    /** @brief Previous long-term packet error rate */
+    double prev_long_per;
+
+    /** @brief Short-term packet error rate */
+    WindowedMean<double> short_per;
+
+    /** @brief Long-term packet error rate */
+    WindowedMean<double> long_per;
+
+    /** @brief Duration of retransmission timer */
+    double retransmission_delay;
+
+    /** @brief ACK delay estimator */
+    TimeWindowMax<MonoClock, double> ack_delay;
+
+    /** @brief Return the packet with the given sequence number in the window */
+    Entry& operator[](Seq seq)
+    {
+        return entries_[seq % entries_.size()];
+    }
+
+    /** @brief Record a packet ACK */
+    void ack(const MonoClock::time_point &tx_time);
+
+    /** @brief Update PER as a result of successful packet transmission. */
+    void txSuccess(void);
+
+    /** @brief Update PER as a result of unsuccessful packet transmission. */
+    void txFailure(void);
+
+    /** @brief Update MCS based on current PER */
+    void updateMCS(void);
+
+    /** @brief Return true if we may move up one MCS level */
+    bool mayMoveUpMCS(void) const;
+
+    /** @brief Move down one MCS level */
+    void moveDownMCS(unsigned n);
+
+    /** @brief Move up one MCS level */
+    void moveUpMCS(void);
+
+    /** @brief Set MCS */
+    void setMCS(size_t mcsidx);
+
+    /** @brief Reconfigure a node's PER estimates */
+    void resetPEREstimates(void);
+
     struct Entry : public TimerQueue::Timer {
         Entry(SendWindow &sendw)
           : sendw(sendw)
@@ -34,22 +154,30 @@ struct SendWindow {
 
         virtual ~Entry() = default;
 
-        void operator =(std::shared_ptr<NetPacket>& p)
-        {
-            pkt = p;
-        }
-
-        operator bool()
+        /** @brief Does this entry have a pending packet to be sent? */
+        inline bool pending()
         {
             return (bool) pkt;
         }
 
-        operator std::shared_ptr<NetPacket>()
+        /** @brief Set packet in send window entry
+         * @param p The packet.
+         */
+        inline void set(const std::shared_ptr<NetPacket>& p)
+        {
+            pkt = p;
+        }
+
+        /** @brief Get packet in send window entry
+         * @return The packet.
+         */
+        inline std::shared_ptr<NetPacket> get()
         {
             return pkt;
         }
 
-        void reset(void)
+        /** @brief Release packet */
+        inline void reset(void)
         {
             pkt.reset();
         }
@@ -88,120 +216,12 @@ struct SendWindow {
         std::shared_ptr<NetPacket> pkt;
 
         /** @brief Timestamp of last transmission of this packet. */
+        /** This is the time at which the packet was queued for transmission,
+         * not the actual time at which it was transmitted, which is instead
+         * recorded in the packet itself.
+         */
         MonoClock::time_point timestamp;
     };
-
-    using vector_type = std::vector<Entry>;
-
-    SendWindow(Node &n,
-               SmartController &controller,
-               Seq::uint_type maxwin,
-               double retransmission_delay_)
-      : node(n)
-      , controller(controller)
-      , seq({0})
-      , unack({0})
-      , max({0})
-      , new_window(true)
-      , send_set_unack(false)
-      , win(1)
-      , maxwin(maxwin)
-      , mcsidx(0)
-      , mcsidx_prob(0)
-      , per_cutoff({0})
-      , prev_short_per(1)
-      , prev_long_per(1)
-      , short_per(1)
-      , long_per(1)
-      , retransmission_delay(retransmission_delay_)
-      , ack_delay(1.0)
-      , entries_(maxwin, *this)
-    {
-    }
-
-    /** @brief Destination node. */
-    Node &node;
-
-    /** @brief Our controller. */
-    SmartController &controller;
-
-    /** @brief Mutex for the send window */
-    std::mutex mutex;
-
-    /** @brief Current sequence number for this destination */
-    Seq seq;
-
-    /** @brief First un-ACKed sequence number. */
-    Seq unack;
-
-    /** @brief Maximum sequence number we have sent. */
-    /** INVARIANT: max < unack + win */
-    Seq max;
-
-    /** @brief Is this a new window? */
-    bool new_window;
-
-    /** @brief Do we need to send a set unack control message? */
-    bool send_set_unack;
-
-    /** @brief Send window size */
-    Seq::uint_type win;
-
-    /** @brief Maximum window size */
-    Seq::uint_type maxwin;
-
-    /** @brief Modulation index */
-    size_t mcsidx;
-
-    /** @brief The probability of moving to a given MCS */
-    std::vector<double> mcsidx_prob;
-
-    /** @brief First sequence that can possibly be used to calculate PER. */
-    /** The packet with this sequence number is the first that can possibly be
-      * used to calculate PER. We use this when the environment has changed and
-      * previously-sent packets should not be used to calculate PER in the new
-      * environment.
-     */
-    Seq per_cutoff;
-
-    /** @brief End of the current PER window PER. */
-    /** Every packet up to, but not including, this sequence number has already been
-     * used to calculate the current PER
-     */
-    Seq per_end;
-
-    /** @brief Previous short-term packet error rate */
-    double prev_short_per;
-
-    /** @brief Previous long-term packet error rate */
-    double prev_long_per;
-
-    /** @brief Short-term packet error rate */
-    WindowedMean<double> short_per;
-
-    /** @brief Long-term packet error rate */
-    WindowedMean<double> long_per;
-
-    /** @brief Long-term EVM, as reported by receiver */
-    std::optional<double> long_evm;
-
-    /** @brief Long-term RSSI, as reported by receiver */
-    std::optional<double> long_rssi;
-
-    /** @brief Duration of retransmission timer */
-    double retransmission_delay;
-
-    /** @brief ACK delay estimator */
-    TimeWindowMax<MonoClock, double> ack_delay;
-
-    /** @brief Return the packet with the given sequence number in the window */
-    Entry& operator[](Seq seq)
-    {
-        return entries_[seq % entries_.size()];
-    }
-
-    /** @brief Record a packet ACK */
-    void recordACK(const MonoClock::time_point &tx_time);
 
 private:
     /** @brief Unacknowledged packets in our send window. */
@@ -210,59 +230,14 @@ private:
 };
 
 struct RecvWindow : public TimerQueue::Timer  {
-    struct Entry {
-        Entry() : received(false), delivered(false), pkt(nullptr) {};
-
-        void operator =(std::shared_ptr<RadioPacket>&& p)
-        {
-            received = true;
-            delivered = false;
-            pkt = std::move(p);
-        }
-
-        void alreadyDelivered(void)
-        {
-            received = true;
-            delivered = true;
-        }
-
-        void reset(void)
-        {
-            received = false;
-            delivered = false;
-            pkt.reset();
-        }
-
-        /** @brief Was this entry in the window received? */
-        bool received;
-
-        /** @brief Was this entry in the window delivered? */
-        bool delivered;
-
-        /** @brief The packet received in this window entry. */
-        std::shared_ptr<RadioPacket> pkt;
-    };
+    struct Entry;
 
     using vector_type = std::vector<Entry>;
 
     RecvWindow(Node &n,
                SmartController &controller,
-               Seq seq,
                Seq::uint_type win,
-               size_t nak_win)
-      : node(n)
-      , controller(controller)
-      , ack(seq)
-      , max(seq-1)
-      , win(win)
-      , need_selective_ack(false)
-      , timer_for_ack(false)
-      , explicit_nak_win(nak_win)
-      , explicit_nak_idx(0)
-      , long_evm(0)
-      , long_rssi(0)
-      , entries_(win)
-    {}
+               size_t nak_win);
 
     /** @brief Sender node. */
     Node &node;
@@ -272,6 +247,15 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     /** @brief Mutex for the receive window */
     std::mutex mutex;
+
+    /** @brief Long-term packet EVM */
+    TimeWindowMean<MonoClock, double> long_evm;
+
+    /** @brief Long-term packet RSSI */
+    TimeWindowMean<MonoClock, double> long_rssi;
+
+    /** @brief True when this is an active window that has received a packet */
+    bool active;
 
     /** @brief Next sequence number we should ACK. */
     /** We have received (or given up) on all packets with sequence numbers <
@@ -309,11 +293,14 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Explicit NAK window index */
     size_t explicit_nak_idx;
 
-    /** @brief Long-term packet EVM */
-    TimeWindowMean<MonoClock, double> long_evm;
+    /** @brief Return true if sequence number is in the receive window */
+    inline bool contains(Seq seq)
+    {
+        return seq >= max - win && seq < ack + win;
+    }
 
-    /** @brief Long-term packet RSSI */
-    TimeWindowMean<MonoClock, double> long_rssi;
+    /** @brief Reset the receive window */
+    void reset(Seq seq);
 
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
@@ -326,15 +313,48 @@ struct RecvWindow : public TimerQueue::Timer  {
 
     void operator()() override;
 
+    struct Entry {
+        Entry() : received(false), delivered(false), pkt(nullptr) {};
+
+        /** @brief Set packet in receive window entry.
+         * @param p The packet.
+         */
+        inline void set(std::shared_ptr<RadioPacket>&& p)
+        {
+            received = true;
+            delivered = false;
+            pkt = std::move(p);
+        }
+
+        void alreadyDelivered(void)
+        {
+            received = true;
+            delivered = true;
+        }
+
+        void reset(void)
+        {
+            received = false;
+            delivered = false;
+            pkt.reset();
+        }
+
+        /** @brief Was this entry in the window received? */
+        bool received;
+
+        /** @brief Was this entry in the window delivered? */
+        bool delivered;
+
+        /** @brief The packet received in this window entry. */
+        std::shared_ptr<RadioPacket> pkt;
+    };
+
 private:
     /** @brief All packets with sequence numbers N such that
      * ack <= N <= max < ack + win
      */
     vector_type entries_;
 };
-
-class SendWindowsProxy;
-class SendWindowProxy;
 
 /** @brief A MAC controller that implements ARQ. */
 class SmartController : public Controller
@@ -959,193 +979,17 @@ protected:
     /** @brief Handle sender setting unack */
     void handleSetUnack(RadioPacket &pkt, RecvWindow &recvw);
 
-    /** @brief Update PER as a result of successful packet transmission. */
-    void txSuccess(SendWindow &sendw);
-
-    /** @brief Update PER as a result of unsuccessful packet transmission. */
-    void txFailure(SendWindow &sendw);
-
-    /** @brief Update MCS based on current PER */
-    void updateMCS(SendWindow &sendw);
-
-    /** @brief Return true if we may move up one MCS level */
-    bool mayMoveUpMCS(const SendWindow &sendw);
-
-    /** @brief Move down one MCS level */
-    void moveDownMCS(SendWindow &sendw, unsigned n);
-
-    /** @brief Move up one MCS level */
-    void moveUpMCS(SendWindow &sendw);
-
-    /** @brief Set MCS */
-    void setMCS(SendWindow &sendw, size_t mcsidx);
-
-    /** @brief Reconfigure a node's PER estimates */
-    void resetPEREstimates(SendWindow &sendw);
-
     /** @brief Get a packet that is elligible to be sent. */
     bool getPacket(std::shared_ptr<NetPacket>& pkt);
-
-    /** @brief Get a node's send window.
-     * @param node_id The node whose window to get
-     * @returns A pointer to the window or nullptr if one doesn't exist.
-     */
-    SendWindow *maybeGetSendWindow(NodeId node_id);
-
-    /** @brief Get a node's send window */
-    SendWindow &getSendWindow(Node &node);
 
     /** @brief Get a node's send window */
     SendWindow &getSendWindow(NodeId node_id);
 
-    /** @brief Get a node's receive window.
+    /** @brief Get a node's receive window
      * @param node_id The node whose window to get
-     * @returns A pointer to the window or nullptr if one doesn't exist.
+     * @returns The receive window
      */
-    RecvWindow *maybeGetReceiveWindow(NodeId node_id);
-
-    /** @brief Get a node's receive window */
-    RecvWindow &getReceiveWindow(NodeId node_id, Seq seq, bool isSYN);
-};
-
-/** @brief A proxy object for a SmartController send window */
-class SendWindowProxy
-{
-public:
-    SendWindowProxy(std::shared_ptr<SmartController> controller,
-                    NodeId node_id)
-      : controller_(controller)
-      , node_id_(node_id)
-    {
-        if (controller_->maybeGetSendWindow(node_id_) == nullptr)
-            throw std::out_of_range("No send window for node");
-    }
-
-    std::optional<double> getShortPER(void)
-    {
-        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<std::mutex> lock(sendw.mutex);
-
-        return sendw.short_per.value();
-    }
-
-    std::optional<double> getLongPER(void)
-    {
-        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<std::mutex> lock(sendw.mutex);
-
-        return sendw.long_per.value();
-    }
-
-    std::optional<double> getLongEVM(void)
-    {
-        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<std::mutex> lock(sendw.mutex);
-
-        if (sendw.long_evm)
-            return *sendw.long_evm;
-        else
-            return std::nullopt;
-    }
-
-    std::optional<double> getLongRSSI(void)
-    {
-        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
-        std::lock_guard<std::mutex> lock(sendw.mutex);
-
-        if (sendw.long_rssi)
-            return *sendw.long_rssi;
-        else
-            return std::nullopt;
-    }
-
-private:
-    /** @brief This send window's SmartController */
-    std::shared_ptr<SmartController> controller_;
-
-    /** @brief This send window's node ID */
-    const NodeId node_id_;
-};
-
-/** @brief A proxy object for SmartController's send windows */
-class SendWindowsProxy
-{
-public:
-    SendWindowsProxy(std::shared_ptr<SmartController> controller)
-      : controller_(controller)
-    {
-    }
-
-    SendWindowsProxy() = delete;
-    ~SendWindowsProxy() = default;
-
-    SendWindowProxy operator [](NodeId node)
-    {
-        return SendWindowProxy(controller_, node);
-    }
-
-private:
-    /** @brief This object's SmartController */
-    std::shared_ptr<SmartController> controller_;
-};
-
-/** @brief A proxy object for a SmartController receive window */
-class ReceiveWindowProxy
-{
-public:
-    ReceiveWindowProxy(std::shared_ptr<SmartController> controller,
-                       NodeId node_id)
-      : controller_(controller)
-      , node_id_(node_id)
-    {
-        if (controller_->maybeGetReceiveWindow(node_id_) == nullptr)
-            throw std::out_of_range("No receive window for node");
-    }
-
-    std::optional<double> getLongEVM(void)
-    {
-        RecvWindow                  &recvw = *controller_->maybeGetReceiveWindow(node_id_);
-        std::lock_guard<std::mutex> lock(recvw.mutex);
-
-        return recvw.long_evm.value();
-    }
-
-    std::optional<double> getLongRSSI(void)
-    {
-        RecvWindow                  &recvw = *controller_->maybeGetReceiveWindow(node_id_);
-        std::lock_guard<std::mutex> lock(recvw.mutex);
-
-        return recvw.long_rssi.value();
-    }
-
-private:
-    /** @brief This send window's SmartController */
-    std::shared_ptr<SmartController> controller_;
-
-    /** @brief This send window's node ID */
-    const NodeId node_id_;
-};
-
-/** @brief A proxy object for SmartController's receive windows */
-class ReceiveWindowsProxy
-{
-public:
-    ReceiveWindowsProxy(std::shared_ptr<SmartController> controller)
-      : controller_(controller)
-    {
-    }
-
-    ReceiveWindowsProxy() = delete;
-    ~ReceiveWindowsProxy() = default;
-
-    ReceiveWindowProxy operator [](NodeId node)
-    {
-        return ReceiveWindowProxy(controller_, node);
-    }
-
-private:
-    /** @brief This object's SmartController */
-    std::shared_ptr<SmartController> controller_;
+    RecvWindow &getReceiveWindow(NodeId node_id);
 };
 
 #endif /* SMARTCONTROLLER_H_ */
