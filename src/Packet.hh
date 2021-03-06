@@ -93,10 +93,10 @@ struct ControlMsg {
 
     struct ReceiverStats {
         /** @brief Long-term EVM at receiver */
-        double long_evm;
+        float long_evm;
 
         /** @brief Long-term RSSI at receiver */
-        double long_rssi;
+        float long_rssi;
     };
 
     using Nak = Seq;
@@ -300,7 +300,7 @@ struct Packet : public buffer<unsigned char>
                              const MonoClock::time_point &t_recv);
 
     /** @brief Append receiver statistics control message to a packet */
-    void appendReceiverStats(double long_evm, double long_rssi);
+    void appendReceiverStats(float long_evm, float long_rssi);
 
     /** @brief Append a NAK control message to a packet */
     void appendNak(const Seq &seq);
@@ -580,7 +580,7 @@ static_assert(ctrlsize(ControlMsg::kHello) == 2);
 static_assert(ctrlsize(ControlMsg::kTimestamp) == 3);
 static_assert(ctrlsize(ControlMsg::kTimestampSent) == 19);
 static_assert(ctrlsize(ControlMsg::kTimestampRecv) == 20);
-static_assert(ctrlsize(ControlMsg::kReceiverStats) == 17);
+static_assert(ctrlsize(ControlMsg::kReceiverStats) == 9);
 static_assert(ctrlsize(ControlMsg::kNak) == 3);
 static_assert(ctrlsize(ControlMsg::kSelectiveAck) == 5);
 static_assert(ctrlsize(ControlMsg::kSetUnack) == 3);

@@ -174,7 +174,7 @@ void Packet::appendTimestampRecv(NodeId node_id,
     appendControl(msg);
 }
 
-void Packet::appendReceiverStats(double long_evm, double long_rssi)
+void Packet::appendReceiverStats(float long_evm, float long_rssi)
 {
     ControlMsg msg;
 

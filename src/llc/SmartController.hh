@@ -49,10 +49,10 @@ struct SendWindow {
     size_t mcsidx;
 
     /** @brief Long-term EVM, as reported by receiver */
-    std::optional<double> long_evm;
+    std::optional<float> long_evm;
 
     /** @brief Long-term RSSI, as reported by receiver */
-    std::optional<double> long_rssi;
+    std::optional<float> long_rssi;
 
     /** @brief Is this a new window? */
     bool new_window;
@@ -255,10 +255,10 @@ struct RecvWindow : public TimerQueue::Timer  {
     std::mutex mutex;
 
     /** @brief Long-term packet EVM */
-    TimeWindowMean<MonoClock, double> long_evm;
+    TimeWindowMean<MonoClock, float> long_evm;
 
     /** @brief Long-term packet RSSI */
-    TimeWindowMean<MonoClock, double> long_rssi;
+    TimeWindowMean<MonoClock, float> long_rssi;
 
     /** @brief True when this is an active window that has received a packet */
     bool active;
