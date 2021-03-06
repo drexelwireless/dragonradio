@@ -205,6 +205,22 @@ protected:
 
     /** @brief A transmission record */
     struct TXRecord {
+        TXRecord() = default;
+
+        // So we can emplace
+        TXRecord(const std::optional<MonoClock::time_point>& timestamp_,
+                 size_t delay_,
+                 size_t nsamples_,
+                 std::list<std::shared_ptr<IQBuf>>&& iqbufs_,
+                 std::list<std::unique_ptr<ModPacket>>&& mpkts_) noexcept
+          : timestamp(timestamp_)
+          , delay(delay_)
+          , nsamples(nsamples_)
+          , iqbufs(std::move(iqbufs_))
+          , mpkts(std::move(mpkts_))
+        {
+        }
+
         /** @brief TX deadline */
         std::optional<MonoClock::time_point> timestamp;
 

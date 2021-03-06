@@ -19,7 +19,7 @@ WorkQueue::~WorkQueue()
 void WorkQueue::addThreads(unsigned int nthreads)
 {
     for (unsigned int i = 0; i < nthreads; ++i)
-        threads_.emplace_back(std::thread(&WorkQueue::run_worker, this));
+        threads_.emplace_back(&WorkQueue::run_worker, this);
 }
 
 void WorkQueue::stop(void)
@@ -36,12 +36,12 @@ void WorkQueue::stop(void)
 
 void WorkQueue::submit(const std::function<void(void)>& item)
 {
-    work_q_.emplace(item);
+    work_q_.push(item);
 }
 
 void WorkQueue::submit(std::function<void(void)>&& item)
 {
-    work_q_.emplace(std::move(item));
+    work_q_.push(std::move(item));
 }
 
 void WorkQueue::run_worker(void)

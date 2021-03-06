@@ -112,6 +112,18 @@ private:
 
     /** @brief A demodulation slot */
     struct Slot {
+        Slot() = default;
+
+        // So we can emplace
+        Slot(const std::shared_ptr<IQBuf>& iqbuf_,
+             const std::shared_ptr<IQBuf>& fdbuf_,
+             ssize_t fd_offset_) noexcept
+          : iqbuf(iqbuf_)
+          , fdbuf(fdbuf_)
+          , fd_offset(fd_offset_)
+        {
+        }
+
         /** @brief The slot's time-domain samples */
         std::shared_ptr<IQBuf> iqbuf;
 

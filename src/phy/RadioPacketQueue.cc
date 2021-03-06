@@ -30,7 +30,7 @@ void RadioPacketQueue::push(barrier b,
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        q_.emplace(b, pkt);
+        q_.insert(b, pkt);
     }
 
     cond_.notify_one();
@@ -43,7 +43,7 @@ RadioPacketQueue::barrier RadioPacketQueue::pushBarrier(void)
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        b = q_.emplace(q_.end(), std::monostate());
+        b = q_.insert(q_.end(), std::monostate());
     }
 
     cond_.notify_one();
