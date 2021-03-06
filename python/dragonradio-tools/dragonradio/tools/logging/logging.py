@@ -407,17 +407,17 @@ class Log:
 
 class LogCollection:
     """A collection of DragonRadio logs"""
-    def __init__(self, start=None):
+    def __init__(self, start_time=None):
         self.logs = {}
         """Logs in the collection"""
 
-        self._start = start
+        self.start_time = start_time
         """Time zero for log events (seconds since the epoch)"""
 
         self.reservation = None
         """Colosseum reservation associate with this log collection"""
 
-    def load(self, path, srns=None):
+    def load(self, path, start_time=None, srn_logs_path=None, srns=None):
         """Load a log into the collection"""
         if isinstance(path, list):
             for onepath in path:
@@ -432,7 +432,9 @@ class LogCollection:
             if len(self.logs) != 0:
                 raise ValueError("Already loaded radio logs")
 
-            self.reservation = ReservationLog(path)
+            self.reservation = ReservationLog(path,
+                                              rf_start_time=self.start_time,
+                                              srn_logs_path=srn_logs_path)
 
             self._start = self.reservation.rf_start_time
 

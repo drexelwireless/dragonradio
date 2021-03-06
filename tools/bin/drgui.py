@@ -496,7 +496,7 @@ def main():
         dragonradio.tools.colosseum.scoring.scenarios_path = args.scenarios
 
     # Load logs
-    logs = dragonradio.tools.logging.LogCollection(start=start)
+    logs = dragonradio.tools.logging.LogCollection(start_time=start)
     logs.load(args.paths)
 
     viewer = LogViewer(logs)
