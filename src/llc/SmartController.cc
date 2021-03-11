@@ -121,8 +121,9 @@ get_packet:
                     (unsigned) recvw.ack);
 #endif
 
-            // Append selective ACK if needed
-            if (recvw.need_selective_ack)
+            // Append selective ACK if needed. A NAK packet should always have
+            // selective ACK information
+            if (recvw.need_selective_ack || pkt->internal_flags.need_selective_ack)
                 appendFeedback(*pkt, recvw);
         } else if (pkt->ehdr().data_len != 0)
             dprintf("send: node=%u; seq=%u",
@@ -581,8 +582,8 @@ void SmartController::ack(RecvWindow &recvw)
     pkt->ehdr().src = radionet_->getThisNodeId();
     pkt->ehdr().dest = recvw.node.id;
 
-    // Append selective ACK control messages
-    appendFeedback(*pkt, recvw);
+    // Mark this packet as seed a selective ACK
+    pkt->internal_flags.need_selective_ack = 1;
 
     netq_->push_hi(std::move(pkt));
 }
@@ -631,8 +632,8 @@ void SmartController::nak(RecvWindow &recvw, Seq seq)
     // Append NAK control message
     pkt->appendNak(seq);
 
-    // Append selective ACK control messages
-    appendFeedback(*pkt, recvw);
+    // Mark this packet as seed a selective ACK
+    pkt->internal_flags.need_selective_ack = 1;
 
     netq_->push_hi(std::move(pkt));
 }

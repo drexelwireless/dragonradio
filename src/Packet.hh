@@ -229,6 +229,9 @@ struct Packet : public buffer<unsigned char>
         /** @brief Set if the packet has an assigned sequence number */
         uint8_t has_seq : 1;
 
+        /** @brief Set if the packet needs a selective ACK */
+        uint8_t need_selective_ack : 1;
+
         /** @brief Set if the packet contains a selective ACK */
         uint8_t has_selective_ack : 1;
     } internal_flags;
