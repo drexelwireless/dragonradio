@@ -214,7 +214,7 @@ public:
             if (!pkt->integrityIntact()) {
                 pkt->internal_flags.invalid_payload = 1;
 
-                logPHY(LOGINFO, "packet integrity not intact: seq=%u",
+                logPHY(LOGERROR, "packet integrity not intact: seq=%u",
                     (unsigned) pkt->hdr.seq);
             }
 
