@@ -227,6 +227,7 @@ class Radio(dragonradio.tasks.TaskManager):
                 setPrintLogLevel(cat, config.loglevel)
 
             if config.verbose_packet_trace:
+                setPrintLogLevel('PHY', logging.DEBUG-1)
                 setPrintLogLevel('NET', logging.DEBUG-1)
                 setPrintLogLevel('TUNTAP', logging.DEBUG-1)
 

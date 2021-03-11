@@ -193,7 +193,7 @@ public:
     {
         if (!header_valid) {
             if (log_invalid_headers_)
-                logPHY(LOGINFO, "invalid header");
+                logPHY(LOGDEBUG-1, "invalid header");
 
             return nullptr;
         } else if (!payload_valid) {
@@ -202,7 +202,7 @@ public:
             pkt->internal_flags.invalid_payload = 1;
 
             if (h.nexthop == node_id_)
-                logPHY(LOGINFO, "invalid payload: curhop=%u; nexthop=%u; seq=%u",
+                logPHY(LOGDEBUG-1, "invalid payload: curhop=%u; nexthop=%u; seq=%u",
                     pkt->hdr.curhop,
                     pkt->hdr.nexthop,
                     (unsigned) pkt->hdr.seq);
