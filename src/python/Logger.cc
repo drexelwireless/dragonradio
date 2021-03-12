@@ -97,4 +97,5 @@ void exportLogger(py::module &m)
     addLoggerSource(loggerCls, "log_sent_packets", Logger::kSentPackets);
     addLoggerSource(loggerCls, "log_sent_iq", Logger::kSentIQ);
     addLoggerSource(loggerCls, "log_events", Logger::kEvents);
+    addLoggerSource(loggerCls, "log_arq_events", Logger::kARQEvents);
 }

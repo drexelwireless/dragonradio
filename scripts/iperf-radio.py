@@ -164,7 +164,7 @@ def main():
         parser.error('the following arguments are required: --test-config')
 
     if config.log_directory:
-        config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events']
+        config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events', 'log_arq_events']
 
     # Parse human-readable bandwidth in bps and convert to Bps
     config.bw = parseHuman(config.bw)/8.0

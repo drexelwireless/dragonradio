@@ -36,7 +36,8 @@ public:
         kRecvSymbols = 2,
         kSentPackets = 3,
         kSentIQ = 4,
-        kEvents = 5
+        kEvents = 5,
+        kARQEvents = 6
     };
 
     Logger(const WallClock::time_point &t_start,
@@ -170,6 +171,63 @@ public:
             log_q_.push([=, event = event.release()](){ logEvent_(t, event); });
     }
 
+    void logSendNAK(NodeId node,
+                    Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(MonoClock::now(), kSendNAK, node, seq); });
+    }
+
+    void logSendSACK(const MonoClock::time_point& t,
+                     NodeId node,
+                     Seq unack,
+                     std::vector<Seq::uint_type> &&sacks)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=, sacks = std::move(sacks)](){ logARQSACKEvent_(t, kSendSACK, node, unack, sacks); });
+    }
+
+    void logNAK(const MonoClock::time_point& t,
+                NodeId node,
+                Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(t, kNAK, node, seq); });
+    }
+
+    void logRetransmissionNAK(const MonoClock::time_point& t,
+                              NodeId node,
+                              Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(t, kRetransmissionNAK, node, seq); });
+    }
+
+    void logSACK(const MonoClock::time_point& t,
+                 NodeId node,
+                 Seq unack,
+                 std::vector<Seq::uint_type> &&sacks)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=, sacks = std::move(sacks)](){ logARQSACKEvent_(t, kSACK, node, unack, sacks); });
+    }
+
+    void logSNAK(const MonoClock::time_point& t,
+                 NodeId node,
+                 Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(t, kSNAK, node, seq); });
+    }
+
+    void logACKTimeout(const MonoClock::time_point& t,
+                       NodeId node,
+                       Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(t, kACKTimeout, node, seq); });
+    }
+
 private:
     bool is_open_;
     H5::H5File file_;
@@ -179,6 +237,7 @@ private:
     std::unique_ptr<ExtensibleDataSet> recv_;
     std::unique_ptr<ExtensibleDataSet> send_;
     std::unique_ptr<ExtensibleDataSet> event_;
+    std::unique_ptr<ExtensibleDataSet> arq_event_;
     WallClock::time_point t_start_;
     MonoClock::time_point mono_t_start_;
     MonoClock::time_point t_last_slot_;
@@ -248,8 +307,29 @@ private:
                   size_t offset,
                   size_t nsamples);
 
-     void logEvent_(const MonoClock::time_point& t,
-                    char *event);
+    void logEvent_(const MonoClock::time_point& t,
+                   char *event);
+
+    enum ARQEventType {
+        kSendNAK = 0,
+        kSendSACK,
+        kNAK,
+        kRetransmissionNAK,
+        kSACK,
+        kSNAK,
+        kACKTimeout,
+    };
+
+    void logARQEvent_(const MonoClock::time_point& t,
+                      ARQEventType type,
+                      NodeId node,
+                      Seq seq);
+
+    void logARQSACKEvent_(const MonoClock::time_point& t,
+                          ARQEventType type,
+                          NodeId node,
+                          Seq unack,
+                          const std::vector<Seq::uint_type> &sacks);
 };
 
 #endif /* LOGGER_H_ */

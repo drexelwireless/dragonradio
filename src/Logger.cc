@@ -171,6 +171,25 @@ struct EventEntry {
     const char *event;
 };
 
+/** @brief Log entry for LLC events */
+struct ARQEventEntry {
+    /** @brief Event timestamp */
+    double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
+    /** @brief Type of LLC entry */
+    uint8_t type;
+    /** @brief Node ID of other node. */
+    uint8_t node;
+    /** @brief Sequence number */
+    uint16_t seq;
+    /** @brief Selective ACKs.*/
+    /** A selective ACK sequence is a list of tuples [start,end) representing
+     * selective ACKs from start (inclusive) to end (non-inclusive).
+     */
+    hvl_t sacks;
+};
+
 Logger::Logger(const WallClock::time_point &t_start,
                const MonoClock::time_point &mono_t_start)
   : is_open_(false)
@@ -297,6 +316,18 @@ void Logger::open(const std::string& filename)
     h5_event.insertMember("mono_timestamp", HOFFSET(EventEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_event.insertMember("event", HOFFSET(EventEntry, event), h5_string);
 
+    // H5 type for variable-length SACK data
+    H5::VarLenType h5_sack_data(&H5::PredType::NATIVE_UINT16);
+
+    // H5 type for ARQ events
+    H5::CompType h5_arq_event(sizeof(ARQEventEntry));
+
+    h5_arq_event.insertMember("timestamp", HOFFSET(ARQEventEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_arq_event.insertMember("type", HOFFSET(ARQEventEntry, type), H5::PredType::NATIVE_UINT8);
+    h5_arq_event.insertMember("node", HOFFSET(ARQEventEntry, node), H5::PredType::NATIVE_UINT8);
+    h5_arq_event.insertMember("seq", HOFFSET(ARQEventEntry, seq), H5::PredType::NATIVE_UINT16);
+    h5_arq_event.insertMember("sacks", HOFFSET(ARQEventEntry, sacks), h5_sack_data);
+
     // Create H5 groups
     file_ = H5::H5File(filename, H5F_ACC_TRUNC);
 
@@ -306,6 +337,7 @@ void Logger::open(const std::string& filename)
     recv_ = std::make_unique<ExtensibleDataSet>(file_, "recv", h5_packet_recv);
     send_ = std::make_unique<ExtensibleDataSet>(file_, "send", h5_packet_send);
     event_ = std::make_unique<ExtensibleDataSet>(file_, "event", h5_event);
+    arq_event_ = std::make_unique<ExtensibleDataSet>(file_, "arq_event", h5_arq_event);
 
     // Start worker thread
     worker_thread_ = std::thread(&Logger::worker, this);
@@ -333,6 +365,7 @@ void Logger::close(void)
         recv_.reset();
         send_.reset();
         event_.reset();
+        arq_event_.reset();
         file_.close();
         is_open_ = false;
     }
@@ -614,4 +647,41 @@ void Logger::logEvent_(const MonoClock::time_point& t,
     event_->write(&entry, 1);
 
     delete[] event;
+}
+
+void Logger::logARQEvent_(const MonoClock::time_point& t,
+                          ARQEventType type,
+                          NodeId node,
+                          Seq seq)
+{
+    ARQEventEntry entry;
+
+    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
+    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
+    entry.type = type;
+    entry.node = node;
+    entry.seq = seq;
+    entry.sacks.p = nullptr;
+    entry.sacks.len = 0;
+
+    arq_event_->write(&entry, 1);
+}
+
+void Logger::logARQSACKEvent_(const MonoClock::time_point& t,
+                              ARQEventType type,
+                              NodeId node,
+                              Seq unack,
+                              const std::vector<Seq::uint_type> &sacks)
+{
+    ARQEventEntry entry;
+
+    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
+    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
+    entry.type = type;
+    entry.node = node;
+    entry.seq = unack;
+    entry.sacks.p = const_cast<Seq::uint_type*>(sacks.data());
+    entry.sacks.len = sacks.size();
+
+    arq_event_->write(&entry, 1);
 }
