@@ -39,7 +39,8 @@ public:
         kEvents = 5
     };
 
-    Logger(WallClock::time_point t_start);
+    Logger(const WallClock::time_point &t_start,
+           const MonoClock::time_point &mono_t_start);
     ~Logger();
 
     Logger() = delete;
@@ -179,6 +180,7 @@ private:
     std::unique_ptr<ExtensibleDataSet> send_;
     std::unique_ptr<ExtensibleDataSet> event_;
     WallClock::time_point t_start_;
+    MonoClock::time_point mono_t_start_;
     MonoClock::time_point t_last_slot_;
 
     /** @brief Data sources we collect. */

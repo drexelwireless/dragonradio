@@ -17,6 +17,8 @@ std::shared_ptr<Logger> logger;
 struct SlotEntry {
     /** @brief Receive timestamp. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
     /** @brief Bandwidth [Hz] */
     float bw;
     /** @brief Size of uncompressed IQ data (bytes). */
@@ -29,6 +31,8 @@ struct SlotEntry {
 struct SnapshotEntry {
     /** @brief Receive timestamp. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
     /** @brief Sampling frequency [Hz] */
     float fs;
     /** @brief Size of uncompressed IQ data (bytes). */
@@ -41,6 +45,8 @@ struct SnapshotEntry {
 struct SelfTXEntry {
     /** @brief Timestamp of snapshot this self-transmission belongs to. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
     /** @brief Is this TX local, i.e., produced by this node? */
     uint8_t is_local;
     /** @brief Offset of start of packet. */
@@ -58,6 +64,8 @@ struct PacketRecvEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
     /** @brief Offset (in samples) from timestamp slot to start of frame. */
     int32_t start_samples;
     /** @brief Offset (in samples) from timestamp slot to end of frame. */
@@ -111,6 +119,8 @@ struct PacketSendEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
     /** @brief Was this packet dropped, and if so, why was it dropped? */
     uint8_t dropped;
     /** @brief Number of packet retransmissions. */
@@ -153,13 +163,19 @@ struct PacketSendEntry {
 
 /** @brief Generic event */
 struct EventEntry {
+    /** @brief Event timestamp. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
+    /** @brief Event description. */
     const char *event;
 };
 
-Logger::Logger(WallClock::time_point t_start)
+Logger::Logger(const WallClock::time_point &t_start,
+               const MonoClock::time_point &mono_t_start)
   : is_open_(false)
   , t_start_(t_start)
+  , mono_t_start_(mono_t_start)
   , t_last_slot_((time_t) 0)
   , sources_(0)
   , done_(false)
@@ -195,6 +211,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_slot(sizeof(SlotEntry));
 
     h5_slot.insertMember("timestamp", HOFFSET(SlotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_slot.insertMember("mono_timestamp", HOFFSET(SlotEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_slot.insertMember("bw", HOFFSET(SlotEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_slot.insertMember("iq_data_len", HOFFSET(SlotEntry, iq_data_len), H5::PredType::NATIVE_UINT32);
     h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_compressed_iqdata);
@@ -203,6 +220,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_snapshot(sizeof(SnapshotEntry));
 
     h5_snapshot.insertMember("timestamp", HOFFSET(SnapshotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_snapshot.insertMember("mono_timestamp", HOFFSET(SnapshotEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_snapshot.insertMember("fs", HOFFSET(SnapshotEntry, fs), H5::PredType::NATIVE_FLOAT);
     h5_snapshot.insertMember("iq_data_len", HOFFSET(SnapshotEntry, iq_data_len), H5::PredType::NATIVE_UINT32);
     h5_snapshot.insertMember("iq_data", HOFFSET(SnapshotEntry, iq_data), h5_compressed_iqdata);
@@ -211,6 +229,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_selftx(sizeof(SelfTXEntry));
 
     h5_selftx.insertMember("timestamp", HOFFSET(SelfTXEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_selftx.insertMember("mono_timestamp", HOFFSET(SelfTXEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_selftx.insertMember("is_local", HOFFSET(SelfTXEntry, is_local), H5::PredType::NATIVE_UINT8);
     h5_selftx.insertMember("start", HOFFSET(SelfTXEntry, start), H5::PredType::NATIVE_INT32);
     h5_selftx.insertMember("end", HOFFSET(SelfTXEntry, end), H5::PredType::NATIVE_INT32);
@@ -221,6 +240,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_packet_recv(sizeof(PacketRecvEntry));
 
     h5_packet_recv.insertMember("timestamp", HOFFSET(PacketRecvEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_recv.insertMember("mono_timestamp", HOFFSET(PacketRecvEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("start_samples", HOFFSET(PacketRecvEntry, start_samples), H5::PredType::NATIVE_INT32);
     h5_packet_recv.insertMember("end_samples", HOFFSET(PacketRecvEntry, end_samples), H5::PredType::NATIVE_INT32);
     h5_packet_recv.insertMember("header_valid", HOFFSET(PacketRecvEntry, header_valid), H5::PredType::NATIVE_UINT8);
@@ -249,6 +269,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_packet_send(sizeof(PacketSendEntry));
 
     h5_packet_send.insertMember("timestamp", HOFFSET(PacketSendEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("mono_timestamp", HOFFSET(PacketSendEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("dropped", HOFFSET(PacketSendEntry, dropped), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("nretrans", HOFFSET(PacketSendEntry, nretrans), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("curhop", HOFFSET(PacketSendEntry, curhop), H5::PredType::NATIVE_UINT8);
@@ -273,6 +294,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_event(sizeof(EventEntry));
 
     h5_event.insertMember("timestamp", HOFFSET(EventEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_event.insertMember("mono_timestamp", HOFFSET(EventEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_event.insertMember("event", HOFFSET(EventEntry, event), h5_string);
 
     // Create H5 groups
@@ -413,6 +435,7 @@ void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
     buffer<char> compressed = compressIQData(buf->data(), buf->size());
 
     entry.timestamp = (WallClock::to_wall_time(*buf->timestamp) - t_start_).get_real_secs();
+    entry.mono_timestamp = (*buf->timestamp - mono_t_start_).get_real_secs();
     entry.bw = bw;
     entry.iq_data_len = buf->size();
     entry.iq_data.p = compressed.data();
@@ -428,10 +451,12 @@ void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
 
     SnapshotEntry          entry;
     double                 timestamp = (WallClock::to_wall_time(snapshot->timestamp) - t_start_).get_real_secs();
+    double                 mono_timestamp = (snapshot->timestamp - mono_t_start_).get_real_secs();
     std::shared_ptr<IQBuf> buf = *(snapshot->getCombinedSlots());
     buffer<char>           compressed = compressIQData(buf->data(), buf->size());
 
     entry.timestamp = timestamp;
+    entry.mono_timestamp = mono_timestamp;
     entry.fs = buf->fs;
     entry.iq_data_len = buf->size();
     entry.iq_data.p = compressed.data();
@@ -443,6 +468,7 @@ void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
 
     for (auto&& selftx : snapshot->selftx) {
         selftx_entry.timestamp = timestamp;
+        selftx_entry.mono_timestamp = mono_timestamp;
         selftx_entry.is_local = selftx.is_local;
         selftx_entry.start = selftx.start;
         selftx_entry.end = selftx.end;
@@ -483,6 +509,7 @@ void Logger::logRecv_(const MonoClock::time_point& t,
     u.flags = hdr.flags;
 
     entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
+    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
     entry.start_samples = start_samples;
     entry.end_samples = end_samples;
     entry.header_valid = header_valid;
@@ -541,6 +568,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
     u.flags = hdr.flags;
 
     entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
+    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
     entry.dropped = dropped;
     entry.nretrans = nretrans;
     entry.curhop = hdr.curhop;
@@ -580,6 +608,7 @@ void Logger::logEvent_(const MonoClock::time_point& t,
     EventEntry entry;
 
     entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
+    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
     entry.event = event;
 
     event_->write(&entry, 1);

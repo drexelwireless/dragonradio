@@ -15,11 +15,11 @@ PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
 {
-    WallClock::time_point t_start = WallClock::time_point(WallClock::now().get_full_secs());
-    auto                  log = std::make_shared<Logger>(t_start);
+    int64_t full_secs = WallClock::now().get_full_secs();
+    auto    log = std::make_shared<Logger>(WallClock::time_point(full_secs), MonoClock::time_point(full_secs));
 
     log->open(path);
-    log->setAttribute("start", (uint32_t) t_start.get_full_secs());
+    log->setAttribute("start", (int64_t) full_secs);
 
     return log;
 }
