@@ -440,7 +440,7 @@ typedef union {
     uint8_t bits;
 } u_flags;
 
-void Logger::logRecv_(const WallClock::time_point& t,
+void Logger::logRecv_(const MonoClock::time_point& t,
                       int32_t start_samples,
                       int32_t end_samples,
                       bool header_valid,
@@ -464,7 +464,7 @@ void Logger::logRecv_(const WallClock::time_point& t,
 
     u.flags = hdr.flags;
 
-    entry.timestamp = (t - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
     entry.start_samples = start_samples;
     entry.end_samples = end_samples;
     entry.header_valid = header_valid;
@@ -501,7 +501,7 @@ void Logger::logRecv_(const WallClock::time_point& t,
         delete symbols;
 }
 
-void Logger::logSend_(const WallClock::time_point& t,
+void Logger::logSend_(const MonoClock::time_point& t,
                       DropType dropped,
                       unsigned nretrans,
                       const Header& hdr,
@@ -522,7 +522,7 @@ void Logger::logSend_(const WallClock::time_point& t,
 
     u.flags = hdr.flags;
 
-    entry.timestamp = (t - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
     entry.dropped = dropped;
     entry.nretrans = nretrans;
     entry.curhop = hdr.curhop;
@@ -556,12 +556,12 @@ void Logger::logSend_(const WallClock::time_point& t,
     send_->write(&entry, 1);
 }
 
-void Logger::logEvent_(const WallClock::time_point& t,
+void Logger::logEvent_(const MonoClock::time_point& t,
                        char *event)
 {
     EventEntry entry;
 
-    entry.timestamp = (t - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
     entry.event = event;
 
     event_->write(&entry, 1);

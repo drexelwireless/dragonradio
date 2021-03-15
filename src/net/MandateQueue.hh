@@ -849,7 +849,7 @@ protected:
         void drop(const NetPacket &pkt) const
         {
             if (logger)
-                logger->logQueueDrop(WallClock::now(),
+                logger->logQueueDrop(MonoClock::now(),
                                      pkt.nretrans,
                                      pkt.hdr,
                                      pkt.ehdr(),

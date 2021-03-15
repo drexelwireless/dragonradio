@@ -156,7 +156,7 @@ void MAC::txNotifier(void)
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
                 const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
 
-                logger_->logSend(WallClock::to_wall_time((*it)->pkt->timestamp),
+                logger_->logSend((*it)->pkt->timestamp,
                                  (*it)->pkt->nretrans,
                                  (*it)->pkt->hdr,
                                  (*it)->pkt->ehdr(),

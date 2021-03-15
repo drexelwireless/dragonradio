@@ -83,7 +83,7 @@ void exportLogger(py::module &m)
         .def("logEvent",
             [](Logger &self, const std::string &msg)
             {
-                return self.logEvent(WallClock::now(), msg);
+                return self.logEvent(MonoClock::now(), msg);
             },
             "Log an event")
         .def("logSnapshot",
