@@ -103,6 +103,9 @@ class AnnotatedPlot(Plot):
         if event.inaxes in self.annotations:
             annot = self.annotations[event.inaxes]
             for line in self.lines[event.inaxes]:
+                if not line.get_visible():
+                    continue
+
                 cont, ind = line.contains(event)
                 if cont:
                     self.updateAnnotation(annot, line, ind)
