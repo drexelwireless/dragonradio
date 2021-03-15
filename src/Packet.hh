@@ -522,6 +522,9 @@ struct NetPacket : public Packet
     /** @brief IQ sample buffer containing modulated packet */
     std::shared_ptr<IQBuf> samples;
 
+    /** @brief Time when packet was transmitted */
+    MonoClock::time_point tx_timestamp;
+
     /** @brief Return true if the packet's deadline has passed, false otherwise */
     bool deadlinePassed(const MonoClock::time_point &now)
     {

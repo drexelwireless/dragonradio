@@ -532,12 +532,12 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
                 Node                        &me = radionet_->getThisNode();
                 std::lock_guard<std::mutex> lock(me.timestamps_mutex);
 
-                me.timestamps_sent.insert_or_assign(*pkt.timestamp_seq, pkt.timestamp);
+                me.timestamps_sent.insert_or_assign(*pkt.timestamp_seq, pkt.tx_timestamp);
             }
 
             logTimeSync(LOGDEBUG, "Transmitted timestamp: tseq_sent=%u; t_sent=%f",
                 (unsigned) *pkt.timestamp_seq,
-                (double) pkt.timestamp.get_real_secs());
+                (double) pkt.tx_timestamp.get_real_secs());
         }
     }
 }
@@ -588,6 +588,7 @@ void SmartController::ack(RecvWindow &recvw)
     // queue.
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
+    pkt->timestamp = MonoClock::now();
     pkt->hdr.curhop = radionet_->getThisNodeId();
     pkt->hdr.nexthop = recvw.node.id;
     pkt->hdr.flags = {0};
@@ -638,6 +639,7 @@ void SmartController::nak(RecvWindow &recvw, Seq seq)
     // queue.
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
+    pkt->timestamp = MonoClock::now();
     pkt->hdr.curhop = radionet_->getThisNodeId();
     pkt->hdr.nexthop = recvw.node.id;
     pkt->hdr.flags = {0};
@@ -669,6 +671,7 @@ void SmartController::broadcastHello(void)
 
     auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
 
+    pkt->timestamp = MonoClock::now();
     pkt->hdr.curhop = radionet_->getThisNodeId();
     pkt->hdr.nexthop = kNodeBroadcast;
     pkt->hdr.flags = {0};

@@ -118,10 +118,9 @@ struct PacketRecvEntry {
 
 /** @brief Log entry for sent packets */
 struct PacketSendEntry {
-    /** @brief Timestamp of the slot in which the packet occurred. */
-    /** If the packet spans two slots, this is the timestamp of the first slot. */
+    /** @brief Timestamp of packet transmission. */
     double timestamp;
-    /** @brief Monotonic clock timestamp. */
+    /** @brief Monotonic clock timestamp of packet transmission. */
     double mono_timestamp;
     /** @brief Was this packet dropped, and if so, why was it dropped? */
     uint8_t dropped;

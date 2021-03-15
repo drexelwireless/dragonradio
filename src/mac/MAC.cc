@@ -132,7 +132,7 @@ void MAC::txNotifier(void)
         if (record.timestamp) {
             // Timestamp packets
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
-                (*it)->pkt->timestamp = *record.timestamp + (record.delay + (*it)->start)/tx_rate_;
+                (*it)->pkt->tx_timestamp = *record.timestamp + (record.delay + (*it)->start)/tx_rate_;
 
             // Record the record's load
             {
