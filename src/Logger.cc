@@ -343,6 +343,24 @@ void Logger::setAttribute(const std::string& name, uint32_t val)
     att.write(h5_type, &val);
 }
 
+void Logger::setAttribute(const std::string& name, int64_t val)
+{
+    H5::IntType   h5_type(H5::PredType::NATIVE_INT64);
+    H5::DataSpace attr_space(H5S_SCALAR);
+    H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
+
+    att.write(h5_type, &val);
+}
+
+void Logger::setAttribute(const std::string& name, uint64_t val)
+{
+    H5::IntType   h5_type(H5::PredType::NATIVE_UINT64);
+    H5::DataSpace attr_space(H5S_SCALAR);
+    H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
+
+    att.write(h5_type, &val);
+}
+
 void Logger::setAttribute(const std::string& name, double val)
 {
     H5::FloatType h5_type(H5::PredType::NATIVE_DOUBLE);

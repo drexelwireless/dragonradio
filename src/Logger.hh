@@ -69,6 +69,8 @@ public:
     void setAttribute(const std::string& name, const std::string& val);
     void setAttribute(const std::string& name, uint8_t val);
     void setAttribute(const std::string& name, uint32_t val);
+    void setAttribute(const std::string& name, int64_t val);
+    void setAttribute(const std::string& name, uint64_t val);
     void setAttribute(const std::string& name, double val);
 
     void logSlot(std::shared_ptr<IQBuf> buf,
