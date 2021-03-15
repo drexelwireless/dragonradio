@@ -518,11 +518,11 @@ class TrafficPlot(AnnotatedPlot):
                          label=str(flow))
         else:
             plotRecv(recv_df[(recv_df.header_valid == 1) & (recv_df.payload_valid == 1)],
-                    color='k',
-                    label='valid')
+                     color='k',
+                     label='valid')
             plotRecv(recv_df[(recv_df.header_valid == 1) & (recv_df.payload_valid != 1)],
-                    color='r',
-                    label='invalid payload')
+                     color='r',
+                     label='invalid payload')
 
         ax.set_title('Received Packets (Node {})'.format(dest))
 
