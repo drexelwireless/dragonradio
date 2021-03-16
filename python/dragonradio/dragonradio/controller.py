@@ -343,8 +343,10 @@ class Controller(CILServer):
 
                 self.createTask(self.discoverNeighbors(),
                                 name='discover neighbors')
-                self.createTask(self.synchronizeClock(),
-                                name='synchronize clock')
+
+                if self.config.clock_sync_period is not None:
+                    self.createTask(self.synchronizeClock(),
+                                    name='synchronize clock')
 
                 if self.is_gateway:
                     self.createTask(self.bootstrapNetwork(),
@@ -1251,7 +1253,7 @@ class Controller(CILServer):
 
         while not self.done:
             try:
-                await asyncio.sleep(config.clock_sync_interval)
+                await asyncio.sleep(config.clock_sync_period)
 
                 radio.synchronizeClock()
             except asyncio.CancelledError:

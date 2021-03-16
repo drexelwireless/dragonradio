@@ -306,7 +306,8 @@ class Config:
         self.standard_hello_interval = 60.0
 
         # Clock synchronization
-        self.clock_sync_interval = 10.0
+        self.clock_sync_period = None
+        """Period at which clock is synchronized"""
         self.clock_noskew = False
         """Assume no clock skew relative to master"""
 
