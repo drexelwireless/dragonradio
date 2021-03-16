@@ -417,6 +417,9 @@ class LogCollection:
         self.reservation = None
         """Colosseum reservation associate with this log collection"""
 
+        self._start = None
+        """Time zero for logs"""
+
     def load(self, path, start_time=None, srn_logs_path=None, srns=None):
         """Load a log into the collection"""
         if isinstance(path, list):
