@@ -57,6 +57,14 @@ DROPPED: List[str] = ['transmitted', 'll_drop', 'queue_drop']
 DROPPED_CAT:CategoricalDtype = CategoricalDtype(range(0, len(DROPPED)))
 """Categories for packet 'dropped' status"""
 
+ARQ_EVENT_TYPE: List[str] = [ 'send_nak', 'send_sack', 'nak', 'retrans_nak'
+                            , 'sack', 'snak', 'ack_timeout'
+                            ]
+"""Category names for ARQ event types"""
+
+ARQ_EVENT_TYPE_CAT:CategoricalDtype = CategoricalDtype(range(0, len(ARQ_EVENT_TYPE)))
+"""Categories for ARQ event types"""
+
 EVENTS = [(re.compile(r), k, c) for (r, k, c) in
             [ [r'^AMC: Moving up modulation scheme', 'AMC', 'g']
             , [r'^AMC: Moving down modulation scheme', 'AMC', 'r']
@@ -242,6 +250,92 @@ class Log:
     def selftx(self):
         """Self-transmissions"""
         return self._loadDataset('selftx')
+
+    @cached_property
+    def arq_events(self):
+        """ARQ events"""
+        df = self._loadDataset('arq_event')
+
+        # Convert dropped field to category
+        df = df.astype({'type': ARQ_EVENT_TYPE_CAT}, copy=False)
+        df.type.cat.rename_categories(ARQ_EVENT_TYPE, inplace=True)
+
+        return df
+
+    @cached_property
+    def sack(self):
+        return self.sacks('sack')
+
+    @cached_property
+    def send_sack(self):
+        return self.sacks('send_sack')
+
+    def sacks(self, col):
+        df = self.arq_events
+        df = df[df.type == col]
+
+        sacks_timestamp = []
+        sacks_sack = []
+        sacks_node = []
+        sacks_seq = []
+
+        count = 0
+
+        for (_, row) in df.iterrows():
+            count += 1
+
+            if len(row.sacks) == 0:
+                continue
+
+            unack = row.seq
+
+            if unack > row.sacks[1]:
+                unack = row.sacks[0]
+            else:
+                unack = min(unack, row.sacks[0])
+
+            i = 0
+
+            while i < len(row.sacks):
+                # Selective NAKs
+                if unack <= row.sacks[i]:
+                    n = row.sacks[i] - unack
+
+                    sacks_seq.append(np.arange(unack, row.sacks[i], dtype=int))
+                else:
+                    n = 2**16-1 - unack + row.sacks[i]
+
+                    sacks_seq.append(np.arange(unack, 2**16-1))
+                    sacks_seq.append(np.arange(0, row.sacks[i]))
+
+                sacks_timestamp.append(np.repeat(row.timestamp, n))
+                sacks_sack.append(np.repeat(0, n))
+                sacks_node.append(np.repeat(row.node, n))
+
+                # Selective ACKs
+                if row.sacks[i] <= row.sacks[i+1]:
+                    n = row.sacks[i+1] - row.sacks[i]
+
+                    sacks_seq.append(np.arange(row.sacks[i], row.sacks[i+1]))
+                else:
+                    n = 2**16-1 - row.sacks[i] + row.sacks[i+1]
+
+                    sacks_seq.append(np.arange(row.sacks[i], 2**16-1))
+                    sacks_seq.append(np.arange(0, row.sacks[i+1]))
+
+                sacks_timestamp.append(np.repeat(row.timestamp, n))
+                sacks_sack.append(np.repeat(1, n))
+                sacks_node.append(np.repeat(row.node, n))
+
+                unack = row.sacks[i+1]
+                i += 2
+
+        return pd.DataFrame({ 'timestamp': np.concatenate(sacks_timestamp)
+                            , 'node': np.concatenate(sacks_node)
+                            , 'seq': np.concatenate(sacks_seq)
+                            , 'sack': np.concatenate(sacks_sack)
+                            }).\
+            astype({ 'timestamp': np.float64, 'node': int, 'seq': int, 'sack': int}, copy=False)
 
     @cached_property
     def mcs_table(self):

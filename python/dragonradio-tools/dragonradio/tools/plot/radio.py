@@ -44,6 +44,12 @@ def pprReceivedPacket(pkt):
                flow=pkt.mgen_flow_uid,
                mgen_seqno=pkt.mgen_seqno)
 
+def pprSACK(sack):
+    """Pretty print a selective ACK"""
+    return "seq={seq:.0f}\nnode={node:.0f}".\
+        format(seq=sack.seq,
+               node=sack.node)
+
 class SpecgramPlot:
     """A spectrogram plot"""
     def __init__(self, fig, ax, nfft=256, noverlap=128, scale=1e3, cmap=plt.get_cmap('viridis')):
@@ -356,7 +362,8 @@ class TrafficPlot(AnnotatedPlot):
                  y: str='seq',
                  filt=lambda x : x,
                  by_flow: bool=True,
-                 mac_errors: bool=False):
+                 mac_errors: bool=False,
+                 sack: bool=False):
         super().__init__(fig, sticky=True)
 
         self.log = log
@@ -388,13 +395,38 @@ class TrafficPlot(AnnotatedPlot):
 
         if src is not None:
             self.plotSentTraffic(sent_ax, src, dest, y, by_flow=by_flow)
+
             if mac_errors:
                 self.plotMACErrors(sent_ax, src, r'^(MAC: (NO SLOT|MISSED))')
 
+            if sack:
+                self.plotSACK(sent_ax, src, dest, 'sack', alpha=0.1)
+
+                delta = self.log[src].delta
+
+                df = self.log[src].arq_events
+                df = df[df.node == dest]
+
+                self.plotTraffic(sent_ax, df[df.type == 'nak'], 'seq', delta, pprSACK,
+                                 label='NAK', color='y')
+
+                self.plotTraffic(sent_ax, df[df.type == 'retrans_nak'], 'seq', delta, pprSACK,
+                                 label='NAK (retrans)', color='y')
+
+                self.plotTraffic(sent_ax, df[df.type == 'snak'], 'seq', delta, pprSACK,
+                                 label='NAK (selective)', color='y')
+
+                self.plotTraffic(sent_ax, df[df.type == 'ack_timeout'], 'seq', delta, pprSACK,
+                                 label='ACK timeout', color='y')
+
         if dest is not None:
             self.plotRecvTraffic(recv_ax, src, dest, y, by_flow=by_flow)
+
             if mac_errors:
                 self.plotMACErrors(recv_ax, dest, r'^(MAC: (attempting))')
+
+            if sack:
+                self.plotSACK(recv_ax, dest, src, 'send_sack', alpha=0.1)
 
         # Tighten layout
         self.fig.tight_layout()
@@ -530,6 +562,13 @@ class TrafficPlot(AnnotatedPlot):
 
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_ylabel(self.Y_LABELS[y])
+
+    def plotSACK(self, ax, node, dest, col='sack', alpha=0.85):
+        delta = self.log[node].delta
+
+        df = self.log[node].sacks(col)
+
+        self.plotTraffic(ax, df[(df.sack == 0) & (df.node == dest)], 'seq', delta, pprSACK, label='SNAK', color='r', alpha=alpha)
 
     def plot(self):
         self.fig.canvas.draw()

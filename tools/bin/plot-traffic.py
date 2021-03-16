@@ -36,6 +36,8 @@ class PlotTrafficCommand(Command):
                             help='plot MCS index instead of packet sequence number')
         parser.add_argument('--mac-errors', action='store_true',
                             help='show MAC errors')
+        parser.add_argument('--sack', action='store_true',
+                            help='show selective ACKs')
         parser.add_argument('--by-flow', action='store_true',
                             help='show traffic by flow')
 
@@ -67,7 +69,8 @@ class PlotTrafficCommand(Command):
                            y=args.y,
                            filt=self.filter,
                            by_flow=args.by_flow,
-                           mac_errors=args.mac_errors)
+                           mac_errors=args.mac_errors,
+                           sack=args.sack)
         plot.plot()
 
         plt.show()
