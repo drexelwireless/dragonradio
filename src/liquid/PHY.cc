@@ -80,6 +80,9 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
                          iqbuf->data(),
                          [&](const auto& x) { return x*g; });
 
+    // Timestamp
+    MonoClock::time_point mod_end = MonoClock::now();
+
     // Pass the modulated packet to the 0dBFS estimator if requested
     AutoGain &autogain = phy_.mcs_table[pkt->mcsidx].autogain;
 
@@ -87,7 +90,8 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
         work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
     // Record modulation latency
-    pkt->mod_latency = (MonoClock::now() - mod_start).get_real_secs();
+    pkt->mod_start_timestamp = mod_start;
+    pkt->mod_end_timestamp = mod_end;
 
     // Fill in the ModPacket
     mpkt.offset = iqbuf->delay;

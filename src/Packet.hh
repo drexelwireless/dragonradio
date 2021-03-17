@@ -510,9 +510,6 @@ struct NetPacket : public Packet
     /** @brief Packet timestamp */
     std::optional<TimestampSeq> timestamp_seq;
 
-    /** @brief Modulation latency */
-    double mod_latency;
-
     /** @brief Offset of start of packet from beginning of sample buffer */
     size_t offset;
 
@@ -522,7 +519,13 @@ struct NetPacket : public Packet
     /** @brief IQ sample buffer containing modulated packet */
     std::shared_ptr<IQBuf> samples;
 
-    /** @brief Time when packet was transmitted */
+    /** @brief Modulation start timestamp */
+    MonoClock::time_point mod_start_timestamp;
+
+    /** @brief Modulation end timestamp */
+    MonoClock::time_point mod_end_timestamp;
+
+    /** @brief Packet transmission timestamp */
     MonoClock::time_point tx_timestamp;
 
     /** @brief Return true if the packet's deadline has passed, false otherwise */

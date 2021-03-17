@@ -154,8 +154,10 @@ struct PacketSendEntry {
     float fc;
     /** @brief Bandwidth [Hz] */
     float bw;
-    /** @brief Modulation latency [sec] */
+    /** @brief Latency of *just* modulation [sec] */
     double mod_latency;
+    /** @brief Latency from network read to modulation [sec] */
+    double synth_latency;
     /** @brief Size of packet (bytes). */
     uint32_t size;
     /** @brief Number of IQ samples. */
@@ -310,6 +312,7 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("mod_latency", HOFFSET(PacketSendEntry, mod_latency), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("synth_latency", HOFFSET(PacketSendEntry, synth_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("size", HOFFSET(PacketSendEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("nsamples", HOFFSET(PacketSendEntry, nsamples), H5::PredType::NATIVE_INT32);
     h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
@@ -598,7 +601,8 @@ void Logger::logSend_(const MonoClock::time_point& t,
     if (dropped == kNotDropped) {
         entry.fc = pkt.fc;
         entry.bw = pkt.bw;
-        entry.mod_latency = pkt.mod_latency;
+        entry.mod_latency = (pkt.mod_end_timestamp - pkt.mod_start_timestamp).get_real_secs();
+        entry.synth_latency = (pkt.mod_end_timestamp - pkt.timestamp).get_real_secs();
         entry.size = pkt.size();
         entry.nsamples = pkt.nsamples;
         if (pkt.samples && getCollectSource(kSentIQ)) {
@@ -617,6 +621,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
         entry.fc = 0;
         entry.bw = 0;
         entry.mod_latency = 0;
+        entry.synth_latency = 0;
         entry.size = 0;
         entry.nsamples = 0;
         entry.iq_data.p = nullptr;
