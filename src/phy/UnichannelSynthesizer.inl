@@ -34,7 +34,11 @@ UnichannelSynthesizer<ChannelModulator>::~UnichannelSynthesizer()
 template <class ChannelModulator>
 void UnichannelSynthesizer<ChannelModulator>::modulate(const std::shared_ptr<Slot> &slot)
 {
-    std::atomic_store_explicit(&curslot_, slot, std::memory_order_release);
+    std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+    curslot_ = slot;
+
+    curslot_cond_.notify_all();
 }
 
 template <class ChannelModulator>
@@ -58,6 +62,8 @@ void UnichannelSynthesizer<ChannelModulator>::stop(void)
 
     done_ = true;
 
+    curslot_cond_.notify_all();
+
     for (size_t i = 0; i < mod_threads_.size(); ++i) {
         if (mod_threads_[i].joinable())
             mod_threads_[i].join();
@@ -79,9 +85,13 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
 
     while (!done_) {
         // Wait for the next slot
-        do {
-            slot = std::atomic_load_explicit(&curslot_, std::memory_order_acquire);
-        } while (!done_ && slot == prev_slot);
+        {
+            std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+            curslot_cond_.wait(lock, [&]{ return done_ || curslot_ != prev_slot; });
+
+            slot = curslot_;
+        }
 
         // Exit now if we're done
         if (done_)

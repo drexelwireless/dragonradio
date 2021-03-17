@@ -5,6 +5,7 @@
 #define UNICHANNELSYNTHESIZER_HH_
 
 #include <atomic>
+#include <mutex>
 
 #include "phy/Channel.hh"
 #include "phy/PHY.hh"
@@ -34,6 +35,12 @@ protected:
 
     /** @brief Reconfiguration flags */
     std::vector<std::atomic<bool>> mod_reconfigure_;
+
+    /** @brief Lock for current slot */
+    std::mutex curslot_mutex_;
+
+    /** @brief Condition variable for current slot */
+    std::condition_variable curslot_cond_;
 
     /** @brief Current slot that need to be synthesized */
     std::shared_ptr<Slot> curslot_;
