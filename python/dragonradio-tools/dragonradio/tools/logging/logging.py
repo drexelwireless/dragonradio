@@ -215,10 +215,18 @@ class Log:
         df = self._loadDataset('recv')
         self._fixMCS(df)
 
+        has_slot_timestamp = 'slot_timestamp' in df
+
+        if not has_slot_timestamp:
+            df['slot_timestamp'] = df.timestamp
+
         # Add packet start and end times based on slot timestamp, bandwidth, and
         # sample start and end.
-        df['start'] = df.timestamp + df.start_samples/df.bw
-        df['end'] = df.timestamp + df.end_samples/df.bw
+        df['start'] = df.slot_timestamp + df.start_samples/df.bw
+        df['end'] = df.slot_timestamp + df.end_samples/df.bw
+
+        if not has_slot_timestamp:
+            df.timestamp = df.start
 
         return df
 
@@ -399,7 +407,7 @@ class Log:
 
         # The packet's timestamp tells us which slot it was received in. We
         # assume there is only one slot with the given timestamp.
-        idx = slots['timestamp'] == pkt.timestamp
+        idx = slots['timestamp'] == pkt.slot_timestamp
 
         if not idx.any():
             return None
