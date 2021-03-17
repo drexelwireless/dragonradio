@@ -824,6 +824,9 @@ protected:
                 ++stats_[mp].npackets;
                 stats_[mp].nbytes += pkt->payload_size;
             }
+
+            // Timestamp enqueue operation
+            pkt->enqueue_timestamp = MonoClock::now();
         }
 
         void postEmplace()
