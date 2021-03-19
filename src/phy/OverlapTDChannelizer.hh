@@ -104,8 +104,6 @@ private:
         {
         }
 
-        OverlapTDChannelDemodulator() = default;
-
         virtual ~OverlapTDChannelDemodulator() = default;
 
         /** @brief Set channel */
