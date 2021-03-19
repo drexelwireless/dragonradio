@@ -136,9 +136,6 @@ private:
         dragonradio::signal::MixingRationalResampler<C,C> resamp_;
     };
 
-    /** @brief Length of a single TDMA slot, *including* guard (sec) */
-    double slot_size_;
-
     /** @brief What portion of the end of the previous slot should we
      * demodulate (sec)?
      */
