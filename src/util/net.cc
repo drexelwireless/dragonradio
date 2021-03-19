@@ -43,7 +43,7 @@ struct sockaddr parseIP(const std::string &s)
 void addStaticARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr, const std::string &macaddr)
 {
     RaiseCaps     caps({CAP_NET_ADMIN});
-    struct arpreq req = {0};
+    struct arpreq req = {{0}};
 
     if (dev)
         strncpy(req.arp_dev, dev->c_str(), sizeof(req.arp_dev)-1);
@@ -62,7 +62,7 @@ void addStaticARPEntry(const std::optional<std::string> &dev, const std::string 
 void deleteARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr)
 {
     RaiseCaps     caps({CAP_NET_ADMIN});
-    struct arpreq req = {0};
+    struct arpreq req = {{0}};
 
     if (dev)
         strncpy(req.arp_dev, dev->c_str(), sizeof(req.arp_dev)-1);
