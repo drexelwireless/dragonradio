@@ -379,7 +379,7 @@ void Packet::initMGENInfo(void)
             int64_t  secs;
             int32_t  usecs;
 
-            memcpy(&mgen_usecs, data() + off, sizeof(uint32_t));
+            memcpy(&mgen_secs, data() + off, sizeof(uint32_t));
             off += sizeof(uint32_t);
 
             memcpy(&mgen_usecs, data() + off, sizeof(uint32_t));
