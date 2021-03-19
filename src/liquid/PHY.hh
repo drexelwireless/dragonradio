@@ -49,6 +49,8 @@ public:
 
     class PacketDemodulator : public ::PHY::PacketDemodulator, virtual protected liquid::Demodulator {
     public:
+        using liquid::Demodulator::demodulate;
+
         PacketDemodulator(PHY &phy,
                           const MCS &header_mcs,
                           bool soft_header,
