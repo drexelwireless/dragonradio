@@ -56,9 +56,12 @@ void FDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
         mpkt.offset = 0;
         mpkt.nsamples = iqbuf_up->size();
         mpkt.samples = std::move(iqbuf_up);
-    } else
+    } else {
         // Modulate packet and apply gain
-        mod_->modulate(std::move(pkt), pkt->g*g, mpkt);
+        auto pkt_g = pkt->g*g;
+
+        mod_->modulate(std::move(pkt), pkt_g, mpkt);
+    }
 
     // Set channel
     mpkt.chanidx = chanidx_;
