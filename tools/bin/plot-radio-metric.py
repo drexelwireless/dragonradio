@@ -18,6 +18,10 @@ class RadioMetricCommand(Command):
                             dest='flows',
                             metavar='FLOW',
                             help='Restrict to given flow')
+        parser.add_argument('--seq', type=int, action='append',
+                            dest='seqs',
+                            metavar='SEQ',
+                            help='Restrict to given sequence number')
 
         parser.add_argument('--cfo', action='store_const', const='cfo',
                             dest='metric',
@@ -53,6 +57,9 @@ class RadioMetricCommand(Command):
     def handle(self, parser, args):
         if args.flows:
             self.filter_by(lambda df: df[df.mgen_flow_uid.isin(args.flows)])
+
+        if args.seqs:
+            self.filter_by(lambda df: df[df.seq.isin(args.seqs)])
 
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
