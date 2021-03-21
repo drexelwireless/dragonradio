@@ -63,8 +63,10 @@ struct SelfTXEntry {
 struct PacketRecvEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
+    double slot_timestamp;
+    /** @brief Timestamp of packet reception. */
     double timestamp;
-    /** @brief Monotonic clock timestamp. */
+    /** @brief Monotonic clock timestamp of packet reception. */
     double mono_timestamp;
     /** @brief Offset (in samples) from timestamp slot to start of frame. */
     int32_t start_samples;
@@ -258,6 +260,7 @@ void Logger::open(const std::string& filename)
     // H5 type for received packets
     H5::CompType h5_packet_recv(sizeof(PacketRecvEntry));
 
+    h5_packet_recv.insertMember("slot_timestamp", HOFFSET(PacketRecvEntry, slot_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("timestamp", HOFFSET(PacketRecvEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("mono_timestamp", HOFFSET(PacketRecvEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("start_samples", HOFFSET(PacketRecvEntry, start_samples), H5::PredType::NATIVE_INT32);
@@ -526,8 +529,9 @@ void Logger::logRecv_(RadioPacket &pkt)
 
     u.flags = hdr.flags;
 
-    entry.timestamp = (WallClock::to_wall_time(pkt.slot_timestamp) - t_start_).get_real_secs();
-    entry.mono_timestamp = (pkt.slot_timestamp - mono_t_start_).get_real_secs();
+    entry.slot_timestamp = (WallClock::to_wall_time(pkt.slot_timestamp) - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(pkt.timestamp) - t_start_).get_real_secs();
+    entry.mono_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
     entry.start_samples = pkt.start_samples;
     entry.end_samples = pkt.end_samples;
     entry.header_valid = !pkt.internal_flags.invalid_header;
