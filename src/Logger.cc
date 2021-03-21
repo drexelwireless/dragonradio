@@ -160,6 +160,8 @@ struct PacketSendEntry {
     double enqueue_latency;
     /** @brief Latency of *just* dequeue [sec] */
     double dequeue_latency;
+    /** @brief Queue latency [sec] */
+    double queue_latency;
     /** @brief LLC latency [sec] */
     double llc_latency;
     /** @brief Latency of *just* modulation [sec] */
@@ -322,6 +324,7 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("tuntap_latency", HOFFSET(PacketSendEntry, tuntap_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("enqueue_latency", HOFFSET(PacketSendEntry, enqueue_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("dequeue_latency", HOFFSET(PacketSendEntry, dequeue_latency), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("queue_latency", HOFFSET(PacketSendEntry, queue_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("llc_latency", HOFFSET(PacketSendEntry, llc_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("mod_latency", HOFFSET(PacketSendEntry, mod_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("synth_latency", HOFFSET(PacketSendEntry, synth_latency), H5::PredType::NATIVE_DOUBLE);
@@ -616,6 +619,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
         entry.tuntap_latency = pkt.wall_timestamp ? (pkt.tuntap_timestamp - *pkt.wall_timestamp).get_real_secs() : 0;
         entry.enqueue_latency = (pkt.enqueue_timestamp - pkt.timestamp).get_real_secs();
         entry.dequeue_latency = (pkt.dequeue_end_timestamp - pkt.dequeue_start_timestamp).get_real_secs();
+        entry.queue_latency = (pkt.dequeue_end_timestamp - pkt.timestamp).get_real_secs();
         entry.llc_latency = (pkt.llc_timestamp - pkt.timestamp).get_real_secs();
         entry.mod_latency = (pkt.mod_end_timestamp - pkt.mod_start_timestamp).get_real_secs();
         entry.synth_latency = (pkt.mod_end_timestamp - pkt.timestamp).get_real_secs();
@@ -639,6 +643,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
         entry.tuntap_latency = 0;
         entry.enqueue_latency = 0;
         entry.dequeue_latency = 0;
+        entry.queue_latency = 0;
         entry.llc_latency = 0;
         entry.mod_latency = 0;
         entry.synth_latency = 0;
