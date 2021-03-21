@@ -56,7 +56,7 @@ TunTap::TunTap(const std::string& tap_iface,
   , tap_macaddr_(tap_macaddr)
   , mtu_(mtu)
   , fd_(0)
-  , ifr_({0})
+  , ifr_({{0}})
   , done_(true)
 {
     logTunTap(LOGINFO, "Creating tap interface %s", tap_iface.c_str());
@@ -139,7 +139,7 @@ size_t TunTap::getMTU(void)
 void TunTap::addARPEntry(uint8_t node_id)
 {
     RaiseCaps     caps({CAP_NET_ADMIN});
-    struct arpreq req = {0};
+    struct arpreq req = {{0}};
 
     strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
 
@@ -159,7 +159,7 @@ void TunTap::addARPEntry(uint8_t node_id)
 void TunTap::deleteARPEntry(uint8_t node_id)
 {
     RaiseCaps     caps({CAP_NET_ADMIN});
-    struct arpreq req = {0};
+    struct arpreq req = {{0}};
 
     strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
 
@@ -178,7 +178,7 @@ static const char *clonedev = "/dev/net/tun";
 void TunTap::openTap(std::string& dev, int flags)
 {
     RaiseCaps    caps({CAP_NET_ADMIN});
-    struct ifreq ifr = {0};
+    struct ifreq ifr = {{0}};
 
     // Open the clone device
     if((fd_ = open(clonedev, O_RDWR)) < 0) {

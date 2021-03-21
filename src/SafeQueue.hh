@@ -174,7 +174,7 @@ private:
     bool done_;
 
     /** @brief Mutex protecting the queue. */
-    std::mutex m_;
+    mutable std::mutex m_;
 
     /** @brief Condition variable protecting the queue. */
     std::condition_variable cond_;

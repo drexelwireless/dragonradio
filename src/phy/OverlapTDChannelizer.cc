@@ -13,7 +13,6 @@ OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<PHY> phy,
                                            const Channels &channels,
                                            unsigned int nthreads)
   : Channelizer(phy, rx_rate, channels)
-  , slot_size_(0.0)
   , prev_demod_(0.0)
   , prev_demod_samps_(0)
   , cur_demod_(0.0)

@@ -359,8 +359,8 @@ private:
 /** @brief A MAC controller that implements ARQ. */
 class SmartController : public Controller
 {
-    friend class SendWindow;
-    friend class RecvWindow;
+    friend struct SendWindow;
+    friend struct RecvWindow;
 
     friend class SendWindowsProxy;
     friend class SendWindowProxy;

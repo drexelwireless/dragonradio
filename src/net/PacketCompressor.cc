@@ -337,7 +337,7 @@ void PacketCompressor::compress(NetPacket &pkt)
         // Must have valid checksum
         uint16_t cksum = ip_checksum(pkt.data() + buf.inoff, 4*iph->ip_hl);
 
-        if (iph->ip_sum == 0xffffff || cksum != 0) {
+        if (iph->ip_sum == (uint16_t) 0xffffff || cksum != 0) {
             logCompress("Bad IP checksum");
             goto done;
         }

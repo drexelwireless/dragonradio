@@ -50,8 +50,6 @@ private:
         {
         }
 
-        TDChannelDemodulator() = default;
-
         virtual ~TDChannelDemodulator() = default;
 
         /** @brief Update IQ buffer sequence number */

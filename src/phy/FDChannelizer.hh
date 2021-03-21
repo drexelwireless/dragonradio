@@ -67,8 +67,6 @@ private:
                              const std::vector<C> &taps,
                              double rate);
 
-        FDChannelDemodulator() = default;
-
         virtual ~FDChannelDemodulator() = default;
 
         /** @brief Update IQ buffer sequence number */
