@@ -35,7 +35,7 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
                                     const float g,
                                     ModPacket &mpkt)
 {
-    MonoClock::time_point now = MonoClock::now();
+    MonoClock::time_point mod_start = MonoClock::now();
 
     // Set team in header
     pkt->hdr.flags.team = team_;
@@ -86,10 +86,12 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     if (autogain.needCalcAutoSoftGain0dBFS())
         work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
+    // Record modulation latency
+    pkt->mod_latency = (MonoClock::now() - mod_start).get_real_secs();
+
     // Fill in the ModPacket
     mpkt.offset = iqbuf->delay;
     mpkt.nsamples = iqbuf->size() - iqbuf->delay;
-    mpkt.mod_latency = (MonoClock::now() - now).get_real_secs();
     mpkt.samples = std::move(iqbuf);
     mpkt.pkt = std::move(pkt);
 }

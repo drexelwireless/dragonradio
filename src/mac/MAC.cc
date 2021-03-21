@@ -156,7 +156,6 @@ void MAC::txNotifier(void)
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
                 (*it)->pkt->fc = tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc;
                 (*it)->pkt->bw = tx_rate_;
-                (*it)->pkt->mod_latency = (*it)->mod_latency;
                 (*it)->pkt->offset = (*it)->offset;
                 (*it)->pkt->nsamples = (*it)->nsamples;
 
