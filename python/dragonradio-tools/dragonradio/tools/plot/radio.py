@@ -166,7 +166,22 @@ class PAPRPlot:
 
         self.fig.canvas.mpl_connect('scroll_event', zoomFactory(self.fig, self.ax, base_scale=2.0))
 
-class RadioMetricPlot(AnnotatedPlot):
+class ReservationPlot(AnnotatedPlot):
+    def __init__(self, fig, *args, logs: LogCollection=None, **kwargs):
+        super().__init__(fig, *args, **kwargs)
+
+        self.logs: LogCollection = logs
+        """Logs to plot"""
+
+    def plotStages(self, ax=None):
+        # If logs are taken from a Colosseum reservation, plot stage markers
+        if self.logs.reservation is not None:
+            scorer = Scorer(self.logs.reservation)
+            if ax is None:
+                ax = self.ax
+            plotStages(ax, scorer)
+
+class RadioMetricPlot(ReservationPlot):
     RECV_METRICS = frozenset(['cfo', 'demod_latency', 'evm', 'mcsidx', 'ms', 'rssi'])
 
     MS_METRICS = frozenset(['ms', 'sent_ms'])
@@ -188,7 +203,7 @@ class RadioMetricPlot(AnnotatedPlot):
                  only_invalid_packets=False,
                  include_invalid_packets=False,
                  filt=lambda x : x):
-        super().__init__(fig, ax)
+        super().__init__(fig, ax, logs=logs)
 
         self.metric = metric
         """The metric to plot"""
@@ -276,10 +291,13 @@ class RadioMetricPlot(AnnotatedPlot):
         if not checkboxes:
             ax.legend(handles=self.lines[ax], loc='upper right')
 
+        # Plot stage markers
+        self.plotStages()
+
         # Attach hover event handler
         self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
 
-class EventPlot(AnnotatedPlot):
+class EventPlot(ReservationPlot):
     def __init__(self, logs, fig=None, ax=None):
         if fig is None:
             fig = plt.figure(figsize=(14,4))
@@ -287,10 +305,7 @@ class EventPlot(AnnotatedPlot):
         if ax is None:
             ax = fig.add_subplot(1,1,1)
 
-        super().__init__(fig, ax)
-
-        self.logs: LogCollection = logs
-        """Logs to plot"""
+        super().__init__(fig, ax, logs=logs)
 
         self.series = []
         """Event series to plot"""
@@ -346,17 +361,15 @@ class EventPlot(AnnotatedPlot):
             line.ppr = ppr
             self.addLine(self.ax, line)
 
-        # If logs are taken from a Colosseum reservation, plot stage markers
-        if self.logs.reservation is not None:
-            scorer = Scorer(self.logs.reservation)
-            plotStages(self.ax, scorer)
+        # Plot stage markers
+        self.plotStages()
 
         self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
 
-class TrafficPlot(AnnotatedPlot):
+class TrafficPlot(ReservationPlot):
     def __init__(self,
                  fig: Figure,
-                 log: ReservationLog,
+                 logs: LogCollection,
                  src: Optional[int],
                  dest: Optional[int],
                  y: str='seq',
@@ -364,9 +377,7 @@ class TrafficPlot(AnnotatedPlot):
                  by_flow: bool=True,
                  mac_errors: bool=False,
                  sack: bool=False):
-        super().__init__(fig, sticky=True)
-
-        self.log = log
+        super().__init__(fig, logs=logs, sticky=True)
 
         self.filt = filt
         """DataFrame filter"""
@@ -402,9 +413,9 @@ class TrafficPlot(AnnotatedPlot):
             if sack:
                 self.plotSACK(sent_ax, src, dest, 'sack', alpha=0.1)
 
-                delta = self.log[src].delta
+                delta = self.logs[src].delta
 
-                df = self.log[src].arq_events
+                df = self.logs[src].arq_events
                 df = df[df.node == dest]
 
                 self.plotTraffic(sent_ax, df[df.type == 'nak'], 'seq', delta, pprSACK,
@@ -419,6 +430,9 @@ class TrafficPlot(AnnotatedPlot):
                 self.plotTraffic(sent_ax, df[df.type == 'ack_timeout'], 'seq', delta, pprSACK,
                                  label='ACK timeout', color='y')
 
+            # Plot stage markers
+            self.plotStages(ax=sent_ax)
+
         if dest is not None:
             self.plotRecvTraffic(recv_ax, src, dest, y, by_flow=by_flow)
 
@@ -427,6 +441,9 @@ class TrafficPlot(AnnotatedPlot):
 
             if sack:
                 self.plotSACK(recv_ax, dest, src, 'send_sack', alpha=0.1)
+
+            # Plot stage markers
+            self.plotStages(ax=recv_ax)
 
         # Tighten layout
         self.fig.tight_layout()
@@ -443,10 +460,10 @@ class TrafficPlot(AnnotatedPlot):
         self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
 
     def plotMACErrors(self, ax, node_id, pat):
-        delta = self.log[node_id].delta
+        delta = self.logs[node_id].delta
 
         r = re.compile(pat)
-        mac_events = self.log.events[node_id]
+        mac_events = self.logs.events[node_id]
         mac_events = mac_events[mac_events.event.str.match(r)]
 
         (t1, t2) = ax.get_xlim()
@@ -474,9 +491,9 @@ class TrafficPlot(AnnotatedPlot):
     def plotSentTraffic(self, ax, src, dest, y, by_flow=True):
         self.addAnnotation(ax)
 
-        delta = self.log[src].delta
+        delta = self.logs[src].delta
 
-        send_df = self.log[src].send
+        send_df = self.logs[src].send
 
         # Restrict to packets to destination
         if dest is not None:
@@ -524,9 +541,9 @@ class TrafficPlot(AnnotatedPlot):
     def plotRecvTraffic(self, ax, src, dest, y, by_flow=False):
         self.addAnnotation(ax)
 
-        delta = self.log[dest].delta
+        delta = self.logs[dest].delta
 
-        recv_df = self.log[dest].recv
+        recv_df = self.logs[dest].recv
 
         # Restrict to packets from source
         if src is not None:
@@ -564,9 +581,9 @@ class TrafficPlot(AnnotatedPlot):
         ax.set_ylabel(self.Y_LABELS[y])
 
     def plotSACK(self, ax, node, dest, col='sack', alpha=0.85):
-        delta = self.log[node].delta
+        delta = self.logs[node].delta
 
-        df = self.log[node].sacks(col)
+        df = self.logs[node].sacks(col)
 
         self.plotTraffic(ax, df[(df.sack == 0) & (df.node == dest)], 'seq', delta, pprSACK, label='SNAK', color='r', alpha=alpha)
 
