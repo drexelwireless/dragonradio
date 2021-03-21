@@ -233,7 +233,7 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
     ssize_t nwrite;
 
     if ((nwrite = write(fd_, pkt->data() + sizeof(ExtendedHeader), pkt->ehdr().data_len)) < 0) {
-        logTunTap(LOGERROR, "tun/tap write failure: errno=%s (%d); nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
+        logTunTap(LOGERROR, "write error: errno=%s (%d); nwrite = %ld; size=%u; seq=%u; data_len=%u",
             strerror(errno),
             errno,
             nwrite,
@@ -244,7 +244,7 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
     }
 
     if ((size_t) nwrite != pkt->ehdr().data_len) {
-        logTunTap(LOGERROR, "tun/tap incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u\n",
+        logTunTap(LOGERROR, "incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u",
             nwrite,
             (unsigned) pkt->size(),
             (unsigned) pkt->hdr.seq,
@@ -287,10 +287,16 @@ void TunTap::worker(void)
         ssize_t nread;
 
         if ((nread = read(fd_, pkt->data() + sizeof(ExtendedHeader), maxlen)) < 0) {
-            if (errno == EINTR)
+            if (errno == EINTR) {
+                logTunTap(LOGERROR, "read error: errno=%s (%d)",
+                    strerror(errno),
+                    errno);
                 continue;
+            }
 
-            perror("read()");
+            logTunTap(LOGERROR, "read error: errno=%s (%d)",
+                strerror(errno),
+                errno);
             exit(1);
         }
 
