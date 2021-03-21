@@ -525,6 +525,12 @@ struct NetPacket : public Packet
     /** @brief Time when packet was enqueued */
     MonoClock::time_point enqueue_timestamp;
 
+    /** @brief Dequeue start timestamp */
+    MonoClock::time_point dequeue_start_timestamp;
+
+    /** @brief Dequeue end timestamp */
+    MonoClock::time_point dequeue_end_timestamp;
+
     /** @brief Time when packet exited LLC */
     MonoClock::time_point llc_timestamp;
 

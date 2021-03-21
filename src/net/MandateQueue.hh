@@ -318,7 +318,7 @@ public:
         if (done_)
             return false;
 
-        MonoClock::time_point now = MonoClock::now();
+        MonoClock::time_point dequeue_start = MonoClock::now();
         unsigned              idx = 0;
         unsigned              end = 0;
         bool                  bonus = false;
@@ -332,7 +332,10 @@ public:
         do {
             SubQueue &subq = qs_[idx];
 
-            if (subq.active && subq.pop(pkt, *this, now, bonus)) {
+            if (subq.active && subq.pop(pkt, *this, dequeue_start, bonus)) {
+                pkt->dequeue_start_timestamp = dequeue_start;
+                pkt->dequeue_end_timestamp = MonoClock::now();
+
                 if (bonus)
                     bonus_idx_ = idx+1;
 
