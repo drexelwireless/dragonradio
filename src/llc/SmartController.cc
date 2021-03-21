@@ -89,7 +89,7 @@ get_packet:
     if (pkt->hdr.nexthop == kNodeBroadcast) {
         pkt->mcsidx = mcsidx_broadcast_;
         pkt->g = broadcast_gain.getLinearGain();
-
+        pkt->llc_timestamp = MonoClock::now();
         return true;
     }
 
@@ -208,6 +208,7 @@ get_packet:
         pkt->g = ack_gain.getLinearGain();
     }
 
+    pkt->llc_timestamp = MonoClock::now();
     return true;
 }
 
