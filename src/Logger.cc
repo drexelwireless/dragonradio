@@ -154,6 +154,8 @@ struct PacketSendEntry {
     float fc;
     /** @brief Bandwidth [Hz] */
     float bw;
+    /** @brief Latency between packet creation and tun/tap read [sec] */
+    double tuntap_latency;
     /** @brief Enqueue latency [sec] */
     double enqueue_latency;
     /** @brief Latency of *just* modulation [sec] */
@@ -313,6 +315,7 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("mcsidx", HOFFSET(PacketSendEntry, mcsidx), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_packet_send.insertMember("tuntap_latency", HOFFSET(PacketSendEntry, tuntap_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("enqueue_latency", HOFFSET(PacketSendEntry, enqueue_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("mod_latency", HOFFSET(PacketSendEntry, mod_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("synth_latency", HOFFSET(PacketSendEntry, synth_latency), H5::PredType::NATIVE_DOUBLE);
@@ -604,6 +607,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
     if (dropped == kNotDropped) {
         entry.fc = pkt.fc;
         entry.bw = pkt.bw;
+        entry.tuntap_latency = pkt.wall_timestamp ? (pkt.tuntap_timestamp - *pkt.wall_timestamp).get_real_secs() : 0;
         entry.enqueue_latency = (pkt.enqueue_timestamp - pkt.timestamp).get_real_secs();
         entry.mod_latency = (pkt.mod_end_timestamp - pkt.mod_start_timestamp).get_real_secs();
         entry.synth_latency = (pkt.mod_end_timestamp - pkt.timestamp).get_real_secs();
@@ -624,6 +628,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
     } else {
         entry.fc = 0;
         entry.bw = 0;
+        entry.tuntap_latency = 0;
         entry.enqueue_latency = 0;
         entry.mod_latency = 0;
         entry.synth_latency = 0;

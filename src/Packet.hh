@@ -519,6 +519,9 @@ struct NetPacket : public Packet
     /** @brief IQ sample buffer containing modulated packet */
     std::shared_ptr<IQBuf> samples;
 
+    /** @brief Wall-clock time when packet was read from tun/tap */
+    WallClock::time_point tuntap_timestamp;
+
     /** @brief Time when packet was enqueued */
     MonoClock::time_point enqueue_timestamp;
 
