@@ -109,7 +109,7 @@ struct PacketRecvEntry {
     /** @brief Bandwidth [Hz] */
     float bw;
     /** @brief Demodulation latency (sec) */
-    float demod_latency;
+    double demod_latency;
     /** @brief Size of packet (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
@@ -282,7 +282,7 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("cfo", HOFFSET(PacketRecvEntry, cfo), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("fc", HOFFSET(PacketRecvEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("bw", HOFFSET(PacketRecvEntry, bw), H5::PredType::NATIVE_FLOAT);
-    h5_packet_recv.insertMember("demod_latency", HOFFSET(PacketRecvEntry, demod_latency), H5::PredType::NATIVE_FLOAT);
+    h5_packet_recv.insertMember("demod_latency", HOFFSET(PacketRecvEntry, demod_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("size", HOFFSET(PacketRecvEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("symbols", HOFFSET(PacketRecvEntry, symbols), h5_iqdata);
 
