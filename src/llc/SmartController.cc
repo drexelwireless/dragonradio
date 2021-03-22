@@ -1642,6 +1642,8 @@ bool SendWindow::mayMoveUpMCS(void) const
             return false;
     }
 
+    std::lock_guard<std::mutex> lock(controller.gen_mutex_);
+
     return controller.dist_(controller.gen_) < mcsidx_prob[mcsidx+1];
 }
 

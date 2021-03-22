@@ -914,6 +914,9 @@ protected:
     /** @brief Current timestamp sequence number */
     std::atomic<TimestampSeq> timestamp_seq_;
 
+    /** @brief Mutex for random number generator */
+    std::mutex gen_mutex_;
+
     /** @brief Random number generator */
     std::mt19937 gen_;
 
