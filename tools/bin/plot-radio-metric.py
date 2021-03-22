@@ -26,6 +26,9 @@ class RadioMetricCommand(Command):
                             dest='mgen_seqnos',
                             metavar='SEQ',
                             help='Restrict to given MGEN sequence number')
+        parser.add_argument('--no-retrans', action='store_true',
+                            default=False,
+                            help='ignore retransmitted packets')
 
         parser.add_argument('--cfo', action='store_const', const='cfo',
                             dest='metric',
@@ -99,6 +102,9 @@ class RadioMetricCommand(Command):
 
         if args.mgen_seqnos:
             self.filter_by(lambda df: df[df.mgen_seqno.isin(args.mgen_seqnos)])
+
+        if args.no_retrans:
+            self.filter_by(lambda df: df[df.nretrans == 0])
 
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
