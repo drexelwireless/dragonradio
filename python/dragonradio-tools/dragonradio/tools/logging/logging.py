@@ -42,8 +42,12 @@ class Slots:
         self.offset = offset
         """Offset of sample 0 of packet"""
 
-        self.fs = slots.iloc[0].bw
+        self.fs = slots.iloc[0].fs
         """Sample rate of IQ data"""
+
+        if 'fc' in slots:
+            self.fc = slots.iloc[0].fc
+            """Sample center frequency"""
 
     def __getitem__(self, idx):
         if isinstance(idx, slice):
@@ -235,8 +239,14 @@ class Log:
     def slots(self):
         """Received MAC slot IQ data"""
         df = self._loadDataset('slots')
+
+        # For backwards compatibility; the 'bw' was renamed to 'fs'
+        if 'bw' in df:
+            df['fs'] = df.bw
+
         df['start'] = df.timestamp
         df['end'] = df.timestamp + df.iq_data_len / df.bw
+
         return df
 
     @cached_property
@@ -416,7 +426,7 @@ class Log:
         # i_start and i_end are the range if indices (inclusive) of the slots
         # spanned by the packet.
         i_start = i_end = slots.index[idx].values[0]
-        fs = slots[idx].bw.iloc[0]
+        fs = slots[idx].fs.iloc[0]
 
         # The packet may have started being received in the previous slot, in
         # which case start_samples will be negative. We must walk backwards
