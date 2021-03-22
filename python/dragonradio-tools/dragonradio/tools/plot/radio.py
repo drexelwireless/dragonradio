@@ -183,7 +183,7 @@ class ReservationPlot(AnnotatedPlot):
             plotStages(ax, scorer)
 
 class RadioMetricPlot(ReservationPlot):
-    RECV_METRICS = frozenset(['cfo', 'evm', 'rssi', 'mcsidx', 'ms', 'demod_latency', 'rx_latency'])
+    RECV_METRICS = frozenset(['cfo', 'evm', 'rssi', 'mcsidx', 'ms', 'interarrival', 'demod_latency', 'rx_latency'])
 
     MS_METRICS = frozenset(['ms', 'sent_ms'])
 
@@ -192,12 +192,14 @@ class RadioMetricPlot(ReservationPlot):
                      , 'rssi': 'RSSI (dB)'
                      , 'mcsidx': 'MCS Index'
                      , 'ms': 'Modulation Scheme'
+                     , 'interarrival': 'Interarrival Time (sec)'
 
                      , 'demod_latency': 'Demodulation Latency (sec)'
                      , 'rx_latency': 'Packet RX Latency (sec)'
 
                      , 'sent_mcsidx': 'MCS Index'
                      , 'sent_ms': 'Modulation Scheme'
+                     , 'interdeparture': 'Interdeparture Time (sec)'
 
                      , 'tuntap_latency': 'tun/tap read Latency (sec)'
                      , 'enqueue_latency': 'Packet Enqueue Latency (sec)'
@@ -266,7 +268,13 @@ class RadioMetricPlot(ReservationPlot):
 
                 ylabel = f"Latency from {strip_latency(metric_from):} to {strip_latency(metric_to):}"
             else:
-                if metric in self.MS_METRICS:
+                if metric == 'interarrival' or metric == 'interdeparture':
+                    df.set_index(['timestamp'], inplace=True)
+                    df.sort_index(inplace=True)
+                    df.reset_index(inplace=True)
+
+                    y = df.timestamp.diff()
+                elif metric in self.MS_METRICS:
                     y = df.ms.cat.codes
                 elif metric == 'sent_mcsidx':
                     y = df['mcsidx']

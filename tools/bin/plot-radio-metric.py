@@ -47,6 +47,10 @@ class RadioMetricCommand(Command):
                             dest='metric',
                             help='plot modulation scheme of received packets')
 
+        parser.add_argument('--interarrival', action='store_const', const='interarrival',
+                            dest='metric',
+                            help='plot interarrival time')
+
         parser.add_argument('--demod-latency', action='store_const', const='demod_latency',
                             dest='metric',
                             help='plot demodulation latency')
@@ -60,6 +64,10 @@ class RadioMetricCommand(Command):
         parser.add_argument('--sent-ms', action='store_const', const='sent_ms',
                             dest='metric',
                             help='plot modulation scheme of sent packets')
+
+        parser.add_argument('--interdeparture', action='store_const', const='interdeparture',
+                            dest='metric',
+                            help='plot interdeparture time')
 
         parser.add_argument('--tuntap-latency', action='store_const', const='tuntap_latency',
                             dest='metric',
