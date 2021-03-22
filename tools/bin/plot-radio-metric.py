@@ -26,30 +26,58 @@ class RadioMetricCommand(Command):
         parser.add_argument('--cfo', action='store_const', const='cfo',
                             dest='metric',
                             help='plot CFO')
-        parser.add_argument('--demod-latency', action='store_const', const='demod_latency',
-                            dest='metric',
-                            help='plot demodulation latency')
         parser.add_argument('--evm', action='store_const', const='evm',
                             dest='metric',
                             help='plot EVM')
-        parser.add_argument('--mcsidx', action='store_const', const='mcsidx',
-                            dest='metric',
-                            help='plot MCS index of received packets')
-        parser.add_argument('--mod-latency', action='store_const', const='mod_latency',
-                            dest='metric',
-                            help='plot modulation latency')
-        parser.add_argument('--ms', action='store_const', const='ms',
-                            dest='metric',
-                            help='plot modulation scheme of received packets')
         parser.add_argument('--rssi', action='store_const', const='rssi',
                             dest='metric',
                             help='plot RSSI')
+
+        parser.add_argument('--mcsidx', action='store_const', const='mcsidx',
+                            dest='metric',
+                            help='plot MCS index of received packets')
+        parser.add_argument('--ms', action='store_const', const='ms',
+                            dest='metric',
+                            help='plot modulation scheme of received packets')
+
+        parser.add_argument('--demod-latency', action='store_const', const='demod_latency',
+                            dest='metric',
+                            help='plot demodulation latency')
+        parser.add_argument('--rx-latency', action='store_const', const='rx_latency',
+                            dest='metric',
+                            help='plot packet RX latency')
+
         parser.add_argument('--sent-mcsidx', action='store_const', const='sent_mcsidx',
                             dest='metric',
                             help='plot MCS index of sent packets')
         parser.add_argument('--sent-ms', action='store_const', const='sent_ms',
                             dest='metric',
                             help='plot modulation scheme of sent packets')
+
+        parser.add_argument('--tuntap-latency', action='store_const', const='tuntap_latency',
+                            dest='metric',
+                            help='plot tun/tap read latency')
+        parser.add_argument('--enqueue-latency', action='store_const', const='enqueue_latency',
+                            dest='metric',
+                            help='plot packet sender enqueue latency')
+        parser.add_argument('--dequeue-latency', action='store_const', const='dequeue_latency',
+                            dest='metric',
+                            help='plot packet sender dequeue latency')
+        parser.add_argument('--queue-latency', action='store_const', const='queue_latency',
+                            dest='metric',
+                            help='plot packet sender queue latency')
+        parser.add_argument('--synth-latency', action='store_const', const='synth_latency',
+                            dest='metric',
+                            help='plot synthesizer latency')
+        parser.add_argument('--llc-latency', action='store_const', const='llc_latency',
+                            dest='metric',
+                            help='plot LLC latency')
+        parser.add_argument('--mod-latency', action='store_const', const='mod_latency',
+                            dest='metric',
+                            help='plot modulation latency')
+        parser.add_argument('--tx-latency', action='store_const', const='tx_latency',
+                            dest='metric',
+                            help='plot packet TX latency')
 
         parser.add_argument('--include-invalid-packets', action='store_true', default=False,
                             help='include invalid packets when displaying metrics')

@@ -183,19 +183,30 @@ class ReservationPlot(AnnotatedPlot):
             plotStages(ax, scorer)
 
 class RadioMetricPlot(ReservationPlot):
-    RECV_METRICS = frozenset(['cfo', 'demod_latency', 'evm', 'mcsidx', 'ms', 'rssi'])
+    RECV_METRICS = frozenset(['cfo', 'evm', 'rssi', 'mcsidx', 'ms', 'demod_latency', 'rx_latency'])
 
     MS_METRICS = frozenset(['ms', 'sent_ms'])
 
     METRIC_YLABELS = { 'cfo': 'CFO (Hz)'
-                     , 'demod_latency': 'Demodulation Latency (sec)'
                      , 'evm': 'EVM (dB)'
-                     , 'mcsidx': 'MCS Index'
-                     , 'mod_latency': 'Modulation Latency (sec)'
-                     , 'ms': 'Modulation Scheme'
                      , 'rssi': 'RSSI (dB)'
+                     , 'mcsidx': 'MCS Index'
+                     , 'ms': 'Modulation Scheme'
+
+                     , 'demod_latency': 'Demodulation Latency (sec)'
+                     , 'rx_latency': 'Packet RX Latency (sec)'
+
                      , 'sent_mcsidx': 'MCS Index'
                      , 'sent_ms': 'Modulation Scheme'
+
+                     , 'tuntap_latency': 'tun/tap read Latency (sec)'
+                     , 'enqueue_latency': 'Packet Enqueue Latency (sec)'
+                     , 'dequeue_latency': 'Packet Dequeue Latency (sec)'
+                     , 'queue_latency': 'Packet Queue Latency (sec)'
+                     , 'llc_latency': 'LLC Latency (sec)'
+                     , 'synth_latency': 'Synthesizer Latency (sec)'
+                     , 'mod_latency': 'Modulation Latency (sec)'
+                     , 'tx_latency': 'Packet TX Latency (sec)'
                      }
 
     def __init__(self, fig, ax, logs, metric,

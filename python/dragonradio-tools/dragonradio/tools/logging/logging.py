@@ -212,6 +212,9 @@ class Log:
         else:
             df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
 
+        if 'mono_timestamp' in df and 'net_timestamp' in df:
+            df['tx_latency'] = df.mono_timestamp - df.net_timestamp
+
         return df
 
     @cached_property
@@ -232,6 +235,9 @@ class Log:
 
         if not has_slot_timestamp:
             df.timestamp = df.start
+
+        if 'tuntap_latency' in df:
+            df['rx_latency'] = df.tuntap_latency
 
         return df
 
