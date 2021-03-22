@@ -209,7 +209,9 @@ class RadioMetricPlot(ReservationPlot):
                      , 'tx_latency': 'Packet TX Latency (sec)'
                      }
 
-    def __init__(self, fig, ax, logs, metric,
+    def __init__(self, fig, ax, logs,
+                 metric=None,
+                 latency=None,
                  nodes=None,
                  checkboxes=True,
                  only_invalid_packets=False,
@@ -250,15 +252,29 @@ class RadioMetricPlot(ReservationPlot):
             x = df.timestamp + logs[node_id].delta
 
             # Determine y axis
-            if metric in self.MS_METRICS:
-                y = df.ms.cat.codes
-            elif metric == 'sent_mcsidx':
-                y = df['mcsidx']
-            else:
-                y = df[metric]
+            if latency is not None:
+                metrics = latency.split(',')
+                if len(metrics) != 2:
+                    raise Exception('Latency must specify two metrics, but got %s' % latency)
 
-            # Determine y label
-            ylabel = self.METRIC_YLABELS[metric]
+                metric_from, metric_to = metrics
+
+                y = df[metric_to] - df[metric_from]
+
+                def strip_latency(s):
+                    return re.sub('_latency', '', s)
+
+                ylabel = f"Latency from {strip_latency(metric_from):} to {strip_latency(metric_to):}"
+            else:
+                if metric in self.MS_METRICS:
+                    y = df.ms.cat.codes
+                elif metric == 'sent_mcsidx':
+                    y = df['mcsidx']
+                else:
+                    y = df[metric]
+
+                # Determine y label
+                ylabel = self.METRIC_YLABELS[metric]
 
             # If this is a modulation scheme metric, set ticks appropriately
             if metric in self.MS_METRICS:

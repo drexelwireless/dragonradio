@@ -79,6 +79,10 @@ class RadioMetricCommand(Command):
                             dest='metric',
                             help='plot packet TX latency')
 
+        parser.add_argument('--latency', action='store', type=str,
+                            dest='latency',
+                            help='plot latency between two timestamped times')
+
         parser.add_argument('--include-invalid-packets', action='store_true', default=False,
                             help='include invalid packets when displaying metrics')
 
@@ -92,7 +96,9 @@ class RadioMetricCommand(Command):
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
 
-        RadioMetricPlot(fig, ax, self.logs, args.metric,
+        RadioMetricPlot(fig, ax, self.logs,
+                        metric=args.metric,
+                        latency=args.latency,
                         nodes=args.srns,
                         filt=self.filter,
                         include_invalid_packets=args.include_invalid_packets)
