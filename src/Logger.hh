@@ -75,8 +75,17 @@ public:
     void setAttribute(const std::string& name, uint64_t val);
     void setAttribute(const std::string& name, double val);
 
-    void logSlot(std::shared_ptr<IQBuf> buf,
-                 float bw);
+    void logSlot(const std::shared_ptr<IQBuf> &buf)
+    {
+        if (getCollectSource(kSlots)) {
+            // Only log slots we haven't logged before. We should never be asked to log
+            // a slot that is older than the youngest slot we've ever logged.
+            if (buf->timestamp > t_last_slot_) {
+                log_q_.push([=](){ logSlot_(*buf); });
+                t_last_slot_ = *buf->timestamp;
+            }
+        }
+    }
 
     void logSnapshot(std::shared_ptr<Snapshot> snapshot)
     {
@@ -219,8 +228,7 @@ private:
                                         const H5::DataType &data_type,
                                         const H5::DataSpace &data_space);
 
-    void logSlot_(std::shared_ptr<IQBuf> buf,
-                  float bw);
+    void logSlot_(const IQBuf &buf);
 
     void logSnapshot_(std::shared_ptr<Snapshot> snapshot);
 

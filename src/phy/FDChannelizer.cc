@@ -366,16 +366,16 @@ void FDChannelizer::demodWorker(unsigned tid)
             if (logger_ && logger_->getCollectSource(Logger::kSlots)) {
                 if (received) {
                     if (prev_prev_iqbuf) {
-                        logger_->logSlot(prev_prev_iqbuf, rx_rate_);
+                        logger_->logSlot(prev_prev_iqbuf);
                         prev_prev_iqbuf.reset();
                     }
 
                     if (prev_iqbuf) {
-                        logger_->logSlot(prev_iqbuf, rx_rate_);
+                        logger_->logSlot(prev_iqbuf);
                         prev_iqbuf.reset();
                     }
 
-                    logger_->logSlot(slot.iqbuf, rx_rate_);
+                    logger_->logSlot(slot.iqbuf);
                 } else {
                     prev_prev_iqbuf = std::move(prev_iqbuf);
                     prev_iqbuf = std::move(slot.iqbuf);

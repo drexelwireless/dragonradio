@@ -215,11 +215,11 @@ void TDChannelizer::demodWorker(unsigned tid)
             if (logger_ && logger_->getCollectSource(Logger::kSlots)) {
                 if (received) {
                     if (prev_iqbuf) {
-                        logger_->logSlot(prev_iqbuf, rx_rate_);
+                        logger_->logSlot(prev_iqbuf);
                         prev_iqbuf.reset();
                     }
 
-                    logger_->logSlot(iqbuf, rx_rate_);
+                    logger_->logSlot(iqbuf);
                 } else
                     prev_iqbuf = std::move(iqbuf);
             }

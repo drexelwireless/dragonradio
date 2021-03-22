@@ -19,8 +19,10 @@ struct SlotEntry {
     double timestamp;
     /** @brief Monotonic clock timestamp. */
     double mono_timestamp;
-    /** @brief Bandwidth [Hz] */
-    float bw;
+    /** @brief Sample center frequency [Hz] */
+    float fc;
+    /** @brief Sample rate [Hz] */
+    float fs;
     /** @brief Size of uncompressed IQ data (bytes). */
     uint32_t iq_data_len;
     /** @brief Compressed IQ data. */
@@ -246,7 +248,8 @@ void Logger::open(const std::string& filename)
 
     h5_slot.insertMember("timestamp", HOFFSET(SlotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_slot.insertMember("mono_timestamp", HOFFSET(SlotEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
-    h5_slot.insertMember("bw", HOFFSET(SlotEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_slot.insertMember("fc", HOFFSET(SlotEntry, fc), H5::PredType::NATIVE_FLOAT);
+    h5_slot.insertMember("fs", HOFFSET(SlotEntry, fs), H5::PredType::NATIVE_FLOAT);
     h5_slot.insertMember("iq_data_len", HOFFSET(SlotEntry, iq_data_len), H5::PredType::NATIVE_UINT32);
     h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_compressed_iqdata);
 
@@ -448,19 +451,6 @@ void Logger::setAttribute(const std::string& name, double val)
     att.write(h5_type, &val);
 }
 
-void Logger::logSlot(std::shared_ptr<IQBuf> buf,
-                     float bw)
-{
-    if (getCollectSource(kSlots)) {
-        // Only log slots we haven't logged before. We should never be asked to log
-        // a slot that is older than the youngest slot we've ever logged.
-        if (buf->timestamp > t_last_slot_) {
-            log_q_.push([=](){ logSlot_(buf, bw); });
-            t_last_slot_ = *buf->timestamp;
-        }
-    }
-}
-
 void Logger::worker(void)
 {
     std::function<void()> entry;
@@ -484,16 +474,16 @@ H5::Attribute Logger::createOrOpenAttribute(const std::string &name,
         return file_.createAttribute(name, data_type, data_space);
 }
 
-void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
-                      float bw)
+void Logger::logSlot_(const IQBuf &buf)
 {
     SlotEntry    entry;
-    buffer<char> compressed = compressIQData(buf->data(), buf->size());
+    buffer<char> compressed = compressIQData(buf.data(), buf.size());
 
-    entry.timestamp = (WallClock::to_wall_time(*buf->timestamp) - t_start_).get_real_secs();
-    entry.mono_timestamp = (*buf->timestamp - mono_t_start_).get_real_secs();
-    entry.bw = bw;
-    entry.iq_data_len = buf->size();
+    entry.timestamp = (WallClock::to_wall_time(*buf.timestamp) - t_start_).get_real_secs();
+    entry.mono_timestamp = (*buf.timestamp - mono_t_start_).get_real_secs();
+    entry.fc = buf.fc;
+    entry.fs = buf.fs;
+    entry.iq_data_len = buf.size();
     entry.iq_data.p = compressed.data();
     entry.iq_data.len = compressed.size();
 

@@ -203,8 +203,8 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
 
         // If we received any packets, log both slots.
         if (logger_ && received && logger_->getCollectSource(Logger::kSlots)) {
-            logger_->logSlot(buf1, rx_rate_);
-            logger_->logSlot(buf2, rx_rate_);
+            logger_->logSlot(buf1);
+            logger_->logSlot(buf2);
         }
     }
 }
