@@ -22,6 +22,10 @@ class RadioMetricCommand(Command):
                             dest='seqs',
                             metavar='SEQ',
                             help='Restrict to given sequence number')
+        parser.add_argument('--mgen-seqno', type=int, action='append',
+                            dest='mgen_seqnos',
+                            metavar='SEQ',
+                            help='Restrict to given MGEN sequence number')
 
         parser.add_argument('--cfo', action='store_const', const='cfo',
                             dest='metric',
@@ -92,6 +96,9 @@ class RadioMetricCommand(Command):
 
         if args.seqs:
             self.filter_by(lambda df: df[df.seq.isin(args.seqs)])
+
+        if args.mgen_seqnos:
+            self.filter_by(lambda df: df[df.mgen_seqno.isin(args.mgen_seqnos)])
 
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
