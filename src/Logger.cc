@@ -122,6 +122,8 @@ struct PacketSendEntry {
     double timestamp;
     /** @brief Monotonic clock timestamp of packet transmission. */
     double mono_timestamp;
+    /** @brief Timestamp of packet reception from network. */
+    double net_timestamp;
     /** @brief Was this packet dropped, and if so, why was it dropped? */
     uint8_t dropped;
     /** @brief Number of packet retransmissions. */
@@ -291,6 +293,7 @@ void Logger::open(const std::string& filename)
 
     h5_packet_send.insertMember("timestamp", HOFFSET(PacketSendEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("mono_timestamp", HOFFSET(PacketSendEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("net_timestamp", HOFFSET(PacketSendEntry, net_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("dropped", HOFFSET(PacketSendEntry, dropped), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("nretrans", HOFFSET(PacketSendEntry, nretrans), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("curhop", HOFFSET(PacketSendEntry, curhop), H5::PredType::NATIVE_UINT8);
@@ -577,6 +580,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
 
     entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
     entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
+    entry.net_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
     entry.dropped = dropped;
     entry.nretrans = pkt.nretrans;
     entry.curhop = hdr.curhop;
