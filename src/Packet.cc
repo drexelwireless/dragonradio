@@ -146,10 +146,13 @@ void Packet::appendTimestampSent(TimestampSeq tseq,
                                  const MonoClock::time_point &t_sent)
 {
     ControlMsg msg;
+    Time temp;
+
+    temp.from_mono_time(t_sent);
 
     msg.type = ControlMsg::Type::kTimestampSent;
     msg.timestamp_sent.tseq = tseq;
-    msg.timestamp_sent.t_sent.from_mono_time(t_sent);
+    msg.timestamp_sent.t_sent = temp;
 
     appendControl(msg);
 }
@@ -159,11 +162,14 @@ void Packet::appendTimestampRecv(NodeId node_id,
                                  const MonoClock::time_point &t_recv)
 {
     ControlMsg msg;
+    Time temp;
+
+    temp.from_mono_time(t_recv);
 
     msg.type = ControlMsg::Type::kTimestampRecv;
     msg.timestamp_recv.node = node_id;
     msg.timestamp_recv.tseq = tseq;
-    msg.timestamp_recv.t_recv.from_mono_time(t_recv);
+    msg.timestamp_recv.t_recv = temp;
 
     appendControl(msg);
 }

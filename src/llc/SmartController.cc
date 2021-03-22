@@ -1143,8 +1143,13 @@ void SmartController::handleReceiverStats(RadioPacket &pkt, SendWindow &sendw)
         switch (it->type) {
             case ControlMsg::Type::kReceiverStats:
             {
-                sendw.long_evm = it->receiver_stats.long_evm;
-                sendw.long_rssi = it->receiver_stats.long_rssi;
+                double temp;
+
+                memcpy(&temp, &it->receiver_stats.long_evm, sizeof(temp));
+                sendw.long_evm = temp;
+
+                memcpy(&temp, &it->receiver_stats.long_rssi, sizeof(temp));
+                sendw.long_rssi = temp;
             }
             break;
 
