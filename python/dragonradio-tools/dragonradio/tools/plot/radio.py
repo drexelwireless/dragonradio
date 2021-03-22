@@ -24,12 +24,13 @@ def pprEvent(e):
 
 def pprSentPacket(pkt):
     """Pretty print a sent packet"""
-    return "seq={seq}\ncurhop={curhop}\nnexthop={nexthop}\nsize={size}\ndata_len={data_len}\nflow={flow}\nmgen_seqno={mgen_seqno}".\
+    return "seq={seq}\ncurhop={curhop}\nnexthop={nexthop}\nsize={size}\ndata_len={data_len}\nmcsidx={mcsidx}\nflow={flow}\nmgen_seqno={mgen_seqno}".\
         format(seq=pkt.seq,
                curhop=pkt.curhop,
                nexthop=pkt.nexthop,
                size=pkt.size,
                data_len=pkt.data_len,
+               mcsidx=pkt.mcsidx,
                flow=pkt.mgen_flow_uid,
                mgen_seqno=pkt.mgen_seqno)
 
