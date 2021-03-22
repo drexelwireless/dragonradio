@@ -503,14 +503,14 @@ def main():
 
     for node_id in args.tx:
         if node_id not in logs.nodes:
-            print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
+            print("Cannot find node {}.".format(node_id), file=sys.stderr)
         else:
             view = viewer.txView(node_id, nfft=args.nfft)
             view.plot(0)
 
     for node_id in args.rx:
         if node_id not in logs.nodes:
-            print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
+            print("Cannot find node {}.".format(node_id), file=sys.stderr)
         else:
             view = viewer.rxView(node_id,
                                  nfft=args.nfft,
