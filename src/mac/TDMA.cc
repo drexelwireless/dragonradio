@@ -25,6 +25,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
                slot_size,
                guard_size,
                slot_send_lead_time)
+  , frame_size_(nslots*slot_size_)
   , nslots_(nslots)
   , tdma_schedule_(nslots)
 {
