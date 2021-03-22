@@ -29,6 +29,18 @@ struct SlotEntry {
     hvl_t iq_data;
 };
 
+/** @brief Log entry for TX records */
+struct TXRecordEntry {
+    /** @brief TX timestamp. */
+    double timestamp;
+    /** @brief Monotonic TX timestamp. */
+    double mono_timestamp;
+    /** @brief Number of samples. */
+    int64_t nsamples;
+    /** @brief Sampling frequency [Hz] */
+    float fs;
+};
+
 /** @brief Log entry for snapshots */
 struct SnapshotEntry {
     /** @brief Receive timestamp. */
@@ -253,6 +265,14 @@ void Logger::open(const std::string& filename)
     h5_slot.insertMember("iq_data_len", HOFFSET(SlotEntry, iq_data_len), H5::PredType::NATIVE_UINT32);
     h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_compressed_iqdata);
 
+    // H5 type for tx records
+    H5::CompType h5_tx_record(sizeof(TXRecordEntry));
+
+    h5_tx_record.insertMember("timestamp", HOFFSET(TXRecordEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_tx_record.insertMember("mono_timestamp", HOFFSET(TXRecordEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_tx_record.insertMember("nsamples", HOFFSET(TXRecordEntry, nsamples), H5::PredType::NATIVE_INT64);
+    h5_tx_record.insertMember("fs", HOFFSET(TXRecordEntry, fs), H5::PredType::NATIVE_DOUBLE);
+
     // H5 type for snapshots
     H5::CompType h5_snapshot(sizeof(SnapshotEntry));
 
@@ -358,6 +378,7 @@ void Logger::open(const std::string& filename)
     file_ = H5::H5File(filename, H5F_ACC_TRUNC);
 
     slots_ = std::make_unique<ExtensibleDataSet>(file_, "slots", h5_slot);
+    tx_records_ = std::make_unique<ExtensibleDataSet>(file_, "tx_records", h5_tx_record);
     snapshots_ = std::make_unique<ExtensibleDataSet>(file_, "snapshots", h5_snapshot);
     selftx_ = std::make_unique<ExtensibleDataSet>(file_, "selftx", h5_selftx);
     recv_ = std::make_unique<ExtensibleDataSet>(file_, "recv", h5_packet_recv);
@@ -386,6 +407,7 @@ void Logger::close(void)
     if (is_open_) {
         stop();
         slots_.reset();
+        tx_records_.reset();
         snapshots_.reset();
         selftx_.reset();
         recv_.reset();
@@ -488,6 +510,18 @@ void Logger::logSlot_(const IQBuf &buf)
     entry.iq_data.len = compressed.size();
 
     slots_->write(&entry, 1);
+}
+
+void Logger::logTXRecord_(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs)
+{
+    TXRecordEntry entry;
+
+    entry.timestamp = t ? (WallClock::to_wall_time(*t) - t_start_).get_real_secs() : 0;
+    entry.mono_timestamp = t ? (*t - mono_t_start_).get_real_secs() : 0;
+    entry.nsamples = nsamples;
+    entry.fs = fs;
+
+    tx_records_->write(&entry, 1);
 }
 
 void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)

@@ -182,5 +182,9 @@ void MAC::txNotifier(void)
                                             tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc);
             }
         }
+
+        // Log the TX record
+        if (logger_)
+            logger_->logTXRecord(record.timestamp, record.nsamples, tx_rate_);
     }
 }

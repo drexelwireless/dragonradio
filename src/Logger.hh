@@ -32,12 +32,13 @@ public:
     /** @brief Logging sources */
     enum Source {
         kSlots = 0,
-        kRecvPackets = 1,
-        kRecvSymbols = 2,
-        kSentPackets = 3,
-        kSentIQ = 4,
-        kEvents = 5,
-        kARQEvents = 6
+        kTXRecords,
+        kRecvPackets,
+        kRecvSymbols,
+        kSentPackets,
+        kSentIQ,
+        kEvents,
+        kARQEvents
     };
 
     Logger(const WallClock::time_point &t_start,
@@ -85,6 +86,12 @@ public:
                 t_last_slot_ = *buf->timestamp;
             }
         }
+    }
+
+    void logTXRecord(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs)
+    {
+        if (getCollectSource(kTXRecords))
+            log_q_.push([=](){ logTXRecord_(t, nsamples, fs); });
     }
 
     void logSnapshot(std::shared_ptr<Snapshot> snapshot)
@@ -199,6 +206,7 @@ private:
     bool is_open_;
     H5::H5File file_;
     std::unique_ptr<ExtensibleDataSet> slots_;
+    std::unique_ptr<ExtensibleDataSet> tx_records_;
     std::unique_ptr<ExtensibleDataSet> snapshots_;
     std::unique_ptr<ExtensibleDataSet> selftx_;
     std::unique_ptr<ExtensibleDataSet> recv_;
@@ -229,6 +237,8 @@ private:
                                         const H5::DataSpace &data_space);
 
     void logSlot_(const IQBuf &buf);
+
+    void logTXRecord_(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs);
 
     void logSnapshot_(std::shared_ptr<Snapshot> snapshot);
 
