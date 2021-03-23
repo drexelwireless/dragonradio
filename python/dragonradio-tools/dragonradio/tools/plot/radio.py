@@ -51,6 +51,11 @@ def pprSACK(sack):
         format(seq=sack.seq,
                node=sack.node)
 
+def pprTXRecord(rec):
+    """Pretty print a TX record"""
+    return "nsamples={nsamples}".\
+        format(nsamples=rec.nsamples)
+
 class SpecgramPlot:
     """A spectrogram plot"""
     def __init__(self, fig, ax, nfft=256, noverlap=128, scale=1e3, cmap=plt.get_cmap('viridis')):
@@ -350,7 +355,9 @@ class EventPlot(ReservationPlot):
         """Categories"""
 
     def addEventCategory(self, node_id, k, ppr, filt=None):
-        if k == 'SEND':
+        if k == 'TXRECORD':
+            df = self.logs[node_id].event_cats.tx_records
+        elif k == 'SEND':
             df = self.logs[node_id].event_cats.send
         elif k == 'RECV':
             df = self.logs[node_id].event_cats.recv

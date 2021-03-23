@@ -110,6 +110,15 @@ class Events:
         return df
 
     @cached_property
+    def tx_records(self):
+        df = self.log.tx_records.copy(deep=False)
+
+        df['color'] = COLOR_CAT.categories[0]
+        df.loc[df.nsamples == 0, 'color'] = 'r'
+
+        return df
+
+    @cached_property
     def send(self):
         df = self.log.send.copy(deep=False)
 
@@ -252,6 +261,16 @@ class Log:
 
         df['start'] = df.timestamp
         df['end'] = df.timestamp + df.iq_data_len / df.bw
+
+        return df
+
+    @cached_property
+    def tx_records(self):
+        """Sent MAC transmissions"""
+        df = self._loadDataset('tx_records')
+
+        df['start'] = df.timestamp
+        df['end'] = df.timestamp + df.nsamples / df.fs
 
         return df
 

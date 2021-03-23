@@ -8,7 +8,7 @@ import matplotlib as mp
 import matplotlib.pyplot as plt
 
 from dragonradio.tools.logging.command_line import Command
-from dragonradio.tools.plot.radio import pprEvent, pprSentPacket, pprReceivedPacket
+from dragonradio.tools.plot.radio import pprEvent, pprSentPacket, pprReceivedPacket, pprTXRecord
 from dragonradio.tools.plot.radio import EventPlot
 
 mp.use('GTK3Agg')
@@ -45,6 +45,9 @@ class PlotEventsCommand(Command):
         parser.add_argument('--recv', action='store_true',
                             default=False,
                             help='show received packets')
+        parser.add_argument('--tx-records', action='store_true',
+                            default=False,
+                            help='show TX records')
         parser.add_argument('--amc', const='AMC', action='append_const',
                             dest='events',
                             help='show AMC events')
@@ -95,6 +98,9 @@ class PlotEventsCommand(Command):
                         self.filter_by(lambda df : df[df.event.str.match(rec)])
 
                     plot.addEventCategory(node_id, k, ppr=pprEvent, filt=self.filter)
+
+            if args.tx_records:
+                plot.addEventCategory(node_id, 'TXRECORD', ppr=pprTXRecord)
 
             if args.send:
                 plot.addEventCategory(node_id, 'SEND', ppr=pprSentPacket)
