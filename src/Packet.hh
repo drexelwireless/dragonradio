@@ -604,6 +604,9 @@ struct RadioPacket : public Packet
     /** @brief Demodulation latency */
     double demod_latency;
 
+    /** @brief Wall-clock time when packet was written to tun/tap */
+    MonoClock::time_point tuntap_timestamp;
+
     /** @brief Size of received payload, including controll information */
     size_t payload_len;
 

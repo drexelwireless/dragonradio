@@ -244,6 +244,8 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
         return;
     }
 
+    pkt->tuntap_timestamp = MonoClock::now();
+
     if (logger_ && logger_->getCollectSource(Logger::kRecvPackets))
         logger_->logRecv(pkt);
 
