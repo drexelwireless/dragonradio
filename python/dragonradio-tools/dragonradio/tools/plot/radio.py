@@ -332,6 +332,10 @@ class RadioMetricPlot(ReservationPlot):
         if not checkboxes:
             ax.legend(handles=self.lines[ax], loc='upper right')
 
+        # Set window title
+        title = 'Reservation {}'.format(self.logs.reservation.reservation_id)
+        self.fig.canvas.set_window_title(title)
+
         # Plot stage markers
         self.plotStages()
 
