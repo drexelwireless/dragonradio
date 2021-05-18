@@ -107,11 +107,11 @@ setup(
     packages=['dragonradio'],
     setup_requires=['pybind11>=2.5.0'],
     cmdclass={'build_ext': BuildExt},
-    install_requires=['h5py==2.10.0'
-                     ,'matplotlib==3.3.2'
-                     ,'numpy==1.19.2'
-                     ,'pandas==1.1.3'
-                     ,'scipy==1.5.2'
+    install_requires=['h5py==3.2.1'
+                     ,'matplotlib==3.4.2'
+                     ,'numpy==1.20.3'
+                     ,'pandas==1.2.4'
+                     ,'scipy==1.6.3'
                      ],
     zip_safe=False,
 )
