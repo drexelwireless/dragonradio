@@ -518,7 +518,7 @@ class Scorer(DataFrameCache):
 
         for srn, image in self.reservation.images.items():
             if 'incumbent' in image:
-                with CilReader(self.reservation.node_pcaps[srn], read_reg=False) as reader:
+                with CilReader(self.reservation.srn_pcaps[srn], read_reg=False) as reader:
                     while True:
                         message = reader.read()
                         if message is None:

@@ -370,7 +370,7 @@ class ReservationLog(DataFrameCache):
         return logs
 
     @cached_property
-    def node_pcaps(self):
+    def srn_pcaps(self):
         """Map from SRN to PCAP file"""
         pcaps = {}
 
