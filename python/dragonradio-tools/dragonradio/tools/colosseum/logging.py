@@ -355,7 +355,7 @@ class ReservationLog(DataFrameCache):
             return self.batch_input.srn_teams
 
     @cached_property
-    def node_logs(self):
+    def srn_logs(self):
         """Map from SRN to node log directory"""
         logs = {}
 
@@ -441,7 +441,7 @@ class ReservationLog(DataFrameCache):
         if gateway is None:
             return None
 
-        path = os.path.join(self.node_logs[gateway],
+        path = os.path.join(self.srn_logs[gateway],
                             'node-{:03d}'.format(gateway),
                             'score_reported.csv')
 

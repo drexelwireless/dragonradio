@@ -576,7 +576,7 @@ class LogCollection:
             for srn in self.reservation.our_srns:
                 if srns is None or srn in srns:
                     try:
-                        path = os.path.join(self.reservation.node_logs[srn],
+                        path = os.path.join(self.reservation.srn_logs[srn],
                                             f'node-{srn:03d}',
                                             'radio.h5')
                         log = Log(path, log_collection=self)
