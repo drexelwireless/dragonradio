@@ -65,10 +65,10 @@ class Scenario(DataFrameCache):
 
                 srn_id = self.reservation.scenario_to_srn[traffic_id]
 
-                if srn_id not in self.reservation.teams:
+                if srn_id not in self.reservation.srn_teams:
                   continue
 
-                team = self.reservation.teams[srn_id]
+                team = self.reservation.srn_teams[srn_id]
 
                 with open(os.path.join(path, file), 'r') as f:
                     mandates = json.loads(f.read())
@@ -169,10 +169,10 @@ class Scenario(DataFrameCache):
 
                 srn_id = self.reservation.scenario_to_srn[traffic_id]
 
-                if srn_id not in self.reservation.teams:
+                if srn_id not in self.reservation.srn_teams:
                   continue
 
-                team = self.reservation.teams[srn_id]
+                team = self.reservation.srn_teams[srn_id]
 
                 with open(os.path.join(path, file), 'r') as f:
                     environment = json.loads(f.read())
@@ -335,7 +335,7 @@ class Scorer(DataFrameCache):
 
         match_scores = {}
 
-        for team in self.reservation.teams.values():
+        for team in self.reservation.srn_teams.values():
             try:
                 match_scores[team] = float(df.loc[team].score.max())
             except:
@@ -753,7 +753,7 @@ class Scorer(DataFrameCache):
         df = self.threshold_success
 
         df = df.groupby(['mp']).agg({'threshold_success': 'sum'})
-        nteams = len(set(self.reservation.teams.values()))
+        nteams = len(set(self.reservation.srn_teams.values()))
         df.threshold_success = (df.threshold_success == nteams).astype(int)
         df.sort_index(inplace=True)
 

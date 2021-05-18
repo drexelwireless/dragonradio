@@ -167,7 +167,7 @@ class ScorePlot(Plot):
         else:
             score_col = 'mp_score'
 
-        for team in frozenset(self.reservation.teams.values()):
+        for team in frozenset(self.reservation.srn_teams.values()):
             self.plotTeamScore(team, score_col=score_col)
 
     def plotGate(self):
