@@ -347,6 +347,11 @@ class ReservationLog(DataFrameCache):
             return self.batch_input.srn_to_scenario
 
     @cached_property
+    def teams(self):
+        """Teams"""
+        return frozenset(self.srn_teams.values())
+
+    @cached_property
     def srn_teams(self):
         """Map from SRN to team"""
         if os.path.exists(self.match_config_path):

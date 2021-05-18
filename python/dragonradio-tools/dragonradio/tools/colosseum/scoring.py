@@ -335,7 +335,7 @@ class Scorer(DataFrameCache):
 
         match_scores = {}
 
-        for team in self.reservation.srn_teams.values():
+        for team in self.reservation.teams:
             try:
                 match_scores[team] = float(df.loc[team].score.max())
             except:
@@ -753,7 +753,7 @@ class Scorer(DataFrameCache):
         df = self.threshold_success
 
         df = df.groupby(['mp']).agg({'threshold_success': 'sum'})
-        nteams = len(set(self.reservation.srn_teams.values()))
+        nteams = len(self.reservation.teams)
         df.threshold_success = (df.threshold_success == nteams).astype(int)
         df.sort_index(inplace=True)
 
