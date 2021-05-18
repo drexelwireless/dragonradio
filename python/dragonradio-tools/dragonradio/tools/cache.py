@@ -71,13 +71,13 @@ class cached_dataframe_property:
                 "Cannot use cached_dataframe_property instance "
                 "without calling __set_name__ on it.")
 
-        df = instance[self.key]
+        df = instance.get_dataframe(self.key)
         if df is not None:
             return df
 
         df = self.func(instance)
 
-        instance[self.key] = df
+        instance.set_dataframe(self.key, df)
 
         return df
 
@@ -102,7 +102,7 @@ class DataFrameCache:
     #   https://pandas.pydata.org/pandas-docs/stable/io.html#parquet
     engine='fastparquet'
 
-    def __getitem__(self, key):
+    def get_dataframe(self, key):
         with self._lock:
             # Try DataFrame cache
             if key in self._df_cache:
@@ -125,7 +125,7 @@ class DataFrameCache:
                 self._df_cache[key] = df
                 return df
 
-    def __setitem__(self, key, df):
+    def set_dataframe(self, key, df):
         with self._lock:
             self._df_cache[key] = df
 
