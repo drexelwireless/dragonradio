@@ -19,6 +19,12 @@ MP = 1
 scenarios_path = None
 """Path to scenarios"""
 
+SCE_QUAL_SCENARIOS = set([99771, 99801, 99840, 99880])
+"""SCE qualification scenarios"""
+
+SCE_CIL_QUAL_SCENARIOS = set([9990, 9991])
+"""SCE CIL qualification scenarios"""
+
 class Scenario(DataFrameCache):
     """Colosseum scenario"""
     def __init__(self, reservation, cache_path=None):
