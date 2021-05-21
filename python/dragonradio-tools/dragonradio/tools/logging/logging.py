@@ -539,12 +539,27 @@ class Log:
 
 class LogCollection:
     """A collection of DragonRadio logs"""
-    def __init__(self, start_time=None):
+    def __init__(self,
+                 start_time=None,
+                 cache_path=None):
+        """Initialize a collection of DragonRadio logs.
+
+        Args:
+            start_time: Explcicit RF scenario start time or None.
+            cache_path: Path to root directory for DataFrame cache.
+
+        Returns:
+            None
+        """
+
         self.logs = {}
         """Logs in the collection"""
 
         self.start_time = start_time
         """Time zero for log events (seconds since the epoch)"""
+
+        self.cache_path = cache_path
+        """Path to cache holding serialized DataFrames"""
 
         self.reservation = None
         """Colosseum reservation associate with this log collection"""
@@ -568,6 +583,7 @@ class LogCollection:
                 raise ValueError("Already loaded radio logs")
 
             self.reservation = ReservationLog(path,
+                                              cache_path=self.cache_path,
                                               rf_start_time=self.start_time,
                                               srn_logs_path=srn_logs_path)
 
