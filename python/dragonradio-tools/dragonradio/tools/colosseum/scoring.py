@@ -1,12 +1,9 @@
 # Copyright 2018-2020 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
-import datetime
 from functools import cached_property
-import importlib.resources
 import json
 import logging
 import os
-import pytz
 import re
 
 import numpy as np
