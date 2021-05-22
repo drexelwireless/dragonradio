@@ -569,6 +569,11 @@ class ReservationLog(DataFrameCache):
             # Compute latency
             df['latency'] = (df.recv_time - df.send_time).dt.total_seconds()
 
+            # Compute interarrival time
+            df['interarrival'] = df.recv_time.diff().dt.total_seconds().astype(float)
+            mask = df.flow_uid != df.flow_uid.shift(1)
+            df.loc[mask, 'interarrival'] = 0
+
             # Add source, destination, and team information
             srn_src = self.scenario_to_srn[src]
             srn_dest = self.scenario_to_srn[dest]
