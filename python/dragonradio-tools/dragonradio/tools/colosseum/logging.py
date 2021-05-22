@@ -490,6 +490,38 @@ class ReservationLog(DataFrameCache):
     def srnLogPath(self, dirname, srn_id, logname):
         return os.path.join(self.srn_logs_path, dirname, f'node-{srn_id:03d}', logname)
 
+    @cached_dataframe_property('heard')
+    def heard(self):
+        """Nodes heard by each SRN"""
+        heard = {}
+
+        for srn in self.our_srns:
+            heard[srn] = set()
+
+            for dirname in os.listdir(self.srn_logs_path):
+                m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), dirname)
+                if m:
+                    dragonlog_path = self.dragonLogPath(dirname, srn)
+                    if os.path.isfile(dragonlog_path):
+
+                        with open(dragonlog_path, 'r') as f:
+                            text = f.read()
+
+                        for m in re.finditer(r'Adding node (\d+)$', text, re.M):
+                            heard[srn].add(int(m.group(1)))
+
+        all_nodes = sorted(set().union(*heard.values()))
+
+        items = []
+
+        for srn in sorted(self.our_srns):
+            items.append([srn] + [n in heard[srn] for n in all_nodes])
+
+        df = pd.DataFrame(items,
+                          columns=["SRN"] + [str(n) for n in all_nodes])
+
+        return df
+
     @cached_property
     def traffic_logs(self):
         """Traffic logs"""
