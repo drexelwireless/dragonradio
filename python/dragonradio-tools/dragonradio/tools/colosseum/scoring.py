@@ -458,7 +458,6 @@ class Scorer(DataFrameCache):
         # Determine which packets were on time
         df['ontime'] = (tp_good | ft_good).astype(int)
 
-        df.to_csv('traffic.csv')
         return df
 
     @cached_dataframe_property('traffic_summary')
@@ -490,7 +489,6 @@ class Scorer(DataFrameCache):
                           , 'ontime_sum': 'npackets_recv'
                           }, inplace=True)
 
-        df.to_csv('traffic_summary.csv')
         return df
 
     def readIncumbentGates(self):
