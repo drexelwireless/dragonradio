@@ -255,7 +255,7 @@ class ScorePlot(Plot):
         else:
             self.ax.legend()
 
-        self.fig.canvas.set_window_title('Reservation {}'.format(self.reservation.reservation_id))
+        self.set_window_title('Reservation {}'.format(self.reservation.reservation_id))
 
 def pprMgen(pkt):
     return "seq={seq}".format(seq=pkt.seq)
@@ -334,7 +334,7 @@ class FlowPlot(AnnotatedPlot):
         addCheckboxWidget(self.fig, self.lat_lines, ax=self.latency_ax, match_legend=True)
 
         # Set title
-        fig.canvas.set_window_title('Reservation {}, Flow {}'.format(reservation.reservation_id, flow_uid))
+        self.set_window_title('Reservation {}, Flow {}'.format(reservation.reservation_id, flow_uid))
 
         # Connect annotations
         self.fig.canvas.mpl_connect("motion_notify_event", self.hover)

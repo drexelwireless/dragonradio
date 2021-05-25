@@ -334,7 +334,7 @@ class RadioMetricPlot(ReservationPlot):
 
         # Set window title
         title = 'Reservation {}'.format(self.logs.reservation.reservation_id)
-        self.fig.canvas.set_window_title(title)
+        self.set_window_title(title)
 
         # Plot stage markers
         self.plotStages()
@@ -388,7 +388,7 @@ class EventPlot(ReservationPlot):
     def plot(self):
         title = 'Event Timeline Plot'
         self.ax.set_title(title)
-        self.fig.canvas.set_window_title(title)
+        self.set_window_title(title)
 
         self.ax.set_ylim((-1, len(self.cats)))
         self.ax.set_yticks(range(len(self.cats)))
@@ -441,7 +441,7 @@ class TrafficPlot(ReservationPlot):
 
         # Set title
         self.fig.suptitle(title)
-        self.fig.canvas.set_window_title(title)
+        self.set_window_title(title)
 
         if src is not None and dest is not None:
             sent_ax = self.fig.add_subplot(2,1,1)

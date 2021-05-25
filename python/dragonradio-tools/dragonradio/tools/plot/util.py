@@ -72,6 +72,14 @@ class Plot:
         # plotted lines get GC'ed, so hovering doesn't work.
         self.fig._plotref = self
 
+    def set_window_title(self, title: str):
+        """Set window title.
+
+        Args:
+            title (str): Window title.
+        """
+        self.fig.canvas.manager.set_window_title(title)
+
 class AnnotatedPlot(Plot):
     def __init__(self, fig, ax=None, sticky=False):
         super().__init__(fig, ax=ax)
