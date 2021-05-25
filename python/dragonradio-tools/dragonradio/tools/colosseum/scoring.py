@@ -30,6 +30,9 @@ class Scenario(DataFrameCache):
     def __init__(self, reservation, cache_path=None):
         super().__init__(cache_path=cache_path)
 
+        if reservation is None:
+            raise ValueError("Reservation must not be None")
+
         self.reservation = reservation
         """Reservation to score"""
 
