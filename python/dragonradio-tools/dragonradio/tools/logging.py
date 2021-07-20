@@ -248,7 +248,7 @@ class Log:
         if self.config['amc_table'] is not None:
             mcs_list = [mcs for (mcs, _) in self.config['amc_table']]
         else:
-            mcs_list = [self.config[key] for key in ['check', 'fec0', 'fec1', 'ms']]
+            mcs_list = [tuple([self.config[key] for key in ('check', 'fec0', 'fec1', 'ms')])]
 
         df = pd.DataFrame(mcs_list, columns=['crc', 'fec0', 'fec1', 'ms'])
 
