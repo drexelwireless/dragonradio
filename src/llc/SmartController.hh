@@ -133,10 +133,16 @@ struct SendWindow {
     bool mayMoveUpMCS(void) const;
 
     /** @brief Move down one MCS level */
-    void moveDownMCS(unsigned n);
+    void moveDownMCS(unsigned n)
+    {
+        setMCS(mcsidx - n);
+    }
 
     /** @brief Move up one MCS level */
-    void moveUpMCS(void);
+    void moveUpMCS(void)
+    {
+        setMCS(mcsidx + 1);
+    }
 
     /** @brief Set MCS */
     void setMCS(size_t mcsidx);

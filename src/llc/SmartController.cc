@@ -1647,74 +1647,59 @@ bool SendWindow::mayMoveUpMCS(void) const
     return controller.dist_(controller.gen_) < mcsidx_prob[mcsidx+1];
 }
 
-void SendWindow::moveDownMCS(unsigned n)
-{
-    assert(mcsidx >= n);
-
-    logAMC(LOGINFO, "Moving down modulation scheme");
-
-    logAMC(LOGDEBUG, "Moving down modulation scheme: node=%u; mcsidx=%u; short per=%f; swin=%lu; lwin=%lu",
-        node.id,
-        (unsigned) mcsidx,
-        short_per ? *short_per : 0.0,
-        short_per.getWindowSize(),
-        long_per.getWindowSize());
-
-    setMCS(mcsidx - n);
-
-    logAMC(LOGDEBUG, "Moved down modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
-        node.id,
-        (unsigned) mcsidx,
-         mcs_table[mcsidx].mcs->description().c_str(),
-        (unsigned) unack,
-        (unsigned) per_end,
-        short_per.getWindowSize(),
-        long_per.getWindowSize());
-}
-
-void SendWindow::moveUpMCS(void)
-{
-    logAMC(LOGINFO, "Moving up modulation scheme");
-
-    logAMC(LOGDEBUG, "Moving up modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
-        node.id,
-        (unsigned) mcsidx,
-        long_per ? *long_per : .0,
-        short_per.getWindowSize(),
-        long_per.getWindowSize());
-
-    setMCS(mcsidx + 1);
-
-    logAMC(LOGDEBUG, "Moved up modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
-        node.id,
-        (unsigned) mcsidx,
-        mcs_table[mcsidx].mcs->description().c_str(),
-        (unsigned) unack,
-        (unsigned) per_end,
-        short_per.getWindowSize(),
-        long_per.getWindowSize());
-}
-
 void SendWindow::setMCS(size_t new_mcsidx)
 {
     assert(new_mcsidx >= 0);
     assert(new_mcsidx < mcs_table.size());
 
-    // Move MCS up until we reach a valid MCS
+    // Move new MCS index up until we reach a valid MCS
     while (new_mcsidx < mcs_table.size() - 1 &&
            !mcs_table[new_mcsidx].valid)
         ++new_mcsidx;
 
+    // Bail if MCS isn't actually changing
+    if (new_mcsidx == mcsidx)
+        return;
+
+    // Log before change
+    const char *direction = (new_mcsidx > mcsidx) ? "up" : "down";
+
+    logAMC(LOGINFO, "Moving %s modulation scheme",
+           direction);
+
+    logAMC(LOGDEBUG, "Moving %s modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
+           direction,
+           node.id,
+           (unsigned) mcsidx,
+           long_per ? *long_per : .0,
+           short_per.getWindowSize(),
+           long_per.getWindowSize());
+
+    // Set new MCS index
     mcsidx = new_mcsidx;
-    per_end = seq;
-
-    resetPEREstimates();
-
     node.mcsidx = new_mcsidx;
 
+    // Set end of PER window
+    per_end = seq;
+
+    // Reset PER estimates
+    resetPEREstimates();
+
+    // Inform network queue of new MCS
     const MCS *mcs = controller.phy_->mcs_table[new_mcsidx].mcs;
 
     controller.netq_->updateMCS(node.id, mcs);
+
+    // Log after change
+    logAMC(LOGDEBUG, "Moved %s modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+           direction,
+           node.id,
+           (unsigned) mcsidx,
+           mcs_table[mcsidx].mcs->description().c_str(),
+           (unsigned) unack,
+           (unsigned) per_end,
+           short_per.getWindowSize(),
+           long_per.getWindowSize());
 }
 
 void SendWindow::resetPEREstimates(void)
