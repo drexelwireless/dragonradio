@@ -19,7 +19,9 @@ struct SlotEntry {
     double timestamp;
     /** @brief Bandwidth [Hz] */
     float bw;
-    /** @brief Raw IQ data. */
+    /** @brief Size of uncompressed IQ data (bytes). */
+    uint32_t iq_data_len;
+    /** @brief Compressed IQ data. */
     hvl_t iq_data;
 };
 
@@ -29,6 +31,8 @@ struct SnapshotEntry {
     double timestamp;
     /** @brief Sampling frequency [Hz] */
     float fs;
+    /** @brief Size of uncompressed IQ data (bytes). */
+    uint32_t iq_data_len;
     /** @brief Compressed IQ data. */
     hvl_t iq_data;
 };
@@ -192,6 +196,7 @@ void Logger::open(const std::string& filename)
 
     h5_slot.insertMember("timestamp", HOFFSET(SlotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_slot.insertMember("bw", HOFFSET(SlotEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_slot.insertMember("iq_data_len", HOFFSET(SlotEntry, iq_data_len), H5::PredType::NATIVE_UINT32);
     h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_compressed_iqdata);
 
     // H5 type for snapshots
@@ -199,6 +204,7 @@ void Logger::open(const std::string& filename)
 
     h5_snapshot.insertMember("timestamp", HOFFSET(SnapshotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_snapshot.insertMember("fs", HOFFSET(SnapshotEntry, fs), H5::PredType::NATIVE_FLOAT);
+    h5_snapshot.insertMember("iq_data_len", HOFFSET(SnapshotEntry, iq_data_len), H5::PredType::NATIVE_UINT32);
     h5_snapshot.insertMember("iq_data", HOFFSET(SnapshotEntry, iq_data), h5_compressed_iqdata);
 
     // H5 type for snapshot self-transmission events
@@ -390,6 +396,7 @@ void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
 
     entry.timestamp = (WallClock::to_wall_time(*buf->timestamp) - t_start_).get_real_secs();
     entry.bw = bw;
+    entry.iq_data_len = buf->size();
     entry.iq_data.p = compressed.data();
     entry.iq_data.len = compressed.size();
 
@@ -408,6 +415,7 @@ void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
 
     entry.timestamp = timestamp;
     entry.fs = buf->fs;
+    entry.iq_data_len = buf->size();
     entry.iq_data.p = compressed.data();
     entry.iq_data.len = compressed.size();
 

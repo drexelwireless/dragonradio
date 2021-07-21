@@ -224,7 +224,7 @@ class Log:
         """Received MAC slot IQ data"""
         df = self._loadDataset('slots')
         df['start'] = df.timestamp
-        df['end'] = df.timestamp + df.iq_data.apply(len) / df.bw
+        df['end'] = df.timestamp + df.iq_data_len / df.bw
         return df
 
     @cached_property
@@ -328,7 +328,7 @@ class Log:
 
         while offset + pkt.start_samples < 0:
             i_start -= 1
-            offset += len(slots.iloc[i_start].iq_data)
+            offset += slots.iloc[i_start].iq_data_len
 
         return Slots(pkt, slots.iloc[i_start:i_end+1], offset)
 
