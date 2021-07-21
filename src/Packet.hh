@@ -59,7 +59,8 @@ struct ControlMsg {
         kTimestamp,
         kTimestampSent,
         kTimestampRecv,
-        kReceiverStats,
+        kShortTermReceiverStats,
+        kLongTermReceiverStats,
         kNak,
         kSelectiveAck,
         kSetUnack
@@ -92,11 +93,11 @@ struct ControlMsg {
     } PACKED;
 
     struct ReceiverStats {
-        /** @brief Long-term EVM at receiver */
-        float long_evm;
+        /** @brief EVM at receiver */
+        float evm;
 
-        /** @brief Long-term RSSI at receiver */
-        float long_rssi;
+        /** @brief RSSI at receiver */
+        float rssi;
     };
 
     using Nak = Seq;
@@ -299,8 +300,11 @@ struct Packet : public buffer<unsigned char>
                              TimestampSeq tseq,
                              const MonoClock::time_point &t_recv);
 
-    /** @brief Append receiver statistics control message to a packet */
-    void appendReceiverStats(float long_evm, float long_rssi);
+    /** @brief Append short-term receiver statistics control message to a packet */
+    void appendShortTermReceiverStats(float short_evm, float short_rssi);
+
+    /** @brief Append long-term receiver statistics control message to a packet */
+    void appendLongTermReceiverStats(float long_evm, float long_rssi);
 
     /** @brief Append a NAK control message to a packet */
     void appendNak(const Seq &seq);
@@ -559,7 +563,10 @@ constexpr size_t ctrlsize(uint8_t ty)
         case ControlMsg::kTimestampRecv:
             return offsetof(ControlMsg, timestamp_recv) + sizeof(ControlMsg::TimestampRecv);
 
-        case ControlMsg::kReceiverStats:
+        case ControlMsg::kShortTermReceiverStats:
+            return offsetof(ControlMsg, receiver_stats) + sizeof(ControlMsg::ReceiverStats);
+
+        case ControlMsg::kLongTermReceiverStats:
             return offsetof(ControlMsg, receiver_stats) + sizeof(ControlMsg::ReceiverStats);
 
         case ControlMsg::kNak:
@@ -580,7 +587,8 @@ static_assert(ctrlsize(ControlMsg::kHello) == 2);
 static_assert(ctrlsize(ControlMsg::kTimestamp) == 3);
 static_assert(ctrlsize(ControlMsg::kTimestampSent) == 19);
 static_assert(ctrlsize(ControlMsg::kTimestampRecv) == 20);
-static_assert(ctrlsize(ControlMsg::kReceiverStats) == 9);
+static_assert(ctrlsize(ControlMsg::kShortTermReceiverStats) == 9);
+static_assert(ctrlsize(ControlMsg::kLongTermReceiverStats) == 9);
 static_assert(ctrlsize(ControlMsg::kNak) == 3);
 static_assert(ctrlsize(ControlMsg::kSelectiveAck) == 5);
 static_assert(ctrlsize(ControlMsg::kSetUnack) == 3);

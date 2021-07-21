@@ -174,13 +174,24 @@ void Packet::appendTimestampRecv(NodeId node_id,
     appendControl(msg);
 }
 
-void Packet::appendReceiverStats(float long_evm, float long_rssi)
+void Packet::appendShortTermReceiverStats(float short_evm, float short_rssi)
 {
     ControlMsg msg;
 
-    msg.type = ControlMsg::Type::kReceiverStats;
-    msg.receiver_stats.long_evm = long_evm;
-    msg.receiver_stats.long_rssi = long_rssi;
+    msg.type = ControlMsg::Type::kShortTermReceiverStats;
+    msg.receiver_stats.evm = short_evm;
+    msg.receiver_stats.rssi = short_rssi;
+
+    appendControl(msg);
+}
+
+void Packet::appendLongTermReceiverStats(float long_evm, float long_rssi)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kLongTermReceiverStats;
+    msg.receiver_stats.evm = long_evm;
+    msg.receiver_stats.rssi = long_rssi;
 
     appendControl(msg);
 }

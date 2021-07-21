@@ -48,8 +48,14 @@ struct SendWindow {
     /** @brief Modulation index */
     size_t mcsidx;
 
+    /** @brief Short-term EVM, as reported by receiver */
+    std::optional<float> short_evm;
+
     /** @brief Long-term EVM, as reported by receiver */
     std::optional<float> long_evm;
+
+    /** @brief Short-term RSSI, as reported by receiver */
+    std::optional<float> short_rssi;
 
     /** @brief Long-term RSSI, as reported by receiver */
     std::optional<float> long_rssi;
@@ -254,8 +260,14 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Mutex for the receive window */
     std::mutex mutex;
 
+    /** @brief Short-term packet EVM */
+    TimeWindowMean<MonoClock, float> short_evm;
+
     /** @brief Long-term packet EVM */
     TimeWindowMean<MonoClock, float> long_evm;
+
+    /** @brief Short-term packet RSSI */
+    TimeWindowMean<MonoClock, float> short_rssi;
 
     /** @brief Long-term packet RSSI */
     TimeWindowMean<MonoClock, float> long_rssi;
@@ -408,6 +420,18 @@ public:
     void setLongPERWindow(double window)
     {
         long_per_window_ = window;
+    }
+
+    /** @brief Get time window for statistics collection (sec) */
+    double getShortStatsWindow(void)
+    {
+        return short_stats_window_;
+    }
+
+    /** @brief Set time window for statistics collection (sec) */
+    void setShortStatsWindow(double window)
+    {
+        short_stats_window_ = window;
     }
 
     /** @brief Get time window for statistics collection (sec) */
@@ -828,6 +852,9 @@ protected:
 
     /** @brief Time window used to calculate long-term PER */
     double long_per_window_;
+
+    /** @brief Time window used to calculate short-term statistics */
+    double short_stats_window_;
 
     /** @brief Time window used to calculate long-term statistics */
     double long_stats_window_;

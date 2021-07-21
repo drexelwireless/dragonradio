@@ -56,6 +56,10 @@ void exportControllers(py::module &m)
             &SmartController::getLongPERWindow,
             &SmartController::setLongPERWindow,
             "Time window used to calculate long-term PE")
+        .def_property("short_stats_window",
+            &SmartController::getShortStatsWindow,
+            &SmartController::setShortStatsWindow,
+            "Time window used to calculate long-term statistics, e.g., EVM and RSSI")
         .def_property("long_stats_window",
             &SmartController::getLongStatsWindow,
             &SmartController::setLongStatsWindow,
@@ -184,9 +188,15 @@ void exportControllers(py::module &m)
         .def_property_readonly("long_per",
             &SendWindowProxy::getLongPER,
             "Long-term packet error rate (unitless)")
+        .def_property_readonly("short_evm",
+            &SendWindowProxy::getShortEVM,
+            "Short-term EVM (dB)")
         .def_property_readonly("long_evm",
             &SendWindowProxy::getLongEVM,
             "Long-term EVM (dB)")
+        .def_property_readonly("short_rssi",
+            &SendWindowProxy::getShortRSSI,
+            "Short-term RSSI (dB)")
         .def_property_readonly("long_rssi",
             &SendWindowProxy::getLongRSSI,
             "Long-term RSSI (dB)")
@@ -207,9 +217,15 @@ void exportControllers(py::module &m)
 
     // Export class ReceiveWindowProxy to Python
     py::class_<ReceiveWindowProxy, std::unique_ptr<ReceiveWindowProxy>>(m, "ReceiveWindow")
+        .def_property_readonly("short_evm",
+            &ReceiveWindowProxy::getShortEVM,
+            "Short-term EVM (dB)")
         .def_property_readonly("long_evm",
             &ReceiveWindowProxy::getLongEVM,
             "Long-term EVM (dB)")
+        .def_property_readonly("short_rssi",
+            &ReceiveWindowProxy::getShortRSSI,
+            "Short-term RSSI (dB)")
         .def_property_readonly("long_rssi",
             &ReceiveWindowProxy::getLongRSSI,
             "Long-term RSSI (dB)")

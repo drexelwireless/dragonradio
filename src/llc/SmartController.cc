@@ -27,6 +27,7 @@ SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
   , evm_thresholds_(evm_thresholds)
   , short_per_window_(100e-3)
   , long_per_window_(400e-3)
+  , short_stats_window_(100e-3)
   , long_stats_window_(400e-3)
   , mcsidx_broadcast_(0)
   , mcsidx_ack_(0)
@@ -234,7 +235,9 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
         // Update metrics. EVM and RSSI should be valid as long as the header is
         // valid.
+        recvw.short_evm.update(pkt->timestamp, pkt->evm);
         recvw.long_evm.update(pkt->timestamp, pkt->evm);
+        recvw.short_rssi.update(pkt->timestamp, pkt->rssi);
         recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
 
         if (pkt->hdr.flags.has_data) {
@@ -1049,8 +1052,11 @@ inline void appendSelectiveACK(NetPacket &pkt,
 void SmartController::appendFeedback(NetPacket &pkt, RecvWindow &recvw)
 {
     // Append statistics
+    if (recvw.short_evm && recvw.short_rssi)
+        pkt.appendShortTermReceiverStats(*recvw.short_evm, *recvw.short_rssi);
+
     if (recvw.long_evm && recvw.long_rssi)
-        pkt.appendReceiverStats(*recvw.long_evm, *recvw.long_rssi);
+        pkt.appendLongTermReceiverStats(*recvw.long_evm, *recvw.long_rssi);
 
     // Append selective ACKs
     if (!selective_ack_)
@@ -1141,14 +1147,26 @@ void SmartController::handleReceiverStats(RadioPacket &pkt, SendWindow &sendw)
 {
     for(auto it = pkt.begin(); it != pkt.end(); ++it) {
         switch (it->type) {
-            case ControlMsg::Type::kReceiverStats:
+            case ControlMsg::Type::kShortTermReceiverStats:
             {
                 float temp;
 
-                memcpy(&temp, &it->receiver_stats.long_evm, sizeof(temp));
+                memcpy(&temp, &it->receiver_stats.evm, sizeof(temp));
+                sendw.short_evm = temp;
+
+                memcpy(&temp, &it->receiver_stats.rssi, sizeof(temp));
+                sendw.short_rssi = temp;
+            }
+            break;
+
+            case ControlMsg::Type::kLongTermReceiverStats:
+            {
+                float temp;
+
+                memcpy(&temp, &it->receiver_stats.evm, sizeof(temp));
                 sendw.long_evm = temp;
 
-                memcpy(&temp, &it->receiver_stats.long_rssi, sizeof(temp));
+                memcpy(&temp, &it->receiver_stats.rssi, sizeof(temp));
                 sendw.long_rssi = temp;
             }
             break;
@@ -1751,7 +1769,9 @@ RecvWindow::RecvWindow(Node &n,
     , explicit_nak_idx(0)
     , entries_(win)
 {
+    short_evm.setTimeWindow(controller.short_stats_window_);
     long_evm.setTimeWindow(controller.long_stats_window_);
+    short_rssi.setTimeWindow(controller.short_stats_window_);
     long_rssi.setTimeWindow(controller.long_stats_window_);
 }
 

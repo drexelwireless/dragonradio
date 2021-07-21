@@ -33,6 +33,17 @@ public:
         return sendw.long_per.value();
     }
 
+    std::optional<double> getShortEVM(void)
+    {
+        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<std::mutex> lock(sendw.mutex);
+
+        if (sendw.short_evm)
+            return *sendw.short_evm;
+        else
+            return std::nullopt;
+    }
+
     std::optional<double> getLongEVM(void)
     {
         SendWindow                  &sendw = controller_->getSendWindow(node_id_);
@@ -40,6 +51,17 @@ public:
 
         if (sendw.long_evm)
             return *sendw.long_evm;
+        else
+            return std::nullopt;
+    }
+
+    std::optional<double> getShortRSSI(void)
+    {
+        SendWindow                  &sendw = controller_->getSendWindow(node_id_);
+        std::lock_guard<std::mutex> lock(sendw.mutex);
+
+        if (sendw.short_rssi)
+            return *sendw.short_rssi;
         else
             return std::nullopt;
     }
@@ -96,12 +118,28 @@ public:
     {
     }
 
+    std::optional<double> getShortEVM(void)
+    {
+        RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
+        std::lock_guard<std::mutex> lock(recvw.mutex);
+
+        return recvw.short_evm.value();
+    }
+
     std::optional<double> getLongEVM(void)
     {
         RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.long_evm.value();
+    }
+
+    std::optional<double> getShortRSSI(void)
+    {
+        RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
+        std::lock_guard<std::mutex> lock(recvw.mutex);
+
+        return recvw.short_rssi.value();
     }
 
     std::optional<double> getLongRSSI(void)

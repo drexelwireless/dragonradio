@@ -250,6 +250,7 @@ class Config:
         self.amc_table = None
         self.amc_short_per_window = 100e-3
         self.amc_long_per_window = 400e-3
+        self.amc_short_stats_window = 100e-3
         self.amc_long_stats_window = 400e-3
         self.amc_mcsidx_broadcast = None
         self.amc_mcsidx_ack = None
@@ -786,6 +787,11 @@ class Config:
                          dest='amc_long_per_window',
                          metavar='SEC',
                          help='time window used to calculate long-term PER')
+        amc.add_argument('--short-stats-window', action='store', type=float,
+                         dest='amc_short_stats_window',
+                         metavar='SEC',
+                         help=('time window used to calculate short-term statistics, '
+                               'e.g., EVM and RSSI'))
         amc.add_argument('--long-stats-window', action='store', type=float,
                          dest='amc_long_stats_window',
                          metavar='SEC',
