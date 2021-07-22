@@ -724,22 +724,45 @@ void SmartController::environmentDiscontinuity(void)
 {
     logAMC(LOGDEBUG, "Environment discontinuity");
 
-    std::lock_guard<std::mutex> lock(send_mutex_);
+    {
+        std::lock_guard<std::mutex> lock(send_mutex_);
 
-    for (auto it = send_.begin(); it != send_.end(); ++it) {
-        SendWindow                  &sendw = it->second;
-        std::lock_guard<std::mutex> lock(sendw.mutex);
+        for (auto it = send_.begin(); it != send_.end(); ++it) {
+            SendWindow                  &sendw = it->second;
+            std::lock_guard<std::mutex> lock(sendw.mutex);
 
-        // Set all MCS transition probabilities to 1.0
-        std::vector<double>&v = sendw.mcsidx_prob;
+            // Set all MCS transition probabilities to 1.0
+            std::vector<double>&v = sendw.mcsidx_prob;
 
-        std::fill(v.begin(), v.end(), 1.0);
+            std::fill(v.begin(), v.end(), 1.0);
 
-        // Set MCS index to initial default
-        sendw.setMCS(mcsidx_init_);
+            // Set MCS index to initial default
+            sendw.setMCS(mcsidx_init_);
 
-        // Don't use previously-sent packets to calculate PER.
-        sendw.per_cutoff = sendw.seq;
+            // Don't use previously-sent packets to calculate PER.
+            sendw.per_cutoff = sendw.seq;
+
+            // Reset EVM and RSSI estimates
+            sendw.short_evm.reset();
+            sendw.long_evm.reset();
+            sendw.short_rssi.reset();
+            sendw.long_rssi.reset();
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(recv_mutex_);
+
+        for (auto it = recv_.begin(); it != recv_.end(); ++it) {
+            RecvWindow                  &recvw = it->second;
+            std::lock_guard<std::mutex> lock(recvw.mutex);
+
+            // Reset EVM and RSSI estimates
+            recvw.short_evm.reset();
+            recvw.long_evm.reset();
+            recvw.short_rssi.reset();
+            recvw.long_rssi.reset();
+        }
     }
 }
 
