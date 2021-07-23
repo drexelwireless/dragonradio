@@ -1633,7 +1633,7 @@ bool SendWindow::mayMoveUpMCS(void) const
 
     if (next_evm_threshold) {
         if (long_evm) {
-            logARQ(LOGDEBUG, "EVM threshold: evm_threshold=%f, evm=%f",
+            logAMC(LOGDEBUG, "EVM threshold: evm_threshold=%f, evm=%f",
                 *next_evm_threshold,
                 *long_evm);
 
