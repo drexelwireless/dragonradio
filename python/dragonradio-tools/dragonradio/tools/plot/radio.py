@@ -223,8 +223,9 @@ class RadioMetricPlot(ReservationPlot):
                  checkboxes=True,
                  only_invalid_packets=False,
                  include_invalid_packets=False,
-                 filt=lambda x : x):
-        super().__init__(fig, ax, logs=logs)
+                 filt=lambda x : x,
+                 **kwargs):
+        super().__init__(fig, ax, logs=logs, **kwargs)
 
         self.metric = metric
         """The metric to plot"""
@@ -343,14 +344,14 @@ class RadioMetricPlot(ReservationPlot):
         self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
 
 class EventPlot(ReservationPlot):
-    def __init__(self, logs, fig=None, ax=None):
+    def __init__(self, logs, fig=None, ax=None, **kwargs):
         if fig is None:
             fig = plt.figure(figsize=(14,4))
 
         if ax is None:
             ax = fig.add_subplot(1,1,1)
 
-        super().__init__(fig, ax, logs=logs)
+        super().__init__(fig, ax, logs=logs, **kwargs)
 
         self.series = []
         """Event series to plot"""
@@ -423,8 +424,9 @@ class TrafficPlot(ReservationPlot):
                  filt=lambda x : x,
                  by_flow: bool=True,
                  mac_errors: bool=False,
-                 sack: bool=False):
-        super().__init__(fig, logs=logs, sticky=True)
+                 sack: bool=False,
+                 **kwargs):
+        super().__init__(fig, logs=logs, sticky=True, **kwargs)
 
         self.filt = filt
         """DataFrame filter"""

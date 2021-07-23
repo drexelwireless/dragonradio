@@ -266,7 +266,8 @@ class FlowPlot(AnnotatedPlot):
                  reservation: ReservationLog,
                  scorer: Scorer,
                  flow_uid: int,
-                 fig: Optional[Figure]=None):
+                 fig: Optional[Figure]=None,
+                 **kwargs):
         """Plot a flow.
 
         Args:
@@ -278,7 +279,7 @@ class FlowPlot(AnnotatedPlot):
         if fig is None:
             fig = plt.figure()
 
-        super().__init__(fig, None)
+        super().__init__(fig, None, **kwargs)
 
         self.reservation = reservation
         """Colosseum reservation"""
