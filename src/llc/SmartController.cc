@@ -742,6 +742,9 @@ void SmartController::environmentDiscontinuity(void)
             // Don't use previously-sent packets to calculate PER.
             sendw.per_cutoff = sendw.seq;
 
+            // Reset PER estimates
+            sendw.resetPEREstimates();
+
             // Reset EVM and RSSI estimates
             sendw.short_evm.reset();
             sendw.long_evm.reset();
