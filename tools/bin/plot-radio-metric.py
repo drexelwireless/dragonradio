@@ -96,6 +96,7 @@ class RadioMetricCommand(Command):
 
         parser.add_argument('--latency', action='store', type=str,
                             dest='latency',
+                            metavar='BEGIN,END',
                             help='plot latency between two timestamped times')
 
         parser.add_argument('--annotate', action='store_const', const=True,
