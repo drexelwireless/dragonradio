@@ -77,6 +77,7 @@ class PlotTrafficCommand(Command):
                            y=args.y,
                            filt=self.filter,
                            by_flow=args.by_flow,
+                           flows=args.flows,
                            mac_errors=args.mac_errors,
                            sack=args.sack,
                            annotate=args.annotate)

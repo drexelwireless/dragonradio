@@ -423,6 +423,7 @@ class TrafficPlot(ReservationPlot):
                  y: str='seq',
                  filt=lambda x : x,
                  by_flow: bool=True,
+                 flows: List[int]=[],
                  mac_errors: bool=False,
                  sack: bool=False,
                  **kwargs):
@@ -430,6 +431,22 @@ class TrafficPlot(ReservationPlot):
 
         self.filt = filt
         """DataFrame filter"""
+
+        # Try to determine src and dest from flows if they are not given
+        if src is None and dest is None and len(flows) != 0:
+            df = logs.reservation.traffic
+
+            srcs = set([df[df.flow_uid == flow_uid].iloc[0].srn_src for flow_uid in flows])
+            dests = set([df[df.flow_uid == flow_uid].iloc[0].srn_dest for flow_uid in flows])
+
+            if len(srcs) > 1 and len(dests) > 1:
+                raise ValueError("Cannot determine unique src or unique dest from flows: sources=%s, destinations=%s" % (srcs, dests))
+
+            if len(srcs) == 1:
+                src = next(iter(srcs))
+
+            if len(dests) == 1:
+                dest = next(iter(dests))
 
         # Set title
         if src is not None and dest is not None:
