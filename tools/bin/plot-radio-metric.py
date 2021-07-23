@@ -98,6 +98,14 @@ class RadioMetricCommand(Command):
                             dest='latency',
                             help='plot latency between two timestamped times')
 
+        parser.add_argument('--annotate', action='store_const', const=True,
+                            dest='annotate',
+                            default=False,
+                            help='show annotations')
+        parser.add_argument('--no-annotate', action='store_const', const=False,
+                            dest='annotate',
+                            help='do not show annotations')
+
         parser.add_argument('--include-invalid-packets', action='store_true', default=False,
                             help='include invalid packets when displaying metrics')
 
@@ -122,7 +130,8 @@ class RadioMetricCommand(Command):
                         latency=args.latency,
                         nodes=args.srns,
                         filt=self.filter,
-                        include_invalid_packets=args.include_invalid_packets)
+                        include_invalid_packets=args.include_invalid_packets,
+                        annotate=args.annotate)
 
         plt.show()
 

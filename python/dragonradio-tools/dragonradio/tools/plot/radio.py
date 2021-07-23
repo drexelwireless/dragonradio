@@ -341,7 +341,7 @@ class RadioMetricPlot(ReservationPlot):
         self.plotStages()
 
         # Attach hover event handler
-        self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
+        self.connect_hover()
 
 class EventPlot(ReservationPlot):
     def __init__(self, logs, fig=None, ax=None, **kwargs):
@@ -412,7 +412,7 @@ class EventPlot(ReservationPlot):
         # Plot stage markers
         self.plotStages()
 
-        self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
+        self.connect_hover()
 
 class TrafficPlot(ReservationPlot):
     def __init__(self,
@@ -506,7 +506,7 @@ class TrafficPlot(ReservationPlot):
             addCheckboxWidget(self.fig, self.lines[recv_ax], ax=recv_ax, match_legend=True)
 
         # Attach hover event handler
-        self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
+        self.connect_hover()
 
     def plotMACErrors(self, ax, node_id, pat):
         delta = self.logs[node_id].delta

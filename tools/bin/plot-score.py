@@ -62,6 +62,14 @@ class PlotScoreCommand(Command):
                             metavar='FLOWUID',
                             help='plot specific flow')
 
+        parser.add_argument('--annotate', action='store_const', const=True,
+                            dest='annotate',
+                            default=False,
+                            help='show annotations')
+        parser.add_argument('--no-annotate', action='store_const', const=False,
+                            dest='annotate',
+                            help='do not show annotations')
+
     def handle(self, parser, args):
         reservation = self.logs.reservation
         scorer = Scorer(reservation, cache_path='cache')
@@ -133,7 +141,7 @@ class PlotScoreCommand(Command):
                             row.lost_points, row.points_fraction))
 
         if args.plot_flow:
-            FlowPlot(reservation, scorer, args.plot_flow)
+            FlowPlot(reservation, scorer, args.plot_flow, annotate=args.annotate)
 
             plt.show()
 

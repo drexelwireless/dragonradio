@@ -41,6 +41,14 @@ class PlotTrafficCommand(Command):
         parser.add_argument('--by-flow', action='store_true',
                             help='show traffic by flow')
 
+        parser.add_argument('--annotate', action='store_const', const=True,
+                            dest='annotate',
+                            default=False,
+                            help='show annotations')
+        parser.add_argument('--no-annotate', action='store_const', const=False,
+                            dest='annotate',
+                            help='do not show annotations')
+
     def handle(self, parser, args):
         src = None
         dest = None
@@ -70,7 +78,8 @@ class PlotTrafficCommand(Command):
                            filt=self.filter,
                            by_flow=args.by_flow,
                            mac_errors=args.mac_errors,
-                           sack=args.sack)
+                           sack=args.sack,
+                           annotate=args.annotate)
         plot.plot()
 
         plt.show()

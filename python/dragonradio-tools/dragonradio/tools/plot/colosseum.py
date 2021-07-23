@@ -338,7 +338,7 @@ class FlowPlot(AnnotatedPlot):
         self.set_window_title('Reservation {}, Flow {}'.format(reservation.reservation_id, flow_uid))
 
         # Connect annotations
-        self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
+        self.connect_hover()
 
     def plotTraffic(self, ax, lines, xcol, ycol, idx, color=None, s=None, label=None):
         line = ax.scatter(self.df[idx][xcol],

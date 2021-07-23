@@ -81,7 +81,7 @@ class Plot:
         self.fig.canvas.manager.set_window_title(title)
 
 class AnnotatedPlot(Plot):
-    def __init__(self, fig, ax=None, sticky=False):
+    def __init__(self, fig, ax=None, annotate=False, sticky=False):
         super().__init__(fig, ax=ax)
 
         self.annotations = {}
@@ -89,6 +89,9 @@ class AnnotatedPlot(Plot):
 
         self.lines = {}
         """Mapping from axis to plotted lines"""
+
+        self.annotate = annotate
+        """Should the plot show annotations?"""
 
         self.sticky = sticky
         """Should annotation stick to previous hotspot?"""
@@ -106,6 +109,11 @@ class AnnotatedPlot(Plot):
 
     def addLine(self, ax, line):
         self.lines[ax].append(line)
+
+    def connect_hover(self):
+        """Connect hover event to show annotations"""
+        if self.annotate:
+            self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
 
     def hover(self, event):
         if event.inaxes in self.annotations:

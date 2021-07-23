@@ -78,8 +78,16 @@ class PlotEventsCommand(Command):
         parser.add_argument('--flow', action='append',
                             metavar='FLOW')
 
+        parser.add_argument('--annotate', action='store_const', const=True,
+                            dest='annotate',
+                            default=False,
+                            help='show annotations')
+        parser.add_argument('--no-annotate', action='store_const', const=False,
+                            dest='annotate',
+                            help='do not show annotations')
+
     def handle(self, parser, args):
-        plot = EventPlot(self.logs)
+        plot = EventPlot(self.logs, annotate=args.annotate)
 
         node_ids = sorted(self.logs.nodes)
 
