@@ -72,6 +72,7 @@ ARQ_EVENT_TYPE_CAT:CategoricalDtype = CategoricalDtype(range(0, len(ARQ_EVENT_TY
 EVENTS = [(re.compile(r), k, c) for (r, k, c) in
             [ [r'^AMC: Moved up modulation scheme', 'AMC', 'g']
             , [r'^AMC: Moved down modulation scheme', 'AMC', 'r']
+            , [r'^AMC: Environment', 'AMC', 'k']
             , [r'^ARQ: send set unack', 'ARQ', 'k']
             , [r'^ARQ: set unack', 'ARQ', 'k']
             , [r'^ARQ: recv OUTSIDE WINDOW', 'ARQ', 'y']
