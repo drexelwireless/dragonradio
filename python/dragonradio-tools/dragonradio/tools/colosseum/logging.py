@@ -423,6 +423,7 @@ class ReservationLog(DataFrameCache):
                             return self.srn_teams[srn_id]
 
         logger.debug('Cannot determine our team number for reservation %d', self.reservation_id)
+        return None
 
     @cached_property
     def our_srns(self):
