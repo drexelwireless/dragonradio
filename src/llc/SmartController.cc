@@ -546,7 +546,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     if (sendw.node.can_transmit && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->hdr.seq >= sendw.per_cutoff) {
         sendw.txFailure();
 
-        logAMC(LOGDEBUG, "txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%f",
+        logAMC(LOGDEBUG, "txFailure retransmission: node=%u; seq=%u; mcsidx=%u; short per=%0.2f",
             (unsigned) sendw.node.id,
             (unsigned) entry.pkt->hdr.seq,
             (unsigned) entry.pkt->mcsidx,
@@ -1553,7 +1553,7 @@ void SendWindow::updateMCS(void)
     }
 
     if (changed)
-        logAMC(LOGDEBUG, "updateMCS: node=%u; short per=%f (%lu samples); long per=%f (%lu samples)",
+        logAMC(LOGDEBUG, "updateMCS: node=%u; short per=%0.2f (%lu samples); long per=%0.2f (%lu samples)",
             node.id,
             short_per.value_or(0),
             short_per.size(),
@@ -1568,7 +1568,7 @@ void SendWindow::updateMCS(void)
             std::max(mcsidx_prob[mcsidx]*controller.mcsidx_alpha_,
                      controller.mcsidx_prob_floor_);
 
-        logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%f",
+        logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%0.2f",
             node.id,
             (unsigned) mcsidx,
             mcsidx_prob[mcsidx]);
@@ -1605,7 +1605,7 @@ void SendWindow::updateMCS(void)
         mcsidx_prob[mcsidx] = 1.0;
 
         if (mcsidx_prob[mcsidx] != old_prob)
-            logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%f",
+            logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%0.2f",
                 node.id,
                 (unsigned) mcsidx,
                 mcsidx_prob[mcsidx]);
@@ -1633,7 +1633,7 @@ bool SendWindow::mayMoveUpMCS(void) const
 
     if (next_evm_threshold) {
         if (long_evm) {
-            logAMC(LOGDEBUG, "EVM threshold: evm_threshold=%f, evm=%f",
+            logAMC(LOGDEBUG, "EVM threshold: evm_threshold=%0.1f, evm=%0.1f",
                 *next_evm_threshold,
                 *long_evm);
 
