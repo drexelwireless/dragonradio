@@ -22,6 +22,7 @@ SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
   : Controller(radionet, mtu)
   , phy_(phy)
   , slot_size_(slot_size)
+  , mcs_fast_adjustment_period_(1.0)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , evm_thresholds_(evm_thresholds)
@@ -391,7 +392,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
                 }
 
                 // Update MCS based on new PER
-                sendw.updateMCS();
+                sendw.updateMCS(isMCSFastAdjustmentPeriod());
 
                 // Advance the send window. It is possible that packets immediately
                 // after the packet that the sender just ACK'ed have timed out and
@@ -555,7 +556,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
             (unsigned) entry.pkt->mcsidx,
             sendw.short_per.value_or(0.0));
 
-        sendw.updateMCS();
+        sendw.updateMCS(isMCSFastAdjustmentPeriod());
     }
 
     // Actually retransmit (or drop) the packet
@@ -723,6 +724,8 @@ void SmartController::broadcastHello(void)
 void SmartController::environmentDiscontinuity(void)
 {
     logAMC(LOGDEBUG, "Environment discontinuity");
+
+    env_timestamp_ = MonoClock::now();
 
     {
         std::lock_guard<std::mutex> lock(send_mutex_);
@@ -1584,7 +1587,7 @@ void SendWindow::txFailure(void)
     long_per.update(1.0);
 }
 
-void SendWindow::updateMCS(void)
+void SendWindow::updateMCS(bool fast_adjust)
 {
     bool changed = false;
 
@@ -1605,6 +1608,20 @@ void SendWindow::updateMCS(void)
             short_per.size(),
             long_per.value_or(0),
             long_per.size());
+
+    if (fast_adjust && short_evm) {
+        mcsidx_t new_mcsidx;
+
+        for (new_mcsidx = controller.mcsidx_min_; new_mcsidx < controller.mcsidx_max_; ++new_mcsidx) {
+            SmartController::evm_thresh_t &evm_threshold = controller.evm_thresholds_[new_mcsidx + 1];
+
+            if (*short_evm >= evm_threshold)
+                break;
+        }
+
+        setMCS(new_mcsidx);
+        return;
+    }
 
     // First for high PER, then test for low PER
     if (short_per && *short_per > controller.mcsidx_down_per_threshold_) {

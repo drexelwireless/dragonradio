@@ -133,7 +133,7 @@ struct SendWindow {
     void txFailure(void);
 
     /** @brief Update MCS based on current PER */
-    void updateMCS(void);
+    void updateMCS(bool fast_adjust);
 
     /** @brief Return true if we may move up one MCS level */
     bool mayMoveUpMCS(void) const;
@@ -397,6 +397,25 @@ public:
                     Seq::uint_type recvwin,
                     const std::vector<evm_thresh_t> &evm_thresholds);
     virtual ~SmartController();
+
+    /** @brief Get MCS fast adjustment period (sec) */
+    double getMCSFastAdjustmentPeriod(void) const
+    {
+        return mcs_fast_adjustment_period_;
+    }
+
+    /** @brief Set MCS fast adjustment period (sec) */
+    void setMCSFastAdjustmentPeriod(double t)
+    {
+        mcs_fast_adjustment_period_ = t;
+    }
+
+    /** @brief Are we in MCS fast adjustment period? */
+    bool isMCSFastAdjustmentPeriod(void) const
+    {
+        return env_timestamp_ &&
+            (MonoClock::now() - *env_timestamp_).get_real_secs() < mcs_fast_adjustment_period_;
+    }
 
     /** @brief Get short time window over which to calculate PER (sec) */
     double getShortPERWindow(void)
@@ -821,6 +840,12 @@ protected:
 
     /** @brief Slot size (sec) */
     double slot_size_;
+
+    /** @brief Latest environment discontinuity */
+    std::optional<MonoClock::time_point> env_timestamp_;
+
+    /** @brief MCS fast-adjustment period (sec) */
+    double mcs_fast_adjustment_period_;
 
     /** @brief Maximum size of a send window */
     Seq::uint_type max_sendwin_;

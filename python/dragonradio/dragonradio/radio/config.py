@@ -252,6 +252,7 @@ class Config:
         self.amc_long_per_window = 400e-3
         self.amc_short_stats_window = 100e-3
         self.amc_long_stats_window = 400e-3
+        self.amc_mcs_fast_adjustment_period = 1.0
         self.amc_mcsidx_broadcast = None
         self.amc_mcsidx_ack = None
         self.amc_mcsidx_min = None
