@@ -1,0 +1,1859 @@
+[
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5001,
+      "goal_set": "Video",
+      "goal_type": "High_res_stream_1",
+      "hold_period": 10,
+      "point_value": 16,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 1536300.0
+      }
+    },
+    {
+      "flow_uid": 5002,
+      "goal_set": "Web",
+      "goal_type": "web_down_20_1",
+      "hold_period": 10,
+      "point_value": 13,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5003,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5004,
+      "goal_set": "Files",
+      "goal_type": "cloud_30_1",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5005,
+      "goal_set": "Video",
+      "goal_type": "High_res_stream_1",
+      "hold_period": 10,
+      "point_value": 16,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 1536300.0
+      }
+    },
+    {
+      "flow_uid": 5006,
+      "goal_set": "Web",
+      "goal_type": "web_down_20_1",
+      "hold_period": 10,
+      "point_value": 13,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5007,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5008,
+      "goal_set": "Files",
+      "goal_type": "cloud_30_1",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5009,
+      "goal_set": "Web",
+      "goal_type": "web_down_12_1",
+      "hold_period": 10,
+      "point_value": 21,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5010,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5011,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_8_1",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5012,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5013,
+      "goal_set": "Files",
+      "goal_type": "cloud_16_1",
+      "hold_period": 10,
+      "point_value": 3,
+      "requirements": {
+        "file_transfer_deadline_s": 16.0
+      }
+    },
+    {
+      "flow_uid": 5014,
+      "goal_set": "Files",
+      "goal_type": "cloud_20_1",
+      "hold_period": 10,
+      "point_value": 3,
+      "requirements": {
+        "file_transfer_deadline_s": 20.0
+      }
+    },
+    {
+      "flow_uid": 5015,
+      "goal_set": "Web",
+      "goal_type": "web_down_12_1",
+      "hold_period": 10,
+      "point_value": 21,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5016,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5017,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_8_1",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5018,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5019,
+      "goal_set": "Files",
+      "goal_type": "cloud_16_1",
+      "hold_period": 10,
+      "point_value": 3,
+      "requirements": {
+        "file_transfer_deadline_s": 16.0
+      }
+    },
+    {
+      "flow_uid": 5020,
+      "goal_set": "Files",
+      "goal_type": "cloud_20_1",
+      "hold_period": 10,
+      "point_value": 3,
+      "requirements": {
+        "file_transfer_deadline_s": 20.0
+      }
+    },
+    {
+      "flow_uid": 5021,
+      "goal_set": "Web",
+      "goal_type": "web_down_12_1",
+      "hold_period": 10,
+      "point_value": 21,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5022,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5023,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_8_1",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5024,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5025,
+      "goal_set": "Files",
+      "goal_type": "cloud_16_1",
+      "hold_period": 10,
+      "point_value": 3,
+      "requirements": {
+        "file_transfer_deadline_s": 16.0
+      }
+    },
+    {
+      "flow_uid": 5026,
+      "goal_set": "Files",
+      "goal_type": "cloud_20_1",
+      "hold_period": 10,
+      "point_value": 3,
+      "requirements": {
+        "file_transfer_deadline_s": 20.0
+      }
+    },
+    {
+      "flow_uid": 5027,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_8_1",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5028,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5029,
+      "goal_set": "Web",
+      "goal_type": "web_down_16_1",
+      "hold_period": 10,
+      "point_value": 16,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5030,
+      "goal_set": "Web",
+      "goal_type": "web_up_16_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5031,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_8_1",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5032,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5033,
+      "goal_set": "Web",
+      "goal_type": "web_down_16_1",
+      "hold_period": 10,
+      "point_value": 16,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5034,
+      "goal_set": "Web",
+      "goal_type": "web_up_16_1",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5035,
+      "goal_set": "Files",
+      "goal_type": "cloud_14_1",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "file_transfer_deadline_s": 14.0
+      }
+    },
+    {
+      "flow_uid": 5036,
+      "goal_set": "Files",
+      "goal_type": "cloud_14_1",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "file_transfer_deadline_s": 14.0
+      }
+    }
+  ],
+  "timestamp": 15.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5253,
+      "goal_set": "Files",
+      "goal_type": "cloud_30_2",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5254,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5255,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5256,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5257,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5258,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5259,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5260,
+      "goal_set": "Web",
+      "goal_type": "web_down_50_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5261,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5262,
+      "goal_set": "Web",
+      "goal_type": "web_down_50_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5263,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5264,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5265,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5266,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5267,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5268,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5269,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5270,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_2",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5271,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5272,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5273,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5274,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5275,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5276,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5277,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5278,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5279,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5280,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5281,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5282,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5283,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5284,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5285,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5286,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5287,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5288,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    }
+  ],
+  "timestamp": 135.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5433,
+      "goal_set": "Files",
+      "goal_type": "cloud_30_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5434,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5435,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5436,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5437,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5438,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5439,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5440,
+      "goal_set": "Web",
+      "goal_type": "web_down_50_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5441,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5442,
+      "goal_set": "Web",
+      "goal_type": "web_down_50_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5443,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5444,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5445,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5446,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5447,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5448,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5449,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5450,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_3",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5451,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5452,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5453,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5454,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5455,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5456,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5457,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5458,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5459,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5460,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5461,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5462,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5463,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5464,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5465,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5466,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5467,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5468,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_3",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    }
+  ],
+  "timestamp": 255.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5613,
+      "goal_set": "Files",
+      "goal_type": "cloud_30_4",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5614,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5615,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5616,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5617,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5618,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_6_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5619,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5620,
+      "goal_set": "Web",
+      "goal_type": "web_down_50_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5621,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5622,
+      "goal_set": "Web",
+      "goal_type": "web_down_50_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5623,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5624,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5625,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5626,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5627,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5628,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5629,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5630,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_3_4",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5631,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5632,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5633,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5634,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5635,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5636,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5637,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5638,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5639,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5640,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5641,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5642,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5643,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5644,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5645,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5646,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5647,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5648,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_4",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    }
+  ],
+  "timestamp": 375.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5757,
+      "goal_set": "Video",
+      "goal_type": "High_res_stream_5",
+      "hold_period": 10,
+      "point_value": 16,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 1536300.0
+      }
+    },
+    {
+      "flow_uid": 5758,
+      "goal_set": "Video",
+      "goal_type": "High_res_stream_5",
+      "hold_period": 10,
+      "point_value": 16,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 1536300.0
+      }
+    },
+    {
+      "flow_uid": 5759,
+      "goal_set": "Web",
+      "goal_type": "web_down_12_5",
+      "hold_period": 10,
+      "point_value": 21,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5760,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5761,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_8_5",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5762,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5763,
+      "goal_set": "Web",
+      "goal_type": "web_down_12_5",
+      "hold_period": 10,
+      "point_value": 21,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5764,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5765,
+      "goal_set": "Video",
+      "goal_type": "video_on_demand_8_5",
+      "hold_period": 10,
+      "point_value": 6,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 480100.0
+      }
+    },
+    {
+      "flow_uid": 5766,
+      "goal_set": "Web",
+      "goal_type": "web_up_12_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5767,
+      "goal_set": "Files",
+      "goal_type": "cloud_14_5",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "file_transfer_deadline_s": 14.0
+      }
+    },
+    {
+      "flow_uid": 5768,
+      "goal_set": "Files",
+      "goal_type": "cloud_14_5",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "file_transfer_deadline_s": 14.0
+      }
+    },
+    {
+      "flow_uid": 5769,
+      "goal_set": "Web",
+      "goal_type": "web_down_20_5",
+      "hold_period": 10,
+      "point_value": 13,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5770,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5771,
+      "goal_set": "Web",
+      "goal_type": "web_down_20_5",
+      "hold_period": 10,
+      "point_value": 13,
+      "requirements": {
+        "file_transfer_deadline_s": 2.0
+      }
+    },
+    {
+      "flow_uid": 5772,
+      "goal_set": "Web",
+      "goal_type": "web_up_20_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5773,
+      "goal_set": "Files",
+      "goal_type": "cloud_30_5",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5774,
+      "goal_set": "Files",
+      "goal_type": "cloud_30_5",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5775,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5776,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5777,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5778,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5779,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5780,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5781,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5782,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5783,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5784,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5785,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5786,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5787,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5788,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5789,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5790,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5791,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    },
+    {
+      "flow_uid": 5792,
+      "goal_set": "Web",
+      "goal_type": "web_up_50_5",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 0.5
+      }
+    }
+  ],
+  "timestamp": 495.0
+}
+]

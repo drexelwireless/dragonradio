@@ -1,0 +1,59 @@
+{
+    "CollabFakeCompetitor": false,
+    "IncumbentFilename": "incumbent-passive-v2",
+    "IncumbentId": 51,
+    "IncumbentType": "passive",
+    "ReportPeriod": 0.1,
+    "Schedule": [
+        {
+            "RFBandwidth": 20000000,
+            "RFCenterFrequencyOffset": 10000000,
+            "ThresholdNominal": -62,
+            "ThresholdStrict": -72,
+            "ThresholdStrictTime": 10,
+            "Timestamp": 0.0
+        },
+        {
+            "RFBandwidth": 40000000,
+            "RFCenterFrequencyOffset": 0,
+            "ThresholdNominal": -62,
+            "ThresholdStrict": -72,
+            "ThresholdStrictTime": 10,
+            "Timestamp": 195.0
+        },
+        {
+            "RFBandwidth": 20000000,
+            "RFCenterFrequencyOffset": 10000000,
+            "ThresholdNominal": -62,
+            "ThresholdStrict": -72,
+            "ThresholdStrictTime": 10,
+            "Timestamp": 375.0
+        },
+        {
+            "RFBandwidth": 40000000,
+            "RFCenterFrequencyOffset": 0,
+            "ThresholdNominal": -62,
+            "ThresholdStrict": -72,
+            "ThresholdStrictTime": 10,
+            "Timestamp": 555.0
+        },
+        {
+            "RFBandwidth": 20000000,
+            "RFCenterFrequencyOffset": 10000000,
+            "ThresholdNominal": -62,
+            "ThresholdStrict": -72,
+            "ThresholdStrictTime": 10,
+            "Timestamp": 735.0
+        },
+        {
+            "RFBandwidth": 40000000,
+            "RFCenterFrequencyOffset": 0,
+            "ThresholdNominal": -62,
+            "ThresholdStrict": -72,
+            "ThresholdStrictTime": 10,
+            "Timestamp": 915.0
+        }
+    ],
+    "SchemaType": "passive.v2.radio.conf.schema",
+    "ViolationPeriod": 1.0
+}

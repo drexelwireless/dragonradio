@@ -58,11 +58,6 @@ class Command(object):
                             default=None,
                             metavar='SEC',
                             help='set start time in seconds since the epoch')
-        parser.add_argument('--scenarios',
-                            type=str,
-                            default=None,
-                            metavar='DIR',
-                            help='specify directory for scenario files')
         parser.add_argument('--srn-logs', type=str,
                             default=None,
                             metavar='DIR',
@@ -87,10 +82,6 @@ class Command(object):
         # Determine start time
         if args.start_time:
             self.start_time = datetime.datetime.fromtimestamp(args.start_time, UTC)
-
-        # Set path to scenarios
-        if args.scenarios is not None:
-            dragonradio.tools.colosseum.scoring.scenarios_path = args.scenarios
 
         # Load logs
         self.logs = LogCollection(start_time=self.start_time)

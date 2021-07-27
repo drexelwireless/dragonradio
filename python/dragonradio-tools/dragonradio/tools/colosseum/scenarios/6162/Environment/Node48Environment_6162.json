@@ -1,0 +1,112 @@
+[
+{
+	"timestamp": 10.0,
+	"stage_number": 1,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 5000000,
+		"scenario_center_frequency": 1010000000
+	}
+	]
+},
+{
+	"timestamp": 180.0,
+	"stage_number": 2,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 25000000,
+		"scenario_center_frequency": 1000000000
+	}
+	]
+},
+{
+	"timestamp": 360.0,
+	"stage_number": 3,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 5000000,
+		"scenario_center_frequency": 1010000000
+	}
+	]
+},
+{
+	"timestamp": 540.0,
+	"stage_number": 4,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 25000000,
+		"scenario_center_frequency": 1000000000
+	}
+	]
+},
+{
+	"timestamp": 720.0,
+	"stage_number": 5,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 5000000,
+		"scenario_center_frequency": 1010000000
+	}
+	]
+},
+{
+	"timestamp": 900.0,
+	"stage_number": 6,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 25000000,
+		"scenario_center_frequency": 1000000000
+	}
+	]
+},
+{
+	"timestamp": 1080.0,
+	"stage_number": 7,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 5000000,
+		"scenario_center_frequency": 1010000000
+	}
+	]
+},
+{
+	"timestamp": 1260.0,
+	"stage_number": 8,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 25000000,
+		"scenario_center_frequency": 1000000000
+	}
+	]
+},
+{
+	"timestamp": 1440.0,
+	"stage_number": 9,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 5000000,
+		"scenario_center_frequency": 1010000000
+	}
+	]
+},
+{
+	"timestamp": 1620.0,
+	"stage_number": 10,
+	"environment": [
+	{
+		"collab_network_type": "INTERNET",
+		"scenario_rf_bandwidth": 25000000,
+		"scenario_center_frequency": 1000000000
+	}
+	]
+}
+]

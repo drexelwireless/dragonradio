@@ -1,6 +1,7 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2021 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 from functools import cached_property
+import importlib_resources
 import json
 import logging
 import os
@@ -15,9 +16,6 @@ logger = logging.getLogger(__name__)
 
 MP = 1
 """Measurement period"""
-
-scenarios_path = None
-"""Path to scenarios"""
 
 SCE_QUAL_SCENARIOS = set([99771, 99801, 99840, 99880])
 """SCE qualification scenarios"""
@@ -47,11 +45,8 @@ class Scenario(DataFrameCache):
                             str(self.rf_scenario))
 
     @property
-    def scenario_path(self):
-        if scenarios_path is None or not os.path.isdir(scenarios_path):
-            raise ValueError("Path to scenarios not specified")
-
-        return os.path.join(scenarios_path, str(self.rf_scenario))
+    def scenarios_path(self):
+        return importlib_resources.files('dragonradio.tools.colosseum.scenarios').joinpath(str(self.rf_scenario))
 
     #@cached_dataframe_property('mandates')
     @cached_property
@@ -59,10 +54,10 @@ class Scenario(DataFrameCache):
         """DataFrame holding mandates"""
         items = []
 
-        path = os.path.join(self.scenario_path, 'Mandated_Outcomes')
+        path = self.scenarios_path.joinpath('Mandated_Outcomes')
 
-        for file in os.listdir(path):
-            m = re.match(r'^Node(\d+)MandatedOutcomes_{}.json$'.format(self.reservation.rf_scenario), file)
+        for file in path.iterdir():
+            m = re.match(r'^Node(\d+)MandatedOutcomes_{}.json$'.format(self.reservation.rf_scenario), file.name)
             if m:
                 traffic_id = int(m.group(1))
 
@@ -163,10 +158,10 @@ class Scenario(DataFrameCache):
         """Scenario environment"""
         items = []
 
-        path = os.path.join(self.scenario_path, 'Environment')
+        path = self.scenarios_path.joinpath('Environment')
 
-        for file in os.listdir(path):
-            m = re.match(r'^Node(\d+)Environment_{}.json$'.format(self.reservation.rf_scenario), file)
+        for file in path.iterdir():
+            m = re.match(r'^Node(\d+)Environment_{}.json$'.format(self.reservation.rf_scenario), file.name)
             if m:
                 traffic_id = int(m.group(1))
 

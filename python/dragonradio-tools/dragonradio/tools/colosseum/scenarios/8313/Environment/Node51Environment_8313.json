@@ -1,0 +1,23 @@
+[
+  {
+    "environment": [
+      {
+        "collab_network_type": "INTERNET",
+        "incumbent_protection": [
+          {
+            "center_frequency": 1000000000,
+            "rf_bandwidth": 10000000
+          }
+        ],
+        "scenario_center_frequency": 1000000000,
+        "scenario_rf_bandwidth": 10000000,
+        "scoring_percent_threshold": 0,
+        "scoring_point_threshold": 0,
+        "stage_number": 1,
+        "timestamp": 15.0
+      }
+    ],
+    "stage_number": 1,
+    "timestamp": 0
+  }
+]

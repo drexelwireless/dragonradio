@@ -1,0 +1,2023 @@
+[
+  {
+    "timestamp": 0.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5052
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5053
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5054
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5055
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5056
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5057
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5058
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5059
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5060
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5061
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5062
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5063
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5064
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5065
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5066
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5067
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5068
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5069
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5070
+      }
+    ]
+  }, 
+  {
+    "timestamp": 135.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5179
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5180
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5181
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5182
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5183
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5184
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5185
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5186
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5187
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5188
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5189
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5190
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5191
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5192
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5193
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5194
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5195
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5196
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5197
+      }
+    ]
+  }, 
+  {
+    "timestamp": 255.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5287
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5288
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5289
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5290
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5291
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5292
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5293
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5294
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5295
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5296
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5297
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5298
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5299
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5300
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5301
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5302
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5303
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5304
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5305
+      }
+    ]
+  }, 
+  {
+    "timestamp": 375.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5354
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5355
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5356
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5357
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5358
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5359
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5360
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5361
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5362
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5363
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5364
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5365
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5366
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5367
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5368
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5369
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5370
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5371
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5372
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5373
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5374
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5375
+      }
+    ]
+  }, 
+  {
+    "timestamp": 495.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 1536314600.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5433
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5434
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5435
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 1536314600.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5436
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5437
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5438
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 1536314600.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5439
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5440
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5441
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5442
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5443
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5444
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5445
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 16.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5446
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5447
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5448
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5449
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5450
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5451
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 16.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5452
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5453
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5454
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5455
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5456
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5457
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5458
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5459
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5460
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5461
+      }
+    ]
+  }, 
+  {
+    "timestamp": 615.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5614
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5615
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5616
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5617
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5618
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5619
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5620
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5621
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5622
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5623
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5624
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5625
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5626
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5627
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5628
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5629
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5630
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5631
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5632
+      }
+    ]
+  }, 
+  {
+    "timestamp": 735.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5725
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5726
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5727
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5728
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5729
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5730
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5731
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5732
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5733
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5734
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5735
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5736
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5737
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5738
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5739
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5740
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5741
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5742
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5743
+      }
+    ]
+  }, 
+  {
+    "timestamp": 855.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5817
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5818
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5819
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5820
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5821
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5822
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5823
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5824
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5825
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5826
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5827
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5828
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5829
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5830
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5831
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5832
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5833
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5834
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5835
+      }
+    ]
+  }, 
+  {
+    "timestamp": 975.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 1536314600.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5910
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 1536314600.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5911
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5912
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5913
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5914
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5915
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5916
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5917
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5918
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5919
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 14.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5920
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 14.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5921
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5922
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5923
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5924
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5925
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5926
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5927
+      }
+    ]
+  }, 
+  {
+    "timestamp": 1095.0, 
+    "scenario_goals": [
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 1536314600.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5985
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5986
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5987
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5988
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 1536314600.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5989
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5990
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5991
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 30.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5992
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5993
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5994
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5995
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5996
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 16.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5997
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5998
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 5999
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6000
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6001
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6002
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 16.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6003
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6004
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6005
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6006
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6007
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6008
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 16.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6009
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 20.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6010
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6011
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6012
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6013
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6014
+      }, 
+      {
+        "goal_set": "Video", 
+        "requirements": {
+          "min_throughput_bps": 480060000.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6015
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6016
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 2.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6017
+      }, 
+      {
+        "goal_set": "Web", 
+        "requirements": {
+          "max_latency_s": 0.5
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6018
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 14.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6019
+      }, 
+      {
+        "goal_set": "Files", 
+        "requirements": {
+          "max_latency_s": 14.0
+        }, 
+        "goal_type": "Traffic", 
+        "hold_period": 20, 
+        "flow_uid": 6020
+      }
+    ]
+  }
+]

@@ -108,6 +108,7 @@ setup(
     setup_requires=['pybind11>=2.5.0'],
     cmdclass={'build_ext': BuildExt},
     install_requires=['h5py==3.2.1'
+                     ,'importlib_resources'
                      ,'matplotlib==3.4.2'
                      ,'numpy==1.20.3'
                      ,'pandas==1.2.4'

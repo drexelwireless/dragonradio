@@ -1,0 +1,54 @@
+[
+  {
+    "environment": [
+      {
+        "collab_network_type": "INTERNET",
+        "scenario_center_frequency": 1000000000,
+        "scenario_rf_bandwidth": 10000000,
+        "scoring_percent_threshold": 12,
+        "scoring_point_threshold": 10
+      }
+    ],
+    "stage_number": 1,
+    "timestamp": 0
+  },
+  {
+    "environment": [
+      {
+        "collab_network_type": "INTERNET",
+        "scenario_center_frequency": 1000000000,
+        "scenario_rf_bandwidth": 10000000,
+        "scoring_percent_threshold": 25,
+        "scoring_point_threshold": 22
+      }
+    ],
+    "stage_number": 2,
+    "timestamp": 195
+  },
+  {
+    "environment": [
+      {
+        "collab_network_type": "INTERNET",
+        "scenario_center_frequency": 1000000000,
+        "scenario_rf_bandwidth": 10000000,
+        "scoring_percent_threshold": 37,
+        "scoring_point_threshold": 33
+      }
+    ],
+    "stage_number": 3,
+    "timestamp": 375
+  },
+  {
+    "environment": [
+      {
+        "collab_network_type": "INTERNET",
+        "scenario_center_frequency": 1000000000,
+        "scenario_rf_bandwidth": 10000000,
+        "scoring_percent_threshold": 50,
+        "scoring_point_threshold": 45
+      }
+    ],
+    "stage_number": 4,
+    "timestamp": 555
+  }
+]
