@@ -720,8 +720,10 @@ void SmartController::broadcastHello(void)
     netq_->push_hi(std::move(pkt));
 }
 
-void SmartController::resetMCSTransitionProbabilities(void)
+void SmartController::environmentDiscontinuity(void)
 {
+    logAMC(LOGDEBUG, "Environment discontinuity");
+
     std::lock_guard<std::mutex> lock(send_mutex_);
 
     for (auto it = send_.begin(); it != send_.end(); ++it) {

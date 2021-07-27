@@ -751,10 +751,12 @@ class Radio(dragonradio.tasks.TaskManager):
         else:
             self.setTXChannel(self.tx_channel_idx)
 
-        # When the environment changes, we reset MCS transition probabilities
-        # because we need to re-explore to find the best MCS.
+    def environmentDiscontinuity(self):
+        # When the environment changes, we need to inform the controller so that
+        # it can reset MCS transition probabilities and adjust its MCS strategy
+        # appropriately.
         if isinstance(self.controller, SmartController):
-            self.controller.resetMCSTransitionProbabilities()
+            self.controller.environmentDiscontinuity()
 
     def genChannelizerTaps(self, channel):
         """Generate channelizer filter taps for given channel"""

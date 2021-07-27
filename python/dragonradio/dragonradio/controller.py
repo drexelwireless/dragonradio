@@ -1379,6 +1379,8 @@ class Controller(CILServer):
     @handle('Request.update_environment')
     def _handleUpdateEnvironment(self, req):
         """Handle an environment update"""
+        self.radio.environmentDiscontinuity()
+
         logger.info('Update environment: timestamp=%f\n%s',
             req.timestamp,
             req.update_environment.environment)

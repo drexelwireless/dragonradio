@@ -175,9 +175,9 @@ void exportControllers(py::module &m)
             "Receive windows")
         .def("broadcastHello",
             &SmartController::broadcastHello)
-        .def("resetMCSTransitionProbabilities",
-            &SmartController::resetMCSTransitionProbabilities,
-            "Reset all AMC transition probabilties to 1.0")
+        .def("environmentDiscontinuity",
+            &SmartController::environmentDiscontinuity,
+            "Inform the controller that an environmental discontinuity has ocurred")
         ;
 
     // Export class SendWindowsProxy to Python
