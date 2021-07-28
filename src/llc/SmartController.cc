@@ -1688,6 +1688,7 @@ void SendWindow::setMCS(size_t new_mcsidx)
     auto       old_long_per = long_per;
     char       short_per_s[BUFSIZE];
     char       long_per_s[BUFSIZE];
+    char       short_evm_s[BUFSIZE];
     char       long_evm_s[BUFSIZE];
 
 #if DEBUG
@@ -1722,9 +1723,10 @@ void SendWindow::setMCS(size_t new_mcsidx)
     // Log change
     snprintf(short_per_s, sizeof(short_per_s), "%0.2f", old_short_per.value_or(0));
     snprintf(long_per_s, sizeof(long_per_s), "%0.2f", old_long_per.value_or(0));
+    snprintf(short_evm_s, sizeof(short_evm_s), "%0.1f", short_evm.value_or(0));
     snprintf(long_evm_s, sizeof(long_evm_s), "%0.1f", long_evm.value_or(0));
 
-    logAMC(LOGDEBUG, "Moved %s modulation scheme: node=%u; mcsidx=%u (from %u); short_per=%s; long_per=%s; prob=%.02f; long_evm=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+    logAMC(LOGDEBUG, "Moved %s modulation scheme: node=%u; mcsidx=%u (from %u); short_per=%s; long_per=%s; prob=%.02f; short_evm=%s; long_evm=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
            direction,
            node.id,
            (unsigned) mcsidx,
@@ -1732,6 +1734,7 @@ void SendWindow::setMCS(size_t new_mcsidx)
            old_short_per ? short_per_s : "none",
            old_long_per ? long_per_s : "none",
            mcsidx_prob[mcsidx],
+           short_evm ? short_evm_s : "none",
            long_evm ? long_evm_s : "none",
            (unsigned) unack,
            (unsigned) per_end,
