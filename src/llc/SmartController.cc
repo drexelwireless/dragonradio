@@ -408,7 +408,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     }
 
 #if DEBUG
-    if (hdr.flags.ack)
+    if (pkt->hdr.flags.ack)
         dprintf("recv: node=%u; seq=%u; ack=%u",
             (unsigned) prevhop,
             (unsigned) pkt->hdr.seq,
