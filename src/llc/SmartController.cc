@@ -1649,6 +1649,8 @@ bool SendWindow::mayMoveUpMCS(void) const
 
 void SendWindow::setMCS(size_t new_mcsidx)
 {
+    const size_t BUFSIZE = 10;
+
     assert(new_mcsidx >= 0);
     assert(new_mcsidx < mcs_table.size());
 
@@ -1663,17 +1665,26 @@ void SendWindow::setMCS(size_t new_mcsidx)
 
     // Log before change
     const char *direction = (new_mcsidx > mcsidx) ? "up" : "down";
+    auto       old_mcsidx = mcsidx;
+    auto       old_short_per = short_per;
+    auto       old_long_per = long_per;
+    char       short_per_s[BUFSIZE];
+    char       long_per_s[BUFSIZE];
+    char       long_evm_s[BUFSIZE];
 
-    logAMC(LOGINFO, "Moving %s modulation scheme",
-           direction);
+#if DEBUG
+    snprintf(short_per_s, sizeof(short_per_s), "%0.2f", short_per.value_or(0));
+    snprintf(long_per_s, sizeof(long_per_s), "%0.2f", long_per.value_or(0));
 
-    logAMC(LOGDEBUG, "Moving %s modulation scheme: node=%u; mcsidx=%u; long per=%f; swin=%lu; lwin=%lu",
-           direction,
-           node.id,
-           (unsigned) mcsidx,
-           long_per ? *long_per : .0,
-           short_per.getWindowSize(),
-           long_per.getWindowSize());
+    dprintf("Moving %s modulation scheme: node=%u; mcsidx=%u; short_per=%s; long_per=%s; swin=%lu; lwin=%lu",
+            direction,
+            node.id,
+            (unsigned) mcsidx,
+            short_per ? short_per_s : "none",
+            long_per ? long_per_s : "none",
+            short_per.getWindowSize(),
+            long_per.getWindowSize());
+#endif /* DEBUG */
 
     // Set new MCS index
     mcsidx = new_mcsidx;
@@ -1690,12 +1701,20 @@ void SendWindow::setMCS(size_t new_mcsidx)
 
     controller.netq_->updateMCS(node.id, mcs);
 
-    // Log after change
-    logAMC(LOGDEBUG, "Moved %s modulation scheme: node=%u; mcsidx=%u; mcs=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
+    // Log change
+    snprintf(short_per_s, sizeof(short_per_s), "%0.2f", old_short_per.value_or(0));
+    snprintf(long_per_s, sizeof(long_per_s), "%0.2f", old_long_per.value_or(0));
+    snprintf(long_evm_s, sizeof(long_evm_s), "%0.1f", long_evm.value_or(0));
+
+    logAMC(LOGDEBUG, "Moved %s modulation scheme: node=%u; mcsidx=%u (from %u); short_per=%s; long_per=%s; prob=%.02f; long_evm=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
            direction,
            node.id,
            (unsigned) mcsidx,
-           mcs_table[mcsidx].mcs->description().c_str(),
+           (unsigned) old_mcsidx,
+           old_short_per ? short_per_s : "none",
+           old_long_per ? long_per_s : "none",
+           mcsidx_prob[mcsidx],
+           long_evm ? long_evm_s : "none",
            (unsigned) unack,
            (unsigned) per_end,
            short_per.getWindowSize(),
