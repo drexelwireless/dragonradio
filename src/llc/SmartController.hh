@@ -680,6 +680,18 @@ public:
         sack_delay_ = t;
     }
 
+    /** @brief Get maximum number of SACKs in a packet. */
+    std::optional<size_t> getMaxSACKs(void) const
+    {
+        return max_sacks_;
+    }
+
+    /** @brief Set maximum number of SACKs in a packet. */
+    void setMaxSACKs(std::optional<size_t> max_sacks)
+    {
+        max_sacks_ = max_sacks;
+    }
+
     /** @brief Return explicit NAK window size. */
     bool getExplicitNAKWindow(void)
     {
@@ -935,6 +947,9 @@ protected:
      * attached.
      */
     double sack_delay_;
+
+    /** @brief Maximum number of SACKs in a packet */
+    std::optional<size_t> max_sacks_;
 
     /** @brief Explicit NAK window */
     size_t explicit_nak_win_;

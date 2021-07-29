@@ -226,6 +226,8 @@ class Config:
         """Safety factor for retransmission timer estimator"""
         self.arq_sack_delay = 50e-3
         """Maximum time to wait for a regular packet to have a SACK attached (sec)"""
+        self.arq_max_sacks = None
+        """Maximum number of SACKs in a packet"""
         self.arq_explicit_nak_win = 10
         """Maximum number of NAKs to send during NAK window"""
         self.arq_explicit_nak_win_duration = 0.1
