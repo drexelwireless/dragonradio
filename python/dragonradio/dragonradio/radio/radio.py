@@ -467,6 +467,8 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.short_per_window = config.amc_short_per_window
             controller.long_per_window = config.amc_long_per_window
             controller.long_stats_window = config.amc_long_stats_window
+            if config.amc_mcs_fast_adjustment_period is not None:
+                controller.mcs_fast_adjustment_period = config.amc_mcs_fast_adjustment_period
             if config.amc_mcsidx_broadcast is not None:
                 controller.mcsidx_broadcast = config.amc_mcsidx_broadcast
             if config.amc_mcsidx_ack is not None:
@@ -751,10 +753,12 @@ class Radio(dragonradio.tasks.TaskManager):
         else:
             self.setTXChannel(self.tx_channel_idx)
 
-        # When the environment changes, we reset MCS transition probabilities
-        # because we need to re-explore to find the best MCS.
+    def environmentDiscontinuity(self):
+        # When the environment changes, we need to inform the controller so that
+        # it can reset MCS transition probabilities and adjust its MCS strategy
+        # appropriately.
         if isinstance(self.controller, SmartController):
-            self.controller.resetMCSTransitionProbabilities()
+            self.controller.environmentDiscontinuity()
 
     def genChannelizerTaps(self, channel):
         """Generate channelizer filter taps for given channel"""

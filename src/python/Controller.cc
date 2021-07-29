@@ -64,6 +64,10 @@ void exportControllers(py::module &m)
             &SmartController::getLongStatsWindow,
             &SmartController::setLongStatsWindow,
             "Time window used to calculate long-term statistics, e.g., EVM and RSSI")
+        .def_property("mcs_fast_adjustment_period",
+            &SmartController::getMCSFastAdjustmentPeriod,
+            &SmartController::setMCSFastAdjustmentPeriod,
+            "MCS fast adjustment period after environmnet discontinuity")
         .def_property("mcsidx_broadcast",
             &SmartController::getBroadcastMCSIndex,
             &SmartController::setBroadcastMCSIndex,
@@ -175,9 +179,9 @@ void exportControllers(py::module &m)
             "Receive windows")
         .def("broadcastHello",
             &SmartController::broadcastHello)
-        .def("resetMCSTransitionProbabilities",
-            &SmartController::resetMCSTransitionProbabilities,
-            "Reset all AMC transition probabilties to 1.0")
+        .def("environmentDiscontinuity",
+            &SmartController::environmentDiscontinuity,
+            "Inform the controller that an environmental discontinuity has ocurred")
         ;
 
     // Export class SendWindowsProxy to Python

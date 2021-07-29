@@ -22,6 +22,7 @@ SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
   : Controller(radionet, mtu)
   , phy_(phy)
   , slot_size_(slot_size)
+  , mcs_fast_adjustment_period_(1.0)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , evm_thresholds_(evm_thresholds)
@@ -240,6 +241,10 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         recvw.short_rssi.update(pkt->timestamp, pkt->rssi);
         recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
 
+        // In the fast adjustment period, provide feedback as quickly as possible
+        if (recvw.short_evm && recvw.short_rssi && isMCSFastAdjustmentPeriod())
+            startSACKTimer(recvw);
+
         if (pkt->hdr.flags.has_data) {
             // Activate the receive window if it is not yet active. If this is a
             // SYN packet or if the sequence number is outside the receive
@@ -391,7 +396,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
                 }
 
                 // Update MCS based on new PER
-                sendw.updateMCS();
+                sendw.updateMCS(isMCSFastAdjustmentPeriod());
 
                 // Advance the send window. It is possible that packets immediately
                 // after the packet that the sender just ACK'ed have timed out and
@@ -555,7 +560,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
             (unsigned) entry.pkt->mcsidx,
             sendw.short_per.value_or(0.0));
 
-        sendw.updateMCS();
+        sendw.updateMCS(isMCSFastAdjustmentPeriod());
     }
 
     // Actually retransmit (or drop) the packet
@@ -720,24 +725,54 @@ void SmartController::broadcastHello(void)
     netq_->push_hi(std::move(pkt));
 }
 
-void SmartController::resetMCSTransitionProbabilities(void)
+void SmartController::environmentDiscontinuity(void)
 {
-    std::lock_guard<std::mutex> lock(send_mutex_);
+    logAMC(LOGDEBUG, "Environment discontinuity");
 
-    for (auto it = send_.begin(); it != send_.end(); ++it) {
-        SendWindow                  &sendw = it->second;
-        std::lock_guard<std::mutex> lock(sendw.mutex);
+    env_timestamp_ = MonoClock::now();
 
-        // Set all MCS transition probabilities to 1.0
-        std::vector<double>&v = sendw.mcsidx_prob;
+    {
+        std::lock_guard<std::mutex> lock(send_mutex_);
 
-        std::fill(v.begin(), v.end(), 1.0);
+        for (auto it = send_.begin(); it != send_.end(); ++it) {
+            SendWindow                  &sendw = it->second;
+            std::lock_guard<std::mutex> lock(sendw.mutex);
 
-        // Set MCS index to initial default
-        sendw.setMCS(mcsidx_init_);
+            // Set all MCS transition probabilities to 1.0
+            std::vector<double>&v = sendw.mcsidx_prob;
 
-        // Don't use previously-sent packets to calculate PER.
-        sendw.per_cutoff = sendw.seq;
+            std::fill(v.begin(), v.end(), 1.0);
+
+            // Set MCS index to initial default
+            sendw.setMCS(mcsidx_init_);
+
+            // Don't use previously-sent packets to calculate PER.
+            sendw.per_cutoff = sendw.seq;
+
+            // Reset PER estimates
+            sendw.resetPEREstimates();
+
+            // Reset EVM and RSSI estimates
+            sendw.short_evm.reset();
+            sendw.long_evm.reset();
+            sendw.short_rssi.reset();
+            sendw.long_rssi.reset();
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(recv_mutex_);
+
+        for (auto it = recv_.begin(); it != recv_.end(); ++it) {
+            RecvWindow                  &recvw = it->second;
+            std::lock_guard<std::mutex> lock(recvw.mutex);
+
+            // Reset EVM and RSSI estimates
+            recvw.short_evm.reset();
+            recvw.long_evm.reset();
+            recvw.short_rssi.reset();
+            recvw.long_rssi.reset();
+        }
     }
 }
 
@@ -1556,7 +1591,7 @@ void SendWindow::txFailure(void)
     long_per.update(1.0);
 }
 
-void SendWindow::updateMCS(void)
+void SendWindow::updateMCS(bool fast_adjust)
 {
     bool changed = false;
 
@@ -1615,6 +1650,18 @@ void SendWindow::updateMCS(void)
             moveDownMCS(n);
         else
             resetPEREstimates();
+    } else if (fast_adjust && short_evm) {
+        mcsidx_t new_mcsidx;
+        auto     current_evm = long_evm.value_or(*short_evm);
+
+        for (new_mcsidx = controller.mcsidx_min_; new_mcsidx < controller.mcsidx_max_; ++new_mcsidx) {
+            SmartController::evm_thresh_t &evm_threshold = controller.evm_thresholds_[new_mcsidx + 1];
+
+            if (current_evm >= evm_threshold)
+                break;
+        }
+
+        setMCS(new_mcsidx);
     } else if (long_per && *long_per < controller.mcsidx_up_per_threshold_) {
         double old_prob = mcsidx_prob[mcsidx];
 
