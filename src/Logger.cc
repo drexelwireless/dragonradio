@@ -716,16 +716,33 @@ void Logger::logARQEvent_(const MonoClock::time_point& t,
     arq_event_->write(&entry, 1);
 }
 
-void Logger::logARQSACKEvent_(const MonoClock::time_point& t,
+void Logger::logARQSACKEvent_(Packet &pkt,
                               ARQEventType type,
                               NodeId node,
-                              Seq unack,
-                              const std::vector<Seq::uint_type> &sacks)
+                              Seq unack)
 {
+    // Extract SACKs
+    std::vector<Seq::uint_type> sacks;
+
+    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kSelectiveAck:
+            {
+                sacks.push_back(it->ack.begin);
+                sacks.push_back(it->ack.end);
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
+
+    // Log event
     ARQEventEntry entry;
 
-    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
-    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(pkt.timestamp) - t_start_).get_real_secs();
+    entry.mono_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
     entry.type = type;
     entry.node = node;
     entry.seq = unack;
