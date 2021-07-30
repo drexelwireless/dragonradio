@@ -86,7 +86,7 @@ USRP::~USRP()
 // See the following for X310 LO offset advice:
 //   https://sc2colosseum.freshdesk.com/support/solutions/articles/22000220403-optimizing-srn-usrp-performance
 //
-// See the following for instructions of waitign for LO to settle:
+// See the following for instructions of waiting for LO to settle:
 //   https://files.ettus.com/manual/page_general.html
 
 void USRP::setTXFrequency(double freq)
@@ -141,7 +141,7 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
         tx_md.end_of_burst = false;
     }
 
-    // We walk through the supplied queue of buffers and trasmit each in chunks
+    // We walk through the supplied queue of buffers and transmit each in chunks
     // whose size is no more than tx_max_samps_ bytes, which is the maximum size
     // of a USRP TX packet. This allows us to avoid being "late" even when we
     // have a very large buffer to send.
