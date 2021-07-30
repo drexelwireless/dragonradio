@@ -335,7 +335,7 @@ class FlowPlot(AnnotatedPlot):
         addCheckboxWidget(self.fig, self.lat_lines, ax=self.latency_ax, match_legend=True)
 
         # Set title
-        self.set_window_title('Reservation {}, Flow {}'.format(reservation.reservation_id, flow_uid))
+        self.set_window_title('Reservation {}, Flow {} ({} -> {})'.format(reservation.reservation_id, flow_uid, self.srn_src, self.srn_dest))
 
         # Connect annotations
         self.connect_hover()
