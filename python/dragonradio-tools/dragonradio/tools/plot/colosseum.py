@@ -301,7 +301,7 @@ class FlowPlot(AnnotatedPlot):
         self.df = df
         """Traffic DataFrame"""
 
-        self.srn_dest = df.srn_src.iloc[0]
+        self.srn_src = df.srn_src.iloc[0]
         """Flow SRN source"""
 
         self.srn_dest = df.srn_dest.iloc[0]
