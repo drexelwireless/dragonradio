@@ -102,7 +102,7 @@ void USRP::setTXFrequency(double freq)
 
     tx_freq_ = usrp_->get_tx_freq();
 
-    logUSRP(LOGDEBUG, "TX frequency set to %f", freq);
+    logUSRP(LOGDEBUG, "TX frequency set to %g", freq);
 }
 
 void USRP::setRXFrequency(double freq)
@@ -118,7 +118,7 @@ void USRP::setRXFrequency(double freq)
 
     rx_freq_ = usrp_->get_rx_freq();
 
-    logUSRP(LOGDEBUG, "RX frequency set to %f", freq);
+    logUSRP(LOGDEBUG, "RX frequency set to %g", freq);
 }
 
 void USRP::burstTX(std::optional<MonoClock::time_point> when_,
