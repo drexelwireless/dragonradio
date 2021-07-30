@@ -241,6 +241,10 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         recvw.short_rssi.update(pkt->timestamp, pkt->rssi);
         recvw.long_rssi.update(pkt->timestamp, pkt->rssi);
 
+        // In the fast adjustment period, provide feedback as quickly as possible
+        if (recvw.short_evm && recvw.short_rssi && isMCSFastAdjustmentPeriod())
+            startSACKTimer(recvw);
+
         if (pkt->hdr.flags.has_data) {
             // Activate the receive window if it is not yet active. If this is a
             // SYN packet or if the sequence number is outside the receive
