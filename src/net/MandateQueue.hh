@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef MANDATEQUEUE_HH_
@@ -6,6 +6,7 @@
 
 #include <deque>
 #include <optional>
+#include <set>
 #include <unordered_map>
 
 #include "Logger.hh"
@@ -932,6 +933,9 @@ protected:
     /** @brief Condition variable protecting the queue. */
     std::condition_variable cond_;
 
+    /** @brief Flows on which we have seen traffic */
+    std::set<NodeId> seen_nodes_;
+
     /** @brief Mandates */
     MandateMap mandates_;
 
@@ -984,10 +988,16 @@ protected:
     SubQueue &queue_for(const T &pkt)
     {
         if (pkt->flow_uid) {
-            auto it = flow_qs_.find(*pkt->flow_uid);
+            // The first packet sent to a node has high priority
+            if (seen_nodes_.find(pkt->hdr.curhop) == seen_nodes_.end()) {
+                seen_nodes_.insert(pkt->hdr.curhop);
+                return hiq_;
+            } else {
+                auto it = flow_qs_.find(*pkt->flow_uid);
 
-            if (it != flow_qs_.end())
-                return it->second;
+                if (it != flow_qs_.end())
+                    return it->second;
+            }
         }
 
         return defaultq_;
