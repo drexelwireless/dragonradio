@@ -142,6 +142,16 @@ void Packet::appendHello(const ControlMsg::Hello &hello)
     appendControl(msg);
 }
 
+void Packet::appendPing(const ControlMsg::Ping &ping)
+{
+    ControlMsg msg;
+
+    msg.type = ControlMsg::Type::kPing;
+    msg.ping = ping;
+
+    appendControl(msg);
+}
+
 void Packet::appendTimestampSent(TimestampSeq tseq,
                                  const MonoClock::time_point &t_sent)
 {

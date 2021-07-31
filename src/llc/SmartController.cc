@@ -295,7 +295,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // Process control info
     if (pkt->hdr.flags.has_control) {
-        handleCtrlHello(*pkt, node);
+        handleCtrlHelloAndPing(*pkt, node);
         handleCtrlTimestamp(*pkt, node);
     }
 
@@ -742,8 +742,61 @@ void SmartController::broadcastHello(void)
     netq_->push_hi(std::move(pkt));
 }
 
+void SmartController::sendPing(NodeId dest)
+{
+    auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
+
+    pkt->timestamp = MonoClock::now();
+    pkt->hdr.curhop = radionet_->getThisNodeId();
+    pkt->hdr.nexthop = dest;
+    pkt->hdr.flags = {0};
+    pkt->hdr.flags.has_seq = 1;
+    pkt->hdr.seq = {0};
+    pkt->ehdr().data_len = 0;
+    pkt->ehdr().src = radionet_->getThisNodeId();
+    pkt->ehdr().dest = dest;
+
+    // Append ping message
+    ControlMsg::Ping msg;
+
+    pkt->appendPing(msg);
+
+    // Mark this packet as seed a selective ACK
+    pkt->internal_flags.need_selective_ack = 1;
+
+    logAMC(LOGDEBUG, "Ping send: node=%u",
+        (unsigned) dest);
+
+    netq_->push_hi(std::move(pkt));
+}
+
+void SmartController::sendPong(NodeId dest)
+{
+    auto pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader));
+
+    pkt->timestamp = MonoClock::now();
+    pkt->hdr.curhop = radionet_->getThisNodeId();
+    pkt->hdr.nexthop = dest;
+    pkt->hdr.flags = {0};
+    pkt->hdr.flags.has_seq = 1;
+    pkt->hdr.seq = {0};
+    pkt->ehdr().data_len = 0;
+    pkt->ehdr().src = radionet_->getThisNodeId();
+    pkt->ehdr().dest = dest;
+
+    // Mark this packet as seed a selective ACK
+    pkt->internal_flags.need_selective_ack = 1;
+
+    logAMC(LOGDEBUG, "Pong send: node=%u",
+        (unsigned) dest);
+
+    netq_->push_hi(std::move(pkt));
+}
+
 void SmartController::environmentDiscontinuity(void)
 {
+    std::set<NodeId> nodes;
+
     logAMC(LOGDEBUG, "Environment discontinuity");
 
     env_timestamp_ = MonoClock::now();
@@ -754,6 +807,8 @@ void SmartController::environmentDiscontinuity(void)
         for (auto it = send_.begin(); it != send_.end(); ++it) {
             SendWindow                  &sendw = it->second;
             std::lock_guard<std::mutex> lock(sendw.mutex);
+
+            nodes.insert(sendw.node.id);
 
             // Set all MCS transition probabilities to 1.0
             std::vector<double>&v = sendw.mcsidx_prob;
@@ -784,6 +839,8 @@ void SmartController::environmentDiscontinuity(void)
             RecvWindow                  &recvw = it->second;
             std::lock_guard<std::mutex> lock(recvw.mutex);
 
+            nodes.insert(recvw.node.id);
+
             // Reset EVM and RSSI estimates
             recvw.short_evm.reset();
             recvw.long_evm.reset();
@@ -791,6 +848,10 @@ void SmartController::environmentDiscontinuity(void)
             recvw.long_rssi.reset();
         }
     }
+
+    // Send a ping packet to every node we're communicating with
+    for (auto &&it : nodes)
+        sendPing(it);
 }
 
 void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
@@ -973,7 +1034,7 @@ void SmartController::startSACKTimer(RecvWindow &recvw)
     }
 }
 
-void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
+void SmartController::handleCtrlHelloAndPing(RadioPacket &pkt, Node &node)
 {
     for(auto it = pkt.begin(); it != pkt.end(); ++it) {
         switch (it->type) {
@@ -987,6 +1048,15 @@ void SmartController::handleCtrlHello(RadioPacket &pkt, Node &node)
                 logARQ(LOGDEBUG, "Discovered neighbor: node=%u; gateway=%s",
                     (unsigned) pkt.hdr.curhop,
                     node.is_gateway ? "true" : "false");
+            }
+            break;
+
+            case ControlMsg::Type::kPing:
+            {
+                logAMC(LOGDEBUG, "Ping recv: node=%u",
+                    (unsigned) pkt.hdr.curhop);
+
+                sendPong(pkt.hdr.curhop);
             }
             break;
 

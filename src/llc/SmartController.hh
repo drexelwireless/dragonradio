@@ -837,6 +837,12 @@ public:
     /** @brief Broadcast a HELLO packet. */
     void broadcastHello(void);
 
+    /** @brief Send a ping packet. */
+    void sendPing(NodeId dest);
+
+    /** @brief Send a pong packet. */
+    void sendPong(NodeId dest);
+
     /** @brief Broadcast gain */
     Gain broadcast_gain;
 
@@ -1024,8 +1030,8 @@ protected:
     /** @brief Start the selective ACK timer if it is not set. */
     void startSACKTimer(RecvWindow &recvw);
 
-    /** @brief Handle HELLO control messages. */
-    void handleCtrlHello(RadioPacket &pkt, Node &node);
+    /** @brief Handle HELLO and ping control messages. */
+    void handleCtrlHelloAndPing(RadioPacket &pkt, Node &node);
 
     /** @brief Handle timestamp control messages. */
     void handleCtrlTimestamp(RadioPacket &pkt, Node &node);
