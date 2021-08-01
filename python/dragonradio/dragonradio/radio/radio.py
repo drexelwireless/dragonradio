@@ -224,14 +224,16 @@ class Radio(dragonradio.tasks.TaskManager):
 
             for cat in EventCategory.__members__.keys():
                 setLogLevel(cat, logging.DEBUG)
-                setPrintLogLevel(cat, config.loglevel)
-
-            if config.verbose_packet_trace:
-                setPrintLogLevel('PHY', logging.DEBUG-1)
-                setPrintLogLevel('NET', logging.DEBUG-1)
-                setPrintLogLevel('TUNTAP', logging.DEBUG-1)
 
             Logger.singleton = self.logger
+
+        for cat in EventCategory.__members__.keys():
+            setPrintLogLevel(cat, config.loglevel)
+
+        if config.verbose_packet_trace:
+            setPrintLogLevel('PHY', logging.DEBUG-1)
+            setPrintLogLevel('NET', logging.DEBUG-1)
+            setPrintLogLevel('TUNTAP', logging.DEBUG-1)
 
         PHY.log_invalid_headers = config.log_invalid_headers
 
