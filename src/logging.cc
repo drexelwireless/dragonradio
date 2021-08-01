@@ -72,7 +72,7 @@ void vlogEvent(const MonoClock::time_point& t,
                const char *fmt,
                va_list ap)
 {
-    if (logger) {
+    if (lvl >= loglevels[cat] || lvl >= printlevels[cat]) {
         std::unique_ptr<char[]> buf(new char[MAXLEN]);
 
         vsnprintf(&buf[0], MAXLEN, fmt, ap);
@@ -82,6 +82,7 @@ void vlogEvent(const MonoClock::time_point& t,
             putc('\n', stderr);
         }
 
-        logger->logEvent(t, std::move(buf));
+        if (logger && lvl >= loglevels[cat])
+            logger->logEvent(t, std::move(buf));
     }
 }

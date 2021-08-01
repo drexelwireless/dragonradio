@@ -77,13 +77,11 @@ inline void logEvent(EventCategory cat,
                      loglevel lvl,
                      const char *fmt, ...)
 {
-    if (lvl >= loglevels[cat]) {
-        va_list ap;
+    va_list ap;
 
-        va_start(ap, fmt);
-        vlogEvent(MonoClock::now(), cat, lvl, fmt, ap);
-        va_end(ap);
-    }
+    va_start(ap, fmt);
+    vlogEvent(MonoClock::now(), cat, lvl, fmt, ap);
+    va_end(ap);
 }
 
 /** @brief Log an event at specific time */
@@ -101,13 +99,11 @@ inline void logEventAt(const MonoClock::time_point& t,
                        loglevel lvl,
                        const char *fmt, ...)
 {
-    if (lvl >= loglevels[cat]) {
-        va_list ap;
+    va_list ap;
 
-        va_start(ap, fmt);
-        vlogEvent(t, cat, lvl, fmt, ap);
-        va_end(ap);
-    }
+    va_start(ap, fmt);
+    vlogEvent(t, cat, lvl, fmt, ap);
+    va_end(ap);
 }
 
 #define logSystem(lvl, ...)    logEvent(kEventSystem, lvl, "SYSTEM: " __VA_ARGS__)
