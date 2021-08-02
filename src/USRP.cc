@@ -89,16 +89,29 @@ USRP::~USRP()
 // See the following for instructions of waitign for LO to settle:
 //   https://files.ettus.com/manual/page_general.html
 
+const int kMaxLOLockCount = 100;
+
 void USRP::setTXFrequency(double freq)
 {
+    int count;
+
+  retry:
     if (device_type_ == kUSRPX310) {
         double lo_offset = -42.0e6;
         usrp_->set_tx_freq(uhd::tune_request_t(freq, lo_offset));
     } else
         usrp_->set_tx_freq(freq);
 
-    while (!usrp_->get_tx_sensor("lo_locked").to_bool())
-        usleep(10);
+    count = 0;
+
+    while (!usrp_->get_tx_sensor("lo_locked").to_bool()) {
+        if (count++ > kMaxLOLockCount) {
+            logUSRP(LOGDEBUG, "Could not attain TX LO lock");
+            goto retry;
+        }
+
+        usleep(100);
+    }
 
     tx_freq_ = usrp_->get_tx_freq();
 
@@ -107,14 +120,25 @@ void USRP::setTXFrequency(double freq)
 
 void USRP::setRXFrequency(double freq)
 {
+    int count;
+
+  retry:
     if (device_type_ == kUSRPX310) {
         double lo_offset = +42.0e6;
         usrp_->set_rx_freq(uhd::tune_request_t(freq, lo_offset));
     } else
         usrp_->set_rx_freq(freq);
 
-    while (!usrp_->get_rx_sensor("lo_locked").to_bool())
-        usleep(10);
+    count = 0;
+
+    while (!usrp_->get_rx_sensor("lo_locked").to_bool()) {
+        if (count++ > kMaxLOLockCount) {
+            logUSRP(LOGDEBUG, "Could not attain RX LO lock");
+            goto retry;
+        }
+
+        usleep(100);
+    }
 
     rx_freq_ = usrp_->get_rx_freq();
 
