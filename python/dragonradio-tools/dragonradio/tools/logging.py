@@ -1,6 +1,7 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2021 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 """Support for working with DragonRadio log files"""
+import datetime
 from functools import cached_property
 import logging
 import os
@@ -466,7 +467,7 @@ class LogCollection:
         if len(starts) == 0:
             return None
         else:
-            return min(starts)
+            return datetime.datetime.fromtimestamp(min(starts))
 
     def findPacketSlots(self, pkt: int) -> Slots:
         """
