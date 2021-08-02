@@ -249,6 +249,7 @@ void FDChannelizer::demodWorker(unsigned tid)
     std::optional<ssize_t> next_snapshot_off;
     unsigned               num_extra_snapshot_slots = 0;
     bool                   received = false; // Have we received any packets?
+    Channels               channels;         // Local copy of channels
     Channel                channel;          // Current channel being demodulated
 
     PHY::PacketDemodulator::callback_type callback = [&] (std::shared_ptr<RadioPacket> &&pkt) {
@@ -265,11 +266,14 @@ void FDChannelizer::demodWorker(unsigned tid)
             // Wait for reconfiguration to finish
             reconfigure_sync_.wait();
 
+            // Make local copy of channels
+            channels = channels_;
+
             // Signal that we have resumed
             reconfigure_sync_.wait();
 
             // If we are unneeded, sleep
-            if (tid >= channels_.size()) {
+            if (tid >= channels.size()) {
                 std::unique_lock<std::mutex> lock(wake_mutex_);
 
                 wake_cond_.wait(lock, [this]{ return done_ || reconfigure_.load(std::memory_order_acquire); });
@@ -278,11 +282,11 @@ void FDChannelizer::demodWorker(unsigned tid)
             }
 
             // Set demodulator callbacks
-            for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_)
+            for (unsigned channelidx = tid; channelidx < channels.size(); channelidx += nthreads_)
                 demods_[channelidx]->setCallback(callback);
         }
 
-        for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
+        for (unsigned channelidx = tid; channelidx < channels.size(); channelidx += nthreads_) {
             auto &demod = *demods_[channelidx];
             auto &slots = *slots_[channelidx];
 
@@ -329,7 +333,7 @@ void FDChannelizer::demodWorker(unsigned tid)
 
             // Set parameters for the callback
             received = false;
-            channel = channels_[channelidx].first;
+            channel = channels[channelidx].first;
 
             // Demodulate data as it is received
             for (int spin_count = 0; !complete; ++spin_count) {
