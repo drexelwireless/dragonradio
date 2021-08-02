@@ -35,7 +35,7 @@ public:
     }
 
 private:
-    /** @brief Number of threads in barrier syncrhonization group */
+    /** @brief Number of threads in barrier synchronization group */
     const unsigned count_;
 
     /** @brief Number of threads that have arrived at the barrier */
