@@ -12,6 +12,7 @@
 #include "net/REDQueue.hh"
 #include "net/SimpleQueue.hh"
 #include "net/SizedQueue.hh"
+#include "net/TailDropQueue.hh"
 #include "net/Queue.hh"
 #include "python/PyModules.hh"
 #include "util/net.hh"
@@ -112,6 +113,15 @@ void exportNet(py::module &m)
             &REDNetQueue::getQueueWeight,
             &REDNetQueue::setQueueWeight,
             "Queue weight (for EWMA)")
+        ;
+
+    // Export class TailDropNetQueue to Python
+    py::class_<TailDropNetQueue, SizedNetQueue, std::shared_ptr<TailDropNetQueue>>(m, "TailDropQueue")
+        .def(py::init<size_t>())
+        .def_property("max_size",
+            &TailDropNetQueue::getMaxSize,
+            &TailDropNetQueue::setMaxSize,
+            "Maximum queue size (bytes)")
         ;
 
     // Export class MandateNetQueue to Python

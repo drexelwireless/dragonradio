@@ -298,6 +298,10 @@ class Config:
         self.mandate_bonus_phase = True
         """Flag indicating whether or not to have a bonus phase"""
 
+        # Tail drop queue options
+        self.tail_drop_max_size = 5*1500
+        "Tail drop queue maximum size (bytes)"
+
         # RED queue options
         self.red_gentle = True
         "Gentle RED"
@@ -854,6 +858,9 @@ class Config:
         net.add_argument('--lifo', action='store_const', const='lifo',
                          dest='queue',
                          help='use LIFO network queue algorithm')
+        net.add_argument('--taildrop', action='store_const', const='taildrop',
+                         dest='queue',
+                         help='use tail drop network queue algorithm')
         net.add_argument('--red', action='store_const', const='red',
                          dest='queue',
                          help='use RED network queue algorithm')
