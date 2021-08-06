@@ -47,8 +47,8 @@ struct Header {
         /** @brief Set if the packet is ACKing */
         uint8_t ack : 1;
 
-        /** @brief Set if the packet has data */
-        uint8_t has_data : 1;
+        /** @brief Set if the packet is sequenced */
+        uint8_t has_seq : 1;
 
         /** @brief Set if the packet has control data */
         uint8_t has_control : 1;

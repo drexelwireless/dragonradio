@@ -229,7 +229,7 @@ struct Packet : public buffer<unsigned char>
         uint8_t retransmission : 1;
 
         /** @brief Set if the packet has an assigned sequence number */
-        uint8_t has_seq : 1;
+        uint8_t assigned_seq : 1;
 
         /** @brief Set if the packet needs a selective ACK */
         uint8_t need_selective_ack : 1;

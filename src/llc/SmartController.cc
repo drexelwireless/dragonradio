@@ -113,7 +113,7 @@ get_packet:
             pkt->ehdr().ack = recvw.ack;
 
 #if DEBUG
-            if (pkt->ehdr().data_len == 0)
+            if (pkt->hdr.flags.has_seq == 0)
                 dprintf("send delayed ack: node=%u; ack=%u",
                     (unsigned) nexthop,
                     (unsigned) recvw.ack);
@@ -127,14 +127,14 @@ get_packet:
             // selective ACK information
             if (recvw.need_selective_ack || pkt->internal_flags.need_selective_ack)
                 appendFeedback(pkt, recvw);
-        } else if (pkt->ehdr().data_len != 0)
+        } else if (pkt->hdr.flags.has_seq == 1)
             dprintf("send: node=%u; seq=%u",
                 (unsigned) nexthop,
                 (unsigned) pkt->hdr.seq);
     }
 
-    // Update our send window if this packet has data
-    if (pkt->ehdr().data_len != 0) {
+    // Update our send window if this packet has a sequence number
+    if (pkt->hdr.flags.has_seq == 1) {
         SendWindow                  &sendw = getSendWindow(nexthop);
         Node                        &dest = (*radionet_)[nexthop];
         std::lock_guard<std::mutex> lock(sendw.mutex);
@@ -246,7 +246,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         if (recvw.short_evm && recvw.short_rssi && isMCSFastAdjustmentPeriod())
             startSACKTimer(recvw);
 
-        if (pkt->hdr.flags.has_data) {
+        if (pkt->hdr.flags.has_seq == 1) {
             // Activate the receive window if it is not yet active. If this is a
             // SYN packet or if the sequence number is outside the receive
             // window, assume the sender restarted and reset the receive window.
@@ -411,8 +411,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         }
     }
 
-    // If this packet doesn't contain any data, we are done
-    if (pkt->ehdr().data_len == 0) {
+    // If this packet doesn't have a sequence number, we are done
+    if (pkt->hdr.flags.has_seq == 0) {
         dprintf("recv: node=%u; ack=%u",
             (unsigned) prevhop,
             (unsigned) pkt->ehdr().ack);
@@ -480,11 +480,15 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // receive window
     if (pkt->hdr.seq == recvw.ack) {
         recvw.ack++;
-        radio_out.push(std::move(pkt));
+
+        if (pkt->ehdr().data_len != 0)
+            radio_out.push(std::move(pkt));
     } else if (!enforce_ordering_ && !pkt->isTCP()) {
         // If this is not a TCP packet, insert it into our receive window, but
         // also go ahead and send it.
-        radio_out.push(std::move(pkt));
+        if (pkt->ehdr().data_len != 0)
+            radio_out.push(std::move(pkt));
+
         recvw[pkt->hdr.seq].alreadyDelivered();
     } else {
         // Insert the packet into our receive window
@@ -498,7 +502,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         if (!entry.received)
             break;
 
-        if (!entry.delivered)
+        if (!entry.delivered && pkt->ehdr().data_len != 0)
             radio_out.push(std::move(entry.pkt));
 
         entry.reset();
@@ -511,7 +515,7 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
     for (auto it = mpkts.begin(); it != mpkts.end(); ++it) {
         NetPacket &pkt = *(*it)->pkt;
 
-        if (pkt.hdr.nexthop != kNodeBroadcast && pkt.ehdr().data_len != 0) {
+        if (pkt.hdr.nexthop != kNodeBroadcast && pkt.hdr.flags.has_seq == 1) {
             SendWindow                  &sendw = getSendWindow(pkt.hdr.nexthop);
             std::lock_guard<std::mutex> lock(sendw.mutex);
 
@@ -934,7 +938,7 @@ void SmartController::advanceRecvWindow(Seq seq, RecvWindow &recvw)
         RecvWindow::Entry &entry = recvw[seq];
 
         // Go ahead and deliver the packet
-        if (entry.pkt && !entry.delivered)
+        if (entry.pkt && !entry.delivered && entry.pkt->ehdr().data_len != 0)
             radio_out.push(std::move(entry.pkt));
 
         // Release the packet
@@ -1460,13 +1464,13 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
         SendWindow                  &sendw = getSendWindow(pkt->hdr.nexthop);
         std::lock_guard<std::mutex> lock(sendw.mutex);
 
-        // If packet has no payload, we can always send it---it has control
+        // If packet is not sequenced, we can always send it---it has control
         // information.
-        if (pkt->ehdr().data_len == 0)
+        if (pkt->hdr.flags.has_seq == 0)
             return true;
 
         // Set the packet sequence number if it doesn't yet have one.
-        if (!pkt->internal_flags.has_seq) {
+        if (!pkt->internal_flags.assigned_seq) {
             // If we can't fit this packet in our window, move the window along
             // by dropping the oldest packet.
             if (   sendw.seq >= sendw.unack + sendw.win
@@ -1477,7 +1481,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             }
 
             pkt->hdr.seq = sendw.seq++;
-            pkt->internal_flags.has_seq = 1;
+            pkt->internal_flags.assigned_seq = 1;
 
             // If this is the first packet we are sending to the destination,
             // set its SYN flag

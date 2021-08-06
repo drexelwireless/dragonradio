@@ -94,7 +94,7 @@ protected:
     /** @brief Return true if the packet can be popped */
     bool canPop(const T& pkt)
     {
-        if (pkt->hdr.nexthop == kNodeBroadcast || pkt->internal_flags.has_seq)
+        if (pkt->hdr.nexthop == kNodeBroadcast || pkt->internal_flags.assigned_seq)
             return true;
 
         std::lock_guard<std::mutex> lock(send_window_status_mutex_);

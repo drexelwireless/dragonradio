@@ -18,10 +18,10 @@ void exportHeader(py::module &m)
             [](Header::Flags &self) { return self.ack; },
             [](Header::Flags &self, uint8_t f) { self.ack = f; },
             "ACK flag")
-        .def_property("has_data",
-            [](Header::Flags &self) { return self.has_data; },
-            [](Header::Flags &self, uint8_t f) { self.has_data = f; },
-            "Does packet have data?")
+        .def_property("has_seq",
+            [](Header::Flags &self) { return self.has_seq; },
+            [](Header::Flags &self, uint8_t f) { self.has_seq = f; },
+            "Is the packet sequenced?")
         .def_property("has_control",
             [](Header::Flags &self) { return self.has_control; },
             [](Header::Flags &self, uint8_t f) { self.has_control = f; },
@@ -35,8 +35,8 @@ void exportHeader(py::module &m)
             [](Header::Flags &self, uint8_t f) { self.team = f; },
             "Team")
         .def("__repr__", [](const Header::Flags& self) {
-            return py::str("HeaderFlags(syn={:d}, ack={:d}, has_data={:d}, has_control=={:d}, compressed=={:d}, team=={:d})").\
-            format(self.syn, self.ack, self.has_data, self.has_control, self.compressed, self.team);
+            return py::str("HeaderFlags(syn={:d}, ack={:d}, has_seq={:d}, has_control=={:d}, compressed=={:d}, team=={:d})").\
+            format(self.syn, self.ack, self.has_seq, self.has_control, self.compressed, self.team);
          })
         ;
 

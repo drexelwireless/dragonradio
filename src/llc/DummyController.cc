@@ -6,7 +6,7 @@
 bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
 {
     if (net_in.pull(pkt)) {
-        if (!pkt->internal_flags.has_seq) {
+        if (!pkt->internal_flags.assigned_seq) {
             Node &nexthop = (*radionet_)[pkt->hdr.nexthop];
 
             {
@@ -24,7 +24,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
             pkt->mcsidx = 0;
             pkt->g = nexthop.g;
 
-            pkt->internal_flags.has_seq = 1;
+            pkt->internal_flags.assigned_seq = 1;
         }
 
         return true;

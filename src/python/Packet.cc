@@ -27,9 +27,9 @@ void exportPacket(py::module &m)
             [](Packet::InternalFlags &self) { return self.retransmission; },
             [](Packet::InternalFlags &self, uint8_t f) { self.retransmission = f; },
             "Is this a retransmission?")
-        .def_property("has_seq",
-            [](Packet::InternalFlags &self) { return self.has_seq; },
-            [](Packet::InternalFlags &self, uint8_t f) { self.has_seq = f; },
+        .def_property("assigned_seq",
+            [](Packet::InternalFlags &self) { return self.assigned_seq; },
+            [](Packet::InternalFlags &self, uint8_t f) { self.assigned_seq = f; },
             "Set if packet has been assigned a sequence number")
         .def_property("has_selective_ack",
             [](Packet::InternalFlags &self) { return self.has_selective_ack; },
