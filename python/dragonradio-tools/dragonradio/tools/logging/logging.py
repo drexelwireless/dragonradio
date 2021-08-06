@@ -590,6 +590,11 @@ class LogCollection:
 
             self._start = self.reservation.rf_start_time
 
+            if srns is not None:
+                unknown_srns = set(srns) - set(self.reservation.our_srns)
+                if len(unknown_srns) != 0:
+                    raise ValueError("Unknown SRNs: %s" % unknown_srns)
+
             for srn in self.reservation.our_srns:
                 if srns is None or srn in srns:
                     try:
