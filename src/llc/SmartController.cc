@@ -1585,6 +1585,7 @@ SendWindow::SendWindow(Node &n,
     , maxwin(maxwin)
     , mcsidx_prob(controller.phy_->mcs_table.size(), 1.0)
     , per_cutoff({0})
+    , per_end({0})
     , prev_short_per(1)
     , prev_long_per(1)
     , short_per(1)
