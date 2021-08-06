@@ -44,7 +44,7 @@ public:
     /** @brief Push an element onto the high-priority queue. */
     virtual void push_hi(T&& item) = 0;
 
-    /** @brief Re-queue and element. */
+    /** @brief Re-queue an element. */
     virtual void repush(T&& item) = 0;
 
     /** @brief Pop an element from the queue. */
