@@ -15,24 +15,21 @@ mp.use('GTK3Agg')
 
 def mkNumericAltPat(ns):
     """Make a regexp that matches one of the given numbers"""
-    if len(ns) == 1:
-        return str(re.escape(ns[0]))
-    else:
-        return reduce(lambda x, y: r'{}|{}'.format(x, re.escape(y)), ns)
+    return reduce(lambda x, y: r'{}|{}'.format(x, y), (re.escape(n) for n in ns))
 
 def canFilterByNode(k):
     return k in ['AMC', 'ARQ', 'TIMESYNC']
 
 def mkNodeFilterPat(nodes):
     """Make a regexp that matches the given nodes"""
-    return r'.*node=({})[^\d]'.format(mkNumericAltPat(nodes))
+    return r'.*node=({})(?!\d)'.format(mkNumericAltPat(nodes))
 
 def canFilterByFlow(k):
     return k in []
 
 def mkFlowFilterPat(flows):
     """Make a regexp that matches the given flows"""
-    return r'.*flow=({})[^\d]'.format(mkNumericAltPat(flows))
+    return r'.*flow=({})(?!\d)'.format(mkNumericAltPat(flows))
 
 class PlotEventsCommand(Command):
     def __init__(self, *args, **kwargs):
