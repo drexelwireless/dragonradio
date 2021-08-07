@@ -880,7 +880,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     }
 
     if (!entry.pkt) {
-        logAMC(LOGDEBUG, "attempted to retransmit ACK'ed packet");
+        logARQ(LOGDEBUG, "attempted to retransmit ACK'ed packet");
         return;
     }
 
