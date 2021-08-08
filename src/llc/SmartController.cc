@@ -1609,20 +1609,6 @@ void SendWindow::updateMCS(bool fast_adjust)
             long_per.value_or(0),
             long_per.size());
 
-    if (fast_adjust && short_evm) {
-        mcsidx_t new_mcsidx;
-
-        for (new_mcsidx = controller.mcsidx_min_; new_mcsidx < controller.mcsidx_max_; ++new_mcsidx) {
-            SmartController::evm_thresh_t &evm_threshold = controller.evm_thresholds_[new_mcsidx + 1];
-
-            if (*short_evm >= evm_threshold)
-                break;
-        }
-
-        setMCS(new_mcsidx);
-        return;
-    }
-
     // First for high PER, then test for low PER
     if (short_per && *short_per > controller.mcsidx_down_per_threshold_) {
         // Perform hysteresis on future MCS increases by decreasing the
@@ -1660,6 +1646,18 @@ void SendWindow::updateMCS(bool fast_adjust)
             moveDownMCS(n);
         else
             resetPEREstimates();
+    } else if (fast_adjust && short_evm) {
+        mcsidx_t new_mcsidx;
+        auto     current_evm = long_evm.value_or(*short_evm);
+
+        for (new_mcsidx = controller.mcsidx_min_; new_mcsidx < controller.mcsidx_max_; ++new_mcsidx) {
+            SmartController::evm_thresh_t &evm_threshold = controller.evm_thresholds_[new_mcsidx + 1];
+
+            if (current_evm >= evm_threshold)
+                break;
+        }
+
+        setMCS(new_mcsidx);
     } else if (long_per && *long_per < controller.mcsidx_up_per_threshold_) {
         double old_prob = mcsidx_prob[mcsidx];
 
