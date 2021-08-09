@@ -119,8 +119,8 @@ public:
         std::lock_guard<std::mutex> lock(m_);
 
         auto&& [it, inserted] = flow_qs_.emplace(std::piecewise_construct,
-                                                    std::forward_as_tuple(flow_uid),
-                                                    std::forward_as_tuple(*this, kDefaultFlowQueuePriority, qtype));
+                                                 std::forward_as_tuple(flow_uid),
+                                                 std::forward_as_tuple(*this, kDefaultFlowQueuePriority, qtype));
 
         if (inserted)
             add_queue(it->second);
@@ -142,8 +142,8 @@ public:
         std::lock_guard<std::mutex> lock(m_);
 
         auto&& [it, inserted] = flow_qs_.emplace(std::piecewise_construct,
-                                                    std::forward_as_tuple(flow_uid),
-                                                    std::forward_as_tuple(*this, kDefaultFlowQueuePriority, FIFO));
+                                                 std::forward_as_tuple(flow_uid),
+                                                 std::forward_as_tuple(*this, kDefaultFlowQueuePriority, FIFO));
 
         if (inserted)
             add_queue(it->second);
