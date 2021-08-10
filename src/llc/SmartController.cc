@@ -969,7 +969,7 @@ void SmartController::advanceSendWindow(SendWindow &sendw)
 
     // Indicate that this node's send window is now open
     if (sendw.seq < sendw.unack + sendw.win)
-        netq_->setSendWindowStatus(sendw.node.id, true);
+        sendw.setSendWindowStatus(true);
 
     // See if we locally updated the send window. If so, we need to tell the
     // receiver we've updated our unack
@@ -1565,7 +1565,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // ALWAYS close it since we're waiting for the ACK to our SYN!
             if (   sendw.seq >= sendw.unack + sendw.win
                 && ((sendw[sendw.unack].pending() && !sendw[sendw.unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
-                netq_->setSendWindowStatus(pkt->hdr.nexthop, false);
+                sendw.setSendWindowStatus(false);
 
             return true;
         } else {
@@ -1651,6 +1651,7 @@ SendWindow::SendWindow(Node &n,
     , mcs_table(controller.phy_->mcs_table)
     , mcsidx(0)
     , new_window(true)
+    , window_open(true)
     , seq({0})
     , unack({0})
     , max({0})
@@ -1669,6 +1670,14 @@ SendWindow::SendWindow(Node &n,
     , entries_(maxwin, *this)
 {
     setMCS(controller.mcsidx_init_);
+}
+
+void SendWindow::setSendWindowStatus(bool open)
+{
+    if (open != window_open) {
+        controller.netq_->setSendWindowStatus(node.id, open);
+        window_open = open;
+    }
 }
 
 void SendWindow::ack(const MonoClock::time_point &tx_time)

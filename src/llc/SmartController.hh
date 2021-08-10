@@ -63,6 +63,9 @@ struct SendWindow {
     /** @brief Is this a new window? */
     bool new_window;
 
+    /** @brief Is the window open? */
+    bool window_open;
+
     /** @brief Current sequence number for this destination */
     Seq seq;
 
@@ -122,6 +125,9 @@ struct SendWindow {
     {
         return entries_[seq % entries_.size()];
     }
+
+    /** @brief Set send window status */
+    void setSendWindowStatus(bool open);
 
     /** @brief Record a packet ACK */
     void ack(const MonoClock::time_point &tx_time);
