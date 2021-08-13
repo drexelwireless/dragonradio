@@ -12,6 +12,7 @@
 #include <mutex>
 
 #include "barrier.hh"
+#include "SafeQueue.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
