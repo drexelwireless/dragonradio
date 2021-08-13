@@ -37,12 +37,12 @@ public:
     SafeQueue& operator=(const SafeQueue&) = delete;
     SafeQueue& operator=(SafeQueue&&) = delete;
 
-    /** @brief Reset queue to empty state. */
-    void reset(void)
+    /** @brief Clear queue contents. */
+    void clear(void)
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        return q_.empty();
+        return q_.clear();
     }
 
     /** @brief Return true if the queue is empty. */
