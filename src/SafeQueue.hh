@@ -136,7 +136,8 @@ public:
         std::unique_lock<std::mutex> lock(m_);
 
         cond_.wait(lock, [this]{ return done_ || !q_.empty(); });
-        if (q_.empty())
+
+        if (done_ || q_.empty())
             return false;
         else {
             val = std::move(q_.front());
