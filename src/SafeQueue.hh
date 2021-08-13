@@ -90,43 +90,6 @@ public:
         cond_.notify_one();
     }
 
-    /** @brief Push an element on the front of the queue .*/
-    void push_front(const T& val)
-    {
-        {
-            std::lock_guard<std::mutex> lock(m_);
-
-            q_.push_front(val);
-        }
-
-        cond_.notify_one();
-    }
-
-    /** @brief Push an element on the front of the queue. */
-    void push_front(T&& val)
-    {
-        {
-            std::lock_guard<std::mutex> lock(m_);
-
-            q_.push_front(std::move(val));
-        }
-
-        cond_.notify_one();
-    }
-
-    /** @brief Construct an element in-place on the front of the queue. */
-    template<class... Args>
-    void emplace_front(Args&&... args)
-    {
-        {
-            std::lock_guard<std::mutex> lock(m_);
-
-            q_.emplace_front(std::forward<Args>(args)...);
-        }
-
-        cond_.notify_one();
-    }
-
     /** @brief Access the first element of the queue and pop it.
      * @param val Reference to location where popped value should be copied.
      * @return true if a value was popped, false otherwise.
