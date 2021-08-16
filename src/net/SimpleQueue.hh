@@ -4,6 +4,9 @@
 #ifndef SIMPLEQUEUE_HH_
 #define SIMPLEQUEUE_HH_
 
+#include <condition_variable>
+#include <mutex>
+
 #include "net/Queue.hh"
 
 /** @brief A simple queue Element. */
