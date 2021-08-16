@@ -4,7 +4,9 @@
 #ifndef MANDATEQUEUE_HH_
 #define MANDATEQUEUE_HH_
 
+#include <condition_variable>
 #include <deque>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <unordered_map>
