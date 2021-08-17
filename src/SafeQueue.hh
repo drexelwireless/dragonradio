@@ -37,6 +37,14 @@ public:
     SafeQueue& operator=(const SafeQueue&) = delete;
     SafeQueue& operator=(SafeQueue&&) = delete;
 
+    /** @brief Get queue size. */
+    size_t size(void)
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        return q_.size();
+    }
+
     /** @brief Clear queue contents. */
     void clear(void)
     {
