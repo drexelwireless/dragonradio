@@ -142,6 +142,15 @@ class BatchInput:
 
 class CollabInfo:
     def __init__(self, reservation):
+        self.collab_server_srn = None
+        """Collaboration server SRN"""
+
+        self.collab_server_ip = None
+        """Collaboration server IP address"""
+
+        self.collab_log = None
+        """Collaboration server log"""
+
         for f in os.listdir(reservation.path):
             m = re.match(r'^[-a-zA-Z0-9_]*-srn(\d*)-RES\d*-colbr(\d*)-\d*-\d*\.pcap$', f)
             if m:
@@ -150,17 +159,12 @@ class CollabInfo:
 
                 if collab != srn and srn in reservation.srn_teams and reservation.srn_teams[srn] == reservation.our_team:
                     self.collab_server_srn = collab
-                    """Collaboration server SRN"""
-
                     self.collab_server_ip = "172.30.{collab}.{srn}".format(srn=100+srn, collab=100+collab)
-                    """Collaboration server IP address"""
-
                     self.collab_log = os.path.join(reservation.path, f)
-                    """Collaboration server log"""
 
                     return
 
-        raise ValueError("Cannot find collaboration server")
+        logging.debug("Cannot find collaboration server")
 
 class TrafficLogs:
     def __init__(self, _res, path):
