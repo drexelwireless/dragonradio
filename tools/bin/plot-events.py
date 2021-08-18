@@ -69,6 +69,9 @@ class PlotEventsCommand(Command):
         parser.add_argument('--tuntap', const='TUNTAP', action='append_const',
                             dest='events',
                             help='show tun/tap events')
+        parser.add_argument('--net', const='NET', action='append_const',
+                            dest='events',
+                            help='show net events')
 
         parser.add_argument('-n', '--node', action='append',
                             metavar='NODE')
