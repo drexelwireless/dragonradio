@@ -221,6 +221,8 @@ class RadioMetricPlot(ReservationPlot):
                  latency=None,
                  nodes=None,
                  checkboxes=True,
+                 only_transmitted_packets=True,
+                 include_retransmissions=False,
                  only_invalid_packets=False,
                  include_invalid_packets=False,
                  filt=lambda x : x,
@@ -245,6 +247,12 @@ class RadioMetricPlot(ReservationPlot):
             else:
                 df = logs[node_id].send
                 ppr = pprSentPacket
+
+                if only_transmitted_packets:
+                    df = df.loc[df.dropped == 'transmitted']
+
+                if not include_retransmissions:
+                    df = df.loc[df.nretrans == 0]
 
             # Restrict packets
             if only_invalid_packets:
