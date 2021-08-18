@@ -21,6 +21,7 @@
 #include "buffer.hh"
 #include "Clock.hh"
 #include "Header.hh"
+#include "IQBuffer.hh"
 #include "net/mgen.h"
 #include "phy/Channel.hh"
 #include "phy/Modem.hh"
@@ -494,6 +495,12 @@ struct NetPacket : public Packet
     /** @brief Multiplicative TX gain. */
     float g;
 
+    /** @brief Center frequency (Hz) */
+    float fc;
+
+    /** @brief Bandwidth (Hz) */
+    float bw;
+
     /** @brief Number of retransmissions. */
     unsigned nretrans;
 
@@ -502,6 +509,39 @@ struct NetPacket : public Packet
 
     /** @brief Packet timestamp */
     std::optional<TimestampSeq> timestamp_seq;
+
+    /** @brief Offset of start of packet from beginning of sample buffer */
+    size_t offset;
+
+    /** @brief Number of modulated samples */
+    size_t nsamples;
+
+    /** @brief IQ sample buffer containing modulated packet */
+    std::shared_ptr<IQBuf> samples;
+
+    /** @brief Wall-clock time when packet was read from tun/tap */
+    WallClock::time_point tuntap_timestamp;
+
+    /** @brief Time when packet was enqueued */
+    MonoClock::time_point enqueue_timestamp;
+
+    /** @brief Dequeue start timestamp */
+    MonoClock::time_point dequeue_start_timestamp;
+
+    /** @brief Dequeue end timestamp */
+    MonoClock::time_point dequeue_end_timestamp;
+
+    /** @brief Time when packet exited LLC */
+    MonoClock::time_point llc_timestamp;
+
+    /** @brief Modulation start timestamp */
+    MonoClock::time_point mod_start_timestamp;
+
+    /** @brief Modulation end timestamp */
+    MonoClock::time_point mod_end_timestamp;
+
+    /** @brief Packet transmission timestamp */
+    MonoClock::time_point tx_timestamp;
 
     /** @brief Return true if the packet's deadline has passed, false otherwise */
     bool deadlinePassed(const MonoClock::time_point &now)
@@ -545,6 +585,33 @@ struct RadioPacket : public Packet
 
     /** @brief Channel the packet was received on */
     Channel channel;
+
+    /** @brief Bandwidth (Hz) of entire received signal */
+    float bw;
+
+    /** @brief MCS index of packet */
+    mcsidx_t mcsidx;
+
+    /** @brief Timestamp of MAC slot containing this packet */
+    MonoClock::time_point slot_timestamp;
+
+    /** @brief Offset of start of packet from MAC slot */
+    size_t start_samples;
+
+    /** @brief Offset of end of packet from MAC slot */
+    size_t end_samples;
+
+    /** @brief Demodulation latency */
+    double demod_latency;
+
+    /** @brief Wall-clock time when packet was written to tun/tap */
+    MonoClock::time_point tuntap_timestamp;
+
+    /** @brief Size of received payload, including controll information */
+    size_t payload_len;
+
+    /** @brief Symbols */
+    std::unique_ptr<std::vector<std::complex<float>>> symbols;
 };
 
 /** @brief Compute the size of the specified control message. */

@@ -318,7 +318,7 @@ public:
         if (done_)
             return false;
 
-        MonoClock::time_point now = MonoClock::now();
+        MonoClock::time_point dequeue_start = MonoClock::now();
         unsigned              idx = 0;
         unsigned              end = 0;
         bool                  bonus = false;
@@ -332,7 +332,10 @@ public:
         do {
             SubQueue &subq = qs_[idx];
 
-            if (subq.active && subq.pop(pkt, *this, now, bonus)) {
+            if (subq.active && subq.pop(pkt, *this, dequeue_start, bonus)) {
+                pkt->dequeue_start_timestamp = dequeue_start;
+                pkt->dequeue_end_timestamp = MonoClock::now();
+
                 if (bonus)
                     bonus_idx_ = idx+1;
 
@@ -647,7 +650,7 @@ protected:
 
                     while (it != end()) {
                         if ((*it)->shouldDrop(now)) {
-                            drop(**it);
+                            drop(*it);
                             it = erase(it);
                         } else if (shouldSend(*it, bonus) && mqueue.canPop(*it)) {
                             pkt = std::move(*it);
@@ -665,7 +668,7 @@ protected:
 
                     while (it != rend()) {
                         if ((*it)->shouldDrop(now)) {
-                            drop(**it);
+                            drop(*it);
                             it = decltype(it){ erase(std::next(it).base()) };
                         } else if (shouldSend(*it, bonus) && mqueue.canPop(*it)) {
                             pkt = std::move(*it);
@@ -824,6 +827,9 @@ protected:
                 ++stats_[mp].npackets;
                 stats_[mp].nbytes += pkt->payload_size;
             }
+
+            // Timestamp enqueue operation
+            pkt->enqueue_timestamp = MonoClock::now();
         }
 
         void postEmplace()
@@ -846,17 +852,10 @@ protected:
         }
 
         /** @brief Indicate that a packet has been dropped. */
-        void drop(const NetPacket &pkt) const
+        void drop(const std::shared_ptr<NetPacket> &pkt) const
         {
             if (logger)
-                logger->logQueueDrop(WallClock::now(),
-                                     pkt.nretrans,
-                                     pkt.hdr,
-                                     pkt.ehdr(),
-                                     pkt.mgen_flow_uid.value_or(0),
-                                     pkt.mgen_seqno.value_or(0),
-                                     pkt.mcsidx,
-                                     pkt.size());
+                logger->logQueueDrop(MonoClock::now(), pkt);
         }
 
         void updateFileTransferThroughput(void)
@@ -867,7 +866,7 @@ protected:
                 // Purge any packets that should be dropped
                 for (auto it = begin(); it != end(); ) {
                     if ((*it)->shouldDrop(now)) {
-                        drop(**it);
+                        drop(*it);
                         it = erase(it);
                     } else
                         ++it;

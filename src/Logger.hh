@@ -32,14 +32,17 @@ public:
     /** @brief Logging sources */
     enum Source {
         kSlots = 0,
-        kRecvPackets = 1,
-        kRecvSymbols = 2,
-        kSentPackets = 3,
-        kSentIQ = 4,
-        kEvents = 5
+        kTXRecords,
+        kRecvPackets,
+        kRecvSymbols,
+        kSentPackets,
+        kSentIQ,
+        kEvents,
+        kARQEvents
     };
 
-    Logger(WallClock::time_point t_start);
+    Logger(const WallClock::time_point &t_start,
+           const MonoClock::time_point &mono_t_start);
     ~Logger();
 
     Logger() = delete;
@@ -69,85 +72,60 @@ public:
     void setAttribute(const std::string& name, const std::string& val);
     void setAttribute(const std::string& name, uint8_t val);
     void setAttribute(const std::string& name, uint32_t val);
+    void setAttribute(const std::string& name, int64_t val);
+    void setAttribute(const std::string& name, uint64_t val);
     void setAttribute(const std::string& name, double val);
 
-    void logSlot(std::shared_ptr<IQBuf> buf,
-                 float bw);
+    void logSlot(const std::shared_ptr<IQBuf> &buf)
+    {
+        if (getCollectSource(kSlots)) {
+            // Only log slots we haven't logged before. We should never be asked to log
+            // a slot that is older than the youngest slot we've ever logged.
+            if (buf->timestamp > t_last_slot_) {
+                log_q_.push([=](){ logSlot_(*buf); });
+                t_last_slot_ = *buf->timestamp;
+            }
+        }
+    }
+
+    void logTXRecord(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs)
+    {
+        if (getCollectSource(kTXRecords))
+            log_q_.push([=](){ logTXRecord_(t, nsamples, fs); });
+    }
 
     void logSnapshot(std::shared_ptr<Snapshot> snapshot)
     {
         log_q_.push([=](){ logSnapshot_(snapshot); });
     }
 
-    void logRecv(const WallClock::time_point& t,
-                 int32_t start_samples,
-                 int32_t end_samples,
-                 bool header_valid,
-                 bool payload_valid,
-                 const Header& hdr,
-                 const ExtendedHeader& ehdr,
-                 uint32_t mgen_flow_uid,
-                 uint32_t mgen_seqno,
-                 unsigned mcsidx,
-                 float evm,
-                 float rssi,
-                 float cfo,
-                 float fc,
-                 float bw,
-                 float demod_latency,
-                 uint32_t size,
-                 buffer<std::complex<float>> *buf)
+    void logRecv(const std::shared_ptr<RadioPacket> &pkt)
     {
         if (getCollectSource(kRecvPackets))
-            log_q_.push([=](){ logRecv_(t, start_samples, end_samples, header_valid, payload_valid, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, evm, rssi, cfo, fc, bw, demod_latency, size, buf); });
+            log_q_.push([=, pkt = std::shared_ptr<RadioPacket>(pkt)]() { logRecv_(*pkt); });
     }
 
-    void logSend(const WallClock::time_point& t,
-                 unsigned nretrans,
-                 const Header& hdr,
-                 const ExtendedHeader& ehdr,
-                 uint32_t mgen_flow_uid,
-                 uint32_t mgen_seqno,
-                 unsigned mcsidx,
-                 float fc,
-                 float bw,
-                 double mod_latency,
-                 uint32_t size,
-                 std::shared_ptr<IQBuf> buf,
-                 size_t offset,
-                 size_t nsamples)
+    void logSend(const std::shared_ptr<NetPacket> &pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=](){ logSend_(t, kNotDropped, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, fc, bw, mod_latency, size, buf, offset, nsamples); });
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)]() { logSend_(pkt->tx_timestamp, kNotDropped, *pkt); });
     }
 
-    void logLinkLayerDrop(const WallClock::time_point& t,
-                          unsigned nretrans,
-                          const Header& hdr,
-                          const ExtendedHeader& ehdr,
-                          uint32_t mgen_flow_uid,
-                          uint32_t mgen_seqno,
-                          unsigned mcsidx,
-                          uint32_t size)
+    void logLinkLayerDrop(const MonoClock::time_point& t,
+                          const std::shared_ptr<NetPacket> &pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=](){ logSend_(t, kLinkLayerDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kLinkLayerDrop, *pkt); });
     }
 
-    void logQueueDrop(const WallClock::time_point& t,
-                      unsigned nretrans,
-                      const Header& hdr,
-                      const ExtendedHeader& ehdr,
-                      uint32_t mgen_flow_uid,
-                      uint32_t mgen_seqno,
-                      unsigned mcsidx,
-                      uint32_t size)
+    void logQueueDrop(const MonoClock::time_point& t,
+                      const std::shared_ptr<NetPacket> &pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=](){ logSend_(t, kQueueDrop, nretrans, hdr, ehdr, mgen_flow_uid, mgen_seqno, mcsidx, 0, 0, 0, size, nullptr, 0, 0); });
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kQueueDrop, *pkt); });
     }
 
-    void logEvent(const WallClock::time_point& t,
+    void logEvent(const MonoClock::time_point& t,
                   const std::string& event)
     {
         if (getCollectSource(kEvents)){
@@ -160,23 +138,81 @@ public:
         }
     }
 
-    void logEvent(const WallClock::time_point& t,
+    void logEvent(const MonoClock::time_point& t,
                   std::unique_ptr<char[]> event)
     {
         if (getCollectSource(kEvents))
             log_q_.push([=, event = event.release()](){ logEvent_(t, event); });
     }
 
+    void logSendNAK(NodeId node,
+                    Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(MonoClock::now(), kSendNAK, node, seq); });
+    }
+
+    void logSendSACK(const std::shared_ptr<NetPacket> &pkt,
+                     NodeId node,
+                     Seq unack)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSendSACK, node, unack); });
+    }
+
+    void logNAK(const MonoClock::time_point& t,
+                NodeId node,
+                Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(t, kNAK, node, seq); });
+    }
+
+    void logRetransmissionNAK(const MonoClock::time_point& t,
+                              NodeId node,
+                              Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(t, kRetransmissionNAK, node, seq); });
+    }
+
+    void logSACK(const std::shared_ptr<RadioPacket> &pkt,
+                 NodeId node,
+                 Seq unack)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=, pkt = std::shared_ptr<RadioPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSACK, node, unack); });
+    }
+
+    void logSNAK(const MonoClock::time_point& t,
+                 NodeId node,
+                 Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(t, kSNAK, node, seq); });
+    }
+
+    void logACKTimeout(const MonoClock::time_point& t,
+                       NodeId node,
+                       Seq seq)
+    {
+        if (getCollectSource(kARQEvents))
+            log_q_.push([=](){ logARQEvent_(t, kACKTimeout, node, seq); });
+    }
+
 private:
     bool is_open_;
     H5::H5File file_;
     std::unique_ptr<ExtensibleDataSet> slots_;
+    std::unique_ptr<ExtensibleDataSet> tx_records_;
     std::unique_ptr<ExtensibleDataSet> snapshots_;
     std::unique_ptr<ExtensibleDataSet> selftx_;
     std::unique_ptr<ExtensibleDataSet> recv_;
     std::unique_ptr<ExtensibleDataSet> send_;
     std::unique_ptr<ExtensibleDataSet> event_;
+    std::unique_ptr<ExtensibleDataSet> arq_event_;
     WallClock::time_point t_start_;
+    MonoClock::time_point mono_t_start_;
     MonoClock::time_point t_last_slot_;
 
     /** @brief Data sources we collect. */
@@ -198,29 +234,13 @@ private:
                                         const H5::DataType &data_type,
                                         const H5::DataSpace &data_space);
 
-    void logSlot_(std::shared_ptr<IQBuf> buf,
-                  float bw);
+    void logSlot_(const IQBuf &buf);
+
+    void logTXRecord_(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs);
 
     void logSnapshot_(std::shared_ptr<Snapshot> snapshot);
 
-    void logRecv_(const WallClock::time_point& t,
-                  int32_t start_samples,
-                  int32_t end_samples,
-                  bool header_valid,
-                  bool payload_valid,
-                  const Header& hdr,
-                  const ExtendedHeader& ehdr,
-                  uint32_t mgen_flow_uid,
-                  uint32_t mgen_seqno,
-                  unsigned mcsidx,
-                  float evm,
-                  float rssi,
-                  float cfo,
-                  float fc,
-                  float bw,
-                  float demod_latency,
-                  uint32_t size,
-                  buffer<std::complex<float>> *buf);
+    void logRecv_(RadioPacket &pkt);
 
     enum DropType {
         kNotDropped = 0,
@@ -228,24 +248,32 @@ private:
         kQueueDrop
     };
 
-    void logSend_(const WallClock::time_point& t,
+    void logSend_(const MonoClock::time_point& t,
                   DropType dropped,
-                  unsigned nretrans,
-                  const Header& hdr,
-                  const ExtendedHeader& ehdr,
-                  uint32_t mgen_flow_uid,
-                  uint32_t mgen_seqno,
-                  unsigned mcsidx,
-                  float fc,
-                  float bw,
-                  double mod_latency,
-                  uint32_t size,
-                  std::shared_ptr<IQBuf> buf,
-                  size_t offset,
-                  size_t nsamples);
+                  NetPacket &pkt);
 
-     void logEvent_(const WallClock::time_point& t,
-                    char *event);
+    void logEvent_(const MonoClock::time_point& t,
+                   char *event);
+
+    enum ARQEventType {
+        kSendNAK = 0,
+        kSendSACK,
+        kNAK,
+        kRetransmissionNAK,
+        kSACK,
+        kSNAK,
+        kACKTimeout,
+    };
+
+    void logARQEvent_(const MonoClock::time_point& t,
+                      ARQEventType type,
+                      NodeId node,
+                      Seq seq);
+
+    void logARQSACKEvent_(Packet &pkt,
+                          ARQEventType type,
+                          NodeId node,
+                          Seq unack);
 };
 
 #endif /* LOGGER_H_ */

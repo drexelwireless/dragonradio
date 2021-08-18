@@ -1019,7 +1019,7 @@ protected:
     /** This method appends feedback to the receiver in the form of both
      * statistics and selective ACKs .
      */
-    void appendFeedback(NetPacket &pkt, RecvWindow &recvw);
+    void appendFeedback(const std::shared_ptr<NetPacket> &pkt, RecvWindow &recvw);
 
     /** @brief Handle receiver statistics. */
     void handleReceiverStats(RadioPacket &pkt, SendWindow &sendw);
@@ -1035,7 +1035,7 @@ protected:
     std::optional<Seq> handleNAK(RadioPacket &pkt, SendWindow &sendw);
 
     /** @brief Handle select ACK messages. */
-    void handleSelectiveACK(RadioPacket &pkt,
+    void handleSelectiveACK(const std::shared_ptr<RadioPacket> &pkt,
                             SendWindow &sendw,
                             MonoClock::time_point tfeedback);
 

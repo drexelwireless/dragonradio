@@ -192,7 +192,7 @@ def main():
 
     # If a log directory is set, log packets and events
     if config.log_directory:
-        config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events']
+        config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events', 'log_arq_events']
 
     # Create the radio
     radio = dragonradio.radio.Radio(config, config.mac)

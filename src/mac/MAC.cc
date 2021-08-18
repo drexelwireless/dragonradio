@@ -132,7 +132,7 @@ void MAC::txNotifier(void)
         if (record.timestamp) {
             // Timestamp packets
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
-                (*it)->pkt->timestamp = *record.timestamp + (record.delay + (*it)->start)/tx_rate_;
+                (*it)->pkt->tx_timestamp = *record.timestamp + (record.delay + (*it)->start)/tx_rate_;
 
             // Record the record's load
             {
@@ -154,22 +154,15 @@ void MAC::txNotifier(void)
             std::shared_ptr<IQBuf> &first = record.iqbufs.front();
 
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
-                const std::shared_ptr<IQBuf> &samples = (*it)->samples ? (*it)->samples : first;
+                (*it)->pkt->fc = tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc;
+                (*it)->pkt->bw = tx_rate_;
+                (*it)->pkt->offset = (*it)->offset;
+                (*it)->pkt->nsamples = (*it)->nsamples;
 
-                logger_->logSend(WallClock::to_wall_time((*it)->pkt->timestamp),
-                                 (*it)->pkt->nretrans,
-                                 (*it)->pkt->hdr,
-                                 (*it)->pkt->ehdr(),
-                                 (*it)->pkt->mgen_flow_uid.value_or(0),
-                                 (*it)->pkt->mgen_seqno.value_or(0),
-                                 (*it)->pkt->mcsidx,
-                                 tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc,
-                                 tx_rate_,
-                                 (*it)->mod_latency,
-                                 (*it)->pkt->size(),
-                                 samples,
-                                 (*it)->offset,
-                                 (*it)->nsamples);
+                if (logger_->getCollectSource(Logger::kSentIQ))
+                    (*it)->pkt->samples = (*it)->samples ? (*it)->samples : first;
+
+                logger_->logSend((*it)->pkt);
             }
         }
 
@@ -189,5 +182,9 @@ void MAC::txNotifier(void)
                                             tx_fc_off_ ? *tx_fc_off_ : (*it)->channel.fc);
             }
         }
+
+        // Log the TX record
+        if (logger_)
+            logger_->logTXRecord(record.timestamp, record.nsamples, tx_rate_);
     }
 }

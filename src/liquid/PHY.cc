@@ -35,7 +35,7 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
                                     const float g,
                                     ModPacket &mpkt)
 {
-    MonoClock::time_point now = MonoClock::now();
+    MonoClock::time_point mod_start = MonoClock::now();
 
     // Set team in header
     pkt->hdr.flags.team = team_;
@@ -80,16 +80,22 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
                          iqbuf->data(),
                          [&](const auto& x) { return x*g; });
 
+    // Timestamp
+    MonoClock::time_point mod_end = MonoClock::now();
+
     // Pass the modulated packet to the 0dBFS estimator if requested
     AutoGain &autogain = phy_.mcs_table[pkt->mcsidx].autogain;
 
     if (autogain.needCalcAutoSoftGain0dBFS())
         work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
+    // Record modulation latency
+    pkt->mod_start_timestamp = mod_start;
+    pkt->mod_end_timestamp = mod_end;
+
     // Fill in the ModPacket
     mpkt.offset = iqbuf->delay;
     mpkt.nsamples = iqbuf->size() - iqbuf->delay;
-    mpkt.mod_latency = (MonoClock::now() - now).get_real_secs();
     mpkt.samples = std::move(iqbuf);
     mpkt.pkt = std::move(pkt);
 }
@@ -113,6 +119,23 @@ PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
 {
 }
 
+/** @brief Get MCS index of MCS in frame stats */
+inline mcsidx_t getMCSIndex(const std::vector<PHY::MCSEntry> &mcs_table,
+                            const framesyncstats_s &stats_)
+{
+    MCS mcs(static_cast<crc_scheme>(stats_.check),
+            static_cast<fec_scheme>(stats_.fec0),
+            static_cast<fec_scheme>(stats_.fec1),
+            static_cast<modulation_scheme>(stats_.mod_scheme));
+
+    for (mcsidx_t i = 0; i < mcs_table.size(); ++i) {
+        if (mcs == *reinterpret_cast<const MCS*>(mcs_table[i].mcs))
+            return i;
+    }
+
+    return 0;
+}
+
 int PHY::PacketDemodulator::callback(unsigned char *  header_,
                                      int              header_valid_,
                                      int              header_test_,
@@ -121,8 +144,8 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
                                      int              payload_valid_,
                                      framesyncstats_s stats_)
 {
-    Header*         hdr = reinterpret_cast<Header*>(header_);
-    ExtendedHeader* ehdr = reinterpret_cast<ExtendedHeader*>(payload_);
+    auto    now = MonoClock::now();
+    Header* hdr = reinterpret_cast<Header*>(header_);
 
     // Save samples of frame start and end
     unsigned sample_end = sample_ + stats_.sample_counter;
@@ -156,10 +179,18 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     if (!pkt)
         return 0;
 
+    // Save MGEN info for logging
+    pkt->initMGENInfo();
+
+    // Save CSI
     pkt->evm = stats_.evm;
     pkt->rssi = stats_.rssi;
     pkt->cfo = stats_.cfo;
+
+    // Save channel info
     pkt->channel = channel_;
+    pkt->bw = rx_rate_;
+    pkt->mcsidx = getMCSIndex(phy_.mcs_table, stats_);
 
     // The start and end variables contain full-rate sample offsets of the frame
     // start and end relative to the beginning of the slot.
@@ -168,12 +199,19 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     MonoClock::time_point timestamp = timestamp_ + start / rx_rate_;
 
     pkt->timestamp = timestamp;
+    pkt->slot_timestamp = timestamp_;
+    pkt->start_samples = start;
+    pkt->end_samples = end;
 
-    // Save MGEN info for logging
-    pkt->initMGENInfo();
+    pkt->demod_latency = (now - timestamp).get_real_secs();
 
-    uint32_t mgen_flow_uid = pkt->mgen_flow_uid.value_or(0);
-    uint32_t mgen_seqno = pkt->mgen_seqno.value_or(0);
+    pkt->payload_len = payload_len_;
+
+    if (logger_ &&
+        logger_->getCollectSource(Logger::kRecvPackets) &&
+        logger_->getCollectSource(Logger::kRecvSymbols) &&
+        (header_valid_ || log_invalid_headers_))
+        pkt->symbols = std::make_unique<std::vector<std::complex<float>>>(stats_.framesyms, stats_.framesyms + stats_.num_framesyms);
 
     // Call callback with received packet
     callback_(std::move(pkt));
@@ -183,50 +221,6 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
                                     *snapshot_off_ + end,
                                     channel_.fc,
                                     channel_.bw);
-
-    if (logger_ &&
-        logger_->getCollectSource(Logger::kRecvPackets) &&
-        (header_valid_ || log_invalid_headers_)) {
-        buffer<std::complex<float>> *buf = nullptr;
-
-        if (logger_->getCollectSource(Logger::kRecvSymbols)) {
-            buf = new buffer<std::complex<float>>(stats_.num_framesyms);
-            memcpy(buf->data(), stats_.framesyms, stats_.num_framesyms*sizeof(std::complex<float>));
-        }
-
-        // Find MCS index
-        MCS                     mcs(static_cast<crc_scheme>(stats_.check),
-                                    static_cast<fec_scheme>(stats_.fec0),
-                                    static_cast<fec_scheme>(stats_.fec1),
-                                    static_cast<modulation_scheme>(stats_.mod_scheme));
-        std::optional<mcsidx_t> mcsidx = 0;
-
-        for (mcsidx_t i = 0; i < phy_.mcs_table.size(); ++i) {
-            if (mcs == *reinterpret_cast<const MCS*>(phy_.mcs_table[i].mcs)) {
-                mcsidx = i;
-                break;
-            }
-        }
-
-        logger_->logRecv(WallClock::to_wall_time(timestamp_),
-                         start,
-                         end,
-                         header_valid_,
-                         payload_valid_,
-                         *hdr,
-                         *ehdr,
-                         mgen_flow_uid,
-                         mgen_seqno,
-                         mcsidx ? *mcsidx : 0,
-                         stats_.evm,
-                         stats_.rssi,
-                         stats_.cfo,
-                         channel_.fc,
-                         rx_rate_,
-                         (MonoClock::now() - timestamp).get_real_secs(),
-                         payload_len_,
-                         std::move(buf));
-    }
 
     return 0;
 }

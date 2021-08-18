@@ -15,11 +15,11 @@ PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
 {
-    WallClock::time_point t_start = WallClock::time_point(WallClock::now().get_full_secs());
-    auto                  log = std::make_shared<Logger>(t_start);
+    int64_t full_secs = WallClock::now().get_full_secs();
+    auto    log = std::make_shared<Logger>(WallClock::time_point(full_secs), MonoClock::time_point(full_secs));
 
     log->open(path);
-    log->setAttribute("start", (uint32_t) t_start.get_full_secs());
+    log->setAttribute("start", (int64_t) full_secs);
 
     return log;
 }
@@ -83,7 +83,7 @@ void exportLogger(py::module &m)
         .def("logEvent",
             [](Logger &self, const std::string &msg)
             {
-                return self.logEvent(WallClock::now(), msg);
+                return self.logEvent(MonoClock::now(), msg);
             },
             "Log an event")
         .def("logSnapshot",
@@ -92,9 +92,11 @@ void exportLogger(py::module &m)
         ;
 
     addLoggerSource(loggerCls, "log_slots", Logger::kSlots);
+    addLoggerSource(loggerCls, "log_tx_records", Logger::kTXRecords);
     addLoggerSource(loggerCls, "log_recv_packets", Logger::kRecvPackets);
     addLoggerSource(loggerCls, "log_recv_symbols", Logger::kRecvSymbols);
     addLoggerSource(loggerCls, "log_sent_packets", Logger::kSentPackets);
     addLoggerSource(loggerCls, "log_sent_iq", Logger::kSentIQ);
     addLoggerSource(loggerCls, "log_events", Logger::kEvents);
+    addLoggerSource(loggerCls, "log_arq_events", Logger::kARQEvents);
 }

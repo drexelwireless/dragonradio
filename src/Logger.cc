@@ -17,18 +17,36 @@ std::shared_ptr<Logger> logger;
 struct SlotEntry {
     /** @brief Receive timestamp. */
     double timestamp;
-    /** @brief Bandwidth [Hz] */
-    float bw;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
+    /** @brief Sample center frequency [Hz] */
+    float fc;
+    /** @brief Sample rate [Hz] */
+    float fs;
     /** @brief Size of uncompressed IQ data (bytes). */
     uint32_t iq_data_len;
     /** @brief Compressed IQ data. */
     hvl_t iq_data;
 };
 
+/** @brief Log entry for TX records */
+struct TXRecordEntry {
+    /** @brief TX timestamp. */
+    double timestamp;
+    /** @brief Monotonic TX timestamp. */
+    double mono_timestamp;
+    /** @brief Number of samples. */
+    int64_t nsamples;
+    /** @brief Sampling frequency [Hz] */
+    float fs;
+};
+
 /** @brief Log entry for snapshots */
 struct SnapshotEntry {
     /** @brief Receive timestamp. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
     /** @brief Sampling frequency [Hz] */
     float fs;
     /** @brief Size of uncompressed IQ data (bytes). */
@@ -41,6 +59,8 @@ struct SnapshotEntry {
 struct SelfTXEntry {
     /** @brief Timestamp of snapshot this self-transmission belongs to. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
     /** @brief Is this TX local, i.e., produced by this node? */
     uint8_t is_local;
     /** @brief Offset of start of packet. */
@@ -57,7 +77,11 @@ struct SelfTXEntry {
 struct PacketRecvEntry {
     /** @brief Timestamp of the slot in which the packet occurred. */
     /** If the packet spans two slots, this is the timestamp of the first slot. */
+    double slot_timestamp;
+    /** @brief Timestamp of packet reception. */
     double timestamp;
+    /** @brief Monotonic clock timestamp of packet reception. */
+    double mono_timestamp;
     /** @brief Offset (in samples) from timestamp slot to start of frame. */
     int32_t start_samples;
     /** @brief Offset (in samples) from timestamp slot to end of frame. */
@@ -99,7 +123,9 @@ struct PacketRecvEntry {
     /** @brief Bandwidth [Hz] */
     float bw;
     /** @brief Demodulation latency (sec) */
-    float demod_latency;
+    double demod_latency;
+    /** @brief Latency between packet reception and write to tun/tap [sec] */
+    double tuntap_latency;
     /** @brief Size of packet (bytes). */
     uint32_t size;
     /** @brief Raw IQ data. */
@@ -108,9 +134,12 @@ struct PacketRecvEntry {
 
 /** @brief Log entry for sent packets */
 struct PacketSendEntry {
-    /** @brief Timestamp of the slot in which the packet occurred. */
-    /** If the packet spans two slots, this is the timestamp of the first slot. */
+    /** @brief Timestamp of packet transmission. */
     double timestamp;
+    /** @brief Monotonic clock timestamp of packet transmission. */
+    double mono_timestamp;
+    /** @brief Timestamp of packet reception from network. */
+    double net_timestamp;
     /** @brief Was this packet dropped, and if so, why was it dropped? */
     uint8_t dropped;
     /** @brief Number of packet retransmissions. */
@@ -141,8 +170,20 @@ struct PacketSendEntry {
     float fc;
     /** @brief Bandwidth [Hz] */
     float bw;
-    /** @brief Modulation latency [sec] */
+    /** @brief Latency between packet creation and tun/tap read [sec] */
+    double tuntap_latency;
+    /** @brief Enqueue latency [sec] */
+    double enqueue_latency;
+    /** @brief Latency of *just* dequeue [sec] */
+    double dequeue_latency;
+    /** @brief Queue latency [sec] */
+    double queue_latency;
+    /** @brief LLC latency [sec] */
+    double llc_latency;
+    /** @brief Latency of *just* modulation [sec] */
     double mod_latency;
+    /** @brief Latency from network read to modulation [sec] */
+    double synth_latency;
     /** @brief Size of packet (bytes). */
     uint32_t size;
     /** @brief Number of IQ samples. */
@@ -153,13 +194,38 @@ struct PacketSendEntry {
 
 /** @brief Generic event */
 struct EventEntry {
+    /** @brief Event timestamp. */
     double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
+    /** @brief Event description. */
     const char *event;
 };
 
-Logger::Logger(WallClock::time_point t_start)
+/** @brief Log entry for LLC events */
+struct ARQEventEntry {
+    /** @brief Event timestamp */
+    double timestamp;
+    /** @brief Monotonic clock timestamp. */
+    double mono_timestamp;
+    /** @brief Type of LLC entry */
+    uint8_t type;
+    /** @brief Node ID of other node. */
+    uint8_t node;
+    /** @brief Sequence number */
+    uint16_t seq;
+    /** @brief Selective ACKs.*/
+    /** A selective ACK sequence is a list of tuples [start,end) representing
+     * selective ACKs from start (inclusive) to end (non-inclusive).
+     */
+    hvl_t sacks;
+};
+
+Logger::Logger(const WallClock::time_point &t_start,
+               const MonoClock::time_point &mono_t_start)
   : is_open_(false)
   , t_start_(t_start)
+  , mono_t_start_(mono_t_start)
   , t_last_slot_((time_t) 0)
   , sources_(0)
   , done_(false)
@@ -195,14 +261,25 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_slot(sizeof(SlotEntry));
 
     h5_slot.insertMember("timestamp", HOFFSET(SlotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
-    h5_slot.insertMember("bw", HOFFSET(SlotEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_slot.insertMember("mono_timestamp", HOFFSET(SlotEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_slot.insertMember("fc", HOFFSET(SlotEntry, fc), H5::PredType::NATIVE_FLOAT);
+    h5_slot.insertMember("fs", HOFFSET(SlotEntry, fs), H5::PredType::NATIVE_FLOAT);
     h5_slot.insertMember("iq_data_len", HOFFSET(SlotEntry, iq_data_len), H5::PredType::NATIVE_UINT32);
     h5_slot.insertMember("iq_data", HOFFSET(SlotEntry, iq_data), h5_compressed_iqdata);
+
+    // H5 type for tx records
+    H5::CompType h5_tx_record(sizeof(TXRecordEntry));
+
+    h5_tx_record.insertMember("timestamp", HOFFSET(TXRecordEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_tx_record.insertMember("mono_timestamp", HOFFSET(TXRecordEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_tx_record.insertMember("nsamples", HOFFSET(TXRecordEntry, nsamples), H5::PredType::NATIVE_INT64);
+    h5_tx_record.insertMember("fs", HOFFSET(TXRecordEntry, fs), H5::PredType::NATIVE_DOUBLE);
 
     // H5 type for snapshots
     H5::CompType h5_snapshot(sizeof(SnapshotEntry));
 
     h5_snapshot.insertMember("timestamp", HOFFSET(SnapshotEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_snapshot.insertMember("mono_timestamp", HOFFSET(SnapshotEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_snapshot.insertMember("fs", HOFFSET(SnapshotEntry, fs), H5::PredType::NATIVE_FLOAT);
     h5_snapshot.insertMember("iq_data_len", HOFFSET(SnapshotEntry, iq_data_len), H5::PredType::NATIVE_UINT32);
     h5_snapshot.insertMember("iq_data", HOFFSET(SnapshotEntry, iq_data), h5_compressed_iqdata);
@@ -211,6 +288,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_selftx(sizeof(SelfTXEntry));
 
     h5_selftx.insertMember("timestamp", HOFFSET(SelfTXEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_selftx.insertMember("mono_timestamp", HOFFSET(SelfTXEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_selftx.insertMember("is_local", HOFFSET(SelfTXEntry, is_local), H5::PredType::NATIVE_UINT8);
     h5_selftx.insertMember("start", HOFFSET(SelfTXEntry, start), H5::PredType::NATIVE_INT32);
     h5_selftx.insertMember("end", HOFFSET(SelfTXEntry, end), H5::PredType::NATIVE_INT32);
@@ -220,7 +298,9 @@ void Logger::open(const std::string& filename)
     // H5 type for received packets
     H5::CompType h5_packet_recv(sizeof(PacketRecvEntry));
 
+    h5_packet_recv.insertMember("slot_timestamp", HOFFSET(PacketRecvEntry, slot_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("timestamp", HOFFSET(PacketRecvEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_recv.insertMember("mono_timestamp", HOFFSET(PacketRecvEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("start_samples", HOFFSET(PacketRecvEntry, start_samples), H5::PredType::NATIVE_INT32);
     h5_packet_recv.insertMember("end_samples", HOFFSET(PacketRecvEntry, end_samples), H5::PredType::NATIVE_INT32);
     h5_packet_recv.insertMember("header_valid", HOFFSET(PacketRecvEntry, header_valid), H5::PredType::NATIVE_UINT8);
@@ -241,7 +321,8 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("cfo", HOFFSET(PacketRecvEntry, cfo), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("fc", HOFFSET(PacketRecvEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("bw", HOFFSET(PacketRecvEntry, bw), H5::PredType::NATIVE_FLOAT);
-    h5_packet_recv.insertMember("demod_latency", HOFFSET(PacketRecvEntry, demod_latency), H5::PredType::NATIVE_FLOAT);
+    h5_packet_recv.insertMember("demod_latency", HOFFSET(PacketRecvEntry, demod_latency), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_recv.insertMember("tuntap_latency", HOFFSET(PacketRecvEntry, tuntap_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("size", HOFFSET(PacketRecvEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_recv.insertMember("symbols", HOFFSET(PacketRecvEntry, symbols), h5_iqdata);
 
@@ -249,6 +330,8 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_packet_send(sizeof(PacketSendEntry));
 
     h5_packet_send.insertMember("timestamp", HOFFSET(PacketSendEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("mono_timestamp", HOFFSET(PacketSendEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("net_timestamp", HOFFSET(PacketSendEntry, net_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("dropped", HOFFSET(PacketSendEntry, dropped), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("nretrans", HOFFSET(PacketSendEntry, nretrans), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("curhop", HOFFSET(PacketSendEntry, curhop), H5::PredType::NATIVE_UINT8);
@@ -264,7 +347,13 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("mcsidx", HOFFSET(PacketSendEntry, mcsidx), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_packet_send.insertMember("tuntap_latency", HOFFSET(PacketSendEntry, tuntap_latency), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("enqueue_latency", HOFFSET(PacketSendEntry, enqueue_latency), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("dequeue_latency", HOFFSET(PacketSendEntry, dequeue_latency), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("queue_latency", HOFFSET(PacketSendEntry, queue_latency), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("llc_latency", HOFFSET(PacketSendEntry, llc_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("mod_latency", HOFFSET(PacketSendEntry, mod_latency), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("synth_latency", HOFFSET(PacketSendEntry, synth_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("size", HOFFSET(PacketSendEntry, size), H5::PredType::NATIVE_UINT32);
     h5_packet_send.insertMember("nsamples", HOFFSET(PacketSendEntry, nsamples), H5::PredType::NATIVE_INT32);
     h5_packet_send.insertMember("iq_data", HOFFSET(PacketSendEntry, iq_data), h5_iqdata);
@@ -273,17 +362,32 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_event(sizeof(EventEntry));
 
     h5_event.insertMember("timestamp", HOFFSET(EventEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_event.insertMember("mono_timestamp", HOFFSET(EventEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_event.insertMember("event", HOFFSET(EventEntry, event), h5_string);
+
+    // H5 type for variable-length SACK data
+    H5::VarLenType h5_sack_data(&H5::PredType::NATIVE_UINT16);
+
+    // H5 type for ARQ events
+    H5::CompType h5_arq_event(sizeof(ARQEventEntry));
+
+    h5_arq_event.insertMember("timestamp", HOFFSET(ARQEventEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_arq_event.insertMember("type", HOFFSET(ARQEventEntry, type), H5::PredType::NATIVE_UINT8);
+    h5_arq_event.insertMember("node", HOFFSET(ARQEventEntry, node), H5::PredType::NATIVE_UINT8);
+    h5_arq_event.insertMember("seq", HOFFSET(ARQEventEntry, seq), H5::PredType::NATIVE_UINT16);
+    h5_arq_event.insertMember("sacks", HOFFSET(ARQEventEntry, sacks), h5_sack_data);
 
     // Create H5 groups
     file_ = H5::H5File(filename, H5F_ACC_TRUNC);
 
     slots_ = std::make_unique<ExtensibleDataSet>(file_, "slots", h5_slot);
+    tx_records_ = std::make_unique<ExtensibleDataSet>(file_, "tx_records", h5_tx_record);
     snapshots_ = std::make_unique<ExtensibleDataSet>(file_, "snapshots", h5_snapshot);
     selftx_ = std::make_unique<ExtensibleDataSet>(file_, "selftx", h5_selftx);
     recv_ = std::make_unique<ExtensibleDataSet>(file_, "recv", h5_packet_recv);
     send_ = std::make_unique<ExtensibleDataSet>(file_, "send", h5_packet_send);
     event_ = std::make_unique<ExtensibleDataSet>(file_, "event", h5_event);
+    arq_event_ = std::make_unique<ExtensibleDataSet>(file_, "arq_event", h5_arq_event);
 
     // Start worker thread
     worker_thread_ = std::thread(&Logger::worker, this);
@@ -306,11 +410,13 @@ void Logger::close(void)
     if (is_open_) {
         stop();
         slots_.reset();
+        tx_records_.reset();
         snapshots_.reset();
         selftx_.reset();
         recv_.reset();
         send_.reset();
         event_.reset();
+        arq_event_.reset();
         file_.close();
         is_open_ = false;
     }
@@ -343,6 +449,24 @@ void Logger::setAttribute(const std::string& name, uint32_t val)
     att.write(h5_type, &val);
 }
 
+void Logger::setAttribute(const std::string& name, int64_t val)
+{
+    H5::IntType   h5_type(H5::PredType::NATIVE_INT64);
+    H5::DataSpace attr_space(H5S_SCALAR);
+    H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
+
+    att.write(h5_type, &val);
+}
+
+void Logger::setAttribute(const std::string& name, uint64_t val)
+{
+    H5::IntType   h5_type(H5::PredType::NATIVE_UINT64);
+    H5::DataSpace attr_space(H5S_SCALAR);
+    H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
+
+    att.write(h5_type, &val);
+}
+
 void Logger::setAttribute(const std::string& name, double val)
 {
     H5::FloatType h5_type(H5::PredType::NATIVE_DOUBLE);
@@ -350,19 +474,6 @@ void Logger::setAttribute(const std::string& name, double val)
     H5::Attribute att = createOrOpenAttribute(name, h5_type, attr_space);
 
     att.write(h5_type, &val);
-}
-
-void Logger::logSlot(std::shared_ptr<IQBuf> buf,
-                     float bw)
-{
-    if (getCollectSource(kSlots)) {
-        // Only log slots we haven't logged before. We should never be asked to log
-        // a slot that is older than the youngest slot we've ever logged.
-        if (buf->timestamp > t_last_slot_) {
-            log_q_.push([=](){ logSlot_(buf, bw); });
-            t_last_slot_ = *buf->timestamp;
-        }
-    }
 }
 
 void Logger::worker(void)
@@ -388,19 +499,32 @@ H5::Attribute Logger::createOrOpenAttribute(const std::string &name,
         return file_.createAttribute(name, data_type, data_space);
 }
 
-void Logger::logSlot_(std::shared_ptr<IQBuf> buf,
-                      float bw)
+void Logger::logSlot_(const IQBuf &buf)
 {
     SlotEntry    entry;
-    buffer<char> compressed = compressIQData(buf->data(), buf->size());
+    buffer<char> compressed = compressIQData(buf.data(), buf.size());
 
-    entry.timestamp = (WallClock::to_wall_time(*buf->timestamp) - t_start_).get_real_secs();
-    entry.bw = bw;
-    entry.iq_data_len = buf->size();
+    entry.timestamp = (WallClock::to_wall_time(*buf.timestamp) - t_start_).get_real_secs();
+    entry.mono_timestamp = (*buf.timestamp - mono_t_start_).get_real_secs();
+    entry.fc = buf.fc;
+    entry.fs = buf.fs;
+    entry.iq_data_len = buf.size();
     entry.iq_data.p = compressed.data();
     entry.iq_data.len = compressed.size();
 
     slots_->write(&entry, 1);
+}
+
+void Logger::logTXRecord_(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs)
+{
+    TXRecordEntry entry;
+
+    entry.timestamp = t ? (WallClock::to_wall_time(*t) - t_start_).get_real_secs() : 0;
+    entry.mono_timestamp = t ? (*t - mono_t_start_).get_real_secs() : 0;
+    entry.nsamples = nsamples;
+    entry.fs = fs;
+
+    tx_records_->write(&entry, 1);
 }
 
 void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
@@ -410,10 +534,12 @@ void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
 
     SnapshotEntry          entry;
     double                 timestamp = (WallClock::to_wall_time(snapshot->timestamp) - t_start_).get_real_secs();
+    double                 mono_timestamp = (snapshot->timestamp - mono_t_start_).get_real_secs();
     std::shared_ptr<IQBuf> buf = *(snapshot->getCombinedSlots());
     buffer<char>           compressed = compressIQData(buf->data(), buf->size());
 
     entry.timestamp = timestamp;
+    entry.mono_timestamp = mono_timestamp;
     entry.fs = buf->fs;
     entry.iq_data_len = buf->size();
     entry.iq_data.p = compressed.data();
@@ -425,6 +551,7 @@ void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
 
     for (auto&& selftx : snapshot->selftx) {
         selftx_entry.timestamp = timestamp;
+        selftx_entry.mono_timestamp = mono_timestamp;
         selftx_entry.is_local = selftx.is_local;
         selftx_entry.start = selftx.start;
         selftx_entry.end = selftx.end;
@@ -440,35 +567,22 @@ typedef union {
     uint8_t bits;
 } u_flags;
 
-void Logger::logRecv_(const WallClock::time_point& t,
-                      int32_t start_samples,
-                      int32_t end_samples,
-                      bool header_valid,
-                      bool payload_valid,
-                      const Header& hdr,
-                      const ExtendedHeader& ehdr,
-                      uint32_t mgen_flow_uid,
-                      uint32_t mgen_seqno,
-                      unsigned mcsidx,
-                      float evm,
-                      float rssi,
-                      float cfo,
-                      float fc,
-                      float bw,
-                      float demod_latency,
-                      uint32_t size,
-                      buffer<std::complex<float>> *symbols)
+void Logger::logRecv_(RadioPacket &pkt)
 {
     PacketRecvEntry entry;
+    Header          &hdr = pkt.hdr;
+    ExtendedHeader  &ehdr = pkt.ehdr();
     u_flags         u;
 
     u.flags = hdr.flags;
 
-    entry.timestamp = (t - t_start_).get_real_secs();
-    entry.start_samples = start_samples;
-    entry.end_samples = end_samples;
-    entry.header_valid = header_valid;
-    entry.payload_valid = payload_valid;
+    entry.slot_timestamp = (WallClock::to_wall_time(pkt.slot_timestamp) - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(pkt.timestamp) - t_start_).get_real_secs();
+    entry.mono_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
+    entry.start_samples = pkt.start_samples;
+    entry.end_samples = pkt.end_samples;
+    entry.header_valid = !pkt.internal_flags.invalid_header;
+    entry.payload_valid = !pkt.internal_flags.invalid_payload;
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
@@ -477,54 +591,44 @@ void Logger::logRecv_(const WallClock::time_point& t,
     entry.dest = ehdr.dest;
     entry.ack = ehdr.ack;
     entry.data_len = ehdr.data_len;
-    entry.mgen_flow_uid = mgen_flow_uid;
-    entry.mgen_seqno = mgen_seqno;
-    entry.mcsidx = mcsidx;
-    entry.evm = evm;
-    entry.rssi = rssi;
-    entry.cfo = cfo;
-    entry.fc = fc;
-    entry.bw = bw;
-    entry.demod_latency = demod_latency;
-    entry.size = size;
-    if (symbols) {
-        entry.symbols.p = symbols->data();
-        entry.symbols.len = symbols->size();
+    entry.mgen_flow_uid = pkt.mgen_flow_uid.value_or(0);
+    entry.mgen_seqno = pkt.mgen_seqno.value_or(0);
+    entry.mcsidx = pkt.mcsidx;
+    entry.evm = pkt.evm;
+    entry.rssi = pkt.rssi;
+    entry.cfo = pkt.cfo;
+    entry.fc = pkt.channel.fc;
+    entry.bw = pkt.bw;
+    entry.demod_latency = pkt.demod_latency;
+    entry.tuntap_latency = (pkt.tuntap_timestamp - pkt.timestamp).get_real_secs();
+    entry.size = pkt.payload_len;
+    if (pkt.symbols && getCollectSource(kRecvSymbols)) {
+        entry.symbols.p = pkt.symbols->data();
+        entry.symbols.len = pkt.symbols->size();
     } else {
         entry.symbols.p = nullptr;
         entry.symbols.len = 0;
     }
 
     recv_->write(&entry, 1);
-
-    if (symbols)
-        delete symbols;
 }
 
-void Logger::logSend_(const WallClock::time_point& t,
+void Logger::logSend_(const MonoClock::time_point& t,
                       DropType dropped,
-                      unsigned nretrans,
-                      const Header& hdr,
-                      const ExtendedHeader& ehdr,
-                      uint32_t mgen_flow_uid,
-                      uint32_t mgen_seqno,
-                      unsigned mcsidx,
-                      float fc,
-                      float bw,
-                      double mod_latency,
-                      uint32_t size,
-                      std::shared_ptr<IQBuf> buf,
-                      size_t offset,
-                      size_t nsamples)
+                      NetPacket &pkt)
 {
     PacketSendEntry entry;
+    Header          &hdr = pkt.hdr;
+    ExtendedHeader  &ehdr = pkt.ehdr();
     u_flags         u;
 
     u.flags = hdr.flags;
 
-    entry.timestamp = (t - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
+    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
+    entry.net_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
     entry.dropped = dropped;
-    entry.nretrans = nretrans;
+    entry.nretrans = pkt.nretrans;
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
@@ -533,22 +637,46 @@ void Logger::logSend_(const WallClock::time_point& t,
     entry.dest = ehdr.dest;
     entry.ack = ehdr.ack;
     entry.data_len = ehdr.data_len;
-    entry.mgen_flow_uid = mgen_flow_uid;
-    entry.mgen_seqno = mgen_seqno;
-    entry.mcsidx = mcsidx;
-    entry.fc = fc;
-    entry.bw = bw;
-    entry.mod_latency = mod_latency;
-    entry.size = size;
-    entry.nsamples = nsamples;
-    if (buf && getCollectSource(kSentIQ)) {
-        // It's possible that a packet's content is split across two successive
-        // IQ buffers. If this happens, we won't have all of the packet's IQ
-        // data, so we need to clamp nsamples.
-        assert(offset <= buf->size());
-        entry.iq_data.p = buf->data() + offset;
-        entry.iq_data.len = std::min(nsamples, (unsigned) buf->size() - offset);
+    entry.mgen_flow_uid =  pkt.mgen_flow_uid.value_or(0);
+    entry.mgen_seqno =  pkt.mgen_seqno.value_or(0);
+    entry.mcsidx =  pkt.mcsidx;
+
+    if (dropped == kNotDropped) {
+        entry.fc = pkt.fc;
+        entry.bw = pkt.bw;
+        entry.tuntap_latency = pkt.wall_timestamp ? (pkt.tuntap_timestamp - *pkt.wall_timestamp).get_real_secs() : 0;
+        entry.enqueue_latency = (pkt.enqueue_timestamp - pkt.timestamp).get_real_secs();
+        entry.dequeue_latency = (pkt.dequeue_end_timestamp - pkt.dequeue_start_timestamp).get_real_secs();
+        entry.queue_latency = (pkt.dequeue_end_timestamp - pkt.timestamp).get_real_secs();
+        entry.llc_latency = (pkt.llc_timestamp - pkt.timestamp).get_real_secs();
+        entry.mod_latency = (pkt.mod_end_timestamp - pkt.mod_start_timestamp).get_real_secs();
+        entry.synth_latency = (pkt.mod_end_timestamp - pkt.timestamp).get_real_secs();
+        entry.size = pkt.size();
+        entry.nsamples = pkt.nsamples;
+        if (pkt.samples && getCollectSource(kSentIQ)) {
+            // It's possible that a packet's content is split across two successive
+            // IQ buffers. If this happens, we won't have all of the packet's IQ
+            // data, so we need to clamp nsamples.
+            assert(pkt.offset <= pkt.samples->size());
+            entry.iq_data.p = pkt.samples->data() + pkt.offset;
+            entry.iq_data.len = std::min(pkt.nsamples,
+                                        (unsigned) pkt.samples->size() - pkt.offset);
+        } else {
+            entry.iq_data.p = nullptr;
+            entry.iq_data.len = 0;
+        }
     } else {
+        entry.fc = 0;
+        entry.bw = 0;
+        entry.tuntap_latency = 0;
+        entry.enqueue_latency = 0;
+        entry.dequeue_latency = 0;
+        entry.queue_latency = 0;
+        entry.llc_latency = 0;
+        entry.mod_latency = 0;
+        entry.synth_latency = 0;
+        entry.size = 0;
+        entry.nsamples = 0;
         entry.iq_data.p = nullptr;
         entry.iq_data.len = 0;
     }
@@ -556,15 +684,70 @@ void Logger::logSend_(const WallClock::time_point& t,
     send_->write(&entry, 1);
 }
 
-void Logger::logEvent_(const WallClock::time_point& t,
+void Logger::logEvent_(const MonoClock::time_point& t,
                        char *event)
 {
     EventEntry entry;
 
-    entry.timestamp = (t - t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
+    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
     entry.event = event;
 
     event_->write(&entry, 1);
 
     delete[] event;
+}
+
+void Logger::logARQEvent_(const MonoClock::time_point& t,
+                          ARQEventType type,
+                          NodeId node,
+                          Seq seq)
+{
+    ARQEventEntry entry;
+
+    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
+    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
+    entry.type = type;
+    entry.node = node;
+    entry.seq = seq;
+    entry.sacks.p = nullptr;
+    entry.sacks.len = 0;
+
+    arq_event_->write(&entry, 1);
+}
+
+void Logger::logARQSACKEvent_(Packet &pkt,
+                              ARQEventType type,
+                              NodeId node,
+                              Seq unack)
+{
+    // Extract SACKs
+    std::vector<Seq::uint_type> sacks;
+
+    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kSelectiveAck:
+            {
+                sacks.push_back(it->ack.begin);
+                sacks.push_back(it->ack.end);
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
+
+    // Log event
+    ARQEventEntry entry;
+
+    entry.timestamp = (WallClock::to_wall_time(pkt.timestamp) - t_start_).get_real_secs();
+    entry.mono_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
+    entry.type = type;
+    entry.node = node;
+    entry.seq = unack;
+    entry.sacks.p = const_cast<Seq::uint_type*>(sacks.data());
+    entry.sacks.len = sacks.size();
+
+    arq_event_->write(&entry, 1);
 }

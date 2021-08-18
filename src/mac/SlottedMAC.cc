@@ -167,6 +167,10 @@ void SlottedMAC::txWorker(void)
                 next_slot_start_of_burst = true;
             }
 
+            // Log the TX record
+            if (logger_)
+                logger_->logTXRecord(WallClock::to_mono_time(slot->deadline), slot->nsamples, tx_rate_);
+
             continue;
         }
 

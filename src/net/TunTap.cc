@@ -49,6 +49,7 @@ TunTap::TunTap(const std::string& tap_iface,
   , source(*this,
            std::bind(&TunTap::start, this),
            std::bind(&TunTap::stop, this))
+  , logger_(logger)
   , persistent_(persistent)
   , tap_iface_(tap_iface)
   , tap_ipaddr_(tap_ipaddr)
@@ -243,6 +244,11 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
         return;
     }
 
+    pkt->tuntap_timestamp = MonoClock::now();
+
+    if (logger_ && logger_->getCollectSource(Logger::kRecvPackets))
+        logger_->logRecv(pkt);
+
     if ((size_t) nwrite != pkt->ehdr().data_len) {
         logTunTap(LOGERROR, "incomplete write: nwrite = %ld; size=%u; seq=%u; data_len=%u",
             nwrite,
@@ -304,6 +310,7 @@ void TunTap::worker(void)
         pkt->ehdr().data_len = nread;
         pkt->resize(sizeof(ExtendedHeader) + nread);
         pkt->timestamp = MonoClock::now();
+        pkt->tuntap_timestamp = WallClock::to_wall_time(pkt->timestamp);
         source.push(std::move(pkt));
     }
 }
