@@ -14,6 +14,7 @@ using namespace pybind11::literals;
 
 #include "Logger.hh"
 #include "util/capabilities.hh"
+#include "phy/PHY.hh"
 
 #define MAXFRAMES 25
 
@@ -128,12 +129,13 @@ int main(int argc, char** argv)
         }
     }
 
-    // Ensure logger is gracefully closed
-    if (logger)
-        logger.reset();
+    // Ensure snapshot collector is gracefully closed
+    PHY::resetSnapshotCollector();
 
-    // Release USRP from Clock. Leaving the release to the Clock's static member
-    // variable's destructor makes UHD unhappy (i.e., crash).
+    // Ensure logger is gracefully closed
+    logger.reset();
+
+    // Release USRP from Clock.
     Clock::releaseUSRP();
 
     return ret;
