@@ -73,6 +73,8 @@ EVENTS = [(re.compile(r), k, c) for (r, k, c) in
             [ [r'^AMC: Moved up modulation scheme', 'AMC', 'g']
             , [r'^AMC: Moved down modulation scheme', 'AMC', 'r']
             , [r'^AMC: Environment', 'AMC', 'k']
+            , [r'^AMC: Ping', 'AMC', 'c']
+            , [r'^AMC: Pong', 'AMC', 'm']
             , [r'^ARQ: send set unack', 'ARQ', 'k']
             , [r'^ARQ: set unack', 'ARQ', 'k']
             , [r'^ARQ: recv OUTSIDE WINDOW', 'ARQ', 'y']
