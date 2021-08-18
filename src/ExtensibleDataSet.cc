@@ -3,20 +3,23 @@
 
 #include "ExtensibleDataSet.hh"
 
+/** @brief File block size(-ish) */
+constexpr size_t kBlockSize = 4*1024;
+
 /** @brief We allocate capacity in multiples of this. */
-constexpr size_t GRANULARITY = 4*1024*1024;
+constexpr size_t kAllocGranularity = 1024*kBlockSize;
 
 /** @brief We chunk in multiples of this. */
-constexpr size_t CHUNK_GRANULARITY = 4*1024*1024;
+constexpr size_t kChunkGranularity = 32*kBlockSize;
 
 ExtensibleDataSet::ExtensibleDataSet(const Group& loc, const std::string& name, const H5::DataType &dt)
   : dt_(dt)
   , size_(0)
   , capacity_(0)
 {
-    hsize_t               dim[] = { GRANULARITY };
+    hsize_t               dim[] = { kAllocGranularity };
     hsize_t               maxdims[] = { H5S_UNLIMITED };
-    hsize_t               chunk_dims[] = { CHUNK_GRANULARITY };
+    hsize_t               chunk_dims[] = { kChunkGranularity };
     H5::DataSpace         space(1, dim, maxdims);
     H5::DSetCreatPropList plist;
 
@@ -35,7 +38,7 @@ ExtensibleDataSet::~ExtensibleDataSet()
 void ExtensibleDataSet::reserve(size_t capacity)
 {
     if (capacity > capacity_) {
-        capacity_ = GRANULARITY * ((capacity + GRANULARITY - 1) / GRANULARITY);
+        capacity_ = kAllocGranularity * ((capacity + kAllocGranularity - 1) / kAllocGranularity);
 
         hsize_t dim[] = { capacity_ };
 

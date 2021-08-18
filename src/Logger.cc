@@ -13,6 +13,21 @@
 
 std::shared_ptr<Logger> logger;
 
+/** @brief File block size(-ish) */
+constexpr size_t kBlockSize = 4*1024;
+
+/** @brief Number of elements in the meta data cache */
+constexpr int kMDCNumElements = 512;
+
+/** @brief Number of elements in the raw data chunk cache */
+constexpr size_t kRDCCNumElements = 512;
+
+/** @brief Total size of the raw data chunk cache, in bytes */
+constexpr size_t kRDCCNumBytes = 16*1024*kBlockSize;
+
+/** @brief Preemption policy */
+constexpr double kRDCCW0 = 0.0;
+
 /** @brief Log entry for slots */
 struct SlotEntry {
     /** @brief Receive timestamp. */
@@ -377,9 +392,17 @@ void Logger::open(const std::string& filename)
     h5_arq_event.insertMember("seq", HOFFSET(ARQEventEntry, seq), H5::PredType::NATIVE_UINT16);
     h5_arq_event.insertMember("sacks", HOFFSET(ARQEventEntry, sacks), h5_sack_data);
 
-    // Create H5 groups
-    file_ = H5::H5File(filename, H5F_ACC_TRUNC);
+    // Open log file and set cache parameters
+    H5::FileAccPropList acc_plist = H5::FileAccPropList::DEFAULT;
 
+    acc_plist.setCache(kMDCNumElements,
+                       kRDCCNumElements,
+                       kRDCCNumBytes,
+                       kRDCCW0);
+
+    file_ = H5::H5File(filename, H5F_ACC_TRUNC, H5::FileCreatPropList::DEFAULT, acc_plist);
+
+    // Create H5 groups
     slots_ = std::make_unique<ExtensibleDataSet>(file_, "slots", h5_slot);
     tx_records_ = std::make_unique<ExtensibleDataSet>(file_, "tx_records", h5_tx_record);
     snapshots_ = std::make_unique<ExtensibleDataSet>(file_, "snapshots", h5_snapshot);
