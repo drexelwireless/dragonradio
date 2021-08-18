@@ -265,6 +265,12 @@ public:
         snapshot_collector_ = collector;
     }
 
+    /** @brief Reset snapshot collector */
+    static void resetSnapshotCollector(void)
+    {
+        snapshot_collector_.reset();
+    }
+
 protected:
     /** @brief This node's team */
     static uint8_t team_;
