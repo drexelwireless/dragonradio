@@ -57,6 +57,7 @@ using TimestampSeq = uint16_t;
 struct ControlMsg {
     enum Type {
         kHello,
+        kPing,
         kTimestamp,
         kTimestampSent,
         kTimestampRecv,
@@ -70,6 +71,9 @@ struct ControlMsg {
     struct Hello {
         /** @brief Set to true if this is the gateway node */
         bool is_gateway;
+    };
+
+    struct Ping {
     };
 
     struct Timestamp {
@@ -117,6 +121,7 @@ struct ControlMsg {
 
     union {
         Hello hello;
+        Ping ping;
         Timestamp timestamp;
         TimestampSent timestamp_sent;
         TimestampRecv timestamp_recv;
@@ -291,6 +296,9 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Append a Hello control message to a packet */
     void appendHello(const ControlMsg::Hello &hello);
+
+    /** @brief Append a Ping control message to a packet */
+    void appendPing(const ControlMsg::Ping &ping);
 
     /** @brief Append a Timestamp Sent control message to a packet */
     void appendTimestampSent(TimestampSeq tseq,
@@ -621,6 +629,9 @@ constexpr size_t ctrlsize(uint8_t ty)
         case ControlMsg::kHello:
             return offsetof(ControlMsg, hello) + sizeof(ControlMsg::Hello);
 
+        case ControlMsg::kPing:
+            return offsetof(ControlMsg, ping) + sizeof(ControlMsg::Ping);
+
         case ControlMsg::kTimestamp:
             return offsetof(ControlMsg, timestamp) + sizeof(ControlMsg::Timestamp);
 
@@ -651,6 +662,7 @@ constexpr size_t ctrlsize(uint8_t ty)
 }
 
 static_assert(ctrlsize(ControlMsg::kHello) == 2);
+static_assert(ctrlsize(ControlMsg::kPing) == 2);
 static_assert(ctrlsize(ControlMsg::kTimestamp) == 3);
 static_assert(ctrlsize(ControlMsg::kTimestampSent) == 19);
 static_assert(ctrlsize(ControlMsg::kTimestampRecv) == 20);
