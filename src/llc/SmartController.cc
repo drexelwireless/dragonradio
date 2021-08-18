@@ -1148,33 +1148,36 @@ void SmartController::appendFeedback(const std::shared_ptr<NetPacket> &pkt, Recv
 
     // If we have too many selective ACK's, keep as many as we can, but keep the
     // *latest* selective ACKs.
-    if (pkt->size() > getMTU()) {
-        // How many SACK's do we need to remove?
-        constexpr size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
-        int              nremove;
-        int              nkeep;
+    constexpr size_t sack_size = ctrlsize(ControlMsg::kSelectiveAck);
+    int              nremove = 0;
+    int              nkeep = nsacks;
 
-        nremove = (pkt->size() - getMTU() + sack_size - 1) /
-                      sack_size;
+    if (pkt->size() > getMTU()) {
+        nremove = (pkt->size() - getMTU() + sack_size - 1) / sack_size;
 
         if (nremove > nsacks)
             nremove = nsacks;
 
-        if (nremove > 0) {
-            nkeep = nsacks - nremove;
+        nkeep = nsacks - nremove;
+    }
 
-            logARQ(LOGDEBUG, "pruning SACKs: node=%u; nremove=%d; nkeep=%d",
-                (unsigned) recvw.node.id,
-                nremove,
-                nkeep);
+    if (max_sacks_ && nkeep > static_cast<int>(*max_sacks_)) {
+        nkeep = static_cast<int>(*max_sacks_);
+        nremove = nsacks - nkeep;
+    }
 
-            unsigned char *sack_start = pkt->data() + pkt->size() -
-                                            nsacks*sack_size;
+    if (nremove > 0) {
+        logARQ(LOGDEBUG, "pruning SACKs: node=%u; nremove=%d; nkeep=%d",
+            (unsigned) recvw.node.id,
+            nremove,
+            nkeep);
 
-            memmove(sack_start, sack_start+nremove*sack_size, nkeep*sack_size);
-            pkt->setControlLen(pkt->getControlLen() - nremove*sack_size);
-            pkt->resize(pkt->size() - nremove*sack_size);
-        }
+        unsigned char *sack_start = pkt->data() + pkt->size() -
+                                        nsacks*sack_size;
+
+        memmove(sack_start, sack_start+nremove*sack_size, nkeep*sack_size);
+        pkt->setControlLen(pkt->getControlLen() - nremove*sack_size);
+        pkt->resize(pkt->size() - nremove*sack_size);
     }
 
     // Mark this packet as containing a selective ACK

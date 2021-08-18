@@ -454,6 +454,7 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.min_retransmission_delay = config.arq_min_retransmission_delay
             controller.retransmission_delay_slop = config.arq_retransmission_delay_slop
             controller.sack_delay = config.arq_sack_delay
+            controller.max_sacks = config.arq_max_sacks
             controller.explicit_nak_window = config.arq_explicit_nak_win
             controller.explicit_nak_window_duration = config.arq_explicit_nak_win_duration
             controller.selective_ack = config.arq_selective_ack

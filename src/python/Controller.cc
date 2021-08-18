@@ -128,6 +128,10 @@ void exportControllers(py::module &m)
             &SmartController::getSACKDelay,
             &SmartController::setSACKDelay,
             "SACK delay (sec)")
+        .def_property("max_sacks",
+            &SmartController::getMaxSACKs,
+            &SmartController::setMaxSACKs,
+            "Maximum number of SACKs in a packet")
         .def_property("explicit_nak_window",
             &SmartController::getExplicitNAKWindow,
             &SmartController::setExplicitNAKWindow,
