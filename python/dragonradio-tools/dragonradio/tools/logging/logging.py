@@ -89,7 +89,7 @@ EVENTS = [(re.compile(r), k, c) for (r, k, c) in
 EVENT_CAT: CategoricalDtype = CategoricalDtype(['UNKNOWN', 'AMC', 'ARQ', 'MAC', 'PHY', 'NET', 'QUEUE', 'SYSTEM', 'TIMESYNC', 'USRP', 'TUNTAP'])
 """Categories for events"""
 
-COLOR_CAT: CategoricalDtype = CategoricalDtype(['k', 'g', 'y', 'r'])
+COLOR_CAT: CategoricalDtype = CategoricalDtype(['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'])
 """Categories for events"""
 
 class Events:
