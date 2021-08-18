@@ -395,7 +395,10 @@ class EventPlot(ReservationPlot):
         self.cats.append((node_id, k))
 
     def plot(self):
-        title = 'Event Timeline Plot'
+        title = 'Events'
+        if self.logs.reservation is not None:
+            title += f'(Reservation {self.logs.reservation.reservation_id})'
+
         self.ax.set_title(title)
         self.set_window_title(title)
 
