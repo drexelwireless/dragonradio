@@ -30,17 +30,16 @@ setup(
         'write_to': os.path.join(ROOT, 'python/dragonradio/dragonradio/radio/version.py')
     },
     setup_requires=['setuptools_scm'],
-    install_requires=['ipython==7.18.1'
+    install_requires=['ipython==7.26.0'
                      ,'libconf==2.0.1'
-                     ,'matplotlib==3.3.2'
-                     ,'netifaces==0.10.9'
-                     ,'numpy==1.19.2'
-                     ,'pandas==1.1.3'
+                     ,'netifaces==0.11.0'
+                     ,'numpy==1.21.2'
+                     ,'pandas==1.3.2'
                      ,'protobuf==3.13.0'
-                     ,'psutil==5.7.2'
-                     ,'python-daemon==2.2.4'
-                     ,'pyzmq==19.0.2'
-                     ,'scipy==1.5.2'
+                     ,'psutil==5.8.0'
+                     ,'python-daemon==2.3.0'
+                     ,'pyzmq==22.2.1'
+                     ,'scipy==1.7.1'
                      ],
     zip_safe=False,
 )
