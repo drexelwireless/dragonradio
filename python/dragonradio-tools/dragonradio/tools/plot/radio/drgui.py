@@ -13,12 +13,11 @@ from matplotlib.widgets import Button, Slider
 import matplotlib.pyplot as plt
 from matplotlib.transforms import blended_transform_factory
 
+from dragonradio.tools.logging.command_line import Command
 import dragonradio.radio
 from dragonradio.radio import decompressIQData
 import dragonradio.tools.logging
-from dragonradio.tools.plot.radio import ConstellationPlot, PAPRPlot, PSDPlot, SpecgramPlot, WaveformPlot
-
-mp.use('GTK3Agg')
+from .plot import ConstellationPlot, PAPRPlot, PSDPlot, SpecgramPlot, WaveformPlot
 
 class LogView:
     def __init__(self, logs, viewer):
@@ -428,94 +427,67 @@ class LogViewer:
         view.fig.show()
         return view
 
-def main():
-    parser = argparse.ArgumentParser(description='Show received packets.')
-    parser.add_argument('-d', '--debug', action='store_const', const=logging.DEBUG,
-                        dest='loglevel',
-                        default=logging.WARNING,
-                        help='print debugging information')
-    parser.add_argument('-v', '--verbose', action='store_const', const=logging.INFO,
-                        dest='loglevel',
-                        help='be verbose')
-    parser.add_argument('--start-time', type=float,
-                        default=None,
-                        metavar='SEC',
-                        help='set start time in seconds since the epoch')
-    parser.add_argument('--srn-logs', type=str,
-                        default=None,
-                        metavar='DIR',
-                        help='directory where node logs are located')
+class DrGUICommand(Command):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    parser.add_argument('--tx', action='append', type=int, default=[],
-                        dest='tx',
-                        metavar='NODE',
-                        help='view TX log for given node')
-    parser.add_argument('--rx', action='append', type=int, default=[],
-                        dest='rx',
-                        metavar='NODE',
-                        help='view RX log for given node')
-    parser.add_argument('--snapshots', action='append', type=int, default=[],
-                        dest='snapshots',
-                        metavar='NODE',
-                        help='view snapshot log for given node')
-    parser.add_argument('--nfft', action='store', type=int, default=256,
-                        dest='nfft',
-                        metavar='N',
-                        help='set number of FFT points')
-    parser.add_argument('--sigslop', action='store', type=int, default=0,
-                        metavar='N',
-                        help='set number of extra samples to plot surrounding received packet')
-    parser.add_argument('--show-invalid-headers', action='store_true', default=False,
-                        dest='show_invalid_headers',
-                        help='show invalid headers when displaying RX log')
-    parser.add_argument('paths', nargs='*')
+    def add_arguments(self, parser):
+        parser.add_argument('--tx', action='append', type=int, default=[],
+                            dest='tx',
+                            metavar='NODE',
+                            help='view TX log for given node')
+        parser.add_argument('--rx', action='append', type=int, default=[],
+                            dest='rx',
+                            metavar='NODE',
+                            help='view RX log for given node')
+        parser.add_argument('--snapshots', action='append', type=int, default=[],
+                            dest='snapshots',
+                            metavar='NODE',
+                            help='view snapshot log for given node')
+        parser.add_argument('--nfft', action='store', type=int, default=256,
+                            dest='nfft',
+                            metavar='N',
+                            help='set number of FFT points')
+        parser.add_argument('--sigslop', action='store', type=int, default=0,
+                            metavar='N',
+                            help='set number of extra samples to plot surrounding received packet')
+        parser.add_argument('--show-invalid-headers', action='store_true', default=False,
+                            dest='show_invalid_headers',
+                            help='show invalid headers when displaying RX log')
+        parser.add_argument('paths', nargs='*')
 
-    # Parse arguments
-    try:
-        args = parser.parse_args()
-    except SystemExit as ex:
-        return ex.code
+    def handle(self, parser, args):
+        mp.use('GTK3Agg')
 
-    # Set up logging
-    logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
-                        level=args.loglevel)
+        viewer = LogViewer(self.logs)
 
-    # Determine start time
-    if args.start_time:
-        start = datetime.datetime.fromtimestamp(args.start_time, UTC)
-    else:
-        start = None
+        for node_id in args.tx:
+            if node_id not in self.logs.nodes:
+                print("Cannot find node {}.".format(node_id), file=sys.stderr)
+            else:
+                view = viewer.txView(node_id, nfft=args.nfft)
+                view.plot(0)
 
-    # Load logs
-    logs = dragonradio.tools.logging.LogCollection(start_time=start)
-    logs.load(args.paths)
+        for node_id in args.rx:
+            if node_id not in self.logs.nodes:
+                print("Cannot find node {}.".format(node_id), file=sys.stderr)
+            else:
+                view = viewer.rxView(node_id,
+                                    nfft=args.nfft,
+                                    show_header_invalid=args.show_invalid_headers, sigslop=args.sigslop)
+                view.plot(0)
 
-    viewer = LogViewer(logs)
+        for node_id in args.snapshots:
+            if node_id not in self.logs.nodes:
+                print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
+            else:
+                view = viewer.snapshotView(node_id, nfft=args.nfft)
+                view.plot(0)
 
-    for node_id in args.tx:
-        if node_id not in logs.nodes:
-            print("Cannot find node {}.".format(node_id), file=sys.stderr)
-        else:
-            view = viewer.txView(node_id, nfft=args.nfft)
-            view.plot(0)
+        plt.show()
 
-    for node_id in args.rx:
-        if node_id not in logs.nodes:
-            print("Cannot find node {}.".format(node_id), file=sys.stderr)
-        else:
-            view = viewer.rxView(node_id,
-                                 nfft=args.nfft,
-                                 show_header_invalid=args.show_invalid_headers, sigslop=args.sigslop)
-            view.plot(0)
+def drgui():
+    mp.use('GTK3Agg')
 
-    for node_id in args.snapshots:
-        if node_id not in logs.nodes:
-            print("Cannot find node {}.".format(args.node_id), file=sys.stderr)
-        else:
-            view = viewer.snapshotView(node_id, nfft=args.nfft)
-            view.plot(0)
-
-    plt.show()
-
-if __name__ == '__main__':
-    main()
+    cmd = DrGUICommand()
+    cmd.run('DragonRadio GUI viewer')

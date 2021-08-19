@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2018-2021 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 import matplotlib as mp
@@ -7,8 +6,6 @@ import matplotlib.pyplot as plt
 from dragonradio.tools.colosseum import Scorer
 from dragonradio.tools.logging.command_line import Command
 from dragonradio.tools.plot.colosseum import ScorePlot, FlowPlot
-
-mp.use('GTK3Agg')
 
 class PlotScoreCommand(Command):
     def __init__(self, *args, **kwargs):
@@ -154,6 +151,8 @@ class PlotScoreCommand(Command):
 
             plt.show()
 
-if __name__ == '__main__':
+def plot_score():
+    mp.use('GTK3Agg')
+
     cmd = PlotScoreCommand()
     cmd.run('Plot Colosseum scores and flows')

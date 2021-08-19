@@ -1,13 +1,11 @@
-#!/usr/bin/env python3
 # Copyright 2018-2021 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 import matplotlib as mp
 import matplotlib.pyplot as plt
 
 from dragonradio.tools.logging.command_line import Command
-from dragonradio.tools.plot.mgen import Metric, TrafficMetricPlot
 
-mp.use('GTK3Agg')
+from .plot import Metric, TrafficMetricPlot
 
 class PlotMGENMetricCommand(Command):
     def __init__(self, *args, **kwargs):
@@ -93,6 +91,8 @@ class PlotMGENMetricCommand(Command):
 
         plt.show()
 
-if __name__ == '__main__':
+def plot_mgen_metric():
+    mp.use('GTK3Agg')
+
     cmd = PlotMGENMetricCommand()
     cmd.run('Plot Colosseum traffic')
