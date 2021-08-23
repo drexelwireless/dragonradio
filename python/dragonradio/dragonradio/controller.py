@@ -830,13 +830,20 @@ class Controller(CILServer):
         config = self.config
 
         if self.is_gateway and config.log_directory:
-            try:
-                df = pd.DataFrame(self.reported_mandate_performance,
-                                  columns=['mp', 'mandates_achieved', 'total_score_achieved'])
-                logger.info('Logging scores to %s', 'score_reported.csv')
-                df.to_csv(os.path.join(config.logdir, 'score_reported.csv'))
-            except: # pylint: disable=bare-except
-                logger.exception('Exception when saving reported mandated performance')
+            self.logCSV(self.reported_mandate_performance,
+                        ['mp', 'mandates_achieved', 'total_score_achieved'],
+                        'score_reported.csv')
+
+    def logCSV(self, data, columns, filename):
+        """Log data to CSV file"""
+        config = self.config
+
+        try:
+            df = pd.DataFrame(data, columns=columns)
+            logger.info('Logging to %s', filename)
+            df.to_csv(os.path.join(config.logdir, filename), index=False)
+        except: # pylint: disable=bare-except
+            logger.exception('Exception when writing %s', filename)
 
     def updateGoals(self, goals, _timestamp):
         """Update mandate goals"""
