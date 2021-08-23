@@ -4,7 +4,6 @@
 """Support for time synchronization."""
 import logging
 import math
-from pprint import pformat
 
 import numpy as np
 
@@ -25,10 +24,6 @@ def synchronize(config, radio, master, me):
     master_timestamps = relativizeTimestamps(master.timestamps.values())
     if len(master_timestamps) == 0:
         return
-
-    if True:
-        logger.debug("TIMESYNC: our timestamps:\n%s", pformat(me_timestamps))
-        logger.debug("TIMESYNC: time master's timestamps:\n%s", pformat(master_timestamps))
 
     # If we have a GPSDO, then assume skew is zero
     if config.clock_noskew or \
