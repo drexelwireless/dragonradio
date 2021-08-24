@@ -41,12 +41,6 @@ public:
     /** @brief Push an element onto the queue. */
     virtual void push(T&& val) = 0;
 
-    /** @brief Push an element onto the high-priority queue. */
-    virtual void push_hi(T&& item) = 0;
-
-    /** @brief Re-queue an element. */
-    virtual void repush(T&& item) = 0;
-
     /** @brief Pop an element from the queue. */
     virtual bool pop(T& val) = 0;
 
@@ -56,55 +50,11 @@ public:
     /** @brief Stop processing queue elements. */
     virtual void stop(void) = 0;
 
-    /** @brief Notify queue of new MCS */
-    virtual void updateMCS(NodeId id, const MCS *mcs) = 0;
-
-    /** @brief Set transmission delay. */
-    virtual void setTransmissionDelay(double t)
-    {
-    }
-
-    /** @brief Get transmission delay. */
-    virtual double getTransmissionDelay(void) const
-    {
-        return 0.0;
-    }
-
-    /** @brief Set whether or not a node's send window is open */
-    virtual void setSendWindowStatus(NodeId id, bool isOpen)
-    {
-        std::lock_guard<std::mutex> lock(send_window_status_mutex_);
-
-        send_window_status_[id] = isOpen;
-    }
-
     /** @brief The queue's packet input port. */
     Port<In, Push, T> in;
 
     /** @brief The queue's packet output port. */
     Port<Out, Pull, T> out;
-
-protected:
-    /** @brief Mutex protecting the send window status */
-    std::mutex send_window_status_mutex_;
-
-    /** @brief Nodes' send window statuses */
-    std::unordered_map<NodeId, bool> send_window_status_;
-
-    /** @brief Return true if the packet can be popped */
-    bool canPop(const T& pkt)
-    {
-        if (pkt->hdr.nexthop == kNodeBroadcast || pkt->internal_flags.assigned_seq)
-            return true;
-
-        std::lock_guard<std::mutex> lock(send_window_status_mutex_);
-        auto                        it = send_window_status_.find(pkt->hdr.nexthop);
-
-        if (it != send_window_status_.end())
-            return it->second;
-        else
-            return true;
-    }
 };
 
 using NetQueue = Queue<std::shared_ptr<NetPacket>>;

@@ -580,7 +580,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
 
 void SmartController::ack(RecvWindow &recvw)
 {
-    if (!netq_)
+    if (!netlink_)
         return;
 
     if (!radionet_->getThisNode().can_transmit)
@@ -605,12 +605,12 @@ void SmartController::ack(RecvWindow &recvw)
     // Mark this packet as seed a selective ACK
     pkt->internal_flags.need_selective_ack = 1;
 
-    netq_->push_hi(std::move(pkt));
+    netlink_->push_hi(std::move(pkt));
 }
 
 void SmartController::nak(RecvWindow &recvw, Seq seq)
 {
-    if (!netq_)
+    if (!netlink_)
         return;
 
     if (!radionet_->getThisNode().can_transmit)
@@ -659,12 +659,12 @@ void SmartController::nak(RecvWindow &recvw, Seq seq)
     // Mark this packet as seed a selective ACK
     pkt->internal_flags.need_selective_ack = 1;
 
-    netq_->push_hi(std::move(pkt));
+    netlink_->push_hi(std::move(pkt));
 }
 
 void SmartController::broadcastHello(void)
 {
-    if (!netq_)
+    if (!netlink_)
         return;
 
     Node &me = radionet_->getThisNode();
@@ -741,7 +741,7 @@ void SmartController::broadcastHello(void)
     pkt->mcsidx = mcsidx_broadcast_;
     pkt->g = 1.0;
 
-    netq_->push_hi(std::move(pkt));
+    netlink_->push_hi(std::move(pkt));
 }
 
 void SmartController::sendPing(NodeId dest)
@@ -769,7 +769,7 @@ void SmartController::sendPing(NodeId dest)
     logAMC(LOGDEBUG, "Ping send: node=%u",
         (unsigned) dest);
 
-    netq_->push_hi(std::move(pkt));
+    netlink_->push_hi(std::move(pkt));
 }
 
 void SmartController::sendPong(NodeId dest)
@@ -792,7 +792,7 @@ void SmartController::sendPong(NodeId dest)
     logAMC(LOGDEBUG, "Pong send: node=%u",
         (unsigned) dest);
 
-    netq_->push_hi(std::move(pkt));
+    netlink_->push_hi(std::move(pkt));
 }
 
 void SmartController::environmentDiscontinuity(void)
@@ -920,8 +920,8 @@ void SmartController::retransmit(SendWindow::Entry &entry)
 
         // Re-queue the packet. The ACK and MCS will be set properly upon
         // retransmission.
-        if (netq_)
-            netq_->repush(std::move(pkt));
+        if (netlink_)
+            netlink_->repush(std::move(pkt));
     } else
         startRetransmissionTimer(entry);
 }
@@ -1680,7 +1680,7 @@ SendWindow::SendWindow(Node &n,
 void SendWindow::setSendWindowStatus(bool open)
 {
     if (open != window_open) {
-        controller.netq_->setSendWindowStatus(node.id, open);
+        controller.netlink_->setSendWindowStatus(node.id, open);
         window_open = open;
     }
 }
@@ -1891,7 +1891,7 @@ void SendWindow::setMCS(size_t new_mcsidx)
     // Inform network queue of new MCS
     const MCS *mcs = controller.phy_->mcs_table[new_mcsidx].mcs;
 
-    controller.netq_->updateMCS(node.id, mcs);
+    controller.netlink_->updateMCS(node.id, mcs);
 
     // Log change
     snprintf(short_per_s, sizeof(short_per_s), "%0.2f", old_short_per.value_or(0));

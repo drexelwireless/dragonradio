@@ -11,9 +11,9 @@
 
 /** @brief A simple queue Element. */
 template <class T>
-class SimpleQueue : public Queue<T> {
+class SimpleQueue : public Queue<T>, public ControllerNetLink {
 public:
-    using Queue<T>::canPop;
+    using ControllerNetLink::canPop;
 
     using const_iterator = typename std::list<T>::const_iterator;
 
@@ -178,10 +178,6 @@ public:
     {
         done_ = true;
         cond_.notify_all();
-    }
-
-    virtual void updateMCS(NodeId, const MCS*) override
-    {
     }
 
 protected:
