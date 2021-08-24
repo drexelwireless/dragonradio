@@ -18,11 +18,11 @@ logger = logging.getLogger('timesync')
 def synchronize(config, radio, master, me):
     """Use timestamps to synchronize our clock with the time master (the gateway)"""
     # Perform linear regression on all timestamps
-    me_timestamps = relativizeTimestamps(me.timestamps.values())
-    if len(me_timestamps) == 0:
+    me_timestamps = radio.me_timestamps
+    if len(radio.me_timestamps) == 0:
         return
 
-    master_timestamps = relativizeTimestamps(master.timestamps.values())
+    master_timestamps = radio.master_timestamps
     if len(master_timestamps) == 0:
         return
 

@@ -534,10 +534,10 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
         // Record timestamp at which we received this timestamp sequence number
         if (pkt.timestamp_seq) {
             {
-                Node                        &me = radionet_->getThisNode();
-                std::lock_guard<std::mutex> lock(me.timestamps_mutex);
+                std::lock_guard<std::mutex> lock(timestamps_mutex_);
+                Timestamps                  &ts = timestamps_[radionet_->getThisNodeId()];
 
-                me.timestamps_sent.insert_or_assign(*pkt.timestamp_seq, pkt.tx_timestamp);
+                ts.timestamps_sent.insert_or_assign(*pkt.timestamp_seq, pkt.tx_timestamp);
             }
 
             logTimeSync(LOGDEBUG, "Transmitted timestamp: tseq_sent=%u; t_sent=%f",
@@ -698,15 +698,16 @@ void SmartController::broadcastHello(void)
     if (time_master && *time_master == radionet_->getThisNodeId()) {
         // Report sent timestamps
         {
-            std::lock_guard<std::mutex> lock(me.timestamps_mutex);
+            std::lock_guard<std::mutex> lock(timestamps_mutex_);
+            Timestamps                  &ts = timestamps_[radionet_->getThisNodeId()];
 
-            for (auto it = me.timestamps_sent.begin(); it != me.timestamps_sent.end(); ++it) {
+            for (auto it = ts.timestamps_sent.begin(); it != ts.timestamps_sent.end(); ++it) {
                 TimestampSeq                tseq = it->first;
                 const MonoClock::time_point &t_sent = it->second;
 
-                if (me.timestamps_echoed.find(tseq) == me.timestamps_echoed.end()) {
+                if (ts.timestamps_echoed.find(tseq) == ts.timestamps_echoed.end()) {
                     pkt->appendTimestampSent(tseq, t_sent);
-                    me.timestamps_echoed.insert(tseq);
+                    ts.timestamps_echoed.insert(tseq);
                 }
             }
         }
@@ -714,16 +715,17 @@ void SmartController::broadcastHello(void)
         // Report received timestamps
         radionet_->foreach([&] (Node &node) {
             if (node.id != radionet_->getThisNodeId()) {
-                std::lock_guard<std::mutex> lock(node.timestamps_mutex);
+                std::lock_guard<std::mutex> lock(timestamps_mutex_);
+                Timestamps                  &ts = timestamps_[node.id];
 
-                for (auto it = node.timestamps_recv.begin(); it != node.timestamps_recv.end(); ++it) {
+                for (auto it = ts.timestamps_recv.begin(); it != ts.timestamps_recv.end(); ++it) {
                     TimestampSeq                tseq = it->first;
                     const MonoClock::time_point &t_recv = it->second;
 
 
-                    if (node.timestamps_echoed.find(tseq) == node.timestamps_echoed.end()) {
+                    if (ts.timestamps_echoed.find(tseq) == ts.timestamps_echoed.end()) {
                         pkt->appendTimestampRecv(node.id, tseq, t_recv);
-                        node.timestamps_echoed.insert(tseq);
+                        ts.timestamps_echoed.insert(tseq);
                     }
                 }
             }
@@ -1082,9 +1084,10 @@ void SmartController::handleCtrlTimestamp(RadioPacket &pkt, Node &node)
                 t_recv = pkt.timestamp;
 
                 {
-                    std::lock_guard<std::mutex> lock(node.timestamps_mutex);
+                    std::lock_guard<std::mutex> lock(timestamps_mutex_);
+                    Timestamps                  &ts = timestamps_[node.id];
 
-                    node.timestamps_recv.insert_or_assign(tseq, t_recv);
+                    ts.timestamps_recv.insert_or_assign(tseq, t_recv);
                 }
 
                 logTimeSync(LOGDEBUG, "Timestamp: node=%u; tseq=%u; t_recv=%f",
@@ -1098,18 +1101,19 @@ void SmartController::handleCtrlTimestamp(RadioPacket &pkt, Node &node)
             {
                 TimestampSeq                tseq = it->timestamp_sent.tseq;
                 MonoClock::time_point       t_sent = it->timestamp_sent.t_sent.to_mono_time();
-                std::lock_guard<std::mutex> lock(node.timestamps_mutex);
+                std::lock_guard<std::mutex> lock(timestamps_mutex_);
+                Timestamps                  &ts = timestamps_[node.id];
 
                 // Add sent timestamp
-                node.timestamps_sent.insert_or_assign(tseq, t_sent);
+                ts.timestamps_sent.insert_or_assign(tseq, t_sent);
 
                 // Add (send, receive) timestamp pair if we have receive timestamp
-                auto ts = node.timestamps_recv.find(tseq);
+                auto tspair = ts.timestamps_recv.find(tseq);
 
-                if (ts != node.timestamps_recv.end()) {
-                    MonoClock::time_point t_recv = ts->second;
+                if (tspair != ts.timestamps_recv.end()) {
+                    MonoClock::time_point t_recv = tspair->second;
 
-                    node.timestamps.insert_or_assign(tseq, std::make_pair(t_sent, t_recv));
+                    ts.timestamps.insert_or_assign(tseq, std::make_pair(t_sent, t_recv));
 
                     logTimeSync(LOGDEBUG, "Timestamp pair: node=%u; t_sent=%f; t_recv=%f",
                         (unsigned) pkt.hdr.curhop,
@@ -1124,18 +1128,19 @@ void SmartController::handleCtrlTimestamp(RadioPacket &pkt, Node &node)
                 if (time_master && node.id == *time_master && node.id != me.id && it->timestamp_recv.node == me.id) {
                     TimestampSeq                tseq = it->timestamp_recv.tseq;
                     MonoClock::time_point       t_recv = it->timestamp_recv.t_recv.to_mono_time();
-                    std::lock_guard<std::mutex> lock(me.timestamps_mutex);
+                    std::lock_guard<std::mutex> lock(timestamps_mutex_);
+                    Timestamps                  &ts = timestamps_[me.id];
 
                     // Add received timestamp
-                    me.timestamps_recv.insert_or_assign(tseq, t_recv);
+                    ts.timestamps_recv.insert_or_assign(tseq, t_recv);
 
                     // Add (send, receive) timestamp pair if we have sent timestamp
-                    auto ts = me.timestamps_sent.find(tseq);
+                    auto tspair = ts.timestamps_sent.find(tseq);
 
-                    if (ts != me.timestamps_sent.end()) {
-                        MonoClock::time_point t_sent = ts->second;
+                    if (tspair != ts.timestamps_sent.end()) {
+                        MonoClock::time_point t_sent = tspair->second;
 
-                        me.timestamps.insert_or_assign(tseq, std::make_pair(t_sent, t_recv));
+                        ts.timestamps.insert_or_assign(tseq, std::make_pair(t_sent, t_recv));
 
                         logTimeSync(LOGDEBUG, "Timestamp pair for us: node=%u; t_sent=%f; t_recv=%f",
                             (unsigned) pkt.hdr.curhop,
