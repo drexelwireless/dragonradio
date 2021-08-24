@@ -6,15 +6,16 @@
 
 #include "logging.hh"
 #include "Clock.hh"
+#include "llc/Controller.hh"
 #include "net/Queue.hh"
 
 /** @brief A queue that tracks its size. */
 template <class T>
-class SizedQueue : public Queue<T> {
+class SizedQueue : public Queue<T>, public ControllerNetLink {
 public:
     using const_iterator = typename std::list<T>::const_iterator;
 
-    using Queue<T>::canPop;
+    using ControllerNetLink::canPop;
 
     SizedQueue()
       : Queue<T>()
@@ -119,10 +120,6 @@ public:
     {
         done_ = true;
         cond_.notify_all();
-    }
-
-    void updateMCS(NodeId, const MCS*) override
-    {
     }
 
 protected:

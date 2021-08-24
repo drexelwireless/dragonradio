@@ -339,7 +339,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.controller.net_out >> self.synthesizer.sink
 
         # Allow Controller access to the network queue
-        self.controller.net_queue = self.netq
+        self.controller.net_link = self.netq
 
     def mkPHY(self, header_mcs, mcs_table):
         """Construct a PHY from configuration parameters"""
