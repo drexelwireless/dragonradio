@@ -79,21 +79,6 @@ struct Node {
     /** @brief MCS for this node */
     mcsidx_t mcsidx;
 
-    /** @brief Mutex protecting timestamps */
-    std::mutex timestamps_mutex;
-
-    /** @brief Timestamp sequences sent by this node */
-    timestamp_map timestamps_sent;
-
-    /** @brief Timestamp sequences received from this node */
-    timestamp_map timestamps_recv;
-
-    /** @brief Echoed timestamp sequences */
-    timestampseq_set timestamps_echoed;
-
-    /** @brief Timestamps received from this node */
-    timestamps_map timestamps;
-
     /** @brief Set soft TX gain.
      * @param dB The soft gain (dBFS).
      */

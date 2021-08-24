@@ -29,7 +29,6 @@ from dragonradio.internal import mkFlowStats, mkSpectrumStats
 import dragonradio.net
 from dragonradio.protobuf import handle, handler, TCPProtoServer
 import dragonradio.radio
-import dragonradio.radio.timesync as timesync
 import dragonradio.remote as remote
 import dragonradio.schedule
 import dragonradio.tasks
@@ -839,14 +838,10 @@ class Controller(CILServer):
                         'score_reported.csv')
 
     def saveTimestamps(self):
-        me = self.radio.radionet.this_node
-        me_timestamps = timesync.relativizeTimestamps(me.timestamps.values())
-        self.logCSV(me_timestamps, ['t_send', 't_recv'], 'me_timestamps.csv')
+        self.logCSV(self.radio.me_timestamps, ['t_send', 't_recv'], 'me_timestamps.csv')
 
         if self.radio.radionet.time_master is not None:
-            master = self.radio.radionet.nodes[self.radio.radionet.time_master]
-            master_timestamps = timesync.relativizeTimestamps(master.timestamps.values())
-            self.logCSV(master_timestamps, ['t_send', 't_recv'], 'master_timestamps.csv')
+            self.logCSV(self.radio.master_timestamps, ['t_send', 't_recv'], 'master_timestamps.csv')
 
     def logCSV(self, data, columns, filename):
         """Log data to CSV file"""

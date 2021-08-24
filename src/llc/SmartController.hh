@@ -23,6 +23,30 @@
 
 class SmartController;
 
+/** @brief Timestamps associated with a node */
+struct Timestamps {
+    /** @brief Map from timestamp sequence number to timestamp. */
+    using timestamp_map = std::unordered_map<TimestampSeq, MonoClock::time_point>;
+
+    /** @brief Map from timestamp sequence number to pair of sent, received timestamps. */
+    using timestamps_map = std::unordered_map<TimestampSeq, std::pair<MonoClock::time_point, MonoClock::time_point>>;
+
+    /** @brief Vector of pairs of timestamps. */
+    using timestampseq_set = std::unordered_set<TimestampSeq>;
+
+    /** @brief Timestamp sequences sent by node */
+    timestamp_map timestamps_sent;
+
+    /** @brief Timestamp sequences received from node */
+    timestamp_map timestamps_recv;
+
+    /** @brief Echoed timestamp sequences */
+    timestampseq_set timestamps_echoed;
+
+    /** @brief Timestamps received from this node by another node */
+    timestamps_map timestamps;
+};
+
 struct SendWindow {
     struct Entry;
 
@@ -821,6 +845,34 @@ public:
         decrease_retrans_mcsidx_ = decrease_retrans_mcsidx;
     }
 
+    /** @brief Return true if timestamps exist for node, false otherwise */
+    bool timestampsContains(NodeId node_id) const
+    {
+        std::lock_guard<std::mutex> lock(timestamps_mutex_);
+
+        return timestamps_.find(node_id) != timestamps_.end();
+    }
+
+    /** @brief Return set of nodes with timestamps */
+    std::set<NodeId> getTimestampsNodes(void) const
+    {
+        std::lock_guard<std::mutex> lock(timestamps_mutex_);
+        std::set<NodeId>            nodes;
+
+        for(auto const& it: timestamps_)
+            nodes.insert(it.first);
+
+        return nodes;
+    }
+
+    /** @brief Get timestamps */
+    Timestamps::timestamps_map getTimestamps(NodeId node_id)
+    {
+        std::lock_guard<std::mutex> lock(timestamps_mutex_);
+
+        return timestamps_[node_id].timestamps;
+    }
+
     /** @brief Return true if send window exists for node, false otherwise */
     bool sendWindowContains(NodeId node_id) const
     {
@@ -925,6 +977,12 @@ protected:
 
     /** @brief Receive windows */
     std::map<NodeId, RecvWindow> recv_;
+
+    /** @brief Mutex for timestamps */
+    mutable std::mutex timestamps_mutex_;
+
+    /** @brief Receive windows */
+    std::map<NodeId, Timestamps> timestamps_;
 
     /** @brief Timer queue */
     TimerQueue timer_queue_;

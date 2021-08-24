@@ -9,6 +9,41 @@
 #include "llc/SmartController.hh"
 #include "python/PyModules.hh"
 
+/** @brief A proxy object for SmartController's timestamps */
+class TimestampsProxy
+{
+public:
+    TimestampsProxy(std::shared_ptr<SmartController> controller)
+      : controller_(controller)
+    {
+    }
+
+    TimestampsProxy() = delete;
+    ~TimestampsProxy() = default;
+
+    Timestamps::timestamps_map operator [](NodeId node)
+    {
+        if (controller_->timestampsContains(node))
+            return controller_->getTimestamps(node);
+        else
+            throw std::out_of_range("No timestamps");
+    }
+
+    bool contains(NodeId node_id) const
+    {
+        return controller_->timestampsContains(node_id);
+    }
+
+    std::set<NodeId> keys(void) const
+    {
+        return controller_->getTimestampsNodes();
+    }
+
+private:
+    /** @brief This object's SmartController */
+    std::shared_ptr<SmartController> controller_;
+};
+
 /** @brief A proxy object for a SmartController send window */
 class SendWindowProxy
 {
@@ -346,6 +381,12 @@ void exportControllers(py::module &m)
             &SmartController::getDecreaseRetransMCSIdx,
             &SmartController::setDecreaseRetransMCSIdx,
             "Should we decrease the MCS index of retransmitted packets with a deadline?")
+        .def_property_readonly("timestamps",
+            [](std::shared_ptr<SmartController> controller) -> std::unique_ptr<TimestampsProxy>
+            {
+                return std::make_unique<TimestampsProxy>(controller);
+            },
+            "Timestamps")
         .def_property_readonly("send",
             [](std::shared_ptr<SmartController> controller) -> std::unique_ptr<SendWindowsProxy>
             {
@@ -363,6 +404,16 @@ void exportControllers(py::module &m)
         .def("environmentDiscontinuity",
             &SmartController::environmentDiscontinuity,
             "Inform the controller that an environmental discontinuity has ocurred")
+        ;
+
+    // Export class TimestampsProxy to Python
+    py::class_<TimestampsProxy, std::unique_ptr<TimestampsProxy>>(m, "Timestamps")
+        .def("__getitem__",
+            &TimestampsProxy::operator [])
+        .def("__contains__",
+            &TimestampsProxy::contains)
+        .def("keys",
+            &TimestampsProxy::keys)
         ;
 
     // Export class SendWindowsProxy to Python
