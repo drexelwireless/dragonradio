@@ -51,6 +51,7 @@ struct Node {
       : id(id)
       , is_gateway(false)
       , can_transmit(true)
+      , unreachable(false)
       , g(1.0)
     {
     }
@@ -71,6 +72,9 @@ struct Node {
 
     /** @brief Flag indicating whether or not this node can transmit */
     bool can_transmit;
+
+    /** @brief Flag indicating whether or not this node is unreachable */
+    bool unreachable;
 
     /** @brief Multiplicative TX gain as measured against 0 dBFS. */
     float g;
