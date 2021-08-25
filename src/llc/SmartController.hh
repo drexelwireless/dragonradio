@@ -421,7 +421,7 @@ public:
     }
 
     /** @brief Get short time window over which to calculate PER (sec) */
-    double getShortPERWindow(void)
+    double getShortPERWindow(void) const
     {
         return short_per_window_;
     }
@@ -433,7 +433,7 @@ public:
     }
 
     /** @brief Get long time window over which to calculate PER (sec) */
-    double getLongPERWindow(void)
+    double getLongPERWindow(void) const
     {
         return long_per_window_;
     }
@@ -445,7 +445,7 @@ public:
     }
 
     /** @brief Get time window for statistics collection (sec) */
-    double getShortStatsWindow(void)
+    double getShortStatsWindow(void) const
     {
         return short_stats_window_;
     }
@@ -457,7 +457,7 @@ public:
     }
 
     /** @brief Get time window for statistics collection (sec) */
-    double getLongStatsWindow(void)
+    double getLongStatsWindow(void) const
     {
         return long_stats_window_;
     }
@@ -469,7 +469,7 @@ public:
     }
 
     /** @brief Get broadcast MCS index */
-    mcsidx_t getBroadcastMCSIndex(void)
+    mcsidx_t getBroadcastMCSIndex(void) const
     {
         return mcsidx_broadcast_;
     }
@@ -484,7 +484,7 @@ public:
     }
 
     /** @brief Get ACK MCS index */
-    mcsidx_t getAckMCSIndex(void)
+    mcsidx_t getAckMCSIndex(void) const
     {
         return mcsidx_ack_;
     }
@@ -499,7 +499,7 @@ public:
     }
 
     /** @brief Get minimum MCS index */
-    mcsidx_t getMinMCSIndex(void)
+    mcsidx_t getMinMCSIndex(void) const
     {
         return mcsidx_min_;
     }
@@ -514,7 +514,7 @@ public:
     }
 
     /** @brief Get maximum MCS index */
-    mcsidx_t getMaxMCSIndex(void)
+    mcsidx_t getMaxMCSIndex(void) const
     {
         return mcsidx_max_;
     }
@@ -529,7 +529,7 @@ public:
     }
 
     /** @brief Get initial MCS index */
-    mcsidx_t getInitialMCSIndex(void)
+    mcsidx_t getInitialMCSIndex(void) const
     {
         return mcsidx_init_;
     }
@@ -544,7 +544,7 @@ public:
     }
 
     /** @brief Get PER threshold for increasing modulation level */
-    double getUpPERThreshold(void)
+    double getUpPERThreshold(void) const
     {
         return mcsidx_up_per_threshold_;
     }
@@ -556,7 +556,7 @@ public:
     }
 
     /** @brief Get PER threshold for decreasing modulation level */
-    double getDownPERThreshold(void)
+    double getDownPERThreshold(void) const
     {
         return mcsidx_down_per_threshold_;
     }
@@ -568,7 +568,7 @@ public:
     }
 
     /** @brief Get MCS index learning alpha */
-    double getMCSLearningAlpha(void)
+    double getMCSLearningAlpha(void) const
     {
         return mcsidx_alpha_;
     }
@@ -580,7 +580,7 @@ public:
     }
 
     /** @brief Get MCS transition probability floor */
-    double getMCSProbFloor(void)
+    double getMCSProbFloor(void) const
     {
         return mcsidx_prob_floor_;
     }
@@ -597,7 +597,7 @@ public:
     void environmentDiscontinuity(void);
 
     /** @brief Get ACK delay. */
-    double getACKDelay(void)
+    double getACKDelay(void) const
     {
         return ack_delay_;
     }
@@ -633,7 +633,7 @@ public:
     }
 
     /** @brief Get retransmission delay. */
-    double getRetransmissionDelay(void)
+    double getRetransmissionDelay(void) const
     {
         return retransmission_delay_;
     }
@@ -645,7 +645,7 @@ public:
     }
 
     /** @brief Get minimum retransmission delay. */
-    double getMinRetransmissionDelay(void)
+    double getMinRetransmissionDelay(void) const
     {
         return min_retransmission_delay_;
     }
@@ -657,7 +657,7 @@ public:
     }
 
     /** @brief Get retransmission delay safety factor. */
-    double getRetransmissionDelaySlop(void)
+    double getRetransmissionDelaySlop(void) const
     {
         return retransmission_delay_slop_;
     }
@@ -669,7 +669,7 @@ public:
     }
 
     /** @brief Get SACK delay. */
-    double getSACKDelay(void)
+    double getSACKDelay(void) const
     {
         return sack_delay_;
     }
@@ -696,7 +696,7 @@ public:
     }
 
     /** @brief Return explicit NAK window size. */
-    bool getExplicitNAKWindow(void)
+    bool getExplicitNAKWindow(void) const
     {
         return explicit_nak_win_;
     }
@@ -708,7 +708,7 @@ public:
     }
 
     /** @brief Return explicit NAK window duration. */
-    double getExplicitNAKWindowDuration(void)
+    double getExplicitNAKWindowDuration(void) const
     {
         return explicit_nak_win_duration_;
     }
@@ -720,7 +720,7 @@ public:
     }
 
     /** @brief Return whether or not we should send selective ACKs. */
-    bool getSelectiveACK(void)
+    bool getSelectiveACK(void) const
     {
         return selective_ack_;
     }
@@ -732,7 +732,7 @@ public:
     }
 
     /** @brief Return selective ACK feedback delay. */
-    double getSelectiveACKFeedbackDelay(void)
+    double getSelectiveACKFeedbackDelay(void) const
     {
         return selective_ack_feedback_delay_;
     }
@@ -744,7 +744,7 @@ public:
     }
 
     /** @brief Return maximum number of retransmission attempts. */
-    std::optional<size_t> getMaxRetransmissions(void)
+    std::optional<size_t> getMaxRetransmissions(void) const
     {
         return max_retransmissions_;
     }
@@ -758,7 +758,7 @@ public:
     /** @brief Return flag indicating whether or not packets are always
      * demodulated in order.
      */
-    bool getDemodAlwaysOrdered(void)
+    bool getDemodAlwaysOrdered(void) const
     {
         return demod_always_ordered_;
     }
@@ -774,7 +774,7 @@ public:
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
-    bool getEnforceOrdering(void)
+    bool getEnforceOrdering(void) const
     {
         return enforce_ordering_;
     }
@@ -786,7 +786,7 @@ public:
     }
 
     /** @brief Get maximum number of extra control bytes beyond MTU. */
-    size_t getMCU(void)
+    size_t getMCU(void) const
     {
         return mcu_;
     }
@@ -798,7 +798,7 @@ public:
     }
 
     /** @brief Get whether or not we always move the send windwo along. */
-    bool getMoveAlong(void)
+    bool getMoveAlong(void) const
     {
         return move_along_;
     }
@@ -810,7 +810,7 @@ public:
     }
 
     /** @brief Get whether or not we decrease the MCS index of retransmitted packets with a deadline. */
-    bool getDecreaseRetransMCSIdx(void)
+    bool getDecreaseRetransMCSIdx(void) const
     {
         return decrease_retrans_mcsidx_;
     }
@@ -875,13 +875,13 @@ protected:
     Seq::uint_type recvwin_;
 
     /** @brief Mutex for the send windows */
-    std::mutex send_mutex_;
+    mutable std::mutex send_mutex_;
 
     /** @brief Send windows */
     std::map<NodeId, SendWindow> send_;
 
     /** @brief Mutex for the receive windows */
-    std::mutex recv_mutex_;
+    mutable std::mutex recv_mutex_;
 
     /** @brief Receive windows */
     std::map<NodeId, RecvWindow> recv_;
