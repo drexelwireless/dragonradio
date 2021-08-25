@@ -84,7 +84,20 @@ public:
 
     SendWindowProxy operator [](NodeId node)
     {
-        return SendWindowProxy(controller_, node);
+        if (controller_->sendWindowContains(node))
+            return SendWindowProxy(controller_, node);
+        else
+            throw std::out_of_range("No send window");
+    }
+
+    bool contains(NodeId node_id) const
+    {
+        return controller_->sendWindowContains(node_id);
+    }
+
+    std::set<NodeId> keys(void) const
+    {
+        return controller_->getSendWindowNodes();
     }
 
 private:
@@ -153,7 +166,20 @@ public:
 
     ReceiveWindowProxy operator [](NodeId node)
     {
-        return ReceiveWindowProxy(controller_, node);
+        if (controller_->recvWindowContains(node))
+            return ReceiveWindowProxy(controller_, node);
+        else
+            throw std::out_of_range("No receive window");
+    }
+
+    bool contains(NodeId node_id) const
+    {
+        return controller_->recvWindowContains(node_id);
+    }
+
+    std::set<NodeId> keys(void) const
+    {
+        return controller_->getRecvWindowNodes();
     }
 
 private:
@@ -372,6 +398,10 @@ void exportControllers(py::module &m)
                     throw py::key_error("node '" + std::to_string(key) + "' does not have a send window");
                 }
             })
+        .def("__contains__",
+            &SendWindowsProxy::contains)
+        .def("keys",
+            &SendWindowsProxy::keys)
         ;
 
     // Export class ReceiveWindowProxy to Python
@@ -401,5 +431,9 @@ void exportControllers(py::module &m)
                     throw py::key_error("node '" + std::to_string(key) + "' does not have a receive window");
                 }
             })
+        .def("__contains__",
+            &ReceiveWindowsProxy::contains)
+        .def("keys",
+            &ReceiveWindowsProxy::keys)
         ;
 }

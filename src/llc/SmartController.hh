@@ -821,6 +821,46 @@ public:
         decrease_retrans_mcsidx_ = decrease_retrans_mcsidx;
     }
 
+    /** @brief Return true if send window exists for node, false otherwise */
+    bool sendWindowContains(NodeId node_id) const
+    {
+        std::lock_guard<std::mutex> lock(send_mutex_);
+
+        return send_.find(node_id) != send_.end();
+    }
+
+    /** @brief Return set of nodes with send windows */
+    std::set<NodeId> getSendWindowNodes(void) const
+    {
+        std::lock_guard<std::mutex> lock(send_mutex_);
+        std::set<NodeId>            nodes;
+
+        for(auto const& it: send_)
+            nodes.insert(it.first);
+
+        return nodes;
+    }
+
+    /** @brief Return true if receive window exists for node, false otherwise */
+    bool recvWindowContains(NodeId node_id) const
+    {
+        std::lock_guard<std::mutex> lock(recv_mutex_);
+
+        return recv_.find(node_id) != recv_.end();
+    }
+
+    /** @brief Return set of nodes with receive windows */
+    std::set<NodeId> getRecvWindowNodes(void) const
+    {
+        std::lock_guard<std::mutex> lock(recv_mutex_);
+        std::set<NodeId>            nodes;
+
+        for(auto const& it: recv_)
+            nodes.insert(it.first);
+
+        return nodes;
+    }
+
     bool pull(std::shared_ptr<NetPacket> &pkt) override;
 
     void received(std::shared_ptr<RadioPacket> &&pkt) override;
