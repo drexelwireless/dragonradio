@@ -214,6 +214,8 @@ class Config:
         """Should ARQ enforce packet ordering?"""
         self.arq_max_retransmissions = None
         """Maximum number of times a packet is allowed to be retransmitted"""
+        self.arq_unreachable_threshold = 2.0
+        """Threshold at which a node is marked unreachable (seconds)"""
         self.arq_ack_delay = 100e-3
         """Maximum delay before an explicit ACK is sent (sec)"""
         self.arq_ack_delay_estimation_window = 1

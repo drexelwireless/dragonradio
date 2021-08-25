@@ -90,6 +90,9 @@ struct SendWindow {
     /** @brief Is the window open? */
     bool window_open;
 
+    /** @brief Timestamp of most recent packet received. */
+    MonoClock::time_point last_timestamp;
+
     /** @brief Current sequence number for this destination */
     Seq seq;
 
@@ -208,14 +211,6 @@ struct SendWindow {
         inline void set(const std::shared_ptr<NetPacket>& p)
         {
             pkt = p;
-        }
-
-        /** @brief Get packet in send window entry
-         * @return The packet.
-         */
-        inline std::shared_ptr<NetPacket> get()
-        {
-            return pkt;
         }
 
         /** @brief Release packet */
@@ -619,6 +614,18 @@ public:
      * occurred.
      * */
     void environmentDiscontinuity(void);
+
+    /** @brief Get threshold for marking node unreachable. */
+    double getUnreachableThreshold(void) const
+    {
+        return unreachable_threshold_;
+    }
+
+    /** @brief Set threshold for marking node unreachable. */
+    void setUnreachableThreshold(double t)
+    {
+        unreachable_threshold_ = t;
+    }
 
     /** @brief Get ACK delay. */
     double getACKDelay(void) const
@@ -1033,6 +1040,9 @@ protected:
 
     /** @brief Minimum MCS transition probability */
     double mcsidx_prob_floor_;
+
+    /** @brief Threshold for marking a node unreachable (seconds) */
+    double unreachable_threshold_;
 
     /** @brief ACK delay in seconds */
     double ack_delay_;

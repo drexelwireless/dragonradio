@@ -332,6 +332,10 @@ void exportControllers(py::module &m)
             &SmartController::getMCSProbFloor,
             &SmartController::setMCSProbFloor,
             "MCS transition probability floor")
+        .def_property("unreachable_threshold",
+            &SmartController::getUnreachableThreshold,
+            &SmartController::setUnreachableThreshold,
+            "Threshold for marking node unreachable (sec)")
         .def_property("ack_delay",
             &SmartController::getACKDelay,
             &SmartController::setACKDelay,
