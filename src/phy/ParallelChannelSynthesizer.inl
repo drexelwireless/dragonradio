@@ -100,6 +100,13 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
     std::unique_ptr<ModPacket>        mpkt;
 
     while (!done_) {
+        // Wait for room
+        while (!queue_.wait_until_room() && !done_)
+            ;
+
+        if (done_)
+            break;
+
         // Reconfigure if necessary
         if (reconfigure_.load(std::memory_order_acquire)) {
             // Wait for reconfiguration to start

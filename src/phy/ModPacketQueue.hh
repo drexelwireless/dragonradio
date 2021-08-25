@@ -10,6 +10,7 @@
 #include <mutex>
 
 #include "phy/PHY.hh"
+#include "util/threads.hh"
 
 /** @brief A queue of modulated packets */
 template<class T = std::unique_ptr<ModPacket>, class Container = std::list<T>>
@@ -20,7 +21,6 @@ public:
 
     ModPacketQueue()
       : done_(false)
-      , kicked_(false)
       , nsamples_(0)
     {
     }
@@ -83,12 +83,8 @@ public:
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
-        consumer_cond_.wait(lock, [this]{ return done_ || kicked_ || nsamples_ > 0; });
-
-        if (kicked_) {
-            kicked_.store(false, std::memory_order_release);
-            return 0;
-        }
+        if (!wait_once(consumer_cond_, lock, [this]{ return done_ || nsamples_ > 0; }) || done_)
+            return false;
 
         size_t nsamples = nsamples_;
 
@@ -102,26 +98,29 @@ public:
 
     void push(T &&mpkt)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
 
-        mpkt->start = nsamples_;
-        nsamples_ += mpkt->nsamples;
+            mpkt->start = nsamples_;
+            nsamples_ += mpkt->nsamples;
 
-        queue_.push_back(std::move(mpkt));
+            queue_.push_back(std::move(mpkt));
+        }
 
         consumer_cond_.notify_one();
+    }
 
-        producer_cond_.wait(lock, [this]{ return done_ || kicked_ || !high_water_mark_ || nsamples_ < *high_water_mark_; });
+    /** @brief Wait for there to be room to push */
+    bool wait_until_room(void)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
 
-        if (kicked_)
-            kicked_.store(false, std::memory_order_release);
+        return wait_once(producer_cond_, lock, [this]{ return done_ || !high_water_mark_ || nsamples_ < *high_water_mark_; });
     }
 
     /** @brief Kick the queue to force progress */
     void kick(void)
     {
-        kicked_.store(true, std::memory_order_release);
-
         producer_cond_.notify_all();
         consumer_cond_.notify_all();
     }
@@ -129,9 +128,6 @@ public:
 protected:
     /** @brief Are we done with the queue? */
     std::atomic<bool> done_;
-
-    /** @brief Is the queue being kicked? */
-    std::atomic<bool> kicked_;
 
     /** @brief Maximum number of IQ samples the queue may contain */
     std::optional<size_t> high_water_mark_;
