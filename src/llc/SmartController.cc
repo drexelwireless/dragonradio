@@ -218,17 +218,25 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     if (pkt->internal_flags.invalid_header)
         return;
 
+    // Get the sending node's send and receive windows. This will add the node
+    // to the network if it doesn't already exist.
+    NodeId     prevhop = pkt->hdr.curhop;
+    RecvWindow &recvw = getRecvWindow(prevhop);
+    SendWindow &sendw = getSendWindow(prevhop);
+
+    // Record last heard timestamp
+    {
+        std::lock_guard<std::mutex> lock(sendw.mutex);
+
+        sendw.heard(pkt->timestamp);
+    }
+
     // Skip packets that aren't for us
     NodeId this_node_id = radionet_->getThisNodeId();
 
     if (pkt->hdr.nexthop != kNodeBroadcast &&
         pkt->hdr.nexthop != this_node_id)
         return;
-
-    // Get the sending node's receive window. This will add the node to the
-    // network if it doesn't already exist.
-    NodeId     prevhop = pkt->hdr.curhop;
-    RecvWindow &recvw = getRecvWindow(prevhop);
 
     // Activate receive window and send NAK for bad packet
     {
@@ -245,6 +253,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         if (recvw.short_evm && recvw.short_rssi && isMCSFastAdjustmentPeriod())
             startSACKTimer(recvw);
 
+        // Handle packet with a sequence number
         if (pkt->hdr.flags.has_seq == 1) {
             // Activate the receive window if it is not yet active. If this is a
             // SYN packet or if the sequence number is outside the receive
@@ -316,8 +325,10 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // Handle ACK/NAK
     {
-        SendWindow                  &sendw = getSendWindow(prevhop);
         std::lock_guard<std::mutex> lock(sendw.mutex);
+
+        // Record last heard timestamp
+        sendw.last_heard_timestamp = MonoClock::now();
 
         if (!sendw.new_window) {
             MonoClock::time_point tfeedback = MonoClock::now() - selective_ack_feedback_delay_;
@@ -872,11 +883,18 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
  */
 void SmartController::retransmit(SendWindow::Entry &entry)
 {
-    // Squelch a retransmission when the destination can't transmit because we
-    // won't be able to hear an ACK anyway.
-    if (!entry.sendw.node.can_transmit) {
+    // Check in case we have not heard from node recently
+    entry.sendw.checkUnheard();
+
+    // Squelch a retransmission when:
+    // 1) The destination can't transmit, because we won't be able to hear an
+    //    ACK anyway.
+    // 2) The destination is unreachable and this retransmission is for any
+    //    packet except the next packet we need ACK'ed
+    if (!entry.sendw.node.can_transmit ||
+        (entry.sendw.node.unreachable && entry.pkt->hdr.seq != entry.sendw.max)) {
         // We need to restart the retransmission timer here so that the packet
-        // will be retransmitted if the destination can transmit in the future.
+        // will be retransmitted if the destination is reachable in the future.
         timer_queue_.cancel(entry);
         startRetransmissionTimer(entry);
         return;
@@ -902,29 +920,23 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // don't cancel it, we can end up retransmitting the same packet twice,
     // e.g., once due to the explicit NAK, and again due to a retransmission
     // timeout.
-    //
-    // The one case where we DO start the transmit timer here is when the MAC
-    // cannot currently send a packet, in which case we DO NOT re-queue the
-    // packet, but instead just restart the retransmission timer.
     timer_queue_.cancel(entry);
 
-    if (radionet_->getThisNode().can_transmit) {
+    // Clear any control information in the packet
+    entry.pkt->clearControl();
+
+    // Mark the packet as a retransmission
+    entry.pkt->internal_flags.retransmission = 1;
+
+    // Re-queue the packet. The ACK and MCS will be set properly upon
+    // retransmission.
+    if (netlink_) {
         // We need to make an explicit new reference to the shared_ptr because
-        // push takes ownership of its argument.
-        std::shared_ptr<NetPacket> pkt = entry.get();
+        // repush takes ownership of its argument.
+        std::shared_ptr<NetPacket> pkt = entry.pkt;
 
-        // Clear any control information in the packet
-        pkt->clearControl();
-
-        // Mark the packet as a retransmission
-        pkt->internal_flags.retransmission = 1;
-
-        // Re-queue the packet. The ACK and MCS will be set properly upon
-        // retransmission.
-        if (netlink_)
-            netlink_->repush(std::move(pkt));
-    } else
-        startRetransmissionTimer(entry);
+        netlink_->repush(std::move(pkt));
+    }
 }
 
 void SmartController::drop(SendWindow::Entry &entry)
@@ -1658,6 +1670,7 @@ SendWindow::SendWindow(Node &n,
     , mcsidx(0)
     , new_window(true)
     , window_open(true)
+    , last_heard_timestamp(MonoClock::now())
     , seq({0})
     , unack({0})
     , max({0})
@@ -1923,6 +1936,38 @@ void SendWindow::resetPEREstimates(void)
 
     long_per.setWindowSize(std::max(1.0, controller.long_per_window_*controller.min_channel_bandwidth_/controller.max_packet_samples_[mcsidx]));
     long_per.reset();
+}
+
+void SendWindow::heard(std::optional<MonoClock::time_point> when)
+{
+    // Record last-heard timestamp
+    last_heard_timestamp = when.value_or(MonoClock::now());
+
+    // If the node was unreachable before, mark it as reachable now
+    if (node.unreachable) {
+        node.unreachable = false;
+
+        // Open send window if we have room
+        if (seq < unack + win)
+            setSendWindowOpen(true);
+
+        logARQ(LOGDEBUG, "Node now reachable: node=%u",
+            (unsigned) node.id);
+    }
+}
+
+void SendWindow::checkUnheard(void)
+{
+    if (!node.unreachable &&
+        controller.unreachable_timeout_ &&
+        (MonoClock::now() - last_heard_timestamp).get_real_secs() > *controller.unreachable_timeout_) {
+        node.unreachable = true;
+
+        setSendWindowOpen(false);
+
+        logARQ(LOGDEBUG, "Node unreachable: node=%u",
+            (unsigned) node.id);
+    }
 }
 
 void SendWindow::Entry::operator()()

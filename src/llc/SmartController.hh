@@ -90,6 +90,9 @@ struct SendWindow {
     /** @brief Is the window open? */
     bool window_open;
 
+    /** @brief Last time we heard from node. */
+    MonoClock::time_point last_heard_timestamp;
+
     /** @brief Current sequence number for this destination */
     Seq seq;
 
@@ -186,6 +189,12 @@ struct SendWindow {
     /** @brief Reconfigure a node's PER estimates */
     void resetPEREstimates(void);
 
+    /** @brief Indicate that we have heard from destination recently */
+    void heard(std::optional<MonoClock::time_point> = {});
+
+    /** @brief Check whether we have not heard from destination recently */
+    void checkUnheard(void);
+
     struct Entry : public TimerQueue::Timer {
         Entry(SendWindow &sendw)
           : sendw(sendw)
@@ -208,14 +217,6 @@ struct SendWindow {
         inline void set(const std::shared_ptr<NetPacket>& p)
         {
             pkt = p;
-        }
-
-        /** @brief Get packet in send window entry
-         * @return The packet.
-         */
-        inline std::shared_ptr<NetPacket> get()
-        {
-            return pkt;
         }
 
         /** @brief Release packet */
@@ -619,6 +620,18 @@ public:
      * occurred.
      * */
     void environmentDiscontinuity(void);
+
+    /** @brief Get threshold for marking node unreachable. */
+    std::optional<double> getUnreachableTimeout(void) const
+    {
+        return unreachable_timeout_;
+    }
+
+    /** @brief Set threshold for marking node unreachable. */
+    void setUnreachableTimeout(std::optional<double> t)
+    {
+        unreachable_timeout_ = t;
+    }
 
     /** @brief Get ACK delay. */
     double getACKDelay(void) const
@@ -1033,6 +1046,9 @@ protected:
 
     /** @brief Minimum MCS transition probability */
     double mcsidx_prob_floor_;
+
+    /** @brief Threshold for marking a node unreachable (seconds) */
+    std::optional<double> unreachable_timeout_;
 
     /** @brief ACK delay in seconds */
     double ack_delay_;
