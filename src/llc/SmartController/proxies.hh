@@ -108,7 +108,7 @@ public:
 
     std::optional<double> getShortEVM(void)
     {
-        RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
+        RecvWindow                  &recvw = controller_->getRecvWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.short_evm.value();
@@ -116,7 +116,7 @@ public:
 
     std::optional<double> getLongEVM(void)
     {
-        RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
+        RecvWindow                  &recvw = controller_->getRecvWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.long_evm.value();
@@ -124,7 +124,7 @@ public:
 
     std::optional<double> getShortRSSI(void)
     {
-        RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
+        RecvWindow                  &recvw = controller_->getRecvWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.short_rssi.value();
@@ -132,7 +132,7 @@ public:
 
     std::optional<double> getLongRSSI(void)
     {
-        RecvWindow                  &recvw = controller_->getReceiveWindow(node_id_);
+        RecvWindow                  &recvw = controller_->getRecvWindow(node_id_);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         return recvw.long_rssi.value();
