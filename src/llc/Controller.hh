@@ -46,12 +46,12 @@ public:
         return 0.0;
     }
 
-    /** @brief Set whether or not a node's send window is open */
-    virtual void setSendWindowStatus(NodeId id, bool isOpen)
+    /** @brief Set whether or not a node's link is open */
+    virtual void setLinkStatus(NodeId node_id, bool isOpen)
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        send_window_status_[id] = isOpen;
+        link_status_[node_id] = isOpen;
     }
 
 protected:
@@ -59,7 +59,7 @@ protected:
     std::mutex mutex_;
 
     /** @brief Nodes' send window statuses */
-    std::unordered_map<NodeId, bool> send_window_status_;
+    std::unordered_map<NodeId, bool> link_status_;
 
     /** @brief Return true if the packet can be popped */
     bool canPop(const std::shared_ptr<NetPacket>& pkt)
@@ -68,9 +68,9 @@ protected:
             return true;
 
         std::lock_guard<std::mutex> lock(mutex_);
-        auto                        it = send_window_status_.find(pkt->hdr.nexthop);
+        auto                        it = link_status_.find(pkt->hdr.nexthop);
 
-        if (it != send_window_status_.end())
+        if (it != link_status_.end())
             return it->second;
         else
             return true;
