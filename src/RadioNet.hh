@@ -52,7 +52,6 @@ struct Node {
       , is_gateway(false)
       , can_transmit(true)
       , g(1.0)
-      , mcsidx(0)
     {
     }
 
@@ -75,9 +74,6 @@ struct Node {
 
     /** @brief Multiplicative TX gain as measured against 0 dBFS. */
     float g;
-
-    /** @brief MCS for this node */
-    mcsidx_t mcsidx;
 
     /** @brief Set soft TX gain.
      * @param dB The soft gain (dBFS).

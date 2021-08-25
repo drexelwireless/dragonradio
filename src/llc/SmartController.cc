@@ -1881,7 +1881,6 @@ void SendWindow::setMCS(size_t new_mcsidx)
 
     // Set new MCS index
     mcsidx = new_mcsidx;
-    node.mcsidx = new_mcsidx;
 
     // Set end of PER window
     per_end = seq;
