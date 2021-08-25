@@ -1680,7 +1680,7 @@ SendWindow::SendWindow(Node &n,
 void SendWindow::setSendWindowStatus(bool open)
 {
     if (open != window_open) {
-        controller.netlink_->setSendWindowStatus(node.id, open);
+        controller.netlink_->setLinkStatus(node.id, open);
         window_open = open;
     }
 }

@@ -78,9 +78,9 @@ public:
         stop();
     }
 
-    void setSendWindowStatus(NodeId id, bool isOpen) override
+    void setLinkStatus(NodeId id, bool isOpen) override
     {
-        ControllerNetLink::setSendWindowStatus(id, isOpen);
+        ControllerNetLink::setLinkStatus(id, isOpen);
 
         // Activate any queues associated with the node whose window just
         // opened.
