@@ -52,9 +52,6 @@ void exportRadioNet(py::module &m)
             &Node::getSoftTXGain,
             &Node::setSoftTXGain,
             "Soft TX gain (dBFS)")
-        .def_readonly("mcsidx",
-            &Node::mcsidx,
-            "MCS index")
         ;
 
     // Export class RadioNet to Python
