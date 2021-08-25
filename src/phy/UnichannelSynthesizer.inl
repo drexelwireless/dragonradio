@@ -32,26 +32,6 @@ UnichannelSynthesizer<ChannelModulator>::~UnichannelSynthesizer()
 }
 
 template <class ChannelModulator>
-void UnichannelSynthesizer<ChannelModulator>::modulate(const std::shared_ptr<Slot> &slot)
-{
-    std::unique_lock<std::mutex> lock(curslot_mutex_);
-
-    curslot_ = slot;
-
-    curslot_cond_.notify_all();
-}
-
-template <class ChannelModulator>
-void UnichannelSynthesizer<ChannelModulator>::reconfigure(void)
-{
-    for (auto &flag : mod_reconfigure_)
-        flag.store(true, std::memory_order_release);
-
-    // Kick the sink
-    sink.kick();
-}
-
-template <class ChannelModulator>
 void UnichannelSynthesizer<ChannelModulator>::stop(void)
 {
     // Release the GIL in case we have Python-based demodulators
@@ -68,6 +48,26 @@ void UnichannelSynthesizer<ChannelModulator>::stop(void)
         if (mod_threads_[i].joinable())
             mod_threads_[i].join();
     }
+}
+
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::reconfigure(void)
+{
+    for (auto &flag : mod_reconfigure_)
+        flag.store(true, std::memory_order_release);
+
+    // Kick the sink
+    sink.kick();
+}
+
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::modulate(const std::shared_ptr<Slot> &slot)
+{
+    std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+    curslot_ = slot;
+
+    curslot_cond_.notify_all();
 }
 
 template <class ChannelModulator>
