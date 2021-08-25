@@ -45,6 +45,9 @@ void exportRadioNet(py::module &m)
         .def_readwrite("can_transmit",
             &Node::can_transmit,
             "Flag indicating whether or not this node can transmit")
+        .def_readwrite("unreachable",
+            &Node::unreachable,
+            "Flag indicating whether or not this node is unreachable")
         .def_readwrite("g",
             &Node::g,
             "Soft TX gain (multiplicative)")
