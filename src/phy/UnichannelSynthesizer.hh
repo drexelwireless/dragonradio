@@ -23,11 +23,11 @@ public:
 
     virtual ~UnichannelSynthesizer();
 
-    void modulate(const std::shared_ptr<Slot> &slot) override;
+    void stop(void) override;
 
     void reconfigure(void) override;
 
-    void stop(void) override;
+    void modulate(const std::shared_ptr<Slot> &slot) override;
 
 protected:
     /** @brief Flag indicating if we should stop processing packets */
