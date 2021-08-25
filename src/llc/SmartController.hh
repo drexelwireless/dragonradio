@@ -151,7 +151,7 @@ struct SendWindow {
     }
 
     /** @brief Set send window status */
-    void setSendWindowStatus(bool open);
+    void setSendWindowOpen(bool open);
 
     /** @brief Record a packet ACK */
     void ack(const MonoClock::time_point &tx_time);
