@@ -8,6 +8,7 @@
 #include <mutex>
 
 #include "net/Queue.hh"
+#include "util/threads.hh"
 
 /** @brief A simple queue Element. */
 template <class T>
@@ -29,7 +30,6 @@ public:
     SimpleQueue(QueueType type)
       : Queue<T>()
       , done_(false)
-      , kicked_(false)
       , type_(type)
     {
     }
@@ -107,15 +107,7 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        cond_.wait(lock, [this]{ return done_ || kicked_ || !hiq_.empty() || !q_.empty(); });
-
-        if (kicked_) {
-            kicked_.store(false, std::memory_order_release);
-            return false;
-        }
-
-        // If we're done, we're done
-        if (done_)
+        if (!wait_once(cond_, lock, [this]{ return done_ || !hiq_.empty() || !q_.empty(); }) || done_)
             return false;
 
         MonoClock::time_point now = MonoClock::now();
@@ -170,7 +162,6 @@ public:
 
     virtual void kick(void) override
     {
-        kicked_.store(true, std::memory_order_release);
         cond_.notify_all();
     }
 
@@ -183,9 +174,6 @@ public:
 protected:
     /** @brief Flag indicating that processing of the queue should stop. */
     bool done_;
-
-    /** @brief Is the queue being kicked? */
-    std::atomic<bool> kicked_;
 
     /** @brief Mutex protecting the queues. */
     mutable std::mutex m_;

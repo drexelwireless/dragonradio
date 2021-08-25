@@ -16,6 +16,7 @@
 #include "cil/CIL.hh"
 #include "llc/Controller.hh"
 #include "net/Queue.hh"
+#include "util/threads.hh"
 
 /** @brief A queue that obeys mandates. */
 template <class T>
@@ -58,7 +59,6 @@ public:
     MandateQueue()
       : Queue<T>()
       , done_(false)
-      , kicked_(false)
       , transmission_delay_(0.0)
       , bonus_phase_(false)
       , hiq_(*this, kHiQueuePriority, FIFO)
@@ -311,15 +311,7 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        cond_.wait(lock, [this]{ return done_ || kicked_ || nitems_ > 0; });
-
-        if (kicked_) {
-            kicked_.store(false, std::memory_order_release);
-            return false;
-        }
-
-        // If we're done, we're done
-        if (done_)
+        if (!wait_once(cond_, lock, [this]{ return done_ || nitems_ > 0; }) || done_)
             return false;
 
         MonoClock::time_point dequeue_start = MonoClock::now();
@@ -375,7 +367,6 @@ public:
 
     virtual void kick(void) override
     {
-        kicked_.store(true, std::memory_order_release);
         cond_.notify_all();
     }
 
@@ -920,9 +911,6 @@ protected:
 
     /** @brief Flag indicating that processing of the queue should stop. */
     bool done_;
-
-    /** @brief Is the queue being kicked? */
-    std::atomic<bool> kicked_;
 
     /** @brief Packet transmission delay in seconds */
     double transmission_delay_;
