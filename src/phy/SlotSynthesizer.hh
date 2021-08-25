@@ -149,7 +149,7 @@ public:
 
     /** @brief Finalize a slot. */
     /** This should be called after a slot is closed in order to finish any
-     * final computations necessary. It does not need to acquire teh slot's
+     * final computations necessary. It does not need to acquire the slot's
      * mutex.
      */
     virtual void finalize(Slot &slot)
