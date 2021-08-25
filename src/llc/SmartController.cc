@@ -98,7 +98,7 @@ get_packet:
 
     // If we have received a packet from the destination, add an ACK.
     {
-        RecvWindow                  &recvw = getReceiveWindow(nexthop);
+        RecvWindow                  &recvw = getRecvWindow(nexthop);
         std::lock_guard<std::mutex> lock(recvw.mutex);
 
         if (recvw.active) {
@@ -229,7 +229,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
     // network if it doesn't already exist.
     NodeId     prevhop = pkt->hdr.curhop;
     Node       &node = (*radionet_)[prevhop];
-    RecvWindow &recvw = getReceiveWindow(prevhop);
+    RecvWindow &recvw = getRecvWindow(prevhop);
 
     // Activate receive window and send NAK for bad packet
     {
@@ -525,7 +525,7 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
 
         // Cancel the selective ACK timer when we actually have sent a selective ACK
         if (pkt.internal_flags.has_selective_ack) {
-            RecvWindow                  &recvw = getReceiveWindow(pkt.hdr.nexthop);
+            RecvWindow                  &recvw = getRecvWindow(pkt.hdr.nexthop);
             std::lock_guard<std::mutex> lock(recvw.mutex);
 
             timer_queue_.cancel(recvw);
@@ -1623,7 +1623,7 @@ SendWindow &SmartController::getSendWindow(NodeId node_id)
     }
 }
 
-RecvWindow &SmartController::getReceiveWindow(NodeId node_id)
+RecvWindow &SmartController::getRecvWindow(NodeId node_id)
 {
     std::lock_guard<std::mutex> lock(recv_mutex_);
     auto                        it = recv_.find(node_id);

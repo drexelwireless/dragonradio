@@ -1079,7 +1079,7 @@ protected:
      * @param node_id The node whose window to get
      * @returns The receive window
      */
-    RecvWindow &getReceiveWindow(NodeId node_id);
+    RecvWindow &getRecvWindow(NodeId node_id);
 };
 
 #endif /* SMARTCONTROLLER_H_ */
