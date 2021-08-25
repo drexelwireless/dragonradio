@@ -971,7 +971,7 @@ void SmartController::advanceSendWindow(SendWindow &sendw)
 
     // Indicate that this node's send window is now open
     if (sendw.seq < sendw.unack + sendw.win)
-        sendw.setSendWindowStatus(true);
+        sendw.setSendWindowOpen(true);
 
     // See if we locally updated the send window. If so, we need to tell the
     // receiver we've updated our unack
@@ -1570,7 +1570,7 @@ bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
             // ALWAYS close it since we're waiting for the ACK to our SYN!
             if (   sendw.seq >= sendw.unack + sendw.win
                 && ((sendw[sendw.unack].pending() && !sendw[sendw.unack].mayDrop(max_retransmissions_)) || !move_along_ || sendw.win == 1))
-                sendw.setSendWindowStatus(false);
+                sendw.setSendWindowOpen(false);
 
             return true;
         } else {
@@ -1677,7 +1677,7 @@ SendWindow::SendWindow(Node &n,
     setMCS(controller.mcsidx_init_);
 }
 
-void SendWindow::setSendWindowStatus(bool open)
+void SendWindow::setSendWindowOpen(bool open)
 {
     if (open != window_open) {
         controller.netlink_->setLinkStatus(node.id, open);
