@@ -97,6 +97,13 @@ public:
         return sendw->long_rssi;
     }
 
+    size_t getMCSIdx(void)
+    {
+        SendWindowGuard sendw(*controller_, node_id_);
+
+        return sendw->mcsidx;
+    }
+
 private:
     /** @brief This send window's SmartController */
     std::shared_ptr<SmartController> controller_;
@@ -436,6 +443,9 @@ void exportControllers(py::module &m)
         .def_property_readonly("long_rssi",
             &SendWindowProxy::getLongRSSI,
             "Long-term RSSI (dB)")
+        .def_property_readonly("mcsidx",
+            &SendWindowProxy::getMCSIdx,
+            "MCS index")
         ;
 
     // Export class SendWindowsProxy to Python
