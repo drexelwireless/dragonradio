@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SMARTCONTROLLER_H_
@@ -386,11 +386,8 @@ class SmartController : public Controller
     friend struct SendWindow;
     friend struct RecvWindow;
 
-    friend class SendWindowsProxy;
-    friend class SendWindowProxy;
-
-    friend class ReceiveWindowsProxy;
-    friend class ReceiveWindowProxy;
+    friend class SendWindowGuard;
+    friend class RecvWindowGuard;
 
 public:
     using evm_thresh_t = std::optional<double>;
@@ -1080,6 +1077,82 @@ protected:
      * @returns The receive window
      */
     RecvWindow &getRecvWindow(NodeId node_id);
+};
+
+class SendWindowGuard {
+public:
+    SendWindowGuard(SmartController &controller, NodeId node_id)
+      : sendw_(controller.getSendWindow(node_id))
+      , lock_(sendw_.mutex)
+    {
+    }
+
+    SendWindowGuard() = delete;
+
+    ~SendWindowGuard() = default;
+
+    SendWindow &operator *()
+    {
+        return sendw_;
+    }
+
+    const SendWindow &operator *() const
+    {
+        return sendw_;
+    }
+
+    SendWindow *operator ->()
+    {
+        return &sendw_;
+    }
+
+    const SendWindow *operator ->() const
+    {
+        return &sendw_;
+    }
+
+private:
+    SendWindow &sendw_;
+
+    std::lock_guard<std::mutex> lock_;
+};
+
+class RecvWindowGuard {
+public:
+    RecvWindowGuard(SmartController &controller, NodeId node_id)
+      : recvw_(controller.getRecvWindow(node_id))
+      , lock_(recvw_.mutex)
+    {
+    }
+
+    RecvWindowGuard() = delete;
+
+    ~RecvWindowGuard() = default;
+
+    RecvWindow &operator *()
+    {
+        return recvw_;
+    }
+
+    const RecvWindow &operator *() const
+    {
+        return recvw_;
+    }
+
+    RecvWindow *operator ->()
+    {
+        return &recvw_;
+    }
+
+    const RecvWindow *operator ->() const
+    {
+        return &recvw_;
+    }
+
+private:
+    RecvWindow &recvw_;
+
+    std::lock_guard<std::mutex> lock_;
 };
 
 #endif /* SMARTCONTROLLER_H_ */
