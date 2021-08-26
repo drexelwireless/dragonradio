@@ -50,7 +50,7 @@ struct Node {
     explicit Node(NodeId id)
       : id(id)
       , is_gateway(false)
-      , can_transmit(true)
+      , emcon(false)
       , unreachable(false)
       , g(1.0)
     {
@@ -70,8 +70,8 @@ struct Node {
     /** @brief Flag indicating whether or not this node is the gateway */
     bool is_gateway;
 
-    /** @brief Flag indicating whether or not this node can transmit */
-    bool can_transmit;
+    /** @brief Flag indicating whether or not this node is subject to emissions control */
+    bool emcon;
 
     /** @brief Flag indicating whether or not this node is unreachable */
     bool unreachable;
