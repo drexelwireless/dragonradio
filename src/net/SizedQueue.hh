@@ -46,6 +46,13 @@ public:
         hi_priority_flows_ = flows;
     }
 
+    virtual size_t size(void) override
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        return size_;
+    }
+
     virtual void reset(void) override
     {
         std::lock_guard<std::mutex> lock(m_);

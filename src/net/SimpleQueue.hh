@@ -55,6 +55,13 @@ public:
         type_ = type;
     }
 
+    virtual size_t size(void) override
+    {
+        std::unique_lock<std::mutex> lock(m_);
+
+        return hiq_.size() + q_.size();
+    }
+
     virtual void reset(void) override
     {
         std::lock_guard<std::mutex> lock(m_);

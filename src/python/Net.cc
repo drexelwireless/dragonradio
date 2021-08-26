@@ -62,6 +62,9 @@ void exportNet(py::module &m)
     py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "Queue")
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
+        .def_property_readonly("size",
+            &NetQueue::size,
+            "Queue size")
         ;
 
     // Export class SimpleNetQueue to Python
