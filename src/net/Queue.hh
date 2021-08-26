@@ -35,6 +35,9 @@ public:
 
     virtual ~Queue() = default;
 
+    /** @brief Queue size. */
+    virtual size_t size(void) = 0;
+
     /** @brief Reset queue to empty state. */
     virtual void reset(void) = 0;
 
