@@ -1002,8 +1002,8 @@ class Radio(dragonradio.tasks.TaskManager):
         self.mac.slotidx = 0
 
         # All nodes can transmit
-        for (_node_id, node) in self.radionet.nodes.items():
-            node.can_transmit = True
+        for node_id in self.radionet.nodes.keys():
+            self.controller.setEmcon(node_id, False)
 
         if self.config.tx_upsample:
             self.mac_schedule = np.identity(len(self.channels)).astype('bool')
@@ -1043,8 +1043,8 @@ class Radio(dragonradio.tasks.TaskManager):
         if 0 in nodes_with_slot:
             nodes_with_slot.remove(0)
 
-        for (node_id, node) in self.radionet.nodes.items():
-            node.can_transmit = node_id in nodes_with_slot
+        for node_id in self.radionet.nodes.keys():
+            self.controller.setEmcon(node_id, node_id not in nodes_with_slot)
 
         # If we are upsampling on TX, go ahead and install the schedule
         if config.tx_upsample:

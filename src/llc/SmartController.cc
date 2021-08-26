@@ -79,6 +79,20 @@ SmartController::~SmartController()
     timer_queue_.stop();
 }
 
+void SmartController::setEmcon(NodeId node_id, bool emcon)
+{
+    Node &node = (*radionet_)[node_id];
+
+    if (node.emcon != emcon) {
+        // If this node can no longer transmit, kick the network input so that
+        // getPacket will realize it's not allowed to transmit.
+        if (node.id == radionet_->getThisNodeId())
+            net_in.kick();
+
+        node.emcon = emcon;
+    }
+}
+
 bool SmartController::pull(std::shared_ptr<NetPacket> &pkt)
 {
 get_packet:
@@ -183,9 +197,12 @@ get_packet:
             sendw.send_set_unack = false;
         }
 
-        // Apply TX params. If the destination can transmit, proceed as usual.
-        // Otherwise, use the default MCS.
-        if (dest.can_transmit) {
+        // Apply TX params. If the destination subject to emissions control, use
+        // the default MCS.
+        if (dest.emcon) {
+            pkt->mcsidx = mcsidx_init_;
+            pkt->g = dest.g;
+        } else {
             // If this is a retransmission, the packet has a deadline, and it
             // was transmitted at the current MCS, decrease the MCS in the hope
             // that we can get this packet through before its deadline passes.
@@ -198,9 +215,6 @@ get_packet:
             else
                 pkt->mcsidx = sendw.mcsidx;
 
-            pkt->g = dest.g;
-        } else {
-            pkt->mcsidx = mcsidx_init_;
             pkt->g = dest.g;
         }
     } else {
@@ -532,8 +546,19 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
             SendWindow                  &sendw = getSendWindow(pkt.hdr.nexthop);
             std::lock_guard<std::mutex> lock(sendw.mutex);
 
-            // Start the retransmit timer if it is not already running.
-            startRetransmissionTimer(sendw[pkt.hdr.seq]);
+            // If the destination is subject to emissions control, reset the
+            // send window entry corresponding to the packet and advance the
+            // send window. Otherwise, start the retransmit timer.
+            if (sendw.node.emcon) {
+                sendw[pkt.hdr.seq].reset();
+
+                if (sendw.unack < pkt.hdr.seq + 1)
+                    sendw.unack = pkt.hdr.seq + 1;
+
+                advanceSendWindow(sendw);
+            } else {
+                startRetransmissionTimer(sendw[pkt.hdr.seq]);
+            }
         }
 
         // Cancel the selective ACK timer when we actually have sent a selective ACK
@@ -572,7 +597,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     }
 
     // Record the packet error as long as receiving node can transmit
-    if (sendw.node.can_transmit && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->hdr.seq >= sendw.per_cutoff) {
+    if (!sendw.node.emcon && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->hdr.seq >= sendw.per_cutoff) {
         sendw.txFailure();
 
         if (logger)
@@ -596,7 +621,7 @@ void SmartController::ack(RecvWindow &recvw)
     if (!netlink_)
         return;
 
-    if (!radionet_->getThisNode().can_transmit)
+    if (radionet_->getThisNode().emcon)
         return;
 
     // Create an ACK-only packet. Why don't we set the ACK field here!? Because
@@ -626,7 +651,7 @@ void SmartController::nak(RecvWindow &recvw, Seq seq)
     if (!netlink_)
         return;
 
-    if (!radionet_->getThisNode().can_transmit)
+    if (radionet_->getThisNode().emcon)
         return;
 
     // If we have a zero-sized NAK window, don't send any NAK's.
@@ -682,7 +707,7 @@ void SmartController::broadcastHello(void)
 
     Node &me = radionet_->getThisNode();
 
-    if (!me.can_transmit)
+    if (me.emcon)
         return;
 
     dprintf("broadcast HELLO");
@@ -885,7 +910,9 @@ void SmartController::retransmitOrDrop(SendWindow::Entry &entry)
 void SmartController::retransmit(SendWindow::Entry &entry)
 {
     // Mark node unreachable if we haven't heard from it recently
-    if (!entry.sendw.node.unreachable && (MonoClock::now() - entry.sendw.last_timestamp).get_real_secs() > unreachable_threshold_) {
+    if (!entry.sendw.node.emcon &&
+        !entry.sendw.node.unreachable &&
+        (MonoClock::now() - entry.sendw.last_timestamp).get_real_secs() > unreachable_threshold_) {
         entry.sendw.node.unreachable = true;
         entry.sendw.setSendWindowOpen(false);
 
@@ -898,7 +925,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     //    ACK anyway.
     // 2) The destination is unreachable and this retransmission is for any
     //    packet except the next packet we need ACK'ed
-    if (!entry.sendw.node.can_transmit ||
+    if (entry.sendw.node.emcon ||
         (entry.sendw.node.unreachable && entry.pkt->hdr.seq != entry.sendw.max)) {
         // We need to restart the retransmission timer here so that the packet
         // will be retransmitted if the destination is reachable in the future.
@@ -1538,7 +1565,12 @@ void SmartController::handleSetUnack(RadioPacket &pkt, RecvWindow &recvw)
 
 bool SmartController::getPacket(std::shared_ptr<NetPacket>& pkt)
 {
+    Node &me = radionet_->getThisNode();
+
     for (;;) {
+        if (me.emcon)
+            return false;
+
         // We use a lock here to protect against a race between getting a packet
         // and updating the send window status of the destination. Without this
         // lock, it's possible that we receive two packets for the same

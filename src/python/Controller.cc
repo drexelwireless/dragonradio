@@ -253,6 +253,9 @@ void exportControllers(py::module &m)
             nullptr,
             &Controller::setMinChannelBandwidth,
             "Minimum channel bandwidth")
+        .def("setEmcon",
+            &Controller::setEmcon,
+            "Set whether or not a node can transmit")
         ;
 
     // Export class DummyController to Python
