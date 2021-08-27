@@ -196,26 +196,20 @@ get_packet:
             sendw.send_set_unack = false;
         }
 
-        // Apply TX params. If the destination subject to emissions control, use
-        // the default MCS.
-        if (dest.emcon) {
-            pkt->mcsidx = mcsidx_init_;
-            pkt->g = dest.g;
-        } else {
-            // If this is a retransmission, the packet has a deadline, and it
-            // was transmitted at the current MCS, decrease the MCS in the hope
-            // that we can get this packet through before its deadline passes.
-            if (decrease_retrans_mcsidx_ &&
-                pkt->internal_flags.retransmission &&
-                pkt->deadline &&
-                pkt->mcsidx == sendw.mcsidx &&
-                pkt->mcsidx > mcsidx_min_)
-                --pkt->mcsidx;
-            else
-                pkt->mcsidx = sendw.mcsidx;
+        // Apply TX params. If this is a retransmission, the packet has a
+        // deadline, and it was transmitted at the current MCS, decrease the MCS
+        // in the hope that we can get this packet through before its deadline
+        // passes.
+        if (decrease_retrans_mcsidx_ &&
+            pkt->internal_flags.retransmission &&
+            pkt->deadline &&
+            pkt->mcsidx == sendw.mcsidx &&
+            pkt->mcsidx > mcsidx_min_)
+            --pkt->mcsidx;
+        else
+            pkt->mcsidx = sendw.mcsidx;
 
-            pkt->g = dest.g;
-        }
+        pkt->g = dest.g;
     } else {
         // Apply ACK TX params
         pkt->mcsidx = mcsidx_ack_;
