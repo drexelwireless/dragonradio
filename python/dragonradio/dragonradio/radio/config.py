@@ -658,24 +658,24 @@ class Config:
         liquid = parser.add_argument_group('liquid-dsp')
 
         liquid.add_argument('-r', '--check',
-                            action='store', type=dragonradio.liquid.CRCScheme,
+                            action='store', type=str,
                             dest='check',
                             help='set data validity check: ' + \
                                 enumHelp(dragonradio.liquid.CRCScheme))
         liquid.add_argument('-c', '--fec0',
-                            action='store', type=dragonradio.liquid.FECScheme,
+                            action='store', type=str,
                             dest='fec0',
                             metavar='FEC',
                             help='set inner FEC: ' + \
                                 enumHelp(dragonradio.liquid.FECScheme))
         liquid.add_argument('-k', '--fec1',
-                            action='store', type=dragonradio.liquid.FECScheme,
+                            action='store', type=str,
                             dest='fec1',
                             metavar='FEC',
                             help='set outer FEC: ' + \
                                 enumHelp(dragonradio.liquid.FECScheme))
         liquid.add_argument('-m', '--mod',
-                            action='store', type=dragonradio.liquid.ModulationScheme,
+                            action='store', type=str,
                             dest='ms',
                             metavar='MODULATION',
                             help='set modulation scheme: ' + \
