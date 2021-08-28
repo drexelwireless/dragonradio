@@ -658,6 +658,9 @@ class Scorer(DataFrameCache):
         # If we are gated, goal is 0
         df.loc[df.gate == True, 'goal'] = 0
 
+        # Make sure goal column is int
+        df.goal = df.goal.astype(int)
+
         #
         # Calculate achieved duration
         #
