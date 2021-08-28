@@ -593,6 +593,12 @@ class Scorer(DataFrameCache):
         cols = pd.Index(['gate'])
         df = df.join(gates_df[cols], how='left')
 
+        # Replace NaN gate values with False
+        df['gate'].fillna(False, inplace=True)
+
+        # Make sure gate column is bool
+        df.gate = df.gate.astype(bool)
+
         #
         # Attach mandates to flows
         #
