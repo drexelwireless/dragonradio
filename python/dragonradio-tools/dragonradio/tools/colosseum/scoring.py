@@ -539,7 +539,7 @@ class Scorer(DataFrameCache):
 
         return items
 
-    @property
+    @cached_dataframe_property('gates')
     def gates(self):
         """Gate violations.
 
