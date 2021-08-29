@@ -14,7 +14,7 @@
 #include "phy/ChannelSynthesizer.hh"
 #include "phy/PHY.hh"
 
-/** @brief A single-channel synthesizer. */
+/** @brief Use one or more workers to synthesize packets for a single channel. */
 template <class ChannelModulator>
 class ParallelChannelSynthesizer : public ChannelSynthesizer
 {
