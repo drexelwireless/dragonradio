@@ -8,6 +8,7 @@
 
 namespace py = pybind11;
 
+#include "Logger.hh"
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/PHY.hh"
 #include "stats/Estimator.hh"
@@ -350,12 +351,22 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                         mpkt->samples = std::move(mod.iqbuf);
                 }
 
-                // If we didn't successfully push the packet, we are done with
-                // this slot and will attempt to add the packet to th next slot.
+                // If we didn't successfully push the packet, there are two
+                // options:
+                // 1) The packet is too large for any slot. In this case, drop
+                //    it and try again.
+                // 2) The packet is too large for the remainder of *this* slot.
+                //    In this case, we are done with this slot and will attempt
+                //    to add the packet to the next slot.
                 if (!pushed) {
-                    pkt = std::move(mpkt->pkt);
-                    mpkt.reset();
-                    break;
+                    if (mpkt->nsamples > slot->max_samples) {
+                        logPHY(LOGWARNING, "Modulated packet is larger than slot!");
+                        mpkt.reset();
+                    } else {
+                        pkt = std::move(mpkt->pkt);
+                        mpkt.reset();
+                        break;
+                    }
                 }
             }
         }
