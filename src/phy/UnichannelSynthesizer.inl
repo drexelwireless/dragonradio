@@ -5,6 +5,8 @@
 
 #include <pybind11/pybind11.h>
 
+#include "Logger.hh"
+
 namespace py = pybind11;
 
 template <class ChannelModulator>
@@ -187,8 +189,12 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             }
 
             // If we didn't successfully push the packet, try again next time
-            if (!pushed)
-                pkt = std::move(mpkt->pkt);
+            if (!pushed) {
+                if (mpkt->nsamples > slot->max_samples)
+                    logPHY(LOGWARNING, "Modulated packet is larger than slot!");
+                else
+                    pkt = std::move(mpkt->pkt);
+            }
         }
 
         // Remember previous slot so we can wait for a new slot before
