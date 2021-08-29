@@ -346,11 +346,8 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                             mod.iqbuf.reset();
                         } else
                             break;
-                    } else {
-                        logPHY(LOGDEBUG, "failed to add packet to slot: seq=%u",
-                            (unsigned) mpkt->pkt->hdr.seq);
+                    } else
                         mpkt->samples = std::move(mod.iqbuf);
-                    }
                 }
 
                 // If we didn't successfully push the packet, we are done with
