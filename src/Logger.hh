@@ -111,6 +111,13 @@ public:
             log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)]() { logSend_(pkt->tx_timestamp, kNotDropped, *pkt); });
     }
 
+    void logPHYDrop(const MonoClock::time_point& t,
+                    const std::shared_ptr<NetPacket> &pkt)
+    {
+        if (getCollectSource(kSentPackets))
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kPHYDrop, *pkt); });
+    }
+
     void logLinkLayerDrop(const MonoClock::time_point& t,
                           const std::shared_ptr<NetPacket> &pkt)
     {
@@ -245,7 +252,8 @@ private:
     enum DropType {
         kNotDropped = 0,
         kLinkLayerDrop,
-        kQueueDrop
+        kQueueDrop,
+        kPHYDrop
     };
 
     void logSend_(const MonoClock::time_point& t,
