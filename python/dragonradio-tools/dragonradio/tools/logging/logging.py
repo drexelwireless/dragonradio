@@ -1,6 +1,7 @@
 # Copyright 2018-2021 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 """Support for working with DragonRadio log files"""
+import ast
 import datetime
 from functools import cached_property
 import logging
@@ -177,12 +178,16 @@ class Log:
     @cached_property
     def config(self):
         """Radio configuration"""
-        return eval(self.h5file.attrs['config'],
-                    { 'CRCScheme': CRCScheme
-                    , 'FECScheme': FECScheme
-                    , 'ModulationScheme': ModulationScheme
-                    },
-                    {})
+        config = self.h5file.attrs['config']
+
+        # Rewrite new-style pybind11 enumerations
+        config = re.sub(r'<(?:CRCScheme|FECScheme|ModulationScheme).(\w*): \d+>', r"'\1'", config, re.M)
+
+        # Rewrite old-style pybind11 enumerations
+        config = re.sub(r'(?:CRCScheme|FECScheme|ModulationScheme).(\w*)', r"'\1'", config, re.M)
+
+        # Now we can evaluate the config as a python literal
+        return ast.literal_eval(config)
 
     @cached_property
     def events(self):
