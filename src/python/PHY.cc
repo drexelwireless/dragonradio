@@ -109,6 +109,7 @@ public:
         }
     }
 
+protected:
     /** @brief Actual MCS objects referred to by mcs_table */
     std::vector<std::shared_ptr<MCS>> mcs_table_;
 };
