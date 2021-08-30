@@ -8,11 +8,10 @@
 namespace py = pybind11;
 
 template <class ChannelModulator>
-ParallelChannelSynthesizer<ChannelModulator>::ParallelChannelSynthesizer(std::shared_ptr<PHY> phy,
-                                                                         double tx_rate,
-                                                                         const Channels &channels,
+ParallelChannelSynthesizer<ChannelModulator>::ParallelChannelSynthesizer(double tx_rate,
+                                                                         const std::vector<PHYChannel> &channels,
                                                                          size_t nthreads)
-  : ChannelSynthesizer(phy, tx_rate, channels)
+  : ChannelSynthesizer(tx_rate, channels)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)
@@ -124,10 +123,8 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                 continue;
             } else {
                 // Reconfigure the modulator
-                mod = std::make_unique<ChannelModulator>(*phy_,
+                mod = std::make_unique<ChannelModulator>(channels_[*chanidx_],
                                                          0,
-                                                         channels_[*chanidx_].first,
-                                                         channels_[*chanidx_].second,
                                                          tx_rate_);
             }
         }
@@ -140,7 +137,7 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 
         // Modulate the packet
         std::unique_ptr<ModPacket> mpkt = std::make_unique<ModPacket>();
-        float                      g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
+        float                      g = channels_[*chanidx_].phy->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
         mod->modulate(std::move(pkt), g, *mpkt);
 

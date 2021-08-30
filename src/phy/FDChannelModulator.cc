@@ -65,5 +65,5 @@ void FDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
 
     // Set channel
     mpkt.chanidx = chanidx_;
-    mpkt.channel = channel_;
+    mpkt.channel = channel_.channel;
 }

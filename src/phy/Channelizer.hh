@@ -13,11 +13,9 @@
 class Channelizer : public Element
 {
 public:
-    Channelizer(std::shared_ptr<PHY> phy,
-                double rx_rate,
-                const Channels &channels)
+    Channelizer(double rx_rate,
+                const std::vector<PHYChannel> &channels)
       : source(*this, nullptr, nullptr)
-      , phy_(phy)
       , rx_rate_(rx_rate)
       , channels_(channels)
     {
@@ -41,13 +39,13 @@ public:
     }
 
     /** @brief Get channels. */
-    virtual const Channels &getChannels(void) const
+    virtual const std::vector<PHYChannel> &getChannels(void) const
     {
         return channels_;
     }
 
     /** @brief Set channels */
-    virtual void setChannels(const Channels &channels)
+    virtual void setChannels(const std::vector<PHYChannel> &channels)
     {
         channels_ = channels;
         reconfigure();
@@ -65,14 +63,11 @@ public:
     RadioOut<Push> source;
 
 protected:
-    /** @brief PHY we use for demodulation. */
-    std::shared_ptr<PHY> phy_;
-
     /** @brief RX sample rate */
     double rx_rate_;
 
     /** @brief Radio channels */
-    Channels channels_;
+    std::vector<PHYChannel> channels_;
 };
 
 /** @brief Demodulate packets from a channel. */
@@ -80,14 +75,12 @@ class ChannelDemodulator {
 public:
     using callback_type = PHY::PacketDemodulator::callback_type;
 
-    ChannelDemodulator(PHY &phy,
-                       const Channel &channel,
-                       const std::vector<C> &taps,
+    ChannelDemodulator(const PHYChannel &channel,
                        double rx_rate)
       : channel_(channel)
-      , rate_(phy.getMinRXRateOversample()*channel.bw/rx_rate)
-      , fshift_(channel.fc/rx_rate)
-      , demod_(phy.mkPacketDemodulator())
+      , rate_(channel.phy->getMinRXRateOversample()*channel.channel.bw/rx_rate)
+      , fshift_(channel.channel.fc/rx_rate)
+      , demod_(channel.phy->mkPacketDemodulator())
     {
     }
 
@@ -123,7 +116,7 @@ public:
 
 protected:
     /** @brief Channel we are demodulating */
-    Channel channel_;
+    PHYChannel channel_;
 
     /** @brief Resampling rate */
     double rate_;

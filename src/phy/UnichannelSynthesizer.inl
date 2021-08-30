@@ -10,11 +10,10 @@
 namespace py = pybind11;
 
 template <class ChannelModulator>
-UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(std::shared_ptr<PHY> phy,
-                                                               double tx_rate,
-                                                               const Channels &channels,
+UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(double tx_rate,
+                                                               const std::vector<PHYChannel> &channels,
                                                                size_t nthreads)
-  : SlotSynthesizer(phy, tx_rate, channels)
+  : SlotSynthesizer(tx_rate, channels)
   , done_(false)
   , mod_reconfigure_(nthreads)
 {
@@ -75,7 +74,7 @@ void UnichannelSynthesizer<ChannelModulator>::modulate(const std::shared_ptr<Slo
 template <class ChannelModulator>
 void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 {
-    Channels                           channels;
+    std::vector<PHYChannel>            channels;
     Schedule                           schedule;
     double                             tx_rate = tx_rate_;
     std::unique_ptr<ChannelModulator>  mod;
@@ -140,10 +139,8 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             chanidx = slot_chanidx[slot->slotidx];
 
             // Reconfigure the modulator
-            mod = std::make_unique<ChannelModulator>(*phy_,
+            mod = std::make_unique<ChannelModulator>(channels[chanidx],
                                                      chanidx,
-                                                     channels[chanidx].first,
-                                                     channels[chanidx].second,
                                                      tx_rate);
         }
 
@@ -178,7 +175,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             bool                       pushed;
 
             // Modulate the packet
-            float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
+            float g = channels_[chanidx].phy->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
             mod->modulate(std::move(pkt), g, *mpkt);
 

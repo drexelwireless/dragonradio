@@ -28,13 +28,12 @@ class OverlapTDChannelizer : public Channelizer
 public:
     using C = std::complex<float>;
 
-    OverlapTDChannelizer(std::shared_ptr<PHY> phy,
-                         double rx_rate,
-                         const Channels &channels,
+    OverlapTDChannelizer(double rx_rate,
+                         const std::vector<PHYChannel> &channels,
                          unsigned int nthreads);
     virtual ~OverlapTDChannelizer();
 
-    void setChannels(const Channels &channels) override;
+    void setChannels(const std::vector<PHYChannel> &channels) override;
 
     void push(const std::shared_ptr<IQBuf> &) override;
 
@@ -91,23 +90,21 @@ private:
     /** @brief Channel state for time-domain demodulation */
     class OverlapTDChannelDemodulator : public ChannelDemodulator {
     public:
-        OverlapTDChannelDemodulator(PHY &phy,
-                                    const Channel &channel,
-                                    const std::vector<C> &taps,
+        OverlapTDChannelDemodulator(const PHYChannel &channel,
                                     double rx_rate)
-          : ChannelDemodulator(phy, channel, taps, rx_rate)
-          , delay_(round((taps.size() - 1)/2.0))
+          : ChannelDemodulator(channel, rx_rate)
+          , delay_(round((channel.taps.size() - 1)/2.0))
           , rx_rate_(rx_rate)
-          , rx_oversample_(phy.getMinRXRateOversample())
+          , rx_oversample_(channel.phy->getMinRXRateOversample())
           , resamp_buf_(0)
-          , resamp_(rate_, 2*M_PI*channel.fc/rx_rate, taps)
+          , resamp_(rate_, 2*M_PI*channel.channel.fc/rx_rate, channel.taps)
         {
         }
 
         virtual ~OverlapTDChannelDemodulator() = default;
 
         /** @brief Set channel */
-        void setChannel(const Channel &channel);
+        void setChannel(const PHYChannel &channel);
 
         void reset(void) override;
 
@@ -173,7 +170,7 @@ private:
     size_t iq_size_;
 
     /** @brief The next channel to demodulate. */
-    Channels::size_type iq_next_channel_;
+    std::vector<PHYChannel>::size_type iq_next_channel_;
 
     /** @brief The queue of IQ buffers. */
     std::list<std::shared_ptr<IQBuf>> iq_;
@@ -189,15 +186,6 @@ private:
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;
-
-    /** @brief Get RX downsample rate for given channel. */
-    double getRXDownsampleRate(const Channel &channel)
-    {
-        if (channel.bw == 0.0)
-            return 1.0;
-        else
-            return (phy_->getMinTXRateOversample()*channel.bw)/rx_rate_;
-    }
 
     /** @brief A demodulation worker. */
     void demodWorker(std::atomic<bool> &reconfig);

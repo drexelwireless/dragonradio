@@ -8,11 +8,10 @@
 
 using namespace std::placeholders;
 
-OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<PHY> phy,
-                                           double rx_rate,
-                                           const Channels &channels,
+OverlapTDChannelizer::OverlapTDChannelizer(double rx_rate,
+                                           const std::vector<PHYChannel> &channels,
                                            unsigned int nthreads)
-  : Channelizer(phy, rx_rate, channels)
+  : Channelizer(rx_rate, channels)
   , prev_demod_(0.0)
   , prev_demod_samps_(0)
   , cur_demod_(0.0)
@@ -39,7 +38,7 @@ OverlapTDChannelizer::~OverlapTDChannelizer()
     stop();
 }
 
-void OverlapTDChannelizer::setChannels(const Channels &channels)
+void OverlapTDChannelizer::setChannels(const std::vector<PHYChannel> &channels)
 {
     channels_ = channels;
 
@@ -128,14 +127,12 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
         // Either reconfigure or set current channel
         if (reconfig.load(std::memory_order_relaxed)) {
             assert(rx_rate_ != 0);
-            demod = std::make_unique<OverlapTDChannelDemodulator>(*phy_,
-                                                                  channels_[channelidx].first,
-                                                                  channels_[channelidx].second,
+            demod = std::make_unique<OverlapTDChannelDemodulator>(channels_[channelidx],
                                                                   rx_rate_);
             demod->setCallback(callback);
             reconfig.store(false, std::memory_order_relaxed);
         } else
-            demod->setChannel(channels_[channelidx].first);
+            demod->setChannel(channels_[channelidx]);
 
         // Reset the state of the demodulator
         demod->reset();
@@ -267,10 +264,10 @@ void OverlapTDChannelizer::nextWindow(void)
     iq_next_channel_ = 0;
 }
 
-void OverlapTDChannelizer::OverlapTDChannelDemodulator::setChannel(const Channel &channel)
+void OverlapTDChannelizer::OverlapTDChannelDemodulator::setChannel(const PHYChannel &channel)
 {
-    double new_rate = rx_oversample_*channel.bw/rx_rate_;
-    double new_fshift = channel.fc/rx_rate_;
+    double new_rate = rx_oversample_*channel.channel.bw/rx_rate_;
+    double new_fshift = channel.channel.fc/rx_rate_;
 
     channel_ = channel;
 
@@ -281,14 +278,14 @@ void OverlapTDChannelizer::OverlapTDChannelDemodulator::setChannel(const Channel
 
     if (new_fshift != fshift_) {
         fshift_ = new_fshift;
-        resamp_.setFreqShift(2*M_PI*channel.fc/rx_rate_);
+        resamp_.setFreqShift(2*M_PI*channel.channel.fc/rx_rate_);
     }
 }
 
 void OverlapTDChannelizer::OverlapTDChannelDemodulator::reset(void)
 {
     resamp_.reset();
-    demod_->reset(channel_);
+    demod_->reset(channel_.channel);
 }
 
 
