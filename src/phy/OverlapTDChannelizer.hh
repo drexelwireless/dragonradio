@@ -28,8 +28,8 @@ class OverlapTDChannelizer : public Channelizer
 public:
     using C = std::complex<float>;
 
-    OverlapTDChannelizer(double rx_rate,
-                         const std::vector<PHYChannel> &channels,
+    OverlapTDChannelizer(const std::vector<PHYChannel> &channels,
+                         double rx_rate,
                          unsigned int nthreads);
     virtual ~OverlapTDChannelizer();
 

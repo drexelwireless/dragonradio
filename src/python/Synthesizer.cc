@@ -52,8 +52,8 @@ void exportSynthesizers(py::module &m)
     using TDSynthesizer = ParallelChannelSynthesizer<TDChannelModulator>;
 
     py::class_<TDSynthesizer, ChannelSynthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
-        .def(py::init<double,
-                      const std::vector<PHYChannel>&,
+        .def(py::init<const std::vector<PHYChannel>&,
+                      double,
                       unsigned int>())
         ;
 
@@ -61,8 +61,8 @@ void exportSynthesizers(py::module &m)
     using FDSynthesizer = ParallelChannelSynthesizer<FDChannelModulator>;
 
     py::class_<FDSynthesizer, ChannelSynthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
-        .def(py::init<double,
-                      const std::vector<PHYChannel>&,
+        .def(py::init<const std::vector<PHYChannel>&,
+                      double,
                       unsigned int>())
         ;
 
@@ -78,8 +78,8 @@ void exportSynthesizers(py::module &m)
     using TDSlotSynthesizer = UnichannelSynthesizer<TDChannelModulator>;
 
     py::class_<TDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<TDSlotSynthesizer>>(m, "TDSlotSynthesizer")
-        .def(py::init<double,
-                      const std::vector<PHYChannel>&,
+        .def(py::init<const std::vector<PHYChannel>&,
+                      double,
                       unsigned int>())
         ;
 
@@ -87,15 +87,15 @@ void exportSynthesizers(py::module &m)
     using FDSlotSynthesizer = UnichannelSynthesizer<FDChannelModulator>;
 
     py::class_<FDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<FDSlotSynthesizer>>(m, "FDSlotSynthesizer")
-        .def(py::init<double,
-                      const std::vector<PHYChannel>&,
+        .def(py::init<const std::vector<PHYChannel>&,
+                      double,
                       unsigned int>())
         ;
 
     // Export class MultichannelSynthesizer to Python
     py::class_<MultichannelSynthesizer, SlotSynthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
-        .def(py::init<double,
-                      const std::vector<PHYChannel>&,
+        .def(py::init<const std::vector<PHYChannel>&,
+                      double,
                       unsigned int>())
         ;
 }

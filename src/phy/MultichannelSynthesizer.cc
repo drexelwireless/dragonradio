@@ -13,10 +13,10 @@ namespace py = pybind11;
 #include "phy/PHY.hh"
 #include "stats/Estimator.hh"
 
-MultichannelSynthesizer::MultichannelSynthesizer(double tx_rate,
-                                                 const std::vector<PHYChannel> &channels,
+MultichannelSynthesizer::MultichannelSynthesizer(const std::vector<PHYChannel> &channels,
+                                                 double tx_rate,
                                                  size_t nthreads)
-  : SlotSynthesizer(tx_rate, channels)
+  : SlotSynthesizer(channels, tx_rate)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)

@@ -22,8 +22,8 @@
 class TDChannelizer : public Channelizer
 {
 public:
-    TDChannelizer(double rx_rate,
-                  const std::vector<PHYChannel> &channels,
+    TDChannelizer(const std::vector<PHYChannel> &channels,
+                  double rx_rate,
                   unsigned int nthreads);
     virtual ~TDChannelizer();
 

@@ -13,15 +13,28 @@
 class Channelizer : public Element
 {
 public:
-    Channelizer(double rx_rate,
-                const std::vector<PHYChannel> &channels)
+    Channelizer(const std::vector<PHYChannel> &channels,
+                double rx_rate)
       : source(*this, nullptr, nullptr)
-      , rx_rate_(rx_rate)
       , channels_(channels)
+      , rx_rate_(rx_rate)
     {
     }
 
     virtual ~Channelizer() = default;
+
+    /** @brief Get channels. */
+    virtual const std::vector<PHYChannel> &getChannels(void) const
+    {
+        return channels_;
+    }
+
+    /** @brief Set channels */
+    virtual void setChannels(const std::vector<PHYChannel> &channels)
+    {
+        channels_ = channels;
+        reconfigure();
+    }
 
     /** @brief Get the RX sample rate. */
     virtual double getRXRate(void)
@@ -38,19 +51,6 @@ public:
         reconfigure();
     }
 
-    /** @brief Get channels. */
-    virtual const std::vector<PHYChannel> &getChannels(void) const
-    {
-        return channels_;
-    }
-
-    /** @brief Set channels */
-    virtual void setChannels(const std::vector<PHYChannel> &channels)
-    {
-        channels_ = channels;
-        reconfigure();
-    }
-
     /** @brief Add an IQ buffer to demodulate.
      * @param buf The IQ samples to demodulate
      */
@@ -63,11 +63,11 @@ public:
     RadioOut<Push> source;
 
 protected:
-    /** @brief RX sample rate */
-    double rx_rate_;
-
     /** @brief Radio channels */
     std::vector<PHYChannel> channels_;
+
+    /** @brief RX sample rate */
+    double rx_rate_;
 };
 
 /** @brief Demodulate packets from a channel. */

@@ -17,10 +17,10 @@ namespace py = pybind11;
 
 using namespace std::placeholders;
 
-FDChannelizer::FDChannelizer(double rx_rate,
-                             const std::vector<PHYChannel> &channels,
+FDChannelizer::FDChannelizer(const std::vector<PHYChannel> &channels,
+                             double rx_rate,
                              unsigned int nthreads)
-  : Channelizer(rx_rate, channels)
+  : Channelizer(channels, rx_rate)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)

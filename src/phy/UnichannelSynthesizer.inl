@@ -10,10 +10,10 @@
 namespace py = pybind11;
 
 template <class ChannelModulator>
-UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(double tx_rate,
-                                                               const std::vector<PHYChannel> &channels,
+UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(const std::vector<PHYChannel> &channels,
+                                                               double tx_rate,
                                                                size_t nthreads)
-  : SlotSynthesizer(tx_rate, channels)
+  : SlotSynthesizer(channels, tx_rate)
   , done_(false)
   , mod_reconfigure_(nthreads)
 {
