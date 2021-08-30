@@ -1804,8 +1804,7 @@ void SendWindow::updateMCS(bool fast_adjust)
         unsigned n = 0; // Number of MCS levels to decrease
 
         while (mcsidx > n &&
-               mcsidx - n > controller.mcsidx_min_ &&
-               mcs_table[mcsidx-(n+1)].valid) {
+               mcsidx - n > controller.mcsidx_min_) {
             // Increment number of MCS levels we will move down
             ++n;
 
@@ -1891,11 +1890,6 @@ void SendWindow::setMCS(size_t new_mcsidx)
 
     assert(new_mcsidx >= 0);
     assert(new_mcsidx < mcs_table.size());
-
-    // Move new MCS index up until we reach a valid MCS
-    while (new_mcsidx < mcs_table.size() - 1 &&
-           !mcs_table[new_mcsidx].valid)
-        ++new_mcsidx;
 
     // Bail if MCS isn't actually changing
     if (new_mcsidx == mcsidx)

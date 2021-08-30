@@ -6,14 +6,12 @@
 #include "mac/FDMA.hh"
 
 FDMA::FDMA(std::shared_ptr<USRP> usrp,
-           std::shared_ptr<PHY> phy,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
            std::shared_ptr<ChannelSynthesizer> synthesizer,
            double period)
   : MAC(usrp,
-        phy,
         controller,
         collector,
         channelizer,
