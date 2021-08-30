@@ -330,8 +330,7 @@ void FDChannelizer::demodWorker(unsigned tid)
             // Timestamp the demodulated data
             demod.timestamp(*fdbuf->timestamp,
                             snapshot_off,
-                            slot.fd_offset,
-                            rx_rate_);
+                            slot.fd_offset);
 
             // Demodulate the IQ buffer
             bool   complete = false; // Is the buffer complete?
@@ -449,15 +448,14 @@ void FDChannelizer::FDChannelDemodulator::reset(void)
 
 void FDChannelizer::FDChannelDemodulator::timestamp(const MonoClock::time_point &timestamp,
                                                     std::optional<ssize_t> snapshot_off,
-                                                    ssize_t offset,
-                                                    float rx_rate)
+                                                    ssize_t offset)
 {
-     demod_->timestamp(timestamp,
-                       snapshot_off,
-                       offset,
-                       delay_,
-                       rate_,
-                       rx_rate);
+    demod_->timestamp(timestamp,
+                      snapshot_off,
+                      offset,
+                      delay_,
+                      rate_,
+                      rx_rate_);
 }
 
 void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* data,

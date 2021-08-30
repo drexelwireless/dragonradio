@@ -78,6 +78,7 @@ public:
     ChannelDemodulator(const PHYChannel &channel,
                        double rx_rate)
       : channel_(channel)
+      , rx_rate_(rx_rate)
       , rate_(channel.phy->getMinRXRateOversample()*channel.channel.bw/rx_rate)
       , fshift_(channel.channel.fc/rx_rate)
       , demod_(channel.phy->mkPacketDemodulator())
@@ -103,12 +104,10 @@ public:
      * timestamp.
      * @param offset The offset of the first sample that will be demodulated.
      * Can be negative!
-     * @param rx_rate RX rate (Hz)
      */
     virtual void timestamp(const MonoClock::time_point &timestamp,
                            std::optional<ssize_t> snapshot_off,
-                           ssize_t offset,
-                           float rx_rate) = 0;
+                           ssize_t offset) = 0;
 
     /** @brief Demodulate data with given parameters */
     virtual void demodulate(const std::complex<float>* data,
@@ -117,6 +116,9 @@ public:
 protected:
     /** @brief Channel we are demodulating */
     PHYChannel channel_;
+
+    /** @brief RX sample ratee */
+    double rx_rate_;
 
     /** @brief Resampling rate */
     double rate_;

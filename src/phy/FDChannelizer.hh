@@ -75,8 +75,7 @@ private:
 
         void timestamp(const MonoClock::time_point &timestamp,
                        std::optional<ssize_t> snapshot_off,
-                       ssize_t offset,
-                       float rx_rate) override;
+                       ssize_t offset) override;
 
         void demodulate(const std::complex<float>* data,
                         size_t count) override;

@@ -94,7 +94,6 @@ private:
                                     double rx_rate)
           : ChannelDemodulator(channel, rx_rate)
           , delay_(round((channel.taps.size() - 1)/2.0))
-          , rx_rate_(rx_rate)
           , rx_oversample_(channel.phy->getMinRXRateOversample())
           , resamp_buf_(0)
           , resamp_(rate_, 2*M_PI*channel.channel.fc/rx_rate, channel.taps)
@@ -110,8 +109,7 @@ private:
 
         void timestamp(const MonoClock::time_point &timestamp,
                        std::optional<ssize_t> snapshot_off,
-                       ssize_t offset,
-                       float rx_rate) override;
+                       ssize_t offset) override;
 
         void demodulate(const std::complex<float>* data,
                         size_t count) override;
@@ -119,9 +117,6 @@ private:
     protected:
         /** @brief Filter delay */
         size_t delay_;
-
-        /** @brief RX rate */
-        const double rx_rate_;
 
         /** @brief RX oversample factor */
         const unsigned rx_oversample_;
