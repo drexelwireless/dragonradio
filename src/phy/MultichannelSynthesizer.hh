@@ -32,8 +32,8 @@ public:
     static constexpr auto L = Upsampler::L;
     static constexpr auto O = Upsampler::O;
 
-    MultichannelSynthesizer(double tx_rate,
-                            const std::vector<PHYChannel> &channels,
+    MultichannelSynthesizer(const std::vector<PHYChannel> &channels,
+                            double tx_rate,
                             size_t nthreads);
     virtual ~MultichannelSynthesizer();
 

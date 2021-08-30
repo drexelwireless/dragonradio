@@ -42,8 +42,8 @@ public:
     /** @brief Number of new samples consumed per input block */
     static constexpr unsigned L = N - (P-1);
 
-    FDChannelizer(double rx_rate,
-                  const std::vector<PHYChannel> &channels,
+    FDChannelizer(const std::vector<PHYChannel> &channels,
+                  double rx_rate,
                   unsigned int nthreads);
     virtual ~FDChannelizer();
 

@@ -8,10 +8,10 @@
 
 using namespace std::placeholders;
 
-OverlapTDChannelizer::OverlapTDChannelizer(double rx_rate,
-                                           const std::vector<PHYChannel> &channels,
+OverlapTDChannelizer::OverlapTDChannelizer(const std::vector<PHYChannel> &channels,
+                                           double rx_rate,
                                            unsigned int nthreads)
-  : Channelizer(rx_rate, channels)
+  : Channelizer(channels, rx_rate)
   , prev_demod_(0.0)
   , prev_demod_samps_(0)
   , cur_demod_(0.0)

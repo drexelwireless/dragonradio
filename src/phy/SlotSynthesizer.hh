@@ -122,9 +122,9 @@ public:
         }
     };
 
-    SlotSynthesizer(double tx_rate,
-                    const std::vector<PHYChannel> &channels)
-      : Synthesizer(tx_rate, channels)
+    SlotSynthesizer(const std::vector<PHYChannel> &channels,
+                    double tx_rate)
+      : Synthesizer(channels, tx_rate)
       , superslots_(false)
     {
     }

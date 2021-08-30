@@ -16,8 +16,8 @@ template <class ChannelModulator>
 class UnichannelSynthesizer : public SlotSynthesizer
 {
 public:
-    UnichannelSynthesizer(double tx_rate,
-                          const std::vector<PHYChannel> &channels,
+    UnichannelSynthesizer(const std::vector<PHYChannel> &channels,
+                          double tx_rate,
                           size_t nthreads);
 
     virtual ~UnichannelSynthesizer();

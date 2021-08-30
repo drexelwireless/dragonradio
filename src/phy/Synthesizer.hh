@@ -16,15 +16,30 @@
 class Synthesizer : public Element
 {
 public:
-    Synthesizer(double tx_rate,
-                const std::vector<PHYChannel> &channels)
+    Synthesizer(const std::vector<PHYChannel> &channels,
+                double tx_rate)
       : sink(*this, nullptr, nullptr)
-      , tx_rate_(tx_rate)
       , channels_(channels)
+      , tx_rate_(tx_rate)
     {
     }
 
     virtual ~Synthesizer() = default;
+
+    /** @brief Get channels. */
+    virtual const std::vector<PHYChannel> &getChannels(void) const
+    {
+        return channels_;
+    }
+
+    /** @brief Set channels */
+    virtual void setChannels(const std::vector<PHYChannel> &channels)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        channels_ = channels;
+        reconfigure();
+    }
 
     /** @brief Get the TX sample rate. */
     virtual double getTXRate(void)
@@ -40,21 +55,6 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
 
         tx_rate_ = rate;
-        reconfigure();
-    }
-
-    /** @brief Get channels. */
-    virtual const std::vector<PHYChannel> &getChannels(void) const
-    {
-        return channels_;
-    }
-
-    /** @brief Set channels */
-    virtual void setChannels(const std::vector<PHYChannel> &channels)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        channels_ = channels;
         reconfigure();
     }
 
@@ -95,11 +95,11 @@ protected:
     /** @brief Mutex for synthesizer state. */
     std::mutex mutex_;
 
-    /** @brief TX sample rate */
-    double tx_rate_;
-
     /** @brief Radio channels */
     std::vector<PHYChannel> channels_;
+
+    /** @brief TX sample rate */
+    double tx_rate_;
 
     /** @brief Radio schedule */
     Schedule schedule_;
