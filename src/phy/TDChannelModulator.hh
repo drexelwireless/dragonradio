@@ -18,15 +18,13 @@ public:
 
     using Upsampler = dragonradio::signal::MixingRationalResampler<C,C>;
 
-    TDChannelModulator(PHY &phy,
+    TDChannelModulator(const PHYChannel &channel,
                        unsigned chanidx,
-                       const Channel &channel,
-                       const std::vector<C> &taps,
                        double tx_rate)
-      : ChannelModulator(phy, chanidx, channel, taps, tx_rate)
-      , upsampler_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw),
-                   2*M_PI*channel.fc/tx_rate,
-                   taps)
+      : ChannelModulator(channel, chanidx, tx_rate)
+      , upsampler_(channel.channel.bw == 0.0 ? 1.0 : tx_rate/(channel.phy->getMinTXRateOversample()*channel.channel.bw),
+                   2*M_PI*channel.channel.fc/tx_rate,
+                   channel.taps)
     {
     }
 

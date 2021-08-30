@@ -29,13 +29,11 @@ public:
 
     static constexpr auto N = Upsampler::N;
 
-    FDChannelModulator(PHY &phy,
+    FDChannelModulator(const PHYChannel &channel,
                        unsigned chanidx,
-                       const Channel &channel,
-                       const std::vector<C> &taps,
                        double tx_rate)
-      : ChannelModulator(phy, chanidx, channel, taps, tx_rate)
-      , upsampler_(phy.getMinTXRateOversample(), tx_rate/channel.bw, N*(channel.fc/tx_rate))
+      : ChannelModulator(channel, chanidx, tx_rate)
+      , upsampler_(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, N*(channel.channel.fc/tx_rate))
     {
     }
 

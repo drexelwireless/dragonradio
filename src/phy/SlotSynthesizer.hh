@@ -122,10 +122,9 @@ public:
         }
     };
 
-    SlotSynthesizer(std::shared_ptr<PHY> phy,
-                    double tx_rate,
-                    const Channels &channels)
-      : Synthesizer(phy, tx_rate, channels)
+    SlotSynthesizer(double tx_rate,
+                    const std::vector<PHYChannel> &channels)
+      : Synthesizer(tx_rate, channels)
       , superslots_(false)
     {
     }

@@ -374,21 +374,18 @@ class Radio(dragonradio.tasks.TaskManager):
         config = self.config
 
         if config.channelizer == 'overlap':
-            channelizer = OverlapTDChannelizer(self.phy,
-                                               self.usrp.rx_rate,
-                                               Channels([]),
+            channelizer = OverlapTDChannelizer(self.usrp.rx_rate,
+                                               PHYChannels([]),
                                                config.num_demodulation_threads)
 
             channelizer.enforce_ordering = config.channelizer_enforce_ordering
         elif config.channelizer == 'timedomain':
-            channelizer = TDChannelizer(self.phy,
-                                        self.usrp.rx_rate,
-                                        Channels([]),
+            channelizer = TDChannelizer(self.usrp.rx_rate,
+                                        PHYChannels([]),
                                         config.num_demodulation_threads)
         elif config.channelizer == 'freqdomain':
-            channelizer = FDChannelizer(self.phy,
-                                        self.usrp.rx_rate,
-                                        Channels([]),
+            channelizer = FDChannelizer(self.usrp.rx_rate,
+                                        PHYChannels([]),
                                         config.num_demodulation_threads)
         else:
             raise ValueError('Unknown channelizer: %s' % config.channelizer)
@@ -401,32 +398,27 @@ class Radio(dragonradio.tasks.TaskManager):
 
         if slotted:
             if config.synthesizer == 'timedomain':
-                synthesizer = TDSlotSynthesizer(self.phy,
-                                                self.usrp.tx_rate,
-                                                Channels([]),
+                synthesizer = TDSlotSynthesizer(self.usrp.tx_rate,
+                                                PHYChannels([]),
                                                 config.num_modulation_threads)
             elif config.synthesizer == 'freqdomain':
-                synthesizer = FDSlotSynthesizer(self.phy,
-                                                self.usrp.tx_rate,
-                                                Channels([]),
+                synthesizer = FDSlotSynthesizer(self.usrp.tx_rate,
+                                                PHYChannels([]),
                                                 config.num_modulation_threads)
             elif config.synthesizer == 'multichannel':
-                synthesizer = MultichannelSynthesizer(self.phy,
-                                                      self.usrp.tx_rate,
-                                                      Channels([]),
+                synthesizer = MultichannelSynthesizer(self.usrp.tx_rate,
+                                                      PHYChannels([]),
                                                       config.num_modulation_threads)
             else:
                 raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
         else:
             if config.synthesizer == 'timedomain':
-                synthesizer = TDSynthesizer(self.phy,
-                                            self.usrp.tx_rate,
-                                            Channels([]),
+                synthesizer = TDSynthesizer(self.usrp.tx_rate,
+                                            PHYChannels([]),
                                             config.num_modulation_threads)
             elif config.synthesizer == 'freqdomain':
-                synthesizer = FDSynthesizer(self.phy,
-                                            self.usrp.tx_rate,
-                                            Channels([]),
+                synthesizer = FDSynthesizer(self.usrp.tx_rate,
+                                            PHYChannels([]),
                                             config.num_modulation_threads)
             elif config.synthesizer == 'multichannel':
                 raise ValueError('Multichannel synthesizer can only be used with a slotted MAC')
@@ -600,17 +592,17 @@ class Radio(dragonradio.tasks.TaskManager):
     def setChannelizerChannels(self, channels):
         """Set channelizer's channels."""
         self.channelizer.channels = \
-            Channels([(chan, self.genChannelizerTaps(chan)) for chan in channels])
+            PHYChannels([PHYChannel(chan, self.genChannelizerTaps(chan), self.phy) for chan in channels])
 
     def setSynthesizerChannels(self, channels):
         """Set synthesizer's channels."""
         self.synthesizer.channels = \
-            Channels([(chan, self.genSynthesizerTaps(chan)) for chan in channels])
+            PHYChannels([PHYChannel(chan, self.genSynthesizerTaps(chan), self.phy) for chan in channels])
 
         #
         # Tell the MAC the minimum number of samples in a slot
         #
-        min_channel_bandwidth = min([chan.bw for (chan, _taps) in self.synthesizer.channels])
+        min_channel_bandwidth = min([chan.channel.bw for chan in self.synthesizer.channels])
 
         if self.mac is not None:
             self.mac.min_channel_bandwidth = min_channel_bandwidth
@@ -949,7 +941,7 @@ class Radio(dragonradio.tasks.TaskManager):
 
     def finishConfiguringMAC(self):
         """Finish configuring MAC"""
-        bws = [chan.bw for (chan, _taps) in self.synthesizer.channels]
+        bws = [chan.channel.bw for chan in self.synthesizer.channels]
         if len(bws) != 0:
             self.mac.min_channel_bandwidth = min(bws)
 

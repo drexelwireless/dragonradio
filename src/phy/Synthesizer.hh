@@ -16,11 +16,9 @@
 class Synthesizer : public Element
 {
 public:
-    Synthesizer(std::shared_ptr<PHY> phy,
-                double tx_rate,
-                const Channels &channels)
+    Synthesizer(double tx_rate,
+                const std::vector<PHYChannel> &channels)
       : sink(*this, nullptr, nullptr)
-      , phy_(phy)
       , tx_rate_(tx_rate)
       , channels_(channels)
     {
@@ -46,13 +44,13 @@ public:
     }
 
     /** @brief Get channels. */
-    virtual const Channels &getChannels(void) const
+    virtual const std::vector<PHYChannel> &getChannels(void) const
     {
         return channels_;
     }
 
     /** @brief Set channels */
-    virtual void setChannels(const Channels &channels)
+    virtual void setChannels(const std::vector<PHYChannel> &channels)
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -94,9 +92,6 @@ public:
     NetIn<Pull> sink;
 
 protected:
-    /** @brief Our PHY. */
-    std::shared_ptr<PHY> phy_;
-
     /** @brief Mutex for synthesizer state. */
     std::mutex mutex_;
 
@@ -104,7 +99,7 @@ protected:
     double tx_rate_;
 
     /** @brief Radio channels */
-    Channels channels_;
+    std::vector<PHYChannel> channels_;
 
     /** @brief Radio schedule */
     Schedule schedule_;
@@ -116,17 +111,15 @@ protected:
  */
 class ChannelModulator {
 public:
-    ChannelModulator(PHY &phy,
+    ChannelModulator(const PHYChannel &channel,
                      unsigned chanidx,
-                     const Channel &channel,
-                     const std::vector<C> &taps,
                      double tx_rate)
-      : chanidx_(chanidx)
-      , channel_(channel)
+      : channel_(channel)
+      , chanidx_(chanidx)
       // XXX Protected against channel with zero bandwidth
-      , rate_(channel.bw == 0.0 ? 1.0 : tx_rate/(phy.getMinTXRateOversample()*channel.bw))
-      , fshift_(channel.fc/tx_rate)
-      , mod_(phy.mkPacketModulator())
+      , rate_(channel.channel.bw == 0.0 ? 1.0 : tx_rate/(channel.phy->getMinTXRateOversample()*channel.channel.bw))
+      , fshift_(channel.channel.fc/tx_rate)
+      , mod_(channel.phy->mkPacketModulator())
     {
     }
 
@@ -144,11 +137,11 @@ public:
                           ModPacket &mpkt) = 0;
 
 protected:
+    /** @brief Channel we are modulating */
+    const PHYChannel channel_;
+
     /** @brief Index of channel we are modulating */
     const unsigned chanidx_;
-
-    /** @brief Channel we are modulating */
-    const Channel channel_;
 
     /** @brief Resampling rate */
     const double rate_;

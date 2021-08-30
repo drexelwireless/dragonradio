@@ -19,9 +19,8 @@ template <class ChannelModulator>
 class ParallelChannelSynthesizer : public ChannelSynthesizer
 {
 public:
-    ParallelChannelSynthesizer(std::shared_ptr<PHY> phy,
-                               double tx_rate,
-                               const Channels &channels,
+    ParallelChannelSynthesizer(double tx_rate,
+                               const std::vector<PHYChannel> &channels,
                                size_t nthreads);
 
     virtual ~ParallelChannelSynthesizer();

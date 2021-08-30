@@ -245,4 +245,32 @@ protected:
     static std::shared_ptr<SnapshotCollector> snapshot_collector_;
 };
 
+using C = std::complex<float>;
+
+/** @brief FIR taps */
+using Taps = std::vector<C>;
+
+/** @brief A PHY channel configuration */
+struct PHYChannel {
+    PHYChannel() = delete;
+
+    PHYChannel(const Channel &channel_,
+               const Taps &taps_,
+               std::shared_ptr<PHY> phy_)
+      : channel(channel_)
+      , taps(taps_)
+      , phy(phy_)
+    {
+    }
+
+    /** @brief The channel */
+    Channel channel;
+
+    /** @brief FIR filter taps */
+    Taps taps;
+
+    /** @brief PHY for channel */
+    std::shared_ptr<PHY> phy;
+};
+
 #endif /* PHY_H_ */

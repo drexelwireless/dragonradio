@@ -13,11 +13,10 @@ namespace py = pybind11;
 #include "phy/PHY.hh"
 #include "stats/Estimator.hh"
 
-MultichannelSynthesizer::MultichannelSynthesizer(std::shared_ptr<PHY> phy,
-                                                 double tx_rate,
-                                                 const Channels &channels,
+MultichannelSynthesizer::MultichannelSynthesizer(double tx_rate,
+                                                 const std::vector<PHYChannel> &channels,
                                                  size_t nthreads)
-  : SlotSynthesizer(phy, tx_rate, channels)
+  : SlotSynthesizer(tx_rate, channels)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)
@@ -154,10 +153,8 @@ void MultichannelSynthesizer::reconfigure(void)
     mods_.resize(nchannels);
 
     for (unsigned chanidx = 0; chanidx < nchannels; chanidx++)
-        mods_[chanidx] = std::make_unique<MultichannelModulator>(*phy_,
+        mods_[chanidx] = std::make_unique<MultichannelModulator>(channels_copy_[chanidx],
                                                                  chanidx,
-                                                                 channels_copy_[chanidx].first,
-                                                                 channels_copy_[chanidx].second,
                                                                  tx_rate_copy_);
 
     // We are done reconfiguring
@@ -290,7 +287,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
                 // Modulate the packet
                 if (!mpkt->pkt) {
-                    float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain()*g_multichan_;
+                    float g = channels_[channelidx].phy->mcs_table[pkt->mcsidx].autogain.getSoftTXGain()*g_multichan_;
 
                     mod.modulate(std::move(pkt), g, *mpkt);
                 }
@@ -386,13 +383,11 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
     }
 }
 
-MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(PHY &phy,
+MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(const PHYChannel &channel,
                                                                       unsigned chanidx,
-                                                                      const Channel &channel,
-                                                                      const std::vector<C> &taps,
                                                                       double tx_rate)
-  : ChannelModulator(phy, chanidx, channel, taps, tx_rate)
-  , Upsampler(phy.getMinTXRateOversample(), tx_rate/channel.bw, N*(channel.fc/tx_rate))
+  : ChannelModulator(channel, chanidx, tx_rate)
+  , Upsampler(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, N*(channel.channel.fc/tx_rate))
   , fdbuf(nullptr)
   , delay(0)
   , nsamples(0)
@@ -413,7 +408,7 @@ void MultichannelSynthesizer::MultichannelModulator::modulate(std::shared_ptr<Ne
 
     // Set channel
     mpkt.chanidx = chanidx_;
-    mpkt.channel = channel_;
+    mpkt.channel = channel_.channel;
 }
 
 void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_slot,

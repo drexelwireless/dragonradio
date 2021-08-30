@@ -8,6 +8,7 @@
 #include <pybind11/stl_bind.h>
 
 #include "phy/Channel.hh"
+#include "phy/PHY.hh"
 #include "python/capsule.hh"
 
 #if !defined(PYMODULE)
@@ -17,7 +18,7 @@
 namespace py = pybind11;
 
 #if !defined(DOXYGEN)
-PYBIND11_MAKE_OPAQUE(Channels)
+PYBIND11_MAKE_OPAQUE(std::vector<PHYChannel>)
 #endif /* !defined(DOXYGEN) */
 
 #if !defined(PYMODULE)

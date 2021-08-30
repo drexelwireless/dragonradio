@@ -22,9 +22,8 @@
 class TDChannelizer : public Channelizer
 {
 public:
-    TDChannelizer(std::shared_ptr<PHY> phy,
-                  double rx_rate,
-                  const Channels &channels,
+    TDChannelizer(double rx_rate,
+                  const std::vector<PHYChannel> &channels,
                   unsigned int nthreads);
     virtual ~TDChannelizer();
 
@@ -39,15 +38,13 @@ private:
     /** @brief Channel state for time-domain demodulation */
     class TDChannelDemodulator : public ChannelDemodulator {
     public:
-        TDChannelDemodulator(PHY &phy,
-                     const Channel &channel,
-                     const std::vector<C> &taps,
-                     double rx_rate)
-          : ChannelDemodulator(phy, channel, taps, rx_rate)
+        TDChannelDemodulator(const PHYChannel &channel,
+                             double rx_rate)
+          : ChannelDemodulator(channel, rx_rate)
           , seq_(0)
-          , delay_(round((taps.size() - 1)/2.0))
+          , delay_(round((channel.taps.size() - 1)/2.0))
           , resamp_buf_(0)
-          , resamp_(rate_, 2*M_PI*channel.fc/rx_rate, taps)
+          , resamp_(rate_, 2*M_PI*channel.channel.fc/rx_rate, channel.taps)
         {
         }
 

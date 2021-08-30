@@ -13,11 +13,10 @@ namespace py = pybind11;
 
 using namespace std::placeholders;
 
-TDChannelizer::TDChannelizer(std::shared_ptr<PHY> phy,
-                             double rx_rate,
-                             const Channels &channels,
+TDChannelizer::TDChannelizer(double rx_rate,
+                             const std::vector<PHYChannel> &channels,
                              unsigned int nthreads)
-  : Channelizer(phy, rx_rate, channels)
+  : Channelizer(rx_rate, channels)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)
@@ -73,9 +72,7 @@ void TDChannelizer::reconfigure(void)
         if (!iqbufs_[i])
             iqbufs_[i] = std::make_unique<SafeQueue<std::shared_ptr<IQBuf>>>();
 
-        demods_[i] = std::make_unique<TDChannelDemodulator>(*phy_,
-                                                            channels_[i].first,
-                                                            channels_[i].second,
+        demods_[i] = std::make_unique<TDChannelDemodulator>(channels_[i],
                                                             rx_rate_);
     }
 
@@ -108,12 +105,12 @@ void TDChannelizer::stop(void)
 
 void TDChannelizer::demodWorker(unsigned tid)
 {
-    std::shared_ptr<IQBuf> prev_iqbuf;
-    std::shared_ptr<IQBuf> iqbuf;
-    std::optional<ssize_t> next_snapshot_off;
-    bool                   received = false; // Have we received any packets?
-    Channels               channels;         // Local copy of channels
-    Channel                channel;          // Current channel being demodulated
+    std::shared_ptr<IQBuf>  prev_iqbuf;
+    std::shared_ptr<IQBuf>  iqbuf;
+    std::optional<ssize_t>  next_snapshot_off;
+    bool                    received = false; // Have we received any packets?
+    std::vector<PHYChannel> channels;         // Local copy of channels
+    Channel                 channel;          // Current channel being demodulated
 
     PHY::PacketDemodulator::callback_type callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
         received = true;
@@ -192,7 +189,7 @@ void TDChannelizer::demodWorker(unsigned tid)
             size_t n = 0;
 
             received = false;
-            channel = channels_[channelidx].first;
+            channel = channels_[channelidx].channel;
 
             for (;;) {
                 complete = iqbuf->complete.load(std::memory_order_acquire);
@@ -245,7 +242,7 @@ void TDChannelizer::TDChannelDemodulator::updateSeq(unsigned seq)
 void TDChannelizer::TDChannelDemodulator::reset(void)
 {
     resamp_.reset();
-    demod_->reset(channel_);
+    demod_->reset(channel_.channel);
     seq_ = 0;
 }
 

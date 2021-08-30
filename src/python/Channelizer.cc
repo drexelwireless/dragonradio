@@ -32,9 +32,8 @@ void exportChannelizers(py::module &m)
 
     // Export class FDChannelizer to Python
     py::class_<FDChannelizer, Channelizer, std::shared_ptr<FDChannelizer>>(m, "FDChannelizer")
-        .def(py::init<std::shared_ptr<PHY>,
-                      double,
-                      const Channels&,
+        .def(py::init<double,
+                      const std::vector<PHYChannel>&,
                       unsigned int>())
         .def_readonly_static("P",
             &FDChannelizer::P,
@@ -52,17 +51,15 @@ void exportChannelizers(py::module &m)
 
     // Export class TDChannelizer to Python
     py::class_<TDChannelizer, Channelizer, std::shared_ptr<TDChannelizer>>(m, "TDChannelizer")
-        .def(py::init<std::shared_ptr<PHY>,
-                      double,
-                      const Channels&,
+        .def(py::init<double,
+                      const std::vector<PHYChannel>&,
                       unsigned int>())
         ;
 
     // Export class OverlapTDChannelizer to Python
     py::class_<OverlapTDChannelizer, Channelizer, std::shared_ptr<OverlapTDChannelizer>>(m, "OverlapTDChannelizer")
-        .def(py::init<std::shared_ptr<PHY>,
-                      double,
-                      const Channels&,
+        .def(py::init<double,
+                      const std::vector<PHYChannel>&,
                       unsigned int>())
         .def_property("prev_demod",
             &OverlapTDChannelizer::getPrevDemod,

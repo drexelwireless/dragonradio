@@ -20,10 +20,9 @@ class ChannelSynthesizer : public Synthesizer
 public:
     using container_type = ModPacketQueue<>::container_type;
 
-    ChannelSynthesizer(std::shared_ptr<PHY> phy,
-                       double tx_rate,
-                       const Channels &channels)
-      : Synthesizer(phy, tx_rate, channels)
+    ChannelSynthesizer(double tx_rate,
+                       const std::vector<PHYChannel> &channels)
+      : Synthesizer(tx_rate, channels)
     {
     }
 

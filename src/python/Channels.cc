@@ -43,7 +43,4 @@ void exportChannels(py::module &m)
                 return Channel(t[0].cast<double>(), t[1].cast<double>());
             }))
         ;
-
-    // Export vector of channels/tap pairs
-    py::bind_vector<Channels>(m, "Channels");
 }

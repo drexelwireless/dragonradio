@@ -349,6 +349,25 @@ void exportPHYs(py::module &m)
         .def("demodulate",
             &PacketDemodulator::demodulate)
         ;
+
+    // Export class PHYChannel to Python
+    py::class_<PHYChannel, std::shared_ptr<PHYChannel>>(m, "PHYChannel")
+        .def(py::init<const Channel&,
+                      const Taps&,
+                      std::shared_ptr<PHY>>())
+        .def_readwrite("channel",
+            &PHYChannel::channel,
+           "Channel")
+        .def_readwrite("taps",
+            &PHYChannel::taps,
+            "FIR filter taps")
+        .def_readwrite("phy",
+            &PHYChannel::phy,
+            "PHY for channel")
+        ;
+
+    // Export vector of PHYChannels
+    py::bind_vector<std::vector<PHYChannel>>(m, "PHYChannels");
 }
 
 void exportLiquidPHYs(py::module &m)

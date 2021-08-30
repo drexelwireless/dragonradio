@@ -42,13 +42,12 @@ public:
     /** @brief Number of new samples consumed per input block */
     static constexpr unsigned L = N - (P-1);
 
-    FDChannelizer(std::shared_ptr<PHY> phy,
-                  double rx_rate,
-                  const Channels &channels,
+    FDChannelizer(double rx_rate,
+                  const std::vector<PHYChannel> &channels,
                   unsigned int nthreads);
     virtual ~FDChannelizer();
 
-    void setChannels(const Channels &channels) override;
+    void setChannels(const std::vector<PHYChannel> &channels) override;
 
     void push(const std::shared_ptr<IQBuf> &) override;
 
@@ -64,9 +63,7 @@ private:
     /** @brief Channel state for time-domain demodulation */
     class FDChannelDemodulator : public ChannelDemodulator {
     public:
-        FDChannelDemodulator(PHY &phy,
-                             const Channel &channel,
-                             const std::vector<C> &taps,
+        FDChannelDemodulator(const PHYChannel &channel,
                              double rate);
 
         virtual ~FDChannelDemodulator() = default;

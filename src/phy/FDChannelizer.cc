@@ -17,11 +17,10 @@ namespace py = pybind11;
 
 using namespace std::placeholders;
 
-FDChannelizer::FDChannelizer(std::shared_ptr<PHY> phy,
-                             double rx_rate,
-                             const Channels &channels,
+FDChannelizer::FDChannelizer(double rx_rate,
+                             const std::vector<PHYChannel> &channels,
                              unsigned int nthreads)
-  : Channelizer(phy, rx_rate, channels)
+  : Channelizer(rx_rate, channels)
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)
@@ -43,10 +42,10 @@ FDChannelizer::~FDChannelizer()
     stop();
 }
 
-void FDChannelizer::setChannels(const Channels &channels)
+void FDChannelizer::setChannels(const std::vector<PHYChannel> &channels)
 {
     for (auto&& chan : channels) {
-        if (fmod(rx_rate_, chan.first.bw) != 0)
+        if (fmod(rx_rate_, chan.channel.bw) != 0)
             throw std::range_error("Channel bandwidth must be an integral multiple of total bandwidth.");
     }
 
@@ -85,9 +84,7 @@ void FDChannelizer::reconfigure(void)
         if (!slots_[i])
             slots_[i] = std::make_unique<SafeQueue<Slot>>();
 
-        demods_[i] = std::make_unique<FDChannelDemodulator>(*phy_,
-                                                            channels_[i].first,
-                                                            channels_[i].second,
+        demods_[i] = std::make_unique<FDChannelDemodulator>(channels_[i],
                                                             rx_rate_);
     }
 
@@ -253,14 +250,14 @@ void FDChannelizer::fftWorker(void)
 void FDChannelizer::demodWorker(unsigned tid)
 {
     // We keep two past buffers when logging slots
-    std::shared_ptr<IQBuf> prev_prev_iqbuf;
-    std::shared_ptr<IQBuf> prev_iqbuf;
-    Slot                   slot;
-    std::optional<ssize_t> next_snapshot_off;
-    unsigned               num_extra_snapshot_slots = 0;
-    bool                   received = false; // Have we received any packets?
-    Channels               channels;         // Local copy of channels
-    Channel                channel;          // Current channel being demodulated
+    std::shared_ptr<IQBuf>  prev_prev_iqbuf;
+    std::shared_ptr<IQBuf>  prev_iqbuf;
+    Slot                    slot;
+    std::optional<ssize_t>  next_snapshot_off;
+    unsigned                num_extra_snapshot_slots = 0;
+    bool                    received = false; // Have we received any packets?
+    std::vector<PHYChannel> channels;         // Local copy of channels
+    Channel                 channel;          // Current channel being demodulated
 
     PHY::PacketDemodulator::callback_type callback = [&] (std::shared_ptr<RadioPacket> &&pkt) {
         received = true;
@@ -343,7 +340,7 @@ void FDChannelizer::demodWorker(unsigned tid)
 
             // Set parameters for the callback
             received = false;
-            channel = channels[channelidx].first;
+            channel = channels[channelidx].channel;
 
             // Demodulate data as it is received
             for (int spin_count = 0; !complete; ++spin_count) {
@@ -399,20 +396,18 @@ void FDChannelizer::demodWorker(unsigned tid)
     }
 }
 
-FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(PHY &phy,
-                                                          const Channel &channel,
-                                                          const std::vector<C> &taps,
+FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(const PHYChannel &channel,
                                                           double rx_rate)
-  : ChannelDemodulator(phy, channel, taps, rx_rate)
+  : ChannelDemodulator(channel, rx_rate)
   , seq_(0)
-  , X_(phy.getMinRXRateOversample())
-  , D_(rx_rate/channel.bw)
+  , X_(channel.phy->getMinRXRateOversample())
+  , D_(rx_rate/channel.channel.bw)
   , ifft_(X_*N/D_, FFTW_BACKWARD, FFTW_MEASURE)
   , temp_(N)
   , H_(N)
 {
     // Number of FFT bins to rotate
-    Nrot_ = N*channel.fc/rx_rate;
+    Nrot_ = N*channel.channel.fc/rx_rate;
     if (Nrot_ < 0)
         Nrot_ += N;
 
@@ -420,12 +415,12 @@ FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(PHY &phy,
     fftw::FFT<C> fft(N, FFTW_FORWARD, FFTW_MEASURE);
 
     std::fill(fft.in.begin(), fft.in.end(), 0);
-    assert(taps.size() <= P);
-    std::copy(taps.begin(), taps.end(), fft.in.begin());
+    assert(channel.taps.size() <= P);
+    std::copy(channel.taps.begin(), channel.taps.end(), fft.in.begin());
     fft.execute(fft.in.data(), H_.data());
 
     // Compute filter delay
-    delay_ = round((taps.size() - 1) / 2.0);
+    delay_ = round((channel.taps.size() - 1) / 2.0);
 
     // Apply 1/(N*D) factor to filter since FFTW doesn't multiply by 1/N for
     // IFFT, and we need to compensate for summation during decimation.
@@ -448,7 +443,7 @@ void FDChannelizer::FDChannelDemodulator::updateSeq(unsigned seq)
 
 void FDChannelizer::FDChannelDemodulator::reset(void)
 {
-    demod_->reset(channel_);
+    demod_->reset(channel_.channel);
     seq_ = 0;
 }
 

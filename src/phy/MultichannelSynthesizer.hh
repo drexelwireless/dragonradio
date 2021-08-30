@@ -32,9 +32,8 @@ public:
     static constexpr auto L = Upsampler::L;
     static constexpr auto O = Upsampler::O;
 
-    MultichannelSynthesizer(std::shared_ptr<PHY> phy,
-                            double tx_rate,
-                            const Channels &channels,
+    MultichannelSynthesizer(double tx_rate,
+                            const std::vector<PHYChannel> &channels,
                             size_t nthreads);
     virtual ~MultichannelSynthesizer();
 
@@ -50,10 +49,8 @@ private:
     /** @brief Channel modulator for multichannel modulation */
     class MultichannelModulator : public ChannelModulator, private Upsampler {
     public:
-        MultichannelModulator(PHY &phy,
+        MultichannelModulator(const PHYChannel &channel,
                               unsigned chanidx,
-                              const Channel &channel,
-                              const std::vector<C> &taps,
                               double tx_rate);
         MultichannelModulator() = delete;
 
@@ -186,7 +183,7 @@ private:
     double tx_rate_copy_;
 
     /** @brief Radio channels */
-    Channels channels_copy_;
+    std::vector<PHYChannel> channels_copy_;
 
     /** @brief Radio schedule */
     Schedule schedule_copy_;
