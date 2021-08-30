@@ -96,9 +96,6 @@ private:
     /** @brief Condition variable for waking demodulators. */
     std::condition_variable wake_cond_;
 
-    /** @brief Mutex for demodulation state. */
-    std::mutex demod_mutex_;
-
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<TDChannelDemodulator>> demods_;
 

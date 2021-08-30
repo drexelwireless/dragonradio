@@ -27,23 +27,30 @@ public:
     virtual ~Synthesizer() = default;
 
     /** @brief Get channels. */
-    virtual const std::vector<PHYChannel> &getChannels(void) const
+    virtual std::vector<PHYChannel> getChannels(void) const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         return channels_;
     }
 
     /** @brief Set channels */
     virtual void setChannels(const std::vector<PHYChannel> &channels)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
 
-        channels_ = channels;
+            channels_ = channels;
+        }
+
         reconfigure();
     }
 
     /** @brief Get the TX sample rate. */
     virtual double getTXRate(void)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         return tx_rate_;
     }
 
@@ -52,33 +59,44 @@ public:
      */
     virtual void setTXRate(double rate)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
 
-        tx_rate_ = rate;
+            tx_rate_ = rate;
+        }
+
         reconfigure();
     }
 
     /** @brief Get schedule. */
     virtual const Schedule &getSchedule(void) const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         return schedule_;
     }
 
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule &schedule)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
 
-        schedule_ = schedule;
+            schedule_ = schedule;
+        }
+
         reconfigure();
     }
 
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule::sched_type &schedule)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
 
-        schedule_ = schedule;
+            schedule_ = schedule;
+        }
+
         reconfigure();
     }
 
@@ -93,7 +111,7 @@ public:
 
 protected:
     /** @brief Mutex for synthesizer state. */
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
 
     /** @brief Radio channels */
     std::vector<PHYChannel> channels_;

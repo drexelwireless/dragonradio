@@ -38,7 +38,7 @@ TDChannelizer::~TDChannelizer()
 
 void TDChannelizer::push(const std::shared_ptr<IQBuf> &iqbuf)
 {
-    std::lock_guard<std::mutex> lock(demod_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     unsigned                    nchannels = channels_.size();
 
     for (unsigned i = 0; i < nchannels; ++i)
@@ -47,7 +47,7 @@ void TDChannelizer::push(const std::shared_ptr<IQBuf> &iqbuf)
 
 void TDChannelizer::reconfigure(void)
 {
-    std::lock_guard<std::mutex> lock(demod_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     // Tell workers we are reconfiguring
     reconfigure_.store(true, std::memory_order_release);

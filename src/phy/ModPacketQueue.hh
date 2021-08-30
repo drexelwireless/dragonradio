@@ -29,6 +29,8 @@ public:
 
     std::optional<size_t> getHighWaterMark(void) const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         return high_water_mark_;
     }
 
@@ -41,7 +43,11 @@ public:
 
     void stop(void)
     {
-        done_ = true;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            done_ = true;
+        }
 
         producer_cond_.notify_all();
         consumer_cond_.notify_all();
@@ -49,17 +55,20 @@ public:
 
     size_t try_pop(container_type &mpkts, size_t max_samples, bool overfill)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        size_t                       nsamples = 0;
-        auto                         it = queue_.begin();
+        size_t nsamples = 0;
 
-        for (; it != queue_.end() && nsamples < max_samples; ++it) {
-            if (nsamples + (*it)->nsamples < max_samples || overfill)
-                nsamples += (*it)->nsamples;
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+            auto                         it = queue_.begin();
+
+            for (; it != queue_.end() && nsamples < max_samples; ++it) {
+                if (nsamples + (*it)->nsamples < max_samples || overfill)
+                    nsamples += (*it)->nsamples;
+            }
+
+            mpkts.splice(mpkts.end(), queue_, queue_.begin(), it);
+            nsamples_ -= nsamples;
         }
-
-        mpkts.splice(mpkts.end(), queue_, queue_.begin(), it);
-        nsamples_ -= nsamples;
 
         producer_cond_.notify_all();
 
@@ -68,11 +77,15 @@ public:
 
     size_t try_pop(container_type &mpkts)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        size_t                       nsamples = nsamples_;
+        size_t nsamples;
 
-        mpkts.splice(mpkts.end(), std::move(queue_));
-        nsamples_ = 0;
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+
+            nsamples = nsamples_;
+            mpkts.splice(mpkts.end(), std::move(queue_));
+            nsamples_ = 0;
+        }
 
         producer_cond_.notify_all();
 
@@ -81,15 +94,18 @@ public:
 
     size_t pop(container_type &mpkts)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
+        size_t nsamples;
 
-        if (!wait_once(consumer_cond_, lock, [this]{ return done_ || nsamples_ > 0; }) || done_)
-            return false;
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
 
-        size_t nsamples = nsamples_;
+            if (!wait_once(consumer_cond_, lock, [this]{ return done_ || nsamples_ > 0; }) || done_)
+                return false;
 
-        mpkts.splice(mpkts.end(), std::move(queue_));
-        nsamples_ = 0;
+            nsamples = nsamples_;
+            mpkts.splice(mpkts.end(), std::move(queue_));
+            nsamples_ = 0;
+        }
 
         producer_cond_.notify_all();
 
@@ -126,17 +142,17 @@ public:
     }
 
 protected:
+    /** @brief Mutex protecting the queue */
+    mutable std::mutex mutex_;
+
     /** @brief Are we done with the queue? */
-    std::atomic<bool> done_;
+    bool done_;
 
     /** @brief Maximum number of IQ samples the queue may contain */
     std::optional<size_t> high_water_mark_;
 
     /** @brief Number of IQ samples the queue contains */
     size_t nsamples_;
-
-    /** @brief Mutex protecting the queue */
-    std::mutex mutex_;
 
     /** @brief Producer condition variable */
     std::condition_variable producer_cond_;
