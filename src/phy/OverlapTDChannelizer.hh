@@ -33,8 +33,6 @@ public:
                          unsigned int nthreads);
     virtual ~OverlapTDChannelizer();
 
-    void setChannels(const std::vector<PHYChannel> &channels) override;
-
     void push(const std::shared_ptr<IQBuf> &) override;
 
     void reconfigure(void) override;
@@ -101,9 +99,6 @@ private:
         }
 
         virtual ~OverlapTDChannelDemodulator() = default;
-
-        /** @brief Set channel */
-        void setChannel(const PHYChannel &channel);
 
         void reset(void) override;
 

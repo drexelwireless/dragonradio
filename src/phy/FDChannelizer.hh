@@ -157,9 +157,6 @@ private:
     /** @brief Time-domain IQ buffers to demodulate */
     SafeQueue<std::shared_ptr<IQBuf>> tdbufs_;
 
-    /** @brief Mutex for demodulation state. */
-    std::mutex demod_mutex_;
-
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<FDChannelDemodulator>> demods_;
 

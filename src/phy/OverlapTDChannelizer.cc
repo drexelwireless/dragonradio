@@ -39,16 +39,6 @@ OverlapTDChannelizer::~OverlapTDChannelizer()
     stop();
 }
 
-void OverlapTDChannelizer::setChannels(const std::vector<PHYChannel> &channels)
-{
-    channels_ = channels;
-
-    std::lock_guard<std::mutex> lock(iq_mutex_);
-
-    if (iq_next_channel_ >= channels_.size())
-        nextWindow();
-}
-
 void OverlapTDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
     // Push the packet on the end of the queue
@@ -65,8 +55,19 @@ void OverlapTDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 
 void OverlapTDChannelizer::reconfigure(void)
 {
-    prev_demod_samps_ = prev_demod_*rx_rate_;
-    cur_demod_samps_ = cur_demod_*rx_rate_;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        prev_demod_samps_ = prev_demod_*rx_rate_;
+        cur_demod_samps_ = cur_demod_*rx_rate_;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(iq_mutex_);
+
+        if (iq_next_channel_ >= channels_.size())
+            nextWindow();
+    }
 
     for (auto &flag : demod_reconfigure_)
         flag.store(true, std::memory_order_relaxed);
@@ -91,12 +92,13 @@ void OverlapTDChannelizer::stop(void)
 
 void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
 {
-    std::unique_ptr<OverlapTDChannelDemodulator> demod;
-    RadioPacketQueue::barrier                    b;
-    unsigned                                     channelidx;
-    std::shared_ptr<IQBuf>                       buf1;
-    std::shared_ptr<IQBuf>                       buf2;
-    bool                                         received;
+    std::vector<std::unique_ptr<OverlapTDChannelDemodulator>> demods;
+    OverlapTDChannelDemodulator                               *demod;
+    RadioPacketQueue::barrier                                 b;
+    unsigned                                                  chanidx;
+    std::shared_ptr<IQBuf>                                    buf1;
+    std::shared_ptr<IQBuf>                                    buf2;
+    bool                                                      received;
 
     auto callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
         received = true;
@@ -109,7 +111,7 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
     };
 
     while (!done_) {
-        if (!pop(b, channelidx, buf1, buf2))
+        if (!pop(b, chanidx, buf1, buf2))
             break;
 
         received = false;
@@ -125,15 +127,22 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
         // Calculate offset into buf1 at which we begin demodulation
         size_t buf1_off = buf1->size() - buf1_nsamples;
 
-        // Either reconfigure or set current channel
+        // Handle reconfiguration
         if (reconfig.load(std::memory_order_relaxed)) {
-            assert(rx_rate_ != 0);
-            demod = std::make_unique<OverlapTDChannelDemodulator>(channels_[channelidx],
-                                                                  rx_rate_);
-            demod->setCallback(callback);
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            demods.resize(channels_.size());
+
+            for (unsigned i = 0; i < channels_.size(); i++) {
+                demods[i] = std::make_unique<OverlapTDChannelDemodulator>(channels_[i],
+                                                                          rx_rate_);
+                demods[i]->setCallback(callback);
+            }
+
             reconfig.store(false, std::memory_order_relaxed);
-        } else
-            demod->setChannel(channels_[channelidx]);
+        }
+
+        demod = demods[chanidx].get();
 
         // Reset the state of the demodulator
         demod->reset();
@@ -258,26 +267,10 @@ bool OverlapTDChannelizer::pop(RadioPacketQueue::barrier& b,
 
 void OverlapTDChannelizer::nextWindow(void)
 {
-    iq_.pop_front();
-    --iq_size_;
-    iq_next_channel_ = 0;
-}
-
-void OverlapTDChannelizer::OverlapTDChannelDemodulator::setChannel(const PHYChannel &channel)
-{
-    double new_rate = rx_oversample_*channel.channel.bw/rx_rate_;
-    double new_fshift = channel.channel.fc/rx_rate_;
-
-    channel_ = channel;
-
-    if (new_rate != rate_) {
-        rate_ = new_rate;
-        resamp_.setRate(new_rate);
-    }
-
-    if (new_fshift != fshift_) {
-        fshift_ = new_fshift;
-        resamp_.setFreqShift(2*M_PI*channel.channel.fc/rx_rate_);
+    if (iq_size_ > 0) {
+        iq_.pop_front();
+        --iq_size_;
+        iq_next_channel_ = 0;
     }
 }
 

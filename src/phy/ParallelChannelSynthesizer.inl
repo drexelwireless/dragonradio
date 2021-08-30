@@ -58,10 +58,14 @@ void ParallelChannelSynthesizer<ChannelModulator>::reconfigure(void)
     // Determine channel index
     std::optional<size_t> chanidx;
 
-    for (size_t chan = 0; chan < schedule_.size(); ++chan) {
-        if (schedule_.canTransmitOnChannel(chan)) {
-            chanidx = chan;
-            break;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+            if (schedule_.canTransmitOnChannel(chan)) {
+                chanidx = chan;
+                break;
+            }
         }
     }
 
@@ -94,6 +98,9 @@ void ParallelChannelSynthesizer<ChannelModulator>::reconfigure(void)
 template <class ChannelModulator>
 void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 {
+    std::vector<PHYChannel>           channels;
+    std::optional<size_t>             chanidx;
+    double                            tx_rate = tx_rate_;
     std::unique_ptr<ChannelModulator> mod;
     std::shared_ptr<NetPacket>        pkt;
     std::unique_ptr<ModPacket>        mpkt;
@@ -111,11 +118,16 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             // Wait for reconfiguration to start
             reconfigure_sync_.wait();
 
+            // Make local copies to ensure thread safety
+            channels = channels_;
+            chanidx = chanidx_;
+            tx_rate = tx_rate_;
+
             // Wait for reconfiguration to finish
             reconfigure_sync_.wait();
 
             // If we have no channels, sleep
-            if (channels_.size() == 0 || !chanidx_) {
+            if (channels.size() == 0 || !chanidx) {
                 std::unique_lock<std::mutex> lock(wake_mutex_);
 
                 wake_cond_.wait(lock, [this]{ return done_ || reconfigure_.load(std::memory_order_acquire); });
@@ -123,9 +135,9 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                 continue;
             } else {
                 // Reconfigure the modulator
-                mod = std::make_unique<ChannelModulator>(channels_[*chanidx_],
+                mod = std::make_unique<ChannelModulator>(channels[*chanidx],
                                                          0,
-                                                         tx_rate_);
+                                                         tx_rate);
             }
         }
 
@@ -137,7 +149,7 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 
         // Modulate the packet
         std::unique_ptr<ModPacket> mpkt = std::make_unique<ModPacket>();
-        float                      g = channels_[*chanidx_].phy->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
+        float                      g = channels[*chanidx].phy->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
         mod->modulate(std::move(pkt), g, *mpkt);
 

@@ -24,21 +24,30 @@ public:
     virtual ~Channelizer() = default;
 
     /** @brief Get channels. */
-    virtual const std::vector<PHYChannel> &getChannels(void) const
+    virtual std::vector<PHYChannel> getChannels(void) const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         return channels_;
     }
 
     /** @brief Set channels */
     virtual void setChannels(const std::vector<PHYChannel> &channels)
     {
-        channels_ = channels;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            channels_ = channels;
+        }
+
         reconfigure();
     }
 
     /** @brief Get the RX sample rate. */
     virtual double getRXRate(void)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         return rx_rate_;
     }
 
@@ -47,7 +56,12 @@ public:
      */
     virtual void setRXRate(double rate)
     {
-        rx_rate_ = rate;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            rx_rate_ = rate;
+        }
+
         reconfigure();
     }
 
@@ -63,6 +77,9 @@ public:
     RadioOut<Push> source;
 
 protected:
+    /** @brief Mutex for channelizer state. */
+    mutable std::mutex mutex_;
+
     /** @brief Radio channels */
     std::vector<PHYChannel> channels_;
 
