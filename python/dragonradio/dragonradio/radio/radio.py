@@ -847,7 +847,6 @@ class Radio(dragonradio.tasks.TaskManager):
         config = self.config
 
         self.mac = SlottedALOHA(self.usrp,
-                                self.phy,
                                 self.controller,
                                 self.snapshot_collector,
                                 self.channelizer,
@@ -895,7 +894,6 @@ class Radio(dragonradio.tasks.TaskManager):
         self.deleteMAC()
 
         self.mac = TDMA(self.usrp,
-                        self.phy,
                         self.controller,
                         self.snapshot_collector,
                         self.channelizer,
@@ -938,7 +936,6 @@ class Radio(dragonradio.tasks.TaskManager):
         self.deleteMAC()
 
         self.mac = FDMA(self.usrp,
-                        self.phy,
                         self.controller,
                         self.snapshot_collector,
                         self.channelizer,

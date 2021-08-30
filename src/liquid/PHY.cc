@@ -27,7 +27,7 @@ PHY::PHY(const MCS &header_mcs,
 
     for (unsigned i = 0; i < mcs_table_.size(); ++i) {
         mcs_table_[i] = mcstab[i].first;
-        mcs_table[i] = { &mcs_table_[i], mcstab[i].second, true };
+        mcs_table[i] = { &mcs_table_[i], mcstab[i].second };
     }
 }
 

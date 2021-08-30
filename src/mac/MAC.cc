@@ -5,14 +5,12 @@
 #include "util/threads.hh"
 
 MAC::MAC(std::shared_ptr<USRP> usrp,
-         std::shared_ptr<PHY> phy,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
          std::shared_ptr<Synthesizer> synthesizer,
          double rx_period)
   : usrp_(usrp)
-  , phy_(phy)
   , controller_(controller)
   , snapshot_collector_(collector)
   , channelizer_(channelizer)

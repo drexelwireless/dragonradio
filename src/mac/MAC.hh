@@ -13,7 +13,6 @@
 #include "mac/Snapshot.hh"
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
-#include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
 
 /** @brief A MAC protocol. */
@@ -40,7 +39,6 @@ public:
     };
 
     MAC(std::shared_ptr<USRP> usrp,
-        std::shared_ptr<PHY> phy,
         std::shared_ptr<Controller> controller,
         std::shared_ptr<SnapshotCollector> collector,
         std::shared_ptr<Channelizer> channelizer,
@@ -143,9 +141,6 @@ public:
 protected:
     /** @brief Our USRP device. */
     std::shared_ptr<USRP> usrp_;
-
-    /** @brief Our PHY. */
-    std::shared_ptr<PHY> phy_;
 
     /** @brief Our controller */
     std::shared_ptr<Controller> controller_;

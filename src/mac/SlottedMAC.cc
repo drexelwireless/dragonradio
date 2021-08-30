@@ -9,7 +9,6 @@
 using Slot = SlotSynthesizer::Slot;
 
 SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
-                       std::shared_ptr<PHY> phy,
                        std::shared_ptr<Controller> controller,
                        std::shared_ptr<SnapshotCollector> collector,
                        std::shared_ptr<Channelizer> channelizer,
@@ -18,7 +17,6 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        double guard_size,
                        double slot_send_lead_time)
   : MAC(usrp,
-        phy,
         controller,
         collector,
         channelizer,
@@ -44,22 +42,6 @@ void SlottedMAC::reconfigure(void)
 
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
     tx_full_slot_samps_ = tx_rate_*slot_size_;
-
-    // If this is an FDMA MAC, all MCS entries are fair game
-    if (isFDMA()) {
-        for (mcsidx_t mcsidx = 0; mcsidx < phy_->mcs_table.size(); ++mcsidx)
-            phy_->mcs_table[mcsidx].valid = true;
-    } else {
-        // Compute the maximum number of samples that will fit in minimum-bandwidth
-        // channel and use this to mark valid MCS indices.
-        size_t max_samples = min_chan_bw_*(slot_size_ - guard_size_);
-
-        for (mcsidx_t mcsidx = 0; mcsidx < phy_->mcs_table.size(); ++mcsidx)
-            phy_->mcs_table[mcsidx].valid = phy_->getModulatedSize(mcsidx, controller_->getMTU()) <= max_samples;
-
-        if (!phy_->mcs_table[phy_->mcs_table.size()-1].valid)
-            logMAC(LOGWARNING, "WARNING: Slot size too small to support a full-sized packet!");
-    }
 }
 
 void SlottedMAC::stop(void)
