@@ -666,8 +666,8 @@ void Logger::logSend_(const MonoClock::time_point& t,
     entry.mcsidx =  pkt.mcsidx;
 
     if (dropped == kNotDropped) {
-        entry.fc = pkt.fc;
-        entry.bw = pkt.bw;
+        entry.fc = pkt.channel.fc;
+        entry.bw = pkt.channel.bw;
         entry.tuntap_latency = pkt.wall_timestamp ? (pkt.tuntap_timestamp - *pkt.wall_timestamp).get_real_secs() : 0;
         entry.enqueue_latency = (pkt.enqueue_timestamp - pkt.timestamp).get_real_secs();
         entry.dequeue_latency = (pkt.dequeue_end_timestamp - pkt.dequeue_start_timestamp).get_real_secs();

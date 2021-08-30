@@ -169,6 +169,7 @@ struct Packet : public buffer<unsigned char>
       , hdr(hdr_)
       , payload_size(0)
       , internal_flags({0})
+      , mcsidx(0)
     {
     }
 
@@ -177,6 +178,7 @@ struct Packet : public buffer<unsigned char>
       , hdr({0})
       , payload_size(0)
       , internal_flags({0})
+      , mcsidx(0)
     {
         assert(n >= sizeof(ExtendedHeader));
     }
@@ -186,6 +188,7 @@ struct Packet : public buffer<unsigned char>
       , hdr(hdr_)
       , payload_size(0)
       , internal_flags({0})
+      , mcsidx(0)
     {
         assert(n >= sizeof(ExtendedHeader));
     }
@@ -242,6 +245,12 @@ struct Packet : public buffer<unsigned char>
         /** @brief Set if the packet contains a selective ACK */
         uint8_t has_selective_ack : 1;
     } internal_flags;
+
+    /** @brief Channel on which the packet was sent/received */
+    Channel channel;
+
+    /** @brief MCS index of packet */
+    mcsidx_t mcsidx;
 
     /** @brief Get extended header */
     ExtendedHeader &ehdr(void)
@@ -488,7 +497,6 @@ struct NetPacket : public Packet
 
     explicit NetPacket(size_t n)
       : Packet(n)
-      , mcsidx(0)
       , g(1.0)
       , nretrans(0)
     {
@@ -497,17 +505,8 @@ struct NetPacket : public Packet
     /** @brief Packet delivery deadline */
     std::optional<MonoClock::time_point> deadline;
 
-    /** @brief MCS to use, given as an index into PHY's MCS table */
-    mcsidx_t mcsidx;
-
     /** @brief Multiplicative TX gain. */
     float g;
-
-    /** @brief Center frequency (Hz) */
-    float fc;
-
-    /** @brief Bandwidth (Hz) */
-    float bw;
 
     /** @brief Number of retransmissions. */
     unsigned nretrans;
@@ -591,14 +590,8 @@ struct RadioPacket : public Packet
     /** @brief Carrier frequency offset (f/Fs) */
     float cfo;
 
-    /** @brief Channel the packet was received on */
-    Channel channel;
-
     /** @brief Bandwidth (Hz) of entire received signal */
     float bw;
-
-    /** @brief MCS index of packet */
-    mcsidx_t mcsidx;
 
     /** @brief Timestamp of MAC slot containing this packet */
     MonoClock::time_point slot_timestamp;
