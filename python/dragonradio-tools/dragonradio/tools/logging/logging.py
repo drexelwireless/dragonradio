@@ -56,7 +56,7 @@ class Slots:
         else:
             return self.iq_data[self.offset+idx]
 
-DROPPED: List[str] = ['transmitted', 'll_drop', 'queue_drop']
+DROPPED: List[str] = ['transmitted', 'll_drop', 'queue_drop', 'phy_drop']
 """Category names for packet 'dropped' status"""
 
 DROPPED_CAT:CategoricalDtype = CategoricalDtype(range(0, len(DROPPED)))
@@ -130,6 +130,7 @@ class Events:
         df['color'] = COLOR_CAT.categories[0]
         df.loc[df.dropped == 'll_drop', 'color'] = 'r'
         df.loc[df.dropped == 'queue_drop', 'color'] = 'y'
+        df.loc[df.dropped == 'phy_drop', 'color'] = 'r'
 
         return df
 

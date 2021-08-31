@@ -37,6 +37,8 @@ def pprSendEvent(row):
         result += f"; dropped by link-layer"
     elif row.dropped == 'queue_drop':
         result += f"; dropped by network queue"
+    elif row.dropped == 'phy_drop':
+        result += f"; dropped by phy"
 
     return result
 
