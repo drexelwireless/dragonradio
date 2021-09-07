@@ -439,7 +439,6 @@ class Radio(dragonradio.tasks.TaskManager):
                                          # Add MCU to MTU
                                          config.mtu + config.arq_mcu,
                                          self.phy,
-                                         config.slot_size,
                                          config.arq_window,
                                          config.arq_window,
                                          evm_thresholds)

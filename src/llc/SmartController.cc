@@ -15,13 +15,11 @@
 SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
                                  size_t mtu,
                                  std::shared_ptr<PHY> phy,
-                                 double slot_size,
                                  Seq::uint_type max_sendwin,
                                  Seq::uint_type recvwin,
                                  const std::vector<evm_thresh_t> &evm_thresholds)
   : Controller(radionet, mtu)
   , phy_(phy)
-  , slot_size_(slot_size)
   , mcs_fast_adjustment_period_(1.0)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)

@@ -420,7 +420,6 @@ public:
     SmartController(std::shared_ptr<RadioNet> radionet_,
                     size_t mtu,
                     std::shared_ptr<PHY> phy,
-                    double slot_size,
                     Seq::uint_type max_sendwin,
                     Seq::uint_type recvwin,
                     const std::vector<evm_thresh_t> &evm_thresholds);
@@ -965,9 +964,6 @@ protected:
 
     /** @brief Mutex to serialize access to the network */
     std::mutex net_mutex_;
-
-    /** @brief Slot size (sec) */
-    double slot_size_;
 
     /** @brief Latest environment discontinuity */
     std::optional<MonoClock::time_point> env_timestamp_;
