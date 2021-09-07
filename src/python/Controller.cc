@@ -269,7 +269,6 @@ void exportControllers(py::module &m)
         .def(py::init<std::shared_ptr<RadioNet>,
                       size_t,
                       std::shared_ptr<PHY>,
-                      double,
                       Seq::uint_type,
                       Seq::uint_type,
                       const std::vector<SmartController::evm_thresh_t>&>())
