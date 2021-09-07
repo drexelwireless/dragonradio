@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "Logger.hh"
@@ -209,11 +209,11 @@ get_packet:
         if (decrease_retrans_mcsidx_ &&
             pkt->internal_flags.retransmission &&
             pkt->deadline &&
-            pkt->mcsidx == sendw.mcsidx &&
+            pkt->mcsidx == sendw.csi.mcsidx &&
             pkt->mcsidx > mcsidx_min_)
             --pkt->mcsidx;
         else
-            pkt->mcsidx = sendw.mcsidx;
+            pkt->mcsidx = sendw.csi.mcsidx;
 
         pkt->g = dest.g;
     } else {
@@ -412,7 +412,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
                 if (nak) {
                     SendWindow::Entry &entry = sendw[*nak];
 
-                    if (entry.pkt && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0 && *nak >= sendw.per_cutoff) {
+                    if (entry.pkt && sendw.csi.mcsidx >= entry.pkt->mcsidx && entry.pkt->nretrans > 0 && *nak >= sendw.per_cutoff) {
                         sendw.txFailure();
 
                         if (logger)
@@ -596,7 +596,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
     }
 
     // Record the packet error as long as receiving node can transmit
-    if (!sendw.node.emcon && sendw.mcsidx >= entry.pkt->mcsidx && entry.pkt->hdr.seq >= sendw.per_cutoff) {
+    if (!sendw.node.emcon && sendw.csi.mcsidx >= entry.pkt->mcsidx && entry.pkt->hdr.seq >= sendw.per_cutoff) {
         sendw.txFailure();
 
         if (logger)
@@ -606,7 +606,7 @@ void SmartController::retransmitOnTimeout(SendWindow::Entry &entry)
             (unsigned) sendw.node.id,
             (unsigned) entry.pkt->hdr.seq,
             (unsigned) entry.pkt->mcsidx,
-            sendw.short_per.value_or(0.0));
+            sendw.csi.short_per.value_or(0.0));
 
         sendw.updateMCS(isMCSFastAdjustmentPeriod());
     }
@@ -850,7 +850,7 @@ void SmartController::environmentDiscontinuity(void)
             nodes.insert(sendw.node.id);
 
             // Set all MCS transition probabilities to 1.0
-            std::vector<double>&v = sendw.mcsidx_prob;
+            std::vector<double>&v = sendw.csi.mcsidx_prob;
 
             std::fill(v.begin(), v.end(), 1.0);
 
@@ -864,10 +864,10 @@ void SmartController::environmentDiscontinuity(void)
             sendw.resetPEREstimates();
 
             // Reset EVM and RSSI estimates
-            sendw.short_evm.reset();
-            sendw.long_evm.reset();
-            sendw.short_rssi.reset();
-            sendw.long_rssi.reset();
+            sendw.csi.short_evm.reset();
+            sendw.csi.long_evm.reset();
+            sendw.csi.short_rssi.reset();
+            sendw.csi.long_rssi.reset();
         }
     }
 
@@ -1325,10 +1325,10 @@ void SmartController::handleReceiverStats(RadioPacket &pkt, SendWindow &sendw)
                 float temp;
 
                 memcpy(&temp, &it->receiver_stats.evm, sizeof(temp));
-                sendw.short_evm = temp;
+                sendw.csi.short_evm = temp;
 
                 memcpy(&temp, &it->receiver_stats.rssi, sizeof(temp));
-                sendw.short_rssi = temp;
+                sendw.csi.short_rssi = temp;
             }
             break;
 
@@ -1337,10 +1337,10 @@ void SmartController::handleReceiverStats(RadioPacket &pkt, SendWindow &sendw)
                 float temp;
 
                 memcpy(&temp, &it->receiver_stats.evm, sizeof(temp));
-                sendw.long_evm = temp;
+                sendw.csi.long_evm = temp;
 
                 memcpy(&temp, &it->receiver_stats.rssi, sizeof(temp));
-                sendw.long_rssi = temp;
+                sendw.csi.long_rssi = temp;
             }
             break;
 
@@ -1705,7 +1705,6 @@ SendWindow::SendWindow(Node &n,
     : node(n)
     , controller(controller)
     , mcs_table(controller.phy_->mcs_table)
-    , mcsidx(0)
     , new_window(true)
     , window_open(true)
     , seq({0})
@@ -1714,13 +1713,9 @@ SendWindow::SendWindow(Node &n,
     , send_set_unack(false)
     , win(1)
     , maxwin(maxwin)
-    , mcsidx_prob(controller.phy_->mcs_table.size(), 1.0)
     , per_cutoff({0})
     , per_end({0})
-    , prev_short_per(1)
-    , prev_long_per(1)
-    , short_per(1)
-    , long_per(1)
+    , csi(controller.phy_->mcs_table.size())
     , retransmission_delay(retransmission_delay_)
     , ack_delay(1.0)
     , entries_(maxwin, *this)
@@ -1751,14 +1746,14 @@ void SendWindow::ack(const MonoClock::time_point &tx_time)
 
 void SendWindow::txSuccess(void)
 {
-    short_per.update(0.0);
-    long_per.update(0.0);
+    csi.short_per.update(0.0);
+    csi.long_per.update(0.0);
 }
 
 void SendWindow::txFailure(void)
 {
-    short_per.update(1.0);
-    long_per.update(1.0);
+    csi.short_per.update(1.0);
+    csi.long_per.update(1.0);
 }
 
 void SendWindow::updateMCS(bool fast_adjust)
@@ -1767,15 +1762,15 @@ void SendWindow::updateMCS(bool fast_adjust)
     bool changed = false;
 #endif
 
-    if (short_per && *short_per != prev_short_per) {
-        prev_short_per = *short_per;
+    if (csi.short_per && *csi.short_per != csi.prev_short_per) {
+        csi.prev_short_per = *csi.short_per;
 #if DEBUG
         changed = true;
 #endif
     }
 
-    if (long_per && *long_per != prev_long_per) {
-        prev_long_per = *long_per;
+    if (csi.long_per && *csi.long_per != csi.prev_long_per) {
+        csi.prev_long_per = *csi.long_per;
 #if DEBUG
         changed = true;
 #endif
@@ -1785,40 +1780,40 @@ void SendWindow::updateMCS(bool fast_adjust)
     if (changed)
         logAMC(LOGDEBUG, "updateMCS: node=%u; short per=%0.2f (%lu samples); long per=%0.2f (%lu samples)",
             node.id,
-            short_per.value_or(0),
-            short_per.size(),
-            long_per.value_or(0),
-            long_per.size());
+            csi.short_per.value_or(0),
+            csi.short_per.size(),
+            csi.long_per.value_or(0),
+            csi.long_per.size());
 #endif
 
     // First for high PER, then test for low PER
-    if (short_per && *short_per > controller.mcsidx_down_per_threshold_) {
+    if (csi.short_per && *csi.short_per > controller.mcsidx_down_per_threshold_) {
         // Perform hysteresis on future MCS increases by decreasing the
         // probability that we will transition to this MCS index.
-        mcsidx_prob[mcsidx] =
-            std::max(mcsidx_prob[mcsidx]*controller.mcsidx_alpha_,
+        csi.mcsidx_prob[csi.mcsidx] =
+            std::max(csi.mcsidx_prob[csi.mcsidx]*controller.mcsidx_alpha_,
                      controller.mcsidx_prob_floor_);
 
         logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%0.2f",
             node.id,
-            (unsigned) mcsidx,
-            mcsidx_prob[mcsidx]);
+            (unsigned) csi.mcsidx,
+            csi.mcsidx_prob[csi.mcsidx]);
 
         // Decrease MCS until we hit rock bottom or we hit an MCS that produces
         // packets too large to fit in a slot.
         unsigned n = 0; // Number of MCS levels to decrease
 
-        while (mcsidx > n &&
-               mcsidx - n > controller.mcsidx_min_) {
+        while (csi.mcsidx > n &&
+               csi.mcsidx - n > controller.mcsidx_min_) {
             // Increment number of MCS levels we will move down
             ++n;
 
             // If we don't have both an EVM threshold and EVM feedback from the
             // sender, stop. Otherwise, use our EVM information to decide if we
             // should decrease the MCS level further.
-            SmartController::evm_thresh_t &next_evm_threshold = controller.evm_thresholds_[mcsidx-n];
+            SmartController::evm_thresh_t &next_evm_threshold = controller.evm_thresholds_[csi.mcsidx-n];
 
-            if (!next_evm_threshold || !long_evm || (*long_evm < *next_evm_threshold))
+            if (!next_evm_threshold || !csi.long_evm || (*csi.long_evm < *next_evm_threshold))
                 break;
         }
 
@@ -1827,9 +1822,9 @@ void SendWindow::updateMCS(bool fast_adjust)
             moveDownMCS(n);
         else
             resetPEREstimates();
-    } else if (fast_adjust && short_evm) {
+    } else if (fast_adjust && csi.short_evm) {
         mcsidx_t new_mcsidx;
-        auto     current_evm = long_evm.value_or(*short_evm);
+        auto     current_evm = csi.long_evm.value_or(*csi.short_evm);
 
         for (new_mcsidx = controller.mcsidx_min_; new_mcsidx < controller.mcsidx_max_; ++new_mcsidx) {
             SmartController::evm_thresh_t &evm_threshold = controller.evm_thresholds_[new_mcsidx + 1];
@@ -1839,18 +1834,18 @@ void SendWindow::updateMCS(bool fast_adjust)
         }
 
         setMCS(new_mcsidx);
-    } else if (long_per && *long_per < controller.mcsidx_up_per_threshold_) {
-        double old_prob = mcsidx_prob[mcsidx];
+    } else if (csi.long_per && *csi.long_per < controller.mcsidx_up_per_threshold_) {
+        double old_prob = csi.mcsidx_prob[csi.mcsidx];
 
         // Set transition probability of current MCS index to 1.0 since we
         // successfully passed the long PER test
-        mcsidx_prob[mcsidx] = 1.0;
+        csi.mcsidx_prob[csi.mcsidx] = 1.0;
 
-        if (mcsidx_prob[mcsidx] != old_prob)
+        if (csi.mcsidx_prob[csi.mcsidx] != old_prob)
             logAMC(LOGDEBUG, "Transition probability for MCS: node=%u; index=%u; prob=%0.2f",
                 node.id,
-                (unsigned) mcsidx,
-                mcsidx_prob[mcsidx]);
+                (unsigned) csi.mcsidx,
+                csi.mcsidx_prob[csi.mcsidx]);
 
         // Now we see if we can actually increase the MCS index.
         if (mayMoveUpMCS())
@@ -1863,7 +1858,7 @@ void SendWindow::updateMCS(bool fast_adjust)
 bool SendWindow::mayMoveUpMCS(void) const
 {
     // We can't move up if we're at the top of the MCS hierarchy...
-    if (mcsidx == controller.mcsidx_max_ || mcsidx == mcs_table.size() - 1)
+    if (csi.mcsidx == controller.mcsidx_max_ || csi.mcsidx == mcs_table.size() - 1)
         return false;
 
     // There are two cases where we may move up an MCS level:
@@ -1871,22 +1866,22 @@ bool SendWindow::mayMoveUpMCS(void) const
     // 1) The next-higher MCS has an EVM threshold that we meet
     // 2) The next-higher MCS *does not* have an EVM threshold, but we pass
     //    the probabilistic transition test.
-    SmartController::evm_thresh_t &next_evm_threshold = controller.evm_thresholds_[mcsidx+1];
+    SmartController::evm_thresh_t &next_evm_threshold = controller.evm_thresholds_[csi.mcsidx+1];
 
     if (next_evm_threshold) {
-        if (long_evm) {
+        if (csi.long_evm) {
             logAMC(LOGDEBUG, "EVM threshold: evm_threshold=%0.1f, evm=%0.1f",
                 *next_evm_threshold,
-                *long_evm);
+                *csi.long_evm);
 
-            return *long_evm < *next_evm_threshold;
+            return *csi.long_evm < *next_evm_threshold;
         } else
             return false;
     }
 
     std::lock_guard<std::mutex> lock(controller.gen_mutex_);
 
-    return controller.dist_(controller.gen_) < mcsidx_prob[mcsidx+1];
+    return controller.dist_(controller.gen_) < csi.mcsidx_prob[csi.mcsidx+1];
 }
 
 void SendWindow::setMCS(size_t new_mcsidx)
@@ -1897,35 +1892,35 @@ void SendWindow::setMCS(size_t new_mcsidx)
     assert(new_mcsidx < mcs_table.size());
 
     // Bail if MCS isn't actually changing
-    if (new_mcsidx == mcsidx)
+    if (new_mcsidx == csi.mcsidx)
         return;
 
     // Log before change
-    const char *direction = (new_mcsidx > mcsidx) ? "up" : "down";
-    auto       old_mcsidx = mcsidx;
-    auto       old_short_per = short_per;
-    auto       old_long_per = long_per;
+    const char *direction = (new_mcsidx > csi.mcsidx) ? "up" : "down";
+    auto       old_mcsidx = csi.mcsidx;
+    auto       old_short_per = csi.short_per;
+    auto       old_long_per = csi.long_per;
     char       short_per_s[BUFSIZE];
     char       long_per_s[BUFSIZE];
     char       short_evm_s[BUFSIZE];
     char       long_evm_s[BUFSIZE];
 
 #if DEBUG
-    snprintf(short_per_s, sizeof(short_per_s), "%0.2f", short_per.value_or(0));
-    snprintf(long_per_s, sizeof(long_per_s), "%0.2f", long_per.value_or(0));
+    snprintf(short_per_s, sizeof(short_per_s), "%0.2f", csi.short_per.value_or(0));
+    snprintf(long_per_s, sizeof(long_per_s), "%0.2f", csi.long_per.value_or(0));
 
     dprintf("Moving %s modulation scheme: node=%u; mcsidx=%u; short_per=%s; long_per=%s; swin=%lu; lwin=%lu",
             direction,
             node.id,
-            (unsigned) mcsidx,
-            short_per ? short_per_s : "none",
-            long_per ? long_per_s : "none",
-            short_per.getWindowSize(),
-            long_per.getWindowSize());
+            (unsigned) csi.mcsidx,
+            csi.short_per ? short_per_s : "none",
+            csi.long_per ? long_per_s : "none",
+            csi.short_per.getWindowSize(),
+            csi.long_per.getWindowSize());
 #endif /* DEBUG */
 
     // Set new MCS index
-    mcsidx = new_mcsidx;
+    csi.mcsidx = new_mcsidx;
 
     // Set end of PER window
     per_end = seq;
@@ -1940,23 +1935,23 @@ void SendWindow::setMCS(size_t new_mcsidx)
     // Log change
     snprintf(short_per_s, sizeof(short_per_s), "%0.2f", old_short_per.value_or(0));
     snprintf(long_per_s, sizeof(long_per_s), "%0.2f", old_long_per.value_or(0));
-    snprintf(short_evm_s, sizeof(short_evm_s), "%0.1f", short_evm.value_or(0));
-    snprintf(long_evm_s, sizeof(long_evm_s), "%0.1f", long_evm.value_or(0));
+    snprintf(short_evm_s, sizeof(short_evm_s), "%0.1f", csi.short_evm.value_or(0));
+    snprintf(long_evm_s, sizeof(long_evm_s), "%0.1f", csi.long_evm.value_or(0));
 
     logAMC(LOGDEBUG, "Moved %s modulation scheme: node=%u; mcsidx=%u (from %u); short_per=%s; long_per=%s; prob=%.02f; short_evm=%s; long_evm=%s; unack=%u; init_seq=%u; swin=%lu; lwin=%lu",
            direction,
            node.id,
-           (unsigned) mcsidx,
+           (unsigned) csi.mcsidx,
            (unsigned) old_mcsidx,
            old_short_per ? short_per_s : "none",
            old_long_per ? long_per_s : "none",
-           mcsidx_prob[mcsidx],
-           short_evm ? short_evm_s : "none",
-           long_evm ? long_evm_s : "none",
+           csi.mcsidx_prob[csi.mcsidx],
+           csi.short_evm ? short_evm_s : "none",
+           csi.long_evm ? long_evm_s : "none",
            (unsigned) unack,
            (unsigned) per_end,
-           short_per.getWindowSize(),
-           long_per.getWindowSize());
+           csi.short_per.getWindowSize(),
+           csi.long_per.getWindowSize());
 }
 
 void SendWindow::resetPEREstimates(void)
@@ -1977,11 +1972,11 @@ void SendWindow::resetPEREstimates(void)
         }
     }
 
-    short_per.setWindowSize(std::max(1.0, controller.short_per_window_*min_channel_bandwidth/controller.max_packet_samples_[mcsidx]));
-    short_per.reset();
+    csi.short_per.setWindowSize(std::max(1.0, controller.short_per_window_*min_channel_bandwidth/controller.max_packet_samples_[csi.mcsidx]));
+    csi.short_per.reset();
 
-    long_per.setWindowSize(std::max(1.0, controller.long_per_window_*min_channel_bandwidth/controller.max_packet_samples_[mcsidx]));
-    long_per.reset();
+    csi.long_per.setWindowSize(std::max(1.0, controller.long_per_window_*min_channel_bandwidth/controller.max_packet_samples_[csi.mcsidx]));
+    csi.long_per.reset();
 }
 
 void SendWindow::Entry::operator()()

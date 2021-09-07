@@ -59,49 +59,49 @@ public:
     {
         SendWindowGuard sendw(*controller_, node_id_);
 
-        return sendw->short_per.value();
+        return sendw->csi.short_per.value();
     }
 
     std::optional<double> getLongPER(void)
     {
         SendWindowGuard sendw(*controller_, node_id_);
 
-        return sendw->long_per.value();
+        return sendw->csi.long_per.value();
     }
 
     std::optional<double> getShortEVM(void)
     {
         SendWindowGuard sendw(*controller_, node_id_);
 
-        return sendw->short_evm;
+        return sendw->csi.short_evm;
     }
 
     std::optional<double> getLongEVM(void)
     {
         SendWindowGuard sendw(*controller_, node_id_);
 
-        return sendw->long_evm;
+        return sendw->csi.long_evm;
     }
 
     std::optional<double> getShortRSSI(void)
     {
         SendWindowGuard sendw(*controller_, node_id_);
 
-        return sendw->short_rssi;
+        return sendw->csi.short_rssi;
     }
 
     std::optional<double> getLongRSSI(void)
     {
         SendWindowGuard sendw(*controller_, node_id_);
 
-        return sendw->long_rssi;
+        return sendw->csi.long_rssi;
     }
 
     size_t getMCSIdx(void)
     {
         SendWindowGuard sendw(*controller_, node_id_);
 
-        return sendw->mcsidx;
+        return sendw->csi.mcsidx;
     }
 
 private:

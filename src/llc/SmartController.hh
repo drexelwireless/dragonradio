@@ -52,6 +52,51 @@ struct SendWindow {
 
     using vector_type = std::vector<Entry>;
 
+    /** @brief Channel state information */
+    struct CSI {
+        CSI() = delete;
+
+        CSI(size_t mcs_count)
+          : mcsidx_prob(mcs_count, 1.0)
+          , mcsidx(0)
+          , prev_short_per(1)
+          , prev_long_per(1)
+          , short_per(1)
+          , long_per(1)
+        {
+        }
+
+        /** @brief The probability of moving to a given MCS */
+        std::vector<double> mcsidx_prob;
+
+        /** @brief Modulation index */
+        size_t mcsidx;
+
+        /** @brief Short-term EVM, as reported by receiver */
+        std::optional<float> short_evm;
+
+        /** @brief Long-term EVM, as reported by receiver */
+        std::optional<float> long_evm;
+
+        /** @brief Short-term RSSI, as reported by receiver */
+        std::optional<float> short_rssi;
+
+        /** @brief Long-term RSSI, as reported by receiver */
+        std::optional<float> long_rssi;
+
+        /** @brief Previous short-term packet error rate */
+        double prev_short_per;
+
+        /** @brief Previous long-term packet error rate */
+        double prev_long_per;
+
+        /** @brief Short-term packet error rate */
+        WindowedMean<double> short_per;
+
+        /** @brief Long-term packet error rate */
+        WindowedMean<double> long_per;
+    };
+
     SendWindow(Node &n,
                SmartController &controller,
                Seq::uint_type maxwin,
@@ -68,21 +113,6 @@ struct SendWindow {
 
     /** @brief Mutex for the send window */
     std::mutex mutex;
-
-    /** @brief Modulation index */
-    size_t mcsidx;
-
-    /** @brief Short-term EVM, as reported by receiver */
-    std::optional<float> short_evm;
-
-    /** @brief Long-term EVM, as reported by receiver */
-    std::optional<float> long_evm;
-
-    /** @brief Short-term RSSI, as reported by receiver */
-    std::optional<float> short_rssi;
-
-    /** @brief Long-term RSSI, as reported by receiver */
-    std::optional<float> long_rssi;
 
     /** @brief Is this a new window? */
     bool new_window;
@@ -112,9 +142,6 @@ struct SendWindow {
     /** @brief Maximum window size */
     Seq::uint_type maxwin;
 
-    /** @brief The probability of moving to a given MCS */
-    std::vector<double> mcsidx_prob;
-
     /** @brief First sequence that can possibly be used to calculate PER. */
     /** The packet with this sequence number is the first that can possibly be
       * used to calculate PER. We use this when the environment has changed and
@@ -129,17 +156,8 @@ struct SendWindow {
      */
     Seq per_end;
 
-    /** @brief Previous short-term packet error rate */
-    double prev_short_per;
-
-    /** @brief Previous long-term packet error rate */
-    double prev_long_per;
-
-    /** @brief Short-term packet error rate */
-    WindowedMean<double> short_per;
-
-    /** @brief Long-term packet error rate */
-    WindowedMean<double> long_per;
+    /** @brief Channel state */
+    CSI csi;
 
     /** @brief Duration of retransmission timer */
     double retransmission_delay;
@@ -174,13 +192,13 @@ struct SendWindow {
     /** @brief Move down one MCS level */
     void moveDownMCS(unsigned n)
     {
-        setMCS(mcsidx - n);
+        setMCS(csi.mcsidx - n);
     }
 
     /** @brief Move up one MCS level */
     void moveUpMCS(void)
     {
-        setMCS(mcsidx + 1);
+        setMCS(csi.mcsidx + 1);
     }
 
     /** @brief Set MCS */
