@@ -30,8 +30,12 @@ public:
         push_hi(std::move(pkt));
     }
 
-    /** @brief Notify of new MCS */
-    virtual void updateMCS(NodeId id, const MCS *mcs)
+    /** @brief Notify queue of new node metric
+     * @param id Node whose metric has changed.
+     * @param metric The new node metric. A larger value indicates a better
+     * metric.
+     */
+    virtual void updateMetric(NodeId id, double metric)
     {
     }
 
