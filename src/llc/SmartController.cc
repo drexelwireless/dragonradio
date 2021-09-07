@@ -1928,10 +1928,9 @@ void SendWindow::setMCS(size_t new_mcsidx)
     // Reset PER estimates
     resetPEREstimates();
 
-    // Inform network queue of new MCS
-    const MCS *mcs = controller.phy_->mcs_table[new_mcsidx].mcs;
-
-    controller.netlink_->updateMCS(node.id, mcs);
+    // Inform network queue of new metric. We use the data rate of the link as
+    // the metric.
+    controller.netlink_->updateMetric(node.id, mcs_table[new_mcsidx].mcs->getRate());
 
     // Log change
     snprintf(short_per_s, sizeof(short_per_s), "%0.2f", old_short_per.value_or(0));

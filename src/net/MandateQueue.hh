@@ -250,7 +250,7 @@ public:
             SubQueue &subq = it.get();
 
             if (subq.mandate)
-                result.push_back({subq.mandate->flow_uid, subq.priority, subq.rate, subq.mandate->point_value, subq.min_throughput});
+                result.push_back({subq.mandate->flow_uid, subq.priority, subq.metric, subq.mandate->point_value, subq.min_throughput});
             else
                 result.push_back({std::nullopt, subq.priority, std::nullopt, std::nullopt, std::nullopt});
         }
@@ -383,18 +383,17 @@ public:
         cond_.notify_all();
     }
 
-    virtual void updateMCS(NodeId id, const MCS *mcs) override
+    virtual void updateMetric(NodeId id, double metric) override
     {
         std::unique_lock<std::mutex> lock(m_);
-        double                       rate = mcs->getRate();
 
-        node_rates_[id] = rate;
+        node_metrics_[id] = metric;
 
         for (auto&& subqref : qs_) {
             SubQueue &subq = subqref.get();
 
             if (subq.nexthop == id)
-                subq.updateRate(rate);
+                subq.updateMetric(metric);
         }
     }
 
@@ -502,8 +501,8 @@ protected:
         /** @brief Next hop */
         std::optional<NodeId> nexthop;
 
-        /** @brief Encoding rate */
-        std::optional<double> rate;
+        /** @brief Node metric. Larger values are better. */
+        std::optional<double> metric;
 
         /** @brief Minimum throughput (bytes per second) */
         std::optional<double> min_throughput;
@@ -536,10 +535,10 @@ protected:
                 // If the queue has a throughput requirement, use it to set the
                 // queue's priority.
                 if (nexthop) {
-                    auto it = mq_.node_rates_.find(*nexthop);
+                    auto it = mq_.node_metrics_.find(*nexthop);
 
-                    if (it != mq_.node_rates_.end())
-                        updateRate(it->second);
+                    if (it != mq_.node_metrics_.end())
+                        updateMetric(it->second);
                 }
 
                 // Add the queue's items to the total count
@@ -590,16 +589,16 @@ protected:
             updatePriority();
         }
 
-        void updateRate(double rate_)
+        void updateMetric(double metric_)
         {
-            rate = rate_;
+            metric = metric_;
             updatePriority();
         }
 
         void updatePriority(void)
         {
-            if (rate && min_throughput && mandate) {
-                double new_priority = (*rate)*static_cast<double>(mandate->point_value)/static_cast<double>(*min_throughput);
+            if (metric && min_throughput && mandate) {
+                double new_priority = (*metric)*static_cast<double>(mandate->point_value)/static_cast<double>(*min_throughput);
 
                 if (priority.second != new_priority) {
                     priority.second = new_priority;
@@ -793,7 +792,7 @@ protected:
         {
             if (mandate) {
                 // If the queue has a mandate, set its next hop so we can use
-                // node rate information to update the queue's priority.
+                // node metric information to update the queue's priority.
                 nexthop = pkt->hdr.nexthop;
 
                 // Add deadline based on mandate.
@@ -949,8 +948,8 @@ protected:
     /** @brief Timer queue */
     TimerQueue timer_queue_;
 
-    /** @brief Map from node ID to rate. */
-    std::unordered_map<NodeId, double> node_rates_;
+    /** @brief Map from node ID to metrics. */
+    std::unordered_map<NodeId, double> node_metrics_;
 
     /** @brief Map from flow to queue. */
     std::unordered_map<FlowUID, SubQueue> flow_qs_;
