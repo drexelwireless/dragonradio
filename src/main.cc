@@ -75,11 +75,15 @@ int main(int argc, char** argv)
     }
 
     // Drop capabilities
-    Caps caps(cap_get_proc());
+    try {
+        Caps caps(cap_get_proc());
 
-    caps.clear();
-    caps.set_flag(CAP_PERMITTED, {CAP_SYS_NICE, CAP_NET_ADMIN});
-    caps.set_proc();
+        caps.clear();
+        caps.set_flag(CAP_PERMITTED, {CAP_SYS_NICE, CAP_NET_ADMIN});
+        caps.set_proc();
+    } catch(const std::exception& e) {
+        throw std::runtime_error("Cannot obtain CAP_SYS_NICE and CAP_NET_ADMIN capabilities.");
+    }
 
     // Drop euid
     if (geteuid() != getuid()) {
