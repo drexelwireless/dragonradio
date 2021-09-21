@@ -151,10 +151,6 @@ distclean : clean
 
 dragonradio : $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
-	sudo chown root $@
-	sudo chmod u+s $@
-	# If file capabilities are supported, do this instead
-	#sudo setcap cap_sys_nice,cap_net_admin+p $@
 
 flexframedemod : util/flexframedemod.cc
 	$(CXX) $< $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LIBS) -o $@
