@@ -1,18 +1,18 @@
 [submodule "dependencies/liquid-dsp"]
 	path = dependencies/liquid-dsp
-	url = git@github.com:drexelwireless/liquid-dsp.git
+	url = https://github.com/drexelwireless/liquid-dsp.git
 [submodule "dependencies/uhd"]
 	path = dependencies/uhd
-	url = git@github.com:drexelwireless/uhd.git
+	url = https://github.com/drexelwireless/uhd.git
 [submodule "dependencies/pybind11"]
 	path = dependencies/pybind11
-	url = git@github.com:pybind/pybind11.git
+	url = https://github.com/pybind/pybind11.git
 [submodule "dependencies/libcorrect"]
 	path = dependencies/libcorrect
-	url = git@github.com:drexelwireless/libcorrect.git
+	url = https://github.com/drexelwireless/libcorrect.git
 [submodule "dependencies/xsimd"]
 	path = dependencies/xsimd
-	url = git@github.com:QuantStack/xsimd.git
+	url = https://github.com/QuantStack/xsimd.git
 [submodule "dependencies/firpm"]
 	path = dependencies/firpm
-	url = git@github.com:sfilip/firpm.git
+	url = https://github.com/sfilip/firpm.git
