@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2021 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 CONTAINER=$1; shift
 
@@ -11,7 +11,7 @@ GID=$(id -g)
 #
 
 lxc exec "$CONTAINER" -- groupadd -g "$GID" "$USER"
-lxc exec "$CONTAINER" -- useradd -u "$UID" -g "$GID" -G sudo,lxd -d "$HOME" -s /bin/zsh -M "$USER"
+lxc exec "$CONTAINER" -- useradd -u "$UID" -g "$GID" -G sudo -d "$HOME" -s "$SHELL" -M "$USER"
 lxc exec "$CONTAINER" -- sh -c "cat >/etc/sudoers.d/$USER" <<EOF
 $USER ALL=(ALL) NOPASSWD: ALL
 EOF
