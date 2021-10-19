@@ -108,13 +108,13 @@ setup(
     setup_requires=['pybind11>=2.5.0'],
     cmdclass={'build_ext': BuildExt},
     install_requires=['fastparquet==0.7.1'
-                     ,'h5py==3.3.0'
-                     ,'importlib_resources==5.2.2'
+                     ,'h5py==3.4.0'
+                     ,'importlib_resources==5.3.0'
                      ,'matplotlib==3.4.3'
                      ,'numpy==1.21.2'
-                     ,'pandas==1.3.2'
+                     ,'pandas==1.3.4'
                      ,'pycairo==1.20.1'
-                     ,'PyGObject==3.40.1'
+                     ,'PyGObject==3.42.0'
                      ,'python-snappy==0.6.0'
                      ,'requests==2.26.0'
                      ,'scipy==1.7.1'
