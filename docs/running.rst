@@ -5,7 +5,7 @@ The radio is initialized via Python. The ``dragonradio`` binary will treat its f
 
 The radio must be run with root privileges in order to properly configure the USRP and network. Help removing this restriction is welcome.
 
-The ``build.sh`` script will create a virtualenv environment containing all needed Python modules. You may either activate this virtualenv before invoking the radio, or you may set the ``VIRTUAL_ENV`` environment variable to point to the virtualenv before you invoke ``dragonradio``.
+The ``build.sh`` script will create a virtualenv environment in the directory ``venv`` containing all required Python modules. You may either activate this virtualenv before invoking the radio, or you may set the ``VIRTUAL_ENV`` environment variable to point to it before you invoke ``dragonradio``.
 
 The Stand-alone Radio
 ---------------------
@@ -14,7 +14,7 @@ Let's take a look at an example invocation of the stand-alone radio, which uses 
 
 .. code-block:: bash
 
-   VIRTUAL_ENV=env ./dragonradio scripts/standalone-radio.py \
+   VIRTUAL_ENV=venv ./dragonradio scripts/standalone-radio.py \
       --auto-soft-tx-gain 100 -G 25 -R 25 \
       --slot-size=0.05 --guard-size=0.001 --superslots --tdma-fdma \
       --fifo --packet-compression \
@@ -41,7 +41,7 @@ The next invocation of the stand-alone radio adds the options ``--config config/
 
 .. code-block:: bash
 
-   VIRTUAL_ENV=env ./dragonradio scripts/standalone-radio.py \
+   VIRTUAL_ENV=venv ./dragonradio scripts/standalone-radio.py \
       --config config/features/amc.conf --amc --arq \
       --auto-soft-tx-gain 100 -G 25 -R 25 \
       --slot-size=0.05 --guard-size=0.001 --superslots --tdma-fdma \
@@ -64,7 +64,7 @@ Here is an example invocation of the SC2 competition radio:
 
 .. code-block:: bash
 
-   VIRTUAL_ENV=env ./dragonradio scripts/sc2-radio.py \
+   VIRTUAL_ENV=venv ./dragonradio scripts/sc2-radio.py \
       --config config/srn/radio.conf \
       --colosseum-ini config/srn/colosseum_config.ini
       --collab-server-ip 10.32.143.101 \

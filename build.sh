@@ -37,8 +37,8 @@ CFLAGS="-Ofast -march=native"
 (cd dependencies/firpm/firpm_d && rm -rf build && mkdir build && cd build && cmake .. && make -j4 && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
 
 # Create virtualenv
-virtualenv -p python3.8 env
-. env/bin/activate
+virtualenv -p python3.8 venv
+. venv/bin/activate
 
 # Update to latest pip and setuptools
 pip install --upgrade pip setuptools

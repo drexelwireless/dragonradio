@@ -1,3 +1,3 @@
 #!/bin/sh
-. /root/dragonradio/env/bin/activate
+. /root/dragonradio/venv/bin/activate
 exec dragonradio-client status "$@"

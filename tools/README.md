@@ -6,7 +6,7 @@ The file `drlog.py` is a module for loading radio log files into a `Log` object.
 
 ## Building
 
-The tools here target python 3.5. The `install.sh` script will perform all steps necessary to create a Python virtualenv at `tools/env` and install the `dragonradio` Python module there. The `dragonradio` module allows portions of the `liquid-dsp` library and other DSP functionality present in the full radio to be used in python.
+The tools here target python 3.5. The `install.sh` script will perform all steps necessary to create a Python virtualenv at `tools/venv` and install the `dragonradio` Python module there. The `dragonradio` module allows portions of the `liquid-dsp` library and other DSP functionality present in the full radio to be used in python.
 
 A full installation requires compiling and installing the `libcorrect` and `liquid-dsp` libraries, which the `install.sh` script does. If you don't like this, if you don't want the liquid module, or if you don't want to use a virtualenv, look at the `install.sh` script and see how it operates.
 
