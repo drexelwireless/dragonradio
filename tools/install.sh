@@ -16,6 +16,3 @@ pip install --upgrade pip setuptools
 (cd .. && pip install python/dragonradio-internal)
 (cd .. && pip install -e python/dragonradio)
 (cd .. && pip install -e python/dragonradio-tools)
-
-# Install tool dependencies
-pip install -Ur requirements.txt
