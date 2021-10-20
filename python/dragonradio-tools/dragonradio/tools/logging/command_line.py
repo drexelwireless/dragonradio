@@ -7,8 +7,6 @@ from functools import reduce
 import logging
 import pytz
 
-import dragonradio.tools.colosseum.scoring
-
 from .logging import LogCollection
 
 UTC = pytz.timezone('UTC')
