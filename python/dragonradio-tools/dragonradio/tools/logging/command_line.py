@@ -54,6 +54,7 @@ class Command(object):
 
     def run(self, *args, **kwargs):
         parser = argparse.ArgumentParser(*args, **kwargs)
+
         parser.add_argument('-d', '--debug', action='store_const',
                             const=logging.DEBUG,
                             dest='loglevel',
@@ -63,20 +64,27 @@ class Command(object):
                             const=logging.INFO,
                             dest='loglevel',
                             help='be verbose')
-        parser.add_argument('--start-time', type=float,
-                            default=None,
-                            metavar='SEC',
-                            help='set start time in seconds since the epoch')
-        parser.add_argument('--srn-logs', type=str,
-                            default=None,
-                            metavar='DIR',
-                            help='directory where node logs are located')
-        parser.add_argument('--srn', action='append', type=int,
-                            dest='srns',
-                            default=None,
-                            metavar='NODE',
-                            help='load log for SRN')
-        parser.add_argument('paths', nargs='*')
+
+        # Logging options
+        logging_parser = parser.add_argument_group('Log files')
+
+        logging_parser.add_argument('--start-time', type=float,
+                                    default=None,
+                                    metavar='SEC',
+                                    help='set start time in seconds since the epoch')
+        logging_parser.add_argument('--srn-logs', type=str,
+                                    default=None,
+                                    metavar='DIR',
+                                    help='directory where node logs are located')
+        logging_parser.add_argument('--srn', action='append', type=int,
+                                    dest='srns',
+                                    default=None,
+                                    metavar='NODE',
+                                    help='load log for SRN')
+        logging_parser.add_argument('paths',
+                                    metavar='LOG',
+                                    help='path to radio.h5 log or reservation',
+                                    nargs='*')
 
         # Add additional arguments
         self.add_arguments(parser)

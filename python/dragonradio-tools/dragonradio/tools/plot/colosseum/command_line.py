@@ -12,54 +12,60 @@ class PlotScoreCommand(Command):
         super().__init__(*args, **kwargs)
 
     def add_arguments(self, parser):
-        parser.add_argument('--dump-environment', action='store_true',
-                            help='dump environment to CSV')
-        parser.add_argument('--dump-mandates', action='store_true',
-                            help='dump mandates to CSV')
-        parser.add_argument('--dump-flow-mp-scores', action='store_true',
-                            help='dump per-flow measurement period scores to CSV')
-        parser.add_argument('--dump-mp-scores', action='store_true',
-                            help='dump measurement period scores to CSV')
-        parser.add_argument('--dump-pe-scores', action='store_true',
-                            help='dump PE scores to CSV')
-        parser.add_argument('--dump-scores', action='store_true',
-                            help='dump (cumulative) scores to CSV')
-        parser.add_argument('--dump-threshold-success', action='store_true',
-                            help='dump threshold success to CSV')
-        parser.add_argument('--dump-ensemble-threshold-success', action='store_true',
-                            help='dump ensemble threshold success to CSV')
-        parser.add_argument('--dump-flows', action='store_true',
-                            help='dump flows')
-        parser.add_argument('--dump-flow', type=int,
-                            default=None,
-                            metavar='FLOWUID',
-                            help='dump specific flow')
-        parser.add_argument('--dump-mp', type=int,
-                            default=None,
-                            metavar='MP',
-                            help='dump specific measurement period')
+        # Dump options
+        dump_parser = parser.add_argument_group('Dump options')
+        dump_parser.add_argument('--dump-environment', action='store_true',
+                                 help='dump environment to CSV')
+        dump_parser.add_argument('--dump-mandates', action='store_true',
+                                 help='dump mandates to CSV')
+        dump_parser.add_argument('--dump-flow-mp-scores', action='store_true',
+                                 help='dump per-flow measurement period scores to CSV')
+        dump_parser.add_argument('--dump-mp-scores', action='store_true',
+                                 help='dump measurement period scores to CSV')
+        dump_parser.add_argument('--dump-pe-scores', action='store_true',
+                                 help='dump PE scores to CSV')
+        dump_parser.add_argument('--dump-scores', action='store_true',
+                                 help='dump (cumulative) scores to CSV')
+        dump_parser.add_argument('--dump-threshold-success', action='store_true',
+                                 help='dump threshold success to CSV')
+        dump_parser.add_argument('--dump-ensemble-threshold-success', action='store_true',
+                                 help='dump ensemble threshold success to CSV')
+        dump_parser.add_argument('--dump-flows', action='store_true',
+                                 help='dump flows to CSV')
+        dump_parser.add_argument('--dump-flow', type=int,
+                                 default=None,
+                                 metavar='FLOWUID',
+                                 help='dump specific flow to CSV')
+        dump_parser.add_argument('--dump-mp', type=int,
+                                 default=None,
+                                 metavar='MP',
+                                 help='dump specific measurement period to CSV')
 
-        parser.add_argument('--plot-score', action='store_true',
-                            help='plot score')
-        parser.add_argument('--grid', action='store_true',
-                            help='turn on plot grid')
-        parser.add_argument('--reported', action='store_true',
-                            help='plot score reported by gateway')
-        parser.add_argument('--phase3', action='store_true',
-                            help='plot Phase 3 score')
+        # Flow information
+        flow_options = parser.add_argument_group('Flow information')
+        flow_options.add_argument('--flows', action='store_true',
+                                  help='show flows')
+        flow_options.add_argument('--problem-flows', action='store_true',
+                                  help='show problematic flows')
+        flow_options.add_argument('--late-flows', action='store_true',
+                                  help='show flows with late packets')
+        flow_options.add_argument('--problem-srns', action='store_true',
+                                  help='show problematic SRNs')
 
-        parser.add_argument('--flows', action='store_true',
-                            help='show flows')
-        parser.add_argument('--problem-flows', action='store_true',
-                            help='show problematic flows')
-        parser.add_argument('--problem-srns', action='store_true',
-                            help='show problematic SRNs')
-        parser.add_argument('--late-flows', action='store_true',
-                            help='show flows with late packets')
-        parser.add_argument('--plot-flow', type=int,
-                            default=None,
-                            metavar='FLOWUID',
-                            help='plot specific flow')
+        # Score plotting
+        score_parser = parser.add_argument_group('Score plotting')
+        score_parser.add_argument('--plot-score', action='store_true',
+                                  help='plot score')
+        score_parser.add_argument('--grid', action='store_true',
+                                  help='turn on plot grid')
+        score_parser.add_argument('--reported', action='store_true',
+                                  help='plot score reported by gateway')
+        score_parser.add_argument('--phase3', action='store_true',
+                                  help='plot Phase 3 score')
+        score_parser.add_argument('--plot-flow', type=int,
+                                  default=None,
+                                  metavar='FLOWUID',
+                                  help='plot specific flow')
 
         add_annotate_args(parser)
 
