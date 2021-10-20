@@ -52,6 +52,8 @@ class PlotScoreCommand(Command):
                             help='show flows')
         parser.add_argument('--problem-flows', action='store_true',
                             help='show problematic flows')
+        parser.add_argument('--problem-srns', action='store_true',
+                            help='show problematic SRNs')
         parser.add_argument('--late-flows', action='store_true',
                             help='show flows with late packets')
         parser.add_argument('--plot-flow', type=int,
@@ -124,18 +126,10 @@ class PlotScoreCommand(Command):
                 print("Flow {:d} {:f}".format(flow_uid, max_delay))
 
         if args.flows or args.problem_flows:
-            for _, row in scorer.flows.iterrows():
-                if row.points == row.possible_points:
-                    if args.problem_flows:
-                        break
+            show_flows(scorer, problem_flows=args.problem_flows)
 
-                    print("Flow {:d} ({:s}); {} -> {}".\
-                        format(row.flow_uid, row.desc, row.srn_src, row.srn_dest))
-                else:
-                    print("Flow {:d} ({:s}); {} -> {}; lost {:.0f} points ({:.02f}%)".\
-                        format(row.flow_uid, row.desc,
-                            row.srn_src, row.srn_dest,
-                            row.lost_points, row.points_fraction))
+        if args.problem_srns:
+            show_problem_srns(scorer)
 
         if args.plot_flow:
             FlowPlot(reservation, scorer, args.plot_flow, annotate=args.annotate)
@@ -150,6 +144,51 @@ class PlotScoreCommand(Command):
                       grid=args.grid)
 
             plt.show()
+
+def show_flows(scorer, problem_flows=False):
+    for _, row in scorer.flows.iterrows():
+        if row.points == row.possible_points:
+            if problem_flows:
+                break
+
+            print("Flow {:d} ({:s}); {} -> {}".\
+                format(row.flow_uid, row.desc, row.srn_src, row.srn_dest))
+        else:
+            print("Flow {:d} ({:s}); {} -> {}; lost {:.0f} points ({:.02f}%)".\
+                format(row.flow_uid, row.desc,
+                    row.srn_src, row.srn_dest,
+                    row.lost_points, row.points_fraction))
+
+def show_problem_srns(scorer):
+    nodes = {}
+
+    # Build initial map from nodes to points lost
+    for _, row in scorer.flows.iterrows():
+        if row.lost_points != 0:
+            nodes[row.srn_src] = nodes.get(row.srn_src, 0) + row.lost_points
+            nodes[row.srn_dest] = nodes.get(row.srn_dest, 0) + row.lost_points
+
+    while len(nodes) != 0:
+        # Pick worst offender
+        all_nodes = sorted(nodes.items(), key=lambda x : x[1], reverse=True)
+        offender = all_nodes[0][0]
+
+        # Display worst offenders
+        print("SRN {} lost {:.0f} points".format(offender, nodes[offender]))
+
+        # Remove losses for which worst offenders are responsible
+        del nodes[offender]
+
+        for _, row in scorer.flows.iterrows():
+            if row.lost_points != 0:
+                if row.srn_src == offender and row.srn_dest in nodes:
+                    nodes[row.srn_dest] -= row.lost_points
+
+                if row.srn_dest == offender and row.srn_src in nodes:
+                    nodes[row.srn_src] -= row.lost_points
+
+        # Remove nodes that are not responsible for point losses
+        nodes = {k: v for k, v in nodes.items() if v > 0}
 
 def plot_score():
     mp.use('GTK3Agg')
