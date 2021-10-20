@@ -82,7 +82,7 @@ int main(int argc, char** argv)
         caps.set_flag(CAP_PERMITTED, {CAP_SYS_NICE, CAP_NET_ADMIN});
         caps.set_proc();
     } catch(const std::exception& e) {
-        throw std::runtime_error("Cannot obtain CAP_SYS_NICE and CAP_NET_ADMIN capabilities.");
+        fprintf(stderr, "WARNING: Cannot obtain CAP_SYS_NICE and CAP_NET_ADMIN capabilities.\n");
     }
 
     // Drop euid
