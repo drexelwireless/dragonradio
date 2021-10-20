@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import re
 
-from dragonradio.tools.logging.command_line import Command
+from dragonradio.tools.logging.command_line import add_annotate_args, Command
 
 from .plot import pprEvent, pprSentPacket, pprReceivedPacket, pprTXRecord
 from .plot import EventPlot, RadioMetricPlot, TrafficPlot
@@ -138,13 +138,7 @@ class PlotEventsCommand(Command):
         parser.add_argument('--flow', action='append',
                             metavar='FLOW')
 
-        parser.add_argument('--annotate', action='store_const', const=True,
-                            dest='annotate',
-                            default=False,
-                            help='show annotations')
-        parser.add_argument('--no-annotate', action='store_const', const=False,
-                            dest='annotate',
-                            help='do not show annotations')
+        add_annotate_args(parser)
 
     def handle(self, parser, args):
         plot = EventPlot(self.logs, annotate=args.annotate)
@@ -269,13 +263,7 @@ class PlotRadioMetricCommand(Command):
                             metavar='BEGIN,END',
                             help='plot latency between two timestamped times')
 
-        parser.add_argument('--annotate', action='store_const', const=True,
-                            dest='annotate',
-                            default=False,
-                            help='show annotations')
-        parser.add_argument('--no-annotate', action='store_const', const=False,
-                            dest='annotate',
-                            help='do not show annotations')
+        add_annotate_args(parser)
 
         parser.add_argument('--include-invalid-packets', action='store_true', default=False,
                             help='include invalid packets when displaying metrics')
@@ -338,13 +326,7 @@ class PlotTrafficCommand(Command):
         parser.add_argument('--by-flow', action='store_true',
                             help='show traffic by flow')
 
-        parser.add_argument('--annotate', action='store_const', const=True,
-                            dest='annotate',
-                            default=False,
-                            help='show annotations')
-        parser.add_argument('--no-annotate', action='store_const', const=False,
-                            dest='annotate',
-                            help='do not show annotations')
+        add_annotate_args(parser)
 
     def handle(self, parser, args):
         src = None

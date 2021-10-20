@@ -4,7 +4,7 @@ import matplotlib as mp
 import matplotlib.pyplot as plt
 
 from dragonradio.tools.colosseum import Scorer
-from dragonradio.tools.logging.command_line import Command
+from dragonradio.tools.logging.command_line import add_annotate_args, Command
 from dragonradio.tools.plot.colosseum import ScorePlot, FlowPlot
 
 class PlotScoreCommand(Command):
@@ -61,13 +61,7 @@ class PlotScoreCommand(Command):
                             metavar='FLOWUID',
                             help='plot specific flow')
 
-        parser.add_argument('--annotate', action='store_const', const=True,
-                            dest='annotate',
-                            default=False,
-                            help='show annotations')
-        parser.add_argument('--no-annotate', action='store_const', const=False,
-                            dest='annotate',
-                            help='do not show annotations')
+        add_annotate_args(parser)
 
     def handle(self, parser, args):
         reservation = self.logs.reservation

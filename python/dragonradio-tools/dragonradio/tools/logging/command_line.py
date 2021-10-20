@@ -11,6 +11,17 @@ from .logging import LogCollection
 
 UTC = pytz.timezone('UTC')
 
+def add_annotate_args(parser):
+    annotate_parser = parser.add_argument_group('Plot annotations')
+
+    annotate_parser.add_argument('--annotate', action='store_const', const=True,
+                                 dest='annotate',
+                                 default=False,
+                                 help='show annotations')
+    annotate_parser.add_argument('--no-annotate', action='store_const', const=False,
+                                 dest='annotate',
+                                 help='do not show annotations')
+
 class Command(object):
     def __init__(self : str=None):
         self.start_time : datetime.datetime = None
