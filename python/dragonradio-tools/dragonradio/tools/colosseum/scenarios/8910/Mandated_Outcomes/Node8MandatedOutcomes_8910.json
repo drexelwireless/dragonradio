@@ -1,0 +1,1270 @@
+[
+{
+  "timestamp": 15.0,
+  "scenario_goals": [
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5001,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5002,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5003,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5004,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5005,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5006,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5007,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5008,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5009,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5046,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5047,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5048,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5061,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5062,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5063,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5064,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5065,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5066,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5067,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5068,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5069,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5070,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5111,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5112,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5113,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5114,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5115,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5116,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5117,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    }
+  ]
+},
+{
+  "timestamp": 165.0,
+  "scenario_goals": [
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5146,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5147,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5148,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5149,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5150,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5151,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5152,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5153,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5154,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5191,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5192,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5193,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5206,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5207,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5208,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5209,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5210,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5211,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5212,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5213,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5214,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5215,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5256,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5257,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5258,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5259,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5260,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5261,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5262,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    }
+  ]
+},
+{
+  "timestamp": 345.0,
+  "scenario_goals": [
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5291,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5292,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5293,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5294,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5295,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5296,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5297,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5298,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5299,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5336,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5337,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5338,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5351,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5352,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5353,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5354,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5355,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5356,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5357,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5358,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5359,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5360,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5401,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5402,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5403,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5404,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5405,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5406,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5407,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    }
+  ]
+},
+{
+  "timestamp": 525.0,
+  "scenario_goals": [
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5436,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5437,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5438,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5439,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5440,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5441,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5442,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5443,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5444,
+      "goal_set": "Voice",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.00000000001
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5481,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5482,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5483,
+      "goal_set": "Video",
+      "hold_period": 10,
+      "point_value": 10,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 918691.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5496,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5497,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5498,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5499,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5500,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5501,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5502,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5503,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5504,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5505,
+      "goal_set": "C2",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5546,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5547,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5548,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5549,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5550,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5551,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "goal_type": "Traffic",
+      "flow_uid": 5552,
+      "goal_set": "Static Images",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    }
+  ]
+}
+]

@@ -1,0 +1,617 @@
+[
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5041,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5042,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5043,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5044,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5045,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5046,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5047,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5048,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5049,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5050,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    }
+  ],
+  "timestamp": 15.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5091,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5092,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5093,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5094,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5095,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5096,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5097,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5098,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5099,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5100,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5141,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5142,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5143,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5144,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5145,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5146,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5147,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5148,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5149,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5150,
+      "goal_set": "Files",
+      "goal_type": "Medium",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    }
+  ],
+  "timestamp": 195.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5191,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5192,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5193,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5194,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5195,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5196,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5197,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5198,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5199,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5200,
+      "goal_set": "Files",
+      "goal_type": "Small",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5241,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5242,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5243,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5244,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5245,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5246,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5247,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5248,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5249,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5250,
+      "goal_set": "Files",
+      "goal_type": "Normal",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5291,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5292,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5293,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5294,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5295,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5296,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5297,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5298,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5299,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5300,
+      "goal_set": "Files",
+      "goal_type": "Large",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    }
+  ],
+  "timestamp": 375.0
+}
+]

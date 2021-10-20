@@ -1,12 +1,10 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2021 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
-import datetime
 from functools import cached_property
-import importlib.resources
+import importlib_resources
 import json
 import logging
 import os
-import pytz
 import re
 
 import numpy as np
@@ -19,13 +17,19 @@ logger = logging.getLogger(__name__)
 MP = 1
 """Measurement period"""
 
-scenarios_path = None
-"""Path to scenarios"""
+SCE_QUAL_SCENARIOS = set([99771, 99801, 99840, 99880])
+"""SCE qualification scenarios"""
+
+SCE_CIL_QUAL_SCENARIOS = set([9990, 9991])
+"""SCE CIL qualification scenarios"""
 
 class Scenario(DataFrameCache):
     """Colosseum scenario"""
     def __init__(self, reservation, cache_path=None):
         super().__init__(cache_path=cache_path)
+
+        if reservation is None:
+            raise ValueError("Reservation must not be None")
 
         self.reservation = reservation
         """Reservation to score"""
@@ -41,11 +45,8 @@ class Scenario(DataFrameCache):
                             str(self.rf_scenario))
 
     @property
-    def scenario_path(self):
-        if scenarios_path is None or not os.path.isdir(scenarios_path):
-            raise ValueError("Path to scenarios not specified")
-
-        return os.path.join(scenarios_path, str(self.rf_scenario))
+    def scenarios_path(self):
+        return importlib_resources.files('dragonradio.tools.colosseum.scenarios').joinpath(str(self.rf_scenario))
 
     #@cached_dataframe_property('mandates')
     @cached_property
@@ -53,10 +54,10 @@ class Scenario(DataFrameCache):
         """DataFrame holding mandates"""
         items = []
 
-        path = os.path.join(self.scenario_path, 'Mandated_Outcomes')
+        path = self.scenarios_path.joinpath('Mandated_Outcomes')
 
-        for file in os.listdir(path):
-            m = re.match(r'^Node(\d+)MandatedOutcomes_{}.json$'.format(self.reservation.rf_scenario), file)
+        for file in path.iterdir():
+            m = re.match(r'^Node(\d+)MandatedOutcomes_{}.json$'.format(self.reservation.rf_scenario), file.name)
             if m:
                 traffic_id = int(m.group(1))
 
@@ -65,10 +66,10 @@ class Scenario(DataFrameCache):
 
                 srn_id = self.reservation.scenario_to_srn[traffic_id]
 
-                if srn_id not in self.reservation.teams:
+                if srn_id not in self.reservation.srn_teams:
                   continue
 
-                team = self.reservation.teams[srn_id]
+                team = self.reservation.srn_teams[srn_id]
 
                 with open(os.path.join(path, file), 'r') as f:
                     mandates = json.loads(f.read())
@@ -157,10 +158,10 @@ class Scenario(DataFrameCache):
         """Scenario environment"""
         items = []
 
-        path = os.path.join(self.scenario_path, 'Environment')
+        path = self.scenarios_path.joinpath('Environment')
 
-        for file in os.listdir(path):
-            m = re.match(r'^Node(\d+)Environment_{}.json$'.format(self.reservation.rf_scenario), file)
+        for file in path.iterdir():
+            m = re.match(r'^Node(\d+)Environment_{}.json$'.format(self.reservation.rf_scenario), file.name)
             if m:
                 traffic_id = int(m.group(1))
 
@@ -169,10 +170,10 @@ class Scenario(DataFrameCache):
 
                 srn_id = self.reservation.scenario_to_srn[traffic_id]
 
-                if srn_id not in self.reservation.teams:
+                if srn_id not in self.reservation.srn_teams:
                   continue
 
-                team = self.reservation.teams[srn_id]
+                team = self.reservation.srn_teams[srn_id]
 
                 with open(os.path.join(path, file), 'r') as f:
                     environment = json.loads(f.read())
@@ -335,7 +336,7 @@ class Scorer(DataFrameCache):
 
         match_scores = {}
 
-        for team in self.reservation.teams.values():
+        for team in self.reservation.teams:
             try:
                 match_scores[team] = float(df.loc[team].score.max())
             except:
@@ -455,7 +456,6 @@ class Scorer(DataFrameCache):
         # Determine which packets were on time
         df['ontime'] = (tp_good | ft_good).astype(int)
 
-        df.to_csv('traffic.csv')
         return df
 
     @cached_dataframe_property('traffic_summary')
@@ -487,7 +487,6 @@ class Scorer(DataFrameCache):
                           , 'ontime_sum': 'npackets_recv'
                           }, inplace=True)
 
-        df.to_csv('traffic_summary.csv')
         return df
 
     def readIncumbentGates(self):
@@ -518,7 +517,7 @@ class Scorer(DataFrameCache):
 
         for srn, image in self.reservation.images.items():
             if 'incumbent' in image:
-                with CilReader(self.reservation.node_pcaps[srn], read_reg=False) as reader:
+                with CilReader(self.reservation.srn_pcaps[srn], read_reg=False) as reader:
                     while True:
                         message = reader.read()
                         if message is None:
@@ -540,7 +539,7 @@ class Scorer(DataFrameCache):
 
         return items
 
-    @property
+    @cached_dataframe_property('gates')
     def gates(self):
         """Gate violations.
 
@@ -593,6 +592,12 @@ class Scorer(DataFrameCache):
         # Attach gates
         cols = pd.Index(['gate'])
         df = df.join(gates_df[cols], how='left')
+
+        # Replace NaN gate values with False
+        df['gate'].fillna(False, inplace=True)
+
+        # Make sure gate column is bool
+        df.gate = df.gate.astype(bool)
 
         #
         # Attach mandates to flows
@@ -652,6 +657,9 @@ class Scorer(DataFrameCache):
 
         # If we are gated, goal is 0
         df.loc[df.gate == True, 'goal'] = 0
+
+        # Make sure goal column is int
+        df.goal = df.goal.astype(int)
 
         #
         # Calculate achieved duration
@@ -753,7 +761,7 @@ class Scorer(DataFrameCache):
         df = self.threshold_success
 
         df = df.groupby(['mp']).agg({'threshold_success': 'sum'})
-        nteams = len(set(self.reservation.teams.values()))
+        nteams = len(self.reservation.teams)
         df.threshold_success = (df.threshold_success == nteams).astype(int)
         df.sort_index(inplace=True)
 

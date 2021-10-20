@@ -16,6 +16,6 @@ The recommended modem configuration for batch mode is located at ``config/sce-qu
 A sample batch configuration file for the `SCE Qualification Scenario`_ is located at ``config/sce-qual/sce-qual.json``. It can be used as a `Jinja`_ template; you will need to fill in the ``name``, ``image``, and ``radio_conf`` parameters to specify the job name, radio image name, and modem configuration.
 
 .. _Colosseum Radio Command and Control API: https://colosseumneu.freshdesk.com/support/solutions/articles/61000253495-radio-command-and-control-c2-api
-.. _SCE Qual Scenario: https://colosseumneu.freshdesk.com/support/solutions/articles/61000253505-sce-qualification-9988-
+.. _SCE Qualification Scenario: https://colosseumneu.freshdesk.com/support/solutions/articles/61000253505-sce-qualification-9988-
 .. _Batch mode: https://colosseumneu.freshdesk.com/support/solutions/articles/61000253519-batch-mode-format-and-process
 .. _Jinja: https://jinja.palletsprojects.com/en/2.11.x/

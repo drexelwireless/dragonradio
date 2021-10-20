@@ -83,6 +83,8 @@ echo "Building dragonradio"
 lxc exec "$CONTAINER" bash <<EOF
 cd /root/dragonradio
 ./build.sh
+cd /root/dragonradio/tools
+./install.sh
 EOF
 
 if [ ! -z "$SERVICE" ]; then

@@ -1,0 +1,810 @@
+[
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 7118,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7119,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7120,
+      "goal_set": "C2",
+      "goal_type": "UAV_telemetry",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7121,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7122,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7123,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7124,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7125,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7126,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7127,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7128,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    }
+  ],
+  "timestamp": 15.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 7118,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7119,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7120,
+      "goal_set": "C2",
+      "goal_type": "UAV_telemetry",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7121,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7122,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7123,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7124,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7125,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7126,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7127,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7128,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7129,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7130,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7131,
+      "goal_set": "Video",
+      "goal_type": "UAV_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7132,
+      "goal_set": "C2",
+      "goal_type": "UAV_CC",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.12,
+        "min_throughput_bps": 12480.0
+      }
+    },
+    {
+      "flow_uid": 7133,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7134,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7135,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7136,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7137,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7138,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7139,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7140,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    }
+  ],
+  "timestamp": 315.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 7118,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7119,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7120,
+      "goal_set": "C2",
+      "goal_type": "UAV_telemetry",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7121,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7122,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7123,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7124,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7125,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7126,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7127,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7128,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 7129,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7130,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7131,
+      "goal_set": "Video",
+      "goal_type": "UAV_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7132,
+      "goal_set": "C2",
+      "goal_type": "UAV_CC",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.12,
+        "min_throughput_bps": 12480.0
+      }
+    },
+    {
+      "flow_uid": 7133,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7134,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7135,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7136,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7137,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7138,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7139,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7140,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 7141,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7142,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7143,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7144,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7145,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7146,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7147,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7148,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_Stage",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 7149,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7150,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7151,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7152,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7153,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7154,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7155,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 7156,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    }
+  ],
+  "timestamp": 615.0
+}
+]

@@ -1,0 +1,13 @@
+{
+    "CollabDetailedPerformanceReportPeriod": 1.0,
+    "CollabFakeCompetitor": false,
+    "CollabLocationReportPeriod": 1.0,
+    "NetemDelay": "8ms 8ms",
+    "RFBandwidth": 10000000,
+    "Schedule": [
+        {
+            "RFCenterFrequencyOffset": 5000000,
+            "Timestamp": 0.0
+        }
+    ]
+}

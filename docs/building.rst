@@ -51,6 +51,7 @@ The documentation can be built as follows:
 .. code-block:: bash
 
    cd docs
+   sudo apt install doxygen
    pip install -Ur requirements.txt
    make html
 

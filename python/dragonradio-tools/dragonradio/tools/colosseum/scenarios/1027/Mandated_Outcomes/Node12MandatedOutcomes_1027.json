@@ -1,0 +1,711 @@
+[
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5001,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5002,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5003,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5004,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5005,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5006,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5007,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5008,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5009,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5010,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5011,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5012,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5013,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5014,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5015,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5016,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5017,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5018,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5019,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5020,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5021,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5022,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5023,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5024,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5025,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5026,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5027,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5028,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5029,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5030,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5031,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5032,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5033,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5034,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5035,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5036,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5037,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5038,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5039,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5040,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5041,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5042,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5043,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5044,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5045,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5046,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5047,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5048,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5049,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5050,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5051,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5052,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5053,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5054,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5055,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5056,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5057,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5058,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5059,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5060,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5061,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5062,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5063,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    },
+    {
+      "flow_uid": 5064,
+      "goal_set": "Video",
+      "goal_type": "Body_cam_video",
+      "hold_period": 10,
+      "point_value": 9,
+      "requirements": {
+        "max_latency_s": 3.0,
+        "min_throughput_bps": 843696.0
+      }
+    }
+  ],
+  "timestamp": 5.0
+}
+]

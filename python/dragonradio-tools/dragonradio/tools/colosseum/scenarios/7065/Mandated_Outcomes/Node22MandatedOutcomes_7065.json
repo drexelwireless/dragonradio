@@ -1,0 +1,2316 @@
+[
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5109,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5110,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5111,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5112,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5113,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5114,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5115,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5116,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5117,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5118,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5119,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5120,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5121,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5122,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5123,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5124,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5125,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5126,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5127,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5128,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5129,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5130,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5131,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5132,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5133,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5134,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5135,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5136,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5137,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5138,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5139,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5140,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5141,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5142,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5143,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5144,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5145,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5146,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5147,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5148,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5149,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5150,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5151,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5152,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5153,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5154,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5155,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5156,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5157,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5158,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5159,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5160,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5161,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5162,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5649,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5650,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5651,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5652,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5653,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5654,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5655,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5656,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5657,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5658,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5659,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5660,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5661,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5662,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5663,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5664,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5665,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5666,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5667,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5668,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5669,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5670,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5671,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5672,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5673,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5674,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5675,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5676,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5677,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5678,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5679,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5680,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5681,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5682,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5683,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5684,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5685,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5686,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5687,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5688,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5689,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5690,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5691,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5692,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5693,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5694,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5695,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5696,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5697,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5698,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5699,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5700,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5701,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5702,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    }
+  ],
+  "timestamp": 15.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5379,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5380,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5381,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5382,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5383,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5384,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5385,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5386,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5387,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5388,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5389,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5390,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5391,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5392,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5393,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5394,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5395,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5396,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5397,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5398,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5399,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5400,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5401,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5402,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5403,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5404,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5405,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_up",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5406,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5407,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5408,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5409,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5410,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5411,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5412,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5413,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5414,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5415,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5416,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5417,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5418,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5419,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5420,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5421,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5422,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5423,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5424,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5425,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5426,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5427,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5428,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5429,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5430,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5431,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5432,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_CC_down",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5919,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5920,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5921,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5922,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5923,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5924,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5925,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5926,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5927,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5928,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5929,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5930,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5931,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5932,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5933,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5934,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5935,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5936,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5937,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5938,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5939,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5940,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5941,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5942,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5943,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5944,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5945,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5946,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5947,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5948,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5949,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5950,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5951,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5952,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5953,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5954,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5955,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5956,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5957,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5958,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5959,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5960,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5961,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5962,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5963,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5964,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5965,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5966,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5967,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5968,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5969,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5970,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 4,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 36504.0
+      }
+    },
+    {
+      "flow_uid": 5971,
+      "goal_set": "Static Images",
+      "goal_type": "Imagery_3",
+      "hold_period": 10,
+      "point_value": 2,
+      "requirements": {
+        "file_transfer_deadline_s": 10.0
+      }
+    },
+    {
+      "flow_uid": 5972,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    }
+  ],
+  "timestamp": 180.0
+}
+]

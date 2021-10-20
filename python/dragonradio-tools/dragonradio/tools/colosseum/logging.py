@@ -40,7 +40,7 @@ class MatchConfig:
         if m:
             self.match_id = int(m.group(1))
 
-        self.teams = {}
+        self.srn_teams = {}
         """Map from SRN to team"""
 
         self.scenario_to_srn = {}
@@ -57,7 +57,7 @@ class MatchConfig:
 
             # Only one team in batch mode. Incumbents have scenario IDs >50.
             if traffic_id <= 50:
-                self.teams[srn_id] = 1
+                self.srn_teams[srn_id] = 1
 
 class BatchInput:
     """""Data from a batch_input.json or freeplay.json file"""
@@ -76,7 +76,7 @@ class BatchInput:
         self.duration = config['Duration']
         """Scenario duration"""
 
-        self.teams = {}
+        self.srn_teams = {}
         """Map from SRN to team"""
 
         self.slot_teams = {}
@@ -130,7 +130,7 @@ class BatchInput:
                 self.modem_config[srn_id] = node['ModemConfig']
 
             if team is not None:
-                self.teams[srn_id] = team
+                self.srn_teams[srn_id] = team
 
                 if team not in teams:
                     teams.add(team)
@@ -142,25 +142,29 @@ class BatchInput:
 
 class CollabInfo:
     def __init__(self, reservation):
+        self.collab_server_srn = None
+        """Collaboration server SRN"""
+
+        self.collab_server_ip = None
+        """Collaboration server IP address"""
+
+        self.collab_log = None
+        """Collaboration server log"""
+
         for f in os.listdir(reservation.path):
             m = re.match(r'^[-a-zA-Z0-9_]*-srn(\d*)-RES\d*-colbr(\d*)-\d*-\d*\.pcap$', f)
             if m:
                 srn = int(m.group(1))
                 collab = int(m.group(2))
 
-                if collab != srn and srn in reservation.teams and reservation.teams[srn] == reservation.our_team:
+                if collab != srn and srn in reservation.srn_teams and reservation.srn_teams[srn] == reservation.our_team:
                     self.collab_server_srn = collab
-                    """Collaboration server SRN"""
-
                     self.collab_server_ip = "172.30.{collab}.{srn}".format(srn=100+srn, collab=100+collab)
-                    """Collaboration server IP address"""
-
                     self.collab_log = os.path.join(reservation.path, f)
-                    """Collaboration server log"""
 
                     return
 
-        raise ValueError("Cannot find collaboration server")
+        logging.debug("Cannot find collaboration server")
 
 class TrafficLogs:
     def __init__(self, _res, path):
@@ -348,14 +352,19 @@ class ReservationLog(DataFrameCache):
 
     @cached_property
     def teams(self):
-        """Map from SRN to team"""
-        if os.path.exists(self.match_config_path):
-            return self.match_config.teams
-        else:
-            return self.batch_input.teams
+        """Teams"""
+        return frozenset(self.srn_teams.values())
 
     @cached_property
-    def node_logs(self):
+    def srn_teams(self):
+        """Map from SRN to team"""
+        if os.path.exists(self.match_config_path):
+            return self.match_config.srn_teams
+        else:
+            return self.batch_input.srn_teams
+
+    @cached_property
+    def srn_logs(self):
         """Map from SRN to node log directory"""
         logs = {}
 
@@ -370,7 +379,7 @@ class ReservationLog(DataFrameCache):
         return logs
 
     @cached_property
-    def node_pcaps(self):
+    def srn_pcaps(self):
         """Map from SRN to PCAP file"""
         pcaps = {}
 
@@ -414,21 +423,22 @@ class ReservationLog(DataFrameCache):
                     srn_id = int(m.group(1))
 
                     if os.path.exists(self.dragonLogPath(dirname, srn_id)):
-                        if srn_id in self.teams:
-                            return self.teams[srn_id]
+                        if srn_id in self.srn_teams:
+                            return self.srn_teams[srn_id]
 
         logger.debug('Cannot determine our team number for reservation %d', self.reservation_id)
+        return None
 
     @cached_property
     def our_srns(self):
         """Our team's SRNs"""
-        return [srn for (srn, team) in self.teams.items() if team == self.our_team]
+        return [srn for (srn, team) in self.srn_teams.items() if team == self.our_team]
 
     @cached_property
     def our_gateway(self):
         """Our team's gateway"""
         for srn in self.gateways:
-            if srn in self.teams and self.teams[srn] == self.our_team:
+            if srn in self.srn_teams and self.srn_teams[srn] == self.our_team:
                 return srn
 
         return None
@@ -441,7 +451,7 @@ class ReservationLog(DataFrameCache):
         if gateway is None:
             return None
 
-        path = os.path.join(self.node_logs[gateway],
+        path = os.path.join(self.srn_logs[gateway],
                             'node-{:03d}'.format(gateway),
                             'score_reported.csv')
 
@@ -484,6 +494,38 @@ class ReservationLog(DataFrameCache):
 
     def srnLogPath(self, dirname, srn_id, logname):
         return os.path.join(self.srn_logs_path, dirname, f'node-{srn_id:03d}', logname)
+
+    @cached_dataframe_property('heard')
+    def heard(self):
+        """Nodes heard by each SRN"""
+        heard = {}
+
+        for srn in self.our_srns:
+            heard[srn] = set()
+
+            for dirname in os.listdir(self.srn_logs_path):
+                m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), dirname)
+                if m:
+                    dragonlog_path = self.dragonLogPath(dirname, srn)
+                    if os.path.isfile(dragonlog_path):
+
+                        with open(dragonlog_path, 'r') as f:
+                            text = f.read()
+
+                        for m in re.finditer(r'Adding node (\d+)$', text, re.M):
+                            heard[srn].add(int(m.group(1)))
+
+        all_nodes = sorted(set().union(*heard.values()))
+
+        items = []
+
+        for srn in sorted(self.our_srns):
+            items.append([srn] + [n in heard[srn] for n in all_nodes])
+
+        df = pd.DataFrame(items,
+                          columns=["SRN"] + [str(n) for n in all_nodes])
+
+        return df
 
     @cached_property
     def traffic_logs(self):
@@ -564,6 +606,11 @@ class ReservationLog(DataFrameCache):
             # Compute latency
             df['latency'] = (df.recv_time - df.send_time).dt.total_seconds()
 
+            # Compute interarrival time
+            df['interarrival'] = df.recv_time.diff().dt.total_seconds().astype(float)
+            mask = df.flow_uid != df.flow_uid.shift(1)
+            df.loc[mask, 'interarrival'] = 0
+
             # Add source, destination, and team information
             srn_src = self.scenario_to_srn[src]
             srn_dest = self.scenario_to_srn[dest]
@@ -572,7 +619,7 @@ class ReservationLog(DataFrameCache):
             df['traffic_dest'] = dest
             df['srn_src'] = srn_src
             df['srn_dest'] = srn_dest
-            df['team'] = self.teams[srn_src]
+            df['team'] = self.srn_teams[srn_src]
 
             dataframes.append(df)
 
