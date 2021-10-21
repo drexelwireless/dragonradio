@@ -1,14 +1,15 @@
 Running the Radio
 =================
 
-The radio is initialized via Python. The ``dragonradio`` binary will treat its first argument as the name of a Python script to run to set up the radio, ignoring all further arguments. The Python script will receive all but the zeroth argument (the name of the ``dragonradio`` binary) as its arguments. Radio scripts are located in the ``scripts`` directory.
+DragonRadio is built against UHD 3.9.5, which is the default version on the Colosseum. We provide a patched version of UHD 3.9.5 that compiles under Ubuntu 20.04. If you are running DragonRadio on your own USRP instead of on the Colosseum, make sure it has been flashed with the 3.9.5 firmware.
 
-The radio must be run with root privileges in order to properly configure the USRP and network. Help removing this restriction is welcome.
+The ``build.sh`` script will create a virtualenv environment in the directory ``venv`` containing all required Python modules. You may either activate this virtualenv before invoking the radio, or you may set the ``VIRTUAL_ENV`` environment variable to point to it before you invoke ``dragonradio``. You must make sure the ``dragonradio`` binary can obtain the ``CAP_SYS_NICE`` and ``CAP_NET_ADMIN`` capabilities when it runs (see :ref:`Capabilities and Security`).
 
-The ``build.sh`` script will create a virtualenv environment in the directory ``venv`` containing all required Python modules. You may either activate this virtualenv before invoking the radio, or you may set the ``VIRTUAL_ENV`` environment variable to point to it before you invoke ``dragonradio``.
+Invoking the radio
+------------------
 
 The Stand-alone Radio
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 Let's take a look at an example invocation of the stand-alone radio, which uses the ``scripts/standalone-radio.py`` to configure the radio:
 
@@ -58,7 +59,7 @@ These options have additional effects:
 The ``--config`` option may be specified multiple times. This features loads configuration settings from a `libconfig <http://www.hyperrealm.com/libconfig/libconfig_manual.html#Configuration-Files>`_ format configuration file, making it easy to specify a large set of options without typing out a long command line. Radio options are managed by the :class:`dragonradio.radio.Config` class; see its documentation for a description of all available radio options. See the :ref:`CLI Reference` for a description of all available command-line options. Most, but not all, radio options can be configured on the command line.
 
 The SC2 Radio
--------------
+^^^^^^^^^^^^^
 
 Here is an example invocation of the SC2 competition radio:
 
@@ -83,32 +84,6 @@ These parameters have the following effects:
 #. ``start`` the radio. This initializes the radio but does not start transmitting until told to begin unless the ``--bootstrap`` option is given.
 
 By default, when run in the background, that radio will write its PID to the file ``/var/run/dragonradio.pid``. It can be invoked with the ``stop`` command instead of the ``start`` command to terminate the radio. The ``dragonradio-client`` script can be used to control the daemonized radio.
-
-Networking
-----------
-
-After starting up, the radio will create a ``tap0`` device with IP address ``10.10.10.NODEID`` and a netmask of ``255.255.255.0``, where ``NODEID`` is the node ID. Packets sent to this subnet will in turn be sent over the radio.
-
-Logging
--------
-
-The radio provides extensive logging. The low-level C++ radio will create a log in `HDF5 format <https://portal.hdfgroup.org/display/HDF5/HDF5>`_ named ``radio.h5``. If the file ``radio.h5`` exists, it will create ``radio-N.h5`` where ``N`` is the first number such that ``radio-N.h5`` does not exist; this allows the radio to be restarted if it crashes while guaranteeing it won't overwrite old logs.
-
-Each HDF5 log has the following attributes:
-
-#. ``config``: The radio configuration, dumped from the :class:`~dragonradio.radio.Config` object used to configure the radio.
-#. ``version``: The version of the radio.
-#. ``node_id``: The numeric radio node identifier.
-#. ``start``: Start time of logging, in seconds since the epoch.
-
-A HDF5 log contains the following tables:
-
-#. ``event``: Logged messages, consisting of a time (offset from ``start`` of the log) and a string.
-#. ``recv``: Received packets.
-#. ``selftx``: Self-transmissions.
-#. ``send``: Sent packets.
-#. ``slots``: IQ data received by MAC.
-#. ``snapshots``: Snapshotted IQ data.
 
 .. _CLI Reference:
 

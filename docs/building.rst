@@ -21,6 +21,12 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
 
    You will also need to edit ``/etc/subuid`` and ``/etc/subgid``. The Colosseum instructions on how to `prepare a container`_ will be helpful.
 
+#. Check out the DragonRadio source code. Since DragonRadio uses submodules, it is import to use the ``--recursive`` flag when cloning the repository.
+
+   .. code-block:: bash
+
+      git clone --recursive https://github.com/drexelwireless/dragonradio.git
+
 #. Build base DragonRadio image
 
    The image built in this step serves as the base image for all DragonRadio builds. It includes generally useful tools, the `Colosseum CLI`_, and additional software, like ``gpsd``, that are necessary to run the radio in batch mode in the Colosseum. The build is automated using ansible:
@@ -33,11 +39,11 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
 
 #. Build a DragonRadio image
 
-   The ``build-image.sh`` takes a ``git`` reference (tag, hash, etc.) and builds an image based on the given version of the radio. For example, an image based on the ``master`` branch can be built as follows:
+   The ``build-image.sh`` takes a ``git`` reference (tag, hash, etc.) and builds an image based on the given version of the radio. For example, an image based on the ``main`` branch can be built as follows:
 
    .. code-block:: bash
 
-     ./bin/build-image.sh master
+     ./bin/build-image.sh main
 
    The image wil be placed in the ``images`` directory and have a name of the form ``REF-DATE-HASH``, where ``REF`` is a ``git`` reference, ``DATE`` is the build date, and ``HASH`` is the ``git`` hash of the version of the radio use to build the image.
 
@@ -50,6 +56,7 @@ The documentation can be built as follows:
 
 .. code-block:: bash
 
+   source venv/bin/activate
    cd docs
    sudo apt install doxygen
    pip install -Ur requirements.txt

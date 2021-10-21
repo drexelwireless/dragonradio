@@ -19,7 +19,7 @@ import sys
 # -- Project information -----------------------------------------------------
 
 project = 'DragonRadio'
-copyright = '2018-2020, Drexel University'
+copyright = '2018-2021, Drexel University'
 author = 'Geoffrey Mainland'
 
 # The short X.Y version
@@ -40,6 +40,7 @@ release = ''
 extensions = [
     'breathe',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosectionlabel',
     'sphinx.ext.githubpages',
     'sphinx.ext.graphviz',
     'sphinx.ext.inheritance_diagram',
@@ -47,6 +48,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinxarg.ext',
+    'sphinx_autodoc_typehints',
 ]
 
 autodoc_mock_imports = ['google.protobuf']

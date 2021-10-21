@@ -13,8 +13,6 @@ DragonRadio originated as Drexel's entry into DARPA's `SC2`_ competition. It is 
 
 Please submit any issues on `GitHub`_.
 
-`Geoffrey Mainland <https://www.cs.drexel.edu/~mainland/>`_ is the primary author of DragonRadio.
-
 |nsf| This project is supported by NSF awards `1717088 <https://www.nsf.gov/awardsearch/showAward?AWD_ID=1717088>`_ and `1730140 <https://www.nsf.gov/awardsearch/showAward?AWD_ID=1730140>`_.
 
 .. |nsf| image:: images/NSF_4-Color_bitmap_Logo.png

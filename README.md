@@ -1,4 +1,4 @@
-# Dragon Radio
+# DragonRadio
 
 This is Drexel's software-defined radio. Please see the [DragonRadio documentation](https://drexelwireless.github.io/dragonradio/) for further information.
 
