@@ -3,6 +3,7 @@
 import matplotlib as mp
 import matplotlib.pyplot as plt
 
+from dragonradio.tools.colosseum import Scorer
 from dragonradio.tools.logging.command_line import Command
 
 from .plot import Metric, TrafficMetricPlot
@@ -54,10 +55,11 @@ class PlotMGENMetricCommand(Command):
 
     def handle(self, parser, args):
         reservation = self.logs.reservation
+        scorer = Scorer(reservation, cache_path='cache')
 
         title = 'Reservation {}'.format(reservation.reservation_id)
 
-        df = reservation.traffic.reset_index()
+        df = scorer.traffic.reset_index()
         df.set_index(['team', 'traffic_src', 'traffic_dest', 'flow_uid', 'send_time'],
                     inplace=True)
         df.sort_index(inplace=True)
