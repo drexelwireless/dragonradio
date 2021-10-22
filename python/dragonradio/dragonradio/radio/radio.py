@@ -56,6 +56,10 @@ class Radio(dragonradio.tasks.TaskManager):
         self.config = config
         """Config object for radio"""
 
+        # Validate node ID range
+        if not (config.node_id >= 1 and config.node_id <= 254):
+            raise ValueError(f"Node ID is {config.node_id} but must be in the range [1,254].")
+
         self.node_id = config.node_id
         """This node's ID"""
 
