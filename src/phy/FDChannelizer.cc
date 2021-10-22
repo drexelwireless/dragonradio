@@ -43,6 +43,16 @@ FDChannelizer::~FDChannelizer()
     stop();
 }
 
+void FDChannelizer::setChannels(const Channels &channels)
+{
+    for (auto&& chan : channels) {
+        if (fmod(rx_rate_, chan.first.bw) != 0)
+            throw std::range_error("Channel bandwidth must be an integral multiple of total bandwidth.");
+    }
+
+    Channelizer::setChannels(channels);
+}
+
 void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
     tdbufs_.push(buf);
