@@ -125,8 +125,9 @@ class Radio(dragonradio.tasks.TaskManager):
         self.configureDefaultChannels()
 
     def __del__(self):
-        self.tuntap.source.disconnect()
-        self.tuntap.sink.disconnect()
+        if hasattr(self, 'tuntap'):
+            self.tuntap.source.disconnect()
+            self.tuntap.sink.disconnect()
 
     def start(self, user_ns=locals()):
         """Start the radio"""
