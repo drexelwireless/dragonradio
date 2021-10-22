@@ -38,7 +38,7 @@ setup(
                      ,'protobuf==3.13.0'
                      ,'psutil==5.8.0'
                      ,'python-daemon==2.3.0'
-                     ,'pyzmq==22.3.0'
+                     ,'pyzmq==19.0.2'
                      ,'scipy==1.7.1'
                      ],
     zip_safe=False,
