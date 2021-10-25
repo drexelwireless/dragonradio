@@ -1,0 +1,38 @@
+- name: Create srn-user group
+  group:
+    name: srn-user
+    gid: 4000
+
+- name: Create srn-user user
+  user:
+    name: srn-user
+    uid: 4000
+    password: "{{ password }}"
+    group: srn-user
+    groups: sudo
+
+- name: Remove the ubuntu user
+  user:
+    name: user
+    state: absent
+    remove: yes
+
+- name: Change root password
+  user:
+    name: "{{ item }}"
+    password: "{{ password }}"
+  with_items:
+    - root
+    - srn-user
+
+- name: Allow password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication '
+    line: PasswordAuthentication yes
+
+- name: Allow password authentication for root
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin '
+    line: PermitRootLogin yes
