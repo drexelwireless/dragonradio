@@ -75,6 +75,8 @@ tar cf - -C $(dirname "$DIR") "$BASEDIR" | lxc exec "$CONTAINER" -- tar xvf - -C
 
 lxc exec "$CONTAINER" -- mv "/root/$BASEDIR" /root/dragonradio
 
+lxc exec "$CONTAINER" -- chown -R root:root /root/dragonradio
+
 #
 # Build the radio
 #
