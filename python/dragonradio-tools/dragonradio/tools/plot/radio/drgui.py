@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2018-2020 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
-import argparse
-import datetime
 from functools import wraps
 import logging
 import sys
@@ -14,9 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.transforms import blended_transform_factory
 
 from dragonradio.tools.logging.command_line import Command
-import dragonradio.radio
 from dragonradio.radio import decompressIQData
-import dragonradio.tools.logging
 from .plot import ConstellationPlot, PAPRPlot, PSDPlot, SpecgramPlot, WaveformPlot
 
 class LogView:
