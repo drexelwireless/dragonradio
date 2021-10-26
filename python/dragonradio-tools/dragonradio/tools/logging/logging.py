@@ -270,7 +270,7 @@ class Log:
             df['fs'] = df.bw
 
         df['start'] = df.timestamp
-        df['end'] = df.timestamp + df.iq_data_len / df.bw
+        df['end'] = df.timestamp + df.iq_data_len / df.fs
 
         return df
 
