@@ -23,6 +23,15 @@ class LogView:
         self.viewer = viewer
         """Responsible LogViewer"""
 
+    def set_window_title(self, title: str):
+        """Set window title.
+
+        Args:
+            title (str): Window title.
+        """
+        if self.fig.canvas.manager is not None:
+            self.fig.canvas.manager.set_window_title(title)
+
 class ReceiveView(LogView):
     """View of received packets"""
     def __init__(self, logs, viewer, node_id,
@@ -101,7 +110,7 @@ class ReceiveView(LogView):
             else:
                 msg = ''
 
-            self.fig.canvas.set_window_title('Node {} Received Packets'.format(self.node_id))
+            self.set_window_title('Node {} Received Packets'.format(self.node_id))
             self.fig.suptitle('Packet {} from node {} '
                               '(evm {:03.1f}dB, rssi {:03.1f}dB, fc {:03.1f}MHz) {}'.\
               format(self.pkt.seq, self.pkt.src, self.pkt.evm, self.pkt.rssi, self.pkt.fc/1e6, msg))
@@ -254,7 +263,7 @@ class SendView(LogView):
             self.pkt = send.iloc[idx]
             self.spos.set_val(idx)
 
-            self.fig.canvas.set_window_title('Node {} Sent Packets'.format(self.node_id))
+            self.set_window_title('Node {} Sent Packets'.format(self.node_id))
             self.fig.suptitle('Packet {} to node {}'.format(self.pkt.seq, self.pkt.dest))
 
             self.constellation.plot(self.pkt.iq_data)
@@ -330,8 +339,7 @@ class SnapshotView(LogView):
 
             sig = decompressIQData(snapshot.iq_data)
 
-            self.fig.canvas.set_window_title('Snapshot at {}'.format(str(snapshot.timestamp)))
-
+            self.set_window_title('Snapshot at {}'.format(str(snapshot.timestamp)))
             self.specgram.plot(snapshot.fs, sig, snapshot.timestamp)
             self.psd.plot(snapshot.fs, sig, title=None)
 

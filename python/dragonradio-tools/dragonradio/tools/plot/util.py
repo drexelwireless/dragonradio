@@ -78,7 +78,8 @@ class Plot:
         Args:
             title (str): Window title.
         """
-        self.fig.canvas.manager.set_window_title(title)
+        if self.fig.canvas.manager is not None:
+            self.fig.canvas.manager.set_window_title(title)
 
 class AnnotatedPlot(Plot):
     def __init__(self, fig, ax=None, annotate=False, sticky=False):
