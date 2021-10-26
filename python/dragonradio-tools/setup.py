@@ -115,6 +115,7 @@ setup(
                      ,'pandas==1.3.4'
                      ,'pycairo==1.20.1'
                      ,'PyGObject==3.42.0'
+                     ,'pyparsing<3'
                      ,'python-snappy==0.6.0'
                      ,'requests==2.26.0'
                      ,'scipy==1.7.1'
