@@ -454,7 +454,6 @@ class DrGUICommand(Command):
         parser.add_argument('--show-invalid-headers', action='store_true', default=False,
                             dest='show_invalid_headers',
                             help='show invalid headers when displaying RX log')
-        parser.add_argument('paths', nargs='*')
 
     def handle(self, parser, args):
         mp.use('GTK3Agg')
