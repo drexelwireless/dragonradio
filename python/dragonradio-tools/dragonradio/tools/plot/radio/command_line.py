@@ -141,7 +141,9 @@ class PlotEventsCommand(Command):
         add_annotate_args(parser)
 
     def handle(self, parser, args):
-        plot = EventPlot(self.logs, annotate=args.annotate)
+        plot = EventPlot(self.logs,
+                         annotate=args.annotate,
+                         sticky=args.sticky)
 
         node_ids = sorted(self.logs.nodes)
 
@@ -290,7 +292,8 @@ class PlotRadioMetricCommand(Command):
                         nodes=args.srns,
                         filt=self.filter,
                         include_invalid_packets=args.include_invalid_packets,
-                        annotate=args.annotate)
+                        annotate=args.annotate,
+                        sticky=args.sticky)
 
         plt.show()
 
@@ -359,7 +362,8 @@ class PlotTrafficCommand(Command):
                            flows=args.flows,
                            mac_errors=args.mac_errors,
                            sack=args.sack,
-                           annotate=args.annotate)
+                           annotate=args.annotate,
+                           sticky=args.sticky)
         plot.plot()
 
         plt.show()

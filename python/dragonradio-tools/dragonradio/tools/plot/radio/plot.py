@@ -438,7 +438,7 @@ class TrafficPlot(ReservationPlot):
                  mac_errors: bool=False,
                  sack: bool=False,
                  **kwargs):
-        super().__init__(fig, logs=logs, sticky=True, **kwargs)
+        super().__init__(fig, logs=logs, **kwargs)
 
         self.filt = filt
         """DataFrame filter"""

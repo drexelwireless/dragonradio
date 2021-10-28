@@ -21,6 +21,10 @@ def add_annotate_args(parser):
     annotate_parser.add_argument('--no-annotate', action='store_const', const=False,
                                  dest='annotate',
                                  help='do not show annotations')
+    annotate_parser.add_argument('--sticky', action='store_const', const=True,
+                                 dest='sticky',
+                                 default=False,
+                                 help='make annotations sticky')
 
 class Command(object):
     def __init__(self : str=None):

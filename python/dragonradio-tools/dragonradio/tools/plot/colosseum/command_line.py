@@ -132,7 +132,9 @@ class PlotScoreCommand(Command):
             show_problem_srns(scorer)
 
         if args.plot_flow:
-            FlowPlot(reservation, scorer, args.plot_flow, annotate=args.annotate)
+            FlowPlot(reservation, scorer, args.plot_flow,
+                     annotate=args.annotate,
+                     sticky=args.sticky)
 
             plt.show()
 
