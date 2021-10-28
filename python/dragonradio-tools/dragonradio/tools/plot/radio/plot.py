@@ -463,11 +463,14 @@ class TrafficPlot(ReservationPlot):
         if src is not None and dest is not None:
             title = 'Traffic {} $\\to$ {}'.format(src, dest)
         elif src is not None:
-            title = 'From {}'.format(src)
+            title = 'Traffic from {}'.format(src)
         elif dest is not None:
-            title = 'To {}'.format(dest)
+            title = 'Traffic to {}'.format(dest)
         else:
             raise ValueError("Must specify at least one of src and dest")
+
+        if self.logs.reservation is not None:
+            title += f' (Reservation {self.logs.reservation.reservation_id})'
 
         # Set title
         self.fig.suptitle(title)
