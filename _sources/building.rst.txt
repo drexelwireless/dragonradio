@@ -1,7 +1,7 @@
 Building the radio
 ==================
 
-DragonRadio is developed under Ubuntu 16.04, the distribution used to the Colosseum. Running the top-level ``build.sh`` script in a base Ubuntu 16.04 installation installs all necessary prerequisites and builds DragonRadio.
+DragonRadio is developed under Ubuntu 20.04. Running the top-level ``build.sh`` script in a base Ubuntu 20.04 installation installs all necessary prerequisites and builds DragonRadio.
 
 .. _building a container:
 
@@ -21,13 +21,11 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
 
    You will also need to edit ``/etc/subuid`` and ``/etc/subgid``. The Colosseum instructions on how to `prepare a container`_ will be helpful.
 
-#. Obtain the Colosseum base image
-
-   Follow the Colosseum instructions to obtain the `base image`_, ``base-1604-nocuda.tar.gz``, and import it. The ``--alias`` argument is important!
+#. Check out the DragonRadio source code. Since DragonRadio uses submodules, it is import to use the ``--recursive`` flag when cloning the repository.
 
    .. code-block:: bash
 
-     lxc import base-1604-nocuda.tar.gz --alias base-1604-nocuda
+      git clone --recursive https://github.com/drexelwireless/dragonradio.git
 
 #. Build base DragonRadio image
 
@@ -37,15 +35,15 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
 
       cd ansible && ansible-playbook -i inventory playbooks/dragonradio.yml
 
-   This will result in a ``dragonradio-1604-base`` image in the top-level ``images`` directory. The password for the ``root`` and ``srn-user`` users in this image is ``dragonradio``.
+   This will result in a ``dragonradio-2004-base`` image in the top-level ``images`` directory. The password for the ``root`` and ``srn-user`` users in this image is ``dragonradio``.
 
 #. Build a DragonRadio image
 
-   The ``build-image.sh`` takes a ``git`` reference (tag, hash, etc.) and builds an image based on the given version of the radio. For example, an image based on the ``master`` branch can be built as follows:
+   The ``build-image.sh`` takes a ``git`` reference (tag, hash, etc.) and builds an image based on the given version of the radio. For example, an image based on the ``main`` branch can be built as follows:
 
    .. code-block:: bash
 
-     ./bin/build-image.sh master
+     ./bin/build-image.sh main
 
    The image wil be placed in the ``images`` directory and have a name of the form ``REF-DATE-HASH``, where ``REF`` is a ``git`` reference, ``DATE`` is the build date, and ``HASH`` is the ``git`` hash of the version of the radio use to build the image.
 
@@ -58,7 +56,9 @@ The documentation can be built as follows:
 
 .. code-block:: bash
 
+   source venv/bin/activate
    cd docs
+   sudo apt install doxygen
    pip install -Ur requirements.txt
    make html
 
