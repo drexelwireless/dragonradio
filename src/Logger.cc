@@ -2,6 +2,7 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <stdint.h>
+#include <string.h>
 
 #include <complex>
 
@@ -751,8 +752,12 @@ void Logger::logARQSACKEvent_(Packet &pkt,
         switch (it->type) {
             case ControlMsg::Type::kSelectiveAck:
             {
-                sacks.push_back(it->ack.begin);
-                sacks.push_back(it->ack.end);
+                ControlMsg::SelectiveAck ack;
+
+                ::memcpy(&ack, &(it->ack), sizeof(ack));
+
+                sacks.push_back(ack.begin);
+                sacks.push_back(ack.end);
             }
             break;
 
