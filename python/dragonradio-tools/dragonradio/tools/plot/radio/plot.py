@@ -342,8 +342,9 @@ class RadioMetricPlot(ReservationPlot):
             ax.legend(handles=self.lines[ax], loc='upper right')
 
         # Set window title
-        title = 'Reservation {}'.format(self.logs.reservation.reservation_id)
-        self.set_window_title(title)
+        if self.logs.reservation:
+            title = 'Reservation {}'.format(self.logs.reservation.reservation_id)
+            self.set_window_title(title)
 
         # Plot stage markers
         self.plotStages()
