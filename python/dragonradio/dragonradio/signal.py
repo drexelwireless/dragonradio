@@ -112,6 +112,12 @@ def lowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
                              fs=fs,
                              pass_zero=True,
                              scale=True)
+    elif ftype == 'ls':
+        bands = np.array([0, wp/2, ws/2, fs/2])
+        desired = [1, 1, 0, 0]
+        weights = [1, 1]
+
+        return signal.firls(Nmax, bands, desired, weights, fs=fs)
 
     # Use firpm
     N = bellangerord(0.001, 0.001, fs, ws-wp)
