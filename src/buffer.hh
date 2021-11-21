@@ -65,7 +65,7 @@ public:
     {
         data_ = other.data_;
         size_ = other.size_;
-        capacity_ = other.size_;
+        capacity_ = other.capacity_;
 
         other.data_ = nullptr;
         other.size_ = 0;
@@ -80,12 +80,13 @@ public:
 
     buffer& operator=(const buffer& other)
     {
-        data_ = reinterpret_cast<T*>(std::malloc(other.size_*sizeof(T)));
-        if (!data_)
+        T *new_data = reinterpret_cast<T*>(std::realloc(data_, other.size_*sizeof(T)));
+        if (!new_data)
             throw std::bad_alloc();
 
-        std::memcpy(data_, other.data_, other.size_*sizeof(T));
+        std::memcpy(new_data, other.data_, other.size_*sizeof(T));
 
+        data_ = new_data;
         size_ = other.size_;
         capacity_ = other.size_;
 
@@ -99,7 +100,7 @@ public:
 
         data_ = other.data_;
         size_ = other.size_;
-        capacity_ = other.size_;
+        capacity_ = other.capacity_;
 
         other.data_ = nullptr;
         other.size_ = 0;
