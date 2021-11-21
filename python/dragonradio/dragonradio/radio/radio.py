@@ -599,12 +599,9 @@ class Radio(dragonradio.tasks.TaskManager):
             PHYChannels([PHYChannel(chan, self.genSynthesizerTaps(chan), self.phy) for chan in channels])
 
         #
-        # Tell the MAC the minimum number of samples in a slot
+        # Tell the LLC the minimum number of samples in a slot
         #
         min_channel_bandwidth = min([chan.channel.bw for chan in self.synthesizer.channels])
-
-        if self.mac is not None:
-            self.mac.min_channel_bandwidth = min_channel_bandwidth
 
         self.controller.min_channel_bandwidth = min_channel_bandwidth
 
@@ -940,9 +937,7 @@ class Radio(dragonradio.tasks.TaskManager):
 
     def finishConfiguringMAC(self):
         """Finish configuring MAC"""
-        bws = [chan.channel.bw for chan in self.synthesizer.channels]
-        if len(bws) != 0:
-            self.mac.min_channel_bandwidth = min(bws)
+        pass
 
     def replaceSynthesizer(self, slotted):
         """Replace the synthesizer"""
