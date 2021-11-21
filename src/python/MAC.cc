@@ -27,10 +27,6 @@ void exportMACs(py::module &m)
             &SlottedMAC::getSchedule,
             py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
             "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
-        .def_property("min_channel_bandwidth",
-            nullptr,
-            &MAC::setMinChannelBandwidth,
-            "Minimum channel bandwidth")
         .def("getLoad",
             &SlottedMAC::getLoad,
             "Get current load")

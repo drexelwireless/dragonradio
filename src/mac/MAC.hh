@@ -91,13 +91,6 @@ public:
         reconfigure();
     }
 
-    /** @brief Set minimum channel bandwidth */
-    virtual void setMinChannelBandwidth(double min_bw)
-    {
-        min_chan_bw_ = min_bw;
-        reconfigure();
-    }
-
     /** @brief Get current load */
     Load getLoad(void)
     {
@@ -179,9 +172,6 @@ protected:
 
     /** @brief The MAC schedule */
     Schedule schedule_;
-
-    /** @brief The minimum channel bandwidth (Hz) */
-    double min_chan_bw_;
 
     /** @brief TX center frequency offset from RX center frequency. */
     /** If the TX and RX rates are different, this is non-empty and contains
