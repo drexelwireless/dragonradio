@@ -220,7 +220,7 @@ class Log:
 
         # Convert dropped field to category
         df = df.astype({'dropped': DROPPED_CAT}, copy=False)
-        df.dropped.cat.rename_categories(DROPPED, inplace=True)
+        df.dropped = df.dropped.cat.rename_categories(DROPPED)
 
         # Add packet start and end times based on slot timestamp, bandwidth, and
         # sample start and end.
@@ -306,7 +306,7 @@ class Log:
 
         # Convert dropped field to category
         df = df.astype({'type': ARQ_EVENT_TYPE_CAT}, copy=False)
-        df.type.cat.rename_categories(ARQ_EVENT_TYPE, inplace=True)
+        df.type = df.type.cat.rename_categories(ARQ_EVENT_TYPE)
 
         return df
 
