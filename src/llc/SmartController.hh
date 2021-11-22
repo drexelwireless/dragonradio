@@ -95,6 +95,9 @@ struct SendWindow {
 
         /** @brief Long-term packet error rate */
         WindowedMean<double> long_per;
+
+        /** @brief Reset channel's PER estimates */
+        void resetPEREstimates(const SmartController& controller);
     };
 
     SendWindow(Node &n,
@@ -288,6 +291,25 @@ struct RecvWindow : public TimerQueue::Timer  {
     struct Entry;
 
     using vector_type = std::vector<Entry>;
+
+    /** @brief Channel state information */
+    struct CSI {
+        CSI() = delete;
+
+        CSI(const SmartController& controller);
+
+        /** @brief Short-term packet EVM */
+        TimeWindowMean<MonoClock, float> short_evm;
+
+        /** @brief Long-term packet EVM */
+        TimeWindowMean<MonoClock, float> long_evm;
+
+        /** @brief Short-term packet RSSI */
+        TimeWindowMean<MonoClock, float> short_rssi;
+
+        /** @brief Long-term packet RSSI */
+        TimeWindowMean<MonoClock, float> long_rssi;
+    };
 
     RecvWindow(Node &n,
                SmartController &controller,

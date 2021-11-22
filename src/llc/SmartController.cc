@@ -861,7 +861,7 @@ void SmartController::environmentDiscontinuity(void)
             sendw.per_cutoff = sendw.seq;
 
             // Reset PER estimates
-            sendw.resetPEREstimates();
+            sendw.csi.resetPEREstimates(sendw.controller);
 
             // Reset EVM and RSSI estimates
             sendw.csi.short_evm.reset();
@@ -1821,7 +1821,7 @@ void SendWindow::updateMCS(bool fast_adjust)
         if (n != 0)
             moveDownMCS(n);
         else
-            resetPEREstimates();
+            csi.resetPEREstimates(controller);
     } else if (fast_adjust && csi.short_evm) {
         mcsidx_t new_mcsidx;
         auto     current_evm = csi.long_evm.value_or(*csi.short_evm);
@@ -1851,7 +1851,7 @@ void SendWindow::updateMCS(bool fast_adjust)
         if (mayMoveUpMCS())
             moveUpMCS();
         else
-            resetPEREstimates();
+            csi.resetPEREstimates(controller);
     }
 }
 
@@ -1926,7 +1926,7 @@ void SendWindow::setMCS(size_t new_mcsidx)
     per_end = seq;
 
     // Reset PER estimates
-    resetPEREstimates();
+    csi.resetPEREstimates(controller);
 
     // Inform network queue of new metric. We use the data rate of the link as
     // the metric.
@@ -1954,7 +1954,7 @@ void SendWindow::setMCS(size_t new_mcsidx)
            csi.long_per.getWindowSize());
 }
 
-void SendWindow::resetPEREstimates(void)
+void SendWindow::CSI::resetPEREstimates(const SmartController& controller)
 {
     double min_channel_bandwidth = 0;
 
@@ -1972,11 +1972,11 @@ void SendWindow::resetPEREstimates(void)
         }
     }
 
-    csi.short_per.setWindowSize(std::max(1.0, controller.short_per_window_*min_channel_bandwidth/controller.max_packet_samples_[csi.mcsidx]));
-    csi.short_per.reset();
+    short_per.setWindowSize(std::max(1.0, controller.short_per_window_*min_channel_bandwidth/controller.max_packet_samples_[mcsidx]));
+    short_per.reset();
 
-    csi.long_per.setWindowSize(std::max(1.0, controller.long_per_window_*min_channel_bandwidth/controller.max_packet_samples_[csi.mcsidx]));
-    csi.long_per.reset();
+    long_per.setWindowSize(std::max(1.0, controller.long_per_window_*min_channel_bandwidth/controller.max_packet_samples_[mcsidx]));
+    long_per.reset();
 }
 
 void SendWindow::Entry::operator()()
@@ -2040,4 +2040,12 @@ void RecvWindow::operator()()
         controller.timer_queue_.run_in(*this,
             controller.ack_delay_ - controller.sack_delay_);
     }
+}
+
+RecvWindow::CSI::CSI(const SmartController& controller)
+{
+    short_evm.setTimeWindow(controller.short_stats_window_);
+    long_evm.setTimeWindow(controller.long_stats_window_);
+    short_rssi.setTimeWindow(controller.short_stats_window_);
+    long_rssi.setTimeWindow(controller.long_stats_window_);
 }
