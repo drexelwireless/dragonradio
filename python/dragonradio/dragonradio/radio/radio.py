@@ -598,12 +598,8 @@ class Radio(dragonradio.tasks.TaskManager):
         self.synthesizer.channels = \
             PHYChannels([PHYChannel(chan, self.genSynthesizerTaps(chan), self.phy) for chan in channels])
 
-        #
-        # Tell the LLC the minimum number of samples in a slot
-        #
-        min_channel_bandwidth = min([chan.channel.bw for chan in self.synthesizer.channels])
-
-        self.controller.min_channel_bandwidth = min_channel_bandwidth
+        # LLC needs to know transmitting channels
+        self.controller.channels = channels
 
     def configureValidDecimationRates(self):
         """Determine valid decimation and interpolation rates"""

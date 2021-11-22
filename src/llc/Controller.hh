@@ -99,7 +99,6 @@ public:
       , radionet_(radionet)
       , netlink_(nullptr)
       , mtu_(mtu)
-      , min_channel_bandwidth_(0)
     {
     }
     virtual ~Controller() = default;
@@ -112,10 +111,9 @@ public:
         return mtu_;
     }
 
-    /** @brief Set minimum channel bandwidth */
-    virtual void setMinChannelBandwidth(double min_bw)
+    /** @brief Set channels */
+    virtual void setChannels(const std::vector<Channel> &channels)
     {
-        min_channel_bandwidth_ = min_bw;
     }
 
     /** @brief Get the controller's network link. */
@@ -197,9 +195,6 @@ protected:
 
     /** @brief Network MTU */
     size_t mtu_;
-
-    /** @brief Bandwidth of the smallest channel */
-    double min_channel_bandwidth_;
 };
 
 #endif /* CONTROLLER_H_ */
