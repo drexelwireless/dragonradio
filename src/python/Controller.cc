@@ -249,10 +249,9 @@ void exportControllers(py::module &m)
         .def_property("net_link",
             &Controller::getNetLink,
             &Controller::setNetLink)
-        .def_property("min_channel_bandwidth",
+        .def_property("channels",
             nullptr,
-            &Controller::setMinChannelBandwidth,
-            "Minimum channel bandwidth")
+            &Controller::setChannels)
         .def("setEmcon",
             &Controller::setEmcon,
             "Set whether or not a node can transmit")

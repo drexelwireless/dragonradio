@@ -419,6 +419,8 @@ public:
                     const std::vector<evm_thresh_t> &evm_thresholds);
     virtual ~SmartController();
 
+    void setChannels(const std::vector<Channel> &channels) override;
+
     /** @brief Get MCS fast adjustment period (sec) */
     double getMCSFastAdjustmentPeriod(void) const
     {
@@ -955,6 +957,12 @@ public:
 protected:
     /** @brief Our PHY. */
     std::shared_ptr<PHY> phy_;
+
+    /** @brief Channels */
+    std::vector<Channel> channels_;
+
+    /** @brief Mutex to serialize access to channels */
+    std::mutex channels_mutex_;
 
     /** @brief Mutex to serialize access to the network */
     std::mutex net_mutex_;

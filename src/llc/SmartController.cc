@@ -77,6 +77,13 @@ SmartController::~SmartController()
     timer_queue_.stop();
 }
 
+void SmartController::setChannels(const std::vector<Channel> &channels)
+{
+    std::lock_guard<std::mutex> lock(channels_mutex_);
+
+    channels_ = channels;
+}
+
 void SmartController::setEmcon(NodeId node_id, bool emcon)
 {
     Node &node = (*radionet_)[node_id];
@@ -1954,10 +1961,26 @@ void SendWindow::setMCS(size_t new_mcsidx)
 
 void SendWindow::resetPEREstimates(void)
 {
-    short_per.setWindowSize(std::max(1.0, controller.short_per_window_*controller.min_channel_bandwidth_/controller.max_packet_samples_[mcsidx]));
+    double min_channel_bandwidth = 0;
+
+    {
+        std::lock_guard<std::mutex> lock(controller.channels_mutex_);
+
+        if (!controller.channels_.empty()) {
+            auto it = controller.channels_.begin();
+
+            min_channel_bandwidth = it->bw;
+            ++it;
+
+            for (; it != controller.channels_.end(); ++it)
+                min_channel_bandwidth = std::min(min_channel_bandwidth, it->bw);
+        }
+    }
+
+    short_per.setWindowSize(std::max(1.0, controller.short_per_window_*min_channel_bandwidth/controller.max_packet_samples_[mcsidx]));
     short_per.reset();
 
-    long_per.setWindowSize(std::max(1.0, controller.long_per_window_*controller.min_channel_bandwidth_/controller.max_packet_samples_[mcsidx]));
+    long_per.setWindowSize(std::max(1.0, controller.long_per_window_*min_channel_bandwidth/controller.max_packet_samples_[mcsidx]));
     long_per.reset();
 }
 
