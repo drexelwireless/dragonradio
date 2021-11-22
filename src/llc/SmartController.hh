@@ -980,7 +980,7 @@ protected:
     std::vector<Channel> channels_;
 
     /** @brief Mutex to serialize access to channels */
-    std::mutex channels_mutex_;
+    mutable std::mutex channels_mutex_;
 
     /** @brief Mutex to serialize access to the network */
     std::mutex net_mutex_;
