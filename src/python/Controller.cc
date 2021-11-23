@@ -240,6 +240,25 @@ void exportControllers(py::module &m)
             "Transmission delay (sec)")
         ;
 
+    // Export class ControllerChannel to Python
+    py::class_<ControllerChannel, std::shared_ptr<ControllerChannel>>(m, "ControllerChannel")
+        .def(py::init<const Channel&,
+                      std::shared_ptr<PHY>,
+                      std::vector<ControllerChannel::evm_thresh_t>>())
+        .def_readwrite("channel",
+            &ControllerChannel::channel,
+           "Channel")
+        .def_readwrite("phy",
+            &ControllerChannel::phy,
+            "PHY for channel")
+        .def_readwrite("evm_thresh",
+            &ControllerChannel::evm_thresh,
+            "EVM threshold table")
+        ;
+
+    // Export vector of ControllerChannel
+    py::bind_vector<std::vector<ControllerChannel>>(m, "ControllerChannels");
+
     // Export class Controller to Python
     py::class_<Controller, std::shared_ptr<Controller>>(m, "Controller")
         .def_property_readonly("net_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_in); } )

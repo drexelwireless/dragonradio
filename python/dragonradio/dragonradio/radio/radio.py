@@ -278,7 +278,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.radionet = RadioNet(self.tuntap, self.node_id)
 
         # Configure the controller
-        self.controller = self.mkController(self.evm_thresholds)
+        self.controller = self.mkController()
 
         #
         # Create flow performance measurement component
@@ -427,7 +427,7 @@ class Radio(dragonradio.tasks.TaskManager):
 
         return synthesizer
 
-    def mkController(self, evm_thresholds):
+    def mkController(self):
         """Construct a Controller according to configuration parameters"""
         config = self.config
 
@@ -441,7 +441,7 @@ class Radio(dragonradio.tasks.TaskManager):
                                          self.phy,
                                          config.arq_window,
                                          config.arq_window,
-                                         evm_thresholds)
+                                         self.evm_thresholds)
 
             # ARQ parameters
             controller.enforce_ordering = config.arq_enforce_ordering
@@ -599,7 +599,7 @@ class Radio(dragonradio.tasks.TaskManager):
             PHYChannels([PHYChannel(chan, self.genSynthesizerTaps(chan), self.phy) for chan in channels])
 
         # LLC needs to know transmitting channels
-        self.controller.channels = channels
+        self.controller.channels = ControllerChannels([ControllerChannel(chan, self.phy, self.evm_thresholds) for chan in channels])
 
     def configureValidDecimationRates(self):
         """Determine valid decimation and interpolation rates"""

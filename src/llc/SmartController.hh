@@ -449,7 +449,7 @@ class SmartController : public Controller
     friend class RecvWindowGuard;
 
 public:
-    using evm_thresh_t = std::optional<double>;
+    using evm_thresh_t = std::optional<float>;
 
     SmartController(std::shared_ptr<RadioNet> radionet_,
                     size_t mtu,
@@ -459,7 +459,7 @@ public:
                     const std::vector<evm_thresh_t> &evm_thresholds);
     virtual ~SmartController();
 
-    void setChannels(const std::vector<Channel> &channels) override;
+    void setChannels(const std::vector<ControllerChannel> &channels) override;
 
     /** @brief Get MCS fast adjustment period (sec) */
     double getMCSFastAdjustmentPeriod(void) const
@@ -999,7 +999,7 @@ protected:
     std::shared_ptr<PHY> phy_;
 
     /** @brief Channels */
-    std::vector<Channel> channels_;
+    std::vector<ControllerChannel> channels_;
 
     /** @brief Mutex to serialize access to channels */
     mutable std::mutex channels_mutex_;

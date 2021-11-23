@@ -81,6 +81,31 @@ protected:
     }
 };
 
+/** @brief A Controller channel configuration */
+struct ControllerChannel {
+    using evm_thresh_t = std::optional<float>;
+
+    ControllerChannel() = delete;
+
+    ControllerChannel(const Channel &channel_,
+                      std::shared_ptr<PHY> phy_,
+                      std::vector<evm_thresh_t> evm_thresh_)
+      : channel(channel_)
+      , phy(phy_)
+      , evm_thresh(evm_thresh_)
+    {
+    }
+
+    /** @brief The channel */
+    Channel channel;
+
+    /** @brief PHY for channel */
+    std::shared_ptr<PHY> phy;
+
+    /** @brief EVM threshold table */
+    std::vector<evm_thresh_t> evm_thresh;
+};
+
 /** @brief A logical link controller. */
 class Controller : public Element
 {
@@ -112,7 +137,7 @@ public:
     }
 
     /** @brief Set channels */
-    virtual void setChannels(const std::vector<Channel> &channels)
+    virtual void setChannels(const std::vector<ControllerChannel> &channels)
     {
     }
 
