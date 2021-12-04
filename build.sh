@@ -91,4 +91,12 @@ pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt -e python/dragonradio
 
 # Build dragonradio
-make -j10
+(
+  rm -rf build;
+  mkdir build;
+  cd build;
+  CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake ..;
+  make -j10;
+  cd ..;
+  ln -sf build/dragonradio
+)
