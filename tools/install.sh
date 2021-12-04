@@ -13,6 +13,8 @@ virtualenv -p python3.8 venv
 pip install --upgrade pip setuptools
 
 # Install dragonradio package in development mode
-(cd .. && pip install python/dragonradio-internal)
-(cd .. && pip install -e python/dragonradio)
-(cd .. && pip install -e python/dragonradio-tools)
+BASEDIR=$(dirname "$0")
+
+pip install "$BASEDIR/.."
+pip install "$BASEDIR/../python/dragonradio"
+pip install "$BASEDIR/../python/dragonradio-tools"
