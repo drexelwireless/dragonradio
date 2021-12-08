@@ -25,16 +25,59 @@ CXX=g++
 CFLAGS="-Ofast -march=native"
 
 # Build and install libcorrect
-(cd dependencies/libcorrect && rm -rf build && mkdir build && cd build && CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
+(
+  cd dependencies/libcorrect;
+  rm -rf build;
+  mkdir build;
+  cd build;
+  CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake ..;
+  make;
+  make shim;
+  sudo make install;
+  sudo ldconfig;
+  make clean;
+  cd ..;
+  rm -rf build
+)
 
 # Build and install UHD
-(cd dependencies/uhd/host && rm -rf build && mkdir build && cd build && cmake -DCMAKE_FIND_ROOT_PATH=/usr ../ && make -j4 && sudo make install && sudo ldconfig && make clean)
+(
+  cd dependencies/uhd/host;
+  rm -rf build;
+  mkdir build;
+  cd build;
+  cmake -DCMAKE_FIND_ROOT_PATH=/usr ../;
+  make -j4;
+  sudo make install;
+  sudo ldconfig;
+  make clean
+)
 
 # Build and install liquid-dsp
-(cd dependencies/liquid-dsp && ./bootstrap.sh && CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" ./configure && make && sudo make install && sudo ldconfig && make clean)
+(
+  cd dependencies/liquid-dsp;
+  ./bootstrap.sh;
+  CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" ./configure;
+  make;
+  sudo make install;
+  sudo ldconfig;
+  make clean
+)
 
 # Build and install firpm
-(cd dependencies/firpm/firpm_d && rm -rf build && mkdir build && cd build && cmake .. && make -j4 && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
+(
+  cd dependencies/firpm/firpm_d;
+  rm -rf build;
+  mkdir build;
+  cd build;
+  cmake ..;
+  make -j4;
+  sudo make install;
+  sudo ldconfig;
+  make clean;
+  cd ..;
+  rm -rf build
+)
 
 # Create virtualenv
 rm -rf venv
