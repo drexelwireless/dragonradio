@@ -163,6 +163,9 @@ python/dragonradio/sc2/%_pb2.py : proto/%.proto
 python/dragonradio/dragonradio/%_pb2.py : proto/%.proto
 	protoc -I proto --python_out=$(dir $@) $(notdir $<)
 
+requirements.txt:
+	./venv/bin/pip freeze --exclude dragonradio >$@
+
 #
 # Print an arbitrary makefile variable
 #
