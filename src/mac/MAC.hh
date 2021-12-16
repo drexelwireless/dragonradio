@@ -7,7 +7,7 @@
 #include <deque>
 #include <memory>
 
-#include "USRP.hh"
+#include "Radio.hh"
 #include "llc/Controller.hh"
 #include "mac/MAC.hh"
 #include "mac/Snapshot.hh"
@@ -38,7 +38,7 @@ public:
         }
     };
 
-    MAC(std::shared_ptr<USRP> usrp,
+    MAC(std::shared_ptr<Radio> radio,
         std::shared_ptr<Controller> controller,
         std::shared_ptr<SnapshotCollector> collector,
         std::shared_ptr<Channelizer> channelizer,
@@ -132,8 +132,8 @@ public:
     virtual void stop(void) = 0;
 
 protected:
-    /** @brief Our USRP device. */
-    std::shared_ptr<USRP> usrp_;
+    /** @brief Our Radio device. */
+    std::shared_ptr<Radio> radio_;
 
     /** @brief Our controller */
     std::shared_ptr<Controller> controller_;

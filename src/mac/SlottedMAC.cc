@@ -1,6 +1,7 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include "logging.hh"
 #include "Logger.hh"
 #include "SlottedMAC.hh"
 #include "liquid/Modem.hh"
@@ -8,7 +9,7 @@
 
 using Slot = SlotSynthesizer::Slot;
 
-SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
+SlottedMAC::SlottedMAC(std::shared_ptr<Radio> radio,
                        std::shared_ptr<Controller> controller,
                        std::shared_ptr<SnapshotCollector> collector,
                        std::shared_ptr<Channelizer> channelizer,
@@ -16,7 +17,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        double slot_size,
                        double guard_size,
                        double slot_send_lead_time)
-  : MAC(usrp,
+  : MAC(radio,
         controller,
         collector,
         channelizer,
@@ -145,7 +146,7 @@ void SlottedMAC::txWorker(void)
         // If the slot doesn't contain any IQ data to send, we're done
         if (slot->mpkts.empty()) {
             if (!next_slot_start_of_burst) {
-                usrp_->stopTXBurst();
+                radio_->stopTXBurst();
                 next_slot_start_of_burst = true;
             }
 
@@ -159,14 +160,14 @@ void SlottedMAC::txWorker(void)
         if (stop_burst_.load(std::memory_order_relaxed)) {
             stop_burst_.store(false, std::memory_order_relaxed);
 
-            usrp_->stopTXBurst();
+            radio_->stopTXBurst();
             next_slot_start_of_burst = true;
         }
 
-        // Transmit the packets via the USRP
+        // Transmit the packets via the radio
         bool end_of_burst = slot->length() < slot->full_slot_samples;
 
-        usrp_->burstTX(WallClock::to_mono_time(slot->deadline) + slot->deadline_delay/tx_rate_,
+        radio_->burstTX(WallClock::to_mono_time(slot->deadline) + slot->deadline_delay/tx_rate_,
                        next_slot_start_of_burst,
                        end_of_burst,
                        slot->iqbufs);

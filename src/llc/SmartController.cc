@@ -1,6 +1,7 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include "logging.hh"
 #include "Logger.hh"
 #include "llc/SmartController.hh"
 

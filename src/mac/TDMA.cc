@@ -1,12 +1,13 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include "logging.hh"
 #include "Clock.hh"
-#include "USRP.hh"
+#include "Radio.hh"
 #include "mac/TDMA.hh"
 #include "util/threads.hh"
 
-TDMA::TDMA(std::shared_ptr<USRP> usrp,
+TDMA::TDMA(std::shared_ptr<Radio> radio,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
@@ -15,7 +16,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            double guard_size,
            double slot_send_lead_time,
            size_t nslots)
-  : SlottedMAC(usrp,
+  : SlottedMAC(radio,
                controller,
                collector,
                channelizer,
