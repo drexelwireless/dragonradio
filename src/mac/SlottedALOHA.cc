@@ -2,11 +2,11 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "Clock.hh"
-#include "USRP.hh"
+#include "Radio.hh"
 #include "mac/SlottedALOHA.hh"
 #include "util/threads.hh"
 
-SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
+SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
                            std::shared_ptr<Controller> controller,
                            std::shared_ptr<SnapshotCollector> collector,
                            std::shared_ptr<Channelizer> channelizer,
@@ -15,7 +15,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            double guard_size,
                            double slot_send_lead_time,
                            double p)
-  : SlottedMAC(usrp,
+  : SlottedMAC(radio,
                controller,
                collector,
                channelizer,

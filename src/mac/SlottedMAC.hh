@@ -13,7 +13,7 @@
 #include "Logger.hh"
 #include "RadioNet.hh"
 #include "SafeQueue.hh"
-#include "USRP.hh"
+#include "Radio.hh"
 #include "phy/Channelizer.hh"
 #include "phy/SlotSynthesizer.hh"
 #include "mac/MAC.hh"
@@ -25,7 +25,7 @@ class SlottedMAC : public MAC
 public:
     using Slot = SlotSynthesizer::Slot;
 
-    SlottedMAC(std::shared_ptr<USRP> usrp,
+    SlottedMAC(std::shared_ptr<Radio> radio,
                std::shared_ptr<Controller> controller,
                std::shared_ptr<SnapshotCollector> collector,
                std::shared_ptr<Channelizer> channelizer,

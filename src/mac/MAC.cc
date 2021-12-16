@@ -1,16 +1,17 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include "logging.hh"
 #include "mac/MAC.hh"
 #include "util/threads.hh"
 
-MAC::MAC(std::shared_ptr<USRP> usrp,
+MAC::MAC(std::shared_ptr<Radio> radio,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
          std::shared_ptr<Synthesizer> synthesizer,
          double rx_period)
-  : usrp_(usrp)
+  : radio_(radio)
   , controller_(controller)
   , snapshot_collector_(collector)
   , channelizer_(channelizer)
@@ -22,22 +23,22 @@ MAC::MAC(std::shared_ptr<USRP> usrp,
   , rx_bufsize_(0)
   , logger_(logger)
 {
-    rx_rate_ = usrp->getRXRate();
-    tx_rate_ = usrp->getTXRate();
+    rx_rate_ = radio_->getRXRate();
+    tx_rate_ = radio_->getTXRate();
 }
 
 void MAC::reconfigure(void)
 {
-    rx_rate_ = usrp_->getRXRate();
-    tx_rate_ = usrp_->getTXRate();
+    rx_rate_ = radio_->getRXRate();
+    tx_rate_ = radio_->getTXRate();
 
-    if (usrp_->getTXRate() == usrp_->getRXRate())
+    if (radio_->getTXRate() == radio_->getRXRate())
         tx_fc_off_ = std::nullopt;
     else
-        tx_fc_off_ = usrp_->getTXFrequency() - usrp_->getRXFrequency();
+        tx_fc_off_ = radio_->getTXFrequency() - radio_->getRXFrequency();
 
     rx_period_samps_ = rx_rate_*rx_period_;
-    rx_bufsize_ = usrp_->getRecommendedBurstRXSize(rx_period_samps_);
+    rx_bufsize_ = radio_->getRecommendedBurstRXSize(rx_period_samps_);
 }
 
 void MAC::rxWorker(void)
@@ -65,7 +66,7 @@ void MAC::rxWorker(void)
         // Bump the sequence number to indicate a discontinuity
         seq++;
 
-        usrp_->startRXStream(WallClock::to_mono_time(t_next_period));
+        radio_->startRXStream(WallClock::to_mono_time(t_next_period));
 
         while (!done_) {
             // Update times
@@ -91,7 +92,7 @@ void MAC::rxWorker(void)
 
             // Read samples for current period. The demodulator will do its
             // thing as we continue to read samples.
-            bool ok = usrp_->burstRX(WallClock::to_mono_time(t_cur_period), rx_period_samps_, *iqbuf);
+            bool ok = radio_->burstRX(WallClock::to_mono_time(t_cur_period), rx_period_samps_, *iqbuf);
 
             // Update snapshot offset by finalizing this snapshot
             if (do_snapshot)
@@ -104,7 +105,7 @@ void MAC::rxWorker(void)
 
         // Attempt to deal with RX errors
         logMAC(LOGERROR, "attempting to reset RX loop");
-        usrp_->stopRXStream();
+        radio_->stopRXStream();
     }
 }
 

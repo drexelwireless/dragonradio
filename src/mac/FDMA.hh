@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "USRP.hh"
+#include "Radio.hh"
 #include "phy/Channelizer.hh"
 #include "phy/ChannelSynthesizer.hh"
 #include "mac/MAC.hh"
@@ -15,7 +15,7 @@
 class FDMA : public MAC
 {
 public:
-    FDMA(std::shared_ptr<USRP> usrp,
+    FDMA(std::shared_ptr<Radio> radio,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
