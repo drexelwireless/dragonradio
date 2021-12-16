@@ -63,6 +63,7 @@ add_library(DragonRadio
   python/Net.cc
   python/PHY.cc
   python/Packet.cc
+  python/Radio.cc
   python/RadioNet.cc
   python/Resample.cc
   python/Snapshot.cc
