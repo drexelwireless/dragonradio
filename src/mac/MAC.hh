@@ -162,7 +162,7 @@ protected:
     double tx_rate_;
 
     /** @brief Length of RX period (sec) */
-    double rx_period_;
+    std::chrono::duration<double> rx_period_;
 
     /** @brief Number of RX samples in an RX period */
     size_t rx_period_samps_;

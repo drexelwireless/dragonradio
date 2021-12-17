@@ -6,6 +6,8 @@
 #include "mac/SlottedALOHA.hh"
 #include "util/threads.hh"
 
+using namespace std::literals::chrono_literals;
+
 SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
                            std::shared_ptr<Controller> controller,
                            std::shared_ptr<SnapshotCollector> collector,
@@ -75,12 +77,12 @@ void SlottedALOHA::txSlotWorker(void)
     WallClock::time_point t_now;            // Current time
     WallClock::time_point t_next_slot;      // Time at which our next slot starts
     WallClock::time_point t_following_slot; // Time at which the following slot starts
-    double                t_slot_pos;       // Offset into the current slot (sec)
+    WallClock::duration   t_slot_pos;       // Offset into the current slot (sec)
 
     while (!done_) {
         // Figure out when our next send slot is.
         t_now = WallClock::now();
-        t_slot_pos = fmod(t_now, slot_size_);
+        t_slot_pos = t_now.time_since_epoch() % slot_size_;
         t_next_slot = t_now + (slot_size_ - t_slot_pos);
         t_following_slot = t_next_slot + slot_size_;
 
@@ -96,11 +98,11 @@ void SlottedALOHA::txSlotWorker(void)
             txSlot(std::move(slot));
 
         // Sleep until TX time for following slot
-        double delta;
+        WallClock::duration delta;
 
         t_now = WallClock::now();
-        delta = (t_following_slot - t_now).get_real_secs() - slot_send_lead_time_;
-        if (delta > 0.0)
+        delta = (t_following_slot - t_now) - slot_send_lead_time_;
+        if (delta > 0.0s)
             doze(delta);
     }
 

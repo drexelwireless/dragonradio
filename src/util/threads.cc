@@ -66,19 +66,6 @@ void pinThisThread(void)
     pinThreadToCPU(pthread_self(), npinned++ % num_cpus);
 }
 
-int doze(double sec)
-{
-    struct timespec ts;
-    double whole, frac;
-
-    frac = modf(sec, &whole);
-
-    ts.tv_sec = whole;
-    ts.tv_nsec = frac*1e9;
-
-    return nanosleep(&ts, NULL);
-}
-
 BlockSignal::BlockSignal(int sig)
 {
     sigset_t block_mask_;

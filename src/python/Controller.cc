@@ -2,6 +2,7 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <pybind11/pybind11.h>
+#include <pybind11/chrono.h>
 #include <pybind11/stl.h>
 
 #include "llc/Controller.hh"
@@ -26,12 +27,12 @@ public:
     timestamps_map operator [](NodeId node)
     {
         if (controller_->timestampsContains(node)) {
-            MonoClock::time_point      t0 = WallClock::getTimeZero();
+            MonoClock::time_point      t0 = WallClock::get_t0();
             Timestamps::timestamps_map ts0 = controller_->getTimestamps(node);
             timestamps_map             ts;
 
             for (auto const& [key, val] : ts0) {
-                ts.insert({key, {(val.first - t0).get_real_secs(), (val.second - t0).get_real_secs()}});
+                ts.insert({key, {(val.first - t0).count(), (val.second - t0).count()}});
             }
 
             return ts;

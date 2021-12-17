@@ -1,6 +1,7 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <cassert>
 #include <mutex>
 
 #include "mac/Snapshot.hh"
@@ -38,7 +39,6 @@ std::optional<std::shared_ptr<IQBuf>> Snapshot::getCombinedSlots(void) const
 }
 
 SnapshotCollector::SnapshotCollector()
-  : last_local_tx_start_(0.0)
 {
 }
 
@@ -122,7 +122,7 @@ void SnapshotCollector::selfTX(MonoClock::time_point when,
     scaled_nsamples = static_cast<ssize_t>(nsamples*fs_rx/fs_tx);
 
     if (snapshot_) {
-        ssize_t start = (when - snapshot_->timestamp).get_real_secs()*fs_rx;
+        ssize_t start = (when - snapshot_->timestamp).count()*fs_rx;
 
         snapshot_->selftx.emplace_back(SelfTX{true,
                                               start,
@@ -152,10 +152,10 @@ void SnapshotCollector::newSnapshot(void)
 
     // Log last TX if it is in progress
     float                 fs = last_local_tx_fs_rx_;
-    MonoClock::time_point end = last_local_tx_start_ + last_local_tx_.end/fs;
+    MonoClock::time_point end = last_local_tx_start_ + MonoClock::duration(last_local_tx_.end/fs);
 
     if (snapshot_->timestamp < end) {
-        ssize_t actual_start = (snapshot_->timestamp - last_local_tx_start_).get_real_secs()*fs;
+        ssize_t actual_start = (snapshot_->timestamp - last_local_tx_start_).count()*fs;
 
         last_local_tx_.start -= actual_start;
         last_local_tx_.end -= actual_start;
@@ -170,7 +170,7 @@ void SnapshotCollector::fixSnapshotTimestamps(void)
         float                 fs = snapshot_->slots[0]->fs;
         MonoClock::time_point provisional_timestamp = snapshot_->timestamp;
         MonoClock::time_point actual_timestamp = *snapshot_->slots[0]->timestamp;
-        ssize_t               delta = (actual_timestamp - provisional_timestamp).get_real_secs()*fs;
+        ssize_t               delta = (actual_timestamp - provisional_timestamp).count()*fs;
 
         // Make snapshot timestamp the timestamp of the first collected slot
         snapshot_->timestamp = actual_timestamp;

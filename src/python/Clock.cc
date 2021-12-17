@@ -1,83 +1,47 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <pybind11/pybind11.h>
+#include <pybind11/chrono.h>
 
 #include "Clock.hh"
 #include "python/PyModules.hh"
 
-template <class T>
-pybind11::class_<T, std::shared_ptr<T>>
-exportTimePoint(py::module &m, const char *name)
-{
-    return py::class_<T, std::shared_ptr<T>>(m, name)
-        .def(py::init())
-        .def(py::init<double>())
-        .def(py::init<int64_t>())
-        .def(py::init<int64_t, double>())
-        .def_property_readonly("full_secs",
-            [](const T &t) {
-                return t.get_full_secs();
-            },
-            "Full seconds")
-        .def_property_readonly("frac_secs",
-            [](const T &t) {
-                return t.get_frac_secs();
-            },
-            "Fractional seconds")
-        .def_property_readonly("secs",
-            [](const T &t) {
-                return t.get_real_secs();
-            },
-            "Seconds")
-        .def(py::self + py::self)
-        .def(py::self + double())
-        .def(py::self - py::self)
-        .def(py::self - double())
-        .def(py::self > py::self)
-        .def(py::self < py::self)
-        .def("__repr__",
-            [name](const T &self) {
-                return py::str("{}(full_secs={}, frac_secs={})").format(name, self.get_full_secs(), self.get_frac_secs());
-            })
-        ;
-}
-
 void exportClock(py::module &m)
 {
-    exportTimePoint<WallClock::time_point>(m, "WallTimePoint")
-      .def_property_readonly("mono_time",
-          [](WallClock::time_point &t) {
-              return WallClock::to_mono_time(t);
-          });
-
-    exportTimePoint<MonoClock::time_point>(m, "MonoTimePoint")
-      .def_property_readonly("wall_time",
-          [](MonoClock::time_point &t) {
-              return WallClock::to_wall_time(t);
-          });
-
-    py::class_<Clock, std::shared_ptr<Clock>>(m, "Clock")
+    py::class_<MonoClock::TimeKeeper, std::shared_ptr<MonoClock::TimeKeeper>>(m, "TimeKeeper")
       ;
 
-    py::class_<WallClock, Clock, std::shared_ptr<WallClock>>(m, "WallClock")
+    py::class_<MonoClock, std::shared_ptr<MonoClock>>(m, "MonoClock")
+      .def_property("time_keeper",
+          nullptr,
+          [](MonoClock &self, const std::shared_ptr<MonoClock::TimeKeeper>& time_keeper) {
+              MonoClock::set_time_keeper(time_keeper);
+          })
+      .def("reset_time_keeper",
+          [](MonoClock &self) {
+              MonoClock::reset_time_keeper();
+          })
+      ;
+
+    py::class_<WallClock, MonoClock, std::shared_ptr<WallClock>>(m, "WallClock")
       .def_property_readonly_static("t0",
           [](py::object /* self */) {
-               return WallClock::getTimeZero();
+              return WallClock::get_t0();
           })
-      .def_property_static("offset",
+      .def_property("offset",
           [](py::object /* self */) {
-              return WallClock::getTimeOffset();
+              return WallClock::get_offset();
           },
-          [](py::object /* self */, MonoClock::time_point offset) {
-              return WallClock::setTimeOffset(offset);
+          [](py::object /* self */, WallClock::duration offset) {
+              return WallClock::set_offset(offset);
           })
-      .def_property_static("skew",
+      .def_property("skew",
           [](py::object /* self */) {
-              return WallClock::getSkew();
+              return WallClock::get_skew();
           },
           [](py::object /* self */, double skew) {
-              return WallClock::setSkew(skew);
+              return WallClock::set_skew(skew);
           })
       ;
 

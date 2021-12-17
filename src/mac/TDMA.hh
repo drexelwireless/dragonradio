@@ -51,7 +51,7 @@ public:
 
 private:
     /** @brief Length of TDMA frame (sec) */
-    double frame_size_;
+    std::chrono::duration<double> frame_size_;
 
     /** @brief Number of TDMA slots */
     size_t nslots_;

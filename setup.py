@@ -43,7 +43,7 @@ ext_modules = [
                 'src/python/Python.cc',
                 'src/python/Resample.cc']),
         cxx_std=17,
-        define_macros=[('NOUHD', '1'), ('PYMODULE', '1')],
+        define_macros=[('PYMODULE', '1')],
         include_dirs=[
             '/usr/include/eigen3',
             DEPENDENCIES / 'xsimd/include',

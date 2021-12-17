@@ -2,6 +2,7 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <pybind11/pybind11.h>
+#include <pybind11/chrono.h>
 #include <pybind11/stl.h>
 
 #include "cil/CIL.hh"
@@ -17,11 +18,11 @@ void exportCIL(py::module &m)
     // Export Mandate class to Python
     py::class_<Mandate, std::unique_ptr<Mandate>>(m, "Mandate")
     .def(py::init<FlowUID,
-                  double,
+                  std::chrono::duration<double>,
                   int,
+                  std::optional<std::chrono::duration<double>>,
                   std::optional<double>,
-                  std::optional<double>,
-                  std::optional<double>>())
+                  std::optional<std::chrono::duration<double>>>())
     .def_readonly("flow_uid",
         &Mandate::flow_uid,
         "Flow UID)")

@@ -33,12 +33,24 @@ void pinThreadToCPU(pthread_t t, int cpu_num);
 /** @brief Pin this thread to a CPU */
 void pinThisThread(void);
 
-/** @brief Sleep for the specified number of seconds. sleep, usleep, and
+/** @brief Sleep for the specified duration. sleep, usleep, and
  * nanosleep were already taken, so this function is named "doze."
- * @param sec The number of seconds to sleep.
+ * @param dur The duration to sleep.
  * @returns -1 if interrupted.
  */
-int doze(double sec);
+template<class Rep, class Period = std::ratio<1>>
+int doze(std::chrono::duration<Rep,Period> dur)
+{
+    struct timespec ts;
+    double whole, frac;
+
+    frac = modf(std::chrono::duration<double>(dur).count(), &whole);
+
+    ts.tv_sec = whole;
+    ts.tv_nsec = frac*1e9;
+
+    return nanosleep(&ts, NULL);
+}
 
 /** @brief The signal we use to wake a thread */
 const int SIGWAKE = SIGUSR1;

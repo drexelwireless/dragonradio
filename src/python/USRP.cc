@@ -17,7 +17,7 @@ void exportUSRP(py::module &m)
 
     py::implicitly_convertible<py::str, USRP::DeviceType>();
 
-    py::class_<USRP, Radio, std::shared_ptr<USRP>>(m, "USRP")
+    py::class_<USRP, Radio, MonoClock::TimeKeeper, std::shared_ptr<USRP>>(m, "USRP")
         .def(py::init<const std::string&,
                       const std::optional<std::string>&,
                       const std::optional<std::string>&,

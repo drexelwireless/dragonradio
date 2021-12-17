@@ -4,6 +4,7 @@
 #ifndef MANDATEQUEUE_HH_
 #define MANDATEQUEUE_HH_
 
+#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <mutex>
@@ -397,12 +398,12 @@ public:
         }
     }
 
-    virtual void setTransmissionDelay(double t) override
+    virtual void setTransmissionDelay(std::chrono::duration<double> t) override
     {
         transmission_delay_ = t;
     }
 
-    virtual double getTransmissionDelay(void) const override
+    virtual std::chrono::duration<double> getTransmissionDelay(void) const override
     {
         return transmission_delay_;
     }
@@ -611,10 +612,10 @@ protected:
         {
             if (bucket && min_throughput) {
                 // Add tokens accrued since last time bucket was filled
-                double time_delta = (now - bucket->last_fill).get_real_secs();
+                MonoClock::duration time_delta = now - bucket->last_fill;
 
                 bucket->last_fill = now;
-                bucket->tokens += kTokenFactor*time_delta*(*min_throughput);
+                bucket->tokens += kTokenFactor*time_delta.count()*(*min_throughput);
                 bucket->tokens = std::min(bucket->tokens, bucket->max_tokens);
 
                 // Activate this flow if it has queued packets and tokens
@@ -632,7 +633,7 @@ protected:
             // packet.
             if (bucket->tokens <= 0 && *min_throughput > 0) {
                 mq_.timer_queue_.run_in(*this,
-                    (1.0 - bucket->tokens)/ *min_throughput);
+                    TimerQueue::time_type::duration((1.0 - bucket->tokens)/ *min_throughput));
             }
         }
 
@@ -880,8 +881,8 @@ protected:
                     const auto &deadline = (*q_.begin())->deadline;
 
                     if (deadline && *deadline > now) {
-                        double delta = (*deadline - now).get_real_secs();
-                        double new_min_throughput = (nbytes - bucket->tokens)/delta;
+                        std::chrono::duration<double> delta = *deadline - now;
+                        double                        new_min_throughput = (nbytes - bucket->tokens)/delta.count();
 
                         setFileTransferThroughput(std::max(0.0, new_min_throughput));
                     }
@@ -918,8 +919,8 @@ protected:
     /** @brief Flag indicating that processing of the queue should stop. */
     bool done_;
 
-    /** @brief Packet transmission delay in seconds */
-    double transmission_delay_;
+    /** @brief Packet transmission delay (sec) */
+    std::chrono::duration<double> transmission_delay_;
 
     /** @brief Flag indicating whether or not to have a bonus phase. */
     bool bonus_phase_;

@@ -1,229 +1,331 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef CLOCK_H_
 #define CLOCK_H_
 
+#include <cmath>
 #include <chrono>
 #include <memory>
 
-#include <uhd/usrp/multi_usrp.hpp>
+/** @brief A high-resolution representation for time values. */
+struct timerep_t
+{
+    using time_t = int64_t;
 
-template <class T>
-struct time_point_t {
-    uhd::time_spec_t t;
-
-    explicit time_point_t(double secs=0) : t(secs) {};
-    explicit time_point_t(int64_t full_secs, double frac_secs=0) : t(full_secs, frac_secs) {};
-    explicit time_point_t(const uhd::time_spec_t &t0) : t(t0) {};
-
-    time_point_t(const time_point_t&) = default;
-    time_point_t(time_point_t&&) = default;
-
-    time_point_t& operator=(const time_point_t&) = default;
-    time_point_t& operator=(time_point_t&&) = default;
-
-    time_point_t operator +(const time_point_t &other) const
+    timerep_t() : full_(0), frac_(0.0)
     {
-        return time_point_t { t + other.t };
     }
 
-    time_point_t operator +(double delta) const
+    timerep_t(const timerep_t&) = default;
+
+    timerep_t(double t)
     {
-        return time_point_t { t + delta };
+        normalize(0, t);
     }
 
-    time_point_t operator -(const time_point_t &other) const
+    timerep_t(time_t full, double frac)
     {
-        return time_point_t { t - other.t };
+        normalize(full, frac);
     }
 
-    time_point_t operator -(double delta) const
+    ~timerep_t() = default;
+
+    timerep_t& operator =(const timerep_t&) = default;
+
+#if defined(UHD_VERSION)
+    timerep_t(const uhd::time_spec_t& t)
     {
-        return time_point_t { t - delta };
+        normalize(t.get_full_secs(), t.get_frac_secs());
     }
 
-    time_point_t &operator +=(double delta)
+    operator uhd::time_spec_t() const
     {
-        t += delta;
+        return uhd::time_spec_t{full_, frac_};
+    }
+#endif /* defined(UHD_VERSION) */
+
+    time_t get_full(void) const
+    {
+        return full_;
+    }
+
+    double get_frac(void) const
+    {
+        return frac_;
+    }
+
+    operator double() const
+    {
+        return full_ + frac_;
+    }
+
+    bool operator ==(const timerep_t& other)
+    {
+        return full_ == other.full_ && frac_ == other.frac_;
+    }
+
+    bool operator <(const timerep_t& other)
+    {
+        return full_ < other.full_ || (full_ == other.full_ && frac_ < other.frac_);
+    }
+
+    timerep_t& operator +=(const timerep_t& rhs)
+    {
+        normalize(full_ + rhs.full_, frac_ + rhs.frac_);
         return *this;
     }
 
-    bool operator >(const time_point_t &other) const
+    friend timerep_t operator +(timerep_t lhs, const timerep_t& rhs)
     {
-        return t > other.t;
+        lhs += rhs;
+        return lhs;
     }
 
-    bool operator <(const time_point_t &other) const
+    timerep_t& operator -=(const timerep_t& rhs)
     {
-        return t < other.t;
+        normalize(full_ - rhs.full_, frac_ - rhs.frac_);
+        return *this;
     }
 
-    double get_real_secs(void) const
+    friend timerep_t operator -(timerep_t lhs, const timerep_t& rhs)
     {
-        return t.get_real_secs();
+        lhs -= rhs;
+        return lhs;
     }
 
-    int64_t get_full_secs(void) const
+    timerep_t& operator %=(const timerep_t& rhs)
     {
-        return t.get_full_secs();
+        double x = static_cast<double>(rhs);
+
+        normalize(0, std::fmod(std::fmod(full_, x) + std::fmod(frac_, x), x));
+        return *this;
     }
 
-    double get_frac_secs(void) const
+    friend timerep_t operator %(timerep_t lhs, const timerep_t& rhs)
     {
-        return t.get_frac_secs();
+        lhs %= rhs;
+        return lhs;
+    }
+
+    friend void swap(timerep_t& lhs, timerep_t& rhs)
+    {
+        std::swap(lhs.full_, rhs.full_);
+        std::swap(lhs.frac_, rhs.frac_);
+    }
+
+private:
+    /** @brief Integral portion of time representation */
+    time_t full_;
+
+    /** @brief Fractional portion of time representation */
+    double frac_;
+
+    constexpr void normalize(time_t full, double frac)
+    {
+        time_t int_frac = frac;
+
+        full_ = full + int_frac;
+        frac_ = frac - int_frac;
+
+        if (frac_ < 0) {
+            full_ -= 1;
+            frac_ += 1;
+        }
     }
 };
 
-template<class T>
-double fmod(const time_point_t<T> &t, double x)
-{
-    return fmod(fmod(t.t.get_full_secs(), x) + fmod(t.t.get_frac_secs(), x), x);
-}
+template<>
+struct std::chrono::treat_as_floating_point<timerep_t> : std::true_type {};
 
-template<class T>
-bool approx(const time_point_t<T> &t1, const time_point_t<T> &t2)
+template<>
+struct std::common_type<timerep_t, float>
 {
-    return fabs((t1 - t2).get_real_secs()) < 1e-6;
-}
+    using type = timerep_t;
+};
 
-/** @brief A clock */
-class Clock
+template<>
+struct std::common_type<float, timerep_t>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<timerep_t, double>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<double, timerep_t>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<timerep_t, long double>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<long double, timerep_t>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<timerep_t, int>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<int, timerep_t>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<timerep_t, long int>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<long int, timerep_t>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<timerep_t, unsigned long>
+{
+    using type = timerep_t;
+};
+
+template<>
+struct std::common_type<unsigned long, timerep_t>
+{
+    using type = timerep_t;
+};
+
+class MonoClock
 {
 public:
-    /** @brief Set the USRP used for clock operations.
-     * @param usrp The USRP.
-     */
-    static void setUSRP(uhd::usrp::multi_usrp::sptr usrp)
+    using rep                       = timerep_t;
+    using period                    = std::ratio<1>;
+    using duration                  = std::chrono::duration<rep, period>;
+    using time_point                = std::chrono::time_point<MonoClock>;
+    static constexpr bool is_steady = true;
+
+    class TimeKeeper
     {
-        usrp_ = usrp;
-        t0_ = usrp->get_time_now();
+    public:
+        virtual ~TimeKeeper() = default;
+
+        virtual time_point now() noexcept = 0;
+    };
+
+    static time_point get_t0()
+    {
+        return t0_;
     }
 
-    /** @brief Release the USRP used for clock operations. */
-    static void releaseUSRP(void)
+    static void set_time_keeper(const std::shared_ptr<TimeKeeper>& time_keeper)
     {
-        usrp_.reset();
+        time_keeper_ = time_keeper;
+        t0_ = time_keeper->now();
+    }
+
+    static void reset_time_keeper()
+    {
+        time_keeper_.reset();
+    }
+
+    static time_point now() noexcept
+    {
+        if (time_keeper_)
+            return time_keeper_->now();
+        else
+            return time_point{std::chrono::steady_clock::now().time_since_epoch()};
     }
 
 protected:
-    /** @brief The USRP used for clock operations. */
-    static uhd::usrp::multi_usrp::sptr usrp_;
+    static std::shared_ptr<TimeKeeper> time_keeper_;
 
-    /** @brief Time zero. */
-    static uhd::time_spec_t t0_;
-
-    /** @brief Get the current UHD time. */
-    static uhd::time_spec_t getTimeNow() noexcept
-    {
-        while (true) {
-            try {
-                return usrp_->get_time_now();
-            } catch (uhd::io_error &err) {
-                fprintf(stderr, "USRP: get_time_now: %s", err.what());
-            }
-        }
-    }
-
-    /** @brief Set the current UHD time.
-     * @param now Current UHD time
-     */
-    static void setTimeNow(const uhd::time_spec_t &now) noexcept
-    {
-        usrp_->set_time_now(now);
-    }
+    static time_point t0_;
 };
 
-/** @brief A monotonic clock */
-class MonoClock : public Clock
+#if defined(UHD_VERSION)
+inline uhd::time_spec_t to_uhd_time(const MonoClock::time_point& t)
 {
-private:
-    struct mono_tag;
+    return t.time_since_epoch().count();
+}
 
-public:
-    using duration   = std::chrono::seconds;
-    using rep        = duration::rep;
-    using period     = duration::period;
-    using time_point = time_point_t<mono_tag>;
-
-    static const bool is_steady = true;
-
-    /** @brief Get the current time. Guaranteed to be monotonic. */
-    static time_point now() noexcept
-    {
-        return time_point { getTimeNow() };
-    }
-};
-
-/** @brief A wall-clock clock */
-class WallClock : public Clock
+inline MonoClock::time_point from_uhd_time(const uhd::time_spec_t& t)
 {
-private:
-    struct wall_tag;
+    std::chrono::duration<timerep_t> dur(timerep_t{t});
 
+    return MonoClock::time_point{dur};
+}
+#endif /* defined(UHD_VERSION) */
+
+class WallClock : public MonoClock
+{
 public:
-    using duration   = std::chrono::seconds;
-    using rep        = duration::rep;
-    using period     = duration::period;
-    using time_point = time_point_t<wall_tag>;
+    using rep                       = timerep_t;
+    using period                    = std::ratio<1>;
+    using duration                  = std::chrono::duration<rep, period>;
+    using time_point                = std::chrono::time_point<WallClock>;
+    static constexpr bool is_steady = false;
 
-    static const bool is_steady = false;
-
-    /** @brief Get time 0 for purposes of linear fit. */
-    static MonoClock::time_point getTimeZero(void)
+    static duration get_offset()
     {
-        return MonoClock::time_point { t0_ };
+        return offset_;
     }
 
-    /** @brief Get time offset. */
-    static MonoClock::time_point getTimeOffset(void)
+    static void set_offset(duration offset)
     {
-        return MonoClock::time_point { offset_ };
+        offset_ = offset;
     }
 
-    /** @brief Set time offset. */
-    static void setTimeOffset(const MonoClock::time_point &offset)
-    {
-        offset_ = offset.t;
-    }
-
-    /** @brief Get skew. */
-    static double getSkew(void)
+    static double get_skew()
     {
         return skew_;
     }
 
-    /** @brief set skew. */
-    static void setSkew(double skew)
+    static void set_skew(double skew)
     {
         skew_ = skew;
     }
 
-    /** @brief Get the current wall-clock time. */
     static time_point now() noexcept
     {
-        uhd::time_spec_t now = getTimeNow();
-
-        return time_point { t0_ + offset_ + skew_*(now - t0_).get_real_secs() };
+        return to_wall_time(MonoClock::now());
     }
 
     /** @brief Return the monotonic time corresponding to wall-clock time. */
-    static MonoClock::time_point to_mono_time(const time_point &t) noexcept
+    static MonoClock::time_point to_mono_time(const time_point& t) noexcept
     {
-        return MonoClock::time_point { t0_ + (t.t - t0_ - offset_).get_real_secs() / skew_ };
+        const time_point t0_wall = time_point { t0_.time_since_epoch() };
+
+        return t0_ + (t - t0_wall - offset_)/skew_;
     }
 
     /** @brief Return the wall-clock time corresponding to monotonic time. */
-    static time_point to_wall_time(const MonoClock::time_point &t) noexcept
+    static time_point to_wall_time(const MonoClock::time_point& t) noexcept
     {
-        return time_point { t0_ + offset_ + skew_*(t.t - t0_).get_real_secs() };
+        const time_point t0_wall = time_point { t0_.time_since_epoch() };
+
+        return t0_wall + offset_ + skew_*(t - t0_);
     }
 
-private:
-    /** @brief The offset between the USRP's clock and wall-clock time. */
-    static uhd::time_spec_t offset_;
+protected:
+    /** @brief The offset between the monotonic clock and wall-clock time. */
+    static duration offset_;
 
-    /** @brief Clock skew. */
+    /** @brief Monotonic clock skew. */
     static double skew_;
 };
 

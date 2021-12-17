@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 
+#include <uhd/version.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
 
 #include "logging.hh"
@@ -250,6 +251,8 @@ public:
     }
 
     void stop(void) override;
+
+    MonoClock::time_point now() noexcept override;
 
 private:
     /** @brief Our associated UHD USRP. */

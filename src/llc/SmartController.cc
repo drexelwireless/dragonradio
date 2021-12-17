@@ -5,6 +5,10 @@
 #include "Logger.hh"
 #include "llc/SmartController.hh"
 
+#include <chrono>
+
+using namespace std::literals::chrono_literals;
+
 #define DEBUG 0
 
 #if DEBUG
@@ -21,14 +25,14 @@ SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
                                  const std::vector<evm_thresh_t> &evm_thresholds)
   : Controller(radionet, mtu)
   , phy_(phy)
-  , mcs_fast_adjustment_period_(1.0)
+  , mcs_fast_adjustment_period_(1s)
   , max_sendwin_(max_sendwin)
   , recvwin_(recvwin)
   , evm_thresholds_(evm_thresholds)
-  , short_per_window_(100e-3)
-  , long_per_window_(400e-3)
-  , short_stats_window_(100e-3)
-  , long_stats_window_(400e-3)
+  , short_per_window_(100e-3s)
+  , long_per_window_(400e-3s)
+  , short_stats_window_(100e-3s)
+  , long_stats_window_(400e-3s)
   , mcsidx_broadcast_(0)
   , mcsidx_ack_(0)
   , mcsidx_min_(0)
@@ -40,8 +44,8 @@ SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
   , mcsidx_prob_floor_(0.1)
   , ack_delay_(100e-3)
   , ack_delay_estimation_window_(1)
-  , retransmission_delay_(500e-3)
-  , min_retransmission_delay_(200e-3)
+  , retransmission_delay_(500e-3s)
+  , min_retransmission_delay_(200e-3s)
   , retransmission_delay_slop_(1.1)
   , sack_delay_(50e-3)
   , explicit_nak_win_(0)
@@ -358,7 +362,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             // tiny amount of slop, 0.001 sec, to make sure we *include* the NAK'ed
             // packet.
             if (demod_always_ordered_ && nak)
-                tfeedback = std::max(tfeedback, sendw[*nak].timestamp + 0.001);
+                tfeedback = std::max(tfeedback, sendw[*nak].timestamp + MonoClock::duration(0.001s));
 
             // Handle ACK
             if (pkt->hdr.flags.ack) {
@@ -579,7 +583,7 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
 
             logTimeSync(LOGDEBUG, "Transmitted timestamp: tseq_sent=%u; t_sent=%f",
                 (unsigned) *pkt.timestamp_seq,
-                (double) pkt.tx_timestamp.get_real_secs());
+                (double) pkt.tx_timestamp.time_since_epoch().count());
         }
     }
 }
@@ -1131,7 +1135,7 @@ void SmartController::handleCtrlTimestamp(RadioPacket &pkt, Node &node)
                 logTimeSync(LOGDEBUG, "Timestamp: node=%u; tseq=%u; t_recv=%f",
                     (unsigned) pkt.hdr.curhop,
                     (unsigned) tseq,
-                    (double) t_recv.get_real_secs());
+                    (double) t_recv.time_since_epoch().count());
             }
             break;
 
@@ -1155,8 +1159,8 @@ void SmartController::handleCtrlTimestamp(RadioPacket &pkt, Node &node)
 
                     logTimeSync(LOGDEBUG, "Timestamp pair: node=%u; t_sent=%f; t_recv=%f",
                         (unsigned) pkt.hdr.curhop,
-                        (double) t_sent.get_real_secs(),
-                        (double) t_recv.get_real_secs());
+                        (double) t_sent.time_since_epoch().count(),
+                        (double) t_recv.time_since_epoch().count());
                 }
             }
             break;
@@ -1182,8 +1186,8 @@ void SmartController::handleCtrlTimestamp(RadioPacket &pkt, Node &node)
 
                         logTimeSync(LOGDEBUG, "Timestamp pair for us: node=%u; t_sent=%f; t_recv=%f",
                             (unsigned) pkt.hdr.curhop,
-                            (double) t_sent.get_real_secs(),
-                            (double) t_recv.get_real_secs());
+                            (double) t_sent.time_since_epoch().count(),
+                            (double) t_recv.time_since_epoch().count());
                     }
                 }
             }
@@ -1693,7 +1697,7 @@ RecvWindow &SmartController::getRecvWindow(NodeId node_id)
 SendWindow::SendWindow(Node &n,
                        SmartController &controller,
                        Seq::uint_type maxwin,
-                       double retransmission_delay_)
+                       std::chrono::duration<double> retransmission_delay_)
     : node(n)
     , controller(controller)
     , mcs_table(controller.phy_->mcs_table)
@@ -1715,7 +1719,7 @@ SendWindow::SendWindow(Node &n,
     , short_per(1)
     , long_per(1)
     , retransmission_delay(retransmission_delay_)
-    , ack_delay(1.0)
+    , ack_delay(1.0s)
     , entries_(maxwin, *this)
 {
     setMCS(controller.mcsidx_init_);
@@ -1733,7 +1737,7 @@ void SendWindow::ack(const MonoClock::time_point &tx_time)
 {
     auto now = MonoClock::now();
 
-    ack_delay.update(now, (now - tx_time).get_real_secs());
+    ack_delay.update(now, now - tx_time);
 
     if (ack_delay)
         retransmission_delay = std::max(controller.getMinRetransmissionDelay(),
@@ -1970,10 +1974,12 @@ void SendWindow::resetPEREstimates(void)
         }
     }
 
-    short_per.setWindowSize(std::max(1.0, controller.short_per_window_*min_channel_bandwidth/controller.max_packet_samples_[mcsidx]));
+    double fact = min_channel_bandwidth/controller.max_packet_samples_[mcsidx];
+
+    short_per.setWindowSize(std::max(1.0, controller.short_per_window_.count()*fact));
     short_per.reset();
 
-    long_per.setWindowSize(std::max(1.0, controller.long_per_window_*min_channel_bandwidth/controller.max_packet_samples_[mcsidx]));
+    long_per.setWindowSize(std::max(1.0, controller.long_per_window_.count()*fact));
     long_per.reset();
 }
 
@@ -2000,7 +2006,7 @@ void SendWindow::checkUnheard(void)
     if (!node.emcon &&
         !node.unreachable &&
         controller.unreachable_timeout_ &&
-        (MonoClock::now() - last_heard_timestamp).get_real_secs() > *controller.unreachable_timeout_) {
+        (MonoClock::now() - last_heard_timestamp) > *controller.unreachable_timeout_) {
         node.unreachable = true;
 
         setSendWindowOpen(false);

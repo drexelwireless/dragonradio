@@ -35,18 +35,22 @@
 
 /** @brief A time */
 struct Time {
-    uint64_t secs;
+    int64_t secs;
     double frac_secs;
 
     void from_mono_time(MonoClock::time_point t)
     {
-        secs = t.t.get_full_secs();
-        frac_secs = t.t.get_frac_secs();
+        timerep_t rep = t.time_since_epoch().count();
+
+        secs = rep.get_full();
+        frac_secs = rep.get_frac();
     }
 
     MonoClock::time_point to_mono_time(void) const
     {
-        return MonoClock::time_point { uhd::time_spec_t { static_cast<time_t>(secs), frac_secs } };
+        std::chrono::duration<timerep_t> dur(timerep_t{secs, frac_secs});
+
+        return MonoClock::time_point{dur};
     }
 };
 
