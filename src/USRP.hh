@@ -44,19 +44,19 @@ public:
     USRP& operator=(USRP&&) = delete;
 
     /** @brief Get type of this device. */
-    DeviceType getDeviceType(void)
+    DeviceType getDeviceType(void) const
     {
         return device_type_;
     }
 
     /** @brief Get clock sources. */
-    std::vector<std::string> getClockSources(const size_t mboard = 0)
+    std::vector<std::string> getClockSources(const size_t mboard = 0) const
     {
         return usrp_->get_clock_sources(mboard);
     }
 
     /** @brief Get clock source. */
-    std::string getClockSource(const size_t mboard = 0)
+    std::string getClockSource(const size_t mboard = 0) const
     {
         return usrp_->get_clock_source(mboard);
     }
@@ -69,13 +69,13 @@ public:
     }
 
     /** @brief Get time sources. */
-    std::vector<std::string> getTimeSources(const size_t mboard = 0)
+    std::vector<std::string> getTimeSources(const size_t mboard = 0) const
     {
         return usrp_->get_time_sources(mboard);
     }
 
     /** @brief Get time source. */
-    std::string getTimeSource(const size_t mboard = 0)
+    std::string getTimeSource(const size_t mboard = 0) const
     {
         return usrp_->get_time_source(mboard);
     }
@@ -88,7 +88,7 @@ public:
     }
 
     /** @brief Get automatic DC offset correction. */
-    bool getAutoDCOffset(bool enable)
+    bool getAutoDCOffset(bool enable) const
     {
         return auto_dc_offset_;
     }
@@ -104,7 +104,7 @@ public:
     /** @brief Return the maximum number of samples we will read at a time
      * during burstRX.
      */
-    size_t getMaxRXSamps(void)
+    size_t getMaxRXSamps(void) const
     {
         return rx_max_samps_;
     }
@@ -129,7 +129,7 @@ public:
     /** @brief Return the maximum number of samples we will write at a time
      * during burstTX.
      */
-    size_t getMaxTXSamps(void)
+    size_t getMaxTXSamps(void) const
     {
         return tx_max_samps_;
     }
