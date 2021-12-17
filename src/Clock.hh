@@ -94,10 +94,17 @@ public:
     /** @brief Set the USRP used for clock operations.
      * @param usrp The USRP.
      */
-    static void setUSRP(uhd::usrp::multi_usrp::sptr usrp);
+    static void setUSRP(uhd::usrp::multi_usrp::sptr usrp)
+    {
+        usrp_ = usrp;
+        t0_ = usrp->get_time_now();
+    }
 
     /** @brief Release the USRP used for clock operations. */
-    static void releaseUSRP(void);
+    static void releaseUSRP(void)
+    {
+        usrp_.reset();
+    }
 
 protected:
     /** @brief The USRP used for clock operations. */

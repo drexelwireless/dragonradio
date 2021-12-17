@@ -211,6 +211,9 @@ class Radio(dragonradio.tasks.TaskManager):
         if config.time_source is not None:
             self.usrp.time_source = config.time_source
 
+        # Synchronize USRP time with host
+        self.usrp.syncTime()
+
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
         self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
 
