@@ -3,8 +3,10 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
+#include <time.h>
 
 #include <atomic>
+#include <random>
 
 #include "logging.hh"
 #include "Clock.hh"
@@ -81,6 +83,33 @@ USRP::USRP(const std::string& addr,
 USRP::~USRP()
 {
     stop();
+}
+
+void USRP::syncTime(bool random_bias)
+{
+    // Set offset relative to system NTP time
+    struct timespec t;
+    int    err;
+
+    if ((err = clock_gettime(CLOCK_REALTIME, &t)) != 0) {
+        fprintf(stderr, "clock_gettime failed: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    uhd::time_spec_t now(t.tv_sec, ((double)t.tv_nsec)/1e9);
+
+    if (random_bias) {
+        std::random_device               rd;
+        std::mt19937                     gen(rd());
+        std::uniform_real_distribution<> dist(0.0, 10.0);
+        double                           offset = dist(gen);
+
+        fprintf(stderr, "CLOCK: offset=%g\n", offset);
+
+        now += offset;
+    }
+
+    usrp_->set_time_now(now);
 }
 
 // See the following for X310 LO offset advice:
