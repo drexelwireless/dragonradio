@@ -87,6 +87,9 @@ public:
         return usrp_->set_time_source(time_source, mboard);
     }
 
+    /** @brief Synchronize USRP time with host. */
+    void syncTime(bool random_bias = false);
+
     /** @brief Get automatic DC offset correction. */
     bool getAutoDCOffset(bool enable) const
     {

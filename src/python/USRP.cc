@@ -79,5 +79,8 @@ void exportUSRP(py::module &m)
             &USRP::getTimeSource)
         .def("setTimeSource",
             &USRP::setTimeSource)
+        .def("syncTime",
+            &USRP::syncTime,
+            py::arg("random_bias")=false)
         ;
 }
