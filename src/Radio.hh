@@ -4,12 +4,14 @@
 #ifndef RADIO_HH_
 #define RADIO_HH_
 
+#include <list>
+
 // #include "logging.hh"
 #include "Clock.hh"
 #include "IQBuffer.hh"
 
 /** @brief A Radio. */
-class Radio
+class Radio : public MonoClock::TimeKeeper
 {
 public:
     Radio() = default;
@@ -111,6 +113,14 @@ public:
 
     /** @brief Stop processing data. */
     virtual void stop(void) = 0;
+
+    /** @brief Get the current monotonic time.
+     * @return A
+     */
+    MonoClock::time_point now() noexcept override
+    {
+        return MonoClock::time_point{std::chrono::steady_clock::now().time_since_epoch()};
+    }
 };
 
 #endif /* RADIO_HH_ */

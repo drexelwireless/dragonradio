@@ -413,8 +413,8 @@ class CILServer(dragonradio.tasks.TaskManager):
                         perf.scalar_performance = mandate.scalar_performance
                         perf.radio_ids.extend(mandate.radio_ids)
                         perf.flow_id = mandate.flow_uid
-                        perf.hold_period = int(mandate.hold_period)
-                        perf.achieved_duration = mandate.achieved_duration
+                        perf.hold_period = int(mandate.hold_period.total_seconds())
+                        perf.achieved_duration = int(mandate.achieved_duration.total_seconds())
                         perf.point_value = mandate.point_value
 
                         return perf

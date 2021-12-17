@@ -4,10 +4,13 @@
 #ifndef TIMEWINDOWESTIMATOR_HH_
 #define TIMEWINDOWESTIMATOR_HH_
 
+#include <chrono>
 #include <deque>
 #include <limits>
 
 #include "Estimator.hh"
+
+using namespace std::literals::chrono_literals;
 
 /** @brief A statistical estimator over a time window */
 template<class Clock, class T>
@@ -15,7 +18,7 @@ class TimeWindowEstimator : public Estimator<T> {
 public:
     using entry = std::pair<typename Clock::time_point, T>;
 
-    explicit TimeWindowEstimator(double twindow=1.0)
+    explicit TimeWindowEstimator(typename Clock::duration twindow=1s)
       : twindow_(twindow)
     {
     }
@@ -23,13 +26,13 @@ public:
     virtual ~TimeWindowEstimator() = default;
 
     /** @brief Get the current time window */
-    double getTimeWindow(void) const
+    virtual typename Clock::duration getTimeWindow(void) const
     {
         return twindow_;
     }
 
     /** @brief Set the current time window */
-    void setTimeWindow(double twindow)
+    virtual void setTimeWindow(typename Clock::duration twindow)
     {
         twindow_ = twindow;
     }
@@ -66,7 +69,7 @@ public:
         if (window_.size() == 0)
             return std::nullopt;
         else
-            return **this;
+            return _value();
     }
 
     T value_or(T&& default_value) const override
@@ -76,7 +79,7 @@ public:
         if (window_.size() == 0)
             return default_value;
         else
-            return **this;
+            return _value();
     }
 
     size_t size(void) const override
@@ -98,14 +101,17 @@ public:
     virtual void update(typename Clock::time_point t, T x) = 0;
 
 protected:
-    /** @brief Time window (sec) */
-    double twindow_;
+    /** @brief Time window) */
+    typename Clock::duration twindow_;
 
     /** @brief Values in our window */
     mutable std::deque<entry> window_;
 
     /** @brief Remove elements outside the time window */
     virtual void purge(typename Clock::time_point t) const = 0;
+
+    /** @brief Compute estimator's value assuming it exists */
+    virtual T _value() const = 0;
 };
 
 /** @brief Compute mean over a time window */
@@ -115,20 +121,14 @@ public:
     using TimeWindowEstimator<Clock, T>::twindow_;
     using TimeWindowEstimator<Clock, T>::window_;
 
-    explicit TimeWindowMean(double twindow=1.0)
+    explicit TimeWindowMean(typename Clock::duration twindow=1s)
       : TimeWindowEstimator<Clock, T>(twindow)
-      , sum_(0)
     {
     }
 
     virtual ~TimeWindowMean() = default;
 
-    T operator *() const override
-    {
-        return sum_/static_cast<T>(window_.size());
-    }
-
-    void reset() override
+    void reset(void) override
     {
         TimeWindowEstimator<Clock, T>::reset();
         sum_ = 0;
@@ -154,6 +154,11 @@ protected:
             window_.pop_front();
         }
     }
+
+    T _value() const override
+    {
+        return sum_/static_cast<T>(window_.size());
+    }
 };
 
 /** @brief Compute mean value *per second* over a time window */
@@ -165,16 +170,17 @@ public:
     using TimeWindowMean<Clock, T>::sum_;
     using TimeWindowMean<Clock, T>::purge;
 
-    explicit TimeWindowMeanRate(double twindow=1.0)
+    explicit TimeWindowMeanRate(typename Clock::duration twindow=1s)
       : TimeWindowMean<Clock, T>(twindow)
     {
     }
 
     virtual ~TimeWindowMeanRate() = default;
 
-    T operator *() const override
+private:
+    T _value() const override
     {
-        return sum_/twindow_;
+        return sum_/twindow_.count();
     }
 };
 
@@ -185,18 +191,12 @@ public:
     using TimeWindowEstimator<Clock, T>::twindow_;
     using TimeWindowEstimator<Clock, T>::window_;
 
-    explicit TimeWindowMin(double twindow=1.0)
+    explicit TimeWindowMin(typename Clock::duration twindow=1s)
       : TimeWindowEstimator<Clock, T>(twindow)
-      , min_(0)
     {
     }
 
     virtual ~TimeWindowMin() = default;
-
-    T operator *() const override
-    {
-        return min_;
-    }
 
     void update(typename Clock::time_point t, T x) override
     {
@@ -241,6 +241,11 @@ protected:
                 window_.pop_front();
         }
     }
+
+    T _value() const override
+    {
+        return min_;
+    }
 };
 
 /** @brief Compute maximum over a time window */
@@ -250,18 +255,12 @@ public:
     using TimeWindowEstimator<Clock, T>::twindow_;
     using TimeWindowEstimator<Clock, T>::window_;
 
-    explicit TimeWindowMax(double twindow=1.0)
+    explicit TimeWindowMax(typename Clock::duration twindow=1s)
       : TimeWindowEstimator<Clock, T>(twindow)
-      , max_(0)
     {
     }
 
     virtual ~TimeWindowMax() = default;
-
-    T operator *() const override
-    {
-        return max_;
-    }
 
     void update(typename Clock::time_point t, T x) override
     {
@@ -305,6 +304,11 @@ protected:
             for (auto it = window_.begin(); it != window_.end() && it->second < max_; it = window_.begin())
                 window_.pop_front();
         }
+    }
+
+    T _value() const override
+    {
+        return max_;
     }
 };
 

@@ -1,26 +1,15 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <algorithm>
+#include <chrono>
 
 #include "TimerQueue.hh"
 #include "util/threads.hh"
 
-TimerQueue::TimerQueue() : done_(true)
-{
-}
+using namespace std::literals::chrono_literals;
 
-TimerQueue::~TimerQueue()
-{
-    stop();
-}
-
-void TimerQueue::run_in(Timer &t, const double &delta)
-{
-    run_at(t, MonoClock::now() + delta);
-}
-
-void TimerQueue::run_at(Timer &t, const time_type &when)
+void TimerQueue::run_at(Timer& t, const time_type& when)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -35,21 +24,6 @@ void TimerQueue::run_at(Timer &t, const time_type &when)
     // is the first timer that needs to be run.
     if (!done_ && t.is_top())
         wakeThread(timer_worker_thread_);
-}
-
-bool TimerQueue::running(const Timer& t)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    return t.in_heap();
-}
-
-void TimerQueue::cancel(Timer &t)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    if (t.in_heap())
-        timer_queue_.remove(t);
 }
 
 void TimerQueue::run(void)
@@ -118,10 +92,14 @@ void TimerQueue::timer_worker(void)
             lock.unlock();
             block.unblockAndPause();
         } else {
-            double delta = (timer_queue_.top().deadline - now).get_real_secs();
+            now = MonoClock::now();
+
+            MonoClock::duration delta = timer_queue_.top().deadline - now;
 
             lock.unlock();
-            doze(delta);
+
+            if (delta > 0.0s)
+                doze(delta);
         }
     }
 }

@@ -18,7 +18,10 @@ public:
     virtual operator bool() const = 0;
 
     /** @brief Return the value of the estimator */
-    virtual T operator *() const = 0;
+    virtual T operator *() const
+    {
+        return *value();
+    }
 
     /** @brief Return the value of the estimator */
     virtual std::optional<T> value(void) const = 0;

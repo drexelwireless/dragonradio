@@ -1,16 +1,17 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
+#include <chrono>
+#include <memory>
+
+using namespace std::literals::chrono_literals;
 
 #include "Clock.hh"
 
-uhd::usrp::multi_usrp::sptr Clock::usrp_;
+std::shared_ptr<MonoClock::TimeKeeper> MonoClock::time_keeper_;
 
-uhd::time_spec_t Clock::t0_(0.0);
+MonoClock::time_point MonoClock::t0_;
 
-double WallClock::skew_(1.0);
+WallClock::duration WallClock::offset_ = 0.0s;
 
-uhd::time_spec_t WallClock::offset_(0.0);
+double WallClock::skew_ = 1.0;

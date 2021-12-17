@@ -218,7 +218,7 @@ class Config:
         """Timeout after which a node is marked unreachable (sec)"""
         self.arq_ack_delay = 100e-3
         """Maximum delay before an explicit ACK is sent (sec)"""
-        self.arq_ack_delay_estimation_window = 1
+        self.arq_ack_delay_estimation_window = 1.0
         """Time window over which to estimate ACK delay (sec)"""
         self.arq_retransmission_delay = 500e-3
         """Default duration of retransmission timer (sec)"""
@@ -299,7 +299,7 @@ class Config:
         """Enable packet compression?"""
 
         # Queue options
-        self.transmission_delay = 0
+        self.transmission_delay = 0.0
         """Estimated packet transmission delay (seconds)"""
         self.mandate_bonus_phase = True
         """Flag indicating whether or not to have a bonus phase"""

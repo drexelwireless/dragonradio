@@ -60,25 +60,15 @@ void exportTimeWindowEstimator(py::module &m, const char *name)
             &TimeWindowEstimator<Clock, T>::setTimeWindow,
             "The time window (sec)")
         .def_property_readonly("start",
-            [](TimeWindowEstimator<Clock, T> &self) -> std::optional<double>
+            [](TimeWindowEstimator<Clock, T> &self) -> std::optional<typename Clock::time_point>
             {
-                auto value = self.getTimeWindowStart();
-
-                if (value)
-                    return value->get_real_secs();
-                else
-                    return std::nullopt;
+                return self.getTimeWindowStart();
             },
             "The start of the time window (sec)")
         .def_property_readonly("end",
-            [](TimeWindowEstimator<Clock, T> &self) -> std::optional<double>
+            [](TimeWindowEstimator<Clock, T> &self) -> std::optional<typename Clock::time_point>
             {
-                auto value = self.getTimeWindowEnd();
-
-                if (value)
-                    return value->get_real_secs();
-                else
-                    return std::nullopt;
+                return self.getTimeWindowEnd();
             },
             "The end of the time window (sec)")
         .def("reset",

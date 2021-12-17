@@ -1,18 +1,18 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <chrono>
+
 #include "cil/CIL.hh"
 #include "cil/Scorer.hh"
 
+using namespace std::literals::chrono_literals;
+
+/** @brief Measurement period */
+constexpr std::chrono::duration<double> kMP(1s);
+
+/** @brief Fraction of file transfer that must be transferred for success */
 const double kFTSuccessMandate = 0.9;
-
-Scorer::Scorer()
-{
-}
-
-Scorer::~Scorer()
-{
-}
 
 void Scorer::setMandates(const MandateMap &mandates)
 {
@@ -139,7 +139,7 @@ void Scorer::updateScore(unsigned final_mp)
             } else
                 score.achieved_duration = 0;
 
-            score.goal_stable = score.achieved_duration >= mandate.hold_period;
+            score.goal_stable = score.achieved_duration*kMP >= mandate.hold_period;
 
             score.mp_score = score.goal_stable ? mandate.point_value : 0;
         }

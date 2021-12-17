@@ -1,9 +1,13 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
+
+#include <chrono>
 
 #include "logging.hh"
 #include "mac/MAC.hh"
 #include "util/threads.hh"
+
+using namespace std::literals::chrono_literals;
 
 MAC::MAC(std::shared_ptr<Radio> radio,
          std::shared_ptr<Controller> controller,
@@ -37,7 +41,7 @@ void MAC::reconfigure(void)
     else
         tx_fc_off_ = radio_->getTXFrequency() - radio_->getRXFrequency();
 
-    rx_period_samps_ = rx_rate_*rx_period_;
+    rx_period_samps_ = rx_rate_*rx_period_.count();
     rx_bufsize_ = radio_->getRecommendedBurstRXSize(rx_period_samps_);
 }
 
@@ -45,13 +49,13 @@ void MAC::rxWorker(void)
 {
     WallClock::time_point t_cur_period;   // Time at which current period starts
     WallClock::time_point t_next_period;  // Time at which next period starts
-    double                t_period_pos;   // Offset into the current period (sec)
+    WallClock::duration   t_period_pos;   // Offset into the current period (sec)
     unsigned              seq = 0;        // Current IQ buffer sequence number
 
     while (!done_) {
         // Wait for period to be known
         if (rx_period_samps_ == 0) {
-            doze(100e-3);
+            doze(100ms);
             continue;
         }
 
@@ -59,7 +63,7 @@ void MAC::rxWorker(void)
         {
             WallClock::time_point t_now = WallClock::now();
 
-            t_period_pos = fmod(t_now, rx_period_);
+            t_period_pos = t_now.time_since_epoch() % rx_period_;
             t_next_period = t_now + rx_period_ - t_period_pos;
         }
 
@@ -131,7 +135,7 @@ void MAC::txNotifier(void)
         if (record.timestamp) {
             // Timestamp packets
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
-                (*it)->pkt->tx_timestamp = *record.timestamp + (record.delay + (*it)->start)/tx_rate_;
+                (*it)->pkt->tx_timestamp = *record.timestamp + MonoClock::duration((record.delay + (*it)->start)/tx_rate_);
 
             // Record the record's load
             {
@@ -144,7 +148,7 @@ void MAC::txNotifier(void)
                         load_.nsamples[chanidx] += (*it)->nsamples;
                 }
 
-                load_.end = WallClock::to_wall_time(*record.timestamp) + (record.delay + record.nsamples)/tx_rate_;
+                load_.end = WallClock::to_wall_time(*record.timestamp) + MonoClock::duration((record.delay + record.nsamples)/tx_rate_);
             }
         }
 
@@ -172,7 +176,7 @@ void MAC::txNotifier(void)
         // Tell the snapshot collector about local self-transmissions
         if (snapshot_collector_ && record.timestamp) {
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
-                MonoClock::time_point timestamp = *record.timestamp + (*it)->start/tx_rate_;
+                MonoClock::time_point timestamp = *record.timestamp + MonoClock::duration((*it)->start/tx_rate_);
 
                 snapshot_collector_->selfTX(timestamp,
                                             rx_rate_,

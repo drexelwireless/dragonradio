@@ -42,7 +42,7 @@ public:
     SlottedMAC& operator=(SlottedMAC&&) = delete;
 
     /** @brief Get slot size, including guard interval */
-    virtual double getSlotSize(void)
+    virtual std::chrono::duration<double> getSlotSize(void)
     {
         return slot_size_;
     }
@@ -50,7 +50,7 @@ public:
     /** @brief Set slot size, including guard interval
      * @param t Slot size in seconds
      */
-    virtual void setSlotSize(double t)
+    virtual void setSlotSize(std::chrono::duration<double> t)
     {
         rx_period_ = t;
         slot_size_ = t;
@@ -58,7 +58,7 @@ public:
     }
 
     /** @brief Get guard interval size */
-    virtual double getGuardSize(void)
+    virtual std::chrono::duration<double> getGuardSize(void)
     {
         return guard_size_;
     }
@@ -66,18 +66,18 @@ public:
     /** @brief Set guard interval size
      * @param t Guard interval size in seconds
      */
-    virtual void setGuardSize(double t)
+    virtual void setGuardSize(std::chrono::duration<double> t)
     {
         guard_size_ = t;
         reconfigure();
     }
 
-    virtual size_t getSlotSendLeadTime(void)
+    virtual std::chrono::duration<double> getSlotSendLeadTime(void)
     {
         return slot_send_lead_time_;
     }
 
-    virtual void setSlotSendLeadTime(size_t t)
+    virtual void setSlotSendLeadTime(std::chrono::duration<double> t)
     {
         slot_send_lead_time_ = t;
         reconfigure();
@@ -100,13 +100,13 @@ protected:
     std::shared_ptr<SlotSynthesizer> slot_synthesizer_;
 
     /** @brief Length of a single TDMA slot, *including* guard (sec) */
-    double slot_size_;
+    std::chrono::duration<double> slot_size_;
 
     /** @brief Length of inter-slot guard (sec) */
-    double guard_size_;
+    std::chrono::duration<double> guard_size_;
 
-    /** @brief Lead time needed to send a slot's worth of data. */
-    double slot_send_lead_time_;
+    /** @brief Lead time needed to send a slot's worth of data (sec) */
+    std::chrono::duration<double> slot_send_lead_time_;
 
     /** @brief Number of TX samples in the non-guard portion of a slot */
     size_t tx_slot_samps_;
