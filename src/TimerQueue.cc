@@ -92,14 +92,11 @@ void TimerQueue::timer_worker(void)
             lock.unlock();
             block.unblockAndPause();
         } else {
-            now = MonoClock::now();
-
-            MonoClock::duration delta = timer_queue_.top().deadline - now;
+            auto deadline = timer_queue_.top().deadline;
 
             lock.unlock();
 
-            if (delta > 0.0s)
-                doze(delta);
+            sleep_until(deadline);
         }
     }
 }

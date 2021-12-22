@@ -55,7 +55,7 @@ void MAC::rxWorker(void)
     while (!done_) {
         // Wait for period to be known
         if (rx_period_samps_ == 0) {
-            doze(100ms);
+            sleep_for(100ms);
             continue;
         }
 
