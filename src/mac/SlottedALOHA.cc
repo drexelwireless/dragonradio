@@ -98,12 +98,7 @@ void SlottedALOHA::txSlotWorker(void)
             txSlot(std::move(slot));
 
         // Sleep until TX time for following slot
-        WallClock::duration delta;
-
-        t_now = WallClock::now();
-        delta = (t_following_slot - t_now) - slot_send_lead_time_;
-        if (delta > 0.0s)
-            doze(delta);
+        sleep_for((t_following_slot - WallClock::now()) - slot_send_lead_time_);
     }
 
     missedRemainingSlots(q);

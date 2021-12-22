@@ -103,7 +103,7 @@ void TDMA::txSlotWorker(void)
             if (!findNextSlot(t_now, t_next_slot, next_slotidx)) {
                 logMAC(LOGDEBUG, "NO SLOT");
                 // Sleep for 100ms if we don't yet have a slot
-                doze(100ms);
+                sleep_for(100ms);
                 continue;
             }
         }
@@ -152,12 +152,7 @@ void TDMA::txSlotWorker(void)
         }
 
         // Sleep until it's time to send the next slot
-        WallClock::duration delta;
-
-        t_now = WallClock::now();
-        delta = t_next_slot - t_now - slot_send_lead_time_;
-        if (delta > 0.0s)
-            doze(delta);
+        sleep_for((t_next_slot - WallClock::now()) - slot_send_lead_time_);
     }
 
     missedRemainingSlots(q);
