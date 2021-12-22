@@ -4,7 +4,6 @@
 """Support for time synchronization."""
 import logging
 import math
-from pprint import pformat
 
 import numpy as np
 
@@ -17,20 +16,14 @@ logger = logging.getLogger('timesync')
 
 def synchronize(config, radio, master, me):
     """Use timestamps to synchronize our clock with the time master (the gateway)"""
-    t0 = clock.t0
-
     # Perform linear regression on all timestamps
-    me_timestamps = _relativizeTimestamps(t0, me.timestamps.values())
+    me_timestamps = relativizeTimestamps(me.timestamps.values())
     if len(me_timestamps) == 0:
         return
 
-    master_timestamps = _relativizeTimestamps(t0, master.timestamps.values())
+    master_timestamps = relativizeTimestamps(master.timestamps.values())
     if len(master_timestamps) == 0:
         return
-
-    if True:
-        logger.debug("TIMESYNC: our timestamps:\n%s", pformat(me_timestamps))
-        logger.debug("TIMESYNC: time master's timestamps:\n%s", pformat(master_timestamps))
 
     # If we have a GPSDO, then assume skew is zero
     if config.clock_noskew or \
@@ -57,8 +50,10 @@ def synchronize(config, radio, master, me):
                                "sigma={:g}; "
                                "delta={:g}").format(sigma, delta))
 
-def _relativizeTimestamps(t0, ts):
-    """Make (t_send, t_recv) timestamps relative to t0"""
+def relativizeTimestamps(ts):
+    """Make (t_send, t_recv) timestamps relative to Clock t0"""
+    t0 = clock.t0
+
     return sorted([((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in ts], key=lambda ts: ts[0])
 
 def timestampRegression(echoed, master):

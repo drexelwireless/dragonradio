@@ -29,6 +29,7 @@ from dragonradio.internal import mkFlowStats, mkSpectrumStats
 import dragonradio.net
 from dragonradio.protobuf import handle, handler, TCPProtoServer
 import dragonradio.radio
+import dragonradio.radio.timesync as timesync
 import dragonradio.remote as remote
 import dragonradio.schedule
 import dragonradio.tasks
@@ -392,6 +393,9 @@ class Controller(CILServer):
                 if self.gpsd_client:
                     logger.info('Stopping gpsd client')
                     await self.gpsd_client.stop()
+
+                # Dump timestamps
+                self.saveTimestamps()
 
                 # Dump score data if we are the gateway
                 if self.is_gateway:
@@ -830,13 +834,30 @@ class Controller(CILServer):
         config = self.config
 
         if self.is_gateway and config.log_directory:
-            try:
-                df = pd.DataFrame(self.reported_mandate_performance,
-                                  columns=['mp', 'mandates_achieved', 'total_score_achieved'])
-                logger.info('Logging scores to %s', 'score_reported.csv')
-                df.to_csv(os.path.join(config.logdir, 'score_reported.csv'))
-            except: # pylint: disable=bare-except
-                logger.exception('Exception when saving reported mandated performance')
+            self.logCSV(self.reported_mandate_performance,
+                        ['mp', 'mandates_achieved', 'total_score_achieved'],
+                        'score_reported.csv')
+
+    def saveTimestamps(self):
+        me = self.radio.radionet.this_node
+        me_timestamps = timesync.relativizeTimestamps(me.timestamps.values())
+        self.logCSV(me_timestamps, ['t_send', 't_recv'], 'me_timestamps.csv')
+
+        if self.radio.radionet.time_master is not None:
+            master = self.radio.radionet.nodes[self.radio.radionet.time_master]
+            master_timestamps = timesync.relativizeTimestamps(master.timestamps.values())
+            self.logCSV(master_timestamps, ['t_send', 't_recv'], 'master_timestamps.csv')
+
+    def logCSV(self, data, columns, filename):
+        """Log data to CSV file"""
+        config = self.config
+
+        try:
+            df = pd.DataFrame(data, columns=columns)
+            logger.info('Logging to %s', filename)
+            df.to_csv(os.path.join(config.logdir, filename), index=False)
+        except: # pylint: disable=bare-except
+            logger.exception('Exception when writing %s', filename)
 
     def updateGoals(self, goals, _timestamp):
         """Update mandate goals"""
