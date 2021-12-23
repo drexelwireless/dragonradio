@@ -1,18 +1,18 @@
-[submodule "dependencies/liquid-dsp"]
-	path = dependencies/liquid-dsp
+[submodule "extern/liquid-dsp"]
+	path = extern/liquid-dsp
 	url = https://github.com/drexelwireless/liquid-dsp.git
-[submodule "dependencies/uhd"]
-	path = dependencies/uhd
+[submodule "extern/uhd"]
+	path = extern/uhd
 	url = https://github.com/drexelwireless/uhd.git
-[submodule "dependencies/pybind11"]
-	path = dependencies/pybind11
+[submodule "extern/pybind11"]
+	path = extern/pybind11
 	url = https://github.com/pybind/pybind11.git
-[submodule "dependencies/libcorrect"]
-	path = dependencies/libcorrect
+[submodule "extern/libcorrect"]
+	path = extern/libcorrect
 	url = https://github.com/drexelwireless/libcorrect.git
-[submodule "dependencies/xsimd"]
-	path = dependencies/xsimd
+[submodule "extern/xsimd"]
+	path = extern/xsimd
 	url = https://github.com/QuantStack/xsimd.git
-[submodule "dependencies/firpm"]
-	path = dependencies/firpm
+[submodule "extern/firpm"]
+	path = extern/firpm
 	url = https://github.com/sfilip/firpm.git

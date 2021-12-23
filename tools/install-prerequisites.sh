@@ -11,7 +11,7 @@ sudo apt install -y libeigen3-dev
 
 # Build and install libcorrect
 (
-  cd dependencies/libcorrect;
+  cd extern/libcorrect;
   rm -rf build;
   mkdir build;
   cd build;
@@ -27,7 +27,7 @@ sudo apt install -y libeigen3-dev
 
 # Build and install liquid-dsp
 (
-  cd dependencies/liquid-dsp;
+  cd extern/liquid-dsp;
   ./bootstrap.sh;
   CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" ./configure;
   make;
@@ -38,7 +38,7 @@ sudo apt install -y libeigen3-dev
 
 # Build and install firpm
 (
-  cd dependencies/firpm/firpm_d;
+  cd extern/firpm/firpm_d;
   rm -rf build;
   mkdir build;
   cd build;

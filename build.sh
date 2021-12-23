@@ -26,7 +26,7 @@ CFLAGS="-Ofast -march=native"
 
 # Build and install libcorrect
 (
-  cd dependencies/libcorrect;
+  cd extern/libcorrect;
   rm -rf build;
   mkdir build;
   cd build;
@@ -42,7 +42,7 @@ CFLAGS="-Ofast -march=native"
 
 # Build and install UHD
 (
-  cd dependencies/uhd/host;
+  cd extern/uhd/host;
   rm -rf build;
   mkdir build;
   cd build;
@@ -55,7 +55,7 @@ CFLAGS="-Ofast -march=native"
 
 # Build and install liquid-dsp
 (
-  cd dependencies/liquid-dsp;
+  cd extern/liquid-dsp;
   ./bootstrap.sh;
   CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" ./configure;
   make;
@@ -66,7 +66,7 @@ CFLAGS="-Ofast -march=native"
 
 # Build and install firpm
 (
-  cd dependencies/firpm/firpm_d;
+  cd extern/firpm/firpm_d;
   rm -rf build;
   mkdir build;
   cd build;
