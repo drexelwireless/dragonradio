@@ -14,7 +14,7 @@ pexpect==4.8.0
 pickleshare==0.7.5
 pkg_resources==0.0.0
 prompt-toolkit==3.0.24
-protobuf==3.13.0
+protobuf==3.19.1
 psutil==5.8.0
 ptyprocess==0.7.0
 Pygments==2.10.0
