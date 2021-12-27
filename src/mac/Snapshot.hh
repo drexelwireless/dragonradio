@@ -85,24 +85,24 @@ public:
      * @param start Sample offset of start of self-transmission
      * @param end Sample offset of end of self-transmission
      * @param fc Center frequency of self-transmission
-     * @param fs Bandwidth of self-transmission
+     * @param bw Bandwidth of self-transmission
      */
-    void selfTX(ssize_t start, ssize_t end, float fc, float fs);
+    void selfTX(ssize_t start, ssize_t end, float fc, float bw);
 
     /** @brief Add a local self-transmission event (we transmitted something)
      * @param when Timestamp of start of self-transmission
      * @param fs_rx RX sampling rate
      * @param fs_tx TX sampling rate
-     * @param fs_chan TX channel sampling rate
-     * @param nsamples Number of samples of self-transmission
      * @param fc Center frequency of self-transmission
+     * @param bw Bandwidth of self-transmission
+     * @param nsamples Number of samples of self-transmission
      */
     void selfTX(MonoClock::time_point when,
                 float fs_rx,
                 float fs_tx,
-                float fs_chan,
-                unsigned nsamples,
-                float fc);
+                float fc,
+                float bw,
+                unsigned nsamples);
 
     /** @brief Return true if a snapshot is being collected */
     bool active(void)

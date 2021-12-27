@@ -101,20 +101,20 @@ void SnapshotCollector::finalizePush(void)
         curbuf_.reset();
 }
 
-void SnapshotCollector::selfTX(ssize_t start, ssize_t end, float fc, float fs)
+void SnapshotCollector::selfTX(ssize_t start, ssize_t end, float fc, float bw)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (snapshot_)
-        snapshot_->selftx.emplace_back(SelfTX{false, start, end, fc, fs});
+        snapshot_->selftx.emplace_back(SelfTX{false, start, end, fc, bw});
 }
 
 void SnapshotCollector::selfTX(MonoClock::time_point when,
                                float fs_rx,
                                float fs_tx,
-                               float fs_chan,
-                               unsigned nsamples,
-                               float fc)
+                               float fc,
+                               float bw,
+                               unsigned nsamples)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     ssize_t                     scaled_nsamples;
@@ -128,7 +128,7 @@ void SnapshotCollector::selfTX(MonoClock::time_point when,
                                               start,
                                               start + scaled_nsamples,
                                               fc,
-                                              fs_chan});
+                                              bw});
     } else {
         last_local_tx_start_ = when;
         last_local_tx_fs_rx_ = fs_rx;
@@ -137,7 +137,7 @@ void SnapshotCollector::selfTX(MonoClock::time_point when,
         last_local_tx_.start = 0;
         last_local_tx_.end = scaled_nsamples;
         last_local_tx_.fc = fc;
-        last_local_tx_.fs = fs_tx;
+        last_local_tx_.fs = bw;
     }
 }
 
