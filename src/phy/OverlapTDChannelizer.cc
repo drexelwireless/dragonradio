@@ -103,6 +103,9 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
     auto callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
         received = true;
         if (pkt) {
+            pkt->chanidx = chanidx;
+            pkt->channel = channels_[chanidx].channel;
+
             if (enforce_ordering_)
                 radio_q_.push(b, pkt);
             else

@@ -257,11 +257,13 @@ void FDChannelizer::demodWorker(unsigned tid)
     unsigned                num_extra_snapshot_slots = 0;
     bool                    received = false; // Have we received any packets?
     std::vector<PHYChannel> channels;         // Local copy of channels
+    unsigned                chanidx;          // Index of current channel being demodulated
     Channel                 channel;          // Current channel being demodulated
 
     PHY::PacketDemodulator::callback_type callback = [&] (std::shared_ptr<RadioPacket> &&pkt) {
         received = true;
         if (pkt) {
+            pkt->chanidx = chanidx;
             pkt->channel = channel;
             source.push(std::move(pkt));
         }
@@ -289,13 +291,13 @@ void FDChannelizer::demodWorker(unsigned tid)
             }
 
             // Set demodulator callbacks
-            for (unsigned channelidx = tid; channelidx < channels.size(); channelidx += nthreads_)
-                demods_[channelidx]->setCallback(callback);
+            for (unsigned i = tid; i < channels.size(); i += nthreads_)
+                demods_[i]->setCallback(callback);
         }
 
-        for (unsigned channelidx = tid; channelidx < channels.size(); channelidx += nthreads_) {
-            auto &demod = *demods_[channelidx];
-            auto &slots = *slots_[channelidx];
+        for (chanidx = tid; chanidx < channels.size(); chanidx += nthreads_) {
+            auto &demod = *demods_[chanidx];
+            auto &slots = *slots_[chanidx];
 
             // Get a slot
             if (!slots.pop(slot)) {
@@ -339,7 +341,7 @@ void FDChannelizer::demodWorker(unsigned tid)
 
             // Set parameters for the callback
             received = false;
-            channel = channels[channelidx].channel;
+            channel = channels[chanidx].channel;
 
             // Demodulate data as it is received
             for (int spin_count = 0; !complete; ++spin_count) {

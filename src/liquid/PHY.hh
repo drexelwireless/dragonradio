@@ -80,6 +80,9 @@ public:
         }
 
     protected:
+        /** @brief Index of the channel being demodulated */
+        unsigned chanidx_;
+
         /** @brief The channel being demodulated */
         Channel channel_;
 

@@ -110,11 +110,13 @@ void TDChannelizer::demodWorker(unsigned tid)
     std::optional<ssize_t>  next_snapshot_off;
     bool                    received = false; // Have we received any packets?
     std::vector<PHYChannel> channels;         // Local copy of channels
+    unsigned                chanidx;          // Index of current channel being demodulated
     Channel                 channel;          // Current channel being demodulated
 
     PHY::PacketDemodulator::callback_type callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
         received = true;
         if (pkt) {
+            pkt->chanidx = chanidx;
             pkt->channel = channel;
             source.push(pkt);
         }
@@ -142,13 +144,13 @@ void TDChannelizer::demodWorker(unsigned tid)
             }
 
             // Set demodulator callbacks
-            for (unsigned channelidx = tid; channelidx < channels.size(); channelidx += nthreads_)
-                demods_[channelidx]->setCallback(callback);
+            for (unsigned i = tid; i < channels.size(); i += nthreads_)
+                demods_[i]->setCallback(callback);
         }
 
-        for (unsigned channelidx = tid; channelidx < channels.size(); channelidx += nthreads_) {
-            auto &demod = *demods_[channelidx];
-            auto &iqbufs = *iqbufs_[channelidx];
+        for (chanidx = tid; chanidx < channels.size(); chanidx += nthreads_) {
+            auto &demod = *demods_[chanidx];
+            auto &iqbufs = *iqbufs_[chanidx];
 
             // Get an IQ buffer
             if (!iqbufs.pop(iqbuf)) {
@@ -188,7 +190,7 @@ void TDChannelizer::demodWorker(unsigned tid)
             size_t n = 0;
 
             received = false;
-            channel = channels_[channelidx].channel;
+            channel = channels_[chanidx].channel;
 
             for (;;) {
                 complete = iqbuf->complete.load(std::memory_order_acquire);

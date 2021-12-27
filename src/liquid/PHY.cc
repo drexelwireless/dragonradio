@@ -185,6 +185,7 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     pkt->cfo = stats_.cfo;
 
     // Save channel info
+    pkt->chanidx = chanidx_;
     pkt->channel = channel_;
     pkt->bw = rx_rate_;
     pkt->mcsidx = getMCSIndex(phy_.mcs_table, stats_);

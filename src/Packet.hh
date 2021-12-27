@@ -246,6 +246,9 @@ struct Packet : public buffer<unsigned char>
         uint8_t has_selective_ack : 1;
     } internal_flags;
 
+    /** @brief Index of channel on which the packet was sent/received */
+    unsigned chanidx;
+
     /** @brief Channel on which the packet was sent/received */
     Channel channel;
 
