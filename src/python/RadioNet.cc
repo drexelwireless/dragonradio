@@ -42,10 +42,10 @@ void exportRadioNet(py::module &m)
         .def_readwrite("is_gateway",
             &Node::is_gateway,
             "Flag indicating whether or not this node is the gateway")
-        .def_readwrite("can_transmit",
-            &Node::can_transmit,
-            "Flag indicating whether or not this node can transmit")
-        .def_readwrite("unreachable",
+        .def_readonly("emcon",
+            &Node::emcon,
+            "Flag indicating whether or not this node is subject to emissions control")
+        .def_readonly("unreachable",
             &Node::unreachable,
             "Flag indicating whether or not this node is unreachable")
         .def_readwrite("g",

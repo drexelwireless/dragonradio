@@ -928,6 +928,8 @@ public:
 
     bool pull(std::shared_ptr<NetPacket> &pkt) override;
 
+    void setEmcon(NodeId node_id, bool emcon) override;
+
     void received(std::shared_ptr<RadioPacket> &&pkt) override;
 
     void transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts) override;
