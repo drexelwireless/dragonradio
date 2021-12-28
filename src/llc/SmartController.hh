@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SMARTCONTROLLER_H_
@@ -386,11 +386,8 @@ class SmartController : public Controller
     friend struct SendWindow;
     friend struct RecvWindow;
 
-    friend class SendWindowsProxy;
-    friend class SendWindowProxy;
-
-    friend class ReceiveWindowsProxy;
-    friend class ReceiveWindowProxy;
+    friend class SendWindowGuard;
+    friend class RecvWindowGuard;
 
 public:
     using evm_thresh_t = std::optional<double>;
@@ -424,7 +421,7 @@ public:
     }
 
     /** @brief Get short time window over which to calculate PER (sec) */
-    double getShortPERWindow(void)
+    double getShortPERWindow(void) const
     {
         return short_per_window_;
     }
@@ -436,7 +433,7 @@ public:
     }
 
     /** @brief Get long time window over which to calculate PER (sec) */
-    double getLongPERWindow(void)
+    double getLongPERWindow(void) const
     {
         return long_per_window_;
     }
@@ -448,7 +445,7 @@ public:
     }
 
     /** @brief Get time window for statistics collection (sec) */
-    double getShortStatsWindow(void)
+    double getShortStatsWindow(void) const
     {
         return short_stats_window_;
     }
@@ -460,7 +457,7 @@ public:
     }
 
     /** @brief Get time window for statistics collection (sec) */
-    double getLongStatsWindow(void)
+    double getLongStatsWindow(void) const
     {
         return long_stats_window_;
     }
@@ -472,7 +469,7 @@ public:
     }
 
     /** @brief Get broadcast MCS index */
-    mcsidx_t getBroadcastMCSIndex(void)
+    mcsidx_t getBroadcastMCSIndex(void) const
     {
         return mcsidx_broadcast_;
     }
@@ -487,7 +484,7 @@ public:
     }
 
     /** @brief Get ACK MCS index */
-    mcsidx_t getAckMCSIndex(void)
+    mcsidx_t getAckMCSIndex(void) const
     {
         return mcsidx_ack_;
     }
@@ -502,7 +499,7 @@ public:
     }
 
     /** @brief Get minimum MCS index */
-    mcsidx_t getMinMCSIndex(void)
+    mcsidx_t getMinMCSIndex(void) const
     {
         return mcsidx_min_;
     }
@@ -517,7 +514,7 @@ public:
     }
 
     /** @brief Get maximum MCS index */
-    mcsidx_t getMaxMCSIndex(void)
+    mcsidx_t getMaxMCSIndex(void) const
     {
         return mcsidx_max_;
     }
@@ -532,7 +529,7 @@ public:
     }
 
     /** @brief Get initial MCS index */
-    mcsidx_t getInitialMCSIndex(void)
+    mcsidx_t getInitialMCSIndex(void) const
     {
         return mcsidx_init_;
     }
@@ -547,7 +544,7 @@ public:
     }
 
     /** @brief Get PER threshold for increasing modulation level */
-    double getUpPERThreshold(void)
+    double getUpPERThreshold(void) const
     {
         return mcsidx_up_per_threshold_;
     }
@@ -559,7 +556,7 @@ public:
     }
 
     /** @brief Get PER threshold for decreasing modulation level */
-    double getDownPERThreshold(void)
+    double getDownPERThreshold(void) const
     {
         return mcsidx_down_per_threshold_;
     }
@@ -571,7 +568,7 @@ public:
     }
 
     /** @brief Get MCS index learning alpha */
-    double getMCSLearningAlpha(void)
+    double getMCSLearningAlpha(void) const
     {
         return mcsidx_alpha_;
     }
@@ -583,7 +580,7 @@ public:
     }
 
     /** @brief Get MCS transition probability floor */
-    double getMCSProbFloor(void)
+    double getMCSProbFloor(void) const
     {
         return mcsidx_prob_floor_;
     }
@@ -600,7 +597,7 @@ public:
     void environmentDiscontinuity(void);
 
     /** @brief Get ACK delay. */
-    double getACKDelay(void)
+    double getACKDelay(void) const
     {
         return ack_delay_;
     }
@@ -636,7 +633,7 @@ public:
     }
 
     /** @brief Get retransmission delay. */
-    double getRetransmissionDelay(void)
+    double getRetransmissionDelay(void) const
     {
         return retransmission_delay_;
     }
@@ -648,7 +645,7 @@ public:
     }
 
     /** @brief Get minimum retransmission delay. */
-    double getMinRetransmissionDelay(void)
+    double getMinRetransmissionDelay(void) const
     {
         return min_retransmission_delay_;
     }
@@ -660,7 +657,7 @@ public:
     }
 
     /** @brief Get retransmission delay safety factor. */
-    double getRetransmissionDelaySlop(void)
+    double getRetransmissionDelaySlop(void) const
     {
         return retransmission_delay_slop_;
     }
@@ -672,7 +669,7 @@ public:
     }
 
     /** @brief Get SACK delay. */
-    double getSACKDelay(void)
+    double getSACKDelay(void) const
     {
         return sack_delay_;
     }
@@ -699,7 +696,7 @@ public:
     }
 
     /** @brief Return explicit NAK window size. */
-    bool getExplicitNAKWindow(void)
+    bool getExplicitNAKWindow(void) const
     {
         return explicit_nak_win_;
     }
@@ -711,7 +708,7 @@ public:
     }
 
     /** @brief Return explicit NAK window duration. */
-    double getExplicitNAKWindowDuration(void)
+    double getExplicitNAKWindowDuration(void) const
     {
         return explicit_nak_win_duration_;
     }
@@ -723,7 +720,7 @@ public:
     }
 
     /** @brief Return whether or not we should send selective ACKs. */
-    bool getSelectiveACK(void)
+    bool getSelectiveACK(void) const
     {
         return selective_ack_;
     }
@@ -735,7 +732,7 @@ public:
     }
 
     /** @brief Return selective ACK feedback delay. */
-    double getSelectiveACKFeedbackDelay(void)
+    double getSelectiveACKFeedbackDelay(void) const
     {
         return selective_ack_feedback_delay_;
     }
@@ -747,7 +744,7 @@ public:
     }
 
     /** @brief Return maximum number of retransmission attempts. */
-    std::optional<size_t> getMaxRetransmissions(void)
+    std::optional<size_t> getMaxRetransmissions(void) const
     {
         return max_retransmissions_;
     }
@@ -761,7 +758,7 @@ public:
     /** @brief Return flag indicating whether or not packets are always
      * demodulated in order.
      */
-    bool getDemodAlwaysOrdered(void)
+    bool getDemodAlwaysOrdered(void) const
     {
         return demod_always_ordered_;
     }
@@ -777,7 +774,7 @@ public:
     /** @brief Return flag indicating whether or not demodulation queue enforces
      * packet order.
      */
-    bool getEnforceOrdering(void)
+    bool getEnforceOrdering(void) const
     {
         return enforce_ordering_;
     }
@@ -789,7 +786,7 @@ public:
     }
 
     /** @brief Get maximum number of extra control bytes beyond MTU. */
-    size_t getMCU(void)
+    size_t getMCU(void) const
     {
         return mcu_;
     }
@@ -801,7 +798,7 @@ public:
     }
 
     /** @brief Get whether or not we always move the send windwo along. */
-    bool getMoveAlong(void)
+    bool getMoveAlong(void) const
     {
         return move_along_;
     }
@@ -813,7 +810,7 @@ public:
     }
 
     /** @brief Get whether or not we decrease the MCS index of retransmitted packets with a deadline. */
-    bool getDecreaseRetransMCSIdx(void)
+    bool getDecreaseRetransMCSIdx(void) const
     {
         return decrease_retrans_mcsidx_;
     }
@@ -822,6 +819,46 @@ public:
     void setDecreaseRetransMCSIdx(bool decrease_retrans_mcsidx)
     {
         decrease_retrans_mcsidx_ = decrease_retrans_mcsidx;
+    }
+
+    /** @brief Return true if send window exists for node, false otherwise */
+    bool sendWindowContains(NodeId node_id) const
+    {
+        std::lock_guard<std::mutex> lock(send_mutex_);
+
+        return send_.find(node_id) != send_.end();
+    }
+
+    /** @brief Return set of nodes with send windows */
+    std::set<NodeId> getSendWindowNodes(void) const
+    {
+        std::lock_guard<std::mutex> lock(send_mutex_);
+        std::set<NodeId>            nodes;
+
+        for(auto const& it: send_)
+            nodes.insert(it.first);
+
+        return nodes;
+    }
+
+    /** @brief Return true if receive window exists for node, false otherwise */
+    bool recvWindowContains(NodeId node_id) const
+    {
+        std::lock_guard<std::mutex> lock(recv_mutex_);
+
+        return recv_.find(node_id) != recv_.end();
+    }
+
+    /** @brief Return set of nodes with receive windows */
+    std::set<NodeId> getRecvWindowNodes(void) const
+    {
+        std::lock_guard<std::mutex> lock(recv_mutex_);
+        std::set<NodeId>            nodes;
+
+        for(auto const& it: recv_)
+            nodes.insert(it.first);
+
+        return nodes;
     }
 
     bool pull(std::shared_ptr<NetPacket> &pkt) override;
@@ -878,13 +915,13 @@ protected:
     Seq::uint_type recvwin_;
 
     /** @brief Mutex for the send windows */
-    std::mutex send_mutex_;
+    mutable std::mutex send_mutex_;
 
     /** @brief Send windows */
     std::map<NodeId, SendWindow> send_;
 
     /** @brief Mutex for the receive windows */
-    std::mutex recv_mutex_;
+    mutable std::mutex recv_mutex_;
 
     /** @brief Receive windows */
     std::map<NodeId, RecvWindow> recv_;
@@ -1079,7 +1116,83 @@ protected:
      * @param node_id The node whose window to get
      * @returns The receive window
      */
-    RecvWindow &getReceiveWindow(NodeId node_id);
+    RecvWindow &getRecvWindow(NodeId node_id);
+};
+
+class SendWindowGuard {
+public:
+    SendWindowGuard(SmartController &controller, NodeId node_id)
+      : sendw_(controller.getSendWindow(node_id))
+      , lock_(sendw_.mutex)
+    {
+    }
+
+    SendWindowGuard() = delete;
+
+    ~SendWindowGuard() = default;
+
+    SendWindow &operator *()
+    {
+        return sendw_;
+    }
+
+    const SendWindow &operator *() const
+    {
+        return sendw_;
+    }
+
+    SendWindow *operator ->()
+    {
+        return &sendw_;
+    }
+
+    const SendWindow *operator ->() const
+    {
+        return &sendw_;
+    }
+
+private:
+    SendWindow &sendw_;
+
+    std::lock_guard<std::mutex> lock_;
+};
+
+class RecvWindowGuard {
+public:
+    RecvWindowGuard(SmartController &controller, NodeId node_id)
+      : recvw_(controller.getRecvWindow(node_id))
+      , lock_(recvw_.mutex)
+    {
+    }
+
+    RecvWindowGuard() = delete;
+
+    ~RecvWindowGuard() = default;
+
+    RecvWindow &operator *()
+    {
+        return recvw_;
+    }
+
+    const RecvWindow &operator *() const
+    {
+        return recvw_;
+    }
+
+    RecvWindow *operator ->()
+    {
+        return &recvw_;
+    }
+
+    const RecvWindow *operator ->() const
+    {
+        return &recvw_;
+    }
+
+private:
+    RecvWindow &recvw_;
+
+    std::lock_guard<std::mutex> lock_;
 };
 
 #endif /* SMARTCONTROLLER_H_ */
