@@ -175,3 +175,7 @@ generate_python_proto(python/dragonradio/sc2/cil_pb2.py cil.proto)
 generate_python_proto(python/dragonradio/sc2/registration_pb2.py registration.proto)
 generate_python_proto(python/dragonradio/dragonradio/internal_pb2.py internal.proto)
 generate_python_proto(python/dragonradio/dragonradio/remote_pb2.py remote.proto)
+
+add_executable(flexframedemod EXCLUDE_FROM_ALL util/flexframedemod.cc)
+target_include_directories(flexframedemod PRIVATE ${LIQUIDDSP_INCLUDE_DIRS})
+target_link_libraries(flexframedemod PRIVATE ${LIQUIDDSP_LIBRARIES})
