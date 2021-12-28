@@ -6,13 +6,17 @@ sudo apt install -y libffi-dev libgirepository1.0-dev libcairo2-dev pkg-config g
 sudo apt install -y libsnappy-dev
 
 # Create virtualenv
+rm -rf venv
 virtualenv -p python3.8 venv
 . venv/bin/activate
 
 # Update to latest pip and setuptools
-pip install --upgrade pip setuptools
+pip install --upgrade pip setuptools wheel
 
 # Install dragonradio package in development mode
-(cd .. && pip install python/dragonradio-internal)
-(cd .. && pip install -e python/dragonradio)
-(cd .. && pip install -e python/dragonradio-tools)
+BASEDIR=$(dirname "$0")
+
+pip install -r requirements.txt \
+  -e "$BASEDIR/.." \
+  -e "$BASEDIR/../python/dragonradio" \
+  -e "$BASEDIR/../python/dragonradio-tools"

@@ -1,7 +1,7 @@
 DragonRadio Utilities
 =====================
 
-DragonRadio comes with a number of utilities for processing log files, generating plots, running a CIL collaboration server, etc. Most utilities are part of the ``dragonradio-tools`` Python module, located in the ``python/dragonradio-tools`` directory. They depend on the ``dragonradio-internal`` module, located at ``python/dragonradio-internal``, that implements a subset of DragonRadio functionality, like modulation and demodulation, as a Python module.
+DragonRadio comes with a number of utilities for processing log files, generating plots, running a CIL collaboration server, etc. Most utilities are part of the ``dragonradio-tools`` Python module, located in the ``python/dragonradio-tools`` directory. They depend on the ``dragonradio-internal`` module, which is located in the top-level directory, that implements a subset of DragonRadio functionality, like modulation and demodulation, as a Python module.
 
 Building the Utilities
 ----------------------

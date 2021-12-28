@@ -37,14 +37,15 @@ CFLAGS="-Ofast -march=native"
 (cd dependencies/firpm/firpm_d && rm -rf build && mkdir build && cd build && cmake .. && make -j4 && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
 
 # Create virtualenv
+rm -rf venv
 virtualenv -p python3.8 venv
 . venv/bin/activate
 
 # Update to latest pip and setuptools
-pip install --upgrade pip setuptools
+pip install --upgrade pip setuptools wheel
 
 # Install dragonradio package in development mode
-pip install -e python/dragonradio
+pip install -r requirements.txt -e python/dragonradio
 
 # Build dragonradio
 make -j10
