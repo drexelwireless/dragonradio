@@ -176,6 +176,14 @@ generate_python_proto(python/dragonradio/sc2/registration_pb2.py registration.pr
 generate_python_proto(python/dragonradio/dragonradio/internal_pb2.py internal.proto)
 generate_python_proto(python/dragonradio/dragonradio/remote_pb2.py remote.proto)
 
+add_custom_target(requirements.txt
+                  DEPENDS
+                  ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/pip freeze --exclude dragonradio >${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt
+  COMMENT "Generating requirements.txt")
+
 add_executable(flexframedemod EXCLUDE_FROM_ALL util/flexframedemod.cc)
 target_include_directories(flexframedemod PRIVATE ${LIQUIDDSP_INCLUDE_DIRS})
 target_link_libraries(flexframedemod PRIVATE ${LIQUIDDSP_LIBRARIES})
