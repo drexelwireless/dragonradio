@@ -9,7 +9,6 @@
 #include "RadioNet.hh"
 #include "USRP.hh"
 #include "phy/Channelizer.hh"
-#include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
 #include "mac/MAC.hh"
 #include "mac/SlottedMAC.hh"
@@ -21,7 +20,6 @@ public:
     using TDMASchedule = std::vector<bool>;
 
     TDMA(std::shared_ptr<USRP> usrp,
-         std::shared_ptr<PHY> phy,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,

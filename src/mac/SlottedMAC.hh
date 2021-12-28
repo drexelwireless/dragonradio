@@ -15,7 +15,6 @@
 #include "SafeQueue.hh"
 #include "USRP.hh"
 #include "phy/Channelizer.hh"
-#include "phy/PHY.hh"
 #include "phy/SlotSynthesizer.hh"
 #include "mac/MAC.hh"
 #include "mac/Schedule.hh"
@@ -27,7 +26,6 @@ public:
     using Slot = SlotSynthesizer::Slot;
 
     SlottedMAC(std::shared_ptr<USRP> usrp,
-               std::shared_ptr<PHY> phy,
                std::shared_ptr<Controller> controller,
                std::shared_ptr<SnapshotCollector> collector,
                std::shared_ptr<Channelizer> channelizer,

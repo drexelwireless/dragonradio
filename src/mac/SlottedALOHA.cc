@@ -7,7 +7,6 @@
 #include "util/threads.hh"
 
 SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
-                           std::shared_ptr<PHY> phy,
                            std::shared_ptr<Controller> controller,
                            std::shared_ptr<SnapshotCollector> collector,
                            std::shared_ptr<Channelizer> channelizer,
@@ -17,7 +16,6 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            double slot_send_lead_time,
                            double p)
   : SlottedMAC(usrp,
-               phy,
                controller,
                collector,
                channelizer,

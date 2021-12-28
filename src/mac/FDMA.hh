@@ -8,7 +8,6 @@
 
 #include "USRP.hh"
 #include "phy/Channelizer.hh"
-#include "phy/PHY.hh"
 #include "phy/ChannelSynthesizer.hh"
 #include "mac/MAC.hh"
 
@@ -17,7 +16,6 @@ class FDMA : public MAC
 {
 public:
     FDMA(std::shared_ptr<USRP> usrp,
-         std::shared_ptr<PHY> phy,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,

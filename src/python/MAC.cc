@@ -69,7 +69,6 @@ void exportMACs(py::module &m)
     // Export class FDMA to Python
     py::class_<FDMA, MAC, std::shared_ptr<FDMA>>(m, "FDMA")
         .def(py::init<std::shared_ptr<USRP>,
-                      std::shared_ptr<PHY>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
@@ -104,7 +103,6 @@ void exportMACs(py::module &m)
     // Export class TDMA to Python
     py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<USRP>,
-                      std::shared_ptr<PHY>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
@@ -121,7 +119,6 @@ void exportMACs(py::module &m)
     // Export class SlottedALOHA to Python
     py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
         .def(py::init<std::shared_ptr<USRP>,
-                      std::shared_ptr<PHY>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,

@@ -106,10 +106,10 @@ public:
 
             mcs_table[i].mcs = mcs_table_[i].get();
             mcs_table[i].autogain = table[i].second;
-            mcs_table[i].valid = true;
         }
     }
 
+protected:
     /** @brief Actual MCS objects referred to by mcs_table */
     std::vector<std::shared_ptr<MCS>> mcs_table_;
 };
@@ -236,9 +236,6 @@ void exportPHYs(py::module &m)
         .def_readonly("autogain",
             &PHY::MCSEntry::autogain,
             "AutoGain for MCS")
-        .def_readonly("valid",
-            &PHY::MCSEntry::valid,
-            "Is this MCS valid?")
         ;
 
     // Export class ModPacket to Python
