@@ -15,7 +15,69 @@ using namespace std::placeholders;
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
 
-/** @brief A MAC controller. */
+/** @brief LLC's link to the network */
+class ControllerNetLink {
+public:
+    ControllerNetLink() = default;
+    virtual ~ControllerNetLink() = default;
+
+    /** @brief Push an element onto the high-priority queue. */
+    virtual void push_hi(std::shared_ptr<NetPacket>&& pkt) = 0;
+
+    /** @brief Re-queue an element. */
+    virtual void repush(std::shared_ptr<NetPacket>&& pkt)
+    {
+        push_hi(std::move(pkt));
+    }
+
+    /** @brief Notify of new MCS */
+    virtual void updateMCS(NodeId id, const MCS *mcs)
+    {
+    }
+
+    /** @brief Set transmission delay. */
+    virtual void setTransmissionDelay(double t)
+    {
+    }
+
+    /** @brief Get transmission delay. */
+    virtual double getTransmissionDelay(void) const
+    {
+        return 0.0;
+    }
+
+    /** @brief Set whether or not a node's link is open */
+    virtual void setLinkStatus(NodeId node_id, bool isOpen)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        link_status_[node_id] = isOpen;
+    }
+
+protected:
+    /** @brief Mutex protecting the send window status */
+    std::mutex mutex_;
+
+    /** @brief Nodes' send window statuses */
+    std::unordered_map<NodeId, bool> link_status_;
+
+    /** @brief Return true if the packet can be popped */
+    bool canPop(const std::shared_ptr<NetPacket>& pkt)
+    {
+        if (pkt->hdr.nexthop == kNodeBroadcast || pkt->internal_flags.assigned_seq)
+            return true;
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto                        it = link_status_.find(pkt->hdr.nexthop);
+
+        if (it != link_status_.end())
+            return it->second;
+        else
+            return true;
+    }
+};
+
+/** @brief A logical link controller. */
 class Controller : public Element
 {
 public:
@@ -31,7 +93,7 @@ public:
                  std::bind(&Controller::received, this, _1))
       , radio_out(*this, nullptr, nullptr)
       , radionet_(radionet)
-      , netq_(nullptr)
+      , netlink_(nullptr)
       , mtu_(mtu)
       , min_channel_bandwidth_(0)
     {
@@ -39,18 +101,6 @@ public:
     virtual ~Controller() = default;
 
     Controller() = delete;
-
-    /** @brief Get the controller's network queue. */
-    std::shared_ptr<NetQueue> getNetQueue(void)
-    {
-        return netq_;
-    }
-
-    /** @brief Set the controller's network queue. */
-    void setNetQueue(std::shared_ptr<NetQueue> q)
-    {
-        netq_ = q;
-    }
 
     /** @brief Get MTU */
     size_t getMTU() const
@@ -62,6 +112,18 @@ public:
     virtual void setMinChannelBandwidth(double min_bw)
     {
         min_channel_bandwidth_ = min_bw;
+    }
+
+    /** @brief Get the controller's network link. */
+    std::shared_ptr<ControllerNetLink> getNetLink(void)
+    {
+        return netlink_;
+    }
+
+    /** @brief Set the controller's network link. */
+    void setNetLink(std::shared_ptr<ControllerNetLink> netlink)
+    {
+        netlink_ = netlink;
     }
 
     /** @brief Pull a packet from the network to be sent next over the radio. */
@@ -96,7 +158,7 @@ public:
      */
     virtual void missed(std::shared_ptr<NetPacket> &&pkt)
     {
-        netq_->repush(std::move(pkt));
+        netlink_->repush(std::move(pkt));
     }
 
     /** @brief Notify controller of transmitted packets. */
@@ -121,7 +183,7 @@ protected:
     std::shared_ptr<RadioNet> radionet_;
 
     /** @brief Network queue with high-priority sub-queue. */
-    std::shared_ptr<NetQueue> netq_;
+    std::shared_ptr<ControllerNetLink> netlink_;
 
     /** @brief Network MTU */
     size_t mtu_;

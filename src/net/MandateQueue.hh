@@ -14,13 +14,14 @@
 #include "Logger.hh"
 #include "TimerQueue.hh"
 #include "cil/CIL.hh"
+#include "llc/Controller.hh"
 #include "net/Queue.hh"
 
 /** @brief A queue that obeys mandates. */
 template <class T>
-class MandateQueue : public Queue<T> {
+class MandateQueue : public Queue<T>, public ControllerNetLink {
 public:
-    using Queue<T>::canPop;
+    using ControllerNetLink::canPop;
 
     /** @brief Priority value */
     /** A priority is a pair, with the first number representing the priority of
@@ -77,9 +78,9 @@ public:
         stop();
     }
 
-    void setSendWindowStatus(NodeId id, bool isOpen) override
+    void setLinkStatus(NodeId id, bool isOpen) override
     {
-        Queue<T>::setSendWindowStatus(id, isOpen);
+        ControllerNetLink::setLinkStatus(id, isOpen);
 
         // Activate any queues associated with the node whose window just
         // opened.

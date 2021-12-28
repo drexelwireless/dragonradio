@@ -13,7 +13,7 @@ class TailDropQueue : public SizedQueue<T> {
 public:
     using const_iterator = typename std::list<T>::const_iterator;
 
-    using Queue<T>::canPop;
+    using SizedQueue<T>::canPop;
     using SizedQueue<T>::stop;
     using SizedQueue<T>::drop;
     using SizedQueue<T>::size_;

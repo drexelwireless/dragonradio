@@ -339,7 +339,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.controller.net_out >> self.synthesizer.sink
 
         # Allow Controller access to the network queue
-        self.controller.net_queue = self.netq
+        self.controller.net_link = self.netq
 
     def mkPHY(self, header_mcs, mcs_table):
         """Construct a PHY from configuration parameters"""
@@ -455,6 +455,7 @@ class Radio(dragonradio.tasks.TaskManager):
             # ARQ parameters
             controller.enforce_ordering = config.arq_enforce_ordering
             controller.max_retransmissions = config.arq_max_retransmissions
+            controller.unreachable_timeout = config.arq_unreachable_timeout
             controller.ack_delay = config.arq_ack_delay
             controller.ack_delay_estimation_window = config.arq_ack_delay_estimation_window
             controller.retransmission_delay = config.arq_retransmission_delay

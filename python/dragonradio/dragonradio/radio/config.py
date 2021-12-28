@@ -214,6 +214,8 @@ class Config:
         """Should ARQ enforce packet ordering?"""
         self.arq_max_retransmissions = None
         """Maximum number of times a packet is allowed to be retransmitted"""
+        self.arq_unreachable_timeout = None
+        """Timeout after which a node is marked unreachable (sec)"""
         self.arq_ack_delay = 100e-3
         """Maximum delay before an explicit ACK is sent (sec)"""
         self.arq_ack_delay_estimation_window = 1
@@ -772,6 +774,10 @@ class Config:
                          dest='arq_max_retransmissions',
                          metavar='COUNT',
                          help='set maximum number of retransmission attempts')
+        arq.add_argument('--unreachable-timout', action='store', type=float,
+                         dest='arq_unreachable_timeout',
+                         metavar='SEC',
+                         help='set timeout after which a node is marked unreachable (sec)')
         arq.add_argument('--explicit-nak-window', action='store', type=int,
                          dest='arq_explicit_nak_win',
                          metavar='NPACKETS',

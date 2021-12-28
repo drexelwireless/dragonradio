@@ -231,15 +231,24 @@ private:
 
 void exportControllers(py::module &m)
 {
+
+    // Export class ControllerNetLink to Python
+    py::class_<ControllerNetLink, std::shared_ptr<ControllerNetLink>>(m, "ControllerNetLink")
+        .def_property("transmission_delay",
+            &ControllerNetLink::getTransmissionDelay,
+            &ControllerNetLink::setTransmissionDelay,
+            "Transmission delay (sec)")
+        ;
+
     // Export class Controller to Python
     py::class_<Controller, std::shared_ptr<Controller>>(m, "Controller")
         .def_property_readonly("net_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_in); } )
         .def_property_readonly("net_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->net_out); } )
         .def_property_readonly("radio_in", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_in); } )
         .def_property_readonly("radio_out", [](std::shared_ptr<Controller> element) { return exposePort(element, &element->radio_out); } )
-        .def_property("net_queue",
-            &Controller::getNetQueue,
-            &Controller::setNetQueue)
+        .def_property("net_link",
+            &Controller::getNetLink,
+            &Controller::setNetLink)
         .def_property("min_channel_bandwidth",
             nullptr,
             &Controller::setMinChannelBandwidth,
@@ -323,6 +332,10 @@ void exportControllers(py::module &m)
             &SmartController::getMCSProbFloor,
             &SmartController::setMCSProbFloor,
             "MCS transition probability floor")
+        .def_property("unreachable_timeout",
+            &SmartController::getUnreachableTimeout,
+            &SmartController::setUnreachableTimeout,
+            "Threshold for marking node unreachable (sec)")
         .def_property("ack_delay",
             &SmartController::getACKDelay,
             &SmartController::setACKDelay,

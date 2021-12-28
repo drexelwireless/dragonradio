@@ -60,16 +60,12 @@ void exportNet(py::module &m)
 
     // Export class NetQueue to Python
     py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "Queue")
-        .def_property("transmission_delay",
-            &NetQueue::getTransmissionDelay,
-            &NetQueue::setTransmissionDelay,
-            "Transmission delay (sec)")
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )
         .def_property_readonly("pop", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->out); } )
         ;
 
     // Export class SimpleNetQueue to Python
-    auto simple_queue_class = py::class_<SimpleNetQueue, NetQueue, std::shared_ptr<SimpleNetQueue>>(m, "SimpleQueue")
+    auto simple_queue_class = py::class_<SimpleNetQueue, NetQueue, ControllerNetLink, std::shared_ptr<SimpleNetQueue>>(m, "SimpleQueue")
         .def(py::init<SimpleNetQueue::QueueType>())
         ;
 
@@ -79,7 +75,7 @@ void exportNet(py::module &m)
         .export_values();
 
     // Export class SizedNetQueue to Python
-    py::class_<SizedNetQueue, NetQueue, std::shared_ptr<SizedNetQueue>>(m, "SizedQueue")
+    py::class_<SizedNetQueue, NetQueue, ControllerNetLink, std::shared_ptr<SizedNetQueue>>(m, "SizedQueue")
         .def_property("hi_priority_flows",
             &SizedNetQueue::getHiPriorityFlows,
             &SizedNetQueue::setHiPriorityFlows,
@@ -87,7 +83,7 @@ void exportNet(py::module &m)
         ;
 
     // Export class REDNetQueue to Python
-    py::class_<REDNetQueue, SizedNetQueue, std::shared_ptr<REDNetQueue>>(m, "REDQueue")
+    py::class_<REDNetQueue, SizedNetQueue, ControllerNetLink, std::shared_ptr<REDNetQueue>>(m, "REDQueue")
         .def(py::init<bool,
                       size_t,
                       size_t,
@@ -116,7 +112,7 @@ void exportNet(py::module &m)
         ;
 
     // Export class TailDropNetQueue to Python
-    py::class_<TailDropNetQueue, SizedNetQueue, std::shared_ptr<TailDropNetQueue>>(m, "TailDropQueue")
+    py::class_<TailDropNetQueue, SizedNetQueue, ControllerNetLink, std::shared_ptr<TailDropNetQueue>>(m, "TailDropQueue")
         .def(py::init<size_t>())
         .def_property("max_size",
             &TailDropNetQueue::getMaxSize,
@@ -125,7 +121,7 @@ void exportNet(py::module &m)
         ;
 
     // Export class MandateNetQueue to Python
-    auto mandate_queue_class = py::class_<MandateNetQueue, NetQueue, std::shared_ptr<MandateNetQueue>>(m, "MandateQueue")
+    auto mandate_queue_class = py::class_<MandateNetQueue, NetQueue, ControllerNetLink, std::shared_ptr<MandateNetQueue>>(m, "MandateQueue")
         .def(py::init<>())
         .def_property("bonus_phase",
             &MandateNetQueue::getBonusPhase,
