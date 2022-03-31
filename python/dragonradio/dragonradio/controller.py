@@ -251,7 +251,7 @@ class Controller(CILServer):
             logger.warning('Bandwidth not specified; using %f', self.config.bandwidth)
 
         # Create the radio object
-        radio = dragonradio.radio.Radio(self.config, 'aloha', loop=self.loop)
+        radio = self.mkRadio(self.config, 'aloha', loop=self.loop)
         self.radio = radio
 
         # Set new node callback
@@ -326,6 +326,9 @@ class Controller(CILServer):
         finally:
             logger.info('Controller terminated')
             self.loop.close()
+
+    def mkRadio(self, *args, **kwargs):
+        return dragonradio.radio.Radio(*args, **kwargs)
 
     async def startRadio(self, timestamp=time.time()):
         """Start the radio"""
