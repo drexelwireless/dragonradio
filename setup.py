@@ -16,7 +16,7 @@ except ImportError:
 
 TOPDIR = Path(__file__).parent
 
-DEPENDENCIES = TOPDIR / 'dependencies'
+DEPENDENCIES = TOPDIR / 'extern'
 
 ext_modules = [
     Pybind11Extension(

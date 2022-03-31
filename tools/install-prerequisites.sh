@@ -10,10 +10,43 @@ sudo apt install -y libflac8 libflac-dev libflac++-dev
 sudo apt install -y libeigen3-dev
 
 # Build and install libcorrect
-(cd ../dependencies/libcorrect && rm -rf build && mkdir build && cd build && CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake .. && make && make shim && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
+(
+  cd extern/libcorrect;
+  rm -rf build;
+  mkdir build;
+  cd build;
+  CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake ..;
+  make;
+  make shim;
+  sudo make install;
+  sudo ldconfig;
+  make clean;
+  cd ..;
+  rm -rf build
+)
 
 # Build and install liquid-dsp
-(cd ../dependencies/liquid-dsp && ./bootstrap.sh && CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" ./configure && make && sudo make install && sudo ldconfig && make clean)
+(
+  cd extern/liquid-dsp;
+  ./bootstrap.sh;
+  CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" ./configure;
+  make;
+  sudo make install;
+  sudo ldconfig;
+  make clean
+)
 
 # Build and install firpm
-(cd ../dependencies/firpm/firpm_d && rm -rf build && mkdir build && cd build && cmake .. && make -j4 && sudo make install && sudo ldconfig && make clean && cd .. && rm -rf build)
+(
+  cd extern/firpm/firpm_d;
+  rm -rf build;
+  mkdir build;
+  cd build;
+  cmake ..;
+  make -j4;
+  sudo make install;
+  sudo ldconfig;
+  make clean;
+  cd ..;
+  rm -rf build
+)
