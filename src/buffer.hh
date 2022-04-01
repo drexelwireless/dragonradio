@@ -349,4 +349,16 @@ void swap(buffer<T>& lhs, buffer<T>& rhs)
     lhs.swap(rhs);
 }
 
+template<typename T>
+typename buffer<T>::const_iterator begin(const buffer<T>& iq)
+{
+    return iq.begin();
+}
+
+template<typename T>
+typename buffer<T>::const_iterator end(const buffer<T>& iq)
+{
+    return iq.end();
+}
+
 #endif /* BUFFER_H_ */
