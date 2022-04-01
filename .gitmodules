@@ -16,3 +16,9 @@
 [submodule "extern/firpm"]
 	path = extern/firpm
 	url = https://github.com/sfilip/firpm.git
+[submodule "extern/Catch2"]
+	path = extern/Catch2
+	url = https://github.com/catchorg/Catch2
+[submodule "extern/rapidcheck"]
+	path = extern/rapidcheck
+	url = https://github.com/emil-e/rapidcheck

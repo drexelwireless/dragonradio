@@ -26,6 +26,8 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g3")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/extern/Catch2/contrib")
+
 include(GitVersion)
 
 project(dragonradio
@@ -42,7 +44,9 @@ find_package(HDF5 REQUIRED COMPONENTS CXX)
 find_package(Python3 EXACT 3.8 REQUIRED COMPONENTS Interpreter Development)
 find_package(Protobuf)
 
+add_subdirectory(extern/Catch2)
 add_subdirectory(extern/pybind11)
+add_subdirectory(extern/rapidcheck)
 add_subdirectory(extern/xsimd)
 
 add_subdirectory(src)
@@ -85,3 +89,10 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt
 add_executable(flexframedemod EXCLUDE_FROM_ALL util/flexframedemod.cc)
 target_include_directories(flexframedemod PRIVATE ${LIQUIDDSP_INCLUDE_DIRS})
 target_link_libraries(flexframedemod PRIVATE ${LIQUIDDSP_LIBRARIES})
+
+enable_testing()
+
+add_subdirectory(test)
+
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
+                  DEPENDS tests)
