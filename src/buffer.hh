@@ -308,7 +308,7 @@ protected:
 template<typename T>
 bool operator==(const buffer<T>& lhs, const buffer<T>& rhs)
 {
-    return lhs.size_ == rhs.size()
+    return lhs.size() == rhs.size()
            && std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
