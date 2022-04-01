@@ -55,8 +55,8 @@ void interleave<xsimd::batch<float, 8>>(const xsimd::batch<float, 8> &lo, const 
 
     const __m256i mask = _mm256_setr_epi32(0, 4, 1, 5, 2, 6, 3, 7);
 
-    res_[0] = _mm256_permutevar8x32_ps(lo_grouped, mask);
-    res_[1] = _mm256_permutevar8x32_ps(hi_grouped, mask);
+    _mm256_storeu_ps(reinterpret_cast<float*>(&res_[0]), _mm256_permutevar8x32_ps(lo_grouped, mask));
+    _mm256_storeu_ps(reinterpret_cast<float*>(&res_[1]), _mm256_permutevar8x32_ps(hi_grouped, mask));
 }
 #else /* !defined(__AVX2__) */
 template<>
