@@ -299,7 +299,7 @@ public:
         memset(reinterpret_cast<void*>(&data_[n]), 0, count*sizeof(T));
     }
 
-private:
+protected:
     T* data_;
     size_t size_;
     size_t capacity_;
