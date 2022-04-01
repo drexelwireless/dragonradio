@@ -52,14 +52,14 @@ public:
             return window_.rbegin()->first;
     }
 
-    virtual operator bool() const override
+    operator bool() const override
     {
         purge(Clock::now());
 
         return window_.size() != 0;
     }
 
-    virtual std::optional<T> value(void) const override
+    std::optional<T> value(void) const override
     {
         purge(Clock::now());
 
@@ -79,7 +79,7 @@ public:
             return **this;
     }
 
-    virtual size_t size(void) const override
+    size_t size(void) const override
     {
         return window_.size();
     }
@@ -89,7 +89,7 @@ public:
         window_.clear();
     }
 
-    virtual void update(T x) override
+    void update(T x) override
     {
         update(Clock::now(), x);
     }
@@ -123,12 +123,12 @@ public:
 
     virtual ~TimeWindowMean() = default;
 
-    virtual T operator *() const override
+    T operator *() const override
     {
         return sum_/static_cast<T>(window_.size());
     }
 
-    virtual void reset(void) override
+    void reset() override
     {
         TimeWindowEstimator<Clock, T>::reset();
         sum_ = 0;
@@ -172,7 +172,7 @@ public:
 
     virtual ~TimeWindowMeanRate() = default;
 
-    virtual T operator *() const override
+    T operator *() const override
     {
         return sum_/twindow_;
     }
@@ -193,7 +193,7 @@ public:
 
     virtual ~TimeWindowMin() = default;
 
-    virtual T operator *() const override
+    T operator *() const override
     {
         return min_;
     }
@@ -258,7 +258,7 @@ public:
 
     virtual ~TimeWindowMax() = default;
 
-    virtual T operator *() const override
+    T operator *() const override
     {
         return max_;
     }
