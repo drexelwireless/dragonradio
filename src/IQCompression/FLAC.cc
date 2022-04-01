@@ -175,6 +175,8 @@ void FLACMemoryDecoder::decode(const char *encoded, size_t n)
     checkInit(init());
 
     check(process_until_end_of_stream());
+
+    check(finish());
 }
 
 FLAC__StreamDecoderReadStatus FLACMemoryDecoder::read_callback(FLAC__byte buffer[], size_t *bytes)
