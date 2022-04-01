@@ -66,7 +66,7 @@ public:
         if (window_.size() == 0)
             return std::nullopt;
         else
-            return *this;
+            return **this;
     }
 
     T value_or(T&& default_value) const override
@@ -76,7 +76,7 @@ public:
         if (window_.size() == 0)
             return default_value;
         else
-            return *this;
+            return **this;
     }
 
     virtual size_t size(void) const override
