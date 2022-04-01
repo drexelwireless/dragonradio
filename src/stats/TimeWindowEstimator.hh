@@ -23,19 +23,19 @@ public:
     virtual ~TimeWindowEstimator() = default;
 
     /** @brief Get the current time window */
-    virtual double getTimeWindow(void) const
+    double getTimeWindow(void) const
     {
         return twindow_;
     }
 
     /** @brief Set the current time window */
-    virtual void setTimeWindow(double twindow)
+    void setTimeWindow(double twindow)
     {
         twindow_ = twindow;
     }
 
     /** @brief Get start of window */
-    virtual std::optional<typename Clock::time_point> getTimeWindowStart() const
+    std::optional<typename Clock::time_point> getTimeWindowStart() const
     {
         if (window_.size() == 0)
             return std::nullopt;
@@ -44,7 +44,7 @@ public:
     }
 
     /** @brief Get end of window */
-    virtual std::optional<typename Clock::time_point> getTimeWindowEnd() const
+    std::optional<typename Clock::time_point> getTimeWindowEnd() const
     {
         if (window_.size() == 0)
             return std::nullopt;
