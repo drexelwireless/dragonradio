@@ -40,8 +40,7 @@ EOF
 # Apply the new profile to the container
 #
 
-PROFILES=$(lxc info "$CONTAINER" | grep Profile | sed -e 's/Profiles: //' -e 's/ //g')
-lxc profile apply "$CONTAINER" "$PROFILES,$USER-home"
+lxc profile add "$CONTAINER" "$USER-home"
 
 #
 # Restart the container to make sure the profile is applied
