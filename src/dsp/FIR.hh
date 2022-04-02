@@ -91,7 +91,7 @@ protected:
     std::vector<C> taps_;
 
     /** @brief Filter taps, reversed */
-    std::vector<C, XSIMD_DEFAULT_ALLOCATOR(C)> rtaps_;
+    std::vector<C, xsimd::aligned_allocator<C>> rtaps_;
 
     /** @brief Delay */
     float delay_;

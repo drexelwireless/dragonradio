@@ -96,7 +96,7 @@ public:
 
         for (size_t i = 0; i < n1; i += tvec_t::size) {
             tvec_t xvec = xsimd::load_unaligned(&w_[read_idx_+i]);
-            cvec_t cvec = xsimd::load_simd(&ys[i], Tag());
+            cvec_t cvec = xsimd::load(&ys[i], Tag());
 
             acc += xvec*cvec;
         }
@@ -143,7 +143,7 @@ protected:
     size_type read_idx_;
 
     /** @brief Samples in our window */
-    std::vector<T, XSIMD_DEFAULT_ALLOCATOR(T)> w_;
+    std::vector<T, xsimd::aligned_allocator<T>> w_;
 };
 
 #endif /* WINDOW_H_ */
