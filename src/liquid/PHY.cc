@@ -74,11 +74,7 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     iqbuf->resize(nsamples);
 
     // Apply soft gain.
-    if (g != 1.0)
-        xsimd::transform(iqbuf->data(),
-                         iqbuf->data() + nsamples,
-                         iqbuf->data(),
-                         [&](const auto& x) { return x*g; });
+    iqbuf->gain(g);
 
     // Timestamp
     MonoClock::time_point mod_end = MonoClock::now();

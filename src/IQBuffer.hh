@@ -179,10 +179,11 @@ public:
      */
     void gain(const float g)
     {
-        xsimd::transform(data() + delay,
-                         data() + delay + size(),
-                         data() + delay,
-            [&](const auto& x) { return x*g; });
+        if (g != 1.0f)
+            xsimd::transform(data() + delay,
+                             data() + delay + size(),
+                             data() + delay,
+                [&](const auto& x) { return x*g; });
     }
 
     /** @brief Compute peak and average power */
