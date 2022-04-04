@@ -43,6 +43,7 @@ find_package(UHD REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS CXX)
 find_package(Python3 EXACT 3.8 REQUIRED COMPONENTS Interpreter Development)
 find_package(Protobuf)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 add_subdirectory(extern/Catch2)
 add_subdirectory(extern/pybind11)

@@ -144,59 +144,97 @@ void exportFilters(py::module &m)
 
     m.def("butter_lowpass", &liquid::butter_lowpass);
 
-    py::class_<PMOutput>(m, "PMOutput")
+    py::enum_<pm::init_t>(m, "Strategy")
+        .value("UNIFORM", pm::init_t::UNIFORM)
+        .value("SCALING", pm::init_t::SCALING)
+        .value("AFP", pm::init_t::AFP)
+        .export_values();
+
+    py::enum_<pm::status_t>(m, "Status")
+        .value("SUCCESS", pm::status_t::STATUS_SUCCESS)
+        .value("FREQUENCY_INVALID_INTERVAL", pm::status_t::STATUS_FREQUENCY_INVALID_INTERVAL)
+        .value("AMPLITUDE_VECTOR_MISMATCH", pm::status_t::STATUS_AMPLITUDE_VECTOR_MISMATCH)
+        .value("AMPLITUDE_DISCONTINUITY", pm::status_t::STATUS_AMPLITUDE_DISCONTINUITY)
+        .value("WEIGHT_NEGATIVE", pm::status_t::STATUS_WEIGHT_NEGATIVE)
+        .value("WEIGHT_VECTOR_MISMATCH", pm::status_t::STATUS_WEIGHT_VECTOR_MISMATCH)
+        .value("WEIGHT_DISCONTINUITY", pm::status_t::STATUS_WEIGHT_DISCONTINUITY)
+        .value("SCALING_INVALID", pm::status_t::STATUS_SCALING_INVALID)
+        .value("AFP_INVALID", pm::status_t::STATUS_AFP_INVALID)
+        .value("COEFFICIENT_SET_INVALID", pm::status_t::STATUS_COEFFICIENT_SET_INVALID)
+        .value("EXCHANGE_FAILURE", pm::status_t::STATUS_EXCHANGE_FAILURE)
+        .value("CONVERGENCE_WARNING", pm::status_t::STATUS_CONVERGENCE_WARNING)
+        .value("UNKNOWN_FAILURE", pm::status_t::STATUS_UNKNOWN_FAILURE)
+        .export_values();
+
+    py::class_<pm::pmoutput_t<double>>(m, "PMOutput")
         .def_readonly("h",
-            &PMOutput::h,
+            &pm::pmoutput_t<double>::h,
             "Final filter coefficients")
         .def_readonly("x",
-            &PMOutput::x,
+            &pm::pmoutput_t<double>::x,
             "Reference set used to generate the final filter")
         .def_readonly("iter",
-            &PMOutput::iter,
+            &pm::pmoutput_t<double>::iter,
             "Number of iterations that were necessary to achieve convergence")
         .def_readonly("delta",
-            &PMOutput::delta,
+            &pm::pmoutput_t<double>::delta,
             "The final reference error")
-        .def_readonly("Q",
-            &PMOutput::Q,
+        .def_readonly("q",
+            &pm::pmoutput_t<double>::q,
             "convergence parameter value")
-        .def("__repr__", [](const PMOutput& self) {
-            return py::str("PMOutput(h={}, x={}, iter={}, delta={}, Q={})").format(self.h, self.x, self.iter, self.delta, self.Q);
+        .def_readonly("q",
+            &pm::pmoutput_t<double>::status,
+            "status code for the output object")
+        .def("__repr__", [](const pm::pmoutput_t<double>& self) {
+            return py::str("PMOutput(h={}, x={}, iter={}, delta={}, q={}, status={})").
+                format(self.h, self.x, self.iter, self.delta, self.q, self.status);
          })
         ;
 
     m.def("firpm",
         &dragonradio::signal::firpm,
         "Use the Remez exchange algorithm to design an equiripple filter",
-        py::arg("numtaps"),
-        py::arg("bands"),
-        py::arg("desired"),
+        py::arg("n"),
+        py::arg("f"),
+        py::arg("a"),
         py::arg("w"),
         py::arg("fs") = 2.0,
-        py::arg("epsT") = 0.01,
-        py::arg("Nmax") = 4);
+        py::arg("eps") = 0.01,
+        py::arg("nmax") = 4,
+        py::arg("strategy") = pm::init_t::UNIFORM,
+        py::arg("depth") = 0u,
+        py::arg("rstrategy") = pm::init_t::UNIFORM,
+        py::arg("prec") = 165ul);
 
     m.def("firpm1f",
         &dragonradio::signal::firpm1f,
         "Use the Remez exchange algorithm to design a filter with 1/f rolloff",
-        py::arg("numtaps"),
-        py::arg("bands"),
-        py::arg("desired"),
+        py::arg("n"),
+        py::arg("f"),
+        py::arg("a"),
         py::arg("w"),
         py::arg("fs") = 2.0,
-        py::arg("epsT") = 0.01,
-        py::arg("Nmax") = 4);
+        py::arg("eps") = 0.01,
+        py::arg("nmax") = 4,
+        py::arg("strategy") = pm::init_t::UNIFORM,
+        py::arg("depth") = 0u,
+        py::arg("rstrategy") = pm::init_t::UNIFORM,
+        py::arg("prec") = 165ul);
 
     m.def("firpm1f2",
         &dragonradio::signal::firpm1f2,
         "Use the Remez exchange algorithm to design a filter with 1/f^2 rolloff",
-        py::arg("numtaps"),
-        py::arg("bands"),
-        py::arg("desired"),
+        py::arg("n"),
+        py::arg("f"),
+        py::arg("a"),
         py::arg("w"),
         py::arg("fs") = 2.0,
-        py::arg("epsT") = 0.01,
-        py::arg("Nmax") = 4);
+        py::arg("eps") = 0.01,
+        py::arg("nmax") = 4,
+        py::arg("strategy") = pm::init_t::UNIFORM,
+        py::arg("depth") = 0u,
+        py::arg("rstrategy") = pm::init_t::UNIFORM,
+        py::arg("prec") = 165ul);
 
     exportWindow<C>(m, "WindowC");
 }
