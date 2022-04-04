@@ -29,7 +29,7 @@ def plotFIRCoefficients(ax, taps, title):
     ax.set_title('Filter Coefficients %s (%d taps)' % (title, len(taps)))
     ax.grid(True)
 
-def plotFIRResponse(ax, taps, fs, wp=None, ws=None, alpha=1.0):
+def plotFIRResponse(ax, taps, fs, wp=None, ws=None, alpha=1.0, worN=512):
     """Plot filter response for one or more filters.
 
     Args:
@@ -39,10 +39,13 @@ def plotFIRResponse(ax, taps, fs, wp=None, ws=None, alpha=1.0):
         ws: Stop-band frequency (optional)
         alpha: Transparency for response plots (default 1.0)
     """
-    for (h, title) in taps:
-        w, h = signal.freqz(h, worN=8000)
+    lines = []
 
-        ax.plot(0.5*fs*w/np.pi, 20*np.log10(np.abs(h)), label=title, alpha=alpha)
+    for (h, title) in taps:
+        w, h = signal.freqz(h, worN=worN)
+
+        line, = ax.plot(0.5*fs*w/np.pi, 20*np.log10(np.abs(h)), label=title, alpha=alpha)
+        lines.append(line)
 
     if wp is not None:
         ax.axvline(x=0.5*wp, linestyle='dashed', label='Passband')
@@ -56,6 +59,8 @@ def plotFIRResponse(ax, taps, fs, wp=None, ws=None, alpha=1.0):
     ax.set_ylabel('Gain (dB)')
     ax.legend()
     ax.set_title('Frequency Response')
+
+    return lines
 
 class Plot:
     """A matplotlib plot"""
