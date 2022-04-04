@@ -26,6 +26,8 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g3")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/extern/Catch2/contrib")
+
 include(GitVersion)
 
 project(dragonradio
@@ -42,118 +44,18 @@ find_package(HDF5 REQUIRED COMPONENTS CXX)
 find_package(Python3 EXACT 3.8 REQUIRED COMPONENTS Interpreter Development)
 find_package(Protobuf)
 
+add_subdirectory(extern/Catch2)
 add_subdirectory(extern/pybind11)
+add_subdirectory(extern/rapidcheck)
+add_subdirectory(extern/xsimd)
 
-configure_file(src/config.h.in src/config.h)
+add_subdirectory(src)
 
 add_executable(dragonradio
-  src/Clock.cc
-  src/ExtensibleDataSet.cc
-  src/IQCompression.cc
-  src/IQCompression/FLAC.cc
-  src/Logger.cc
-  src/logging.cc
   src/main.cc
-  src/Math.cc
-  src/Packet.cc
-  src/RadioNet.cc
-  src/TimerQueue.cc
-  src/USRP.cc
-  src/WorkQueue.cc
-  src/cil/Scorer.cc
-  src/dsp/FFTW.cc
-  src/dsp/FIRDesign.cc
-  src/dsp/TableNCO.cc
-  src/liquid/Filter.cc
-  src/liquid/Modem.cc
-  src/liquid/Mutex.cc
-  src/liquid/OFDM.cc
-  src/liquid/PHY.cc
-  src/liquid/Resample.cc
-  src/phy/AutoGain.cc
-  src/phy/FDChannelModulator.cc
-  src/phy/FDChannelizer.cc
-  src/phy/MultichannelSynthesizer.cc
-  src/phy/OverlapTDChannelizer.cc
-  src/phy/PHY.cc
-  src/phy/RadioPacketQueue.cc
-  src/phy/TDChannelModulator.cc
-  src/phy/TDChannelizer.cc
-  src/llc/DummyController.cc
-  src/llc/SmartController.cc
-  src/mac/FDMA.cc
-  src/mac/MAC.cc
-  src/mac/SlottedALOHA.cc
-  src/mac/SlottedMAC.cc
-  src/mac/Snapshot.cc
-  src/mac/TDMA.cc
-  src/net/FlowPerformance.cc
-  src/net/NetFilter.cc
-  src/net/PacketCompressor.cc
-  src/net/TunTap.cc
-  src/python/CIL.cc
-  src/python/Channelizer.cc
-  src/python/Channels.cc
-  src/python/Clock.cc
-  src/python/Controller.cc
-  src/python/Estimator.cc
-  src/python/Filter.cc
-  src/python/Flow.cc
-  src/python/Header.cc
-  src/python/IQBuffer.cc
-  src/python/IQCompression.cc
-  src/python/Liquid.cc
-  src/python/Logger.cc
-  src/python/MAC.cc
-  src/python/Modem.cc
-  src/python/NCO.cc
-  src/python/Net.cc
-  src/python/PHY.cc
-  src/python/Packet.cc
   src/python/Python.cc
-  src/python/RadioNet.cc
-  src/python/Resample.cc
-  src/python/Snapshot.cc
-  src/python/Synthesizer.cc
-  src/python/USRP.cc
-  src/python/WorkQueue.cc
-  src/util/exec.cc
-  src/util/net.cc
-  src/util/threads.cc
-  src/util/sprintf.cc
 )
-
-target_include_directories(dragonradio PRIVATE src)
-target_include_directories(dragonradio PRIVATE extern/xsimd/include)
-
-target_link_libraries(dragonradio PRIVATE pybind11::embed)
-
-target_include_directories(dragonradio PRIVATE ${xsimd_INCLUDE_DIRS})
-
-target_include_directories(dragonradio PRIVATE ${CAP_INCLUDE_DIRS})
-target_link_libraries(dragonradio PRIVATE ${CAP_LIBRARIES})
-
-target_include_directories(dragonradio PRIVATE ${FIRPM_INCLUDE_DIRS})
-target_link_libraries(dragonradio PRIVATE ${FIRPM_LIBRARIES})
-
-target_include_directories(dragonradio PRIVATE ${FLAC_INCLUDE_DIRS})
-target_link_libraries(dragonradio PRIVATE ${FLAC_LIBRARIES})
-
-target_include_directories(dragonradio PRIVATE ${FLACXX_INCLUDE_DIRS})
-target_link_libraries(dragonradio PRIVATE ${FLACXX_LIBRARIES})
-
-target_include_directories(dragonradio PRIVATE ${LIQUIDDSP_INCLUDE_DIRS})
-target_link_libraries(dragonradio PRIVATE ${LIQUIDDSP_LIBRARIES})
-
-target_include_directories(dragonradio PRIVATE ${FFTW3_INCLUDE_DIRS})
-target_link_libraries(dragonradio PRIVATE ${FFTW3_LIBRARIES} ${FFTW3F_LIBRARIES})
-
-target_include_directories(dragonradio PRIVATE ${UHD_INCLUDE_DIRS})
-target_link_libraries(dragonradio PRIVATE ${UHD_LIBRARIES})
-
-target_compile_definitions(dragonradio PUBLIC ${HDF5_DEFINITIONS})
-target_include_directories(dragonradio PRIVATE ${HDF5_INCLUDE_DIRS})
-target_link_libraries(dragonradio PRIVATE ${HDF5_LIBRARIES})
+target_link_libraries(dragonradio PRIVATE DragonRadio)
 
 add_custom_target(python ALL
                   DEPENDS
@@ -187,3 +89,10 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt
 add_executable(flexframedemod EXCLUDE_FROM_ALL util/flexframedemod.cc)
 target_include_directories(flexframedemod PRIVATE ${LIQUIDDSP_INCLUDE_DIRS})
 target_link_libraries(flexframedemod PRIVATE ${LIQUIDDSP_LIBRARIES})
+
+enable_testing()
+
+add_subdirectory(test)
+
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
+                  DEPENDS tests)
