@@ -94,6 +94,19 @@ public:
         complete.store(true, std::memory_order_release);
     }
 
+    template<class InputIt>
+    IQBuf(InputIt first, InputIt last)
+      : buffer(0)
+      , delay(0)
+      , undersample(0)
+      , oversample(0)
+    {
+        for (auto it = first; it != last; ++it) {
+            resize(size_+1);
+            data_[size_-1] = *it;
+        }
+    }
+
     ~IQBuf() noexcept {}
 
     IQBuf& operator=(const IQBuf&) = delete;

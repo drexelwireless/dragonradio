@@ -65,7 +65,7 @@ public:
     {
         data_ = other.data_;
         size_ = other.size_;
-        capacity_ = other.size_;
+        capacity_ = other.capacity_;
 
         other.data_ = nullptr;
         other.size_ = 0;
@@ -80,12 +80,13 @@ public:
 
     buffer& operator=(const buffer& other)
     {
-        data_ = reinterpret_cast<T*>(std::malloc(other.size_*sizeof(T)));
-        if (!data_)
+        T *new_data = reinterpret_cast<T*>(std::realloc(data_, other.size_*sizeof(T)));
+        if (!new_data)
             throw std::bad_alloc();
 
-        std::memcpy(data_, other.data_, other.size_*sizeof(T));
+        std::memcpy(new_data, other.data_, other.size_*sizeof(T));
 
+        data_ = new_data;
         size_ = other.size_;
         capacity_ = other.size_;
 
@@ -99,7 +100,7 @@ public:
 
         data_ = other.data_;
         size_ = other.size_;
-        capacity_ = other.size_;
+        capacity_ = other.capacity_;
 
         other.data_ = nullptr;
         other.size_ = 0;
@@ -298,7 +299,7 @@ public:
         memset(reinterpret_cast<void*>(&data_[n]), 0, count*sizeof(T));
     }
 
-private:
+protected:
     T* data_;
     size_t size_;
     size_t capacity_;
@@ -307,7 +308,7 @@ private:
 template<typename T>
 bool operator==(const buffer<T>& lhs, const buffer<T>& rhs)
 {
-    return lhs.size_ == rhs.size()
+    return lhs.size() == rhs.size()
            && std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
@@ -346,6 +347,18 @@ template<typename T>
 void swap(buffer<T>& lhs, buffer<T>& rhs)
 {
     lhs.swap(rhs);
+}
+
+template<typename T>
+typename buffer<T>::const_iterator begin(const buffer<T>& iq)
+{
+    return iq.begin();
+}
+
+template<typename T>
+typename buffer<T>::const_iterator end(const buffer<T>& iq)
+{
+    return iq.end();
 }
 
 #endif /* BUFFER_H_ */
