@@ -88,7 +88,7 @@ public:
     }
 
 protected:
-    using taps_t = std::vector<C, XSIMD_DEFAULT_ALLOCATOR(C)>;
+    using taps_t = std::vector<C, xsimd::aligned_allocator<C>>;
 
     /** @brief Number of channels */
     unsigned l_;

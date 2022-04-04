@@ -15,7 +15,7 @@
 	url = https://github.com/QuantStack/xsimd.git
 [submodule "extern/firpm"]
 	path = extern/firpm
-	url = https://github.com/sfilip/firpm.git
+	url = https://github.com/drexelwireless/firpm.git
 [submodule "extern/Catch2"]
 	path = extern/Catch2
 	url = https://github.com/catchorg/Catch2

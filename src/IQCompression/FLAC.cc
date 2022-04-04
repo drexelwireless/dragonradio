@@ -26,7 +26,7 @@ void convert2int32(const fc32_t *in_, const size_t n, int32_t *out)
     for (size_t i = 0; i < vec_size; i += inc) {
         vec_type invec = xsimd::load_unaligned(&in[i]);
 
-        xsimd::store_unaligned<int32_t, float>(&out[i], kvec*invec);
+        xsimd::store_unaligned(&out[i], xsimd::batch_cast<int32_t,float>(kvec*invec));
     }
 
     // Remaining part that cannot be vectorized
@@ -48,7 +48,9 @@ void interleave<float>(const float &x, const float &y, float *res)
 // For the inverse operations on 32-bit integers, see:
 // https://stackoverflow.com/questions/42497985/packing-and-de-interleaving-two-m256-registers
 template<>
-void interleave<xsimd::batch<float, 8>>(const xsimd::batch<float, 8> &lo, const xsimd::batch<float, 8> &hi, xsimd::batch<float, 8> *res_)
+void interleave<xsimd::batch<float, xsimd::avx2>>(const xsimd::batch<float, xsimd::avx2> &lo,
+                                                  const xsimd::batch<float, xsimd::avx2> &hi,
+                                                  xsimd::batch<float, xsimd::avx2> *res_)
 {
     auto lo_grouped = _mm256_permute2f128_ps(lo, hi, 0 | (2 << 4));
     auto hi_grouped = _mm256_permute2f128_ps(lo, hi, 1 | (3 << 4));
@@ -65,8 +67,8 @@ void interleave<xsimd::simd_type<float>>(const xsimd::simd_type<float> &x, const
     float *res = reinterpret_cast<float*>(res_);
 
     for (size_t j = 0; j < xsimd::simd_type<float>::size; ++j) {
-        res[2*j] = x[j];
-        res[2*j+1] = y[j];
+        res[2*j] = x.get(j);
+        res[2*j+1] = y.get(j);
     }
 }
 #endif /* !defined(__AVX2__) */
@@ -75,25 +77,27 @@ void interleave<xsimd::simd_type<float>>(const xsimd::simd_type<float> &x, const
 void convert2fc32(const int32_t *const in[], const size_t size, fc32_t *out_)
 {
 #if defined(__AVX2__)
-    using vec_type = xsimd::batch<float, 8>;
+    using ivec_type = xsimd::batch<int32_t, xsimd::avx2>;
+    using fvec_type = xsimd::batch<float, xsimd::avx2>;
 #else /* !defined(__AVX2__) */
-    using vec_type = xsimd::simd_type<float>;
+    using ivec_type = xsimd::simd_type<int32_t>;
+    using fvec_type = xsimd::simd_type<float>;
 #endif /* !defined(__AVX2__) */
 
     constexpr float k = 1.f/(1 << (kBits - 1));
-    const vec_type  kvec(k);
+    const fvec_type  kvec(k);
 
-    size_t inc = vec_type::size;
+    size_t inc = fvec_type::size;
     size_t vec_size = size - size % inc;
 
     for (size_t i = 0; i < vec_size; i += inc) {
-        vec_type rvec;
-        vec_type ivec;
+        fvec_type rvec;
+        fvec_type ivec;
 
-        rvec.load_unaligned(&in[0][i]);
-        ivec.load_unaligned(&in[1][i]);
+        rvec = xsimd::batch_cast<float,int32_t>(ivec_type::load_unaligned<int32_t>(&in[0][i]));
+        ivec = xsimd::batch_cast<float,int32_t>(ivec_type::load_unaligned<int32_t>(&in[1][i]));
 
-        interleave(kvec*rvec, kvec*ivec, reinterpret_cast<vec_type*>(&out_[i]));
+        interleave(kvec*rvec, kvec*ivec, reinterpret_cast<fvec_type*>(&out_[i]));
     }
 
     // Remaining part that cannot be vectorized

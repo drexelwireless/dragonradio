@@ -106,3 +106,5 @@ target_include_directories(DragonRadio PUBLIC ${HDF5_INCLUDE_DIRS})
 target_link_libraries(DragonRadio PUBLIC ${HDF5_LIBRARIES})
 
 target_link_libraries(DragonRadio PUBLIC pybind11::embed)
+
+target_link_libraries(DragonRadio PUBLIC Eigen3::Eigen)

@@ -66,7 +66,7 @@ CFLAGS="-Ofast -march=native"
 
 # Build and install firpm
 (
-  cd extern/firpm/firpm_d;
+  cd extern/firpm;
   rm -rf build;
   mkdir build;
   cd build;
