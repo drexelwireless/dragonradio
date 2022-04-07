@@ -388,6 +388,7 @@ void Logger::open(const std::string& filename)
     H5::CompType h5_arq_event(sizeof(ARQEventEntry));
 
     h5_arq_event.insertMember("timestamp", HOFFSET(ARQEventEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_arq_event.insertMember("mono_timestamp", HOFFSET(ARQEventEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_arq_event.insertMember("type", HOFFSET(ARQEventEntry, type), H5::PredType::NATIVE_UINT8);
     h5_arq_event.insertMember("node", HOFFSET(ARQEventEntry, node), H5::PredType::NATIVE_UINT8);
     h5_arq_event.insertMember("seq", HOFFSET(ARQEventEntry, seq), H5::PredType::NATIVE_UINT16);
