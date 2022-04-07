@@ -14,7 +14,7 @@ except:
 
 logger = logging.getLogger('timesync')
 
-def synchronize(config, radio, master, me):
+def synchronize(config, radio):
     """Use timestamps to synchronize our clock with the time master (the gateway)"""
     # Perform linear regression on all timestamps
     me_timestamps = radio.me_timestamps
