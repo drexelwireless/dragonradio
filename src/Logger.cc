@@ -156,6 +156,10 @@ struct PacketSendEntry {
     double mono_timestamp;
     /** @brief Timestamp of packet reception from network. */
     double net_timestamp;
+    /** @brief Timestamp of packet reception from MGEN. */
+    double wall_timestamp;
+    /** @brief Packet deadline. */
+    double deadline;
     /** @brief Was this packet dropped, and if so, why was it dropped? */
     uint8_t dropped;
     /** @brief Number of packet retransmissions. */
@@ -347,6 +351,8 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("timestamp", HOFFSET(PacketSendEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("mono_timestamp", HOFFSET(PacketSendEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("net_timestamp", HOFFSET(PacketSendEntry, net_timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("wall_timestamp", HOFFSET(PacketSendEntry, wall_timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_packet_send.insertMember("deadline", HOFFSET(PacketSendEntry, deadline), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("dropped", HOFFSET(PacketSendEntry, dropped), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("nretrans", HOFFSET(PacketSendEntry, nretrans), H5::PredType::NATIVE_UINT16);
     h5_packet_send.insertMember("curhop", HOFFSET(PacketSendEntry, curhop), H5::PredType::NATIVE_UINT8);
@@ -662,6 +668,8 @@ void Logger::logSend_(const MonoClock::time_point& t,
     entry.timestamp = std::chrono::duration<double>(WallClock::to_wall_time(t) - t_start_).count();
     entry.mono_timestamp = std::chrono::duration<double>(t - mono_t_start_).count();
     entry.net_timestamp = std::chrono::duration<double>(pkt.timestamp - mono_t_start_).count();
+    entry.wall_timestamp = pkt.wall_timestamp ? std::chrono::duration<double>(*pkt.wall_timestamp - t_start_).count() : 0.0;
+    entry.deadline = pkt.deadline ? std::chrono::duration<double>(*pkt.deadline - mono_t_start_).count() : 0.0;
     entry.dropped = dropped;
     entry.nretrans = pkt.nretrans;
     entry.curhop = hdr.curhop;
