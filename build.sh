@@ -88,7 +88,11 @@ virtualenv -p python3.8 venv
 pip install --upgrade pip setuptools wheel
 
 # Install dragonradio package in development mode
-pip install -r requirements.txt -e python/dragonradio
+#
+# XXX We must use the system HDF5 library to avoid linking conflicts when
+# embedding in dragonradio, so we set PIP_NO_BINARY=tables to ensure the tables
+# spackage is built from source.
+PIP_NO_BINARY=tables pip install -r requirements.txt -e python/dragonradio
 
 # Build dragonradio
 (

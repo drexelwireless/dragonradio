@@ -30,6 +30,7 @@ def synchronize(config, radio):
         (radio.usrp.clock_source == 'external' and radio.usrp.time_source == 'external')
 
     (sigma, delta, tau) = timestampRegression(me_timestamps, master_timestamps, no_skew=no_skew)
+    radio.timesync = (sigma, delta, tau)
 
     old_sigma = clock.skew
     old_delta = clock.offset.secs

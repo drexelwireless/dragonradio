@@ -90,6 +90,9 @@ class Radio(dragonradio.tasks.TaskManager):
         self.channels = []
         """Channels"""
 
+        self.timesync = None
+        """Time synchronization parameters"""
+
         # Add global work queue workers
         work_queue.addThreads(1)
 
