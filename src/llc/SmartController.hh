@@ -31,7 +31,7 @@ struct Timestamps {
     /** @brief Map from timestamp sequence number to pair of sent, received timestamps. */
     using timestamps_map = std::unordered_map<TimestampSeq, std::pair<MonoClock::time_point, MonoClock::time_point>>;
 
-    /** @brief Vector of pairs of timestamps. */
+    /** @brief Set of timestamp sequence numbers. */
     using timestampseq_set = std::unordered_set<TimestampSeq>;
 
     /** @brief Timestamp sequences sent by node */
