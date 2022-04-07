@@ -163,31 +163,31 @@ public:
     static const bool is_steady = false;
 
     /** @brief Get time 0 for purposes of linear fit. */
-    MonoClock::time_point getTimeZero(void)
+    static MonoClock::time_point getTimeZero(void)
     {
         return MonoClock::time_point { t0_ };
     }
 
     /** @brief Get time offset. */
-    MonoClock::time_point getTimeOffset(void)
+    static MonoClock::time_point getTimeOffset(void)
     {
         return MonoClock::time_point { offset_ };
     }
 
     /** @brief Set time offset. */
-    void setTimeOffset(const MonoClock::time_point &offset)
+    static void setTimeOffset(const MonoClock::time_point &offset)
     {
         offset_ = offset.t;
     }
 
     /** @brief Get skew. */
-    double getSkew(void)
+    static double getSkew(void)
     {
         return skew_;
     }
 
     /** @brief set skew. */
-    void setSkew(double skew)
+    static void setSkew(double skew)
     {
         skew_ = skew;
     }

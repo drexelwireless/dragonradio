@@ -61,16 +61,24 @@ void exportClock(py::module &m)
       ;
 
     py::class_<WallClock, Clock, std::shared_ptr<WallClock>>(m, "WallClock")
-      .def_property_readonly("t0",
-          [](WallClock &self) {
-              return self.getTimeZero();
+      .def_property_readonly_static("t0",
+          [](py::object /* self */) {
+               return WallClock::getTimeZero();
           })
-      .def_property("offset",
-          &WallClock::getTimeOffset,
-          &WallClock::setTimeOffset)
-      .def_property("skew",
-          &WallClock::getSkew,
-          &WallClock::setSkew)
+      .def_property_static("offset",
+          [](py::object /* self */) {
+              return WallClock::getTimeOffset();
+          },
+          [](py::object /* self */, MonoClock::time_point offset) {
+              return WallClock::setTimeOffset(offset);
+          })
+      .def_property_static("skew",
+          [](py::object /* self */) {
+              return WallClock::getSkew();
+          },
+          [](py::object /* self */, double skew) {
+              return WallClock::setSkew(skew);
+          })
       ;
 
     m.attr("clock") = std::make_shared<WallClock>();
