@@ -49,13 +49,7 @@ def synchronize(config, radio, master, me):
                                "sigma={:g}; "
                                "delta={:g}").format(sigma, delta))
 
-def relativizeTimestamps(ts):
-    """Make (t_send, t_recv) timestamps relative to Clock t0"""
-    t0 = clock.t0
-
-    return sorted([((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in ts], key=lambda ts: ts[0])
-
-def timestampRegression(echoed, master, no_skew=True):
+def timestampRegression(echoed, master, no_skew=False):
     """Perform a linear regression on timestamps to determine clock skew and delta"""
     # pylint: disable=too-many-locals
     avec = np.array([a for (a, _) in echoed])
