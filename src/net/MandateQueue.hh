@@ -62,6 +62,7 @@ public:
       , done_(false)
       , transmission_delay_(0.0)
       , bonus_phase_(false)
+      , use_wall_timestamp_(false)
       , hiq_(*this, kHiQueuePriority, FIFO)
       , defaultq_(*this, kDefaultQueuePriority, FIFO)
       , nitems_(0)
@@ -107,6 +108,22 @@ public:
     void setBonusPhase(bool bonus_phase)
     {
         bonus_phase_ = bonus_phase;
+    }
+
+    /** @brief Set flag indicating whether or not to compute deadline from
+     * packet creation timestamp
+     */
+    bool getUseWallTimestamp(void) const
+    {
+        return use_wall_timestamp_;
+    }
+
+    /** @brief Get flag indicating whether or not to compute deadline from
+     * packet creation timestamp
+     */
+    void setUseWallTimestamp(bool use_wall_timestamp)
+    {
+        use_wall_timestamp_ = use_wall_timestamp;
     }
 
     /** @brief Get flow queue type */
@@ -797,9 +814,11 @@ protected:
                 nexthop = pkt->hdr.nexthop;
 
                 // Add deadline based on mandate.
-                if (mandate->max_latency_s)
-                    pkt->deadline = (pkt->wall_timestamp ? WallClock::to_mono_time(*pkt->wall_timestamp) : pkt->timestamp) +
-                        *mandate->max_latency_s - mq_.transmission_delay_;
+                if (mandate->max_latency_s) {
+                    auto start_timestamp = (pkt->wall_timestamp && mq_.use_wall_timestamp_) ?
+                                            WallClock::to_mono_time(*pkt->wall_timestamp) : pkt->timestamp;
+                    pkt->deadline = start_timestamp + *mandate->max_latency_s - mq_.transmission_delay_;
+                }
             }
 
             // If the queue is inactive, activate it if either the queue is
@@ -924,6 +943,11 @@ protected:
 
     /** @brief Flag indicating whether or not to have a bonus phase. */
     bool bonus_phase_;
+
+    /** @brief Flag indicating whether or not to compute deadline with packet
+      * creation timestamp.
+      * */
+    bool use_wall_timestamp_;
 
     /** @brief Mutex protecting the queues. */
     mutable std::mutex m_;
