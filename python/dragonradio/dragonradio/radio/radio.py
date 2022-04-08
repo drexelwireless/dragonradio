@@ -508,6 +508,7 @@ class Radio(dragonradio.tasks.TaskManager):
         elif config.queue == 'mandate':
             netq = MandateQueue()
             netq.bonus_phase = config.mandate_bonus_phase
+            netq.use_wall_timestamp = config.mandate_use_wall_timestamp
         elif config.queue == 'taildrop':
             netq = TailDropQueue(config.tail_drop_max_size)
         elif config.queue == 'red':

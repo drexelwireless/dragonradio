@@ -131,6 +131,10 @@ void exportNet(py::module &m)
             &MandateNetQueue::getBonusPhase,
             &MandateNetQueue::setBonusPhase,
             "Flag indicating whether or not to have a bonus phase")
+        .def_property("use_wall_timestamp",
+            &MandateNetQueue::getUseWallTimestamp,
+            &MandateNetQueue::setUseWallTimestamp,
+            "Flag indicating whether or not to compute deadline with packet creation timestamp")
         .def("getFlowQueueType",
             &MandateNetQueue::getFlowQueueType,
             "Get flow queue's type")

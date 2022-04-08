@@ -303,6 +303,8 @@ class Config:
         """Estimated packet transmission delay (seconds)"""
         self.mandate_bonus_phase = True
         """Flag indicating whether or not to have a bonus phase"""
+        self.mandate_use_wall_timestamp = False
+        """Flag indicating whether or not to compute deadline from packet creation timestamp"""
 
         # Tail drop queue options
         self.tail_drop_max_size = 5*1500
