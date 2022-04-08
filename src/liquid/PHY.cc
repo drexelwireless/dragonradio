@@ -214,6 +214,11 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
         (header_valid_ || log_invalid_headers_))
         pkt->symbols = std::make_unique<std::vector<std::complex<float>>>(stats_.framesyms, stats_.framesyms + stats_.num_framesyms);
 
+    // If the packet has an invalid header or payload, log reception now because
+    // it will not be logged in the TunTap component.
+    if (logger_ && logger_->getCollectSource(Logger::kRecvPackets) && (!header_valid_ || !payload_valid_))
+        logger_->logRecv(pkt);
+
     // Call callback with received packet
     callback_(std::move(pkt));
 
