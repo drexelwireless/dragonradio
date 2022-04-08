@@ -595,7 +595,6 @@ void Logger::logRecv_(RadioPacket &pkt)
 {
     PacketRecvEntry entry;
     Header          &hdr = pkt.hdr;
-    ExtendedHeader  &ehdr = pkt.ehdr();
     u_flags         u;
 
     u.flags = hdr.flags;
@@ -611,10 +610,6 @@ void Logger::logRecv_(RadioPacket &pkt)
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
     entry.flags = u.bits;
-    entry.src = ehdr.src;
-    entry.dest = ehdr.dest;
-    entry.ack = ehdr.ack;
-    entry.data_len = ehdr.data_len;
     entry.mgen_flow_uid = pkt.mgen_flow_uid.value_or(0);
     entry.mgen_seqno = pkt.mgen_seqno.value_or(0);
     entry.mcsidx = pkt.mcsidx;
@@ -632,6 +627,22 @@ void Logger::logRecv_(RadioPacket &pkt)
     } else {
         entry.symbols.p = nullptr;
         entry.symbols.len = 0;
+    }
+
+    // Only read from extended header if it is present. It may not be present if
+    // the packet is invalid.
+    if (pkt.size() >= sizeof(ExtendedHeader)) {
+        ExtendedHeader  &ehdr = pkt.ehdr();
+
+        entry.src = ehdr.src;
+        entry.dest = ehdr.dest;
+        entry.ack = ehdr.ack;
+        entry.data_len = ehdr.data_len;
+    } else {
+        entry.src = 0;
+        entry.dest = 0;
+        entry.ack = 0;
+        entry.data_len = 0;
     }
 
     recv_->write(&entry, 1);
