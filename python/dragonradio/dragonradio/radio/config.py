@@ -157,6 +157,8 @@ class Config:
         # Channelizer parameters
         self.channelizer = 'freqdomain'
         self.channelizer_enforce_ordering = False
+        self.channelizer_ftype = 'firpm1f2'
+        """Algorithm used to construct low-pass filter for channelizer."""
 
         # Synthesizer parameters
         self.synthesizer = 'freqdomain'
@@ -649,6 +651,10 @@ class Config:
         phy.add_argument('--channelizer-enforce-ordering', action='store_const', const=True,
                          dest='channelizer_enforce_ordering',
                          help='enforce packet order when demodulating in channelizer')
+        phy.add_argument('--channelizer-ftype', action='store',
+                         choices=['kaiser', 'ls', 'firpm1f', 'firpm1f2'],
+                         dest='channelizer_ftype',
+                         help='algorithm used to construct low-pass filter for channelizer')
 
         # Synthesizer parameters
         phy.add_argument('--synthesizer', action='store',

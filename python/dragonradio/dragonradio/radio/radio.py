@@ -784,7 +784,7 @@ class Radio(dragonradio.tasks.TaskManager):
             ws = channel.bw
             fs = self.usrp.rx_rate
 
-            h = dragonradio.signal.lowpass(wp, ws, fs, ftype='firpm1f2', Nmax=FDChannelizer.P)
+            h = dragonradio.signal.lowpass(wp, ws, fs, ftype=config.channelizer_ftype, Nmax=FDChannelizer.P)
         else:
             wp = 0.9*channel.bw
             ws = 1.1*channel.bw
