@@ -79,6 +79,8 @@ EVENTS = [(re.compile(r), k, c) for (r, k, c) in
             , [r'^ARQ: send set unack', 'ARQ', 'k']
             , [r'^ARQ: set unack', 'ARQ', 'k']
             , [r'^ARQ: recv OUTSIDE WINDOW', 'ARQ', 'y']
+            , [r'^ARQ: Node now reachable', 'ARQ', 'g']
+            , [r'^ARQ: Node unreachable', 'ARQ', 'r']
             , [r'^PHY: invalid payload', 'PHY', 'r']
             , [r'^TIMESYNC:', 'TIMESYNC', 'k']
             , [r'^USRP:', 'USRP', 'k']
