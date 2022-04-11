@@ -7,6 +7,8 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <vector>
 
 #include "IQBuffer.hh"
 

@@ -30,6 +30,7 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportClock(mradio);
     exportLogger(mlogging);
     exportWorkQueue(mradio);
+    exportRadio(mradio);
     exportUSRP(mradio);
     exportEstimators(mradio);
     exportControllers(mradio);

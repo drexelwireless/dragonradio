@@ -21,11 +21,9 @@ void exportIQBuffer(py::module &m)
 
                 return std::make_shared<IQBuf>(reinterpret_cast<fc32*>(buf.ptr), buf.size);
             }))
-#if !defined(NOUHD)
         .def_readwrite("timestamp",
             &IQBuf::timestamp,
             "IQ buffer timestamp in seconds")
-#endif /* !defined(NOUHD) */
         .def_readwrite("fc",
             &IQBuf::fc,
             "Sample senter frequency")
@@ -68,11 +66,7 @@ void exportIQBuffer(py::module &m)
             })
         .def("__repr__",
             [](const IQBuf& self) {
-#if defined(NOUHD)
-                return py::str("IQBuf(fc={:g}, fs={:g})").format(self.fc, self.fs);
-#else /* !defined(NOUHD) */
                 return py::str("IQBuf(timestamp={}, fc={:g}, fs={:g})").format(self.timestamp, self.fc, self.fs);
-#endif /* !defined(NOUHD) */
              })
         ;
 }

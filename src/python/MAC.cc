@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include <pybind11/pybind11.h>
+#include <pybind11/chrono.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
@@ -42,19 +43,19 @@ void exportMACs(py::module &m)
         .def_property_readonly("start",
             [](Load &self) -> double
             {
-                return self.start.get_real_secs();
+                return self.start.time_since_epoch().count();
             },
             "Start of load measurement period (sec)")
         .def_property_readonly("end",
             [](Load &self) -> double
             {
-                return self.end.get_real_secs();
+                return self.end.time_since_epoch().count();
             },
             "End of load measurement period (sec)")
         .def_property_readonly("period",
             [](Load &self) -> double
             {
-                return (self.end - self.start).get_real_secs();
+                return (self.end - self.start).count();
             },
             "Measurement period (sec)")
         .def_readwrite("nsamples",
@@ -64,7 +65,7 @@ void exportMACs(py::module &m)
 
     // Export class FDMA to Python
     py::class_<FDMA, MAC, std::shared_ptr<FDMA>>(m, "FDMA")
-        .def(py::init<std::shared_ptr<USRP>,
+        .def(py::init<std::shared_ptr<Radio>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
@@ -98,7 +99,7 @@ void exportMACs(py::module &m)
 
     // Export class TDMA to Python
     py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
-        .def(py::init<std::shared_ptr<USRP>,
+        .def(py::init<std::shared_ptr<Radio>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
@@ -114,7 +115,7 @@ void exportMACs(py::module &m)
 
     // Export class SlottedALOHA to Python
     py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
-        .def(py::init<std::shared_ptr<USRP>,
+        .def(py::init<std::shared_ptr<Radio>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,

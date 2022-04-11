@@ -4,9 +4,10 @@
 #ifndef FDMA_H_
 #define FDMA_H_
 
+#include <chrono>
 #include <vector>
 
-#include "USRP.hh"
+#include "Radio.hh"
 #include "phy/Channelizer.hh"
 #include "phy/ChannelSynthesizer.hh"
 #include "mac/MAC.hh"
@@ -15,7 +16,7 @@
 class FDMA : public MAC
 {
 public:
-    FDMA(std::shared_ptr<USRP> usrp,
+    FDMA(std::shared_ptr<Radio> radio,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
@@ -39,12 +40,12 @@ public:
         accurate_tx_timestamps_ = accurate;
     }
 
-    double getTimedTXDelay(void) const
+    std::chrono::duration<double> getTimedTXDelay(void) const
     {
         return timed_tx_delay_;
     }
 
-    void setTimedTXDelay(double t)
+    void setTimedTXDelay(std::chrono::duration<double> t)
     {
         timed_tx_delay_ = t;
     }
@@ -63,7 +64,7 @@ private:
     bool accurate_tx_timestamps_;
 
     /** @brief Delay for timed TX (sec) */
-    double timed_tx_delay_;
+    std::chrono::duration<double> timed_tx_delay_;
 
     /** @brief Out channel synthesizer */
     std::shared_ptr<ChannelSynthesizer> channel_synthesizer_;

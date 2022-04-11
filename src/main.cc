@@ -141,7 +141,7 @@ int main(int argc, char** argv)
         logger->close();
 
     // Release USRP from Clock.
-    Clock::releaseUSRP();
+    MonoClock::reset_time_keeper();
 
     return ret;
 }

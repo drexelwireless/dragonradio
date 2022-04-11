@@ -2,11 +2,13 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "Clock.hh"
-#include "USRP.hh"
+#include "Radio.hh"
 #include "mac/SlottedALOHA.hh"
 #include "util/threads.hh"
 
-SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
+using namespace std::literals::chrono_literals;
+
+SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
                            std::shared_ptr<Controller> controller,
                            std::shared_ptr<SnapshotCollector> collector,
                            std::shared_ptr<Channelizer> channelizer,
@@ -15,7 +17,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
                            double guard_size,
                            double slot_send_lead_time,
                            double p)
-  : SlottedMAC(usrp,
+  : SlottedMAC(radio,
                controller,
                collector,
                channelizer,
@@ -75,12 +77,12 @@ void SlottedALOHA::txSlotWorker(void)
     WallClock::time_point t_now;            // Current time
     WallClock::time_point t_next_slot;      // Time at which our next slot starts
     WallClock::time_point t_following_slot; // Time at which the following slot starts
-    double                t_slot_pos;       // Offset into the current slot (sec)
+    WallClock::duration   t_slot_pos;       // Offset into the current slot (sec)
 
     while (!done_) {
         // Figure out when our next send slot is.
         t_now = WallClock::now();
-        t_slot_pos = fmod(t_now, slot_size_);
+        t_slot_pos = t_now.time_since_epoch() % slot_size_;
         t_next_slot = t_now + (slot_size_ - t_slot_pos);
         t_following_slot = t_next_slot + slot_size_;
 
@@ -96,12 +98,7 @@ void SlottedALOHA::txSlotWorker(void)
             txSlot(std::move(slot));
 
         // Sleep until TX time for following slot
-        double delta;
-
-        t_now = WallClock::now();
-        delta = (t_following_slot - t_now).get_real_secs() - slot_send_lead_time_;
-        if (delta > 0.0)
-            doze(delta);
+        sleep_for((t_following_slot - WallClock::now()) - slot_send_lead_time_);
     }
 
     missedRemainingSlots(q);

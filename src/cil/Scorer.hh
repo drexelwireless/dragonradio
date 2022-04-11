@@ -66,8 +66,8 @@ using ScoreMap = std::unordered_map<FlowUID, Scores>;
 class Scorer
 {
 public:
-    Scorer();
-    virtual ~Scorer();
+    Scorer() = default;
+    virtual ~Scorer() = default;
 
     /** @brief Get mandates */
     MandateMap getMandates(void)

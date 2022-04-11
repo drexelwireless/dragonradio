@@ -3,8 +3,13 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
+#include <time.h>
 
 #include <atomic>
+#include <random>
+
+#include <uhd/version.hpp>
+#include <uhd/usrp/multi_usrp.hpp>
 
 #include "logging.hh"
 #include "Clock.hh"
@@ -44,9 +49,6 @@ USRP::USRP(const std::string& addr,
     if (rx_subdev)
         usrp_->set_rx_subdev_spec(*rx_subdev);
 
-    // Set up clock
-    Clock::setUSRP(usrp_);
-
     // Set RX and TX frequencies
     setRXFrequency(freq);
     setTXFrequency(freq);
@@ -81,6 +83,33 @@ USRP::USRP(const std::string& addr,
 USRP::~USRP()
 {
     stop();
+}
+
+void USRP::syncTime(bool random_bias)
+{
+    // Set offset relative to system NTP time
+    struct timespec t;
+    int    err;
+
+    if ((err = clock_gettime(CLOCK_REALTIME, &t)) != 0) {
+        fprintf(stderr, "clock_gettime failed: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    uhd::time_spec_t now(t.tv_sec, ((double)t.tv_nsec)/1e9);
+
+    if (random_bias) {
+        std::random_device               rd;
+        std::mt19937                     gen(rd());
+        std::uniform_real_distribution<> dist(0.0, 10.0);
+        double                           offset = dist(gen);
+
+        fprintf(stderr, "CLOCK: offset=%g\n", offset);
+
+        now += offset;
+    }
+
+    usrp_->set_time_now(now);
 }
 
 // See the following for X310 LO offset advice:
@@ -155,7 +184,7 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
 
     if (start_of_burst) {
         if (when_) {
-            tx_md.time_spec = when_->t;
+            tx_md.time_spec = to_uhd_time(*when_);
             tx_md.has_time_spec = true;
 
             t_next_tx_ = *when_;
@@ -173,7 +202,7 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
         IQBuf& iqbuf = **it; // Current buffer we are sending
 
         if (t_next_tx_)
-            iqbuf.timestamp = *t_next_tx_ - iqbuf.delay/tx_rate_;
+            iqbuf.timestamp = *t_next_tx_ - MonoClock::duration(iqbuf.delay/tx_rate_);
 
         for (size_t off = iqbuf.delay; off < iqbuf.size(); off += n) {
             // Compute how many samples we will send in this transmission
@@ -196,7 +225,7 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
         }
 
         if (t_next_tx_)
-            *t_next_tx_ += static_cast<double>(iqbuf.size() - iqbuf.delay)/tx_rate_;
+            *t_next_tx_ += MonoClock::duration((iqbuf.size() - iqbuf.delay)/tx_rate_);
     }
 }
 
@@ -217,7 +246,7 @@ void USRP::startRXStream(MonoClock::time_point when)
 
     stream_cmd.stream_now = false;
     stream_cmd.num_samps = 0;
-    stream_cmd.time_spec = when.t;
+    stream_cmd.time_spec = to_uhd_time(when);
     rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
@@ -230,8 +259,8 @@ void USRP::stopRXStream(void)
 
 bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
-    uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rx_rate_;
-    size_t           ndelivered = 0;
+    MonoClock::time_point t_end = t_start + MonoClock::duration(nsamps/rx_rate_);
+    size_t                ndelivered = 0;
 
     buf.fc = rx_freq_;
     buf.fs = rx_rate_;
@@ -242,10 +271,11 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 
         n = rx_stream_->recv(&buf[ndelivered], rx_max_samps_, rx_md, 1, false);
 
+        MonoClock::time_point t_rx = from_uhd_time(rx_md.time_spec);
+
         if (rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
             if (rx_md.has_time_spec)
-                logUSRPAt(MonoClock::time_point { rx_md.time_spec },
-                          LOGWARNING, "RX error: %s", rx_md.strerror().c_str());
+                logUSRPAt(t_rx, LOGWARNING, "RX error: %s", rx_md.strerror().c_str());
             else
                 logUSRP(LOGWARNING, "RX error: %s", rx_md.strerror().c_str());
 
@@ -258,19 +288,19 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
             }
         }
 
-        if (n == 0 || rx_md.time_spec < t_start.t)
+        if (n == 0 || t_rx < t_start)
             continue;
 
         if (ndelivered == 0) {
-            buf.timestamp = MonoClock::time_point { rx_md.time_spec };
-            buf.undersample = (rx_md.time_spec - t_start.t).get_real_secs() * rx_rate_;
+            buf.timestamp = t_rx;
+            buf.undersample = MonoClock::duration(t_rx - t_start).count() * rx_rate_;
         }
 
         ndelivered += n;
 
         // If we have received enough samples to move us past t_end, stop
         // receiving.
-        if (rx_md.time_spec + static_cast<double>(n)/rx_rate_ >= t_end) {
+        if (t_rx + MonoClock::duration(n/rx_rate_) >= t_end) {
             // Set proper buffer size
             buf.resize(ndelivered);
 
@@ -324,6 +354,19 @@ void USRP::stop(void)
 
     if (tx_error_thread_.joinable())
         tx_error_thread_.join();
+}
+
+MonoClock::time_point USRP::now() noexcept
+{
+    while (true) {
+        try {
+            std::chrono::duration<timerep_t> dur(usrp_->get_time_now());
+
+            return MonoClock::time_point{dur};
+        } catch (uhd::io_error &err) {
+            fprintf(stderr, "USRP: get_time_now: %s", err.what());
+        }
+    }
 }
 
 void USRP::determineDeviceType(void)
@@ -382,7 +425,7 @@ void USRP::txErrorWorker(void)
 
         if (msg) {
             if (async_md.has_time_spec)
-                logUSRPAt(MonoClock::time_point { async_md.time_spec },
+                logUSRPAt(from_uhd_time(async_md.time_spec),
                           LOGWARNING, "%s", msg);
             else
                 logUSRP(LOGWARNING, "%s", msg);

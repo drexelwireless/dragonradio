@@ -17,7 +17,7 @@ void exportUSRP(py::module &m)
 
     py::implicitly_convertible<py::str, USRP::DeviceType>();
 
-    py::class_<USRP, std::shared_ptr<USRP>>(m, "USRP")
+    py::class_<USRP, Radio, MonoClock::TimeKeeper, std::shared_ptr<USRP>>(m, "USRP")
         .def(py::init<const std::string&,
                       const std::optional<std::string>&,
                       const std::optional<std::string>&,
@@ -28,26 +28,6 @@ void exportUSRP(py::module &m)
                       float>())
         .def_property_readonly("device_type",
             &USRP::getDeviceType)
-        .def_property_readonly("clock_rate",
-            &USRP::getMasterClockRate)
-        .def_property("tx_frequency",
-            &USRP::getTXFrequency,
-            &USRP::setTXFrequency)
-        .def_property("rx_frequency",
-            &USRP::getRXFrequency,
-            &USRP::setRXFrequency)
-        .def_property("tx_rate",
-            &USRP::getTXRate,
-            &USRP::setTXRate)
-        .def_property("rx_rate",
-            &USRP::getRXRate,
-            &USRP::setRXRate)
-        .def_property("tx_gain",
-            &USRP::getTXGain,
-            &USRP::setTXGain)
-        .def_property("rx_gain",
-            &USRP::getRXGain,
-            &USRP::setRXGain)
         .def_property_readonly("clock_sources",
             [](std::shared_ptr<USRP> self)
             {
@@ -99,5 +79,8 @@ void exportUSRP(py::module &m)
             &USRP::getTimeSource)
         .def("setTimeSource",
             &USRP::setTimeSource)
+        .def("syncTime",
+            &USRP::syncTime,
+            py::arg("random_bias")=false)
         ;
 }

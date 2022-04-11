@@ -1,12 +1,17 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <chrono>
+
+#include "logging.hh"
 #include "Clock.hh"
-#include "USRP.hh"
+#include "Radio.hh"
 #include "mac/TDMA.hh"
 #include "util/threads.hh"
 
-TDMA::TDMA(std::shared_ptr<USRP> usrp,
+using namespace std::literals::chrono_literals;
+
+TDMA::TDMA(std::shared_ptr<Radio> radio,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
@@ -15,7 +20,7 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
            double guard_size,
            double slot_send_lead_time,
            size_t nslots)
-  : SlottedMAC(usrp,
+  : SlottedMAC(radio,
                controller,
                collector,
                channelizer,
@@ -98,14 +103,14 @@ void TDMA::txSlotWorker(void)
             if (!findNextSlot(t_now, t_next_slot, next_slotidx)) {
                 logMAC(LOGDEBUG, "NO SLOT");
                 // Sleep for 100ms if we don't yet have a slot
-                doze(100e-3);
+                sleep_for(100ms);
                 continue;
             }
         }
 
         // If we're less that one slot away from our next slot, finalize it
         // and transmit it
-        if ((t_now - t_next_slot).get_real_secs() < slot_size_) {
+        if (t_next_slot - t_now < slot_size_) {
             // Finalize next slot. After this returns, we have EXCLUSIVE access
             // to the slot.
             auto slot = finalizeSlot(q, t_next_slot);
@@ -147,12 +152,7 @@ void TDMA::txSlotWorker(void)
         }
 
         // Sleep until it's time to send the next slot
-        double delta;
-
-        t_now = WallClock::now();
-        delta = (t_next_slot - t_now).get_real_secs() - slot_send_lead_time_;
-        if (delta > 0.0)
-            doze(delta);
+        sleep_for((t_next_slot - WallClock::now()) - slot_send_lead_time_);
     }
 
     missedRemainingSlots(q);
@@ -162,12 +162,12 @@ bool TDMA::findNextSlot(WallClock::time_point t,
                         WallClock::time_point &t_next,
                         size_t &next_slotidx)
 {
-    double t_slot_pos; // Offset into the current slot (sec)
-    size_t cur_slot;   // Current slot index
-    size_t tx_slot;    // Slots before we can TX
+    WallClock::duration t_slot_pos; // Offset into the current slot (sec)
+    size_t              cur_slot;   // Current slot index
+    size_t              tx_slot;    // Slots before we can TX
 
-    t_slot_pos = fmod(t, slot_size_);
-    cur_slot = fmod(t, frame_size_) / slot_size_;
+    t_slot_pos = t.time_since_epoch() % slot_size_;
+    cur_slot = (t.time_since_epoch() % frame_size_) / slot_size_;
 
     for (tx_slot = 1; tx_slot <= nslots_; ++tx_slot) {
         if (tdma_schedule_[(cur_slot + tx_slot) % nslots_]) {

@@ -15,8 +15,9 @@ PYBIND11_MAKE_OPAQUE(std::vector<SelfTX>)
 
 std::shared_ptr<Logger> mkLogger(const std::string& path)
 {
-    int64_t full_secs = WallClock::now().get_full_secs();
-    auto    log = std::make_shared<Logger>(WallClock::time_point(full_secs), MonoClock::time_point(full_secs));
+    int64_t full_secs = WallClock::now().time_since_epoch().count().get_full();
+    auto    dur = WallClock::duration{timerep_t{full_secs, 0.0}};
+    auto    log = std::make_shared<Logger>(WallClock::time_point{dur}, MonoClock::time_point{dur});
 
     log->open(path);
     log->setAttribute("start", (int64_t) full_secs);

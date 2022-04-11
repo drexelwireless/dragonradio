@@ -4,9 +4,11 @@
 #ifndef CONTROLLER_H_
 #define CONTROLLER_H_
 
+#include <chrono>
 #include <functional>
 #include <list>
 
+using namespace std::chrono_literals;
 using namespace std::placeholders;
 
 #include "RadioNet.hh"
@@ -40,14 +42,14 @@ public:
     }
 
     /** @brief Set transmission delay. */
-    virtual void setTransmissionDelay(double t)
+    virtual void setTransmissionDelay(std::chrono::duration<double> t)
     {
     }
 
     /** @brief Get transmission delay. */
-    virtual double getTransmissionDelay(void) const
+    virtual std::chrono::duration<double> getTransmissionDelay(void) const
     {
-        return 0.0;
+        return 0.0s;
     }
 
     /** @brief Set whether or not a node's link is open */

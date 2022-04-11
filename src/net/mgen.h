@@ -122,7 +122,9 @@ struct PACKED mgenhdr {
         secs = ntohl(hdr_secs);
         usecs = ntohl(hdr_usecs);
 
-        return WallClock::time_point{static_cast<int64_t>(secs), usecs/1e6};
+        std::chrono::duration<timerep_t> dur(timerep_t(secs, usecs/1e6));
+
+        return WallClock::time_point{dur};
     }
 };
 

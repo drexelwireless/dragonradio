@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "RadioNet.hh"
-#include "USRP.hh"
+#include "Radio.hh"
 #include "phy/Channelizer.hh"
 #include "phy/Synthesizer.hh"
 #include "mac/MAC.hh"
@@ -19,7 +19,7 @@ class TDMA : public SlottedMAC
 public:
     using TDMASchedule = std::vector<bool>;
 
-    TDMA(std::shared_ptr<USRP> usrp,
+    TDMA(std::shared_ptr<Radio> radio,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
@@ -51,7 +51,7 @@ public:
 
 private:
     /** @brief Length of TDMA frame (sec) */
-    double frame_size_;
+    std::chrono::duration<double> frame_size_;
 
     /** @brief Number of TDMA slots */
     size_t nslots_;

@@ -8,8 +8,11 @@
 #include <unistd.h>
 
 #include <condition_variable>
+#include <chrono>
 #include <mutex>
 #include <thread>
+
+using namespace std::literals::chrono_literals;
 
 /** @brief Wait only once on a condition variable */
 template <class Predicate>
@@ -33,12 +36,33 @@ void pinThreadToCPU(pthread_t t, int cpu_num);
 /** @brief Pin this thread to a CPU */
 void pinThisThread(void);
 
-/** @brief Sleep for the specified number of seconds. sleep, usleep, and
- * nanosleep were already taken, so this function is named "doze."
- * @param sec The number of seconds to sleep.
- * @returns -1 if interrupted.
+/** @brief Sleep for the specified duration.
+ * @param sleep_duration The duration to sleep.
  */
-int doze(double sec);
+template<class Rep, class Period>
+void sleep_for(const std::chrono::duration<Rep, Period>& sleep_duration)
+{
+    if (sleep_duration > 0.0s) {
+        struct timespec ts;
+        double whole, frac;
+
+        frac = modf(std::chrono::duration<double>(sleep_duration).count(), &whole);
+
+        ts.tv_sec = whole;
+        ts.tv_nsec = frac*1e9;
+
+        nanosleep(&ts, NULL);
+    }
+}
+
+/** @brief Sleep until the specified time_point
+ * @param sleep_duration The duration to sleep.
+ */
+template<class Clock, class Duration>
+void sleep_until(const std::chrono::time_point<Clock,Duration>& sleep_time)
+{
+    sleep_for(sleep_time - Clock::now());
+}
 
 /** @brief The signal we use to wake a thread */
 const int SIGWAKE = SIGUSR1;
