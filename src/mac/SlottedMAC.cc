@@ -1,14 +1,27 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <chrono>
+
+#include "logging.hh"
 #include "Logger.hh"
 #include "SlottedMAC.hh"
 #include "liquid/Modem.hh"
 #include "util/threads.hh"
 
+using namespace std::literals::chrono_literals;
+
 using Slot = SlotSynthesizer::Slot;
 
-SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
+template <class Clock, class Duration, class Rep, class Period>
+bool within(const std::chrono::time_point<Clock,Duration>& t1,
+            const std::chrono::time_point<Clock,Duration>& t2,
+            const std::chrono::duration<Rep,Period>& diff)
+{
+    return std::chrono::abs(std::chrono::duration<double>(t2-t1)) < diff;
+}
+
+SlottedMAC::SlottedMAC(std::shared_ptr<Radio> radio,
                        std::shared_ptr<Controller> controller,
                        std::shared_ptr<SnapshotCollector> collector,
                        std::shared_ptr<Channelizer> channelizer,
@@ -16,7 +29,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<USRP> usrp,
                        double slot_size,
                        double guard_size,
                        double slot_send_lead_time)
-  : MAC(usrp,
+  : MAC(radio,
         controller,
         collector,
         channelizer,
@@ -40,8 +53,8 @@ void SlottedMAC::reconfigure(void)
 {
     MAC::reconfigure();
 
-    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_);
-    tx_full_slot_samps_ = tx_rate_*slot_size_;
+    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_).count();
+    tx_full_slot_samps_ = tx_rate_*slot_size_.count();
 }
 
 void SlottedMAC::stop(void)
@@ -89,7 +102,7 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
 
             // If the next slot needs to be transmitted or tossed, pop it,
             // otherwise return nullptr since we need to wait longer
-            if (deadline < when || approx(deadline, when)) {
+            if (deadline < when || within(deadline, when, 1us)) {
                 slot = std::move(q.front());
                 q.pop();
             } else
@@ -111,13 +124,13 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
 
         // If the slot's deadline has passed, try the next slot. Otherwise,
         // return the slot.
-        if (approx(deadline, when)) {
+        if (within(deadline, when, 1us)) {
             return slot;
         } else {
             logMAC(LOGWARNING, "MISSED SLOT DEADLINE: desired slot=%f; slot=%f; now=%f",
-                (double) when.get_real_secs(),
-                (double) deadline.get_real_secs(),
-                (double) WallClock::now().get_real_secs());
+                (double) when.time_since_epoch().count(),
+                (double) deadline.time_since_epoch().count(),
+                (double) WallClock::now().time_since_epoch().count());
 
             // Stop any current TX burst.
             stop_burst_.store(true, std::memory_order_relaxed);
@@ -145,7 +158,7 @@ void SlottedMAC::txWorker(void)
         // If the slot doesn't contain any IQ data to send, we're done
         if (slot->mpkts.empty()) {
             if (!next_slot_start_of_burst) {
-                usrp_->stopTXBurst();
+                radio_->stopTXBurst();
                 next_slot_start_of_burst = true;
             }
 
@@ -159,17 +172,17 @@ void SlottedMAC::txWorker(void)
         if (stop_burst_.load(std::memory_order_relaxed)) {
             stop_burst_.store(false, std::memory_order_relaxed);
 
-            usrp_->stopTXBurst();
+            radio_->stopTXBurst();
             next_slot_start_of_burst = true;
         }
 
-        // Transmit the packets via the USRP
+        // Transmit the packets via the radio
         bool end_of_burst = slot->length() < slot->full_slot_samples;
 
-        usrp_->burstTX(WallClock::to_mono_time(slot->deadline) + slot->deadline_delay/tx_rate_,
-                       next_slot_start_of_burst,
-                       end_of_burst,
-                       slot->iqbufs);
+        radio_->burstTX(WallClock::to_mono_time(slot->deadline) + WallClock::duration(slot->deadline_delay/tx_rate_),
+                        next_slot_start_of_burst,
+                        end_of_burst,
+                        slot->iqbufs);
 
         next_slot_start_of_burst = end_of_burst;
 

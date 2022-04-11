@@ -1,55 +1,17 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2021 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
+#include <chrono>
+#include <memory>
 
-#ifdef RANDOM_CLOCK_BIAS
-#include <random>
-#endif
+using namespace std::literals::chrono_literals;
 
 #include "Clock.hh"
 
-uhd::usrp::multi_usrp::sptr Clock::usrp_;
+std::shared_ptr<MonoClock::TimeKeeper> MonoClock::time_keeper_;
 
-uhd::time_spec_t Clock::t0_(0.0);
+MonoClock::time_point MonoClock::t0_;
 
-double WallClock::skew_(1.0);
+WallClock::duration WallClock::offset_ = 0.0s;
 
-uhd::time_spec_t WallClock::offset_(0.0);
-
-void Clock::setUSRP(uhd::usrp::multi_usrp::sptr usrp)
-{
-    // Set offset relative to system NTP time
-    struct timespec t;
-    int    err;
-
-    if ((err = clock_gettime(CLOCK_REALTIME, &t)) != 0) {
-        fprintf(stderr, "clock_gettime failed: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    uhd::time_spec_t now(t.tv_sec, ((double)t.tv_nsec)/1e9);
-
-    usrp_ = usrp;
-    t0_ = now;
-
-#ifdef RANDOM_CLOCK_BIAS
-    std::random_device rd;
-    std::mt19937       gen(rd());
-    std::uniform_real_distribution<> dist(0.0, 10.0);
-    double offset = dist(gen);
-
-    fprintf(stderr, "CLOCK: offset=%g\n", offset);
-
-    Clock::setTimeNow(t0_ + offset);
-#else
-    Clock::setTimeNow(t0_);
-#endif
-}
-
-void Clock::releaseUSRP(void)
-{
-    usrp_.reset();
-}
+double WallClock::skew_ = 1.0;

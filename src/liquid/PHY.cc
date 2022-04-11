@@ -1,6 +1,8 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <chrono>
+
 #include <xsimd/xsimd.hpp>
 #include <xsimd/stl/algorithms.hpp>
 
@@ -9,6 +11,8 @@
 #include "WorkQueue.hh"
 #include "dsp/NCO.hh"
 #include "liquid/PHY.hh"
+
+using namespace std::chrono_literals;
 
 namespace liquid {
 
@@ -107,7 +111,6 @@ PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
   , delay_(0)
   , resamp_rate_(1.0)
   , internal_oversample_fact_(1)
-  , timestamp_(0.0)
   , offset_(0)
   , sample_start_(0)
   , sample_end_(0)
@@ -194,14 +197,14 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     // start and end relative to the beginning of the slot.
     ssize_t               start = offset_ - delay_ + resamp_rate_*static_cast<signed>(frame_start - sample_start_);
     ssize_t               end = offset_ - delay_ + resamp_rate_*static_cast<signed>(frame_end - sample_start_);
-    MonoClock::time_point timestamp = timestamp_ + start / rx_rate_;
+    MonoClock::time_point timestamp = timestamp_ + MonoClock::duration(start / rx_rate_);
 
     pkt->timestamp = timestamp;
     pkt->slot_timestamp = timestamp_;
     pkt->start_samples = start;
     pkt->end_samples = end;
 
-    pkt->demod_latency = (now - timestamp).get_real_secs();
+    pkt->demod_latency = (now - timestamp).count();
 
     pkt->payload_len = payload_len_;
 
@@ -229,7 +232,7 @@ void PHY::PacketDemodulator::reset(const Channel &channel)
 
     channel_ = channel;
     resamp_rate_ = 1.0;
-    timestamp_ = MonoClock::time_point { 0.0 };
+    timestamp_ = MonoClock::time_point{0.0s};
     snapshot_off_ = std::nullopt;
     offset_ = 0;
     delay_ = 0;

@@ -2,16 +2,16 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "Clock.hh"
-#include "USRP.hh"
+#include "Radio.hh"
 #include "mac/FDMA.hh"
 
-FDMA::FDMA(std::shared_ptr<USRP> usrp,
+FDMA::FDMA(std::shared_ptr<Radio> radio,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
            std::shared_ptr<ChannelSynthesizer> synthesizer,
            double period)
-  : MAC(usrp,
+  : MAC(radio,
         controller,
         collector,
         channelizer,
@@ -93,7 +93,7 @@ void FDMA::txWorker(void)
         // case we need to stop the burst.
         if (nsamples == 0) {
             if (!next_slot_start_of_burst) {
-                usrp_->stopTXBurst();
+                radio_->stopTXBurst();
                 next_slot_start_of_burst = true;
             }
 
@@ -120,10 +120,10 @@ void FDMA::txWorker(void)
         if (next_slot_start_of_burst && accurate_timestamp)
             t_next_tx = MonoClock::now() + timed_tx_delay_;
         else
-            t_next_tx = usrp_->getNextTXTime();
+            t_next_tx = radio_->getNextTXTime();
 
         // Send IQ buffers
-        usrp_->burstTX(next_slot_start_of_burst && accurate_timestamp ? t_next_tx : std::nullopt,
+        radio_->burstTX(next_slot_start_of_burst && accurate_timestamp ? t_next_tx : std::nullopt,
                        next_slot_start_of_burst,
                        false,
                        iqbufs);
@@ -140,8 +140,8 @@ void FDMA::txWorker(void)
         tx_records_cond_.notify_one();
 
         // Start a new TX burst if there was an underflow
-        if (usrp_->getTXUnderflowCount() != 0) {
-            usrp_->stopTXBurst();
+        if (radio_->getTXUnderflowCount() != 0) {
+            radio_->stopTXBurst();
             next_slot_start_of_burst = true;
         }
     }

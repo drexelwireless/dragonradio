@@ -49,7 +49,7 @@ struct FlowStats {
     NodeId dest;
 
     /** @brief Flow mandated latency */
-    std::optional<double> mandated_latency;
+    std::optional<std::chrono::duration<double>> mandated_latency;
 
     /** @brief Lowest MP modified */
     std::optional<size_t> low_mp;
@@ -96,13 +96,13 @@ public:
     }
 
     /** @brief Get start time */
-    std::optional<double> getStart(void) const
+    std::optional<WallClock::time_point> getStart(void) const
     {
         return start_;
     }
 
     /** @brief Set start time */
-    void setStart(std::optional<double> &start)
+    void setStart(std::optional<WallClock::time_point> &start)
     {
         start_ = start;
     }
@@ -147,7 +147,7 @@ protected:
     double mp_;
 
     /** @brief Start time */
-    std::optional<double> start_;
+    std::optional<WallClock::time_point> start_;
 
     /** @brief Mutex for sources */
     std::mutex sources_mutex_;

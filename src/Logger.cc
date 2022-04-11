@@ -237,12 +237,11 @@ struct ARQEventEntry {
     hvl_t sacks;
 };
 
-Logger::Logger(const WallClock::time_point &t_start,
-               const MonoClock::time_point &mono_t_start)
+Logger::Logger(const WallClock::time_point& t_start,
+               const MonoClock::time_point& mono_t_start)
   : is_open_(false)
   , t_start_(t_start)
   , mono_t_start_(mono_t_start)
-  , t_last_slot_((time_t) 0)
   , sources_(0)
   , done_(false)
 {
@@ -529,8 +528,8 @@ void Logger::logSlot_(const IQBuf &buf)
     SlotEntry    entry;
     buffer<char> compressed = compressIQData(buf.data(), buf.size());
 
-    entry.timestamp = (WallClock::to_wall_time(*buf.timestamp) - t_start_).get_real_secs();
-    entry.mono_timestamp = (*buf.timestamp - mono_t_start_).get_real_secs();
+    entry.timestamp = (WallClock::to_wall_time(*buf.timestamp) - t_start_).count();
+    entry.mono_timestamp = std::chrono::duration<double>(*buf.timestamp - mono_t_start_).count();
     entry.fc = buf.fc;
     entry.fs = buf.fs;
     entry.iq_data_len = buf.size();
@@ -544,8 +543,8 @@ void Logger::logTXRecord_(const std::optional<MonoClock::time_point> &t, size_t 
 {
     TXRecordEntry entry;
 
-    entry.timestamp = t ? (WallClock::to_wall_time(*t) - t_start_).get_real_secs() : 0;
-    entry.mono_timestamp = t ? (*t - mono_t_start_).get_real_secs() : 0;
+    entry.timestamp = t ? std::chrono::duration<double>(WallClock::to_wall_time(*t) - t_start_).count() : 0;
+    entry.mono_timestamp = t ? std::chrono::duration<double>(*t - mono_t_start_).count() : 0;
     entry.nsamples = nsamples;
     entry.fs = fs;
 
@@ -558,8 +557,8 @@ void Logger::logSnapshot_(std::shared_ptr<Snapshot> snapshot)
         return;
 
     SnapshotEntry          entry;
-    double                 timestamp = (WallClock::to_wall_time(snapshot->timestamp) - t_start_).get_real_secs();
-    double                 mono_timestamp = (snapshot->timestamp - mono_t_start_).get_real_secs();
+    double                 timestamp = std::chrono::duration<double>(WallClock::to_wall_time(snapshot->timestamp) - t_start_).count();
+    double                 mono_timestamp = std::chrono::duration<double>(snapshot->timestamp - mono_t_start_).count();
     std::shared_ptr<IQBuf> buf = *(snapshot->getCombinedSlots());
     buffer<char>           compressed = compressIQData(buf->data(), buf->size());
 
@@ -601,9 +600,9 @@ void Logger::logRecv_(RadioPacket &pkt)
 
     u.flags = hdr.flags;
 
-    entry.slot_timestamp = (WallClock::to_wall_time(pkt.slot_timestamp) - t_start_).get_real_secs();
-    entry.timestamp = (WallClock::to_wall_time(pkt.timestamp) - t_start_).get_real_secs();
-    entry.mono_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
+    entry.slot_timestamp = std::chrono::duration<double>(WallClock::to_wall_time(pkt.slot_timestamp) - t_start_).count();
+    entry.timestamp = std::chrono::duration<double>(WallClock::to_wall_time(pkt.timestamp) - t_start_).count();
+    entry.mono_timestamp = std::chrono::duration<double>(pkt.timestamp - mono_t_start_).count();
     entry.start_samples = pkt.start_samples;
     entry.end_samples = pkt.end_samples;
     entry.header_valid = !pkt.internal_flags.invalid_header;
@@ -625,7 +624,7 @@ void Logger::logRecv_(RadioPacket &pkt)
     entry.fc = pkt.channel.fc;
     entry.bw = pkt.bw;
     entry.demod_latency = pkt.demod_latency;
-    entry.tuntap_latency = (pkt.tuntap_timestamp - pkt.timestamp).get_real_secs();
+    entry.tuntap_latency = std::chrono::duration<double>(pkt.tuntap_timestamp - pkt.timestamp).count();
     entry.size = pkt.payload_len;
     if (pkt.symbols && getCollectSource(kRecvSymbols)) {
         entry.symbols.p = pkt.symbols->data();
@@ -649,9 +648,9 @@ void Logger::logSend_(const MonoClock::time_point& t,
 
     u.flags = hdr.flags;
 
-    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
-    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
-    entry.net_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
+    entry.timestamp = std::chrono::duration<double>(WallClock::to_wall_time(t) - t_start_).count();
+    entry.mono_timestamp = std::chrono::duration<double>(t - mono_t_start_).count();
+    entry.net_timestamp = std::chrono::duration<double>(pkt.timestamp - mono_t_start_).count();
     entry.dropped = dropped;
     entry.nretrans = pkt.nretrans;
     entry.curhop = hdr.curhop;
@@ -669,13 +668,13 @@ void Logger::logSend_(const MonoClock::time_point& t,
     if (dropped == kNotDropped) {
         entry.fc = pkt.channel.fc;
         entry.bw = pkt.channel.bw;
-        entry.tuntap_latency = pkt.wall_timestamp ? (pkt.tuntap_timestamp - *pkt.wall_timestamp).get_real_secs() : 0;
-        entry.enqueue_latency = (pkt.enqueue_timestamp - pkt.timestamp).get_real_secs();
-        entry.dequeue_latency = (pkt.dequeue_end_timestamp - pkt.dequeue_start_timestamp).get_real_secs();
-        entry.queue_latency = (pkt.dequeue_end_timestamp - pkt.timestamp).get_real_secs();
-        entry.llc_latency = (pkt.llc_timestamp - pkt.timestamp).get_real_secs();
-        entry.mod_latency = (pkt.mod_end_timestamp - pkt.mod_start_timestamp).get_real_secs();
-        entry.synth_latency = (pkt.mod_end_timestamp - pkt.timestamp).get_real_secs();
+        entry.tuntap_latency = pkt.wall_timestamp ? std::chrono::duration<double>(pkt.tuntap_timestamp - *pkt.wall_timestamp).count() : 0;
+        entry.enqueue_latency = std::chrono::duration<double>(pkt.enqueue_timestamp - pkt.timestamp).count();
+        entry.dequeue_latency = std::chrono::duration<double>(pkt.dequeue_end_timestamp - pkt.dequeue_start_timestamp).count();
+        entry.queue_latency = std::chrono::duration<double>(pkt.dequeue_end_timestamp - pkt.timestamp).count();
+        entry.llc_latency = std::chrono::duration<double>(pkt.llc_timestamp - pkt.timestamp).count();
+        entry.mod_latency = std::chrono::duration<double>(pkt.mod_end_timestamp - pkt.mod_start_timestamp).count();
+        entry.synth_latency = std::chrono::duration<double>(pkt.mod_end_timestamp - pkt.timestamp).count();
         entry.size = pkt.size();
         entry.nsamples = pkt.nsamples;
         if (pkt.samples && getCollectSource(kSentIQ)) {
@@ -714,8 +713,8 @@ void Logger::logEvent_(const MonoClock::time_point& t,
 {
     EventEntry entry;
 
-    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
-    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
+    entry.timestamp = std::chrono::duration<double>(WallClock::to_wall_time(t) - t_start_).count();
+    entry.mono_timestamp = std::chrono::duration<double>(t - mono_t_start_).count();
     entry.event = event;
 
     event_->write(&entry, 1);
@@ -730,8 +729,8 @@ void Logger::logARQEvent_(const MonoClock::time_point& t,
 {
     ARQEventEntry entry;
 
-    entry.timestamp = (WallClock::to_wall_time(t) - t_start_).get_real_secs();
-    entry.mono_timestamp = (t - mono_t_start_).get_real_secs();
+    entry.timestamp = std::chrono::duration<double>(WallClock::to_wall_time(t) - t_start_).count();
+    entry.mono_timestamp = std::chrono::duration<double>(t - mono_t_start_).count();
     entry.type = type;
     entry.node = node;
     entry.seq = seq;
@@ -770,8 +769,8 @@ void Logger::logARQSACKEvent_(Packet &pkt,
     // Log event
     ARQEventEntry entry;
 
-    entry.timestamp = (WallClock::to_wall_time(pkt.timestamp) - t_start_).get_real_secs();
-    entry.mono_timestamp = (pkt.timestamp - mono_t_start_).get_real_secs();
+    entry.timestamp = std::chrono::duration<double>(WallClock::to_wall_time(pkt.timestamp) - t_start_).count();
+    entry.mono_timestamp = std::chrono::duration<double>(pkt.timestamp - mono_t_start_).count();
     entry.type = type;
     entry.node = node;
     entry.seq = unack;

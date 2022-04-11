@@ -8,7 +8,7 @@ import math
 import numpy as np
 
 try:
-    from _dragonradio.radio import MonoTimePoint, clock
+    from _dragonradio.radio import clock
 except:
     pass
 
@@ -33,7 +33,7 @@ def synchronize(config, radio):
     radio.timesync = (sigma, delta, tau)
 
     old_sigma = clock.skew
-    old_delta = clock.offset.secs
+    old_delta = clock.offset.total_seconds()
 
     logger.debug(("TIMESYNC: regression parameters: "
                   "old_sigma=%g; "
@@ -44,7 +44,7 @@ def synchronize(config, radio):
         old_sigma, old_delta, sigma, delta, tau)
 
     if math.isfinite(delta) and math.isfinite(sigma):
-        clock.offset = MonoTimePoint(delta)
+        clock.offset = delta
         clock.skew = sigma
         radio.logger.logEvent(("TIMESYNC: set skew and offset: "
                                "sigma={:g}; "

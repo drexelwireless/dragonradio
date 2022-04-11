@@ -55,7 +55,7 @@ struct SendWindow {
     SendWindow(Node &n,
                SmartController &controller,
                Seq::uint_type maxwin,
-               double retransmission_delay_);
+               std::chrono::duration<double> retransmission_delay_);
 
     /** @brief Destination node. */
     Node &node;
@@ -142,10 +142,10 @@ struct SendWindow {
     WindowedMean<double> long_per;
 
     /** @brief Duration of retransmission timer */
-    double retransmission_delay;
+    std::chrono::duration<double> retransmission_delay;
 
     /** @brief ACK delay estimator */
-    TimeWindowMax<MonoClock, double> ack_delay;
+    TimeWindowMax<MonoClock, std::chrono::duration<double>> ack_delay;
 
     /** @brief Return the packet with the given sequence number in the window */
     Entry& operator[](Seq seq)
@@ -157,7 +157,7 @@ struct SendWindow {
     void setSendWindowOpen(bool open);
 
     /** @brief Record a packet ACK */
-    void ack(const MonoClock::time_point &tx_time);
+    void ack(const MonoClock::time_point& tx_time);
 
     /** @brief Update PER as a result of successful packet transmission. */
     void txSuccess(void);
@@ -199,7 +199,6 @@ struct SendWindow {
         Entry(SendWindow &sendw)
           : sendw(sendw)
           , pkt(nullptr)
-          , timestamp(0.0)
          {
          };
 
@@ -428,13 +427,13 @@ public:
     void setChannels(const std::vector<PHYChannel> &channels) override;
 
     /** @brief Get MCS fast adjustment period (sec) */
-    double getMCSFastAdjustmentPeriod(void) const
+    std::chrono::duration<double> getMCSFastAdjustmentPeriod(void) const
     {
         return mcs_fast_adjustment_period_;
     }
 
     /** @brief Set MCS fast adjustment period (sec) */
-    void setMCSFastAdjustmentPeriod(double t)
+    void setMCSFastAdjustmentPeriod(std::chrono::duration<double> t)
     {
         mcs_fast_adjustment_period_ = t;
     }
@@ -443,53 +442,53 @@ public:
     bool isMCSFastAdjustmentPeriod(void) const
     {
         return env_timestamp_ &&
-            (MonoClock::now() - *env_timestamp_).get_real_secs() < mcs_fast_adjustment_period_;
+            (MonoClock::now() - *env_timestamp_) < mcs_fast_adjustment_period_;
     }
 
     /** @brief Get short time window over which to calculate PER (sec) */
-    double getShortPERWindow(void) const
+    std::chrono::duration<double> getShortPERWindow(void) const
     {
         return short_per_window_;
     }
 
     /** @brief Set short time window over which to calculate PER (sec) */
-    void setShortPERWindow(double window)
+    void setShortPERWindow(std::chrono::duration<double> window)
     {
         short_per_window_ = window;
     }
 
     /** @brief Get long time window over which to calculate PER (sec) */
-    double getLongPERWindow(void) const
+    std::chrono::duration<double> getLongPERWindow(void) const
     {
         return long_per_window_;
     }
 
     /** @brief Set long time window over which to calculate PER (sec) */
-    void setLongPERWindow(double window)
+    void setLongPERWindow(std::chrono::duration<double> window)
     {
         long_per_window_ = window;
     }
 
     /** @brief Get time window for statistics collection (sec) */
-    double getShortStatsWindow(void) const
+    std::chrono::duration<double> getShortStatsWindow(void) const
     {
         return short_stats_window_;
     }
 
     /** @brief Set time window for statistics collection (sec) */
-    void setShortStatsWindow(double window)
+    void setShortStatsWindow(std::chrono::duration<double> window)
     {
         short_stats_window_ = window;
     }
 
     /** @brief Get time window for statistics collection (sec) */
-    double getLongStatsWindow(void) const
+    std::chrono::duration<double> getLongStatsWindow(void) const
     {
         return long_stats_window_;
     }
 
     /** @brief Set time window for statistics collection (sec) */
-    void setLongStatsWindow(double window)
+    void setLongStatsWindow(std::chrono::duration<double> window)
     {
         long_stats_window_ = window;
     }
@@ -623,25 +622,25 @@ public:
     void environmentDiscontinuity(void);
 
     /** @brief Get threshold for marking node unreachable. */
-    std::optional<double> getUnreachableTimeout(void) const
+    std::optional<std::chrono::duration<double>> getUnreachableTimeout(void) const
     {
         return unreachable_timeout_;
     }
 
     /** @brief Set threshold for marking node unreachable. */
-    void setUnreachableTimeout(std::optional<double> t)
+    void setUnreachableTimeout(std::optional<std::chrono::duration<double>> t)
     {
         unreachable_timeout_ = t;
     }
 
     /** @brief Get ACK delay. */
-    double getACKDelay(void) const
+    std::chrono::duration<double> getACKDelay(void) const
     {
         return ack_delay_;
     }
 
     /** @brief Set ACK delay. */
-    void setACKDelay(double t)
+    void setACKDelay(std::chrono::duration<double> t)
     {
         if (sack_delay_ >= ack_delay_)
             throw(std::out_of_range("SACK delays must be < ACK delay"));
@@ -650,13 +649,13 @@ public:
     }
 
     /** @brief Get ACK delay estimation window (sec). */
-    double getACKDelayEstimationWindow(void) const
+    std::chrono::duration<double> getACKDelayEstimationWindow(void) const
     {
         return ack_delay_estimation_window_;
     }
 
     /** @brief Set ACK delay estimation window (sec). */
-    void setACKDelayEstimationWindow(double t)
+    void setACKDelayEstimationWindow(std::chrono::duration<double> t)
     {
         ack_delay_estimation_window_ = t;
 
@@ -671,25 +670,25 @@ public:
     }
 
     /** @brief Get retransmission delay. */
-    double getRetransmissionDelay(void) const
+    std::chrono::duration<double> getRetransmissionDelay(void) const
     {
         return retransmission_delay_;
     }
 
     /** @brief Set retransmission delay. */
-    void setRetransmissionDelay(double t)
+    void setRetransmissionDelay(std::chrono::duration<double> t)
     {
         retransmission_delay_ = t;
     }
 
     /** @brief Get minimum retransmission delay. */
-    double getMinRetransmissionDelay(void) const
+    std::chrono::duration<double> getMinRetransmissionDelay(void) const
     {
         return min_retransmission_delay_;
     }
 
     /** @brief Set minimum retransmission delay. */
-    void setMinRetransmissionDelay(double t)
+    void setMinRetransmissionDelay(std::chrono::duration<double> t)
     {
         min_retransmission_delay_ = t;
     }
@@ -707,13 +706,13 @@ public:
     }
 
     /** @brief Get SACK delay. */
-    double getSACKDelay(void) const
+    std::chrono::duration<double> getSACKDelay(void) const
     {
         return sack_delay_;
     }
 
     /** @brief Set SACK delay. */
-    void setSACKDelay(double t)
+    void setSACKDelay(std::chrono::duration<double> t)
     {
         if (sack_delay_ >= ack_delay_)
             throw(std::out_of_range("SACK delays must be < ACK delay"));
@@ -746,13 +745,13 @@ public:
     }
 
     /** @brief Return explicit NAK window duration. */
-    double getExplicitNAKWindowDuration(void) const
+    std::chrono::duration<double> getExplicitNAKWindowDuration(void) const
     {
         return explicit_nak_win_duration_;
     }
 
     /** @brief Set explicit NAK window duration. */
-    void setExplicitNAKWindowDuration(double t)
+    void setExplicitNAKWindowDuration(std::chrono::duration<double> t)
     {
         explicit_nak_win_duration_ = t;
     }
@@ -770,13 +769,13 @@ public:
     }
 
     /** @brief Return selective ACK feedback delay. */
-    double getSelectiveACKFeedbackDelay(void) const
+    std::chrono::duration<double> getSelectiveACKFeedbackDelay(void) const
     {
         return selective_ack_feedback_delay_;
     }
 
     /** @brief Set selective ACK feedback delay. */
-    void setSelectiveACKFeedbackDelay(double delay)
+    void setSelectiveACKFeedbackDelay(std::chrono::duration<double> delay)
     {
         selective_ack_feedback_delay_ = delay;
     }
@@ -977,7 +976,7 @@ protected:
     std::optional<MonoClock::time_point> env_timestamp_;
 
     /** @brief MCS fast-adjustment period (sec) */
-    double mcs_fast_adjustment_period_;
+    std::chrono::duration<double> mcs_fast_adjustment_period_;
 
     /** @brief Maximum size of a send window */
     Seq::uint_type max_sendwin_;
@@ -1013,16 +1012,16 @@ protected:
     std::vector<evm_thresh_t> evm_thresholds_;
 
     /** @brief Time window used to calculate short-term PER */
-    double short_per_window_;
+    std::chrono::duration<double> short_per_window_;
 
     /** @brief Time window used to calculate long-term PER */
-    double long_per_window_;
+    std::chrono::duration<double> long_per_window_;
 
     /** @brief Time window used to calculate short-term statistics */
-    double short_stats_window_;
+    std::chrono::duration<double> short_stats_window_;
 
     /** @brief Time window used to calculate long-term statistics */
-    double long_stats_window_;
+    std::chrono::duration<double> long_stats_window_;
 
     /** @brief Broadcast MCS index */
     mcsidx_t mcsidx_broadcast_;
@@ -1054,19 +1053,19 @@ protected:
     double mcsidx_prob_floor_;
 
     /** @brief Threshold for marking a node unreachable (seconds) */
-    std::optional<double> unreachable_timeout_;
+    std::optional<std::chrono::duration<double>> unreachable_timeout_;
 
-    /** @brief ACK delay in seconds */
-    double ack_delay_;
+    /** @brief ACK delay (sec) */
+    std::chrono::duration<double> ack_delay_;
 
     /** @brief ACK delay estimation window (sec) */
-    double ack_delay_estimation_window_;
+    std::chrono::duration<double> ack_delay_estimation_window_;
 
-    /** @brief Packet re-transmission delay in seconds */
-    double retransmission_delay_;
+    /** @brief Packet re-transmission delay (sec) */
+    std::chrono::duration<double> retransmission_delay_;
 
-    /** @brief Minimum packet re-transmission delay in seconds */
-    double min_retransmission_delay_;
+    /** @brief Minimum packet re-transmission delay (sec) */
+    std::chrono::duration<double> min_retransmission_delay_;
 
     /** @brief Safety factor for retransmission timer estimator */
     double retransmission_delay_slop_;
@@ -1075,7 +1074,7 @@ protected:
     /** @brief Amount of time we wait for a regular packet to have a SACK
      * attached.
      */
-    double sack_delay_;
+    std::chrono::duration<double> sack_delay_;
 
     /** @brief Maximum number of SACKs in a packet */
     std::optional<size_t> max_sacks_;
@@ -1084,7 +1083,7 @@ protected:
     size_t explicit_nak_win_;
 
     /** @brief Explicit NAK window duration */
-    double explicit_nak_win_duration_;
+    std::chrono::duration<double> explicit_nak_win_duration_;
 
     /** @brief Should we send selective ACK packets? */
     bool selective_ack_;
@@ -1092,7 +1091,7 @@ protected:
     /** @brief Amount of time we wait to accept selective ACK feedback about a
      * packet
      */
-    double selective_ack_feedback_delay_;
+    std::chrono::duration<double> selective_ack_feedback_delay_;
 
     /** @brief Maximum number of retransmission attempts
      */

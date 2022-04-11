@@ -11,7 +11,6 @@
 #include <string>
 #include <thread>
 
-#include <uhd/usrp/multi_usrp.hpp>
 #include <H5Cpp.h>
 
 #include "buffer.hh"
@@ -41,8 +40,8 @@ public:
         kARQEvents
     };
 
-    Logger(const WallClock::time_point &t_start,
-           const MonoClock::time_point &mono_t_start);
+    Logger(const WallClock::time_point& t_start,
+           const MonoClock::time_point& mono_t_start);
     ~Logger();
 
     Logger() = delete;

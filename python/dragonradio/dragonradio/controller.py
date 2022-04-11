@@ -812,8 +812,8 @@ class Controller(CILServer):
                 score.update_timestamp_recv,
                 score.npackets_recv)
 
-            # Calculate scalar performance and
-            mandate.achieved_duration = score.achieved_duration
+            # Calculate scalar performance, mandates achieved, and total score achieved
+            mandate.achieved_duration = float(score.achieved_duration)
 
             if mandate.achieved_duration >= mandate.hold_period:
                 mandate.scalar_performance = 1.0
@@ -876,11 +876,17 @@ class Controller(CILServer):
 
         for goal in goals:
             flow_uid = goal['flow_uid']
-            hold_period = goal['hold_period']
+            hold_period = float(goal['hold_period'])
             point_value = goal.get('point_value', 1)
             max_latency_s = goal['requirements'].get('max_latency_s', None)
             min_throughput_bps = goal['requirements'].get('min_throughput_bps', None)
             file_transfer_deadline_s = goal['requirements'].get('file_transfer_deadline_s', None)
+
+            if max_latency_s is not None:
+                max_latency_s = float(max_latency_s)
+
+            if file_transfer_deadline_s is not None:
+                file_transfer_deadline_s = float(file_transfer_deadline_s)
 
             mandates[flow_uid] = dragonradio.radio.Mandate(flow_uid,
                                                            hold_period,
