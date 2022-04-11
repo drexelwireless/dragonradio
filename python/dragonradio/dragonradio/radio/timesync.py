@@ -14,7 +14,7 @@ except:
 
 logger = logging.getLogger('timesync')
 
-def synchronize(config, radio, master, me):
+def synchronize(config, radio):
     """Use timestamps to synchronize our clock with the time master (the gateway)"""
     # Perform linear regression on all timestamps
     me_timestamps = radio.me_timestamps
@@ -26,11 +26,11 @@ def synchronize(config, radio, master, me):
         return
 
     # If we have a GPSDO, then assume skew is zero
-    if config.clock_noskew or \
-        (radio.usrp.clock_source == 'external' and radio.usrp.time_source == 'external'):
-        (sigma, delta, tau) = timestampRegressionNoSkew(me_timestamps, master_timestamps)
-    else:
-        (sigma, delta, tau) = timestampRegression(me_timestamps, master_timestamps)
+    no_skew = config.clock_noskew or \
+        (radio.usrp.clock_source == 'external' and radio.usrp.time_source == 'external')
+
+    (sigma, delta, tau) = timestampRegression(me_timestamps, master_timestamps, no_skew=no_skew)
+    radio.timesync = (sigma, delta, tau)
 
     old_sigma = clock.skew
     old_delta = clock.offset.secs
@@ -50,21 +50,14 @@ def synchronize(config, radio, master, me):
                                "sigma={:g}; "
                                "delta={:g}").format(sigma, delta))
 
-def relativizeTimestamps(ts):
-    """Make (t_send, t_recv) timestamps relative to Clock t0"""
-    t0 = clock.t0
-
-    return sorted([((t_send-t0).secs, (t_recv-t0).secs) for (t_send, t_recv) in ts], key=lambda ts: ts[0])
-
-def timestampRegression(echoed, master):
+def timestampRegression(echoed, master, no_skew=False):
     """Perform a linear regression on timestamps to determine clock skew and delta"""
     # pylint: disable=too-many-locals
+    avec = np.array([a for (a, _) in echoed])
+    bvec = np.array([b for (_, b) in echoed])
 
-    avec = [a for (a, _) in echoed]
-    bvec = [b for (_, b) in echoed]
-
-    cvec = [c for (c, _) in master]
-    dvec = [d for (_, d) in master]
+    cvec = np.array([c for (c, _) in master])
+    dvec = np.array([d for (_, d) in master])
 
     abar = np.mean(avec)
     bbar = np.mean(bvec)
@@ -72,13 +65,16 @@ def timestampRegression(echoed, master):
     cbar = np.mean(cvec)
     dbar = np.mean(dvec)
 
-    covab = sum([(a - abar)*(b - bbar) for (a, b) in echoed])
-    vara = sum([(a - abar)**2.0 for a in avec])
+    if no_skew:
+        sigma = 1.0
+    else:
+        covab = np.sum((avec - abar)*(bvec - bbar))
+        vara = np.sum(np.square(avec - abar))
 
-    covcd = sum([(c - cbar)*(d - dbar) for (c, d) in master])
-    vard = sum([(d - dbar)**2.0 for d in dvec])
+        covcd = np.sum((cvec - cbar)*(dvec - dbar))
+        vard = np.sum(np.square(dvec - dbar))
 
-    sigma = (covab + covcd)/(vara + vard)
+        sigma = (covab + covcd)/(vara + vard)
 
     delta_plus_tau = bbar - sigma*abar
     delta_minus_tau = cbar - sigma*dbar
@@ -87,25 +83,3 @@ def timestampRegression(echoed, master):
     tau = (delta_plus_tau - delta_minus_tau) / 2.0
 
     return (sigma, delta, tau)
-
-def timestampRegressionNoSkew(echoed, master):
-    """Perform a linear regression on timestamps to determine clock delta (assuming no skew)"""
-    avec = [a for (a, _) in echoed]
-    bvec = [b for (_, b) in echoed]
-
-    cvec = [c for (c, _) in master]
-    dvec = [d for (_, d) in master]
-
-    abar = np.mean(avec)
-    bbar = np.mean(bvec)
-
-    cbar = np.mean(cvec)
-    dbar = np.mean(dvec)
-
-    delta_plus_tau = bbar - abar
-    delta_minus_tau = cbar - dbar
-
-    delta = (delta_plus_tau + delta_minus_tau) / 2.0
-    tau = (delta_plus_tau - delta_minus_tau) / 2.0
-
-    return (1.0, delta, tau)

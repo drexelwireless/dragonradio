@@ -13,6 +13,8 @@
 class TimestampsProxy
 {
 public:
+    using timestamps_map = std::unordered_map<TimestampSeq, std::pair<double, double>>;
+
     TimestampsProxy(std::shared_ptr<SmartController> controller)
       : controller_(controller)
     {
@@ -21,11 +23,19 @@ public:
     TimestampsProxy() = delete;
     ~TimestampsProxy() = default;
 
-    Timestamps::timestamps_map operator [](NodeId node)
+    timestamps_map operator [](NodeId node)
     {
-        if (controller_->timestampsContains(node))
-            return controller_->getTimestamps(node);
-        else
+        if (controller_->timestampsContains(node)) {
+            MonoClock::time_point      t0 = WallClock::getTimeZero();
+            Timestamps::timestamps_map ts0 = controller_->getTimestamps(node);
+            timestamps_map             ts;
+
+            for (auto const& [key, val] : ts0) {
+                ts.insert({key, {(val.first - t0).get_real_secs(), (val.second - t0).get_real_secs()}});
+            }
+
+            return ts;
+        } else
             throw std::out_of_range("No timestamps");
     }
 

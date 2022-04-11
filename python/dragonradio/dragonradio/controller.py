@@ -838,10 +838,23 @@ class Controller(CILServer):
                         'score_reported.csv')
 
     def saveTimestamps(self):
-        self.logCSV(self.radio.me_timestamps, ['t_send', 't_recv'], 'me_timestamps.csv')
+        if self.config.logdir is None:
+            return
 
-        if self.radio.radionet.time_master is not None:
-            self.logCSV(self.radio.master_timestamps, ['t_send', 't_recv'], 'master_timestamps.csv')
+        path = os.path.join(self.config.logdir, 'timestamps.h5')
+
+        if self.radio.timesync is not None:
+            (sigma, delta, tau) = self.radio.timesync
+
+            df_timesync = pd.DataFrame([(delta, sigma, tau)],
+                                       columns=['delta', 'sigma', 'tau'])
+            df_timesync.to_hdf(path, 'timesync', index=False)
+
+        df_me_timestamps = pd.DataFrame(self.radio.me_timestamps, columns=['t_send', 't_recv'])
+        df_me_timestamps.to_hdf(path, 'me_timestamps', index=False)
+
+        df_master_timestamps = pd.DataFrame(self.radio.master_timestamps, columns=['t_send', 't_recv'])
+        df_master_timestamps.to_hdf(path, 'master_timestamps', index=False)
 
     def logCSV(self, data, columns, filename):
         """Log data to CSV file"""

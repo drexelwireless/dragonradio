@@ -90,6 +90,9 @@ class Radio(dragonradio.tasks.TaskManager):
         self.channels = []
         """Channels"""
 
+        self.timesync = None
+        """Time synchronization parameters"""
+
         # Add global work queue workers
         work_queue.addThreads(1)
 
@@ -1067,10 +1070,7 @@ class Radio(dragonradio.tasks.TaskManager):
         if self.node_id == self.radionet.time_master:
             return
 
-        me = self.radionet.this_node
-        master = self.radionet.nodes[self.radionet.time_master]
-
-        timesync.synchronize(self.config, self, master, me)
+        timesync.synchronize(self.config, self)
 
     def getRadioLogPath(self):
         """
@@ -1193,7 +1193,7 @@ class Radio(dragonradio.tasks.TaskManager):
         if isinstance(self.controller, SmartController):
             me = self.radionet.this_node
             if me.id in self.controller.timestamps:
-                return timesync.relativizeTimestamps(self.controller.timestamps[me.id].values())
+                return self.controller.timestamps[me.id].values()
             else:
                 return []
         else:
@@ -1205,7 +1205,7 @@ class Radio(dragonradio.tasks.TaskManager):
         if isinstance(self.controller, SmartController) and self.radionet.time_master is not None:
             master = self.radionet.nodes[self.radionet.time_master]
             if master.id in self.controller.timestamps:
-                return timesync.relativizeTimestamps(self.controller.timestamps[master.id].values())
+                return self.controller.timestamps[master.id].values()
             else:
                 return []
         else:
