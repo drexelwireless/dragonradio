@@ -10,7 +10,6 @@
 
 #include "IQBuffer.hh"
 #include "Packet.hh"
-#include "RadioNet.hh"
 #include "mac/Snapshot.hh"
 #include "phy/AutoGain.hh"
 
