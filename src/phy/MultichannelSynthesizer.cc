@@ -8,7 +8,7 @@
 
 namespace py = pybind11;
 
-#include "Logger.hh"
+#include "logging.hh"
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/PHY.hh"
 #include "stats/Estimator.hh"

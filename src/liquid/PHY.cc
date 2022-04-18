@@ -4,6 +4,7 @@
 #include <xsimd/xsimd.hpp>
 #include <xsimd/stl/algorithms.hpp>
 
+#include "logging.hh"
 #include "Logger.hh"
 #include "WorkQueue.hh"
 #include "dsp/NCO.hh"

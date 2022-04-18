@@ -6,6 +6,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#include "logging.hh"
 #include "phy/Channel.hh"
 #include "phy/FDChannelModulator.hh"
 #include "phy/MultichannelSynthesizer.hh"

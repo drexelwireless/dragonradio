@@ -8,7 +8,6 @@
 #include <functional>
 #include <list>
 
-#include "logging.hh"
 #include "IQBuffer.hh"
 #include "Packet.hh"
 #include "RadioNet.hh"
@@ -183,42 +182,7 @@ public:
                                                       bool payload_valid,
                                                       const Header &h,
                                                       size_t payload_len,
-                                                      unsigned char *payload_data)
-    {
-        if (!header_valid) {
-            if (log_invalid_headers_)
-                logPHY(LOGDEBUG-1, "invalid header");
-
-            return nullptr;
-        } else if (!payload_valid) {
-            std::shared_ptr<RadioPacket> pkt = std::make_shared<RadioPacket>(h);
-
-            pkt->internal_flags.invalid_payload = 1;
-
-            if (h.nexthop == node_id_)
-                logPHY(LOGDEBUG-1, "invalid payload: curhop=%u; nexthop=%u; seq=%u",
-                    pkt->hdr.curhop,
-                    pkt->hdr.nexthop,
-                    (unsigned) pkt->hdr.seq);
-
-            return pkt;
-        } else {
-            std::shared_ptr<RadioPacket> pkt = std::make_shared<RadioPacket>(h, payload_data, payload_len);
-
-            if (!pkt->integrityIntact()) {
-                pkt->internal_flags.invalid_payload = 1;
-
-                logPHY(LOGERROR, "packet integrity not intact: seq=%u",
-                    (unsigned) pkt->hdr.seq);
-            }
-
-            // Cache payload size if this packet is not compressed
-            if (!pkt->hdr.flags.compressed)
-                pkt->payload_size = pkt->getPayloadSize();
-
-            return pkt;
-        }
-    }
+                                                      unsigned char *payload_data);
 
     /** @brief Get this node's ID */
     static NodeId getTeam()

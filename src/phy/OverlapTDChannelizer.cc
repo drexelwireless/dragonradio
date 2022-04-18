@@ -3,6 +3,7 @@
 
 #include <functional>
 
+#include "logging.hh"
 #include "phy/PHY.hh"
 #include "phy/OverlapTDChannelizer.hh"
 
