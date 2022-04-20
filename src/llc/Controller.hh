@@ -112,7 +112,7 @@ public:
     }
 
     /** @brief Set channels */
-    virtual void setChannels(const std::vector<Channel> &channels)
+    virtual void setChannels(const std::vector<PHYChannel> &channels)
     {
     }
 

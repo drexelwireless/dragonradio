@@ -76,7 +76,7 @@ SmartController::~SmartController()
     timer_queue_.stop();
 }
 
-void SmartController::setChannels(const std::vector<Channel> &channels)
+void SmartController::setChannels(const std::vector<PHYChannel> &channels)
 {
     std::lock_guard<std::mutex> lock(channels_mutex_);
 
@@ -1961,11 +1961,11 @@ void SendWindow::resetPEREstimates(void)
         if (!controller.channels_.empty()) {
             auto it = controller.channels_.begin();
 
-            min_channel_bandwidth = it->bw;
+            min_channel_bandwidth = it->channel.bw;
             ++it;
 
             for (; it != controller.channels_.end(); ++it)
-                min_channel_bandwidth = std::min(min_channel_bandwidth, it->bw);
+                min_channel_bandwidth = std::min(min_channel_bandwidth, it->channel.bw);
         }
     }
 
