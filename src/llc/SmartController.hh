@@ -415,7 +415,7 @@ class SmartController : public Controller
     friend class RecvWindowGuard;
 
 public:
-    using evm_thresh_t = std::optional<double>;
+    using evm_thresh_t = std::optional<float>;
 
     SmartController(std::shared_ptr<RadioNet> radionet_,
                     size_t mtu,
