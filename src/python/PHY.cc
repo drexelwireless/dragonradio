@@ -353,11 +353,15 @@ void exportPHYs(py::module &m)
     // Export class PHYChannel to Python
     py::class_<PHYChannel, std::shared_ptr<PHYChannel>>(m, "PHYChannel")
         .def(py::init<const Channel&,
+                      const std::vector<evm_thresh_t>&,
                       const Taps&,
                       std::shared_ptr<PHY>>())
         .def_readwrite("channel",
             &PHYChannel::channel,
            "Channel")
+        .def_readwrite("evm_thresh",
+            &PHYChannel::evm_thresh,
+            "EVM threshold table")
         .def_readwrite("taps",
             &PHYChannel::taps,
             "FIR filter taps")

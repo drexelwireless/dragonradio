@@ -13,6 +13,45 @@
 #include "mac/Snapshot.hh"
 #include "phy/AutoGain.hh"
 
+/** @brief Complex float */
+using C = std::complex<float>;
+
+/** @brief FIR taps */
+using Taps = std::vector<C>;
+
+/** @brief EVM threshold */
+using evm_thresh_t = std::optional<float>;
+
+class PHY;
+
+/** @brief A PHY channel configuration */
+struct PHYChannel {
+    PHYChannel() = delete;
+
+    PHYChannel(const Channel& channel_,
+               const std::vector<evm_thresh_t>& evm_thresh_,
+               const Taps& taps_,
+               std::shared_ptr<PHY> phy_)
+      : channel(channel_)
+      , evm_thresh(evm_thresh_)
+      , taps(taps_)
+      , phy(phy_)
+    {
+    }
+
+    /** @brief The channel */
+    Channel channel;
+
+    /** @brief EVM threshold table */
+    std::vector<evm_thresh_t> evm_thresh;
+
+    /** @brief FIR filter taps */
+    Taps taps;
+
+    /** @brief PHY for channel */
+    std::shared_ptr<PHY> phy;
+};
+
 /** @brief A modulated data packet to be sent over the radio */
 struct ModPacket
 {
@@ -243,34 +282,6 @@ protected:
 
     /** @brief Snapshot collector */
     static std::shared_ptr<SnapshotCollector> snapshot_collector_;
-};
-
-using C = std::complex<float>;
-
-/** @brief FIR taps */
-using Taps = std::vector<C>;
-
-/** @brief A PHY channel configuration */
-struct PHYChannel {
-    PHYChannel() = delete;
-
-    PHYChannel(const Channel &channel_,
-               const Taps &taps_,
-               std::shared_ptr<PHY> phy_)
-      : channel(channel_)
-      , taps(taps_)
-      , phy(phy_)
-    {
-    }
-
-    /** @brief The channel */
-    Channel channel;
-
-    /** @brief FIR filter taps */
-    Taps taps;
-
-    /** @brief PHY for channel */
-    std::shared_ptr<PHY> phy;
 };
 
 #endif /* PHY_H_ */

@@ -591,12 +591,12 @@ class Radio(dragonradio.tasks.TaskManager):
     def setChannelizerChannels(self, channels):
         """Set channelizer's channels."""
         self.channelizer.channels = \
-            PHYChannels([PHYChannel(chan, self.genChannelizerTaps(chan), self.phy) for chan in channels])
+            PHYChannels([PHYChannel(chan, self.evm_thresholds, self.genChannelizerTaps(chan), self.phy) for chan in channels])
 
     def setSynthesizerChannels(self, channels):
         """Set synthesizer's channels."""
         self.synthesizer.channels = \
-            PHYChannels([PHYChannel(chan, self.genSynthesizerTaps(chan), self.phy) for chan in channels])
+            PHYChannels([PHYChannel(chan, self.evm_thresholds, self.genSynthesizerTaps(chan), self.phy) for chan in channels])
 
         # LLC needs to know transmitting channels
         self.controller.channels = channels
