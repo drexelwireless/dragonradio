@@ -9,6 +9,7 @@ import math
 import os
 import random
 import signal
+from typing import Any, Callable, Dict
 
 import numpy as np
 
@@ -151,6 +152,22 @@ class Radio(dragonradio.tasks.TaskManager):
         self.configureMAC(self.config.mac)
 
         # Either start the interactive loop or run the loop ourselves
+        user_ns['radio'] = self
+
+        self.run(finalizer=self.stop, user_ns=user_ns)
+
+        return 0
+
+    def run(self, finalizer: Callable[[], None], user_ns: Dict[str, Any]=locals()):
+        """Run the radio's asyncio loop.
+
+        Args:
+            finalizer (Callable[[], None]): Finalizer function to be called on termination.
+            user_ns (Dict[str, Any], optional): User namespace. Defaults to locals().
+
+        Returns:
+            int: Exit code
+        """
         if self.config.interactive:
             import IPython.terminal.embed
             from traitlets.config import Config
@@ -159,16 +176,18 @@ class Radio(dragonradio.tasks.TaskManager):
             c.TerminalInteractiveShell.loop_runner = 'asyncio'
             c.TerminalInteractiveShell.autoawait = True
 
-            user_ns['radio'] = self
+            try:
+                shell = IPython.terminal.embed.InteractiveShellEmbed(config=c, user_ns=user_ns)
+                shell.enable_gui('asyncio')
+                shell()
 
-            shell = IPython.terminal.embed.InteractiveShellEmbed(config=c, user_ns=user_ns)
-            shell.enable_gui('asyncio')
-            shell()
-
-            self.stop()
+                finalizer()
+                self.loop.run_forever()
+            finally:
+                self.loop.close()
         else:
             for sig in [signal.SIGINT, signal.SIGTERM]:
-                self.loop.add_signal_handler(sig, self.stop)
+                self.loop.add_signal_handler(sig, finalizer)
 
             try:
                 self.loop.run_forever()
