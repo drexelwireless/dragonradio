@@ -1147,10 +1147,18 @@ class Radio(dragonradio.tasks.TaskManager):
         """Center frequency"""
         return self.config.frequency
 
+    @frequency.setter
+    def frequency(self, new_frequency):
+        self.reconfigureBandwidthAndFrequency(self.bandwidth, new_frequency)
+
     @property
     def bandwidth(self):
         """Bandwidth"""
         return min(self.config.bandwidth, self.config.max_bandwidth)
+
+    @bandwidth.setter
+    def bandwidth(self, new_bandwidth):
+        self.reconfigureBandwidthAndFrequency(new_bandwidth, self.frequency)
 
     @property
     def header_mcs(self):
