@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Radio configuration"""
@@ -478,6 +478,9 @@ class Config:
         parser.add_argument('--interactive', action='store_const', const=True,
                             dest='interactive',
                             help='enter interactive shell after radio is started')
+        parser.add_argument('--kernel', action='store_const', const=True,
+                            dest='kernel',
+                            help='start IPython kernel')
 
         # Load configuration file
         parser.add_argument('--config', action=LoadConfigAction,
