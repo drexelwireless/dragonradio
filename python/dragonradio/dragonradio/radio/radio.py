@@ -94,6 +94,9 @@ class Radio(dragonradio.tasks.TaskManager):
         self.timesync = None
         """Time synchronization parameters"""
 
+        self.kernel = None
+        """IPython kernel"""
+
         # Add global work queue workers
         work_queue.addThreads(1)
 
@@ -168,7 +171,14 @@ class Radio(dragonradio.tasks.TaskManager):
         Returns:
             int: Exit code
         """
-        if self.config.interactive:
+        if self.config.kernel:
+            from ipykernel.kernelapp import IPKernelApp
+
+            self.kernel = IPKernelApp.instance()
+            self.kernel.initialize(["python"])
+            self.kernel.shell.user_ns.update(user_ns)
+            self.kernel.start()
+        elif self.config.interactive:
             import IPython.terminal.embed
             from traitlets.config import Config
             c = Config()
@@ -186,7 +196,7 @@ class Radio(dragonradio.tasks.TaskManager):
             finally:
                 self.loop.close()
         else:
-            for sig in [signal.SIGINT, signal.SIGTERM]:
+            for sig in [signal.SIGINT, signal.SIGTERM, signal.SIGQUIT]:
                 self.loop.add_signal_handler(sig, finalizer)
 
             try:
@@ -207,6 +217,13 @@ class Radio(dragonradio.tasks.TaskManager):
 
         # Wait for remaining tasks and stop the event loop
         await dragonradio.tasks.stopEventLoop(self.loop, logger)
+
+    async def stopTasks(self):
+        # Stop any running IPython kernel
+        if self.kernel is not None:
+            self.kernel.close()
+
+        await super().stopTasks()
 
     def configureUSRP(self):
         """Construct USRP object from configuration parameters"""
