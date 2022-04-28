@@ -1,10 +1,13 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <sys/types.h>
+
+#include <pwd.h>
 #include <execinfo.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <pybind11/embed.h>
 
@@ -74,6 +77,39 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
+    // If we were run under sudo, change euid and egid to match the user who
+    // invoked us.
+    const char *SUDO_UID = "SUDO_UID";
+    const char *SUDO_GID = "SUDO_GID";
+    const char *HOME = "HOME";
+
+    if (geteuid() == 0 && getuid() == 0 && getenv(SUDO_UID) != NULL && getenv(SUDO_GID) != NULL) {
+        int sudo_uid      = atoi(getenv(SUDO_UID));
+        int sudo_gid      = atoi(getenv(SUDO_GID));
+        struct passwd *pw = getpwuid(sudo_uid);
+
+        if (setegid(sudo_gid) < 0)
+            throw std::runtime_error(strerror(errno));
+
+        if (seteuid(sudo_uid) < 0)
+            throw std::runtime_error(strerror(errno));
+
+        if (setenv(HOME, pw->pw_dir, 1) < 0)
+            throw std::runtime_error(strerror(errno));
+    } else {
+        // If we were invoked setuid, change euid and egid to match the user who
+        // invoked us.
+        if (getegid() != getgid()) {
+            if (setegid(getgid()) < 0)
+                throw std::runtime_error(strerror(errno));
+        }
+
+        if (geteuid() != getuid()) {
+            if (seteuid(getuid()) < 0)
+                throw std::runtime_error(strerror(errno));
+        }
+    }
+
     // Drop capabilities
     try {
         Caps caps(cap_get_proc());
@@ -83,12 +119,6 @@ int main(int argc, char** argv)
         caps.set_proc();
     } catch(const std::exception& e) {
         fprintf(stderr, "WARNING: Cannot obtain CAP_SYS_NICE and CAP_NET_ADMIN capabilities.\n");
-    }
-
-    // Drop euid
-    if (geteuid() != getuid()) {
-        if (seteuid(getuid()) < 0)
-            throw std::runtime_error(strerror(errno));
     }
 
     // Install backtrace signal handler
