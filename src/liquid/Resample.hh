@@ -13,10 +13,6 @@
 #include "IQBuffer.hh"
 #include "dsp/Resample.hh"
 
-#if defined(DOXYGEN)
-#define final
-#endif /* defined(DOXYGEN) */
-
 namespace liquid {
 
 using C = std::complex<float>;

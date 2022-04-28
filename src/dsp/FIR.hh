@@ -11,10 +11,6 @@
 #include "dsp/Filter.hh"
 #include "dsp/Window.hh"
 
-#if defined(DOXYGEN)
-#define final
-#endif /* defined(DOXYGEN) */
-
 namespace dragonradio::signal {
 
 template <class T, class C>

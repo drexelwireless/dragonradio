@@ -16,10 +16,6 @@
 #include "dsp/TableNCO.hh"
 #include "dsp/Window.hh"
 
-#if defined(DOXYGEN)
-#define final
-#endif /* defined(DOXYGEN) */
-
 namespace dragonradio::signal {
 
 /** @brief A polyphase filter bank */
