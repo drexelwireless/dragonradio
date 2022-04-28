@@ -3,6 +3,7 @@ INPUT                  = ../src
 FILE_PATTERNS          = *.hh
 RECURSIVE              = YES
 PREDEFINED             = DOXYGEN
+EXCLUDE_SYMBOLS        = __attribute__ final
 
 GENERATE_HTML          = NO
 GENERATE_LATEX         = NO
