@@ -258,6 +258,8 @@ class Config:
         self.amc_long_per_window = 400e-3
         self.amc_short_stats_window = 100e-3
         self.amc_long_stats_window = 400e-3
+        self.amc_aggressive_stats_reset = True
+        """bool: Aggressively reset link statistics even if we cannot change MCS index"""
         self.amc_mcs_fast_adjustment_period = 1.0
         self.amc_mcsidx_broadcast = None
         self.amc_mcsidx_ack = None
@@ -833,6 +835,12 @@ class Config:
                          metavar='SEC',
                          help=('time window used to calculate long-term statistics, '
                                'e.g., EVM and RSSI'))
+        amc.add_argument('--agressive-stats-reset', action='store_const', const=True,
+                         dest='amc_aggressive_stats_reset',
+                         help=('Aggressively reset PER statistics even when MCS index does not change'))
+        amc.add_argument('--no-agressive-stats-reset', action='store_const', const=False,
+                         dest='amc_aggressive_stats_reset',
+                         help=('Do not aggressively reset PER statistics even when MCS index does not change'))
         amc.add_argument('--mcsidx-up-per-threshold', action='store', type=float,
                          dest='amc_mcsidx_up_per_threshold',
                          metavar='FRACTION',

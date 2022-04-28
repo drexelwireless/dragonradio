@@ -493,6 +493,18 @@ public:
         long_stats_window_ = window;
     }
 
+    /** @brief Get aggressive stats reset flag */
+    bool getAggressiveStatsReset(void) const
+    {
+        return aggressive_stats_reset_;
+    }
+
+    /** @brief Set aggressive stats reset flag (sec) */
+    void setAggressiveStatsReset(bool aggressive_stats_reset)
+    {
+        aggressive_stats_reset_ = aggressive_stats_reset;
+    }
+
     /** @brief Get broadcast MCS index */
     mcsidx_t getBroadcastMCSIndex(void) const
     {
@@ -1022,6 +1034,13 @@ protected:
 
     /** @brief Time window used to calculate long-term statistics */
     std::chrono::duration<double> long_stats_window_;
+
+    /** @brief Aggressively reset statistics. */
+    /**
+     * When true, PER estimates will be reset aggressively even when we cannot
+     * move up or down an MCS level. See SendWindow::updateMCS().
+     */
+    bool aggressive_stats_reset_;
 
     /** @brief Broadcast MCS index */
     mcsidx_t mcsidx_broadcast_;
