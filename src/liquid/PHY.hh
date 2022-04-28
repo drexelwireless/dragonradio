@@ -18,10 +18,6 @@
 #include "liquid/Resample.hh"
 #include "phy/PHY.hh"
 
-#if defined(DOXYGEN)
-#define final
-#endif /* defined(DOXYGEN) */
-
 namespace liquid {
 
 class PHY : public ::PHY {
