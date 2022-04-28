@@ -1,5 +1,6 @@
 PROJECT_NAME           = "DragonRadio"
 INPUT                  = ../src
+FILE_PATTERNS          = *.hh
 RECURSIVE              = YES
 PREDEFINED             = DOXYGEN
 
