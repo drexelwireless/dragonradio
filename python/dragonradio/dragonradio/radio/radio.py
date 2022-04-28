@@ -512,6 +512,7 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.short_per_window = config.amc_short_per_window
             controller.long_per_window = config.amc_long_per_window
             controller.long_stats_window = config.amc_long_stats_window
+            controller.aggressive_stats_reset = config.amc_aggressive_stats_reset
             if config.amc_mcs_fast_adjustment_period is not None:
                 controller.mcs_fast_adjustment_period = config.amc_mcs_fast_adjustment_period
             if config.amc_mcsidx_broadcast is not None:

@@ -33,6 +33,7 @@ SmartController::SmartController(std::shared_ptr<RadioNet> radionet,
   , long_per_window_(400e-3s)
   , short_stats_window_(100e-3s)
   , long_stats_window_(400e-3s)
+  , aggressive_stats_reset_(false)
   , mcsidx_broadcast_(0)
   , mcsidx_ack_(0)
   , mcsidx_min_(0)
@@ -1822,7 +1823,7 @@ void SendWindow::updateMCS(bool fast_adjust)
         // Move down n MCS levels
         if (n != 0)
             moveDownMCS(n);
-        else
+        else if (controller.aggressive_stats_reset_)
             resetPEREstimates();
     } else if (fast_adjust && short_evm) {
         mcsidx_t new_mcsidx;
@@ -1852,7 +1853,7 @@ void SendWindow::updateMCS(bool fast_adjust)
         // Now we see if we can actually increase the MCS index.
         if (mayMoveUpMCS())
             moveUpMCS();
-        else
+        else if (controller.aggressive_stats_reset_)
             resetPEREstimates();
     }
 }
