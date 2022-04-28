@@ -307,7 +307,7 @@ void exportControllers(py::module &m)
         .def_property("mcs_fast_adjustment_period",
             &SmartController::getMCSFastAdjustmentPeriod,
             &SmartController::setMCSFastAdjustmentPeriod,
-            "MCS fast adjustment period after environmnet discontinuity")
+            "MCS fast adjustment period after environment discontinuity")
         .def_property("mcsidx_broadcast",
             &SmartController::getBroadcastMCSIndex,
             &SmartController::setBroadcastMCSIndex,
