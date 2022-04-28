@@ -20,32 +20,47 @@ class RemoteClient(TCPProtoClient):
                          *args, **kwargs)
 
     @rpc(remote.Request, remote.Response)
-    def start(self, req, timestamp=time.time()):
+    def start(self, req, timestamp=None):
         """Tell radio to start"""
+        if timestamp is None:
+            timestamp = time.time()
+
         req.timestamp = timestamp
         req.radio_command = remote.START
 
     @rpc(remote.Request, remote.Response)
-    def stop(self, req, timestamp=time.time()):
+    def stop(self, req, timestamp=None):
         """Tell radio to stop"""
+        if timestamp is None:
+            timestamp = time.time()
+
         req.timestamp = timestamp
         req.radio_command = remote.STOP
 
     @rpc(remote.Request, remote.Response)
-    def status(self, req, timestamp=time.time()):
+    def status(self, req, timestamp=None):
         """Get radio status"""
+        if timestamp is None:
+            timestamp = time.time()
+
         req.timestamp = timestamp
         req.radio_command = remote.STATUS
 
     @rpc(remote.Request, remote.Response)
-    def updateMandatedOutcomes(self, req, goals, timestamp=time.time()):
+    def updateMandatedOutcomes(self, req, goals, timestamp=None):
         """Update mandated outcomes"""
+        if timestamp is None:
+            timestamp = time.time()
+
         req.timestamp = timestamp
         req.update_mandated_outcomes.goals = goals
 
     @rpc(remote.Request, remote.Response)
-    def updateEnvironment(self, req, env, timestamp=time.time()):
+    def updateEnvironment(self, req, env, timestamp=None):
         """Update radio environment"""
+        if timestamp is None:
+            timestamp = time.time()
+
         req.timestamp = timestamp
         req.update_environment.environment = env
 

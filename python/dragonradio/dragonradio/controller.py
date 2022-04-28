@@ -333,8 +333,11 @@ class Controller(CILServer):
     def mkRadio(self, *args, **kwargs):
         return dragonradio.radio.Radio(*args, **kwargs)
 
-    async def startRadio(self, timestamp=time.time()):
+    async def startRadio(self, timestamp=None):
         """Start the radio"""
+        if timestamp is None:
+            timestamp = time.time()
+
         if not self.started:
             logger.info('Starting radio: now=%f; timestamp=%f',
                 time.time(),
