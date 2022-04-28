@@ -197,7 +197,7 @@ private:
 };
 
 /** @brief Estimate a value by calculating an exponential moving average */
-/** The EMA estimator updates an exponetially weighted moving average with a
+/** The EMA estimator updates an exponentially weighted moving average with a
  * weight alpha. Optionally, it can make an estimate using an average until
  * mean_until samples have been collected. As a guideline, choosing alpha to be
  * 2/(n+1) means the first n data points "will represent about 86% of the total
