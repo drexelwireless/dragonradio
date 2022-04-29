@@ -52,3 +52,4 @@
     state: absent
   with_items:
     - /var/snap
+  ignore_errors: yes
