@@ -43,7 +43,7 @@ echo "Checking out $REV"
 
 HASH=$(cd "$DIR" && git rev-parse "$REV"^{} | cut -c1-8)
 
-REVNAME=$(cd "$DIR" && (git name-rev --name-only "$REV" --exclude=tags/ | sed -e 's/^.*\///' -e 's/[^a-zA-Z0-9-]//g'))
+REVNAME=$(cd "$DIR" && (git name-rev --name-only "$REV" --exclude='tags/*' | sed -e 's/^.*\///' -e 's/[^a-zA-Z0-9-]//g'))
 REVNAME=$(basename $REVNAME)
 
 DATE=$(date +%Y%m%d)
