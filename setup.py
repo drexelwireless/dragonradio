@@ -6,14 +6,6 @@ from pathlib import Path
 from pybind11.setup_helpers import Pybind11Extension
 from setuptools import setup
 
-# See:
-#   https://github.com/pypa/setuptools_scm/issues/190
-try:
-    import setuptools_scm.integration
-    setuptools_scm.integration.find_files = lambda _: []
-except ImportError:
-    pass
-
 TOPDIR = Path(__file__).parent
 
 DEPENDENCIES = TOPDIR / 'extern'
@@ -54,5 +46,4 @@ ext_modules = [
     ),
 ]
 
-setup(ext_modules=ext_modules,
-      use_scm_version = { 'relative_to': 'setup.py' })
+setup(ext_modules=ext_modules)
