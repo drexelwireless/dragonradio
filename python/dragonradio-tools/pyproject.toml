@@ -1,9 +1,22 @@
 [build-system]
 requires = [
-    "setuptools>=42",
-    "setuptools_scm",
+    "setuptools>=45",
+    "setuptools_scm[toml]>=6.2",
     "wheel",
     "pybind11==2.7.1",
 ]
 
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+git_describe_command = [
+    "git",
+    "describe",
+    "--dirty",
+    "--tags",
+    "--long",
+    "--match",
+    "v*[0-9]*",
+]
+root = "../.."
+write_to = "python/dragonradio-tools/dragonradio/tools/version.py"
