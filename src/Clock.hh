@@ -135,6 +135,8 @@ private:
     }
 };
 
+// XXX Doxygen doesn't like these
+#if !defined(DOXYGEN)
 template<>
 struct std::chrono::treat_as_floating_point<timerep_t> : std::true_type {};
 
@@ -209,6 +211,7 @@ struct std::common_type<unsigned long, timerep_t>
 {
     using type = timerep_t;
 };
+#endif /* !DOXYGEN */
 
 class MonoClock
 {
