@@ -134,7 +134,7 @@ public:
     /** @brief Set whether or not node is subject to emissions control. */
     virtual void setEmcon(NodeId node_id, bool emcon)
     {
-        (*nhood_)[node_id].emcon = emcon;
+        (*nhood_)[node_id]->emcon = emcon;
     }
 
     /** @brief Pull a packet from the network to be sent next over the radio. */

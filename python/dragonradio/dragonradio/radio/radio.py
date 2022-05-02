@@ -149,7 +149,7 @@ class Radio(dragonradio.tasks.TaskManager):
         # Add radio nodes to the network if number of nodes was specified
         if self.config.num_nodes is not None:
             for i in range(0, self.config.num_nodes):
-                self.nhood.addNode(i+1)
+                self.nhood.addNeighbor(i+1)
 
         # Configure the MAC
         self.configureMAC(self.config.mac)
@@ -320,7 +320,7 @@ class Radio(dragonradio.tasks.TaskManager):
                              config.mtu,
                              self.node_id)
 
-        self.nhood = Neighborhood(self.tuntap, self.node_id)
+        self.nhood = self.mkNeighborhood()
 
         # Configure the controller
         self.controller = self.mkController()
@@ -413,6 +413,9 @@ class Radio(dragonradio.tasks.TaskManager):
             raise ValueError('Unknown PHY: %s' % config.phy)
 
         return phy
+
+    def mkNeighborhood(self):
+        return Neighborhood(self.tuntap, self.node_id)
 
     def mkChannelizer(self):
         """Construct a Channelizer according to configuration parameters"""
@@ -1028,7 +1031,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.mac.slotidx = 0
 
         # All nodes can transmit
-        for node_id in self.nhood.nodes.keys():
+        for node_id in self.nhood.neighbors.keys():
             self.controller.setEmcon(node_id, False)
 
         if self.config.tx_upsample:
@@ -1069,7 +1072,7 @@ class Radio(dragonradio.tasks.TaskManager):
         if 0 in nodes_with_slot:
             nodes_with_slot.remove(0)
 
-        for node_id in self.nhood.nodes.keys():
+        for node_id in self.nhood.neighbors.keys():
             self.controller.setEmcon(node_id, node_id not in nodes_with_slot)
 
         # If we are upsampling on TX, go ahead and install the schedule
@@ -1094,7 +1097,7 @@ class Radio(dragonradio.tasks.TaskManager):
     def configureSimpleMACSchedule(self, fdma_mac=False):
         """Set a simple static schedule."""
         nchannels = len(self.channels)
-        nodes = sorted(list(self.nhood.nodes))
+        nodes = sorted(list(self.nhood.neighbors))
 
         if nchannels == 1:
             sched = dragonradio.schedule.pureTDMASchedule(nodes)
@@ -1255,7 +1258,7 @@ class Radio(dragonradio.tasks.TaskManager):
     def master_timestamps(self):
         """Timestamps for time master"""
         if isinstance(self.controller, SmartController) and self.nhood.time_master is not None:
-            master = self.nhood.nodes[self.nhood.time_master]
+            master = self.nhood.neighbors[self.nhood.time_master]
             if master.id in self.controller.timestamps:
                 return self.controller.timestamps[master.id].values()
             else:

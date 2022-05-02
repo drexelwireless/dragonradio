@@ -11,19 +11,50 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <set>
 #include <thread>
 #include <vector>
 
 #include "Node.hh"
 #include "Packet.hh"
+#include "WorkQueue.hh"
 #include "net/TunTap.hh"
 
+/** @brief A listener for neighborhood events */
+class NeighborhoodListener
+{
+public:
+    NeighborhoodListener() = default;
+
+    virtual ~NeighborhoodListener() = default;
+
+    /** @brief Called when a neighbor is added
+     * @param neighbor The neighbor that was added
+     * */
+    virtual void neighborAdded(const std::shared_ptr<Node> &neighbor)
+    {
+    }
+
+    /** @brief Called when a neighbor is removed
+     * @param neighbor The neighbor that was removed
+     * */
+    virtual void neighborRemoved(const std::shared_ptr<Node> &neighbor)
+    {
+    }
+
+    /** @brief Called when a gateway is added
+     * @param neighbor The gateway that was added
+     * */
+    virtual void gatewayAdded(const std::shared_ptr<Node> &neighbor)
+    {
+    }
+};
+
+/** @brief The local (one-hop) neighborhood */
 class Neighborhood
 {
 public:
     using NodeMap = std::map<NodeId, std::shared_ptr<Node>>;
-
-    using new_node_callback_t = std::function<void(const std::shared_ptr<Node>&)>;
 
     Neighborhood() = delete;
 
@@ -31,7 +62,7 @@ public:
                  NodeId this_node_id)
       : me(std::make_shared<Node>(this_node_id))
       , tuntap_(tuntap)
-      , nodes_({ {this_node_id, me} })
+      , neighbors_({ {this_node_id, me} })
     {
     }
 
@@ -46,92 +77,128 @@ public:
     /** @brief This node */
     const std::shared_ptr<Node> me;
 
-    /** @brief Return true if node is in the network, false otherwise */
-    bool contains(NodeId node_id)
-    {
-        std::lock_guard<std::mutex> lock(nodes_mutex_);
+    /** @brief Get the node that is the time master */
+    std::optional<NodeId> getTimeMaster(void) const;
 
-        return nodes_.find(node_id) != nodes_.end();
+    /** @brief Return true if node is in the neighborhood, false otherwise */
+    bool contains(NodeId node_id) const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        return neighbors_.find(node_id) != neighbors_.end();
     }
 
-    /** @brief Get nodes */
-    /** @return A copy of the current node map. */
-    NodeMap getNodes(void)
+    /** @brief Get one-hop neighbors */
+    /** @return The current one-hop neighbors. */
+    NodeMap getNeighbors(void) const
     {
-        std::lock_guard<std::mutex> lock(nodes_mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
-        return nodes_;
-    }
-
-    /** @brief Get the entry for a particular node in the network */
-    std::shared_ptr<Node> getNode(NodeId node_id)
-    {
-        std::shared_ptr<Node> node;
-
-        {
-            std::lock_guard<std::mutex> lock(nodes_mutex_);
-            const auto&                 [it, created] = nodes_.try_emplace(node_id, nullptr);
-
-            // If the entry is new, construct the shared_ptr. We pass nullptr above
-            // to avoid creating a shared_ptr even if the entry already exists.
-            if (created) {
-                node = std::make_shared<Node>(node_id);
-                it->second = node;
-
-                // Add ARP entry
-                if (node_id != me->id)
-                    tuntap_->addARPEntry(node_id);
-            } else
-                return it->second;
-        }
-
-        // We only reach this point if the node was created. We go through this
-        // rigamarole so that we call new_node_callback_ without holding the
-        // nodes_mutex_ mutex.
-        assert(node);
-
-        if (new_node_callback_)
-            new_node_callback_(node);
-
-        return node;
+        return neighbors_;
     }
 
     /** @brief Get the entry for a particular node in the network */
-    Node& operator[](NodeId node_id)
+    const std::shared_ptr<Node> &operator[](NodeId node_id) const
     {
-        return *getNode(node_id);
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        return neighbors_.at(node_id);
     }
 
-    /** @brief Apply a function to each node */
-    void foreach(std::function<void(Node&)> f)
+    /** @brief Apply a function to each neighbor */
+    template <typename F>
+    void foreach(F&& f)
     {
-        std::lock_guard<std::mutex> lock(nodes_mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
-        for (auto it = nodes_.begin(); it != nodes_.end(); ++it)
+        for (auto it = neighbors_.begin(); it != neighbors_.end(); ++it)
             f(*(it->second));
     }
 
-    /** @brief Get the node that is the time master */
-    std::optional<NodeId> getTimeMaster(void);
-
-    /** @brief Set new node callback */
-    void setNewNodeCallback(const new_node_callback_t &cb)
+    /** @brief Apply a function to each neighbor */
+    template <typename F>
+    void foreach(F&& f) const
     {
-        new_node_callback_ = cb;
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        for (auto it = neighbors_.begin(); it != neighbors_.end(); ++it)
+            f(*(it->second));
+    }
+
+    /** @brief Add a one-hop neighbor
+     * @param node_id The node id of the neighbor to add
+     * @return The new neighbor node.
+     */
+    std::shared_ptr<Node> addNeighbor(NodeId node_id);
+
+    /** @brief Add a one-hop neighbor
+     * @param node The neighbor node
+     */
+    void addNeighbor(const std::shared_ptr<Node> &node);
+
+    /** @brief Remove a one-hop neighbor
+     * @param node_id The node id of the neighbor to remove
+     */
+    void removeNeighbor(NodeId node_id);
+
+    /** @brief Add a gateway
+     * @param node The gateway node
+     */
+    void addGateway(const std::shared_ptr<Node> &node);
+
+    /** @brief Add a listener
+     * @param listener The listener to add
+     */
+    void addListener(const std::shared_ptr<NeighborhoodListener> &listener)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        listeners_.insert(listener);
+    }
+
+    /** @brief Remove a listener
+     * @param listener The listener to remove
+     */
+    void removeListener(const std::shared_ptr<NeighborhoodListener> &listener)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto                        it = listeners_.find(listener);
+
+        if (it != listeners_.end())
+            listeners_.erase(it);
     }
 
 private:
     /** @brief Our tun/tap interface */
     std::shared_ptr<TunTap> tuntap_;
 
-    /** @brief New node callback */
-    new_node_callback_t new_node_callback_;
+    /** @brief Mutex protecting the neighborhood */
+    mutable std::mutex mutex_;
 
-    /** @brief Mutex protecting nodes in the network */
-    std::mutex nodes_mutex_;
+    /** @brief The one-hop neighbors */
+    NodeMap neighbors_;
 
-    /** @brief The nodes in the network */
-    NodeMap nodes_;
+    /** @brief Listeners */
+    std::set<std::shared_ptr<NeighborhoodListener>> listeners_;
+
+    /** @brief Apply a notification function to each listener */
+    template <typename F>
+    void notify(F&& f) const
+    {
+        std::set<std::shared_ptr<NeighborhoodListener>> listeners;
+
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            listeners = listeners_;
+        }
+
+        work_queue.submit([listeners=std::move(listeners), f]()
+                          {
+                              for (auto&& it : listeners)
+                                  f(*it);
+                          });
+    }
 };
 
 #endif /* NEIGHBORHOOD_HH_ */

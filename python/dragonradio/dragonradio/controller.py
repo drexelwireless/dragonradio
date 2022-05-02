@@ -114,13 +114,14 @@ class Voxel:
 
 @handler(remote.Request)
 @handler(internal.Message)
-class Controller(CILServer):
+class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     """High-level radio controller.
 
     This class implements all high-level control necessary for the Colosseum.
     """
     def __init__(self, config):
-        super().__init__()
+        CILServer.__init__(self)
+        dragonradio.radio.NeighborhoodListener.__init__(self)
 
         self.config = config
         """Our Config"""
@@ -218,6 +219,13 @@ class Controller(CILServer):
         # Provide default start time
         self.scenario_start_time = math.floor(time.time())
 
+    def __del__(self):
+        try:
+            if self.radio is not None:
+                self.radio.nhood.removeListener(self)
+        except:
+            logger.exception("Could not remove controller as neighborhood listener")
+
     def timeToMP(self, t, closest=False):
         """Convert time (in seconds since the epoch) to a measurement period"""
         if closest: # pylint: disable=no-else-return
@@ -254,8 +262,8 @@ class Controller(CILServer):
         radio = self.mkRadio(self.config, 'aloha', loop=self.loop)
         self.radio = radio
 
-        # Set new node callback
-        radio.nhood.new_node_callback = self.newNodeCallback
+        # Listen for neighborhood events
+        self.radio.nhood.addListener(self)
 
         # Collect snapshots if requested
         if self.config.snapshot_frequency is not None:
@@ -426,7 +434,7 @@ class Controller(CILServer):
 
                 with await self.radio.lock:
                     # Remove all nodes
-                    for node in self.nodes.values():
+                    for node in self.neighbors.values():
                         await self.removeNode(node)
 
                 # Close the logger
@@ -447,9 +455,8 @@ class Controller(CILServer):
         logger.debug('Terminating')
         await self.stopRadio()
 
-        # Clear new node callback. I don't know if this matters, but I want to
-        # be sure we don't retain a reference to a Python object.
-        self.radio.nhood.new_node_callback = None
+        # Stop listening for neighborhood events
+        self.radio.nhood.removeListener(self)
 
         # Stop remote server
         logger.debug('Stopping remote protocol server')
@@ -530,12 +537,18 @@ class Controller(CILServer):
         return self.this_node.is_gateway
 
     @property
-    def nodes(self):
+    def neighbors(self):
         """Return known nodes"""
-        return self.radio.nhood.nodes
+        return self.radio.nhood.neighbors
 
-    def newNodeCallback(self, node):
+    def neighborAdded(self, node : dragonradio.radio.Node):
         self.createTask(self.addNode(node), f"Add node {node.id:}")
+
+    def neighborRemoved(self, node : dragonradio.radio.Node):
+        pass
+
+    def gatewayAdded(self, node : dragonradio.radio.Node):
+        self.createTask(self.addGateway(node), f"Add gateway {node.id:}")
 
     async def addNode(self, node):
         """Add a node"""
@@ -552,14 +565,12 @@ class Controller(CILServer):
                                                        loop=self.loop)
 
         # If we are the gateway, connect an internal protocol client to the
-        # new node's server
+        # new node's server and update the schedule
         if self.is_gateway:
             internal_client = InternalProtoClient(server_host=internalNodeIP(node.id),
                                                   loop=self.loop)
             self.node_internal_clients[node.id] = internal_client
 
-        # If we are the gateway, update the schedule
-        if self.is_gateway:
             self.tdma_reschedule.set()
 
     async def removeNode(self, node):
@@ -569,6 +580,14 @@ class Controller(CILServer):
         if self.has_traffic_iface:
             if node.id != self.this_node.id:
                 self.removeNodeRoute(node)
+
+    async def addGateway(self, node):
+        """Add a gateway"""
+        logger.info('Adding gateway %d', node.id)
+
+        # Connect to new gateway and start sending status updates
+        self.internal_client = InternalProtoClient(server_host=internalNodeIP(node.id),
+                                                   loop=self.loop)
 
     def addNodeRoute(self, node):
         dst = darpaNodeNet(node.id)
@@ -613,7 +632,7 @@ class Controller(CILServer):
         logger.info('IP links:\n%s', stdout.decode('utf-8'))
 
         # Log routes
-        for node_id in self.nodes:
+        for node_id in self.neighbors:
             for octet in [1]:
                 ip = darpaNodeIP(node_id, octet)
 
@@ -654,13 +673,13 @@ class Controller(CILServer):
                     radio.deleteMAC()
                     radio.configureTDMA(nslots)
 
-                # Make sure the RadioNet is aware of all nodes in the schedule
+                # Make sure the Neighborhood is aware of all nodes in the schedule
                 nodes_with_slot = set(sched.flatten())
                 if 0 in nodes_with_slot:
                     nodes_with_slot.remove(0)
 
                 for node_id in nodes_with_slot:
-                    self.radio.nhood.addNode(node_id)
+                    self.radio.nhood.addNeighbor(node_id)
 
                 radio.installMACSchedule(sched, fdma_mac=(self.config.mac == 'fdma'))
                 self.schedule = sched
@@ -701,7 +720,7 @@ class Controller(CILServer):
         voxels = []
 
         for chan in radio.channels:
-            transmitters = set(self.nodes)
+            transmitters = set(self.neighbors)
 
             f_start = radio.frequency + chan.fc - chan.bw/2
             f_end = radio.frequency + chan.fc + chan.bw/2
@@ -1141,7 +1160,7 @@ class Controller(CILServer):
                 logger.debug('Creating schedule')
 
                 # Get all nodes we know about
-                self.schedule_nodes = list(self.nodes.keys())
+                self.schedule_nodes = list(self.neighbors.keys())
                 self.schedule_nodes.sort()
 
                 # Make sure we are first in the list so we always get the same
@@ -1459,8 +1478,8 @@ class Controller(CILServer):
         node_id = msg.status.radio_id
 
         # Update node location
-        if node_id in self.nodes:
-            n = self.nodes[node_id]
+        if node_id in self.neighbors:
+            n = self.neighbors[node_id]
             loc = msg.status.loc
 
             n.loc.lat = loc.location.latitude

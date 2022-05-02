@@ -7,7 +7,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
 {
     if (net_in.pull(pkt)) {
         if (!pkt->internal_flags.assigned_seq) {
-            Node &nexthop = (*nhood_)[pkt->hdr.nexthop];
+            Node &nexthop = *nhood_->addNeighbor(pkt->hdr.nexthop);
 
             {
                 std::lock_guard<std::mutex> lock(seqs_mutex_);

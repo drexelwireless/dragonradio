@@ -54,13 +54,13 @@ struct SendWindow {
 
     using vector_type = std::vector<Entry>;
 
-    SendWindow(Node &n,
+    SendWindow(std::shared_ptr<Node> n,
                SmartController &controller,
                Seq::uint_type maxwin,
                std::chrono::duration<double> retransmission_delay_);
 
     /** @brief Destination node. */
-    Node &node;
+    const std::shared_ptr<Node> node;
 
     /** @brief Our controller. */
     SmartController &controller;
@@ -201,8 +201,8 @@ struct SendWindow {
         Entry(SendWindow &sendw)
           : sendw(sendw)
           , pkt(nullptr)
-         {
-         };
+        {
+        };
 
         virtual ~Entry() = default;
 
@@ -278,13 +278,13 @@ struct RecvWindow  {
 
     using vector_type = std::vector<Entry>;
 
-    RecvWindow(Node &n,
+    RecvWindow(std::shared_ptr<Node> n,
                SmartController &controller,
                Seq::uint_type win,
                size_t nak_win);
 
     /** @brief Sender node. */
-    Node &node;
+    const std::shared_ptr<Node> node;
 
     /** @brief Our controller. */
     SmartController &controller;
@@ -1179,7 +1179,7 @@ protected:
     void startSACKTimer(RecvWindow &recvw);
 
     /** @brief Handle HELLO and ping control messages. */
-    void handleCtrlHelloAndPing(RadioPacket &pkt, Node &node);
+    void handleCtrlHelloAndPing(RadioPacket &pkt, const std::shared_ptr<Node> &node);
 
     /** @brief Handle timestamp control messages. */
     void handleCtrlTimestamp(RadioPacket &pkt, Node &node);
