@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SMARTCONTROLLER_H_
@@ -10,6 +10,8 @@
 #include <list>
 #include <map>
 #include <random>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "heap.hh"
 #include "Clock.hh"

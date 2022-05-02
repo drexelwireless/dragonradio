@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef RADIONET_HH_
@@ -9,8 +9,6 @@
 #include <functional>
 #include <map>
 #include <mutex>
-#include <unordered_map>
-#include <unordered_set>
 #include <optional>
 #include <queue>
 #include <thread>
@@ -36,15 +34,6 @@ struct GPSLocation {
     /** @brief Timestamp of last update */
     double timestamp;
 };
-
-/** @brief Map from timestamp sequence number to timestamp. */
-using timestamp_map = std::unordered_map<TimestampSeq, MonoClock::time_point>;
-
-/** @brief Map from timestamp sequence number to pair of sent, received timestamps. */
-using timestamps_map = std::unordered_map<TimestampSeq, std::pair<MonoClock::time_point, MonoClock::time_point>>;
-
-/** @brief Vector of pairs of timestamps. */
-using timestampseq_set = std::unordered_set<TimestampSeq>;
 
 struct Node {
     explicit Node(NodeId id)
