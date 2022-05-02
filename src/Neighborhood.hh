@@ -29,10 +29,9 @@ public:
 
     Neighborhood(std::shared_ptr<TunTap> tuntap,
                  NodeId this_node_id)
-      : tuntap_(tuntap)
-      , this_node_id_(this_node_id)
-      , this_node_(std::make_shared<Node>(this_node_id))
-      , nodes_({ {this_node_id_, this_node_} })
+      : me(std::make_shared<Node>(this_node_id))
+      , tuntap_(tuntap)
+      , nodes_({ {this_node_id, me} })
     {
     }
 
@@ -44,17 +43,8 @@ public:
     Neighborhood& operator=(const Neighborhood&) = delete;
     Neighborhood& operator=(Neighborhood&&) = delete;
 
-    /** @brief Get this node's ID */
-    inline NodeId getThisNodeId(void) const
-    {
-        return this_node_id_;
-    }
-
-    /** @brief Get the entry for this node */
-    inline Node& getThisNode(void)
-    {
-        return *this_node_;
-    }
+    /** @brief This node */
+    const std::shared_ptr<Node> me;
 
     /** @brief Return true if node is in the network, false otherwise */
     bool contains(NodeId node_id)
@@ -89,7 +79,7 @@ public:
                 it->second = node;
 
                 // Add ARP entry
-                if (node_id != this_node_id_)
+                if (node_id != me->id)
                     tuntap_->addARPEntry(node_id);
             } else
                 return it->second;
@@ -133,12 +123,6 @@ public:
 private:
     /** @brief Our tun/tap interface */
     std::shared_ptr<TunTap> tuntap_;
-
-    /** @brief This node's ID */
-    const NodeId this_node_id_;
-
-    /** @brief This node */
-    std::shared_ptr<Node> this_node_;
 
     /** @brief New node callback */
     new_node_callback_t new_node_callback_;

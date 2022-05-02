@@ -14,11 +14,8 @@ void exportNeighborhood(py::module &m)
     py::class_<Neighborhood, std::shared_ptr<Neighborhood>>(m, "Neighborhood")
         .def(py::init<std::shared_ptr<TunTap>,
                       NodeId>())
-        .def_property_readonly("this_node_id",
-            &Neighborhood::getThisNodeId)
-        .def_property_readonly("this_node",
-            &Neighborhood::getThisNode,
-            py::return_value_policy::reference_internal)
+        .def_readonly("me",
+            &Neighborhood::me)
         .def_property_readonly("nodes",
             &Neighborhood::getNodes,
             "Nodes in the network")

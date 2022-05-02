@@ -522,7 +522,7 @@ class Controller(CILServer):
     @property
     def this_node(self):
         """Return the current node"""
-        return self.radio.nhood.this_node
+        return self.radio.nhood.me
 
     @property
     def is_gateway(self):
