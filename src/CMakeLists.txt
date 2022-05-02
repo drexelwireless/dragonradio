@@ -61,6 +61,7 @@ add_library(DragonRadio
   python/Modem.cc
   python/NCO.cc
   python/Net.cc
+  python/Node.cc
   python/PHY.cc
   python/Packet.cc
   python/Radio.cc
