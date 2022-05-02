@@ -19,7 +19,6 @@
 #include <functional>
 
 #include "logging.hh"
-#include "RadioNet.hh"
 #include "net/TunTap.hh"
 #include "util/capabilities.hh"
 #include "util/net.hh"

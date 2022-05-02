@@ -6,7 +6,6 @@
 
 #include <vector>
 
-#include "RadioNet.hh"
 #include "Radio.hh"
 #include "phy/Channelizer.hh"
 #include "phy/Synthesizer.hh"

@@ -11,6 +11,7 @@
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
+#include "Node.hh"
 #include "RadioNet.hh"
 #include "net/Element.hh"
 #include "net/Queue.hh"

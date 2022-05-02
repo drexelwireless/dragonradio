@@ -8,7 +8,8 @@
 #include <optional>
 #include <unordered_map>
 
-#include "RadioNet.hh"
+#include "Node.hh"
+#include "Packet.hh"
 
 using namespace std::chrono_literals;
 
