@@ -1,8 +1,8 @@
 // Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#ifndef RADIONET_HH_
-#define RADIONET_HH_
+#ifndef NEIGHBORHOOD_HH_
+#define NEIGHBORHOOD_HH_
 
 #include <math.h>
 
@@ -18,17 +18,17 @@
 #include "Packet.hh"
 #include "net/TunTap.hh"
 
-class RadioNet
+class Neighborhood
 {
 public:
     using NodeMap = std::map<NodeId, std::shared_ptr<Node>>;
 
     using new_node_callback_t = std::function<void(const std::shared_ptr<Node>&)>;
 
-    RadioNet() = delete;
+    Neighborhood() = delete;
 
-    RadioNet(std::shared_ptr<TunTap> tuntap,
-             NodeId this_node_id)
+    Neighborhood(std::shared_ptr<TunTap> tuntap,
+                 NodeId this_node_id)
       : tuntap_(tuntap)
       , this_node_id_(this_node_id)
       , this_node_(std::make_shared<Node>(this_node_id))
@@ -36,13 +36,13 @@ public:
     {
     }
 
-    ~RadioNet() = default;
+    ~Neighborhood() = default;
 
-    RadioNet(const RadioNet&) = delete;
-    RadioNet(RadioNet&&) = delete;
+    Neighborhood(const Neighborhood&) = delete;
+    Neighborhood(Neighborhood&&) = delete;
 
-    RadioNet& operator=(const RadioNet&) = delete;
-    RadioNet& operator=(RadioNet&&) = delete;
+    Neighborhood& operator=(const Neighborhood&) = delete;
+    Neighborhood& operator=(Neighborhood&&) = delete;
 
     /** @brief Get this node's ID */
     inline NodeId getThisNodeId(void) const
@@ -150,4 +150,4 @@ private:
     NodeMap nodes_;
 };
 
-#endif /* RADIONET_HH_ */
+#endif /* NEIGHBORHOOD_HH_ */

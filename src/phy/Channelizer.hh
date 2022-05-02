@@ -5,7 +5,7 @@
 #define CHANNELIZER_H_
 
 #include "IQBuffer.hh"
-#include "RadioNet.hh"
+#include "Neighborhood.hh"
 #include "phy/Channel.hh"
 #include "phy/PHY.hh"
 

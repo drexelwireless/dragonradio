@@ -149,7 +149,7 @@ class Radio(dragonradio.tasks.TaskManager):
         # Add radio nodes to the network if number of nodes was specified
         if self.config.num_nodes is not None:
             for i in range(0, self.config.num_nodes):
-                self.radionet.addNode(i+1)
+                self.nhood.addNode(i+1)
 
         # Configure the MAC
         self.configureMAC(self.config.mac)
@@ -320,7 +320,7 @@ class Radio(dragonradio.tasks.TaskManager):
                              config.mtu,
                              self.node_id)
 
-        self.radionet = RadioNet(self.tuntap, self.node_id)
+        self.nhood = Neighborhood(self.tuntap, self.node_id)
 
         # Configure the controller
         self.controller = self.mkController()
@@ -359,7 +359,7 @@ class Radio(dragonradio.tasks.TaskManager):
         #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall ->
         #       PacketCompressor.net -> NetQueue -> controller -> synthesizer
         #
-        self.netfilter = NetFilter(self.radionet,
+        self.netfilter = NetFilter(self.nhood,
                                    int(int_net.network_address),
                                    int(int_net.netmask),
                                    int(int_net.broadcast_address),
@@ -480,7 +480,7 @@ class Radio(dragonradio.tasks.TaskManager):
             raise ValueError('AMC requires ARQ')
 
         if config.arq:
-            controller = SmartController(self.radionet,
+            controller = SmartController(self.nhood,
                                          # Add MCU to MTU
                                          config.mtu + config.arq_mcu,
                                          self.phy,
@@ -530,7 +530,7 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.mcsidx_prob_floor = config.amc_mcsidx_prob_floor
 
         else:
-            controller = DummyController(self.radionet, config.mtu)
+            controller = DummyController(self.nhood, config.mtu)
 
         return controller
 
@@ -1028,7 +1028,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.mac.slotidx = 0
 
         # All nodes can transmit
-        for node_id in self.radionet.nodes.keys():
+        for node_id in self.nhood.nodes.keys():
             self.controller.setEmcon(node_id, False)
 
         if self.config.tx_upsample:
@@ -1069,7 +1069,7 @@ class Radio(dragonradio.tasks.TaskManager):
         if 0 in nodes_with_slot:
             nodes_with_slot.remove(0)
 
-        for node_id in self.radionet.nodes.keys():
+        for node_id in self.nhood.nodes.keys():
             self.controller.setEmcon(node_id, node_id not in nodes_with_slot)
 
         # If we are upsampling on TX, go ahead and install the schedule
@@ -1094,7 +1094,7 @@ class Radio(dragonradio.tasks.TaskManager):
     def configureSimpleMACSchedule(self, fdma_mac=False):
         """Set a simple static schedule."""
         nchannels = len(self.channels)
-        nodes = sorted(list(self.radionet.nodes))
+        nodes = sorted(list(self.nhood.nodes))
 
         if nchannels == 1:
             sched = dragonradio.schedule.pureTDMASchedule(nodes)
@@ -1108,10 +1108,10 @@ class Radio(dragonradio.tasks.TaskManager):
 
     def synchronizeClock(self):
         """Use timestamps to synchronize our clock with the time master (the gateway)"""
-        if self.radionet.time_master is None:
+        if self.nhood.time_master is None:
             return
 
-        if self.node_id == self.radionet.time_master:
+        if self.node_id == self.nhood.time_master:
             return
 
         timesync.synchronize(self.config, self)
@@ -1243,7 +1243,7 @@ class Radio(dragonradio.tasks.TaskManager):
     def me_timestamps(self):
         """Timestamps for this node"""
         if isinstance(self.controller, SmartController):
-            me = self.radionet.this_node
+            me = self.nhood.this_node
             if me.id in self.controller.timestamps:
                 return self.controller.timestamps[me.id].values()
             else:
@@ -1254,8 +1254,8 @@ class Radio(dragonradio.tasks.TaskManager):
     @property
     def master_timestamps(self):
         """Timestamps for time master"""
-        if isinstance(self.controller, SmartController) and self.radionet.time_master is not None:
-            master = self.radionet.nodes[self.radionet.time_master]
+        if isinstance(self.controller, SmartController) and self.nhood.time_master is not None:
+            master = self.nhood.nodes[self.nhood.time_master]
             if master.id in self.controller.timestamps:
                 return self.controller.timestamps[master.id].values()
             else:

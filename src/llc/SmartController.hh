@@ -423,7 +423,7 @@ class SmartController : public Controller
 public:
     using evm_thresh_t = std::optional<float>;
 
-    SmartController(std::shared_ptr<RadioNet> radionet_,
+    SmartController(std::shared_ptr<Neighborhood> nhood_,
                     size_t mtu,
                     std::shared_ptr<PHY> phy,
                     Seq::uint_type max_sendwin,

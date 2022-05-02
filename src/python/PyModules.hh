@@ -76,7 +76,7 @@ void exportNetUtil(py::module &m);
 void exportCIL(py::module &m);
 void exportFlow(py::module &m);
 void exportNode(py::module &m);
-void exportRadioNet(py::module &m);
+void exportNeighborhood(py::module &m);
 void exportHeader(py::module &m);
 void exportPacket(py::module &m);
 void exportModem(py::module &m);
