@@ -5,7 +5,7 @@
 #include <pybind11/chrono.h>
 #include <pybind11/stl.h>
 
-#include "RadioNet.hh"
+#include "Neighborhood.hh"
 #include "net/MandateQueue.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
@@ -189,7 +189,7 @@ void exportNet(py::module &m)
 
     // Export class NetFilter to Python
     py::class_<NetFilter, NetProcessor, std::shared_ptr<NetFilter>>(m, "NetFilter")
-        .def(py::init<std::shared_ptr<RadioNet>,
+        .def(py::init<std::shared_ptr<Neighborhood>,
                       in_addr_t,
                       in_addr_t,
                       in_addr_t,

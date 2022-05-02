@@ -5,34 +5,34 @@
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 
-#include "RadioNet.hh"
+#include "Neighborhood.hh"
 #include "python/PyModules.hh"
 
-void exportRadioNet(py::module &m)
+void exportNeighborhood(py::module &m)
 {
-    // Export class RadioNet to Python
-    py::class_<RadioNet, std::shared_ptr<RadioNet>>(m, "RadioNet")
+    // Export class Neighborhood to Python
+    py::class_<Neighborhood, std::shared_ptr<Neighborhood>>(m, "Neighborhood")
         .def(py::init<std::shared_ptr<TunTap>,
                       NodeId>())
         .def_property_readonly("this_node_id",
-            &RadioNet::getThisNodeId)
+            &Neighborhood::getThisNodeId)
         .def_property_readonly("this_node",
-            &RadioNet::getThisNode,
+            &Neighborhood::getThisNode,
             py::return_value_policy::reference_internal)
         .def_property_readonly("nodes",
-            &RadioNet::getNodes,
+            &Neighborhood::getNodes,
             "Nodes in the network")
         .def_property_readonly("time_master",
-            &RadioNet::getTimeMaster)
+            &Neighborhood::getTimeMaster)
         .def_property("new_node_callback",
             nullptr,
-            &RadioNet::setNewNodeCallback)
+            &Neighborhood::setNewNodeCallback)
         .def("__getitem__",
-            [](RadioNet &self, size_t i) -> Node& { return self[i]; },
+            [](Neighborhood &self, size_t i) -> Node& { return self[i]; },
             py::return_value_policy::reference_internal)
         .def("getNode",
-            [](RadioNet &self, NodeId id) { return self.getNode(id); })
+            [](Neighborhood &self, NodeId id) { return self.getNode(id); })
         .def("addNode",
-            [](RadioNet &self, NodeId id) { return self.getNode(id); })
+            [](Neighborhood &self, NodeId id) { return self.getNode(id); })
         ;
 }

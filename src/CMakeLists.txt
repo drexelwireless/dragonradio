@@ -8,8 +8,8 @@ add_library(DragonRadio
   Logger.cc
   logging.cc
   Math.cc
+  Neighborhood.cc
   Packet.cc
-  RadioNet.cc
   TimerQueue.cc
   USRP.cc
   WorkQueue.cc
@@ -60,12 +60,12 @@ add_library(DragonRadio
   python/MAC.cc
   python/Modem.cc
   python/NCO.cc
+  python/Neighborhood.cc
   python/Net.cc
   python/Node.cc
   python/PHY.cc
   python/Packet.cc
   python/Radio.cc
-  python/RadioNet.cc
   python/Resample.cc
   python/Snapshot.cc
   python/Synthesizer.cc

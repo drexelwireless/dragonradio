@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <sys/types.h>
@@ -10,9 +10,9 @@
 #include <cstring>
 #include <functional>
 
-#include "RadioNet.hh"
+#include "Neighborhood.hh"
 
-std::optional<NodeId> RadioNet::getTimeMaster(void)
+std::optional<NodeId> Neighborhood::getTimeMaster(void)
 {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
     std::optional<NodeId>       master;

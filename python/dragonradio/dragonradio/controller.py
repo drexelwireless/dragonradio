@@ -255,7 +255,7 @@ class Controller(CILServer):
         self.radio = radio
 
         # Set new node callback
-        radio.radionet.new_node_callback = self.newNodeCallback
+        radio.nhood.new_node_callback = self.newNodeCallback
 
         # Collect snapshots if requested
         if self.config.snapshot_frequency is not None:
@@ -449,7 +449,7 @@ class Controller(CILServer):
 
         # Clear new node callback. I don't know if this matters, but I want to
         # be sure we don't retain a reference to a Python object.
-        self.radio.radionet.new_node_callback = None
+        self.radio.nhood.new_node_callback = None
 
         # Stop remote server
         logger.debug('Stopping remote protocol server')
@@ -522,7 +522,7 @@ class Controller(CILServer):
     @property
     def this_node(self):
         """Return the current node"""
-        return self.radio.radionet.this_node
+        return self.radio.nhood.this_node
 
     @property
     def is_gateway(self):
@@ -532,7 +532,7 @@ class Controller(CILServer):
     @property
     def nodes(self):
         """Return known nodes"""
-        return self.radio.radionet.nodes
+        return self.radio.nhood.nodes
 
     def newNodeCallback(self, node):
         self.createTask(self.addNode(node), f"Add node {node.id:}")
@@ -660,7 +660,7 @@ class Controller(CILServer):
                     nodes_with_slot.remove(0)
 
                 for node_id in nodes_with_slot:
-                    self.radio.radionet.addNode(node_id)
+                    self.radio.nhood.addNode(node_id)
 
                 radio.installMACSchedule(sched, fdma_mac=(self.config.mac == 'fdma'))
                 self.schedule = sched
