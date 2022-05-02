@@ -328,7 +328,7 @@ class CILServer(dragonradio.tasks.TaskManager):
                 # Calculate locations
                 locations = []
 
-                for _node_id, n in self.nodes.items():
+                for _node_id, n in self.neighbors.items():
                     if n.loc.timestamp > time.time() - MAX_LOCATION_AGE:
                         info = cil.LocationInfo()
                         info.radio_id = n.id
