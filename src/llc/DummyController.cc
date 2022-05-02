@@ -37,6 +37,6 @@ void DummyController::received(std::shared_ptr<RadioPacket> &&pkt)
     if (pkt->internal_flags.invalid_header || pkt->internal_flags.invalid_payload)
         return;
 
-    if (pkt->ehdr().data_len != 0 && pkt->hdr.nexthop == nhood_->getThisNodeId())
+    if (pkt->ehdr().data_len != 0 && pkt->hdr.nexthop == nhood_->me->id)
         radio_out.push(std::move(pkt));
 }

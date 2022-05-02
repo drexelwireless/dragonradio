@@ -1243,7 +1243,7 @@ class Radio(dragonradio.tasks.TaskManager):
     def me_timestamps(self):
         """Timestamps for this node"""
         if isinstance(self.controller, SmartController):
-            me = self.nhood.this_node
+            me = self.nhood.me
             if me.id in self.controller.timestamps:
                 return self.controller.timestamps[me.id].values()
             else:
