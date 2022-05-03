@@ -225,10 +225,9 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
         pkt->hdr.nexthop != this_node_id)
         return;
 
-    // Get a reference to the sending node. This will add a new node to the
+    // Get the sending node's receive window. This will add the node to the
     // network if it doesn't already exist.
     NodeId     prevhop = pkt->hdr.curhop;
-    Node       &node = (*radionet_)[prevhop];
     RecvWindow &recvw = getRecvWindow(prevhop);
 
     // Activate receive window and send NAK for bad packet
@@ -295,6 +294,8 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
     // Process control info
     if (pkt->hdr.flags.has_control) {
+        Node &node = (*radionet_)[prevhop];
+
         handleCtrlHelloAndPing(*pkt, node);
         handleCtrlTimestamp(*pkt, node);
     }
@@ -343,7 +344,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
 
                 if (pkt->ehdr().ack > sendw.unack) {
                     dprintf("ack: node=%u; seq=[%u,%u)",
-                        (unsigned) node.id,
+                        (unsigned) prevhop,
                         (unsigned) sendw.unack,
                         (unsigned) pkt->ehdr().ack);
 
@@ -393,7 +394,7 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
                             logger->logRetransmissionNAK(pkt->timestamp, sendw.node.id, *nak);
 
                         dprintf("txFailure nak of retransmission: node=%u; seq=%u; mcsidx=%u",
-                            (unsigned) node.id,
+                            (unsigned) prevhop,
                             (unsigned) *nak,
                             (unsigned) entry.pkt->mcsidx);
                     }
