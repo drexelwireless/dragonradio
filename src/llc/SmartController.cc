@@ -283,9 +283,10 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             // if it has seen its SYN packet ACK'ed.
             if ((pkt->hdr.nexthop == this_node_id) &&
                 (!recvw.active || pkt->hdr.flags.syn || !recvw.contains(pkt->hdr.seq))) {
-                // This is a new connection, so cancel selective ACK timer for the
-                // old receive window
-                timer_queue_.cancel(recvw);
+                // This is a new connection, so cancel selective ACK timer for
+                // the old receive window
+                timer_queue_.cancel(recvw.sack_timer);
+                timer_queue_.cancel(recvw.ack_timer);
 
                 // Reset the receive window
                 recvw.reset(pkt->hdr.seq);
@@ -570,7 +571,8 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
             RecvWindow                  &recvw = getRecvWindow(pkt.hdr.nexthop);
             std::lock_guard<std::mutex> lock(recvw.mutex);
 
-            timer_queue_.cancel(recvw);
+            timer_queue_.cancel(recvw.sack_timer);
+            timer_queue_.cancel(recvw.ack_timer);
         }
 
         // Record timestamp at which we received this timestamp sequence number
@@ -1069,13 +1071,12 @@ void SmartController::startRetransmissionTimer(SendWindow::Entry &entry)
 void SmartController::startSACKTimer(RecvWindow &recvw)
 {
     // Start the selective ACK timer if it is not already running.
-    if (!timer_queue_.running(recvw)) {
+    if (!timer_queue_.running(recvw.sack_timer)) {
         dprintf("starting SACK timer: node=%u",
             (unsigned) recvw.node.id);
 
         recvw.need_selective_ack = false;
-        recvw.timer_for_ack = false;
-        timer_queue_.run_in(recvw, sack_delay_);
+        timer_queue_.run_in(recvw.sack_timer, sack_delay_);
     }
 }
 
@@ -2045,7 +2046,8 @@ RecvWindow::RecvWindow(Node &n,
     , max({0})
     , win(win)
     , need_selective_ack(false)
-    , timer_for_ack(false)
+    , ack_timer([this]() { this->ack_timeout(); })
+    , sack_timer([this]() { this->sack_timeout(); })
     , explicit_nak_win(nak_win)
     , explicit_nak_idx(0)
     , entries_(win)
@@ -2063,7 +2065,6 @@ void RecvWindow::reset(Seq seq)
     ack = seq;
     max = seq - 1;
     need_selective_ack = false;
-    timer_for_ack = false;
 
     auto nak_win = explicit_nak_win.size();
 
@@ -2075,19 +2076,21 @@ void RecvWindow::reset(Seq seq)
     entries_.resize(win);
 }
 
-void RecvWindow::operator()()
+void RecvWindow::ack_timeout(void)
 {
     std::lock_guard<std::mutex> lock(this->mutex);
 
-    if (timer_for_ack) {
-        controller.ack(*this);
-    } else {
-        need_selective_ack = true;
-        timer_for_ack = true;
+    controller.ack(*this);
+}
 
-        dprintf("starting full ACK timer: node=%u",
-            (unsigned) node.id);
-        controller.timer_queue_.run_in(*this,
-            controller.ack_delay_ - controller.sack_delay_);
-    }
+void RecvWindow::sack_timeout(void)
+{
+    std::lock_guard<std::mutex> lock(this->mutex);
+
+    need_selective_ack = true;
+
+    dprintf("starting full ACK timer: node=%u",
+        (unsigned) node.id);
+    controller.timer_queue_.run_in(this->ack_timer,
+        controller.ack_delay_ - controller.sack_delay_);
 }
