@@ -1390,30 +1390,34 @@ std::optional<Seq> SmartController::handleNAK(RadioPacket &pkt,
         switch (it->type) {
             case ControlMsg::Type::kNak:
             {
-                SendWindow::Entry &entry = sendw[it->nak];
+                Seq nak;
+
+                memcpy(&nak, &it->nak, sizeof(Seq));
+
+                SendWindow::Entry &entry = sendw[nak];
 
                 // If this packet is outside our send window, ignore the NAK.
-                if (it->nak < sendw.unack || it->nak >= sendw.unack + sendw.win || !entry.pkt) {
+                if (nak < sendw.unack || nak >= sendw.unack + sendw.win || !entry.pkt) {
                     logARQ(LOGDEBUG, "nak for packet outside send window: node=%u; seq=%u; unack=%u; end=%u",
                         (unsigned) sendw.node.id,
-                        (unsigned) it->nak,
+                        (unsigned) nak,
                         (unsigned) sendw.unack,
                         (unsigned) sendw.unack + sendw.win);
                 // If this packet has already been ACK'ed, ignore the NAK.
                 } else if (!entry.pkt) {
                     logARQ(LOGDEBUG, "nak for already ACK'ed packet: node=%u; seq=%u",
                         (unsigned) sendw.node.id,
-                        (unsigned) it->nak);
+                        (unsigned) nak);
                 } else {
                     // Log the NAK
                     dprintf("nak: node=%u; seq=%u",
                         (unsigned) sendw.node.id,
-                        (unsigned) it->nak);
+                        (unsigned) nak);
 
                     if (logger)
-                        logger->logNAK(pkt.timestamp, sendw.node.id, it->nak);
+                        logger->logNAK(pkt.timestamp, sendw.node.id, nak);
 
-                    result = it->nak;
+                    result = nak;
                 }
             }
             break;
@@ -1438,6 +1442,12 @@ void SmartController::handleSelectiveACK(const std::shared_ptr<RadioPacket> &pkt
         switch (it->type) {
             case ControlMsg::Type::kSelectiveAck:
             {
+                Seq ack_begin;
+                Seq ack_end;
+
+                memcpy(&ack_begin, &it->ack.begin, sizeof(Seq));
+                memcpy(&ack_end, &it->ack.end, sizeof(Seq));
+
                 // Handle first selective ACK
                 if (!sawACKRun) {
                     dprintf("selective ack: node=%u; per_end=%u",
@@ -1446,12 +1456,12 @@ void SmartController::handleSelectiveACK(const std::shared_ptr<RadioPacket> &pkt
 
                     // If the selective ACK is from before our send window, send
                     // a set unack control message
-                    if (it->ack.begin < sendw.unack) {
+                    if (ack_begin < sendw.unack) {
                         logARQ(LOGDEBUG, "send set unack: node=%u; per_end=%u; ack=%u, ack_begin=%u; unack=%u",
                             (unsigned) node.id,
                             (unsigned) sendw.per_end,
                             (unsigned) pkt->ehdr().ack,
-                            (unsigned) it->ack.begin,
+                            (unsigned) ack_begin,
                             (unsigned) sendw.unack);
 
                         sendw.send_set_unack = true;
@@ -1460,13 +1470,13 @@ void SmartController::handleSelectiveACK(const std::shared_ptr<RadioPacket> &pkt
 
                 // Record the gap between the last packet in the previous ACK
                 // run and the first packet in this ACK run as failures.
-                if (nextSeq < it->ack.begin) {
+                if (nextSeq < ack_begin) {
                     dprintf("selective nak: node=%u; seq=[%u,%u)",
                         (unsigned) node.id,
                         (unsigned) nextSeq,
-                        (unsigned) it->ack.begin);
+                        (unsigned) ack_begin);
 
-                    for (Seq seq = nextSeq; seq < it->ack.begin; ++seq) {
+                    for (Seq seq = nextSeq; seq < ack_begin; ++seq) {
                         if (seq >= sendw.per_end) {
                             if (sendw[seq].pending()) {
                                 if (sendw[seq].timestamp < tfeedback) {
@@ -1497,10 +1507,10 @@ void SmartController::handleSelectiveACK(const std::shared_ptr<RadioPacket> &pkt
 
                 dprintf("selective ack: node=%u; seq=[%u,%u)",
                     (unsigned) node.id,
-                    (unsigned) it->ack.begin,
-                    (unsigned) it->ack.end);
+                    (unsigned) ack_begin,
+                    (unsigned) ack_end);
 
-                for (Seq seq = it->ack.begin; seq < it->ack.end; ++seq) {
+                for (Seq seq = ack_begin; seq < ack_end; ++seq) {
                     // Handle the ACK
                     if (seq >= sendw.unack)
                         handleACK(sendw, seq);
@@ -1517,7 +1527,7 @@ void SmartController::handleSelectiveACK(const std::shared_ptr<RadioPacket> &pkt
 
                 // We've now handled at least one ACK run
                 sawACKRun = true;
-                nextSeq = it->ack.end;
+                nextSeq = ack_end;
             }
             break;
 
@@ -1537,7 +1547,9 @@ void SmartController::handleSetUnack(RadioPacket &pkt, RecvWindow &recvw)
         switch (it->type) {
             case ControlMsg::Type::kSetUnack:
             {
-                Seq next_ack = it->unack.unack;
+                Seq next_ack;
+
+                memcpy(&next_ack, &it->unack.unack, sizeof(Seq));
 
                 logARQ(LOGDEBUG, "set unack: node=%u; cur_ack=%u; unack=%u",
                     (unsigned) recvw.node.id,
