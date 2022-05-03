@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <chrono>
@@ -22,7 +22,7 @@ public:
 
         virtual void operator()() = 0;
 
-        bool operator <(const Timer& other) const
+        bool operator <(const Timer &other) const
         {
             return deadline < other.deadline;
         }
@@ -44,16 +44,16 @@ public:
     TimerQueue& operator=(TimerQueue&&) = delete;
 
     /** @brief Run a timer after a delta */
-    void run_in(Timer& t, const time_type::duration& delta)
+    void run_in(Timer &t, const time_type::duration &delta)
     {
         run_at(t, MonoClock::now() + delta);
     }
 
     /** @brief Run a timer at a specific time */
-    void run_at(Timer& t, const time_type &when);
+    void run_at(Timer &t, const time_type &when);
 
     /** @brief Return true if a timer is running */
-    bool running(const Timer& t)
+    bool running(const Timer &t)
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -61,7 +61,7 @@ public:
     }
 
     /** @brief Cancel a timer */
-    void cancel(Timer& t)
+    void cancel(Timer &t)
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -70,7 +70,7 @@ public:
     }
 
     /** @brief Update a timer whose deadline has changed */
-    void update(Timer& t);
+    void update(Timer &t);
 
     /** @brief Execute timer events. */
     void run(void);
