@@ -18,14 +18,20 @@ public:
 
     struct Timer : public heap<Timer>::element
     {
-        time_type deadline;
+        Timer() = default;
+        virtual ~Timer() = default;
 
+        /** @brief Timer action */
         virtual void operator()() = 0;
 
+        /** @brief Compare timers according to deadline */
         bool operator <(const Timer &other) const
         {
             return deadline < other.deadline;
         }
+
+        /** @brief Timer deadline */
+        time_type deadline;
     };
 
     TimerQueue() : done_(true)
@@ -96,4 +102,25 @@ private:
 
     /** @brief Timer worker. */
     void timer_worker(void);
+};
+
+template<class T>
+class TimerCallback : public TimerQueue::Timer
+{
+public:
+    TimerCallback(T &&callback)
+      : callback_(callback)
+    {
+    }
+
+    TimerCallback() = delete;
+
+    void operator()() override final
+    {
+        callback_();
+    }
+
+protected:
+    /** @brief Timer callback */
+    T callback_;
 };
