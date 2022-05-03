@@ -88,7 +88,7 @@ private:
     /** @brief Event queue. */
     heap<Timer> timer_queue_;
 
-    /** @brief Flag indicating we are done prcoessing timers. */
+    /** @brief Flag indicating we are done processing timers. */
     bool done_;
 
     /** @brief Thread that runs the timer worker. */
