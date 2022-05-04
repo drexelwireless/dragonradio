@@ -9,7 +9,7 @@
 using namespace std::literals::chrono_literals;
 
 /** @brief Measurement period */
-constexpr std::chrono::duration<double> kMP(1s);
+constexpr std::chrono::duration<double> kMP = 1s;
 
 /** @brief Fraction of file transfer that must be transferred for success */
 const double kFTSuccessMandate = 0.9;
