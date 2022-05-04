@@ -19,7 +19,7 @@ import sys
 # -- Project information -----------------------------------------------------
 
 project = 'DragonRadio'
-copyright = '2018-2021, Drexel University'
+copyright = '2018-2023, Drexel University'
 author = 'Geoffrey Mainland'
 
 # The short X.Y version
