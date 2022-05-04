@@ -271,6 +271,9 @@ private:
     /** @brief Unacknowledged packets in our send window. */
     /** INVARIANT: unack <= N <= max < unack + win */
     vector_type entries_;
+
+    /** @brief Unreachable timer */
+    TimerCallback<std::function<void(void)>> unreachable_timer_;
 };
 
 struct RecvWindow  {
@@ -650,6 +653,40 @@ public:
     void setUnreachableTimeout(std::optional<std::chrono::duration<double>> t)
     {
         unreachable_timeout_ = t;
+    }
+
+    /** @brief Decide whether a node is unreachable
+     * @param last_heard The time at which the node was last heard
+     * @return true if the node is unreachable, false otherwise
+     */
+    bool unreachableTimeout(const MonoClock::time_point &last_heard)
+    {
+        return unreachable_timeout_ &&
+               (MonoClock::now() - last_heard) > *unreachable_timeout_;
+    }
+
+    /** @brief Get flag indicating whether to proactively test for unreachable nodes. */
+    bool getProactiveUnreachable(void) const
+    {
+        return proactive_unreachable_;
+    }
+
+    /** @brief Set flag indicating whether to proactively test unreachable nodes. */
+    void setProactiveUnreachable(bool proactive_unreachable)
+    {
+        proactive_unreachable_ = proactive_unreachable;
+    }
+
+    /** @brief Get flag indicating whether to purge unreachable nodes. */
+    bool getPurgeUnreachable(void) const
+    {
+        return purge_unreachable_;
+    }
+
+    /** @brief Set flag indicating whether to purge unreachable nodes. */
+    void setPurgeUnreachable(bool purge_unreachable)
+    {
+        purge_unreachable_ = purge_unreachable;
     }
 
     /** @brief Get ACK delay. */
@@ -1080,6 +1117,12 @@ protected:
 
     /** @brief Threshold for marking a node unreachable (seconds) */
     std::optional<std::chrono::duration<double>> unreachable_timeout_;
+
+    /** @brief If true, proactively test for unreachable nodes */
+    bool proactive_unreachable_;
+
+    /** @brief If true, purge unreachable nodes */
+    bool purge_unreachable_;
 
     /** @brief ACK delay (sec) */
     std::chrono::duration<double> ack_delay_;

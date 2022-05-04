@@ -495,6 +495,8 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.enforce_ordering = config.arq_enforce_ordering
             controller.max_retransmissions = config.arq_max_retransmissions
             controller.unreachable_timeout = config.arq_unreachable_timeout
+            controller.proactive_unreachable = config.arq_proactive_unreachable
+            controller.purge_unreachable = config.arq_purge_unreachable
             controller.ack_delay = config.arq_ack_delay
             controller.ack_delay_estimation_window = config.arq_ack_delay_estimation_window
             controller.retransmission_delay = config.arq_retransmission_delay
