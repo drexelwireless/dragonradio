@@ -80,6 +80,12 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
+# Automatically extract typehints when specified and place them in
+# descriptions of the relevant function/method.
+autodoc_typehints = "description"
+
+# Both the class' and __init__ method's docstring are concatenated and inserted.
+autoclass_content = 'both'
 
 # -- Options for HTML output -------------------------------------------------
 
