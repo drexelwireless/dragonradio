@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Controller for intelligent radio functionality"""
@@ -321,11 +321,14 @@ class Controller(CILServer):
 
         self.state = remote.READY
 
-        try:
-            self.loop.run_forever()
-        finally:
-            logger.info('Controller terminated')
-            self.loop.close()
+        # Either start the interactive loop or run the loop ourselves
+        user_ns = locals()
+        user_ns['radio'] = self.radio
+        user_ns['controller'] = self
+
+        self.radio.run(finalizer=self.terminate, user_ns=user_ns)
+
+        logger.info('Controller terminated')
 
     def mkRadio(self, *args, **kwargs):
         return dragonradio.radio.Radio(*args, **kwargs)
@@ -429,7 +432,11 @@ class Controller(CILServer):
             except:
                 logger.exception('Exception when stopping radio')
 
-    async def terminate(self):
+    def terminate(self):
+        """Stop the controller and all associated tasks"""
+        self.loop.create_task(self._terminate())
+
+    async def _terminate(self):
         """Terminate the radio"""
         logger.debug('Terminating')
         await self.stopRadio()

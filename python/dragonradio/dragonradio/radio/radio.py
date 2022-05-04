@@ -9,6 +9,7 @@ import math
 import os
 import random
 import signal
+from typing import Any, Callable, Dict
 
 import numpy as np
 
@@ -93,6 +94,9 @@ class Radio(dragonradio.tasks.TaskManager):
         self.timesync = None
         """Time synchronization parameters"""
 
+        self.kernel = None
+        """IPython kernel"""
+
         # Add global work queue workers
         work_queue.addThreads(1)
 
@@ -151,7 +155,30 @@ class Radio(dragonradio.tasks.TaskManager):
         self.configureMAC(self.config.mac)
 
         # Either start the interactive loop or run the loop ourselves
-        if self.config.interactive:
+        user_ns['radio'] = self
+
+        self.run(finalizer=self.stop, user_ns=user_ns)
+
+        return 0
+
+    def run(self, finalizer: Callable[[], None], user_ns: Dict[str, Any]=locals()):
+        """Run the radio's asyncio loop.
+
+        Args:
+            finalizer (Callable[[], None]): Finalizer function to be called on termination.
+            user_ns (Dict[str, Any], optional): User namespace. Defaults to locals().
+
+        Returns:
+            int: Exit code
+        """
+        if self.config.kernel:
+            from ipykernel.kernelapp import IPKernelApp
+
+            self.kernel = IPKernelApp.instance()
+            self.kernel.initialize(["python"])
+            self.kernel.shell.user_ns.update(user_ns)
+            self.kernel.start()
+        elif self.config.interactive:
             import IPython.terminal.embed
             from traitlets.config import Config
             c = Config()
@@ -159,16 +186,18 @@ class Radio(dragonradio.tasks.TaskManager):
             c.TerminalInteractiveShell.loop_runner = 'asyncio'
             c.TerminalInteractiveShell.autoawait = True
 
-            user_ns['radio'] = self
+            try:
+                shell = IPython.terminal.embed.InteractiveShellEmbed(config=c, user_ns=user_ns)
+                shell.enable_gui('asyncio')
+                shell()
 
-            shell = IPython.terminal.embed.InteractiveShellEmbed(config=c, user_ns=user_ns)
-            shell.enable_gui('asyncio')
-            shell()
-
-            self.stop()
+                finalizer()
+                self.loop.run_forever()
+            finally:
+                self.loop.close()
         else:
-            for sig in [signal.SIGINT, signal.SIGTERM]:
-                self.loop.add_signal_handler(sig, self.stop)
+            for sig in [signal.SIGINT, signal.SIGTERM, signal.SIGQUIT]:
+                self.loop.add_signal_handler(sig, finalizer)
 
             try:
                 self.loop.run_forever()
@@ -188,6 +217,13 @@ class Radio(dragonradio.tasks.TaskManager):
 
         # Wait for remaining tasks and stop the event loop
         await dragonradio.tasks.stopEventLoop(self.loop, logger)
+
+    async def stopTasks(self):
+        # Stop any running IPython kernel
+        if self.kernel is not None:
+            self.kernel.close()
+
+        await super().stopTasks()
 
     def configureUSRP(self):
         """Construct USRP object from configuration parameters"""

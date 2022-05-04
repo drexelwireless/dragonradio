@@ -1,8 +1,6 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
-import asyncio
-from functools import partial
 import io
 import logging
 import os
@@ -51,9 +49,6 @@ def configureLogging(config):
 
     return (fh, fout, ferr)
 
-def sighandler(controller, _signum, _frame):
-    asyncio.run_coroutine_threadsafe(controller.terminate(), controller.loop)
-
 def run(config):
     # Configure logging
     (fh, fout, ferr) = configureLogging(config)
@@ -62,9 +57,6 @@ def run(config):
     controller = Controller(config)
 
     if config.foreground:
-        signal.signal(signal.SIGINT, partial(sighandler, controller))
-        signal.signal(signal.SIGTERM, partial(sighandler, controller))
-
         controller.setupRadio(bootstrap=config.bootstrap)
     else:
         # See:
@@ -75,10 +67,7 @@ def run(config):
                                   stderr=ferr,
                                   detach_process=True,
                                   prevent_core=False,
-                                  pidfile=daemon.pidfile.TimeoutPIDLockFile(config.pidfile),
-                                  signal_map={ signal.SIGINT: partial(sighandler, controller)
-                                             , signal.SIGTERM: partial(sighandler, controller)
-                                             }):
+                                  pidfile=daemon.pidfile.TimeoutPIDLockFile(config.pidfile)):
             controller.setupRadio(bootstrap=config.bootstrap)
 
     return 0
