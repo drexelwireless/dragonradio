@@ -135,7 +135,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         self.dumpcap_procs = []
         """dumpcap procs we've started"""
 
-        self.state = remote.BOOTING
+        self._state = remote.BOOTING
         """Current radio state"""
 
         self.started = False
@@ -225,6 +225,20 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 self.radio.nhood.removeListener(self)
         except:
             logger.exception("Could not remove controller as neighborhood listener")
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, new_state):
+        if new_state != self._state:
+            old_state = self._state
+            self._state = new_state
+            self.stateChange(old_state, new_state)
+
+    def stateChange(self, old_state, new_state):
+        pass
 
     def timeToMP(self, t, closest=False):
         """Convert time (in seconds since the epoch) to a measurement period"""
