@@ -39,6 +39,7 @@ release = ''
 # ones.
 extensions = [
     'breathe',
+    'myst_parser',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.githubpages',
@@ -59,8 +60,7 @@ templates_path = ['.templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # The master toctree document.
 master_doc = 'index'
@@ -86,6 +86,16 @@ autodoc_typehints = "description"
 
 # Both the class' and __init__ method's docstring are concatenated and inserted.
 autoclass_content = 'both'
+
+# Don't warn about document headings
+suppress_warnings = ['myst.header']
+
+# myst extensions
+myst_enable_extensions = [
+    'amsmath',
+    'dollarmath',
+    'smartquotes',
+]
 
 # -- Options for HTML output -------------------------------------------------
 
