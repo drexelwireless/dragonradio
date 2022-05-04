@@ -352,6 +352,14 @@ void exportControllers(py::module &m)
             &SmartController::getUnreachableTimeout,
             &SmartController::setUnreachableTimeout,
             "Threshold for marking node unreachable (sec)")
+        .def_property("proactive_unreachable",
+            &SmartController::getProactiveUnreachable,
+            &SmartController::setProactiveUnreachable,
+            "Should we proactively test for unreachable nodes?")
+        .def_property("purge_unreachable",
+            &SmartController::getPurgeUnreachable,
+            &SmartController::setPurgeUnreachable,
+            "Should we purge unreachable nodes?")
         .def_property("ack_delay",
             &SmartController::getACKDelay,
             &SmartController::setACKDelay,

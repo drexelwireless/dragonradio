@@ -43,6 +43,8 @@ SmartController::SmartController(std::shared_ptr<Neighborhood> nhood,
   , mcsidx_down_per_threshold_(0.10)
   , mcsidx_alpha_(0.5)
   , mcsidx_prob_floor_(0.1)
+  , proactive_unreachable_(false)
+  , purge_unreachable_(false)
   , ack_delay_(100e-3)
   , ack_delay_estimation_window_(1)
   , retransmission_delay_(500e-3s)
@@ -1719,7 +1721,6 @@ SendWindow::SendWindow(std::shared_ptr<Node> n,
     , mcsidx(0)
     , new_window(true)
     , window_open(true)
-    , last_heard_timestamp(MonoClock::now())
     , seq({0})
     , unack({0})
     , max({0})
@@ -1736,8 +1737,11 @@ SendWindow::SendWindow(std::shared_ptr<Node> n,
     , retransmission_delay(retransmission_delay_)
     , ack_delay(1.0s)
     , entries_(maxwin, *this)
+    , unreachable_timer_([this]() { this->checkUnheard(); })
 {
     setMCS(controller.mcsidx_init_);
+
+    heard();
 }
 
 void SendWindow::setSendWindowOpen(bool open)
@@ -2011,6 +2015,11 @@ void SendWindow::heard(std::optional<MonoClock::time_point> when)
         if (seq < unack + win)
             setSendWindowOpen(true);
 
+        // Re-add node as neighbor
+        controller.nhood_->addNeighbor(node);
+        if (node->is_gateway)
+            controller.nhood_->addGateway(node);
+
         logARQ(LOGDEBUG, "Node now reachable: node=%u",
             (unsigned) node->id);
     }
@@ -2028,7 +2037,19 @@ void SendWindow::checkUnheard(void)
 
         logARQ(LOGDEBUG, "Node unreachable: node=%u",
             (unsigned) node->id);
+
+        // If we are supposed to purge unreachable nodes, remove the unreachable
+        // neighbor. Even when a node is removed, we keep its send and receive
+        // windows around.
+        if (controller.purge_unreachable_)
+            controller.nhood_->removeNeighbor(node->id);
+
+        return;
     }
+
+    // If we are proactively probing for unreachable nodes, set a timer
+    if (controller.unreachable_timeout_ && controller.proactive_unreachable_)
+        controller.timer_queue_.run_in(unreachable_timer_, *controller.unreachable_timeout_);
 }
 
 void SendWindow::Entry::operator()()

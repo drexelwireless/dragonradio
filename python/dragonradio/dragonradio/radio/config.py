@@ -218,6 +218,10 @@ class Config:
         """Maximum number of times a packet is allowed to be retransmitted"""
         self.arq_unreachable_timeout = None
         """Timeout after which a node is marked unreachable (sec)"""
+        self.arq_proactive_unreachable = False
+        """bool: If true, proactively test for unreachable nodes"""
+        self.arq_purge_unreachable = False
+        """bool: If true, purge unreachable nodes"""
         self.arq_ack_delay = 100e-3
         """Maximum delay before an explicit ACK is sent (sec)"""
         self.arq_ack_delay_estimation_window = 1.0
