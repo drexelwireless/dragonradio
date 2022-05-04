@@ -42,6 +42,7 @@ extensions = [
     'myst_parser',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosectionlabel',
+    'sphinx.ext.extlinks',
     'sphinx.ext.githubpages',
     'sphinx.ext.graphviz',
     'sphinx.ext.inheritance_diagram',
@@ -96,6 +97,10 @@ myst_enable_extensions = [
     'dollarmath',
     'smartquotes',
 ]
+
+# External links
+extlinks = {'nsfaward': ('https://www.nsf.gov/awardsearch/showAward?AWD_ID=%s',
+                         '%s')}
 
 # -- Options for HTML output -------------------------------------------------
 
