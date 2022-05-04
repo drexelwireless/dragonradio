@@ -271,7 +271,7 @@ private:
     vector_type entries_;
 };
 
-struct RecvWindow : public TimerQueue::Timer  {
+struct RecvWindow  {
     struct Entry;
 
     using vector_type = std::vector<Entry>;
@@ -330,10 +330,11 @@ struct RecvWindow : public TimerQueue::Timer  {
     /** @brief Flag indicating whether or not we need a selective ACK. */
     bool need_selective_ack;
 
-    /** @brief Flag indicating whether or not the timer is for an ACK or a
-     * selective ACK.
-     */
-    bool timer_for_ack;
+    /** @brief ACK timer */
+    TimerCallback<std::function<void(void)>> ack_timer;
+
+    /** @brief SACK timer */
+    TimerCallback<std::function<void(void)>> sack_timer;
 
     /** @brief Explicit NAK window */
     std::vector<MonoClock::time_point> explicit_nak_win;
@@ -359,7 +360,11 @@ struct RecvWindow : public TimerQueue::Timer  {
         return entries_[seq % entries_.size()];
     }
 
-    void operator()() override;
+    /** @brief Send ACK */
+    void ack_timeout(void);
+
+    /** @brief Send SACK */
+    void sack_timeout(void);
 
     struct Entry {
         Entry() : received(false), delivered(false), pkt(nullptr) {};
