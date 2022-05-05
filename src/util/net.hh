@@ -39,13 +39,93 @@ void addRoute(const std::string &dst, const std::string &mask, const std::string
 /** @brief Delete an IP route */
 void deleteRoute(const std::string &dst, const std::string &mask);
 
-class Socket {
+/** @brief A file descriptor */
+class Fd {
 public:
-    Socket() : fd_(0)
+    Fd() : fd_(-1)
     {
     }
 
-    explicit Socket(int fd) : fd_(fd)
+    explicit Fd(int fd) : fd_(fd)
+    {
+    }
+
+    Fd(const Fd&) = delete;
+
+    Fd(Fd&& other)
+    {
+        fd_ = other.fd_;
+        other.fd_ = -1;
+    }
+
+    virtual ~Fd()
+    {
+        if (fd_ >= 0)
+            close();
+    }
+
+    Fd& operator =(const Fd&) = delete;
+
+    Fd& operator =(Fd&& other)
+    {
+        if (fd_ >= 0)
+            close();
+
+        fd_ = other.fd_;
+        other.fd_ = -1;
+
+        return *this;
+    }
+
+    Fd& operator =(int fd)
+    {
+        if (fd_ >= 0)
+            close();
+
+        fd_ = fd;
+
+        return *this;
+    }
+
+    /** @brief The file descriptor */
+    operator int() noexcept
+    {
+        return fd_;
+    }
+
+    /** @brief Release file descriptor
+     * @return The file descriptor
+     */
+    int release() noexcept
+    {
+        int fd = fd_;
+
+        fd_ = -1;
+        return fd;
+    }
+
+    /** @brief Close file descriptor */
+    void close()
+    {
+        if (::close(fd_) != 0)
+            throw std::runtime_error(strerror(errno));
+
+        fd_ = -1;
+    }
+
+protected:
+    /** @brief File descriptor */
+    int fd_;
+};
+
+/** @brief A socket */
+class Socket : public Fd {
+public:
+    Socket() : Fd()
+    {
+    }
+
+    explicit Socket(int fd) : Fd(fd)
     {
     }
 
@@ -54,44 +134,6 @@ public:
         if ((fd_ = socket(domain, type, protocol)) < 0)
             throw std::runtime_error(strerror(errno));
     }
-
-    Socket(const Socket&) = delete;
-
-    Socket(Socket&& other)
-    {
-        fd_ = other.fd_;
-        other.fd_ = 0;
-    }
-
-    ~Socket()
-    {
-        if (fd_ != 0)
-            close(fd_);
-    }
-
-    Socket& operator =(Socket& other)
-    {
-        fd_ = other.fd_;
-        other.fd_ = 0;
-
-        return *this;
-    }
-
-    Socket& operator =(Socket&& other)
-    {
-        fd_ = other.fd_;
-        other.fd_ = 0;
-
-        return *this;
-    }
-
-    operator int()
-    {
-        return fd_;
-    }
-
-protected:
-    int fd_;
 };
 
 #endif /* UTIL_NET_HH_ */
