@@ -186,6 +186,49 @@ std::string TunTap::nodeIPAddress(uint8_t node_id) const
     return ssprintf(tap_ipaddr_.c_str(), node_id);
 }
 
+std::string TunTap::sysConfPath(bool ipv4, const std::string &attr) const
+{
+    return ssprintf("/proc/sys/net/%s/conf/%s/%s",
+                    ipv4 ? "ipv4" : "ipv6",
+                    tap_iface_.c_str(),
+                    attr.c_str());
+}
+
+std::string TunTap::readSysConfPath(bool ipv4, const std::string &attr) const
+{
+    std::string path = sysConfPath(ipv4, attr);
+
+    Fd fd;
+
+    if ((fd = open(path.c_str(), O_RDONLY)) < 0)
+        throw std::runtime_error(strerror(errno));
+
+    char    buf[1024];
+    ssize_t count;
+
+    if ((count = read(fd, buf, sizeof(buf)-1)) < 0)
+        throw std::runtime_error(strerror(errno));
+
+    buf[count] = '\0';
+    return std::string(buf);
+}
+
+void TunTap::writeSysConfPath(bool ipv4, const std::string &attr, const std::string &value)
+{
+    RaiseCaps   caps({CAP_NET_ADMIN});
+    std::string path = sysConfPath(ipv4, attr);
+
+    Fd fd;
+
+    if ((fd = open(path.c_str(), O_WRONLY)) < 0)
+        throw std::runtime_error(strerror(errno));
+
+    ssize_t count;
+
+    if ((count = write(fd, value.c_str(), value.length()+1)) < 0)
+        throw std::runtime_error(strerror(errno));
+}
+
 void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
 {
     ssize_t nwrite;

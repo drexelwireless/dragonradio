@@ -13,6 +13,7 @@
 
 #include "Logger.hh"
 #include "net/Element.hh"
+#include "util/ssprintf.hh"
 
 class TunTap : public Element
 {
@@ -46,6 +47,34 @@ public:
     std::string getIface(void) const
     {
         return tap_iface_;
+    }
+
+    /** @brief Get accept_redirects flag */
+    int getAcceptRedirects(void) const
+    {
+        std::string value = readSysConfPath(true, "accept_redirects");
+
+        return atoi(value.c_str());
+    }
+
+    /** @brief Set accept_redirects flag */
+    void setAcceptRedirects(int accept_redirects)
+    {
+        writeSysConfPath(true, "accept_redirects", ssprintf("%d\n", accept_redirects));
+    }
+
+    /** @brief Get send_redirects flag */
+    int getSendRedirects(void) const
+    {
+        std::string value = readSysConfPath(true, "send_redirects");
+
+        return atoi(value.c_str());
+    }
+
+    /** @brief Set send_redirects flag */
+    void setSendRedirects(int send_redirects)
+    {
+        writeSysConfPath(true, "send_redirects", ssprintf("%d\n", send_redirects));
     }
 
     /** @brief Sink for radio packets. Packets written here are sent to the
@@ -105,6 +134,15 @@ private:
 
     /** @brief Get IP address for node. */
     std::string nodeIPAddress(uint8_t node_id) const;
+
+    /** @brief Get /proc/sys path to interface conf attribute */
+    std::string sysConfPath(bool ipv4, const std::string &attr) const;
+
+    /** @brief Read /proc/sys interface conf attribute */
+    std::string readSysConfPath(bool ipv4, const std::string &attr) const;
+
+    /** @brief Write /proc/sys interface conf attribute */
+    void writeSysConfPath(bool ipv4, const std::string &attr, const std::string &value);
 
     /** @brief Send a packet to the tun/tap device */
     void send(std::shared_ptr<RadioPacket>&& pkt);
