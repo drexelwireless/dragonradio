@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef PHY_H_
@@ -12,6 +12,13 @@
 #include "Packet.hh"
 #include "mac/Snapshot.hh"
 #include "phy/AutoGain.hh"
+
+/* When non-zero, nodes will only listen to other nodes whose node ID differs
+ * from theirs by 1. This makes it easy to set up a debug configuration where
+ * nodes act like they are in a linear layout in which nodes can only hear their
+ * immediate neighbors. Such a layout is nice for debugging MANET operation.
+ */
+#define DEBUG_LINEAR_LAYOUT 0
 
 /** @brief Complex float */
 using C = std::complex<float>;
@@ -210,6 +217,9 @@ public:
         return header_valid
             && (h->flags.team == team_)
             && (h->curhop != node_id_)
+#if DEBUG_LINEAR_LAYOUT
+            && (h->curhop == node_id_ - 1 || h->curhop == node_id_ + 1)
+#endif /* DEBUG_LINEAR_LAYOUT */
             && ((h->nexthop == kNodeBroadcast) ||
                 (h->nexthop == node_id_) ||
                 (snapshot_collector_ && snapshot_collector_->active()));
