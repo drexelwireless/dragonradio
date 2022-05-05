@@ -131,11 +131,6 @@ TunTap::~TunTap(void)
     closeTap();
 }
 
-size_t TunTap::getMTU(void)
-{
-    return mtu_;
-}
-
 void TunTap::addARPEntry(uint8_t node_id)
 {
     RaiseCaps     caps({CAP_NET_ADMIN});
@@ -218,12 +213,12 @@ void TunTap::closeTap(void)
     close(fd_);
 }
 
-std::string TunTap::nodeMACAddress(uint8_t node_id)
+std::string TunTap::nodeMACAddress(uint8_t node_id) const
 {
     return ssprintf(tap_macaddr_.c_str(), node_id);
 }
 
-std::string TunTap::nodeIPAddress(uint8_t node_id)
+std::string TunTap::nodeIPAddress(uint8_t node_id) const
 {
     return ssprintf(tap_ipaddr_.c_str(), node_id);
 }

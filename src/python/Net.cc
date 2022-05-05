@@ -169,10 +169,24 @@ void exportNet(py::module &m)
                       const std::string&,
                       bool,
                       size_t,
-                      uint8_t>())
-        .def_property_readonly("mtu", &TunTap::getMTU)
-        .def_property_readonly("source", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->source); } )
-        .def_property_readonly("sink", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->sink); } )
+                      uint8_t>(),
+            py::arg("iface"),
+            py::arg("ipaddr"),
+            py::arg("netmask"),
+            py::arg("macaddr"),
+            py::arg("persistent"),
+            py::arg("mtu"),
+            py::arg("node_id"))
+        .def_property_readonly("mtu",
+            &TunTap::getMTU,
+            "int: Maximum Transmission Unit")
+        .def_property_readonly("iface",
+            &TunTap::getIface,
+            "str: interface name")
+        .def_property_readonly("source",
+            [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->source); } )
+        .def_property_readonly("sink",
+            [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->sink); } )
         ;
 
     // Export class NetProcessor to Python

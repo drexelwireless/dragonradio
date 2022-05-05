@@ -37,7 +37,16 @@ public:
     virtual ~TunTap();
 
     /** @brief Return the MTU of this interface */
-    size_t getMTU(void);
+    size_t getMTU(void) const
+    {
+        return mtu_;
+    }
+
+    /** @brief Return interface name */
+    std::string getIface(void) const
+    {
+        return tap_iface_;
+    }
 
     /** @brief Add a static ARP table entry to tap device for node */
     void addARPEntry(uint8_t node_id);
@@ -65,14 +74,14 @@ private:
     /** @brief The name of the tun/tap device */
     std::string tap_iface_;
 
-    /** @brief The name of the tun/tap device */
-    std::string tap_ipaddr_;
+    /** @brief sprintf-style string specifying tap interface network address */
+    const std::string tap_ipaddr_;
 
-    /** @brief The name of the tun/tap device */
-    std::string tap_ipnetmask_;
+    /** @brief sprintf-style string specifying tap interface netmask address */
+    const std::string tap_ipnetmask_;
 
-    /** @brief The name of the tun/tap device */
-    std::string tap_macaddr_;
+    /** @brief sprintf-style string specifying tap interface mac address */
+    const std::string tap_macaddr_;
 
     /** @brief MTU of the interface */
     size_t mtu_;
@@ -98,10 +107,10 @@ private:
     void closeTap(void);
 
     /** @brief Get MAC address for node. */
-    std::string nodeMACAddress(uint8_t node_id);
+    std::string nodeMACAddress(uint8_t node_id) const;
 
     /** @brief Get IP address for node. */
-    std::string nodeIPAddress(uint8_t node_id);
+    std::string nodeIPAddress(uint8_t node_id) const;
 
     /** @brief Send a packet to the tun/tap device */
     void send(std::shared_ptr<RadioPacket>&& pkt);
