@@ -1,16 +1,16 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#ifndef UTIL_SPRINTF_HH_
-#define UTIL_SPRINTF_HH_
+#ifndef UTIL_SSPRINTF_HH_
+#define UTIL_SSPRINTF_HH_
 
 #include <string>
 
 /** @brief sprintf to a std::string. */
-std::string sprintf(const char *fmt, ...)
+std::string ssprintf(const char *fmt, ...)
 #if !defined(DOXYGEN)
 __attribute__((format(printf, 1, 2)))
 #endif
 ;
 
-#endif /* UTIL_SPRINTF_HH_ */
+#endif /* UTIL_SSPRINTF_HH_ */

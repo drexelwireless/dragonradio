@@ -23,7 +23,7 @@
 #include "net/TunTap.hh"
 #include "util/capabilities.hh"
 #include "util/net.hh"
-#include "util/sprintf.hh"
+#include "util/ssprintf.hh"
 #include "util/threads.hh"
 
 using namespace std::placeholders;
@@ -221,12 +221,12 @@ void TunTap::closeTap(void)
 
 std::string TunTap::nodeMACAddress(uint8_t node_id)
 {
-    return sprintf(tap_macaddr_.c_str(), node_id);
+    return ssprintf(tap_macaddr_.c_str(), node_id);
 }
 
 std::string TunTap::nodeIPAddress(uint8_t node_id)
 {
-    return sprintf(tap_ipaddr_.c_str(), node_id);
+    return ssprintf(tap_ipaddr_.c_str(), node_id);
 }
 
 void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
