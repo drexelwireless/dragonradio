@@ -1,13 +1,13 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <stdarg.h>
 
 #include <memory>
 
-#include "util/sprintf.hh"
+#include "util/ssprintf.hh"
 
-std::string sprintf(const char *fmt, ...)
+std::string ssprintf(const char *fmt, ...)
 {
     int                     n = 1024;
     std::unique_ptr<char[]> buf;

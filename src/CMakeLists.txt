@@ -72,8 +72,8 @@ add_library(DragonRadio
   python/WorkQueue.cc
   util/exec.cc
   util/net.cc
+  util/ssprintf.cc
   util/threads.cc
-  util/sprintf.cc
 )
 
 target_include_directories(DragonRadio PUBLIC .)
