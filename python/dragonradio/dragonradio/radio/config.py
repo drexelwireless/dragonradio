@@ -310,6 +310,9 @@ class Config:
         self.packet_compression = False
         """Enable packet compression?"""
 
+        self.manet = False
+        """bool: MANET mode"""
+
         # Queue options
         self.transmission_delay = 0.0
         """Estimated packet transmission delay (seconds)"""
@@ -911,6 +914,10 @@ class Config:
         net.add_argument('--packet-compression', action='store_const', const=True,
                          dest='packet_compression',
                          help='enable network packet compress')
+
+        net.add_argument('--manet', action='store_const', const=True,
+                         dest='manet',
+                         help='enable MANET support')
 
         # Collaboration server options
         collab = parser.add_argument_group('Collaboration')

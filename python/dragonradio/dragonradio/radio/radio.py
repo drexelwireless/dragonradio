@@ -147,7 +147,7 @@ class Radio(dragonradio.tasks.TaskManager):
             self.startSnapshots()
 
         # Add radio nodes to the network if number of nodes was specified
-        if self.config.num_nodes is not None:
+        if self.config.num_nodes is not None and not self.config.manet:
             for i in range(0, self.config.num_nodes):
                 self.nhood.addNeighbor(i+1)
 
@@ -1099,7 +1099,10 @@ class Radio(dragonradio.tasks.TaskManager):
     def configureSimpleMACSchedule(self, fdma_mac=False):
         """Set a simple static schedule."""
         nchannels = len(self.channels)
-        nodes = sorted(list(self.nhood.neighbors))
+        if self.config.manet and self.config.num_nodes is not None:
+            nodes = range(1, self.config.num_nodes + 1)
+        else:
+            nodes = sorted(list(self.nhood.neighbors))
 
         if nchannels == 1:
             sched = dragonradio.schedule.pureTDMASchedule(nodes)
