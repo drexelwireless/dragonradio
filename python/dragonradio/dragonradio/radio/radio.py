@@ -308,8 +308,8 @@ class Radio(dragonradio.tasks.TaskManager):
         config = self.config
 
         # Create object representing internal and external IP networks
-        int_net = ipaddress.IPv4Network(config.internal_net)
-        ext_net = ipaddress.IPv4Network(config.external_net)
+        int_net = ipaddress.IPv4Network((config.internal_net, config.internal_netmask))
+        ext_net = ipaddress.IPv4Network((config.external_net, config.external_netmask))
 
         # Create tun/tap interface and net neighborhood
         self.tuntap = TunTap(config.tap_iface,

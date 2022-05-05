@@ -283,11 +283,15 @@ class Config:
         self.mtu = 1500
         """"Maximum Transmission Unit"""
 
-        self.internal_net = '10.10.10.0/24'
+        self.internal_net = '10.10.10.0'
         """IP network for internal radio network"""
+        self.internal_netmask = '255.255.255.0'
+        """IP network mask for internal radio network"""
 
-        self.external_net = '192.168.0.0/16'
+        self.external_net = '192.168.0.0'
         """IP network for external network"""
+        self.external_netmask = '255.255.0.0'
+        """IP network mask for external network"""
 
         self.tap_iface = 'tap0'
         """Tap interface to use"""

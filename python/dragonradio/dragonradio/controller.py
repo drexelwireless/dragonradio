@@ -290,7 +290,7 @@ class Controller(CILServer):
         # If we are the gateway, start an internal protocol client connected to
         # the broadcast address
         if self.is_gateway:
-            int_net = ipaddress.IPv4Network(self.config.internal_net)
+            int_net = ipaddress.IPv4Network((self.config.internal_net, self.config.internal_netmask))
 
             self.internal_client = \
                 InternalProtoClient(loop=self.loop,
