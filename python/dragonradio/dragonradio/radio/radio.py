@@ -338,6 +338,12 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                              config.mtu,
                              self.node_id)
 
+        # In MANET mode, we may send packets back out the interface from whence
+        # they came, so disable ICMP redirects.
+        if config.manet:
+            self.tuntap.accept_redirects = 0
+            self.tuntap.send_redirects = 0
+
         # Create neighborhood and listen for events
         self.nhood = self.mkNeighborhood()
         self.nhood.addListener(self)
