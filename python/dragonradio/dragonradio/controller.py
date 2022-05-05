@@ -339,31 +339,34 @@ class Controller(CILServer):
             timestamp = time.time()
 
         if not self.started:
-            logger.info('Starting radio: now=%f; timestamp=%f',
-                time.time(),
-                timestamp)
+            try:
+                logger.info('Starting radio: now=%f; timestamp=%f',
+                    time.time(),
+                    timestamp)
 
-            with await self.radio.lock:
-                self.started = True
-                self.scenario_start_time = timestamp
+                with await self.radio.lock:
+                    self.started = True
+                    self.scenario_start_time = timestamp
 
-                # Create ALOHA MAC for HELLO messages
-                self.radio.configureALOHA()
+                    # Create ALOHA MAC for HELLO messages
+                    self.radio.configureALOHA()
 
-                self.createTask(self.discoverNeighbors(),
-                                name='discover neighbors')
+                    self.createTask(self.discoverNeighbors(),
+                                    name='discover neighbors')
 
-                if self.config.clock_sync_period is not None:
-                    self.createTask(self.synchronizeClock(),
-                                    name='synchronize clock')
+                    if self.config.clock_sync_period is not None:
+                        self.createTask(self.synchronizeClock(),
+                                        name='synchronize clock')
 
-                if self.is_gateway:
-                    self.createTask(self.bootstrapNetwork(),
-                                    name='bootstrap network')
-                    self.createTask(self.distributeScheduleViaBroadcast(),
-                                    name='distribute schedule')
+                    if self.is_gateway:
+                        self.createTask(self.bootstrapNetwork(),
+                                        name='bootstrap network')
+                        self.createTask(self.distributeScheduleViaBroadcast(),
+                                        name='distribute schedule')
 
-                self.state = remote.ACTIVE
+                    self.state = remote.ACTIVE
+            except:
+                logging.exception("Could not start radio")
 
     async def stopRadio(self):
         """Stop the radio.
