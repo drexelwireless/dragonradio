@@ -183,6 +183,14 @@ void exportNet(py::module &m)
         .def_property_readonly("iface",
             &TunTap::getIface,
             "str: interface name")
+        .def_property("accept_redirects",
+            &TunTap::getAcceptRedirects,
+            &TunTap::setAcceptRedirects,
+            "int: accept_redirects flag")
+        .def_property("send_redirects",
+            &TunTap::getSendRedirects,
+            &TunTap::setSendRedirects,
+            "int: send_redirects flag")
         .def_property_readonly("source",
             [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->source); } )
         .def_property_readonly("sink",
