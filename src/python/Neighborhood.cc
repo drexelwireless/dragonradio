@@ -70,9 +70,7 @@ void exportNeighborhood(py::module &m)
 
     // Export class Neighborhood to Python
     py::class_<Neighborhood, std::shared_ptr<Neighborhood>>(m, "Neighborhood", "The local one-hop neighborhood")
-        .def(py::init<std::shared_ptr<TunTap>,
-                      NodeId>(),
-            py::arg("tuntap"),
+        .def(py::init<NodeId>(),
             py::arg("node_id"))
         .def_readonly("me",
             &Neighborhood::me,

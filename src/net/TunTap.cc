@@ -131,43 +131,6 @@ TunTap::~TunTap(void)
     closeTap();
 }
 
-void TunTap::addARPEntry(uint8_t node_id)
-{
-    RaiseCaps     caps({CAP_NET_ADMIN});
-    struct arpreq req = {{0}};
-
-    strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
-
-    parseIP(nodeIPAddress(node_id), &req.arp_pa);
-    parseMAC(nodeMACAddress(node_id), &req.arp_ha);
-
-    req.arp_flags = ATF_PERM | ATF_COM;
-
-    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
-
-    if (ioctl(sockfd, SIOCSARP, &req) < 0)
-        logTunTap(LOGERROR, "Error adding ARP entry for node %d: %s", node_id, strerror(errno));
-    else
-        logTunTap(LOGDEBUG, "Added ARP entry for node %d", node_id);
-}
-
-void TunTap::deleteARPEntry(uint8_t node_id)
-{
-    RaiseCaps     caps({CAP_NET_ADMIN});
-    struct arpreq req = {{0}};
-
-    strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
-
-    parseIP(nodeIPAddress(node_id), &req.arp_pa);
-
-    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
-
-    if (ioctl(sockfd, SIOCDARP, &req) < 0)
-        logTunTap(LOGERROR, "Error deleting ARP entry for node %d: %s", node_id, strerror(errno));
-    else
-        logTunTap(LOGDEBUG, "Deleted ARP entry for node %d", node_id);
-}
-
 static const char *clonedev = "/dev/net/tun";
 
 void TunTap::openTap(std::string& dev, int flags)

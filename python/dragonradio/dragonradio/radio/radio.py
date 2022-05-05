@@ -21,6 +21,7 @@ except:
 
 import dragonradio.channels
 from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
+import dragonradio.net
 import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
 import dragonradio.signal
@@ -39,7 +40,7 @@ _MACS = { 'aloha': True
 def _isSlottedMAC(mac):
     return _MACS.get(mac, ValueError("Unknown MAC %s", mac))
 
-class Radio(dragonradio.tasks.TaskManager):
+class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     """Radio configuration, setup, and maintenance"""
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
@@ -49,7 +50,8 @@ class Radio(dragonradio.tasks.TaskManager):
         if loop is None:
             loop = asyncio.get_event_loop()
 
-        super().__init__(loop)
+        dragonradio.tasks.TaskManager.__init__(self, loop)
+        NeighborhoodListener.__init__(self)
 
         logger.info('Radio version: %s', __version__)
         logger.info('Radio configuration:\n%s', str(config))
@@ -140,6 +142,11 @@ class Radio(dragonradio.tasks.TaskManager):
             self.tuntap.source.disconnect()
             self.tuntap.sink.disconnect()
 
+        try:
+            self.nhood.removeListener(self)
+        except:
+            logger.exception("Could not remove radio as neighborhood listener")
+
     def start(self, user_ns=locals()):
         """Start the radio"""
         # Collect snapshots if requested
@@ -224,6 +231,17 @@ class Radio(dragonradio.tasks.TaskManager):
             self.kernel.close()
 
         await super().stopTasks()
+
+    def neighborAdded(self, node : Node):
+        dragonradio.net.addStaticARPEntry(self.tuntap.iface,
+                                          self.config.tap_ipaddr % node.id,
+                                          self.config.tap_macaddr % node.id)
+        logging.debug("Neighbor %d added", node.id)
+
+    def neighborRemoved(self, node : Node):
+        dragonradio.net.deleteARPEntry(self.tuntap.iface,
+                                       self.config.tap_ipaddr % node.id)
+        logging.debug("Neighbor %d removed", node.id)
 
     def configureUSRP(self):
         """Construct USRP object from configuration parameters"""
@@ -320,7 +338,9 @@ class Radio(dragonradio.tasks.TaskManager):
                              config.mtu,
                              self.node_id)
 
+        # Create neighborhood and listen for events
         self.nhood = self.mkNeighborhood()
+        self.nhood.addListener(self)
 
         # Configure the controller
         self.controller = self.mkController()
@@ -415,7 +435,7 @@ class Radio(dragonradio.tasks.TaskManager):
         return phy
 
     def mkNeighborhood(self):
-        return Neighborhood(self.tuntap, self.node_id)
+        return Neighborhood(self.node_id)
 
     def mkChannelizer(self):
         """Construct a Channelizer according to configuration parameters"""

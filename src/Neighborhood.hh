@@ -58,10 +58,8 @@ public:
 
     Neighborhood() = delete;
 
-    Neighborhood(std::shared_ptr<TunTap> tuntap,
-                 NodeId this_node_id)
+    Neighborhood(NodeId this_node_id)
       : me(std::make_shared<Node>(this_node_id))
-      , tuntap_(tuntap)
       , neighbors_({ {this_node_id, me} })
     {
     }

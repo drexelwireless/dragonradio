@@ -48,12 +48,6 @@ public:
         return tap_iface_;
     }
 
-    /** @brief Add a static ARP table entry to tap device for node */
-    void addARPEntry(uint8_t node_id);
-
-    /** @brief Delete ARP table entryfrom tap device for node */
-    void deleteARPEntry(uint8_t node_id);
-
     /** @brief Sink for radio packets. Packets written here are sent to the
      * tun/tap device.
      */

@@ -46,9 +46,6 @@ std::shared_ptr<Node> Neighborhood::addNeighbor(NodeId node_id)
     // rigamarole so that we can perform the following operations without
     // holding the mutex.
 
-    // Add ARP entry
-    tuntap_->addARPEntry(node_id);
-
     // Notify listeners
     notify([=](NeighborhoodListener &listener) { listener.neighborAdded(node); });
 
@@ -64,9 +61,6 @@ void Neighborhood::addNeighbor(const std::shared_ptr<Node> &node)
         if (!created)
             return;
     }
-
-    // Add ARP entry
-    tuntap_->addARPEntry(node->id);
 
     // Notify listeners
     notify([=](NeighborhoodListener &listener) { listener.neighborAdded(node); });
@@ -88,9 +82,6 @@ void Neighborhood::removeNeighbor(NodeId node_id)
 
     // node will be non-empty iff we deleted a node
     if (node) {
-        // Delete ARP entry
-        tuntap_->deleteARPEntry(node_id);
-
         // Notify listeners
         notify([=](NeighborhoodListener &listener) { listener.neighborRemoved(node); });
     }
