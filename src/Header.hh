@@ -16,11 +16,8 @@
 
 #include <liquid/liquid.h>
 
+#include "Node.hh"
 #include "Seq.hh"
-
-typedef uint8_t NodeId;
-
-const NodeId kNodeBroadcast = 255;
 
 #if defined(DOXYGEN)
 #define PACKED

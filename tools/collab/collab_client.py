@@ -77,8 +77,8 @@ class DummyController(CILServer):
         self.done = False
         """Is the radio done?"""
 
-        self.nodes = {node.id : node}
-        """Nodes in our network"""
+        self.neighbors = {node.id : node}
+        """Neighbors in our network"""
 
         self.gpsd_client = GPSDClient(node.loc, loop=loop)
         """gpsd client"""

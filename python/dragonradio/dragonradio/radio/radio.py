@@ -21,6 +21,7 @@ except:
 
 import dragonradio.channels
 from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
+import dragonradio.net
 import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
 import dragonradio.signal
@@ -39,7 +40,7 @@ _MACS = { 'aloha': True
 def _isSlottedMAC(mac):
     return _MACS.get(mac, ValueError("Unknown MAC %s", mac))
 
-class Radio(dragonradio.tasks.TaskManager):
+class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     """Radio configuration, setup, and maintenance"""
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
@@ -49,7 +50,8 @@ class Radio(dragonradio.tasks.TaskManager):
         if loop is None:
             loop = asyncio.get_event_loop()
 
-        super().__init__(loop)
+        dragonradio.tasks.TaskManager.__init__(self, loop)
+        NeighborhoodListener.__init__(self)
 
         logger.info('Radio version: %s', __version__)
         logger.info('Radio configuration:\n%s', str(config))
@@ -140,6 +142,11 @@ class Radio(dragonradio.tasks.TaskManager):
             self.tuntap.source.disconnect()
             self.tuntap.sink.disconnect()
 
+        try:
+            self.nhood.removeListener(self)
+        except:
+            logger.exception("Could not remove radio as neighborhood listener")
+
     def start(self, user_ns=locals()):
         """Start the radio"""
         # Collect snapshots if requested
@@ -147,9 +154,9 @@ class Radio(dragonradio.tasks.TaskManager):
             self.startSnapshots()
 
         # Add radio nodes to the network if number of nodes was specified
-        if self.config.num_nodes is not None:
+        if self.config.num_nodes is not None and not self.config.manet:
             for i in range(0, self.config.num_nodes):
-                self.radionet.addNode(i+1)
+                self.nhood.addNeighbor(i+1)
 
         # Configure the MAC
         self.configureMAC(self.config.mac)
@@ -224,6 +231,17 @@ class Radio(dragonradio.tasks.TaskManager):
             self.kernel.close()
 
         await super().stopTasks()
+
+    def neighborAdded(self, node : Node):
+        dragonradio.net.addStaticARPEntry(self.tuntap.iface,
+                                          self.config.tap_ipaddr % node.id,
+                                          self.config.tap_macaddr % node.id)
+        logging.debug("Neighbor %d added", node.id)
+
+    def neighborRemoved(self, node : Node):
+        dragonradio.net.deleteARPEntry(self.tuntap.iface,
+                                       self.config.tap_ipaddr % node.id)
+        logging.debug("Neighbor %d removed", node.id)
 
     def configureUSRP(self):
         """Construct USRP object from configuration parameters"""
@@ -320,7 +338,15 @@ class Radio(dragonradio.tasks.TaskManager):
                              config.mtu,
                              self.node_id)
 
-        self.radionet = RadioNet(self.tuntap, self.node_id)
+        # In MANET mode, we may send packets back out the interface from whence
+        # they came, so disable ICMP redirects.
+        if config.manet:
+            self.tuntap.accept_redirects = 0
+            self.tuntap.send_redirects = 0
+
+        # Create neighborhood and listen for events
+        self.nhood = self.mkNeighborhood()
+        self.nhood.addListener(self)
 
         # Configure the controller
         self.controller = self.mkController()
@@ -359,7 +385,7 @@ class Radio(dragonradio.tasks.TaskManager):
         #   tun/tap -> NetFilter -> FlowPerformance.net -> NetFirewall ->
         #       PacketCompressor.net -> NetQueue -> controller -> synthesizer
         #
-        self.netfilter = NetFilter(self.radionet,
+        self.netfilter = NetFilter(self.nhood,
                                    int(int_net.network_address),
                                    int(int_net.netmask),
                                    int(int_net.broadcast_address),
@@ -413,6 +439,9 @@ class Radio(dragonradio.tasks.TaskManager):
             raise ValueError('Unknown PHY: %s' % config.phy)
 
         return phy
+
+    def mkNeighborhood(self):
+        return Neighborhood(self.node_id)
 
     def mkChannelizer(self):
         """Construct a Channelizer according to configuration parameters"""
@@ -480,7 +509,7 @@ class Radio(dragonradio.tasks.TaskManager):
             raise ValueError('AMC requires ARQ')
 
         if config.arq:
-            controller = SmartController(self.radionet,
+            controller = SmartController(self.nhood,
                                          # Add MCU to MTU
                                          config.mtu + config.arq_mcu,
                                          self.phy,
@@ -492,6 +521,8 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.enforce_ordering = config.arq_enforce_ordering
             controller.max_retransmissions = config.arq_max_retransmissions
             controller.unreachable_timeout = config.arq_unreachable_timeout
+            controller.proactive_unreachable = config.arq_proactive_unreachable
+            controller.purge_unreachable = config.arq_purge_unreachable
             controller.ack_delay = config.arq_ack_delay
             controller.ack_delay_estimation_window = config.arq_ack_delay_estimation_window
             controller.retransmission_delay = config.arq_retransmission_delay
@@ -530,7 +561,7 @@ class Radio(dragonradio.tasks.TaskManager):
             controller.mcsidx_prob_floor = config.amc_mcsidx_prob_floor
 
         else:
-            controller = DummyController(self.radionet, config.mtu)
+            controller = DummyController(self.nhood, config.mtu)
 
         return controller
 
@@ -1028,7 +1059,7 @@ class Radio(dragonradio.tasks.TaskManager):
         self.mac.slotidx = 0
 
         # All nodes can transmit
-        for node_id in self.radionet.nodes.keys():
+        for node_id in self.nhood.neighbors.keys():
             self.controller.setEmcon(node_id, False)
 
         if self.config.tx_upsample:
@@ -1069,7 +1100,7 @@ class Radio(dragonradio.tasks.TaskManager):
         if 0 in nodes_with_slot:
             nodes_with_slot.remove(0)
 
-        for node_id in self.radionet.nodes.keys():
+        for node_id in self.nhood.neighbors.keys():
             self.controller.setEmcon(node_id, node_id not in nodes_with_slot)
 
         # If we are upsampling on TX, go ahead and install the schedule
@@ -1094,7 +1125,10 @@ class Radio(dragonradio.tasks.TaskManager):
     def configureSimpleMACSchedule(self, fdma_mac=False):
         """Set a simple static schedule."""
         nchannels = len(self.channels)
-        nodes = sorted(list(self.radionet.nodes))
+        if self.config.manet and self.config.num_nodes is not None:
+            nodes = range(1, self.config.num_nodes + 1)
+        else:
+            nodes = sorted(list(self.nhood.neighbors))
 
         if nchannels == 1:
             sched = dragonradio.schedule.pureTDMASchedule(nodes)
@@ -1108,10 +1142,10 @@ class Radio(dragonradio.tasks.TaskManager):
 
     def synchronizeClock(self):
         """Use timestamps to synchronize our clock with the time master (the gateway)"""
-        if self.radionet.time_master is None:
+        if self.nhood.time_master is None:
             return
 
-        if self.node_id == self.radionet.time_master:
+        if self.node_id == self.nhood.time_master:
             return
 
         timesync.synchronize(self.config, self)
@@ -1243,7 +1277,7 @@ class Radio(dragonradio.tasks.TaskManager):
     def me_timestamps(self):
         """Timestamps for this node"""
         if isinstance(self.controller, SmartController):
-            me = self.radionet.this_node
+            me = self.nhood.me
             if me.id in self.controller.timestamps:
                 return self.controller.timestamps[me.id].values()
             else:
@@ -1254,8 +1288,8 @@ class Radio(dragonradio.tasks.TaskManager):
     @property
     def master_timestamps(self):
         """Timestamps for time master"""
-        if isinstance(self.controller, SmartController) and self.radionet.time_master is not None:
-            master = self.radionet.nodes[self.radionet.time_master]
+        if isinstance(self.controller, SmartController) and self.nhood.time_master is not None:
+            master = self.nhood.neighbors[self.nhood.time_master]
             if master.id in self.controller.timestamps:
                 return self.controller.timestamps[master.id].values()
             else:

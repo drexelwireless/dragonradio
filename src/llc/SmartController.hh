@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SMARTCONTROLLER_H_
@@ -10,6 +10,8 @@
 #include <list>
 #include <map>
 #include <random>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "heap.hh"
 #include "Clock.hh"
@@ -52,13 +54,13 @@ struct SendWindow {
 
     using vector_type = std::vector<Entry>;
 
-    SendWindow(Node &n,
+    SendWindow(std::shared_ptr<Node> n,
                SmartController &controller,
                Seq::uint_type maxwin,
                std::chrono::duration<double> retransmission_delay_);
 
     /** @brief Destination node. */
-    Node &node;
+    const std::shared_ptr<Node> node;
 
     /** @brief Our controller. */
     SmartController &controller;
@@ -199,8 +201,8 @@ struct SendWindow {
         Entry(SendWindow &sendw)
           : sendw(sendw)
           , pkt(nullptr)
-         {
-         };
+        {
+        };
 
         virtual ~Entry() = default;
 
@@ -269,6 +271,9 @@ private:
     /** @brief Unacknowledged packets in our send window. */
     /** INVARIANT: unack <= N <= max < unack + win */
     vector_type entries_;
+
+    /** @brief Unreachable timer */
+    TimerCallback<std::function<void(void)>> unreachable_timer_;
 };
 
 struct RecvWindow  {
@@ -276,13 +281,13 @@ struct RecvWindow  {
 
     using vector_type = std::vector<Entry>;
 
-    RecvWindow(Node &n,
+    RecvWindow(std::shared_ptr<Node> n,
                SmartController &controller,
                Seq::uint_type win,
                size_t nak_win);
 
     /** @brief Sender node. */
-    Node &node;
+    const std::shared_ptr<Node> node;
 
     /** @brief Our controller. */
     SmartController &controller;
@@ -421,7 +426,7 @@ class SmartController : public Controller
 public:
     using evm_thresh_t = std::optional<float>;
 
-    SmartController(std::shared_ptr<RadioNet> radionet_,
+    SmartController(std::shared_ptr<Neighborhood> nhood_,
                     size_t mtu,
                     std::shared_ptr<PHY> phy,
                     Seq::uint_type max_sendwin,
@@ -648,6 +653,40 @@ public:
     void setUnreachableTimeout(std::optional<std::chrono::duration<double>> t)
     {
         unreachable_timeout_ = t;
+    }
+
+    /** @brief Decide whether a node is unreachable
+     * @param last_heard The time at which the node was last heard
+     * @return true if the node is unreachable, false otherwise
+     */
+    bool unreachableTimeout(const MonoClock::time_point &last_heard)
+    {
+        return unreachable_timeout_ &&
+               (MonoClock::now() - last_heard) > *unreachable_timeout_;
+    }
+
+    /** @brief Get flag indicating whether to proactively test for unreachable nodes. */
+    bool getProactiveUnreachable(void) const
+    {
+        return proactive_unreachable_;
+    }
+
+    /** @brief Set flag indicating whether to proactively test unreachable nodes. */
+    void setProactiveUnreachable(bool proactive_unreachable)
+    {
+        proactive_unreachable_ = proactive_unreachable;
+    }
+
+    /** @brief Get flag indicating whether to purge unreachable nodes. */
+    bool getPurgeUnreachable(void) const
+    {
+        return purge_unreachable_;
+    }
+
+    /** @brief Set flag indicating whether to purge unreachable nodes. */
+    void setPurgeUnreachable(bool purge_unreachable)
+    {
+        purge_unreachable_ = purge_unreachable;
     }
 
     /** @brief Get ACK delay. */
@@ -1079,6 +1118,12 @@ protected:
     /** @brief Threshold for marking a node unreachable (seconds) */
     std::optional<std::chrono::duration<double>> unreachable_timeout_;
 
+    /** @brief If true, proactively test for unreachable nodes */
+    bool proactive_unreachable_;
+
+    /** @brief If true, purge unreachable nodes */
+    bool purge_unreachable_;
+
     /** @brief ACK delay (sec) */
     std::chrono::duration<double> ack_delay_;
 
@@ -1177,7 +1222,7 @@ protected:
     void startSACKTimer(RecvWindow &recvw);
 
     /** @brief Handle HELLO and ping control messages. */
-    void handleCtrlHelloAndPing(RadioPacket &pkt, Node &node);
+    void handleCtrlHelloAndPing(RadioPacket &pkt, const std::shared_ptr<Node> &node);
 
     /** @brief Handle timestamp control messages. */
     void handleCtrlTimestamp(RadioPacket &pkt, Node &node);

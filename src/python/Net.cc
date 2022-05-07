@@ -5,7 +5,7 @@
 #include <pybind11/chrono.h>
 #include <pybind11/stl.h>
 
-#include "RadioNet.hh"
+#include "Neighborhood.hh"
 #include "net/MandateQueue.hh"
 #include "net/NetFilter.hh"
 #include "net/Noop.hh"
@@ -169,10 +169,32 @@ void exportNet(py::module &m)
                       const std::string&,
                       bool,
                       size_t,
-                      uint8_t>())
-        .def_property_readonly("mtu", &TunTap::getMTU)
-        .def_property_readonly("source", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->source); } )
-        .def_property_readonly("sink", [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->sink); } )
+                      uint8_t>(),
+            py::arg("iface"),
+            py::arg("ipaddr"),
+            py::arg("netmask"),
+            py::arg("macaddr"),
+            py::arg("persistent"),
+            py::arg("mtu"),
+            py::arg("node_id"))
+        .def_property_readonly("mtu",
+            &TunTap::getMTU,
+            "int: Maximum Transmission Unit")
+        .def_property_readonly("iface",
+            &TunTap::getIface,
+            "str: interface name")
+        .def_property("accept_redirects",
+            &TunTap::getAcceptRedirects,
+            &TunTap::setAcceptRedirects,
+            "int: accept_redirects flag")
+        .def_property("send_redirects",
+            &TunTap::getSendRedirects,
+            &TunTap::setSendRedirects,
+            "int: send_redirects flag")
+        .def_property_readonly("source",
+            [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->source); } )
+        .def_property_readonly("sink",
+            [](std::shared_ptr<TunTap> element) { return exposePort(element, &element->sink); } )
         ;
 
     // Export class NetProcessor to Python
@@ -189,7 +211,7 @@ void exportNet(py::module &m)
 
     // Export class NetFilter to Python
     py::class_<NetFilter, NetProcessor, std::shared_ptr<NetFilter>>(m, "NetFilter")
-        .def(py::init<std::shared_ptr<RadioNet>,
+        .def(py::init<std::shared_ptr<Neighborhood>,
                       in_addr_t,
                       in_addr_t,
                       in_addr_t,
@@ -239,14 +261,24 @@ void exportNetUtil(py::module &m)
 {
     m.def("addStaticARPEntry",
         &addStaticARPEntry,
+        py::arg("device"),
+        py::arg("ip"),
+        py::arg("mac"),
         "Add a static ARP table entry")
      .def("deleteARPEntry",
         &deleteARPEntry,
+        py::arg("device"),
+        py::arg("ip"),
         "Delete an ARP table entry")
      .def("addRoute",
         &addRoute,
+        py::arg("dest"),
+        py::arg("mask"),
+        py::arg("gateway"),
         "Add an IP route")
      .def("deleteRoute",
         &deleteRoute,
+        py::arg("dest"),
+        py::arg("mask"),
         "Delete an IP route");
 }

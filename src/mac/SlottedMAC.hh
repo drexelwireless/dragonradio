@@ -11,7 +11,6 @@
 
 #include "Clock.hh"
 #include "Logger.hh"
-#include "RadioNet.hh"
 #include "SafeQueue.hh"
 #include "Radio.hh"
 #include "phy/Channelizer.hh"

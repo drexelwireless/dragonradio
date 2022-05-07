@@ -11,7 +11,8 @@
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-#include "RadioNet.hh"
+#include "Neighborhood.hh"
+#include "Node.hh"
 #include "net/Element.hh"
 #include "net/Queue.hh"
 #include "phy/PHY.hh"
@@ -87,7 +88,7 @@ protected:
 class Controller : public Element
 {
 public:
-    Controller(std::shared_ptr<RadioNet> radionet,
+    Controller(std::shared_ptr<Neighborhood> nhood,
                size_t mtu)
       : net_in(*this, nullptr, nullptr)
       , net_out(*this,
@@ -98,7 +99,7 @@ public:
       , radio_in(*this,nullptr, nullptr,
                  std::bind(&Controller::received, this, _1))
       , radio_out(*this, nullptr, nullptr)
-      , radionet_(radionet)
+      , nhood_(nhood)
       , netlink_(nullptr)
       , mtu_(mtu)
     {
@@ -133,7 +134,7 @@ public:
     /** @brief Set whether or not node is subject to emissions control. */
     virtual void setEmcon(NodeId node_id, bool emcon)
     {
-        (*radionet_)[node_id].emcon = emcon;
+        (*nhood_)[node_id]->emcon = emcon;
     }
 
     /** @brief Pull a packet from the network to be sent next over the radio. */
@@ -190,7 +191,7 @@ public:
 
 protected:
     /** @brief The Net we're attached to */
-    std::shared_ptr<RadioNet> radionet_;
+    std::shared_ptr<Neighborhood> nhood_;
 
     /** @brief Network queue with high-priority sub-queue. */
     std::shared_ptr<ControllerNetLink> netlink_;
