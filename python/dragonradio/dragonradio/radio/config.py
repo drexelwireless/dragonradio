@@ -91,7 +91,12 @@ class Config:
         self.team = 0
         self.node_id = getNodeIdFromHostname()
         self.num_nodes = None
+
+        # Interactive mode
         self.interactive = False
+        """bool: If True, start IPython shell after radio starts"""
+        self.kernel = False
+        """bool: If True, start IPython kernel after radio starts"""
 
         # Log parameters
         self.log_directory = None
@@ -488,18 +493,22 @@ class Config:
         parser.add_argument('-n', action='store', type=int, dest='num_nodes',
                             metavar='N',
                             help='set number of nodes in network')
-        parser.add_argument('--interactive', action='store_const', const=True,
-                            dest='interactive',
-                            help='enter interactive shell after radio is started')
-        parser.add_argument('--kernel', action='store_const', const=True,
-                            dest='kernel',
-                            help='start IPython kernel')
 
         # Load configuration file
         parser.add_argument('--config', action=LoadConfigAction,
                             default=argparse.SUPPRESS,
                             metavar='FILE',
                             help='load configuration options from a file')
+
+        # Interactive mode
+        interact = parser.add_argument_group('Interactive mode').add_mutually_exclusive_group()
+
+        interact.add_argument('--interactive', action='store_const', const=True,
+                              dest='interactive',
+                              help='enter interactive shell after radio is started')
+        interact.add_argument('--kernel', action='store_const', const=True,
+                              dest='kernel',
+                              help='start IPython kernel')
 
         # Log parameters
         log = parser.add_argument_group('Logging')
