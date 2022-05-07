@@ -19,7 +19,6 @@
 #include <functional>
 
 #include "logging.hh"
-#include "RadioNet.hh"
 #include "net/TunTap.hh"
 #include "util/capabilities.hh"
 #include "util/net.hh"
@@ -95,7 +94,7 @@ TunTap::TunTap(const std::string& tap_iface,
     // Set MAC address
     ifr_.ifr_hwaddr = {0};
 
-    ifr_.ifr_hwaddr = parseMAC(nodeMACAddress(node_id));
+    parseMAC(nodeMACAddress(node_id), &ifr_.ifr_hwaddr);
 
     if (ioctl(sockfd, SIOCSIFHWADDR, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting MAC address: %s", strerror(errno));
@@ -103,7 +102,7 @@ TunTap::TunTap(const std::string& tap_iface,
     // Set IP address
     ifr_.ifr_addr = {0};
 
-    ifr_.ifr_addr = parseIP(nodeIPAddress(node_id));
+    parseIP(nodeIPAddress(node_id), &ifr_.ifr_addr);
 
     if (ioctl(sockfd, SIOCSIFADDR, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting IP address: %s", strerror(errno));
@@ -111,7 +110,7 @@ TunTap::TunTap(const std::string& tap_iface,
     // Set netmask
     ifr_.ifr_addr = {0};
 
-    ifr_.ifr_addr = parseIP(tap_ipnetmask_);
+    parseIP(tap_ipnetmask_, &ifr_.ifr_addr);
 
     if (ioctl(sockfd, SIOCSIFNETMASK, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting IP netmask: %s", strerror(errno));
@@ -130,48 +129,6 @@ TunTap::~TunTap(void)
 {
     stop();
     closeTap();
-}
-
-size_t TunTap::getMTU(void)
-{
-    return mtu_;
-}
-
-void TunTap::addARPEntry(uint8_t node_id)
-{
-    RaiseCaps     caps({CAP_NET_ADMIN});
-    struct arpreq req = {{0}};
-
-    strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
-
-    req.arp_pa = parseIP(nodeIPAddress(node_id));
-    req.arp_ha = parseMAC(nodeMACAddress(node_id));
-
-    req.arp_flags = ATF_PERM | ATF_COM;
-
-    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
-
-    if (ioctl(sockfd, SIOCSARP, &req) < 0)
-        logTunTap(LOGERROR, "Error adding ARP entry for node %d: %s", node_id, strerror(errno));
-    else
-        logTunTap(LOGDEBUG, "Added ARP entry for node %d", node_id);
-}
-
-void TunTap::deleteARPEntry(uint8_t node_id)
-{
-    RaiseCaps     caps({CAP_NET_ADMIN});
-    struct arpreq req = {{0}};
-
-    strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
-
-    req.arp_pa = parseIP(nodeIPAddress(node_id));
-
-    Socket sockfd(AF_INET, SOCK_DGRAM, 0);
-
-    if (ioctl(sockfd, SIOCDARP, &req) < 0)
-        logTunTap(LOGERROR, "Error deleting ARP entry for node %d: %s", node_id, strerror(errno));
-    else
-        logTunTap(LOGDEBUG, "Deleted ARP entry for node %d", node_id);
 }
 
 static const char *clonedev = "/dev/net/tun";
@@ -219,14 +176,57 @@ void TunTap::closeTap(void)
     close(fd_);
 }
 
-std::string TunTap::nodeMACAddress(uint8_t node_id)
+std::string TunTap::nodeMACAddress(uint8_t node_id) const
 {
     return ssprintf(tap_macaddr_.c_str(), node_id);
 }
 
-std::string TunTap::nodeIPAddress(uint8_t node_id)
+std::string TunTap::nodeIPAddress(uint8_t node_id) const
 {
     return ssprintf(tap_ipaddr_.c_str(), node_id);
+}
+
+std::string TunTap::sysConfPath(bool ipv4, const std::string &attr) const
+{
+    return ssprintf("/proc/sys/net/%s/conf/%s/%s",
+                    ipv4 ? "ipv4" : "ipv6",
+                    tap_iface_.c_str(),
+                    attr.c_str());
+}
+
+std::string TunTap::readSysConfPath(bool ipv4, const std::string &attr) const
+{
+    std::string path = sysConfPath(ipv4, attr);
+
+    Fd fd;
+
+    if ((fd = open(path.c_str(), O_RDONLY)) < 0)
+        throw std::runtime_error(strerror(errno));
+
+    char    buf[1024];
+    ssize_t count;
+
+    if ((count = read(fd, buf, sizeof(buf)-1)) < 0)
+        throw std::runtime_error(strerror(errno));
+
+    buf[count] = '\0';
+    return std::string(buf);
+}
+
+void TunTap::writeSysConfPath(bool ipv4, const std::string &attr, const std::string &value)
+{
+    RaiseCaps   caps({CAP_NET_ADMIN});
+    std::string path = sysConfPath(ipv4, attr);
+
+    Fd fd;
+
+    if ((fd = open(path.c_str(), O_WRONLY)) < 0)
+        throw std::runtime_error(strerror(errno));
+
+    ssize_t count;
+
+    if ((count = write(fd, value.c_str(), value.length()+1)) < 0)
+        throw std::runtime_error(strerror(errno));
 }
 
 void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)

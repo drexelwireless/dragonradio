@@ -218,6 +218,10 @@ class Config:
         """Maximum number of times a packet is allowed to be retransmitted"""
         self.arq_unreachable_timeout = None
         """Timeout after which a node is marked unreachable (sec)"""
+        self.arq_proactive_unreachable = False
+        """bool: If true, proactively test for unreachable nodes"""
+        self.arq_purge_unreachable = False
+        """bool: If true, purge unreachable nodes"""
         self.arq_ack_delay = 100e-3
         """Maximum delay before an explicit ACK is sent (sec)"""
         self.arq_ack_delay_estimation_window = 1.0
@@ -305,6 +309,9 @@ class Config:
 
         self.packet_compression = False
         """Enable packet compression?"""
+
+        self.manet = False
+        """bool: MANET mode"""
 
         # Queue options
         self.transmission_delay = 0.0
@@ -907,6 +914,10 @@ class Config:
         net.add_argument('--packet-compression', action='store_const', const=True,
                          dest='packet_compression',
                          help='enable network packet compress')
+
+        net.add_argument('--manet', action='store_const', const=True,
+                         dest='manet',
+                         help='enable MANET support')
 
         # Collaboration server options
         collab = parser.add_argument_group('Collaboration')

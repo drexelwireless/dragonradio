@@ -8,8 +8,8 @@
 #include <mutex>
 
 #include "Logger.hh"
-#include "RadioNet.hh"
 #include "mac/Schedule.hh"
+#include "net/Element.hh"
 #include "phy/PHY.hh"
 
 /** @brief Base class for synthesizers */

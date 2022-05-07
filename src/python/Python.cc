@@ -37,7 +37,8 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportNet(mradio);
     exportCIL(mradio);
     exportFlow(mradio);
-    exportRadioNet(mradio);
+    exportNode(mradio);
+    exportNeighborhood(mradio);
     exportHeader(mradio);
     exportPacket(mradio);
     exportModem(mradio);
