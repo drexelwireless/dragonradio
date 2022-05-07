@@ -275,12 +275,14 @@ void TunTap::start(void)
 
 void TunTap::stop(void)
 {
-    done_ = true;
+    if (!done_) {
+        done_ = true;
 
-    wakeThread(worker_thread_);
+        wakeThread(worker_thread_);
 
-    if (worker_thread_.joinable())
-        worker_thread_.join();
+        if (worker_thread_.joinable())
+            worker_thread_.join();
+    }
 }
 
 void TunTap::worker(void)
