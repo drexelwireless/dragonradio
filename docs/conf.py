@@ -51,6 +51,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinxarg.ext',
     'sphinx_autodoc_typehints',
+    'sphinx_sitemap'
 ]
 
 autodoc_mock_imports = ['google.protobuf']
@@ -129,6 +130,8 @@ html_static_path = ['_static']
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
+
+html_baseurl = 'https://drexelwireless.github.io/dragonradio/'
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
