@@ -44,12 +44,28 @@ FDChannelizer::~FDChannelizer()
 
 void FDChannelizer::setChannels(const std::vector<PHYChannel> &channels)
 {
-    for (auto&& chan : channels) {
-        if (fmod(rx_rate_, chan.channel.bw) != 0)
-            throw std::range_error("Channel bandwidth must be an integral multiple of total bandwidth.");
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        checkChannels(channels, rx_rate_);
+
+        channels_ = channels;
     }
 
-    Channelizer::setChannels(channels);
+    reconfigure();
+}
+
+void FDChannelizer::setRXRate(double rate)
+{
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        checkChannels(channels_, rate);
+
+        rx_rate_ = rate;
+    }
+
+    reconfigure();
 }
 
 void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
@@ -407,6 +423,12 @@ FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(const PHYChannel &chan
   , temp_(N)
   , H_(N)
 {
+    // Channel bandwidth must be less that total available bandwidth
+    assert(channel.channel.bw <= rx_rate);
+
+    // Channel bandwidth must evenly divide total bandwidth
+    assert(fmod(rx_rate_, channel.channel.bw) == 0);
+
     // Number of FFT bins to rotate
     Nrot_ = N*channel.channel.fc/rx_rate;
     if (Nrot_ < 0)

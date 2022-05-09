@@ -49,6 +49,8 @@ public:
 
     void setChannels(const std::vector<PHYChannel> &channels) override;
 
+    void setRXRate(double rate) override;
+
     void push(const std::shared_ptr<IQBuf> &) override;
 
     void reconfigure(void) override;
@@ -171,6 +173,9 @@ private:
 
     /** @brief A reference to the global logger */
     std::shared_ptr<Logger> logger_;
+
+    /** @brief Check that channels are compatible with bandwidth specification */
+    void checkChannels(const std::vector<PHYChannel> &channels, double rx_rate);
 
     /** @brief Worker that converts packets from time domain to frequency
      * domain.
