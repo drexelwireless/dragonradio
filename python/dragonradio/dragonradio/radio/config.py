@@ -10,20 +10,20 @@ import os
 from pprint import pformat
 import platform
 import re
+from typing import Any, List, Mapping, Optional
 
 import libconf
 
-import dragonradio
-import dragonradio.liquid
+from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 
 logger = logging.getLogger('config')
 
-def getNodeIdFromHostname():
+def getNodeIdFromHostname() -> int:
     """Determine node ID from hostname"""
     m = re.search(r'([0-9]{1,3})$', platform.node())
     if not m:
-        logger.warning('Cannot determine node id from hostname')
-        return None
+        logger.warning('Cannot determine node ID from hostname; defaulting to node ID 1')
+        return 1
 
     return int(m.group(1))
 
@@ -31,10 +31,8 @@ class ExtendAction(argparse.Action):
     """Add a list of values to an argument's value"""
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, option_strings, *args, **kwargs):
-        super().__init__(option_strings=option_strings,
-                         nargs=0,
-                         *args, **kwargs)
+    def __init__(self, option_strings, *args, nargs=0, **kwargs):
+        super().__init__(option_strings, nargs=0, *args, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         items = getattr(namespace, self.dest) or []
@@ -46,9 +44,7 @@ class LogLevelAction(argparse.Action):
     # pylint: disable=too-few-public-methods
 
     def __init__(self, option_strings, *args, **kwargs):
-        super().__init__(option_strings=option_strings,
-                         nargs=0,
-                         *args, **kwargs)
+        super().__init__(option_strings, nargs=0, *args, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, self.const)
@@ -68,8 +64,7 @@ class LoadConfigAction(argparse.Action):
     # pylint: disable=too-few-public-methods
 
     def __init__(self, option_strings, *args, **kwargs):
-        super().__init__(option_strings=option_strings,
-                         *args, **kwargs)
+        super().__init__(option_strings, *args, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         namespace.loadConfig(values)
@@ -80,319 +75,400 @@ def parser():
 
 class Config:
     """Radio configuration"""
-    # pylint: disable=too-many-instance-attributes
+
+    team: int = 0
+    "Team identifier. Must be in the range [0,7]."
+    node_id: int
+    "Node identifier"
+    num_nodes: Optional[int] = None
+    "Total number of nodes"
+
+    # Interactive mode
+    interactive: bool = False
+    """If True, start IPython shell after radio starts"""
+    kernel: bool = False
+    """If True, start IPython kernel after radio starts"""
+
+    # Logging
+    loglevel: int = logging.WARNING
+    """Log level"""
+    verbose_packet_trace: bool = False
+    "Print every packet sent and received"
+
+    # Log parameters
+    log_directory: Optional[str] = None
+    """Path to directory holding log files"""
+    log_sources: List[str]
+    """event sources to log"""
+    log_interfaces: List[str]
+    """network interfaces to log with pcap"""
+    log_invalid_headers: bool = False
+    """log packets with invalid headers"""
+    log_snapshots: bool = False
+    """log snapshots"""
+    log_protobuf: bool = False
+    """set protobuf log level to DEBUG"""
+    log_scoring: bool = False
+    """set protobuf log level to DEBUG"""
+    compress_interface_logs: bool = False
+    """compress pcap file with xz post-capture"""
+    logdir_: Optional[str] = None
+    """Path to the log directory for this node"""
+
+    # USRP settings
+    addr: str = ''
+    """USRP device address"""
+    rx_antenna: str = 'RX2'
+    """USRP RX antenna"""
+    tx_antenna: str = 'TX/RX'
+    """USRP TX antenna"""
+    rx_subdev: Optional[str] = None
+    """USRP RX sub-device"""
+    tx_subdev: Optional[str] = None
+    """USRP TX sub-device"""
+    rx_max_samps_factor: int = 8
+    """Factor used to calculate maximum number of RX samples"""
+    tx_max_samps_factor: int = 8
+    """Factor used to calculate maximum number of TX samples"""
+    clock_source: Optional[str] = None
+    """Clock source for the USRP device"""
+    time_source: Optional[str] = None
+    """Time source for the USRP device"""
+
+    # Frequency and bandwidth
+    # Default frequency in the Colosseum is 1GHz
+    frequency: float = 1e9
+    """Radio frequency"""
+    bandwidth: float = 5e6
+    """Radio bandwidth to use"""
+    max_bandwidth: float = 50e6
+    """float: Max bandwidth radio can handle"""
+    rx_bandwidth: Optional[float]  = None
+    """If set, always receive at this bandwidth. Otherwise, calculate receive bandwidth based on RX oversample factor and radio bandwidth."""
+    tx_bandwidth: Optional[float] = None
+    """If set, always transmit at this bandwidth. Otherwise, calculate transmit bandwidth based on TX oversample factor and channel bandwidth."""
+    rx_oversample_factor: float = 1.0
+    """Oversample factor on RX"""
+    tx_oversample_factor: float = 1.0
+    """Oversample factor on TX"""
+    channel_bandwidth: float = 1e6
+    """Default channel bandwidth for FDMA"""
+
+    # TX/RX gain parameters
+    tx_gain: float = 25.0
+    """USRP RF TX gain (dB)"""
+    rx_gain: float = 25.0
+    """USRP RF RX gain (dB)"""
+    soft_tx_gain: float = -8.0
+    """soft (digital) TX gain (dB)"""
+    auto_soft_tx_gain: Optional[int] = None
+    """Optional[int]: number of packets to use to calculate 0 dBFS soft TX gain"""
+    auto_soft_tx_gain_clip_frac: float = 1.0
+    """fraction of IQ samples used to calculate 0 dBFS soft TX gain"""
+
+    # PHY parameters
+    phy: str = 'ofdm'
+    """PHY to use"""
+    num_modulation_threads: int = 1
+    """Number of modulation threads"""
+    num_demodulation_threads: int = 10
+    """Number of demodulation threads"""
+    max_channels: int = 10
+    """Maximum number of channels"""
+    tx_upsample: bool = True
+    """If True, upsample transmitted data"""
+
+    # Channelizer parameters
+    channelizer: str = 'freqdomain'
+    "Channelizer to use"
+    channelizer_enforce_ordering: bool = False
+    "Enforce demodulation order in channelizer"
+    channelizer_ftype: str = 'firpm1f2'
+    """Algorithm used to construct low-pass filter for channelizer."""
+
+    # Synthesizer parameters
+    synthesizer: str = 'freqdomain'
+    """Synthesizer to use"""
+
+    # General liquid modulation options
+    check: CRCScheme = 'crc32'
+    """CRCScheme: default Liquid CRC scheme"""
+    fec0: FECScheme = 'rs8'
+    """default Liquid inner FEC"""
+    fec1: FECScheme = 'none'
+    """default Liquid outer FEC"""
+    ms: ModulationScheme = 'qpsk'
+    """default Liquid modulation scheme"""
+
+    # Header MCS
+    header_check: CRCScheme = 'crc32'
+    """Liquid CRC scheme for header"""
+    header_fec0: FECScheme = 'none'
+    """Liquid inner FEC for header"""
+    header_fec1: FECScheme = 'v29p78'
+    """Liquid outer FEC for header"""
+    header_ms: ModulationScheme = 'bpsk'
+    """Liquid modulation scheme for header"""
+
+    # Soft decoding options
+    soft_header: bool = True
+    "bool: Use soft decoding for header"
+    soft_payload: bool = True
+    "Use soft decoding for payload"
+
+    # OFDM parameters
+    M: int = 48
+    """number of OFDM subcarriers"""
+    cp_len: int = 6
+    """OFDM cyclic prefix length"""
+    taper_len: int = 4
+    """OFDM taper length"""
+    subcarriers: Optional[str] = None
+    """string specifying OFDM subcarriers: '.' = null; 'P' = pilot; '+' = data."""
+
+    # MAC parameters
+    mac: str = 'tdma-fdma'
+    """MAC to use"""
+    slot_size: float = .035
+    """Total slot duration, including guard interval (seconds)"""
+    guard_size: float = .01
+    """Size of slot guard interval (seconds)"""
+    demod_overlap_size: float = .005
+    """Size of demodulation overlap if using the overlapping demodulator (seconds)"""
+    slot_send_lead_time: float = 5e-3
+    """Lead time needed for slot transmission (seconds)"""
+    aloha_prob: float = .1
+    """Probability of transmission in a given slot for ALOHA"""
+    superslots: bool = False
+    """True if slots should be combined into superslots"""
+    mac_accurate_tx_timestamps: bool = False
+    """True if MAC should provide more accurate TX timestamps at a potential performance cost"""
+    mac_timed_tx_delay: float = 500e-6
+    """Delay for timed TX"""
+    neighbor_discovery_period: float = 12.0
+    """Neighbor discovery period at radio startup (sec)"""
+
+    # ARQ options
+    arq: bool = False
+    """Should ARQ be enabled?"""
+    arq_window: int = 1024
+    """ARQ window size"""
+    arq_enforce_ordering: bool = False
+    """Should ARQ enforce packet ordering?"""
+    arq_max_retransmissions: Optional[int] = None
+    """Maximum number of times a packet is allowed to be retransmitted"""
+    arq_unreachable_timeout: Optional[float] = None
+    """Timeout after which a node is marked unreachable (sec)"""
+    arq_proactive_unreachable: bool = False
+    """If true, proactively test for unreachable nodes"""
+    arq_purge_unreachable: bool = False
+    """If true, purge unreachable nodes"""
+    arq_ack_delay: float = 100e-3
+    """Maximum delay before an explicit ACK is sent (sec)"""
+    arq_ack_delay_estimation_window: float = 1.0
+    """Time window over which to estimate ACK delay (sec)"""
+    arq_retransmission_delay: float = 500e-3
+    """Default duration of retransmission timer (sec)"""
+    arq_min_retransmission_delay: float = 200e-3
+    """Minimum duration of retransmission timer (sec)"""
+    arq_retransmission_delay_slop: float = 1.1
+    """Safety factor for retransmission timer estimator"""
+    arq_sack_delay: float = 50e-3
+    """Maximum time to wait for a regular packet to have a SACK attached (sec)"""
+    arq_max_sacks: Optional[int] = None
+    """Maximum number of SACKs in a packet"""
+    arq_explicit_nak_win: int = 10
+    """Maximum number of NAKs to send during NAK window"""
+    arq_explicit_nak_win_duration: float = 0.1
+    """Duration of NAK window (sec)"""
+    arq_selective_ack: bool = True
+    """Send selective ACKs?"""
+    arq_selective_ack_feedback_delay: float = 0.300
+    """Maximum time to wait before counting a selective NAK as a TX failure"""
+    arq_mcu: int = 100
+    """Maximum number of extra bytes beyond MTU to be used for control information"""
+    arq_move_along: bool = True
+    """Move the send window along even when it's full"""
+    arq_decrease_retrans_mcsidx: bool = False
+    """Decrease MCS index for retransmitted packets with a deadline"""
+    arq_broadcast_gain_db: float = 0.0
+    """Gain to be applied to broadcast packets (dB)"""
+    arq_ack_gain_db: float = 0.0
+    """Gain to be applied to ACK packets (dB)"""
+
+    # AMC options
+    amc: bool = False
+    """If True, enable AMC. Requires ARQ."""
+    amc_table: Optional[Mapping] = None
+    """AMC table of modulation and coding schemes"""
+    amc_short_per_window: float = 100e-3
+    """Time window over which short-term packer error rate is calculated"""
+    amc_long_per_window: float = 400e-3
+    """Time window over which long-term packer error rate is calculated"""
+    amc_short_stats_window: float = 100e-3
+    """Time window over which short-term channel state statistics are calculated"""
+    amc_long_stats_window: float = 400e-3
+    """Time window over which long-term channel state statistics are calculated"""
+    amc_aggressive_stats_reset: bool = True
+    """Aggressively reset link statistics even if we cannot change MCS index"""
+    amc_mcs_fast_adjustment_period: float = 1.0
+    """Duration of fast adjustment period after an environment change"""
+    amc_mcsidx_broadcast: Optional[int] = None
+    """MCS index for broadcast packets"""
+    amc_mcsidx_ack: Optional[int] = None
+    """MCS index for ACK packets"""
+    amc_mcsidx_min: Optional[int] = None
+    """minimum MCS index"""
+    amc_mcsidx_max: Optional[int] = None
+    """maximum MCS index"""
+    amc_mcsidx_init: Optional[int] = 0
+    """initial MCS index"""
+    amc_mcsidx_up_per_threshold: float = 0.04
+    """Packet error rate threshold for increasing MCS index"""
+    amc_mcsidx_down_per_threshold: float = 0.10
+    """Packet error rate threshold for decreasing MCS index"""
+    amc_mcsidx_alpha: float = 0.5
+    """Multiplier for MCS transition probe probability on MCS index decrease"""
+    amc_mcsidx_prob_floor: float = 0.1
+    """Minimum MCS transition probe probability"""
+
+    # Snapshot options
+    snapshot_frequency: Optional[float] = None
+    """How often to take a snapshot (sec)"""
+    snapshot_duration: float = 0.5
+    """Duration of each snapshot (sec)"""
+    snapshot_finalize_wait: float = 200e-3
+    """How long to wait for demodulation to finish after stopping a snapshot (sec)"""
+
+    # Network options
+    mtu: int = 1500
+    """Maximum Transmission Unit"""
+
+    internal_net: str = '10.10.10.0'
+    """IP network for internal radio network"""
+    internal_netmask: str = '255.255.255.0'
+    """IP network mask for internal radio network"""
+
+    external_net: str = '192.168.0.0'
+    """IP network for external network"""
+    external_netmask: str = '255.255.0.0'
+    """IP network mask for external network"""
+
+    tap_iface: str = 'tap0'
+    """Tap interface to use"""
+    tap_ipaddr: str = '10.10.10.%d'
+    """printf-style format string specifying node IP address"""
+    tap_macaddr: str = 'c6:ff:ff:ff:ff:%02x'
+    """printf-style format string specifying node MAC address"""
+
+    queue: str = 'fifo'
+    """Network queue to use"""
+
+    packet_compression: bool = False
+    """Enable packet compression?"""
+
+    manet: bool = False
+    """MANET mode"""
+
+    #
+    # Queue options
+    #
+    transmission_delay: float = 0.0
+    """Estimated packet transmission delay (seconds)"""
+
+    # Mandate queue options
+    mandate_bonus_phase: bool = True
+    """Flag indicating whether or not to have a bonus phase"""
+    mandate_use_wall_timestamp: bool = False
+    """Flag indicating whether or not to compute deadline from packet creation timestamp"""
+
+    # Tail drop queue options
+    tail_drop_max_size: int = 5*1500
+    """Tail drop queue maximum size (bytes)"""
+
+    # RED queue options
+    red_gentle: bool = True
+    """Gentle RED"""
+    red_min_thresh: int = 5*1500
+    """RED minimum queue threshold"""
+    red_max_thresh: int = 3*5*1500
+    """RED maximum queue threshold"""
+    red_max_p: float = 0.1
+    """RED maximum packet drop probability"""
+    red_w_q: float = 0.002
+    """RED queue weight (for EWMA)"""
+
+    # Neighbor discover options
+    # discovery_hello_interval is how often we send HELLO packets during
+    # discovery, and standard_hello_interval is how often we send HELLO
+    # packets during the rest of the run
+    discovery_hello_interval: float = 1.0
+    """Interval between HELLO packets during node discovery (sec)"""
+    standard_hello_interval: float = 60.0
+    """Standard interval between HELLO packets (post node discovery) (sec)"""
+
+    # Clock synchronization
+    clock_sync_period: Optional[float] = None
+    """Period at which clock is synchronized"""
+    clock_noskew: bool = False
+    """Assume no clock skew relative to master"""
+
+    # Measurement options
+    measurement_period: float = 1.0
+    """DARPA SC2 measurement period (sec)"""
+
+    # Scoring options
+    max_performance_age: float = 8.0
+    """Performance reports may be from a measurement period no older than
+    this many seconds"""
+
+    stats_ignore_window: float = 1.5
+    """Ignore flow statistics during this (most recent) time window"""
+
+    # Internal agent options
+    status_update_period: float = 5.0
+    """Period between status updates (sec)"""
+
+    # Collaboration server options
+    force_gateway: bool = False
+    """Force this node to be the collaboration gateway"""
+    collab_iface: Optional[str] = None
+    """Name of Colosseum collaboration interface"""
+    collab_server_ip: Optional[str] = None
+    """Collaboration server IP address"""
+    collab_server_port: int = 5556
+    """Collaboration server port"""
+    collab_client_port: int = 5557
+    """Collaboration client port"""
+    collab_peer_port: int = 5558
+    """Collaboration peer port"""
+
+    # Collaboration agent message periods
+    location_update_period: float = 15.0
+    """Period between location updates"""
+    spectrum_usage_update_period: float = 5.0
+    """Period between spectrum updates"""
+    detailed_performance_update_period: float = 5.0
+    """Period between detailed performance updates"""
+
+    # Spectrum usage tuning parameters
+    spec_future_period: float = 10.0
+    """How far into the future to predict spectrum usage"""
+    spec_chan_trim_lo: float = 0.05
+    """Trim this fraction of the bandwidth from the low edge of channel when predicting"""
+    spec_chan_trim_hi: float = 0.05
+    """Trim this fraction of the bandwidth from the high edge of channel when predicting"""
+
+    # Traffic options
+    traffic_iface: str = 'tr0'
+    """Name of Colosseum traffic interface"""
 
     def __init__(self):
-        # pylint: disable=too-many-statements
-
-        # Set some default values
-        self.loglevel = logging.WARNING
-        self.verbose_packet_trace = False
-        self.team = 0
         self.node_id = getNodeIdFromHostname()
-        self.num_nodes = None
-
-        # Interactive mode
-        self.interactive = False
-        """bool: If True, start IPython shell after radio starts"""
-        self.kernel = False
-        """bool: If True, start IPython kernel after radio starts"""
 
         # Log parameters
-        self.log_directory = None
         self.log_sources = []
-        self.log_interfaces = []
-        self.log_invalid_headers = False
-        self.log_snapshots = False
-        self.log_protobuf = False
-        self.log_scoring = False
-        self.compress_interface_logs = False
-        # This is the actual path to the log directory
-        self.logdir_ = None
-
-        # USRP settings
-        self.addr = ''
-        self.rx_antenna = 'RX2'
-        self.tx_antenna = 'TX/RX'
-        self.rx_subdev = None
-        self.tx_subdev = None
-        self.rx_max_samps_factor = 8
-        self.tx_max_samps_factor = 8
-        self.clock_source = None
-        """Clock source for the USRP device"""
-        self.time_source = None
-        """Time source for the USRP device"""
-
-        # Frequency and bandwidth
-        # Default frequency in the Colosseum is 1GHz
-        self.frequency = 1e9
-        """Radio frequency"""
-        self.bandwidth = 5e6
-        """Radio bandwidth to use"""
-        self.max_bandwidth = 50e6
-        """Max bandwidth radio can handle"""
-        self.rx_bandwidth = None
-        """If set, always receive at this bandwidth. Otherwise, calculate
-        receive bandwidth based on RX oversample factor and radio bandwidth."""
-        self.tx_bandwidth = None
-        """If set, always transmit at this bandwidth. Otherwise, calculate
-        transmit bandwidth based on TX oversample factor and channel
-        bandwidth."""
-        self.rx_oversample_factor = 1.0
-        """Oversample factor on RX"""
-        self.tx_oversample_factor = 1.0
-        """Oversample factor on TX"""
-        self.channel_bandwidth = 1e6
-        """Default channel bandwidth for FDMA"""
-
-        # TX/RX gain parameters
-        self.tx_gain = 25
-        self.rx_gain = 25
-        self.soft_tx_gain = -8
-        self.auto_soft_tx_gain = None
-        self.auto_soft_tx_gain_clip_frac = 1.0
-
-        # PHY parameters
-        self.phy = 'ofdm'
-        self.num_modulation_threads = 1
-        self.num_demodulation_threads = 10
-        self.max_channels = 10
-        self.tx_upsample = True
-
-        # Channelizer parameters
-        self.channelizer = 'freqdomain'
-        self.channelizer_enforce_ordering = False
-        self.channelizer_ftype = 'firpm1f2'
-        """Algorithm used to construct low-pass filter for channelizer."""
-
-        # Synthesizer parameters
-        self.synthesizer = 'freqdomain'
-
-        # General liquid modulation options
-        self.check = 'crc32'
-        self.fec0 = 'rs8'
-        self.fec1 = 'none'
-        self.ms = 'qpsk'
-
-        # Header MCS
-        self.header_check = 'crc32'
-        self.header_fec0 = 'none'
-        self.header_fec1 = 'v29p78'
-        self.header_ms = 'bpsk'
-
-        # Soft decoding options
-        self.soft_header = True
-        self.soft_payload = True
-
-        # OFDM parameters
-        self.M = 48
-        self.cp_len = 6
-        self.taper_len = 4
-        self.subcarriers = None
-
-        # MAC parameters
-        self.mac = 'tdma-fdma'
-        """Mac"""
-        self.slot_size = .035
-        """Total slot duration, including guard interval (seconds)"""
-        self.guard_size = .01
-        """Size of slot guard interval (seconds)"""
-        self.demod_overlap_size = .005
-        """Size of demodulation overlap if using the overlapping demodulator (seconds)"""
-        self.slot_send_lead_time = 5e-3
-        """Lead time needed for slot transmission (seconds)"""
-        self.aloha_prob = .1
-        """Probability of transmission in a given slot for ALOHA"""
-        self.superslots = False
-        """True if slots should be combined into superslots"""
-        self.mac_accurate_tx_timestamps = False
-        """True if MAC should provide more accurate TX timestamps at a potential performance cost"""
-        self.mac_timed_tx_delay = 500e-6
-        """Delay for timed TX"""
-        self.neighbor_discovery_period = 12
-        """Neighbor discovery period at radio startup (sec)"""
-
-        # ARQ options
-        self.arq = False
-        """Should ARQ be enabled?"""
-        self.arq_window = 1024
-        """ARQ window size"""
-        self.arq_enforce_ordering = False
-        """Should ARQ enforce packet ordering?"""
-        self.arq_max_retransmissions = None
-        """Maximum number of times a packet is allowed to be retransmitted"""
-        self.arq_unreachable_timeout = None
-        """Timeout after which a node is marked unreachable (sec)"""
-        self.arq_proactive_unreachable = False
-        """bool: If true, proactively test for unreachable nodes"""
-        self.arq_purge_unreachable = False
-        """bool: If true, purge unreachable nodes"""
-        self.arq_ack_delay = 100e-3
-        """Maximum delay before an explicit ACK is sent (sec)"""
-        self.arq_ack_delay_estimation_window = 1.0
-        """Time window over which to estimate ACK delay (sec)"""
-        self.arq_retransmission_delay = 500e-3
-        """Default duration of retransmission timer (sec)"""
-        self.arq_min_retransmission_delay = 200e-3
-        """Minimum duration of retransmission timer (sec)"""
-        self.arq_retransmission_delay_slop = 1.1
-        """Safety factor for retransmission timer estimator"""
-        self.arq_sack_delay = 50e-3
-        """Maximum time to wait for a regular packet to have a SACK attached (sec)"""
-        self.arq_max_sacks = None
-        """Maximum number of SACKs in a packet"""
-        self.arq_explicit_nak_win = 10
-        """Maximum number of NAKs to send during NAK window"""
-        self.arq_explicit_nak_win_duration = 0.1
-        """Duration of NAK window (sec)"""
-        self.arq_selective_ack = True
-        """Send selective ACKs?"""
-        self.arq_selective_ack_feedback_delay = 0.300
-        """Maximum time to wait before counting a selective NAK as a TX failure"""
-        self.arq_mcu = 100
-        """Maximum number of extra bytes beyond MTU to be used for control information"""
-        self.arq_move_along = True
-        """Move the send window along even when it's full"""
-        self.arq_decrease_retrans_mcsidx = False
-        """Decrease MCS index for retransmitted packets with a deadline"""
-        self.arq_broadcast_gain_db = 0.0
-        """Gain to be applied to broadcast packets (dB)"""
-        self.arq_ack_gain_db = 0.0
-        """Gain to be applied to ACK packets (dB)"""
-
-        # AMC options
-        self.amc = False
-        self.amc_table = None
-        self.amc_short_per_window = 100e-3
-        self.amc_long_per_window = 400e-3
-        self.amc_short_stats_window = 100e-3
-        self.amc_long_stats_window = 400e-3
-        self.amc_aggressive_stats_reset = True
-        """bool: Aggressively reset link statistics even if we cannot change MCS index"""
-        self.amc_mcs_fast_adjustment_period = 1.0
-        self.amc_mcsidx_broadcast = None
-        self.amc_mcsidx_ack = None
-        self.amc_mcsidx_min = None
-        self.amc_mcsidx_max = None
-        self.amc_mcsidx_init = 0
-        self.amc_mcsidx_up_per_threshold = 0.04
-        self.amc_mcsidx_down_per_threshold = 0.10
-        self.amc_mcsidx_alpha = 0.5
-        self.amc_mcsidx_prob_floor = 0.1
-
-        # Snapshot options
-        self.snapshot_frequency = None
-        """How often to take a snapshot (sec)"""
-        self.snapshot_duration = 0.5
-        """Duration of each snapshot (sec)"""
-        self.snapshot_finalize_wait = 200e-3
-        """How long to wait for demodulation to finish after stopping a snapshot (sec)"""
-
-        # Network options
-        self.mtu = 1500
-        """"Maximum Transmission Unit"""
-
-        self.internal_net = '10.10.10.0'
-        """IP network for internal radio network"""
-        self.internal_netmask = '255.255.255.0'
-        """IP network mask for internal radio network"""
-
-        self.external_net = '192.168.0.0'
-        """IP network for external network"""
-        self.external_netmask = '255.255.0.0'
-        """IP network mask for external network"""
-
-        self.tap_iface = 'tap0'
-        """Tap interface to use"""
-        self.tap_ipaddr = '10.10.10.%d'
-        """printf-style string specifying node IP address"""
-        self.tap_macaddr = 'c6:ff:ff:ff:ff:%02x'
-        """printf-style string specifying node MAC address"""
-
-        self.queue = 'fifo'
-        """Network queue to use"""
-
-        self.packet_compression = False
-        """Enable packet compression?"""
-
-        self.manet = False
-        """bool: MANET mode"""
-
-        # Queue options
-        self.transmission_delay = 0.0
-        """Estimated packet transmission delay (seconds)"""
-        self.mandate_bonus_phase = True
-        """Flag indicating whether or not to have a bonus phase"""
-        self.mandate_use_wall_timestamp = False
-        """Flag indicating whether or not to compute deadline from packet creation timestamp"""
-
-        # Tail drop queue options
-        self.tail_drop_max_size = 5*1500
-        "Tail drop queue maximum size (bytes)"
-
-        # RED queue options
-        self.red_gentle = True
-        "Gentle RED"
-        self.red_min_thresh = 5*1500
-        "RED minimum queue threshold"
-        self.red_max_thresh = 3*self.red_min_thresh
-        "RED maximum queue threshold"
-        self.red_max_p = 0.1
-        "RED maximum packet drop probability"
-        self.red_w_q = 0.002
-        "RED queue weight (for EWMA)"
-
-        # Neighbor discover options
-        # discovery_hello_interval is how often we send HELLO packets during
-        # discovery, and standard_hello_interval is how often we send HELLO
-        # packets during the rest of the run
-        self.discovery_hello_interval = 1.0
-        self.standard_hello_interval = 60.0
-
-        # Clock synchronization
-        self.clock_sync_period = None
-        """Period at which clock is synchronized"""
-        self.clock_noskew = False
-        """Assume no clock skew relative to master"""
-
-        # Measurement options
-        self.measurement_period = 1.0
-
-        # Scoring options
-        self.max_performance_age = 8.0
-        """Performance reports may be from a measurement period no older than
-        this many seconds"""
-
-        self.stats_ignore_window = self.measurement_period + 0.5
-        """Ignore flow statistics during this (most recent) time window"""
-
-        # Internal agent options
-        self.status_update_period = 5
-
-        # Collaboration server options
-        self.force_gateway = False
-        self.collab_iface = None
-        self.collab_server_ip = None
-        self.collab_server_port = 5556
-        self.collab_client_port = 5557
-        self.collab_peer_port = 5558
-
-        # Collaboration agent message periods
-        self.location_update_period = 15
-        self.spectrum_usage_update_period = 5
-        self.detailed_performance_update_period = 5
-
-        # Spectrum usage tuning parameters
-        self.spec_future_period = 10.0
-        """How far into the future to predict spectrum usage"""
-        self.spec_chan_trim_lo = 0.05
-        """Trim this fraction of the bandwidth from the low edge of channel when predicting"""
-        self.spec_chan_trim_hi = 0.05
-        """Trim this fraction of the bandwidth from the high edge of channel when predicting"""
-
-        # Traffic options
-        self.traffic_iface = 'tr0'
-        """Name of Colosseum traffic interface"""
+        self.log_interfaces  = []
 
     def __str__(self):
         return pformat(self.__dict__)
@@ -419,10 +495,10 @@ class Config:
         return logging.getLevelName(self.loglevel)
 
     @log_level.setter
-    def log_level(self, level):
+    def log_level(self, level: str):
         self.loglevel = getattr(logging, level)
 
-    def mergeConfig(self, config):
+    def mergeConfig(self, config: Mapping[str, Any]):
         """Merge a configuration into this configuration"""
         for key in config:
             setattr(self, key, config[key])
@@ -470,7 +546,7 @@ class Config:
         self.addArguments(parser)
         return parser
 
-    def addArguments(self, parser):
+    def addArguments(self, parser: argparse.ArgumentParser):
         """
         Populate an ArgumentParser with arguments corresponding to configuration
         parameters.
@@ -694,25 +770,22 @@ class Config:
                             action='store', type=str,
                             dest='check',
                             help='set data validity check: ' + \
-                                enumHelp(dragonradio.liquid.CRCScheme))
+                                enumHelp(CRCScheme))
         liquid.add_argument('-c', '--fec0',
                             action='store', type=str,
                             dest='fec0',
                             metavar='FEC',
-                            help='set inner FEC: ' + \
-                                enumHelp(dragonradio.liquid.FECScheme))
+                            help='set inner FEC: ' + enumHelp(FECScheme))
         liquid.add_argument('-k', '--fec1',
                             action='store', type=str,
                             dest='fec1',
                             metavar='FEC',
-                            help='set outer FEC: ' + \
-                                enumHelp(dragonradio.liquid.FECScheme))
+                            help='set outer FEC: ' + enumHelp(FECScheme))
         liquid.add_argument('-m', '--mod',
                             action='store', type=str,
                             dest='ms',
                             metavar='MODULATION',
-                            help='set modulation scheme: ' + \
-                                enumHelp(dragonradio.liquid.ModulationScheme))
+                            help='set modulation scheme: ' + enumHelp(ModulationScheme))
 
         # Soft decoding options
         liquid.add_argument('--soft-header', action='store_const', const=True,
