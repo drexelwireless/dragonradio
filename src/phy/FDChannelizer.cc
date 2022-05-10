@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <math.h>
@@ -24,7 +24,7 @@ FDChannelizer::FDChannelizer(const std::vector<PHYChannel> &channels,
   , nthreads_(nthreads)
   , done_(false)
   , reconfigure_(true)
-  , reconfigure_sync_(nthreads+1)
+  , reconfigure_sync_(nthreads+2)
   , logger_(logger)
 {
     fft_thread_ = std::thread(&FDChannelizer::fftWorker, this);
@@ -79,6 +79,9 @@ void FDChannelizer::reconfigure(void)
 
     // Tell workers we are reconfiguring
     reconfigure_.store(true, std::memory_order_release);
+
+    // Kick the FFT worker
+    tdbufs_.kick();
 
     // Wake all workers that might be sleeping.
     {
@@ -136,15 +139,41 @@ void FDChannelizer::stop(void)
     }
 }
 
+void FDChannelizer::checkChannels(const std::vector<PHYChannel> &channels, double rx_rate)
+{
+    for (auto&& chan : channels) {
+        if (chan.channel.fc + chan.channel.bw/2 > rx_rate/2)
+            throw std::range_error("Channel does not fit in available bandwidth.");
+
+        if (chan.channel.fc - chan.channel.bw/2 < -rx_rate/2)
+            throw std::range_error("Channel does not fit in available bandwidth.");
+
+        if (fmod(rx_rate, chan.channel.bw) != 0)
+            throw std::range_error("Channel bandwidth must evenly divide total bandwidth.");
+    }
+}
+
 void FDChannelizer::fftWorker(void)
 {
-    std::shared_ptr<IQBuf> iqbuf;
-    std::shared_ptr<IQBuf> fdbuf;
-    unsigned               seq = 0;
-    fftw::FFT<C>           fft(N, FFTW_FORWARD, FFTW_MEASURE);
-    size_t                 fftoff = O;
+    std::vector<PHYChannel> channels; // Local copy of channels
+    std::shared_ptr<IQBuf>  iqbuf;
+    std::shared_ptr<IQBuf>  fdbuf;
+    unsigned                seq = 0;
+    fftw::FFT<C>            fft(N, FFTW_FORWARD, FFTW_MEASURE);
+    size_t                  fftoff = O;
 
     while (!done_) {
+        if (reconfigure_.load(std::memory_order_acquire)) {
+            // Wait for reconfiguration to finish
+            reconfigure_sync_.wait();
+
+            // Make local copy of channels
+            channels = channels_;
+
+            // Signal that we have resumed
+            reconfigure_sync_.wait();
+        }
+
         // Get a time-domain IQ buffer
         if (!tdbufs_.pop(iqbuf)) {
             if (done_)
@@ -176,7 +205,7 @@ void FDChannelizer::fftWorker(void)
         // Make the frequency-domain buffer available to the individual channels
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            unsigned                    nchannels = channels_.size();
+            unsigned                    nchannels = channels.size();
 
             for (unsigned i = 0; i < nchannels; ++i)
                 slots_[i]->emplace(iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O));
