@@ -10,13 +10,40 @@ import os
 from pprint import pformat
 import platform
 import re
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Mapping, Optional, Type
 
 import libconf
 
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 
+from _dragonradio.radio import MAC, PHY
+from _dragonradio.radio import FDMA, SlottedALOHA, TDMA
+from dragonradio.liquid import FlexFrame, NewFlexFrame, OFDM
+
 logger = logging.getLogger('config')
+
+MAC_NAMES = { 'aloha': SlottedALOHA
+            , 'tdma': TDMA
+            , 'tdma-fdma': TDMA
+            , 'fdma': FDMA
+            }
+
+def str2mac(name: str) -> Type[MAC]:
+    if name in MAC_NAMES:
+        return MAC_NAMES[name]
+
+    raise ValueError("%s is not a valid MAC", name)
+
+PHY_NAMES = { 'ofdm': OFDM
+            , 'flexframe': FlexFrame
+            , 'newflexframe': NewFlexFrame
+            }
+
+def str2phy(name: str) -> Type[PHY]:
+    if name in PHY_NAMES:
+        return PHY_NAMES[name]
+
+    raise ValueError("%s is not a valid PHY", name)
 
 def getNodeIdFromHostname() -> int:
     """Determine node ID from hostname"""
@@ -474,6 +501,14 @@ class Config:
         return pformat(self.__dict__)
 
     @property
+    def mac_class(self) -> Type[MAC]:
+        return str2mac(self.mac)
+
+    @property
+    def phy_class(self) -> Type[PHY]:
+        return str2phy(self.phy)
+
+    @property
     def logdir(self):
         """Log directory"""
         if self.logdir_:
@@ -731,7 +766,7 @@ class Config:
         phy = parser.add_argument_group('PHY')
 
         phy.add_argument('--phy', action='store',
-                         choices=['flexframe', 'newflexframe', 'ofdm'],
+                         choices=sorted(PHY_NAMES.keys()),
                          dest='phy',
                          help='set PHY')
         phy.add_argument('--max-channels', action='store', type=int,
@@ -818,20 +853,24 @@ class Config:
         mac = parser.add_argument_group('MAC')
 
         mac.add_argument('--mac', action='store',
-                         choices=['aloha', 'tdma', 'tdma-fdma', 'fdma'],
+                         choices=sorted(MAC_NAMES.keys()),
                          dest='mac',
                          help='set MAC')
         mac.add_argument('--aloha', action='store_const', const='aloha',
                          dest='mac',
+                         default=argparse.SUPPRESS,
                          help='use slotted ALOHA MAC')
         mac.add_argument('--tdma', action='store_const', const='tdma',
                          dest='mac',
+                         default=argparse.SUPPRESS,
                          help='use pure TDMA MAC')
         mac.add_argument('--fdma', action='store_const', const='fdma',
                          dest='mac',
+                         default=argparse.SUPPRESS,
                          help='use FDMA MAC')
         mac.add_argument('--tdma-fdma', action='store_const', const='tdma-fdma',
                          dest='mac',
+                         default=argparse.SUPPRESS,
                          help='use TDMA/FDMA MAC')
 
         mac.add_argument('--slot-size', action='store', type=float,

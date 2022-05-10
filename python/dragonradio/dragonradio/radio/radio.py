@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Radio class for managing the radio."""
@@ -9,7 +9,7 @@ import math
 import os
 import random
 import signal
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional, Type
 
 import numpy as np
 
@@ -22,8 +22,10 @@ except:
 import dragonradio.channels
 from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
 import dragonradio.net
+from dragonradio.radio.config import Config, str2mac
 import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
+from dragonradio.schedule import Schedule
 import dragonradio.signal
 import dragonradio.tasks
 
@@ -31,22 +33,13 @@ from .version import version as __version__
 
 logger = logging.getLogger('radio')
 
-_MACS = { 'aloha': True
-        , 'tdma': True
-        , 'tdma-fdma': True
-        , 'fdma': False
-        }
-
-def _isSlottedMAC(mac):
-    return _MACS.get(mac, ValueError("Unknown MAC %s", mac))
-
 class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     """Radio configuration, setup, and maintenance"""
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=no-member
 
-    def __init__(self, config, mac, loop=None):
+    def __init__(self, config: Config, mac: str, loop=None):
         if loop is None:
             loop = asyncio.get_event_loop()
 
@@ -85,7 +78,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Default TX channel index"""
 
         self.mac = None
-        """The radio's MAC"""
+        """MAC: The radio's MAC"""
 
         self.mac_schedule = None
         """Our MAC schedule"""
@@ -118,13 +111,15 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # Create the PHY
         PHY.team = config.team
         PHY.node_id = config.node_id
+
         self.phy = self.mkPHY(self.header_mcs, self.mcs_table)
+        """PHY: The radio's PHY"""
 
         # Configure channelizer
         self.channelizer = self.mkChannelizer()
 
         # Configure synthesizer
-        self.synthesizer = self.mkSynthesizer(_isSlottedMAC(mac))
+        self.synthesizer = self.mkSynthesizer(str2mac(mac))
 
         # Hook up the radio components
         self.configureComponents()
@@ -159,7 +154,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                 self.nhood.addNeighbor(i+1)
 
         # Configure the MAC
-        self.configureMAC(self.config.mac)
+        self.configureMAC(self.config.mac_class)
 
         # Either start the interactive loop or run the loop ourselves
         user_ns['radio'] = self
@@ -416,27 +411,20 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Construct a PHY from configuration parameters"""
         config = self.config
 
-        if config.phy == 'flexframe':
-            phy = dragonradio.liquid.FlexFrame(header_mcs,
-                                               mcs_table,
-                                               config.soft_header,
-                                               config.soft_payload)
-        elif config.phy == 'newflexframe':
-            phy = dragonradio.liquid.NewFlexFrame(header_mcs,
-                                                  mcs_table,
-                                                  config.soft_header,
-                                                  config.soft_payload)
-        elif config.phy == 'ofdm':
-            phy = dragonradio.liquid.OFDM(header_mcs,
-                                          mcs_table,
-                                          config.soft_header,
-                                          config.soft_payload,
-                                          config.M,
-                                          config.cp_len,
-                                          config.taper_len,
-                                          config.subcarriers)
+        if issubclass(config.phy_class, dragonradio.liquid.OFDM):
+            phy = config.phy_class(header_mcs,
+                                   mcs_table,
+                                   config.soft_header,
+                                   config.soft_payload,
+                                   config.M,
+                                   config.cp_len,
+                                   config.taper_len,
+                                   config.subcarriers)
         else:
-            raise ValueError('Unknown PHY: %s' % config.phy)
+            phy = config.phy_class(header_mcs,
+                                   mcs_table,
+                                   config.soft_header,
+                                   config.soft_payload)
 
         return phy
 
@@ -466,11 +454,11 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         return channelizer
 
-    def mkSynthesizer(self, slotted):
+    def mkSynthesizer(self, mac_class: Type[MAC]):
         """Construct a Synthesizer according to configuration parameters"""
         config = self.config
 
-        if slotted:
+        if issubclass(mac_class, SlottedMAC):
             if config.synthesizer == 'timedomain':
                 synthesizer = TDSlotSynthesizer(PHYChannels([]),
                                                 self.usrp.tx_rate,
@@ -885,18 +873,12 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                      len(h), wp, ws, fs)
         return h
 
-    def configureMAC(self, mac):
+    def configureMAC(self, mac_class: Type[MAC]):
         """Configure MAC"""
-        if mac == 'aloha':
+        if issubclass(mac_class, SlottedALOHA):
             self.configureALOHA()
-        elif mac == 'tdma':
-            self.configureSimpleMACSchedule()
-        elif mac == 'tdma-fdma':
-            self.configureSimpleMACSchedule()
-        elif mac == 'fdma':
-            self.configureSimpleMACSchedule(fdma_mac=True)
         else:
-            raise ValueError("Unknown MAC: {}".format(mac))
+            self.configureSimpleMACSchedule(mac_class)
 
     def deleteMAC(self):
         """Delete the current MAC"""
@@ -933,7 +915,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         self.finishConfiguringMAC()
 
-    def configureTDMA(self, nslots):
+    def configureTDMA(self, nslots: int):
         """Configures a TDMA MAC with 'nslots' slots.
 
         This function sets up a TDMA MAC for a schedule with `nslots` slots, but
@@ -950,7 +932,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         # Replace the synthesizer if it is not a SlotSynthesizer
         if not isinstance(self.synthesizer, SlotSynthesizer):
-            self.replaceSynthesizer(False)
+            self.replaceSynthesizer(TDMA)
 
         # Replace the MAC
         self.deleteMAC()
@@ -992,7 +974,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         # Replace the synthesizer if it is not a ChannelSynthesizer
         if not isinstance(self.synthesizer, ChannelSynthesizer):
-            self.replaceSynthesizer(False)
+            self.replaceSynthesizer(FDMA)
 
         # Replace the MAC
         self.deleteMAC()
@@ -1013,7 +995,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Finish configuring MAC"""
         pass
 
-    def replaceSynthesizer(self, slotted):
+    def replaceSynthesizer(self, mac_class: Type[MAC]):
         """Replace the synthesizer"""
         # pylint: disable=pointless-statement
 
@@ -1030,7 +1012,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self.synthesizer.sink.disconnect()
 
         # Replace synthesizer
-        self.synthesizer = self.mkSynthesizer(slotted)
+        self.synthesizer = self.mkSynthesizer(mac_class)
 
         # Reconnect the controller to the synthesizer.
         self.netq.pop >> self.controller.net_in
@@ -1072,7 +1054,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def installMACSchedule(self, sched, fdma_mac=False):
+    def installMACSchedule(self, sched: Schedule, mac_class: Optional[Type[MAC]]):
         """Install a MAC schedule.
 
         Args:
@@ -1082,13 +1064,16 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """
         config = self.config
 
+        if mac_class is None:
+            mac_class = config.mac_class
+
         logger.debug('Installing MAC schedule:\n%s', sched)
 
         # Get number of channels and slots
         (_nchannels, nslots) = sched.shape
 
         # First configure the TDMA MAC for the desired number of slots
-        if fdma_mac:
+        if issubclass(mac_class, FDMA):
             if nslots != 1:
                 raise ValueError("FDMA schedule has more than one slot: %s" % sched)
             self.configureFDMA()
@@ -1122,7 +1107,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def configureSimpleMACSchedule(self, fdma_mac=False):
+    def configureSimpleMACSchedule(self, mac_class: Optional[Type[MAC]]=None):
         """Set a simple static schedule."""
         nchannels = len(self.channels)
         if self.config.manet and self.config.num_nodes is not None:
@@ -1138,7 +1123,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                                                 nodes,
                                                                 3)
 
-        self.installMACSchedule(sched, fdma_mac=fdma_mac)
+        self.installMACSchedule(sched, mac_class)
 
     def synchronizeClock(self):
         """Use timestamps to synchronize our clock with the time master (the gateway)"""

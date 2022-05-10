@@ -696,7 +696,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     for node_id in nodes_with_slot:
                         self.radio.nhood.addNeighbor(node_id)
 
-                radio.installMACSchedule(sched, fdma_mac=(self.config.mac == 'fdma'))
+                radio.installMACSchedule(sched, self.config.mac_class)
                 self.schedule = sched
 
             self.schedule_seq = seq
