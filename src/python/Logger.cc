@@ -39,7 +39,9 @@ void exportLogger(py::module &m)
 
     event_cat.def(py::init([](std::string value) -> EventCategory {
             return string2EventCategory(value);
-        }));
+        }),
+        "Initialize event category using name",
+        py::arg("name"));
 
     py::implicitly_convertible<py::str, EventCategory>();
 
@@ -77,10 +79,14 @@ void exportLogger(py::module &m)
             [](py::object, std::shared_ptr<Logger> log) { return logger = log; })
         .def(py::init(&mkLogger))
         .def("close", &Logger::close)
-        .def("setAttribute", py::overload_cast<const std::string&, const std::string&>(&Logger::setAttribute))
-        .def("setAttribute", py::overload_cast<const std::string&, uint8_t>(&Logger::setAttribute))
-        .def("setAttribute", py::overload_cast<const std::string&, uint32_t>(&Logger::setAttribute))
-        .def("setAttribute", py::overload_cast<const std::string&, double>(&Logger::setAttribute))
+        .def("setAttribute",
+            py::overload_cast<const std::string&, const std::string&>(&Logger::setAttribute))
+        .def("setAttribute",
+            py::overload_cast<const std::string&, uint8_t>(&Logger::setAttribute))
+        .def("setAttribute",
+            py::overload_cast<const std::string&, uint32_t>(&Logger::setAttribute))
+        .def("setAttribute",
+            py::overload_cast<const std::string&, double>(&Logger::setAttribute))
         .def("logEvent",
             [](Logger &self, const std::string &msg)
             {

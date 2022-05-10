@@ -17,16 +17,16 @@ void exportSnapshot(py::module &m)
     py::class_<Snapshot, std::shared_ptr<Snapshot>>(m, "Snapshot")
         .def_readonly("timestamp",
             &Snapshot::timestamp,
-            "Snapshot timestamp")
+            "datetime.timedelta: Snapshot timestamp")
         .def_readonly("slots",
             &Snapshot::slots,
-            "Slots in snapshot (IQ data)")
+            "Sequence[IQBuf]: Slots in snapshot (IQ data)")
         .def_readonly("selftx",
             &Snapshot::selftx,
-            "Self-transmission events")
+            "Sequence[SelfTX]: Self-transmission events")
         .def_property_readonly("combined_slots",
             &Snapshot::getCombinedSlots,
-            "Combined IQ data for all slots in snapshot")
+            "Optional[IQBuf]: Combined IQ data for all slots in snapshot")
         .def("__repr__", [](const Snapshot& self) {
             return py::str("Snapshot(timestamp={})").format(self.timestamp);
          })
@@ -36,16 +36,16 @@ void exportSnapshot(py::module &m)
     py::class_<SelfTX, std::shared_ptr<SelfTX>>(m, "SelfTX")
         .def_readwrite("start",
             &SelfTX::start,
-            "Snapshot sample offset of start of packet")
+            "int: Snapshot sample offset of start of packet")
         .def_readwrite("end",
             &SelfTX::end,
-            "Snapshot sample offset of end of packet")
+            "int: Snapshot sample offset of end of packet")
         .def_readwrite("fc",
             &SelfTX::fc,
-            "Center frequency of packet")
+            "float: Center frequency of packet")
         .def_readwrite("fs",
             &SelfTX::fs,
-            "Sample frequency of packet")
+            "float: Sample frequency of packet")
         .def("__repr__", [](const SelfTX& self) {
             return py::str("SelfTX(start={}, end={}, fc={:g}, fs={:g})").format(self.start, self.end, self.fc, self.fs);
          })
@@ -68,6 +68,6 @@ void exportSnapshot(py::module &m)
             "Finalize snapshot collection, returning the collected snapshot")
         .def_property_readonly("active",
             &SnapshotCollector::active,
-            "Is snapshot collection active?")
+            "bool: Is snapshot collection active?")
         ;
 }

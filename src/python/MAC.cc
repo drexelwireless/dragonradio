@@ -27,13 +27,13 @@ void exportMACs(py::module &m)
         .def_property("schedule",
             &SlottedMAC::getSchedule,
             py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
-            "MAC schedule specifying on which channels this node may transmit in each schedule slot.")
+            "Schedule: MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         .def("getLoad",
             &SlottedMAC::getLoad,
-            "Get current load")
+            "Load: Get current load")
         .def("popLoad",
             &SlottedMAC::popLoad,
-            "Get current load and reset load counters")
+            "Load: Get current load and reset load counters")
         ;
 
     // Export class MAC::Load to Python
@@ -45,22 +45,22 @@ void exportMACs(py::module &m)
             {
                 return self.start.time_since_epoch().count();
             },
-            "Start of load measurement period (sec)")
+            "float: Start of load measurement period (sec)")
         .def_property_readonly("end",
             [](Load &self) -> double
             {
                 return self.end.time_since_epoch().count();
             },
-            "End of load measurement period (sec)")
+            "float: End of load measurement period (sec)")
         .def_property_readonly("period",
             [](Load &self) -> double
             {
                 return (self.end - self.start).count();
             },
-            "Measurement period (sec)")
+            "float: Measurement period (sec)")
         .def_readwrite("nsamples",
             &SlottedMAC::Load::nsamples,
-            "Load per channel measured in number of samples")
+            "int: Load per channel measured in number of samples")
         ;
 
     // Export class FDMA to Python
@@ -70,15 +70,21 @@ void exportMACs(py::module &m)
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
                       std::shared_ptr<ChannelSynthesizer>,
-                      double>())
+                      double>(),
+            py::arg("radio"),
+            py::arg("controller"),
+            py::arg("snapshot_collector"),
+            py::arg("channelizer"),
+            py::arg("synthesizer"),
+            py::arg("premodulation"))
         .def_property("accurate_tx_timestamps",
             &FDMA::getAccurateTXTimestamps,
             &FDMA::setAccurateTXTimestamps,
-            "Increase timestamp accuracy at a potential cost to performance")
+            "bool: Increase timestamp accuracy at a potential cost to performance")
         .def_property("timed_tx_delay",
             &FDMA::getTimedTXDelay,
             &FDMA::setTimedTXDelay,
-            "Delay for timed TX (sec)")
+            "float: Delay for timed TX (sec)")
         ;
 
     // Export class SlottedMAC to Python
@@ -86,15 +92,15 @@ void exportMACs(py::module &m)
         .def_property("slot_size",
             &SlottedMAC::getSlotSize,
             &SlottedMAC::setSlotSize,
-            "Slot size (sec)")
+            "float: Slot size (sec)")
         .def_property("guard_size",
             &SlottedMAC::getGuardSize,
             &SlottedMAC::setGuardSize,
-            "Guard size (sec)")
+            "float: Guard size (sec)")
         .def_property("slot_send_lead_time",
             &SlottedMAC::getSlotSendLeadTime,
             &SlottedMAC::setSlotSendLeadTime,
-            "Slot send lead time (sec)")
+            "float: Slot send lead time (sec)")
         ;
 
     // Export class TDMA to Python
@@ -107,10 +113,19 @@ void exportMACs(py::module &m)
                       double,
                       double,
                       double,
-                      size_t>())
+                      size_t>(),
+            py::arg("radio"),
+            py::arg("controller"),
+            py::arg("snapshot_collector"),
+            py::arg("channelizer"),
+            py::arg("synthesizer"),
+            py::arg("slot_size"),
+            py::arg("guard_size"),
+            py::arg("slot_send_lead_time"),
+            py::arg("nslots"))
         .def_property_readonly("nslots",
             &TDMA::getNSlots,
-            "The number of TDMA slots.")
+            "int: The number of TDMA slots.")
         ;
 
     // Export class SlottedALOHA to Python
@@ -123,14 +138,23 @@ void exportMACs(py::module &m)
                       double,
                       double,
                       double,
-                      double>())
+                      double>(),
+            py::arg("radio"),
+            py::arg("controller"),
+            py::arg("snapshot_collector"),
+            py::arg("channelizer"),
+            py::arg("synthesizer"),
+            py::arg("slot_size"),
+            py::arg("guard_size"),
+            py::arg("slot_send_lead_time"),
+            py::arg("probability"))
         .def_property("slotidx",
             &SlottedALOHA::getSlotIndex,
             &SlottedALOHA::setSlotIndex,
-            "Slot index to transmit in")
+            "int: Slot index to transmit in")
         .def_property("p",
             &SlottedALOHA::getTXProb,
             &SlottedALOHA::setTXProb,
-            "Probability of transmission in a given slot")
+            "float: Probability of transmission in a given slot")
         ;
 }
