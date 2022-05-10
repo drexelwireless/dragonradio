@@ -19,12 +19,6 @@
 #include "Node.hh"
 #include "Seq.hh"
 
-#if defined(DOXYGEN)
-#define PACKED
-#else /* !DOXYGEN */
-#define PACKED __attribute__((packed))
-#endif /* !DOXYGEN */
-
 /** @brief %PHY packet header. */
 struct Header {
     /** @brief Current hop. */
@@ -56,7 +50,7 @@ struct Header {
         /** @brief Unused flags */
         uint8_t team : 3;
     } flags;
-} PACKED;
+} __attribute__((packed));
 
 /** @brief Extended header that appears in radio payload. */
 struct ExtendedHeader {

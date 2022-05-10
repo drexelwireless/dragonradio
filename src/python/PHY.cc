@@ -201,8 +201,14 @@ void exportPHYs(py::module &m)
 {
     // Export class Gain to Python
     py::class_<Gain, std::shared_ptr<Gain>>(m, "Gain")
-        .def_property("lin", &Gain::getLinearGain, &Gain::setLinearGain)
-        .def_property("dB", &Gain::getDbGain, &Gain::setDbGain)
+        .def_property("lin",
+            &Gain::getLinearGain,
+            &Gain::setLinearGain,
+            "float: Linear gain (multiplicative factor)")
+        .def_property("dB",
+            &Gain::getDbGain,
+            &Gain::setDbGain,
+            "float: Logarithmic gain (dB)")
         .def("__repr__", [](const Gain& self) {
             return py::str("Gain(lin={}, dB={})").format(self.getLinearGain(), self.getDbGain());
          })
@@ -214,54 +220,55 @@ void exportPHYs(py::module &m)
         .def_property("g_0dBFS",
             &AutoGain::getSoftTXGain,
             &AutoGain::setSoftTXGain,
-            "Soft TX gain (multiplicative factor)")
+            "float: Soft TX gain (multiplicative factor)")
         .def_property("soft_tx_gain_0dBFS",
             &AutoGain::getSoftTXGain0dBFS,
             &AutoGain::setSoftTXGain0dBFS,
-            "Soft TX gain (dBFS)")
+            "float: Soft TX gain (dBFS)")
         .def_property("auto_soft_tx_gain_clip_frac",
             &AutoGain::getAutoSoftTXGainClipFrac,
             &AutoGain::setAutoSoftTXGainClipFrac,
-            "Clipping threshold for automatic TX soft gain")
+            "float: Clipping threshold for automatic TX soft gain")
         .def("recalc0dBFSEstimate",
             &AutoGain::recalc0dBFSEstimate,
-            "Reset the 0dBFS estimate")
+            "Reset the 0dBFS estimate",
+            py::arg("nsamples"))
         ;
 
     // Export class MCSEntry to Python
     py::class_<PHY::MCSEntry, std::shared_ptr<PHY::MCSEntry>>(m, "MCSEntry")
         .def_readonly("mcs",
             &PHY::MCSEntry::mcs,
-            "Modulation and coding scheme")
+            "MCS: Modulation and coding scheme")
         .def_readonly("autogain",
             &PHY::MCSEntry::autogain,
-            "AutoGain for MCS")
+            "AutoGain: AutoGain for MCS")
         ;
 
     // Export class ModPacket to Python
-    py::class_<ModPacket, std::shared_ptr<ModPacket>>(m, "ModPacket")
+    py::class_<ModPacket, std::shared_ptr<ModPacket>>(m, "ModPacket", "A modulated packet")
         .def(py::init<>())
         .def_readwrite("chanidx",
             &ModPacket::chanidx,
-            "Index of channel")
+            "int: Index of channel")
         .def_readwrite("channel",
             &ModPacket::channel,
-            "Channel")
+            "Channel: Channel")
         .def_readwrite("start",
             &ModPacket::start,
-            "Offset of start of packet from start of slot, in number of samples")
+            "int: Offset of start of packet from start of slot, in number of samples")
         .def_readwrite("offset",
             &ModPacket::offset,
-            "Offset of start of packet from beginning of sample buffer")
+            "int: Offset of start of packet from beginning of sample buffer")
         .def_readwrite("nsamples",
             &ModPacket::nsamples,
-            "Number of modulated samples")
+            "int: Number of modulated samples")
         .def_readwrite("samples",
             &ModPacket::samples,
-            "Buffer containing the modulated samples")
+            "IQBuffer: Buffer containing the modulated samples")
         .def_readwrite("pkt",
             &ModPacket::pkt,
-            "The un-modulated packet")
+            "Packet: The un-modulated packet")
         ;
 
     // Export class PHY to Python
@@ -315,19 +322,19 @@ void exportPHYs(py::module &m)
         .def_property_static("team",
             [](py::object) { return PHY::getTeam(); },
             [](py::object, uint8_t team) { PHY::setTeam(team); },
-            "Team")
+            "int: Team")
         .def_property_static("node_id",
             [](py::object) { return PHY::getNodeId(); },
             [](py::object, NodeId id) { PHY::setNodeId(id); },
-            "Node ID")
+            "int: Node ID")
         .def_property_static("log_invalid_headers",
             [](py::object) { return PHY::getLogInvalidHeaders(); },
             [](py::object, bool log) { PHY::setLogInvalidHeaders(log); },
-            "Log invalid headers?")
+            "bool: Log invalid headers?")
         .def_property_static("snapshot_collector",
             nullptr,
             [](py::object, std::shared_ptr<SnapshotCollector> collector) { PHY::setSnapshotCollector(collector); },
-            "Snapshot collector")
+            "Optional[SnapshotCollector]: Snapshot collector")
         ;
 
     // Export class PacketModulator to Python
@@ -358,7 +365,7 @@ void exportPHYs(py::module &m)
                       std::shared_ptr<PHY>>())
         .def_readwrite("channel",
             &PHYChannel::channel,
-           "Channel")
+            "Channel: Channel")
         .def_readwrite("evm_thresh",
             &PHYChannel::evm_thresh,
             "EVM threshold table")
@@ -367,7 +374,7 @@ void exportPHYs(py::module &m)
             "FIR filter taps")
         .def_readwrite("phy",
             &PHYChannel::phy,
-            "PHY for channel")
+            "PHY: PHY for channel")
         ;
 
     // Export vector of PHYChannels
@@ -379,31 +386,44 @@ void exportLiquidPHYs(py::module &m)
     // Export class liquid::PHY to Python
     py::class_<liquid::PHY, PHY, std::shared_ptr<liquid::PHY>>(m, "LiquidPHY")
         .def_property_readonly("header_mcs",
-            &liquid::PHY::getHeaderMCS)
+            &liquid::PHY::getHeaderMCS,
+            "MCS: Header MCS")
         .def_property_readonly("soft_header",
-            &liquid::PHY::getSoftHeader)
+            &liquid::PHY::getSoftHeader,
+            "bool: Use soft decoding for header")
         .def_property_readonly("soft_payload",
-            &liquid::PHY::getSoftPayload)
+            &liquid::PHY::getSoftPayload,
+            "bool: Use soft decoding for payload")
         ;
 
     // Export class FlexFrame to Python
-    py::class_<liquid::FlexFrame, liquid::PHY, std::shared_ptr<liquid::FlexFrame>>(m, "FlexFrame")
+    py::class_<liquid::FlexFrame, liquid::PHY, std::shared_ptr<liquid::FlexFrame>>(m, "FlexFrame", "Liquid FlexFrame PHY")
         .def(py::init<const liquid::MCS&,
                       const std::vector<std::pair<liquid::MCS, AutoGain>>&,
                       bool,
-                      bool>())
+                      bool>(),
+            "Initialize FlexFrame PHY",
+            py::arg("header_mcs"),
+            py::arg("mcs_table"),
+            py::arg("soft_header"),
+            py::arg("soft_payload"))
         ;
 
     // Export class NewFlexFrame to Python
-    py::class_<liquid::NewFlexFrame, liquid::PHY, std::shared_ptr<liquid::NewFlexFrame>>(m, "NewFlexFrame")
+    py::class_<liquid::NewFlexFrame, liquid::PHY, std::shared_ptr<liquid::NewFlexFrame>>(m, "NewFlexFrame", "Liquid \"new\" FlexFrame PHY")
         .def(py::init<const liquid::MCS&,
                       const std::vector<std::pair<liquid::MCS, AutoGain>>&,
                       bool,
-                      bool>())
+                      bool>(),
+            "Initialize \"new\" FlexFrame PHY",
+            py::arg("header_mcs"),
+            py::arg("mcs_table"),
+            py::arg("soft_header"),
+            py::arg("soft_payload"))
         ;
 
     // Export class OFDM to Python
-    py::class_<liquid::OFDM, liquid::PHY, std::shared_ptr<liquid::OFDM>>(m, "OFDM")
+    py::class_<liquid::OFDM, liquid::PHY, std::shared_ptr<liquid::OFDM>>(m, "OFDM", "Liquid OFDM PHY")
         .def(py::init<const liquid::MCS&,
                       const std::vector<std::pair<liquid::MCS, AutoGain>>&,
                       bool,
@@ -411,11 +431,21 @@ void exportLiquidPHYs(py::module &m)
                       unsigned int,
                       unsigned int,
                       unsigned int,
-                      const std::optional<std::string>&>())
+                      const std::optional<std::string>&>(),
+            "Initialize OFDM PHY",
+            py::arg("header_mcs"),
+            py::arg("mcs_table"),
+            py::arg("soft_header"),
+            py::arg("soft_payload"),
+            py::arg("M"),
+            py::arg("cp_len"),
+            py::arg("taper_len"),
+            py::arg("subcarriers"))
         .def_property_readonly("subcarriers",
             [](std::shared_ptr<liquid::OFDM> self)
             {
                 return static_cast<std::string>(self->getSubcarriers());
-            })
+            },
+            "str: Subcarriers")
         ;
 }

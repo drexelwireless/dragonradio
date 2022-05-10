@@ -7,10 +7,6 @@
 #include "liquid/FlexFrame.hh"
 #include "liquid/PHY.hh"
 
-#if defined(DOXYGEN)
-#define final
-#endif /* defined(DOXYGEN) */
-
 namespace liquid {
 
 /** @brief A %PHY thats uses the liquid-usrp flexframegen code. */

@@ -57,7 +57,7 @@ void sleep_for(const std::chrono::duration<Rep, Period>& sleep_duration)
 }
 
 /** @brief Sleep until the specified time_point
- * @param sleep_duration The duration to sleep.
+ * @param sleep_time Sleep deadline.
  */
 template<class Clock, class Duration>
 void sleep_until(const std::chrono::time_point<Clock,Duration>& sleep_time)
