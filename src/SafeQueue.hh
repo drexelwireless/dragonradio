@@ -8,6 +8,8 @@
 #include <deque>
 #include <mutex>
 
+#include "util/threads.hh"
+
 /** @brief A thread-safe queue. */
 /** A SafeQueue is a thread-safe FIFO queue. Any call to pop will block until an
  * element is inserted until the queue is stopped by a call to stop. Once stop
@@ -106,7 +108,7 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        cond_.wait(lock, [this]{ return done_ || !q_.empty(); });
+        wait_once(cond_, lock, [this]{ return done_ || !q_.empty(); });
 
         if (done_ || q_.empty())
             return false;
@@ -138,6 +140,12 @@ public:
     void stop(void)
     {
         done_ = true;
+        cond_.notify_all();
+    }
+
+    /** @brief Kick the queue. */
+    void kick(void)
+    {
         cond_.notify_all();
     }
 
