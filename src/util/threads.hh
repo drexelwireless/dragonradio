@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <cmath>
 #include <condition_variable>
 #include <chrono>
 #include <mutex>
