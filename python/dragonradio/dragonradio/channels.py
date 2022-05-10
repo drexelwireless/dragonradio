@@ -1,26 +1,31 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Channel planning"""
-try:
-  from _dragonradio.radio import Channel
-except:
-  pass
+from typing import List
 
-def defaultChannelPlan(bandwidth, cbw,
-                       cgbw=0,
-                       egbw=0,
-                       maximize_channel_guard_bandwidth=True):
-    """Generate a default channel plan.
+from _dragonradio.radio import Channel
 
-    Arguments:
-        bandwidth: total bandwidth
-        cbw: channel bandwidth
-        cgbw: channel guard bandwidth, i.e., minimum space between channels
-        egbw: edge guard bandwidth, i.e., minimum space from edges of spectrum
+def defaultChannelPlan(bandwidth: float, cbw: float,
+                       cgbw: float=0,
+                       egbw: float=0,
+                       maximize_channel_guard_bandwidth: bool=True) -> List[Channel]:
+    """Generate a default channel plan. Channels have equal bandwidth and are
+    optionally separated by a channel guard bandwidth. The entire block of
+    spectrum is also optionally surrounded on the two edges by a guard.
 
-    Return:
-        A list of Channels
+    Args:
+        bandwidth (float): total bandwidth
+        cbw (float): channel bandwidth
+        cgbw (float, optional): channel guard bandwidth, i.e., minimum space between channels. Defaults to 0.
+        egbw (float, optional): edge guard bandwidth, i.e., minimum space from edges of spectrum. Defaults to 0.
+        maximize_channel_guard_bandwidth (bool, optional): Use extra spectrum to maximize space between channels. Defaults to True.
+
+    Raises:
+        ValueError: raised if there is not enough bandwidth for a channel.
+
+    Returns:
+        List[Channel]: A list of spaced channels.
     """
     # We space channels so that there is egbw on each end and at least cgbw
     # between channels. For n channels, we therefore have n+1 guards, so:
