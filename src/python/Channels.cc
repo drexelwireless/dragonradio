@@ -14,16 +14,20 @@ void exportChannels(py::module &m)
     // Export class Channel to Python
     py::class_<Channel, std::shared_ptr<Channel>>(m, "Channel")
         .def(py::init<>())
-        .def(py::init<double, double>())
+        .def(py::init<double, double>(),
+            "Initialize channel with center frequency and bandwidth",
+            py::arg("fc"),
+            py::arg("bw"))
         .def_readwrite("fc",
             &Channel::fc,
-           "Frequency shift from center")
+           "float: Frequency shift from center")
         .def_readwrite("bw",
             &Channel::bw,
-            "Bandwidth")
+            "float: Bandwidth")
         .def("intersects",
             &Channel::intersects,
-            "Return true if channels intersect, false otherwise")
+            py::arg("channel"),
+            "Return True if channels intersect, False otherwise")
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def(py::self < py::self)

@@ -19,10 +19,12 @@ void exportChannelizers(py::module &m)
     py::class_<Channelizer, std::shared_ptr<Channelizer>>(m, "Channelizer")
         .def_property("rx_rate",
             &Channelizer::getRXRate,
-            &Channelizer::setRXRate)
+            &Channelizer::setRXRate,
+            "float: RX rate")
         .def_property("channels",
             &Channelizer::getChannels,
-            &Channelizer::setChannels)
+            &Channelizer::setChannels,
+            "Sequence[Channel]: channels")
         .def_property_readonly("source",
             [](std::shared_ptr<Channelizer> e)
             {
@@ -37,23 +39,26 @@ void exportChannelizers(py::module &m)
                       unsigned int>())
         .def_readonly_static("P",
             &FDChannelizer::P,
-            "Maximum prototype filter length.")
+            "int: Maximum prototype filter length.")
         .def_readonly_static("V",
             &FDChannelizer::V,
-            "Overlap factor.")
+            "int: Overlap factor.")
         .def_readonly_static("N",
             &FDChannelizer::N,
-            "FFT size.")
+            "int: FFT size.")
         .def_readonly_static("L",
             &FDChannelizer::L,
-            "Samples consumer per input block.")
+            "int: Samples consumer per input block.")
         ;
 
     // Export class TDChannelizer to Python
     py::class_<TDChannelizer, Channelizer, std::shared_ptr<TDChannelizer>>(m, "TDChannelizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
-                      unsigned int>())
+                      unsigned int>(),
+            py::arg("channels"),
+            py::arg("rx_rate"),
+            py::arg("nthreads"))
         ;
 
     // Export class OverlapTDChannelizer to Python
@@ -63,12 +68,15 @@ void exportChannelizers(py::module &m)
                       unsigned int>())
         .def_property("prev_demod",
             &OverlapTDChannelizer::getPrevDemod,
-            &OverlapTDChannelizer::setPrevDemod)
+            &OverlapTDChannelizer::setPrevDemod,
+            "float: portion of the end of the previous slot to demodulate (sec)")
         .def_property("cur_demod",
             &OverlapTDChannelizer::getCurDemod,
-            &OverlapTDChannelizer::setCurDemod)
+            &OverlapTDChannelizer::setCurDemod,
+            "float: portion of the current slot to demodulate (sec)")
         .def_property("enforce_ordering",
             &OverlapTDChannelizer::getEnforceOrdering,
-            &OverlapTDChannelizer::setEnforceOrdering)
+            &OverlapTDChannelizer::setEnforceOrdering,
+            "bool: enforce packet ordering?")
         ;
 }

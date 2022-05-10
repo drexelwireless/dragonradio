@@ -23,15 +23,16 @@ void exportSynthesizers(py::module &m)
     py::class_<Synthesizer, std::shared_ptr<Synthesizer>>(m, "Synthesizer")
         .def_property("tx_rate",
             &Synthesizer::getTXRate,
-            &Synthesizer::setTXRate)
+            &Synthesizer::setTXRate,
+            "float: TX rate")
         .def_property("channels",
             &Synthesizer::getChannels,
             &Synthesizer::setChannels,
-            "TX channels")
+            "Sequence[Channel]: TX channels")
         .def_property("schedule",
             &SlotSynthesizer::getSchedule,
             py::overload_cast<const Schedule::sched_type &>(&SlotSynthesizer::setSchedule),
-            "MAC schedule")
+            "Schedule: MAC schedule")
         .def_property_readonly("sink",
             [](std::shared_ptr<Synthesizer> element)
             {
@@ -44,7 +45,7 @@ void exportSynthesizers(py::module &m)
         .def_property("high_water_mark",
             &ChannelSynthesizer::getHighWaterMark,
             &ChannelSynthesizer::setHighWaterMark,
-            "Maximum number of modulated samples to queue.")
+            "int: Maximum number of modulated samples to queue.")
         ;
         ;
 
@@ -54,7 +55,10 @@ void exportSynthesizers(py::module &m)
     py::class_<TDSynthesizer, ChannelSynthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
-                      unsigned int>())
+                      unsigned int>(),
+            py::arg("channels"),
+            py::arg("tx_rate"),
+            py::arg("nthreads"))
         ;
 
     // Export class FDSynthesizer to Python
@@ -63,7 +67,10 @@ void exportSynthesizers(py::module &m)
     py::class_<FDSynthesizer, ChannelSynthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
-                      unsigned int>())
+                      unsigned int>(),
+            py::arg("channels"),
+            py::arg("tx_rate"),
+            py::arg("nthreads"))
         ;
 
     // Export class SlotSynthesizer to Python
@@ -71,7 +78,7 @@ void exportSynthesizers(py::module &m)
         .def_property("superslots",
             &SlotSynthesizer::getSuperslots,
             &SlotSynthesizer::setSuperslots,
-            "Flag indicating whether or not to use superslots.")
+            "bool: Flag indicating whether or not to use superslots.")
         ;
 
     // Export class TDSlotSynthesizer to Python
@@ -80,7 +87,10 @@ void exportSynthesizers(py::module &m)
     py::class_<TDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<TDSlotSynthesizer>>(m, "TDSlotSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
-                      unsigned int>())
+                      unsigned int>(),
+            py::arg("channels"),
+            py::arg("tx_rate"),
+            py::arg("nthreads"))
         ;
 
     // Export class FDSlotSynthesizer to Python
@@ -89,13 +99,19 @@ void exportSynthesizers(py::module &m)
     py::class_<FDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<FDSlotSynthesizer>>(m, "FDSlotSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
-                      unsigned int>())
+                      unsigned int>(),
+            py::arg("channels"),
+            py::arg("tx_rate"),
+            py::arg("nthreads"))
         ;
 
     // Export class MultichannelSynthesizer to Python
     py::class_<MultichannelSynthesizer, SlotSynthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
-                      unsigned int>())
+                      unsigned int>(),
+            py::arg("channels"),
+            py::arg("tx_rate"),
+            py::arg("nthreads"))
         ;
 }

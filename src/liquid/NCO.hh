@@ -10,10 +10,6 @@
 
 #include "dsp/NCO.hh"
 
-#if defined(DOXYGEN)
-#define final
-#endif /* defined(DOXYGEN) */
-
 namespace liquid {
 
 class BaseNCO : public ::NCO

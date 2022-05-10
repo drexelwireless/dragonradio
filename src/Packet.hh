@@ -26,13 +26,6 @@
 #include "phy/Channel.hh"
 #include "phy/Modem.hh"
 
-#if defined(DOXYGEN)
-#define PACKED
-#error PACKED
-#else /* !DOXYGEN */
-#define PACKED __attribute__((packed))
-#endif /* !DOXYGEN */
-
 /** @brief A time */
 struct Time {
     int64_t secs;
@@ -90,7 +83,7 @@ struct ControlMsg {
         TimestampSeq tseq;
         /** @brief Sent packet's timestamp */
         Time t_sent;
-    } PACKED;
+    } __attribute__((packed));
 
     struct TimestampRecv {
         /** @brief Node ID of original timestamp transmitter */
@@ -99,7 +92,7 @@ struct ControlMsg {
         TimestampSeq tseq;
         /** @brief Receiver's timestamp of packet */
         Time t_recv;
-    } PACKED;
+    } __attribute__((packed));
 
     struct ReceiverStats {
         /** @brief EVM at receiver */
@@ -134,7 +127,7 @@ struct ControlMsg {
         SelectiveAck ack;
         SetUnack unack;
     };
-} PACKED;
+} __attribute__((packed));
 
 /** @brief A flow UID. */
 typedef uint16_t FlowUID;

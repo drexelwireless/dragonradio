@@ -436,13 +436,13 @@ void exportControllers(py::module &m)
             {
                 return std::make_unique<SendWindowsProxy>(controller);
             },
-            "Send windows")
+            "SendWindows : map from node to SendWindow")
         .def_property_readonly("recv",
             [](std::shared_ptr<SmartController> controller) -> std::unique_ptr<ReceiveWindowsProxy>
             {
                 return std::make_unique<ReceiveWindowsProxy>(controller);
             },
-            "Receive windows")
+            "ReceiveWindows : map from node to ReceiveWindow")
         .def("broadcastHello",
             &SmartController::broadcastHello)
         .def("environmentDiscontinuity",

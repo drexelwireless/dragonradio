@@ -86,7 +86,9 @@ void exportPacket(py::module &m)
                 std::string s = payload;
 
                 return std::make_shared<RadioPacket>(hdr, reinterpret_cast<unsigned char*>(s.data()), s.size());
-            }))
+            }),
+            py::arg("hdr"),
+            py::arg("payload"))
         .def_readwrite("evm",
             &RadioPacket::evm,
             "EVM")
