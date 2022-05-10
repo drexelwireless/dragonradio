@@ -1,11 +1,28 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """MAC schedule construction"""
 import numpy as np
-from typing import Dict, List
+from typing import Dict, Sequence, Tuple
 
-def bestScheduleChannel(sched, node_id):
+NodeId = int
+"""A node ID"""
+
+ChannelIdx = int
+"""A channel index"""
+
+NodeAssignments = Dict[NodeId, ChannelIdx]
+"""A map from node to assignment channel"""
+
+Schedule = np.ndarray
+"""A MAC schedule.
+
+A schedule is an n x m array, where n is the number of channels and m is the
+number of time slots. Each entry in the array specifies which node is allowed to
+transmit in that slot.
+"""
+
+def bestScheduleChannel(sched: Schedule, node_id: NodeId) -> ChannelIdx:
     """Choose the best single channel for the given node to use from the
     schedule.
 
@@ -13,25 +30,28 @@ def bestScheduleChannel(sched, node_id):
     the channel with the most air time.
 
     Args:
-        sched: A schedule
-        node_id: A node
+        sched (Schedule): A schedule
+        node_id (NodeId): A node
+
+    Raises:
+        ValueError: Raised if no channel is available.
 
     Returns:
-        The best channel to transmit on
+        ChannelIdx: The best channel to transmit on
     """
     if not (sched == node_id).any():
         raise ValueError("No slot for node {}".format(node_id))
 
     return (sched == node_id).sum(axis=1).argmax()
 
-def pureTDMASchedule(nodes):
+def pureTDMASchedule(nodes: Sequence[NodeId]) -> Schedule:
     """Create a pure TDMA schedule that gives each node a single slot.
 
     Args:
-        nodes: The nodes
+        nodes (Sequence[NodeId]): The nodes
 
     Returns:
-        A schedule consisting of a 1 X nslots array of node IDs.
+        Schedule: A schedule consisting of a 1 X nslots array of node IDs.
     """
     nslots = len(nodes)
     sched = np.zeros((1, nslots), dtype=int)
@@ -41,17 +61,17 @@ def pureTDMASchedule(nodes):
 
     return sched
 
-def fullChannelMACSchedule(nchannels, nslots, nodes, k):
+def fullChannelMACSchedule(nchannels: int, nslots: int, nodes: Sequence[NodeId], k: int) -> Schedule:
     """Create a greedy schedule that gives each node its own channel.
 
     Args:
-        nchannels: The number of channels
-        nslots: The number of time slots
-        nodes: The nodes
-        k: The desired channel separation
+        nchannels (int): The number of channels
+        nslots (int): The number of time slots
+        nodes (Sequence[NodeId]): The nodes
+        k (int): The desired channel separation
 
     Returns:
-        A schedule consisting of a nchannels X nslots array of node IDs.
+        Schedule: A schedule consisting of a nchannels X nslots array of node IDs.
     """
     sched = np.zeros((nchannels, nslots), dtype=int)
 
@@ -72,18 +92,18 @@ def fullChannelMACSchedule(nchannels, nslots, nodes, k):
 
     return sched
 
-def fairMACSchedule(nchannels : int, nslots : int, nodes : List[int], k : int=3, assignments : Dict[int, int]={}):
+def fairMACSchedule(nchannels: int, nslots : int, nodes: Sequence[NodeId], k: int=3, assignments: NodeAssignments={}) -> Tuple[Schedule, NodeAssignments]:
     """Create a schedule that distributes slots evenly amongst nodes.
 
     Args:
         nchannels (int): The number of channels
         nslots (int): The number of time slots
-        nodes (List[int]): The nodes
+        nodes (Sequence[NodeId]): The nodes
         k (int, optional): The desired channel separation. Defaults to 3.
         assignments (Dict[int, int], optional): Map from nodes to assigned channels. Defaults to {}.
 
     Returns:
-        [type]: A schedule consisting of a nchannels X nslots array of node IDs.
+        Tuple[Schedule, NodeAssignments]: A schedule consisting of a nchannels X nslots array of node IDs and
     """
     # Create list of nodes assigned to each channel.
     channels = [[] for _ in range(0, nchannels)]
