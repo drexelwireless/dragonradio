@@ -85,7 +85,7 @@ USRP::~USRP()
     stop();
 }
 
-void USRP::syncTime(bool random_bias)
+void USRP::syncTime(bool random_bias, bool use_pps)
 {
     // Set offset relative to system NTP time
     struct timespec t;
@@ -109,7 +109,14 @@ void USRP::syncTime(bool random_bias)
         now += offset;
     }
 
-    usrp_->set_time_now(now);
+    if (use_pps) {
+        uhd::time_spec_t t0 = now.get_full_secs() + 1.0;
+
+        usrp_->set_time_next_pps(t0);
+        sleep(1);
+    } else {
+        usrp_->set_time_now(now);
+    }
 }
 
 // See the following for X310 LO offset advice:
