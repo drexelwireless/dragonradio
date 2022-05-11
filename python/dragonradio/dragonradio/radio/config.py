@@ -4,6 +4,7 @@
 """Radio configuration"""
 import argparse
 import configparser
+from enum import Enum
 import io
 import logging
 import os
@@ -17,7 +18,10 @@ import libconf
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 
 from _dragonradio.radio import MAC, PHY
-from _dragonradio.radio import FDMA, SlottedALOHA, TDMA
+from _dragonradio.radio import FDMA, SlottedALOHA, SlottedMAC, TDMA
+from _dragonradio.radio import FDChannelizer, TDChannelizer, OverlapTDChannelizer
+from _dragonradio.radio import FDSlotSynthesizer, TDSlotSynthesizer, MultichannelSynthesizer
+from _dragonradio.radio import FDSynthesizer, TDSynthesizer
 from dragonradio.liquid import FlexFrame, NewFlexFrame, OFDM
 
 logger = logging.getLogger('config')
@@ -44,6 +48,40 @@ def str2phy(name: str) -> Type[PHY]:
         return PHY_NAMES[name]
 
     raise ValueError("%s is not a valid PHY", name)
+
+CHANNELIZER_NAMES = { 'freqdomain': FDChannelizer
+                    , 'timedomain': TDChannelizer
+                    , 'overlap': OverlapTDChannelizer
+                    }
+
+def str2channelizer(name: str) -> Type[PHY]:
+    if name in CHANNELIZER_NAMES:
+        return CHANNELIZER_NAMES[name]
+
+    raise ValueError(f"{name:} is not a valid channelizer")
+
+SLOTTED_SYNTHESIZER_NAMES = { 'freqdomain': FDSlotSynthesizer
+                            , 'timedomain': TDSlotSynthesizer
+                            , 'multichannel': MultichannelSynthesizer
+                            }
+
+SYNTHESIZER_NAMES = { 'freqdomain': FDSynthesizer
+                    , 'timedomain': TDSynthesizer
+                    }
+
+def str2synthesizer(mac_class: Type[MAC], name: str) -> Type[PHY]:
+    if issubclass(mac_class, SlottedMAC):
+        names = SLOTTED_SYNTHESIZER_NAMES
+    else:
+        names = SYNTHESIZER_NAMES
+
+    if name in names:
+        return names[name]
+
+    if name == 'multichannel':
+        raise ValueError('Multichannel synthesizer can only be used with a slotted MAC')
+
+    raise ValueError(f"{name:} is not a valid synthesizer")
 
 def getNodeIdFromHostname() -> int:
     """Determine node ID from hostname"""
@@ -509,6 +547,14 @@ class Config:
         return str2phy(self.phy)
 
     @property
+    def channelizer_class(self) -> Type[MAC]:
+        return str2channelizer(self.channelizer)
+
+    @property
+    def synthesizer_class(self) -> Type[MAC]:
+        return str2synthesizer(self.mac_class, self.synthesizer)\
+
+    @property
     def logdir(self):
         """Log directory"""
         if self.logdir_:
@@ -781,7 +827,7 @@ class Config:
 
         # Channelizer parameters
         phy.add_argument('--channelizer', action='store',
-                         choices=['freqdomain', 'timedomain', 'overlap'],
+                         choices=sorted(CHANNELIZER_NAMES.keys()),
                          dest='channelizer',
                          help='set channelization algorithm')
         phy.add_argument('--channelizer-enforce-ordering', action='store_const', const=True,
@@ -794,7 +840,7 @@ class Config:
 
         # Synthesizer parameters
         phy.add_argument('--synthesizer', action='store',
-                         choices=['multichannel', 'freqdomain', 'timedomain'],
+                         choices=sorted(SLOTTED_SYNTHESIZER_NAMES.keys()),
                          dest='synthesizer',
                          help='set synthesizer algorithm')
 
