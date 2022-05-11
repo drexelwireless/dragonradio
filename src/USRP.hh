@@ -185,7 +185,7 @@ public:
     void setTXRate(double rate) override
     {
         usrp_->set_tx_rate(rate);
-        logUSRP(LOGDEBUG, "TX rate set to %f", rate);
+        logUSRP(LOGDEBUG, "TX rate set to %g", rate);
         tx_rate_ = usrp_->get_tx_rate();
     }
 
@@ -197,7 +197,7 @@ public:
     void setRXRate(double rate) override
     {
         usrp_->set_rx_rate(rate);
-        logUSRP(LOGDEBUG, "RX rate set to %f", rate);
+        logUSRP(LOGDEBUG, "RX rate set to %g", rate);
         rx_rate_ = usrp_->get_rx_rate();
     }
 
