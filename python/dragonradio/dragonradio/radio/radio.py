@@ -435,22 +435,12 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Construct a Channelizer according to configuration parameters"""
         config = self.config
 
-        if config.channelizer == 'overlap':
-            channelizer = OverlapTDChannelizer(PHYChannels([]),
+        channelizer = config.channelizer_class(PHYChannels([]),
                                                self.usrp.rx_rate,
                                                config.num_demodulation_threads)
 
+        if isinstance(channelizer, OverlapTDChannelizer):
             channelizer.enforce_ordering = config.channelizer_enforce_ordering
-        elif config.channelizer == 'timedomain':
-            channelizer = TDChannelizer(PHYChannels([]),
-                                        self.usrp.rx_rate,
-                                        config.num_demodulation_threads)
-        elif config.channelizer == 'freqdomain':
-            channelizer = FDChannelizer(PHYChannels([]),
-                                        self.usrp.rx_rate,
-                                        config.num_demodulation_threads)
-        else:
-            raise ValueError('Unknown channelizer: %s' % config.channelizer)
 
         return channelizer
 
@@ -458,36 +448,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Construct a Synthesizer according to configuration parameters"""
         config = self.config
 
-        if issubclass(mac_class, SlottedMAC):
-            if config.synthesizer == 'timedomain':
-                synthesizer = TDSlotSynthesizer(PHYChannels([]),
-                                                self.usrp.tx_rate,
-                                                config.num_modulation_threads)
-            elif config.synthesizer == 'freqdomain':
-                synthesizer = FDSlotSynthesizer(PHYChannels([]),
-                                                self.usrp.tx_rate,
-                                                config.num_modulation_threads)
-            elif config.synthesizer == 'multichannel':
-                synthesizer = MultichannelSynthesizer(PHYChannels([]),
-                                                      self.usrp.tx_rate,
-                                                      config.num_modulation_threads)
-            else:
-                raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
-        else:
-            if config.synthesizer == 'timedomain':
-                synthesizer = TDSynthesizer(PHYChannels([]),
-                                            self.usrp.tx_rate,
-                                            config.num_modulation_threads)
-            elif config.synthesizer == 'freqdomain':
-                synthesizer = FDSynthesizer(PHYChannels([]),
-                                            self.usrp.tx_rate,
-                                            config.num_modulation_threads)
-            elif config.synthesizer == 'multichannel':
-                raise ValueError('Multichannel synthesizer can only be used with a slotted MAC')
-            else:
-                raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
-
-        return synthesizer
+        return config.synthesizer_class(PHYChannels([]),
+                                        self.usrp.tx_rate,
+                                        config.num_modulation_threads)
 
     def mkController(self):
         """Construct a Controller according to configuration parameters"""
