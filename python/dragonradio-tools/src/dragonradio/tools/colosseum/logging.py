@@ -1,11 +1,11 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 import datetime
+from datetime import timezone
 from functools import cached_property
 import json
 import logging
 import os
-import pytz
 import re
 
 import pandas as pd
@@ -16,8 +16,6 @@ from dragonradio.tools.colosseum.scoring import MP
 
 logger = logging.getLogger(__name__)
 
-UTC = pytz.timezone('UTC')
-
 class MatchConfig:
     """""Data from a match_conf.json file"""
     def __init__(self, _res, path):
@@ -26,7 +24,7 @@ class MatchConfig:
 
         self.json = config
 
-        self.date_started = datetime.datetime.fromtimestamp(config['date_started'], UTC)
+        self.date_started = datetime.datetime.fromtimestamp(config['date_started'], timezone.utc)
 
         self.team = config['team']
 
@@ -323,7 +321,7 @@ class ReservationLog(DataFrameCache):
         path = os.path.join(self.inputs_path, 'rf_start_time.json')
         if os.path.exists(path):
             with open(path, 'r') as f:
-                return datetime.datetime.fromtimestamp(json.load(f), UTC)
+                return datetime.datetime.fromtimestamp(json.load(f), timezone.utc)
 
     @cached_property
     def images(self):

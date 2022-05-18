@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 import argparse
 import datetime
+from datetime import timezone
 from functools import reduce
 import logging
-import pytz
 
 from .logging import LogCollection
-
-UTC = pytz.timezone('UTC')
 
 def add_annotate_args(parser):
     annotate_parser = parser.add_argument_group('Plot annotations')
@@ -102,7 +100,7 @@ class Command(object):
 
         # Determine start time
         if args.start_time:
-            self.start_time = datetime.datetime.fromtimestamp(args.start_time, UTC)
+            self.start_time = datetime.datetime.fromtimestamp(args.start_time, timezone.utc)
 
         # Load logs
         self.logs = LogCollection(start_time=self.start_time)
