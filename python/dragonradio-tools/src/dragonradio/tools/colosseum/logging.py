@@ -395,6 +395,13 @@ class ReservationLog(DataFrameCache):
         return pcaps
 
     @cached_property
+    def observer_logs(self):
+        if not os.path.exists(self.srn_logs_path):
+            return []
+
+        return [filename for filename in os.listdir(self.srn_logs_path) if 'observer' in filename]
+
+    @cached_property
     def collab_info(self):
         """Collaboration info"""
         return CollabInfo(self)
