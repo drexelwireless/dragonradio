@@ -177,18 +177,19 @@ class TrafficLogs:
         self.listen_traffic_logs = {}
         """Map from scenario (src, dest) pairs to a listen traffic log"""
 
-        for f in os.listdir(path):
-            m = re.match(r'^(send|listen)_SENDNODE-(\d+)_RECNODE-(\d+)_.*.drc$', f)
-            if m:
-                full_path = os.path.join(path, f)
-                (ty, src, dest ) = m.groups()
-                src = int(src)
-                dest = int(dest)
+        if os.path.exists(path):
+            for f in os.listdir(path):
+                m = re.match(r'^(send|listen)_SENDNODE-(\d+)_RECNODE-(\d+)_.*.drc$', f)
+                if m:
+                    full_path = os.path.join(path, f)
+                    (ty, src, dest ) = m.groups()
+                    src = int(src)
+                    dest = int(dest)
 
-                if ty == 'send':
-                    self.send_traffic_logs[(src, dest)] = full_path
-                else:
-                    self.listen_traffic_logs[(src, dest)] = full_path
+                    if ty == 'send':
+                        self.send_traffic_logs[(src, dest)] = full_path
+                    else:
+                        self.listen_traffic_logs[(src, dest)] = full_path
 
 class ReservationLog(DataFrameCache):
     """A Colosseum reservation log"""
@@ -559,6 +560,9 @@ class ReservationLog(DataFrameCache):
             send_df.rename(columns={'timestamp': 'send_time'}, inplace=True)
 
             # Load corresponding listen MGEN log
+            if (src, dest) not in self.traffic_logs.listen_traffic_logs:
+                continue
+
             recv_arr = mgen.parseRecv(self.traffic_logs.listen_traffic_logs[(src, dest)])
             recv_df = pd.DataFrame(recv_arr).astype({ 'timestamp': 'datetime64[ns, UTC]'
                                                     , 'sent': 'datetime64[ns, UTC]'
@@ -622,6 +626,9 @@ class ReservationLog(DataFrameCache):
             df['team'] = self.srn_teams[srn_src]
 
             dataframes.append(df)
+
+        if len(dataframes) == 0:
+            return None
 
         logger.info('Concatenating traffic data frames')
         return pd.concat(dataframes)

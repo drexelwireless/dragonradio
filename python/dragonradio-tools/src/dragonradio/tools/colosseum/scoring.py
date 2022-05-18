@@ -392,6 +392,8 @@ class Scorer(DataFrameCache):
     def traffic(self):
         """Scored traffic with duplicate received packets dropped"""
         df = self.reservation.traffic
+        if df is None:
+            return None
 
         # Delete flow 0
         df.drop(df.index[df.flow_uid == 0], inplace=True)
@@ -461,6 +463,8 @@ class Scorer(DataFrameCache):
     @cached_dataframe_property('traffic_summary')
     def traffic_summary(self):
         df = self.traffic
+        if df is None:
+            return None
 
         # Add delivered column for delivered bytes
         logger.info('Calculating delivered bytes')
