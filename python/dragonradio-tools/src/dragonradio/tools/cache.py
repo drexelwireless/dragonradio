@@ -127,6 +127,9 @@ class DataFrameCache:
 
     def set_dataframe(self, key, df):
         with self._lock:
+            if df is None:
+                return
+
             self._df_cache[key] = df
 
             if self._cache_path is None:
