@@ -1,13 +1,14 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
-from functools import wraps
 import logging
 import os
 import pandas as pd
-import pickle
+from pathlib import Path
 from threading import RLock
 import time
+from typing import Optional
 from weakref import WeakValueDictionary
+import xdg
 
 logger = logging.getLogger(__name__)
 
@@ -82,18 +83,26 @@ class cached_dataframe_property:
         return df
 
 class DataFrameCache:
-    def __init__(self, cache_path=None):
-        self._cache_path = cache_path
-        """Path to cache holding serialized DataFrames"""
+    _cache_path: Path
+    """Path to cache holding serialized DataFrames"""
+
+    _lock: RLock
+    """Lock on cache"""
+
+    _df_cache: WeakValueDictionary
+    """DataFrame cache"""
+
+    def __init__(self, cache_path: Optional[Path]=None):
+        if cache_path is None:
+            self._cache_path = xdg.xdg_cache_home() / 'dragonradio' / 'dataframe'
+        else:
+            self._cache_path = Path(cache_path)
 
         self._lock = RLock()
-        """Lock on cache"""
-
         self._df_cache = WeakValueDictionary()
-        """DataFrame cache"""
 
     @property
-    def cache_path(self):
+    def cache_path(self) -> Path:
         """Path to cache holding serialized DataFrames"""
         return self._cache_path
 

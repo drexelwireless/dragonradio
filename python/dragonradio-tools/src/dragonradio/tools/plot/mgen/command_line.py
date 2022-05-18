@@ -55,7 +55,7 @@ class PlotMGENMetricCommand(Command):
 
     def handle(self, parser, args):
         reservation = self.logs.reservation
-        scorer = Scorer(reservation, cache_path='cache')
+        scorer = Scorer(reservation)
 
         title = 'Reservation {}'.format(reservation.reservation_id)
 
