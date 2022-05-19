@@ -584,7 +584,7 @@ class LogCollection:
         if isinstance(path, list):
             for onepath in path:
                 try:
-                    self.load(onepath, srns=srns)
+                    self.load(onepath, start_time=start_time, srn_logs_path=srn_logs_path, srns=srns)
                 except:
                     logger.exception('Could not load %s', onepath)
         elif os.path.isdir(path):
