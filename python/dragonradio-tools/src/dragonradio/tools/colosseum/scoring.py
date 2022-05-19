@@ -1,56 +1,64 @@
-# Copyright 2018-2021 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
+from datetime import datetime
 from functools import cached_property
 import importlib_resources
 import json
 import logging
+from pathlib import Path
 import os
 import re
+from typing import List, Mapping, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
 
 from dragonradio.tools.cache import DataFrameCache, cached_dataframe_property
 
+from .logging import ReservationLog
+
 logger = logging.getLogger(__name__)
 
-MP = 1
+MP: int = 1
 """Measurement period"""
 
-SCE_QUAL_SCENARIOS = set([99771, 99801, 99840, 99880])
+SCE_QUAL_SCENARIOS: Set[int] = set([99771, 99801, 99840, 99880])
 """SCE qualification scenarios"""
 
-SCE_CIL_QUAL_SCENARIOS = set([9990, 9991])
+SCE_CIL_QUAL_SCENARIOS: Set[int] = set([9990, 9991])
 """SCE CIL qualification scenarios"""
 
 class Scenario(DataFrameCache):
     """Colosseum scenario"""
-    def __init__(self, reservation, cache_path=None):
-        super().__init__(cache_path=cache_path)
+
+    reservation: ReservationLog
+    """Reservation to score"""
+
+    def __init__(self, reservation: ReservationLog, **kwargs):
+        super().__init__(**kwargs)
 
         if reservation is None:
             raise ValueError("Reservation must not be None")
 
         self.reservation = reservation
-        """Reservation to score"""
-
-        self.rf_scenario = reservation.rf_scenario
-        """RF Scenario ID"""
 
     @property
     def cache_path(self):
         """Path to cache holding serialized DataFrames"""
-        return os.path.join(self._cache_path,
-                            'scenario',
-                            str(self.rf_scenario))
+        return self._cache_path / 'scenario' / str(self.rf_scenario)
+
+    @cached_property
+    def rf_scenario(self) -> int:
+        """RF Scenario ID"""
+        return self.reservation.rf_scenario
 
     @property
-    def scenarios_path(self):
+    def scenarios_path(self) -> Path:
         return importlib_resources.files('dragonradio.tools.colosseum.scenarios').joinpath(str(self.rf_scenario))
 
     #@cached_dataframe_property('mandates')
     @cached_property
-    def mandates(self):
+    def mandates(self) -> pd.DataFrame:
         """DataFrame holding mandates"""
         items = []
 
@@ -154,7 +162,7 @@ class Scenario(DataFrameCache):
 
     #@cached_dataframe_property('environment')
     @cached_property
-    def environment(self):
+    def environment(self) -> pd.DataFrame:
         """Scenario environment"""
         items = []
 
@@ -237,43 +245,49 @@ class Scenario(DataFrameCache):
 
 class Scorer(DataFrameCache):
     """Colosseum scoring"""
-    def __init__(self, reservation, cache_path=None):
-        super().__init__(cache_path=cache_path)
+
+    reservation: ReservationLog
+    """Reservation to score"""
+
+    scenario: Scenario
+    """Scenario being scored"""
+
+    sanity_check: bool = False
+    """Perform extra sanity checks"""
+
+    def __init__(self, reservation, **kwargs):
+        super().__init__(**kwargs)
 
         self.reservation = reservation
-        """Reservation to score"""
-
-        self.sanity_check = False
-        """Perform extra sanity checks"""
-
         self.scenario = Scenario(reservation)
-        """Scenario"""
 
     @property
-    def cache_path(self):
+    def cache_path(self) -> Path:
         """Path to cache holding serialized DataFrames"""
-        return os.path.join(self._cache_path,
-                            'scoring',
-                            str(self.reservation_id),
-                            str(self.rf_start_time.timestamp()))
+        return self._cache_path / 'scoring' / str(self.reservation_id) / str(self.rf_start_time.timestamp())
 
     @cached_property
-    def reservation_id(self):
+    def reservation_id(self) -> int:
         """Reservation ID"""
         return self.reservation.reservation_id
 
     @cached_property
-    def rf_scenario(self):
+    def rf_scenario(self) -> int:
         """RF scenario ID"""
         return self.reservation.rf_scenario
 
     @cached_property
-    def rf_start_time(self):
+    def rf_start_time(self) -> datetime:
         """RF scenario start time (seconds since epoch)"""
         return self.reservation.rf_start_time
 
     @cached_property
-    def max_team_scores(self):
+    def valid(self) -> bool:
+        """Return True if score information is valid."""
+        return self.reservation.traffic is not None and not self.reservation.traffic.empty
+
+    @cached_property
+    def max_team_scores(self) -> pd.DataFrame:
         """Maximum possible score per team per stage."""
         return self.scenario.mandates.reset_index().\
                 groupby(['team', 'stage']).\
@@ -281,14 +295,14 @@ class Scorer(DataFrameCache):
                 rename(columns={ 'flow_uid': 'max_score' })
 
     @cached_property
-    def max_stage_scores(self):
+    def max_stage_scores(self) -> List[float]:
         """Maximum possible score per stage."""
         df = self.max_team_scores.reset_index().groupby(['stage']).agg({ 'max_score': 'min' })
 
         return [df.loc[stage].max_score for stage in self.stages]
 
     @cached_property
-    def stage_scores(self):
+    def stage_scores(self) -> pd.DataFrame:
         """Stage scores"""
         df = self.ensemble_mp_score
 
@@ -304,7 +318,7 @@ class Scorer(DataFrameCache):
         return stage_scores
 
     @cached_property
-    def stage_score_intervals(self):
+    def stage_score_intervals(self) -> List[float]:
         """The earliest scoring interval in which the max score was obtained"""
         df = self.ensemble_mp_score
 
@@ -320,17 +334,17 @@ class Scorer(DataFrameCache):
         return stage_score_intervals
 
     @cached_property
-    def max_match_score(self):
+    def max_match_score(self) -> float:
         """Maximum possible match score."""
         return sum(self.max_stage_scores)
 
     @cached_property
-    def final_match_score(self):
+    def final_match_score(self) -> float:
         """Final match score"""
         return sum(self.stage_scores)
 
     @cached_property
-    def match_scores(self):
+    def match_scores(self) -> Mapping[int, float]:
         """Match scores"""
         df = self.score
 
@@ -345,7 +359,7 @@ class Scorer(DataFrameCache):
         return match_scores
 
     @cached_property
-    def start(self):
+    def start(self) -> datetime:
         """Start of scoring period (seconds since epoch)"""
         if self.rf_start_time is not None:
             return self.rf_start_time
@@ -358,24 +372,24 @@ class Scorer(DataFrameCache):
             return df.send_time.min() - pd.Timedelta(seconds=self.stages[0])
 
     @cached_property
-    def end(self):
-      """End of scoring period (seconds since epoch)"""
-      df = self.reservation.traffic
+    def end(self) -> float:
+        """End of scoring period (seconds since epoch)"""
+        df = self.reservation.traffic
 
-      return df.send_time.max()
+        return df.send_time.max()
 
     @cached_property
-    def last_mp(self):
+    def last_mp(self) -> int:
         """Last measurement period"""
         return int((self.end - self.start).total_seconds() / MP) - 1
 
     @cached_property
-    def stages(self):
+    def stages(self) -> List[float]:
         """Stages"""
         return sorted(list(self.scenario.mandates.index.get_level_values('stage').unique()))
 
     @cached_property
-    def stage_end(self):
+    def stage_end(self) -> List[float]:
         """Map from stage start time to last MP in stage"""
         ends = {}
 
@@ -389,11 +403,9 @@ class Scorer(DataFrameCache):
 
     @cached_dataframe_property('traffic')
     #@property
-    def traffic(self):
+    def traffic(self) -> Optional[pd.DataFrame]:
         """Scored traffic with duplicate received packets dropped"""
         df = self.reservation.traffic
-        if df is None:
-            return None
 
         # Delete flow 0
         df.drop(df.index[df.flow_uid == 0], inplace=True)
@@ -461,7 +473,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('traffic_summary')
-    def traffic_summary(self):
+    def traffic_summary(self) -> Optional[pd.DataFrame]:
         df = self.traffic
         if df is None:
             return None
@@ -493,7 +505,7 @@ class Scorer(DataFrameCache):
 
         return df
 
-    def readIncumbentGates(self):
+    def readIncumbentGates(self) -> List[Tuple[int, bool]]:
         try:
             from ciltool import CilReader, cil_pb2
         except:
@@ -544,7 +556,7 @@ class Scorer(DataFrameCache):
         return items
 
     @cached_dataframe_property('gates')
-    def gates(self):
+    def gates(self) -> pd.DataFrame:
         """Gate violations.
 
         The gate value in an MP is True if gated, i.e., there is a violation,
@@ -559,7 +571,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('per_mp_score')
-    def per_mp_score(self):
+    def per_mp_score(self) -> pd.DataFrame:
         """Flow score per measurement period.
 
         This DataFrame has an index on team, flow_uid, stage, and mp.
@@ -702,7 +714,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('mp_score')
-    def mp_score(self):
+    def mp_score(self) -> pd.DataFrame:
         """Measurement period scores.
 
         This DataFrame has an index on team, stage, and mp.
@@ -728,7 +740,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('ensemble_mp_score')
-    def ensemble_mp_score(self):
+    def ensemble_mp_score(self) -> pd.DataFrame:
         """Ensemble score"""
         df = self.mp_score
 
@@ -740,7 +752,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('threshold_success')
-    def threshold_success(self):
+    def threshold_success(self) -> pd.DataFrame:
         """Threshold success"""
         df = self.mp_score
         thresholds_df = self.scenario.environment
@@ -760,7 +772,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('ensemble_threshold_success')
-    def ensemble_threshold_success(self):
+    def ensemble_threshold_success(self) -> pd.DataFrame:
         """Ensemble threshold success"""
         df = self.threshold_success
 
@@ -772,7 +784,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('pe_score')
-    def pe_score(self):
+    def pe_score(self) -> pd.DataFrame:
         """Points earned"""
         df = self.threshold_success
         ensemble_success_df = self.ensemble_threshold_success
@@ -792,7 +804,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_property
-    def score(self):
+    def score(self) -> pd.DataFrame:
         """Phase 3 scores"""
         df = self.pe_score
         df['score'] = df.groupby('team').pe_score.cumsum()
@@ -801,7 +813,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_property
-    def ensemble_score(self):
+    def ensemble_score(self) -> pd.DataFrame:
         """Phase 3 ensemble score"""
         df = self.ensemble_mp_score
         df['score'] = df.mp_score.cumsum()
@@ -810,7 +822,7 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_property
-    def flows(self):
+    def flows(self) -> pd.DataFrame:
         """Per-flow score information, sorted in descending order by lost points"""
         score_df = self.per_mp_score
         traffic_df = self.traffic
@@ -865,7 +877,7 @@ class Scorer(DataFrameCache):
                               ascending=[False, True])
 
     @property
-    def max_flow_delay(self):
+    def max_flow_delay(self) -> pd.DataFrame:
         """Maxmim delay per flow"""
         df = self.traffic
 
