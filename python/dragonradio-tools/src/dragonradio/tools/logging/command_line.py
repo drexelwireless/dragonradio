@@ -2,10 +2,10 @@
 # Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 import argparse
-import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from functools import reduce
 import logging
+from typing import Any, List, Optional
 
 from .logging import LogCollection
 
@@ -25,15 +25,17 @@ def add_annotate_args(parser):
                                  help='make annotations sticky')
 
 class Command(object):
-    def __init__(self : str=None):
-        self.start_time : datetime.datetime = None
-        """Override of log start time"""
+    start_time: Optional[datetime] = None
+    """Override of log start time"""
 
-        self.logs : LogCollection = None
-        """Our log collection"""
+    logs: LogCollection
+    """Our log collection"""
 
+    filters: List[Any]
+    """DataFrame filters to apply"""
+
+    def __init__(self):
         self.filters = []
-        """DataFrame filters to apply"""
 
     def reset_filters(self):
         self.filters = []
@@ -100,7 +102,7 @@ class Command(object):
 
         # Determine start time
         if args.start_time:
-            self.start_time = datetime.datetime.fromtimestamp(args.start_time, timezone.utc)
+            self.start_time = datetime.fromtimestamp(args.start_time, timezone.utc)
 
         # Load logs
         self.logs = LogCollection(start_time=self.start_time)

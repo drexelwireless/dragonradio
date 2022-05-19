@@ -1,51 +1,73 @@
 # Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
-import datetime
-from datetime import timezone
+from datetime import datetime, timezone
+from enum import Enum
 from functools import cached_property
 import json
 import logging
 import os
+from pathlib import Path
 import re
+from typing import Dict, FrozenSet, List, Mapping, MutableMapping, Optional, Set, Tuple
 
 import pandas as pd
 
 import dragonradio.tools.mgen as mgen
 from dragonradio.tools.cache import DataFrameCache, cached_dataframe_property
-from dragonradio.tools.colosseum.scoring import MP
 
 logger = logging.getLogger(__name__)
 
+MP: int = 1
+"""Measurement period"""
+
 class MatchConfig:
-    """""Data from a match_conf.json file"""
-    def __init__(self, _res, path):
+    """Data from a match_conf.json file"""
+
+    reservation: 'ReservationLog'
+    """Reservation"""
+
+    path: Path
+    """Path to match_conf.json"""
+
+    date_started: datetime
+    """Match start time"""
+
+    team: str
+    """Team name"""
+
+    batch_filename: str
+    """Batch filename"""
+
+    match_id: Optional[int] = None
+    """Match ID"""
+
+    scenario_to_srn: MutableMapping[int, int]
+    """Map from scenario node to SRN"""
+
+    srn_to_scenario: MutableMapping[int, int]
+    """Map from SRN to scenario node"""
+
+    def __init__(self, reservation: 'ReservationLog', path: Path):
+        self.reservation = reservation
+        self.path = path
+
         with open(path, 'r') as f:
             config = json.load(f)
 
-        self.json = config
-
-        self.date_started = datetime.datetime.fromtimestamp(config['date_started'], timezone.utc)
+        self.date_started = datetime.fromtimestamp(config['date_started'], timezone.utc)
 
         self.team = config['team']
 
         self.batch_filename = config['batch_filename']
-        """Batch filename"""
 
         self.match_id = None
-        """Match ID"""
 
         m = re.match(r'Match_(\d+)_', self.batch_filename)
         if m:
             self.match_id = int(m.group(1))
 
-        self.srn_teams = {}
-        """Map from SRN to team"""
-
         self.scenario_to_srn = {}
-        """Map from scenario node to SRN"""
-
         self.srn_to_scenario = {}
-        """Map from SRN to scenario node"""
 
         for (traffic_id, srn_id) in config['node_to_srn_mapping'].items():
             traffic_id = int(traffic_id)
@@ -53,56 +75,75 @@ class MatchConfig:
             self.scenario_to_srn[traffic_id] = srn_id
             self.srn_to_scenario[srn_id] = traffic_id
 
-            # Only one team in batch mode. Incumbents have scenario IDs >50.
-            if traffic_id <= 50:
-                self.srn_teams[srn_id] = 1
-
 class BatchInput:
     """""Data from a batch_input.json or freeplay.json file"""
+
+    reservation: 'ReservationLog'
+    """Reservation"""
+
+    path: Path
+    """Path to batch_input.json (or match .json file)"""
+
+    rf_scenario: int
+    """RF scenario ID"""
+
+    traffic_scenario: int
+    """Traffic scenario ID"""
+
+    duration: int
+    """Scenario duration (sec)"""
+
+    teams: List[int]
+    """Teams in order of appearance"""
+
+    srn_teams: MutableMapping[int, int]
+    """Map from SRN to team"""
+
+    images: MutableMapping[int, str]
+    """Map from SRN to image"""
+
+    modem_config: MutableMapping[int, str]
+    """Map from SRN to modem configuration"""
+
+    gateways: Set[int]
+    """Gateway SRNs"""
+
+    scenario_to_srn: MutableMapping[int, int]
+    """Map from scenario node to SRN"""
+
+    srn_to_scenario: MutableMapping[int, int]
+    """Map from SRN to scenario node"""
+
     def __init__(self, res, path):
+        self.reservation = res
+        self.path = path
+        self.teams = []
+        self.srn_teams = {}
+        self.images = {}
+        self.modem_config = {}
+        self.gateways = set()
+        self.scenario_to_srn = {}
+        self.srn_to_scenario = {}
+
         with open(path, 'r') as f:
             config = json.load(f)
 
-        self.json = config
-
         self.rf_scenario = config['RFScenario']
-        """RF scenario ID"""
-
         self.traffic_scenario = config['TrafficScenario']
-        """Traffic scenario ID"""
-
         self.duration = config['Duration']
-        """Scenario duration"""
-
-        self.srn_teams = {}
-        """Map from SRN to team"""
-
-        self.slot_teams = {}
-        """Map from scenario slot to team"""
-
-        self.images = {}
-        """Map from SRN to image"""
-
-        self.modem_config = {}
-        """Map from SRN to modem configuration"""
-
-        self.gateways = set()
-        """Gateway SRNs"""
-
-        self.scenario_to_srn = {}
-        """Map from scenario node to SRN"""
-
-        self.srn_to_scenario = {}
-        """Map from SRN to scenario node"""
-
-        teams = set()
-        team_slot = 0
 
         for node in config['NodeData']:
             rf_id = node['RFNode_ID']
-            traffic_id = node['TrafficNode']
+
+            # A match batch file has a TrafficNode_ID attribute, but a normal
+            # batch file has a TrafficNode attribute.
+            if 'TrafficNode_ID' in node:
+                traffic_id = node['TrafficNode_ID']
+            else:
+                traffic_id = node['TrafficNode']
+
             if traffic_id != rf_id:
-                logger.warning("")
+                logger.warning("Traffic node ID does not match RF node ID")
 
             if 'srn_number' in node:
                 srn_id = node['srn_number']
@@ -127,57 +168,66 @@ class BatchInput:
             if 'ModemConfig' in node:
                 self.modem_config[srn_id] = node['ModemConfig']
 
-            if team is not None:
-                self.srn_teams[srn_id] = team
-
-                if team not in teams:
-                    teams.add(team)
-                    self.slot_teams[team_slot] = team
-                    team_slot += 1
-
             if node['isGateway']:
                 self.gateways.add(srn_id)
 
+            if team is not None:
+                self.srn_teams[srn_id] = team
+
+                if team not in self.teams:
+                    self.teams.append(team)
+            # Only one team in batch mode, and incumbents have scenario IDs >50.
+            elif traffic_id <= 50:
+                self.srn_teams[srn_id] = 1
+
+                if 1 not in self.teams:
+                    self.teams.append(1)
+
 class CollabInfo:
-    def __init__(self, reservation):
-        self.collab_server_srn = None
-        """Collaboration server SRN"""
+    """Collaboration information"""
 
-        self.collab_server_ip = None
-        """Collaboration server IP address"""
+    collab_server_srn: Optional[int] = None
+    """Collaboration server SRN"""
 
-        self.collab_log = None
-        """Collaboration server log"""
+    collab_server_ip: Optional[str] = None
+    """Collaboration server IP address"""
 
-        for f in os.listdir(reservation.path):
-            m = re.match(r'^[-a-zA-Z0-9_]*-srn(\d*)-RES\d*-colbr(\d*)-\d*-\d*\.pcap$', f)
-            if m:
-                srn = int(m.group(1))
-                collab = int(m.group(2))
+    collab_log: Optional[Path] = None
+    """Collaboration server log"""
 
-                if collab != srn and srn in reservation.srn_teams and reservation.srn_teams[srn] == reservation.our_team:
-                    self.collab_server_srn = collab
-                    self.collab_server_ip = "172.30.{collab}.{srn}".format(srn=100+srn, collab=100+collab)
-                    self.collab_log = os.path.join(reservation.path, f)
+    def __init__(self, reservation: 'ReservationLog'):
+        if reservation.srn_teams is not None:
+            for f in reservation.path.iterdir():
+                m = re.match(r'^[-a-zA-Z0-9_]*-srn(\d*)-RES\d*-colbr(\d*)-\d*-\d*\.pcap$', f.name)
+                if m:
+                    srn = int(m.group(1))
+                    collab_srn = int(m.group(2))
 
-                    return
+                    if collab_srn != srn \
+                        and srn in reservation.srn_teams \
+                        and reservation.srn_teams[srn] == reservation.our_team:
+                        self.collab_server_srn = collab_srn
+                        self.collab_server_ip = "172.30.{collab_srn}.{srn}".format(srn=100+srn, collab_srn=100+collab_srn)
+                        self.collab_log = reservation.path / f
 
-        logging.debug("Cannot find collaboration server")
+                        return
 
 class TrafficLogs:
-    def __init__(self, _res, path):
+    path: Path
+    """Path to directory containing traffic logs"""
+
+    send_traffic_logs: MutableMapping[Tuple[int, int], str] = {}
+    """Map from scenario (src, dest) pairs to a send traffic log"""
+
+    listen_traffic_logs: MutableMapping[Tuple[int, int], str] = {}
+    """Map from scenario (src, dest) pairs to a listen traffic log"""
+
+    def __init__(self, reservation: 'ReservationLog', path: Path):
         self.path = path
-        """Path to directory containign traffic logs"""
 
-        self.send_traffic_logs = {}
-        """Map from scenario (src, dest) pairs to a send traffic log"""
-
-        self.listen_traffic_logs = {}
-        """Map from scenario (src, dest) pairs to a listen traffic log"""
-
-        if os.path.exists(path):
-            for f in os.listdir(path):
-                m = re.match(r'^(send|listen)_SENDNODE-(\d+)_RECNODE-(\d+)_.*.drc$', f)
+        if path.exists():
+            for f in path.iterdir():
+                m = re.match(r'^(send|listen)_SENDNODE-(\d+)_RECNODE-(\d+)_.*.drc$', f.name)
                 if m:
                     full_path = os.path.join(path, f)
                     (ty, src, dest ) = m.groups()
@@ -189,130 +239,176 @@ class TrafficLogs:
                     else:
                         self.listen_traffic_logs[(src, dest)] = full_path
 
+class ReservationStatus(Enum):
+    pending = 'Pending'
+    active = 'Active'
+    complete = 'Complete'
+    error = 'Error'
+
 class ReservationLog(DataFrameCache):
     """A Colosseum reservation log"""
-    def __init__(self, path,
-                 rf_start_time=None,
-                 srn_logs_path=None,
-                 cache_path=None):
+
+    path: Path
+    """Directory containing Colosseum logs"""
+
+    srn_logs_path: Path
+    """Directory containing SRN logs"""
+
+    _rf_start_time: Optional[datetime]
+    """RF scenario start time given to init"""
+
+    sanity_check: bool = False
+    """Perform extra sanity checks"""
+
+    def __init__(self,
+                 path: Path,
+                 rf_start_time: Optional[datetime]=None,
+                 srn_logs_path: Optional[Path]=None,
+                 **kwargs):
         """A Colosseum reservation log.
 
         Args:
-            path: Path to log directory.
-            rf_start_time: RF scenario start time or None.
-            srn_logs_path: Path to SRN log directory or None.
-            cache_path: Path to root directory for DataFrame cache.
-
-        Returns:
-            None
+            path (Path): Path to log directory.
+            rf_start_time (Optional[float]): RF scenario start time or None.
+            srn_logs_path (Optional[Path]): Path to SRN log directory or None.
         """
-        super().__init__(cache_path=cache_path)
+        super().__init__(**kwargs)
 
-        self.path = os.path.realpath(path)
-        """Directory containing Colosseum logs"""
+        if path is None:
+            self.path = path
+        else:
+            self.path = Path(path).resolve()
 
-        self.srn_logs_path = self.path
-        """Directory containing SRN logs"""
-
-        if srn_logs_path is not None:
-            self.srn_logs_path = os.path.realpath(srn_logs_path)
+        if srn_logs_path is None:
+            self.srn_logs_path = self.path
+        else:
+            self.srn_logs_path = Path(srn_logs_path).resolve()
 
         self._rf_start_time = rf_start_time
-        """RF scenario start time specified to init"""
-
-        self.sanity_check = False
-        """Perform extra sanity checks"""
 
     @property
-    def cache_path(self):
+    def status(self) -> ReservationStatus:
+        """Determine reservation status"""
+        # Look for .pcap files that contain CIL packets. These seem to be the
+        # last files to appear when a reservation is over, so if they're
+        # present, the reservation should be complete.  Except... reservations
+        # that error out seem not to get a rf_start_time.json file, so if there
+        # is no RF start time, set the status to 'Error'.
+        has_pcap = any(fname.name.endswith('.pcap') for fname in self.path.iterdir())
+
+        if has_pcap:
+            if self.rf_start_time is None:
+                return ReservationStatus.error
+            else:
+                return ReservationStatus.complete
+        else:
+            return ReservationStatus.active
+
+    @property
+    def is_complete(self) -> bool:
+        """Is reservation complete?"""
+        return self.status == ReservationStatus.complete
+
+    @property
+    def cache_path(self) -> Path:
         """Path to cache holding serialized DataFrames"""
-        return os.path.join(self._cache_path, 'reservation', str(self.reservation_id))
+        return self._cache_path / 'reservation' / str(self.reservation_id)
 
     @property
-    def inputs_path(self):
-        return os.path.join(self.path, 'Inputs')
+    def inputs_path(self) -> Path:
+        return self.path / 'Inputs'
 
     @property
-    def match_config_path(self):
-        return os.path.join(self.inputs_path, 'match_conf.json')
+    def match_config_path(self) -> Path:
+        return self.inputs_path / 'match_conf.json'
 
     @property
-    def batch_input_path(self):
-        return os.path.join(self.inputs_path, 'batch_input.json')
+    def batch_input_path(self) -> Path:
+        return self.inputs_path / 'batch_input.json'
 
     @property
-    def freeplay_path(self):
-        return os.path.join(self.inputs_path, 'freeplay.json')
+    def freeplay_path(self) -> Path:
+        return self.inputs_path / 'freeplay.json'
 
     @property
-    def traffic_logs_path(self):
-        return os.path.join(self.path, 'traffic_logs')
+    def traffic_logs_path(self) -> Path:
+        return self.path / 'traffic_logs'
 
     @cached_property
-    def reservation_info(self):
+    def reservation_info(self) -> Tuple[str, int]:
         """Reservation type and ID"""
-        m = re.match(r'^FREEPLAY-RESERVATION-(\d+)$', os.path.basename(self.path))
+        m = re.match(r'^FREEPLAY-RESERVATION-(\d+)$', self.path.name)
         if m:
             return ('Freeplay', int(m.group(1)))
 
-        m = re.match(r'^RESERVATION-(\d+)$', os.path.basename(self.path))
+        m = re.match(r'^RESERVATION-(\d+)$', self.path.name)
         if m:
             return ('Batch', int(m.group(1)))
 
-        m = re.match(r'^MATCH-\d+-RES-(\d+)$', os.path.basename(self.path))
+        m = re.match(r'^MATCH-\d+-RES-(\d+)$', self.path.name)
         if m:
             return ('Match', int(m.group(1)))
 
-        m = re.match(r'^scrimmage(\d+)-.*-(\d+)$', os.path.basename(self.path))
+        m = re.match(r'^scrimmage(\d+)-.*-(\d+)$', self.path.name)
         if m:
             return ('Scrimmage {}'.format(m.groups(1)), int(m.group(2)))
 
         raise Exception('Cannot determine reservation ID: %s' % self.path)
 
     @cached_property
-    def reservation_type(self):
+    def reservation_type(self) -> str:
         return self.reservation_info[0]
 
     @cached_property
-    def reservation_id(self):
+    def reservation_id(self) -> int:
         """Reservation ID"""
         return self.reservation_info[1]
 
     @cached_property
-    def match_config(self):
+    def match_config(self) -> MatchConfig:
         """Match configuration"""
-        return MatchConfig(self, self.match_config_path)
+        if os.path.exists(self.match_config_path):
+            return MatchConfig(self, self.match_config_path)
+
+        raise RuntimeError('Cannot find match configuration for %s' % self.path)
 
     @cached_property
-    def match_start_time(self):
+    def match_start_time(self) -> datetime:
         """Match start time (seconds since epoch)"""
         return self.match_config.date_started
 
     @cached_property
-    def match_id(self):
+    def match_id(self) -> Optional[int]:
         """Match ID"""
         return self.match_config.match_id
 
     @cached_property
-    def batch_input(self):
+    def batch_input(self) -> BatchInput:
         """Batch input"""
         if os.path.exists(self.batch_input_path):
             return BatchInput(self, self.batch_input_path)
-        else:
+        elif os.path.exists(self.freeplay_path):
             return BatchInput(self, self.freeplay_path)
 
+        raise RuntimeError('Cannot find batch configuration for %s' % self.path)
+
     @cached_property
-    def rf_scenario(self):
+    def rf_scenario(self) -> int:
         """RF Scenario ID"""
         return self.batch_input.rf_scenario
 
     @cached_property
-    def traffic_scenario(self):
+    def traffic_scenario(self) -> int:
         """Traffic Scenario ID"""
         return self.batch_input.traffic_scenario
 
     @cached_property
-    def rf_start_time(self):
+    def start_time(self) -> Optional[datetime]:
+        """Reservation start time (seconds since epoch)"""
+        return self.match_config.date_started
+
+    @cached_property
+    def rf_start_time(self) -> Optional[datetime]:
         """RF scenario start time (seconds since epoch)"""
         # Prefer RF scenario start time specified to init
         if self._rf_start_time is not None:
@@ -321,20 +417,22 @@ class ReservationLog(DataFrameCache):
         path = os.path.join(self.inputs_path, 'rf_start_time.json')
         if os.path.exists(path):
             with open(path, 'r') as f:
-                return datetime.datetime.fromtimestamp(json.load(f), timezone.utc)
+                return datetime.fromtimestamp(json.load(f), timezone.utc)
+
+        return None
 
     @cached_property
-    def images(self):
+    def images(self) -> Mapping[int, str]:
         """Map from SRN to image"""
         return self.batch_input.images
 
     @cached_property
-    def gateways(self):
+    def gateways(self) -> Set[int]:
         """Gateways"""
         return self.batch_input.gateways
 
     @cached_property
-    def scenario_to_srn(self):
+    def scenario_to_srn(self) -> Mapping[int, int]:
         """Map from scenario node to SRN"""
         if os.path.exists(self.match_config_path):
             return self.match_config.scenario_to_srn
@@ -342,7 +440,7 @@ class ReservationLog(DataFrameCache):
             return self.batch_input.scenario_to_srn
 
     @cached_property
-    def srn_to_scenario(self):
+    def srn_to_scenario(self) -> Mapping[int, int]:
         """Map from SRN to scenario node"""
         if os.path.exists(self.match_config_path):
             return self.match_config.srn_to_scenario
@@ -350,20 +448,35 @@ class ReservationLog(DataFrameCache):
             return self.batch_input.srn_to_scenario
 
     @cached_property
-    def teams(self):
-        """Teams"""
-        return frozenset(self.srn_teams.values())
+    def teams(self) -> List[int]:
+        """Teams in order of appearance in batch configuration"""
+        if self.match_config is not None:
+            batch_path = self.path / self.match_config.batch_filename
+
+            if batch_path.exists():
+                batch = BatchInput(self, batch_path)
+                return batch.teams
+
+        return self.batch_input.teams
 
     @cached_property
-    def srn_teams(self):
+    def srn_teams(self) -> Mapping[int, int]:
         """Map from SRN to team"""
-        if os.path.exists(self.match_config_path):
-            return self.match_config.srn_teams
-        else:
+
+        if self.match_config is not None:
+            batch_path = self.path / self.match_config.batch_filename
+
+            if batch_path.exists():
+                batch = BatchInput(self, batch_path)
+                return batch.srn_teams
+
+        if self.batch_input is not None:
             return self.batch_input.srn_teams
 
+        return {}
+
     @cached_property
-    def srn_logs(self):
+    def srn_logs(self) -> Mapping[int, Path]:
         """Map from SRN to node log directory"""
         logs = {}
 
@@ -373,12 +486,12 @@ class ReservationLog(DataFrameCache):
                 if m:
                     srn = int(m.group(1))
                     if srn in self.srn_to_scenario:
-                        logs[srn] = os.path.join(self.srn_logs_path, f)
+                        logs[srn] = self.srn_logs_path / f
 
         return logs
 
     @cached_property
-    def srn_pcaps(self):
+    def srn_pcaps(self) -> Mapping[int, str]:
         """Map from SRN to PCAP file"""
         pcaps = {}
 
@@ -393,38 +506,37 @@ class ReservationLog(DataFrameCache):
         return pcaps
 
     @cached_property
-    def observer_logs(self):
+    def observer_logs(self) -> List[str]:
         if not os.path.exists(self.srn_logs_path):
             return []
 
         return [filename for filename in os.listdir(self.srn_logs_path) if 'observer' in filename]
 
     @cached_property
-    def collab_info(self):
+    def collab_info(self) -> CollabInfo:
         """Collaboration info"""
         return CollabInfo(self)
 
     @property
-    def collab_server_srn(self):
-        """Collaboration server SRN"""
+    def collab_server_srn(self) -> Optional[int]:
         return self.collab_info.collab_server_srn
 
     @property
-    def collab_server_ip(self):
+    def collab_server_ip(self) -> Optional[str]:
         """Collaboration server IP address"""
         return self.collab_info.collab_server_ip
 
     @property
-    def collab_log(self):
+    def collab_log(self) -> Optional[Path]:
         """Collaboration server log"""
         return self.collab_info.collab_log
 
     @cached_property
-    def our_team(self):
+    def our_team(self) -> Optional[int]:
         """Our team number"""
         if os.path.exists(self.srn_logs_path):
-            for dirname in os.listdir(self.srn_logs_path):
-                m = re.match(r'^.*-srn(\d+)-RES{}$'.format(self.reservation_id), dirname)
+            for dirname in self.srn_logs_path.iterdir():
+                m = re.match(r'^.*-srn(\d+)-RES{}$'.format(self.reservation_id), dirname.name)
                 if m:
                     srn_id = int(m.group(1))
 
@@ -436,12 +548,12 @@ class ReservationLog(DataFrameCache):
         return None
 
     @cached_property
-    def our_srns(self):
+    def our_srns(self) -> Set[int]:
         """Our team's SRNs"""
-        return [srn for (srn, team) in self.srn_teams.items() if team == self.our_team]
+        return set(srn for (srn, team) in self.srn_teams.items() if team == self.our_team)
 
     @cached_property
-    def our_gateway(self):
+    def our_gateway(self) -> Optional[int]:
         """Our team's gateway"""
         for srn in self.gateways:
             if srn in self.srn_teams and self.srn_teams[srn] == self.our_team:
@@ -450,7 +562,7 @@ class ReservationLog(DataFrameCache):
         return None
 
     @cached_property
-    def reported_scores(self):
+    def reported_scores(self) -> Optional[pd.DataFrame]:
         """Reported scores"""
         gateway = self.our_gateway
 
@@ -469,18 +581,20 @@ class ReservationLog(DataFrameCache):
     @cached_property
     def image_name(self):
         """DragonRadio image used"""
-        # Look in images UNLESS this is a match, in which case the image names
-        # are not useful
-        if self.match_id is None:
-            return self.images[self.our_srns[0]]
-
         # Otherwise, look at a dragonradio log
         if len(self.our_srns) != 0:
-            srn = self.our_srns[0]
+            # Get one of our SRNs
+            some_srn = next(iter(self.our_srns))
+
+            # Look in images UNLESS this is a match, in which case the image names
+            # are not useful
+            if self.match_id is None:
+                return self.images[some_srn]
+
             for dirname in os.listdir(self.srn_logs_path):
-                m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), dirname)
+                m = re.match(r'^.*-srn{}-RES{}$'.format(some_srn, self.reservation_id), dirname)
                 if m:
-                    dragonlog_path = self.dragonLogPath(dirname, srn)
+                    dragonlog_path = self.dragonLogPath(dirname, some_srn)
                     if os.path.isfile(dragonlog_path):
                         with open(dragonlog_path, 'r') as f:
                             text = f.read()
@@ -490,21 +604,72 @@ class ReservationLog(DataFrameCache):
 
         return None
 
-    def dragonLogPath(self, dirname, srn_id):
+    def dragonLogPath(self, dirname: Path, srn_id: int) -> Path:
         """Get path to dragonradio.log given log sub-directory and SRN"""
         return self.srnLogPath(dirname, srn_id, 'dragonradio.log')
 
-    def stderrLogPath(self, dirname, srn_id):
+    def stderrLogPath(self, dirname: Path, srn_id: int) -> Path:
         """Get path to stderr.log given log sub-directory and SRN"""
         return self.srnLogPath(dirname, srn_id, 'stderr.log')
 
-    def srnLogPath(self, dirname, srn_id, logname):
-        return os.path.join(self.srn_logs_path, dirname, f'node-{srn_id:03d}', logname)
+    def srnLogPath(self, dirname: Path, srn_id: int, logname: str) -> Path:
+        return self.srn_logs_path / dirname / f'node-{srn_id:03d}' / logname
+
+    @cached_property
+    def has_crash(self) -> bool:
+        """Flag indicating whether or not a node crashed"""
+        for srn in self.our_srns:
+            for path in self.srn_logs_path.iterdir():
+                m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), path.name)
+                if m:
+                    core_path = path / 'cores'
+                    if core_path.is_dir and len(list(core_path.iterdir())) != 0:
+                        return True
+
+        return False
+
+    @cached_property
+    def has_traceback(self) -> bool:
+        """Flag indicating whether or not a node has a python Traceback"""
+        for srn in self.our_srns:
+            for path in self.srn_logs_path.iterdir():
+                m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), path.name)
+                if m:
+                    dragonlog_path = self.dragonLogPath(path, srn)
+
+                    if dragonlog_path.is_file():
+                        with dragonlog_path.open('r') as f:
+                            text = f.read()
+
+                        m = re.search(r'Traceback', text, re.M)
+                        if m:
+                            return True
+
+        return False
+
+    @cached_property
+    def has_uhd_error(self) -> bool:
+        """Flag indicating whether or not a node has a UHD error"""
+        for srn in self.our_srns:
+            for path in self.srn_logs_path.iterdir():
+                m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), path.name)
+                if m:
+                    dragonlog_path = self.stderrLogPath(path, srn)
+
+                    if dragonlog_path.is_file():
+                        with dragonlog_path.open('r') as f:
+                            text = f.read()
+
+                        m = re.search(r'UHD Error', text, re.M)
+                        if m:
+                            return True
+
+        return False
 
     @cached_dataframe_property('heard')
-    def heard(self):
+    def heard(self) -> pd.DataFrame:
         """Nodes heard by each SRN"""
-        heard = {}
+        heard: Dict[int, Set[int]] = {}
 
         for srn in self.our_srns:
             heard[srn] = set()
@@ -534,11 +699,11 @@ class ReservationLog(DataFrameCache):
         return df
 
     @cached_property
-    def traffic_logs(self):
+    def traffic_logs(self) -> TrafficLogs:
         """Traffic logs"""
         return TrafficLogs(self, self.traffic_logs_path)
 
-    def _fixTrafficDataFrame(self, df):
+    def _fixTrafficDataFrame(self, df: pd.DataFrame) -> None:
         columns = ['frag', 'tos', 'src_port', 'dest_ip', 'dest_port']
         if 'src_ip' in df:
             columns.append('src_ip')
@@ -548,7 +713,7 @@ class ReservationLog(DataFrameCache):
         df.set_index(['flow_uid', 'seq'], inplace=True)
 
     @cached_dataframe_property('traffic')
-    def traffic(self):
+    def traffic(self) -> Optional[pd.DataFrame]:
         """Reservation traffic"""
         dataframes = []
 
