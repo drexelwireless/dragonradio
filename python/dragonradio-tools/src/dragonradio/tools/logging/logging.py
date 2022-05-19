@@ -557,7 +557,7 @@ class LogCollection:
         """Initialize a collection of DragonRadio logs.
 
         Args:
-            start_time: Explcicit RF scenario start time or None.
+            start_time: Explicit RF scenario start time or None.
             cache_path: Path to root directory for DataFrame cache.
 
         Returns:
