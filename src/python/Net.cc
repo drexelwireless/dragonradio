@@ -239,14 +239,24 @@ void exportNetUtil(py::module &m)
 {
     m.def("addStaticARPEntry",
         &addStaticARPEntry,
+        py::arg("device"),
+        py::arg("ip"),
+        py::arg("mac"),
         "Add a static ARP table entry")
      .def("deleteARPEntry",
         &deleteARPEntry,
+        py::arg("device"),
+        py::arg("ip"),
         "Delete an ARP table entry")
      .def("addRoute",
         &addRoute,
+        py::arg("dest"),
+        py::arg("mask"),
+        py::arg("gateway"),
         "Add an IP route")
      .def("deleteRoute",
         &deleteRoute,
+        py::arg("dest"),
+        py::arg("mask"),
         "Delete an IP route");
 }
