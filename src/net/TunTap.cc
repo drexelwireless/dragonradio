@@ -94,7 +94,7 @@ TunTap::TunTap(const std::string& tap_iface,
     // Set MAC address
     ifr_.ifr_hwaddr = {0};
 
-    ifr_.ifr_hwaddr = parseMAC(nodeMACAddress(node_id));
+    parseMAC(nodeMACAddress(node_id), &ifr_.ifr_hwaddr);
 
     if (ioctl(sockfd, SIOCSIFHWADDR, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting MAC address: %s", strerror(errno));
@@ -102,7 +102,7 @@ TunTap::TunTap(const std::string& tap_iface,
     // Set IP address
     ifr_.ifr_addr = {0};
 
-    ifr_.ifr_addr = parseIP(nodeIPAddress(node_id));
+    parseIP(nodeIPAddress(node_id), &ifr_.ifr_addr);
 
     if (ioctl(sockfd, SIOCSIFADDR, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting IP address: %s", strerror(errno));
@@ -110,7 +110,7 @@ TunTap::TunTap(const std::string& tap_iface,
     // Set netmask
     ifr_.ifr_addr = {0};
 
-    ifr_.ifr_addr = parseIP(tap_ipnetmask_);
+    parseIP(tap_ipnetmask_, &ifr_.ifr_addr);
 
     if (ioctl(sockfd, SIOCSIFNETMASK, &ifr_) < 0)
         logTunTap(LOGERROR, "Error setting IP netmask: %s", strerror(errno));
@@ -143,8 +143,8 @@ void TunTap::addARPEntry(uint8_t node_id)
 
     strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
 
-    req.arp_pa = parseIP(nodeIPAddress(node_id));
-    req.arp_ha = parseMAC(nodeMACAddress(node_id));
+    parseIP(nodeIPAddress(node_id), &req.arp_pa);
+    parseMAC(nodeMACAddress(node_id), &req.arp_ha);
 
     req.arp_flags = ATF_PERM | ATF_COM;
 
@@ -163,7 +163,7 @@ void TunTap::deleteARPEntry(uint8_t node_id)
 
     strncpy(req.arp_dev, tap_iface_.c_str(), sizeof(req.arp_dev)-1);
 
-    req.arp_pa = parseIP(nodeIPAddress(node_id));
+    parseIP(nodeIPAddress(node_id), &req.arp_pa);
 
     Socket sockfd(AF_INET, SOCK_DGRAM, 0);
 
