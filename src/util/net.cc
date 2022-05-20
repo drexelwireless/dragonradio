@@ -32,7 +32,9 @@ void parseIP(const std::string &s, struct sockaddr *addr)
         throw std::domain_error("Illegally formatted IP address");
 }
 
-void addStaticARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr, const std::string &macaddr)
+void addStaticARPEntry(const std::optional<std::string> &dev,
+                       const std::string &ipaddr,
+                       const std::string &macaddr)
 {
     RaiseCaps     caps({CAP_NET_ADMIN});
     struct arpreq req = {{0}};
@@ -51,7 +53,8 @@ void addStaticARPEntry(const std::optional<std::string> &dev, const std::string 
         throw std::runtime_error(strerror(errno));
 }
 
-void deleteARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr)
+void deleteARPEntry(const std::optional<std::string> &dev,
+                    const std::string &ipaddr)
 {
     RaiseCaps     caps({CAP_NET_ADMIN});
     struct arpreq req = {{0}};
@@ -67,7 +70,9 @@ void deleteARPEntry(const std::optional<std::string> &dev, const std::string &ip
         throw std::runtime_error(strerror(errno));
 }
 
-void addRoute(const std::string &dst, const std::string &mask, const std::string &gateway)
+void addRoute(const std::string &dst,
+              const std::string &mask,
+              const std::string &gateway)
 {
     RaiseCaps      caps({CAP_NET_ADMIN});
     struct rtentry route = {0};
@@ -83,7 +88,8 @@ void addRoute(const std::string &dst, const std::string &mask, const std::string
         throw std::runtime_error(strerror(errno));
 }
 
-void deleteRoute(const std::string &dst, const std::string &mask)
+void deleteRoute(const std::string &dst,
+                 const std::string &mask)
 {
     RaiseCaps          caps({CAP_NET_ADMIN});
     struct rtentry     route = {0};

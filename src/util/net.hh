@@ -28,16 +28,22 @@ void parseMAC(const std::string &s, struct sockaddr *addr);
 void parseIP(const std::string &s, struct sockaddr *addr);
 
 /** @brief Add a static ARP table entry */
-void addStaticARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr, const std::string &macaddr);
+void addStaticARPEntry(const std::optional<std::string> &dev,
+                       const std::string &ipaddr,
+                       const std::string &macaddr);
 
 /** @brief Delete a static ARP table entry */
-void deleteARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr);
+void deleteARPEntry(const std::optional<std::string> &dev,
+                    const std::string &ipaddr);
 
 /** @brief Add an IP route */
-void addRoute(const std::string &dst, const std::string &mask, const std::string &gateway);
+void addRoute(const std::string &dst,
+              const std::string &mask,
+              const std::string &gateway);
 
 /** @brief Delete an IP route */
-void deleteRoute(const std::string &dst, const std::string &mask);
+void deleteRoute(const std::string &dst,
+                 const std::string &mask);
 
 /** @brief A file descriptor */
 class Fd {
