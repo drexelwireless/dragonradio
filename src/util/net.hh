@@ -22,10 +22,10 @@ inline bool isEthernetBroadcast(const u_char *host)
 }
 
 /** @brief Parse a MAC address */
-struct sockaddr parseMAC(const std::string &s);
+void parseMAC(const std::string &s, struct sockaddr *addr);
 
 /** @brief Parse an IP address */
-struct sockaddr parseIP(const std::string &s);
+void parseIP(const std::string &s, struct sockaddr *addr);
 
 /** @brief Add a static ARP table entry */
 void addStaticARPEntry(const std::optional<std::string> &dev, const std::string &ipaddr, const std::string &macaddr);
