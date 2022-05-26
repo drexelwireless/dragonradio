@@ -17,6 +17,7 @@ dependencies = [
     "PyGObject",
     "python-snappy",
     "requests",
+    "rich",
     "scipy",
     "xdg"
 ]
@@ -32,6 +33,7 @@ plot-score = "dragonradio.tools.plot.colosseum.command_line:plot_score"
 plot-events = "dragonradio.tools.plot.radio.command_line:plot_events"
 plot-traffic = "dragonradio.tools.plot.radio.command_line:plot_traffic"
 plot-radio-metric = "dragonradio.tools.plot.radio.command_line:plot_radio_metric"
+sc2-diagnostics = "dragonradio.tools.colosseum.command_line:sc2_diagnostics"
 sc2-score = "dragonradio.tools.colosseum.command_line:sc2_score"
 
 [build-system]
