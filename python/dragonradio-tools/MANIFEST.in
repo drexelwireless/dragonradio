@@ -1,2 +1,2 @@
 global-include py.typed
-recursive-include dragonradio/tools/colosseum/scenarios *
+recursive-include dragonradio/tools/colosseum/data *

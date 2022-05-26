@@ -54,7 +54,7 @@ class Scenario(DataFrameCache):
 
     @property
     def scenarios_path(self) -> Path:
-        return importlib_resources.files('dragonradio.tools.colosseum.scenarios').joinpath(str(self.rf_scenario))
+        return importlib_resources.files('dragonradio.tools.colosseum.data.scenarios').joinpath(str(self.rf_scenario))
 
     #@cached_dataframe_property('mandates')
     @cached_property
