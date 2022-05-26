@@ -803,4 +803,10 @@ class ReservationLog(DataFrameCache):
             return None
 
         logger.info('Concatenating traffic data frames')
-        return pd.concat(dataframes)
+        df = pd.concat(dataframes)
+
+        # Somehow, sometimes the flow_uid and seq columns end up having type
+        # 'float'. Fix that.
+        df = df.astype({'flow_uid': int, 'seq': int}, copy=False)
+
+        return df
