@@ -119,6 +119,22 @@ class Scorer(DataFrameCache):
         """Final match score"""
         return sum(self.stage_scores)
 
+    def phase3_score(self, team : Optional[int]=None) -> float:
+        """Phase 3 score."""
+        if team is None:
+            team = self.reservation.our_team
+
+        df = self.score
+        return df[df.index.get_level_values('team') == team].score.max()
+
+    def max_phase3_score(self, team : Optional[int]=None) -> float:
+        """Maximum possible Phase 3 score."""
+        if team is None:
+            team = self.reservation.our_team
+
+        df = self.score
+        return df[df.index.get_level_values('team') == team].max_score.max()
+
     @cached_property
     def match_scores(self) -> Mapping[int, float]:
         """Match scores"""
