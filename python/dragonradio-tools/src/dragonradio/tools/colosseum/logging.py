@@ -747,9 +747,11 @@ class ReservationLog(DataFrameCache):
 
             logger.info('Joining traffic from %d to %d', src, dest)
 
-            # Join tables on flow and sequence number
+            # Join tables on flow and sequence number. We use a left join since
+            # it is possible for packets to be reported received without being
+            # reported sent...
             if self.sanity_check:
-                df = send_df.join(recv_df, how='outer', rsuffix='_outer').reset_index()
+                df = send_df.join(recv_df, how='left', rsuffix='_outer').reset_index()
 
                 # Check that send timestamps match if present
                 idx = df.send_time_outer.notna()
@@ -767,7 +769,7 @@ class ReservationLog(DataFrameCache):
                 df.drop(columns=['send_time_outer', 'nbytes_outer'], inplace=True)
             else:
                 cols = pd.Index(['recv_time'])
-                df = send_df.join(recv_df[cols], how='outer', rsuffix='_outer').reset_index()
+                df = send_df.join(recv_df[cols], how='left', rsuffix='_outer').reset_index()
 
             logger.info('Computing statistics for traffic from %d to %d', src, dest)
 
