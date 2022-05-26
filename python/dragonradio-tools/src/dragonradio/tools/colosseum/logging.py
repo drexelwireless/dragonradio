@@ -105,6 +105,9 @@ class BatchInput:
     modem_config: MutableMapping[int, str]
     """Map from SRN to modem configuration"""
 
+    srns: Set[int]
+    """SRNs"""
+
     gateways: Set[int]
     """Gateway SRNs"""
 
@@ -121,6 +124,7 @@ class BatchInput:
         self.srn_teams = {}
         self.images = {}
         self.modem_config = {}
+        self.srns = set()
         self.gateways = set()
         self.scenario_to_srn = {}
         self.srn_to_scenario = {}
@@ -149,6 +153,8 @@ class BatchInput:
                 srn_id = node['srn_number']
             else:
                 srn_id = res.match_config.scenario_to_srn[traffic_id]
+
+            self.srns.add(srn_id)
 
             self.scenario_to_srn[traffic_id] = srn_id
             self.srn_to_scenario[srn_id] = traffic_id
@@ -425,6 +431,11 @@ class ReservationLog(DataFrameCache):
     def images(self) -> Mapping[int, str]:
         """Map from SRN to image"""
         return self.batch_input.images
+
+    @cached_property
+    def srns(self) -> Set[int]:
+        """SRNs"""
+        return self.batch_input.srns
 
     @cached_property
     def gateways(self) -> Set[int]:
