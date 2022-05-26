@@ -196,7 +196,7 @@ class Scorer(DataFrameCache):
         df.reset_index(inplace=True)
         df.set_index(['team', 'flow_uid', 'seq'], inplace=True)
 
-        df = df[~df.index.duplicated(keep='first')]
+        df = df[~df.index.duplicated(keep='first')].copy()
 
         # Compute stages
         logger.info('Computing stages')
