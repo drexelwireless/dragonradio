@@ -116,6 +116,9 @@ class SC2ScoreCommand(Command):
         if args.problem_srns:
             show_problem_srns(scorer)
 
+        print(f"Phase 2 score: {scorer.final_match_score:}/{scorer.max_match_score:}")
+        print(f"Phase 3 score: {scorer.phase3_score():g}/{scorer.max_phase3_score():g}")
+
 def show_flows(scorer: Scorer, problem_flows : Optional[bool]=False):
     for _, row in scorer.flows.iterrows():
         if row.points == row.possible_points:
