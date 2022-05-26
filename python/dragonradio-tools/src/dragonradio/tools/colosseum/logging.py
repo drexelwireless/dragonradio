@@ -677,9 +677,9 @@ class ReservationLog(DataFrameCache):
 
         return False
 
-    @cached_dataframe_property('heard')
+    @cached_property
     def heard(self) -> pd.DataFrame:
-        """Nodes heard by each SRN"""
+        """SRN connectivity"""
         heard: Dict[int, Set[int]] = {}
 
         for srn in self.our_srns:
@@ -697,17 +697,18 @@ class ReservationLog(DataFrameCache):
                         for m in re.finditer(r'Adding node (\d+)$', text, re.M):
                             heard[srn].add(int(m.group(1)))
 
-        all_nodes = sorted(set().union(*heard.values()))
+        return heard
 
+    @cached_dataframe_property('heard_df')
+    def heard_df(self) -> Optional[pd.DataFrame]:
+        """DataFrame representation of connectivity matrix"""
+        all_nodes = sorted(set().union(*self.heard.values()))
         items = []
 
         for srn in sorted(self.our_srns):
-            items.append([srn] + [n in heard[srn] for n in all_nodes])
+            items.append([srn] + [n in self.heard[srn] for n in all_nodes])
 
-        df = pd.DataFrame(items,
-                          columns=["SRN"] + [str(n) for n in all_nodes])
-
-        return df
+        return pd.DataFrame(items, columns=["SRN"] + [str(n) for n in all_nodes])
 
     @cached_property
     def traffic_logs(self) -> TrafficLogs:
