@@ -1,0 +1,104 @@
+{
+  "BatchName": "{{name}}",
+  "RFScenario": 9991,
+  "TrafficScenario": 99910,
+  "Duration": 630,
+  "NodeData": [
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 1,
+      "TrafficNode_ID": 1,
+      "isGateway": true,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 2,
+      "TrafficNode_ID": 2,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 3,
+      "TrafficNode_ID": 3,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 4,
+      "TrafficNode_ID": 4,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 5,
+      "TrafficNode_ID": 5,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 6,
+      "TrafficNode_ID": 6,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 7,
+      "TrafficNode_ID": 7,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 8,
+      "TrafficNode_ID": 8,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 9,
+      "TrafficNode_ID": 9,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "{{ image }}",
+      "ModemConfig": "{{ radio_conf }}",
+      "RFNode_ID": 10,
+      "TrafficNode_ID": 10,
+      "isGateway": false,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "incumbent-passive-v2-3",
+      "ModemConfig": "Node51Incumbent_9991.json",
+      "RFNode_ID": 51,
+      "TrafficNode_ID": 51,
+      "isGateway": true,
+      "node_type": "competitor"
+    },
+    {
+      "ImageName": "sc2observer1-2",
+      "ModemConfig": "sc2observer_9989.json",
+      "RFNode_ID": 52,
+      "TrafficNode_ID": 52,
+      "isGateway": false,
+      "node_type": "competitor"
+    }
+  ]
+}
