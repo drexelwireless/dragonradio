@@ -1,10 +1,13 @@
 # Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
+import logging
 from typing import Optional
+import re
 from rich import print
 
 from dragonradio.tools.colosseum import Scorer
 from dragonradio.tools.logging.command_line import Command
+from dragonradio.tools.logging.logging import LogCollection
 
 from .command import Command
 
@@ -58,6 +61,21 @@ class SC2DiagnosticsCommand(Command):
               ", ".join(str(srn) for srn in sorted(list(self.reservation.srns))))
 
         #
+        # Check for node errors
+        #
+        if self.reservation.has_crash:
+            print("[bold red]The following nodes crashed:",
+                  ", ".join(str(srn) for srn in sorted(list(self.reservation.crashed_nodes))))
+
+        if self.reservation.has_traceback:
+            print("[bold yellow]The following nodes have Python tracebacks:",
+                  ", ".join(str(srn) for srn in sorted(list(self.reservation.traceback_nodes))))
+
+        if self.reservation.has_uhd_error:
+            print("[bold red]The following nodes encountered UHD errors:",
+                  ", ".join(str(srn) for srn in sorted(list(self.reservation.uhd_error_nodes))))
+
+        #
         # Check node connectivity
         #
         heard = self.reservation.heard
@@ -76,6 +94,28 @@ class SC2DiagnosticsCommand(Command):
                 print(f"[italic red]SRN {srn:} did not hear from the following nodes:",
                       ", ".join(str(srn) for srn in sorted(list(unheard))))
 
+        #
+        # Check for node events
+        #
+        logs = LogCollection()
+        logs.load(args.path,
+                  start_time=args.start_time,
+                  srn_logs_path=args.srn_logs)
+
+        r = re.compile(r'^USRP: (RX|TX) error:')
+        for srn in sorted(list(self.reservation.our_srns)):
+            try:
+                df = logs[srn].event_cats.events
+                df = df[df.category=='USRP']
+                idx = df.event.str.match(r)
+                if len(df[idx]) > 0:
+                    print(f"[italic yellow]Node {srn:} encountered UHD warnings")
+            except KeyError:
+                logging.error("Could not read logs for SRN %d", srn)
+
+        #
+        # Check scores
+        #
         scorer = Scorer(self.reservation)
 
         for offender, point_loss in problem_srns(scorer):
