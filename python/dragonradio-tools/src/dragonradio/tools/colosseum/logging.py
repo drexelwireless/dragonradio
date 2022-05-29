@@ -627,21 +627,25 @@ class ReservationLog(DataFrameCache):
         return self.srn_logs_path / dirname / f'node-{srn_id:03d}' / logname
 
     @cached_property
-    def has_crash(self) -> bool:
-        """Flag indicating whether or not a node crashed"""
+    def crashed_nodes(self) -> Set[int]:
+        """Determine which nodes have crashed, if any"""
+        nodes = set()
+
         for srn in self.our_srns:
             for path in self.srn_logs_path.iterdir():
                 m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), path.name)
                 if m:
                     core_path = path / 'cores'
                     if core_path.is_dir and len(list(core_path.iterdir())) != 0:
-                        return True
+                        nodes.add(srn)
 
-        return False
+        return nodes
 
     @cached_property
-    def has_traceback(self) -> bool:
-        """Flag indicating whether or not a node has a python Traceback"""
+    def traceback_nodes(self) -> Set[int]:
+        """Determine which nodes have Python tracebacks, if any"""
+        nodes = set()
+
         for srn in self.our_srns:
             for path in self.srn_logs_path.iterdir():
                 m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), path.name)
@@ -654,13 +658,15 @@ class ReservationLog(DataFrameCache):
 
                         m = re.search(r'Traceback', text, re.M)
                         if m:
-                            return True
+                            nodes.add(srn)
 
-        return False
+        return nodes
 
     @cached_property
-    def has_uhd_error(self) -> bool:
-        """Flag indicating whether or not a node has a UHD error"""
+    def uhd_error_nodes(self) -> Set[int]:
+        """Determine which nodes have Python UHD errors, if any"""
+        nodes = set()
+
         for srn in self.our_srns:
             for path in self.srn_logs_path.iterdir():
                 m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), path.name)
@@ -673,9 +679,24 @@ class ReservationLog(DataFrameCache):
 
                         m = re.search(r'UHD Error', text, re.M)
                         if m:
-                            return True
+                            nodes.add(srn)
 
-        return False
+        return nodes
+
+    @cached_property
+    def has_crash(self) -> bool:
+        """Flag indicating whether or not a node crashed"""
+        return len(self.crashed_nodes) != 0
+
+    @cached_property
+    def has_traceback(self) -> bool:
+        """Flag indicating whether or not a node has a python Traceback"""
+        return len(self.traceback_nodes) != 0
+
+    @cached_property
+    def has_uhd_error(self) -> bool:
+        """Flag indicating whether or not a node has a UHD error"""
+        return len(self.uhd_error_nodes) != 0
 
     @cached_property
     def heard(self) -> pd.DataFrame:
