@@ -14,6 +14,10 @@ struct Seq {
 
     Seq() = default;
 
+#if __cplusplus >= 202002L
+    Seq(uint_type seq) : seq_(seq) {}
+#endif
+
     Seq(const Seq&) = default;
     Seq(Seq&&) = default;
 
