@@ -144,8 +144,8 @@ struct Packet : public buffer<unsigned char>
 
         iterator() = delete;
 
-        bool operator ==(const iterator& other);
-        bool operator !=(const iterator& other);
+        bool operator ==(const iterator& other) const;
+        bool operator !=(const iterator& other) const;
 
         iterator& operator ++();
         iterator& operator ++(int);
