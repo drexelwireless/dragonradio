@@ -136,8 +136,15 @@ typedef uint16_t FlowUID;
 /** @brief A packet. */
 struct Packet : public buffer<unsigned char>
 {
-    class iterator : public std::iterator<std::input_iterator_tag, ControlMsg> {
+    class iterator
+    {
     public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = ControlMsg;
+        using difference_type = std::ptrdiff_t;
+        using pointer = ControlMsg*;
+        using reference = ControlMsg&;
+
         iterator(const Packet &pkt);
         iterator(const Packet &pkt, int);
         ~iterator() = default;
