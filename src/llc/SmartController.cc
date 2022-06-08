@@ -1725,15 +1725,15 @@ SendWindow::SendWindow(std::shared_ptr<Node> n,
     , mcsidx(0)
     , new_window(true)
     , window_open(true)
-    , seq({0})
-    , unack({0})
-    , max({0})
+    , seq{0}
+    , unack{0}
+    , max{0}
     , send_set_unack(false)
     , win(1)
     , maxwin(maxwin)
     , mcsidx_prob(controller.phy_->mcs_table.size(), 1.0)
-    , per_cutoff({0})
-    , per_end({0})
+    , per_cutoff{0}
+    , per_end{0}
     , prev_short_per(1)
     , prev_long_per(1)
     , short_per(1)
@@ -2068,8 +2068,8 @@ RecvWindow::RecvWindow(std::shared_ptr<Node> n,
     : node(n)
     , controller(controller)
     , active(false)
-    , ack({0})
-    , max({0})
+    , ack{0}
+    , max{0}
     , win(win)
     , need_selective_ack(false)
     , ack_timer([this]() { this->ack_timeout(); })
