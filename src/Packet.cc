@@ -31,14 +31,14 @@ Packet::iterator::iterator(const Packet &pkt, int)
 {
 }
 
-bool Packet::iterator::operator ==(const iterator& other)
+bool Packet::iterator::operator ==(const iterator& other) const
 {
     return &this->pkt_ == &other.pkt_ &&
         this->ctrl_len_ == other.ctrl_len_ &&
         this->ctrl_ptr_ == other.ctrl_ptr_;
 }
 
-bool Packet::iterator::operator !=(const iterator& other)
+bool Packet::iterator::operator !=(const iterator& other) const
 {
     return !(*this == other);
 }
