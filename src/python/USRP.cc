@@ -26,6 +26,8 @@ void exportUSRP(py::module &m)
                       const std::string&,
                       float,
                       float>())
+        .def_property_readonly("mboard",
+            &USRP::getMboard)
         .def_property_readonly("device_type",
             &USRP::getDeviceType)
         .def_property_readonly("clock_sources",

@@ -44,6 +44,12 @@ public:
     USRP& operator=(const USRP&) = delete;
     USRP& operator=(USRP&&) = delete;
 
+    /** @brief Get motherboard of this device. */
+    std::string getMboard(void) const
+    {
+        return mboard_;
+    }
+
     /** @brief Get type of this device. */
     DeviceType getDeviceType(void) const
     {
@@ -260,6 +266,9 @@ public:
 private:
     /** @brief Our associated UHD USRP. */
     uhd::usrp::multi_usrp::sptr usrp_;
+
+    /** @brief The motherboard */
+    std::string mboard_;
 
     /** @brief The DeviceType of the main device */
     DeviceType device_type_;

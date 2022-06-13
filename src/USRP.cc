@@ -34,6 +34,8 @@ USRP::USRP(const std::string& addr,
     tx_underflow_count_.store(0, std::memory_order_release);
     tx_late_count_.store(0, std::memory_order_release);
 
+    mboard_ = usrp_->get_mboard_name();
+
     determineDeviceType();
 
     usrp_->set_tx_antenna(tx_ant);
