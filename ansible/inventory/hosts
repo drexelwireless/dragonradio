@@ -3,3 +3,4 @@ dragonradio-2004-base server=https://cloud-images.ubuntu.com/releases alias=20.0
 
 [containers:vars]
 ansible_connection=lxd
+usb=false
