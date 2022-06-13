@@ -70,13 +70,8 @@ USRP::USRP(const std::string& addr,
     rx_stream_ = usrp_->get_rx_stream(stream_args);
 
     // Set maximum number of samples we attempt to TX/RX.
-    if (device_type_ == kUSRPX310) {
-        setMaxTXSamps(8*tx_stream_->get_max_num_samps());
-        setMaxRXSamps(8*rx_stream_->get_max_num_samps());
-    } else {
-        setMaxTXSamps(512);
-        setMaxRXSamps(2048);
-    }
+    tx_max_samps_ = tx_stream_->get_max_num_samps();
+    rx_max_samps_ = rx_stream_->get_max_num_samps();
 
     // Start thread that receives TX errors
     tx_error_thread_ = std::thread(&USRP::txErrorWorker, this);
