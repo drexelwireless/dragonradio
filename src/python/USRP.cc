@@ -8,15 +8,6 @@
 
 void exportUSRP(py::module &m)
 {
-    // Export class USRP to Python
-    py::enum_<USRP::DeviceType>(m, "DeviceType")
-        .value("N210", USRP::kUSRPN210)
-        .value("X310", USRP::kUSRPX310)
-        .value("Unknown", USRP::kUSRPUnknown)
-        .export_values();
-
-    py::implicitly_convertible<py::str, USRP::DeviceType>();
-
     py::class_<USRP, Radio, MonoClock::TimeKeeper, std::shared_ptr<USRP>>(m, "USRP")
         .def(py::init<const std::string&,
                       const std::optional<std::string>&,
@@ -28,8 +19,6 @@ void exportUSRP(py::module &m)
                       float>())
         .def_property_readonly("mboard",
             &USRP::getMboard)
-        .def_property_readonly("device_type",
-            &USRP::getDeviceType)
         .def_property_readonly("clock_sources",
             [](std::shared_ptr<USRP> self)
             {

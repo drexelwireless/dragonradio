@@ -36,8 +36,6 @@ USRP::USRP(const std::string& addr,
 
     mboard_ = usrp_->get_mboard_name();
 
-    determineDeviceType();
-
     usrp_->set_tx_antenna(tx_ant);
     usrp_->set_rx_antenna(rx_ant);
 
@@ -129,7 +127,7 @@ void USRP::setTXFrequency(double freq)
     int count;
 
   retry:
-    if (device_type_ == kUSRPX310) {
+    if (mboard_ == "X310") {
         double lo_offset = -42.0e6;
         usrp_->set_tx_freq(uhd::tune_request_t(freq, lo_offset));
     } else
@@ -156,7 +154,7 @@ void USRP::setRXFrequency(double freq)
     int count;
 
   retry:
-    if (device_type_ == kUSRPX310) {
+    if (mboard_ == "X310") {
         double lo_offset = +42.0e6;
         usrp_->set_rx_freq(uhd::tune_request_t(freq, lo_offset));
     } else
@@ -371,18 +369,6 @@ MonoClock::time_point USRP::now() noexcept
             fprintf(stderr, "USRP: get_time_now: %s", err.what());
         }
     }
-}
-
-void USRP::determineDeviceType(void)
-{
-    std::string mboard = usrp_->get_mboard_name();
-
-    if (mboard.find("N210") == 0)
-        device_type_ = kUSRPN210;
-    else if (mboard.find("X310") == 0)
-        device_type_ = kUSRPX310;
-    else
-        device_type_ = kUSRPUnknown;
 }
 
 void USRP::txErrorWorker(void)
