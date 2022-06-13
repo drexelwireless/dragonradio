@@ -21,12 +21,6 @@
 class USRP : public Radio
 {
 public:
-    enum DeviceType {
-        kUSRPN210,
-        kUSRPX310,
-        kUSRPUnknown
-    };
-
     USRP(const std::string& addr,
          const std::optional<std::string>& tx_subdev,
          const std::optional<std::string>& rx_subdev,
@@ -48,12 +42,6 @@ public:
     std::string getMboard(void) const
     {
         return mboard_;
-    }
-
-    /** @brief Get type of this device. */
-    DeviceType getDeviceType(void) const
-    {
-        return device_type_;
     }
 
     /** @brief Get clock sources. */
@@ -270,9 +258,6 @@ private:
     /** @brief The motherboard */
     std::string mboard_;
 
-    /** @brief The DeviceType of the main device */
-    DeviceType device_type_;
-
     /** @brief Current TX rate */
     double tx_rate_;
 
@@ -318,9 +303,6 @@ private:
 
     /** @brief Thread that receives TX errors. */
     std::thread tx_error_thread_;
-
-    /** @brief Determine the type of the main device. */
-    void determineDeviceType(void);
 
     /** @brief Worker that receives TX errors. */
     void txErrorWorker(void);
