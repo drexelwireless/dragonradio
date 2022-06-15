@@ -5,13 +5,15 @@
 import argparse
 import configparser
 from enum import Enum
-import io
+import json
 import logging
 import os
+from pathlib import Path
 from pprint import pformat
 import platform
 import re
 from typing import Any, List, Mapping, Optional, Type
+import yaml
 
 import libconf
 
@@ -125,14 +127,14 @@ class LogLevelAction(argparse.Action):
             namespace.debug = False
 
 class LoadConfigAction(argparse.Action):
-    """Load configuration parameters from a file in libconf format."""
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self, option_strings, *args, **kwargs):
-        super().__init__(option_strings, *args, **kwargs)
-
+    """Load configuration parameters from a file."""
     def __call__(self, parser, namespace, values, option_string=None):
-        namespace.loadConfig(values)
+        namespace.load(values)
+
+class DumpConfigAction(argparse.Action):
+    """Dump configuration parameters to a file."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        namespace.dump(values)
 
 def parser():
     """Return the default configuration parser."""
@@ -536,7 +538,26 @@ class Config:
         self.log_interfaces  = []
 
     def __str__(self):
-        return pformat(self.__dict__)
+        return pformat(self.asdict())
+
+    def asdict(self) -> dict:
+        """Return the attribute values of Config instance as a dictionary.
+
+        Returns:
+            dict: Dictionary containing attributes.
+        """
+        d = dict()
+
+        for attr in self.__annotations__:
+            if attr[-1] != '_':
+                d[attr] = getattr(self, attr)
+
+        if self.__class__ != Config:
+            for attr in Config.__annotations__:
+                if attr[-1] != '_':
+                    d[attr] = getattr(self, attr)
+
+        return d
 
     @property
     def mac_class(self) -> Type[MAC]:
@@ -579,46 +600,73 @@ class Config:
     def log_level(self, level: str):
         self.loglevel = getattr(logging, level)
 
-    def mergeConfig(self, config: Mapping[str, Any]):
-        """Merge a configuration into this configuration"""
+    def merge(self, config: Mapping[str, Any]):
+        """Merge configuration parameters into this configuration.
+
+        Args:
+            config (Mapping[str, Any]): Configuration parameters.
+        """
         for key in config:
             setattr(self, key, config[key])
 
-    def loadConfig(self, path):
-        """Load configuration parameters from a radio.conf file in libconf format."""
-        try:
-            with io.open(path) as f:
-                self.mergeConfig(libconf.load(f))
-            logger.info("Loaded radio config '%s'", path)
-        except:
-            logger.exception("Cannot load radio config '%s'", path)
-            raise
+    def load(self, path: Path):
+        """Load configuration parameters from a file.
 
-    def loadColosseumIni(self, path):
-        """Load configuration parameters from a colosseum_config.ini file."""
-        try:
-            with open(path, 'r') as f:
-                logger.debug("Read colosseum.ini '%s':\n%s", path, f.read())
-        except:
-            logger.exception("Cannot open colosseum_config.ini '%s'", path)
-            raise
+        Configurations can be specified in a libconf-style (``.conf``) file,
+        JSON, YAML, or .ini file. A .ini file is assumed to be in
+        ``colosseum_config.ini`` format (see the `Radio Command and Control (C2)
+        API
+        <https://colosseumneu.freshdesk.com/support/solutions/articles/61000253495-radio-command-and-control-c2-api>_`).
 
-        try:
-            config = configparser.ConfigParser()
-            config.read(path)
+        Args:
+            path (Path): Path to a configuration file.
+        """
+        if path.suffix == '.conf':
+            with path.open('r') as fp:
+                config = libconf.load(fp)
+        elif path.suffix == '.json':
+            with path.open('r') as fp:
+                config = json.load(fp)
+        elif path.suffix == '.yaml':
+            with path.open('r') as fp:
+                config = yaml.safe_load(fp)
+        elif path.suffix == '.ini':
+            with path.open('r') as fp:
+                config_parser = configparser.ConfigParser()
+                config_parser.read_file(fp)
 
-            if 'COLLABORATION' in config:
-                for key in config['COLLABORATION']:
-                    setattr(self, key, config['COLLABORATION'][key])
+            config = {}
 
-            if 'RF' in config:
-                for key in config['RF']:
-                    setattr(self, key, float(config['RF'][key]))
+            if 'COLLABORATION' in config_parser:
+                for key in config_parser['COLLABORATION']:
+                    config[key] = config_parser['COLLABORATION'][key]
 
-            logger.info("Loaded colosseum_config.ini '%s'", path)
-        except:
-            logger.exception("Cannot load colosseum_config.ini '%s'", path)
-            raise
+            if 'RF' in config_parser:
+                for key in config_parser['RF']:
+                    config[key] = float(config_parser['RF'][key])
+        else:
+            raise ValueError(f"Unknown configuration file extension: {path.suffix:}.")
+
+        self.merge(config)
+
+    def dump(self, path: Path):
+        """Dump configuration parameters to a file.
+
+        Configurations can be specified in a libconf-style (``.conf``) file,
+        JSON, or YAML. The file type will be determined from the suffix of path.
+
+        Args:
+            path (Path): Path to a configuration file.
+        """
+        if path.suffix == '.conf':
+            with path.open('w') as fp:
+                libconf.dump(self.asdict(), fp)
+        elif path.suffix == '.json':
+            with path.open('w') as fp:
+                json.dump(self.asdict(), fp, indent=2)
+        elif path.suffix == '.yaml':
+            with path.open('w') as fp:
+                yaml.safe_dump(self.asdict(), fp)
 
     def parser(self):
         """Create an argument parser and populate it with arguments."""
@@ -652,10 +700,14 @@ class Config:
                             help='set number of nodes in network')
 
         # Load configuration file
-        parser.add_argument('--config', action=LoadConfigAction,
+        parser.add_argument('--config', type=Path, action=LoadConfigAction,
                             default=argparse.SUPPRESS,
                             metavar='FILE',
                             help='load configuration options from a file')
+        parser.add_argument('--dump-config', type=Path, action=DumpConfigAction,
+                            default=argparse.SUPPRESS,
+                            metavar='FILE',
+                            help='dump configuration options to a file')
 
         # Interactive mode
         interact = parser.add_argument_group('Interactive mode').add_mutually_exclusive_group()
