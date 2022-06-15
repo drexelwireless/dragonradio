@@ -452,7 +452,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                         await self.removeNode(node)
 
                 # Close the logger
-                self.radio.logger.close()
+                if self.radio.logger:
+                    self.radio.logger.close()
 
                 # Update radio state to FINISHED
                 self.state = remote.FINISHED
