@@ -1107,3 +1107,7 @@ class Config:
                     defaults[dest] = getattr(self, dest)
 
         parser.set_defaults(**defaults)
+
+        # Set up logging
+        logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
+                            level=logging.DEBUG)
