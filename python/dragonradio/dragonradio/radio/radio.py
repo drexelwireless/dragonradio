@@ -3,6 +3,7 @@
 
 """Radio class for managing the radio."""
 import asyncio
+from functools import cached_property
 import ipaddress
 import logging
 import math
@@ -49,13 +50,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     lock: asyncio.Lock
     """Lock protecting radio configuration"""
 
-    tx_rate: Optional[float] = None
-    """Current TX rate. None if not yet set."""
-
-    rx_rate: Optional[float] = None
-    """Current RX rate. None if not yet set."""
-
-    tx_channel_idx: int = 0
+    _tx_channel_idx: int = 0
     """TX channel index"""
 
     phy: PHY = None
@@ -109,9 +104,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         # Initialize USRP
         self.configureUSRP()
-
-        # Configure valid decimation rates
-        self.configureValidDecimationRates()
 
         # Create the logger *after* we create the USRP so that we have a global
         # clock
@@ -624,7 +616,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             self.setTXRate(self.bandwidth)
             self.setSynthesizerChannels(channels)
         else:
-            self.setTXChannel(self.tx_channel_idx)
+            self.setTXChannelIdx(self.tx_channel_idx)
 
     def setChannelizerChannels(self, channels: Sequence[Channel]):
         """Set channelizer's channels."""
@@ -639,10 +631,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # LLC needs to know transmitting channels
         self.controller.channels = self.synthesizer.channels
 
-    def configureValidDecimationRates(self):
-        """Determine valid decimation and interpolation rates"""
-        # See:
-        #   https://files.ettus.com/manual/page_general.html#general_sampleratenotes
+    @cached_property
+    def valid_rates(self) -> List[float]:
+        """Valid decimation and interpolation rates
+
+        See:
+          https://files.ettus.com/manual/page_general.html#general_sampleratenotes
+        """
 
         # Start out with only even rates. We sort this list in reverse so we can
         # easily find the first rate that is less than or equal to the requested
@@ -655,17 +650,18 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # If the rate exceeds 256, the rate must be evenly divisible by 4.
         rates = [r for r in rates if r <= 256 or r % 4 == 0]
 
-        self.valid_rates = rates
+        return rates
 
-    def validRate(self, min_rate, clock_rate):
-        """Find a valid rate no less than min_rate given the clock rate clock_rate.
+    def findValidRate(self, min_rate: float, clock_rate: float) -> float:
+        """Find a valid rate no less than min_rate given the clock rate.
 
-        Arguments:
-            min_rate: The minimum desired rate
-            clock_rate: The radio clock rate
+        Args:
+            min_rate (float): The minimum desired rate
+            clock_rate (float): The radio clock rate
 
         Returns:
-            A rate no less than rate min_rate that is supported by the hardware"""
+            float: A rate no less than rate min_rate that is supported by the hardware
+        """
         # Compute decimation rate
         dec_rate = math.floor(clock_rate/min_rate)
 
@@ -682,56 +678,84 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         return clock_rate/dec_rate
 
+    @property
+    def rx_rate(self) -> float:
+        """Current RX rate"""
+        return self.usrp.rx_rate
+
     def setRXRate(self, rate: float):
         """Set RX rate"""
         config = self.config
 
-        if config.rx_bandwidth:
+        if config.rx_bandwidth is not None:
             want_rx_rate = config.rx_bandwidth
         else:
             rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
 
             want_rx_rate = rate*rx_rate_oversample
-            # We max out at about 50Mhz with UHD 3.9
-            want_rx_rate = min(want_rx_rate, 50e6)
+            want_rx_rate = min(want_rx_rate, config.max_bandwidth)
 
-        want_rx_rate = self.validRate(want_rx_rate, self.usrp.clock_rate)
+        want_rx_rate = self.findValidRate(want_rx_rate, self.usrp.clock_rate)
 
         if self.rx_rate != want_rx_rate:
             self.usrp.rx_rate = want_rx_rate
-            self.rx_rate = self.usrp.rx_rate
 
-            if self.rx_rate != want_rx_rate:
+            if self.usrp.rx_rate != want_rx_rate:
                 raise ValueError('Wanted RX rate %g, but got %g' % (want_rx_rate, self.rx_rate))
 
+        if self.channelizer.rx_rate != self.rx_rate:
             self.channelizer.rx_rate = self.rx_rate
+
+    @property
+    def tx_rate(self) -> float:
+        """Current TX rate"""
+        return self.usrp.tx_rate
 
     def setTXRate(self, rate: float):
         """Set TX rate"""
         config = self.config
 
-        if config.tx_bandwidth and config.tx_upsample:
+        if config.tx_bandwidth is not None and config.tx_upsample:
             logger.warning("TX bandwidth set, but TX upsampling requested.")
 
-        if config.tx_bandwidth and not config.tx_upsample:
+        if config.tx_bandwidth is not None and not config.tx_upsample:
             want_tx_rate = config.tx_bandwidth
         else:
             tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
 
             want_tx_rate = rate*tx_rate_oversample
+            want_tx_rate = min(want_tx_rate, config.max_bandwidth)
 
-        want_tx_rate = self.validRate(want_tx_rate, self.usrp.clock_rate)
+        want_tx_rate = self.findValidRate(want_tx_rate, self.usrp.clock_rate)
 
         if self.tx_rate != want_tx_rate:
             self.usrp.tx_rate = want_tx_rate
-            self.tx_rate = self.usrp.tx_rate
 
-            if self.tx_rate != want_tx_rate:
+            if self.usrp.tx_rate != want_tx_rate:
                 raise ValueError('Wanted TX rate %g, but got %g' % (want_tx_rate, self.tx_rate))
 
+        if self.synthesizer.tx_rate != self.tx_rate:
             self.synthesizer.tx_rate = self.tx_rate
 
-    def setTXChannel(self, channel_idx: int):
+    @property
+    def tx_channel_idx(self) -> Optional[int]:
+        """The index of the channel the radio uses for transmissions.
+
+        When the radio is not upsampling, it configures itself to transmit on a
+        single channel. This is the index of that channel.
+
+        If the radio is upsampling, there is no TX channel index, and this
+        property is None.
+
+        Returns:
+            Optional[int]: The TX channel index
+        """
+        if self.config.tx_upsample:
+            return None
+
+        return self._tx_channel_idx
+
+    def setTXChannelIdx(self, channel_idx: int):
         """Set the index of the transmission channel.
 
         If we are upsampling on TX, this is a no-op. Otherwise, the radio
@@ -746,25 +770,40 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         if config.tx_upsample:
             logger.warning('Attempt to set TX channel when upsampling')
-        else:
-            # Determine TX channel from index
-            self.tx_channel_idx = min(channel_idx, len(self.channels) - 1)
-            channel = self.channels[self.tx_channel_idx]
+            return
 
-            # Set TX rate
-            self.setTXRate(channel.bw)
+        # Sanity check the TX channel
+        if channel_idx < 0 or channel_idx >= len(self.channels):
+            logger.warning('Attempt to set TX channel to %d, but there are only %d channels',
+                            channel_idx,
+                            len(self.channels))
 
-            # Set TX frequency
-            logger.info("Setting TX frequency offset to %g", channel.fc)
-            self.usrp.tx_frequency = self.frequency + channel.fc
+            channel_idx = max(0, min(channel_idx, len(self.channels) - 1))
 
-            # Set synthesizer channel
-            self.setSynthesizerChannels([Channel(0, channel.bw)])
+        self._tx_channel_idx = channel_idx
 
-            # Allow the MAC to figure out the TX offset so snapshot self
-            # tranmissions are correctly logged
-            if self.mac is not None:
-                self.mac.reconfigure()
+        # Get the channel corresponding to the channel index
+        channel = self.channels[channel_idx]
+
+        # Set TX rate to the channel's bandwidth. This will compensate for
+        # any necessary oversampling.
+        self.setTXRate(channel.bw)
+
+        # Set TX frequency to configured radio frequency plus the center
+        # frequency offset of our TX channel.
+        logger.info("Setting TX frequency offset to %g", channel.fc)
+        self.usrp.tx_frequency = self.frequency + channel.fc
+
+        # Set synthesizer channel to a "dummy" channel. From the
+        # synthesizer's perspective, it is operating with a single a channel
+        # whose center frequency is 0 and whose bandwidth is the bandwidth
+        # of the "true" channel.
+        self.setSynthesizerChannels([Channel(0, channel.bw)])
+
+        # Allow the MAC to figure out the TX offset so snapshot self
+        # tranmissions are correctly logged
+        if self.mac is not None:
+            self.mac.reconfigure()
 
     def reconfigureBandwidthAndFrequency(self, bandwidth: float, frequency: float):
         """Reconfigure the radio for the given bandwidth and frequency
@@ -799,7 +838,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
             self.configureDefaultChannels()
         else:
-            self.setTXChannel(self.tx_channel_idx)
+            self.setTXChannelIdx(self.tx_channel_idx)
 
     def environmentDiscontinuity(self):
         # When the environment changes, we need to inform the controller so that
@@ -1011,7 +1050,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if self.config.tx_upsample:
             self.mac.slotidx = channel_idx
         else:
-            self.setTXChannel(channel_idx)
+            self.setTXChannelIdx(channel_idx)
 
     def installALOHASchedule(self):
         """Install a schedule for an ALOHA MAC.
@@ -1028,7 +1067,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if self.config.tx_upsample:
             self.mac_schedule = np.identity(len(self.channels)).astype('bool')
         else:
-            self.setTXChannel(0)
+            self.setTXChannelIdx(0)
 
             self.mac_schedule = [[1]]
 
@@ -1081,7 +1120,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                 logger.error('No MAC schedule entry for radio %d', self.node_id)
                 chan = 0
 
-            self.setTXChannel(chan)
+            self.setTXChannelIdx(chan)
 
             self.mac_schedule = [sched[chan] == self.node_id]
 
