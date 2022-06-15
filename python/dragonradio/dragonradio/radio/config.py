@@ -38,7 +38,7 @@ def str2mac(name: str) -> Type[MAC]:
     if name in MAC_NAMES:
         return MAC_NAMES[name]
 
-    raise ValueError("%s is not a valid MAC", name)
+    raise ConfigException(f"{name:} is not a valid MAC")
 
 PHY_NAMES = { 'ofdm': OFDM
             , 'flexframe': FlexFrame
@@ -49,7 +49,7 @@ def str2phy(name: str) -> Type[PHY]:
     if name in PHY_NAMES:
         return PHY_NAMES[name]
 
-    raise ValueError("%s is not a valid PHY", name)
+    raise ConfigException(f"{name:} is not a valid PHY")
 
 CHANNELIZER_NAMES = { 'freqdomain': FDChannelizer
                     , 'timedomain': TDChannelizer
@@ -60,7 +60,7 @@ def str2channelizer(name: str) -> Type[PHY]:
     if name in CHANNELIZER_NAMES:
         return CHANNELIZER_NAMES[name]
 
-    raise ValueError(f"{name:} is not a valid channelizer")
+    raise ConfigException(f"{name:} is not a valid channelizer")
 
 SLOTTED_SYNTHESIZER_NAMES = { 'freqdomain': FDSlotSynthesizer
                             , 'timedomain': TDSlotSynthesizer
@@ -81,9 +81,9 @@ def str2synthesizer(mac_class: Type[MAC], name: str) -> Type[PHY]:
         return names[name]
 
     if name == 'multichannel':
-        raise ValueError('Multichannel synthesizer can only be used with a slotted MAC')
+        raise ConfigException('Multichannel synthesizer can only be used with a slotted MAC')
 
-    raise ValueError(f"{name:} is not a valid synthesizer")
+    raise ConfigException(f"{name:} is not a valid synthesizer")
 
 def getNodeIdFromHostname() -> int:
     """Determine node ID from hostname"""
@@ -93,6 +93,9 @@ def getNodeIdFromHostname() -> int:
         return 1
 
     return int(m.group(1))
+
+class ConfigException(Exception):
+    pass
 
 class ExtendAction(argparse.Action):
     """Add a list of values to an argument's value"""
@@ -645,7 +648,7 @@ class Config:
                 for key in config_parser['RF']:
                     config[key] = float(config_parser['RF'][key])
         else:
-            raise ValueError(f"Unknown configuration file extension: {path.suffix:}.")
+            raise ConfigException(f"Unknown configuration file extension: {path.suffix:}.")
 
         self.merge(config)
 
