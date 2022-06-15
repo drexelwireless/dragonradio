@@ -102,5 +102,6 @@ PIP_NO_BINARY=tables pip install -r requirements.txt -e python/dragonradio
   CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake ..;
   make -j10;
   cd ..;
-  ln -sf build/dragonradio
+  ln -sf build/dragonradio;
+  ln -sf ../../build/dragonradio venv/bin/dragonpython
 )

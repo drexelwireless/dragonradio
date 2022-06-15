@@ -59,19 +59,20 @@ void activateVirtualenv(void)
     }
 }
 
-/** @brief Set Python sys.argv */
-void setPythonArgv(int argc, char** argv)
+bool endswith(const char *s1, const char *s2)
 {
-    py::list args(argc);
-
-    for (int i = 0; i < argc; ++i)
-        args[i] = argv[i];
-
-    py::module::import("sys").attr("argv") = args;
+    return strlen(s1) >= strlen(s2) && strcmp(s1 + strlen(s1) - strlen(s2), s2) == 0;
 }
 
 int main(int argc, char** argv)
 {
+    // If this binary's name ends in "python,"" just run the python interpreter.
+    // This provides a standard Python interpreter with the complete dragonradio
+    // module available, which is useful for, e.g., mypy.
+    if (argc > 0 && endswith(argv[0], "python")) {
+        return Py_BytesMain(argc, argv);
+    }
+
     if (argc == 1) {
         fprintf(stderr, "Must specify Python script to run.\n");
         exit(EXIT_FAILURE);
@@ -134,15 +135,13 @@ int main(int argc, char** argv)
 
     // Start the Python interpreter
     {
-        py::scoped_interpreter guard{};
+        // Pass our command-line arguments to Python, but skip the first
+        // argument, which is the name of this binary. Instead, Python will see
+        // the name of the script we run as the first argument.
+        py::scoped_interpreter guard{ true, argc-1, argv+1, true };
 
         // Activate any Python virtual environment
         activateVirtualenv();
-
-        // Stuff our arguments into Python's sys.argv, but skip the first argument,
-        // which is the name of this binary. Instead, Python will see the name of
-        // the script we run as the first argument.
-        setPythonArgv(argc-1, argv+1);
 
         // Evaluate the Python script
         try {
