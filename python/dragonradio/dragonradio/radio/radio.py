@@ -1,16 +1,18 @@
-# Copyright 2018-2021 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Radio class for managing the radio."""
 import asyncio
+from functools import cached_property
 import ipaddress
 import logging
 import math
 import os
 import random
 import signal
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type
 
+from ipykernel.kernelapp import IPKernelApp
 import numpy as np
 
 try:
@@ -22,8 +24,10 @@ except:
 import dragonradio.channels
 from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
 import dragonradio.net
+from dragonradio.radio.config import Config, ConfigException, str2mac
 import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
+from dragonradio.schedule import Schedule
 import dragonradio.signal
 import dragonradio.tasks
 
@@ -31,22 +35,49 @@ from .version import version as __version__
 
 logger = logging.getLogger('radio')
 
-_MACS = { 'aloha': True
-        , 'tdma': True
-        , 'tdma-fdma': True
-        , 'fdma': False
-        }
-
-def _isSlottedMAC(mac):
-    return _MACS.get(mac, ValueError("Unknown MAC %s", mac))
-
 class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     """Radio configuration, setup, and maintenance"""
-    # pylint: disable=too-many-public-methods
-    # pylint: disable=too-many-instance-attributes
-    # pylint: disable=no-member
 
-    def __init__(self, config, mac, loop=None):
+    config: Config
+    """Config object for radio"""
+
+    node_id: int
+    """This node's ID"""
+
+    logger: Optional[Logger] = None
+    """Our DragonRadio logger"""
+
+    lock: asyncio.Lock
+    """Lock protecting radio configuration"""
+
+    _tx_channel_idx: int = 0
+    """TX channel index"""
+
+    phy: PHY = None
+    """The radio's PHY"""
+
+    mac: MAC = None
+    """The radio's MAC"""
+
+    mac_schedule: np.ndarray
+    """Our MAC schedule"""
+
+    channels: List[Channel]
+    """Radio channels"""
+
+    channelizer: Channelizer
+    """The radio's channelizer"""
+
+    synthesizer: Synthesizer
+    """The radio's synthesizer"""
+
+    timesync : Optional[Tuple[float, float, float]] = None
+    """Time synchronization parameters"""
+
+    kernel: Optional[IPKernelApp] = None
+    """IPython kernel"""
+
+    def __init__(self, config: Config, mac: str, loop: asyncio.AbstractEventLoop=None):
         if loop is None:
             loop = asyncio.get_event_loop()
 
@@ -57,56 +88,22 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         logger.info('Radio configuration:\n%s', str(config))
 
         self.config = config
-        """Config object for radio"""
 
         # Validate node ID range
         if not (config.node_id >= 1 and config.node_id <= 254):
-            raise ValueError(f"Node ID is {config.node_id} but must be in the range [1,254].")
+            raise ConfigException(f"Node ID is {config.node_id} but must be in the range [1,254].")
 
         self.node_id = config.node_id
-        """This node's ID"""
-
-        self.logger = None
-        """Our DragonRadio logger"""
 
         self.lock = asyncio.Lock()
-        """Lock protecting radio configuration"""
-
-        # Set the TX and RX rates to None to ensure they are properly set
-        # everywhere by setTXRate and setRXRate the first time those two
-        # functions are called.
-        self.tx_rate = None
-        """Current TX rate. None if not yet set."""
-
-        self.rx_rate = None
-        """Current RX rate. None if not yet set."""
-
-        self.tx_channel_idx = 0
-        """Default TX channel index"""
-
-        self.mac = None
-        """The radio's MAC"""
-
-        self.mac_schedule = None
-        """Our MAC schedule"""
 
         self.channels = []
-        """Channels"""
-
-        self.timesync = None
-        """Time synchronization parameters"""
-
-        self.kernel = None
-        """IPython kernel"""
 
         # Add global work queue workers
         work_queue.addThreads(1)
 
         # Initialize USRP
         self.configureUSRP()
-
-        # Configure valid decimation rates
-        self.configureValidDecimationRates()
 
         # Create the logger *after* we create the USRP so that we have a global
         # clock
@@ -118,13 +115,14 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # Create the PHY
         PHY.team = config.team
         PHY.node_id = config.node_id
+
         self.phy = self.mkPHY(self.header_mcs, self.mcs_table)
 
         # Configure channelizer
         self.channelizer = self.mkChannelizer()
 
         # Configure synthesizer
-        self.synthesizer = self.mkSynthesizer(_isSlottedMAC(mac))
+        self.synthesizer = self.mkSynthesizer(str2mac(mac))
 
         # Hook up the radio components
         self.configureComponents()
@@ -159,7 +157,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                 self.nhood.addNeighbor(i+1)
 
         # Configure the MAC
-        self.configureMAC(self.config.mac)
+        self.configureMAC(self.config.mac_class)
 
         # Either start the interactive loop or run the loop ourselves
         user_ns['radio'] = self
@@ -179,8 +177,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             int: Exit code
         """
         if self.config.kernel:
-            from ipykernel.kernelapp import IPKernelApp
-
             self.kernel = IPKernelApp.instance()
             self.kernel.initialize(["python"])
             self.kernel.shell.user_ns.update(user_ns)
@@ -311,7 +307,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         if config.snapshot_frequency is not None:
             if config.snapshot_frequency < config.snapshot_duration:
-                raise ValueError("Snapshot duration frequency must be no greater than snapshot frequency")
+                raise ConfigException("Snapshot duration frequency must be no greater than snapshot frequency")
 
             self.snapshot_collector = SnapshotCollector()
         else:
@@ -416,27 +412,20 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Construct a PHY from configuration parameters"""
         config = self.config
 
-        if config.phy == 'flexframe':
-            phy = dragonradio.liquid.FlexFrame(header_mcs,
-                                               mcs_table,
-                                               config.soft_header,
-                                               config.soft_payload)
-        elif config.phy == 'newflexframe':
-            phy = dragonradio.liquid.NewFlexFrame(header_mcs,
-                                                  mcs_table,
-                                                  config.soft_header,
-                                                  config.soft_payload)
-        elif config.phy == 'ofdm':
-            phy = dragonradio.liquid.OFDM(header_mcs,
-                                          mcs_table,
-                                          config.soft_header,
-                                          config.soft_payload,
-                                          config.M,
-                                          config.cp_len,
-                                          config.taper_len,
-                                          config.subcarriers)
+        if issubclass(config.phy_class, dragonradio.liquid.OFDM):
+            phy = config.phy_class(header_mcs,
+                                   mcs_table,
+                                   config.soft_header,
+                                   config.soft_payload,
+                                   config.M,
+                                   config.cp_len,
+                                   config.taper_len,
+                                   config.subcarriers)
         else:
-            raise ValueError('Unknown PHY: %s' % config.phy)
+            phy = config.phy_class(header_mcs,
+                                   mcs_table,
+                                   config.soft_header,
+                                   config.soft_payload)
 
         return phy
 
@@ -447,66 +436,29 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Construct a Channelizer according to configuration parameters"""
         config = self.config
 
-        if config.channelizer == 'overlap':
-            channelizer = OverlapTDChannelizer(PHYChannels([]),
+        channelizer = config.channelizer_class(PHYChannels([]),
                                                self.usrp.rx_rate,
                                                config.num_demodulation_threads)
 
+        if isinstance(channelizer, OverlapTDChannelizer):
             channelizer.enforce_ordering = config.channelizer_enforce_ordering
-        elif config.channelizer == 'timedomain':
-            channelizer = TDChannelizer(PHYChannels([]),
-                                        self.usrp.rx_rate,
-                                        config.num_demodulation_threads)
-        elif config.channelizer == 'freqdomain':
-            channelizer = FDChannelizer(PHYChannels([]),
-                                        self.usrp.rx_rate,
-                                        config.num_demodulation_threads)
-        else:
-            raise ValueError('Unknown channelizer: %s' % config.channelizer)
 
         return channelizer
 
-    def mkSynthesizer(self, slotted):
+    def mkSynthesizer(self, mac_class: Type[MAC]):
         """Construct a Synthesizer according to configuration parameters"""
         config = self.config
 
-        if slotted:
-            if config.synthesizer == 'timedomain':
-                synthesizer = TDSlotSynthesizer(PHYChannels([]),
-                                                self.usrp.tx_rate,
-                                                config.num_modulation_threads)
-            elif config.synthesizer == 'freqdomain':
-                synthesizer = FDSlotSynthesizer(PHYChannels([]),
-                                                self.usrp.tx_rate,
-                                                config.num_modulation_threads)
-            elif config.synthesizer == 'multichannel':
-                synthesizer = MultichannelSynthesizer(PHYChannels([]),
-                                                      self.usrp.tx_rate,
-                                                      config.num_modulation_threads)
-            else:
-                raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
-        else:
-            if config.synthesizer == 'timedomain':
-                synthesizer = TDSynthesizer(PHYChannels([]),
-                                            self.usrp.tx_rate,
-                                            config.num_modulation_threads)
-            elif config.synthesizer == 'freqdomain':
-                synthesizer = FDSynthesizer(PHYChannels([]),
-                                            self.usrp.tx_rate,
-                                            config.num_modulation_threads)
-            elif config.synthesizer == 'multichannel':
-                raise ValueError('Multichannel synthesizer can only be used with a slotted MAC')
-            else:
-                raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
+        return config.synthesizer_class(PHYChannels([]),
+                                        self.usrp.tx_rate,
+                                        config.num_modulation_threads)
 
-        return synthesizer
-
-    def mkController(self):
+    def mkController(self) -> Controller:
         """Construct a Controller according to configuration parameters"""
         config = self.config
 
         if config.amc and not config.arq:
-            raise ValueError('AMC requires ARQ')
+            raise ConfigException('AMC requires ARQ')
 
         if config.arq:
             controller = SmartController(self.nhood,
@@ -565,7 +517,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         return controller
 
-    def mkNetQueue(self):
+    def mkNetQueue(self) -> Queue:
         """Construct a network queue according to configuration parameters"""
         config = self.config
 
@@ -586,13 +538,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                             config.red_max_p,
                             config.red_w_q)
         else:
-            raise ValueError('Unknown queue type: %s' % config.queue)
+            raise ConfigException('Unknown queue type: %s' % config.queue)
 
         netq.transmission_delay = config.transmission_delay
 
         return netq
 
-    def mkAutoGain(self):
+    def mkAutoGain(self) -> AutoGain:
         """Construct an AutoGain object according to configuration parameters"""
         config = self.config
 
@@ -631,7 +583,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         self.setChannels(channels)
 
-    def setChannels(self, channels):
+    def setChannels(self, channels: Sequence[Channel]):
         """Set current channels.
 
         This function will configure the necessary RX and TX rates and
@@ -649,7 +601,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if self.mac is not None:
             self.mac.reconfigure()
 
-    def setRXChannels(self, channels):
+    def setRXChannels(self, channels: Sequence[Channel]):
         """Configure RX chain for channels"""
         # Initialize channelizer
         self.setRXRate(self.bandwidth)
@@ -658,20 +610,20 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # determine filter parameters
         self.setChannelizerChannels(channels)
 
-    def setTXChannels(self, channels):
+    def setTXChannels(self, channels: Sequence[Channel]):
         """Configure TX chain for channels"""
         if self.config.tx_upsample:
             self.setTXRate(self.bandwidth)
             self.setSynthesizerChannels(channels)
         else:
-            self.setTXChannel(self.tx_channel_idx)
+            self.setTXChannelIdx(self.tx_channel_idx)
 
-    def setChannelizerChannels(self, channels):
+    def setChannelizerChannels(self, channels: Sequence[Channel]):
         """Set channelizer's channels."""
         self.channelizer.channels = \
             PHYChannels([PHYChannel(chan, self.evm_thresholds, self.genChannelizerTaps(chan), self.phy) for chan in channels])
 
-    def setSynthesizerChannels(self, channels):
+    def setSynthesizerChannels(self, channels: Sequence[Channel]):
         """Set synthesizer's channels."""
         self.synthesizer.channels = \
             PHYChannels([PHYChannel(chan, self.evm_thresholds, self.genSynthesizerTaps(chan), self.phy) for chan in channels])
@@ -679,10 +631,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # LLC needs to know transmitting channels
         self.controller.channels = self.synthesizer.channels
 
-    def configureValidDecimationRates(self):
-        """Determine valid decimation and interpolation rates"""
-        # See:
-        #   https://files.ettus.com/manual/page_general.html#general_sampleratenotes
+    @cached_property
+    def valid_rates(self) -> List[float]:
+        """Valid decimation and interpolation rates
+
+        See:
+          https://files.ettus.com/manual/page_general.html#general_sampleratenotes
+        """
 
         # Start out with only even rates. We sort this list in reverse so we can
         # easily find the first rate that is less than or equal to the requested
@@ -695,17 +650,18 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # If the rate exceeds 256, the rate must be evenly divisible by 4.
         rates = [r for r in rates if r <= 256 or r % 4 == 0]
 
-        self.valid_rates = rates
+        return rates
 
-    def validRate(self, min_rate, clock_rate):
-        """Find a valid rate no less than min_rate given the clock rate clock_rate.
+    def findValidRate(self, min_rate: float, clock_rate: float) -> float:
+        """Find a valid rate no less than min_rate given the clock rate.
 
-        Arguments:
-            min_rate: The minimum desired rate
-            clock_rate: The radio clock rate
+        Args:
+            min_rate (float): The minimum desired rate
+            clock_rate (float): The radio clock rate
 
         Returns:
-            A rate no less than rate min_rate that is supported by the hardware"""
+            float: A rate no less than rate min_rate that is supported by the hardware
+        """
         # Compute decimation rate
         dec_rate = math.floor(clock_rate/min_rate)
 
@@ -722,88 +678,140 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         return clock_rate/dec_rate
 
-    def setRXRate(self, rate):
+    @property
+    def rx_rate(self) -> float:
+        """Current RX rate"""
+        return self.usrp.rx_rate
+
+    def setRXRate(self, rate: float):
         """Set RX rate"""
         config = self.config
 
-        if config.rx_bandwidth:
+        if config.rx_bandwidth is not None:
             want_rx_rate = config.rx_bandwidth
         else:
             rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
 
             want_rx_rate = rate*rx_rate_oversample
-            # We max out at about 50Mhz with UHD 3.9
-            want_rx_rate = min(want_rx_rate, 50e6)
+            want_rx_rate = min(want_rx_rate, config.max_bandwidth)
 
-        want_rx_rate = self.validRate(want_rx_rate, self.usrp.clock_rate)
+        want_rx_rate = self.findValidRate(want_rx_rate, self.usrp.clock_rate)
 
         if self.rx_rate != want_rx_rate:
             self.usrp.rx_rate = want_rx_rate
-            self.rx_rate = self.usrp.rx_rate
 
-            if self.rx_rate != want_rx_rate:
+            if self.usrp.rx_rate != want_rx_rate:
                 raise ValueError('Wanted RX rate %g, but got %g' % (want_rx_rate, self.rx_rate))
 
+        if self.channelizer.rx_rate != self.rx_rate:
             self.channelizer.rx_rate = self.rx_rate
 
-    def setTXRate(self, rate):
+    @property
+    def tx_rate(self) -> float:
+        """Current TX rate"""
+        return self.usrp.tx_rate
+
+    def setTXRate(self, rate: float):
         """Set TX rate"""
         config = self.config
 
-        if config.tx_bandwidth and config.tx_upsample:
+        if config.tx_bandwidth is not None and config.tx_upsample:
             logger.warning("TX bandwidth set, but TX upsampling requested.")
 
-        if config.tx_bandwidth and not config.tx_upsample:
+        if config.tx_bandwidth is not None and not config.tx_upsample:
             want_tx_rate = config.tx_bandwidth
         else:
             tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
 
             want_tx_rate = rate*tx_rate_oversample
+            want_tx_rate = min(want_tx_rate, config.max_bandwidth)
 
-        want_tx_rate = self.validRate(want_tx_rate, self.usrp.clock_rate)
+        want_tx_rate = self.findValidRate(want_tx_rate, self.usrp.clock_rate)
 
         if self.tx_rate != want_tx_rate:
             self.usrp.tx_rate = want_tx_rate
-            self.tx_rate = self.usrp.tx_rate
 
-            if self.tx_rate != want_tx_rate:
+            if self.usrp.tx_rate != want_tx_rate:
                 raise ValueError('Wanted TX rate %g, but got %g' % (want_tx_rate, self.tx_rate))
 
+        if self.synthesizer.tx_rate != self.tx_rate:
             self.synthesizer.tx_rate = self.tx_rate
 
-    def setTXChannel(self, channel_idx):
-        """Set the transmission channel.
+    @property
+    def tx_channel_idx(self) -> Optional[int]:
+        """The index of the channel the radio uses for transmissions.
 
-        If we are upsampling on TX, this is a no-op. Otherwise we configure the
-        radio's frequency and bandwidth and synthesizer for the new, single
+        When the radio is not upsampling, it configures itself to transmit on a
+        single channel. This is the index of that channel.
+
+        If the radio is upsampling, there is no TX channel index, and this
+        property is None.
+
+        Returns:
+            Optional[int]: The TX channel index
+        """
+        if self.config.tx_upsample:
+            return None
+
+        return self._tx_channel_idx
+
+    def setTXChannelIdx(self, channel_idx: int):
+        """Set the index of the transmission channel.
+
+        If we are upsampling on TX, this is a no-op. Otherwise, the radio
+        configures its frequency, bandwidth, and synthesizer for the new, single
         channel.
+
+        Args:
+            channel_idx (int): The index of the channel to use for
+            transmissions.
         """
         config = self.config
 
         if config.tx_upsample:
             logger.warning('Attempt to set TX channel when upsampling')
-        else:
-            # Determine TX channel from index
-            self.tx_channel_idx = min(channel_idx, len(self.channels) - 1)
-            channel = self.channels[self.tx_channel_idx]
+            return
 
-            # Set TX rate
-            self.setTXRate(channel.bw)
+        # Sanity check the TX channel
+        if channel_idx < 0 or channel_idx >= len(self.channels):
+            logger.warning('Attempt to set TX channel to %d, but there are only %d channels',
+                            channel_idx,
+                            len(self.channels))
 
-            # Set TX frequency
-            logger.info("Setting TX frequency offset to %g", channel.fc)
-            self.usrp.tx_frequency = self.frequency + channel.fc
+            channel_idx = max(0, min(channel_idx, len(self.channels) - 1))
 
-            # Set synthesizer channel
-            self.setSynthesizerChannels([Channel(0, channel.bw)])
+        self._tx_channel_idx = channel_idx
 
-            # Allow the MAC to figure out the TX offset so snapshot self
-            # tranmissions are correctly logged
-            if self.mac is not None:
-                self.mac.reconfigure()
+        # Get the channel corresponding to the channel index
+        channel = self.channels[channel_idx]
 
-    def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
-        """Reconfigure the radio for the given bandwidth and frequency"""
+        # Set TX rate to the channel's bandwidth. This will compensate for
+        # any necessary oversampling.
+        self.setTXRate(channel.bw)
+
+        # Set TX frequency to configured radio frequency plus the center
+        # frequency offset of our TX channel.
+        logger.info("Setting TX frequency offset to %g", channel.fc)
+        self.usrp.tx_frequency = self.frequency + channel.fc
+
+        # Set synthesizer channel to a "dummy" channel. From the
+        # synthesizer's perspective, it is operating with a single a channel
+        # whose center frequency is 0 and whose bandwidth is the bandwidth
+        # of the "true" channel.
+        self.setSynthesizerChannels([Channel(0, channel.bw)])
+
+        # Allow the MAC to figure out the TX offset so snapshot self
+        # tranmissions are correctly logged
+        if self.mac is not None:
+            self.mac.reconfigure()
+
+    def reconfigureBandwidthAndFrequency(self, bandwidth: float, frequency: float):
+        """Reconfigure the radio for the given bandwidth and frequency
+
+        Args:
+            bandwidth (float): bandwidth (Hz)
+            frequency (float): frequency (Hz)
+        """
         config = self.config
 
         if bandwidth == config.bandwidth and frequency == config.frequency:
@@ -830,7 +838,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
             self.configureDefaultChannels()
         else:
-            self.setTXChannel(self.tx_channel_idx)
+            self.setTXChannelIdx(self.tx_channel_idx)
 
     def environmentDiscontinuity(self):
         # When the environment changes, we need to inform the controller so that
@@ -839,7 +847,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if isinstance(self.controller, SmartController):
             self.controller.environmentDiscontinuity()
 
-    def genChannelizerTaps(self, channel):
+    def genChannelizerTaps(self, channel: Channel) -> np.ndarray:
         """Generate channelizer filter taps for given channel"""
         config = self.config
 
@@ -864,7 +872,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                      len(h), wp, ws, fs)
         return h
 
-    def genSynthesizerTaps(self, channel):
+    def genSynthesizerTaps(self, channel: Channel) -> np.ndarray:
         """Generate synthesizer filter taps for given channel"""
         config = self.config
 
@@ -885,18 +893,12 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                      len(h), wp, ws, fs)
         return h
 
-    def configureMAC(self, mac):
+    def configureMAC(self, mac_class: Type[MAC]):
         """Configure MAC"""
-        if mac == 'aloha':
+        if issubclass(mac_class, SlottedALOHA):
             self.configureALOHA()
-        elif mac == 'tdma':
-            self.configureSimpleMACSchedule()
-        elif mac == 'tdma-fdma':
-            self.configureSimpleMACSchedule()
-        elif mac == 'fdma':
-            self.configureSimpleMACSchedule(fdma_mac=True)
         else:
-            raise ValueError("Unknown MAC: {}".format(mac))
+            self.configureSimpleMACSchedule(mac_class)
 
     def deleteMAC(self):
         """Delete the current MAC"""
@@ -933,7 +935,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         self.finishConfiguringMAC()
 
-    def configureTDMA(self, nslots):
+    def configureTDMA(self, nslots: int):
         """Configures a TDMA MAC with 'nslots' slots.
 
         This function sets up a TDMA MAC for a schedule with `nslots` slots, but
@@ -950,7 +952,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         # Replace the synthesizer if it is not a SlotSynthesizer
         if not isinstance(self.synthesizer, SlotSynthesizer):
-            self.replaceSynthesizer(False)
+            self.replaceSynthesizer(TDMA)
 
         # Replace the MAC
         self.deleteMAC()
@@ -992,7 +994,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         # Replace the synthesizer if it is not a ChannelSynthesizer
         if not isinstance(self.synthesizer, ChannelSynthesizer):
-            self.replaceSynthesizer(False)
+            self.replaceSynthesizer(FDMA)
 
         # Replace the MAC
         self.deleteMAC()
@@ -1013,7 +1015,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Finish configuring MAC"""
         pass
 
-    def replaceSynthesizer(self, slotted):
+    def replaceSynthesizer(self, mac_class: Type[MAC]):
         """Replace the synthesizer"""
         # pylint: disable=pointless-statement
 
@@ -1030,7 +1032,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self.synthesizer.sink.disconnect()
 
         # Replace synthesizer
-        self.synthesizer = self.mkSynthesizer(slotted)
+        self.synthesizer = self.mkSynthesizer(mac_class)
 
         # Reconnect the controller to the synthesizer.
         self.netq.pop >> self.controller.net_in
@@ -1048,7 +1050,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if self.config.tx_upsample:
             self.mac.slotidx = channel_idx
         else:
-            self.setTXChannel(channel_idx)
+            self.setTXChannelIdx(channel_idx)
 
     def installALOHASchedule(self):
         """Install a schedule for an ALOHA MAC.
@@ -1065,14 +1067,14 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if self.config.tx_upsample:
             self.mac_schedule = np.identity(len(self.channels)).astype('bool')
         else:
-            self.setTXChannel(0)
+            self.setTXChannelIdx(0)
 
             self.mac_schedule = [[1]]
 
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def installMACSchedule(self, sched, fdma_mac=False):
+    def installMACSchedule(self, sched: Schedule, mac_class: Optional[Type[MAC]]):
         """Install a MAC schedule.
 
         Args:
@@ -1082,13 +1084,16 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """
         config = self.config
 
+        if mac_class is None:
+            mac_class = config.mac_class
+
         logger.debug('Installing MAC schedule:\n%s', sched)
 
         # Get number of channels and slots
         (_nchannels, nslots) = sched.shape
 
         # First configure the TDMA MAC for the desired number of slots
-        if fdma_mac:
+        if issubclass(mac_class, FDMA):
             if nslots != 1:
                 raise ValueError("FDMA schedule has more than one slot: %s" % sched)
             self.configureFDMA()
@@ -1115,14 +1120,14 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                 logger.error('No MAC schedule entry for radio %d', self.node_id)
                 chan = 0
 
-            self.setTXChannel(chan)
+            self.setTXChannelIdx(chan)
 
             self.mac_schedule = [sched[chan] == self.node_id]
 
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def configureSimpleMACSchedule(self, fdma_mac=False):
+    def configureSimpleMACSchedule(self, mac_class: Optional[Type[MAC]]=None):
         """Set a simple static schedule."""
         nchannels = len(self.channels)
         if self.config.manet and self.config.num_nodes is not None:
@@ -1138,7 +1143,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                                                 nodes,
                                                                 3)
 
-        self.installMACSchedule(sched, fdma_mac=fdma_mac)
+        self.installMACSchedule(sched, mac_class)
 
     def synchronizeClock(self):
         """Use timestamps to synchronize our clock with the time master (the gateway)"""
