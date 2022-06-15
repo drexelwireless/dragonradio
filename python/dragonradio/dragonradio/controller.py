@@ -29,6 +29,7 @@ from dragonradio.internal import mkFlowStats, mkSpectrumStats
 import dragonradio.net
 from dragonradio.protobuf import handle, handler, TCPProtoServer
 import dragonradio.radio
+from dragonradio.radio import ConfigException
 import dragonradio.remote as remote
 import dragonradio.schedule
 import dragonradio.tasks
@@ -218,6 +219,11 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
         # Provide default start time
         self.scenario_start_time = math.floor(time.time())
+
+        if not config.arq:
+            raise ConfigException("Neighbor discovery is only supported with the "
+                                  "SmartController LLC. Please enable AMC and ARQ, e.g., "
+                                  "with the --amc and --arq command-line flags.")
 
     def __del__(self):
         try:
