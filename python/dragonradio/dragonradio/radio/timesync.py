@@ -46,9 +46,10 @@ def synchronize(config, radio):
     if math.isfinite(delta) and math.isfinite(sigma):
         clock.offset = delta
         clock.skew = sigma
-        radio.logger.logEvent(("TIMESYNC: set skew and offset: "
-                               "sigma={:g}; "
-                               "delta={:g}").format(sigma, delta))
+        if radio.logger:
+            radio.logger.logEvent(("TIMESYNC: set skew and offset: "
+                                   "sigma={:g}; "
+                                   "delta={:g}").format(sigma, delta))
 
 def timestampRegression(echoed, master, no_skew=False):
     """Perform a linear regression on timestamps to determine clock skew and delta"""
