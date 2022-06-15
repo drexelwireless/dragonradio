@@ -39,6 +39,13 @@
       # For dragonradio tun/tap
       - net-tools
 
+- name: Install packages required for USB-based USRP support
+  apt:
+    state: present
+    pkg:
+      - libusb-1.0-0-dev
+  when: usb | bool
+
 - name: Remove unneeded packages
   apt:
     state: absent
