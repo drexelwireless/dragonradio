@@ -24,7 +24,7 @@ except:
 import dragonradio.channels
 from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
 import dragonradio.net
-from dragonradio.radio.config import Config, str2mac
+from dragonradio.radio.config import Config, ConfigException, str2mac
 import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
 from dragonradio.schedule import Schedule
@@ -91,7 +91,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         # Validate node ID range
         if not (config.node_id >= 1 and config.node_id <= 254):
-            raise ValueError(f"Node ID is {config.node_id} but must be in the range [1,254].")
+            raise ConfigException(f"Node ID is {config.node_id} but must be in the range [1,254].")
 
         self.node_id = config.node_id
 
@@ -307,7 +307,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         if config.snapshot_frequency is not None:
             if config.snapshot_frequency < config.snapshot_duration:
-                raise ValueError("Snapshot duration frequency must be no greater than snapshot frequency")
+                raise ConfigException("Snapshot duration frequency must be no greater than snapshot frequency")
 
             self.snapshot_collector = SnapshotCollector()
         else:
@@ -458,7 +458,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         config = self.config
 
         if config.amc and not config.arq:
-            raise ValueError('AMC requires ARQ')
+            raise ConfigException('AMC requires ARQ')
 
         if config.arq:
             controller = SmartController(self.nhood,
@@ -538,7 +538,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                             config.red_max_p,
                             config.red_w_q)
         else:
-            raise ValueError('Unknown queue type: %s' % config.queue)
+            raise ConfigException('Unknown queue type: %s' % config.queue)
 
         netq.transmission_delay = config.transmission_delay
 
