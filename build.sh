@@ -10,6 +10,7 @@ sudo apt install -y libfftw3-dev
 sudo apt install -y libhdf5-dev
 sudo apt install -y libflac8 libflac-dev libflac++-dev
 sudo apt install -y libeigen3-dev
+sudo apt install -y ninja-build
 
 # For capabilities
 sudo apt install -y libcap-dev
@@ -30,12 +31,12 @@ CFLAGS="-Ofast -march=native"
   rm -rf build;
   mkdir build;
   cd build;
-  CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake ..;
-  make;
-  make shim;
-  sudo make install;
+  CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake -G Ninja ..;
+  ninja;
+  ninja shim;
+  sudo ninja install;
   sudo ldconfig;
-  make clean;
+  ninja clean;
   cd ..;
   rm -rf build
 )
@@ -46,11 +47,12 @@ CFLAGS="-Ofast -march=native"
   rm -rf build;
   mkdir build;
   cd build;
-  cmake -DCMAKE_FIND_ROOT_PATH=/usr ../;
-  make -j4;
-  sudo make install;
+  cmake -DCMAKE_FIND_ROOT_PATH=/usr -G Ninja ..;
+  ninja;
+  sudo ninja install;
   sudo ldconfig;
-  make clean
+  rm -rf docs/doxygen/html;
+  ninja clean
 )
 
 # Build and install liquid-dsp
@@ -70,11 +72,11 @@ CFLAGS="-Ofast -march=native"
   rm -rf build;
   mkdir build;
   cd build;
-  cmake ..;
-  make -j4;
-  sudo make install;
+  cmake -G Ninja ..;
+  ninja;
+  sudo ninja install;
   sudo ldconfig;
-  make clean;
+  ninja clean;
   cd ..;
   rm -rf build
 )

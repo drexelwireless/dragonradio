@@ -34,7 +34,7 @@ USRP::USRP(const std::string& addr,
     tx_underflow_count_.store(0, std::memory_order_release);
     tx_late_count_.store(0, std::memory_order_release);
 
-    determineDeviceType();
+    mboard_ = usrp_->get_mboard_name();
 
     usrp_->set_tx_antenna(tx_ant);
     usrp_->set_rx_antenna(rx_ant);
@@ -68,13 +68,8 @@ USRP::USRP(const std::string& addr,
     rx_stream_ = usrp_->get_rx_stream(stream_args);
 
     // Set maximum number of samples we attempt to TX/RX.
-    if (device_type_ == kUSRPX310) {
-        setMaxTXSamps(8*tx_stream_->get_max_num_samps());
-        setMaxRXSamps(8*rx_stream_->get_max_num_samps());
-    } else {
-        setMaxTXSamps(512);
-        setMaxRXSamps(2048);
-    }
+    tx_max_samps_ = tx_stream_->get_max_num_samps();
+    rx_max_samps_ = rx_stream_->get_max_num_samps();
 
     // Start thread that receives TX errors
     tx_error_thread_ = std::thread(&USRP::txErrorWorker, this);
@@ -109,6 +104,9 @@ void USRP::syncTime(bool random_bias, bool use_pps)
         now += offset;
     }
 
+    // Lock the clock for update
+    std::lock_guard lock(clock_mutex_);
+
     if (use_pps) {
         uhd::time_spec_t t0 = now.get_full_secs() + 1.0;
 
@@ -132,7 +130,7 @@ void USRP::setTXFrequency(double freq)
     int count;
 
   retry:
-    if (device_type_ == kUSRPX310) {
+    if (mboard_ == "X310") {
         double lo_offset = -42.0e6;
         usrp_->set_tx_freq(uhd::tune_request_t(freq, lo_offset));
     } else
@@ -159,7 +157,7 @@ void USRP::setRXFrequency(double freq)
     int count;
 
   retry:
-    if (device_type_ == kUSRPX310) {
+    if (mboard_ == "X310") {
         double lo_offset = +42.0e6;
         usrp_->set_rx_freq(uhd::tune_request_t(freq, lo_offset));
     } else
@@ -365,6 +363,8 @@ void USRP::stop(void)
 
 MonoClock::time_point USRP::now() noexcept
 {
+    std::lock_guard lock(clock_mutex_);
+
     while (true) {
         try {
             std::chrono::duration<timerep_t> dur(usrp_->get_time_now());
@@ -374,18 +374,6 @@ MonoClock::time_point USRP::now() noexcept
             fprintf(stderr, "USRP: get_time_now: %s", err.what());
         }
     }
-}
-
-void USRP::determineDeviceType(void)
-{
-    std::string mboard = usrp_->get_mboard_name();
-
-    if (mboard.find("N210") == 0)
-        device_type_ = kUSRPN210;
-    else if (mboard.find("X310") == 0)
-        device_type_ = kUSRPX310;
-    else
-        device_type_ = kUSRPUnknown;
 }
 
 void USRP::txErrorWorker(void)
