@@ -688,9 +688,10 @@ void Logger::logSend_(const MonoClock::time_point& t,
         entry.fc = pkt.channel.fc;
         entry.bw = pkt.channel.bw;
         entry.tuntap_latency = pkt.wall_timestamp ? std::chrono::duration<double>(pkt.tuntap_timestamp - *pkt.wall_timestamp).count() : 0;
-        entry.enqueue_latency = std::chrono::duration<double>(pkt.enqueue_timestamp - pkt.timestamp).count();
-        entry.dequeue_latency = std::chrono::duration<double>(pkt.dequeue_end_timestamp - pkt.dequeue_start_timestamp).count();
-        entry.queue_latency = std::chrono::duration<double>(pkt.dequeue_end_timestamp - pkt.timestamp).count();
+        entry.enqueue_latency = pkt.enqueue_timestamp ? std::chrono::duration<double>(*pkt.enqueue_timestamp - pkt.timestamp).count() : 0;
+        entry.dequeue_latency = (pkt.dequeue_end_timestamp && pkt.dequeue_start_timestamp)
+                                ? std::chrono::duration<double>(*pkt.dequeue_end_timestamp - *pkt.dequeue_start_timestamp).count() : 0;
+        entry.queue_latency = pkt.dequeue_end_timestamp ? std::chrono::duration<double>(*pkt.dequeue_end_timestamp - pkt.timestamp).count() : 0;
         entry.llc_latency = std::chrono::duration<double>(pkt.llc_timestamp - pkt.timestamp).count();
         entry.mod_latency = std::chrono::duration<double>(pkt.mod_end_timestamp - pkt.mod_start_timestamp).count();
         entry.synth_latency = std::chrono::duration<double>(pkt.mod_end_timestamp - pkt.timestamp).count();
