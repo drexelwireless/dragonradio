@@ -482,6 +482,10 @@ class Config:
     """Period at which clock is synchronized"""
     clock_noskew: bool = False
     """Assume no clock skew relative to master"""
+    clock_random_bias: float = 0.0
+    """Introduce a random bias in USRP clock selected from the uniform distribution [0, bias) (for testing)"""
+    clock_use_pps: bool = False
+    """Set time on PPS edge. Use with GPSDO."""
 
     # Measurement options
     measurement_period: float = 1.0
@@ -1140,6 +1144,16 @@ class Config:
         net.add_argument('--manet', action='store_const', const=True,
                          dest='manet',
                          help='enable MANET support')
+
+        # Clock synchronization options
+        clock = parser.add_argument_group('Clock')
+
+        clock.add_argument('--random-bias', action='store', type=float,
+                            dest='clock_random_bias',
+                            help='introduce a random bias in USRP clock selected from the uniform distribution [0, bias) (for testing)')
+        clock.add_argument('--use-pps', action='store_const', const=True,
+                           dest='clock_use_pps',
+                           help='set time on PPS edge. Use with GPSDO.')
 
         # Collaboration server options
         collab = parser.add_argument_group('Collaboration')

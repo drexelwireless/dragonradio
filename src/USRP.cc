@@ -56,7 +56,7 @@ USRP::~USRP()
     stop();
 }
 
-void USRP::syncTime(bool random_bias, bool use_pps)
+void USRP::syncTime(double random_bias, bool use_pps)
 {
     // Set offset relative to system NTP time
     struct timespec t;
@@ -69,11 +69,11 @@ void USRP::syncTime(bool random_bias, bool use_pps)
 
     uhd::time_spec_t now(t.tv_sec, ((double)t.tv_nsec)/1e9);
 
-    if (random_bias) {
-        std::random_device               rd;
-        std::mt19937                     gen(rd());
-        std::uniform_real_distribution<> dist(0.0, 10.0);
-        double                           offset = dist(gen);
+    if (random_bias != 0.0) {
+        std::random_device                     rd;
+        std::mt19937                           gen(rd());
+        std::uniform_real_distribution<double> dist(0.0, random_bias);
+        double                                 offset = dist(gen);
 
         fprintf(stderr, "CLOCK: offset=%g\n", offset);
 

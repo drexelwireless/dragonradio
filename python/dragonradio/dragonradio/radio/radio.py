@@ -270,7 +270,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             self.usrp.time_source = config.time_source
 
         # Synchronize USRP time with host
-        self.usrp.syncTime()
+        self.usrp.syncTime(random_bias=config.clock_random_bias,
+                           use_pps=config.clock_use_pps)
 
         # Set USRP as clock's time keeper
         dragonradio.radio.clock.time_keeper = self.usrp
