@@ -104,6 +104,9 @@ void USRP::syncTime(bool random_bias, bool use_pps)
         now += offset;
     }
 
+    // Lock the clock for update
+    std::lock_guard lock(clock_mutex_);
+
     if (use_pps) {
         uhd::time_spec_t t0 = now.get_full_secs() + 1.0;
 
@@ -360,6 +363,8 @@ void USRP::stop(void)
 
 MonoClock::time_point USRP::now() noexcept
 {
+    std::lock_guard lock(clock_mutex_);
+
     while (true) {
         try {
             std::chrono::duration<timerep_t> dur(usrp_->get_time_now());
