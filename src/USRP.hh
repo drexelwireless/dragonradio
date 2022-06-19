@@ -316,10 +316,11 @@ public:
     }
 
     /** @brief Synchronize USRP time with host.
-     * @param random_bias Introduce a random bias in USRP clock (for testing).
+     * @param random_bias Introduce a random bias in USRP clock selected from
+     * the uniform distribution [0, random_bias) (for testing).
      * @param use_pps Set time on PPS edge. Use with GPSDO.
      */
-    void syncTime(bool random_bias = false, bool use_pps = false);
+    void syncTime(double random_bias = 0.0, bool use_pps = false);
 
     double getMasterClockRate(void) const override
     {
