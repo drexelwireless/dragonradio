@@ -1,11 +1,13 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef USRP_H_
 #define USRP_H_
 
 #include <atomic>
+#include <chrono>
 #include <deque>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -21,6 +23,73 @@
 class USRP : public Radio
 {
 public:
+    /** @brief A class that preserves the USRP clock across potential master
+     * clock rate changes.
+     */
+    /**
+     * When the USRP master clock rate changes, the USRP time may also change.
+     * On some USRP devices, like the B210, changing the sampling rate can
+     * change the master clock. This will then change the current USRP time. For
+     * example, the default B210 master clock rate seems to be 32 MHz. When
+     * setting the TX rate to, e.g., 1 MHZ, the master clock rate is
+     * automatically changed to 16 MHz. This causes the USRP time to *double*.
+     * Apparently, USRP time is stored as the number of master clock ticks, so
+     * halving the master clock rate doubles the time. This RAII class attempts
+     * to preserve the USRP clock across operations that potentially change the
+     * master clock rate. It should come into scope before an operation that may
+     * change the master clock rate. It should remain in scope for as short a
+     * time as possible, but for at least the duration of the operation in
+     * question.
+     */
+    class preserve_clock {
+    public:
+        preserve_clock() = delete;
+
+        preserve_clock(USRP& usrp_)
+            : usrp(usrp_)
+            , clock_lock(usrp_.clock_mutex_)
+            , t_last_pps(usrp.usrp_->get_time_last_pps())
+            , t1_uhd(usrp.usrp_->get_time_now())
+            , t1_steady(std::chrono::steady_clock::now())
+        {
+        }
+
+        ~preserve_clock()
+        {
+            uhd::time_spec_t                      t2_uhd = usrp.usrp_->get_time_now();
+            std::chrono::steady_clock::time_point t2_steady = std::chrono::steady_clock::now();
+            double                                delta_pps = (t1_uhd - t_last_pps).get_real_secs();
+            double                                delta_uhd = (t2_uhd - t1_uhd).get_real_secs();
+            std::chrono::duration<double>         delta_steady = t2_steady - t1_steady;
+
+            // If the difference between the USRP time before the potential
+            // master clock rate change and the USRP time after the potential
+            // master lock rate change is either negative or more than twice the
+            // steady_clock delta, assume the master clock rate has changed and
+            // reset the USRP time.
+            if (delta_uhd < 0 || delta_uhd > 2*delta_steady.count()) {
+                usrp.usrp_->set_time_next_pps(t_last_pps + ceil(delta_steady.count() - delta_pps));
+                std::this_thread::sleep_for(1s);
+            }
+        }
+
+    protected:
+        /** @brief The USRP. */
+        USRP& usrp;
+
+        // Lock the clock for update
+        std::lock_guard<std::mutex> clock_lock;
+
+        /** @brief Time at last PPS. */
+        uhd::time_spec_t t_last_pps;
+
+        /** @brief UHD time before potential master lock rate change */
+        uhd::time_spec_t t1_uhd;
+
+        /** @brief Steady clock time before potential master lock rate change */
+        std::chrono::steady_clock::time_point t1_steady;
+    };
+
     USRP(const std::string& addr,
          const std::optional<std::string>& tx_subdev,
          const std::optional<std::string>& rx_subdev,
@@ -178,7 +247,12 @@ public:
 
     void setTXRate(double rate) override
     {
-        usrp_->set_tx_rate(rate);
+        {
+            preserve_clock preserve(*this);
+
+            usrp_->set_tx_rate(rate);
+        }
+
         logUSRP(LOGDEBUG, "TX rate set to %g", rate);
         tx_rate_ = usrp_->get_tx_rate();
     }
@@ -190,7 +264,12 @@ public:
 
     void setRXRate(double rate) override
     {
-        usrp_->set_rx_rate(rate);
+        {
+            preserve_clock preserve(*this);
+
+            usrp_->set_rx_rate(rate);
+        }
+
         logUSRP(LOGDEBUG, "RX rate set to %g", rate);
         rx_rate_ = usrp_->get_rx_rate();
     }
@@ -254,6 +333,9 @@ public:
 private:
     /** @brief Our associated UHD USRP. */
     uhd::usrp::multi_usrp::sptr usrp_;
+
+    /** @brief Mutex for accessing the clock. */
+    mutable std::mutex clock_mutex_;
 
     /** @brief The motherboard */
     std::string mboard_;
