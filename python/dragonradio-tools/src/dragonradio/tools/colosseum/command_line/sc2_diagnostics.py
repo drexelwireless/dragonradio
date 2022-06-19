@@ -5,11 +5,15 @@ from typing import Optional
 import re
 from rich import print
 
+import numpy as np
+
 from dragonradio.tools.colosseum import Scorer
 from dragonradio.tools.logging.command_line import Command
 from dragonradio.tools.logging.logging import LogCollection
 
 from .command import Command
+
+EXPECTED_EVM = { 9988: [-30, -25, -20, -15, -30] }
 
 class SC2DiagnosticsCommand(Command):
     def __init__(self, *args, **kwargs):
@@ -56,9 +60,18 @@ class SC2DiagnosticsCommand(Command):
         flow_options.add_argument('--problem-srns', action='store_true',
                                   help='show problematic SRNs')
 
+        # EVM information
+        evm_options = parser.add_argument_group('EVM')
+        evm_options.add_argument('--check-evm', action='store_true',
+                                 default=False,
+                                 help='show flows')
+
     def handle(self, parser, args):
-        print("Reservation SRNS:",
-              ", ".join(str(srn) for srn in sorted(list(self.reservation.srns))))
+        scorer = Scorer(self.reservation)
+
+        our_srns = sorted(list(self.reservation.srns))
+
+        print("Reservation SRNS:", ", ".join(str(srn) for srn in our_srns))
 
         #
         # Check for node errors
@@ -103,7 +116,7 @@ class SC2DiagnosticsCommand(Command):
                   srn_logs_path=args.srn_logs)
 
         r = re.compile(r'^USRP: (RX|TX) error:')
-        for srn in sorted(list(self.reservation.our_srns)):
+        for srn in our_srns:
             try:
                 df = logs[srn].event_cats.events
                 df = df[df.category=='USRP']
@@ -114,10 +127,48 @@ class SC2DiagnosticsCommand(Command):
                 logging.error("Could not read logs for SRN %d", srn)
 
         #
+        # Compute EVM
+        #
+        for srn in our_srns:
+            srn_df = logs[srn].recv
+            srn_df.timestamp += logs[srn].delta
+
+            # Compute measurement period for each packet
+            srn_df['mp'] = 0
+
+            for i, t in enumerate(scorer.stages):
+                srn_df.loc[srn_df.timestamp >= t, 'mp'] = i+1
+
+            # Look for lack of traffic
+            df = srn_df.groupby('mp').agg({'evm': ['count']})
+
+            missing_idx = (df.index > 0) & (df[('evm', 'count')]<1000)
+            if missing_idx.any():
+                missing = ",".join(str(i) for i in list(df.index[missing_idx]))
+                print(f"[italic red]SRN {srn:} missing traffic in following stages: {missing:}")
+
+            if args.check_evm:
+                for curhop in srn_df.curhop.unique():
+                    df = srn_df.loc[srn_df.curhop == curhop].groupby('mp').agg({'evm': [np.median, np.mean, np.std]})
+
+                    # Look for suspicious EVM levels.
+                    #
+                    # We see if per-stage EVM levels are within two standard deviations
+                    # of the expected EVM
+                    if self.reservation.rf_scenario in EXPECTED_EVM:
+                        try:
+                            expected = EXPECTED_EVM[self.reservation.rf_scenario]
+                            if not df.empty:
+                                diff = np.abs(df.loc[1:5, ('evm', 'mean')] - expected) >= 3*df.loc[1:5, ('evm', 'std')]
+                                if diff.any():
+                                    print(f"Suspicious EVM for path {curhop:} -> {srn:}")
+                                    print(df.loc[1:5])
+                        except:
+                            print(f"Could not look for suspicious EVM levels for path {curhop:} -> {srn:}")
+
+        #
         # Check scores
         #
-        scorer = Scorer(self.reservation)
-
         for offender, point_loss in problem_srns(scorer):
             print("[italic red]SRN {} lost {:.0f} points".format(offender, point_loss))
 
