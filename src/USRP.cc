@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <sys/types.h>
@@ -16,14 +16,7 @@
 #include "USRP.hh"
 #include "util/capabilities.hh"
 
-USRP::USRP(const std::string& addr,
-           const std::optional<std::string>& tx_subdev,
-           const std::optional<std::string>& rx_subdev,
-           double freq,
-           const std::string& tx_ant,
-           const std::string& rx_ant,
-           float tx_gain,
-           float rx_gain)
+USRP::USRP(const std::string& addr)
   : auto_dc_offset_(false)
   , done_(false)
 {
@@ -35,23 +28,6 @@ USRP::USRP(const std::string& addr,
     tx_late_count_.store(0, std::memory_order_release);
 
     mboard_ = usrp_->get_mboard_name();
-
-    usrp_->set_tx_antenna(tx_ant);
-    usrp_->set_rx_antenna(rx_ant);
-
-    usrp_->set_tx_gain(tx_gain);
-    usrp_->set_rx_gain(rx_gain);
-
-    // Set subdevice specifications
-    if (tx_subdev)
-        usrp_->set_tx_subdev_spec(*tx_subdev);
-
-    if (rx_subdev)
-        usrp_->set_rx_subdev_spec(*rx_subdev);
-
-    // Set RX and TX frequencies
-    setRXFrequency(freq);
-    setTXFrequency(freq);
 
     // Get TX and RX rates
     tx_rate_ = usrp_->get_tx_rate();
@@ -127,8 +103,6 @@ const int kMaxLOLockCount = 100;
 
 void USRP::setTXFrequency(double freq)
 {
-    int count;
-
   retry:
     if (mboard_ == "X310") {
         double lo_offset = -42.0e6;
@@ -136,7 +110,7 @@ void USRP::setTXFrequency(double freq)
     } else
         usrp_->set_tx_freq(freq);
 
-    count = 0;
+    int count = 0;
 
     while (!usrp_->get_tx_sensor("lo_locked").to_bool()) {
         if (count++ > kMaxLOLockCount) {
@@ -154,8 +128,6 @@ void USRP::setTXFrequency(double freq)
 
 void USRP::setRXFrequency(double freq)
 {
-    int count;
-
   retry:
     if (mboard_ == "X310") {
         double lo_offset = +42.0e6;
@@ -163,7 +135,7 @@ void USRP::setRXFrequency(double freq)
     } else
         usrp_->set_rx_freq(freq);
 
-    count = 0;
+    int count = 0;
 
     while (!usrp_->get_rx_sensor("lo_locked").to_bool()) {
         if (count++ > kMaxLOLockCount) {
