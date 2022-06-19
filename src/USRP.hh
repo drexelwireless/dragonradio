@@ -90,14 +90,7 @@ public:
         std::chrono::steady_clock::time_point t1_steady;
     };
 
-    USRP(const std::string& addr,
-         const std::optional<std::string>& tx_subdev,
-         const std::optional<std::string>& rx_subdev,
-         double freq,
-         const std::string& tx_ant,
-         const std::string& rx_ant,
-         float tx_gain,
-         float rx_gain);
+    USRP(const std::string& addr);
     ~USRP();
 
     USRP() = delete;
@@ -113,52 +106,8 @@ public:
         return mboard_;
     }
 
-    /** @brief Get clock sources. */
-    std::vector<std::string> getClockSources(const size_t mboard = 0) const
-    {
-        return usrp_->get_clock_sources(mboard);
-    }
-
-    /** @brief Get clock source. */
-    std::string getClockSource(const size_t mboard = 0) const
-    {
-        return usrp_->get_clock_source(mboard);
-    }
-
-    /** @brief Set clock source. */
-    void setClockSource(const std::string clock_source,
-                        const size_t mboard = uhd::usrp::multi_usrp::ALL_MBOARDS)
-    {
-        return usrp_->set_clock_source(clock_source, mboard);
-    }
-
-    /** @brief Get time sources. */
-    std::vector<std::string> getTimeSources(const size_t mboard = 0) const
-    {
-        return usrp_->get_time_sources(mboard);
-    }
-
-    /** @brief Get time source. */
-    std::string getTimeSource(const size_t mboard = 0) const
-    {
-        return usrp_->get_time_source(mboard);
-    }
-
-    /** @brief Set time source. */
-    void setTimeSource(const std::string &time_source,
-                       const size_t mboard = uhd::usrp::multi_usrp::ALL_MBOARDS)
-    {
-        return usrp_->set_time_source(time_source, mboard);
-    }
-
-    /** @brief Synchronize USRP time with host.
-     * @param random_bias Introduce a random bias in USRP clock (for testing).
-     * @param use_pps Set time on PPS edge. Use with GPSDO.
-     */
-    void syncTime(bool random_bias = false, bool use_pps = false);
-
     /** @brief Get automatic DC offset correction. */
-    bool getAutoDCOffset(bool enable) const
+    bool getAutoDCOffset() const
     {
         return auto_dc_offset_;
     }
@@ -169,7 +118,7 @@ public:
         auto_dc_offset_ = enable;
         usrp_->set_rx_dc_offset(auto_dc_offset_);
         usrp_->set_tx_dc_offset(auto_dc_offset_);
-    };
+    }
 
     /** @brief Return the maximum number of samples we will read at a time
      * during burstRX.
@@ -220,6 +169,157 @@ public:
     {
         setMaxTXSamps(n*tx_stream_->get_max_num_samps());
     }
+
+    /** @brief Get a list of possible TX antennas.
+     * @param chan The channel index
+     */
+    std::vector<std::string> getTXAntennas(size_t chan=0) const
+    {
+        return usrp_->get_tx_antennas(chan);
+    }
+
+    /** @brief Set the TX antenna.
+     * @param chan The channel index
+     */
+    std::string getTXAntenna(size_t chan=0) const
+    {
+        return usrp_->get_tx_antenna(chan);
+    }
+
+    /** @brief Set the TX antenna.
+     * @param ant The antenna name
+     * @param chan The channel index
+     */
+    void setTXAntenna(const std::string &ant, size_t chan=0)
+    {
+        usrp_->set_tx_antenna(ant, chan);
+    }
+
+    /** @brief Get a list of possible RX antennas.
+     * @param chan The channel index
+     */
+    std::vector<std::string> getRXAntennas(size_t chan=0) const
+    {
+        return usrp_->get_rx_antennas(chan);
+    }
+
+    /** @brief Set the RX antenna.
+     * @param chan The channel index
+     */
+    std::string getRXAntenna(size_t chan=0) const
+    {
+        return usrp_->get_rx_antenna(chan);
+    }
+
+    /** @brief Set the RX antenna.
+     * @param ant The antenna name
+     * @param chan The channel index
+     */
+    void setRXAntenna(const std::string &ant, size_t chan=0)
+    {
+        usrp_->set_rx_antenna(ant, chan);
+    }
+
+    /** @brief Get the TX frontend specification.
+     * @param chan The channel index
+     */
+    std::string getTXSubdevSpec(size_t chan=0) const
+    {
+        return usrp_->get_tx_subdev_spec(chan).to_string();
+    }
+
+    /** @brief Set the TX frontend specification.
+     * @param spec The frontend specification
+     * @param chan The channel index
+     */
+    void setTXSubdevSpec(const std::string &spec, size_t chan=0) const
+    {
+        usrp_->set_tx_subdev_spec(spec, chan);
+    }
+
+    /** @brief Get the RX frontend specification.
+     * @param chan The channel index
+     */
+    std::string getRXSubdevSpec(size_t chan=0) const
+    {
+        return usrp_->get_rx_subdev_spec(chan).to_string();
+    }
+
+    /** @brief Set the RX frontend specification.
+     * @param spec The frontend specification
+     * @param chan The channel index
+     */
+    void setRXSubdevSpec(const std::string &spec, size_t chan=0) const
+    {
+        usrp_->set_rx_subdev_spec(spec, chan);
+    }
+
+    /** @brief Get the master clock rate
+     * @param mboard The motherboard
+     */
+    double getMasterClockRate(size_t mboard) const
+    {
+        return usrp_->get_master_clock_rate(mboard);
+    }
+
+    /** @brief Get the master clock rate
+     * @param rate The master clock rate (Hz)
+     * @param mboard The motherboard
+     */
+    void setMasterClockRate(double rate, size_t mboard = uhd::usrp::multi_usrp::ALL_MBOARDS)
+    {
+        {
+            preserve_clock preserve(*this);
+
+            usrp_->set_master_clock_rate(rate, mboard);
+        }
+
+        logUSRP(LOGDEBUG, "master clock rate set to %g", rate);
+    }
+
+    /** @brief Get clock sources. */
+    std::vector<std::string> getClockSources(const size_t mboard = 0) const
+    {
+        return usrp_->get_clock_sources(mboard);
+    }
+
+    /** @brief Get clock source. */
+    std::string getClockSource(const size_t mboard = 0) const
+    {
+        return usrp_->get_clock_source(mboard);
+    }
+
+    /** @brief Set clock source. */
+    void setClockSource(const std::string clock_source,
+                        const size_t mboard = uhd::usrp::multi_usrp::ALL_MBOARDS)
+    {
+        return usrp_->set_clock_source(clock_source, mboard);
+    }
+
+    /** @brief Get time sources. */
+    std::vector<std::string> getTimeSources(const size_t mboard = 0) const
+    {
+        return usrp_->get_time_sources(mboard);
+    }
+
+    /** @brief Get time source. */
+    std::string getTimeSource(const size_t mboard = 0) const
+    {
+        return usrp_->get_time_source(mboard);
+    }
+
+    /** @brief Set time source. */
+    void setTimeSource(const std::string &time_source,
+                       const size_t mboard = uhd::usrp::multi_usrp::ALL_MBOARDS)
+    {
+        return usrp_->set_time_source(time_source, mboard);
+    }
+
+    /** @brief Synchronize USRP time with host.
+     * @param random_bias Introduce a random bias in USRP clock (for testing).
+     * @param use_pps Set time on PPS edge. Use with GPSDO.
+     */
+    void syncTime(bool random_bias = false, bool use_pps = false);
 
     double getMasterClockRate(void) const override
     {
@@ -278,6 +378,7 @@ public:
     {
         return usrp_->get_tx_gain();
     }
+
     void setTXGain(float db) override
     {
         return usrp_->set_tx_gain(db);
