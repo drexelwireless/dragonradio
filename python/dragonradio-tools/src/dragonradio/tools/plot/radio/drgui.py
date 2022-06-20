@@ -96,7 +96,7 @@ class ReceiveView(LogView):
             self.pkt = recv.iloc[idx]
             self.spos.set_val(idx)
 
-            slots = self.logs.findPacketSlots(self.pkt)
+            slots = self.logs.findPacketSlots(self.pkt, self.node_id)
             if slots == None:
                 logging.warning("Cannot find slots for packet at timestamp %f", self.pkt.timestamp)
                 return
@@ -155,7 +155,7 @@ class ReceiveView(LogView):
 
     def link_to_tx(self, event):
         if self.viewer:
-            idx = self.logs[self.pkt.curhop].findSentPacketIndex(self.pkt.seq)
+            idx = self.logs[self.pkt.curhop].findSentPacketIndex(self.pkt)
             if idx is None:
                 logging.warning('Could not find transmitted packet')
                 return

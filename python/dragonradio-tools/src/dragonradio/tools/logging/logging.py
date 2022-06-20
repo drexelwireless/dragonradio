@@ -7,7 +7,7 @@ from functools import cached_property
 import logging
 import os
 import re
-from typing import List
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -21,34 +21,41 @@ from dragonradio.tools.colosseum.logging import ReservationLog
 
 logger = logging.getLogger(__name__)
 
-def enumCategories(cls):
+def enumCategories(cls) -> CategoricalDtype:
     """Return a CategoricalDtype for a pybind11 enum"""
     return CategoricalDtype(categories=cls.__members__.keys())
 
 class Slots:
     """Slots containing IQ data for a received packet"""
-    def __init__(self, pkt, slots, offset):
-        self._pkt = pkt
-        """Received packet"""
+    pkt: pd.DataFrame
+    """Received packet"""
 
-        self._slots = slots
-        """Slots containing received IQ data"""
+    slots: pd.DataFrame
+    """Slots containing received IQ data"""
 
+    ts: List[float]
+    """Timestamps of slots in the set"""
+
+    offset: int
+    """Offset of sample 0 of packet"""
+
+    fs: float
+    """Sample rate of IQ data"""
+
+    fc: float
+    """Sample center frequency"""
+
+    def __init__(self, pkt: pd.DataFrame, slots: pd.DataFrame, offset: int):
+        self.pkt = pkt
+        self.slots = slots
         self.ts = list(slots.timestamp)
-        """Timestamps of slots in the set"""
-
-        self.iq_data = np.concatenate([decompressIQData(sig) for sig in slots.iq_data])
-        """Combined IQ data of slots in the set"""
 
         self.offset = offset
-        """Offset of sample 0 of packet"""
 
         self.fs = slots.iloc[0].fs
-        """Sample rate of IQ data"""
 
         if 'fc' in slots:
             self.fc = slots.iloc[0].fc
-            """Sample center frequency"""
 
     def __getitem__(self, idx):
         if isinstance(idx, slice):
@@ -56,10 +63,15 @@ class Slots:
         else:
             return self.iq_data[self.offset+idx]
 
+    @cached_property
+    def iq_data(self) -> np.ndarray:
+        """Combined IQ data of slots in the set"""
+        return np.concatenate([decompressIQData(sig) for sig in self.slots.iq_data])
+
 DROPPED: List[str] = ['transmitted', 'll_drop', 'queue_drop', 'phy_drop']
 """Category names for packet 'dropped' status"""
 
-DROPPED_CAT:CategoricalDtype = CategoricalDtype(range(0, len(DROPPED)))
+DROPPED_CAT: CategoricalDtype = CategoricalDtype(range(0, len(DROPPED)))
 """Categories for packet 'dropped' status"""
 
 ARQ_EVENT_TYPE: List[str] = [ 'send_nak', 'send_sack', 'nak', 'retrans_nak'
@@ -67,9 +79,10 @@ ARQ_EVENT_TYPE: List[str] = [ 'send_nak', 'send_sack', 'nak', 'retrans_nak'
                             ]
 """Category names for ARQ event types"""
 
-ARQ_EVENT_TYPE_CAT:CategoricalDtype = CategoricalDtype(range(0, len(ARQ_EVENT_TYPE)))
+ARQ_EVENT_TYPE_CAT: CategoricalDtype = CategoricalDtype(range(0, len(ARQ_EVENT_TYPE)))
 """Categories for ARQ event types"""
 
+EVENTS: List[Tuple[re.Pattern, str, str]]
 EVENTS = [(re.compile(r), k, c) for (r, k, c) in
             [ [r'^AMC: Moved up modulation scheme', 'AMC', 'g']
             , [r'^AMC: Moved down modulation scheme', 'AMC', 'r']
@@ -99,11 +112,14 @@ COLOR_CAT: CategoricalDtype = CategoricalDtype(['b', 'g', 'r', 'c', 'm', 'y', 'k
 
 class Events:
     """Categorized events"""
-    def __init__(self, log):
+    log: 'Log'
+
+    def __init__(self, log: 'Log'):
         self.log = log
 
     @cached_property
-    def events(self):
+    def events(self) -> pd.DataFrame:
+        """Log events"""
         df = self.log.events.copy(deep=False)
 
         df['category'] = EVENT_CAT.categories[0]
@@ -117,7 +133,8 @@ class Events:
         return df
 
     @cached_property
-    def tx_records(self):
+    def tx_records(self) -> pd.DataFrame:
+        """TX record events"""
         df = self.log.tx_records.copy(deep=False)
 
         df['color'] = COLOR_CAT.categories[0]
@@ -126,7 +143,8 @@ class Events:
         return df
 
     @cached_property
-    def send(self):
+    def send(self) -> pd.DataFrame:
+        """Sent packet events"""
         df = self.log.send.copy(deep=False)
 
         df['color'] = COLOR_CAT.categories[0]
@@ -137,7 +155,8 @@ class Events:
         return df
 
     @cached_property
-    def recv(self):
+    def recv(self) -> pd.DataFrame:
+        """Received packet events"""
         df = self.log.recv.copy(deep=False)
 
         df['color'] = COLOR_CAT.categories[0]
@@ -147,21 +166,25 @@ class Events:
         return df
 
 class Log:
-    """DragonRadio log data"""
+    """A DragonRadio log file"""
+
+    h5file: h5py.File
+    """HDF5 file containing radio log"""
+
+    log_collection: Optional['LogCollection']
+    """LogCollection to which this log belongs, if any"""
+
     def __init__(self, path, log_collection=None):
         self.h5file = h5py.File(path, 'r')
-        """HDF5 file containing radio log data"""
-
         self.log_collection = log_collection
-        """LogCollection to which this log belongs, if any"""
 
     @property
-    def start(self):
+    def start(self) -> float:
         """Time at which logging began (in seconds since the Epoch)"""
         return self.h5file.attrs['start']
 
     @property
-    def delta(self):
+    def delta(self) -> float:
         """Time delta between log entries in this log and the global start"""
         if self.log_collection is None:
             return 0
@@ -169,17 +192,17 @@ class Log:
         return self.start - self.log_collection.start.timestamp()
 
     @property
-    def node_id(self):
+    def node_id(self) -> int:
         """Node ID"""
         return self.h5file.attrs['node_id']
 
     @property
-    def version(self):
+    def version(self) -> str:
         """Radio version"""
         return self.h5file.attrs['version']
 
     @cached_property
-    def config(self):
+    def config(self) -> dict:
         """Radio configuration"""
         config = self.h5file.attrs['config']
 
@@ -193,7 +216,7 @@ class Log:
         return ast.literal_eval(config)
 
     @cached_property
-    def events(self):
+    def events(self) -> pd.DataFrame:
         """Radio events"""
         df = self._loadDataset('event')
         df.event = df.event.str.decode('utf-8')
@@ -201,11 +224,11 @@ class Log:
         return df
 
     @cached_property
-    def event_cats(self):
+    def event_cats(self) -> Events:
         return Events(self)
 
     @cached_property
-    def send(self):
+    def send(self) -> pd.DataFrame:
         """Sent packets"""
         df = self._loadDataset('send')
         self._fixMCS(df)
@@ -239,7 +262,7 @@ class Log:
         return df
 
     @cached_property
-    def recv(self):
+    def recv(self) -> pd.DataFrame:
         """Received packets"""
         df = self._loadDataset('recv')
         self._fixMCS(df)
@@ -263,7 +286,7 @@ class Log:
         return df
 
     @cached_property
-    def slots(self):
+    def slots(self) -> pd.DataFrame:
         """Received MAC slot IQ data"""
         df = self._loadDataset('slots')
 
@@ -277,7 +300,7 @@ class Log:
         return df
 
     @cached_property
-    def tx_records(self):
+    def tx_records(self) -> pd.DataFrame:
         """Sent MAC transmissions"""
         df = self._loadDataset('tx_records')
 
@@ -287,7 +310,7 @@ class Log:
         return df
 
     @cached_property
-    def snapshots(self):
+    def snapshots(self) -> pd.DataFrame:
         """Snapshots.
 
         The iq_data column is IQ data compressed using FLAC.
@@ -297,12 +320,12 @@ class Log:
         return df
 
     @cached_property
-    def selftx(self):
+    def selftx(self) -> pd.DataFrame:
         """Self-transmissions"""
         return self._loadDataset('selftx')
 
     @cached_property
-    def arq_events(self):
+    def arq_events(self) -> pd.DataFrame:
         """ARQ events"""
         df = self._loadDataset('arq_event')
 
@@ -313,14 +336,14 @@ class Log:
         return df
 
     @cached_property
-    def sack(self):
+    def sack(self) -> pd.DataFrame:
         return self.sacks('sack')
 
     @cached_property
-    def send_sack(self):
+    def send_sack(self) -> pd.DataFrame:
         return self.sacks('send_sack')
 
-    def sacks(self, col):
+    def sacks(self, col: str) -> pd.DataFrame:
         df = self.arq_events
         df = df[df.type == col]
 
@@ -388,7 +411,7 @@ class Log:
             astype({ 'timestamp': np.float64, 'node': int, 'seq': int, 'sack': int}, copy=False)
 
     @cached_property
-    def mcs_table(self):
+    def mcs_table(self) -> pd.DataFrame:
         """MCS table"""
         if self.config['amc_table'] is not None:
             mcs_list = [mcs for (mcs, _) in self.config['amc_table']]
@@ -407,7 +430,7 @@ class Log:
                          , 'ms' : ModulationSchemeCat
                          })
 
-    def _loadDataset(self, key):
+    def _loadDataset(self, key) -> pd.DataFrame:
         """Load an HDF5 dataset into a Pandas DataFrame"""
         ds = self.h5file[key]
         data = np.empty(len(ds), dtype=ds.dtype)
@@ -415,7 +438,7 @@ class Log:
             ds.read_direct(data)
         return pd.DataFrame(data)
 
-    def _fixMCS(self, df):
+    def _fixMCS(self, df: pd.DataFrame):
         """Add crc, fec0, fec1, and ms columns based on mcsidx column and MCS table"""
         mcsidx_df = self.mcs_table.iloc[df.mcsidx.clip(0, len(self.mcs_table) - 1)]
 
@@ -424,21 +447,20 @@ class Log:
         df['fec1'] = mcsidx_df.fec1.values
         df['ms'] = mcsidx_df.ms.values
 
-    def findSlot(self, t):
-        """
-        Find received MAC slot corresponding to a given time.
+    def findSlot(self, t: float) -> pd.Series:
+        """Find received MAC slot corresponding to a given time.
 
         Args:
-            t: A time.
+            t (float): A time.
 
         Returns:
-            Either a slot or None.
+            Slots that ended before the given time.
         """
         slots = self.slots
 
         return slots[(slots.start <= t) & (t < slots.end)]
 
-    def findPacketSlots(self, pkt):
+    def findPacketSlots(self, pkt: pd.DataFrame):
         """Find slots during which a packet was received.
 
         Args:
@@ -447,10 +469,6 @@ class Log:
         Returns:
             A Slots object containing the slots.
         """
-        if pkt.nexthop != self.node_id:
-            raise ValueError("Cannot find slots for packet received by "
-              "node {} in log for node {}".format(pkt.nexthop, self.node_id))
-
         slots = self.slots
 
         # The packet's timestamp tells us which slot it was received in. We
@@ -463,7 +481,6 @@ class Log:
         # i_start and i_end are the range if indices (inclusive) of the slots
         # spanned by the packet.
         i_start = i_end = slots.index[idx].values[0]
-        fs = slots[idx].fs.iloc[0]
 
         # The packet may have started being received in the previous slot, in
         # which case start_samples will be negative. We must walk backwards
@@ -477,7 +494,7 @@ class Log:
 
         return Slots(pkt, slots.iloc[i_start:i_end+1], offset)
 
-    def findReceivedPackets(self, t1, t2):
+    def findReceivedPackets(self, t1: float, t2: float) -> pd.Series:
         """Find packets received during a time interval.
 
         Args:
@@ -495,7 +512,7 @@ class Log:
 
         return recv[idx]
 
-    def findSentPackets(self, node, t1, t2):
+    def findSentPackets(self, t1: float, t2: float) -> pd.Series:
         """Find packets sent during a time interval.
 
         Args:
@@ -505,15 +522,15 @@ class Log:
         Returns:
             A data frame of packets.
         """
-        sent = self.sent
+        send = self.send
 
-        idx = ((t1 >= sent.start) & (t1 < sent.end)) | \
-              ((t2 >= sent.start) & (t2 < sent.end)) | \
-              ((t1 < sent.start) & (t2 > sent.end))
+        idx = ((t1 >= send.start) & (t1 < send.end)) | \
+              ((t2 >= send.start) & (t2 < send.end)) | \
+              ((t1 < send.start) & (t2 > send.end))
 
-        return sent[idx]
+        return send[idx]
 
-    def findReceivedPacketIndex(self, seq: int):
+    def findReceivedPacketIndex(self, pkt: pd.DataFrame) -> Optional[pd.Series]:
         """Find the index of received packet given sequence number.
 
         Args:
@@ -524,14 +541,14 @@ class Log:
         """
         recv = self.recv
 
-        idx = recv.seq == seq
+        idx = recv.seq == pkt.seq
 
         if idx.any():
             return recv.index[idx].tolist()[0]
         else:
             return None
 
-    def findSentPacketIndex(self, seq: int):
+    def findSentPacketIndex(self, pkt: pd.DataFrame) -> Optional[pd.Series]:
         """Find the index of sent packet given sequence number.
 
         Args:
@@ -542,7 +559,7 @@ class Log:
         """
         send = self.send
 
-        idx = send.seq == seq
+        idx = send.seq == pkt.seq
 
         if idx.any():
             return send.index[idx].tolist()[0]
@@ -640,17 +657,18 @@ class LogCollection:
         else:
             return datetime.datetime.fromtimestamp(min(starts))
 
-    def findPacketSlots(self, pkt: int) -> Slots:
+    def findPacketSlots(self, pkt: pd.Series, dest: int) -> Optional[Slots]:
         """
         Find slots during which a packet was received.
 
         Args:
-            pkt: A packet.
+            pkt (pd.DataFrame): A packet.
+            dest (int): The destination node ID.
 
         Returns:
             A Slots object containing the slots.
         """
-        if pkt.nexthop in self.logs:
-            return self.logs[pkt.nexthop].findPacketSlots(pkt)
+        if dest in self.logs:
+            return self.logs[dest].findPacketSlots(pkt)
         else:
             return None
