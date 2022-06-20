@@ -86,7 +86,9 @@ class DumpEventsCommand(Command):
 
             df = pd.concat(frames)
 
-            if not args.wall_time:
+            if args.wall_time:
+                df.timestamp += self.logs[node_id].start
+            else:
                 df.timestamp += self.logs[node_id].delta
 
             df = df.sort_values(by='timestamp')
