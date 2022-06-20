@@ -309,6 +309,7 @@ class PlotTrafficCommand(Command):
         parser.add_argument('--dest', type=int, action='store',
                             help='plot traffic to given destination')
         parser.add_argument('--flow', type=int, action='append',
+                            default=[],
                             dest='flows',
                             metavar='FLOW',
                             help='Restrict to given flow')
@@ -354,6 +355,9 @@ class PlotTrafficCommand(Command):
 
         if args.seq:
             self.filter_by(lambda df: df[df.seq.isin(args.seq)])
+
+        if src is None and dest is None and len(args.flows) == 0:
+            parser.error("Must specify at least one of source, destination, or flow.")
 
         plot = TrafficPlot(plt.figure(), self.logs, src, dest,
                            y=args.y,
