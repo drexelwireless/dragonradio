@@ -249,12 +249,12 @@ class Log:
 
         # Add packet start and end times based on slot timestamp, bandwidth, and
         # sample start and end.
-        df['start'] = df.timestamp
+        df['start'] = df.aligned_timestamp
 
         if 'nsamples' in df:
-            df['end'] = df.timestamp + df.nsamples/df.bw
+            df['end'] = df.aligned_timestamp + df.nsamples/df.bw
         else:
-            df['end'] = df.timestamp + df.iq_data.str.len()/df.bw
+            df['end'] = df.aligned_timestamp + df.iq_data.str.len()/df.bw
 
         if 'mono_timestamp' in df and 'net_timestamp' in df:
             df['tx_latency'] = df.mono_timestamp - df.net_timestamp
@@ -270,7 +270,7 @@ class Log:
         has_slot_timestamp = 'slot_timestamp' in df
 
         if not has_slot_timestamp:
-            df['slot_timestamp'] = df.timestamp
+            df['slot_timestamp'] = df.aligned_timestamp
 
         # Add packet start and end times based on slot timestamp, bandwidth, and
         # sample start and end.
@@ -278,7 +278,7 @@ class Log:
         df['end'] = df.slot_timestamp + df.end_samples/df.bw
 
         if not has_slot_timestamp:
-            df.timestamp = df.start
+            df.aligned_timestamp = df.start
 
         if 'tuntap_latency' in df:
             df['rx_latency'] = df.tuntap_latency
@@ -294,8 +294,8 @@ class Log:
         if 'bw' in df:
             df['fs'] = df.bw
 
-        df['start'] = df.timestamp
-        df['end'] = df.timestamp + df.iq_data_len / df.fs
+        df['start'] = df.aligned_timestamp
+        df['end'] = df.aligned_timestamp + df.iq_data_len / df.fs
 
         return df
 
@@ -304,8 +304,8 @@ class Log:
         """Sent MAC transmissions"""
         df = self._loadDataset('tx_records')
 
-        df['start'] = df.timestamp
-        df['end'] = df.timestamp + df.nsamples / df.fs
+        df['start'] = df.aligned_timestamp
+        df['end'] = df.aligned_timestamp + df.nsamples / df.fs
 
         return df
 
@@ -316,7 +316,7 @@ class Log:
         The iq_data column is IQ data compressed using FLAC.
         """
         df = self._loadDataset('snapshots')
-        df['start'] = df.timestamp
+        df['start'] = df.aligned_timestamp
         return df
 
     @cached_property
@@ -381,7 +381,7 @@ class Log:
                     sacks_seq.append(np.arange(unack, 2**16-1))
                     sacks_seq.append(np.arange(0, row.sacks[i]))
 
-                sacks_timestamp.append(np.repeat(row.timestamp, n))
+                sacks_timestamp.append(np.repeat(row.aligned_timestamp, n))
                 sacks_sack.append(np.repeat(0, n))
                 sacks_node.append(np.repeat(row.node, n))
 
@@ -396,7 +396,7 @@ class Log:
                     sacks_seq.append(np.arange(row.sacks[i], 2**16-1))
                     sacks_seq.append(np.arange(0, row.sacks[i+1]))
 
-                sacks_timestamp.append(np.repeat(row.timestamp, n))
+                sacks_timestamp.append(np.repeat(row.aligned_timestamp, n))
                 sacks_sack.append(np.repeat(1, n))
                 sacks_node.append(np.repeat(row.node, n))
 
@@ -436,7 +436,13 @@ class Log:
         data = np.empty(len(ds), dtype=ds.dtype)
         if len(ds) != 0:
             ds.read_direct(data)
-        return pd.DataFrame(data)
+
+        df = pd.DataFrame(data)
+
+        if 'timestamp' in df:
+            df['aligned_timestamp'] = df.timestamp + self.delta
+
+        return df
 
     def _fixMCS(self, df: pd.DataFrame):
         """Add crc, fec0, fec1, and ms columns based on mcsidx column and MCS table"""

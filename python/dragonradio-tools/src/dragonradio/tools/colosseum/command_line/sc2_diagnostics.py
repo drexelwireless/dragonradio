@@ -131,13 +131,12 @@ class SC2DiagnosticsCommand(Command):
         #
         for srn in our_srns:
             srn_df = logs[srn].recv
-            srn_df.timestamp += logs[srn].delta
 
             # Compute measurement period for each packet
             srn_df['mp'] = 0
 
             for i, t in enumerate(scorer.stages):
-                srn_df.loc[srn_df.timestamp >= t, 'mp'] = i+1
+                srn_df.loc[srn_df.aligned_timestamp >= t, 'mp'] = i+1
 
             # Look for lack of traffic
             df = srn_df.groupby('mp').agg({'evm': ['count']})

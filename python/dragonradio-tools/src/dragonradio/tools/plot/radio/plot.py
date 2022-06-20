@@ -265,7 +265,7 @@ class RadioMetricPlot(ReservationPlot):
 
             # Use time delta to align node's timestamps with collective start of
             # log.
-            x = df.timestamp + logs[node_id].delta
+            x = df.aligned_timestamp
 
             # Determine y axis
             if latency is not None:
@@ -387,7 +387,7 @@ class EventPlot(ReservationPlot):
             idx = df.color == c
 
             self.series.append((node_id, k,
-                                df[idx].timestamp+ self.logs[node_id].delta,
+                                df[idx].aligned_timestamp,
                                 len(self.cats),
                                 c,
                                 df[idx],
@@ -494,21 +494,19 @@ class TrafficPlot(ReservationPlot):
             if sack:
                 self.plotSACK(sent_ax, src, dest, 'sack', alpha=0.1)
 
-                delta = self.logs[src].delta
-
                 df = self.logs[src].arq_events
                 df = df[df.node == dest]
 
-                self.plotTraffic(sent_ax, df[df.type == 'nak'], 'seq', delta, pprSACK,
+                self.plotTraffic(sent_ax, df[df.type == 'nak'], 'seq', pprSACK,
                                  label='NAK', color='y')
 
-                self.plotTraffic(sent_ax, df[df.type == 'retrans_nak'], 'seq', delta, pprSACK,
+                self.plotTraffic(sent_ax, df[df.type == 'retrans_nak'], 'seq', pprSACK,
                                  label='NAK (retrans)', color='y')
 
-                self.plotTraffic(sent_ax, df[df.type == 'snak'], 'seq', delta, pprSACK,
+                self.plotTraffic(sent_ax, df[df.type == 'snak'], 'seq', pprSACK,
                                  label='NAK (selective)', color='y')
 
-                self.plotTraffic(sent_ax, df[df.type == 'ack_timeout'], 'seq', delta, pprSACK,
+                self.plotTraffic(sent_ax, df[df.type == 'ack_timeout'], 'seq', pprSACK,
                                  label='ACK timeout', color='y')
 
             # Plot stage markers
@@ -541,8 +539,6 @@ class TrafficPlot(ReservationPlot):
         self.connect_hover()
 
     def plotMACErrors(self, ax, node_id, pat):
-        delta = self.logs[node_id].delta
-
         r = re.compile(pat)
         mac_events = self.logs.events[node_id]
         mac_events = mac_events[mac_events.event.str.match(r)]
@@ -551,14 +547,14 @@ class TrafficPlot(ReservationPlot):
 
         for (_, row) in mac_events.iterrows():
             if row.t >= t1 and row.t <= t2:
-                ax.axvline(x=row.timestamp + delta, color='r')
+                ax.axvline(x=row.aligned_timestamp, color='r')
 
     Y_LABELS = { 'seq':        'Sequence number'
                , 'mgen_seqno': 'MGEN sequence number'
                , 'mcsidx':     'MCS index'}
 
-    def plotTraffic(self, ax, df, y, delta, ppr, color='k', alpha=0.85, label=None):
-        line, = ax.plot(df.timestamp + delta, df[y],
+    def plotTraffic(self, ax, df, y, ppr, color='k', alpha=0.85, label=None):
+        line, = ax.plot(df.aligned_timestamp, df[y],
                         'o',
                         markersize=2,
                         color=color,
@@ -572,8 +568,6 @@ class TrafficPlot(ReservationPlot):
     def plotSentTraffic(self, ax, src, dest, y, by_flow=True):
         self.addAnnotation(ax)
 
-        delta = self.logs[src].delta
-
         send_df = self.logs[src].send
 
         # Restrict to packets to destination
@@ -586,7 +580,7 @@ class TrafficPlot(ReservationPlot):
         # Plot sent packets and then dropped packets. This makes the dropped
         # packets stand out on the plot.
         def plotSend(df, color='k', alpha=0.85, label=None):
-            self.plotTraffic(ax, df, y, delta, pprSentPacket, color, alpha, label)
+            self.plotTraffic(ax, df, y, pprSentPacket, color, alpha, label)
 
         if by_flow:
             flows = send_df.mgen_flow_uid[send_df.mgen_flow_uid != 0].unique()
@@ -622,8 +616,6 @@ class TrafficPlot(ReservationPlot):
     def plotRecvTraffic(self, ax, src, dest, y, by_flow=False):
         self.addAnnotation(ax)
 
-        delta = self.logs[dest].delta
-
         recv_df = self.logs[dest].recv
 
         # Restrict to packets from source
@@ -636,7 +628,7 @@ class TrafficPlot(ReservationPlot):
         # Plot valid packets and then packets with an invalid payload. This
         # makes the packets with an invalid payload stand out on the plot.
         def plotRecv(df, color='k', alpha=0.85, label=None):
-            self.plotTraffic(ax, df, y, delta, pprReceivedPacket, color, alpha, label)
+            self.plotTraffic(ax, df, y, pprReceivedPacket, color, alpha, label)
 
         if by_flow:
             flows = recv_df.mgen_flow_uid[recv_df.mgen_flow_uid != 0].unique()
@@ -662,11 +654,9 @@ class TrafficPlot(ReservationPlot):
         ax.set_ylabel(self.Y_LABELS[y])
 
     def plotSACK(self, ax, node, dest, col='sack', alpha=0.85):
-        delta = self.logs[node].delta
-
         df = self.logs[node].sacks(col)
 
-        self.plotTraffic(ax, df[(df.sack == 0) & (df.node == dest)], 'seq', delta, pprSACK, label='SNAK', color='r', alpha=alpha)
+        self.plotTraffic(ax, df[(df.sack == 0) & (df.node == dest)], 'seq', pprSACK, label='SNAK', color='r', alpha=alpha)
 
     def plot(self):
         self.fig.canvas.draw()
