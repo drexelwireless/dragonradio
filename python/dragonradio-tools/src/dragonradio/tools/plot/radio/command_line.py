@@ -81,6 +81,9 @@ class DumpEventsCommand(Command):
                 frames.append(pd.DataFrame({ 'timestamp': self.logs[node_id].recv.timestamp
                                            , 'event': self.logs[node_id].recv.apply(pprRecvEvent, axis=1)}))
 
+            if len(frames) == 0:
+                parser.error("No event source specified")
+
             df = pd.concat(frames)
 
             if not args.wall_time:
