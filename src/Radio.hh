@@ -82,6 +82,11 @@ public:
      */
     virtual std::optional<MonoClock::time_point> getNextTXTime() const = 0;
 
+    /** @brief Transmit zero samples
+     * @param n Number of zero samples to transmit
+     */
+    virtual void zeroStuff(ssize_t n) = 0;
+
     /** @brief Transmit a burst of IQ buffers at the given time.
      * @param when Time at which to start the burst.
      * @param start_of_burst Is this the start of a burst?

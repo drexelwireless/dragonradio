@@ -47,6 +47,10 @@ USRP::USRP(const std::string& addr)
     tx_stream_ = usrp_->get_tx_stream(stream_args);
     rx_stream_ = usrp_->get_rx_stream(stream_args);
 
+    // We allocate this once so there's no potential for a race condition to
+    // occur when resizing this buffer (and so we only allocate it once).
+    zeros_.resize(tx_stream_->get_max_num_samps());
+
     // Set maximum number of samples we attempt to TX/RX.
     tx_max_samps_ = tx_stream_->get_max_num_samps();
     rx_max_samps_ = rx_stream_->get_max_num_samps();
@@ -217,6 +221,20 @@ void USRP::setRXFrequency(double freq)
     rx_freq_ = usrp_->get_rx_freq();
 
     logUSRP(LOGDEBUG, "RX frequency set to %g", freq);
+}
+
+void USRP::zeroStuff(ssize_t n)
+{
+    if (n != 0) {
+        uhd::tx_metadata_t tx_md;
+        ssize_t            count = 0;
+
+        while (count < n)
+            count += tx_stream_->send(zeros_.data(), std::min(static_cast<ssize_t>(zeros_.size()), n), tx_md);
+
+        if (t_next_tx_)
+            *t_next_tx_ += MonoClock::duration(count/tx_rate_);
+    }
 }
 
 void USRP::burstTX(std::optional<MonoClock::time_point> when_,
