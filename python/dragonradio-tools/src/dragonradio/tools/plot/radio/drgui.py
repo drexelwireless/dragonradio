@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 from functools import wraps
 import logging
 import sys
 
 import matplotlib as mp
-import matplotlib.patches as patches
 from matplotlib.widgets import Button, Slider
 import matplotlib.pyplot as plt
 from matplotlib.transforms import blended_transform_factory
@@ -349,24 +348,16 @@ class SnapshotView(LogView):
             fs = snapshot.fs
 
             for _, e in selftx.iterrows():
-                start = e.start/fs
-                end = e.end/fs
-                f_bot = e.fc-0.5*e.fs
-                f_height = e.fs
-
                 if e.is_local:
                     color = 'b'
                 else:
                     color = 'r'
 
-                rect = patches.Rectangle((start, f_bot),
-                                         end-start,
-                                         f_height,
-                                         linewidth=0.4,
-                                         edgecolor=color,
-                                         facecolor=color,
-                                         alpha=0.3)
-                self.specgram.ax.add_patch(rect)
+                self.specgram.plotVoxel(e.start/fs, e.end/fs, e.fc, e.fs,
+                                        linewidth=0.4,
+                                        edgecolor=color,
+                                        facecolor=color,
+                                        alpha=0.3)
 
             self.fig.canvas.draw()
 

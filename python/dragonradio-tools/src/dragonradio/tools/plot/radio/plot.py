@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 """Plotting utilities for DragonRadio"""
 from enum import Enum
@@ -8,6 +8,7 @@ from typing import List, Optional
 
 import matplotlib as mp
 from matplotlib.figure import Figure
+import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
@@ -89,6 +90,16 @@ class SpecgramPlot:
         self.ax.xaxis.set_major_formatter(xticks)
         self.ax.yaxis.set_major_formatter(yticks)
         #self.ax.axis('tight')
+
+    def plotVoxel(self, t_start: float, t_end: float, fc: float, bw: float, **kwargs):
+        f_bot = fc-0.5*bw
+        f_height = bw
+
+        rect = patches.Rectangle((t_start, f_bot),
+                                  t_end-t_start,
+                                  f_height,
+                                  **kwargs)
+        self.ax.add_patch(rect)
 
 class ConstellationPlot:
     """A constellation plot"""
