@@ -138,6 +138,10 @@ struct PacketRecvEntry {
     float fc;
     /** @brief Bandwidth [Hz] */
     float bw;
+    /** @brief Channel center frequency [Hz] */
+    float chan_fc;
+    /** @brief Bandwidth [Hz] */
+    float chan_bw;
     /** @brief Demodulation latency (sec) */
     double demod_latency;
     /** @brief Latency between packet reception and write to tun/tap [sec] */
@@ -340,6 +344,8 @@ void Logger::open(const std::string& filename)
     h5_packet_recv.insertMember("cfo", HOFFSET(PacketRecvEntry, cfo), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("fc", HOFFSET(PacketRecvEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("bw", HOFFSET(PacketRecvEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_packet_recv.insertMember("chan_fc", HOFFSET(PacketRecvEntry, chan_fc), H5::PredType::NATIVE_FLOAT);
+    h5_packet_recv.insertMember("chan_bw", HOFFSET(PacketRecvEntry, chan_bw), H5::PredType::NATIVE_FLOAT);
     h5_packet_recv.insertMember("demod_latency", HOFFSET(PacketRecvEntry, demod_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("tuntap_latency", HOFFSET(PacketRecvEntry, tuntap_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_recv.insertMember("size", HOFFSET(PacketRecvEntry, size), H5::PredType::NATIVE_UINT32);
@@ -624,6 +630,8 @@ void Logger::logRecv_(RadioPacket &pkt)
     entry.cfo = pkt.cfo;
     entry.fc = pkt.channel.fc;
     entry.bw = pkt.bw;
+    entry.chan_fc = pkt.channel.fc;
+    entry.chan_bw = pkt.channel.bw;
     entry.demod_latency = pkt.demod_latency;
     entry.tuntap_latency = std::chrono::duration<double>(pkt.tuntap_timestamp - pkt.timestamp).count();
     entry.size = pkt.payload_len;
