@@ -73,6 +73,9 @@ public:
         tx_lead_time_.store(t, std::memory_order_release);
     }
 
+    /** @brief Return true if radio is currently transmitting a burst */
+    virtual bool inTXBurst() const = 0;
+
     /** @brief Get time at which next transmission will occur */
     virtual std::optional<MonoClock::time_point> getNextTXTime() const = 0;
 
