@@ -661,7 +661,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         return rates
 
-    def findValidRate(self, min_rate: float, clock_rate: float) -> float:
+    def findValidRate(self, min_rate: float) -> float:
         """Find a valid rate no less than min_rate given the clock rate.
 
         Args:
@@ -671,10 +671,18 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         Returns:
             float: A rate no less than rate min_rate that is supported by the hardware
         """
+        for start, stop in self.usrp.clock_rate_ranges:
+            if min_rate >= start and min_rate <= stop:
+                self.usrp.clock_rate = min_rate
+                break
+
+        clock_rate = self.usrp.clock_rate
+
         # Compute decimation rate
         dec_rate = math.floor(clock_rate/min_rate)
 
-        logger.debug('Desired decimation rate: %g', dec_rate)
+        logger.debug('Desired rate: %g', min_rate)
+        logger.debug('Desired decimation: %g', dec_rate)
 
         # Otherwise, make sure we use a safe decimation rate
         if dec_rate != 1:
@@ -683,9 +691,12 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                     dec_rate = rate
                     break
 
-        logger.debug('Actual decimation rate: %g', dec_rate)
+        actual_rate = clock_rate/dec_rate
 
-        return clock_rate/dec_rate
+        logger.debug('Actual rate: %g', actual_rate)
+        logger.debug('Actual decimation: %g', dec_rate)
+
+        return actual_rate
 
     @property
     def rx_rate(self) -> float:
@@ -704,7 +715,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             want_rx_rate = rate*rx_rate_oversample
             want_rx_rate = min(want_rx_rate, config.max_bandwidth)
 
-        want_rx_rate = self.findValidRate(want_rx_rate, self.usrp.clock_rate)
+        want_rx_rate = self.findValidRate(want_rx_rate)
 
         if self.rx_rate != want_rx_rate:
             self.usrp.rx_rate = want_rx_rate
@@ -735,7 +746,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             want_tx_rate = rate*tx_rate_oversample
             want_tx_rate = min(want_tx_rate, config.max_bandwidth)
 
-        want_tx_rate = self.findValidRate(want_tx_rate, self.usrp.clock_rate)
+        want_tx_rate = self.findValidRate(want_tx_rate)
 
         if self.tx_rate != want_tx_rate:
             self.usrp.tx_rate = want_tx_rate

@@ -57,6 +57,31 @@ USRP::~USRP()
     stop();
 }
 
+std::vector<std::pair<double, double>>
+USRP::getMasterClockRateRanges(size_t mboard) const
+{
+    std::vector<std::pair<double, double>> clock_ranges;
+
+#if UHD_VERSION >= 3110000
+    auto range = usrp_->get_master_clock_rate_range(mboard);
+
+    clock_ranges.push_back(std::make_pair(range.start(), range.stop()));
+#else /* UHD_VERSION < 3110000 */
+    // B210 has a master clock range of 200 kHz to 56 MHz.
+    // See:
+    //   https://files.ettus.com/manual/page_usrp_b200.html
+    if (mboard_ == "B200" || mboard_ == "B210")
+        clock_ranges.push_back(std::make_pair(5e6, 56e6));
+    else {
+        double clock_rate = usrp_->get_master_clock_rate();
+
+        clock_ranges.push_back(std::make_pair(clock_rate, clock_rate));
+    }
+#endif /* UHD_VERSION < 3110000 */
+
+    return clock_ranges;
+}
+
 inline uhd::time_spec_t get_clock_time(clockid_t clk_id = CLOCK_REALTIME)
 {
     struct timespec t;
