@@ -257,6 +257,11 @@ public:
     /** @brief Get the master clock rate
      * @param mboard The motherboard
      */
+    std::vector<std::pair<double, double>> getMasterClockRateRanges(size_t mboard = 0) const;
+
+    /** @brief Get the master clock rate
+     * @param mboard The motherboard
+     */
     double getMasterClockRate(size_t mboard) const
     {
         return usrp_->get_master_clock_rate(mboard);
