@@ -114,6 +114,11 @@ void exportUSRP(py::module &m)
             "frontend specification"_a,
             "channel index"_a=0)
         // Master clock rate
+        .def_property_readonly("clock_rate_ranges",
+            [](std::shared_ptr<USRP> self)
+            {
+                return self->getMasterClockRateRanges();
+            })
         .def_property("clock_rate",
             [](std::shared_ptr<USRP> self)
             {
@@ -123,6 +128,8 @@ void exportUSRP(py::module &m)
             {
                 return self->setMasterClockRate(rate);
             })
+        .def("getMasterClockRateRanges",
+            &USRP::getMasterClockRateRanges)
         .def("getMasterClockRate",
             [](std::shared_ptr<USRP> self, size_t mboard)
             {
