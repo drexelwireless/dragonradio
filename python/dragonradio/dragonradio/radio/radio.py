@@ -681,7 +681,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # Compute decimation rate
         dec_rate = math.floor(clock_rate/min_rate)
 
-        logger.debug('Desired decimation rate: %g', dec_rate)
+        logger.debug('Desired rate: %g', min_rate)
+        logger.debug('Desired decimation: %g', dec_rate)
 
         # Otherwise, make sure we use a safe decimation rate
         if dec_rate != 1:
@@ -690,9 +691,12 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                     dec_rate = rate
                     break
 
-        logger.debug('Actual decimation rate: %g', dec_rate)
+        actual_rate = clock_rate/dec_rate
 
-        return clock_rate/dec_rate
+        logger.debug('Actual rate: %g', actual_rate)
+        logger.debug('Actual decimation: %g', dec_rate)
+
+        return actual_rate
 
     @property
     def rx_rate(self) -> float:
