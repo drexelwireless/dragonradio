@@ -671,6 +671,11 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         Returns:
             float: A rate no less than rate min_rate that is supported by the hardware
         """
+        for start, stop in self.usrp.clock_rate_ranges:
+            if min_rate >= start and min_rate <= stop:
+                self.usrp.clock_rate = min_rate
+                break
+
         clock_rate = self.usrp.clock_rate
 
         # Compute decimation rate
