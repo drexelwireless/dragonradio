@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <sys/types.h>
@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include <atomic>
+#include <chrono>
 #include <random>
 
 #include <uhd/version.hpp>
@@ -16,14 +17,7 @@
 #include "USRP.hh"
 #include "util/capabilities.hh"
 
-USRP::USRP(const std::string& addr,
-           const std::optional<std::string>& tx_subdev,
-           const std::optional<std::string>& rx_subdev,
-           double freq,
-           const std::string& tx_ant,
-           const std::string& rx_ant,
-           float tx_gain,
-           float rx_gain)
+USRP::USRP(const std::string& addr)
   : auto_dc_offset_(false)
   , done_(false)
 {
@@ -35,23 +29,6 @@ USRP::USRP(const std::string& addr,
     tx_late_count_.store(0, std::memory_order_release);
 
     mboard_ = usrp_->get_mboard_name();
-
-    usrp_->set_tx_antenna(tx_ant);
-    usrp_->set_rx_antenna(rx_ant);
-
-    usrp_->set_tx_gain(tx_gain);
-    usrp_->set_rx_gain(rx_gain);
-
-    // Set subdevice specifications
-    if (tx_subdev)
-        usrp_->set_tx_subdev_spec(*tx_subdev);
-
-    if (rx_subdev)
-        usrp_->set_rx_subdev_spec(*rx_subdev);
-
-    // Set RX and TX frequencies
-    setRXFrequency(freq);
-    setTXFrequency(freq);
 
     // Get TX and RX rates
     tx_rate_ = usrp_->get_tx_rate();
@@ -80,40 +57,76 @@ USRP::~USRP()
     stop();
 }
 
-void USRP::syncTime(bool random_bias, bool use_pps)
+inline uhd::time_spec_t get_clock_time(clockid_t clk_id = CLOCK_REALTIME)
+{
+    struct timespec t;
+
+    if (clock_gettime(clk_id, &t) != 0)
+        throw std::runtime_error(strerror(errno));
+
+    return uhd::time_spec_t(t.tv_sec, ((double)t.tv_nsec)/1e9);
+}
+
+void USRP::syncTime(double random_bias, bool use_pps)
 {
     // Set offset relative to system NTP time
-    struct timespec t;
-    int    err;
+    double bias = 0.0;
 
-    if ((err = clock_gettime(CLOCK_REALTIME, &t)) != 0) {
-        fprintf(stderr, "clock_gettime failed: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
+    if (random_bias != 0.0) {
+        std::random_device                     rd;
+        std::mt19937                           gen(rd());
+        std::uniform_real_distribution<double> dist(0.0, random_bias);
 
-    uhd::time_spec_t now(t.tv_sec, ((double)t.tv_nsec)/1e9);
-
-    if (random_bias) {
-        std::random_device               rd;
-        std::mt19937                     gen(rd());
-        std::uniform_real_distribution<> dist(0.0, 10.0);
-        double                           offset = dist(gen);
-
-        fprintf(stderr, "CLOCK: offset=%g\n", offset);
-
-        now += offset;
+        bias = dist(gen);
     }
 
     // Lock the clock for update
     std::lock_guard lock(clock_mutex_);
 
     if (use_pps) {
-        uhd::time_spec_t t0 = now.get_full_secs() + 1.0;
+        uhd::time_spec_t now = get_clock_time() + bias;
+        uhd::time_spec_t t_next_pps = now.get_full_secs() + 1.0;
 
-        usrp_->set_time_next_pps(t0);
-        sleep(1);
+        usrp_->set_time_next_pps(t_next_pps);
+        std::this_thread::sleep_for(1s);
     } else {
+#if 1
+        uhd::time_spec_t now = get_clock_time() + bias;
+
         usrp_->set_time_now(now);
+
+        // Sleep so we are guaranteed that get_time_last_pps will reflect the
+        // time we just set.
+        std::this_thread::sleep_for(1s);
+#else
+        // Catch PPS edge
+        uhd::time_spec_t                      t_last_pps = usrp_->get_time_last_pps();
+        std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now() + 1100ms;
+
+        while (t_last_pps == usrp_->get_time_last_pps()) {
+            if (std::chrono::steady_clock::now() > end_time)
+                throw uhd::runtime_error(
+                    "Board 0 may not be getting a PPS signal!\n"
+                    "No PPS detected within the time interval.\n"
+                    "See the application notes for your device.\n"
+                );
+
+            std::this_thread::sleep_for(1ms);
+        }
+
+        // Get current USRP time and current local time
+        uhd::time_spec_t t_now = usrp_->get_time_now();
+        uhd::time_spec_t now = get_clock_time() + bias;
+
+        // XXX Turns out, get_time_last_pps() - t_last_pps is more than 1s, so
+        // we can't use the old PPS!
+        t_last_pps = usrp_->get_time_last_pps();
+
+        double delta = (t_now - t_last_pps).get_real_secs();
+
+        usrp_->set_time_next_pps(now - delta + 1.0);
+        std::this_thread::sleep_for(1s);
+#endif
     }
 }
 
@@ -127,8 +140,6 @@ const int kMaxLOLockCount = 100;
 
 void USRP::setTXFrequency(double freq)
 {
-    int count;
-
   retry:
     if (mboard_ == "X310") {
         double lo_offset = -42.0e6;
@@ -136,7 +147,7 @@ void USRP::setTXFrequency(double freq)
     } else
         usrp_->set_tx_freq(freq);
 
-    count = 0;
+    int count = 0;
 
     while (!usrp_->get_tx_sensor("lo_locked").to_bool()) {
         if (count++ > kMaxLOLockCount) {
@@ -154,8 +165,6 @@ void USRP::setTXFrequency(double freq)
 
 void USRP::setRXFrequency(double freq)
 {
-    int count;
-
   retry:
     if (mboard_ == "X310") {
         double lo_offset = +42.0e6;
@@ -163,7 +172,7 @@ void USRP::setRXFrequency(double freq)
     } else
         usrp_->set_rx_freq(freq);
 
-    count = 0;
+    int count = 0;
 
     while (!usrp_->get_rx_sensor("lo_locked").to_bool()) {
         if (count++ > kMaxLOLockCount) {

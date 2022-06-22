@@ -1,6 +1,7 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <pybind11/chrono.h>
 #include <pybind11/stl.h>
 
 #include "Radio.hh"
@@ -30,5 +31,7 @@ void exportRadio(py::module &m)
         .def_property("rx_gain",
             &Radio::getRXGain,
             &Radio::setRXGain)
+        .def_property_readonly("now",
+            &Radio::now)
         ;
 }

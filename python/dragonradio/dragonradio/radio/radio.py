@@ -244,14 +244,22 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         config = self.config
 
         # Create the USRP
-        self.usrp = USRP(config.addr,
-                         config.tx_subdev,
-                         config.rx_subdev,
-                         self.frequency,
-                         config.tx_antenna,
-                         config.rx_antenna,
-                         config.tx_gain,
-                         config.rx_gain)
+        self.usrp = USRP(config.addr)
+
+        if config.tx_subdev is not None:
+            self.usrp.tx_subdev_spec = config.tx_subdev
+
+        if config.rx_subdev is not None:
+            self.usrp.rx_subdev_spec = config.rx_subdev
+
+        self.usrp.tx_antenna = config.tx_antenna
+        self.usrp.rx_antenna = config.rx_antenna
+
+        self.usrp.tx_gain = config.tx_gain
+        self.usrp.rx_gain = config.rx_gain
+
+        self.usrp.tx_frequency = self.frequency
+        self.usrp.rx_frequency = self.frequency
 
         # Set USRP clock and time sources. If they were not specified in the
         # configuration, we leave the default setting as-is.
@@ -262,7 +270,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             self.usrp.time_source = config.time_source
 
         # Synchronize USRP time with host
-        self.usrp.syncTime()
+        self.usrp.syncTime(random_bias=config.clock_random_bias,
+                           use_pps=config.clock_use_pps)
 
         # Set USRP as clock's time keeper
         dragonradio.radio.clock.time_keeper = self.usrp
