@@ -24,8 +24,6 @@
 #define logCompress(...)
 #endif /* !DEBUG */
 
-using namespace std::placeholders;
-
 uint16_t ip_checksum_update(uint16_t cksum, const void *data_, size_t count)
 {
     char     *data = (char*) data_;

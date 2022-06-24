@@ -15,8 +15,6 @@ namespace py = pybind11;
 #include "phy/FDChannelizer.hh"
 #include "phy/PHY.hh"
 
-using namespace std::placeholders;
-
 FDChannelizer::FDChannelizer(const std::vector<PHYChannel> &channels,
                              double rx_rate,
                              unsigned int nthreads)
