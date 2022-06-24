@@ -10,8 +10,6 @@
 #include "Packet.hh"
 #include "net/Element.hh"
 
-using namespace std::placeholders;
-
 /** @brief A packet compression element. */
 class PacketCompressor : public Element
 {
@@ -23,10 +21,20 @@ public:
                      in_addr_t int_netmask,
                      in_addr_t ext_net,
                      in_addr_t ext_netmask)
-      : net_in(*this, nullptr, nullptr, std::bind(&PacketCompressor::netPush, this, _1))
-      , net_out(*this, nullptr, nullptr)
-      , radio_in(*this, nullptr, nullptr, std::bind(&PacketCompressor::radioPush, this, _1))
-      , radio_out(*this, nullptr, nullptr)
+      : net_in(*this,
+               nullptr,
+               nullptr,
+               std::bind(&PacketCompressor::netPush, this, std::placeholders::_1))
+      , net_out(*this,
+                nullptr,
+                nullptr)
+      , radio_in(*this,
+                 nullptr,
+                 nullptr,
+                 std::bind(&PacketCompressor::radioPush, this, std::placeholders::_1))
+      , radio_out(*this,
+                  nullptr,
+                  nullptr)
       , enabled_(enabled)
       , int_net_(int_net)
       , int_netmask_(int_netmask)

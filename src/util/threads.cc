@@ -5,7 +5,12 @@
 
 #include <atomic>
 
+#include <uhd/version.hpp>
+#if UHD_VERSION >= 3110000
+#include <uhd/utils/thread.hpp>
+#else /* UHD_VERSION < 3110000 */
 #include <uhd/utils/thread_priority.hpp>
+#endif /* UHD_VERSION < 3110000 */
 
 #include "logging.hh"
 #include "util/capabilities.hh"

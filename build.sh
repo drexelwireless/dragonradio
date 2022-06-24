@@ -4,7 +4,6 @@ set -e
 umask 022
 
 sudo apt install -y autoconf automake build-essential cmake
-sudo apt install -y python3-mako
 sudo apt install -y libboost-dev libboost-date-time-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev libboost-system-dev libboost-serialization-dev libboost-test-dev libboost-thread-dev
 sudo apt install -y libfftw3-dev
 sudo apt install -y libhdf5-dev
@@ -17,6 +16,9 @@ sudo apt install -y libcap-dev
 
 # Install Python 3.8
 sudo apt install -y python3 python3-dev python3-distutils python3-pip
+
+# For UHD
+sudo apt install -y python3-mako python3-numpy
 
 # Install virtualenv
 sudo apt install -y python3-virtualenv virtualenv
@@ -54,6 +56,11 @@ CFLAGS="-Ofast -march=native"
   rm -rf docs/doxygen/html;
   ninja clean
 )
+
+# Download firmware
+sudo apt install -y python-is-python3 python3-requests
+sudo pip install --upgrade urllib3
+sudo uhd_images_downloader
 
 # Build and install liquid-dsp
 (

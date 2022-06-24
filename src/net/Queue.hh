@@ -10,8 +10,6 @@
 #include "Header.hh"
 #include "net/Element.hh"
 
-using namespace std::placeholders;
-
 /** @brief A queue Element that has a separate high-priority queue that is
  * always serviced first.
  */
@@ -24,11 +22,11 @@ public:
       : in(*this,
            nullptr,
            nullptr,
-           std::bind(&Queue<T>::push, this, _1))
+           std::bind(&Queue<T>::push, this, std::placeholders::_1))
       , out(*this,
             std::bind(&Queue<T>::reset, this),
             std::bind(&Queue<T>::stop, this),
-            std::bind(&Queue<T>::pop, this, _1),
+            std::bind(&Queue<T>::pop, this, std::placeholders::_1),
             std::bind(&Queue<T>::kick, this))
     {
     }

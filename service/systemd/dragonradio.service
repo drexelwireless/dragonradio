@@ -2,6 +2,7 @@
 Description=DragonRadio
 
 [Service]
+Environment=HOME=/root
 Type=forking
 ExecStartPre=/bin/mkdir -p /logs/cores
 ExecStartPre=/bin/chown -R root root /logs/cores

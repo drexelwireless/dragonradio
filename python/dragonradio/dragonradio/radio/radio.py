@@ -4,12 +4,16 @@
 """Radio class for managing the radio."""
 import asyncio
 from functools import cached_property
+import importlib_resources
 import ipaddress
 import logging
 import math
 import os
+from pathlib import Path
 import random
+import re
 import signal
+import subprocess
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type
 
 from ipykernel.kernelapp import IPKernelApp
@@ -102,6 +106,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # Add global work queue workers
         work_queue.addThreads(1)
 
+        # Flash firmware
+        if config.firmware_path is not None:
+            self.flash_firmware(config.firmware_path)
+
         # Initialize USRP
         self.configureUSRP()
 
@@ -144,6 +152,66 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             self.nhood.removeListener(self)
         except:
             logger.exception("Could not remove radio as neighborhood listener")
+
+    def vivado(self, *args) -> subprocess.Popen:
+        """Invoke Vivado firmware flashing TCL script in batch mode.
+
+        Additional arguments will be passed as TCL arguments.
+
+        Returns:
+            subprocess.Popen: Vivado process
+        """
+        tcl_path = importlib_resources.files('dragonradio.radio.tcl').joinpath('hardware_utils.tcl')
+
+        # Construct vivado command
+        command = [ str(self.config.vivado_path)
+                    , '-mode', 'batch'
+                    , '-source', str(tcl_path)
+                    , '-tclargs'
+                    ] + list(args)
+        logging.debug(' '.join(command))
+
+        # If a log directory was specified, run vivado from that directory to
+        # capture any vivado logs.
+        kwargs = {}
+        if self.config.logdir is not None:
+            kwargs['cwd'] = self.config.logdir
+
+        p = subprocess.Popen(command,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             encoding='utf-8',
+                             **kwargs)
+        p.wait()
+        return p
+
+    def flash_firmware(self, firmware_path: Path):
+        """Flash USRP firmware using Vivado.
+
+        Args:
+            firmware_path (Path): path to firmware.
+        """
+        logging.info('Flashing %s', str(firmware_path))
+
+        while True:
+            p = self.vivado('program', str(firmware_path))
+            stdout = p.stdout.read()
+
+            if p.returncode == 0:
+                break
+
+            logger.error('Flashing failed:\n%s', stdout)
+
+            # The first time or two we try to flash the USRP on the Colosseum,
+            # we get the following error:
+            #
+            #   Tcl_RegisterChannel: duplicate channel names
+            #
+            # Attempting the flash again seems to always eventually work.
+            if not re.search('Tcl_RegisterChannel: duplicate channel names', stdout):
+                raise Exception('Could not flash USRP')
+
+        logger.info('Flashing complete:\n%s', stdout)
 
     def start(self, user_ns=locals()):
         """Start the radio"""

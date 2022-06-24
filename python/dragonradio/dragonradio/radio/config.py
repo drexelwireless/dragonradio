@@ -205,6 +205,12 @@ class Config:
     time_source: Optional[str] = None
     """Time source for the USRP device"""
 
+    # USRP firmware
+    vivado_path: Optional[Path] = None
+    """Path to Vivado"""
+    firmware_path: Optional[Path] = None
+    """Path to USRP firmware"""
+
     # Frequency and bandwidth
     # Default frequency in the Colosseum is 1GHz
     frequency: float = 1e9
@@ -806,6 +812,19 @@ class Config:
                           dest='time_source',
                           metavar='CLOCK',
                           help='set time source')
+
+        # USRP firmware
+        firmware = parser.add_argument_group('USRP firmware')
+
+        firmware.add_argument('--vivado', action='store',
+                              dest='vivado_path',
+                              help='path to Vivado')
+        firmware.add_argument('--firmware', action='store',
+                              dest='firmware_path',
+                              help='firmware to flash before starting radio')
+        firmware.add_argument('--no-firmware', action='store_const', const=None,
+                              dest='firmware_path',
+                              help='do not flash radio firmware before starting radio')
 
         # Frequency and bandwidth
         freqbw = parser.add_argument_group('Frequency and bandwidth')

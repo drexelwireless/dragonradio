@@ -9,7 +9,6 @@
 #include <list>
 
 using namespace std::chrono_literals;
-using namespace std::placeholders;
 
 #include "Neighborhood.hh"
 #include "Node.hh"
@@ -94,10 +93,10 @@ public:
       , net_out(*this,
                 nullptr,
                 std::bind(&Controller::disconnect, this),
-                std::bind(&Controller::pull, this, _1),
+                std::bind(&Controller::pull, this, std::placeholders::_1),
                 std::bind(&Controller::kick, this))
       , radio_in(*this,nullptr, nullptr,
-                 std::bind(&Controller::received, this, _1))
+                 std::bind(&Controller::received, this, std::placeholders::_1))
       , radio_out(*this, nullptr, nullptr)
       , nhood_(nhood)
       , netlink_(nullptr)

@@ -7,7 +7,6 @@
 #include "phy/PHY.hh"
 #include "phy/OverlapTDChannelizer.hh"
 
-using namespace std::placeholders;
 using namespace std::literals::chrono_literals;
 
 OverlapTDChannelizer::OverlapTDChannelizer(const std::vector<PHYChannel> &channels,
