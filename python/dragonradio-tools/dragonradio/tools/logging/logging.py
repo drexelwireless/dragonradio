@@ -16,7 +16,7 @@ from pandas.api.types import CategoricalDtype
 import h5py
 
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
-from dragonradio.radio import decompressIQData
+from dragonradio.signal import decompressIQData
 from dragonradio.tools.colosseum.logging import ReservationLog
 
 logger = logging.getLogger(__name__)

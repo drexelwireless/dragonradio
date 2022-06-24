@@ -127,23 +127,8 @@ void exportWindow(py::module &m, const char *name)
         ;
 }
 
-void exportFilters(py::module &m)
+void exportFirpm(py::module &m)
 {
-    using C = std::complex<float>;
-    using F = float;
-
-    exportFilter<C,C>(m, "FilterCC");
-    exportDragonFIR<C,C>(m, "FIRCCC");
-    exportDragonFIR<C,F>(m, "FIRCCF");
-    exportLiquidFIR<C,C,C>(m, "LiquidFIRCCC");
-    exportLiquidIIR<C,C,C>(m, "LiquidIIRCCC");
-
-    m.def("parks_mcclellan", &liquid::parks_mcclellan);
-
-    m.def("kaiser", &liquid::kaiser);
-
-    m.def("butter_lowpass", &liquid::butter_lowpass);
-
     py::enum_<pm::init_t>(m, "Strategy")
         .value("UNIFORM", pm::init_t::UNIFORM)
         .value("SCALING", pm::init_t::SCALING)
@@ -235,6 +220,28 @@ void exportFilters(py::module &m)
         py::arg("depth") = 0u,
         py::arg("rstrategy") = pm::init_t::UNIFORM,
         py::arg("prec") = 165ul);
+}
+
+void exportFilters(py::module &m)
+{
+    using C = std::complex<float>;
+    using F = float;
+
+    exportFilter<C,C>(m, "FilterCC");
+    exportDragonFIR<C,C>(m, "FIRCCC");
+    exportDragonFIR<C,F>(m, "FIRCCF");
+    exportLiquidFIR<C,C,C>(m, "LiquidFIRCCC");
+    exportLiquidIIR<C,C,C>(m, "LiquidIIRCCC");
+
+    m.def("parks_mcclellan", &liquid::parks_mcclellan);
+
+    m.def("kaiser", &liquid::kaiser);
+
+    m.def("butter_lowpass", &liquid::butter_lowpass);
 
     exportWindow<C>(m, "WindowC");
+
+    auto mfirpm = m.def_submodule("firpm");
+
+    exportFirpm(mfirpm);
 }
