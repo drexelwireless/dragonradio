@@ -356,8 +356,8 @@ class SnapshotView(LogView):
                 self.specgram.plotVoxel(e.start/fs, e.end/fs, e.fc, e.fs,
                                         linewidth=0.4,
                                         edgecolor=color,
-                                        facecolor=color,
-                                        alpha=0.3)
+                                        facecolor='none',
+                                        alpha=0.8)
 
             self.fig.canvas.draw()
 
