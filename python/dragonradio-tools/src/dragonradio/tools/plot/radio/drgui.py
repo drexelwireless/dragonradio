@@ -123,7 +123,26 @@ class ReceiveView(LogView):
             if not self.show_header_invalid:
                 pkts = pkts[pkts.header_valid == True]
 
-            for (_, pkt) in pkts.iterrows():
+            for _, pkt in pkts.iterrows():
+                # Plot voxel occupied by packet
+                if 'chan_bw' in pkt:
+                    if pkt.seq == self.pkt.seq and pkt.fc == self.pkt.fc:
+                        alpha = 0.9
+                    else:
+                        alpha = 0.3
+
+                    if pkt.payload_valid:
+                        color = 'k'
+                    else:
+                        color = 'r'
+
+                    self.specgram.plotVoxel(pkt.start-t0, pkt.end-t0, pkt.fc, pkt.chan_bw,
+                                            linewidth=1,
+                                            edgecolor=color,
+                                            facecolor='none',
+                                            alpha=alpha)
+
+                # Display packet bracket at top of plot
                 self.bracketPacket(pkt, t0, self.specgram.ax)
 
             # Mark all slots in the current specgram
