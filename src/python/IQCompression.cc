@@ -102,7 +102,7 @@ void exportIQCompression(py::module &m)
     }, "convert sc16 buffer to a fc32 buffer")
     ;
 
-    m.def("compressIQData", [](py::array_t<fc32_t> sig) -> py::bytes {
+    m.def("compressIQData", [](py::array_t<fc32_t> sig) -> py::array_t<char> {
         PyArrayEncoder encoder;
         auto           sigbuf = sig.request();
 
