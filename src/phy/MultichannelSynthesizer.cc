@@ -16,18 +16,15 @@ namespace py = pybind11;
 MultichannelSynthesizer::MultichannelSynthesizer(const std::vector<PHYChannel> &channels,
                                                  double tx_rate,
                                                  size_t nthreads)
-  : SlotSynthesizer(channels, tx_rate)
+  : SlotSynthesizer(channels, tx_rate, nthreads+1)
   , nthreads_(nthreads)
-  , done_(false)
-  , reconfigure_(true)
-  , reconfigure_sync_(nthreads+1)
 {
+    reconfigure();
+
     for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&MultichannelSynthesizer::modWorker,
                                               this,
                                               i));
-
-    reconfigure();
 }
 
 MultichannelSynthesizer::~MultichannelSynthesizer()
@@ -54,7 +51,7 @@ void MultichannelSynthesizer::finalize(Slot &slot)
     size_t nchannels = mods_.size();
 
     for (unsigned channelidx = 0; channelidx < nchannels; ++channelidx) {
-        const Schedule::slot_type &slots = schedule_copy_[channelidx];
+        const Schedule::slot_type &slots = schedule_[channelidx];
 
         // Skip this channel if we're not allowed to modulate
         if (slots[slot.slotidx]) {
@@ -90,81 +87,14 @@ void MultichannelSynthesizer::stop(void)
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
 
-    done_ = true;
-
-    wake_cond_.notify_all();
-
-    for (size_t i = 0; i < mod_threads_.size(); ++i) {
-        if (mod_threads_[i].joinable())
-            mod_threads_[i].join();
-    }
-}
-
-void MultichannelSynthesizer::reconfigure(void)
-{
-    std::lock_guard<std::mutex> lock(mods_mutex_);
-
-    // Tell workers we are reconfiguring
-    reconfigure_.store(true, std::memory_order_release);
-
-    // Wake all workers that might be sleeping.
-    {
-        std::unique_lock<std::mutex> lock(wake_mutex_);
-
-        wake_cond_.notify_all();
-    }
-
-    // Disable the sink
-    sink.disable();
-
-    // Wait for workers to be ready for reconfiguration
-    reconfigure_sync_.wait();
-
-    // Make copies of variables for thread safety
-    // NOTE: The mutex protecting the synthesizer state is held when reconfigure
-    // is called.
-    tx_rate_copy_ = tx_rate_;
-    channels_copy_ = channels_;
-    schedule_copy_ = schedule_;
-
-    // Compute gain necessary to compensate for maximum number of channels on
-    // which we may simultaneously transmit.
-    unsigned chancount = 0;
-
-    for (unsigned chanidx = 0; chanidx < schedule_.size(); ++chanidx) {
-        auto &slots = schedule_[chanidx];
-
-        for (unsigned slotidx = 0; slotidx < slots.size(); ++slotidx) {
-            if (slots[slotidx]) {
-                ++chancount;
-                break;
-            }
+    // Set done flag
+    if (modify([&](){ done_ = true; })) {
+        // Join on all threads
+        for (size_t i = 0; i < mod_threads_.size(); ++i) {
+            if (mod_threads_[i].joinable())
+                mod_threads_[i].join();
         }
     }
-
-    if (chancount == 0)
-        g_multichan_ = 1.0f;
-    else
-        g_multichan_ = 1.0f/static_cast<float>(chancount);
-
-    // Now set the channels and reconfigure the channel state
-    const unsigned nchannels = channels_copy_.size();
-
-    mods_.resize(nchannels);
-
-    for (unsigned chanidx = 0; chanidx < nchannels; chanidx++)
-        mods_[chanidx] = std::make_unique<MultichannelModulator>(channels_copy_[chanidx],
-                                                                 chanidx,
-                                                                 tx_rate_copy_);
-
-    // We are done reconfiguring
-    reconfigure_.store(false, std::memory_order_release);
-
-    // Wait for workers to resume
-    reconfigure_sync_.wait();
-
-    // Re-enable the sink
-    sink.enable();
 }
 
 void MultichannelSynthesizer::modWorker(unsigned tid)
@@ -174,30 +104,25 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
     std::unique_ptr<ModPacket> mpkt;
     std::shared_ptr<NetPacket> pkt;
 
-    while (!done_) {
+    for (;;) {
         // Wait for the next slot if we are starting at the first channel for
         // which we are responsible.
         do {
             slot = std::atomic_load_explicit(&curslot_, std::memory_order_acquire);
-        } while (!done_ && !reconfigure_.load(std::memory_order_acquire) && slot == prev_slot);
+        } while (!needs_sync() && slot == prev_slot);
 
-        // Exit now if we're done
-        if (done_)
-            break;
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
 
-        // If we are reconfiguring, wait until reconfiguration is done
-        if (reconfigure_.load(std::memory_order_acquire)) {
-            // Wait for reconfiguration to start
-            reconfigure_sync_.wait();
-
-            // Wait for reconfiguration to finish
-            reconfigure_sync_.wait();
+            if (done_)
+                break;
 
             // If we are unneeded, sleep
-            if (tid >= channels_copy_.size()) {
+            if (schedule_.size() == 0 || tid >= channels_.size()) {
                 std::unique_lock<std::mutex> lock(wake_mutex_);
 
-                wake_cond_.wait(lock, [this]{ return done_ || reconfigure_.load(std::memory_order_acquire); });
+                wake_cond_.wait(lock, [this]{ return needs_sync(); });
 
                 continue;
             }
@@ -206,9 +131,12 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
             continue;
         }
 
+        if (!slot)
+            continue;
+
         // If we don't have a schedule yet, try again
-        if (schedule_copy_.size() == 0 || slot->slotidx > schedule_copy_[0].size()) {
-            std::this_thread::yield();
+        if (slot->slotidx > schedule_[0].size()) {
+            prev_slot = std::move(slot);
             continue;
         }
 
@@ -229,10 +157,10 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
             }
         }
 
-        for (unsigned channelidx = tid; channelidx < channels_copy_.size(); channelidx += nthreads_) {
+        for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
             // Get channel state for current channel
             MultichannelModulator     &mod = *mods_[channelidx];
-            const Schedule::slot_type &slots = schedule_copy_[channelidx];
+            const Schedule::slot_type &slots = schedule_[channelidx];
 
             // Skip this channel if we're not allowed to modulate
             if (!slots[slot->slotidx])
@@ -270,7 +198,12 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
             }
 
             // Modulate packets for the current slot
-            while (!done_) {
+            for (;;) {
+                // If we need to synchronize on state change, break to continue
+                // in outer loop
+                if (needs_sync())
+                    break;
+
                 // If we don't have a modulated packet already, get a packet to
                 // modulate (if needed), and then create a ModPacket for modulation.
                 if (!mpkt) {
@@ -383,6 +316,53 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
         // Remember previous slot so we can wait for a new slot before
         // attempting to modulate anything
         prev_slot = std::move(slot);
+    }
+}
+
+void MultichannelSynthesizer::reconfigure(void)
+{
+    Synthesizer::reconfigure();
+
+    // Compute gain necessary to compensate for maximum number of channels on
+    // which we may simultaneously transmit.
+    unsigned chancount = 0;
+
+    for (unsigned chanidx = 0; chanidx < schedule_.size(); ++chanidx) {
+        auto &slots = schedule_[chanidx];
+
+        for (unsigned slotidx = 0; slotidx < slots.size(); ++slotidx) {
+            if (slots[slotidx]) {
+                ++chancount;
+                break;
+            }
+        }
+    }
+
+    if (chancount == 0)
+        g_multichan_ = 1.0f;
+    else
+        g_multichan_ = 1.0f/static_cast<float>(chancount);
+
+    // Now set the channels and reconfigure the channel state
+    const unsigned nchannels = channels_.size();
+
+    mods_.resize(nchannels);
+
+    for (unsigned chanidx = 0; chanidx < nchannels; chanidx++)
+        mods_[chanidx] = std::make_unique<MultichannelModulator>(channels_[chanidx],
+                                                                 chanidx,
+                                                                 tx_rate_);
+}
+
+void MultichannelSynthesizer::wake_dependents()
+{
+    Synthesizer::wake_dependents();
+
+    // Wake all workers that might be sleeping.
+    {
+        std::unique_lock<std::mutex> lock(wake_mutex_);
+
+        wake_cond_.notify_all();
     }
 }
 

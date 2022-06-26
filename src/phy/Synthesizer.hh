@@ -7,18 +7,21 @@
 #include <atomic>
 #include <mutex>
 
+#include "sync_barrier.hh"
 #include "Logger.hh"
 #include "mac/Schedule.hh"
 #include "net/Element.hh"
 #include "phy/PHY.hh"
 
 /** @brief Base class for synthesizers */
-class Synthesizer : public Element
+class Synthesizer : public Element, protected sync_barrier
 {
 public:
     Synthesizer(const std::vector<PHYChannel> &channels,
-                double tx_rate)
-      : sink(*this, nullptr, nullptr)
+                double tx_rate,
+                unsigned nsyncthreads)
+      : sync_barrier(nsyncthreads)
+      , sink(*this, nullptr, nullptr)
       , channels_(channels)
       , tx_rate_(tx_rate)
     {
@@ -37,13 +40,7 @@ public:
     /** @brief Set channels */
     virtual void setChannels(const std::vector<PHYChannel> &channels)
     {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            channels_ = channels;
-        }
-
-        reconfigure();
+        modify([&]() { channels_ = channels; reconfigure(); });
     }
 
     /** @brief Get the TX sample rate. */
@@ -59,13 +56,7 @@ public:
      */
     virtual void setTXRate(double rate)
     {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            tx_rate_ = rate;
-        }
-
-        reconfigure();
+        modify([&]() { tx_rate_ = rate; reconfigure(); }, [&](){ return tx_rate_ != rate; });
     }
 
     /** @brief Get schedule. */
@@ -79,40 +70,22 @@ public:
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule &schedule)
     {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            schedule_ = schedule;
-        }
-
-        reconfigure();
+        modify([&]() { schedule_ = schedule; reconfigure(); });
     }
 
     /** @brief Set schedule */
     virtual void setSchedule(const Schedule::sched_type &schedule)
     {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            schedule_ = schedule;
-        }
-
-        reconfigure();
+        modify([&]() { schedule_ = schedule; reconfigure(); });
     }
 
     /** @brief Stop modulating. */
     virtual void stop(void) = 0;
 
-    /** @brief Reconfigure for new TX parameters */
-    virtual void reconfigure(void) = 0;
-
     /** @brief Input port for packets. */
     NetIn<Pull> sink;
 
 protected:
-    /** @brief Mutex for synthesizer state. */
-    mutable std::mutex mutex_;
-
     /** @brief Radio channels */
     std::vector<PHYChannel> channels_;
 
@@ -121,6 +94,11 @@ protected:
 
     /** @brief Radio schedule */
     Schedule schedule_;
+
+    /** @brief Reconfigure for new parameters */
+    virtual void reconfigure(void);
+
+    void wake_dependents(void) override;
 };
 
 /** @brief Modulate packets for a channel. */

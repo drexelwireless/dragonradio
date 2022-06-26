@@ -13,17 +13,14 @@ template <class ChannelModulator>
 UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(const std::vector<PHYChannel> &channels,
                                                                double tx_rate,
                                                                size_t nthreads)
-  : SlotSynthesizer(channels, tx_rate)
-  , done_(false)
-  , mod_reconfigure_(nthreads)
+  : SlotSynthesizer(channels, tx_rate, nthreads+1)
 {
-    for (size_t i = 0; i < nthreads; ++i) {
-        mod_reconfigure_[i].store(true, std::memory_order_release);
+    reconfigure();
+
+    for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&UnichannelSynthesizer::modWorker,
                                               this,
-                                              std::ref(mod_reconfigure_[i]),
                                               i));
-    }
 }
 
 template <class ChannelModulator>
@@ -41,25 +38,13 @@ void UnichannelSynthesizer<ChannelModulator>::stop(void)
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
 
-    done_ = true;
-
-    curslot_cond_.notify_all();
-
-    for (size_t i = 0; i < mod_threads_.size(); ++i) {
-        if (mod_threads_[i].joinable())
-            mod_threads_[i].join();
+    if (modify([&](){ done_ = true; })) {
+        // Join on all threads
+        for (size_t i = 0; i < mod_threads_.size(); ++i) {
+            if (mod_threads_[i].joinable())
+                mod_threads_[i].join();
+        }
     }
-}
-
-template <class ChannelModulator>
-void UnichannelSynthesizer<ChannelModulator>::reconfigure(void)
-{
-    for (auto &flag : mod_reconfigure_)
-        flag.store(true, std::memory_order_release);
-
-    // Disable and re-enable the sink
-    sink.disable();
-    sink.enable();
 }
 
 template <class ChannelModulator>
@@ -73,11 +58,8 @@ void UnichannelSynthesizer<ChannelModulator>::modulate(const std::shared_ptr<Slo
 }
 
 template <class ChannelModulator>
-void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &reconfig, unsigned tid)
+void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 {
-    std::vector<PHYChannel>            channels;
-    Schedule                           schedule;
-    double                             tx_rate = tx_rate_;
     std::unique_ptr<ChannelModulator>  mod;
     std::shared_ptr<Slot>              prev_slot;
     std::shared_ptr<Slot>              slot;
@@ -85,49 +67,44 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
     size_t                             chanidx = 0;  // Index of TX channel
     std::shared_ptr<NetPacket>         pkt;
 
-    while (!done_) {
+    for (;;) {
         // Wait for the next slot
         {
             std::unique_lock<std::mutex> lock(curslot_mutex_);
 
-            curslot_cond_.wait(lock, [&]{ return done_ || curslot_ != prev_slot; });
+            curslot_cond_.wait(lock, [&]{ return needs_sync() || curslot_ != prev_slot; });
 
             slot = curslot_;
         }
 
-        // Exit now if we're done
-        if (done_)
-            break;
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
 
-        // Reconfigure if necessary
-        if (reconfig.load(std::memory_order_acquire)) {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            // Make local copies to ensure thread safety
-            channels = channels_;
-            schedule = schedule_;
-            tx_rate = tx_rate_;
+            if (done_)
+                return;
 
             // If we have no schedule or channels, yield and try again
-            if (schedule.size() == 0 || channels.size() == 0) {
-                reconfig.store(false, std::memory_order_relaxed);
+            if (schedule_.size() == 0 || channels_.size() == 0) {
                 std::this_thread::yield();
                 continue;
             }
 
             // Cache which channel we use in each slot
-            size_t nslots = schedule[0].size();
+            size_t nslots = schedule_[0].size();
 
             slot_chanidx.resize(nslots);
 
             for (size_t slot = 0; slot < nslots; ++slot)
-                schedule.firstChannelIdx(slot, slot_chanidx[slot]);
+                schedule_.firstChannelIdx(slot, slot_chanidx[slot]);
 
             // We need to update the modulator
             mod.release();
-
-            reconfig.store(false, std::memory_order_relaxed);
         }
+
+        // If we don't have a slot, try again
+        if (!slot)
+            continue;
 
         // Skip illegal slot indices
         if (slot->slotidx >= slot_chanidx.size()) {
@@ -140,14 +117,14 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             chanidx = slot_chanidx[slot->slotidx];
 
             // Reconfigure the modulator
-            mod = std::make_unique<ChannelModulator>(channels[chanidx],
+            mod = std::make_unique<ChannelModulator>(channels_[chanidx],
                                                      chanidx,
-                                                     tx_rate);
+                                                     tx_rate_);
         }
 
         // We can overfill if we are allowed to transmit on the same channel in
         // the next slot in the schedule
-        const Schedule::slot_type &slots = schedule[chanidx];
+        const Schedule::slot_type &slots = schedule_[chanidx];
 
         // Determine maximum number of samples in this slot
         bool overfill = getSuperslots() && slots[(slot->slotidx + 1) % slots.size()];
@@ -159,7 +136,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
         }
 
         // Modulate packets for the current slot
-        while (!done_) {
+        while (!needs_sync()) {
             // Get a packet to modulate
             if (!pkt) {
                 if (!sink.pull(pkt))
@@ -198,5 +175,18 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
         // Remember previous slot so we can wait for a new slot before
         // attempting to modulate anything
         prev_slot = std::move(slot);
+    }
+}
+
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::wake_dependents()
+{
+    SlotSynthesizer::wake_dependents();
+
+    // Wake all modulation threads
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        curslot_cond_.notify_all();
     }
 }
