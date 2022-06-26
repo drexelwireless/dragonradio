@@ -568,7 +568,9 @@ class Log:
         idx = send.seq == pkt.seq
 
         if idx.any():
-            return send.index[idx].tolist()[0]
+            closest = np.argmin(np.abs(send[idx].aligned_timestamp - pkt.aligned_timestamp))
+
+            return send.index[idx].tolist()[closest]
         else:
             return None
 
