@@ -14,19 +14,16 @@ namespace py = pybind11;
 TDChannelizer::TDChannelizer(const std::vector<PHYChannel> &channels,
                              double rx_rate,
                              unsigned int nthreads)
-  : Channelizer(channels, rx_rate)
+  : Channelizer(channels, rx_rate, nthreads+1)
   , nthreads_(nthreads)
-  , done_(false)
-  , reconfigure_(true)
-  , reconfigure_sync_(nthreads+1)
   , logger_(logger)
 {
+    reconfigure();
+
     for (unsigned int tid = 0; tid < nthreads; ++tid)
         demod_threads_.emplace_back(std::thread(&TDChannelizer::demodWorker,
                                     this,
                                     tid));
-
-    reconfigure();
 }
 
 TDChannelizer::~TDChannelizer()
@@ -43,61 +40,22 @@ void TDChannelizer::push(const std::shared_ptr<IQBuf> &iqbuf)
         iqbufs_[i]->push(iqbuf);
 }
 
-void TDChannelizer::reconfigure(void)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    // Tell workers we are reconfiguring
-    reconfigure_.store(true, std::memory_order_release);
-
-    // Wake all workers that might be sleeping.
-    {
-        std::unique_lock<std::mutex> lock(wake_mutex_);
-
-        wake_cond_.notify_all();
-    }
-
-    // Wait for workers to be ready for reconfiguration
-    reconfigure_sync_.wait();
-
-    // Now set the channels and reconfigure the channel state
-    unsigned nchannels = channels_.size();
-
-    demods_.resize(nchannels);
-    iqbufs_.resize(nchannels);
-
-    for (unsigned i = 0; i < nchannels; i++) {
-        if (!iqbufs_[i])
-            iqbufs_[i] = std::make_unique<SafeQueue<std::shared_ptr<IQBuf>>>();
-
-        demods_[i] = std::make_unique<TDChannelDemodulator>(channels_[i],
-                                                            rx_rate_);
-    }
-
-    // We are done reconfiguring
-    reconfigure_.store(false, std::memory_order_release);
-
-    // Wait for workers to resume
-    reconfigure_sync_.wait();
-}
-
 void TDChannelizer::stop(void)
 {
     // Release the GIL in case we have Python-based demodulators
     py::gil_scoped_release gil;
 
-    done_ = true;
-
     // Stop all IQ buffer queues
     for (unsigned int i = 0; i < iqbufs_.size(); ++i)
         iqbufs_[i]->disable();
 
-    // Join on all threads
-    wake_cond_.notify_all();
-
-    for (unsigned int i = 0; i < demod_threads_.size(); ++i) {
-        if (demod_threads_[i].joinable())
-            demod_threads_[i].join();
+    // Set done flag
+    if (modify([&](){ done_ = true; })) {
+        // Join on all threads
+        for (unsigned int i = 0; i < demod_threads_.size(); ++i) {
+            if (demod_threads_[i].joinable())
+                demod_threads_[i].join();
+        }
     }
 }
 
@@ -107,7 +65,6 @@ void TDChannelizer::demodWorker(unsigned tid)
     std::shared_ptr<IQBuf>  iqbuf;
     std::optional<ssize_t>  next_snapshot_off;
     bool                    received = false; // Have we received any packets?
-    std::vector<PHYChannel> channels;         // Local copy of channels
     unsigned                chanidx;          // Index of current channel being demodulated
     Channel                 channel;          // Current channel being demodulated
 
@@ -120,43 +77,35 @@ void TDChannelizer::demodWorker(unsigned tid)
         }
     };
 
-    while (!done_) {
-        // If we are reconfiguring, wait until reconfiguration is done
-        if (reconfigure_.load(std::memory_order_acquire)) {
-            // Wait for reconfiguration to finish
-            reconfigure_sync_.wait();
+    for (;;) {
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
 
-            // Make local copy of channels
-            channels = channels_;
-
-            // Signal that we have resumed
-            reconfigure_sync_.wait();
+            if (done_)
+                return;
 
             // If we are unneeded, sleep
-            if (tid >= channels.size()) {
+            if (tid >= channels_.size()) {
                 std::unique_lock<std::mutex> lock(wake_mutex_);
 
-                wake_cond_.wait(lock, [this]{ return done_ || reconfigure_.load(std::memory_order_acquire); });
+                wake_cond_.wait(lock, [this]{ return needs_sync(); });
 
                 continue;
             }
 
             // Set demodulator callbacks
-            for (unsigned i = tid; i < channels.size(); i += nthreads_)
+            for (unsigned i = tid; i < channels_.size(); i += nthreads_)
                 demods_[i]->setCallback(callback);
         }
 
-        for (chanidx = tid; chanidx < channels.size(); chanidx += nthreads_) {
+        for (chanidx = tid; chanidx < channels_.size(); chanidx += nthreads_) {
             auto &demod = *demods_[chanidx];
             auto &iqbufs = *iqbufs_[chanidx];
 
             // Get an IQ buffer
-            if (!iqbufs.pop(iqbuf)) {
-                if (done_)
-                    return;
-
+            if (!iqbufs.pop(iqbuf))
                 continue;
-            }
 
             // Wait for the buffer to start to fill.
             iqbuf->waitToStartFilling();
@@ -224,6 +173,42 @@ void TDChannelizer::demodWorker(unsigned tid)
                     prev_iqbuf = std::move(iqbuf);
             }
         }
+    }
+}
+
+void TDChannelizer::reconfigure(void)
+{
+    // Make sure every channel has an IQ buffer queue and create a new
+    // demodulator for each channel.
+    unsigned nchannels = channels_.size();
+
+    demods_.resize(nchannels);
+    iqbufs_.resize(nchannels);
+
+    for (unsigned i = 0; i < nchannels; i++) {
+        if (!iqbufs_[i])
+            iqbufs_[i] = std::make_unique<SafeQueue<std::shared_ptr<IQBuf>>>();
+
+        demods_[i] = std::make_unique<TDChannelDemodulator>(channels_[i],
+                                                            rx_rate_);
+    }
+
+    // Re-enable all IQ buffer queues
+    for (unsigned int i = 0; i < iqbufs_.size(); ++i)
+        iqbufs_[i]->enable();
+}
+
+void TDChannelizer::wake_dependents()
+{
+    // Stop all IQ buffer queues
+    for (unsigned int i = 0; i < iqbufs_.size(); ++i)
+        iqbufs_[i]->disable();
+
+    // Wake all workers that might be sleeping.
+    {
+        std::unique_lock<std::mutex> lock(wake_mutex_);
+
+        wake_cond_.notify_all();
     }
 }
 

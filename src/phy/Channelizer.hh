@@ -4,18 +4,21 @@
 #ifndef CHANNELIZER_H_
 #define CHANNELIZER_H_
 
+#include "sync_barrier.hh"
 #include "IQBuffer.hh"
 #include "Neighborhood.hh"
 #include "phy/Channel.hh"
 #include "phy/PHY.hh"
 
 /** @brief Base class for channelizers */
-class Channelizer : public Element
+class Channelizer : public Element, protected sync_barrier
 {
 public:
     Channelizer(const std::vector<PHYChannel> &channels,
-                double rx_rate)
-      : source(*this, nullptr, nullptr)
+                double rx_rate,
+                unsigned nsyncthreads)
+      : sync_barrier(nsyncthreads)
+      , source(*this, nullptr, nullptr)
       , channels_(channels)
       , rx_rate_(rx_rate)
     {
@@ -34,13 +37,7 @@ public:
     /** @brief Set channels */
     virtual void setChannels(const std::vector<PHYChannel> &channels)
     {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            channels_ = channels;
-        }
-
-        reconfigure();
+        modify([&]() { channels_ = channels; reconfigure(); });
     }
 
     /** @brief Get the RX sample rate. */
@@ -56,13 +53,7 @@ public:
      */
     virtual void setRXRate(double rate)
     {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-
-            rx_rate_ = rate;
-        }
-
-        reconfigure();
+        modify([&]() { rx_rate_ = rate; reconfigure(); }, [&](){ return rx_rate_ != rate; });
     }
 
     /** @brief Add an IQ buffer to demodulate.
@@ -70,21 +61,18 @@ public:
      */
     virtual void push(const std::shared_ptr<IQBuf> &buf) = 0;
 
-    /** @brief Reconfigure for new RX parameters */
-    virtual void reconfigure(void) = 0;
-
     /** @brief Demodulated packets */
     RadioOut<Push> source;
 
 protected:
-    /** @brief Mutex for channelizer state. */
-    mutable std::mutex mutex_;
-
     /** @brief Radio channels */
     std::vector<PHYChannel> channels_;
 
     /** @brief RX sample rate */
     double rx_rate_;
+
+    /** @brief Reconfigure for new RX parameters */
+    virtual void reconfigure(void) = 0;
 };
 
 /** @brief Demodulate packets from a channel. */
