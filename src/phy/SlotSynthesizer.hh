@@ -123,8 +123,9 @@ public:
     };
 
     SlotSynthesizer(const std::vector<PHYChannel> &channels,
-                    double tx_rate)
-      : Synthesizer(channels, tx_rate)
+                    double tx_rate,
+                    unsigned nsyncthreads)
+      : Synthesizer(channels, tx_rate, nsyncthreads)
       , superslots_(false)
     {
     }

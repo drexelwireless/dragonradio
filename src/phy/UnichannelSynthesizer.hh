@@ -24,17 +24,9 @@ public:
 
     void stop(void) override;
 
-    void reconfigure(void) override;
-
     void modulate(const std::shared_ptr<Slot> &slot) override;
 
 protected:
-    /** @brief Flag indicating if we should stop processing packets */
-    std::atomic<bool> done_;
-
-    /** @brief Reconfiguration flags */
-    std::vector<std::atomic<bool>> mod_reconfigure_;
-
     /** @brief Lock for current slot */
     std::mutex curslot_mutex_;
 
@@ -48,7 +40,9 @@ protected:
     std::vector<std::thread> mod_threads_;
 
     /** @brief Thread modulating packets */
-    void modWorker(std::atomic<bool> &reconfig, unsigned tid);
+    void modWorker(unsigned tid);
+
+    void wake_dependents() override;
 };
 
 #endif /* UNICHANNELSYNTHESIZER_HH_ */
