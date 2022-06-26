@@ -1,10 +1,12 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef BARRIER_HH
 #define BARRIER_HH
 
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 
 class barrier
@@ -13,7 +15,7 @@ public:
     barrier(unsigned count)
       : count_(count)
       , arrived_(0)
-      , generation_(0)
+      , phase_(0)
     {
     }
 
@@ -23,14 +25,16 @@ public:
 
     void wait(void)
     {
-        const unsigned generation = generation_;
+        std::unique_lock<std::mutex> lock(mutex_);
 
-        if (arrived_.fetch_add(1, std::memory_order_release)+1 == count_) {
-            arrived_.store(0, std::memory_order_release);
-            generation_.fetch_add(1, std::memory_order_release);
+        if (++arrived_ == count_) {
+            arrived_ = 0;
+            phase_++;
+            cv_.notify_all();
         } else {
-            while (generation == generation_.load(std::memory_order_acquire))
-                std::this_thread::yield();
+            auto phase = phase_;
+
+            cv_.wait(lock, [&]{ return phase_ > phase; });
         }
     }
 
@@ -38,11 +42,17 @@ private:
     /** @brief Number of threads in barrier synchronization group */
     const unsigned count_;
 
-    /** @brief Number of threads that have arrived at the barrier */
-    std::atomic<unsigned> arrived_;
+    /** @brief Mutex for barrier state */
+    std::mutex mutex_;
 
-    /** @brief Current barrier generation */
-    std::atomic<unsigned> generation_;
+    /** @brief Condition variable for barrier */
+    std::condition_variable cv_;
+
+    /** @brief Number of threads that have arrived at the barrier */
+    unsigned arrived_;
+
+    /** @brief Current barrier phase */
+    unsigned phase_;
 };
 
 #endif /* BARRIER_HH */
