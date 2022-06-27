@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <pybind11/pybind11.h>
@@ -67,7 +67,7 @@ void exportNCOs(py::module &m)
         ;
 
     // Export class TableNCO to Python
-    py::class_<TableNCO, NCO, std::shared_ptr<TableNCO>>(m, "TableNCO")
+    py::class_<TableNCO<>, NCO, std::shared_ptr<TableNCO<>>>(m, "TableNCO")
         .def(py::init<double>())
         ;
 }

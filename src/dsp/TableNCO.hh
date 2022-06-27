@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef TABLENCO_HH_
@@ -9,8 +9,7 @@
 
 using namespace std::complex_literals;
 
-constexpr int INTBITS = 12;
-
+template<int INTBITS = 12>
 class TableNCO : public NCO
 {
 public:
@@ -92,8 +91,14 @@ public:
 private:
     static sintab<INTBITS> sintab_;
 
-    sintab<INTBITS>::brad_t theta_;
-    sintab<INTBITS>::brad_t dtheta_;
+    typename sintab<INTBITS>::brad_t theta_;
+    typename sintab<INTBITS>::brad_t dtheta_;
 };
+
+template<int INTBITS>
+sintab<INTBITS> TableNCO<INTBITS>::sintab_;
+
+extern template
+sintab<> TableNCO<>::sintab_;
 
 #endif /* TABLENCO_HH_ */

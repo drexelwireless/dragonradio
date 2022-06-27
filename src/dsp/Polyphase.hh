@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef POLYPHASE_H_
@@ -537,7 +537,7 @@ protected:
     double rad_;
 
     /** @brief NCO used for mixing */
-    TableNCO nco_;
+    TableNCO<> nco_;
 
     void reconfigure(void) override
     {
