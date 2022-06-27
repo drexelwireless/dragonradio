@@ -73,9 +73,19 @@ public:
         return (*this)[theta];
     }
 
+    float sin(float theta)
+    {
+        return (*this)[to_brad(theta)];
+    }
+
     float cos(brad_t theta)
     {
         return sin(theta + PIDIV2);
+    }
+
+    float cos(float theta)
+    {
+        return sin(to_brad(theta) + PIDIV2);
     }
 
 private:
