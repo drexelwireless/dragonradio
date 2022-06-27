@@ -6,6 +6,8 @@
 
 #include <complex>
 
+#include "Math.hh"
+
 template<int INTBITS = 12>
 class sintab {
 public:
@@ -49,13 +51,13 @@ public:
         // Note we divide by pi instead of 2*pi and then shift left by
         // BRADBITS-1 instead of BRADBITS, which would overflow anyway, to
         // compensate.
-        return (x/M_PI)*(static_cast<brad_t>(1) << (BRADBITS-1));
+        return (unwrapPhase(x)/M_PI)*(static_cast<brad_t>(1) << (BRADBITS-1));
     }
 
     /** @brief Convert an angle in binary radians to radians */
     static double from_brad(brad_t x)
     {
-        return x/(static_cast<brad_t>(1) << (BRADBITS-1)) * M_PI;
+        return (x*M_PI)/(static_cast<brad_t>(1) << (BRADBITS-1));
     }
 
     float operator [](brad_t pos)
