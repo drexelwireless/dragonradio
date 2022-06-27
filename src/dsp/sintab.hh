@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SINTAB_HH_
@@ -6,7 +6,7 @@
 
 #include <complex>
 
-template<int INTBITS>
+template<int INTBITS = 12>
 class sintab {
 public:
     /** @brief A binary radian */
