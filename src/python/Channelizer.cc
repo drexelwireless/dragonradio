@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <pybind11/pybind11.h>
@@ -9,7 +9,6 @@
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
 #include "phy/FDChannelizer.hh"
-#include "phy/OverlapTDChannelizer.hh"
 #include "phy/TDChannelizer.hh"
 #include "python/PyModules.hh"
 
@@ -59,24 +58,5 @@ void exportChannelizers(py::module &m)
             py::arg("channels"),
             py::arg("rx_rate"),
             py::arg("nthreads"))
-        ;
-
-    // Export class OverlapTDChannelizer to Python
-    py::class_<OverlapTDChannelizer, Channelizer, std::shared_ptr<OverlapTDChannelizer>>(m, "OverlapTDChannelizer")
-        .def(py::init<const std::vector<PHYChannel>&,
-                      double,
-                      unsigned int>())
-        .def_property("prev_demod",
-            &OverlapTDChannelizer::getPrevDemod,
-            &OverlapTDChannelizer::setPrevDemod,
-            "float: portion of the end of the previous slot to demodulate (sec)")
-        .def_property("cur_demod",
-            &OverlapTDChannelizer::getCurDemod,
-            &OverlapTDChannelizer::setCurDemod,
-            "float: portion of the current slot to demodulate (sec)")
-        .def_property("enforce_ordering",
-            &OverlapTDChannelizer::getEnforceOrdering,
-            &OverlapTDChannelizer::setEnforceOrdering,
-            "bool: enforce packet ordering?")
         ;
 }

@@ -21,7 +21,7 @@ from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 
 from _dragonradio.radio import MAC, PHY
 from _dragonradio.radio import FDMA, SlottedALOHA, SlottedMAC, TDMA
-from _dragonradio.radio import FDChannelizer, TDChannelizer, OverlapTDChannelizer
+from _dragonradio.radio import FDChannelizer, TDChannelizer
 from _dragonradio.radio import FDSlotSynthesizer, TDSlotSynthesizer, MultichannelSynthesizer
 from _dragonradio.radio import FDSynthesizer, TDSynthesizer
 from dragonradio.liquid import FlexFrame, NewFlexFrame, OFDM
@@ -53,7 +53,6 @@ def str2phy(name: str) -> Type[PHY]:
 
 CHANNELIZER_NAMES = { 'freqdomain': FDChannelizer
                     , 'timedomain': TDChannelizer
-                    , 'overlap': OverlapTDChannelizer
                     }
 
 def str2channelizer(name: str) -> Type[PHY]:
@@ -257,8 +256,6 @@ class Config:
     # Channelizer parameters
     channelizer: str = 'freqdomain'
     "Channelizer to use"
-    channelizer_enforce_ordering: bool = False
-    "Enforce demodulation order in channelizer"
     channelizer_ftype: str = 'firpm1f2'
     """Algorithm used to construct low-pass filter for channelizer."""
 
@@ -309,8 +306,6 @@ class Config:
     """Total slot duration, including guard interval (seconds)"""
     guard_size: float = .01
     """Size of slot guard interval (seconds)"""
-    demod_overlap_size: float = .005
-    """Size of demodulation overlap if using the overlapping demodulator (seconds)"""
     slot_send_lead_time: float = 5e-3
     """Lead time needed for slot transmission (seconds)"""
     aloha_prob: float = .1
@@ -908,9 +903,6 @@ class Config:
                          choices=sorted(CHANNELIZER_NAMES.keys()),
                          dest='channelizer',
                          help='set channelization algorithm')
-        phy.add_argument('--channelizer-enforce-ordering', action='store_const', const=True,
-                         dest='channelizer_enforce_ordering',
-                         help='enforce packet order when demodulating in channelizer')
         phy.add_argument('--channelizer-ftype', action='store',
                          choices=['kaiser', 'ls', 'firpm1f', 'firpm1f2'],
                          dest='channelizer_ftype',
@@ -1005,10 +997,6 @@ class Config:
                          dest='guard_size',
                          metavar='SEC',
                          help='set MAC guard interval (sec)')
-        mac.add_argument('--demod-overlap-size', action='store', type=float,
-                         dest='demod_overlap_size',
-                         metavar='SEC',
-                         help='set demodulation overlap interval (sec)')
         mac.add_argument('--superslots', action='store_const', const=True,
                          dest='superslots',
                          help='use TDMA superslots')
