@@ -517,9 +517,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                                self.usrp.rx_rate,
                                                config.num_demodulation_threads)
 
-        if isinstance(channelizer, OverlapTDChannelizer):
-            channelizer.enforce_ordering = config.channelizer_enforce_ordering
-
         return channelizer
 
     def mkSynthesizer(self, mac_class: Type[MAC]):
@@ -1014,13 +1011,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # We may not use superslots with the ALOHA MAC
         self.synthesizer.superslots = False
 
-        # Set up overlap channelizer
-        if isinstance(self.channelizer, OverlapTDChannelizer):
-            # We need to demodulate half the previous slot because a sender
-            # could start transmitting a packet halfway into a slot + epsilon.
-            self.channelizer.prev_demod = 0.5*config.slot_size
-            self.channelizer.cur_demod = config.slot_size
-
         self.finishConfiguringMAC()
 
     def configureTDMA(self, nslots: int):
@@ -1057,19 +1047,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         # We may use superslots with the TDMA MAC
         self.synthesizer.superslots = config.superslots
-
-        # Set up overlap channelizer
-        if isinstance(self.channelizer, OverlapTDChannelizer):
-            # When using superslots, we need to demodulate half the previous
-            # slot because a sender could start transmitting a packet halfway
-            # into a slot + epsilon.
-            if self.config.superslots:
-                self.channelizer.prev_demod = 0.5*config.slot_size
-                self.channelizer.cur_demod = config.slot_size
-            else:
-                self.channelizer.prev_demod = config.demod_overlap_size
-                self.channelizer.cur_demod = \
-                    config.slot_size - config.guard_size + config.demod_overlap_size
 
         self.finishConfiguringMAC()
 
