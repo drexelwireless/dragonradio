@@ -10,7 +10,6 @@
 #include "sync_barrier.hh"
 #include "Radio.hh"
 #include "llc/Controller.hh"
-#include "mac/MAC.hh"
 #include "mac/Snapshot.hh"
 #include "phy/Channel.hh"
 #include "phy/Channelizer.hh"
