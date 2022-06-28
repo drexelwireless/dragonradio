@@ -1128,7 +1128,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                  config.slot_size)
 
             self.mac.accurate_tx_timestamps = config.mac_accurate_tx_timestamps
-            self.mac.timed_tx_delay = config.mac_timed_tx_delay
 
     def replaceSynthesizer(self, mac_class: Type[MAC]):
         """Replace the synthesizer"""

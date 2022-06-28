@@ -42,18 +42,6 @@ public:
         modify([&](){ accurate_tx_timestamps_ = accurate; });
     }
 
-    std::chrono::duration<double> getTimedTXDelay(void) const
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-
-        return timed_tx_delay_;
-    }
-
-    void setTimedTXDelay(std::chrono::duration<double> t)
-    {
-        modify([&](){ timed_tx_delay_ = t; });
-    }
-
     /** @brief Stop processing packets */
     void stop(void) override;
 
@@ -64,9 +52,6 @@ private:
     /** @brief Provide more accurate TX timestamps */
     /** Providing more accurate TX timestamps may increase latency. */
     bool accurate_tx_timestamps_;
-
-    /** @brief Delay for timed TX (sec) */
-    std::chrono::duration<double> timed_tx_delay_;
 
     /** @brief Out channel synthesizer */
     std::shared_ptr<ChannelSynthesizer> channel_synthesizer_;

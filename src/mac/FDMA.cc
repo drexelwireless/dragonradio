@@ -20,7 +20,6 @@ FDMA::FDMA(std::shared_ptr<Radio> radio,
         4)
   , premod_(period)
   , accurate_tx_timestamps_(false)
-  , timed_tx_delay_(500e-6)
   , channel_synthesizer_(synthesizer)
 {
     rx_thread_ = std::thread(&FDMA::rxWorker, this);
@@ -102,7 +101,7 @@ void FDMA::txWorker(void)
         // burst. If we need an accurate timestamp, we use a timed burst, in
         // which case we need to add a slight delay to the transmission time.
         if (next_slot_start_of_burst && accurate_timestamp)
-            t_next_tx = MonoClock::now() + timed_tx_delay_;
+            t_next_tx = MonoClock::now() + radio_->getTXLeadTime();
         else
             t_next_tx = radio_->getNextTXTime();
 

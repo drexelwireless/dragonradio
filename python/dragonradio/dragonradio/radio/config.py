@@ -338,8 +338,6 @@ class Config:
     """True if slots should be combined into superslots"""
     mac_accurate_tx_timestamps: bool = False
     """True if MAC should provide more accurate TX timestamps at a potential performance cost"""
-    mac_timed_tx_delay: float = 500e-6
-    """Delay for timed TX"""
     neighbor_discovery_period: float = 12.0
     """Neighbor discovery period at radio startup (sec)"""
 
@@ -1044,10 +1042,6 @@ class Config:
         mac.add_argument('--accurate-mac-tx-timestamps', action='store_const', const=True,
                          dest='mac_accurate_tx_timestamps',
                          help='provide more accurate TX timestamps at a potential performance cost')
-        mac.add_argument('--mac-timed-tx-delay', action='store', type=float,
-                         dest='mac_timed_tx_delay',
-                         metavar='SEC',
-                         help='delay for timed TX (sec)')
 
         # ARQ options
         arq = parser.add_argument_group('ARQ')
