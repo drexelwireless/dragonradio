@@ -130,10 +130,6 @@ void exportMACs(py::module &m)
             &FDMA::getAccurateTXTimestamps,
             &FDMA::setAccurateTXTimestamps,
             "bool: Increase timestamp accuracy at a potential cost to performance")
-        .def_property("timed_tx_delay",
-            &FDMA::getTimedTXDelay,
-            &FDMA::setTimedTXDelay,
-            "float: Delay for timed TX (sec)")
         ;
 
     // Export class SlottedMAC to Python
