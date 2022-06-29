@@ -1,9 +1,10 @@
-// Copyright 2018-2021 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef RADIO_HH_
 #define RADIO_HH_
 
+#include <chrono>
 #include <list>
 
 // #include "logging.hh"
@@ -59,6 +60,18 @@ public:
 
     /** @brief Set RX gain (dB). */
     virtual void setRXGain(float db) = 0;
+
+    /** @brief Get TX lead time (sec) */
+    virtual std::chrono::duration<double> getTXLeadTime(void) const
+    {
+        return tx_lead_time_.load(std::memory_order_acquire);
+    }
+
+    /** @brief Set TX lead time (sec) */
+    virtual void setTXLeadTime(std::chrono::duration<double> t)
+    {
+        tx_lead_time_.store(t, std::memory_order_release);
+    }
 
     /** @brief Get time at which next transmission will occur */
     virtual std::optional<MonoClock::time_point> getNextTXTime() const = 0;
@@ -121,6 +134,10 @@ public:
     {
         return MonoClock::time_point{std::chrono::steady_clock::now().time_since_epoch()};
     }
+
+ protected:
+    /** @brief Lead time needed for transmission (sec) */
+    std::atomic<std::chrono::duration<double>> tx_lead_time_;
 };
 
 #endif /* RADIO_HH_ */

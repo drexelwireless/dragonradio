@@ -372,6 +372,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self.usrp.tx_frequency = self.frequency
         self.usrp.rx_frequency = self.frequency
 
+        self.usrp.tx_lead_time = self.config.tx_lead_time
+
         # Set USRP clock and time sources. If they were not specified in the
         # configuration, we leave the default setting as-is.
         if config.clock_source is not None:
