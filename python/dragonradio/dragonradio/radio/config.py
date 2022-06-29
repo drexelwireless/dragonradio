@@ -247,6 +247,10 @@ class Config:
     auto_soft_tx_gain_clip_frac: float = 1.0
     """fraction of IQ samples used to calculate 0 dBFS soft TX gain"""
 
+    # Radio settings
+    tx_lead_time: float = 500e-6
+    """Lead time necessary for timed TX (sec)"""
+
     # PHY parameters
     phy: str = 'ofdm'
     """PHY to use"""
