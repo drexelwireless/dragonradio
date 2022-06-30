@@ -370,7 +370,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
         // We are done with this slot. Finalize it if everyone else has finished
         // too.
-        if (slot->nfinished.fetch_add(std::memory_order_relaxed) == nthreads_ - 1) {
+        if (slot->nfinished.fetch_add(1, std::memory_order_acq_rel) == nthreads_ - 1) {
             std::lock_guard<std::mutex> lock(slot->mutex);
 
             if (!slot->closed.load(std::memory_order_acquire))
