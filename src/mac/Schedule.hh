@@ -6,8 +6,8 @@
 
 #include <vector>
 
-/** @brief A schedule specifying the channels on which a node may transmit
- * in a given slot.
+/** @brief A schedule specifying the channels on which a node may transmit in a
+ * given slot.
  */
 class Schedule {
 public:
@@ -39,9 +39,19 @@ public:
         return *this;
     }
 
-    sched_type::size_type size(void) const
+    /** @brief Return number of channels in schedule */
+    sched_type::size_type nchannels(void) const
     {
         return schedule_.size();
+    }
+
+    /** @brief Return number of slots in schedule */
+    slot_type::size_type nslots(void) const
+    {
+        if (schedule_.size() == 0)
+            return 0;
+
+        return schedule_[0].size();
     }
 
     sched_type::const_reference operator [](slot_type::size_type i) const
@@ -52,7 +62,7 @@ public:
     /** @brief Return true if we can transmit in given slot */
     bool canTransmitInSlot(size_t slot) const
     {
-        for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+        for (size_t chan = 0; chan < nchannels(); ++chan) {
             if (schedule_[chan][slot])
                 return true;
         }
@@ -63,7 +73,7 @@ public:
     /** @brief Return true if we can transmit on given channel (in any slot) */
     bool canTransmitOnChannel(size_t chan) const
     {
-        for (size_t slot = 0; slot < schedule_[0].size(); ++slot) {
+        for (size_t slot = 0; slot < nslots(); ++slot) {
             if (schedule_[chan][slot])
                 return true;
         }
@@ -77,7 +87,7 @@ public:
     bool firstChannelIdx(size_t slot,
                          size_t &chan_) const
     {
-        for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+        for (size_t chan = 0; chan < nchannels(); ++chan) {
             if (schedule_[chan][slot]) {
                 chan_ = chan;
                 return true;
@@ -90,7 +100,7 @@ public:
     /** @brief Is this an FDMA schedule? */
     bool isFDMA(void) const
     {
-        for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+        for (size_t chan = 0; chan < nchannels(); ++chan) {
             const slot_type &slots = schedule_[chan];
 
             if (!std::equal(slots.begin() + 1, slots.end(), slots.begin()))

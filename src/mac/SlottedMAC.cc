@@ -67,7 +67,7 @@ void SlottedMAC::modulateSlot(WallClock::time_point when,
                                         tx_slot_samps_ - prev_overfill,
                                         tx_full_slot_samps_ - prev_overfill,
                                         slotidx,
-                                        schedule_.size());
+                                        schedule_.nchannels());
 
     // Tell the synthesizer to synthesize for this slot
     slot_synthesizer_->modulate(next_slot_);
