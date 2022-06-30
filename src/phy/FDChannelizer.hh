@@ -56,9 +56,6 @@ public:
     void stop(void);
 
 private:
-    /** @brief Log of size of ring buffers */
-    static constexpr unsigned LOGR = 4;
-
     /** @brief Channel state for time-domain demodulation */
     class FDChannelDemodulator : public ChannelDemodulator {
     public:
