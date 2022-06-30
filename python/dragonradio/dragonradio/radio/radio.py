@@ -31,7 +31,6 @@ import dragonradio.net
 from dragonradio.radio.config import Config, ConfigException, str2mac
 import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
-from dragonradio.schedule import Schedule
 import dragonradio.signal
 import dragonradio.tasks
 
@@ -63,7 +62,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     mac: MAC = None
     """The radio's MAC"""
 
-    mac_schedule: np.ndarray
+    mac_schedule: Schedule
     """Our MAC schedule"""
 
     channels: List[Channel]
@@ -1122,6 +1121,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         This installs a schedule with one slot per channel. If we are not
         resampling on TX, it installs a schedule with one slot.
         """
+        config = self.config
+
         self.mac.slotidx = 0
 
         # All nodes can transmit
@@ -1129,16 +1130,22 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             self.controller.setEmcon(node_id, False)
 
         if self.config.tx_upsample:
-            self.mac_schedule = np.identity(len(self.channels)).astype('bool')
+            self.mac_schedule = Schedule(np.identity(len(self.channels)).astype('bool'),
+                                         slot_size=config.slot_size,
+                                         guard_size=config.guard_size,
+                                         superslots=config.superslots)
         else:
             self.setTXChannelIdx(0)
 
-            self.mac_schedule = [[1]]
+            self.mac_schedule = Schedule([[1]],
+                                         slot_size=config.slot_size,
+                                         guard_size=config.guard_size,
+                                         superslots=config.superslots)
 
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def installMACSchedule(self, sched: Schedule, mac_class: Optional[Type[MAC]]):
+    def installMACSchedule(self, sched: np.ndarray, mac_class: Optional[Type[MAC]]):
         """Install a MAC schedule.
 
         Args:
@@ -1174,7 +1181,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         # If we are upsampling on TX, go ahead and install the schedule
         if config.tx_upsample:
-            self.mac_schedule = (sched == self.node_id)
+            self.mac_schedule = Schedule((sched == self.node_id),
+                                         slot_size=config.slot_size,
+                                         guard_size=config.guard_size,
+                                         superslots=config.superslots)
         # Otherwise we need to pick a channel we're allowed to send on and stick
         # to that
         else:
@@ -1186,7 +1196,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
             self.setTXChannelIdx(chan)
 
-            self.mac_schedule = [sched[chan] == self.node_id]
+            self.mac_schedule = Schedule([sched[chan] == self.node_id],
+                                         slot_size=config.slot_size,
+                                         guard_size=config.guard_size,
+                                         superslots=config.superslots)
 
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
