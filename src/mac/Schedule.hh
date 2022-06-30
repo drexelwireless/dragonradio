@@ -14,6 +14,18 @@ public:
     using slot_type = std::vector<bool>;
     using sched_type = std::vector<slot_type>;
 
+    Schedule(const sched_type &schedule)
+      : schedule_(schedule)
+    {
+        validate();
+    }
+
+    Schedule(sched_type &&schedule)
+      : schedule_(schedule)
+    {
+        validate();
+    }
+
     Schedule() = default;
     Schedule(const Schedule&) = default;
     Schedule(Schedule&&) = default;
@@ -24,6 +36,15 @@ public:
     Schedule& operator=(const sched_type &schedule)
     {
         schedule_ = schedule;
+
+        validate();
+
+        return *this;
+    }
+
+    Schedule& operator=(sched_type &&schedule)
+    {
+        schedule_ = std::move(schedule);
 
         validate();
 
