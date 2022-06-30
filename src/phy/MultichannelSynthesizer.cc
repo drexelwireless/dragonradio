@@ -119,7 +119,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 break;
 
             // If we are unneeded, sleep
-            if (schedule_.size() == 0 || tid >= channels_.size()) {
+            if (schedule_.nchannels() == 0 || tid >= channels_.size()) {
                 std::unique_lock<std::mutex> lock(wake_mutex_);
 
                 wake_cond_.wait(lock, [this]{ return needs_sync(); });
@@ -135,7 +135,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
             continue;
 
         // If we don't have a schedule yet, try again
-        if (slot->slotidx > schedule_[0].size()) {
+        if (slot->slotidx > schedule_.nslots()) {
             prev_slot = std::move(slot);
             continue;
         }
@@ -327,7 +327,7 @@ void MultichannelSynthesizer::reconfigure(void)
     // which we may simultaneously transmit.
     unsigned chancount = 0;
 
-    for (unsigned chanidx = 0; chanidx < schedule_.size(); ++chanidx) {
+    for (unsigned chanidx = 0; chanidx < schedule_.nchannels(); ++chanidx) {
         auto &slots = schedule_[chanidx];
 
         for (unsigned slotidx = 0; slotidx < slots.size(); ++slotidx) {

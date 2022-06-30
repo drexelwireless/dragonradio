@@ -85,7 +85,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                 return;
 
             // If we have no schedule or channels, yield and try again
-            if (schedule_.size() == 0 || channels_.size() == 0) {
+            if (schedule_.nchannels() == 0 || channels_.size() == 0) {
                 std::this_thread::yield();
                 continue;
             }

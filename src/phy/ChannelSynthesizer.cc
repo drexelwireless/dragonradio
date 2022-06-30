@@ -17,7 +17,7 @@ void ChannelSynthesizer::reconfigure(void)
     // Determine channel index
     std::optional<size_t> chanidx;
 
-    for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+    for (size_t chan = 0; chan < schedule_.nchannels(); ++chan) {
         if (schedule_.canTransmitOnChannel(chan)) {
             chanidx = chan;
             break;
