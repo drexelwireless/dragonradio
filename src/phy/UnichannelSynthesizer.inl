@@ -63,7 +63,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
     std::unique_ptr<ChannelModulator>  mod;
     std::shared_ptr<Slot>              prev_slot;
     std::shared_ptr<Slot>              slot;
-    std::vector<size_t>                slot_chanidx; // TX channel for each slot
+    std::vector<std::optional<size_t>> slot_chanidx; // TX channel for each slot
     size_t                             chanidx = 0;  // Index of TX channel
     std::shared_ptr<NetPacket>         pkt;
 
@@ -96,7 +96,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             slot_chanidx.resize(nslots);
 
             for (size_t slot = 0; slot < nslots; ++slot)
-                schedule_.firstChannelIdx(slot, slot_chanidx[slot]);
+                slot_chanidx[slot] = schedule_.firstChannelIdx(slot);
 
             // We need to update the modulator
             mod.release();
@@ -112,9 +112,13 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             continue;
         }
 
-        if (!mod || slot_chanidx[slot->slotidx] != chanidx) {
+        // Skip slots where we don't have a channel
+        if (!slot_chanidx[slot->slotidx])
+            continue;
+
+        if (!mod || *slot_chanidx[slot->slotidx] != chanidx) {
             // Update our channel index
-            chanidx = slot_chanidx[slot->slotidx];
+            chanidx = *slot_chanidx[slot->slotidx];
 
             // Reconfigure the modulator
             mod = std::make_unique<ChannelModulator>(channels_[chanidx],

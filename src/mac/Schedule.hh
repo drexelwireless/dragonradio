@@ -4,6 +4,7 @@
 #ifndef SCHEDULE_H_
 #define SCHEDULE_H_
 
+#include <optional>
 #include <vector>
 
 /** @brief A schedule specifying the channels on which a node may transmit in a
@@ -94,20 +95,17 @@ public:
         return false;
     }
 
-    /** @brief Find the first channel index in which we can transmit in the
-     * given slot.
+    /** @brief Find the index of the first channel on which we can transmit in
+     * the given slot.
      */
-    bool firstChannelIdx(size_t slot,
-                         size_t &chan_) const
+    std::optional<size_t> firstChannelIdx(size_t slot) const
     {
         for (size_t chan = 0; chan < nchannels(); ++chan) {
-            if (schedule_[chan][slot]) {
-                chan_ = chan;
-                return true;
-            }
+            if (schedule_[chan][slot])
+                return chan;
         }
 
-        return false;
+        return std::nullopt;
     }
 
     /** @brief Is this an FDMA schedule? */
