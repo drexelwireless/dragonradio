@@ -30,10 +30,10 @@ void exportMACs(py::module &m)
             "Schedule: MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         .def("getLoad",
             &MAC::getLoad,
-            "Load: Get current load")
+            "Get current load")
         .def("popLoad",
             &MAC::popLoad,
-            "Load: Get current load and reset load counters")
+            "Get current load and reset load counters")
         ;
 
     // Export class MAC::Load to Python
