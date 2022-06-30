@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SCHEDULE_H_
@@ -31,7 +31,7 @@ public:
 
         for (size_t chan = 1; chan < schedule.size(); ++chan) {
             if (schedule[chan].size() != nslots)
-                throw std::out_of_range("Schedule channels have differeing numbers of slots");
+                throw std::out_of_range("Schedule channels have differing numbers of slots");
         }
 
         schedule_ = schedule;
