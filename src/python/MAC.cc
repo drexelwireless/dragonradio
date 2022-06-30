@@ -16,6 +16,48 @@
 
 void exportMACs(py::module &m)
 {
+    // Export class Schedule to Python
+    py::class_<Schedule, std::unique_ptr<Schedule>>(m, "Schedule")
+        .def(py::init<const Schedule::sched_type&,
+                      std::chrono::duration<double>,
+                      std::chrono::duration<double>,
+                      bool>(),
+            py::arg("schedule"),
+            py::arg("slot_size") = 0s,
+            py::arg("guard_size") = 0s,
+            py::arg("superslots") = false)
+        .def_property("slot_size",
+            [](Schedule &self) -> double
+            {
+                return self.getSlotSize().count();
+            },
+            &Schedule::setSlotSize,
+            "float: Slot size (sec)")
+        .def_property("guard_size",
+            [](Schedule &self) -> double
+            {
+                return self.getGuardSize().count();
+            },
+            &Schedule::setGuardSize,
+            "float: Guard size (sec)")
+        .def_property_readonly("frame_size",
+            [](Schedule &self) -> double
+            {
+                return self.getFrameSize().count();
+            },
+            "float: Frame size (sec)")
+        .def_property("superslots",
+            &Schedule::getSuperslots,
+            &Schedule::setSuperslots,
+            "bool: Allow superslots")
+        .def_property_readonly("nchannels",
+            &Schedule::nchannels,
+            "int: Number of channels")
+        .def_property_readonly("nslots",
+            &Schedule::nslots,
+            "int: Number of slots")
+        ;
+
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
         .def("stop",
@@ -26,7 +68,14 @@ void exportMACs(py::module &m)
             "Notify the MAC of a TX/RX rate change")
         .def_property("schedule",
             &MAC::getSchedule,
-            py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
+            [](MAC &self, py::object obj)
+            {
+                try {
+                    return self.setSchedule(obj.cast<const Schedule::sched_type>());
+                } catch (py::cast_error &) {
+                    return self.setSchedule(obj.cast<const Schedule>());
+                }
+            },
             "Schedule: MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         .def("getLoad",
             &MAC::getLoad,

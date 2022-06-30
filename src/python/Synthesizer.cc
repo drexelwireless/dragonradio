@@ -31,7 +31,14 @@ void exportSynthesizers(py::module &m)
             "Sequence[Channel]: TX channels")
         .def_property("schedule",
             &SlotSynthesizer::getSchedule,
-            py::overload_cast<const Schedule::sched_type &>(&SlotSynthesizer::setSchedule),
+            [](Synthesizer &self, py::object obj)
+            {
+                try {
+                    return self.setSchedule(obj.cast<const Schedule::sched_type>());
+                } catch (py::cast_error &) {
+                    return self.setSchedule(obj.cast<const Schedule>());
+                }
+            },
             "Schedule: MAC schedule")
         .def_property_readonly("sink",
             [](std::shared_ptr<Synthesizer> element)
