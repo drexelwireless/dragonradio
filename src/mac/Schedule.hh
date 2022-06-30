@@ -54,9 +54,10 @@ public:
         return schedule_[0].size();
     }
 
-    sched_type::const_reference operator [](slot_type::size_type i) const
+    /** @brief Return slot schedule at given channel */
+    sched_type::const_reference operator [](sched_type::size_type chan) const
     {
-        return schedule_[i];
+        return schedule_[chan];
     }
 
     /** @brief Return true if we can transmit in given slot */
