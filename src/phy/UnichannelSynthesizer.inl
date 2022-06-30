@@ -91,7 +91,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             }
 
             // Cache which channel we use in each slot
-            size_t nslots = schedule_[0].size();
+            size_t nslots = schedule_.nslots();
 
             slot_chanidx.resize(nslots);
 

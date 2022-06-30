@@ -110,6 +110,6 @@ void SlottedALOHA::reconfigure(void)
 {
     SlottedMAC::reconfigure();
 
-    if (schedule_.nchannels() == 0 || slotidx_ >= schedule_[0].size())
+    if (schedule_.nchannels() == 0 || slotidx_ >= schedule_.nslots())
         slotidx_ = 0;
 }
