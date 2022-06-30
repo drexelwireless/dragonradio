@@ -25,14 +25,14 @@ void exportMACs(py::module &m)
             &MAC::rateChange,
             "Notify the MAC of a TX/RX rate change")
         .def_property("schedule",
-            &SlottedMAC::getSchedule,
+            &MAC::getSchedule,
             py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
             "Schedule: MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         .def("getLoad",
-            &SlottedMAC::getLoad,
+            &MAC::getLoad,
             "Load: Get current load")
         .def("popLoad",
-            &SlottedMAC::popLoad,
+            &MAC::popLoad,
             "Load: Get current load and reset load counters")
         ;
 
