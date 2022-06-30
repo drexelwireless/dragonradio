@@ -4,6 +4,7 @@
 #ifndef SCHEDULE_H_
 #define SCHEDULE_H_
 
+#include <chrono>
 #include <optional>
 #include <vector>
 
@@ -15,19 +16,38 @@ public:
     using slot_type = std::vector<bool>;
     using sched_type = std::vector<slot_type>;
 
-    Schedule(const sched_type &schedule)
+    Schedule()
+      : slot_size_(std::chrono::duration<double>(0.0))
+      , guard_size_(std::chrono::duration<double>(0.0))
+      , frame_size_(std::chrono::duration<double>(0.0))
+      , superslots_(false)
+    {
+    }
+
+    Schedule(const sched_type &schedule,
+             std::chrono::duration<double> slot_size = std::chrono::duration<double>(0.0),
+             std::chrono::duration<double> guard_size = std::chrono::duration<double>(0.0),
+             bool superslots = false)
       : schedule_(schedule)
+      , slot_size_(slot_size)
+      , guard_size_(guard_size)
+      , superslots_(superslots)
     {
         validate();
     }
 
-    Schedule(sched_type &&schedule)
+    Schedule(sched_type &&schedule,
+             std::chrono::duration<double> slot_size = std::chrono::duration<double>(0.0),
+             std::chrono::duration<double> guard_size = std::chrono::duration<double>(0.0),
+             bool superslots = false)
       : schedule_(schedule)
+      , slot_size_(slot_size)
+      , guard_size_(guard_size)
+      , superslots_(superslots)
     {
         validate();
     }
 
-    Schedule() = default;
     Schedule(const Schedule&) = default;
     Schedule(Schedule&&) = default;
 
@@ -50,6 +70,49 @@ public:
         validate();
 
         return *this;
+    }
+
+    /** @brief Get slot size */
+    std::chrono::duration<double> getSlotSize() const
+    {
+        return slot_size_;
+    }
+
+    /** @brief Set slot size */
+    void setSlotSize(std::chrono::duration<double> slot_size)
+    {
+        slot_size_ = slot_size;
+        frame_size_ = nslots()*slot_size_;
+    }
+
+    /** @brief Get guard size */
+    std::chrono::duration<double> getGuardSize() const
+    {
+        return guard_size_;
+    }
+
+    /** @brief Set guard size */
+    void setGuardSize(std::chrono::duration<double> guard_size)
+    {
+        guard_size_ = guard_size;
+    }
+
+    /** @brief Get frame size */
+    std::chrono::duration<double> getFrameSize() const
+    {
+        return frame_size_;
+    }
+
+    /** @brief Get superslots */
+    bool getSuperslots() const
+    {
+        return superslots_;
+    }
+
+    /** @brief Set superslots */
+    void setSuperslots(bool superslots)
+    {
+        superslots_ = superslots;
     }
 
     /** @brief Return number of channels in schedule */
@@ -121,9 +184,27 @@ public:
         return true;
     }
 
+    /** @brief May we overfill given slot? */
+    bool mayOverfill(size_t chan, size_t slot) const
+    {
+        return superslots_ && schedule_[chan][(slot + 1) % nslots()];
+    }
+
 private:
     /** @brief The slot schedule */
     sched_type schedule_;
+
+    /** @brief The slot size */
+    std::chrono::duration<double> slot_size_;
+
+    /** @brief The guard size */
+    std::chrono::duration<double> guard_size_;
+
+    /** @brief The frame size */
+    std::chrono::duration<double> frame_size_;
+
+    /** @brief Allow merged adjacent slots ("superslots") */
+    bool superslots_;
 
     /** @brief Validate the slot schedule */
     void validate(void)
@@ -138,6 +219,9 @@ private:
             if (schedule_[chan].size() != nslots)
                 throw std::out_of_range("Schedule channels have differing numbers of slots");
         }
+
+        // Update frame size
+        frame_size_ = nslots*slot_size_;
     }
 };
 
