@@ -74,8 +74,6 @@ private:
         dragonradio::signal::MixingRationalResampler<C,C> resamp_;
     };
 
-    static const unsigned LOGN = 4;
-
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
 
