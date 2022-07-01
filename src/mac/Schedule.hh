@@ -190,6 +190,26 @@ public:
         return superslots_ && schedule_[chan][(slot + 1) % nslots()];
     }
 
+    /** @brief Determine slot at given time
+     * @brief t Time
+     * @return slot
+     */
+    template<class Clock>
+    size_t slotAt(const std::chrono::time_point<Clock> &t) const
+    {
+        return (t.time_since_epoch() % frame_size_) / slot_size_;
+    }
+
+    /** @brief Determine slot offset at given time
+     * @brief t Time
+     * @return offset into current slot
+     */
+    template<class Clock>
+    std::chrono::duration<double> slotOffsetAt(const std::chrono::time_point<Clock> &t) const
+    {
+        return t.time_since_epoch() % slot_size_;
+    }
+
 private:
     /** @brief The slot schedule */
     sched_type schedule_;

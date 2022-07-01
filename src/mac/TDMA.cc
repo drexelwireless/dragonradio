@@ -147,17 +147,15 @@ bool TDMA::findNextSlot(WallClock::time_point t,
                         WallClock::time_point &t_next,
                         size_t &next_slotidx)
 {
-    WallClock::duration t_slot_pos; // Offset into the current slot (sec)
     size_t              cur_slot;   // Current slot index
-    size_t              tx_slot;    // Slots before we can TX
+    WallClock::duration t_slot_pos; // Offset into the current slot (sec)
     const auto          slot_size = schedule_.getSlotSize();
-    const auto          frame_size = schedule_.getFrameSize();
     const auto          nslots = schedule_.nslots();
 
-    t_slot_pos = t.time_since_epoch() % slot_size;
-    cur_slot = (t.time_since_epoch() % frame_size) / slot_size;
+    cur_slot = schedule_.slotAt(t);
+    t_slot_pos = schedule_.slotOffsetAt(t);
 
-    for (tx_slot = 1; tx_slot <= nslots; ++tx_slot) {
+    for (size_t tx_slot = 1; tx_slot <= nslots; ++tx_slot) {
         if (tdma_schedule_[(cur_slot + tx_slot) % nslots]) {
             t_next = t + (tx_slot*slot_size - t_slot_pos);
             next_slotidx = (cur_slot + tx_slot) % nslots;
