@@ -82,10 +82,6 @@ void exportSynthesizers(py::module &m)
 
     // Export class SlotSynthesizer to Python
     py::class_<SlotSynthesizer, Synthesizer, std::shared_ptr<SlotSynthesizer>>(m, "SlotSynthesizer")
-        .def_property("superslots",
-            &SlotSynthesizer::getSuperslots,
-            &SlotSynthesizer::setSuperslots,
-            "bool: Flag indicating whether or not to use superslots.")
         ;
 
     // Export class TDSlotSynthesizer to Python
