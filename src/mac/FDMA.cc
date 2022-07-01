@@ -51,16 +51,20 @@ void FDMA::stop(void)
 
 void FDMA::txWorker(void)
 {
-    std::optional<MonoClock::time_point> t_next_tx; // Time at which next transmission starts
-    bool                                 next_slot_start_of_burst = true;
-
     for (;;) {
         TXRecord txrecord;
 
-        if (next_slot_start_of_burst)
+        // Pop packets to send.
+        if (radio_->inTXBurst()) {
+            std::optional<MonoClock::time_point> t_next_tx = radio_->getNextTXTime();
+
+            if (t_next_tx)
+                txrecord = channel_synthesizer_->pop_until(*t_next_tx - radio_->getTXLeadTime());
+            else
+                txrecord = channel_synthesizer_->try_pop();
+        } else {
             txrecord = channel_synthesizer_->pop();
-        else
-            txrecord = channel_synthesizer_->try_pop();
+        }
 
         // Synchronize on state change
         if (needs_sync()) {
@@ -74,10 +78,7 @@ void FDMA::txWorker(void)
         // the start of a burst, then it is part of an in-flight burst, in which
         // case we need to stop the burst.
         if (txrecord.nsamples == 0) {
-            if (!next_slot_start_of_burst) {
-                radio_->stopTXBurst();
-                next_slot_start_of_burst = true;
-            }
+            radio_->stopTXBurst();
 
             continue;
         }
@@ -93,34 +94,32 @@ void FDMA::txWorker(void)
             }
         }
 
-        // Determine time of next transmission. If this is *not* the start of a
-        // burst, then t_next_tx has already been updated. Otherwise, we
-        // initialize it with the current time since we are starting a new
-        // burst. If we need an accurate timestamp, we use a timed burst, in
-        // which case we need to add a slight delay to the transmission time.
-        if (next_slot_start_of_burst && accurate_timestamp)
+        // Determine time of next transmission.
+        //
+        // If we need an accurate timestamp, we first attempt to use the radio's
+        // "next TX" timestamp. If that isn't available and we are in a TX
+        // burst, stop the burst. Then, start a new burst with a timestamp. We
+        // set the start of the new burst to be time in the very near future.
+        std::optional<MonoClock::time_point> t_next_tx = radio_->getNextTXTime();
+
+        if (accurate_timestamp && !t_next_tx) {
+            if (radio_->inTXBurst())
+                radio_->stopTXBurst();
+
             t_next_tx = MonoClock::now() + radio_->getTXLeadTime();
-        else
-            t_next_tx = radio_->getNextTXTime();
+        }
 
-        // Send IQ buffers
-        radio_->burstTX(next_slot_start_of_burst && accurate_timestamp ? t_next_tx : std::nullopt,
-                       next_slot_start_of_burst,
-                       false,
-                       txrecord.iqbufs);
-
-        next_slot_start_of_burst = false;
+        // Send IQ buffers. We always start a TX burst if we are not already in
+        // one.
+        radio_->burstTX(t_next_tx,
+                        !radio_->inTXBurst(),
+                        false,
+                        txrecord.iqbufs);
 
         // Hand-off TX record to TX notification thread
         txrecord.timestamp = t_next_tx;
 
         pushTXRecord(std::move(txrecord));
-
-        // Start a new TX burst if there was an underflow
-        if (radio_->getTXUnderflowCount() != 0) {
-            radio_->stopTXBurst();
-            next_slot_start_of_burst = true;
-        }
     }
 }
 
