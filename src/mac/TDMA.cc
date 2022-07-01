@@ -16,22 +16,16 @@ TDMA::TDMA(std::shared_ptr<Radio> radio,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
            std::shared_ptr<SlotSynthesizer> synthesizer,
-           double slot_size,
-           double guard_size,
-           double slot_send_lead_time,
-           size_t nslots)
+           double rx_period,
+           double slot_send_lead_time)
   : SlottedMAC(radio,
                controller,
                collector,
                channelizer,
                synthesizer,
-               slot_size,
-               guard_size,
+               rx_period,
                slot_send_lead_time,
                5)
-  , frame_size_(nslots*slot_size_)
-  , nslots_(nslots)
-  , tdma_schedule_(nslots)
 {
     reconfigure();
 
@@ -99,7 +93,9 @@ void TDMA::txSlotWorker(void)
 
         // If we're less that one slot away from our next slot, finalize it
         // and transmit it
-        if (t_next_slot - t_now < slot_size_) {
+        auto slot_size = schedule_.getSlotSize();
+
+        if (t_next_slot - t_now < slot_size) {
             // Finalize next slot. After this returns, we have EXCLUSIVE access
             // to the slot.
             auto slot = finalizeSlot(t_next_slot);
@@ -116,12 +112,12 @@ void TDMA::txSlotWorker(void)
                 noverfillslots = 0;
             }
 
-            // Find following slot. We divide slot_size_ by two to avoid
-            // possible rounding issues where we mights end up skipping a slot.
-            // If we reach this line of code, then findNextSlot must have
-            // returned true above, in which case we know it will return true
-            // here, so we do not need to check the result.
-            (void) findNextSlot(t_next_slot + noverfillslots*slot_size_ + slot_size_/2.0,
+            // Find following slot. We divide slot_size by two to avoid possible
+            // rounding issues where we mights end up skipping a slot. If we
+            // reach this line of code, then findNextSlot must have returned
+            // true above, in which case we know it will return true here, so we
+            // do not need to check the result.
+            (void) findNextSlot(t_next_slot + noverfillslots*slot_size + slot_size/2.0,
                                 t_following_slot,
                                 following_slotidx);
 
@@ -151,17 +147,18 @@ bool TDMA::findNextSlot(WallClock::time_point t,
                         WallClock::time_point &t_next,
                         size_t &next_slotidx)
 {
-    WallClock::duration t_slot_pos; // Offset into the current slot (sec)
     size_t              cur_slot;   // Current slot index
-    size_t              tx_slot;    // Slots before we can TX
+    WallClock::duration t_slot_pos; // Offset into the current slot (sec)
+    const auto          slot_size = schedule_.getSlotSize();
+    const auto          nslots = schedule_.nslots();
 
-    t_slot_pos = t.time_since_epoch() % slot_size_;
-    cur_slot = (t.time_since_epoch() % frame_size_) / slot_size_;
+    cur_slot = schedule_.slotAt(t);
+    t_slot_pos = schedule_.slotOffsetAt(t);
 
-    for (tx_slot = 1; tx_slot <= nslots_; ++tx_slot) {
-        if (tdma_schedule_[(cur_slot + tx_slot) % nslots_]) {
-            t_next = t + (tx_slot*slot_size_ - t_slot_pos);
-            next_slotidx = (cur_slot + tx_slot) % nslots_;
+    for (size_t tx_slot = 1; tx_slot <= nslots; ++tx_slot) {
+        if (schedule_.canTransmitInSlot((cur_slot + tx_slot) % nslots)) {
+            t_next = t + (tx_slot*slot_size - t_slot_pos);
+            next_slotidx = (cur_slot + tx_slot) % nslots;
             return true;
         }
     }
@@ -172,11 +169,6 @@ bool TDMA::findNextSlot(WallClock::time_point t,
 void TDMA::reconfigure(void)
 {
     SlottedMAC::reconfigure();
-
-    for (size_t i = 0; i < nslots_; ++i)
-        tdma_schedule_[i] = schedule_.canTransmitInSlot(i);
-
-    frame_size_ = nslots_*slot_size_;
 
     // Determine whether or not we have a slot
     WallClock::time_point t_now = WallClock::now();

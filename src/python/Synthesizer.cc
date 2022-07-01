@@ -31,7 +31,14 @@ void exportSynthesizers(py::module &m)
             "Sequence[Channel]: TX channels")
         .def_property("schedule",
             &SlotSynthesizer::getSchedule,
-            py::overload_cast<const Schedule::sched_type &>(&SlotSynthesizer::setSchedule),
+            [](Synthesizer &self, py::object obj)
+            {
+                try {
+                    return self.setSchedule(obj.cast<const Schedule::sched_type>());
+                } catch (py::cast_error &) {
+                    return self.setSchedule(obj.cast<const Schedule>());
+                }
+            },
             "Schedule: MAC schedule")
         .def_property_readonly("sink",
             [](std::shared_ptr<Synthesizer> element)
@@ -75,10 +82,6 @@ void exportSynthesizers(py::module &m)
 
     // Export class SlotSynthesizer to Python
     py::class_<SlotSynthesizer, Synthesizer, std::shared_ptr<SlotSynthesizer>>(m, "SlotSynthesizer")
-        .def_property("superslots",
-            &SlotSynthesizer::getSuperslots,
-            &SlotSynthesizer::setSuperslots,
-            "bool: Flag indicating whether or not to use superslots.")
         ;
 
     // Export class TDSlotSynthesizer to Python

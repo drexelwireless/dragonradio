@@ -23,8 +23,7 @@ public:
                  std::shared_ptr<SnapshotCollector> collector,
                  std::shared_ptr<Channelizer> channelizer,
                  std::shared_ptr<SlotSynthesizer> synthesizer,
-                 double slot_size,
-                 double guard_size,
+                 double rx_period,
                  double slot_send_lead_time,
                  double p);
     virtual ~SlottedALOHA();

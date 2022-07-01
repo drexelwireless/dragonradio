@@ -146,7 +146,7 @@ void FDMA::reconfigure(void)
     // Determine whether or not we can transmit
     can_transmit_ = false;
 
-    for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+    for (size_t chan = 0; chan < schedule_.nchannels(); ++chan) {
         // Check for valid FDMA schedule, i.e., we only have one slot for each channel
         if (schedule_[chan].size() != 1)
             throw std::out_of_range("Schedule is not an FDMA schedule: schedule has more than one slot");

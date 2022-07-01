@@ -26,8 +26,7 @@ SlottedMAC::SlottedMAC(std::shared_ptr<Radio> radio,
                        std::shared_ptr<SnapshotCollector> collector,
                        std::shared_ptr<Channelizer> channelizer,
                        std::shared_ptr<SlotSynthesizer> synthesizer,
-                       double slot_size,
-                       double guard_size,
+                       double rx_period,
                        double slot_send_lead_time,
                        unsigned nsyncthreads)
   : MAC(radio,
@@ -35,11 +34,9 @@ SlottedMAC::SlottedMAC(std::shared_ptr<Radio> radio,
         collector,
         channelizer,
         synthesizer,
-        slot_size,
+        rx_period,
         nsyncthreads)
   , slot_synthesizer_(synthesizer)
-  , slot_size_(slot_size)
-  , guard_size_(guard_size)
   , slot_send_lead_time_(slot_send_lead_time)
   , tx_slot_samps_(0)
   , tx_full_slot_samps_(0)
@@ -67,7 +64,7 @@ void SlottedMAC::modulateSlot(WallClock::time_point when,
                                         tx_slot_samps_ - prev_overfill,
                                         tx_full_slot_samps_ - prev_overfill,
                                         slotidx,
-                                        schedule_.size());
+                                        schedule_.nchannels());
 
     // Tell the synthesizer to synthesize for this slot
     slot_synthesizer_->modulate(next_slot_);
@@ -217,8 +214,11 @@ void SlottedMAC::reconfigure(void)
 {
     MAC::reconfigure();
 
-    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_).count();
-    tx_full_slot_samps_ = tx_rate_*slot_size_.count();
+    const auto slot_size = schedule_.getSlotSize();
+    const auto guard_size = schedule_.getGuardSize();
+
+    tx_slot_samps_ = tx_rate_*(slot_size - guard_size).count();
+    tx_full_slot_samps_ = tx_rate_*slot_size.count();
 
     // Re-enable the TX slot queue
     tx_slot_.enable();
