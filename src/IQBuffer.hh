@@ -146,8 +146,8 @@ public:
     void waitToStartFilling(void)
     {
         for (int spin_count = 0;; ++spin_count) {
-            if (nsamples.load(std::memory_order_relaxed) != 0 ||
-                complete.load(std::memory_order_relaxed))
+            if (nsamples.load(std::memory_order_acquire) != 0 ||
+                complete.load(std::memory_order_acquire))
                 break;
 
             if (spin_count < 16)
