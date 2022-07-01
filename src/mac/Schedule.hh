@@ -74,31 +74,31 @@ public:
     /** @brief Find the first channel index in which we can transmit in the
      * given slot.
      */
-     bool firstChannelIdx(size_t slot,
-                          size_t &chan_) const
-     {
-         for (size_t chan = 0; chan < schedule_.size(); ++chan) {
-             if (schedule_[chan][slot]) {
-                 chan_ = chan;
-                 return true;
-             }
-         }
+    bool firstChannelIdx(size_t slot,
+                         size_t &chan_) const
+    {
+        for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+            if (schedule_[chan][slot]) {
+                chan_ = chan;
+                return true;
+            }
+        }
 
-         return false;
-     }
+        return false;
+    }
 
-     /** @brief Is this an FDMA schedule? */
-     bool isFDMA(void) const
-     {
-         for (size_t chan = 0; chan < schedule_.size(); ++chan) {
-             const slot_type &slots = schedule_[chan];
+    /** @brief Is this an FDMA schedule? */
+    bool isFDMA(void) const
+    {
+        for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+            const slot_type &slots = schedule_[chan];
 
-             if (!std::equal(slots.begin() + 1, slots.end(), slots.begin()))
+            if (!std::equal(slots.begin() + 1, slots.end(), slots.begin()))
                 return false;
-         }
+        }
 
-         return true;
-     }
+        return true;
+    }
 
 private:
     /** @brief The slot schedule */
