@@ -23,10 +23,8 @@ public:
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
          std::shared_ptr<SlotSynthesizer> synthesizer,
-         double slot_size,
-         double guard_size,
-         double slot_send_lead_time,
-         size_t nslots);
+         double rx_period,
+         double slot_send_lead_time);
     virtual ~TDMA();
 
     TDMA(const TDMA&) = delete;
@@ -38,26 +36,12 @@ public:
     /** @brief Stop processing packets */
     void stop(void) override;
 
-    /** @brief Get number of slots */
-    size_t getNSlots(void)
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-
-        return nslots_;
-    }
-
     bool isFDMA(void) const override
     {
         return schedule_.isFDMA();
     }
 
 private:
-    /** @brief Length of TDMA frame (sec) */
-    std::chrono::duration<double> frame_size_;
-
-    /** @brief Number of TDMA slots */
-    size_t nslots_;
-
     /** @brief The TDMA schedule */
     TDMASchedule tdma_schedule_;
 

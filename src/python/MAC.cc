@@ -138,14 +138,6 @@ void exportMACs(py::module &m)
 
     // Export class SlottedMAC to Python
     py::class_<SlottedMAC, MAC, std::shared_ptr<SlottedMAC>>(m, "SlottedMAC")
-        .def_property("slot_size",
-            &SlottedMAC::getSlotSize,
-            &SlottedMAC::setSlotSize,
-            "float: Slot size (sec)")
-        .def_property("guard_size",
-            &SlottedMAC::getGuardSize,
-            &SlottedMAC::setGuardSize,
-            "float: Guard size (sec)")
         .def_property("slot_send_lead_time",
             &SlottedMAC::getSlotSendLeadTime,
             &SlottedMAC::setSlotSendLeadTime,
@@ -160,21 +152,14 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Channelizer>,
                       std::shared_ptr<SlotSynthesizer>,
                       double,
-                      double,
-                      double,
-                      size_t>(),
+                      double>(),
             py::arg("radio"),
             py::arg("controller"),
             py::arg("snapshot_collector"),
             py::arg("channelizer"),
             py::arg("synthesizer"),
-            py::arg("slot_size"),
-            py::arg("guard_size"),
-            py::arg("slot_send_lead_time"),
-            py::arg("nslots"))
-        .def_property_readonly("nslots",
-            &TDMA::getNSlots,
-            "int: The number of TDMA slots.")
+            py::arg("rx_period"),
+            py::arg("slot_send_lead_time"))
         ;
 
     // Export class SlottedALOHA to Python
@@ -186,15 +171,13 @@ void exportMACs(py::module &m)
                       std::shared_ptr<SlotSynthesizer>,
                       double,
                       double,
-                      double,
                       double>(),
             py::arg("radio"),
             py::arg("controller"),
             py::arg("snapshot_collector"),
             py::arg("channelizer"),
             py::arg("synthesizer"),
-            py::arg("slot_size"),
-            py::arg("guard_size"),
+            py::arg("rx_period"),
             py::arg("slot_send_lead_time"),
             py::arg("probability"))
         .def_property("slotidx",

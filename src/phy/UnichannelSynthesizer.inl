@@ -126,13 +126,10 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                                                      tx_rate_);
         }
 
-        // We can overfill if we are allowed to transmit on the same channel in
-        // the next slot in the schedule
-        const Schedule::slot_type &slots = schedule_[chanidx];
+        // Determine if we may overfill current slot
+        bool overfill = schedule_.mayOverfill(chanidx, slot->slotidx);
 
         // Determine maximum number of samples in this slot
-        bool overfill = getSuperslots() && slots[(slot->slotidx + 1) % slots.size()];
-
         if (overfill) {
             std::lock_guard<std::mutex> lock(slot->mutex);
 

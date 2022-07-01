@@ -126,23 +126,10 @@ public:
                     double tx_rate,
                     unsigned nsyncthreads)
       : Synthesizer(channels, tx_rate, nsyncthreads)
-      , superslots_(false)
     {
     }
 
     virtual ~SlotSynthesizer() = default;
-
-    /** @brief Get superslots flag */
-    bool getSuperslots(void) const
-    {
-        return superslots_.load(std::memory_order_relaxed);
-    }
-
-    /** @brief Set superslots flag */
-    void setSuperslots(bool superslots)
-    {
-        superslots_.store(superslots, std::memory_order_relaxed);
-    }
 
     /** @brief Modulate a slot. */
     virtual void modulate(const std::shared_ptr<Slot> &slot) = 0;
@@ -155,10 +142,6 @@ public:
     virtual void finalize(Slot &slot)
     {
     }
-
-protected:
-    /** @brief Use superslots */
-    std::atomic<bool> superslots_;
 };
 
 #endif /* SLOTSYNTHESIZER_H_ */
