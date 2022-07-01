@@ -30,8 +30,7 @@ public:
                std::shared_ptr<SnapshotCollector> collector,
                std::shared_ptr<Channelizer> channelizer,
                std::shared_ptr<SlotSynthesizer> synthesizer,
-               double slot_size,
-               double guard_size,
+               double rx_period,
                double slot_send_lead_time,
                unsigned nsyncthreads);
     virtual ~SlottedMAC();
@@ -41,47 +40,6 @@ public:
 
     SlottedMAC& operator=(const SlottedMAC&) = delete;
     SlottedMAC& operator=(SlottedMAC&&) = delete;
-
-    /** @brief Get slot size, including guard interval */
-    virtual std::chrono::duration<double> getSlotSize(void)
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-
-        return slot_size_;
-    }
-
-    /** @brief Set slot size, including guard interval
-     * @param t Slot size in seconds
-     */
-    virtual void setSlotSize(std::chrono::duration<double> t)
-    {
-        modify([&](){
-            rx_period_ = t;
-            slot_size_ = t;
-
-            reconfigure();
-        });
-    }
-
-    /** @brief Get guard interval size */
-    virtual std::chrono::duration<double> getGuardSize(void)
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-
-        return guard_size_;
-    }
-
-    /** @brief Set guard interval size
-     * @param t Guard interval size in seconds
-     */
-    virtual void setGuardSize(std::chrono::duration<double> t)
-    {
-        modify([&](){
-            guard_size_ = t;
-
-            reconfigure();
-        });
-    }
 
     virtual std::chrono::duration<double> getSlotSendLeadTime(void)
     {
@@ -110,12 +68,6 @@ public:
 protected:
     /** @brief Our slot synthesizer. */
     std::shared_ptr<SlotSynthesizer> slot_synthesizer_;
-
-    /** @brief Length of a single TDMA slot, *including* guard (sec) */
-    std::chrono::duration<double> slot_size_;
-
-    /** @brief Length of inter-slot guard (sec) */
-    std::chrono::duration<double> guard_size_;
 
     /** @brief Lead time needed to send a slot's worth of data (sec) */
     std::chrono::duration<double> slot_send_lead_time_;

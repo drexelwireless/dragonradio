@@ -686,13 +686,11 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 return
 
             if not np.array_equal(sched, self.schedule):
-                (_nchannels, nslots) = sched.shape
-
                 if not self.bootstrapped:
-                    logger.info('Switching to TDMA MAC with %s slots', nslots)
+                    logger.info('Switching to TDMA MAC')
                     self.bootstrapped = True
                     radio.deleteMAC()
-                    radio.configureTDMA(nslots)
+                    radio.configureTDMA()
 
                 # Make sure the Neighborhood is aware of all nodes in the schedule
                 nodes_with_slot = set(sched.flatten())

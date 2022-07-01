@@ -13,8 +13,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
                            std::shared_ptr<SnapshotCollector> collector,
                            std::shared_ptr<Channelizer> channelizer,
                            std::shared_ptr<SlotSynthesizer> synthesizer,
-                           double slot_size,
-                           double guard_size,
+                           double rx_period,
                            double slot_send_lead_time,
                            double p)
   : SlottedMAC(radio,
@@ -22,8 +21,7 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
                collector,
                channelizer,
                synthesizer,
-               slot_size,
-               guard_size,
+               rx_period,
                slot_send_lead_time,
                5)
   , slotidx_(0)
@@ -82,10 +80,12 @@ void SlottedALOHA::txSlotWorker(void)
         }
 
         // Figure out when our next send slot is.
+        auto slot_size = schedule_.getSlotSize();
+
         t_now = WallClock::now();
-        t_slot_pos = t_now.time_since_epoch() % slot_size_;
-        t_next_slot = t_now + (slot_size_ - t_slot_pos);
-        t_following_slot = t_next_slot + slot_size_;
+        t_slot_pos = t_now.time_since_epoch() % slot_size;
+        t_next_slot = t_now + (slot_size - t_slot_pos);
+        t_following_slot = t_next_slot + slot_size;
 
         // Finalize next slot
         auto slot = finalizeSlot(t_next_slot);
@@ -110,6 +110,6 @@ void SlottedALOHA::reconfigure(void)
 {
     SlottedMAC::reconfigure();
 
-    if (schedule_.size() == 0 || slotidx_ >= schedule_[0].size())
+    if (schedule_.nchannels() == 0 || slotidx_ >= schedule_.nslots())
         slotidx_ = 0;
 }

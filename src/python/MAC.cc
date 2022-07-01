@@ -16,6 +16,48 @@
 
 void exportMACs(py::module &m)
 {
+    // Export class Schedule to Python
+    py::class_<Schedule, std::unique_ptr<Schedule>>(m, "Schedule")
+        .def(py::init<const Schedule::sched_type&,
+                      std::chrono::duration<double>,
+                      std::chrono::duration<double>,
+                      bool>(),
+            py::arg("schedule"),
+            py::arg("slot_size") = 0s,
+            py::arg("guard_size") = 0s,
+            py::arg("superslots") = false)
+        .def_property("slot_size",
+            [](Schedule &self) -> double
+            {
+                return self.getSlotSize().count();
+            },
+            &Schedule::setSlotSize,
+            "float: Slot size (sec)")
+        .def_property("guard_size",
+            [](Schedule &self) -> double
+            {
+                return self.getGuardSize().count();
+            },
+            &Schedule::setGuardSize,
+            "float: Guard size (sec)")
+        .def_property_readonly("frame_size",
+            [](Schedule &self) -> double
+            {
+                return self.getFrameSize().count();
+            },
+            "float: Frame size (sec)")
+        .def_property("superslots",
+            &Schedule::getSuperslots,
+            &Schedule::setSuperslots,
+            "bool: Allow superslots")
+        .def_property_readonly("nchannels",
+            &Schedule::nchannels,
+            "int: Number of channels")
+        .def_property_readonly("nslots",
+            &Schedule::nslots,
+            "int: Number of slots")
+        ;
+
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
         .def("stop",
@@ -25,15 +67,22 @@ void exportMACs(py::module &m)
             &MAC::rateChange,
             "Notify the MAC of a TX/RX rate change")
         .def_property("schedule",
-            &SlottedMAC::getSchedule,
-            py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
+            &MAC::getSchedule,
+            [](MAC &self, py::object obj)
+            {
+                try {
+                    return self.setSchedule(obj.cast<const Schedule::sched_type>());
+                } catch (py::cast_error &) {
+                    return self.setSchedule(obj.cast<const Schedule>());
+                }
+            },
             "Schedule: MAC schedule specifying on which channels this node may transmit in each schedule slot.")
         .def("getLoad",
-            &SlottedMAC::getLoad,
-            "Load: Get current load")
+            &MAC::getLoad,
+            "Get current load")
         .def("popLoad",
-            &SlottedMAC::popLoad,
-            "Load: Get current load and reset load counters")
+            &MAC::popLoad,
+            "Get current load and reset load counters")
         ;
 
     // Export class MAC::Load to Python
@@ -89,14 +138,6 @@ void exportMACs(py::module &m)
 
     // Export class SlottedMAC to Python
     py::class_<SlottedMAC, MAC, std::shared_ptr<SlottedMAC>>(m, "SlottedMAC")
-        .def_property("slot_size",
-            &SlottedMAC::getSlotSize,
-            &SlottedMAC::setSlotSize,
-            "float: Slot size (sec)")
-        .def_property("guard_size",
-            &SlottedMAC::getGuardSize,
-            &SlottedMAC::setGuardSize,
-            "float: Guard size (sec)")
         .def_property("slot_send_lead_time",
             &SlottedMAC::getSlotSendLeadTime,
             &SlottedMAC::setSlotSendLeadTime,
@@ -111,21 +152,14 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Channelizer>,
                       std::shared_ptr<SlotSynthesizer>,
                       double,
-                      double,
-                      double,
-                      size_t>(),
+                      double>(),
             py::arg("radio"),
             py::arg("controller"),
             py::arg("snapshot_collector"),
             py::arg("channelizer"),
             py::arg("synthesizer"),
-            py::arg("slot_size"),
-            py::arg("guard_size"),
-            py::arg("slot_send_lead_time"),
-            py::arg("nslots"))
-        .def_property_readonly("nslots",
-            &TDMA::getNSlots,
-            "int: The number of TDMA slots.")
+            py::arg("rx_period"),
+            py::arg("slot_send_lead_time"))
         ;
 
     // Export class SlottedALOHA to Python
@@ -137,15 +171,13 @@ void exportMACs(py::module &m)
                       std::shared_ptr<SlotSynthesizer>,
                       double,
                       double,
-                      double,
                       double>(),
             py::arg("radio"),
             py::arg("controller"),
             py::arg("snapshot_collector"),
             py::arg("channelizer"),
             py::arg("synthesizer"),
-            py::arg("slot_size"),
-            py::arg("guard_size"),
+            py::arg("rx_period"),
             py::arg("slot_send_lead_time"),
             py::arg("probability"))
         .def_property("slotidx",

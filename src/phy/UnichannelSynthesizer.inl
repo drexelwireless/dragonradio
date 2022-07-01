@@ -63,7 +63,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
     std::unique_ptr<ChannelModulator>  mod;
     std::shared_ptr<Slot>              prev_slot;
     std::shared_ptr<Slot>              slot;
-    std::vector<size_t>                slot_chanidx; // TX channel for each slot
+    std::vector<std::optional<size_t>> slot_chanidx; // TX channel for each slot
     size_t                             chanidx = 0;  // Index of TX channel
     std::shared_ptr<NetPacket>         pkt;
 
@@ -85,18 +85,18 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                 return;
 
             // If we have no schedule or channels, yield and try again
-            if (schedule_.size() == 0 || channels_.size() == 0) {
+            if (schedule_.nchannels() == 0 || channels_.size() == 0) {
                 std::this_thread::yield();
                 continue;
             }
 
             // Cache which channel we use in each slot
-            size_t nslots = schedule_[0].size();
+            size_t nslots = schedule_.nslots();
 
             slot_chanidx.resize(nslots);
 
             for (size_t slot = 0; slot < nslots; ++slot)
-                schedule_.firstChannelIdx(slot, slot_chanidx[slot]);
+                slot_chanidx[slot] = schedule_.firstChannelIdx(slot);
 
             // We need to update the modulator
             mod.release();
@@ -112,9 +112,13 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             continue;
         }
 
-        if (!mod || slot_chanidx[slot->slotidx] != chanidx) {
+        // Skip slots where we don't have a channel
+        if (!slot_chanidx[slot->slotidx])
+            continue;
+
+        if (!mod || *slot_chanidx[slot->slotidx] != chanidx) {
             // Update our channel index
-            chanidx = slot_chanidx[slot->slotidx];
+            chanidx = *slot_chanidx[slot->slotidx];
 
             // Reconfigure the modulator
             mod = std::make_unique<ChannelModulator>(channels_[chanidx],
@@ -122,13 +126,10 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                                                      tx_rate_);
         }
 
-        // We can overfill if we are allowed to transmit on the same channel in
-        // the next slot in the schedule
-        const Schedule::slot_type &slots = schedule_[chanidx];
+        // Determine if we may overfill current slot
+        bool overfill = schedule_.mayOverfill(chanidx, slot->slotidx);
 
         // Determine maximum number of samples in this slot
-        bool overfill = getSuperslots() && slots[(slot->slotidx + 1) % slots.size()];
-
         if (overfill) {
             std::lock_guard<std::mutex> lock(slot->mutex);
 
