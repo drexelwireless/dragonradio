@@ -156,7 +156,7 @@ bool TDMA::findNextSlot(WallClock::time_point t,
     t_slot_pos = schedule_.slotOffsetAt(t);
 
     for (size_t tx_slot = 1; tx_slot <= nslots; ++tx_slot) {
-        if (tdma_schedule_[(cur_slot + tx_slot) % nslots]) {
+        if (schedule_.canTransmitInSlot((cur_slot + tx_slot) % nslots)) {
             t_next = t + (tx_slot*slot_size - t_slot_pos);
             next_slotidx = (cur_slot + tx_slot) % nslots;
             return true;
@@ -169,12 +169,6 @@ bool TDMA::findNextSlot(WallClock::time_point t,
 void TDMA::reconfigure(void)
 {
     SlottedMAC::reconfigure();
-
-    size_t nslots = schedule_.nslots();
-
-    tdma_schedule_.resize(nslots);
-    for (size_t i = 0; i < nslots; ++i)
-        tdma_schedule_[i] = schedule_.canTransmitInSlot(i);
 
     // Determine whether or not we have a slot
     WallClock::time_point t_now = WallClock::now();

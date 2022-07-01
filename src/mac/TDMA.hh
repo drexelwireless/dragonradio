@@ -16,8 +16,6 @@
 class TDMA : public SlottedMAC
 {
 public:
-    using TDMASchedule = std::vector<bool>;
-
     TDMA(std::shared_ptr<Radio> radio,
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
@@ -42,9 +40,6 @@ public:
     }
 
 private:
-    /** @brief The TDMA schedule */
-    TDMASchedule tdma_schedule_;
-
     /** @brief Thread running rxWorker */
     std::thread rx_thread_;
 
