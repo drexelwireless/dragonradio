@@ -44,7 +44,7 @@ public:
     }
 
     /** @brief Get the TX sample rate. */
-    virtual double getTXRate(void)
+    virtual double getTXRate(void) const
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
