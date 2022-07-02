@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SYNTHESIZER_H_
@@ -12,6 +12,73 @@
 #include "mac/Schedule.hh"
 #include "net/Element.hh"
 #include "phy/PHY.hh"
+
+/** @brief A record of transmitted packets */
+struct TXRecord {
+    TXRecord()
+      : delay(0)
+      , nsamples(0)
+    {
+    }
+
+    TXRecord(const TXRecord&) = delete;
+
+    TXRecord(TXRecord &&other)
+      : timestamp(std::move(other.timestamp))
+      , delay(other.delay)
+      , nsamples(other.nsamples)
+      , iqbufs(std::move(other.iqbufs))
+      , mpkts(std::move(other.mpkts))
+    {
+        other.delay = 0;
+        other.nsamples = 0;
+    }
+
+    // So we can emplace
+    TXRecord(const std::optional<MonoClock::time_point>& timestamp_,
+             size_t delay_,
+             size_t nsamples_,
+             std::list<std::shared_ptr<IQBuf>>&& iqbufs_,
+             std::list<std::unique_ptr<ModPacket>>&& mpkts_) noexcept
+      : timestamp(timestamp_)
+      , delay(delay_)
+      , nsamples(nsamples_)
+      , iqbufs(std::move(iqbufs_))
+      , mpkts(std::move(mpkts_))
+    {
+    }
+
+    TXRecord& operator =(const TXRecord&) = delete;
+
+    TXRecord& operator =(TXRecord &&other)
+    {
+        timestamp = std::move(other.timestamp);
+        delay = other.delay;
+        nsamples = other.nsamples;
+        iqbufs = std::move(other.iqbufs);
+        mpkts = std::move(other.mpkts);
+
+        other.delay = 0;
+        other.nsamples = 0;
+
+        return *this;
+    }
+
+    /** @brief TX deadline */
+    std::optional<MonoClock::time_point> timestamp;
+
+    /** @brief Number of samples from timestamp transmission was delayed */
+    size_t delay;
+
+    /** @brief Number of samples transmitted */
+    size_t nsamples;
+
+    /** @brief Transmitted IQ buffers */
+    std::list<std::shared_ptr<IQBuf>> iqbufs;
+
+    /** @brief Transmitted modulated packets */
+    std::list<std::unique_ptr<ModPacket>> mpkts;
+};
 
 /** @brief Base class for synthesizers */
 class Synthesizer : public Element, protected sync_barrier
