@@ -74,6 +74,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     synthesizer: Synthesizer
     """The radio's synthesizer"""
 
+    nhood: Optional[Neighborhood] = None
+    """One-hop neighborhood"""
+
     timesync : Optional[Tuple[float, float, float]] = None
     """Time synchronization parameters"""
 
@@ -147,10 +150,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             self.tuntap.source.disconnect()
             self.tuntap.sink.disconnect()
 
-        try:
+        if self.nhood is not None:
             self.nhood.removeListener(self)
-        except:
-            logger.exception("Could not remove radio as neighborhood listener")
 
     def vivado(self, *args) -> subprocess.Popen:
         """Invoke Vivado firmware flashing TCL script in batch mode.
@@ -505,7 +506,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         return phy
 
-    def mkNeighborhood(self):
+    def mkNeighborhood(self) -> Neighborhood:
         return Neighborhood(self.node_id)
 
     def mkChannelizer(self):
