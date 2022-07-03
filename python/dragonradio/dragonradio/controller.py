@@ -386,7 +386,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     self.scenario_start_time = timestamp
 
                     # Create ALOHA MAC for HELLO messages
-                    self.radio.configureALOHA()
+                    self.radio.configureMAC(dragonradio.radio.SlottedALOHA)
 
                     self.createTask(self.discoverNeighbors(),
                                     name='discover neighbors')
@@ -698,8 +698,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 if not self.bootstrapped:
                     logger.info('Switching to TDMA MAC')
                     self.bootstrapped = True
-                    radio.deleteMAC()
-                    radio.configureTDMA()
+                    radio.setMAC(self.config.mac_class)
 
                 # Make sure the Neighborhood is aware of all nodes in the schedule
                 nodes_with_slot = set(sched.flatten())

@@ -59,10 +59,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     _tx_channel_idx: int = 0
     """TX channel index"""
 
-    phy: PHY = None
+    phy: Optional[PHY] = None
     """The radio's PHY"""
 
-    mac: MAC = None
+    mac: Optional[MAC] = None
     """The radio's MAC"""
 
     mac_schedule: Schedule
@@ -71,10 +71,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     channels: List[Channel]
     """Radio channels"""
 
-    channelizer: Channelizer
+    channelizer: Optional[Channelizer] = None
     """The radio's channelizer"""
 
-    synthesizer: Synthesizer
+    synthesizer: Optional[Synthesizer] = None
     """The radio's synthesizer"""
 
     nhood: Optional[Neighborhood] = None
@@ -1063,94 +1063,70 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         return taps
 
     def configureMAC(self, mac_class: Type[MAC]):
-        """Configure MAC"""
-        if issubclass(mac_class, SlottedALOHA):
-            self.configureALOHA()
-        else:
-            self.configureSimpleMACSchedule(mac_class)
+        """Configure MAC
 
-    def deleteMAC(self):
-        """Delete the current MAC"""
+        Args:
+            mac_class (Type[MAC]): Class of the MAC to instantiate and
+                configure.
+        """
+        self.setMAC(mac_class)
+
+        if issubclass(mac_class, SlottedALOHA):
+            # Install slot-per-channel schedule for ALOHA MAC
+            self.installALOHASchedule()
+        else:
+            self.installSimpleMACSchedule(mac_class)
+
+    def setMAC(self, mac_class: Type[MAC]):
+        """Set the MAC to be an instance of the specified MAC class.
+
+        If the current MAC is alrady an instance of mac_class, do nothing.
+        Otherwise, replace it with a new MAC.
+
+        Args:
+            mac_class (Type[MAC]): Class of the MAC to instantiate.
+        """
+        if isinstance(self.mac, mac_class):
+            return
+
+        config = self.config
+
+        if (issubclass(mac_class, SlottedMAC) and not isinstance(self.synthesizer, SlotSynthesizer)) \
+            or not isinstance(self.synthesizer, ChannelSynthesizer):
+            self.replaceSynthesizer(mac_class)
+
+        # Delete the current MAC
         if self.mac is not None:
             self.mac.stop()
             self.mac = None
 
-    def configureALOHA(self):
-        """Configure ALOHA MAC"""
-        config = self.config
+        if issubclass(mac_class, SlottedALOHA):
+            self.mac = mac_class(self.usrp,
+                                 self.controller,
+                                 self.snapshot_collector,
+                                 self.channelizer,
+                                 self.synthesizer,
+                                 config.slot_size,
+                                 config.slot_send_lead_time,
+                                 config.aloha_prob)
+        elif issubclass(mac_class, TDMA):
+            self.mac = mac_class(self.usrp,
+                                 self.controller,
+                                 self.snapshot_collector,
+                                 self.channelizer,
+                                 self.synthesizer,
+                                 config.slot_size,
+                                 config.slot_send_lead_time)
+        elif issubclass(mac_class, FDMA):
+            self.mac = mac_class(self.usrp,
+                                 self.controller,
+                                 self.snapshot_collector,
+                                 self.channelizer,
+                                 self.synthesizer,
+                                 config.slot_size)
 
-        self.mac = SlottedALOHA(self.usrp,
-                                self.controller,
-                                self.snapshot_collector,
-                                self.channelizer,
-                                self.synthesizer,
-                                config.slot_size,
-                                config.slot_send_lead_time,
-                                config.aloha_prob)
-
-        # Install slot-per-channel schedule for ALOHA MAC
-        self.installALOHASchedule()
-
-        self.finishConfiguringMAC()
-
-    def configureTDMA(self):
-        """Configures a TDMA MAC.
-
-        This function sets up a TDMA MAC, but it does not claim any of the
-        slots. After calling this function, the node *will not transmit* until
-        it is given a slot.
-        """
-        config = self.config
-
-        if isinstance(self.mac, TDMA):
-            return
-
-        # Replace the synthesizer if it is not a SlotSynthesizer
-        if not isinstance(self.synthesizer, SlotSynthesizer):
-            self.replaceSynthesizer(TDMA)
-
-        # Replace the MAC
-        self.deleteMAC()
-
-        self.mac = TDMA(self.usrp,
-                        self.controller,
-                        self.snapshot_collector,
-                        self.channelizer,
-                        self.synthesizer,
-                        config.slot_size,
-                        config.slot_send_lead_time)
-
-        self.finishConfiguringMAC()
-
-    def configureFDMA(self):
-        """Configures a FDMA MAC."""
-        config = self.config
-
-        if isinstance(self.mac, FDMA):
-            return
-
-        # Replace the synthesizer if it is not a ChannelSynthesizer
-        if not isinstance(self.synthesizer, ChannelSynthesizer):
-            self.replaceSynthesizer(FDMA)
-
-        # Replace the MAC
-        self.deleteMAC()
-
-        self.mac = FDMA(self.usrp,
-                        self.controller,
-                        self.snapshot_collector,
-                        self.channelizer,
-                        self.synthesizer,
-                        config.slot_size)
-
-        self.mac.accurate_tx_timestamps = config.mac_accurate_tx_timestamps
-        self.mac.timed_tx_delay = config.mac_timed_tx_delay
-
-        self.finishConfiguringMAC()
-
-    def finishConfiguringMAC(self):
-        """Finish configuring MAC"""
-        pass
+            self.mac.accurate_tx_timestamps = config.mac_accurate_tx_timestamps
+            self.mac.timed_tx_delay = config.mac_timed_tx_delay
 
     def replaceSynthesizer(self, mac_class: Type[MAC]):
         """Replace the synthesizer"""
@@ -1193,7 +1169,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Install a schedule for an ALOHA MAC.
 
         This installs a schedule with one slot per channel. If we are not
-        resampling on TX, it installs a schedule with one slot.
+        resampling on TX, it installs a schedule with one slot. The ALOHA slot
+        is set to 0.
         """
         config = self.config
 
@@ -1220,13 +1197,47 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
-    def installMACSchedule(self, sched: np.ndarray, mac_class: Optional[Type[MAC]]):
+    def installSimpleMACSchedule(self, mac_class: Optional[Type[MAC]]=None):
+        """Install a simple static schedule.
+
+        If there is only one channel, a pue TDMA schedule will be installed.
+        Otherwise, a greedy schedule that attempts to give each node a full
+        channel will be installed.
+
+        Args:
+            mac_class (Optional[Type[MAC]], optional): The MAC to use. Defaults
+                to None. If no MAC is specified, the MAC from the radio
+                configuration is used.
+        """
+        nchannels = len(self.channels)
+        if self.config.manet and self.config.num_nodes is not None:
+            nodes = range(1, self.config.num_nodes + 1)
+        else:
+            nodes = sorted(list(self.nhood.neighbors))
+
+        if nchannels == 1:
+            sched = dragonradio.schedule.pureTDMASchedule(nodes)
+        else:
+            sched = dragonradio.schedule.fullChannelMACSchedule(nchannels,
+                                                                1,
+                                                                nodes,
+                                                                3)
+
+        self.installMACSchedule(sched, mac_class)
+
+    def installMACSchedule(self, sched: np.ndarray, mac_class: Optional[Type[MAC]]=None):
         """Install a MAC schedule.
 
         Args:
-            sched: The schedule, which is a nchannels X nslots array of node
-                IDs.
-            fdma_mac: If True, use the FDMA MAC
+            sched (np.ndarray): The schedule, which is a nchannels X nslots
+                array of node IDs.
+
+            mac_class (Optional[Type[MAC]], optional): The MAC to use. Defaults
+                to None. If no MAC is specified, the MAC from the radio
+                configuration is used.
+
+        Raises:
+            ValueError: Raised if schedule is incompatible with MAC.
         """
         config = self.config
 
@@ -1236,15 +1247,15 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         logger.debug('Installing MAC schedule:\n%s', sched)
 
         # Get number of channels and slots
-        (_nchannels, nslots) = sched.shape
+        _nchannels, nslots = sched.shape
 
-        # First configure the TDMA MAC for the desired number of slots
+        # Check that schedule is compatible with MAC
         if issubclass(mac_class, FDMA):
             if nslots != 1:
                 raise ValueError("FDMA schedule has more than one slot: %s" % sched)
-            self.configureFDMA()
-        else:
-            self.configureTDMA()
+
+        # Set the MAC
+        self.setMAC(mac_class)
 
         # Determine which nodes are allowed to transmit
         nodes_with_slot = set(sched.flatten())
@@ -1260,6 +1271,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                          slot_size=config.slot_size,
                                          guard_size=config.guard_size,
                                          superslots=config.superslots)
+
         # Otherwise we need to pick a channel we're allowed to send on and stick
         # to that
         else:
@@ -1278,24 +1290,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
-
-    def configureSimpleMACSchedule(self, mac_class: Optional[Type[MAC]]=None):
-        """Set a simple static schedule."""
-        nchannels = len(self.channels)
-        if self.config.manet and self.config.num_nodes is not None:
-            nodes = range(1, self.config.num_nodes + 1)
-        else:
-            nodes = sorted(list(self.nhood.neighbors))
-
-        if nchannels == 1:
-            sched = dragonradio.schedule.pureTDMASchedule(nodes)
-        else:
-            sched = dragonradio.schedule.fullChannelMACSchedule(nchannels,
-                                                                1,
-                                                                nodes,
-                                                                3)
-
-        self.installMACSchedule(sched, mac_class)
 
     def synchronizeClock(self):
         """Use timestamps to synchronize our clock with the time master (the gateway)"""
