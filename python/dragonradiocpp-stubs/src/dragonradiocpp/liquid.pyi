@@ -308,6 +308,7 @@ class LiquidModulator(dragonradiocpp.radio.Modulator):
     def payload_mcs(self, arg1: MCS) -> None:
         ...
 class LiquidPHY(dragonradiocpp.radio.PHY):
+    mcs: MCS
     @property
     def header_mcs(self) -> MCS:
         """
