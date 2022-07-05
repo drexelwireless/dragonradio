@@ -24,6 +24,7 @@ from typing_extensions import TypeAlias
 from ipykernel.kernelapp import IPKernelApp
 import numpy as np
 
+from dragonradiocpp.liquid import CRCScheme, FECScheme, LiquidPHY, ModulationScheme
 from dragonradiocpp.radio import Channel, PHYChannel, PHYChannels
 from dragonradiocpp.radio import PHY
 from dragonradiocpp.radio import FDMA, MAC, SlottedALOHA, SlottedMAC, TDMA
@@ -1496,12 +1497,61 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self.setBandwidthAndFrequency(new_bandwidth, self.frequency)
 
     @property
-    def header_mcs(self):
+    def header_mcs(self) -> MCS:
         "Header MCS"
         return MCS(self.config.header_check,
                    self.config.header_fec0,
                    self.config.header_fec1,
                    self.config.header_ms)
+
+    @property
+    def mcs(self) -> MCS:
+        assert isinstance(self.phy, LiquidPHY)
+        return self.phy.mcs
+
+    @property
+    def check(self) -> CRCScheme:
+        assert isinstance(self.phy, LiquidPHY)
+        return self.phy.mcs.check
+
+    @check.setter
+    def check(self, check: CRCScheme):
+        assert isinstance(self.phy, LiquidPHY)
+        mcs = self.mcs
+        self.phy.mcs = MCS(check=check, fec0=mcs.fec0, fec1=mcs.fec1, ms=mcs.ms)
+
+    @property
+    def fec0(self) -> FECScheme:
+        assert isinstance(self.phy, LiquidPHY)
+        return self.phy.mcs.fec0
+
+    @fec0.setter
+    def fec0(self, fec: FECScheme):
+        assert isinstance(self.phy, LiquidPHY)
+        mcs = self.mcs
+        self.phy.mcs = MCS(check=mcs.check, fec0=fec, fec1=mcs.fec1, ms=mcs.ms)
+
+    @property
+    def fec1(self) -> FECScheme:
+        assert isinstance(self.phy, LiquidPHY)
+        return self.phy.mcs.fec1
+
+    @fec1.setter
+    def fec1(self, fec: FECScheme):
+        assert isinstance(self.phy, LiquidPHY)
+        mcs = self.mcs
+        self.phy.mcs = MCS(check=mcs.check, fec0=mcs.fec0, fec1=fec, ms=mcs.ms)
+
+    @property
+    def ms(self) -> ModulationScheme:
+        assert isinstance(self.phy, LiquidPHY)
+        return self.phy.mcs.ms
+
+    @ms.setter
+    def ms(self, ms: ModulationScheme):
+        assert isinstance(self.phy, LiquidPHY)
+        mcs = self.mcs
+        self.phy.mcs = MCS(check=mcs.check, fec0=mcs.fec0, fec1=mcs.fec1, ms=ms)
 
     @property
     def mcs_table(self):
