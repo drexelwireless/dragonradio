@@ -143,7 +143,11 @@ void exportLiquid(py::module &m)
         .def(py::init<crc_scheme,
                       fec_scheme,
                       fec_scheme,
-                      modulation_scheme>())
+                      modulation_scheme>(),
+            py::arg("check"),
+            py::arg("fec0"),
+            py::arg("fec1"),
+            py::arg("ms"))
         .def_readwrite("check", &liquid::MCS::check, "Data validity check")
         .def_readwrite("fec0", &liquid::MCS::fec0, "Inner FEC")
         .def_readwrite("fec1", &liquid::MCS::fec1, "Outer FEC")

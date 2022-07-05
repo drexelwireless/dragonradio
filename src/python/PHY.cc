@@ -364,6 +364,9 @@ void exportLiquidPHYs(py::module &m)
             &liquid::PHY::getSoftHeader)
         .def_property_readonly("soft_payload",
             &liquid::PHY::getSoftPayload)
+        .def_property("mcs",
+            &liquid::PHY::getMCS,
+            &liquid::PHY::setMCS)
         ;
 
     // Export class FlexFrame to Python

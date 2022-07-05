@@ -169,6 +169,16 @@ public:
 
     size_t getModulatedSize(mcsidx_t mcsidx, size_t n) override;
 
+    const MCS &getMCS() const
+    {
+        return mcs_table_.at(0);
+    }
+
+    void setMCS(MCS mcs)
+    {
+        mcs_table_.at(0) = mcs;
+    }
+
 protected:
     /** @brief Modulation and coding scheme for headers. */
     MCS header_mcs_;

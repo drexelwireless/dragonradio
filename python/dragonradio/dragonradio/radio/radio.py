@@ -1182,6 +1182,46 @@ class Radio(dragonradio.tasks.TaskManager):
                    self.config.header_ms)
 
     @property
+    def mcs(self):
+        return self.phy.mcs
+
+    @property
+    def check(self):
+        return self.phy.mcs.check
+
+    @check.setter
+    def check(self, check):
+        mcs = self.mcs
+        self.phy.mcs = MCS(check=check, fec0=mcs.fec0, fec1=mcs.fec1, ms=mcs.ms)
+
+    @property
+    def fec0(self):
+        return self.phy.mcs.fec0
+
+    @fec0.setter
+    def fec0(self, fec):
+        mcs = self.mcs
+        self.phy.mcs = MCS(check=mcs.check, fec0=fec, fec1=mcs.fec1, ms=mcs.ms)
+
+    @property
+    def fec1(self):
+        return self.phy.mcs.fec1
+
+    @fec1.setter
+    def fec1(self, fec):
+        mcs = self.mcs
+        self.phy.mcs = MCS(check=mcs.check, fec0=mcs.fec0, fec1=fec, ms=mcs.ms)
+
+    @property
+    def ms(self):
+        return self.phy.mcs.ms
+
+    @ms.setter
+    def ms(self, ms):
+        mcs = self.mcs
+        self.phy.mcs = MCS(check=mcs.check, fec0=mcs.fec0, fec1=mcs.fec1, ms=ms)
+
+    @property
     def mcs_table(self):
         """MCS table"""
         # pylint: disable=no-else-return
