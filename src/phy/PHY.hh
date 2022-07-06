@@ -117,7 +117,13 @@ public:
     public:
         using callback_type = std::function<void(std::shared_ptr<RadioPacket>&&)>;
 
-        PacketDemodulator(PHY &phy) : phy_(phy) {}
+        PacketDemodulator(PHY &phy, unsigned chanidx, const Channel &channel)
+          : phy_(phy)
+          , chanidx_(chanidx)
+          , channel_(channel)
+        {
+        }
+
         virtual ~PacketDemodulator() = default;
 
         /** @brief Set demodulation callback */
@@ -166,6 +172,12 @@ public:
         /** @brief Our PHY */
         PHY &phy_;
 
+        /** @brief Index of channel we are demodulating */
+        unsigned chanidx_;
+
+        /** @brief Channel we are demodulating */
+        Channel channel_;
+
         /** @brief Demodulation callback */
         callback_type callback_;
     };
@@ -205,7 +217,7 @@ public:
     virtual std::shared_ptr<PacketModulator> mkPacketModulator(void) = 0;
 
     /** @brief Create a Demodulator for this %PHY */
-    virtual std::shared_ptr<PacketDemodulator> mkPacketDemodulator(void) = 0;
+    virtual std::shared_ptr<PacketDemodulator> mkPacketDemodulator(unsigned chanidx, const Channel &channel) = 0;
 
     /** @brief Return flag indicating whether or not we want the given packet */
     /** We only demodulate packets destined for us *unless* we are collecting

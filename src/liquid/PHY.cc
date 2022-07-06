@@ -102,12 +102,13 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
 }
 
 PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
+                                          unsigned chanidx,
+                                          const Channel &channel,
                                           const MCS &header_mcs,
                                           bool soft_header,
                                           bool soft_payload)
   : Demodulator(header_mcs, soft_header, soft_payload)
-  , ::PHY::PacketDemodulator(phy)
-  , channel_()
+  , ::PHY::PacketDemodulator(phy, chanidx, channel)
   , delay_(0)
   , resamp_rate_(1.0)
   , internal_oversample_fact_(1)
