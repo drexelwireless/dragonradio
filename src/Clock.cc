@@ -12,6 +12,6 @@ std::shared_ptr<MonoClock::TimeKeeper> MonoClock::time_keeper_;
 
 MonoClock::time_point MonoClock::t0_;
 
-WallClock::duration WallClock::offset_ = 0.0s;
+std::atomic<double> WallClock::offset_ = 0.0;
 
-double WallClock::skew_ = 1.0;
+std::atomic<double> WallClock::skew_ = 1.0;
