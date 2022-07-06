@@ -251,8 +251,8 @@ Logger::Logger(const WallClock::time_point& t_start,
   , t_start_(t_start)
   , mono_t_start_(mono_t_start)
   , sources_(0)
-  , done_(false)
 {
+    done_.store(false, std::memory_order_release);
 }
 
 Logger::~Logger()
@@ -433,7 +433,7 @@ void Logger::open(const std::string& filename)
 
 void Logger::stop(void)
 {
-    done_ = true;
+    done_.store(true, std::memory_order_release);
 
     log_q_.disable();
 
@@ -516,9 +516,9 @@ void Logger::worker(void)
 {
     std::function<void()> entry;
 
-    while (!done_) {
+    while (true) {
         log_q_.pop(entry);
-        if (done_)
+        if (done_.load(std::memory_order_acquire))
             break;
 
         entry();
