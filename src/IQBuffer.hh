@@ -121,7 +121,7 @@ public:
     size_t delay;
 
     /** @brief Number of samples received so far. */
-    /** This value is valid untile the buffer is marked complete. */
+    /** This value is valid until the buffer is marked complete. */
     std::atomic<size_t> nsamples;
 
     /** @brief Flag that is true when receive is completed. */
