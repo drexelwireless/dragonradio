@@ -122,7 +122,7 @@ protected:
     /** @brief Channel we are demodulating */
     PHYChannel channel_;
 
-    /** @brief RX sample ratee */
+    /** @brief RX sample rate */
     double rx_rate_;
 
     /** @brief Resampling rate */
