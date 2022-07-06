@@ -48,6 +48,8 @@ public:
         using liquid::Demodulator::demodulate;
 
         PacketDemodulator(PHY &phy,
+                          unsigned chanidx,
+                          const Channel &channel,
                           const MCS &header_mcs,
                           bool soft_header,
                           bool soft_payload);
@@ -76,12 +78,6 @@ public:
         }
 
     protected:
-        /** @brief Index of the channel being demodulated */
-        unsigned chanidx_;
-
-        /** @brief The channel being demodulated */
-        Channel channel_;
-
         /** @brief Filter delay */
         ssize_t delay_;
 

@@ -35,9 +35,10 @@ private:
     /** @brief Channel state for time-domain demodulation */
     class TDChannelDemodulator : public ChannelDemodulator {
     public:
-        TDChannelDemodulator(const PHYChannel &channel,
+        TDChannelDemodulator(unsigned chanidx,
+                             const PHYChannel &channel,
                              double rx_rate)
-          : ChannelDemodulator(channel, rx_rate)
+          : ChannelDemodulator(chanidx, channel, rx_rate)
           , seq_(0)
           , delay_(round((channel.taps.size() - 1)/2.0))
           , resamp_buf_(0)

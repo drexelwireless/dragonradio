@@ -72,12 +72,14 @@ public:
         );
     }
 
-    std::shared_ptr<PacketDemodulator> mkPacketDemodulator(void) override
+    std::shared_ptr<PacketDemodulator> mkPacketDemodulator(unsigned chanidx, const Channel &channel) override
     {
         PYBIND11_OVERLOAD_PURE(
             std::shared_ptr<PacketDemodulator>,
             PHY,
             mkPacketDemodulator,
+            chanidx,
+            channel
         );
     }
 
@@ -346,7 +348,9 @@ void exportPHYs(py::module &m)
 
     // Export class PacketModulator to Python
     py::class_<PacketDemodulator, PyPacketDemodulator, std::shared_ptr<PacketDemodulator>>(m, "PacketDemodulator")
-        .def(py::init<PHY&>())
+        .def(py::init<PHY&,
+                      unsigned,
+                      const Channel&>())
         .def("isFrameOpen",
             &PacketDemodulator::isFrameOpen)
         .def("reset",
