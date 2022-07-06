@@ -55,8 +55,9 @@ TunTap::TunTap(const std::string& tap_iface,
   , mtu_(mtu)
   , fd_(0)
   , ifr_({{0}})
-  , done_(true)
 {
+    done_.store(true, std::memory_order_release);
+
     logTunTap(LOGINFO, "Creating tap interface %s", tap_iface.c_str());
 
     openTap(tap_iface_, IFF_TAP | IFF_NO_PI);
@@ -267,14 +268,14 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
 
 void TunTap::start(void)
 {
-    done_ = false;
+    done_.store(false, std::memory_order_release);
     worker_thread_ = std::thread(&TunTap::worker, this);
 }
 
 void TunTap::stop(void)
 {
-    if (!done_) {
-        done_ = true;
+    if (!done_.load(std::memory_order_acquire)) {
+        done_.store(true, std::memory_order_release);
 
         wakeThread(worker_thread_);
 
@@ -287,7 +288,7 @@ void TunTap::worker(void)
 {
     makeThreadWakeable();
 
-    while (!done_) {
+    while (!done_.load(std::memory_order_acquire)) {
         size_t  maxlen = mtu_ + sizeof(struct ether_header);
         auto    pkt = std::make_shared<NetPacket>(sizeof(ExtendedHeader) + maxlen);
         ssize_t nread;
