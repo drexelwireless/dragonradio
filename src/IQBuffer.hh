@@ -98,6 +98,9 @@ public:
             resize(size_+1);
             data_[size_-1] = *it;
         }
+
+        nsamples.store(0, std::memory_order_release);
+        complete.store(true, std::memory_order_release);
     }
 
     ~IQBuf() noexcept {}
