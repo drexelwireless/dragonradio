@@ -4,6 +4,7 @@
 #ifndef CLOCK_H_
 #define CLOCK_H_
 
+#include <atomic>
 #include <cmath>
 #include <chrono>
 #include <memory>
@@ -289,22 +290,22 @@ public:
 
     static duration get_offset()
     {
-        return offset_;
+        return std::chrono::duration<double>(offset_.load(std::memory_order_relaxed));
     }
 
     static void set_offset(duration offset)
     {
-        offset_ = offset;
+        offset_.store(offset.count(), std::memory_order_relaxed);
     }
 
     static double get_skew()
     {
-        return skew_;
+        return skew_.load(std::memory_order_relaxed);
     }
 
     static void set_skew(double skew)
     {
-        skew_ = skew;
+        skew_.store(skew, std::memory_order_relaxed);
     }
 
     static time_point now() noexcept
@@ -317,7 +318,7 @@ public:
     {
         const time_point t0_wall = time_point { t0_.time_since_epoch() };
 
-        return t0_ + (t - t0_wall - offset_)/skew_;
+        return t0_ + (t - t0_wall - get_offset())/get_skew();
     }
 
     /** @brief Return the wall-clock time corresponding to monotonic time. */
@@ -325,15 +326,15 @@ public:
     {
         const time_point t0_wall = time_point { t0_.time_since_epoch() };
 
-        return t0_wall + offset_ + skew_*(t - t0_);
+        return t0_wall + get_offset() + get_skew()*(t - t0_);
     }
 
 protected:
     /** @brief The offset between the monotonic clock and wall-clock time. */
-    static duration offset_;
+    static std::atomic<double> offset_;
 
     /** @brief Monotonic clock skew. */
-    static double skew_;
+    static std::atomic<double> skew_;
 };
 
 #endif /* CLOCK_H_ */
