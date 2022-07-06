@@ -1,6 +1,7 @@
 // Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <mutex>
@@ -34,8 +35,9 @@ public:
         time_type deadline;
     };
 
-    TimerQueue() : done_(true)
+    TimerQueue()
     {
+        done_.store(true, std::memory_order_release);
     }
 
     ~TimerQueue()
@@ -95,7 +97,7 @@ private:
     heap<Timer> timer_queue_;
 
     /** @brief Flag indicating we are done processing timers. */
-    bool done_;
+    std::atomic<bool> done_;
 
     /** @brief Thread that runs the timer worker. */
     std::thread timer_worker_thread_;

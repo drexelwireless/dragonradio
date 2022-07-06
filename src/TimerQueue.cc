@@ -22,7 +22,7 @@ void TimerQueue::run_at(Timer& t, const time_type& when)
 
     // Wake the timer worker if it's running and the timer we just inserted
     // is the first timer that needs to be run.
-    if (!done_ && t.is_top())
+    if (!done_.load(std::memory_order_acquire) && t.is_top())
         wakeThread(timer_worker_thread_);
 }
 
@@ -45,8 +45,8 @@ void TimerQueue::run(void)
 
 void TimerQueue::start(void)
 {
-    if (done_) {
-        done_ = false;
+    if (done_.load(std::memory_order_acquire)) {
+        done_.store(false, std::memory_order_release);
 
         timer_worker_thread_ = std::thread(&TimerQueue::timer_worker, this);
     }
@@ -54,8 +54,8 @@ void TimerQueue::start(void)
 
 void TimerQueue::stop(void)
 {
-    if (!done_) {
-        done_ = true;
+    if (!done_.load(std::memory_order_acquire)) {
+        done_.store(true, std::memory_order_release);
 
         if (timer_worker_thread_.joinable()) {
             wakeThread(timer_worker_thread_);
@@ -68,7 +68,7 @@ void TimerQueue::timer_worker(void)
 {
     makeThreadWakeable();
 
-    while (!done_) {
+    while (!done_.load(std::memory_order_acquire)) {
         time_type now = MonoClock::now();
 
         // Run all pending timers
