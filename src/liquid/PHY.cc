@@ -43,7 +43,11 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     MonoClock::time_point mod_start = MonoClock::now();
 
     // Set team in header
-    pkt->hdr.flags.team = team_;
+    if (team_ != 0) {
+        std::lock_guard<std::mutex> lock(pkt->mutex);
+
+        pkt->hdr.flags.team = team_;
+    }
 
     // Set MCS based on MCS index
     assert(pkt->mcsidx < phy_.mcs_table.size());
@@ -91,8 +95,12 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
         work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
     // Record modulation latency
-    pkt->mod_start_timestamp = mod_start;
-    pkt->mod_end_timestamp = mod_end;
+    {
+        std::lock_guard<std::mutex> lock(pkt->mutex);
+
+        pkt->mod_start_timestamp = mod_start;
+        pkt->mod_end_timestamp = mod_end;
+    }
 
     // Fill in the ModPacket
     mpkt.offset = iqbuf->delay;
