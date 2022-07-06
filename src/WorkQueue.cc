@@ -6,8 +6,9 @@
 WorkQueue work_queue;
 
 WorkQueue::WorkQueue(const unsigned int nthreads)
-  : done_(false)
 {
+    done_.store(false, std::memory_order_release);
+
     addThreads(nthreads);
 }
 
@@ -24,7 +25,7 @@ void WorkQueue::addThreads(unsigned int nthreads)
 
 void WorkQueue::stop(void)
 {
-    done_ = true;
+    done_.store(true, std::memory_order_release);
 
     work_q_.disable();
 
@@ -48,7 +49,7 @@ void WorkQueue::run_worker(void)
 {
     std::function<void(void)> item;
 
-    while (!done_) {
+    while (!done_.load(std::memory_order_acquire)) {
         if (work_q_.pop(item)) {
             try {
                 item();
