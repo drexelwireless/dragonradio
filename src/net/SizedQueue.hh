@@ -8,7 +8,6 @@
 #include "Clock.hh"
 #include "llc/Controller.hh"
 #include "net/Queue.hh"
-#include "util/threads.hh"
 
 /** @brief A queue that tracks its size. */
 template <class T>
@@ -20,14 +19,14 @@ public:
 
     SizedQueue()
       : Queue<T>()
-      , done_(false)
+      , enabled_(true)
       , size_(0)
     {
     }
 
     virtual ~SizedQueue()
     {
-        stop();
+        disable();
     }
 
     /** @brief Get flag indicating whether or not to be gentle */
@@ -46,6 +45,37 @@ public:
         hi_priority_flows_ = flows;
     }
 
+    bool isEnabled(void) const override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            return enabled_;
+        }
+    }
+
+    void enable(void) override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            enabled_ = true;
+        }
+
+        cond_.notify_all();
+    }
+
+    void disable(void) override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            enabled_ = false;
+        }
+
+        cond_.notify_all();
+    }
+
     virtual size_t size(void) override
     {
         std::unique_lock<std::mutex> lock(m_);
@@ -57,7 +87,7 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        done_ = false;
+        enabled_ = true;
         size_ = 0;
         hiq_.clear();
         q_.clear();
@@ -96,7 +126,9 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        if (!wait_once(cond_, lock, [this]{ return done_ || !hiq_.empty() || !q_.empty(); }) || done_)
+        cond_.wait(lock, [&]{ return !enabled_ || !hiq_.empty() || !q_.empty(); });
+
+        if (!enabled_)
             return false;
 
         MonoClock::time_point now = MonoClock::now();
@@ -109,29 +141,18 @@ public:
         return pop_queue(q_, now, val);
     }
 
-    virtual void kick(void) override
-    {
-        cond_.notify_all();
-    }
-
-    void stop(void) override
-    {
-        done_ = true;
-        cond_.notify_all();
-    }
-
 protected:
-    /** @brief Flag indicating that processing of the queue should stop. */
-    bool done_;
+    /** @brief Mutex protecting the queues. */
+    mutable std::mutex m_;
+
+    /** @brief Flag indicating that the queue is enabled. */
+    bool enabled_;
 
     /** @brief High-priority flows. */
     std::set<FlowUID> hi_priority_flows_;
 
     /** @brief Size of queue (bytes). */
     size_t size_;
-
-    /** @brief Mutex protecting the queues. */
-    mutable std::mutex m_;
 
     /** @brief Condition variable protecting the queue. */
     std::condition_variable cond_;

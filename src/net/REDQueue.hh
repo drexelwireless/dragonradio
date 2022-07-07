@@ -17,9 +17,8 @@ public:
     using const_iterator = typename std::list<T>::const_iterator;
 
     using SizedQueue<T>::canPop;
-    using SizedQueue<T>::stop;
     using SizedQueue<T>::drop;
-    using SizedQueue<T>::done_;
+    using SizedQueue<T>::enabled_;
     using SizedQueue<T>::size_;
     using SizedQueue<T>::hi_priority_flows_;
     using SizedQueue<T>::m_;
@@ -46,11 +45,6 @@ public:
     }
 
     REDQueue() = delete;
-
-    virtual ~REDQueue()
-    {
-        stop();
-    }
 
     /** @brief Get flag indicating whether or not to be gentle */
     /** See:
@@ -119,7 +113,7 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        done_ = false;
+        enabled_ = true;
         size_ = 0;
         count_ = 0;
         hiq_.clear();

@@ -84,8 +84,8 @@ void ParallelChannelSynthesizer<ChannelModulator>::reconfigure(void)
     // Disable the modulated packet queue
     queue_.disable();
 
-    // Kick the queue and the sink
-    sink.kick();
+    // Disable the sink
+    sink.disable();
 
     // Wait for workers to be ready for reconfiguration
     reconfigure_sync_.wait();
@@ -98,6 +98,9 @@ void ParallelChannelSynthesizer<ChannelModulator>::reconfigure(void)
 
     // Wait for workers to resume
     reconfigure_sync_.wait();
+
+    // Re-enable the sink
+    sink.enable();
 }
 
 template <class ChannelModulator>

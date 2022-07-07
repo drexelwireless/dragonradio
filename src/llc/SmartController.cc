@@ -96,10 +96,13 @@ void SmartController::setEmcon(NodeId node_id, bool emcon)
     Node &node = *(*nhood_)[node_id];
 
     if (node.emcon != emcon) {
-        // If this node can no longer transmit, kick the network input so that
-        // getPacket will realize it's not allowed to transmit.
-        if (node.id == nhood_->me->id)
-            net_in.kick();
+        // Enable or disable the network input according to emcon
+        if (node.id == nhood_->me->id) {
+            if (emcon)
+                net_in.disable();
+            else
+                net_in.enable();
+        }
 
         node.emcon = emcon;
     }

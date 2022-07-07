@@ -14,7 +14,6 @@ public:
     using const_iterator = typename std::list<T>::const_iterator;
 
     using SizedQueue<T>::canPop;
-    using SizedQueue<T>::stop;
     using SizedQueue<T>::drop;
     using SizedQueue<T>::size_;
     using SizedQueue<T>::hi_priority_flows_;
@@ -30,11 +29,6 @@ public:
     }
 
     TailDropQueue() = delete;
-
-    virtual ~TailDropQueue()
-    {
-        stop();
-    }
 
     /** @brief Get maximum size */
     size_t getMaxSize(void) const
