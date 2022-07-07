@@ -24,14 +24,24 @@ public:
            nullptr,
            std::bind(&Queue<T>::push, this, std::placeholders::_1))
       , out(*this,
-            std::bind(&Queue<T>::reset, this),
-            std::bind(&Queue<T>::stop, this),
-            std::bind(&Queue<T>::pop, this, std::placeholders::_1),
-            std::bind(&Queue<T>::kick, this))
+            std::bind(&Queue<T>::connected, this),
+            std::bind(&Queue<T>::disconnected, this),
+            std::bind(&Queue<T>::enable, this),
+            std::bind(&Queue<T>::disable, this),
+            std::bind(&Queue<T>::pop, this, std::placeholders::_1))
     {
     }
 
     virtual ~Queue() = default;
+
+    /** @brief Is the queue enabled? */
+    virtual bool isEnabled(void) const = 0;
+
+    /** @brief Enable the queue. */
+    virtual void enable(void) = 0;
+
+    /** @brief Disable the queue. */
+    virtual void disable(void) = 0;
 
     /** @brief Queue size. */
     virtual size_t size(void) = 0;
@@ -45,17 +55,24 @@ public:
     /** @brief Pop an element from the queue. */
     virtual bool pop(T& val) = 0;
 
-    /** @brief Kick the queue. */
-    virtual void kick(void) = 0;
-
-    /** @brief Stop processing queue elements. */
-    virtual void stop(void) = 0;
-
     /** @brief The queue's packet input port. */
     Port<In, Push, T> in;
 
     /** @brief The queue's packet output port. */
     Port<Out, Pull, T> out;
+
+  protected:
+    /** @brief Called when queue is connected */
+    virtual void connected(void)
+    {
+        reset();
+    }
+
+    /** @brief Called when queue is disconnected */
+    virtual void disconnected(void)
+    {
+        disable();
+    }
 };
 
 using NetQueue = Queue<std::shared_ptr<NetPacket>>;

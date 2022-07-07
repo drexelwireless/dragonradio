@@ -93,8 +93,9 @@ public:
       , net_out(*this,
                 nullptr,
                 std::bind(&Controller::disconnect, this),
-                std::bind(&Controller::pull, this, std::placeholders::_1),
-                std::bind(&Controller::kick, this))
+                std::bind(&Controller::enable, this),
+                std::bind(&Controller::disable, this),
+                std::bind(&Controller::pull, this, std::placeholders::_1))
       , radio_in(*this,nullptr, nullptr,
                  std::bind(&Controller::received, this, std::placeholders::_1))
       , radio_out(*this, nullptr, nullptr)
@@ -142,10 +143,16 @@ public:
      */
     virtual bool pull(std::shared_ptr<NetPacket> &pkt) = 0;
 
-    /** @brief Kick the controller. */
-    virtual void kick(void)
+    /** @brief Enable the controller. */
+    virtual void enable(void)
     {
-        net_in.kick();
+        net_in.enable();
+    }
+
+    /** @brief Disable the controller. */
+    virtual void disable(void)
+    {
+        net_in.disable();
     }
 
     /** @brief Process demodulated packets. */

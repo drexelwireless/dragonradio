@@ -90,7 +90,7 @@ void TDChannelizer::stop(void)
 
     // Stop all IQ buffer queues
     for (unsigned int i = 0; i < iqbufs_.size(); ++i)
-        iqbufs_[i]->stop();
+        iqbufs_[i]->disable();
 
     // Join on all threads
     wake_cond_.notify_all();
