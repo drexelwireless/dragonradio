@@ -41,12 +41,15 @@ public:
     /** @brief Get number of slots */
     size_t getNSlots(void)
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return nslots_;
     }
 
-    void reconfigure(void) override;
-
-    bool isFDMA(void) const override;
+    bool isFDMA(void) const override
+    {
+        return schedule_.isFDMA();
+    }
 
 private:
     /** @brief Length of TDMA frame (sec) */
@@ -82,6 +85,8 @@ private:
     bool findNextSlot(WallClock::time_point t,
                       WallClock::time_point &t_next,
                       size_t &next_slotidx);
+
+    void reconfigure(void) override;
 };
 
 #endif /* TDMA_H_ */

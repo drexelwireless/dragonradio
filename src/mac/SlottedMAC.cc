@@ -28,13 +28,15 @@ SlottedMAC::SlottedMAC(std::shared_ptr<Radio> radio,
                        std::shared_ptr<SlotSynthesizer> synthesizer,
                        double slot_size,
                        double guard_size,
-                       double slot_send_lead_time)
+                       double slot_send_lead_time,
+                       unsigned nsyncthreads)
   : MAC(radio,
         controller,
         collector,
         channelizer,
         synthesizer,
-        slot_size)
+        slot_size,
+        nsyncthreads)
   , slot_synthesizer_(synthesizer)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
@@ -49,43 +51,29 @@ SlottedMAC::~SlottedMAC()
 {
 }
 
-void SlottedMAC::reconfigure(void)
-{
-    MAC::reconfigure();
-
-    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_).count();
-    tx_full_slot_samps_ = tx_rate_*slot_size_.count();
-}
-
 void SlottedMAC::stop(void)
 {
-    done_ = true;
-
-    tx_slots_.disable();
+    tx_slot_.disable();
 }
 
-void SlottedMAC::modulateSlot(slot_queue &q,
-                              WallClock::time_point when,
+void SlottedMAC::modulateSlot(WallClock::time_point when,
                               size_t prev_overfill,
                               size_t slotidx)
 {
     assert(prev_overfill <= tx_full_slot_samps_);
 
-    auto slot = std::make_shared<Slot>(when,
-                                       prev_overfill,
-                                       tx_slot_samps_ - prev_overfill,
-                                       tx_full_slot_samps_ - prev_overfill,
-                                       slotidx,
-                                       schedule_.size());
+    next_slot_ = std::make_shared<Slot>(when,
+                                        prev_overfill,
+                                        tx_slot_samps_ - prev_overfill,
+                                        tx_full_slot_samps_ - prev_overfill,
+                                        slotidx,
+                                        schedule_.size());
 
     // Tell the synthesizer to synthesize for this slot
-    slot_synthesizer_->modulate(slot);
-
-    q.push(std::move(slot));
+    slot_synthesizer_->modulate(next_slot_);
 }
 
-std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
-                                               WallClock::time_point when)
+std::shared_ptr<Slot> SlottedMAC::finalizeSlot(WallClock::time_point when)
 {
     std::shared_ptr<Slot> slot;
     WallClock::time_point deadline;
@@ -94,18 +82,17 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
         // Get the next slot
         {
             // If we don't have any slots synthesized, we can't send anything
-            if (q.empty())
+            if (!next_slot_)
                 return nullptr;
 
             // Check deadline of next slot
-            deadline = q.front()->deadline;
+            deadline = next_slot_->deadline;
 
             // If the next slot needs to be transmitted or tossed, pop it,
             // otherwise return nullptr since we need to wait longer
-            if (deadline < when || within(deadline, when, 1us)) {
-                slot = std::move(q.front());
-                q.pop();
-            } else
+            if (deadline < when || within(deadline, when, 1us))
+                slot = std::move(next_slot_);
+            else
                 return nullptr;
         }
 
@@ -146,11 +133,16 @@ void SlottedMAC::txWorker(void)
     std::shared_ptr<Slot> slot;
     bool                  next_slot_start_of_burst = true;
 
-    while (!done_) {
+    for (;;) {
         // Get a slot
-        if (!tx_slots_.pop(slot)) {
-            if (done_)
-                return;
+        if (!tx_slot_.pop(slot)) {
+            // Synchronize on state change
+            if (needs_sync()) {
+                sync();
+
+                if (done_)
+                    return;
+            }
 
             continue;
         }
@@ -213,10 +205,21 @@ void SlottedMAC::missedSlot(Slot &slot)
         controller_->missed(std::move((*it)->pkt));
 }
 
-void SlottedMAC::missedRemainingSlots(slot_queue &q)
+void SlottedMAC::wake_dependents()
 {
-    while (!q.empty()) {
-        missedSlot(*q.front());
-        q.pop();
-    }
+    MAC::wake_dependents();
+
+    // Disable the TX slot queue
+    tx_slot_.disable();
+}
+
+void SlottedMAC::reconfigure(void)
+{
+    MAC::reconfigure();
+
+    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_).count();
+    tx_full_slot_samps_ = tx_rate_*slot_size_.count();
+
+    // Re-enable the TX slot queue
+    tx_slot_.enable();
 }

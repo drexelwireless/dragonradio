@@ -9,6 +9,7 @@
 #include <optional>
 #include <queue>
 
+#include "qvar.hh"
 #include "Clock.hh"
 #include "Logger.hh"
 #include "SafeQueue.hh"
@@ -31,7 +32,8 @@ public:
                std::shared_ptr<SlotSynthesizer> synthesizer,
                double slot_size,
                double guard_size,
-               double slot_send_lead_time);
+               double slot_send_lead_time,
+               unsigned nsyncthreads);
     virtual ~SlottedMAC();
 
     SlottedMAC(const SlottedMAC&) = delete;
@@ -43,6 +45,8 @@ public:
     /** @brief Get slot size, including guard interval */
     virtual std::chrono::duration<double> getSlotSize(void)
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return slot_size_;
     }
 
@@ -51,14 +55,19 @@ public:
      */
     virtual void setSlotSize(std::chrono::duration<double> t)
     {
-        rx_period_ = t;
-        slot_size_ = t;
-        reconfigure();
+        modify([&](){
+            rx_period_ = t;
+            slot_size_ = t;
+
+            reconfigure();
+        });
     }
 
     /** @brief Get guard interval size */
     virtual std::chrono::duration<double> getGuardSize(void)
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return guard_size_;
     }
 
@@ -67,19 +76,27 @@ public:
      */
     virtual void setGuardSize(std::chrono::duration<double> t)
     {
-        guard_size_ = t;
-        reconfigure();
+        modify([&](){
+            guard_size_ = t;
+
+            reconfigure();
+        });
     }
 
     virtual std::chrono::duration<double> getSlotSendLeadTime(void)
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return slot_send_lead_time_;
     }
 
     virtual void setSlotSendLeadTime(std::chrono::duration<double> t)
     {
-        slot_send_lead_time_ = t;
-        reconfigure();
+        modify([&](){
+            slot_send_lead_time_ = t;
+
+            reconfigure();
+        });
     }
 
     /** @brief Is this MAC FDMA? */
@@ -88,13 +105,9 @@ public:
         return false;
     }
 
-    void reconfigure(void) override;
-
     void stop(void) override;
 
 protected:
-    using slot_queue = std::queue<std::shared_ptr<Slot>>;
-
     /** @brief Our slot synthesizer. */
     std::shared_ptr<SlotSynthesizer> slot_synthesizer_;
 
@@ -116,25 +129,25 @@ protected:
     /** @brief Do we need to stop the current burst? */
     std::atomic<bool> stop_burst_;
 
-    /** @brief Slots to transmit */
-    SafeQueue<std::shared_ptr<Slot>> tx_slots_;
+    /** @brief The next slot */
+    std::shared_ptr<Slot> next_slot_;
+
+    /** @brief Slot to transmit */
+    qvar<std::shared_ptr<Slot>> tx_slot_;
 
     /** @brief Worker transmitting slots */
     void txWorker(void);
 
     /** @brief Schedule modulation of a slot
-     * @param q The slot queue
      * @param when Start time of slot
      * @param prev_overfill Number of overfill samples from previous slot.
      * @param slotidx Index of the slot to modulated
      */
-    void modulateSlot(slot_queue &q,
-                      WallClock::time_point when,
+    void modulateSlot(WallClock::time_point when,
                       size_t prev_overfill,
                       size_t slotidx);
 
     /** @brief Finalize the next TX slot.
-     * @param q The slot queue
      * @param when Start time of slot
      * @return The slot
      */
@@ -142,15 +155,14 @@ protected:
      * That is, it does not need to acquire the slot's lock to modify it,
      * because it is guaranteed exclusive access.
      */
-    std::shared_ptr<Slot> finalizeSlot(slot_queue &q,
-                                       WallClock::time_point when);
+    std::shared_ptr<Slot> finalizeSlot(WallClock::time_point when);
 
     /** @brief Transmit a slot
      * @param slot The slot
      */
     void txSlot(std::shared_ptr<Slot> &&slot)
     {
-        tx_slots_.push(std::move(slot));
+        tx_slot_ = std::move(slot);
     }
 
     /** @brief Mark a slot as missed
@@ -158,10 +170,9 @@ protected:
      */
     void missedSlot(Slot &slot);
 
-    /** @brief Mark all remaining slots in qeueue as missed
-     * @param q The slot queue
-     */
-    void missedRemainingSlots(slot_queue &q);
+    void wake_dependents() override;
+
+    void reconfigure(void) override;
 };
 
 #endif /* SLOTTEDMAC_H_ */

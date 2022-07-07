@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "Clock.hh"
@@ -16,12 +16,15 @@ FDMA::FDMA(std::shared_ptr<Radio> radio,
         collector,
         channelizer,
         synthesizer,
-        period)
+        period,
+        4)
   , premod_(period)
   , accurate_tx_timestamps_(false)
   , timed_tx_delay_(500e-6)
   , channel_synthesizer_(synthesizer)
 {
+    reconfigure();
+
     rx_thread_ = std::thread(&FDMA::rxWorker, this);
     tx_thread_ = std::thread(&FDMA::txWorker, this);
     tx_notifier_thread_ = std::thread(&FDMA::txNotifier, this);
@@ -34,44 +37,17 @@ FDMA::~FDMA()
 
 void FDMA::stop(void)
 {
-    done_ = true;
+    if (modify([&]() { done_ = true; })) {
+        // Join on all threads
+        if (rx_thread_.joinable())
+            rx_thread_.join();
 
-    synthesizer_->stop();
+        if (tx_thread_.joinable())
+            tx_thread_.join();
 
-    tx_records_cond_.notify_all();
-
-    if (rx_thread_.joinable())
-        rx_thread_.join();
-
-    if (tx_thread_.joinable())
-        tx_thread_.join();
-
-    if (tx_notifier_thread_.joinable())
-        tx_notifier_thread_.join();
-}
-
-void FDMA::reconfigure(void)
-{
-    MAC::reconfigure();
-
-    // Determine whether or not we can transmit
-    bool can_transmit = false;
-
-    for (size_t chan = 0; chan < schedule_.size(); ++chan) {
-        // Check for valid FDMA schedule, i.e., we only have one slot for each channel
-        if (schedule_[chan].size() != 1)
-            throw std::out_of_range("Schedule is not an FDMA schedule: schedule has more than one slot");
-
-        if (schedule_[chan][0]) {
-            can_transmit = true;
-            break;
-        }
+        if (tx_notifier_thread_.joinable())
+            tx_notifier_thread_.join();
     }
-
-    can_transmit_ = can_transmit;
-
-    // Set synthesizer's high water mark
-    channel_synthesizer_->setHighWaterMark(premod_*tx_rate_);
 }
 
 void FDMA::txWorker(void)
@@ -79,7 +55,7 @@ void FDMA::txWorker(void)
     std::optional<MonoClock::time_point> t_next_tx; // Time at which next transmission starts
     bool                                 next_slot_start_of_burst = true;
 
-    while (!done_) {
+    for (;;) {
         ChannelSynthesizer::container_type mpkts;
         size_t                             nsamples;
 
@@ -87,6 +63,14 @@ void FDMA::txWorker(void)
             nsamples = channel_synthesizer_->pop(mpkts);
         else
             nsamples = channel_synthesizer_->try_pop(mpkts);
+
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
+
+            if (done_)
+                return;
+        }
 
         // If we don't have any data to send, we're done. If this slot was not
         // the start of a burst, then it is part of an in-flight burst, in which
@@ -145,4 +129,37 @@ void FDMA::txWorker(void)
             next_slot_start_of_burst = true;
         }
     }
+}
+
+void FDMA::wake_dependents()
+{
+    MAC::wake_dependents();
+
+    // Disable the channel synthesizer
+    channel_synthesizer_->disable();
+}
+
+void FDMA::reconfigure(void)
+{
+    MAC::reconfigure();
+
+    // Determine whether or not we can transmit
+    can_transmit_ = false;
+
+    for (size_t chan = 0; chan < schedule_.size(); ++chan) {
+        // Check for valid FDMA schedule, i.e., we only have one slot for each channel
+        if (schedule_[chan].size() != 1)
+            throw std::out_of_range("Schedule is not an FDMA schedule: schedule has more than one slot");
+
+        if (schedule_[chan][0]) {
+            can_transmit_ = true;
+            break;
+        }
+    }
+
+    // Set synthesizer's high water mark
+    channel_synthesizer_->setHighWaterMark(premod_*tx_rate_);
+
+    // Re-enable the channel synthesizer
+    channel_synthesizer_->enable();
 }

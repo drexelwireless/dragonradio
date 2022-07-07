@@ -7,6 +7,7 @@
 #include <deque>
 #include <memory>
 
+#include "sync_barrier.hh"
 #include "Radio.hh"
 #include "llc/Controller.hh"
 #include "mac/MAC.hh"
@@ -16,7 +17,7 @@
 #include "phy/Synthesizer.hh"
 
 /** @brief A MAC protocol. */
-class MAC
+class MAC : protected sync_barrier
 {
 public:
     /** @brief MAC load, measured as samples transmitted over time */
@@ -43,7 +44,8 @@ public:
         std::shared_ptr<SnapshotCollector> collector,
         std::shared_ptr<Channelizer> channelizer,
         std::shared_ptr<Synthesizer> synthesizer,
-        double rx_period);
+        double rx_period,
+        unsigned nsyncthreads);
     virtual ~MAC() = default;
 
     MAC() = delete;
@@ -63,32 +65,45 @@ public:
         return synthesizer_;
     }
 
+    /** @brief Notify MAC that TX/RX rates have changed */
+    virtual void rateChange(void);
+
     /** @brief Can this MAC transmit
      * @return true if we can transmit, false otherwise
      */
     virtual bool canTransmit(void) const
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return can_transmit_;
     }
 
     /** @brief Get MAC schedule */
     virtual const Schedule &getSchedule(void) const
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return schedule_;
     }
 
     /** @brief Set MAC schedule */
     virtual void setSchedule(const Schedule &schedule)
     {
-        schedule_ = schedule;
-        reconfigure();
+        modify([&](){
+            schedule_ = schedule;
+
+            reconfigure();
+        });
     }
 
     /** @brief Set MAC schedule */
     virtual void setSchedule(const Schedule::sched_type &schedule)
     {
-        schedule_ = schedule;
-        reconfigure();
+        modify([&](){
+            schedule_ = schedule;
+
+            reconfigure();
+        });
     }
 
     /** @brief Get current load */
@@ -125,13 +140,13 @@ public:
         return load;
     }
 
-    /** @brief Reconfigure the MAC when after parameters change */
-    virtual void reconfigure(void);
-
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
 
 protected:
+    /** @brief A reference to the global logger */
+    std::shared_ptr<Logger> logger_;
+
     /** @brief Our Radio device. */
     std::shared_ptr<Radio> radio_;
 
@@ -147,8 +162,11 @@ protected:
     /** @brief Our synthesizer. */
     std::shared_ptr<Synthesizer> synthesizer_;
 
-    /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
+    /** @brief Mutex for load */
+    std::mutex load_mutex_;
+
+    /** @brief Number of sent samples */
+    Load load_;
 
     /** @brief Flag indicating whether or not we can transmit */
     /** This is used, in particular, for the TDMA MAC, which may not have a slot
@@ -178,15 +196,6 @@ protected:
      * the frequency of the channel we transmit on.
      */
     std::optional<double> tx_fc_off_;
-
-    /** @brief A reference to the global logger */
-    std::shared_ptr<Logger> logger_;
-
-    /** @brief Mutex for load */
-    std::mutex load_mutex_;
-
-    /** @brief Number of sent samples */
-    Load load_;
 
     /** @brief A transmission record */
     struct TXRecord {
@@ -236,6 +245,11 @@ protected:
 
     /** @brief Worker handling notification for transmitted slots */
     void txNotifier(void);
+
+    /** @brief Reconfigure the MAC after parameters change */
+    virtual void reconfigure(void);
+
+    void wake_dependents() override;
 };
 
 #endif /* MAC_H_ */

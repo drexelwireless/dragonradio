@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef FDMA_H_
@@ -32,28 +32,30 @@ public:
 
     bool getAccurateTXTimestamps(void) const
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return accurate_tx_timestamps_;
     }
 
     void setAccurateTXTimestamps(bool accurate)
     {
-        accurate_tx_timestamps_ = accurate;
+        modify([&](){ accurate_tx_timestamps_ = accurate; });
     }
 
     std::chrono::duration<double> getTimedTXDelay(void) const
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return timed_tx_delay_;
     }
 
     void setTimedTXDelay(std::chrono::duration<double> t)
     {
-        timed_tx_delay_ = t;
+        modify([&](){ timed_tx_delay_ = t; });
     }
 
     /** @brief Stop processing packets */
     void stop(void) override;
-
-    void reconfigure(void) override;
 
 private:
     /** @brief Amount of data to pre-modulate (sec) */
@@ -80,6 +82,10 @@ private:
 
     /** @brief Worker preparing slots for transmission */
     void txWorker(void);
+
+    void reconfigure(void) override;
+
+    void wake_dependents() override;
 };
 
 #endif /* FDMA_H_ */
