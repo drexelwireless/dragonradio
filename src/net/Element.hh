@@ -184,11 +184,18 @@ public:
             return false;
     }
 
-    /** @brief Kick the port. */
-    void kick(void)
+    /** @brief Enable the port. */
+    void enable(void)
     {
         if (upstream_)
-            return upstream_->kick();
+            return upstream_->enable();
+    }
+
+    /** @brief Disable the port. */
+    void disable(void)
+    {
+        if (upstream_)
+            return upstream_->disable();
     }
 
     /** @brief Connect the port to an upstream pull port. */
@@ -311,15 +318,29 @@ public:
     Port(Element& element,
          std::function<void(void)> connected,
          std::function<void(void)> disconnected,
-         std::function<bool(T&)> recv,
-         std::function<void(void)> kick)
+         std::function<void(void)> enable,
+         std::function<void(void)> disable,
+         std::function<bool(T&)> recv)
       : BasePort<Out, Pull, T>(element, connected, disconnected)
+      , enable_(enable)
+      , disable_(disable)
       , recv_(recv)
-      , kick_(kick)
     {
     }
 
     virtual ~Port() = default;
+
+    /** @brief Enable the port. */
+    void enable(void)
+    {
+        enable_();
+    }
+
+    /** @brief Disable the port. */
+    void disable(void)
+    {
+        disable_();
+    }
 
     /** @brief Receive a packet from the port. */
     bool recv(T& pkt)
@@ -327,18 +348,15 @@ public:
         return recv_(pkt);
     }
 
-    /** @brief Kick the port. */
-    void kick(void)
-    {
-        kick_();
-    }
-
 protected:
+    /** @brief Called to enable. */
+    std::function<void(void)> enable_;
+
+    /** @brief Called to disable. */
+    std::function<void(void)> disable_;
+
     /** @brief Called to receive a packet. */
     std::function<bool(T&)> recv_;
-
-    /** @brief Called to kick. */
-    std::function<void(void)> kick_;
 };
 
 template <typename D>

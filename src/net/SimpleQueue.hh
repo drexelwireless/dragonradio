@@ -8,7 +8,6 @@
 #include <mutex>
 
 #include "net/Queue.hh"
-#include "util/threads.hh"
 
 /** @brief A simple queue Element. */
 template <class T>
@@ -29,14 +28,14 @@ public:
 
     SimpleQueue(QueueType type)
       : Queue<T>()
-      , done_(false)
+      , enabled_(true)
       , type_(type)
     {
     }
 
     virtual ~SimpleQueue()
     {
-        stop();
+        disable();
     }
 
     /** @brief Get queue type */
@@ -55,6 +54,37 @@ public:
         type_ = type;
     }
 
+    bool isEnabled(void) const override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            return enabled_;
+        }
+    }
+
+    void enable(void) override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            enabled_ = true;
+        }
+
+        cond_.notify_all();
+    }
+
+    void disable(void) override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            enabled_ = false;
+        }
+
+        cond_.notify_all();
+    }
+
     virtual size_t size(void) override
     {
         std::unique_lock<std::mutex> lock(m_);
@@ -67,7 +97,7 @@ public:
         std::lock_guard<std::mutex> lock(m_);
         std::list<T> newq;
 
-        done_ = false;
+        enabled_ = true;
         q_.swap(newq);
     }
 
@@ -114,7 +144,9 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        if (!wait_once(cond_, lock, [this]{ return done_ || !hiq_.empty() || !q_.empty(); }) || done_)
+        cond_.wait(lock, [&]{ return !enabled_ || !hiq_.empty() || !q_.empty(); });
+
+        if (!enabled_)
             return false;
 
         MonoClock::time_point now = MonoClock::now();
@@ -167,23 +199,12 @@ public:
         return false;
     }
 
-    virtual void kick(void) override
-    {
-        cond_.notify_all();
-    }
-
-    virtual void stop(void) override
-    {
-        done_ = true;
-        cond_.notify_all();
-    }
-
 protected:
-    /** @brief Flag indicating that processing of the queue should stop. */
-    bool done_;
-
     /** @brief Mutex protecting the queues. */
     mutable std::mutex m_;
+
+    /** @brief Flag indicating that the queue is enabled. */
+    bool enabled_;
 
     /** @brief Condition variable protecting the queue. */
     std::condition_variable cond_;

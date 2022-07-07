@@ -17,7 +17,6 @@
 #include "cil/CIL.hh"
 #include "llc/Controller.hh"
 #include "net/Queue.hh"
-#include "util/threads.hh"
 
 /** @brief A queue that obeys mandates. */
 template <class T>
@@ -59,7 +58,7 @@ public:
 
     MandateQueue()
       : Queue<T>()
-      , done_(false)
+      , enabled_(true)
       , transmission_delay_(0.0)
       , bonus_phase_(false)
       , use_wall_timestamp_(false)
@@ -77,7 +76,7 @@ public:
     virtual ~MandateQueue()
     {
         timer_queue_.stop();
-        stop();
+        disable();
     }
 
     void setLinkStatus(NodeId id, bool isOpen) override
@@ -276,6 +275,37 @@ public:
         return result;
     }
 
+    bool isEnabled(void) const override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            return enabled_;
+        }
+    }
+
+    void enable(void) override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            enabled_ = true;
+        }
+
+        cond_.notify_all();
+    }
+
+    void disable(void) override
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            enabled_ = false;
+        }
+
+        cond_.notify_all();
+    }
+
     virtual size_t size(void) override
     {
         std::unique_lock<std::mutex> lock(m_);
@@ -287,7 +317,7 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        done_ = false;
+        enabled_ = true;
 
         flow_qs_.clear();
         qs_.clear();
@@ -336,7 +366,9 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        if (!wait_once(cond_, lock, [this]{ return done_ || nitems_ > 0; }) || done_)
+        cond_.wait(lock, [&]{ return !enabled_ || nitems_ > 0; });
+
+        if (!enabled_)
             return false;
 
         MonoClock::time_point dequeue_start = MonoClock::now();
@@ -388,17 +420,6 @@ public:
         }
 
         return false;
-    }
-
-    virtual void kick(void) override
-    {
-        cond_.notify_all();
-    }
-
-    virtual void stop(void) override
-    {
-        done_ = true;
-        cond_.notify_all();
     }
 
     virtual void updateMetric(NodeId id, double metric) override
@@ -935,8 +956,11 @@ protected:
         }
     };
 
-    /** @brief Flag indicating that processing of the queue should stop. */
-    bool done_;
+    /** @brief Mutex protecting the queues. */
+    mutable std::mutex m_;
+
+    /** @brief Flag indicating that the queue is enabled. */
+    bool enabled_;
 
     /** @brief Packet transmission delay (sec) */
     std::chrono::duration<double> transmission_delay_;
@@ -948,9 +972,6 @@ protected:
       * creation timestamp.
       * */
     bool use_wall_timestamp_;
-
-    /** @brief Mutex protecting the queues. */
-    mutable std::mutex m_;
 
     /** @brief Condition variable protecting the queue. */
     std::condition_variable cond_;

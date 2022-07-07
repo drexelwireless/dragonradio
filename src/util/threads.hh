@@ -8,20 +8,8 @@
 #include <unistd.h>
 
 #include <cmath>
-#include <condition_variable>
 #include <chrono>
-#include <mutex>
 #include <thread>
-
-/** @brief Wait only once on a condition variable */
-template <class Predicate>
-bool wait_once(std::condition_variable& cond, std::unique_lock<std::mutex>& lock, Predicate pred)
-{
-    if (!pred())
-        cond.wait(lock);
-
-    return pred();
-}
 
 /** @brief Make thread have real-time priority. */
 void setRealtimePriority(void);

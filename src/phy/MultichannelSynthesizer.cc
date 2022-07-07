@@ -114,8 +114,8 @@ void MultichannelSynthesizer::reconfigure(void)
         wake_cond_.notify_all();
     }
 
-    // Kick the sink
-    sink.kick();
+    // Disable the sink
+    sink.disable();
 
     // Wait for workers to be ready for reconfiguration
     reconfigure_sync_.wait();
@@ -162,6 +162,9 @@ void MultichannelSynthesizer::reconfigure(void)
 
     // Wait for workers to resume
     reconfigure_sync_.wait();
+
+    // Re-enable the sink
+    sink.enable();
 }
 
 void MultichannelSynthesizer::modWorker(unsigned tid)
