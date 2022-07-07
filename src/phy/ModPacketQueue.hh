@@ -10,7 +10,6 @@
 #include <mutex>
 
 #include "phy/PHY.hh"
-#include "util/threads.hh"
 
 /** @brief A queue of modulated packets */
 template<class T = std::unique_ptr<ModPacket>, class Container = std::list<T>>
@@ -20,12 +19,15 @@ public:
     using container_type = Container;
 
     ModPacketQueue()
-      : done_(false)
+      : enabled_(true)
       , nsamples_(0)
     {
     }
 
-    ~ModPacketQueue() = default;
+    ~ModPacketQueue()
+    {
+        disable();
+    }
 
     std::optional<size_t> getHighWaterMark(void) const
     {
@@ -41,12 +43,36 @@ public:
         high_water_mark_ = high_water_mark;
     }
 
-    void stop(void)
+    /** @brief Is the queue enabled? */
+    bool isEnabled(void) const
     {
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            std::unique_lock<std::mutex> lock(mutex_);
 
-            done_ = true;
+            return enabled_;
+        }
+    }
+
+    /** @brief Enable the queue. */
+    void enable(void)
+    {
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+
+            enabled_ = true;
+        }
+
+        producer_cond_.notify_all();
+        consumer_cond_.notify_all();
+    }
+
+    /** @brief Disable the queue. */
+    void disable(void)
+    {
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+
+            enabled_ = false;
         }
 
         producer_cond_.notify_all();
@@ -99,8 +125,10 @@ public:
         {
             std::unique_lock<std::mutex> lock(mutex_);
 
-            if (!wait_once(consumer_cond_, lock, [this]{ return done_ || nsamples_ > 0; }) || done_)
-                return false;
+            consumer_cond_.wait(lock, [this]{ return !enabled_ || nsamples_ > 0; });
+
+            if (!enabled_)
+                return 0;
 
             nsamples = nsamples_;
             mpkts.splice(mpkts.end(), std::move(queue_));
@@ -126,27 +154,24 @@ public:
         consumer_cond_.notify_one();
     }
 
-    /** @brief Wait for there to be room to push */
+    /** @brief Wait for there to be room to push
+     * @return true if there is room in the queue
+     */
     bool wait_until_room(void)
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
-        return wait_once(producer_cond_, lock, [this]{ return done_ || !high_water_mark_ || nsamples_ < *high_water_mark_; });
-    }
+        producer_cond_.wait(lock, [this]{ return !enabled_ || !high_water_mark_ || nsamples_ < *high_water_mark_; });
 
-    /** @brief Kick the queue to force progress */
-    void kick(void)
-    {
-        producer_cond_.notify_all();
-        consumer_cond_.notify_all();
+        return !high_water_mark_ || nsamples_ < *high_water_mark_;
     }
 
 protected:
     /** @brief Mutex protecting the queue */
     mutable std::mutex mutex_;
 
-    /** @brief Are we done with the queue? */
-    bool done_;
+    /** @brief Flag indicating that the queue is enabled. */
+    bool enabled_;
 
     /** @brief Maximum number of IQ samples the queue may contain */
     std::optional<size_t> high_water_mark_;

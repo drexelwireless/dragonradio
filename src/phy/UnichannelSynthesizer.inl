@@ -57,8 +57,9 @@ void UnichannelSynthesizer<ChannelModulator>::reconfigure(void)
     for (auto &flag : mod_reconfigure_)
         flag.store(true, std::memory_order_release);
 
-    // Kick the sink
-    sink.kick();
+    // Disable and re-enable the sink
+    sink.disable();
+    sink.enable();
 }
 
 template <class ChannelModulator>

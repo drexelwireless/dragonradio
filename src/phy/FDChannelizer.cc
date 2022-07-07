@@ -78,8 +78,8 @@ void FDChannelizer::reconfigure(void)
     // Tell workers we are reconfiguring
     reconfigure_.store(true, std::memory_order_release);
 
-    // Kick the FFT worker
-    tdbufs_.kick();
+    // Disable the FFT worker queue
+    tdbufs_.disable();
 
     // Wake all workers that might be sleeping.
     {
@@ -105,6 +105,9 @@ void FDChannelizer::reconfigure(void)
                                                             rx_rate_);
     }
 
+    // Re-enable the FFT worker queue
+    tdbufs_.enable();
+
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
 
@@ -120,10 +123,10 @@ void FDChannelizer::stop(void)
     done_ = true;
 
     // Stop all IQ buffer queues
-    tdbufs_.stop();
+    tdbufs_.disable();
 
     for (unsigned int i = 0; i < slots_.size(); ++i)
-        slots_[i]->stop();
+        slots_[i]->disable();
 
     // Join on all threads
     wake_cond_.notify_all();
