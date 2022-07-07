@@ -42,7 +42,7 @@ void ParallelChannelSynthesizer<ChannelModulator>::stop(void)
 
     done_ = true;
 
-    queue_.stop();
+    queue_.disable();
 
     wake_cond_.notify_all();
 
@@ -81,12 +81,17 @@ void ParallelChannelSynthesizer<ChannelModulator>::reconfigure(void)
         wake_cond_.notify_all();
     }
 
+    // Disable the modulated packet queue
+    queue_.disable();
+
     // Kick the queue and the sink
-    queue_.kick();
     sink.kick();
 
     // Wait for workers to be ready for reconfiguration
     reconfigure_sync_.wait();
+
+    // Re-enable the modulated packet queue
+    queue_.enable();
 
     // We are done reconfiguring
     reconfigure_.store(false, std::memory_order_release);
