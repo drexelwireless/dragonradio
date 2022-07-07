@@ -17,6 +17,8 @@
 #include "USRP.hh"
 #include "util/capabilities.hh"
 
+using namespace std::literals::chrono_literals;
+
 USRP::USRP(const std::string& addr)
   : auto_dc_offset_(false)
   , done_(false)
