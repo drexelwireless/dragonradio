@@ -24,7 +24,8 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
                synthesizer,
                slot_size,
                guard_size,
-               slot_send_lead_time)
+               slot_send_lead_time,
+               5)
   , slotidx_(0)
   , p_(p)
   , gen_(std::random_device()())
@@ -48,38 +49,38 @@ void SlottedALOHA::stop(void)
 {
     SlottedMAC::stop();
 
-    tx_records_cond_.notify_all();
+    if (modify([&](){ done_ = true; })) {
+        // Join on all threads
+        if (rx_thread_.joinable())
+            rx_thread_.join();
 
-    if (rx_thread_.joinable())
-        rx_thread_.join();
+        if (tx_thread_.joinable())
+            tx_thread_.join();
 
-    if (tx_thread_.joinable())
-        tx_thread_.join();
+        if (tx_slot_thread_.joinable())
+            tx_slot_thread_.join();
 
-    if (tx_slot_thread_.joinable())
-        tx_slot_thread_.join();
-
-    if (tx_notifier_thread_.joinable())
-        tx_notifier_thread_.join();
-}
-
-void SlottedALOHA::reconfigure(void)
-{
-    SlottedMAC::reconfigure();
-
-    if (schedule_.size() == 0 || slotidx_ >= schedule_[0].size())
-        slotidx_ = 0;
+        if (tx_notifier_thread_.joinable())
+            tx_notifier_thread_.join();
+    }
 }
 
 void SlottedALOHA::txSlotWorker(void)
 {
-    slot_queue            q;
     WallClock::time_point t_now;            // Current time
     WallClock::time_point t_next_slot;      // Time at which our next slot starts
     WallClock::time_point t_following_slot; // Time at which the following slot starts
     WallClock::duration   t_slot_pos;       // Offset into the current slot (sec)
 
-    while (!done_) {
+    for (;;) {
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
+
+            if (done_)
+                break;
+        }
+
         // Figure out when our next send slot is.
         t_now = WallClock::now();
         t_slot_pos = t_now.time_since_epoch() % slot_size_;
@@ -87,11 +88,11 @@ void SlottedALOHA::txSlotWorker(void)
         t_following_slot = t_next_slot + slot_size_;
 
         // Finalize next slot
-        auto slot = finalizeSlot(q, t_next_slot);
+        auto slot = finalizeSlot(t_next_slot);
 
         // Modulate following slot with probability p_
         if (dist_(gen_) < p_)
-            modulateSlot(q, t_following_slot, 0, slotidx_);
+            modulateSlot(t_following_slot, 0, slotidx_);
 
         // Transmit next slot
         if (slot)
@@ -101,5 +102,14 @@ void SlottedALOHA::txSlotWorker(void)
         sleep_for((t_following_slot - WallClock::now()) - slot_send_lead_time_);
     }
 
-    missedRemainingSlots(q);
+    if (next_slot_)
+        missedSlot(*next_slot_);
+}
+
+void SlottedALOHA::reconfigure(void)
+{
+    SlottedMAC::reconfigure();
+
+    if (schedule_.size() == 0 || slotidx_ >= schedule_[0].size())
+        slotidx_ = 0;
 }

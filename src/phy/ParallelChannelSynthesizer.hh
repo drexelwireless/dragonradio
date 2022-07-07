@@ -9,7 +9,6 @@
 #include <memory>
 #include <mutex>
 
-#include "barrier.hh"
 #include "phy/Channel.hh"
 #include "phy/ChannelSynthesizer.hh"
 #include "phy/PHY.hh"
@@ -27,20 +26,9 @@ public:
 
     void stop(void) override;
 
-    void reconfigure(void) override;
-
 protected:
     /** @brief Number of synthesizer threads. */
     unsigned nthreads_;
-
-    /** @brief Flag indicating if we should stop processing packets */
-    std::atomic<bool> done_;
-
-    /** @brief Flag that is true when we are reconfiguring. */
-    std::atomic<bool> reconfigure_;
-
-    /** @brief Reconfiguration barrier */
-    barrier reconfigure_sync_;
 
     /** @brief Mutex for waking demodulators. */
     std::mutex wake_mutex_;
@@ -53,6 +41,8 @@ protected:
 
     /** @brief Thread modulating packets */
     void modWorker(unsigned tid);
+
+    void wake_dependents() override;
 };
 
 #endif /* PARALLELCHANNELSYNTHESIZER_HH_ */

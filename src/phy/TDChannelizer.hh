@@ -11,7 +11,6 @@
 #include <list>
 #include <mutex>
 
-#include "barrier.hh"
 #include "SafeQueue.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
@@ -28,8 +27,6 @@ public:
     virtual ~TDChannelizer();
 
     void push(const std::shared_ptr<IQBuf> &) override;
-
-    void reconfigure(void) override;
 
     /** @brief Stop demodulating. */
     void stop(void);
@@ -81,15 +78,6 @@ private:
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
 
-    /** @brief Flag that is true when we should finish processing. */
-    bool done_;
-
-    /** @brief Flag that is true when we are reconfiguring. */
-    std::atomic<bool> reconfigure_;
-
-    /** @brief Reconfiguration barrier */
-    barrier reconfigure_sync_;
-
     /** @brief Mutex for waking demodulators. */
     std::mutex wake_mutex_;
 
@@ -110,6 +98,10 @@ private:
 
     /** @brief A demodulation worker. */
     void demodWorker(unsigned tid);
+
+    void reconfigure(void) override;
+
+    void wake_dependents() override;
 };
 
 #endif /* TDCHANNELIZER_H_ */

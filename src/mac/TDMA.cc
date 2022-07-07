@@ -27,11 +27,14 @@ TDMA::TDMA(std::shared_ptr<Radio> radio,
                synthesizer,
                slot_size,
                guard_size,
-               slot_send_lead_time)
+               slot_send_lead_time,
+               5)
   , frame_size_(nslots*slot_size_)
   , nslots_(nslots)
   , tdma_schedule_(nslots)
 {
+    reconfigure();
+
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
     tx_thread_ = std::thread(&TDMA::txWorker, this);
     tx_slot_thread_ = std::thread(&TDMA::txSlotWorker, this);
@@ -47,46 +50,24 @@ void TDMA::stop(void)
 {
     SlottedMAC::stop();
 
-    tx_records_cond_.notify_all();
+    if (modify([&](){ done_ = true; })) {
+        // Join on all threads
+        if (rx_thread_.joinable())
+            rx_thread_.join();
 
-    if (rx_thread_.joinable())
-        rx_thread_.join();
+        if (tx_thread_.joinable())
+            tx_thread_.join();
 
-    if (tx_thread_.joinable())
-        tx_thread_.join();
+        if (tx_slot_thread_.joinable())
+            tx_slot_thread_.join();
 
-    if (tx_slot_thread_.joinable())
-        tx_slot_thread_.join();
-
-    if (tx_notifier_thread_.joinable())
-        tx_notifier_thread_.join();
-}
-
-void TDMA::reconfigure(void)
-{
-    SlottedMAC::reconfigure();
-
-    for (size_t i = 0; i < nslots_; ++i)
-        tdma_schedule_[i] = schedule_.canTransmitInSlot(i);
-
-    frame_size_ = nslots_*slot_size_;
-
-    // Determine whether or not we have a slot
-    WallClock::time_point t_now = WallClock::now();
-    WallClock::time_point t_next_slot;
-    size_t                next_slotidx;
-
-    can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
-}
-
-bool TDMA::isFDMA(void) const
-{
-    return schedule_.isFDMA();
+        if (tx_notifier_thread_.joinable())
+            tx_notifier_thread_.join();
+    }
 }
 
 void TDMA::txSlotWorker(void)
 {
-    slot_queue            q;
     WallClock::time_point t_now;              // Current time
     WallClock::time_point t_next_slot;        // Time at which our next slot starts
     WallClock::time_point t_following_slot;   // Time at which our following slot starts
@@ -95,7 +76,15 @@ void TDMA::txSlotWorker(void)
     size_t                noverfill = 0;      // Number of overfilled samples
     size_t                noverfillslots = 0; // Number of overfilled slots
 
-    while (!done_) {
+    for (;;) {
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
+
+            if (done_)
+                break;
+        }
+
         t_now = WallClock::now();
 
         // If we missed a slot, find the next slot
@@ -113,7 +102,7 @@ void TDMA::txSlotWorker(void)
         if (t_next_slot - t_now < slot_size_) {
             // Finalize next slot. After this returns, we have EXCLUSIVE access
             // to the slot.
-            auto slot = finalizeSlot(q, t_next_slot);
+            auto slot = finalizeSlot(t_next_slot);
 
             // Determine how many samples were sent beyond the end of the slot,
             // i.e., the number of overfilled samples.
@@ -137,8 +126,7 @@ void TDMA::txSlotWorker(void)
                                 following_slotidx);
 
             // Schedule modulation of following slot
-            modulateSlot(q,
-                         t_following_slot,
+            modulateSlot(t_following_slot,
                          noverfill,
                          following_slotidx);
 
@@ -155,7 +143,8 @@ void TDMA::txSlotWorker(void)
         sleep_for((t_next_slot - WallClock::now()) - slot_send_lead_time_);
     }
 
-    missedRemainingSlots(q);
+    if (next_slot_)
+        missedSlot(*next_slot_);
 }
 
 bool TDMA::findNextSlot(WallClock::time_point t,
@@ -178,4 +167,21 @@ bool TDMA::findNextSlot(WallClock::time_point t,
     }
 
     return false;
+}
+
+void TDMA::reconfigure(void)
+{
+    SlottedMAC::reconfigure();
+
+    for (size_t i = 0; i < nslots_; ++i)
+        tdma_schedule_[i] = schedule_.canTransmitInSlot(i);
+
+    frame_size_ = nslots_*slot_size_;
+
+    // Determine whether or not we have a slot
+    WallClock::time_point t_now = WallClock::now();
+    WallClock::time_point t_next_slot;
+    size_t                next_slotidx;
+
+    can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
 }

@@ -7,7 +7,6 @@
 #include <atomic>
 #include <mutex>
 
-#include "barrier.hh"
 #include "dsp/FDResample.hh"
 #include "dsp/FFTW.hh"
 #include "phy/PHY.hh"
@@ -42,8 +41,6 @@ public:
     void finalize(Slot &slot) override;
 
     void stop(void) override;
-
-    void reconfigure(void) override;
 
 private:
     /** @brief Channel modulator for multichannel modulation */
@@ -149,23 +146,11 @@ private:
     /** @brief Number of synthesizer threads. */
     unsigned nthreads_;
 
-    /** @brief Flag indicating if we should stop processing packets */
-    std::atomic<bool> done_;
-
-    /** @brief Flag that is true when we are reconfiguring. */
-    std::atomic<bool> reconfigure_;
-
-    /** @brief Reconfiguration barrier */
-    barrier reconfigure_sync_;
-
-    /** @brief Mutex for waking demodulators. */
+    /** @brief Mutex for waking modulators. */
     std::mutex wake_mutex_;
 
-    /** @brief Condition variable for waking demodulators. */
+    /** @brief Condition variable for waking modulators. */
     std::condition_variable wake_cond_;
-
-    /** @brief Mutex for demodulation state. */
-    std::mutex mods_mutex_;
 
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<MultichannelModulator>> mods_;
@@ -179,20 +164,15 @@ private:
     /** @brief OLS time domain converter */
     Upsampler::ToTimeDomain timedomain_;
 
-    /** @brief TX sample rate */
-    double tx_rate_copy_;
-
-    /** @brief Radio channels */
-    std::vector<PHYChannel> channels_copy_;
-
-    /** @brief Radio schedule */
-    Schedule schedule_copy_;
-
     /** @brief Gain necessary to compensate for simultaneous transmission */
     float g_multichan_;
 
     /** @brief Thread modulating packets */
     void modWorker(unsigned tid);
+
+    void reconfigure(void) override;
+
+    void wake_dependents() override;
 };
 
 #endif /* MULTICHANNELSYNTHESIZER_H_ */

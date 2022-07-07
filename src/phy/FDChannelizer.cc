@@ -18,21 +18,18 @@ namespace py = pybind11;
 FDChannelizer::FDChannelizer(const std::vector<PHYChannel> &channels,
                              double rx_rate,
                              unsigned int nthreads)
-  : Channelizer(channels, rx_rate)
+  : Channelizer(channels, rx_rate, nthreads+2)
   , nthreads_(nthreads)
-  , done_(false)
-  , reconfigure_(true)
-  , reconfigure_sync_(nthreads+2)
   , logger_(logger)
 {
+    reconfigure();
+
     fft_thread_ = std::thread(&FDChannelizer::fftWorker, this);
 
     for (unsigned int tid = 0; tid < nthreads; ++tid)
         demod_threads_.emplace_back(std::thread(&FDChannelizer::demodWorker,
                                                 this,
                                                 tid));
-
-    reconfigure();
 }
 
 FDChannelizer::~FDChannelizer()
@@ -42,28 +39,38 @@ FDChannelizer::~FDChannelizer()
 
 void FDChannelizer::setChannels(const std::vector<PHYChannel> &channels)
 {
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
-        checkChannels(channels, rx_rate_);
+    if (done_)
+        return;
+
+    checkChannels(channels, rx_rate_);
+
+    {
+        scoped_sync sync(*this);
 
         channels_ = channels;
-    }
 
-    reconfigure();
+        reconfigure();
+    }
 }
 
 void FDChannelizer::setRXRate(double rate)
 {
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
-        checkChannels(channels_, rate);
+    if (done_)
+        return;
+
+    checkChannels(channels_, rate);
+
+    {
+        scoped_sync sync(*this);
 
         rx_rate_ = rate;
-    }
 
-    reconfigure();
+        reconfigure();
+    }
 }
 
 void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
@@ -71,56 +78,10 @@ void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
     tdbufs_.push(buf);
 }
 
-void FDChannelizer::reconfigure(void)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    // Tell workers we are reconfiguring
-    reconfigure_.store(true, std::memory_order_release);
-
-    // Disable the FFT worker queue
-    tdbufs_.disable();
-
-    // Wake all workers that might be sleeping.
-    {
-        std::unique_lock<std::mutex> lock(wake_mutex_);
-
-        wake_cond_.notify_all();
-    }
-
-    // Wait for workers to be ready for reconfiguration
-    reconfigure_sync_.wait();
-
-    // Now set the channels and reconfigure the channel state
-    unsigned nchannels = channels_.size();
-
-    demods_.resize(nchannels);
-    slots_.resize(nchannels);
-
-    for (unsigned i = 0; i < nchannels; i++) {
-        if (!slots_[i])
-            slots_[i] = std::make_unique<SafeQueue<Slot>>();
-
-        demods_[i] = std::make_unique<FDChannelDemodulator>(channels_[i],
-                                                            rx_rate_);
-    }
-
-    // Re-enable the FFT worker queue
-    tdbufs_.enable();
-
-    // We are done reconfiguring
-    reconfigure_.store(false, std::memory_order_release);
-
-    // Wait for workers to resume
-    reconfigure_sync_.wait();
-}
-
 void FDChannelizer::stop(void)
 {
     // Release the GIL in case we have Python-based demodulators
     py::gil_scoped_release gil;
-
-    done_ = true;
 
     // Stop all IQ buffer queues
     tdbufs_.disable();
@@ -128,15 +89,16 @@ void FDChannelizer::stop(void)
     for (unsigned int i = 0; i < slots_.size(); ++i)
         slots_[i]->disable();
 
-    // Join on all threads
-    wake_cond_.notify_all();
+    // Set done flag
+    if (modify([&]() { done_ = true; })) {
+        // Join on all threads
+        if (fft_thread_.joinable())
+            fft_thread_.join();
 
-    if (fft_thread_.joinable())
-        fft_thread_.join();
-
-    for (unsigned int i = 0; i < demod_threads_.size(); ++i) {
-        if (demod_threads_[i].joinable())
-            demod_threads_[i].join();
+        for (unsigned int i = 0; i < demod_threads_.size(); ++i) {
+            if (demod_threads_[i].joinable())
+                demod_threads_[i].join();
+        }
     }
 }
 
@@ -156,32 +118,24 @@ void FDChannelizer::checkChannels(const std::vector<PHYChannel> &channels, doubl
 
 void FDChannelizer::fftWorker(void)
 {
-    std::vector<PHYChannel> channels; // Local copy of channels
     std::shared_ptr<IQBuf>  iqbuf;
     std::shared_ptr<IQBuf>  fdbuf;
     unsigned                seq = 0;
     fftw::FFT<C>            fft(N, FFTW_FORWARD, FFTW_MEASURE);
     size_t                  fftoff = O;
 
-    while (!done_) {
-        if (reconfigure_.load(std::memory_order_acquire)) {
-            // Wait for reconfiguration to finish
-            reconfigure_sync_.wait();
+    for (;;) {
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
 
-            // Make local copy of channels
-            channels = channels_;
-
-            // Signal that we have resumed
-            reconfigure_sync_.wait();
+            if (done_)
+                return;
         }
 
         // Get a time-domain IQ buffer
-        if (!tdbufs_.pop(iqbuf)) {
-            if (done_)
-                return;
-
+        if (!tdbufs_.pop(iqbuf))
             continue;
-        }
 
         // Reset FFT state on buffer discontinuity. We detect a discontinuity
         // via a gap in the time-domain IQ buffer sequence number.
@@ -204,13 +158,10 @@ void FDChannelizer::fftWorker(void)
         fdbuf->snapshot_off = iqbuf->snapshot_off;
 
         // Make the frequency-domain buffer available to the individual channels
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            unsigned                    nchannels = channels.size();
+        unsigned nchannels = channels_.size();
 
-            for (unsigned i = 0; i < nchannels; ++i)
-                slots_[i]->emplace(iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O));
-        }
+        for (unsigned i = 0; i < nchannels; ++i)
+            slots_[i]->emplace(iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O));
 
         // Perform overlap-save on input buffer as data becomes available
         bool   complete;            // Is the buffer complete?
@@ -302,7 +253,6 @@ void FDChannelizer::demodWorker(unsigned tid)
     std::optional<ssize_t>  next_snapshot_off;
     unsigned                num_extra_snapshot_slots = 0;
     bool                    received = false; // Have we received any packets?
-    std::vector<PHYChannel> channels;         // Local copy of channels
     unsigned                chanidx;          // Index of current channel being demodulated
     Channel                 channel;          // Current channel being demodulated
 
@@ -315,43 +265,35 @@ void FDChannelizer::demodWorker(unsigned tid)
         }
     };
 
-    while (!done_) {
-        // If we are reconfiguring, wait until reconfiguration is done
-        if (reconfigure_.load(std::memory_order_acquire)) {
-            // Wait for reconfiguration to finish
-            reconfigure_sync_.wait();
+    for (;;) {
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
 
-            // Make local copy of channels
-            channels = channels_;
-
-            // Signal that we have resumed
-            reconfigure_sync_.wait();
+            if (done_)
+                return;
 
             // If we are unneeded, sleep
-            if (tid >= channels.size()) {
+            if (tid >= channels_.size()) {
                 std::unique_lock<std::mutex> lock(wake_mutex_);
 
-                wake_cond_.wait(lock, [this]{ return done_ || reconfigure_.load(std::memory_order_acquire); });
+                wake_cond_.wait(lock, [this]{ return needs_sync(); });
 
                 continue;
             }
 
             // Set demodulator callbacks
-            for (unsigned i = tid; i < channels.size(); i += nthreads_)
+            for (unsigned i = tid; i < channels_.size(); i += nthreads_)
                 demods_[i]->setCallback(callback);
         }
 
-        for (chanidx = tid; chanidx < channels.size(); chanidx += nthreads_) {
+        for (chanidx = tid; chanidx < channels_.size(); chanidx += nthreads_) {
             auto &demod = *demods_[chanidx];
             auto &slots = *slots_[chanidx];
 
             // Get a slot
-            if (!slots.pop(slot)) {
-                if (done_)
-                    return;
-
+            if (!slots.pop(slot))
                 continue;
-            }
 
             auto &fdbuf = slot.fdbuf;
             auto &iqbuf = slot.iqbuf;
@@ -387,7 +329,7 @@ void FDChannelizer::demodWorker(unsigned tid)
 
             // Set parameters for the callback
             received = false;
-            channel = channels[chanidx].channel;
+            channel = channels_[chanidx].channel;
 
             // Demodulate data as it is received
             for (int spin_count = 0; !complete; ++spin_count) {
@@ -440,6 +382,50 @@ void FDChannelizer::demodWorker(unsigned tid)
                 }
             }
         }
+    }
+}
+
+void FDChannelizer::reconfigure(void)
+{
+    unsigned nchannels = channels_.size();
+
+    // Make sure every channel has a slot queue and create a new demodulator for
+    // each channel.
+    demods_.resize(nchannels);
+    slots_.resize(nchannels);
+
+    for (unsigned i = 0; i < nchannels; i++) {
+        if (!slots_[i])
+            slots_[i] = std::make_unique<SafeQueue<Slot>>();
+
+        demods_[i] = std::make_unique<FDChannelDemodulator>(channels_[i],
+                                                            rx_rate_);
+    }
+
+    // Re-enable the slot queues
+    for (unsigned i = 0; i < nchannels; i++)
+        slots_[i]->enable();
+
+    // Re-enable the FFT worker queue
+    tdbufs_.enable();
+}
+
+void FDChannelizer::wake_dependents()
+{
+    // Disable the FFT worker queue
+    tdbufs_.disable();
+
+    // Disable the slot queues
+    unsigned nchannels = channels_.size();
+
+    for (unsigned i = 0; i < nchannels; i++)
+        slots_[i]->disable();
+
+    // Wake all workers that might be sleeping.
+    {
+        std::unique_lock<std::mutex> lock(wake_mutex_);
+
+        wake_cond_.notify_all();
     }
 }
 

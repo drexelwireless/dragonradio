@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef CHANNELSYNTHESIZER_HH_
@@ -21,8 +21,9 @@ public:
     using container_type = ModPacketQueue<>::container_type;
 
     ChannelSynthesizer(const std::vector<PHYChannel> &channels,
-                       double tx_rate)
-      : Synthesizer(channels, tx_rate)
+                       double tx_rate,
+                       unsigned nsyncthreads)
+      : Synthesizer(channels, tx_rate, nsyncthreads)
     {
     }
 
@@ -38,6 +39,18 @@ public:
     void setHighWaterMark(std::optional<size_t> mark)
     {
         queue_.setHighWaterMark(mark);
+    }
+
+    /** @brief Enable the queue. */
+    void enable(void)
+    {
+        queue_.enable();
+    }
+
+    /** @brief Disable the queue. */
+    void disable(void)
+    {
+        queue_.disable();
     }
 
     /** @brief Pop modulated packets. */
@@ -64,6 +77,10 @@ protected:
 
     /** @brief Queue */
     ModPacketQueue<> queue_;
+
+    void wake_dependents(void) override;
+
+    void reconfigure(void) override;
 };
 
 #endif /* CHANNELSYNTHESIZER_HH_ */
