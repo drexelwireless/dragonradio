@@ -150,7 +150,9 @@ void FDChannelizer::fftWorker(void)
         iqbuf->waitToStartFilling();
 
         // Create a frequency-domain buffer
-        fdbuf = std::make_shared<IQBuf>(N*(1 + (iqbuf->size() + L - 1)/L));
+        auto max_samples = iqbuf->max_samples.load(std::memory_order_acquire);
+
+        fdbuf = std::make_shared<IQBuf>(N*(1 + (max_samples + L - 1)/L));
         fdbuf->timestamp = *iqbuf->timestamp;
         fdbuf->seq = iqbuf->seq;
         fdbuf->fc = iqbuf->fc;
@@ -257,10 +259,8 @@ void FDChannelizer::demodWorker(unsigned tid)
     Channel                 channel;          // Current channel being demodulated
 
     PHY::PacketDemodulator::callback_type callback = [&] (std::shared_ptr<RadioPacket> &&pkt) {
-        received = true;
         if (pkt) {
-            pkt->chanidx = chanidx;
-            pkt->channel = channel;
+            received = true;
             source.push(std::move(pkt));
         }
     };
@@ -398,7 +398,8 @@ void FDChannelizer::reconfigure(void)
         if (!slots_[i])
             slots_[i] = std::make_unique<SafeQueue<Slot>>();
 
-        demods_[i] = std::make_unique<FDChannelDemodulator>(channels_[i],
+        demods_[i] = std::make_unique<FDChannelDemodulator>(i,
+                                                            channels_[i],
                                                             rx_rate_);
     }
 
@@ -429,9 +430,10 @@ void FDChannelizer::wake_dependents()
     }
 }
 
-FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(const PHYChannel &channel,
+FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(unsigned chanidx,
+                                                          const PHYChannel &channel,
                                                           double rx_rate)
-  : ChannelDemodulator(channel, rx_rate)
+  : ChannelDemodulator(chanidx, channel, rx_rate)
   , seq_(0)
   , X_(channel.phy->getMinRXRateOversample())
   , D_(rx_rate/channel.channel.bw)

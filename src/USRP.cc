@@ -21,8 +21,9 @@ using namespace std::literals::chrono_literals;
 
 USRP::USRP(const std::string& addr)
   : auto_dc_offset_(false)
-  , done_(false)
 {
+    done_.store(false, std::memory_order_release);
+
     RaiseCaps caps({CAP_SYS_NICE});
 
     usrp_ = uhd::usrp::multi_usrp::make(addr);
@@ -391,7 +392,7 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 
 void USRP::stop(void)
 {
-    done_ = true;
+    done_.store(true, std::memory_order_release);
 
     if (tx_error_thread_.joinable())
         tx_error_thread_.join();
@@ -417,7 +418,7 @@ void USRP::txErrorWorker(void)
     uhd::async_metadata_t async_md;
     const char *msg;
 
-    while (!done_) {
+    while (!done_.load(std::memory_order_acquire)) {
         msg = nullptr;
 
         if (tx_stream_->recv_async_msg(async_md, 0.1)) {

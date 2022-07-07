@@ -62,7 +62,8 @@ private:
     /** @brief Channel state for time-domain demodulation */
     class FDChannelDemodulator : public ChannelDemodulator {
     public:
-        FDChannelDemodulator(const PHYChannel &channel,
+        FDChannelDemodulator(unsigned chanidx,
+                             const PHYChannel &channel,
                              double rate);
 
         virtual ~FDChannelDemodulator() = default;

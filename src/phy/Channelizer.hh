@@ -80,13 +80,15 @@ class ChannelDemodulator {
 public:
     using callback_type = PHY::PacketDemodulator::callback_type;
 
-    ChannelDemodulator(const PHYChannel &channel,
+    ChannelDemodulator(unsigned chanidx,
+                       const PHYChannel &channel,
                        double rx_rate)
-      : channel_(channel)
+      : chanidx_(chanidx)
+      , channel_(channel)
       , rx_rate_(rx_rate)
       , rate_(channel.phy->getMinRXRateOversample()*channel.channel.bw/rx_rate)
       , fshift_(channel.channel.fc/rx_rate)
-      , demod_(channel.phy->mkPacketDemodulator())
+      , demod_(channel.phy->mkPacketDemodulator(chanidx, channel.channel))
     {
     }
 
@@ -119,10 +121,13 @@ public:
                             size_t count) = 0;
 
 protected:
+    /** @brief Index of channel we are demodulating */
+    unsigned chanidx_;
+
     /** @brief Channel we are demodulating */
     PHYChannel channel_;
 
-    /** @brief RX sample ratee */
+    /** @brief RX sample rate */
     double rx_rate_;
 
     /** @brief Resampling rate */

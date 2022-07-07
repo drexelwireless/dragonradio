@@ -27,6 +27,7 @@ public:
       , undersample(0)
       , oversample(0)
     {
+        max_samples.store(sz, std::memory_order_release);
         nsamples.store(0, std::memory_order_release);
         complete.store(false, std::memory_order_release);
     }
@@ -38,6 +39,8 @@ public:
       , undersample(other.undersample)
       , oversample(other.oversample)
     {
+        max_samples.store(other.max_samples.load(std::memory_order_acquire),
+            std::memory_order_release);
         nsamples.store(other.nsamples.load(std::memory_order_acquire),
             std::memory_order_release);
         complete.store(other.complete.load(std::memory_order_acquire),
@@ -51,6 +54,8 @@ public:
       , undersample(other.undersample)
       , oversample(other.oversample)
     {
+        max_samples.store(other.max_samples.load(std::memory_order_acquire),
+            std::memory_order_release);
         nsamples.store(other.nsamples.load(std::memory_order_acquire),
             std::memory_order_release);
         complete.store(other.complete.load(std::memory_order_acquire),
@@ -63,6 +68,7 @@ public:
       , undersample(0)
       , oversample(0)
     {
+        max_samples.store(0, std::memory_order_release);
         nsamples.store(0, std::memory_order_release);
         complete.store(true, std::memory_order_release);
     }
@@ -73,6 +79,7 @@ public:
       , undersample(0)
       , oversample(0)
     {
+        max_samples.store(0, std::memory_order_release);
         nsamples.store(0, std::memory_order_release);
         complete.store(true, std::memory_order_release);
     }
@@ -83,6 +90,7 @@ public:
       , undersample(0)
       , oversample(0)
     {
+        max_samples.store(0, std::memory_order_release);
         nsamples.store(0, std::memory_order_release);
         complete.store(true, std::memory_order_release);
     }
@@ -98,6 +106,10 @@ public:
             resize(size_+1);
             data_[size_-1] = *it;
         }
+
+        max_samples.store(0, std::memory_order_release);
+        nsamples.store(0, std::memory_order_release);
+        complete.store(true, std::memory_order_release);
     }
 
     ~IQBuf() noexcept {}
@@ -120,8 +132,11 @@ public:
     /** @brief Signal delay */
     size_t delay;
 
+    /** @brief Maximum number of samples that can be received. */
+    std::atomic<size_t> max_samples;
+
     /** @brief Number of samples received so far. */
-    /** This value is valid untile the buffer is marked complete. */
+    /** This value is valid until the buffer is marked complete. */
     std::atomic<size_t> nsamples;
 
     /** @brief Flag that is true when receive is completed. */

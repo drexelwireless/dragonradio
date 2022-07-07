@@ -31,11 +31,15 @@ public:
     class PacketDemodulator : public liquid::PHY::PacketDemodulator, protected liquid::NewFlexFrameDemodulator
     {
     public:
-        PacketDemodulator(NewFlexFrame &phy)
+        PacketDemodulator(NewFlexFrame &phy,
+                          unsigned chanidx,
+                          const Channel &channel)
           : liquid::Demodulator(phy.header_mcs_,
                                 phy.soft_header_,
                                 phy.soft_payload_)
           , liquid::PHY::PacketDemodulator(phy,
+                                           chanidx,
+                                           channel,
                                            phy.header_mcs_,
                                            phy.soft_header_,
                                            phy.soft_payload_)
@@ -77,9 +81,9 @@ public:
     }
 
 protected:
-    std::shared_ptr<::PHY::PacketDemodulator> mkPacketDemodulator(void) override
+    std::shared_ptr<::PHY::PacketDemodulator> mkPacketDemodulator(unsigned chanidx, const Channel &channel) override
     {
-        return std::make_shared<PacketDemodulator>(*this);
+        return std::make_shared<PacketDemodulator>(*this, chanidx, channel);
     }
 
     std::shared_ptr<::PHY::PacketModulator> mkPacketModulator(void) override

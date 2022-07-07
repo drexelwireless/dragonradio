@@ -484,7 +484,7 @@ private:
     bool auto_dc_offset_;
 
     /** @brief Flag indicating the we should stop processing data. */
-    bool done_;
+    std::atomic<bool> done_;
 
     /** @brief TX underflow count. */
     std::atomic<uint64_t> tx_underflow_count_;

@@ -43,7 +43,11 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     MonoClock::time_point mod_start = MonoClock::now();
 
     // Set team in header
-    pkt->hdr.flags.team = team_;
+    if (team_ != 0) {
+        std::lock_guard<std::mutex> lock(pkt->mutex);
+
+        pkt->hdr.flags.team = team_;
+    }
 
     // Set MCS based on MCS index
     assert(pkt->mcsidx < phy_.mcs_table.size());
@@ -91,8 +95,12 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
         work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
     // Record modulation latency
-    pkt->mod_start_timestamp = mod_start;
-    pkt->mod_end_timestamp = mod_end;
+    {
+        std::lock_guard<std::mutex> lock(pkt->mutex);
+
+        pkt->mod_start_timestamp = mod_start;
+        pkt->mod_end_timestamp = mod_end;
+    }
 
     // Fill in the ModPacket
     mpkt.offset = iqbuf->delay;
@@ -102,12 +110,13 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
 }
 
 PHY::PacketDemodulator::PacketDemodulator(PHY &phy,
+                                          unsigned chanidx,
+                                          const Channel &channel,
                                           const MCS &header_mcs,
                                           bool soft_header,
                                           bool soft_payload)
   : Demodulator(header_mcs, soft_header, soft_payload)
-  , ::PHY::PacketDemodulator(phy)
-  , channel_()
+  , ::PHY::PacketDemodulator(phy, chanidx, channel)
   , delay_(0)
   , resamp_rate_(1.0)
   , internal_oversample_fact_(1)

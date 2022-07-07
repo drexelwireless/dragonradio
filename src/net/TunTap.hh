@@ -7,6 +7,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 
+#include <atomic>
 #include <string>
 #include <thread>
 #include <vector>
@@ -116,7 +117,7 @@ private:
     struct ifreq ifr_;
 
     /** @brief Flag indicating whether or not we are done receiving */
-    bool done_;
+    std::atomic<bool> done_;
 
     /** @brief Create and open a tun/tap device.
      * @param dev The name of the device to open; may be the empty string. This

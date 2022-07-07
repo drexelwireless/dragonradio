@@ -69,10 +69,8 @@ void TDChannelizer::demodWorker(unsigned tid)
     Channel                 channel;          // Current channel being demodulated
 
     PHY::PacketDemodulator::callback_type callback = [&] (const std::shared_ptr<RadioPacket> &pkt) {
-        received = true;
         if (pkt) {
-            pkt->chanidx = chanidx;
-            pkt->channel = channel;
+            received = true;
             source.push(pkt);
         }
     };
@@ -189,7 +187,8 @@ void TDChannelizer::reconfigure(void)
         if (!iqbufs_[i])
             iqbufs_[i] = std::make_unique<SafeQueue<std::shared_ptr<IQBuf>>>();
 
-        demods_[i] = std::make_unique<TDChannelDemodulator>(channels_[i],
+        demods_[i] = std::make_unique<TDChannelDemodulator>(i,
+                                                            channels_[i],
                                                             rx_rate_);
     }
 

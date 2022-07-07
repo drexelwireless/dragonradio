@@ -6,6 +6,7 @@
 
 #include <time.h>
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -225,7 +226,7 @@ private:
     uint32_t sources_;
 
     /** @brief Flag indicating we should terminate the logger. */
-    bool done_;
+    std::atomic<bool> done_;
 
     /** @brief Pending log entries. */
     SafeQueue<std::function<void(void)>> log_q_;
