@@ -61,7 +61,7 @@ void SlottedMAC::stop(void)
 {
     done_ = true;
 
-    tx_slots_.stop();
+    tx_slots_.disable();
 }
 
 void SlottedMAC::modulateSlot(slot_queue &q,

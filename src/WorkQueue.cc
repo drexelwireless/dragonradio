@@ -26,7 +26,7 @@ void WorkQueue::stop(void)
 {
     done_ = true;
 
-    work_q_.stop();
+    work_q_.disable();
 
     for (unsigned int i = 0; i < threads_.size(); ++i) {
         if (threads_[i].joinable())

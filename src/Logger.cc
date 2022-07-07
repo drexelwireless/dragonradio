@@ -435,7 +435,7 @@ void Logger::stop(void)
 {
     done_ = true;
 
-    log_q_.stop();
+    log_q_.disable();
 
     if (worker_thread_.joinable())
         worker_thread_.join();
