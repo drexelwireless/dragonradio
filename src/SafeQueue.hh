@@ -8,8 +8,6 @@
 #include <deque>
 #include <mutex>
 
-#include "util/threads.hh"
-
 /** @brief A thread-safe queue. */
 /** A SafeQueue is a thread-safe FIFO queue. Any call to pop will block until an
  * element is inserted until the queue is stopped by a call to stop. Once stop
@@ -24,13 +22,13 @@ public:
     using const_iterator = typename container_type::const_iterator;
 
     SafeQueue()
-      : done_(false)
+      : enabled_(true)
     {
     }
 
     ~SafeQueue()
     {
-        stop();
+        disable();
     }
 
     SafeQueue(const SafeQueue&) = delete;
@@ -38,6 +36,40 @@ public:
 
     SafeQueue& operator=(const SafeQueue&) = delete;
     SafeQueue& operator=(SafeQueue&&) = delete;
+
+    /** @brief Is the queue enabled? */
+    bool isEnabled(void) const
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            return enabled_;
+        }
+    }
+
+    /** @brief Enable the queue. */
+    void enable(void)
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            enabled_ = true;
+        }
+
+        cond_.notify_all();
+    }
+
+    /** @brief Disable the queue. */
+    void disable(void)
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_);
+
+            enabled_ = false;
+        }
+
+        cond_.notify_all();
+    }
 
     /** @brief Get queue size. */
     size_t size(void)
@@ -108,9 +140,9 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        wait_once(cond_, lock, [this]{ return done_ || !q_.empty(); });
+        cond_.wait(lock, [this]{ return !enabled_ || !q_.empty(); });
 
-        if (done_ || q_.empty())
+        if (!enabled_ || q_.empty())
             return false;
         else {
             val = std::move(q_.front());
@@ -127,7 +159,7 @@ public:
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        if (done_ || q_.empty())
+        if (!enabled_ || q_.empty())
             return false;
         else {
             val = std::move(q_.front());
@@ -136,25 +168,12 @@ public:
         }
     }
 
-    /** @brief Mark the queue as stopped. */
-    void stop(void)
-    {
-        done_ = true;
-        cond_.notify_all();
-    }
-
-    /** @brief Kick the queue. */
-    void kick(void)
-    {
-        cond_.notify_all();
-    }
-
 private:
-    /** @brief Flag indicating that processing of the queue should stop. */
-    bool done_;
-
     /** @brief Mutex protecting the queue. */
     mutable std::mutex m_;
+
+    /** @brief Flag indicating that the queue is enabled. */
+    bool enabled_;
 
     /** @brief Condition variable protecting the queue. */
     std::condition_variable cond_;
