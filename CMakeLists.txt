@@ -26,6 +26,12 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g3")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+#
+# Uncomment to enable thread sanitizer
+#
+#add_compile_options(-fsanitize=thread)
+#add_link_options(-fsanitize=thread)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/extern/Catch2/contrib")
 
 include(GitVersion)
