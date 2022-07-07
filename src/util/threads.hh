@@ -13,8 +13,6 @@
 #include <mutex>
 #include <thread>
 
-using namespace std::literals::chrono_literals;
-
 /** @brief Wait only once on a condition variable */
 template <class Predicate>
 bool wait_once(std::condition_variable& cond, std::unique_lock<std::mutex>& lock, Predicate pred)
@@ -43,6 +41,8 @@ void pinThisThread(void);
 template<class Rep, class Period>
 void sleep_for(const std::chrono::duration<Rep, Period>& sleep_duration)
 {
+    using namespace std::literals::chrono_literals;
+
     if (sleep_duration > 0.0s) {
         struct timespec ts;
         double whole, frac;

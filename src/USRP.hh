@@ -56,6 +56,8 @@ public:
 
         ~preserve_clock()
         {
+            using namespace std::literals::chrono_literals;
+
             uhd::time_spec_t                      t2_uhd = usrp.usrp_->get_time_now();
             std::chrono::steady_clock::time_point t2_steady = std::chrono::steady_clock::now();
             double                                delta_pps = (t1_uhd - t_last_pps).get_real_secs();
