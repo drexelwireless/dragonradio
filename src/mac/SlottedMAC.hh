@@ -9,6 +9,7 @@
 #include <optional>
 #include <queue>
 
+#include "qvar.hh"
 #include "Clock.hh"
 #include "Logger.hh"
 #include "SafeQueue.hh"
@@ -114,8 +115,8 @@ protected:
     /** @brief Do we need to stop the current burst? */
     std::atomic<bool> stop_burst_;
 
-    /** @brief Slots to transmit */
-    SafeQueue<std::shared_ptr<Slot>> tx_slots_;
+    /** @brief Slot to transmit */
+    qvar<std::shared_ptr<Slot>> tx_slot_;
 
     /** @brief Worker transmitting slots */
     void txWorker(void);
@@ -148,7 +149,7 @@ protected:
      */
     void txSlot(std::shared_ptr<Slot> &&slot)
     {
-        tx_slots_.push(std::move(slot));
+        tx_slot_ = std::move(slot);
     }
 
     /** @brief Mark a slot as missed
