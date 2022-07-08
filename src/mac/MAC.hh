@@ -7,6 +7,7 @@
 #include <deque>
 #include <memory>
 
+#include "sync_barrier.hh"
 #include "Radio.hh"
 #include "llc/Controller.hh"
 #include "mac/MAC.hh"
@@ -16,7 +17,7 @@
 #include "phy/Synthesizer.hh"
 
 /** @brief A MAC protocol. */
-class MAC
+class MAC : protected sync_barrier
 {
 public:
     /** @brief MAC load, measured as samples transmitted over time */
@@ -43,7 +44,8 @@ public:
         std::shared_ptr<SnapshotCollector> collector,
         std::shared_ptr<Channelizer> channelizer,
         std::shared_ptr<Synthesizer> synthesizer,
-        double rx_period);
+        double rx_period,
+        unsigned nsyncthreads);
     virtual ~MAC() = default;
 
     MAC() = delete;
@@ -71,27 +73,37 @@ public:
      */
     virtual bool canTransmit(void) const
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return can_transmit_;
     }
 
     /** @brief Get MAC schedule */
     virtual const Schedule &getSchedule(void) const
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return schedule_;
     }
 
     /** @brief Set MAC schedule */
     virtual void setSchedule(const Schedule &schedule)
     {
-        schedule_ = schedule;
-        reconfigure();
+        modify([&](){
+            schedule_ = schedule;
+
+            reconfigure();
+        });
     }
 
     /** @brief Set MAC schedule */
     virtual void setSchedule(const Schedule::sched_type &schedule)
     {
-        schedule_ = schedule;
-        reconfigure();
+        modify([&](){
+            schedule_ = schedule;
+
+            reconfigure();
+        });
     }
 
     /** @brief Get current load */
@@ -155,9 +167,6 @@ protected:
 
     /** @brief Number of sent samples */
     Load load_;
-
-    /** @brief Flag indicating if we should stop processing packets */
-    bool done_;
 
     /** @brief Flag indicating whether or not we can transmit */
     /** This is used, in particular, for the TDMA MAC, which may not have a slot
@@ -239,6 +248,8 @@ protected:
 
     /** @brief Reconfigure the MAC after parameters change */
     virtual void reconfigure(void);
+
+    void wake_dependents() override;
 };
 
 #endif /* MAC_H_ */

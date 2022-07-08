@@ -32,22 +32,26 @@ public:
 
     bool getAccurateTXTimestamps(void) const
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return accurate_tx_timestamps_;
     }
 
     void setAccurateTXTimestamps(bool accurate)
     {
-        accurate_tx_timestamps_ = accurate;
+        modify([&](){ accurate_tx_timestamps_ = accurate; });
     }
 
     std::chrono::duration<double> getTimedTXDelay(void) const
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return timed_tx_delay_;
     }
 
     void setTimedTXDelay(std::chrono::duration<double> t)
     {
-        timed_tx_delay_ = t;
+        modify([&](){ timed_tx_delay_ = t; });
     }
 
     /** @brief Stop processing packets */
@@ -80,6 +84,8 @@ private:
     void txWorker(void);
 
     void reconfigure(void) override;
+
+    void wake_dependents() override;
 };
 
 #endif /* FDMA_H_ */

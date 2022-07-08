@@ -27,7 +27,8 @@ TDMA::TDMA(std::shared_ptr<Radio> radio,
                synthesizer,
                slot_size,
                guard_size,
-               slot_send_lead_time)
+               slot_send_lead_time,
+               5)
   , frame_size_(nslots*slot_size_)
   , nslots_(nslots)
   , tdma_schedule_(nslots)
@@ -49,19 +50,20 @@ void TDMA::stop(void)
 {
     SlottedMAC::stop();
 
-    tx_records_cond_.notify_all();
+    if (modify([&](){ done_ = true; })) {
+        // Join on all threads
+        if (rx_thread_.joinable())
+            rx_thread_.join();
 
-    if (rx_thread_.joinable())
-        rx_thread_.join();
+        if (tx_thread_.joinable())
+            tx_thread_.join();
 
-    if (tx_thread_.joinable())
-        tx_thread_.join();
+        if (tx_slot_thread_.joinable())
+            tx_slot_thread_.join();
 
-    if (tx_slot_thread_.joinable())
-        tx_slot_thread_.join();
-
-    if (tx_notifier_thread_.joinable())
-        tx_notifier_thread_.join();
+        if (tx_notifier_thread_.joinable())
+            tx_notifier_thread_.join();
+    }
 }
 
 void TDMA::txSlotWorker(void)
@@ -74,7 +76,15 @@ void TDMA::txSlotWorker(void)
     size_t                noverfill = 0;      // Number of overfilled samples
     size_t                noverfillslots = 0; // Number of overfilled slots
 
-    while (!done_) {
+    for (;;) {
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
+
+            if (done_)
+                break;
+        }
+
         t_now = WallClock::now();
 
         // If we missed a slot, find the next slot

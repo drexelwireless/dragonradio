@@ -41,6 +41,8 @@ public:
     /** @brief Get number of slots */
     size_t getNSlots(void)
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return nslots_;
     }
 
