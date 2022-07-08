@@ -15,7 +15,8 @@ MAC::MAC(std::shared_ptr<Radio> radio,
          std::shared_ptr<Channelizer> channelizer,
          std::shared_ptr<Synthesizer> synthesizer,
          double rx_period)
-  : radio_(radio)
+  : logger_(logger)
+  , radio_(radio)
   , controller_(controller)
   , snapshot_collector_(collector)
   , channelizer_(channelizer)
@@ -25,10 +26,16 @@ MAC::MAC(std::shared_ptr<Radio> radio,
   , rx_period_(rx_period)
   , rx_period_samps_(0)
   , rx_bufsize_(0)
-  , logger_(logger)
 {
-    rx_rate_ = radio_->getRXRate();
-    tx_rate_ = radio_->getTXRate();
+}
+
+void MAC::rateChange(void)
+{
+    double rx_rate = radio_->getRXRate();
+    double tx_rate = radio_->getTXRate();
+
+    if(rx_rate_ != rx_rate || tx_rate_ != tx_rate)
+        reconfigure();
 }
 
 void MAC::reconfigure(void)
@@ -36,7 +43,7 @@ void MAC::reconfigure(void)
     rx_rate_ = radio_->getRXRate();
     tx_rate_ = radio_->getTXRate();
 
-    if (radio_->getTXRate() == radio_->getRXRate())
+    if (tx_rate_ == rx_rate_)
         tx_fc_off_ = std::nullopt;
     else
         tx_fc_off_ = radio_->getTXFrequency() - radio_->getRXFrequency();

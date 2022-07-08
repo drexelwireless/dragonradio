@@ -64,8 +64,6 @@ public:
     /** @brief Stop processing packets */
     void stop(void) override;
 
-    void reconfigure(void) override;
-
 private:
     /** @brief Slot index to use */
     size_t slotidx_;
@@ -96,6 +94,8 @@ private:
 
     /** @brief Worker preparing slots for transmission */
     void txSlotWorker(void);
+
+    void reconfigure(void) override;
 };
 
 #endif /* SLOTTEDALOHA_H_ */

@@ -32,6 +32,8 @@ TDMA::TDMA(std::shared_ptr<Radio> radio,
   , nslots_(nslots)
   , tdma_schedule_(nslots)
 {
+    reconfigure();
+
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
     tx_thread_ = std::thread(&TDMA::txWorker, this);
     tx_slot_thread_ = std::thread(&TDMA::txSlotWorker, this);
@@ -60,28 +62,6 @@ void TDMA::stop(void)
 
     if (tx_notifier_thread_.joinable())
         tx_notifier_thread_.join();
-}
-
-void TDMA::reconfigure(void)
-{
-    SlottedMAC::reconfigure();
-
-    for (size_t i = 0; i < nslots_; ++i)
-        tdma_schedule_[i] = schedule_.canTransmitInSlot(i);
-
-    frame_size_ = nslots_*slot_size_;
-
-    // Determine whether or not we have a slot
-    WallClock::time_point t_now = WallClock::now();
-    WallClock::time_point t_next_slot;
-    size_t                next_slotidx;
-
-    can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
-}
-
-bool TDMA::isFDMA(void) const
-{
-    return schedule_.isFDMA();
 }
 
 void TDMA::txSlotWorker(void)
@@ -178,4 +158,21 @@ bool TDMA::findNextSlot(WallClock::time_point t,
     }
 
     return false;
+}
+
+void TDMA::reconfigure(void)
+{
+    SlottedMAC::reconfigure();
+
+    for (size_t i = 0; i < nslots_; ++i)
+        tdma_schedule_[i] = schedule_.canTransmitInSlot(i);
+
+    frame_size_ = nslots_*slot_size_;
+
+    // Determine whether or not we have a slot
+    WallClock::time_point t_now = WallClock::now();
+    WallClock::time_point t_next_slot;
+    size_t                next_slotidx;
+
+    can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
 }

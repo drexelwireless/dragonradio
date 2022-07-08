@@ -63,6 +63,9 @@ public:
         return synthesizer_;
     }
 
+    /** @brief Notify MAC that TX/RX rates have changed */
+    virtual void rateChange(void);
+
     /** @brief Can this MAC transmit
      * @return true if we can transmit, false otherwise
      */
@@ -125,13 +128,13 @@ public:
         return load;
     }
 
-    /** @brief Reconfigure the MAC when after parameters change */
-    virtual void reconfigure(void);
-
     /** @brief Stop processing packets. */
     virtual void stop(void) = 0;
 
 protected:
+    /** @brief A reference to the global logger */
+    std::shared_ptr<Logger> logger_;
+
     /** @brief Our Radio device. */
     std::shared_ptr<Radio> radio_;
 
@@ -146,6 +149,12 @@ protected:
 
     /** @brief Our synthesizer. */
     std::shared_ptr<Synthesizer> synthesizer_;
+
+    /** @brief Mutex for load */
+    std::mutex load_mutex_;
+
+    /** @brief Number of sent samples */
+    Load load_;
 
     /** @brief Flag indicating if we should stop processing packets */
     bool done_;
@@ -178,15 +187,6 @@ protected:
      * the frequency of the channel we transmit on.
      */
     std::optional<double> tx_fc_off_;
-
-    /** @brief A reference to the global logger */
-    std::shared_ptr<Logger> logger_;
-
-    /** @brief Mutex for load */
-    std::mutex load_mutex_;
-
-    /** @brief Number of sent samples */
-    Load load_;
 
     /** @brief A transmission record */
     struct TXRecord {
@@ -236,6 +236,9 @@ protected:
 
     /** @brief Worker handling notification for transmitted slots */
     void txNotifier(void);
+
+    /** @brief Reconfigure the MAC after parameters change */
+    virtual void reconfigure(void);
 };
 
 #endif /* MAC_H_ */

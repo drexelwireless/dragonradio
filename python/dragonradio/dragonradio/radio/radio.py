@@ -671,9 +671,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # Initialize TX chain
         self.setTXChannels(channels)
 
-        # Reconfigure the MAC
+        # Notify MAC of TX/RX rate change
         if self.mac is not None:
-            self.mac.reconfigure()
+            self.mac.rateChange()
 
     def setRXChannels(self, channels: Sequence[Channel]):
         """Configure RX chain for channels"""
@@ -885,10 +885,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # of the "true" channel.
         self.setSynthesizerChannels([Channel(0, channel.bw)])
 
-        # Allow the MAC to figure out the TX offset so snapshot self
-        # tranmissions are correctly logged
+        # Notify MAC of TX/RX rate change
         if self.mac is not None:
-            self.mac.reconfigure()
+            self.mac.rateChange()
 
     def reconfigureBandwidthAndFrequency(self, bandwidth: float, frequency: float):
         """Reconfigure the radio for the given bandwidth and frequency
