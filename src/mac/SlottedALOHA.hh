@@ -38,19 +38,19 @@ public:
     /** @brief Get slot index to transmit on */
     size_t getSlotIndex(void) const
     {
-        return slotidx_;
+        return slotidx_.load(std::memory_order_relaxed);
     }
 
     /** @brief Set slot to transmit on */
     void setSlotIndex(size_t slotidx)
     {
-        slotidx_ = slotidx;
+        slotidx_.store(slotidx, std::memory_order_relaxed);
     }
 
     /** @brief Get probability of transmission */
     double getTXProb(void) const
     {
-        return p_;
+        return p_.load(std::memory_order_relaxed);
     }
 
     /** @brief Set probability of transmission
@@ -58,7 +58,7 @@ public:
      */
     void setTXProb(double p)
     {
-        p_ = p;
+        p_.store(p, std::memory_order_relaxed);
     }
 
     /** @brief Stop processing packets */
@@ -66,10 +66,10 @@ public:
 
 private:
     /** @brief Slot index to use */
-    size_t slotidx_;
+    std::atomic<size_t> slotidx_;
 
     /** @brief Probability of transmission */
-    double p_;
+    std::atomic<double> p_;
 
     /** @brief Random number generator */
     std::mt19937 gen_;

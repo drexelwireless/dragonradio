@@ -28,13 +28,15 @@ SlottedMAC::SlottedMAC(std::shared_ptr<Radio> radio,
                        std::shared_ptr<SlotSynthesizer> synthesizer,
                        double slot_size,
                        double guard_size,
-                       double slot_send_lead_time)
+                       double slot_send_lead_time,
+                       unsigned nsyncthreads)
   : MAC(radio,
         controller,
         collector,
         channelizer,
         synthesizer,
-        slot_size)
+        slot_size,
+        nsyncthreads)
   , slot_synthesizer_(synthesizer)
   , slot_size_(slot_size)
   , guard_size_(guard_size)
@@ -51,8 +53,6 @@ SlottedMAC::~SlottedMAC()
 
 void SlottedMAC::stop(void)
 {
-    done_ = true;
-
     tx_slot_.disable();
 }
 
@@ -133,11 +133,16 @@ void SlottedMAC::txWorker(void)
     std::shared_ptr<Slot> slot;
     bool                  next_slot_start_of_burst = true;
 
-    while (!done_) {
+    for (;;) {
         // Get a slot
         if (!tx_slot_.pop(slot)) {
-            if (done_)
-                return;
+            // Synchronize on state change
+            if (needs_sync()) {
+                sync();
+
+                if (done_)
+                    return;
+            }
 
             continue;
         }
@@ -200,10 +205,21 @@ void SlottedMAC::missedSlot(Slot &slot)
         controller_->missed(std::move((*it)->pkt));
 }
 
+void SlottedMAC::wake_dependents()
+{
+    MAC::wake_dependents();
+
+    // Disable the TX slot queue
+    tx_slot_.disable();
+}
+
 void SlottedMAC::reconfigure(void)
 {
     MAC::reconfigure();
 
     tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_).count();
     tx_full_slot_samps_ = tx_rate_*slot_size_.count();
+
+    // Re-enable the TX slot queue
+    tx_slot_.enable();
 }

@@ -14,14 +14,15 @@ MAC::MAC(std::shared_ptr<Radio> radio,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
          std::shared_ptr<Synthesizer> synthesizer,
-         double rx_period)
-  : logger_(logger)
+         double rx_period,
+         unsigned nsyncthreads)
+  : sync_barrier(nsyncthreads)
+  , logger_(logger)
   , radio_(radio)
   , controller_(controller)
   , snapshot_collector_(collector)
   , channelizer_(channelizer)
   , synthesizer_(synthesizer)
-  , done_(false)
   , can_transmit_(true)
   , rx_period_(rx_period)
   , rx_period_samps_(0)
@@ -34,8 +35,16 @@ void MAC::rateChange(void)
     double rx_rate = radio_->getRXRate();
     double tx_rate = radio_->getTXRate();
 
-    if(rx_rate_ != rx_rate || tx_rate_ != tx_rate)
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (done_)
+        return;
+
+    if(rx_rate_ != rx_rate || tx_rate_ != tx_rate) {
+        scoped_sync sync(*this);
+
         reconfigure();
+    }
 }
 
 void MAC::reconfigure(void)
@@ -59,7 +68,15 @@ void MAC::rxWorker(void)
     WallClock::duration   t_period_pos;   // Offset into the current period (sec)
     unsigned              seq = 0;        // Current IQ buffer sequence number
 
-    while (!done_) {
+    for (;;) {
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
+
+            if (done_)
+                return;
+        }
+
         // Wait for period to be known
         if (rx_period_samps_ == 0) {
             sleep_for(100ms);
@@ -79,7 +96,15 @@ void MAC::rxWorker(void)
 
         radio_->startRXStream(WallClock::to_mono_time(t_next_period));
 
-        while (!done_) {
+        for (;;) {
+            // Synchronize on state change
+            if (needs_sync()) {
+                sync();
+
+                if (done_)
+                    return;
+            }
+
             // Update times
             t_cur_period = t_next_period;
             t_next_period += rx_period_;
@@ -124,16 +149,24 @@ void MAC::txNotifier(void)
 {
     TXRecord record;
 
-    while (!done_) {
+    for (;;) {
         // Get TX record
         {
             std::unique_lock<std::mutex> lock(tx_records_mutex_);
 
-            tx_records_cond_.wait(lock, [this]{ return done_ || !tx_records_.empty(); });
+            tx_records_cond_.wait(lock, [this]{ return needs_sync() || !tx_records_.empty(); });
 
-            // If we're done, we're done
-            if (done_)
-                return;
+            // Synchronize on state change
+            if (needs_sync()) {
+                lock.unlock();
+
+                sync();
+
+                if (done_)
+                    return;
+
+                continue;
+            }
 
             record = std::move(tx_records_.front());
             tx_records_.pop();
@@ -197,5 +230,14 @@ void MAC::txNotifier(void)
         // Log the TX record
         if (logger_)
             logger_->logTXRecord(record.timestamp, record.nsamples, tx_rate_);
+    }
+}
+
+void MAC::wake_dependents()
+{
+    {
+        std::unique_lock<std::mutex> lock(tx_records_mutex_);
+
+        tx_records_cond_.notify_all();
     }
 }

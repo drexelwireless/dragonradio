@@ -32,7 +32,8 @@ public:
                std::shared_ptr<SlotSynthesizer> synthesizer,
                double slot_size,
                double guard_size,
-               double slot_send_lead_time);
+               double slot_send_lead_time,
+               unsigned nsyncthreads);
     virtual ~SlottedMAC();
 
     SlottedMAC(const SlottedMAC&) = delete;
@@ -44,6 +45,8 @@ public:
     /** @brief Get slot size, including guard interval */
     virtual std::chrono::duration<double> getSlotSize(void)
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return slot_size_;
     }
 
@@ -52,14 +55,19 @@ public:
      */
     virtual void setSlotSize(std::chrono::duration<double> t)
     {
-        rx_period_ = t;
-        slot_size_ = t;
-        reconfigure();
+        modify([&](){
+            rx_period_ = t;
+            slot_size_ = t;
+
+            reconfigure();
+        });
     }
 
     /** @brief Get guard interval size */
     virtual std::chrono::duration<double> getGuardSize(void)
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return guard_size_;
     }
 
@@ -68,19 +76,27 @@ public:
      */
     virtual void setGuardSize(std::chrono::duration<double> t)
     {
-        guard_size_ = t;
-        reconfigure();
+        modify([&](){
+            guard_size_ = t;
+
+            reconfigure();
+        });
     }
 
     virtual std::chrono::duration<double> getSlotSendLeadTime(void)
     {
+        std::unique_lock<std::mutex> lock(mutex_);
+
         return slot_send_lead_time_;
     }
 
     virtual void setSlotSendLeadTime(std::chrono::duration<double> t)
     {
-        slot_send_lead_time_ = t;
-        reconfigure();
+        modify([&](){
+            slot_send_lead_time_ = t;
+
+            reconfigure();
+        });
     }
 
     /** @brief Is this MAC FDMA? */
@@ -153,6 +169,8 @@ protected:
      * @param slot The slot
      */
     void missedSlot(Slot &slot);
+
+    void wake_dependents() override;
 
     void reconfigure(void) override;
 };
