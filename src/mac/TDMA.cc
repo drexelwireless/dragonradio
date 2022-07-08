@@ -66,7 +66,6 @@ void TDMA::stop(void)
 
 void TDMA::txSlotWorker(void)
 {
-    slot_queue            q;
     WallClock::time_point t_now;              // Current time
     WallClock::time_point t_next_slot;        // Time at which our next slot starts
     WallClock::time_point t_following_slot;   // Time at which our following slot starts
@@ -93,7 +92,7 @@ void TDMA::txSlotWorker(void)
         if (t_next_slot - t_now < slot_size_) {
             // Finalize next slot. After this returns, we have EXCLUSIVE access
             // to the slot.
-            auto slot = finalizeSlot(q, t_next_slot);
+            auto slot = finalizeSlot(t_next_slot);
 
             // Determine how many samples were sent beyond the end of the slot,
             // i.e., the number of overfilled samples.
@@ -117,8 +116,7 @@ void TDMA::txSlotWorker(void)
                                 following_slotidx);
 
             // Schedule modulation of following slot
-            modulateSlot(q,
-                         t_following_slot,
+            modulateSlot(t_following_slot,
                          noverfill,
                          following_slotidx);
 
@@ -135,7 +133,8 @@ void TDMA::txSlotWorker(void)
         sleep_for((t_next_slot - WallClock::now()) - slot_send_lead_time_);
     }
 
-    missedRemainingSlots(q);
+    if (next_slot_)
+        missedSlot(*next_slot_);
 }
 
 bool TDMA::findNextSlot(WallClock::time_point t,

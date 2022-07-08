@@ -92,8 +92,6 @@ public:
     void stop(void) override;
 
 protected:
-    using slot_queue = std::queue<std::shared_ptr<Slot>>;
-
     /** @brief Our slot synthesizer. */
     std::shared_ptr<SlotSynthesizer> slot_synthesizer_;
 
@@ -115,6 +113,9 @@ protected:
     /** @brief Do we need to stop the current burst? */
     std::atomic<bool> stop_burst_;
 
+    /** @brief The next slot */
+    std::shared_ptr<Slot> next_slot_;
+
     /** @brief Slot to transmit */
     qvar<std::shared_ptr<Slot>> tx_slot_;
 
@@ -122,18 +123,15 @@ protected:
     void txWorker(void);
 
     /** @brief Schedule modulation of a slot
-     * @param q The slot queue
      * @param when Start time of slot
      * @param prev_overfill Number of overfill samples from previous slot.
      * @param slotidx Index of the slot to modulated
      */
-    void modulateSlot(slot_queue &q,
-                      WallClock::time_point when,
+    void modulateSlot(WallClock::time_point when,
                       size_t prev_overfill,
                       size_t slotidx);
 
     /** @brief Finalize the next TX slot.
-     * @param q The slot queue
      * @param when Start time of slot
      * @return The slot
      */
@@ -141,8 +139,7 @@ protected:
      * That is, it does not need to acquire the slot's lock to modify it,
      * because it is guaranteed exclusive access.
      */
-    std::shared_ptr<Slot> finalizeSlot(slot_queue &q,
-                                       WallClock::time_point when);
+    std::shared_ptr<Slot> finalizeSlot(WallClock::time_point when);
 
     /** @brief Transmit a slot
      * @param slot The slot
@@ -156,11 +153,6 @@ protected:
      * @param slot The slot
      */
     void missedSlot(Slot &slot);
-
-    /** @brief Mark all remaining slots in qeueue as missed
-     * @param q The slot queue
-     */
-    void missedRemainingSlots(slot_queue &q);
 
     void reconfigure(void) override;
 };
