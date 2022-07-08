@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef FDMA_H_
@@ -53,8 +53,6 @@ public:
     /** @brief Stop processing packets */
     void stop(void) override;
 
-    void reconfigure(void) override;
-
 private:
     /** @brief Amount of data to pre-modulate (sec) */
     double premod_;
@@ -80,6 +78,8 @@ private:
 
     /** @brief Worker preparing slots for transmission */
     void txWorker(void);
+
+    void reconfigure(void) override;
 };
 
 #endif /* FDMA_H_ */

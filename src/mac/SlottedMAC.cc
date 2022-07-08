@@ -49,14 +49,6 @@ SlottedMAC::~SlottedMAC()
 {
 }
 
-void SlottedMAC::reconfigure(void)
-{
-    MAC::reconfigure();
-
-    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_).count();
-    tx_full_slot_samps_ = tx_rate_*slot_size_.count();
-}
-
 void SlottedMAC::stop(void)
 {
     done_ = true;
@@ -219,4 +211,12 @@ void SlottedMAC::missedRemainingSlots(slot_queue &q)
         missedSlot(*q.front());
         q.pop();
     }
+}
+
+void SlottedMAC::reconfigure(void)
+{
+    MAC::reconfigure();
+
+    tx_slot_samps_ = tx_rate_*(slot_size_ - guard_size_).count();
+    tx_full_slot_samps_ = tx_rate_*slot_size_.count();
 }

@@ -88,8 +88,6 @@ public:
         return false;
     }
 
-    void reconfigure(void) override;
-
     void stop(void) override;
 
 protected:
@@ -162,6 +160,8 @@ protected:
      * @param q The slot queue
      */
     void missedRemainingSlots(slot_queue &q);
+
+    void reconfigure(void) override;
 };
 
 #endif /* SLOTTEDMAC_H_ */

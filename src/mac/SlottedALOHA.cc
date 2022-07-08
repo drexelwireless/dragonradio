@@ -63,14 +63,6 @@ void SlottedALOHA::stop(void)
         tx_notifier_thread_.join();
 }
 
-void SlottedALOHA::reconfigure(void)
-{
-    SlottedMAC::reconfigure();
-
-    if (schedule_.size() == 0 || slotidx_ >= schedule_[0].size())
-        slotidx_ = 0;
-}
-
 void SlottedALOHA::txSlotWorker(void)
 {
     slot_queue            q;
@@ -102,4 +94,12 @@ void SlottedALOHA::txSlotWorker(void)
     }
 
     missedRemainingSlots(q);
+}
+
+void SlottedALOHA::reconfigure(void)
+{
+    SlottedMAC::reconfigure();
+
+    if (schedule_.size() == 0 || slotidx_ >= schedule_[0].size())
+        slotidx_ = 0;
 }

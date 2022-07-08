@@ -21,9 +21,9 @@ void exportMACs(py::module &m)
         .def("stop",
             &MAC::stop,
             "Tell MAC to stop processing packets.")
-        .def("reconfigure",
-            &MAC::reconfigure,
-            "Force the MAC to reconfigure after PHY parameters, e.g., TX rate, change.")
+        .def("rateChange",
+            &MAC::rateChange,
+            "Notify the MAC of a TX/RX rate change")
         .def_property("schedule",
             &SlottedMAC::getSchedule,
             py::overload_cast<const Schedule::sched_type &>(&SlottedMAC::setSchedule),
