@@ -116,7 +116,7 @@ std::shared_ptr<Slot> SlottedMAC::finalizeSlot(slot_queue &q,
         {
             std::lock_guard<std::mutex> lock(slot->mutex);
 
-            slot->closed.store(true, std::memory_order_relaxed);
+            slot->closed.store(true, std::memory_order_release);
         }
 
         // Finalize the slot
@@ -206,7 +206,7 @@ void SlottedMAC::missedSlot(Slot &slot)
     std::lock_guard<std::mutex> lock(slot.mutex);
 
     // Close the slot
-    slot.closed.store(true, std::memory_order_relaxed);
+    slot.closed.store(true, std::memory_order_release);
 
     // Re-queue packets that were modulated for this slot
     for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it)

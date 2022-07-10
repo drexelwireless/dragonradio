@@ -280,7 +280,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 }
 
                 // If the slot is closed, bail.
-                if (slot->closed.load(std::memory_order_relaxed))
+                if (slot->closed.load(std::memory_order_acquire))
                     break;
 
                 std::lock_guard<std::mutex> lock(mod.mutex);
