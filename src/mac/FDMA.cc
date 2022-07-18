@@ -55,13 +55,12 @@ void FDMA::txWorker(void)
     bool                                 next_slot_start_of_burst = true;
 
     for (;;) {
-        ChannelSynthesizer::container_type mpkts;
-        size_t                             nsamples;
+        TXRecord txrecord;
 
         if (next_slot_start_of_burst)
-            nsamples = channel_synthesizer_->pop(mpkts);
+            txrecord = channel_synthesizer_->pop();
         else
-            nsamples = channel_synthesizer_->try_pop(mpkts);
+            txrecord = channel_synthesizer_->try_pop();
 
         // Synchronize on state change
         if (needs_sync()) {
@@ -74,7 +73,7 @@ void FDMA::txWorker(void)
         // If we don't have any data to send, we're done. If this slot was not
         // the start of a burst, then it is part of an in-flight burst, in which
         // case we need to stop the burst.
-        if (nsamples == 0) {
+        if (txrecord.nsamples == 0) {
             if (!next_slot_start_of_burst) {
                 radio_->stopTXBurst();
                 next_slot_start_of_burst = true;
@@ -85,14 +84,13 @@ void FDMA::txWorker(void)
 
         // Collect IQ buffers. We keep track of whether or not this batch of
         // modulate packets needs an accurate timestamp.
-        std::list<std::shared_ptr<IQBuf>> iqbufs;
         bool accurate_timestamp = accurate_tx_timestamps_;
 
-        for (auto it = mpkts.begin(); it != mpkts.end(); ++it) {
-            if ((*it)->pkt->timestamp_seq)
+        for (auto it = txrecord.mpkts.begin(); it != txrecord.mpkts.end(); ++it) {
+            if ((*it)->pkt->timestamp_seq) {
                 accurate_timestamp = true;
-
-            iqbufs.emplace_back((*it)->samples);
+                break;
+            }
         }
 
         // Determine time of next transmission. If this is *not* the start of a
@@ -109,18 +107,14 @@ void FDMA::txWorker(void)
         radio_->burstTX(next_slot_start_of_burst && accurate_timestamp ? t_next_tx : std::nullopt,
                        next_slot_start_of_burst,
                        false,
-                       iqbufs);
+                       txrecord.iqbufs);
 
         next_slot_start_of_burst = false;
 
         // Hand-off TX record to TX notification thread
-        {
-            std::lock_guard<std::mutex> lock(tx_records_mutex_);
+        txrecord.timestamp = t_next_tx;
 
-            tx_records_.emplace(t_next_tx, 0, nsamples, std::move(iqbufs), std::move(mpkts));
-        }
-
-        tx_records_cond_.notify_one();
+        pushTXRecord(std::move(txrecord));
 
         // Start a new TX burst if there was an underflow
         if (radio_->getTXUnderflowCount() != 0) {

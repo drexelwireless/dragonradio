@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "ParallelChannelSynthesizer.hh"
@@ -11,8 +11,7 @@ template <class ChannelModulator>
 ParallelChannelSynthesizer<ChannelModulator>::ParallelChannelSynthesizer(const std::vector<PHYChannel> &channels,
                                                                          double tx_rate,
                                                                          size_t nthreads)
-  : ChannelSynthesizer(channels, tx_rate, nthreads+1)
-  , nthreads_(nthreads)
+  : ChannelSynthesizer(channels, tx_rate, nthreads)
 {
     for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&ParallelChannelSynthesizer::modWorker,
@@ -23,34 +22,6 @@ ParallelChannelSynthesizer<ChannelModulator>::ParallelChannelSynthesizer(const s
 }
 
 template <class ChannelModulator>
-ParallelChannelSynthesizer<ChannelModulator>::~ParallelChannelSynthesizer()
-{
-    stop();
-}
-
-template <class ChannelModulator>
-void ParallelChannelSynthesizer<ChannelModulator>::stop(void)
-{
-    // Release the GIL in case we have Python-based demodulators
-    py::gil_scoped_release gil;
-
-    // XXX We must disconnect the sink in order to stop the modulator threads.
-    sink.disconnect();
-
-    // Disable the queue
-    queue_.disable();
-
-    // Set done flag
-    if (modify([&](){ done_ = true; })) {
-        // Join on all threads
-        for (size_t i = 0; i < mod_threads_.size(); ++i) {
-            if (mod_threads_[i].joinable())
-                mod_threads_[i].join();
-        }
-    }
-}
-
-template <class ChannelModulator>
 void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 {
     std::unique_ptr<ChannelModulator> mod;
@@ -58,10 +29,6 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
     std::unique_ptr<ModPacket>        mpkt;
 
     for (;;) {
-        // Wait for room
-        while (!queue_.wait_until_room() && !needs_sync())
-            ;
-
         // Synchronize on state change
         if (needs_sync()) {
             sync();
@@ -69,19 +36,24 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             if (done_)
                 return;
 
-            // If we have no channels, sleep
-            if (channels_.size() == 0 || !chanidx_) {
+            // If we don't have a channel, sleep
+            if (!chanidx_) {
                 sleep_until_state_change();
                 continue;
             } else {
-                // Reconfigure the modulator
+                // Otherwise, create a modulator for the channel
                 mod = std::make_unique<ChannelModulator>(channels_[*chanidx_],
-                                                         0,
+                                                         *chanidx_,
                                                          tx_rate_);
             }
         }
 
-        // Get a packet to modulate
+        // Wait until we can push
+        if (!wait_until_can_push())
+            continue;
+
+        // Get a packet to modulate. We may already have a packet if the last
+        // push failed.
         if (!pkt) {
             if (!sink.pull(pkt))
                 continue;
@@ -93,13 +65,9 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 
         mod->modulate(std::move(pkt), g, *mpkt);
 
-        // Add the packet to the queue
-        queue_.push(std::move(mpkt));
+        // If we didn't successfully push the packet, save the packet and try
+        // again next time
+        if (!push(std::move(mpkt)))
+            pkt = std::move(mpkt->pkt);
     }
-}
-
-template <class ChannelModulator>
-void ParallelChannelSynthesizer<ChannelModulator>::wake_dependents()
-{
-    ChannelSynthesizer::wake_dependents();
 }

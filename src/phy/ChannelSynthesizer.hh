@@ -10,7 +10,6 @@
 #include <mutex>
 
 #include "phy/Channel.hh"
-#include "phy/ModPacketQueue.hh"
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
 
@@ -18,65 +17,204 @@
 class ChannelSynthesizer : public Synthesizer
 {
 public:
-    using container_type = ModPacketQueue<>::container_type;
+    using container_type = std::list<std::unique_ptr<ModPacket>>;
 
     ChannelSynthesizer(const std::vector<PHYChannel> &channels,
                        double tx_rate,
-                       unsigned nsyncthreads)
-      : Synthesizer(channels, tx_rate, nsyncthreads)
+                       unsigned nthreads)
+      : Synthesizer(channels, tx_rate, nthreads+1)
+      , enabled_(true)
+      , nthreads_(nthreads)
     {
     }
 
-    virtual ~ChannelSynthesizer() = default;
+    virtual ~ChannelSynthesizer();
 
     /** @brief Get high-water mark. */
     std::optional<size_t> getHighWaterMark(void) const
     {
-        return queue_.getHighWaterMark();
+        std::lock_guard<std::mutex> lock(queue_mutex_);
+
+        return high_water_mark_;
     }
 
     /** @brief Set high-water mark. */
-    void setHighWaterMark(std::optional<size_t> mark)
+    void setHighWaterMark(std::optional<size_t> high_water_mark)
     {
-        queue_.setHighWaterMark(mark);
+        std::lock_guard<std::mutex> lock(queue_mutex_);
+
+        high_water_mark_ = high_water_mark;
+    }
+
+    /** @brief Is the queue enabled? */
+    bool isEnabled(void) const
+    {
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+
+            return enabled_;
+        }
     }
 
     /** @brief Enable the queue. */
     void enable(void)
     {
-        queue_.enable();
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+
+            enabled_ = true;
+        }
+
+        producer_cv_.notify_all();
+        consumer_cv_.notify_all();
     }
 
     /** @brief Disable the queue. */
     void disable(void)
     {
-        queue_.disable();
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+
+            enabled_ = false;
+        }
+
+        producer_cv_.notify_all();
+        consumer_cv_.notify_all();
     }
 
-    /** @brief Pop modulated packets. */
-    size_t try_pop(container_type &mpkts, size_t max_samples, bool overfill)
+    /** @brief Pop all available modulated packets.
+     * @return A TXRecord containing packets to transmit
+     */
+    TXRecord try_pop(void)
     {
-        return queue_.try_pop(mpkts, max_samples, overfill);
+        TXRecord txrecord;
+
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+
+            if (!enabled_)
+                return txrecord;
+
+            txrecord = std::move(txrecord_);
+        }
+
+        producer_cv_.notify_all();
+
+        return txrecord;
     }
 
-    /** @brief Pop all modulated packets. */
-    size_t try_pop(container_type &mpkts)
+    /** @brief Pop at least one packet.
+     * @return A TXRecord containing packets to transmit
+     */
+    TXRecord pop(void)
     {
-        return queue_.try_pop(mpkts);
+        TXRecord txrecord;
+
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+
+            consumer_cv_.wait(lock, [&]{ return !enabled_ || txrecord_.nsamples > 0; });
+
+            if (!enabled_ || txrecord_.nsamples == 0)
+                return txrecord;
+
+            txrecord = std::move(txrecord_);
+        }
+
+        producer_cv_.notify_all();
+
+        return txrecord;
     }
 
-    /** @brief Pop all modulated packets. */
-    size_t pop(container_type &mpkts)
+    /** @brief Pop at least one packet with a timeout.
+     * @param timeout_time The time at which to stop waiting for packets
+     * @return A TXRecord containing packets to transmit
+     */
+    template <class Clock, class Duration>
+    TXRecord pop_until(const std::chrono::time_point<Clock, Duration>& timeout_time)
     {
-        return queue_.pop(mpkts);
+        TXRecord txrecord;
+
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+
+            consumer_cv_.wait_for(lock, timeout_time - Clock::now(), [&]{ return !enabled_ || txrecord_.nsamples > 0; });
+
+            if (!enabled_ || txrecord_.nsamples == 0)
+                return txrecord;
+
+            txrecord = std::move(txrecord_);
+        }
+
+        producer_cv_.notify_all();
+
+        return txrecord;
     }
+
+    void stop(void) override;
 
 protected:
     /** @brief Index of channel we should synthesize. */
     std::optional<size_t> chanidx_;
 
-    /** @brief Queue */
-    ModPacketQueue<> queue_;
+    /** @brief Mutex for waking demodulators. */
+    mutable std::mutex queue_mutex_;
+
+    /** @brief Maximum number of IQ samples the queue may contain */
+    std::optional<size_t> high_water_mark_;
+
+    /** @brief Flag indicating that the queue is enabled. */
+    bool enabled_;
+
+    /** @brief Queue of modulated packets */
+    TXRecord txrecord_;
+
+    /** @brief Producer condition variable */
+    std::condition_variable producer_cv_;
+
+    /** @brief Consumer condition variable */
+    std::condition_variable consumer_cv_;
+
+    /** @brief Number of synthesizer threads. */
+    unsigned nthreads_;
+
+    /** @brief Threads running modWorker */
+    std::vector<std::thread> mod_threads_;
+
+    /** @brief Push a modulated packet onto the queue */
+    bool push(std::unique_ptr<ModPacket>&& mpkt)
+    {
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+
+            mpkt->start = txrecord_.nsamples;
+
+            txrecord_.nsamples += mpkt->nsamples;
+            txrecord_.iqbufs.push_back(std::move(mpkt->samples));
+            txrecord_.mpkts.push_back(std::move(mpkt));
+        }
+
+        consumer_cv_.notify_one();
+
+        return true;
+    }
+
+    /** @brief Can we push a modulated packet? */
+    /** The queue mutex must be held by the caller */
+    bool can_push(void) const
+    {
+        return !high_water_mark_ || txrecord_.nsamples < *high_water_mark_;
+    }
+
+    /** @brief Wait until we can push a packet */
+    bool wait_until_can_push(void)
+    {
+        std::unique_lock<std::mutex> lock(queue_mutex_);
+
+        producer_cv_.wait(lock, [&]{ return needs_sync() || can_push(); });
+
+        return can_push();
+    }
 
     void wake_dependents(void) override;
 

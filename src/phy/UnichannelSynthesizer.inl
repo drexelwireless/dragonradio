@@ -84,7 +84,7 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             if (done_)
                 return;
 
-            // Wait until we have a schedule and channels
+            // If we have no schedule or channels, yield and try again
             if (schedule_.nchannels() == 0 || channels_.size() == 0) {
                 sleep_until_state_change();
                 continue;
