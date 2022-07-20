@@ -205,6 +205,20 @@ protected:
     /** @brief Queue of transmission records */
     std::queue<TXRecord> tx_records_;
 
+    /** @brief Push a transmission record
+     * @param txrecord The TXRecord to hand off to the TX notification thread
+     */
+    void pushTXRecord(TXRecord&& txrecord)
+    {
+        {
+            std::lock_guard<std::mutex> lock(tx_records_mutex_);
+
+            tx_records_.push(std::move(txrecord));
+        }
+
+        tx_records_cond_.notify_one();
+    }
+
     /** @brief Worker receiving packets */
     void rxWorker(void);
 
