@@ -219,6 +219,16 @@ protected:
         tx_records_cond_.notify_one();
     }
 
+    /** @brief Abort a transmission record
+     * @param txrecord The TXRecord to abort
+     */
+    void abortTXRecord(TXRecord& txrecord)
+    {
+        // Re-queue all packets in this TX record
+        for (auto it = txrecord.mpkts.begin(); it != txrecord.mpkts.end(); ++it)
+            controller_->missed(std::move((*it)->pkt));
+    }
+
     /** @brief Worker receiving packets */
     void rxWorker(void);
 
