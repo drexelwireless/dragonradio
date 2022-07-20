@@ -137,7 +137,8 @@ int main(int argc, char** argv)
     PHY::resetSnapshotCollector();
 
     // Ensure logger is gracefully closed
-    logger.reset();
+    if (logger)
+        logger->close();
 
     // Release USRP from Clock.
     Clock::releaseUSRP();
