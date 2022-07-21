@@ -283,14 +283,16 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
 
 void USRP::stopTXBurst(void)
 {
-    uhd::tx_metadata_t tx_md; // TX metadata for UHD
+    if (in_tx_burst_.load(std::memory_order_consume)) {
+        uhd::tx_metadata_t tx_md; // TX metadata for UHD
 
-    tx_md.end_of_burst = true;
+        tx_md.end_of_burst = true;
 
-    tx_stream_->send((char *) nullptr, 0, tx_md);
+        tx_stream_->send((char *) nullptr, 0, tx_md);
 
-    in_tx_burst_.store(false, std::memory_order_release);
-    t_next_tx_ = std::nullopt;
+        in_tx_burst_.store(false, std::memory_order_release);
+        t_next_tx_ = std::nullopt;
+    }
 }
 
 void USRP::startRXStream(MonoClock::time_point when)
