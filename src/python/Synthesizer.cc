@@ -107,7 +107,7 @@ void exportSynthesizers(py::module &m)
         ;
 
     // Export class MultichannelSynthesizer to Python
-    py::class_<MultichannelSynthesizer, SlotSynthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
+    py::class_<MultichannelSynthesizer, Synthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
                       unsigned int>(),

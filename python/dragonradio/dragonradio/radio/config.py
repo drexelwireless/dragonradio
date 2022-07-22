@@ -63,11 +63,11 @@ def str2channelizer(name: str) -> Type[PHY]:
 
 SLOTTED_SYNTHESIZER_NAMES = { 'freqdomain': FDSlotSynthesizer
                             , 'timedomain': TDSlotSynthesizer
-                            , 'multichannel': MultichannelSynthesizer
                             }
 
 SYNTHESIZER_NAMES = { 'freqdomain': FDSynthesizer
                     , 'timedomain': TDSynthesizer
+                    , 'multichannel': MultichannelSynthesizer
                     }
 
 def str2synthesizer(mac_class: Type[MAC], name: str) -> Type[PHY]:
@@ -78,9 +78,6 @@ def str2synthesizer(mac_class: Type[MAC], name: str) -> Type[PHY]:
 
     if name in names:
         return names[name]
-
-    if name == 'multichannel':
-        raise ConfigException('Multichannel synthesizer can only be used with a slotted MAC')
 
     raise ConfigException(f"{name:} is not a valid synthesizer")
 
@@ -955,7 +952,7 @@ class Config:
 
         # Synthesizer parameters
         phy.add_argument('--synthesizer', action='store',
-                         choices=sorted(SLOTTED_SYNTHESIZER_NAMES.keys()),
+                         choices=sorted(SYNTHESIZER_NAMES.keys()),
                          dest='synthesizer',
                          help='set synthesizer algorithm')
 

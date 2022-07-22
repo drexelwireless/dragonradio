@@ -16,10 +16,84 @@ namespace py = pybind11;
 #include "phy/PHY.hh"
 #include "stats/Estimator.hh"
 
+/** @brief A time slot that needs to be synthesized */
+struct MultichannelSynthesizer::Slot {
+    Slot(const WallClock::time_point& deadline_,
+         size_t deadline_delay_,
+         size_t slot_samples_,
+         size_t full_slot_samples_,
+         size_t slotidx_)
+      : slot_samples(slot_samples_)
+      , full_slot_samples(full_slot_samples_)
+      , slotidx(slotidx_)
+      , closed(false)
+      , deadline(deadline_)
+      , delay(0)
+      , fdnsamples(0)
+      , npartial(0)
+    {
+        nfinished.store(0, std::memory_order_relaxed);
+
+        txrecord.timestamp = WallClock::to_mono_time(deadline_);
+        txrecord.delay = deadline_delay_;
+    }
+
+    Slot() = delete;
+
+    ~Slot() = default;
+
+    /** @brief Number of samples in a full slot NOT including any guard */
+    const ssize_t slot_samples;
+
+    /** @brief Number of samples in a full slot including any guard */
+    const ssize_t full_slot_samples;
+
+    /** @brief The schedule slot this slot represents */
+    const size_t slotidx;
+
+    /** @brief Number of threads who have finished with this slot */
+    std::atomic<unsigned> nfinished;
+
+    /** @brief When true, indicates that the slot is closed for further
+     * samples.
+     */
+    bool closed;
+
+    /** @brief Packets to transmit */
+    TXRecord txrecord;
+
+    /** @brief Slot deadline */
+    WallClock::time_point deadline;
+
+    /** @brief Number of samples to delay */
+    size_t delay;
+
+    /** @brief Frequency-domain IQ buffer */
+    std::unique_ptr<IQBuf> fdbuf;
+
+    /** @brief Number of valid samples in the frequency-domain buffer */
+    size_t fdnsamples;
+
+    /** @brief Number of samples represented by final FFT block that were
+     * part of the slot.
+     */
+    size_t npartial;
+
+    /** @brief The length of the slot, in samples. */
+    /** Return the length of the slot, in samples. This does not include
+     * delayed samples.
+     */
+    size_t length(void) const
+    {
+        return txrecord.nsamples - delay;
+    }
+};
+
 /** @brief Channel modulator for multichannel modulation */
 class MultichannelSynthesizer::MultichannelModulator : public ChannelModulator {
 public:
-    MultichannelModulator(const PHYChannel &channel,
+    MultichannelModulator(MultichannelSynthesizer& synthesizer,
+                          const PHYChannel &channel,
                           unsigned chanidx,
                           double tx_rate);
     MultichannelModulator() = delete;
@@ -33,33 +107,33 @@ public:
     /** @brief Specify the next slot to modulate.
      * @param prev_slot The previous slot
      * @param slot The new slot
-     * @param overfill true if this slot can be overfilled
+     * @param schedule The current schedule
      */
-    void nextSlot(const Slot *prev_slot, Slot &slot, const bool overfill);
+    void nextSlot(const Slot* prev_slot, Slot& slot, const Schedule& schedule);
+
+    /** @brief Push modulated packet onto slot
+     * @param mpkt The modulated packet
+     * @param cv Condition variable for packet consumers
+     * @return true if the packet was pushed, false otherwise
+     */
+    bool push(std::unique_ptr<ModPacket>&, Slot& slot);
+
+    /** @brief Perform frequency-domain upsampling on current IQ buffer.
+     * @param slot Current slot.
+     */
+    void flush(Slot& slot);
 
     /** @brief Determine whether or not a modulated packet will fit in
      * the current frequency domain buffer.
      * @param mpkt The modulated packet
-     * @param overfill Flag that is true if the slot can be overfilled
      * @return true if the packet will fit in the slot, false otherwise
      */
-    /** If the packet will fit in the slot, nsamples is updated
-     * appropriately.
-     */
-    bool fits(ModPacket &mpkt, const bool overfill);
+    bool fits(ModPacket& mpkt);
 
-    /** @brief Set current IQ buffer to be upsampled.
-     * @param iqbuf
-     */
-    void setIQBuffer(std::shared_ptr<IQBuf> &&iqbuf);
-
-    /** @brief Calculate how many samples will be in upsampled signal.
-     * @@param n Number of samples in original signal.
-     * @return Number of samples in upsampled signal.
-     */
-    size_t upsampledSize(size_t n)
+    /** @brief Does this modulator have samples for the next slot? */
+    bool continued(void) const
     {
-        return n/resampler.getRate();
+        return (bool) iqbuf;
     }
 
     /** @brief Perform frequency-domain upsampling on current IQ buffer.
@@ -67,25 +141,15 @@ public:
      */
     size_t upsample(void);
 
-    /** @brief Perform frequency-domain upsampling on current IQ buffer.
-     * @param slot Current slot.
-     */
-    void flush(Slot &slot);
-
-    /** @brief Mutex for channel state */
-    std::mutex mutex;
-
-    /** @brief Packet whose modulated signal is the IQ buffer */
-    std::shared_ptr<NetPacket> pkt;
+private:
+    /** @brief The modulator's synthesizer */
+    MultichannelSynthesizer& synthesizer_;
 
     /** @brief IQ buffer being upsampled */
     std::shared_ptr<IQBuf> iqbuf;
 
     /** @brief Offset of unmodulated data in IQ buffer */
     size_t iqbufoff;
-
-    /** @brief Frequency domain buffer into which we upsample */
-    IQBuf *fdbuf;
 
     /** @brief Number of time domain samples in the frequency domain buffer
      * to delay.
@@ -100,6 +164,9 @@ public:
      */
     size_t nsamples;
 
+    /** @brief Can we overfill? */
+    bool overfill;
+
     /** @brief Maximum number of time-domain samples. */
     size_t max_samples;
 
@@ -110,6 +177,9 @@ public:
 
     /** @brief FFT buffer offset before flush of partial block. */
     std::optional<size_t> partial_fftoff;
+
+    /** @brief Frequency domain buffer into which we upsample */
+    IQBuf* fdbuf;
 
     /** @brief Number of valid samples in the frequency-domain buffer */
     /** This will be a multiple of N */
@@ -122,7 +192,8 @@ public:
 MultichannelSynthesizer::MultichannelSynthesizer(const std::vector<PHYChannel> &channels,
                                                  double tx_rate,
                                                  size_t nthreads)
-  : SlotSynthesizer(channels, tx_rate, nthreads+1)
+  : Synthesizer(channels, tx_rate, nthreads+1)
+  , enabled_(true)
   , nthreads_(nthreads)
 {
     for (size_t i = 0; i < nthreads; ++i)
@@ -138,9 +209,195 @@ MultichannelSynthesizer::~MultichannelSynthesizer()
     stop();
 }
 
-void MultichannelSynthesizer::modulate(const std::shared_ptr<Slot> &slot)
+std::optional<size_t> MultichannelSynthesizer::getHighWaterMark(void) const
 {
-    std::atomic_store_explicit(&curslot_, slot, std::memory_order_release);
+    std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+    return high_water_mark_;
+}
+
+void MultichannelSynthesizer::setHighWaterMark(std::optional<size_t> high_water_mark)
+{
+    std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+    high_water_mark_ = high_water_mark;
+}
+
+bool MultichannelSynthesizer::isEnabled(void) const
+{
+    std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+    return enabled_;
+}
+
+void MultichannelSynthesizer::enable(void)
+{
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        enabled_ = true;
+    }
+
+    consumer_cv_.notify_all();
+}
+
+void MultichannelSynthesizer::disable(void)
+{
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        enabled_ = false;
+    }
+
+    consumer_cv_.notify_all();
+}
+
+TXRecord MultichannelSynthesizer::try_pop(void)
+{
+    return TXRecord{};
+}
+
+TXRecord MultichannelSynthesizer::pop(void)
+{
+    std::shared_ptr<Slot> slot;
+
+    push_slot();
+
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        consumer_cv_.wait(lock, [&]{ return !enabled_ || !curslot_ || !curslot_->txrecord.mpkts.empty(); });
+
+        if (enabled_)
+            slot = std::move(curslot_);
+    }
+
+    if (slot) {
+        closeAndFinalize(*slot);
+        return std::move(slot->txrecord);
+    } else {
+        return TXRecord{};
+    }
+}
+
+TXRecord MultichannelSynthesizer::pop_for(const std::chrono::duration<double>& rel_time)
+{
+    std::shared_ptr<Slot> slot;
+
+    push_slot();
+
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        consumer_cv_.wait(lock, [&]{ return !enabled_ || !curslot_ || !curslot_->txrecord.mpkts.empty(); });
+
+        if (enabled_)
+            slot = std::move(curslot_);
+    }
+
+    if (slot) {
+        closeAndFinalize(*slot);
+        return std::move(slot->txrecord);
+    } else {
+        return TXRecord{};
+    }
+}
+
+void MultichannelSynthesizer::push_slot(const WallClock::time_point& when, size_t slotidx, ssize_t prev_oversample)
+{
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        curslot_ = std::make_shared<Slot>(when,
+                                          prev_oversample,
+                                          tx_slot_samps_ - prev_oversample,
+                                          tx_full_slot_samps_ - prev_oversample,
+                                          slotidx);
+    }
+
+    producer_cv_.notify_all();
+}
+
+TXSlot MultichannelSynthesizer::pop_slot(void)
+{
+    std::shared_ptr<Slot> slot;
+
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        slot = std::move(curslot_);
+    }
+
+    if (!slot)
+        return TXSlot{};
+
+    // Close and finalize the slot.
+    closeAndFinalize(*slot);
+
+    // Return TXSlot
+    return TXSlot { std::move(slot->txrecord)
+                  , std::move(slot->deadline)
+                  , static_cast<ssize_t>(slot->length() - slot->full_slot_samples)
+                  , schedule_.canTransmitInSlot((slot->slotidx + 1) % schedule_.nslots())
+                  };
+}
+
+bool MultichannelSynthesizer::push(std::unique_ptr<ModPacket>& mpkt,
+                                   Slot& slot)
+{
+    {
+        std::lock_guard<std::mutex> lock(curslot_mutex_);
+
+        // If the slot is closed, put the IQ buffer back into the ModPacket and
+        // return false since we failed to push.
+        if (slot.closed)
+            return false;
+
+        slot.txrecord.mpkts.emplace_back(std::move(mpkt));
+    }
+
+    // Signal any consumer
+    consumer_cv_.notify_one();
+
+    return true;
+}
+
+void MultichannelSynthesizer::push_slot(void)
+{
+    WallClock::time_point t_now = WallClock::now();
+    WallClock::time_point when = t_now - schedule_.slotOffsetAt(t_now);
+    size_t                slotidx = schedule_.slotAt(t_now);
+
+    if (schedule_.nslots() == 0)
+        return;
+
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        curslot_ = std::make_shared<Slot>(when,
+                                          0,
+                                          tx_slot_samps_,
+                                          tx_full_slot_samps_,
+                                          slotidx);
+    }
+
+    producer_cv_.notify_all();
+}
+
+void MultichannelSynthesizer::closeAndFinalize(Slot& slot)
+{
+    // Close the slot. We grab the slot's mutex to guarantee that all
+    // synthesizer threads have seen that the slot is closed---this serves as a
+    // barrier. After this, no synthesizer will touch the slot, so we are
+    // guaranteed exclusive access.
+    {
+        std::lock_guard<std::mutex> lock(curslot_mutex_);
+
+        slot.closed = true;
+    }
+
+    // Finalize the slot
+    finalize(slot);
 }
 
 void MultichannelSynthesizer::finalize(Slot &slot)
@@ -150,7 +407,7 @@ void MultichannelSynthesizer::finalize(Slot &slot)
 
     // If we've already converted the frequency-domain buffer to a time-domain
     // buffer, there's nothing left to do.
-    if (!slot.iqbufs.empty())
+    if (!slot.txrecord.iqbufs.empty())
         return;
 
     // Flush all synthesis state
@@ -161,7 +418,7 @@ void MultichannelSynthesizer::finalize(Slot &slot)
 
         // Skip this channel if we're not allowed to modulate
         if (slots[slot.slotidx]) {
-            std::lock_guard<std::mutex> lock(mods_[channelidx]->mutex);
+            std::lock_guard<std::mutex> lock(mod_mutexes_[channelidx]);
 
             mods_[channelidx]->flush(slot);
         }
@@ -169,7 +426,7 @@ void MultichannelSynthesizer::finalize(Slot &slot)
 
     // If we have any samples, our delay will always be less than nsamples, so
     // we can just check that nsamples is non-zero here.
-    if (slot.nsamples == 0)
+    if (slot.txrecord.nsamples == 0)
         return;
 
     // Convert the frequency-domain signal back to the time domain
@@ -180,9 +437,9 @@ void MultichannelSynthesizer::finalize(Slot &slot)
 
     timedomain_.toTimeDomain(slot.fdbuf->data(), slot.fdnsamples, iqbuf->data());
     iqbuf->delay = slot.delay;
-    iqbuf->resize(slot.nsamples);
+    iqbuf->resize(slot.txrecord.nsamples);
 
-    slot.iqbufs.emplace_back(std::move(iqbuf));
+    slot.txrecord.iqbufs.emplace_back(std::move(iqbuf));
 }
 
 void MultichannelSynthesizer::stop(void)
@@ -211,11 +468,14 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
     std::shared_ptr<NetPacket> pkt;
 
     for (;;) {
-        // Wait for the next slot if we are starting at the first channel for
-        // which we are responsible.
-        do {
-            slot = std::atomic_load_explicit(&curslot_, std::memory_order_acquire);
-        } while (!needs_sync() && slot == prev_slot);
+        // Get the next slot
+        {
+            std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+            producer_cv_.wait(lock, [&]{ return needs_sync() || curslot_ != prev_slot; });
+
+            slot = curslot_;
+        }
 
         // Synchronize on state change
         if (needs_sync()) {
@@ -230,11 +490,11 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 continue;
             }
 
-            // Otherwise, get the next slot
             continue;
         }
 
-        if (!slot)
+        // If we don't have a new slot, try again
+        if (!slot || slot == prev_slot)
             continue;
 
         // If we don't have a schedule yet, try again
@@ -246,7 +506,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
         // Get the frequency-domain buffer for the slot, creating it if it does
         // not yet exist
         {
-            std::lock_guard<std::mutex> lock(slot->mutex);
+            std::lock_guard<std::mutex> lock(curslot_mutex_);
 
             // We allocate (and zero) a frequency-domain buffer for everyone to
             // use if we are the first to get access to this slot.
@@ -262,6 +522,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
         for (unsigned channelidx = tid; channelidx < channels_.size(); channelidx += nthreads_) {
             // Get channel state for current channel
+            std::mutex                &mod_mutex = mod_mutexes_[channelidx];
             MultichannelModulator     &mod = *mods_[channelidx];
             const Schedule::slot_type &slots = schedule_[channelidx];
 
@@ -269,35 +530,11 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
             if (!slots[slot->slotidx])
                 continue;
 
-            // We can overfill if we are allowed to transmit on the same channel
-            // in the next slot in the schedule
-            bool overfill = schedule_.mayOverfill(channelidx, slot->slotidx);
-
             {
-                std::lock_guard<std::mutex> lock(slot->mutex);
-
-                if (overfill)
-                    slot->max_samples = slot->full_slot_samples;
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(mod.mutex);
+                std::lock_guard<std::mutex> lock(mod_mutex);
 
                 // Modulate into a new slot
-                mod.nextSlot(prev_slot.get(), *slot, overfill);
-
-                // Do upsampling of leftover IQ buffer here
-                if (mod.iqbuf) {
-                    mod.iqbufoff += mod.upsample();
-
-                    // This should never happen!
-                    if (mod.iqbufoff != mod.iqbuf->size())
-                        logPHY(LOGERROR, "leftover IQ buffer bigger than slot!");
-
-                    mod.iqbuf.reset();
-                    assert(mod.pkt);
-                    mod.pkt.reset();
-                }
+                mod.nextSlot(prev_slot.get(), *slot, schedule_);
             }
 
             // Modulate packets for the current slot
@@ -318,11 +555,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                     mpkt = std::make_unique<ModPacket>();
                 }
 
-                // If the slot is closed, bail.
-                if (slot->closed.load(std::memory_order_acquire))
-                    break;
-
-                std::lock_guard<std::mutex> lock(mod.mutex);
+                std::lock_guard<std::mutex> lock(mod_mutex);
 
                 // Modulate the packet
                 if (!mpkt->pkt) {
@@ -331,71 +564,22 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                     mod.modulate(std::move(pkt), g, *mpkt);
                 }
 
-                // Determine whether or not we can fit this modulated packet.
-                bool pushed = false;
-
-                if (mod.fits(*mpkt, overfill)) {
-                    // We must upsample the modulated packet's IQ buffer
-                    mod.setIQBuffer(std::move(mpkt->samples));
-
-                    // Do upsampling here. Note that we may not be able to fit the
-                    // entire upsampled data into the current slot.
-                    size_t nsamples0 = mod.nsamples;
-                    size_t n = mod.upsample();
-
-                    {
-                        std::lock_guard<std::mutex> lock(slot->mutex);
-
-                        if (!slot->closed.load(std::memory_order_acquire)) {
-                            // Set modulated packet's start and number of
-                            // samples with respect to final time-domain IQ
-                            // buffer.
-                            mpkt->offset = nsamples0;
-                            mpkt->nsamples = mod.upsampledSize(mod.iqbuf->size() - mod.iqbuf->delay);
-
-                            // If we pushed the packet, record the new offset
-                            // into the IQ buffer.
-                            mod.iqbufoff += n;
-
-                            // If the packet did fit entirely within the slot,
-                            // save a copy of the un-modulated packet so if
-                            // there is an error and we can't transmit the rest
-                            // of the packet in the next slot, then we can
-                            // re-modulate it.
-                            if (mod.iqbufoff != mod.iqbuf->size())
-                                mod.pkt = mpkt->pkt;
-
-                            slot->mpkts.emplace_back(std::move(mpkt));
-
-                            pushed = true;
-                        }
-                    }
-
-                    // If we pushed the packet and it fit entirely in the slot, free
-                    // the buffer; otherwise, keep the buffer around so we can put
-                    // the rest of it into the next slot.
+                // If we can push the packet onto the slot, break if the packet
+                // must be continued into the next slot.
+                if (mod.push(mpkt, *slot)) {
+                    if (mod.continued())
+                        break;
+                } else {
+                    // If we didn't successfully push the packet, there are two
+                    // options:
                     //
-                    // If we didn't push the packet, put the samples back into the
-                    // modulated packet.
-                    if (pushed) {
-                        if (mod.iqbufoff == mod.iqbuf->size()) {
-                            assert(mod.iqbuf);
-                            mod.iqbuf.reset();
-                        } else
-                            break;
-                    } else
-                        mpkt->samples = std::move(mod.iqbuf);
-                }
-
-                // If we didn't successfully push the packet, there are two
-                // options:
-                // 1) The packet is too large for any slot. In this case, drop
-                //    it and try again.
-                // 2) The packet is too large for the remainder of *this* slot.
-                //    In this case, we are done with this slot and will attempt
-                //    to add the packet to the next slot.
-                if (!pushed) {
-                    if (mpkt->nsamples > slot->max_samples) {
+                    // 1) The packet is too large for any slot. In this case,
+                    //    drop it and try again.
+                    //
+                    // 2) The packet is too large for the remainder of *this*
+                    //    slot. In this case, we are done with this slot and
+                    //    will attempt to add the packet to the next slot.
+                    if (mpkt->nsamples > tx_slot_samps_) {
                         logPHY(LOGWARNING, "Modulated packet is larger than slot!");
                         mpkt.reset();
                     } else {
@@ -410,9 +594,9 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
         // We are done with this slot. Finalize it if everyone else has finished
         // too.
         if (slot->nfinished.fetch_add(1, std::memory_order_acq_rel) == nthreads_ - 1) {
-            std::lock_guard<std::mutex> lock(slot->mutex);
+            std::lock_guard<std::mutex> lock(curslot_mutex_);
 
-            if (!slot->closed.load(std::memory_order_acquire))
+            if (!slot->closed)
                 finalize(*slot);
         }
 
@@ -426,51 +610,76 @@ void MultichannelSynthesizer::reconfigure(void)
 {
     Synthesizer::reconfigure();
 
+    // Compute number of samples in slot
+    const auto slot_size = schedule_.getSlotSize();
+    const auto guard_size = schedule_.getGuardSize();
+
+    tx_slot_samps_ = tx_rate_*(slot_size - guard_size).count();
+    tx_full_slot_samps_ = tx_rate_*slot_size.count();
+
     // Compute gain necessary to compensate for maximum number of channels on
     // which we may simultaneously transmit.
-    unsigned chancount = 0;
+    size_t max_chancount = 0;
 
-    for (unsigned chanidx = 0; chanidx < schedule_.nchannels(); ++chanidx) {
-        auto &slots = schedule_[chanidx];
+    if (schedule_.nchannels() != 0) {
+        std::vector<size_t> chancount(schedule_.nslots());
 
-        for (unsigned slotidx = 0; slotidx < slots.size(); ++slotidx) {
-            if (slots[slotidx]) {
-                ++chancount;
-                break;
+        for (unsigned chanidx = 0; chanidx < schedule_.nchannels(); ++chanidx) {
+            auto &slots = schedule_[chanidx];
+
+            for (unsigned slotidx = 0; slotidx < slots.size(); ++slotidx) {
+                if (slots[slotidx]) {
+                    ++chancount[slotidx];
+                    break;
+                }
             }
         }
+
+        max_chancount = *std::max_element(chancount.begin(), chancount.end());
     }
 
-    if (chancount == 0)
+    if (max_chancount == 0)
         g_multichan_ = 1.0f;
     else
-        g_multichan_ = 1.0f/static_cast<float>(chancount);
+        g_multichan_ = 1.0f/static_cast<float>(max_chancount);
 
-    // Now set the channels and reconfigure the channel state
+    // Create modulators
     const unsigned nchannels = channels_.size();
 
+    mod_mutexes_ = std::vector<std::mutex>(nchannels);
     mods_.resize(nchannels);
 
     for (unsigned chanidx = 0; chanidx < nchannels; chanidx++)
-        mods_[chanidx] = std::make_unique<MultichannelModulator>(channels_[chanidx],
+        mods_[chanidx] = std::make_unique<MultichannelModulator>(*this,
+                                                                 channels_[chanidx],
                                                                  chanidx,
                                                                  tx_rate_);
 }
 
 void MultichannelSynthesizer::wake_dependents()
 {
+    // Wake threads waiting on the current slot
+    {
+        std::unique_lock<std::mutex> lock(curslot_mutex_);
+
+        producer_cv_.notify_all();
+    }
+
     Synthesizer::wake_dependents();
 }
 
-MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(const PHYChannel &channel,
+MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(MultichannelSynthesizer& synthesizer,
+                                                                      const PHYChannel& channel,
                                                                       unsigned chanidx,
                                                                       double tx_rate)
   : ChannelModulator(channel, chanidx, tx_rate)
-  , fdbuf(nullptr)
+  , synthesizer_(synthesizer)
   , delay(0)
   , nsamples(0)
+  , overfill(false)
   , max_samples(0)
   , npartial(0)
+  , fdbuf(nullptr)
   , fdnsamples(0)
   , resampler(channel.I,
               channel.D,
@@ -484,7 +693,7 @@ MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(const PHYC
 
 void MultichannelSynthesizer::MultichannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
                                                               const float g,
-                                                              ModPacket &mpkt)
+                                                              ModPacket& mpkt)
 {
     const float g_effective = pkt->g*g;
 
@@ -496,16 +705,25 @@ void MultichannelSynthesizer::MultichannelModulator::modulate(std::shared_ptr<Ne
     mpkt.channel = channel_.channel;
 }
 
-void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_slot,
-                                                              Slot &slot,
-                                                              const bool overfill)
+void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot* prev_slot,
+                                                              Slot& slot,
+                                                              const Schedule& schedule)
 {
     // It's safe to keep a plain old pointer since we will only keep this
     // pointer around as long as we have a reference to the slot, and the slot
     // owns this buffer.
     fdbuf = slot.fdbuf.get();
 
-    max_samples = overfill ? slot.full_slot_samples : slot.max_samples;
+    // Determine maximum number of samples we can push into this slot. The
+    // slot's TXRecord's delay is the number of overflow samples from the
+    // previous slot, which we must subtract from the number of samples in the
+    // current slot.
+    if (synthesizer_.high_water_mark_) {
+        max_samples = *synthesizer_.high_water_mark_;
+    } else {
+        overfill = schedule.mayOverfill(chanidx_, slot.slotidx);
+        max_samples = overfill ? slot.full_slot_samples : slot.slot_samples;
+    }
 
     // Was a partial block output in the previous slot?
     if (prev_slot && prev_slot->npartial != 0) {
@@ -523,7 +741,7 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
             assert(npartial == prev_slot->npartial);
 
             // If partial_fftoff is set, we flushed our FFT buffer to yield a
-            // partial block, so we need to rewind the FFT upsampler.
+            // partial block, so we need to rewind the FFT resampler.
             if (partial_fftoff) {
                 resampler.restoreFFTOffset(*partial_fftoff);
 
@@ -567,42 +785,47 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
         delay = 0;
         npartial = 0;
     }
+
+    // Do upsampling of leftover IQ buffer here
+    if (iqbuf) {
+        iqbufoff += upsample();
+
+        // This should never happen!
+        if (iqbufoff != iqbuf->size())
+            logPHY(LOGERROR, "leftover IQ buffer bigger than slot!");
+
+        iqbuf.reset();
+    }
 }
 
-bool MultichannelSynthesizer::MultichannelModulator::fits(ModPacket &mpkt, const bool overfill)
+bool MultichannelSynthesizer::MultichannelModulator::push(std::unique_ptr<ModPacket>& mpkt,
+                                                          Slot& slot)
 {
-    // This is the number of samples the upsampled signal will need
-    size_t n = upsampledSize(mpkt.samples->size() - mpkt.samples->delay);
-
-    if (nsamples + resampler.npending() + n <= delay + max_samples ||
-        (nsamples + resampler.npending() < delay + max_samples && overfill)) {
-        mpkt.start = nsamples;
-        mpkt.nsamples = n;
-
-        return true;
-    } else
+    if (!fits(*mpkt))
         return false;
-}
 
-void MultichannelSynthesizer::MultichannelModulator::setIQBuffer(std::shared_ptr<IQBuf> &&iqbuf_)
-{
-    iqbuf = std::move(iqbuf_);
+    // The ModPacket's IQ buffer now belongs to us
+    iqbuf = std::move(mpkt->samples);
+    mpkt->offset = nsamples;
+    mpkt->nsamples = resampler.resampledSize(iqbuf->size() - iqbuf->delay);
+
+    // Push onto slot
+    if (!synthesizer_.push(mpkt, slot)) {
+        mpkt->samples = std::move(iqbuf);
+        return false;
+    }
+
+    // If we pushed the packet, record the new offset into the IQ buffer. Since
+    // iqbufoff is used by upsample, we must set it *before* we call upsample.
     iqbufoff = iqbuf->delay;
-    pkt.reset();
-}
+    iqbufoff += upsample();
 
-size_t MultichannelSynthesizer::MultichannelModulator::upsample(void)
-{
-    return resampler.resampleToFD(iqbuf->data() + iqbufoff,
-                                  iqbuf->size() - iqbufoff,
-                                  fdbuf->data() + fdnsamples,
-                                  1.0f,
-                                  false,
-                                  [&](size_t n) {
-                                      fdnsamples += Resampler::N;
-                                      nsamples += n;
-                                      return nsamples < delay + max_samples;
-                                  });
+    // If the entire packet fit in the slot, free the IQ buffer. Otherwise, keep
+    // the buffer around so we can put the rest of it into the next slot.
+    if (iqbufoff == iqbuf->size())
+        iqbuf.reset();
+
+    return true;
 }
 
 void MultichannelSynthesizer::MultichannelModulator::flush(Slot &slot)
@@ -630,10 +853,37 @@ void MultichannelSynthesizer::MultichannelModulator::flush(Slot &slot)
     } else
         npartial = 0;
 
-    if (nsamples > slot.nsamples) {
+    if (nsamples > slot.txrecord.nsamples) {
         slot.delay = delay;
-        slot.nsamples = nsamples;
+        slot.txrecord.nsamples = nsamples;
         slot.fdnsamples = fdnsamples;
         slot.npartial = npartial;
     }
+}
+
+bool MultichannelSynthesizer::MultichannelModulator::fits(ModPacket& mpkt)
+{
+    if (synthesizer_.high_water_mark_) {
+        return nsamples <= *synthesizer_.high_water_mark_;
+    } else {
+        // This is the number of samples the upsampled signal will need
+        const size_t n = resampler.resampledSize(mpkt.samples->size() - mpkt.samples->delay);
+
+        return (nsamples + resampler.npending() + n <= delay + max_samples)
+            || (nsamples + resampler.npending() < delay + max_samples && overfill);
+    }
+}
+
+size_t MultichannelSynthesizer::MultichannelModulator::upsample(void)
+{
+    return resampler.resampleToFD(iqbuf->data() + iqbufoff,
+                                  iqbuf->size() - iqbufoff,
+                                  fdbuf->data() + fdnsamples,
+                                  1.0f,
+                                  false,
+                                  [&](size_t n) {
+                                      fdnsamples += Resampler::N;
+                                      nsamples += n;
+                                      return nsamples < delay + max_samples;
+                                  });
 }
