@@ -1133,8 +1133,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         config = self.config
 
-        if (issubclass(mac_class, SlottedMAC) and not isinstance(self.synthesizer, SlotSynthesizer)) \
-            or not isinstance(self.synthesizer, ChannelSynthesizer):
+        if (issubclass(mac_class, SlottedMAC) and not isinstance(self.synthesizer, SlotSynthesizer)):
             self.replaceSynthesizer(mac_class)
 
         # Delete the current MAC

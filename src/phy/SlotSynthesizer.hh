@@ -131,6 +131,52 @@ public:
 
     virtual ~SlotSynthesizer() = default;
 
+    std::optional<size_t> getHighWaterMark(void) const override
+    {
+        return std::nullopt;
+    }
+
+    void setHighWaterMark(std::optional<size_t> high_water_mark) override
+    {
+    }
+
+    bool isEnabled(void) const override
+    {
+        return true;
+    }
+
+    void enable(void) override
+    {
+    }
+
+    void disable(void) override
+    {
+    }
+
+    TXRecord try_pop(void) override
+    {
+        return TXRecord{};
+    }
+
+    TXRecord pop(void) override
+    {
+        return TXRecord{};
+    }
+
+    TXRecord pop_for(const std::chrono::duration<double>& rel_time) override
+    {
+        return TXRecord{};
+    }
+
+    void push_slot(const WallClock::time_point& when, size_t slot, ssize_t prev_oversample) override
+    {
+    }
+
+    TXSlot pop_slot(void) override
+    {
+        return TXSlot{};
+    }
+
     /** @brief Modulate a slot. */
     virtual void modulate(const std::shared_ptr<Slot> &slot) = 0;
 
