@@ -1133,9 +1133,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         config = self.config
 
-        if (issubclass(mac_class, SlottedMAC) and not isinstance(self.synthesizer, SlotSynthesizer)):
-            self.replaceSynthesizer(mac_class)
-
         # Delete the current MAC
         if self.mac is not None:
             self.mac.stop()
@@ -1165,6 +1162,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                  config.slot_size)
 
             self.mac.accurate_tx_timestamps = config.mac_accurate_tx_timestamps
+
+        if isinstance(self.mac, SlottedMAC):
+            self.mac.slot_send_lead_time = config.slot_send_lead_time
 
     def replaceSynthesizer(self, mac_class: Type[MAC]):
         """Replace the synthesizer"""
