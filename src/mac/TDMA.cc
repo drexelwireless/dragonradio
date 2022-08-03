@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <chrono>
@@ -15,17 +15,18 @@ TDMA::TDMA(std::shared_ptr<Radio> radio,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
-           std::shared_ptr<SlotSynthesizer> synthesizer,
-           double rx_period,
-           double slot_send_lead_time)
-  : SlottedMAC(radio,
-               controller,
-               collector,
-               channelizer,
-               synthesizer,
-               rx_period,
-               slot_send_lead_time,
-               5)
+           std::shared_ptr<Synthesizer> synthesizer,
+           double rx_period)
+  : MAC(radio,
+        controller,
+        collector,
+        channelizer,
+        synthesizer,
+        rx_period,
+        5)
+  , tx_slot_samps_(0)
+  , tx_full_slot_samps_(0)
+  , stop_burst_(false)
 {
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
     tx_thread_ = std::thread(&TDMA::txWorker, this);
@@ -42,8 +43,6 @@ TDMA::~TDMA()
 
 void TDMA::stop(void)
 {
-    SlottedMAC::stop();
-
     if (modify([&](){ done_ = true; })) {
         // Join on all threads
         if (rx_thread_.joinable())
@@ -57,6 +56,50 @@ void TDMA::stop(void)
 
         if (tx_notifier_thread_.joinable())
             tx_notifier_thread_.join();
+    }
+}
+
+void TDMA::txWorker(void)
+{
+    std::optional<TXSlot> slot;
+
+    for (;;) {
+        // Synchronize on state change
+        if (needs_sync()) {
+            sync();
+
+            if (done_)
+                return;
+        }
+
+        if (!tx_slot_.pop(slot))
+            continue;
+
+        // If the slot doesn't contain any IQ data to send, we're done
+        if (slot->txrecord.mpkts.empty()) {
+            radio_->stopTXBurst();
+
+            continue;
+        }
+
+        // If we were told to stop the TX burst, do so.
+        if (stop_burst_.load(std::memory_order_relaxed)) {
+            stop_burst_.store(false, std::memory_order_relaxed);
+
+            radio_->stopTXBurst();
+        }
+
+        // Transmit the packets via the radio
+        radio_->burstTX(*slot->txrecord.timestamp + WallClock::duration(slot->txrecord.delay/tx_rate_),
+                        // Start burst if we're not already in one
+                        !radio_->inTXBurst(),
+                        // Stop burst if slot isn't continued or if we didn't
+                        // fill this slot
+                        !slot->continued || slot->nexcess < 0,
+                        slot->txrecord.iqbufs);
+
+        // Hand-off TX record to TX notification thread
+        pushTXRecord(std::move(slot->txrecord));
     }
 }
 
@@ -96,19 +139,28 @@ void TDMA::txSlotWorker(void)
         auto slot_size = schedule_.getSlotSize();
 
         if (t_next_slot - t_now < slot_size) {
-            // Finalize next slot. After this returns, we have EXCLUSIVE access
-            // to the slot.
-            auto slot = finalizeSlot(t_next_slot);
+            auto slot = synthesizer_->pop_slot();
+
+            if (slot.txrecord.nsamples > 0 && slot.txrecord.timestamp != WallClock::to_mono_time(t_next_slot)) {
+                logMAC(LOGWARNING, "MISSED SLOT DEADLINE: desired slot=%f; slot=%f; now=%f",
+                    (double) t_next_slot.time_since_epoch().count(),
+                    (double) WallClock::to_wall_time(*slot.txrecord.timestamp).time_since_epoch().count(),
+                    (double) WallClock::now().time_since_epoch().count());
+
+                // Stop any current TX burst.
+                stop_burst_.store(true, std::memory_order_relaxed);
+
+                // Re-queue packets that were modulated for this slot
+                abortTXRecord(slot.txrecord);
+
+                continue;
+            }
 
             // Determine how many samples were sent beyond the end of the slot,
             // i.e., the number of overfilled samples.
-            if (slot) {
-                std::lock_guard<std::mutex> lock(slot->mutex);
-
-                noverfill = slot->length() < slot->max_samples ? 0 : slot->length() - slot->max_samples;
-
-                noverfill %= tx_full_slot_samps_;
-                noverfillslots = noverfill / tx_full_slot_samps_;
+            if (slot.txrecord.nsamples > 0 && slot.nexcess > 0) {
+                noverfill = slot.nexcess % tx_full_slot_samps_;
+                noverfillslots = slot.nexcess / tx_full_slot_samps_;
             } else {
                 noverfill = 0;
                 noverfillslots = 0;
@@ -124,13 +176,11 @@ void TDMA::txSlotWorker(void)
                          following_slotidx);
 
             // Schedule modulation of following slot
-            modulateSlot(t_following_slot,
-                         noverfill,
-                         following_slotidx);
+            synthesizer_->push_slot(t_following_slot, following_slotidx, noverfill);
 
             // Transmit next slot
-            if (slot)
-                txSlot(std::move(slot));
+            if (slot.txrecord.nsamples > 0)
+                tx_slot_ = std::move(slot);
 
             // The following slot is now the next slot
             t_next_slot = t_following_slot;
@@ -138,29 +188,34 @@ void TDMA::txSlotWorker(void)
         }
 
         // Sleep until it's time to send the next slot
-        sleep_for((t_next_slot - WallClock::now()) - slot_send_lead_time_);
+        sleep_for((t_next_slot - WallClock::now()) - radio_->getTXLeadTime());
     }
 
-    if (next_slot_)
-        missedSlot(*next_slot_);
+    // We cannot transmit remaining packets
+    TXRecord txrecord = synthesizer_->try_pop();
+
+    abortTXRecord(txrecord);
 }
 
 void TDMA::findNextSlot(WallClock::time_point t,
-                        WallClock::time_point &t_next,
+                        WallClock::time_point& t_next,
                         size_t &next_slotidx)
 {
     size_t              cur_slot;   // Current slot index
     WallClock::duration t_slot_pos; // Offset into the current slot (sec)
     const auto          slot_size = schedule_.getSlotSize();
     const auto          nslots = schedule_.nslots();
+    size_t              slotidx;
 
     cur_slot = schedule_.slotAt(t);
     t_slot_pos = schedule_.slotOffsetAt(t);
 
     for (size_t tx_slot = 1; tx_slot <= nslots; ++tx_slot) {
-        if (schedule_.canTransmitInSlot((cur_slot + tx_slot) % nslots)) {
+        slotidx = (cur_slot + tx_slot) % nslots;
+
+        if (schedule_.canTransmitInSlot(slotidx)) {
             t_next = t + (tx_slot*slot_size - t_slot_pos);
-            next_slotidx = (cur_slot + tx_slot) % nslots;
+            next_slotidx = slotidx;
             return;
         }
     }
@@ -168,9 +223,27 @@ void TDMA::findNextSlot(WallClock::time_point t,
     assert(false);
 }
 
+void TDMA::wake_dependents(void)
+{
+    // Disable the TX slot queue
+    tx_slot_.disable();
+
+    MAC::wake_dependents();
+}
+
 void TDMA::reconfigure(void)
 {
-    SlottedMAC::reconfigure();
+    MAC::reconfigure();
 
+    const auto slot_size = schedule_.getSlotSize();
+    const auto guard_size = schedule_.getGuardSize();
+
+    tx_slot_samps_ = tx_rate_*(slot_size - guard_size).count();
+    tx_full_slot_samps_ = tx_rate_*slot_size.count();
+
+    // Determine whether or not we can transmit
     can_transmit_ = schedule_.canTransmit();
+
+    // Re-enable the TX slot queue
+    tx_slot_.enable();
 }

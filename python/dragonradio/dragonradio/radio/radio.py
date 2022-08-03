@@ -1156,8 +1156,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                  self.snapshot_collector,
                                  self.channelizer,
                                  self.synthesizer,
-                                 config.slot_size,
-                                 config.slot_send_lead_time)
+                                 config.slot_size)
         elif issubclass(mac_class, FDMA):
             self.mac = mac_class(self.usrp,
                                  self.controller,

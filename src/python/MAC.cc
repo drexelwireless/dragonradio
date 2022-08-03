@@ -141,21 +141,19 @@ void exportMACs(py::module &m)
         ;
 
     // Export class TDMA to Python
-    py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
+    py::class_<TDMA, MAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<Radio>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
-                      std::shared_ptr<SlotSynthesizer>,
-                      double,
+                      std::shared_ptr<Synthesizer>,
                       double>(),
             py::arg("radio"),
             py::arg("controller"),
             py::arg("snapshot_collector"),
             py::arg("channelizer"),
             py::arg("synthesizer"),
-            py::arg("rx_period"),
-            py::arg("slot_send_lead_time"))
+            py::arg("rx_period"))
         ;
 
     // Export class SlottedALOHA to Python
