@@ -118,7 +118,7 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
-                      std::shared_ptr<ChannelSynthesizer>,
+                      std::shared_ptr<Synthesizer>,
                       double>(),
             py::arg("radio"),
             py::arg("controller"),

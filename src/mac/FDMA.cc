@@ -9,7 +9,7 @@ FDMA::FDMA(std::shared_ptr<Radio> radio,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
-           std::shared_ptr<ChannelSynthesizer> synthesizer,
+           std::shared_ptr<Synthesizer> synthesizer,
            double period)
   : MAC(radio,
         controller,
@@ -20,7 +20,6 @@ FDMA::FDMA(std::shared_ptr<Radio> radio,
         4)
   , premod_(period)
   , accurate_tx_timestamps_(false)
-  , channel_synthesizer_(synthesizer)
 {
     rx_thread_ = std::thread(&FDMA::rxWorker, this);
     tx_thread_ = std::thread(&FDMA::txWorker, this);
@@ -59,11 +58,11 @@ void FDMA::txWorker(void)
             std::optional<MonoClock::time_point> t_next_tx = radio_->getNextTXTime();
 
             if (t_next_tx)
-                txrecord = channel_synthesizer_->pop_until(*t_next_tx - radio_->getTXLeadTime());
+                txrecord = synthesizer_->pop_until(*t_next_tx - radio_->getTXLeadTime());
             else
-                txrecord = channel_synthesizer_->try_pop();
+                txrecord = synthesizer_->try_pop();
         } else {
-            txrecord = channel_synthesizer_->pop();
+            txrecord = synthesizer_->pop();
         }
 
         // Synchronize on state change
@@ -128,7 +127,7 @@ void FDMA::wake_dependents()
     MAC::wake_dependents();
 
     // Disable the channel synthesizer
-    channel_synthesizer_->disable();
+    synthesizer_->disable();
 }
 
 void FDMA::reconfigure(void)
@@ -150,8 +149,8 @@ void FDMA::reconfigure(void)
     }
 
     // Set synthesizer's high water mark
-    channel_synthesizer_->setHighWaterMark(premod_*tx_rate_);
+    synthesizer_->setHighWaterMark(premod_*tx_rate_);
 
     // Re-enable the channel synthesizer
-    channel_synthesizer_->enable();
+    synthesizer_->enable();
 }

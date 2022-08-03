@@ -24,7 +24,6 @@ add_library(DragonRadio
   liquid/PHY.cc
   liquid/Resample.cc
   phy/AutoGain.cc
-  phy/ChannelSynthesizer.cc
   phy/FDChannelModulator.cc
   phy/FDChannelizer.cc
   phy/MultichannelSynthesizer.cc

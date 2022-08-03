@@ -8,9 +8,9 @@
 
 #include "logging.hh"
 #include "phy/Channel.hh"
+#include "phy/ChannelSynthesizer.inl"
 #include "phy/FDChannelModulator.hh"
 #include "phy/MultichannelSynthesizer.hh"
-#include "phy/ParallelChannelSynthesizer.inl"
 #include "phy/SlotSynthesizer.hh"
 #include "phy/Synthesizer.hh"
 #include "phy/TDChannelModulator.hh"
@@ -21,6 +21,10 @@ void exportSynthesizers(py::module &m)
 {
     // Export class Synthesizer to Python
     py::class_<Synthesizer, std::shared_ptr<Synthesizer>>(m, "Synthesizer")
+        .def_property("high_water_mark",
+            &Synthesizer::getHighWaterMark,
+            &Synthesizer::setHighWaterMark,
+            "int: Maximum number of modulated samples to queue.")
         .def_property("tx_rate",
             &Synthesizer::getTXRate,
             &Synthesizer::setTXRate,
@@ -47,19 +51,10 @@ void exportSynthesizers(py::module &m)
             })
         ;
 
-    // Export class ChannelSynthesizer to Python
-    py::class_<ChannelSynthesizer, Synthesizer, std::shared_ptr<ChannelSynthesizer>>(m, "ChannelSynthesizer")
-        .def_property("high_water_mark",
-            &ChannelSynthesizer::getHighWaterMark,
-            &ChannelSynthesizer::setHighWaterMark,
-            "int: Maximum number of modulated samples to queue.")
-        ;
-        ;
-
     // Export class TDSynthesizer to Python
-    using TDSynthesizer = ParallelChannelSynthesizer<TDChannelModulator>;
+    using TDSynthesizer = ChannelSynthesizer<TDChannelModulator>;
 
-    py::class_<TDSynthesizer, ChannelSynthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
+    py::class_<TDSynthesizer, Synthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
                       unsigned int>(),
@@ -69,9 +64,9 @@ void exportSynthesizers(py::module &m)
         ;
 
     // Export class FDSynthesizer to Python
-    using FDSynthesizer = ParallelChannelSynthesizer<FDChannelModulator>;
+    using FDSynthesizer = ChannelSynthesizer<FDChannelModulator>;
 
-    py::class_<FDSynthesizer, ChannelSynthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
+    py::class_<FDSynthesizer, Synthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
                       unsigned int>(),
