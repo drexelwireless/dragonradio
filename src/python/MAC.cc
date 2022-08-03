@@ -157,13 +157,12 @@ void exportMACs(py::module &m)
         ;
 
     // Export class SlottedALOHA to Python
-    py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
+    py::class_<SlottedALOHA, MAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
         .def(py::init<std::shared_ptr<Radio>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
-                      std::shared_ptr<SlotSynthesizer>,
-                      double,
+                      std::shared_ptr<Synthesizer>,
                       double,
                       double>(),
             py::arg("radio"),
@@ -172,7 +171,6 @@ void exportMACs(py::module &m)
             py::arg("channelizer"),
             py::arg("synthesizer"),
             py::arg("rx_period"),
-            py::arg("slot_send_lead_time"),
             py::arg("probability"))
         .def_property("slotidx",
             &SlottedALOHA::getSlotIndex,
