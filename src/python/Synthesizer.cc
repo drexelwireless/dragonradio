@@ -11,10 +11,8 @@
 #include "phy/ChannelSynthesizer.inl"
 #include "phy/FDChannelModulator.hh"
 #include "phy/MultichannelSynthesizer.hh"
-#include "phy/SlotSynthesizer.hh"
 #include "phy/Synthesizer.hh"
 #include "phy/TDChannelModulator.hh"
-#include "phy/UnichannelSynthesizer.inl"
 #include "python/PyModules.hh"
 
 void exportSynthesizers(py::module &m)
@@ -34,7 +32,7 @@ void exportSynthesizers(py::module &m)
             &Synthesizer::setChannels,
             "Sequence[Channel]: TX channels")
         .def_property("schedule",
-            &SlotSynthesizer::getSchedule,
+            &Synthesizer::getSchedule,
             [](Synthesizer &self, py::object obj)
             {
                 try {
@@ -76,34 +74,6 @@ void exportSynthesizers(py::module &m)
         .def_readonly_static("P",
             &FDChannelModulator::P,
             "int: Maximum prototype filter length.")
-        ;
-
-    // Export class SlotSynthesizer to Python
-    py::class_<SlotSynthesizer, Synthesizer, std::shared_ptr<SlotSynthesizer>>(m, "SlotSynthesizer")
-        ;
-
-    // Export class TDSlotSynthesizer to Python
-    using TDSlotSynthesizer = UnichannelSynthesizer<TDChannelModulator>;
-
-    py::class_<TDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<TDSlotSynthesizer>>(m, "TDSlotSynthesizer")
-        .def(py::init<const std::vector<PHYChannel>&,
-                      double,
-                      unsigned int>(),
-            py::arg("channels"),
-            py::arg("tx_rate"),
-            py::arg("nthreads"))
-        ;
-
-    // Export class FDSlotSynthesizer to Python
-    using FDSlotSynthesizer = UnichannelSynthesizer<FDChannelModulator>;
-
-    py::class_<FDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<FDSlotSynthesizer>>(m, "FDSlotSynthesizer")
-        .def(py::init<const std::vector<PHYChannel>&,
-                      double,
-                      unsigned int>(),
-            py::arg("channels"),
-            py::arg("tx_rate"),
-            py::arg("nthreads"))
         ;
 
     // Export class MultichannelSynthesizer to Python
