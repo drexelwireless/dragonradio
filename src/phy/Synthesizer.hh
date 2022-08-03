@@ -64,6 +64,16 @@ struct TXRecord {
         return *this;
     }
 
+    /** @brief Clear the contexts of the TX record */
+    void clear() noexcept
+    {
+        timestamp.reset();
+        delay = 0;
+        nsamples = 0;
+        iqbufs.clear();
+        mpkts.clear();
+    }
+
     /** @brief TX deadline */
     std::optional<MonoClock::time_point> timestamp;
 
@@ -124,6 +134,14 @@ struct TXSlot {
         other.continued = false;
 
         return *this;
+    }
+
+    /** @brief Clear the contexts of the TX slot */
+    void clear()
+    {
+        txrecord.clear();
+        nexcess = 0;
+        continued = false;
     }
 
     /** @brief Packets to transmit */

@@ -141,7 +141,7 @@ void exportMACs(py::module &m)
         ;
 
     // Export class TDMA to Python
-    py::class_<TDMA, MAC, std::shared_ptr<TDMA>>(m, "TDMA")
+    py::class_<TDMA, SlottedMAC, std::shared_ptr<TDMA>>(m, "TDMA")
         .def(py::init<std::shared_ptr<Radio>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
@@ -157,7 +157,7 @@ void exportMACs(py::module &m)
         ;
 
     // Export class SlottedALOHA to Python
-    py::class_<SlottedALOHA, MAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
+    py::class_<SlottedALOHA, SlottedMAC, std::shared_ptr<SlottedALOHA>>(m, "SlottedALOHA")
         .def(py::init<std::shared_ptr<Radio>,
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,

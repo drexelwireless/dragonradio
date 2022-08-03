@@ -20,10 +20,9 @@ import libconf
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 
 from _dragonradio.radio import MAC, PHY
-from _dragonradio.radio import FDMA, SlottedALOHA, SlottedMAC, TDMA
+from _dragonradio.radio import FDMA, SlottedALOHA, TDMA
 from _dragonradio.radio import FDChannelizer, TDChannelizer
-from _dragonradio.radio import FDSlotSynthesizer, TDSlotSynthesizer, MultichannelSynthesizer
-from _dragonradio.radio import FDSynthesizer, TDSynthesizer
+from _dragonradio.radio import FDSynthesizer, TDSynthesizer, MultichannelSynthesizer
 from dragonradio.liquid import FlexFrame, NewFlexFrame, OFDM
 
 logger = logging.getLogger('config')
@@ -61,23 +60,14 @@ def str2channelizer(name: str) -> Type[PHY]:
 
     raise ConfigException(f"{name:} is not a valid channelizer")
 
-SLOTTED_SYNTHESIZER_NAMES = { 'freqdomain': FDSlotSynthesizer
-                            , 'timedomain': TDSlotSynthesizer
-                            }
-
 SYNTHESIZER_NAMES = { 'freqdomain': FDSynthesizer
                     , 'timedomain': TDSynthesizer
                     , 'multichannel': MultichannelSynthesizer
                     }
 
-def str2synthesizer(mac_class: Type[MAC], name: str) -> Type[PHY]:
-    if issubclass(mac_class, SlottedMAC):
-        names = SLOTTED_SYNTHESIZER_NAMES
-    else:
-        names = SYNTHESIZER_NAMES
-
-    if name in names:
-        return names[name]
+def str2synthesizer(name: str) -> Type[PHY]:
+    if name in SYNTHESIZER_NAMES:
+        return SYNTHESIZER_NAMES[name]
 
     raise ConfigException(f"{name:} is not a valid synthesizer")
 
@@ -609,7 +599,7 @@ class Config:
 
     @property
     def synthesizer_class(self) -> Type[MAC]:
-        return str2synthesizer(self.mac_class, self.synthesizer)\
+        return str2synthesizer(self.synthesizer)
 
     @property
     def logdir(self):
@@ -1042,6 +1032,10 @@ class Config:
         mac.add_argument('--superslots', action='store_const', const=True,
                          dest='superslots',
                          help='use TDMA superslots')
+
+        mac.add_argument('--slot-send-lead-time', action='store', type=float,
+                         dest='slot_send_lead_time',
+                         help='Lead time needed to send a slot (sec)')
 
         mac.add_argument('--accurate-mac-tx-timestamps', action='store_const', const=True,
                          dest='mac_accurate_tx_timestamps',
