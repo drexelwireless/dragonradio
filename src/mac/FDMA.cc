@@ -19,7 +19,6 @@ FDMA::FDMA(std::shared_ptr<Radio> radio,
         period,
         4)
   , premod_(period)
-  , accurate_tx_timestamps_(false)
 {
     rx_thread_ = std::thread(&FDMA::rxWorker, this);
     tx_thread_ = std::thread(&FDMA::txWorker, this);

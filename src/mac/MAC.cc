@@ -23,6 +23,7 @@ MAC::MAC(std::shared_ptr<Radio> radio,
   , snapshot_collector_(collector)
   , channelizer_(channelizer)
   , synthesizer_(synthesizer)
+  , accurate_tx_timestamps_(false)
   , can_transmit_(true)
   , rx_period_(rx_period)
   , rx_period_samps_(0)

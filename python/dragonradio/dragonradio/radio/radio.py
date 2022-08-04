@@ -1161,7 +1161,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                  self.synthesizer,
                                  config.slot_size)
 
-            self.mac.accurate_tx_timestamps = config.mac_accurate_tx_timestamps
+        self.mac.accurate_tx_timestamps = config.mac_accurate_tx_timestamps
 
         if isinstance(self.mac, SlottedMAC):
             self.mac.slot_send_lead_time = config.slot_send_lead_time
