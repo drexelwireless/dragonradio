@@ -63,10 +63,7 @@ void MAC::reconfigure(void)
 
 void MAC::rxWorker(void)
 {
-    WallClock::time_point t_cur_period;   // Time at which current period starts
-    WallClock::time_point t_next_period;  // Time at which next period starts
-    WallClock::duration   t_period_pos;   // Offset into the current period (sec)
-    unsigned              seq = 0;        // Current IQ buffer sequence number
+    unsigned seq = 0; // Current IQ buffer sequence number
 
     for (;;) {
         // Synchronize on state change
@@ -82,19 +79,10 @@ void MAC::rxWorker(void)
                 continue;
             }
         }
-
-        // Set up streaming starting at *next* period
-        {
-            WallClock::time_point t_now = WallClock::now();
-
-            t_period_pos = t_now.time_since_epoch() % rx_period_;
-            t_next_period = t_now + rx_period_ - t_period_pos;
-        }
-
         // Bump the sequence number to indicate a discontinuity
         seq++;
 
-        radio_->startRXStream(WallClock::to_mono_time(t_next_period));
+        radio_->startRXStream();
 
         for (;;) {
             // Synchronize on state change
@@ -104,10 +92,6 @@ void MAC::rxWorker(void)
                 if (done_)
                     return;
             }
-
-            // Update times
-            t_cur_period = t_next_period;
-            t_next_period += rx_period_;
 
             // Create buffer for period
             auto iqbuf = std::make_shared<IQBuf>(rx_bufsize_);
@@ -128,7 +112,7 @@ void MAC::rxWorker(void)
 
             // Read samples for current period. The demodulator will do its
             // thing as we continue to read samples.
-            bool ok = radio_->burstRX(WallClock::to_mono_time(t_cur_period), rx_period_samps_, *iqbuf);
+            bool ok = radio_->burstRX(std::nullopt, rx_period_samps_, *iqbuf);
 
             // Update snapshot offset by finalizing this snapshot
             if (do_snapshot)
