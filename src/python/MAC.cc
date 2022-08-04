@@ -63,6 +63,10 @@ void exportMACs(py::module &m)
         .def("stop",
             &MAC::stop,
             "Tell MAC to stop processing packets.")
+        .def_property("accurate_tx_timestamps",
+            &MAC::getAccurateTXTimestamps,
+            &MAC::setAccurateTXTimestamps,
+            "bool: Increase timestamp accuracy at a potential cost to performance")
         .def("rateChange",
             &MAC::rateChange,
             "Notify the MAC of a TX/RX rate change")
@@ -126,10 +130,6 @@ void exportMACs(py::module &m)
             py::arg("channelizer"),
             py::arg("synthesizer"),
             py::arg("premodulation"))
-        .def_property("accurate_tx_timestamps",
-            &FDMA::getAccurateTXTimestamps,
-            &FDMA::setAccurateTXTimestamps,
-            "bool: Increase timestamp accuracy at a potential cost to performance")
         ;
 
     // Export class SlottedMAC to Python

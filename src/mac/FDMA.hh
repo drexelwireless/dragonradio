@@ -30,28 +30,12 @@ public:
     FDMA& operator=(const FDMA&) = delete;
     FDMA& operator=(FDMA&&) = delete;
 
-    bool getAccurateTXTimestamps(void) const
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-
-        return accurate_tx_timestamps_;
-    }
-
-    void setAccurateTXTimestamps(bool accurate)
-    {
-        modify([&](){ accurate_tx_timestamps_ = accurate; });
-    }
-
     /** @brief Stop processing packets */
     void stop(void) override;
 
 private:
     /** @brief Amount of data to pre-modulate (sec) */
     double premod_;
-
-    /** @brief Provide more accurate TX timestamps */
-    /** Providing more accurate TX timestamps may increase latency. */
-    bool accurate_tx_timestamps_;
 
     /** @brief Thread running rxWorker */
     std::thread rx_thread_;

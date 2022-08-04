@@ -67,6 +67,24 @@ public:
     /** @brief Notify MAC that TX/RX rates have changed */
     virtual void rateChange(void);
 
+    /** @brief Return true if transmitted packets have accurate timestamps */
+    bool getAccurateTXTimestamps(void) const
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+
+        return accurate_tx_timestamps_;
+    }
+
+    /** @brief Set flag indicating whether or not transmitted packets should
+     * have accurate timestamps
+     * @param accurate true if transmitted packets should have accurate
+     * timestamps.
+     */
+    void setAccurateTXTimestamps(bool accurate)
+    {
+        modify([&](){ accurate_tx_timestamps_ = accurate; });
+    }
+
     /** @brief Can this MAC transmit
      * @return true if we can transmit, false otherwise
      */
@@ -166,6 +184,10 @@ protected:
 
     /** @brief Number of sent samples */
     Load load_;
+
+    /** @brief Provide more accurate TX timestamps */
+    /** Providing more accurate TX timestamps may increase latency. */
+    bool accurate_tx_timestamps_;
 
     /** @brief Flag indicating whether or not we can transmit */
     /** This is used, in particular, for the TDMA MAC, which may not have a slot
