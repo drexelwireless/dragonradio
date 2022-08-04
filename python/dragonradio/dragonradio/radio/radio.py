@@ -722,6 +722,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
     def setRXChannels(self, channels: Sequence[PHYChannel]):
         """Configure RX chain for channels"""
+        # Clear all channels to prepare for rate change
+        self.setChannelizerChannels([])
+
         # Initialize channelizer
         self.setRXRate(self.bandwidth)
 
@@ -732,7 +735,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     def setTXChannels(self, channels: Sequence[PHYChannel]):
         """Configure TX chain for channels"""
         if self.config.tx_upsample:
+            # Clear all channels to prepare for rate change
+            self.setSynthesizerChannels([])
+
+            # Set TX rate
             self.setTXRate(self.bandwidth)
+
+            # Set channels after setting TX rate
             self.setSynthesizerChannels(channels)
         else:
             self.setTXChannelIdx(self.tx_channel_idx)
