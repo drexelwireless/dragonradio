@@ -423,11 +423,11 @@ public:
 
     void stopTXBurst(void) override;
 
-    void startRXStream(MonoClock::time_point when) override;
+    void startRXStream(std::optional<MonoClock::time_point> when) override;
 
     void stopRXStream(void) override;
 
-    bool burstRX(MonoClock::time_point when, size_t nsamps, IQBuf& buf) override;
+    bool burstRX(std::optional<MonoClock::time_point> when, size_t nsamps, IQBuf& buf) override;
 
     size_t getRecommendedBurstRXSize(size_t nsamps) const override
     {

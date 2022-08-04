@@ -97,7 +97,7 @@ public:
     virtual void stopTXBurst(void) = 0;
 
     /** @brief Start streaming read */
-    virtual void startRXStream(MonoClock::time_point when) = 0;
+    virtual void startRXStream(std::optional<MonoClock::time_point> when = std::nullopt) = 0;
 
     /** @brief Stop streaming read */
     virtual void stopRXStream(void) = 0;
@@ -110,7 +110,7 @@ public:
      * @returns Returns true if the burst was successfully received, false
      * otherwise.
      */
-    virtual bool burstRX(MonoClock::time_point when, size_t nsamps, IQBuf& buf) = 0;
+    virtual bool burstRX(std::optional<MonoClock::time_point> when, size_t nsamps, IQBuf& buf) = 0;
 
     /** @brief Return the recommended buffer size during burstRX.
      * @param nsamps Number of samples to read during burst
