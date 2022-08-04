@@ -231,14 +231,13 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
         if (when_) {
             tx_md.time_spec = to_uhd_time(*when_);
             tx_md.has_time_spec = true;
-
-            t_next_tx_ = *when_;
         }
 
         tx_md.start_of_burst = true;
         tx_md.end_of_burst = false;
 
         in_tx_burst_.store(true, std::memory_order_release);
+        t_next_tx_ = when_;
     }
 
     // We walk through the supplied queue of buffers and transmit each in chunks
@@ -275,10 +274,8 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
             *t_next_tx_ += MonoClock::duration((iqbuf.size() - iqbuf.delay)/tx_rate_);
     }
 
-    if (end_of_burst) {
+    if (end_of_burst)
         in_tx_burst_.store(false, std::memory_order_release);
-        t_next_tx_ = std::nullopt;
-    }
 }
 
 void USRP::stopTXBurst(void)
@@ -291,7 +288,6 @@ void USRP::stopTXBurst(void)
         tx_stream_->send((char *) nullptr, 0, tx_md);
 
         in_tx_burst_.store(false, std::memory_order_release);
-        t_next_tx_ = std::nullopt;
     }
 }
 
