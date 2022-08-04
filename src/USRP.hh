@@ -409,7 +409,8 @@ public:
 
     std::optional<MonoClock::time_point> getNextTXTime() const override
     {
-        if (!in_tx_burst_.load(std::memory_order_acquire))
+        if (   !in_tx_burst_.load(std::memory_order_consume)
+            || (t_next_tx_ && *t_next_tx_ < MonoClock::now()))
             t_next_tx_ = std::nullopt;
 
         return t_next_tx_;
