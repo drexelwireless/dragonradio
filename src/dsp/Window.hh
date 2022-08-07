@@ -89,7 +89,7 @@ public:
         using cvec_t = xsimd::simd_type<C>;
         using size_t = typename std::vector<T>::size_type;
 
-        tvec_t acc{0.0};
+        tvec_t acc{};
 
         // Calculate dot product with first portion of window
         const size_t n1 = std::min(n_, len_ - read_idx_);
