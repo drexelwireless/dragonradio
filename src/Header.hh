@@ -14,8 +14,6 @@
 #include <iterator>
 #include <vector>
 
-#include <liquid/liquid.h>
-
 #include "Node.hh"
 #include "Seq.hh"
 
