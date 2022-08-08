@@ -47,7 +47,34 @@ struct Header {
 
         /** @brief Unused flags */
         uint8_t team : 3;
+
+        bool operator ==(const Flags& other) const
+        {
+            return syn == other.syn
+                && ack == other.ack
+                && has_seq == other.has_seq
+                && has_control == other.has_control
+                && compressed == other.compressed
+                && team == other.team;
+        }
+
+        bool operator !=(const Flags& other) const
+        {
+            return !(*this == other);
+        }
     } flags;
+
+    bool operator ==(const Header& other) const
+    {
+        return curhop == other.curhop
+            && nexthop == other.nexthop
+            && seq == other.seq;
+    }
+
+    bool operator !=(const Header& other) const
+    {
+        return !(*this == other);
+    }
 } __attribute__((packed));
 
 /** @brief Extended header that appears in radio payload. */
@@ -66,6 +93,19 @@ struct ExtendedHeader {
      * gives the size of the data portion of the payload.
      */
     uint16_t data_len;
+
+    bool operator ==(const ExtendedHeader& other) const
+    {
+        return src == other.src
+            && dest == other.dest
+            && ack == other.ack
+            && data_len == other.data_len;
+    }
+
+    bool operator !=(const ExtendedHeader& other) const
+    {
+        return !(*this == other);
+    }
 };
 
 #endif /* HEADER_HH_ */
