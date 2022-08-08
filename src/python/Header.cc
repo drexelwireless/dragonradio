@@ -35,7 +35,7 @@ void exportHeader(py::module &m)
             [](Header::Flags &self, uint8_t f) { self.team = f; },
             "int: Team")
         .def("__repr__", [](const Header::Flags& self) {
-            return py::str("HeaderFlags(syn={:d}, ack={:d}, has_seq={:d}, has_control=={:d}, compressed=={:d}, team=={:d})").\
+            return py::str("HeaderFlags(syn={:d}, ack={:d}, has_seq={:d}, has_control={:d}, compressed={:d}, team={:d})").\
             format(self.syn, self.ack, self.has_seq, self.has_control, self.compressed, self.team);
          })
         ;
