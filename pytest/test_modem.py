@@ -3,9 +3,9 @@ import numpy as np
 import random
 from unittest import TestCase
 
-from _dragonradio.radio import Header
 from dragonradio.liquid import MCS, LiquidModulator, LiquidDemodulator
 import dragonradio.liquid
+from dragonradio.packet import Header
 
 class TestModulation(TestCase):
     HEADER_MCS: MCS = MCS('crc32', 'secded7264', 'h84', 'bpsk')

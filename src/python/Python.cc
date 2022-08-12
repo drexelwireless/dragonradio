@@ -15,6 +15,7 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     auto mliquid = m.def_submodule("liquid");
     auto mlogging = m.def_submodule("logging");
     auto mnet = m.def_submodule("net");
+    auto mpacket = m.def_submodule("packet");
     auto mradio = m.def_submodule("radio");
     auto msignal = m.def_submodule("signal");
 
@@ -24,8 +25,9 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportFilters(msignal);
     exportIQCompression(msignal);
 
+    exportHeader(mpacket);
+
     exportChannels(mradio);
-    exportHeader(mradio);
     exportModem(mradio);
 
     exportLiquid(mliquid);
@@ -34,6 +36,9 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportNCOs(msignal);
     exportFilters(msignal);
     exportIQCompression(msignal);
+
+    exportHeader(mpacket);
+    exportPacket(mpacket);
 
     exportLogger(mlogging);
 
@@ -48,8 +53,6 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportFlow(mradio);
     exportNode(mradio);
     exportNeighborhood(mradio);
-    exportHeader(mradio);
-    exportPacket(mradio);
     exportModem(mradio);
     exportPHYs(mradio);
     exportChannels(mradio);
