@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SINTAB_HH_
@@ -6,7 +6,9 @@
 
 #include <complex>
 
-template<int INTBITS>
+#include "Math.hh"
+
+template<int INTBITS = 12>
 class sintab {
 public:
     /** @brief A binary radian */
@@ -49,13 +51,13 @@ public:
         // Note we divide by pi instead of 2*pi and then shift left by
         // BRADBITS-1 instead of BRADBITS, which would overflow anyway, to
         // compensate.
-        return (x/M_PI)*(static_cast<brad_t>(1) << (BRADBITS-1));
+        return (unwrapPhase(x)/M_PI)*(static_cast<brad_t>(1) << (BRADBITS-1));
     }
 
     /** @brief Convert an angle in binary radians to radians */
     static double from_brad(brad_t x)
     {
-        return x/(static_cast<brad_t>(1) << (BRADBITS-1)) * M_PI;
+        return (x*M_PI)/(static_cast<brad_t>(1) << (BRADBITS-1));
     }
 
     float operator [](brad_t pos)
@@ -71,9 +73,19 @@ public:
         return (*this)[theta];
     }
 
+    float sin(float theta)
+    {
+        return (*this)[to_brad(theta)];
+    }
+
     float cos(brad_t theta)
     {
         return sin(theta + PIDIV2);
+    }
+
+    float cos(float theta)
+    {
+        return sin(to_brad(theta) + PIDIV2);
     }
 
 private:
