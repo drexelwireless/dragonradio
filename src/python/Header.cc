@@ -34,6 +34,8 @@ void exportHeader(py::module &m)
             [](Header::Flags &self) { return self.team; },
             [](Header::Flags &self, uint8_t f) { self.team = f; },
             "int: Team")
+        .def(py::self == py::self)
+        .def(py::self != py::self)
         .def("__repr__", [](const Header::Flags& self) {
             return py::str("HeaderFlags(syn={:d}, ack={:d}, has_seq={:d}, has_control={:d}, compressed={:d}, team={:d})").\
             format(self.syn, self.ack, self.has_seq, self.has_control, self.compressed, self.team);
@@ -61,6 +63,8 @@ void exportHeader(py::module &m)
         .def_readwrite("flags",
             &Header::flags,
             "HeaderFlags: Flags")
+        .def(py::self == py::self)
+        .def(py::self != py::self)
         .def("__repr__", [](const Header& self) {
             return py::str("Header(curhop={:d}, nexthop={:d}, seq={:d}, flags={})").\
             format(self.curhop, self.nexthop, static_cast<Seq::uint_type>(self.seq), self.flags);
@@ -88,5 +92,7 @@ void exportHeader(py::module &m)
         .def_readwrite("data_len",
             &ExtendedHeader::data_len,
             "int: Length of packet data")
+        .def(py::self == py::self)
+        .def(py::self != py::self)
         ;
 }

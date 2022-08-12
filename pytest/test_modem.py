@@ -25,6 +25,7 @@ class TestModulation(TestCase):
         pkts = demod.demodulate(np.concatenate(n*[sig]))
 
         self.assertEqual(len(pkts), 1)
+        self.assertEqual(pkts[0][0], hdr)
         self.assertEqual(pkts[0][1], payload)
 
     def test_ofdm(self, M: int=48, cp_len: int=6, taper_len: int=4):
