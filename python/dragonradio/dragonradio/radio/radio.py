@@ -951,7 +951,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if self.mac is not None:
             self.mac.rateChange()
 
-    def reconfigureBandwidthAndFrequency(self, bandwidth: float, frequency: float):
+    def setBandwidthAndFrequency(self, bandwidth: float, frequency: float):
         """Reconfigure the radio for the given bandwidth and frequency
 
         Args:
@@ -965,26 +965,34 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         logger.info("Reconfiguring radio: bandwidth=%f, frequency=%f", bandwidth, frequency)
 
-        # Set current frequency
-        config.frequency = frequency
+        old_bandwidth = config.bandwidth
+        old_frequency = config.frequency
 
-        self.usrp.rx_frequency = self.frequency
+        try:
+            # Set current frequency
+            config.frequency = frequency
 
-        # If we are upsampling on TX, set TX frequency. Otherwise the call to
-        # setTXChannel below will set the appropriate TX frequency.
-        if config.tx_upsample:
-            self.usrp.tx_frequency = self.frequency
+            self.usrp.rx_frequency = self.frequency
 
-        # If the bandwidth has changed, re-configure channels. Otherwise just
-        # set the current channel---we need to re-set the channel after a
-        # frequency change because although the channel number may be the same,
-        # the corresponding frequency will be different.
-        if config.bandwidth != bandwidth:
-            config.bandwidth = bandwidth
+            # If we are upsampling on TX, set TX frequency. Otherwise the call to
+            # setTXChannel below will set the appropriate TX frequency.
+            if config.tx_upsample:
+                self.usrp.tx_frequency = self.frequency
 
-            self.configureDefaultChannels()
-        else:
-            self.setTXChannelIdx(self.tx_channel_idx)
+            # If the bandwidth has changed, re-configure channels. Otherwise just
+            # set the current channel---we need to re-set the channel after a
+            # frequency change because although the channel number may be the same,
+            # the corresponding frequency will be different.
+            if config.bandwidth != bandwidth:
+                config.bandwidth = bandwidth
+
+                self.configureDefaultChannels()
+            else:
+                if not self.config.tx_upsample:
+                    self.setTXChannelIdx(self.tx_channel_idx)
+        except:
+            self.setBandwidthAndFrequency(old_bandwidth, old_frequency)
+            raise
 
     def environmentDiscontinuity(self):
         # When the environment changes, we need to inform the controller so that
@@ -1381,7 +1389,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
     @frequency.setter
     def frequency(self, new_frequency):
-        self.reconfigureBandwidthAndFrequency(self.bandwidth, new_frequency)
+        self.setBandwidthAndFrequency(self.bandwidth, new_frequency)
 
     @property
     def bandwidth(self):
@@ -1390,7 +1398,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
     @bandwidth.setter
     def bandwidth(self, new_bandwidth):
-        self.reconfigureBandwidthAndFrequency(new_bandwidth, self.frequency)
+        self.setBandwidthAndFrequency(new_bandwidth, self.frequency)
 
     @property
     def header_mcs(self):
