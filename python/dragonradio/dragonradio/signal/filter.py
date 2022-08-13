@@ -87,19 +87,18 @@ def firpm1f2(N, wp, ws, fs):
     return out.h
 
 @lru_cache
-def lowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
-    """Calculate a low-pass filter, estimating the number of taps needed.
+def autolowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
+    """Calculate a low-pass filter, automatically estimating the number of taps
+    needed.
 
     Args:
-        wp: Passband frequency
-        ws: Stopband frequency
-        ftype: Type of filter. One of 'kaiser', 'ls', 'firpm1f', or 'firpm1f2'
-        atten: desired attenuation (dB)
-        Nmax: Maximum number of taps
+        wp: Passband frequency ws: Stopband frequency ftype: Type of filter. One
+        of 'kaiser', 'ls', 'firpm1f', or 'firpm1f2' atten: desired attenuation
+        (dB) Nmax: Maximum number of taps
 
     Returns:
         Filter taps.
-        """
+    """
     # Use Kaiser window
     if ftype == 'kaiser':
         N, beta = signal.kaiserord(atten, (ws-wp)/fs)
