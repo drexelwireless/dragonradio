@@ -3,4 +3,4 @@
 
 from _dragonradio.signal import *
 
-from .signal import *
+from .filter import *
