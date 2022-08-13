@@ -107,8 +107,8 @@ protected:
         unsigned ntaps = adjtaps_.size();
 
         // Compute number of taps per channel. Each channel gets every mth tap
-        // from the protype filter, and we add additional 0 taps to ensure every
-        // channel gets the same number of taps
+        // from the protoype filter, and we add additional 0 taps to ensure
+        // every channel gets the same number of taps
         n_ = (ntaps + l_ - 1) / l_;
 
         // Resize sample window
