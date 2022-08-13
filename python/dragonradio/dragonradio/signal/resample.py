@@ -1,5 +1,6 @@
 # Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
+from fractions import Fraction
 import math
 from typing import Callable
 
@@ -10,6 +11,21 @@ import dragonradio.signal
 
 Resampler = Callable[[int, int, ArrayLike, ArrayLike, float], np.ndarray]
 """The type of a resampler"""
+
+def resample_and_filter(sig: ArrayLike, rate: float, fshift: float, resample: Resampler, numtaps: int, ftype: str='ls'):
+    if rate == 1 and fshift == 0:
+        return sig
+
+    # Determine interpolation and decimation rates
+    frate = Fraction(rate).limit_denominator(200)
+
+    # Determine stopband in normalized frequency units
+    ws = min(1.0/frate.numerator, 1.0/frate.denominator)
+
+    # Create lowpass filter
+    h = dragonradio.signal.lowpass(wp=0.95*ws, ws=ws, fs=1.0, numtaps=numtaps, ftype=ftype)
+
+    return resample(frate.numerator, frate.denominator, h, sig, fshift=fshift)
 
 def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> np.ndarray:
     resampler = dragonradio.signal.RationalResamplerCCC(p/q)
