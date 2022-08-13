@@ -75,3 +75,21 @@ def tone(Fc: float, Fs: float, n: int) -> np.ndarray:
     """
     samples = np.arange(n) / Fs
     return np.exp(2 * np.pi * 1j * Fc * samples)
+
+def chirp(f0: float, f1: float, Fs: float, n: int) -> np.ndarray:
+    """Generate a (complex) chirp.
+
+    Args:
+        f0 (float): Initial frequency of tone.
+        f1 (float): Final frequency of tone.
+        Fs (float): Sampling rate.
+        n (int): Number of samples to generate.
+
+    Returns:
+        np.ndarray: Chirp signal (complex).
+    """
+    T = n/Fs
+    c = (f1 - f0)/T
+
+    samples = np.arange(n) / Fs
+    return np.exp(2 * np.pi * 1j * (c/2 * samples**2 + f0 * samples))
