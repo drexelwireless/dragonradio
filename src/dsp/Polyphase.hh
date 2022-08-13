@@ -18,9 +18,12 @@
 
 namespace dragonradio::signal {
 
-/** @brief A polyphase filter bank */
+/** @brief A polyphase filter bank
+ * @tparam T The type of samples
+ * @tparam C The type of filter taps
+ */
 template <class T, class C>
-class Pfb
+class Pfb : public Resampler<T,T>
 {
 public:
     /** @brief Construct a polyphase filter bank
@@ -131,7 +134,7 @@ protected:
 
 /** @brief An upsampler that uses a polyphase filter bank */
 template <class T, class C>
-class Upsampler : public Pfb<T,C>, public Resampler<T,T> {
+class Upsampler : public Pfb<T,C> {
 protected:
     using Pfb<T,C>::l_;
     using Pfb<T,C>::n_;
@@ -199,7 +202,7 @@ protected:
 
 /** @brief A downsampler that uses a polyphase filter bank */
 template <class T, class C>
-class Downsampler : public Pfb<T,C>, public Resampler<T,T> {
+class Downsampler : public Pfb<T,C> {
 protected:
     using Pfb<T,C>::n_;
     using Pfb<T,C>::rtaps_;
@@ -276,7 +279,7 @@ protected:
 
 /** @brief A rational resampler that uses a polyphase filter bank */
 template <class T, class C>
-class RationalResampler : public Pfb<T,C>, public Resampler<T,T> {
+class RationalResampler : public Pfb<T,C> {
 protected:
     using Pfb<T,C>::l_;
     using Pfb<T,C>::n_;
