@@ -4,6 +4,8 @@
 """Filter design"""
 from functools import lru_cache
 import math
+from typing import Optional
+
 import numpy as np
 import scipy.signal as signal
 
@@ -131,6 +133,47 @@ def autolowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
         return firpm1f2(N, wp, ws, fs)
     else:
         raise ValueError('Unknown filter type {}'.format(ftype))
+
+def lowpass(numtaps: int, wp: float, ws: float, fs: float, ftype: str='ls', beta: Optional[float]=None) -> np.ndarray:
+    """Return a lowpass filter.
+
+    Args:
+        numtaps (int): Number of filter taps.
+        ws (float): Stop band frequency
+        wp (float): Pass band frequency
+        fs (float): Sample frequency
+        ftype (str, optional): Filter type. May be one of 'kaiser', 'ls', 'remez1f', 'firpm', 'firpm1f', or 'firpm1f2'. Defaults to 'ls'.
+        beta (float, optional): Kaiser beta parameter.
+
+    Returns:
+        np.ndarray: Filter taps
+    """
+    # Use Kaiser window
+    if ftype == 'kaiser':
+        return signal.firwin(numtaps, ws/2,
+                             window=('kaiser', beta),
+                             fs=fs,
+                             pass_zero=True,
+                             scale=True)
+
+    bands = np.array([0, wp/2, ws/2, fs/2])
+    desired = [1, 1, 0, 0]
+    weights = [1, 1]
+
+    if ftype == 'ls':
+        return signal.firls(numtaps, bands, desired, weights, fs=fs)
+    elif ftype == 'remez1f':
+        desired = [1, 0]
+
+        return remez1f(numtaps, bands, desired, weights, fs=fs)
+    elif ftype == 'firpm':
+        return dragonradio.signal.firpm.firpm(numtaps, bands, desired, weights, fs=fs).h
+    elif ftype == 'firpm1f':
+        return dragonradio.signal.firpm.firpm1f(numtaps, bands, desired, weights, fs=fs).h
+    elif ftype == 'firpm1f2':
+        return dragonradio.signal.firpm.firpm1f2(numtaps, bands, desired, weights, fs=fs).h
+    else:
+        raise ValueError(f"Unknown filter type '{ftype:}'")
 
 def lowpassIter(wp, ws, fs, f, atten=90, n_max=400):
     """Design a lowpass filter using f by iterating to minimize the number
