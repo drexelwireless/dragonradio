@@ -1,14 +1,34 @@
 #! python
-import numpy as np
-from typing import Tuple
+from datetime import timedelta
+from fractions import Fraction
+import math
+from typing import Optional, Tuple
 from unittest import TestCase
 
-from hypothesis import given, strategies as st
+import numpy as np
+from numpy.typing import ArrayLike
+
+from hypothesis import given, note, settings, strategies as st
 from hypothesis.strategies import composite
 
 from dragonradio.liquid import MCS, LiquidModulator, LiquidDemodulator
 import dragonradio.liquid
 from dragonradio.packet import Header
+from dragonradio.signal import Resampler, sigpow
+
+resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.resample,
+                                                           dragonradio.signal.resample_and_mix,
+                                                           dragonradio.signal.fdresample])
+"""A resampler"""
+
+Channel = Tuple[float, float, float]
+
+@composite
+def channel(draw) -> Channel:
+    fs = draw(st.sampled_from([1e6, 2e6, 3e6, 5e6, 10e6, 15e6, 20e6, 25e6]))
+    cbw = draw(st.sampled_from([100e3, 250e3, 300e3, 1e6, 2e6, 3e6, 5e6]).filter(lambda cbw: cbw < fs and fs/cbw <= 25))
+    fc = draw(st.sampled_from([1e6*x for x in  range(0, 25)]).filter(lambda fc: fc + cbw/2 < fs))
+    return (cbw, fc, fs)
 
 ModemPair = Tuple[LiquidModulator, LiquidDemodulator]
 """A modulator/demodulator pair"""
@@ -49,18 +69,50 @@ def newflexframe_modem(draw, header_mcs: MCS) -> ModemPair:
 class TestModulation(TestCase):
     HEADER_MCS: MCS = MCS('crc32', 'secded7264', 'h84', 'bpsk')
 
+    def resample_and_filter(self, sig: ArrayLike, rate: float, fshift: float, resample: Resampler, max_err: float=0.01):
+        resampled = dragonradio.signal.resample_and_filter(sig, rate, fshift, resample, numtaps=1201)
+
+        # Assert that the power of the original and resampled signals is within
+        # max_err relative error
+        p1 = sigpow(sig)
+        p2 = sigpow(resampled)
+
+        self.assertLessEqual(abs((p2-p1)/p1), max_err)
+
+        return resampled
+
     def run_modem(self,
                   hdr: Header,
                   payload_mcs: MCS,
                   payload: bytes,
                   mod: LiquidModulator,
-                  demod: LiquidDemodulator):
+                  demod: LiquidDemodulator,
+                  cbw: float=1e6,
+                  Fc: float=0,
+                  Fs: float=1e6,
+                  upsample: Optional[Resampler]=None,
+                  downsample: Optional[Resampler]=None):
+        # Set payload MCS
         mod.payload_mcs = payload_mcs
 
+        # Modulate signal
         sig = mod.modulate(hdr, payload)
 
+        # Create multiples copies of signal
         n = 1
-        pkts = demod.demodulate(np.concatenate(n*[sig]))
+        sig = np.concatenate(n*[sig])
+
+        if cbw != Fs:
+            # Upsample
+            upsampled = self.resample_and_filter(sig, Fs/cbw, 2*math.pi*Fc/Fs, upsample)
+
+            # Downsample
+            downsampled = self.resample_and_filter(upsampled, cbw/Fs, 2*math.pi*Fc/Fs, downsample)
+
+            sig = downsampled
+
+        # Demodulate signal
+        pkts = demod.demodulate(sig)
 
         self.assertEqual(len(pkts), 1)
         self.assertEqual(pkts[0][0], hdr)
@@ -77,3 +129,26 @@ class TestModulation(TestCase):
                        payload=payload,
                        mod=mod,
                        demod=demod)
+
+    @given(modem=ofdm_modem(HEADER_MCS),
+           channel=channel(),
+           ms=st.sampled_from(['bpsk', 'qpsk', 'qam4', 'qam8', 'qam16', 'qam32', 'qam64', 'qam128', 'qam256']),
+           payload=st.binary(max_size=1500),
+           upsample=resampler,
+           downsample=resampler)
+    @settings(deadline=timedelta(seconds=1))
+    def test_ofdm_resampled(self, modem: ModemPair, channel: Channel, ms: str, payload: bytes, upsample: Resampler, downsample: Resampler):
+        mod, demod = modem
+        (cbw, Fc, Fs) = channel
+
+        rate = Fraction(cbw/Fs).limit_denominator(200)
+        note(f"Rate: {rate:}")
+
+        return self.run_modem(cbw=cbw, Fc=Fc, Fs=Fs,
+                              hdr=Header(2, 1, 0),
+                              payload_mcs=MCS('crc32', 'rs8', 'none', ms),
+                              payload=payload,
+                              mod=mod,
+                              demod=demod,
+                              upsample=upsample,
+                              downsample=downsample)
