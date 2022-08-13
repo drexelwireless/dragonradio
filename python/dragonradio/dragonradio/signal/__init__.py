@@ -4,3 +4,4 @@
 from _dragonradio.signal import *
 
 from .filter import *
+from .resample import *
