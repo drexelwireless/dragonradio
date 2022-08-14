@@ -83,6 +83,11 @@ public:
         return result;
     }
 
+    double getDelay(void) const override
+    {
+        return (taps_.size() - 1.0)/2.0;
+    }
+
 protected:
     using taps_t = std::vector<C, xsimd::aligned_allocator<C>>;
 
@@ -163,11 +168,6 @@ public:
         return l_;
     }
 
-    double getDelay(void) const override
-    {
-        return (n_ + 1.0)/2.0;
-    }
-
     size_t neededOut(size_t count) const override
     {
         return count*l_;
@@ -229,11 +229,6 @@ public:
     double getRate(void) const override
     {
         return 1.0/m_;
-    }
-
-    double getDelay(void) const override
-    {
-        return (n_ + 1.0)/2.0;
     }
 
     size_t neededOut(size_t count) const override
@@ -350,11 +345,6 @@ public:
         l_ = l;
         m_ = m;
         reconfigure();
-    }
-
-    double getDelay(void) const override
-    {
-        return (n_ + 1.0)/2.0;
     }
 
     size_t neededOut(size_t count) const override
