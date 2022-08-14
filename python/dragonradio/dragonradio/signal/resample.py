@@ -36,11 +36,13 @@ def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> n
         nco = dragonradio.signal.TableNCO(fshift)
         sig = nco.mix_down(sig)
 
-    # Append samples to compensate for filter delay
-    resampled = resampler.resample(np.append(sig, np.zeros(math.ceil(resampler.delay))))
+    # Append samples to compensate for filter
+    delay = int(resampler.delay)
+
+    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
 
     # Remove prefix consisting of transient samples
-    resampled = resampled[math.floor(resampler.rate*resampler.delay):]
+    resampled = resampled[delay//q:]
 
     if fshift != 0 and p/q > 1.0:
         # Frequency shift
@@ -53,13 +55,15 @@ def resample_and_mix(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float
     resampler = dragonradio.signal.MixingRationalResamplerCCC(p/q, fshift, h)
 
     # Append samples to compensate for filter delay
+    delay = int(resampler.delay)
+
     if p/q > 1.0:
-        resampled = resampler.resampleMixUp(np.append(sig, np.zeros(math.ceil(resampler.delay))))
+        resampled = resampler.resampleMixUp(np.append(sig, np.zeros(delay)))
     else:
-        resampled = resampler.resampleMixDown(np.append(sig, np.zeros(math.ceil(resampler.delay))))
+        resampled = resampler.resampleMixDown(np.append(sig, np.zeros(delay)))
 
     # Remove prefix consisting of transient samples
-    return resampled[math.floor(resampler.rate*resampler.delay):]
+    return resampled[delay//q:]
 
 def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, fshift: float=0, P: int=25*128+1) -> np.ndarray:
     if D != 1:
