@@ -246,7 +246,11 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
     size_t             n;     // Size of next send
 
     if (start_of_burst) {
+        std::chrono::duration<double> tx_rampup = tx_rampup_.load(std::memory_order_acquire);
+
         if (when_) {
+            *when_ -= MonoClock::duration(tx_rampup);
+
             tx_md.time_spec = to_uhd_time(*when_);
             tx_md.has_time_spec = true;
         }
@@ -256,6 +260,14 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
 
         in_tx_burst_.store(true, std::memory_order_release);
         t_next_tx_ = when_;
+
+        // If this is the start of a burst, add TX ramp-up samples
+        if (tx_rampup != 0s) {
+            zeroStuff(tx_rampup.count()*tx_rate_);
+
+            tx_md.has_time_spec = false;
+            tx_md.start_of_burst = false;
+        }
     }
 
     // We walk through the supplied queue of buffers and transmit each in chunks
