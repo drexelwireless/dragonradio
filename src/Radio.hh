@@ -73,6 +73,18 @@ public:
         tx_lead_time_.store(t, std::memory_order_release);
     }
 
+    /** @brief Get time required for TX ramp-up */
+    virtual std::chrono::duration<double> getTXRampup(void) const
+    {
+        return tx_rampup_.load(std::memory_order_acquire);
+    }
+
+    /** @brief Set time required for TX ramp-up */
+    virtual void setTXRampup(std::chrono::duration<double> t)
+    {
+        tx_rampup_.store(t, std::memory_order_release);
+    }
+
     /** @brief Return true if radio is currently transmitting a burst */
     virtual bool inTXBurst() const = 0;
 
@@ -149,6 +161,9 @@ public:
  protected:
     /** @brief Lead time needed for transmission (sec) */
     std::atomic<std::chrono::duration<double>> tx_lead_time_;
+
+    /** @brief Time needed for TX ramp-up (sec) */
+    std::atomic<std::chrono::duration<double>> tx_rampup_;
 };
 
 #endif /* RADIO_HH_ */
