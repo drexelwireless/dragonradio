@@ -780,6 +780,25 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         return rates
 
+    def setClockRate(self, rate: float) -> bool:
+        """Set radio master clock rate.
+
+        Args:
+            rate (float): Desired clock rate.
+
+        Returns:
+            bool: True of clock rate was set, False otherwise.
+        """
+        if rate == self.usrp.clock_rate:
+            return True
+
+        for start, stop in self.usrp.clock_rate_ranges:
+            if rate >= start and rate <= stop:
+                self.usrp.clock_rate = rate
+                return True
+
+        return False
+
     def findValidRate(self, min_rate: float) -> float:
         """Find a valid rate no less than min_rate given the clock rate.
 
@@ -790,10 +809,12 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         Returns:
             float: A rate no less than rate min_rate that is supported by the hardware
         """
-        for start, stop in self.usrp.clock_rate_ranges:
-            if min_rate >= start and min_rate <= stop:
-                self.usrp.clock_rate = min_rate
-                break
+        # If we can't set the clock rate to the desired rate, try even
+        # multiples.
+        if not self.setClockRate(min_rate):
+            for k in [4, 8, 16]:
+                if self.setClockRate(k*min_rate):
+                    break
 
         clock_rate = self.usrp.clock_rate
 
