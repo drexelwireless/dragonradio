@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SLOTTEDMAC_H_
@@ -10,28 +10,21 @@
 #include <queue>
 
 #include "qvar.hh"
-#include "Clock.hh"
-#include "Logger.hh"
-#include "SafeQueue.hh"
 #include "Radio.hh"
-#include "phy/Channelizer.hh"
-#include "phy/SlotSynthesizer.hh"
 #include "mac/MAC.hh"
-#include "mac/Schedule.hh"
+#include "phy/Channelizer.hh"
+#include "phy/Synthesizer.hh"
 
 /** @brief A slotted MAC. */
 class SlottedMAC : public MAC
 {
 public:
-    using Slot = SlotSynthesizer::Slot;
-
     SlottedMAC(std::shared_ptr<Radio> radio,
                std::shared_ptr<Controller> controller,
                std::shared_ptr<SnapshotCollector> collector,
                std::shared_ptr<Channelizer> channelizer,
-               std::shared_ptr<SlotSynthesizer> synthesizer,
+               std::shared_ptr<Synthesizer> synthesizer,
                double rx_period,
-               double slot_send_lead_time,
                unsigned nsyncthreads);
     virtual ~SlottedMAC();
 
@@ -57,18 +50,9 @@ public:
         });
     }
 
-    /** @brief Is this MAC FDMA? */
-    virtual bool isFDMA(void) const
-    {
-        return false;
-    }
-
     void stop(void) override;
 
 protected:
-    /** @brief Our slot synthesizer. */
-    std::shared_ptr<SlotSynthesizer> slot_synthesizer_;
-
     /** @brief Lead time needed to send a slot's worth of data (sec) */
     std::chrono::duration<double> slot_send_lead_time_;
 
@@ -81,48 +65,45 @@ protected:
     /** @brief Do we need to stop the current burst? */
     std::atomic<bool> stop_burst_;
 
-    /** @brief The next slot */
-    std::shared_ptr<Slot> next_slot_;
-
     /** @brief Slot to transmit */
-    qvar<std::shared_ptr<Slot>> tx_slot_;
+    qvar<std::optional<TXSlot>> tx_slot_;
+
+    /** @brief Thread running rxWorker */
+    std::thread rx_thread_;
+
+    /** @brief Thread running txWorker */
+    std::thread tx_thread_;
+
+    /** @brief Thread running txSlotWorker */
+    std::thread tx_slot_thread_;
+
+    /** @brief Thread running txNotifier */
+    std::thread tx_notifier_thread_;
 
     /** @brief Worker transmitting slots */
     void txWorker(void);
 
-    /** @brief Schedule modulation of a slot
-     * @param when Start time of slot
-     * @param prev_overfill Number of overfill samples from previous slot.
-     * @param slotidx Index of the slot to modulated
-     */
-    void modulateSlot(WallClock::time_point when,
-                      size_t prev_overfill,
-                      size_t slotidx);
+    /** @brief Worker preparing slots for transmission */
+    void txSlotWorker(void);
 
-    /** @brief Finalize the next TX slot.
-     * @param when Start time of slot
-     * @return The slot
+    /** @brief Find next TX slot
+     * @param t Time at which to start looking for a TX slot
+     * @param t_next The beginning of the next TX slot
+     * @param next_slotidx Slot index of next slot
      */
-    /** After finalizeSlot returns, the caller has exclusive access to the slot.
-     * That is, it does not need to acquire the slot's lock to modify it,
-     * because it is guaranteed exclusive access.
-     */
-    std::shared_ptr<Slot> finalizeSlot(WallClock::time_point when);
+    virtual void findNextSlot(WallClock::time_point t,
+                              WallClock::time_point& t_next,
+                              size_t& next_slotidx) = 0;
 
-    /** @brief Transmit a slot
-     * @param slot The slot
+    /** @brief Decide whether or not to transmit in a slot
+     * @param t Time at which slot starts
+     * @param slotidx Slot index
+     * @returns True if a slot was found, false otherwise
      */
-    void txSlot(std::shared_ptr<Slot> &&slot)
-    {
-        tx_slot_ = std::move(slot);
-    }
+    virtual bool transmitInSlot(WallClock::time_point t,
+                                size_t slotidx);
 
-    /** @brief Mark a slot as missed
-     * @param slot The slot
-     */
-    void missedSlot(Slot &slot);
-
-    void wake_dependents() override;
+    void wake_dependents(void) override;
 
     void reconfigure(void) override;
 };
