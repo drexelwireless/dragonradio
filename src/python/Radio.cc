@@ -35,6 +35,10 @@ void exportRadio(py::module &m)
             &Radio::getTXLeadTime,
             &Radio::setTXLeadTime,
             "float: Lead time necessary for timed TX (sec)")
+        .def_property("tx_rampup",
+            &Radio::getTXRampup,
+            &Radio::setTXRampup,
+            "float: Time required for TX ramp-up (sec)")
         .def_property_readonly("now",
             &Radio::now)
         ;

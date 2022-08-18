@@ -47,6 +47,10 @@ USRP::USRP(const std::string& addr)
     tx_stream_ = usrp_->get_tx_stream(stream_args);
     rx_stream_ = usrp_->get_rx_stream(stream_args);
 
+    // We allocate this once so there's no potential for a race condition to
+    // occur when resizing this buffer (and so we only allocate it once).
+    zeros_.resize(tx_stream_->get_max_num_samps());
+
     // Set maximum number of samples we attempt to TX/RX.
     tx_max_samps_ = tx_stream_->get_max_num_samps();
     rx_max_samps_ = rx_stream_->get_max_num_samps();
@@ -219,6 +223,20 @@ void USRP::setRXFrequency(double freq)
     logUSRP(LOGDEBUG, "RX frequency set to %g", freq);
 }
 
+void USRP::zeroStuff(ssize_t n)
+{
+    if (n != 0) {
+        uhd::tx_metadata_t tx_md;
+        ssize_t            count = 0;
+
+        while (count < n)
+            count += tx_stream_->send(zeros_.data(), std::min(static_cast<ssize_t>(zeros_.size()), n), tx_md);
+
+        if (t_next_tx_)
+            *t_next_tx_ += MonoClock::duration(count/tx_rate_);
+    }
+}
+
 void USRP::burstTX(std::optional<MonoClock::time_point> when_,
                    bool start_of_burst,
                    bool end_of_burst,
@@ -228,7 +246,11 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
     size_t             n;     // Size of next send
 
     if (start_of_burst) {
+        std::chrono::duration<double> tx_rampup = tx_rampup_.load(std::memory_order_acquire);
+
         if (when_) {
+            *when_ -= MonoClock::duration(tx_rampup);
+
             tx_md.time_spec = to_uhd_time(*when_);
             tx_md.has_time_spec = true;
         }
@@ -238,6 +260,14 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
 
         in_tx_burst_.store(true, std::memory_order_release);
         t_next_tx_ = when_;
+
+        // If this is the start of a burst, add TX ramp-up samples
+        if (tx_rampup != 0s) {
+            zeroStuff(tx_rampup.count()*tx_rate_);
+
+            tx_md.has_time_spec = false;
+            tx_md.start_of_burst = false;
+        }
     }
 
     // We walk through the supplied queue of buffers and transmit each in chunks
