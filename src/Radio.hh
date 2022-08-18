@@ -73,7 +73,13 @@ public:
         tx_lead_time_.store(t, std::memory_order_release);
     }
 
-    /** @brief Get time at which next transmission will occur */
+    /** @brief Return true if radio is currently transmitting a burst */
+    virtual bool inTXBurst() const = 0;
+
+    /** @brief Get monotonic time at which next transmission will occur */
+    /** This is the time at which the next transmission would occur. The next TX
+     * time can be non-nullopt even if we are not in a burst.
+     */
     virtual std::optional<MonoClock::time_point> getNextTXTime() const = 0;
 
     /** @brief Transmit a burst of IQ buffers at the given time.

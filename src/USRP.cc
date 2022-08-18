@@ -51,6 +51,9 @@ USRP::USRP(const std::string& addr)
     tx_max_samps_ = tx_stream_->get_max_num_samps();
     rx_max_samps_ = rx_stream_->get_max_num_samps();
 
+    // We are not in a burst
+    in_tx_burst_.store(false, std::memory_order_release);
+
     // Start thread that receives TX errors
     tx_error_thread_ = std::thread(&USRP::txErrorWorker, this);
 }
@@ -228,12 +231,13 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
         if (when_) {
             tx_md.time_spec = to_uhd_time(*when_);
             tx_md.has_time_spec = true;
-
-            t_next_tx_ = *when_;
         }
 
         tx_md.start_of_burst = true;
         tx_md.end_of_burst = false;
+
+        in_tx_burst_.store(true, std::memory_order_release);
+        t_next_tx_ = when_;
     }
 
     // We walk through the supplied queue of buffers and transmit each in chunks
@@ -269,17 +273,22 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
         if (t_next_tx_)
             *t_next_tx_ += MonoClock::duration((iqbuf.size() - iqbuf.delay)/tx_rate_);
     }
+
+    if (end_of_burst)
+        in_tx_burst_.store(false, std::memory_order_release);
 }
 
 void USRP::stopTXBurst(void)
 {
-    uhd::tx_metadata_t tx_md; // TX metadata for UHD
+    if (in_tx_burst_.load(std::memory_order_consume)) {
+        uhd::tx_metadata_t tx_md; // TX metadata for UHD
 
-    tx_md.end_of_burst = true;
+        tx_md.end_of_burst = true;
 
-    tx_stream_->send((char *) nullptr, 0, tx_md);
+        tx_stream_->send((char *) nullptr, 0, tx_md);
 
-    t_next_tx_ = std::nullopt;
+        in_tx_burst_.store(false, std::memory_order_release);
+    }
 }
 
 void USRP::startRXStream(MonoClock::time_point when)
@@ -429,6 +438,7 @@ void USRP::txErrorWorker(void)
                 case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
                     msg = "TX error: an internal send buffer has emptied";
                     tx_underflow_count_.fetch_add(1, std::memory_order_relaxed);
+                    in_tx_burst_.store(false, std::memory_order_release);
                     break;
 
                 case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:

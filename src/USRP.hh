@@ -402,8 +402,17 @@ public:
         return usrp_->set_rx_gain(db);
     }
 
+    bool inTXBurst() const override
+    {
+        return in_tx_burst_.load(std::memory_order_consume);
+    }
+
     std::optional<MonoClock::time_point> getNextTXTime() const override
     {
+        if (   !in_tx_burst_.load(std::memory_order_consume)
+            || (t_next_tx_ && *t_next_tx_ < MonoClock::now()))
+            t_next_tx_ = std::nullopt;
+
         return t_next_tx_;
     }
 
@@ -475,8 +484,11 @@ private:
      */
     size_t rx_max_samps_;
 
+    /** @brief Flag indicating whether or not radio is in a TX burst */
+    std::atomic<bool> in_tx_burst_;
+
     /** @brief Time at which next transmission will occur */
-    std::optional<MonoClock::time_point> t_next_tx_;
+    mutable std::optional<MonoClock::time_point> t_next_tx_;
 
     /** @brief Flag indicating whether or not to enable automatic DC offset
      * correction.
