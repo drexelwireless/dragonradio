@@ -1,6 +1,7 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include "logging.hh"
 #include "Clock.hh"
 #include "Radio.hh"
 #include "mac/SlottedALOHA.hh"
@@ -12,9 +13,8 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
                            std::shared_ptr<Controller> controller,
                            std::shared_ptr<SnapshotCollector> collector,
                            std::shared_ptr<Channelizer> channelizer,
-                           std::shared_ptr<SlotSynthesizer> synthesizer,
+                           std::shared_ptr<Synthesizer> synthesizer,
                            double rx_period,
-                           double slot_send_lead_time,
                            double p)
   : SlottedMAC(radio,
                controller,
@@ -22,13 +22,11 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
                channelizer,
                synthesizer,
                rx_period,
-               slot_send_lead_time,
                5)
   , slotidx_(0)
   , p_(p)
   , gen_(std::random_device()())
   , dist_(0, 1.0)
-  , arrival_dist_(p)
 {
     rx_thread_ = std::thread(&SlottedALOHA::rxWorker, this);
     tx_thread_ = std::thread(&SlottedALOHA::txWorker, this);
@@ -43,79 +41,29 @@ SlottedALOHA::~SlottedALOHA()
     stop();
 }
 
-void SlottedALOHA::stop(void)
+void SlottedALOHA::findNextSlot(WallClock::time_point t,
+                                WallClock::time_point& t_next,
+                                size_t& next_slotidx)
 {
-    SlottedMAC::stop();
+    WallClock::duration t_slot_pos; // Offset into the current slot (sec)
+    const auto          slot_size = schedule_.getSlotSize();
 
-    if (modify([&](){ done_ = true; })) {
-        // Join on all threads
-        if (rx_thread_.joinable())
-            rx_thread_.join();
+    t_slot_pos = schedule_.slotOffsetAt(t);
 
-        if (tx_thread_.joinable())
-            tx_thread_.join();
-
-        if (tx_slot_thread_.joinable())
-            tx_slot_thread_.join();
-
-        if (tx_notifier_thread_.joinable())
-            tx_notifier_thread_.join();
-    }
+    t_next = t + (slot_size - t_slot_pos);
+    next_slotidx = getSlotIndex();
 }
 
-void SlottedALOHA::txSlotWorker(void)
+bool SlottedALOHA::transmitInSlot(WallClock::time_point t,
+                                  size_t slotidx)
 {
-    WallClock::time_point t_now;            // Current time
-    WallClock::time_point t_next_slot;      // Time at which our next slot starts
-    WallClock::time_point t_following_slot; // Time at which the following slot starts
-    WallClock::duration   t_slot_pos;       // Offset into the current slot (sec)
-
-    for (;;) {
-        // Synchronize on state change
-        if (needs_sync()) {
-            sync();
-
-            if (done_)
-                break;
-
-            // Wait for non-zero slot size
-            if (schedule_.getSlotSize() == 0s) {
-                sleep_until_state_change();
-                continue;
-            }
-        }
-
-        // Figure out when our next send slot is.
-        auto slot_size = schedule_.getSlotSize();
-
-        t_now = WallClock::now();
-        t_slot_pos = t_now.time_since_epoch() % slot_size;
-        t_next_slot = t_now + (slot_size - t_slot_pos);
-        t_following_slot = t_next_slot + slot_size;
-
-        // Finalize next slot
-        auto slot = finalizeSlot(t_next_slot);
-
-        // Modulate following slot with probability p_
-        if (dist_(gen_) < p_)
-            modulateSlot(t_following_slot, 0, slotidx_);
-
-        // Transmit next slot
-        if (slot)
-            txSlot(std::move(slot));
-
-        // Sleep until TX time for following slot
-        sleep_for((t_following_slot - WallClock::now()) - slot_send_lead_time_);
-    }
-
-    if (next_slot_)
-        missedSlot(*next_slot_);
+    return dist_(gen_) < p_;
 }
 
 void SlottedALOHA::reconfigure(void)
 {
     SlottedMAC::reconfigure();
 
-    if (schedule_.nchannels() == 0 || slotidx_ >= schedule_.nslots())
-        slotidx_ = 0;
+    // We can always transmit
+    can_transmit_ = true;
 }

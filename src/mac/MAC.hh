@@ -196,40 +196,6 @@ protected:
      */
     std::optional<double> tx_fc_off_;
 
-    /** @brief A transmission record */
-    struct TXRecord {
-        TXRecord() = default;
-
-        // So we can emplace
-        TXRecord(const std::optional<MonoClock::time_point>& timestamp_,
-                 size_t delay_,
-                 size_t nsamples_,
-                 std::list<std::shared_ptr<IQBuf>>&& iqbufs_,
-                 std::list<std::unique_ptr<ModPacket>>&& mpkts_) noexcept
-          : timestamp(timestamp_)
-          , delay(delay_)
-          , nsamples(nsamples_)
-          , iqbufs(std::move(iqbufs_))
-          , mpkts(std::move(mpkts_))
-        {
-        }
-
-        /** @brief TX deadline */
-        std::optional<MonoClock::time_point> timestamp;
-
-        /** @brief Number of samples from timestamp transmission was delayed */
-        size_t delay;
-
-        /** @brief Number of samples transmitted */
-        size_t nsamples;
-
-        /** @brief Transmitted IQ buffers */
-        std::list<std::shared_ptr<IQBuf>> iqbufs;
-
-        /** @brief Transmitted modulated packets */
-        std::list<std::unique_ptr<ModPacket>> mpkts;
-    };
-
     /** @brief Mutex for transmission records */
     std::mutex tx_records_mutex_;
 
@@ -238,6 +204,30 @@ protected:
 
     /** @brief Queue of transmission records */
     std::queue<TXRecord> tx_records_;
+
+    /** @brief Push a transmission record
+     * @param txrecord The TXRecord to hand off to the TX notification thread
+     */
+    void pushTXRecord(TXRecord&& txrecord)
+    {
+        {
+            std::lock_guard<std::mutex> lock(tx_records_mutex_);
+
+            tx_records_.push(std::move(txrecord));
+        }
+
+        tx_records_cond_.notify_one();
+    }
+
+    /** @brief Abort a transmission record
+     * @param txrecord The TXRecord to abort
+     */
+    void abortTXRecord(TXRecord& txrecord)
+    {
+        // Re-queue all packets in this TX record
+        for (auto it = txrecord.mpkts.begin(); it != txrecord.mpkts.end(); ++it)
+            controller_->missed(std::move((*it)->pkt));
+    }
 
     /** @brief Worker receiving packets */
     void rxWorker(void);

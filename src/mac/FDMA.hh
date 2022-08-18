@@ -9,7 +9,7 @@
 
 #include "Radio.hh"
 #include "phy/Channelizer.hh"
-#include "phy/ChannelSynthesizer.hh"
+#include "phy/Synthesizer.hh"
 #include "mac/MAC.hh"
 
 /** @brief A FDMA MAC. */
@@ -20,7 +20,7 @@ public:
          std::shared_ptr<Controller> controller,
          std::shared_ptr<SnapshotCollector> collector,
          std::shared_ptr<Channelizer> channelizer,
-         std::shared_ptr<ChannelSynthesizer> synthesizer,
+         std::shared_ptr<Synthesizer> synthesizer,
          double period);
     virtual ~FDMA();
 
@@ -52,9 +52,6 @@ private:
     /** @brief Provide more accurate TX timestamps */
     /** Providing more accurate TX timestamps may increase latency. */
     bool accurate_tx_timestamps_;
-
-    /** @brief Out channel synthesizer */
-    std::shared_ptr<ChannelSynthesizer> channel_synthesizer_;
 
     /** @brief Thread running rxWorker */
     std::thread rx_thread_;

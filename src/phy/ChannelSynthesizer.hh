@@ -10,73 +10,91 @@
 #include <mutex>
 
 #include "phy/Channel.hh"
-#include "phy/ModPacketQueue.hh"
 #include "phy/PHY.hh"
 #include "phy/Synthesizer.hh"
 
-/** @brief A single-channel synthesizer. */
+/** @brief Synthesize packets for a single, fixed channel. */
+template <class ChannelModulator>
 class ChannelSynthesizer : public Synthesizer
 {
 public:
-    using container_type = ModPacketQueue<>::container_type;
-
     ChannelSynthesizer(const std::vector<PHYChannel> &channels,
                        double tx_rate,
-                       unsigned nsyncthreads)
-      : Synthesizer(channels, tx_rate, nsyncthreads)
-    {
-    }
+                       unsigned nthreads);
 
-    virtual ~ChannelSynthesizer() = default;
+    virtual ~ChannelSynthesizer();
 
-    /** @brief Get high-water mark. */
-    std::optional<size_t> getHighWaterMark(void) const
-    {
-        return queue_.getHighWaterMark();
-    }
+    std::optional<size_t> getHighWaterMark(void) const override;
 
-    /** @brief Set high-water mark. */
-    void setHighWaterMark(std::optional<size_t> mark)
-    {
-        queue_.setHighWaterMark(mark);
-    }
+    void setHighWaterMark(std::optional<size_t> high_water_mark) override;
 
-    /** @brief Enable the queue. */
-    void enable(void)
-    {
-        queue_.enable();
-    }
+    bool isEnabled(void) const override;
 
-    /** @brief Disable the queue. */
-    void disable(void)
-    {
-        queue_.disable();
-    }
+    void enable(void) override;
 
-    /** @brief Pop modulated packets. */
-    size_t try_pop(container_type &mpkts, size_t max_samples, bool overfill)
-    {
-        return queue_.try_pop(mpkts, max_samples, overfill);
-    }
+    void disable(void) override;
 
-    /** @brief Pop all modulated packets. */
-    size_t try_pop(container_type &mpkts)
-    {
-        return queue_.try_pop(mpkts);
-    }
+    TXRecord try_pop(void) override;
 
-    /** @brief Pop all modulated packets. */
-    size_t pop(container_type &mpkts)
-    {
-        return queue_.pop(mpkts);
-    }
+    TXRecord pop(void) override;
+
+    TXRecord pop_for(const std::chrono::duration<double>& rel_time) override;
+
+    void push_slot(const WallClock::time_point& when, size_t slot, ssize_t prev_oversample) override;
+
+    TXSlot pop_slot(void) override;
+
+    void stop(void) override;
 
 protected:
     /** @brief Index of channel we should synthesize. */
     std::optional<size_t> chanidx_;
 
-    /** @brief Queue */
-    ModPacketQueue<> queue_;
+    /** @brief Mutex for waking demodulators. */
+    mutable std::mutex queue_mutex_;
+
+    /** @brief Index of slot we should synthesize. */
+    std::optional<size_t> slot_;
+
+    /** @brief Deadline of slot we should synthesize. */
+    WallClock::time_point slot_deadline_;
+
+    /** @brief Maximum number of samples in a packet */
+    std::optional<size_t> max_samples_;
+
+    /** @brief Maximum number of IQ samples the queue may contain */
+    std::optional<size_t> high_water_mark_;
+
+    /** @brief Flag indicating that the queue is enabled. */
+    bool enabled_;
+
+    /** @brief Queue of modulated packets */
+    TXRecord txrecord_;
+
+    /** @brief Producer condition variable */
+    std::condition_variable producer_cv_;
+
+    /** @brief Consumer condition variable */
+    std::condition_variable consumer_cv_;
+
+    /** @brief Number of synthesizer threads. */
+    unsigned nthreads_;
+
+    /** @brief Threads running modWorker */
+    std::vector<std::thread> mod_threads_;
+
+    /** @brief Push a modulated packet onto the queue */
+    bool push(std::unique_ptr<ModPacket>&& mpkt);
+
+    /** @brief Can we push a modulated packet? */
+    /** The queue mutex must be held by the caller */
+    bool can_push(size_t nsamples) const;
+
+    /** @brief Wait until we can push a packet */
+    bool wait_until_can_push(void);
+
+    /** @brief Modulation worker */
+    void modWorker(unsigned tid);
 
     void wake_dependents(void) override;
 

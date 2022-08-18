@@ -9,7 +9,7 @@ FDMA::FDMA(std::shared_ptr<Radio> radio,
            std::shared_ptr<Controller> controller,
            std::shared_ptr<SnapshotCollector> collector,
            std::shared_ptr<Channelizer> channelizer,
-           std::shared_ptr<ChannelSynthesizer> synthesizer,
+           std::shared_ptr<Synthesizer> synthesizer,
            double period)
   : MAC(radio,
         controller,
@@ -20,7 +20,6 @@ FDMA::FDMA(std::shared_ptr<Radio> radio,
         4)
   , premod_(period)
   , accurate_tx_timestamps_(false)
-  , channel_synthesizer_(synthesizer)
 {
     rx_thread_ = std::thread(&FDMA::rxWorker, this);
     tx_thread_ = std::thread(&FDMA::txWorker, this);
@@ -51,17 +50,20 @@ void FDMA::stop(void)
 
 void FDMA::txWorker(void)
 {
-    std::optional<MonoClock::time_point> t_next_tx; // Time at which next transmission starts
-    bool                                 next_slot_start_of_burst = true;
-
     for (;;) {
-        ChannelSynthesizer::container_type mpkts;
-        size_t                             nsamples;
+        TXRecord txrecord;
 
-        if (next_slot_start_of_burst)
-            nsamples = channel_synthesizer_->pop(mpkts);
-        else
-            nsamples = channel_synthesizer_->try_pop(mpkts);
+        // Pop packets to send.
+        if (radio_->inTXBurst()) {
+            std::optional<MonoClock::time_point> t_next_tx = radio_->getNextTXTime();
+
+            if (t_next_tx)
+                txrecord = synthesizer_->pop_until(*t_next_tx - radio_->getTXLeadTime());
+            else
+                txrecord = synthesizer_->try_pop();
+        } else {
+            txrecord = synthesizer_->pop();
+        }
 
         // Synchronize on state change
         if (needs_sync()) {
@@ -74,59 +76,49 @@ void FDMA::txWorker(void)
         // If we don't have any data to send, we're done. If this slot was not
         // the start of a burst, then it is part of an in-flight burst, in which
         // case we need to stop the burst.
-        if (nsamples == 0) {
-            if (!next_slot_start_of_burst) {
-                radio_->stopTXBurst();
-                next_slot_start_of_burst = true;
-            }
+        if (txrecord.nsamples == 0) {
+            radio_->stopTXBurst();
 
             continue;
         }
 
         // Collect IQ buffers. We keep track of whether or not this batch of
         // modulate packets needs an accurate timestamp.
-        std::list<std::shared_ptr<IQBuf>> iqbufs;
         bool accurate_timestamp = accurate_tx_timestamps_;
 
-        for (auto it = mpkts.begin(); it != mpkts.end(); ++it) {
-            if ((*it)->pkt->timestamp_seq)
+        for (auto it = txrecord.mpkts.begin(); it != txrecord.mpkts.end(); ++it) {
+            if ((*it)->pkt->timestamp_seq) {
                 accurate_timestamp = true;
-
-            iqbufs.emplace_back((*it)->samples);
+                break;
+            }
         }
 
-        // Determine time of next transmission. If this is *not* the start of a
-        // burst, then t_next_tx has already been updated. Otherwise, we
-        // initialize it with the current time since we are starting a new
-        // burst. If we need an accurate timestamp, we use a timed burst, in
-        // which case we need to add a slight delay to the transmission time.
-        if (next_slot_start_of_burst && accurate_timestamp)
+        // Determine time of next transmission.
+        //
+        // If we need an accurate timestamp, we first attempt to use the radio's
+        // "next TX" timestamp. If that isn't available and we are in a TX
+        // burst, stop the burst. Then, start a new burst with a timestamp. We
+        // set the start of the new burst to be time in the very near future.
+        std::optional<MonoClock::time_point> t_next_tx = radio_->getNextTXTime();
+
+        if (accurate_timestamp && !t_next_tx) {
+            if (radio_->inTXBurst())
+                radio_->stopTXBurst();
+
             t_next_tx = MonoClock::now() + radio_->getTXLeadTime();
-        else
-            t_next_tx = radio_->getNextTXTime();
+        }
 
-        // Send IQ buffers
-        radio_->burstTX(next_slot_start_of_burst && accurate_timestamp ? t_next_tx : std::nullopt,
-                       next_slot_start_of_burst,
-                       false,
-                       iqbufs);
-
-        next_slot_start_of_burst = false;
+        // Send IQ buffers. We always start a TX burst if we are not already in
+        // one.
+        radio_->burstTX(t_next_tx,
+                        !radio_->inTXBurst(),
+                        false,
+                        txrecord.iqbufs);
 
         // Hand-off TX record to TX notification thread
-        {
-            std::lock_guard<std::mutex> lock(tx_records_mutex_);
+        txrecord.timestamp = t_next_tx;
 
-            tx_records_.emplace(t_next_tx, 0, nsamples, std::move(iqbufs), std::move(mpkts));
-        }
-
-        tx_records_cond_.notify_one();
-
-        // Start a new TX burst if there was an underflow
-        if (radio_->getTXUnderflowCount() != 0) {
-            radio_->stopTXBurst();
-            next_slot_start_of_burst = true;
-        }
+        pushTXRecord(std::move(txrecord));
     }
 }
 
@@ -135,7 +127,7 @@ void FDMA::wake_dependents()
     MAC::wake_dependents();
 
     // Disable the channel synthesizer
-    channel_synthesizer_->disable();
+    synthesizer_->disable();
 }
 
 void FDMA::reconfigure(void)
@@ -157,8 +149,8 @@ void FDMA::reconfigure(void)
     }
 
     // Set synthesizer's high water mark
-    channel_synthesizer_->setHighWaterMark(premod_*tx_rate_);
+    synthesizer_->setHighWaterMark(premod_*tx_rate_);
 
     // Re-enable the channel synthesizer
-    channel_synthesizer_->enable();
+    synthesizer_->enable();
 }

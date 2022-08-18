@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SLOTTEDALOHA_H_
@@ -7,12 +7,10 @@
 #include <random>
 #include <vector>
 
-#include "Node.hh"
 #include "Radio.hh"
+#include "mac/SlottedMAC.hh"
 #include "phy/Channelizer.hh"
 #include "phy/Synthesizer.hh"
-#include "mac/MAC.hh"
-#include "mac/SlottedMAC.hh"
 
 /** @brief A Slotted ALOHA MAC. */
 class SlottedALOHA : public SlottedMAC
@@ -22,9 +20,8 @@ public:
                  std::shared_ptr<Controller> controller,
                  std::shared_ptr<SnapshotCollector> collector,
                  std::shared_ptr<Channelizer> channelizer,
-                 std::shared_ptr<SlotSynthesizer> synthesizer,
+                 std::shared_ptr<Synthesizer> synthesizer,
                  double rx_period,
-                 double slot_send_lead_time,
                  double p);
     virtual ~SlottedALOHA();
 
@@ -60,9 +57,6 @@ public:
         p_.store(p, std::memory_order_relaxed);
     }
 
-    /** @brief Stop processing packets */
-    void stop(void) override;
-
 private:
     /** @brief Slot index to use */
     std::atomic<size_t> slotidx_;
@@ -76,23 +70,12 @@ private:
     /** @brief Uniform 0-1 real distribution */
     std::uniform_real_distribution<double> dist_;
 
-    /** @brief Exponential distribution for inter-arrival times */
-    std::exponential_distribution<double> arrival_dist_;
+    void findNextSlot(WallClock::time_point t,
+                      WallClock::time_point& t_next,
+                      size_t& next_slotidx) override;
 
-    /** @brief Thread running rxWorker */
-    std::thread rx_thread_;
-
-    /** @brief Thread running txWorker */
-    std::thread tx_thread_;
-
-    /** @brief Thread running txSlotWorker */
-    std::thread tx_slot_thread_;
-
-    /** @brief Thread running txNotifier */
-    std::thread tx_notifier_thread_;
-
-    /** @brief Worker preparing slots for transmission */
-    void txSlotWorker(void);
+    bool transmitInSlot(WallClock::time_point t,
+                        size_t slotidx) override;
 
     void reconfigure(void) override;
 };

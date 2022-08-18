@@ -8,19 +8,21 @@
 
 #include "logging.hh"
 #include "phy/Channel.hh"
+#include "phy/ChannelSynthesizer.inl"
 #include "phy/FDChannelModulator.hh"
 #include "phy/MultichannelSynthesizer.hh"
-#include "phy/ParallelChannelSynthesizer.inl"
-#include "phy/SlotSynthesizer.hh"
 #include "phy/Synthesizer.hh"
 #include "phy/TDChannelModulator.hh"
-#include "phy/UnichannelSynthesizer.inl"
 #include "python/PyModules.hh"
 
 void exportSynthesizers(py::module &m)
 {
     // Export class Synthesizer to Python
     py::class_<Synthesizer, std::shared_ptr<Synthesizer>>(m, "Synthesizer")
+        .def_property("high_water_mark",
+            &Synthesizer::getHighWaterMark,
+            &Synthesizer::setHighWaterMark,
+            "int: Maximum number of modulated samples to queue.")
         .def_property("tx_rate",
             &Synthesizer::getTXRate,
             &Synthesizer::setTXRate,
@@ -30,7 +32,7 @@ void exportSynthesizers(py::module &m)
             &Synthesizer::setChannels,
             "Sequence[Channel]: TX channels")
         .def_property("schedule",
-            &SlotSynthesizer::getSchedule,
+            &Synthesizer::getSchedule,
             [](Synthesizer &self, py::object obj)
             {
                 try {
@@ -47,19 +49,10 @@ void exportSynthesizers(py::module &m)
             })
         ;
 
-    // Export class ChannelSynthesizer to Python
-    py::class_<ChannelSynthesizer, Synthesizer, std::shared_ptr<ChannelSynthesizer>>(m, "ChannelSynthesizer")
-        .def_property("high_water_mark",
-            &ChannelSynthesizer::getHighWaterMark,
-            &ChannelSynthesizer::setHighWaterMark,
-            "int: Maximum number of modulated samples to queue.")
-        ;
-        ;
-
     // Export class TDSynthesizer to Python
-    using TDSynthesizer = ParallelChannelSynthesizer<TDChannelModulator>;
+    using TDSynthesizer = ChannelSynthesizer<TDChannelModulator>;
 
-    py::class_<TDSynthesizer, ChannelSynthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
+    py::class_<TDSynthesizer, Synthesizer, std::shared_ptr<TDSynthesizer>>(m, "TDSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
                       unsigned int>(),
@@ -69,9 +62,9 @@ void exportSynthesizers(py::module &m)
         ;
 
     // Export class FDSynthesizer to Python
-    using FDSynthesizer = ParallelChannelSynthesizer<FDChannelModulator>;
+    using FDSynthesizer = ChannelSynthesizer<FDChannelModulator>;
 
-    py::class_<FDSynthesizer, ChannelSynthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
+    py::class_<FDSynthesizer, Synthesizer, std::shared_ptr<FDSynthesizer>>(m, "FDSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
                       unsigned int>(),
@@ -83,36 +76,8 @@ void exportSynthesizers(py::module &m)
             "int: Maximum prototype filter length.")
         ;
 
-    // Export class SlotSynthesizer to Python
-    py::class_<SlotSynthesizer, Synthesizer, std::shared_ptr<SlotSynthesizer>>(m, "SlotSynthesizer")
-        ;
-
-    // Export class TDSlotSynthesizer to Python
-    using TDSlotSynthesizer = UnichannelSynthesizer<TDChannelModulator>;
-
-    py::class_<TDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<TDSlotSynthesizer>>(m, "TDSlotSynthesizer")
-        .def(py::init<const std::vector<PHYChannel>&,
-                      double,
-                      unsigned int>(),
-            py::arg("channels"),
-            py::arg("tx_rate"),
-            py::arg("nthreads"))
-        ;
-
-    // Export class FDSlotSynthesizer to Python
-    using FDSlotSynthesizer = UnichannelSynthesizer<FDChannelModulator>;
-
-    py::class_<FDSlotSynthesizer, SlotSynthesizer, std::shared_ptr<FDSlotSynthesizer>>(m, "FDSlotSynthesizer")
-        .def(py::init<const std::vector<PHYChannel>&,
-                      double,
-                      unsigned int>(),
-            py::arg("channels"),
-            py::arg("tx_rate"),
-            py::arg("nthreads"))
-        ;
-
     // Export class MultichannelSynthesizer to Python
-    py::class_<MultichannelSynthesizer, SlotSynthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
+    py::class_<MultichannelSynthesizer, Synthesizer, std::shared_ptr<MultichannelSynthesizer>>(m, "MultichannelSynthesizer")
         .def(py::init<const std::vector<PHYChannel>&,
                       double,
                       unsigned int>(),

@@ -118,7 +118,7 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
-                      std::shared_ptr<ChannelSynthesizer>,
+                      std::shared_ptr<Synthesizer>,
                       double>(),
             py::arg("radio"),
             py::arg("controller"),
@@ -146,16 +146,14 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
-                      std::shared_ptr<SlotSynthesizer>,
-                      double,
+                      std::shared_ptr<Synthesizer>,
                       double>(),
             py::arg("radio"),
             py::arg("controller"),
             py::arg("snapshot_collector"),
             py::arg("channelizer"),
             py::arg("synthesizer"),
-            py::arg("rx_period"),
-            py::arg("slot_send_lead_time"))
+            py::arg("rx_period"))
         ;
 
     // Export class SlottedALOHA to Python
@@ -164,8 +162,7 @@ void exportMACs(py::module &m)
                       std::shared_ptr<Controller>,
                       std::shared_ptr<SnapshotCollector>,
                       std::shared_ptr<Channelizer>,
-                      std::shared_ptr<SlotSynthesizer>,
-                      double,
+                      std::shared_ptr<Synthesizer>,
                       double,
                       double>(),
             py::arg("radio"),
@@ -174,7 +171,6 @@ void exportMACs(py::module &m)
             py::arg("channelizer"),
             py::arg("synthesizer"),
             py::arg("rx_period"),
-            py::arg("slot_send_lead_time"),
             py::arg("probability"))
         .def_property("slotidx",
             &SlottedALOHA::getSlotIndex,
