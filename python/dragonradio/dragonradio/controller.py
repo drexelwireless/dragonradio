@@ -1250,7 +1250,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                                                 self.config.bandwidth,
                                                 self.scenario_start_time)
 
-    async def reconfigureBandwidthAndFrequency(self, bandwidth, frequency):
+    async def setBandwidthAndFrequency(self, bandwidth, frequency):
         """Reconfigure bandwidth and frequency.
 
         If we are the gateway node, this will trigger a new TDMA schedule.
@@ -1259,7 +1259,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
                 old_bandwidth = self.radio.bandwidth
 
-                self.radio.reconfigureBandwidthAndFrequency(bandwidth, frequency)
+                self.radio.setBandwidthAndFrequency(bandwidth, frequency)
                 if self.collab_server:
                     self.forceSpectrumUsageUpdate()
 
@@ -1477,7 +1477,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             self.scoring_percent_threshold = env.get('scoring_percent_threshold', 0)
             self.scoring_point_threshold = env.get('scoring_point_threshold', 0)
 
-            self.createTask(self.reconfigureBandwidthAndFrequency(bandwidth, frequency),
+            self.createTask(self.setBandwidthAndFrequency(bandwidth, frequency),
                             "Reconfigure bandwidth and frequency")
 
         resp = remote.Response()
