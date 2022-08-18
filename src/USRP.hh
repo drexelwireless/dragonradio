@@ -416,6 +416,8 @@ public:
         return t_next_tx_;
     }
 
+    void zeroStuff(ssize_t n) override;
+
     void burstTX(std::optional<MonoClock::time_point> when,
                  bool start_of_burst,
                  bool end_of_burst,
@@ -506,6 +508,9 @@ private:
 
     /** @brief Thread that receives TX errors. */
     std::thread tx_error_thread_;
+
+    /** @brief Buffer for zero stuffing. */
+    std::vector<std::complex<float>> zeros_;
 
     /** @brief Worker that receives TX errors. */
     void txErrorWorker(void);

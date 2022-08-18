@@ -250,6 +250,8 @@ class Config:
     # Radio settings
     tx_lead_time: float = 500e-6
     """Lead time necessary for timed TX (sec)"""
+    tx_rampup: float = 0.0
+    """Time required for TX ramp-up"""
 
     # PHY parameters
     phy: str = 'ofdm'
@@ -836,6 +838,11 @@ class Config:
                           dest='time_source',
                           metavar='CLOCK',
                           help='set time source')
+
+        usrp.add_argument('--tx-rampup', action='store', type=float,
+                          dest='tx_rampup',
+                          metavar='SEC',
+                          help='set time required for TX ramp-up')
 
         # USRP firmware
         firmware = parser.add_argument_group('USRP firmware')

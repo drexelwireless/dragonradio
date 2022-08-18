@@ -374,6 +374,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         self.usrp.tx_lead_time = self.config.tx_lead_time
 
+        self.usrp.tx_rampup = self.config.tx_rampup
+
         # Set USRP clock and time sources. If they were not specified in the
         # configuration, we leave the default setting as-is.
         if config.clock_source is not None:
