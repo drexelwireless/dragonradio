@@ -291,13 +291,19 @@ void USRP::stopTXBurst(void)
     }
 }
 
-void USRP::startRXStream(MonoClock::time_point when)
+void USRP::startRXStream(std::optional<MonoClock::time_point> when)
 {
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 
-    stream_cmd.stream_now = false;
-    stream_cmd.num_samps = 0;
-    stream_cmd.time_spec = to_uhd_time(when);
+    if (when) {
+        stream_cmd.stream_now = false;
+        stream_cmd.num_samps = 0;
+        stream_cmd.time_spec = to_uhd_time(*when);
+    } else {
+        stream_cmd.stream_now = true;
+        stream_cmd.num_samps = 0;
+    }
+
     rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
@@ -308,13 +314,16 @@ void USRP::stopRXStream(void)
     rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
-bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
+bool USRP::burstRX(std::optional<MonoClock::time_point> t_start, size_t nsamps, IQBuf& buf)
 {
-    MonoClock::time_point t_end = t_start + MonoClock::duration(nsamps/rx_rate_);
-    size_t                ndelivered = 0;
+    std::optional<MonoClock::time_point> t_end;
+    size_t                               ndelivered = 0;
 
     buf.fc = rx_freq_;
     buf.fs = rx_rate_;
+
+    if (t_start)
+        t_end = *t_start + MonoClock::duration(nsamps/rx_rate_);
 
     for (;;) {
         uhd::rx_metadata_t rx_md;
@@ -339,19 +348,20 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
             }
         }
 
-        if (n == 0 || t_rx < t_start)
+        if (n == 0 || (t_start && t_rx < *t_start))
             continue;
 
         if (ndelivered == 0) {
             buf.timestamp = t_rx;
-            buf.undersample = MonoClock::duration(t_rx - t_start).count() * rx_rate_;
+            if (t_start)
+                buf.undersample = MonoClock::duration(t_rx - *t_start).count() * rx_rate_;
         }
 
         ndelivered += n;
 
         // If we have received enough samples to move us past t_end, stop
         // receiving.
-        if (t_rx + MonoClock::duration(n/rx_rate_) >= t_end) {
+        if (t_end ? t_rx + MonoClock::duration(n/rx_rate_) >= *t_end : ndelivered >= nsamps) {
             // Set proper buffer size
             buf.resize(ndelivered);
 
