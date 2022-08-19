@@ -879,10 +879,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Set TX rate"""
         config = self.config
 
-        if config.tx_bandwidth is not None and config.tx_upsample:
-            logger.warning("TX bandwidth set, but TX upsampling requested.")
-
         if config.tx_bandwidth is not None and not config.tx_upsample:
+            logger.warning("TX bandwidth set, but TX upsampling NOT requested.")
+
+        if config.tx_bandwidth is not None and config.tx_upsample:
             want_tx_rate = config.tx_bandwidth
         else:
             if config.channel_bandwidth is None or config.channel_bandwidth == rate:
