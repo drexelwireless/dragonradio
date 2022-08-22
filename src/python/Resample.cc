@@ -64,8 +64,6 @@ template <class T, class C>
 void exportDragonPfb(py::module &m, const char *name)
 {
     py::class_<dragonradio::signal::Pfb<T,C>, std::shared_ptr<dragonradio::signal::Pfb<T,C>>>(m, name)
-        .def(py::init<unsigned,
-                      const std::vector<C>&>())
         .def_property("nchannels",
             &dragonradio::signal::Pfb<T,C>::getNumChannels,
             &dragonradio::signal::Pfb<T,C>::setNumChannels,

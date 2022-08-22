@@ -11,7 +11,9 @@ from hypothesis import example, given, settings, strategies as st
 import dragonradio.signal
 from dragonradio.signal import Resampler
 
-resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.fdresample])
+resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.resample,
+                                                           dragonradio.signal.resample_and_mix,
+                                                           dragonradio.signal.fdresample])
 """A resampler"""
 
 def rms(xs: ArrayLike):
