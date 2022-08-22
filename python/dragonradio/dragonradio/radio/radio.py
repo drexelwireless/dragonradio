@@ -944,13 +944,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             ws = channel.bw
             fs = self.usrp.rx_rate
 
-            h = dragonradio.signal.lowpass(wp, ws, fs, ftype=config.channelizer_ftype, Nmax=FDChannelizer.P)
+            h = dragonradio.signal.autolowpass(wp, ws, fs, ftype=config.channelizer_ftype, Nmax=FDChannelizer.P)
         else:
             wp = 0.9*channel.bw
             ws = 1.1*channel.bw
             fs = self.usrp.rx_rate
 
-            h = dragonradio.signal.lowpass(wp, ws, fs)
+            h = dragonradio.signal.autolowpass(wp, ws, fs)
 
         logger.debug('Created prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g',
                      len(h), wp, ws, fs)
@@ -971,7 +971,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         ws = 1.1*channel.bw
         fs = self.usrp.tx_rate
 
-        h = dragonradio.signal.lowpass(wp, ws, fs)
+        h = dragonradio.signal.autolowpass(wp, ws, fs)
 
         logger.debug('Created prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g',
                      len(h), wp, ws, fs)
