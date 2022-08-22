@@ -14,7 +14,7 @@ from hypothesis.strategies import composite
 from dragonradio.liquid import MCS, LiquidModulator, LiquidDemodulator
 import dragonradio.liquid
 from dragonradio.packet import Header
-from dragonradio.signal import Resampler, sigpow
+from dragonradio.signal import Resampler
 
 resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.resample,
                                                            dragonradio.signal.resample_and_mix,
@@ -69,17 +69,8 @@ def newflexframe_modem(draw, header_mcs: MCS) -> ModemPair:
 class TestModulation(TestCase):
     HEADER_MCS: MCS = MCS('crc32', 'secded7264', 'h84', 'bpsk')
 
-    def resample_and_filter(self, sig: ArrayLike, rate: float, fshift: float, resample: Resampler, max_err: float=0.01):
-        resampled = dragonradio.signal.resample_and_filter(sig, rate, fshift, resample, numtaps=1201)
-
-        # Assert that the power of the original and resampled signals is within
-        # max_err relative error
-        p1 = sigpow(sig)
-        p2 = sigpow(resampled)
-
-        self.assertLessEqual(abs((p2-p1)/p1), max_err)
-
-        return resampled
+    def resample_and_filter(self, sig: ArrayLike, rate: float, fshift: float, resample: Resampler):
+        return dragonradio.signal.resample_and_filter(sig, rate, fshift, resample, numtaps=1201)
 
     def run_modem(self,
                   hdr: Header,
