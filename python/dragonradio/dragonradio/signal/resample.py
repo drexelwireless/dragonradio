@@ -2,7 +2,7 @@
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 from fractions import Fraction
 import math
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -164,3 +164,110 @@ def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, fshift: float=0, 
 
     # Correct for tail end of signal
     return downsampled[:len(sig)//D]
+
+def fdresample(U: int, D: int, h: Optional[np.ndarray], sig: np.ndarray, fshift: float=0, P: int=2**7*3*5**3*7+1):
+    # Overlap factor
+    V = 4
+
+    # Length of FFT
+    N = V*(P-1)
+
+    # Number of new samples consumed per input block
+    L = N-(P-1)
+
+    # Validate rates
+    if N % U != 0:
+        raise ValueError(f"Interpolation rate must divide FFT size, but {U:} does not divide {N:}")
+
+    if N % D != 0:
+        raise ValueError(f"Decimation rate must divide FFT size, but {D:} does not divide {N:}")
+
+    # Compute and validate number of frequency bins to rotate
+    Nrot = N*(fshift/(2*math.pi))
+
+    if U/D < 1.0:
+        Nrot /= U
+    elif U/D > 1.0:
+        Nrot /= D
+
+    Nrot_int = round(Nrot)
+    if abs(Nrot - Nrot_int) > 1e-5:
+        raise ValueError(f"Frequency shift must consist of integer number of FFT bins, but {Nrot:} is not an integer")
+
+    Nrot = Nrot_int
+
+    # Compute compensation factor. We compensate for interpolation by
+    # multiplying by U and compensate for repeating the signal D times during
+    # downsampling by dividing by D.
+    k = U/D
+
+    # Compute frequency-space filter
+    if h is not None:
+        H = k*np.fft.fft(h, N)
+    else:
+        H = None
+
+    # Perform mixing, convolution, and interpolation in frequency space
+    off = 0
+    resampled = np.zeros(0)
+
+    while off < len(sig):
+        # Buffer source block
+        if off == 0:
+            # Handle first block by inserting zeros
+            x = np.append(np.zeros((P-1)//U), sig[:L//U])
+            off = (L-(P-1))//U
+        else:
+            x = sig[off:off+N//U]
+            off += L//U
+
+        # Perform FFT
+        X = np.fft.fft(x, N//U)
+
+        if U/D < 1.0:
+            X = np.roll(X, -Nrot)
+
+        # Interpolate
+        XU = np.zeros(N, dtype='complex128')
+
+        if h is not None:
+            # Duplicate
+            l = N//U
+            l2 = l//2
+
+            for i in range(0, U):
+                XU[i*l:i*l+l2] = X[:l2]
+                XU[N-i*l-l2:N-i*l] = X[l2:]
+
+            # Convolve
+            XU = XU*H
+        else:
+            XU[:N//U//2] = X[:N//U//2]
+            XU[N-(N//U//2):] = X[N//U-(N//U//2):]
+
+        # Decimate
+        XD = np.zeros(N//D, dtype='complex128')
+
+        for i in range (0, D):
+            XD += XU[i*N//D:(i+1)*N//D]
+
+        # Mix up by rotating FFT bins
+        if U/D > 1.0:
+            XD = np.roll(XD, Nrot)
+
+        # Perform inverse FFT
+        y = np.fft.ifft(XD, N//D)
+
+        resampled = np.append(resampled, y[(P-1)//D:N//D])
+
+    # Compensate for resampling if we didn't filter
+    if H is None:
+        resampled *= k
+
+    # Correct for filter delay and tail end of signal
+    if h is None:
+        delay = 0
+    else:
+        delay = (len(h)-1)//2
+
+    return resampled[delay//D:(delay+len(sig)*U)//D]
