@@ -18,9 +18,12 @@
 
 namespace dragonradio::signal {
 
-/** @brief A polyphase filter bank */
+/** @brief A polyphase filter bank
+ * @tparam T The type of samples
+ * @tparam C The type of filter taps
+ */
 template <class T, class C>
-class Pfb
+class Pfb : public Resampler<T,T>
 {
 public:
     /** @brief Construct a polyphase filter bank
@@ -31,13 +34,14 @@ public:
     Pfb(unsigned l, const std::vector<C> &taps)
       : l_(l)
       , taps_(taps)
+      , adjtaps_(taps)
       , w_(1)
     {
+        if (taps.size() == 0)
+            throw std::range_error("Polyphase filter taps must be non-empty");
+
         reconfigure();
-    }// Copyright 2018-2020 Drexel University
-// Author: Geoffrey Mainland <mainland@drexel.edu>
-
-
+    }
 
     Pfb() = delete;
 
@@ -65,6 +69,9 @@ public:
     /** @brief Set prototype filter taps */
     void setTaps(const std::vector<C> &taps)
     {
+        if (taps.size() == 0)
+            throw std::range_error("Polyphase filter taps must be non-empty");
+
         taps_ = taps;
         adjtaps_ = taps;
         reconfigure();
@@ -81,6 +88,11 @@ public:
         }
 
         return result;
+    }
+
+    double getDelay(void) const override
+    {
+        return (taps_.size() - 1.0)/2.0;
     }
 
 protected:
@@ -110,9 +122,10 @@ protected:
         unsigned ntaps = adjtaps_.size();
 
         // Compute number of taps per channel. Each channel gets every mth tap
-        // from the protype filter, and we add additional 0 taps to ensure every
-        // channel gets the same number of taps
+        // from the protoype filter, and we add additional 0 taps to ensure
+        // every channel gets the same number of taps
         n_ = (ntaps + l_ - 1) / l_;
+        assert(n_ > 0);
 
         // Resize sample window
         w_.resize(n_);
@@ -134,7 +147,7 @@ protected:
 
 /** @brief An upsampler that uses a polyphase filter bank */
 template <class T, class C>
-class Upsampler : public Pfb<T,C>, public Resampler<T,T> {
+class Upsampler : public Pfb<T,C> {
 protected:
     using Pfb<T,C>::l_;
     using Pfb<T,C>::n_;
@@ -161,11 +174,6 @@ public:
     double getRate(void) const override
     {
         return l_;
-    }
-
-    double getDelay(void) const override
-    {
-        return (n_ + 1.0)/2.0;
     }
 
     size_t neededOut(size_t count) const override
@@ -202,7 +210,7 @@ protected:
 
 /** @brief A downsampler that uses a polyphase filter bank */
 template <class T, class C>
-class Downsampler : public Pfb<T,C>, public Resampler<T,T> {
+class Downsampler : public Pfb<T,C> {
 protected:
     using Pfb<T,C>::n_;
     using Pfb<T,C>::rtaps_;
@@ -229,11 +237,6 @@ public:
     double getRate(void) const override
     {
         return 1.0/m_;
-    }
-
-    double getDelay(void) const override
-    {
-        return (n_ + 1.0)/2.0;
     }
 
     size_t neededOut(size_t count) const override
@@ -279,7 +282,7 @@ protected:
 
 /** @brief A rational resampler that uses a polyphase filter bank */
 template <class T, class C>
-class RationalResampler : public Pfb<T,C>, public Resampler<T,T> {
+class RationalResampler : public Pfb<T,C> {
 protected:
     using Pfb<T,C>::l_;
     using Pfb<T,C>::n_;
@@ -350,11 +353,6 @@ public:
         l_ = l;
         m_ = m;
         reconfigure();
-    }
-
-    double getDelay(void) const override
-    {
-        return (n_ + 1.0)/2.0;
     }
 
     size_t neededOut(size_t count) const override
