@@ -7,6 +7,7 @@
 #include <complex>
 
 #include "IQBuffer.hh"
+#include "Math.hh"
 
 namespace dragonradio::signal {
 
@@ -76,6 +77,24 @@ public:
     }
 };
 
-}
+/** @brief A rational resampler
+ * @tparam I Type of input signal values
+ * @tparam O Type of output signal values
+ */
+template <class I, class O>
+class RationalResampler : virtual public Resampler<I,O> {
+public:
+    /** @brief Get interpolation rate */
+    virtual unsigned getInterpolationRate(void) const = 0;
 
+    /** @brief Get decimation rate */
+    virtual unsigned getDecimationRate(void) const = 0;
+
+    double getRate(void) const override
+    {
+        return static_cast<double>(getInterpolationRate())/static_cast<double>(getDecimationRate());
+    }
+};
+
+}
 #endif /* RESAMPLE_HH_ */
