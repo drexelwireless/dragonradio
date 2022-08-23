@@ -51,6 +51,21 @@ void exportResampler(py::module &m, const char *name)
         ;
 }
 
+template <class I, class O>
+void exportRationalResampler(py::module &m, const char *name)
+{
+    py::class_<dragonradio::signal::RationalResampler<I,O>,
+               Resampler<I,O>,
+               std::shared_ptr<dragonradio::signal::RationalResampler<I,O>>>(m, name)
+        .def_property_readonly("interpolation_rate",
+            &dragonradio::signal::RationalResampler<I,O>::getInterpolationRate,
+            "int: Interpolation rate")
+        .def_property_readonly("decimation_rate",
+            &dragonradio::signal::RationalResampler<I,O>::getDecimationRate,
+            "int: Decimation rate")
+        ;
+}
+
 template <class I, class O, class C>
 void exportLiquidMSResamp(py::module &m, const char *name)
 {
@@ -61,7 +76,13 @@ void exportLiquidMSResamp(py::module &m, const char *name)
                       unsigned,
                       double,
                       double,
-                      unsigned>())
+                      unsigned>(),
+            "Construct a liquid-dsp mult-stage resampler",
+            py::arg("rate"),
+            py::arg("m"),
+            py::arg("fs"),
+            py::arg("As"),
+            py::arg("npfb"))
         ;
 }
 
@@ -91,7 +112,10 @@ void exportDragonUpsampler(py::module &m, const char *name)
                Resampler<T,T>,
                std::shared_ptr<dragonradio::signal::pfb::Upsampler<T,C>>>(m, name)
         .def(py::init<unsigned,
-                      const std::vector<C>&>())
+                      const std::vector<C>&>(),
+            "Construct a polyphase upsampler",
+            py::arg("l"),
+            py::arg("taps") = std::vector<C>{1.0})
         ;
 }
 
@@ -103,7 +127,10 @@ void exportDragonDownsampler(py::module &m, const char *name)
                Resampler<T,T>,
                std::shared_ptr<dragonradio::signal::pfb::Downsampler<T,C>>>(m, name)
         .def(py::init<unsigned,
-                      const std::vector<C>&>())
+                      const std::vector<C>&>(),
+            "Construct a polyphase downsampler",
+            py::arg("m"),
+            py::arg("taps") = std::vector<C>{1.0})
         ;
 }
 
@@ -112,20 +139,20 @@ void exportDragonRationalResampler(py::module &m, const char *name)
 {
     py::class_<dragonradio::signal::pfb::RationalResampler<T,C>,
                Pfb<T,C>,
-               Resampler<T,T>,
+               dragonradio::signal::RationalResampler<T,T>,
                std::shared_ptr<dragonradio::signal::pfb::RationalResampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       unsigned,
-                      const std::vector<C>&>())
+                      const std::vector<C>&>(),
+            "Construct a polyphase rational resampler",
+            py::arg("l"),
+            py::arg("m"),
+            py::arg("taps") = std::vector<C>{1.0})
         .def(py::init<double,
-                      const std::vector<C>&>())
-        .def(py::init<double>())
-        .def_property_readonly("up_rate",
-            &dragonradio::signal::pfb::RationalResampler<T,C>::getUpRate,
-            "Upsample rate")
-        .def_property_readonly("down_rate",
-            &dragonradio::signal::pfb::RationalResampler<T,C>::getDownRate,
-            "Downsample rate")
+                      const std::vector<C>&>(),
+            "Construct a polyphase rational resampler",
+            py::arg("rate"),
+            py::arg("taps") = std::vector<C>{1.0})
         ;
 }
 
@@ -143,10 +170,19 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
         .def(py::init<unsigned,
                       unsigned,
                       double,
-                      const std::vector<C>&>())
+                      const std::vector<C>&>(),
+            "Construct a polyphase mixing rational resampler",
+            py::arg("l"),
+            py::arg("m"),
+            py::arg("rad"),
+            py::arg("taps") = std::vector<C>{1.0})
         .def(py::init<double,
                       double,
-                      const std::vector<C>&>())
+                      const std::vector<C>&>(),
+            "Construct a polyphase mixing rational resampler",
+            py::arg("rate"),
+            py::arg("rad"),
+            py::arg("taps") = std::vector<C>{1.0})
         .def_property("shift",
             &dragonradio::signal::pfb::MixingRationalResampler<T,C>::getFreqShift,
             &dragonradio::signal::pfb::MixingRationalResampler<T,C>::setFreqShift,
@@ -199,6 +235,7 @@ void exportResamplers(py::module &m)
     using F = float;
 
     exportResampler<C,C>(m, "ResamplerCC");
+    exportRationalResampler<C,C>(m, "RationalResamplerCC");
     exportLiquidMSResamp<C,C,F>(m, "LiquidMSResampCCF");
 
     exportDragonPfb<C,F>(m, "PfbCCF");
