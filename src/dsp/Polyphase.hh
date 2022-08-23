@@ -16,7 +16,9 @@
 #include "dsp/TableNCO.hh"
 #include "dsp/Window.hh"
 
-namespace dragonradio::signal {
+namespace dragonradio::signal::pfb {
+
+using dragonradio::signal::Resampler;
 
 /** @brief A polyphase filter bank
  * @tparam T The type of samples
