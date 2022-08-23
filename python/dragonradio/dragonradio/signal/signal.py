@@ -32,24 +32,24 @@ def mixUp(sig: ArrayLike, theta: float) -> np.ndarray:
 
     Args:
         sig (np.ndarray): Signal to mix
-        theta (float): Frequency to mix. Should be of the form 2*np.pi*shift.
+        theta (float): Mixing frequency (normalized frequency)
 
     Returns:
         np.ndarray: Mixed signal.
     """
-    return sig*np.exp(theta*1j*(np.arange(0,len(sig))))
+    return sig*np.exp(2*np.pi*theta*1j*(np.arange(0,len(sig))))
 
 def mixDown(sig: ArrayLike, theta: float) -> np.ndarray:
     """Mix a signal down.
 
     Args:
         sig (np.ndarray): Signal to mix
-        theta (float): Frequency to mix. Should be of the form 2*np.pi*shift.
+        theta (float): Mixing frequency (normalized frequency)
 
     Returns:
         np.ndarray: Mixed signal.
     """
-    return sig*np.exp(-theta*1j*(np.arange(0,len(sig))))
+    return sig*np.exp(-2*np.pi*theta*1j*(np.arange(0,len(sig))))
 
 def sigpow(sig: ArrayLike) -> float:
     """Compute signal power.

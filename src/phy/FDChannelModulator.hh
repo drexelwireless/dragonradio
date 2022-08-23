@@ -29,7 +29,7 @@ public:
                        unsigned chanidx,
                        double tx_rate)
       : ChannelModulator(channel, chanidx, tx_rate)
-      , upsampler_(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, N*(channel.channel.fc/tx_rate))
+      , upsampler_(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, channel.channel.fc/tx_rate)
     {
     }
 

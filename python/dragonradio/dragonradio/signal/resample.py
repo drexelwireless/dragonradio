@@ -12,8 +12,8 @@ import dragonradio.signal
 Resampler = Callable[[int, int, ArrayLike, ArrayLike, float], np.ndarray]
 """The type of a resampler"""
 
-def resample_and_filter(sig: ArrayLike, rate: float, fshift: float, resample: Resampler, numtaps: int, ftype: str='ls'):
-    if rate == 1 and fshift == 0:
+def resample_and_filter(sig: ArrayLike, rate: float, theta: float, resample: Resampler, numtaps: int, ftype: str='ls'):
+    if rate == 1 and theta == 0:
         return sig
 
     # Determine interpolation and decimation rates
@@ -25,13 +25,13 @@ def resample_and_filter(sig: ArrayLike, rate: float, fshift: float, resample: Re
     # Create lowpass filter
     h = dragonradio.signal.lowpass(wp=0.95*ws, ws=ws, fs=1.0, numtaps=numtaps, ftype=ftype)
 
-    return resample(frate.numerator, frate.denominator, h, sig, fshift=fshift)
+    return resample(frate.numerator, frate.denominator, h, sig, theta)
 
-def upsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> np.ndarray:
+def upsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
     if q != 1:
         raise ValueError("upsample: can only upsample")
 
-    if fshift != 0:
+    if theta != 0:
         raise ValueError("upsample: cannot frequency shift")
 
     resampler = dragonradio.signal.UpsamplerCCC(p)
@@ -47,11 +47,11 @@ def upsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> n
 
     return resampled
 
-def downsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> np.ndarray:
+def downsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
     if p != 1:
         raise ValueError("downsample: can only downsample")
 
-    if fshift != 0:
+    if theta != 0:
         raise ValueError("downsample: cannot frequency shift")
 
     resampler = dragonradio.signal.DownsamplerCCC(q)
@@ -67,13 +67,13 @@ def downsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) ->
 
     return resampled
 
-def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> np.ndarray:
+def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
     resampler = dragonradio.signal.RationalResamplerCCC(p/q)
     resampler.taps = h
 
-    if fshift != 0 and p/q < 1.0:
+    if theta != 0 and p/q < 1.0:
         # Frequency shift
-        nco = dragonradio.signal.TableNCO(fshift)
+        nco = dragonradio.signal.TableNCO(2*math.pi*theta)
         sig = nco.mix_down(sig)
 
     # Append samples to compensate for filter
@@ -84,15 +84,15 @@ def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> n
     # Remove prefix consisting of transient samples
     resampled = resampled[delay//q:]
 
-    if fshift != 0 and p/q > 1.0:
+    if theta != 0 and p/q > 1.0:
         # Frequency shift
-        nco = dragonradio.signal.TableNCO(fshift)
+        nco = dragonradio.signal.TableNCO(2*math.pi*theta)
         resampled = nco.mix_up(resampled)
 
     return resampled
 
-def resample_and_mix(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> np.ndarray:
-    resampler = dragonradio.signal.MixingRationalResamplerCCC(p/q, fshift, h)
+def resample_and_mix(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
+    resampler = dragonradio.signal.MixingRationalResamplerCCC(p/q, theta, h)
 
     # Append samples to compensate for filter delay
     delay = int(resampler.delay)
@@ -105,7 +105,7 @@ def resample_and_mix(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float
     # Remove prefix consisting of transient samples
     return resampled[delay//q:]
 
-def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, fshift: float=0, P: int=25*128+1) -> np.ndarray:
+def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, theta: float=0, P: int=25*128+1) -> np.ndarray:
     if D != 1:
         raise ValueError("fdupsample: can only upsample")
 
@@ -119,7 +119,7 @@ def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, fshift: float=0, P
     L = N - (P-1)
 
     # Number of FFT bins to rotate
-    Nrot = int(N*(fshift/(2*math.pi)))
+    Nrot = int(N*theta)
 
     # Perform mixing, convolution, and interpolation in frequency space
     off = 0
@@ -154,7 +154,7 @@ def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, fshift: float=0, P
     # Compensate for upsampling by multiplying by interpolation factor
     return upsampled*U
 
-def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, fshift: float=0, P: int=25*128+1) -> np.ndarray:
+def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, P: int=25*128+1) -> np.ndarray:
     if U != 1:
         raise ValueError("fddownsample: can only downsample")
 
@@ -171,7 +171,7 @@ def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, fshift: float=0, 
     H = np.fft.fft(h, N)
 
     # Number of FFT bins to rotate
-    Nrot = int(N*(fshift/(2*math.pi)))
+    Nrot = int(N*theta)
 
     # Perform mixing, convolution, and decimation in frequency space
     off = 0
@@ -209,7 +209,7 @@ def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, fshift: float=0, 
     # Correct for tail end of signal
     return downsampled[:len(sig)//D]
 
-def fdresample(U: int, D: int, h: Optional[np.ndarray], sig: np.ndarray, fshift: float=0, P: int=2**7*3*5**3*7+1):
+def fdresample(U: int, D: int, h: Optional[np.ndarray], sig: np.ndarray, theta: float=0, P: int=2**7*3*5**3*7+1):
     # Overlap factor
     V = 4
 
@@ -227,7 +227,7 @@ def fdresample(U: int, D: int, h: Optional[np.ndarray], sig: np.ndarray, fshift:
         raise ValueError(f"Decimation rate must divide FFT size, but {D:} does not divide {N:}")
 
     # Compute and validate number of frequency bins to rotate
-    Nrot = N*(fshift/(2*math.pi))
+    Nrot = N*theta
 
     if U/D < 1.0:
         Nrot /= U
