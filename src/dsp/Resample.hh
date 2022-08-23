@@ -8,6 +8,8 @@
 
 #include "IQBuffer.hh"
 
+namespace dragonradio::signal {
+
 /** @brief Resample a signal
  * @tparam I Type of input signal values
  * @tparam O Type of output signal values
@@ -73,5 +75,7 @@ public:
         return out;
     }
 };
+
+}
 
 #endif /* RESAMPLE_HH_ */

@@ -11,6 +11,8 @@
 #include "liquid/Resample.hh"
 #include "python/PyModules.hh"
 
+using dragonradio::signal::Resampler;
+
 template <class I, class O>
 void exportResampler(py::module &m, const char *name)
 {
@@ -51,7 +53,9 @@ void exportResampler(py::module &m, const char *name)
 template <class I, class O, class C>
 void exportLiquidMSResamp(py::module &m, const char *name)
 {
-    py::class_<liquid::MultiStageResampler<I,O,C>, Resampler<I,O>, std::shared_ptr<liquid::MultiStageResampler<I,O,C>>>(m, name)
+    py::class_<liquid::MultiStageResampler<I,O,C>,
+               Resampler<I,O>,
+               std::shared_ptr<liquid::MultiStageResampler<I,O,C>>>(m, name)
         .def(py::init<double,
                       unsigned,
                       double,
@@ -81,7 +85,10 @@ void exportDragonPfb(py::module &m, const char *name)
 template <class T, class C>
 void exportDragonUpsampler(py::module &m, const char *name)
 {
-    py::class_<dragonradio::signal::Upsampler<T,C>, dragonradio::signal::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<dragonradio::signal::Upsampler<T,C>>>(m, name)
+    py::class_<dragonradio::signal::Upsampler<T,C>,
+               dragonradio::signal::Pfb<T,C>,
+               Resampler<T,T>,
+               std::shared_ptr<dragonradio::signal::Upsampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       const std::vector<C>&>())
         ;
@@ -90,7 +97,10 @@ void exportDragonUpsampler(py::module &m, const char *name)
 template <class T, class C>
 void exportDragonDownsampler(py::module &m, const char *name)
 {
-    py::class_<dragonradio::signal::Downsampler<T,C>, dragonradio::signal::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<dragonradio::signal::Downsampler<T,C>>>(m, name)
+    py::class_<dragonradio::signal::Downsampler<T,C>,
+               dragonradio::signal::Pfb<T,C>,
+               Resampler<T,T>,
+               std::shared_ptr<dragonradio::signal::Downsampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       const std::vector<C>&>())
         ;
@@ -99,7 +109,10 @@ void exportDragonDownsampler(py::module &m, const char *name)
 template <class T, class C>
 void exportDragonRationalResampler(py::module &m, const char *name)
 {
-    py::class_<dragonradio::signal::RationalResampler<T,C>, dragonradio::signal::Pfb<T,C>, Resampler<T,T>, std::shared_ptr<dragonradio::signal::RationalResampler<T,C>>>(m, name)
+    py::class_<dragonradio::signal::RationalResampler<T,C>,
+               dragonradio::signal::Pfb<T,C>,
+               Resampler<T,T>,
+               std::shared_ptr<dragonradio::signal::RationalResampler<T,C>>>(m, name)
         .def(py::init<unsigned,
                       unsigned,
                       const std::vector<C>&>())
