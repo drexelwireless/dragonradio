@@ -12,39 +12,120 @@
 #include <xsimd/stl/algorithms.hpp>
 
 #include "dsp/FFTW.hh"
+#include "dsp/Resample.hh"
 
-template <typename T, unsigned P, unsigned V>
-class FDUpsampler
+namespace dragonradio::signal {
+
+/** @brief An overlap-save frequency domain upsampler
+ * @tparam T The type of signal values
+ * @tparam P_ The filter length
+ * @tparam V_ The overlap factor
+ */
+template <typename T, unsigned P_=128*3*25+1, unsigned V_=8>
+class FDUpsampler : public Resampler<T,T>
 {
 public:
+    using Resampler<T,T>::resample;
+
+    /** @brief Filter length */
+    static constexpr unsigned P = P_;
+
+    /** @brief Overlap factor */
+    static constexpr unsigned V = V_;
+
+    /** @brief Length of FFT */
+    static constexpr unsigned N = V*(P-1);
+
+    /** @brief Size of FFT overlap */
+    static constexpr unsigned O = P-1;
+
+    /** @brief Number of new samples consumed per input block */
+    static constexpr unsigned L = N-O;
+
+    /** @brief Construct a frequency domain upsampler
+     * @param X_ The oversample factor
+     * @param I_ The interpolation factor
+     * @param theta The frequency shift (normalized frequency)
+     */
     FDUpsampler(unsigned X_, unsigned I_, double theta)
       : X(X_)
       , I(I_)
-      , Nrot(N*theta)
       , fft(X*N/I, FFTW_FORWARD, FFTW_MEASURE)
+      , ifft(N, FFTW_BACKWARD, FFTW_MEASURE)
     {
-        const int n = N/I; // Size of input block, not counting oversampling
+        if (fabs(N*theta - round(N*theta)) > 1e-10) {
+            std::stringstream msg;
 
-        if (Nrot > 0)
-            assert(Nrot >= n/2);
+            msg << "Cannot shift a fractional number of frequency bins: N="
+                << N << "; theta=" << theta <<"; bins=" << N*theta;
 
+            throw std::range_error(msg.str());
+        }
+
+        if (N % I != 0) {
+            std::stringstream msg;
+
+            msg << "Interpolation rate " << I
+                << " must evenly divide FFT size " << N;
+
+            throw std::range_error(msg.str());
+        }
+
+        // Determine number of bins to rotate
+        Nrot = round(N*theta);
         if (Nrot < 0)
-            assert(Nrot <= n/2);
+            Nrot += N;
 
         reset();
     }
 
     FDUpsampler() = delete;
 
-    void reset(size_t npartial = 0)
+    virtual ~FDUpsampler() = default;
+
+    double getRate(void) const override
+    {
+        return I;
+    }
+
+    double getDelay(void) const override
+    {
+        return 0;
+    }
+
+    size_t neededOut(size_t count) const override
+    {
+        const unsigned Li = X*L/I; // Number of samples consumed per input block
+
+        return L*((count + Li - 1)/Li);
+    }
+
+    void reset() override
+    {
+        reset(0);
+    }
+
+    size_t resample(const T* in, size_t count, T* out) override
+    {
+        return resample(in, count, out, 1.0f);
+    }
+
+    /** @brief Reset the upsampler state
+     * @param offset The offset at which samples should be output
+     */
+    /** The first offset samples output will be zero */
+    void reset(size_t offset)
     {
         const unsigned Oi = X*O/I; // Overlap factor for input FFT
 
-        fftoff = Oi + npartial;
+        fftoff = Oi + offset;
         std::fill(fft.in.begin(), fft.in.begin() + fftoff, 0);
     }
 
-    void upsampleBlock(T *out)
+    /** @brief Upsample a frequency domain block of data
+     * @param out The buffer that will contain the upsampled frequency domain data.
+     */
+    void upsampleBlock(T out[N])
     {
         const unsigned Ni = X*N/I; // Size of forward FFT for input
         const int      n = N/I;    // Size of input block, not counting
@@ -96,20 +177,117 @@ public:
         }
     }
 
-    size_t upsample(const T *in,
+    /** @brief Resample a signal
+     * @param in Input signal
+     * @param count Number of input samples
+     * @param out Buffer for upsampled signal
+     * @param g Gain (linear)
+     * @return Number of samples output
+     */
+    size_t resample(const T* in,
                     size_t count,
-                    T *out,
+                    T* out,
+                    float g)
+    {
+        const unsigned Ni = X*N/I;   // Size of forward FFT for input
+        const unsigned Li = X*L/I;   // Number of samples consumed per input block
+        size_t         inoff = 0;    // Offset into input buffer
+        size_t         nsamples = 0; // Number of samples output
+
+        // The upsampled signal is multiplied by this constant. It incorporates:
+        //   * The requested gain
+        //   * Scaling compensation for the FFT
+        const float k = g/static_cast<float>(Ni);
+
+        // Reset upsampler state
+        reset();
+
+        // Set all upsampled FFT bins to 0. We only copy values into a subset of
+        // the bins, so this ensures the rest are 0.
+        std::fill(ifft.in.begin(), ifft.in.end(), 0);
+
+        while (inoff < count) {
+            size_t avail = count - inoff;
+
+            if (fftoff + avail < Ni) {
+                std::copy(in + inoff,
+                          in + inoff + avail,
+                          fft.in.begin() + fftoff);
+
+                std::fill(fft.in.begin() + fftoff + avail,
+                          fft.in.end(),
+                          0);
+            } else {
+                std::copy(in + inoff,
+                          in + inoff + Ni - fftoff,
+                          fft.in.begin() + fftoff);
+            }
+
+            // Perform the FFT
+            fft.execute();
+
+            // Normalize by k
+            xsimd::transform(fft.out.begin(),
+                             fft.out.end(),
+                             fft.out.begin(),
+                [k](const auto& x) { return x*k; });
+
+            // Copy FFT buffer to output, upsampling and frequency shifting by
+            // shifting bins.
+            upsampleBlock(ifft.in.data());
+
+            // Perform inverse FFT to convert back to time domain
+            ifft.execute();
+
+            // Copy time-domain data into IQ buffer
+            if (fftoff + avail < Ni) {
+                std::copy(ifft.out.begin() + O,
+                          ifft.out.begin() + I*(fftoff + avail)/X,
+                          out + nsamples);
+
+                nsamples += I*(fftoff + avail)/X - O;
+
+                break;
+            } else {
+                std::copy(ifft.out.begin() + O,
+                          ifft.out.end(),
+                          out + nsamples);
+
+                nsamples += L;
+                inoff += Li - fftoff;
+                fftoff = 0;
+            }
+        }
+
+        //assert(I*count/X == nsamples);
+        return nsamples;
+    }
+
+    /** @brief Incrementally upsample time domain data
+     * @param in Input buffer containing signal to upsample
+     * @param count Number of input samples
+     * @param out Frequency domain output buffer
+     * @param g Gain (linear)
+     * @param flush Flush remaining samples in FFT with zeros (no more signal)
+     * @param nsamples The number of valid UN-overlapped time-domain samples
+     * represented by the FFT blocks in the frequency domain buffer.
+     * @param max_nsamples Maximum number of time-domain samples.
+     * @param fdnsamples Number of valid samples in the frequency-domain buffer.
+     * Always a multiple of N.
+     * @return Offset of first unconsumed sample in input buffer
+     */
+    size_t upsample(const T* in,
+                    size_t count,
+                    T* out,
                     const float g,
                     bool flush,
-                    size_t &nsamples,
+                    size_t& nsamples,
                     size_t max_nsamples,
-                    size_t &fdnsamples)
+                    size_t& fdnsamples)
     {
         const unsigned Ni = X*N/I; // Size of forward FFT for input
         const unsigned Li = X*L/I; // Number of samples consumed per input block
-        const unsigned Oi = X*O/I; // Overlap factor for input FFT
         size_t         inoff = 0;  // Offset into input buffer
-        auto           fftin = fft.in.begin();
 
         // The upsampled signal is multiplied by this constant. It incorporates:
         //   * The requested gain
@@ -119,11 +297,15 @@ public:
         while (nsamples < max_nsamples) {
             size_t avail = count - inoff;
 
+            // If we don't have enough samples for a full FFT block...
             if (fftoff + avail < Ni) {
                 std::copy(in + inoff,
                           in + inoff + avail,
-                          fftin + fftoff);
+                          fft.in.begin() + fftoff);
 
+                // If we are flushing the signal, fill the rest of FFT block
+                // with zeros. Otherwise, return immediately so we can process a
+                // full block when more data is available.
                 if (flush) {
                     std::fill(fft.in.begin() + fftoff + avail,
                               fft.in.end(),
@@ -136,7 +318,7 @@ public:
             } else {
                 std::copy(in + inoff,
                           in + inoff + Ni - fftoff,
-                          fftin + fftoff);
+                          fft.in.begin() + fftoff);
             }
 
             // Perform the FFT
@@ -153,12 +335,14 @@ public:
             upsampleBlock(out + fdnsamples);
             fdnsamples += N;
 
-            // If the FFT buffer held up to Ni - Oi samples, we can get all the
-            // data we need for the next FFT from the input buffer.
+            // If we flushed a partial block, return.
             //
-            // Otherwise we need to reuse some of the data in the current FFT
-            // buffer in the next round.
-            if (fftoff + avail < Ni - Oi) {
+            // If the FFT buffer held up to Li samples, we can get all the
+            // overlap data we need for the next FFT from the input buffer.
+            //
+            // Otherwise, we need to reuse some of the data in the current FFT
+            // buffer for the overlap.
+            if (fftoff + avail < Ni) {
                 inoff += avail;
                 fftoff += avail;
                 nsamples += I*fftoff/X - O;
@@ -169,7 +353,7 @@ public:
                 fftoff = 0;
                 nsamples += L;
             } else {
-                std::copy(fft.in.begin() + Ni - 2*Oi,
+                std::copy(fft.in.begin() + Li,
                           fft.in.end(),
                           fft.in.begin());
                 fftoff -= Li;
@@ -188,15 +372,6 @@ public:
         return n > O ? n - O : 0;
     }
 
-    /** @brief Length of FFT */
-    static constexpr unsigned N = V*(P-1);
-
-    /** @brief Size of FFT overlap */
-    static constexpr unsigned O = P-1;
-
-    /** @brief Number of new samples consumed per input block */
-    static constexpr unsigned L = N - 2*O;
-
     /** @brief Oversample factor */
     const unsigned X;
 
@@ -204,10 +379,13 @@ public:
     const unsigned I;
 
     /** @brief Number of bins to rotate */
-    const int Nrot;
+    int Nrot;
 
     /** @brief FFT */
     fftw::FFT<T> fft;
+
+    /** @brief Inverse FFT */
+    fftw::FFT<T> ifft;
 
     /** @brief Offset into FFT input at which to place new data */
     size_t fftoff;
@@ -220,11 +398,11 @@ public:
         {
         }
 
-        size_t toTimeDomain(const T *in, size_t count, T *out)
+        size_t toTimeDomain(const T* in, size_t count, T* out)
         {
             size_t outoff = 0;
 
-            for (; count >= N; count -= N, in += N) {
+            while (count >= N) {
                 // Copy data into IFFT buffer
                 std::copy(in, in + N, ifft.in.begin());
 
@@ -233,8 +411,11 @@ public:
 
                 // Copy time-domain data into IQ buffer
                 std::copy(ifft.out.begin() + O,
-                          ifft.out.end() - O,
+                          ifft.out.end(),
                           out + outoff);
+
+                count -= N;
+                in += N;
                 outoff += L;
             }
 
@@ -244,7 +425,8 @@ public:
         /** @brief FFT */
         fftw::FFT<T> ifft;
     };
-
 };
+
+}
 
 #endif /* FDUPSAMPLER_HH_ */

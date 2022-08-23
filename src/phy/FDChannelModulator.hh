@@ -21,7 +21,7 @@ public:
     /** @brief Overlap factor */
     static constexpr unsigned V = 8;
 
-    using Upsampler = FDUpsampler<C,P,V>;
+    using Upsampler = dragonradio::signal::FDUpsampler<C,P,V>;
 
     static constexpr auto N = Upsampler::N;
 
