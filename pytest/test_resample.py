@@ -16,6 +16,12 @@ resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.re
                                                            dragonradio.signal.fdresample])
 """A resampler"""
 
+upsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.upsample])
+"""An upsampler"""
+
+downsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.downsample])
+"""An downsampler"""
+
 def rms(xs: ArrayLike):
    return np.sqrt(np.mean(xs * np.conj(xs)).real)
 
@@ -39,17 +45,7 @@ class TestResampling(TestCase):
 
         self.assertLessEqual(err, 0.1)
 
-    @given(Fc=st.sampled_from([-450e3, -300e3, -100e3, -50e3, 1e2, 1e3, 10e3, 100e3, 110e3, 300e3, 400e3, 450e3]),
-           rate=st.sampled_from([1/2, 1/3, 2/3, 1/4, 3/4, 1/5, 2/5, 1/10, 1.0, 5/4, 3/2, 2.0, 3.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0]),
-           resample=resampler)
-    @example(Fc=450e3,
-             rate=50.0,
-             resample=dragonradio.signal.fdresample)
-    @settings(deadline=None)
-    def test_tone(self, Fc: float, rate: float, resample: Resampler):
-        Fs = 1e6
-        n = 100000
-
+    def _test_tone(self, Fs: float, Fc: float, rate: float, n: int, resample: Resampler):
         assume(abs(Fc) < 0.95*rate*Fs/2)
 
         sig1 = dragonradio.signal.tone(Fc, Fs, n)
@@ -61,3 +57,27 @@ class TestResampling(TestCase):
         err = rms(resampled[:n] - sig2[:n])
 
         self.assertLessEqual(err, 0.1)
+
+    @given(Fc=st.sampled_from([-450e3, -300e3, -100e3, -50e3, 1e2, 1e3, 10e3, 100e3, 110e3, 300e3, 400e3, 450e3]),
+           rate=st.sampled_from([1/2, 1/3, 2/3, 1/4, 3/4, 1/5, 2/5, 1/10, 1.0, 5/4, 3/2, 2.0, 3.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0]),
+           resample=resampler)
+    @example(Fc=450e3,
+             rate=50.0,
+             resample=dragonradio.signal.fdresample)
+    @settings(deadline=None)
+    def test_tone(self, Fc: float, rate: float, resample: Resampler):
+        self._test_tone(Fs=1e6, Fc=Fc, rate=rate, n=100000, resample=resample)
+
+    @given(Fc=st.sampled_from([-450e3, -300e3, -100e3, -50e3, 1e2, 1e3, 10e3, 100e3, 110e3, 300e3, 400e3, 450e3]),
+           rate=st.sampled_from([1, 2, 3, 5, 10, 15, 20, 25, 30, 40, 50]),
+           resample=upsampler)
+    @settings(deadline=None)
+    def test_upsample_tone(self, Fc: float, rate: float, resample: Resampler):
+        self._test_tone(Fs=1e6, Fc=Fc, rate=rate, n=100000, resample=resample)
+
+    @given(Fc=st.sampled_from([-450e3, -300e3, -100e3, -50e3, 1e2, 1e3, 10e3, 100e3, 110e3, 300e3, 400e3, 450e3]),
+           rate=st.sampled_from([1/2, 1/3, 1/4, 1/5, 1/10, 1/20, 1/25, 1/50]),
+           resample=downsampler)
+    @settings(deadline=None)
+    def test_downsample_tone(self, Fc: float, rate: float, resample: Resampler):
+        self._test_tone(Fs=1e6, Fc=Fc, rate=rate, n=100000, resample=resample)
