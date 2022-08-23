@@ -42,7 +42,7 @@ private:
           , seq_(0)
           , delay_(round((channel.taps.size() - 1)/2.0))
           , resamp_buf_(0)
-          , resamp_(rate_, 2*M_PI*channel.channel.fc/rx_rate, channel.taps)
+          , resamp_(rate_, channel.channel.fc/rx_rate, channel.taps)
         {
         }
 

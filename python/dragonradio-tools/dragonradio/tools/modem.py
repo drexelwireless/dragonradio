@@ -1,6 +1,5 @@
 # Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
-import math
 from typing import List, Optional, Tuple
 
 import matplotlib.pyplot as plt
@@ -47,7 +46,7 @@ def modulate(hdr: Header, mcs: MCS, payload: bytes, cbw: float, Fc: float, Fs: f
         fig.plot(sig, title='Modulated signal')
 
     # Resample
-    resampled = resample_and_filter(sig, rate=Fs/cbw, fshift=2*math.pi*Fc/Fs, resample=resample, numtaps=numtaps)
+    resampled = resample_and_filter(sig, rate=Fs/cbw, theta=Fc/Fs, resample=resample, numtaps=numtaps)
 
     if plot:
         fig = PSDPlot(*plt.subplots(), nfft=1024)
@@ -72,7 +71,7 @@ def demodulate(sig: np.ndarray, cbw: float, Fc: float, Fs: float,
         Modulated and mixed signals.
     """
     # Resample
-    resampled = resample_and_filter(sig, rate=cbw/Fs, fshift=2*math.pi*Fc/Fs, resample=resample, numtaps=numtaps)
+    resampled = resample_and_filter(sig, rate=cbw/Fs, theta=Fc/Fs, resample=resample, numtaps=numtaps)
 
     # Plot resampled signal
     if plot:

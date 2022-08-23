@@ -1,7 +1,6 @@
 #! python
 from datetime import timedelta
 from fractions import Fraction
-import math
 from typing import Optional, Tuple
 from unittest import TestCase
 
@@ -69,8 +68,8 @@ def newflexframe_modem(draw, header_mcs: MCS) -> ModemPair:
 class TestModulation(TestCase):
     HEADER_MCS: MCS = MCS('crc32', 'secded7264', 'h84', 'bpsk')
 
-    def resample_and_filter(self, sig: ArrayLike, rate: float, fshift: float, resample: Resampler):
-        return dragonradio.signal.resample_and_filter(sig, rate, fshift, resample, numtaps=1201)
+    def resample_and_filter(self, sig: ArrayLike, rate: float, theta: float, resample: Resampler):
+        return dragonradio.signal.resample_and_filter(sig, rate, theta, resample, numtaps=1201)
 
     def run_modem(self,
                   hdr: Header,
@@ -95,10 +94,10 @@ class TestModulation(TestCase):
 
         if cbw != Fs:
             # Upsample
-            upsampled = self.resample_and_filter(sig, Fs/cbw, 2*math.pi*Fc/Fs, upsample)
+            upsampled = self.resample_and_filter(sig, Fs/cbw, Fc/Fs, upsample)
 
             # Downsample
-            downsampled = self.resample_and_filter(upsampled, cbw/Fs, 2*math.pi*Fc/Fs, downsample)
+            downsampled = self.resample_and_filter(upsampled, cbw/Fs, Fc/Fs, downsample)
 
             sig = downsampled
 

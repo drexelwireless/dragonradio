@@ -17,10 +17,10 @@ template <typename T, unsigned P, unsigned V>
 class FDUpsampler
 {
 public:
-    FDUpsampler(unsigned X_, unsigned I_, int Nrot_)
+    FDUpsampler(unsigned X_, unsigned I_, double theta)
       : X(X_)
       , I(I_)
-      , Nrot(Nrot_)
+      , Nrot(N*theta)
       , fft(X*N/I, FFTW_FORWARD, FFTW_MEASURE)
     {
         const int n = N/I; // Size of input block, not counting oversampling

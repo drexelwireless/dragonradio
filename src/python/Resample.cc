@@ -174,19 +174,19 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
             "Construct a polyphase mixing rational resampler",
             py::arg("l"),
             py::arg("m"),
-            py::arg("rad"),
+            py::arg("theta"),
             py::arg("taps") = std::vector<C>{1.0})
         .def(py::init<double,
                       double,
                       const std::vector<C>&>(),
             "Construct a polyphase mixing rational resampler",
             py::arg("rate"),
-            py::arg("rad"),
+            py::arg("theta"),
             py::arg("taps") = std::vector<C>{1.0})
-        .def_property("shift",
-            &dragonradio::signal::pfb::MixingRationalResampler<T,C>::getFreqShift,
-            &dragonradio::signal::pfb::MixingRationalResampler<T,C>::setFreqShift,
-            "Mixing frequency shift")
+        .def_property("theta",
+            &dragonradio::signal::pfb::MixingRationalResampler<T,C>::getTheta,
+            &dragonradio::signal::pfb::MixingRationalResampler<T,C>::setTheta,
+            "float: Mixing frequency shift (normalized frequency)")
         .def_property_readonly("bandpass_taps",
             &dragonradio::signal::pfb::MixingRationalResampler<T,C>::getBandpassTaps,
             "Prototype bandpass filter taps")

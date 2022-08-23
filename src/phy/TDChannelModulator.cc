@@ -10,7 +10,7 @@ void TDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
     const float g_effective = pkt->g*g;
 
     // Upsample if needed
-    if (upsampler_.getFreqShift() != 0.0 || upsampler_.getRate() != 1.0) {
+    if (upsampler_.getTheta() != 0.0 || upsampler_.getRate() != 1.0) {
         // Modulate the packet, but don't paply gain yet. We will apply gain
         // when we resample.
         mod_->modulate(std::move(pkt), 1.0f, mpkt);

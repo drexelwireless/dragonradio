@@ -429,12 +429,12 @@ public:
     /** @brief Construct a polyphase rational resampler
      * @param l The interpolation rate
      * @param m The decimation rate
-     * @param rad The frequency shift (radians)
+     * @param theta The frequency shift (normalized frequency)
      * @param taps The taps for the prototype FIR filter.
      */
-    MixingRationalResampler(unsigned l, unsigned m, double rad, const std::vector<C> &taps)
+    MixingRationalResampler(unsigned l, unsigned m, double theta, const std::vector<C> &taps)
       : RationalResampler<T,C>(l, m, taps)
-      , rad_(rad)
+      , theta_(theta)
       , nco_(0.0)
     {
         reconfigure();
@@ -442,12 +442,12 @@ public:
 
     /** @brief Construct a polyphase rational resampler
      * @param r The resampling rate
-     * @param rad The frequency shift (radians)
+     * @param theta The frequency shift (normalized frequency)
      * @param taps The taps for the prototype FIR filter.
      */
-    MixingRationalResampler(double r, double rad, const std::vector<C> &taps)
+    MixingRationalResampler(double r, double theta, const std::vector<C> &taps)
       : RationalResampler<T,C>(r, taps)
-      , rad_(rad)
+      , theta_(theta)
       , nco_(0.0)
     {
         reconfigure();
@@ -457,20 +457,21 @@ public:
 
     virtual ~MixingRationalResampler() = default;
 
-    /** @brief Get frequency shift in radians */
-    double getFreqShift(void)
+    /** @brief Get frequency shift (normalized frequency) */
+    double getTheta(void)
     {
-        return rad_;
+        return theta_;
     }
 
-    /** @brief Set frequency shift in radians
-     * @param rad Frequency shift with respect to the highest sample rate out of
-     * the input and output rates. The resampler will internally compensate for
-     * non-unity upsampler and downsampler rates.
+    /** @brief Set frequency shift (normalized frequency)
+     * @param theta Frequency shift (normalized frequency).
      */
-    void setFreqShift(double rad)
+    /** The resampler will internally compensate for non-unity upsampler and
+     * downsampler rates.
+     */
+    void setTheta(double theta)
     {
-        rad_ = rad;
+        theta_ = theta;
         reconfigure();
     }
 
@@ -542,8 +543,8 @@ public:
     }
 
 protected:
-    /** @brief Frequency shift in radians */
-    double rad_;
+    /** @brief Frequency shift (normalized frequency) */
+    double theta_;
 
     /** @brief NCO used for mixing */
     TableNCO<> nco_;
@@ -556,8 +557,8 @@ protected:
         // lowpass filter into a bandpass filter. The frequency shift is
         // specified at the higher of the input and output rates, so we have to
         // compensate appropriately.
-        TableNCO nco(rate > 1.0 ? rad_/static_cast<double>(m_)
-                                : rad_/static_cast<double>(l_));
+        TableNCO nco(rate > 1.0 ? 2*M_PI*theta_/static_cast<double>(m_)
+                                : 2*M_PI*theta_/static_cast<double>(l_));
 
         adjtaps_.resize(taps_.size());
 
@@ -570,9 +571,9 @@ protected:
 
         // And finally we reset the NCO
         if (rate > 1.0)
-            nco_.reset(rad_*static_cast<double>(l_)/static_cast<double>(m_));
+            nco_.reset(2*M_PI*theta_*static_cast<double>(l_)/static_cast<double>(m_));
         else
-            nco_.reset(rad_*static_cast<double>(m_)/static_cast<double>(l_));
+            nco_.reset(2*M_PI*theta_*static_cast<double>(m_)/static_cast<double>(l_));
     }
 };
 

@@ -360,7 +360,7 @@ MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(const PHYC
                                                                       unsigned chanidx,
                                                                       double tx_rate)
   : ChannelModulator(channel, chanidx, tx_rate)
-  , Upsampler(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, N*(channel.channel.fc/tx_rate))
+  , Upsampler(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, channel.channel.fc/tx_rate)
   , fdbuf(nullptr)
   , delay(0)
   , nsamples(0)
