@@ -154,10 +154,7 @@ def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, theta: float=0, P:
     # Compensate for upsampling by multiplying by interpolation factor
     return upsampled*U
 
-def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, P: int=25*128+1) -> np.ndarray:
-    if U != 1:
-        raise ValueError("fddownsample: can only downsample")
-
+def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, P: int=128*3*25+1) -> np.ndarray:
     # Overlap factor
     V = 4
 
@@ -165,10 +162,23 @@ def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, P
     N = V*(P-1)
 
     # Number of new samples consumed per input block
-    L = N - (P-1)
+    L = N-(P-1)
+
+    # Validate rates
+    if U != 1:
+        raise ValueError("Interpolation rate must be 1")
+
+    if N % D != 0:
+        raise ValueError(f"Decimation rate must divide FFT size, but {D:} does not divide {N:}")
+
+    if theta*N % 1.0 != 0:
+        raise ValueError(f"Frequency shift must consist of integer number of FFT bins, but {N*theta:} is not an integer")
 
     # Compute frequency-space filter
     H = np.fft.fft(h, N)
+
+    # Compensate for size difference between input FFT (N) and output FFT (D).
+    H /= D
 
     # Number of FFT bins to rotate
     Nrot = int(N*theta)
@@ -202,12 +212,15 @@ def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, P
         for i in range (0, D):
             XD += X2[i*N//D:(i+1)*N//D]
 
+        # Perform inverse FFT
         y = np.fft.ifft(XD, N//D)
 
         downsampled = np.append(downsampled, y[(P-1)//D:N//D])
 
     # Correct for tail end of signal
-    return downsampled[:len(sig)//D]
+    delay = (len(h)-1)//2
+
+    return downsampled[delay//D:(delay+len(sig)*U)//D]
 
 def fdresample(U: int, D: int, h: Optional[np.ndarray], sig: np.ndarray, theta: float=0, P: int=2**7*3*5**3*7+1):
     # Overlap factor
