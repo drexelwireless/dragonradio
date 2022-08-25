@@ -104,3 +104,35 @@ def resample_and_mix(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=
 
     # Remove prefix consisting of transient samples
     return resampled[delay//q:]
+
+def fdupsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
+    if D != 1:
+        raise ValueError("fdupsample_native: can only upsample")
+
+    resampler = dragonradio.signal.FDUpsamplerCCC(1, U, theta)
+
+    # Append samples to compensate for filter
+    delay = int(resampler.delay)
+
+    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+
+    # Remove prefix consisting of transient samples
+    resampled = resampled[delay//U:]
+
+    return resampled
+
+def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
+    if U != 1:
+        raise ValueError("fddownsample: can only downsample")
+
+    resampler = dragonradio.signal.FDDownsamplerCCC(1, D, theta, h)
+
+    # Append samples to compensate for filter
+    delay = int(resampler.delay)
+
+    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+
+    # Remove prefix consisting of transient samples
+    resampled = resampled[delay//D:]
+
+    return resampled
