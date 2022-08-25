@@ -18,10 +18,12 @@ resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.re
 """A resampler"""
 
 upsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.upsample,
+                                                           dragonradio.signal.fdupsample,
                                                            pyresample.fdupsample])
 """An upsampler"""
 
 downsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.downsample,
+                                                             dragonradio.signal.fddownsample,
                                                              pyresample.fddownsample])
 """An downsampler"""
 
