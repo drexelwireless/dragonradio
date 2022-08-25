@@ -105,10 +105,7 @@ def resample_and_mix(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=
     # Remove prefix consisting of transient samples
     return resampled[delay//q:]
 
-def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, theta: float=0, P: int=25*128+1) -> np.ndarray:
-    if D != 1:
-        raise ValueError("fdupsample: can only upsample")
-
+def fdupsample(U: int, D: int, h: Optional[ArrayLike], sig: ArrayLike, theta: float=0, P: int=128*3*25+1) -> np.ndarray:
     # Overlap factor
     V = 4
 
@@ -116,7 +113,17 @@ def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, theta: float=0, P:
     N = V*(P-1)
 
     # Number of new samples consumed per input block
-    L = N - (P-1)
+    L = N-(P-1)
+
+    # Validate rates
+    if D != 1:
+        raise ValueError("Decimation rate must be 1")
+
+    if N % U != 0:
+        raise ValueError(f"Decimation rate must divide FFT size, but {D:} does not divide {N:}")
+
+    if theta*N % 1.0 != 0:
+        raise ValueError(f"Frequency shift must consist of integer number of FFT bins, but {N*theta:} is not an integer")
 
     # Number of FFT bins to rotate
     Nrot = int(N*theta)
@@ -140,6 +147,7 @@ def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, theta: float=0, P:
 
         # Interpolate
         XU = np.zeros(N, dtype='complex128')
+
         XU[:N//U//2] = X[:N//U//2]
         XU[N-(N//U//2):] = X[N//U-(N//U//2):]
 
@@ -151,8 +159,10 @@ def fdupsample(U: int, D: int, _h: ArrayLike, sig: ArrayLike, theta: float=0, P:
 
         upsampled = np.append(upsampled, y[(P-1):N])
 
-    # Compensate for upsampling by multiplying by interpolation factor
-    return upsampled*U
+    # Compensate for interpolation
+    upsampled *= U
+
+    return upsampled
 
 def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, P: int=128*3*25+1) -> np.ndarray:
     # Overlap factor
