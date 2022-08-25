@@ -1,8 +1,8 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
-#ifndef FDRESAMPLE_HH_
-#define FDRESAMPLE_HH_
+#ifndef FDUPSAMPLER_HH_
+#define FDUPSAMPLER_HH_
 
 #include <assert.h>
 
@@ -247,4 +247,4 @@ public:
 
 };
 
-#endif /* FDRESAMPLE_HH_ */
+#endif /* FDUPSAMPLER_HH_ */

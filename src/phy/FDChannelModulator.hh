@@ -4,7 +4,7 @@
 #ifndef FDCHANNELMODULATOR_H_
 #define FDCHANNELMODULATOR_H_
 
-#include "dsp/FDResample.hh"
+#include "dsp/FDUpsampler.hh"
 #include "phy/Synthesizer.hh"
 
 /** @brief Channel state for frequency-domain modulation */
