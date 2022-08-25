@@ -19,7 +19,8 @@ resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.re
 upsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.upsample])
 """An upsampler"""
 
-downsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.downsample])
+downsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.downsample,
+                                                             dragonradio.signal.fddownsample])
 """An downsampler"""
 
 def rms(xs: ArrayLike):
