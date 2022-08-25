@@ -1,11 +1,14 @@
 #! python
 from datetime import timedelta
 from fractions import Fraction
+import sys
 from typing import Optional, Tuple
 from unittest import TestCase
 
 import numpy as np
 from numpy.typing import ArrayLike
+
+import pytest
 
 from hypothesis import given, note, settings, strategies as st
 from hypothesis.strategies import composite
@@ -14,6 +17,11 @@ from dragonradio.liquid import MCS, LiquidModulator, LiquidDemodulator
 import dragonradio.liquid
 from dragonradio.packet import Header
 from dragonradio.signal import Resampler
+
+try:
+    import dragonradio.tools.modem as modem
+except:
+    pass
 
 resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.resample,
                                                            dragonradio.signal.resample_and_mix,
@@ -142,3 +150,31 @@ class TestModulation(TestCase):
                               demod=demod,
                               upsample=upsample,
                               downsample=downsample)
+
+    @pytest.mark.skipif('dragonradio.tools.modem' not in sys.modules,
+                        reason="requires the dragonradio.tools.modem library")
+    @given(Fc=st.sampled_from([1e6, 2e6, 3e6, -4e6]),
+           payload=st.binary(max_size=1500),
+           ms=st.sampled_from(['bpsk', 'qpsk', 'qam4', 'qam8', 'qam16', 'qam32', 'qam64', 'qam128', 'qam256']))
+    @settings(deadline=timedelta(seconds=1))
+    def test_modem_module(self, Fc: float, ms: str, payload: bytes):
+        # Sampling frequency
+        Fs = 10e6
+
+        # Center frequency
+        Fc = 1e6
+
+        # Channel bandwidth
+        cbw = 1e6
+
+        # Modulate first packet
+        hdr = dragonradio.packet.Header(1, 2, 0)
+        payload_mcs = dragonradio.liquid.MCS('crc32', 'none', 'v27', ms)
+
+        sig = modem.modulate(hdr, payload_mcs, payload, cbw, Fc, Fs)
+
+        pkts = modem.demodulate(sig, cbw, Fc, Fs)
+
+        self.assertEqual(len(pkts), 1)
+        self.assertEqual(pkts[0][0], hdr)
+        self.assertEqual(pkts[0][1], payload)
