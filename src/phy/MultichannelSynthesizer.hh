@@ -7,7 +7,7 @@
 #include <atomic>
 #include <mutex>
 
-#include "dsp/FDResample.hh"
+#include "dsp/FDUpsampler.hh"
 #include "dsp/FFTW.hh"
 #include "phy/PHY.hh"
 #include "phy/SlotSynthesizer.hh"
