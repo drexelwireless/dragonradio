@@ -136,6 +136,19 @@ public:
         return schedule_[chan];
     }
 
+    /** @brief Return true if we can transmit in some slot */
+    bool canTransmit() const
+    {
+        for (size_t chan = 0; chan < nchannels(); ++chan) {
+            for (size_t slot = 0; slot < nslots(); ++slot) {
+                if (schedule_[chan][slot])
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @brief Return true if we can transmit in given slot */
     bool canTransmitInSlot(size_t slot) const
     {
