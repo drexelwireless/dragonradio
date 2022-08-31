@@ -79,17 +79,17 @@ void TDMA::txSlotWorker(void)
                 break;
         }
 
+        // Wait until we can transmit
+        if (!can_transmit_) {
+            sleep_until_state_change();
+            continue;
+        }
+
         t_now = WallClock::now();
 
         // If we missed a slot, find the next slot
-        if (t_now > t_next_slot) {
-            if (!findNextSlot(t_now, t_next_slot, next_slotidx)) {
-                logMAC(LOGDEBUG, "NO SLOT");
-                // Sleep for 100ms if we don't yet have a slot
-                sleep_for(100ms);
-                continue;
-            }
-        }
+        if (t_now > t_next_slot)
+            findNextSlot(t_now, t_next_slot, next_slotidx);
 
         // If we're less that one slot away from our next slot, finalize it
         // and transmit it
@@ -117,9 +117,9 @@ void TDMA::txSlotWorker(void)
             // reach this line of code, then findNextSlot must have returned
             // true above, in which case we know it will return true here, so we
             // do not need to check the result.
-            (void) findNextSlot(t_next_slot + noverfillslots*slot_size + slot_size/2.0,
-                                t_following_slot,
-                                following_slotidx);
+            findNextSlot(t_next_slot + noverfillslots*slot_size + slot_size/2.0,
+                         t_following_slot,
+                         following_slotidx);
 
             // Schedule modulation of following slot
             modulateSlot(t_following_slot,
@@ -143,7 +143,7 @@ void TDMA::txSlotWorker(void)
         missedSlot(*next_slot_);
 }
 
-bool TDMA::findNextSlot(WallClock::time_point t,
+void TDMA::findNextSlot(WallClock::time_point t,
                         WallClock::time_point &t_next,
                         size_t &next_slotidx)
 {
@@ -159,21 +159,16 @@ bool TDMA::findNextSlot(WallClock::time_point t,
         if (schedule_.canTransmitInSlot((cur_slot + tx_slot) % nslots)) {
             t_next = t + (tx_slot*slot_size - t_slot_pos);
             next_slotidx = (cur_slot + tx_slot) % nslots;
-            return true;
+            return;
         }
     }
 
-    return false;
+    assert(false);
 }
 
 void TDMA::reconfigure(void)
 {
     SlottedMAC::reconfigure();
 
-    // Determine whether or not we have a slot
-    WallClock::time_point t_now = WallClock::now();
-    WallClock::time_point t_next_slot;
-    size_t                next_slotidx;
-
-    can_transmit_ = findNextSlot(t_now, t_next_slot, next_slotidx);
+    can_transmit_ = schedule_.canTransmit();
 }
