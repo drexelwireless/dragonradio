@@ -15,12 +15,12 @@ UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(const std::vector
                                                                size_t nthreads)
   : SlotSynthesizer(channels, tx_rate, nthreads+1)
 {
-    reconfigure();
-
     for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&UnichannelSynthesizer::modWorker,
                                               this,
                                               i));
+
+    modify([&]() { reconfigure(); });
 }
 
 template <class ChannelModulator>
@@ -84,6 +84,12 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             if (done_)
                 return;
 
+            // Wait until we have a schedule and channels
+            if (schedule_.nchannels() == 0 || channels_.size() == 0) {
+                sleep_until_state_change();
+                continue;
+            }
+
             // Cache which channel we use in each slot
             size_t nslots = schedule_.nslots();
 
@@ -94,12 +100,6 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 
             // We need to update the modulator
             mod.release();
-        }
-
-        // Wait until we have a schedule and channels
-        if (schedule_.nchannels() == 0 || channels_.size() == 0) {
-            sleep_until_state_change();
-            continue;
         }
 
         // If we don't have a slot, try again

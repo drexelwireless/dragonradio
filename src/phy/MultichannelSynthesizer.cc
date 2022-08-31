@@ -19,12 +19,12 @@ MultichannelSynthesizer::MultichannelSynthesizer(const std::vector<PHYChannel> &
   : SlotSynthesizer(channels, tx_rate, nthreads+1)
   , nthreads_(nthreads)
 {
-    reconfigure();
-
     for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&MultichannelSynthesizer::modWorker,
                                               this,
                                               i));
+
+    modify([&]() { reconfigure(); });
 }
 
 MultichannelSynthesizer::~MultichannelSynthesizer()

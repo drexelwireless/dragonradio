@@ -23,11 +23,11 @@ FDMA::FDMA(std::shared_ptr<Radio> radio,
   , timed_tx_delay_(500e-6)
   , channel_synthesizer_(synthesizer)
 {
-    reconfigure();
-
     rx_thread_ = std::thread(&FDMA::rxWorker, this);
     tx_thread_ = std::thread(&FDMA::txWorker, this);
     tx_notifier_thread_ = std::thread(&FDMA::txNotifier, this);
+
+    modify([&]() { reconfigure(); });
 }
 
 FDMA::~FDMA()

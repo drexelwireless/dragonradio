@@ -17,7 +17,7 @@ public:
       : done_(false)
       , barrier_(count)
     {
-        synchronize_.store(false, std::memory_order_release);
+        synchronize_.store(true, std::memory_order_release);
     }
 
     sync_barrier() = delete;
