@@ -59,9 +59,8 @@ private:
      * @param t Time at which to start looking for a TX slot
      * @param t_next The beginning of the next TX slot
      * @param next_slotidx Slot index of next slot
-     * @returns True if a slot was found, false otherwise
      */
-    bool findNextSlot(WallClock::time_point t,
+    void findNextSlot(WallClock::time_point t,
                       WallClock::time_point &t_next,
                       size_t &next_slotidx);
 

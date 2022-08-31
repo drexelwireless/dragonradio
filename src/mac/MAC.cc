@@ -75,12 +75,12 @@ void MAC::rxWorker(void)
 
             if (done_)
                 return;
-        }
 
-        // Wait for period to be known
-        if (rx_period_samps_ == 0) {
-            sleep_for(100ms);
-            continue;
+            // Wait for period to be known
+            if (rx_period_samps_ == 0) {
+                sleep_until_state_change();
+                continue;
+            }
         }
 
         // Set up streaming starting at *next* period
@@ -245,4 +245,6 @@ void MAC::wake_dependents()
 
         tx_records_cond_.notify_all();
     }
+
+    sync_barrier::wake_dependents();
 }

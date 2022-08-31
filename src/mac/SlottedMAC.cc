@@ -144,6 +144,12 @@ void SlottedMAC::txWorker(void)
             continue;
         }
 
+        // Wait for non-zero slot size
+        if (schedule_.getSlotSize() == 0s) {
+            sleep_until_state_change();
+            continue;
+        }
+
         // If the slot doesn't contain any IQ data to send, we're done
         if (slot->mpkts.empty()) {
             if (!next_slot_start_of_burst) {

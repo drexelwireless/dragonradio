@@ -136,12 +136,6 @@ private:
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
 
-    /** @brief Mutex for waking demodulators. */
-    std::mutex wake_mutex_;
-
-    /** @brief Condition variable for waking demodulators. */
-    std::condition_variable wake_cond_;
-
     /** @brief Time-domain IQ buffers to demodulate */
     SafeQueue<std::shared_ptr<IQBuf>> tdbufs_;
 

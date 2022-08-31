@@ -13,4 +13,6 @@ void Synthesizer::wake_dependents(void)
 {
     // Disable the sink
     sink.disable();
+
+    sync_barrier::wake_dependents();
 }
