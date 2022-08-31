@@ -275,10 +275,7 @@ void FDChannelizer::demodWorker(unsigned tid)
 
             // If we are unneeded, sleep
             if (tid >= channels_.size()) {
-                std::unique_lock<std::mutex> lock(wake_mutex_);
-
-                wake_cond_.wait(lock, [this]{ return needs_sync(); });
-
+                sleep_until_state_change();
                 continue;
             }
 
@@ -422,12 +419,7 @@ void FDChannelizer::wake_dependents()
     for (unsigned i = 0; i < nchannels; i++)
         slots_[i]->disable();
 
-    // Wake all workers that might be sleeping.
-    {
-        std::unique_lock<std::mutex> lock(wake_mutex_);
-
-        wake_cond_.notify_all();
-    }
+    Channelizer::wake_dependents();
 }
 
 FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(unsigned chanidx,

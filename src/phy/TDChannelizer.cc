@@ -85,10 +85,7 @@ void TDChannelizer::demodWorker(unsigned tid)
 
             // If we are unneeded, sleep
             if (tid >= channels_.size()) {
-                std::unique_lock<std::mutex> lock(wake_mutex_);
-
-                wake_cond_.wait(lock, [this]{ return needs_sync(); });
-
+                sleep_until_state_change();
                 continue;
             }
 
@@ -203,12 +200,7 @@ void TDChannelizer::wake_dependents()
     for (unsigned int i = 0; i < iqbufs_.size(); ++i)
         iqbufs_[i]->disable();
 
-    // Wake all workers that might be sleeping.
-    {
-        std::unique_lock<std::mutex> lock(wake_mutex_);
-
-        wake_cond_.notify_all();
-    }
+    Channelizer::wake_dependents();
 }
 
 void TDChannelizer::TDChannelDemodulator::updateSeq(unsigned seq)
