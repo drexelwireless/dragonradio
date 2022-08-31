@@ -19,12 +19,12 @@ MultichannelSynthesizer::MultichannelSynthesizer(const std::vector<PHYChannel> &
   : SlotSynthesizer(channels, tx_rate, nthreads+1)
   , nthreads_(nthreads)
 {
-    reconfigure();
-
     for (size_t i = 0; i < nthreads; ++i)
         mod_threads_.emplace_back(std::thread(&MultichannelSynthesizer::modWorker,
                                               this,
                                               i));
+
+    modify([&]() { reconfigure(); });
 }
 
 MultichannelSynthesizer::~MultichannelSynthesizer()
@@ -120,10 +120,7 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
 
             // If we are unneeded, sleep
             if (schedule_.nchannels() == 0 || tid >= channels_.size()) {
-                std::unique_lock<std::mutex> lock(wake_mutex_);
-
-                wake_cond_.wait(lock, [this]{ return needs_sync(); });
-
+                sleep_until_state_change();
                 continue;
             }
 
@@ -357,13 +354,6 @@ void MultichannelSynthesizer::reconfigure(void)
 void MultichannelSynthesizer::wake_dependents()
 {
     Synthesizer::wake_dependents();
-
-    // Wake all workers that might be sleeping.
-    {
-        std::unique_lock<std::mutex> lock(wake_mutex_);
-
-        wake_cond_.notify_all();
-    }
 }
 
 MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(const PHYChannel &channel,

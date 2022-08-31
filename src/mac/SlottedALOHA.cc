@@ -30,12 +30,12 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<Radio> radio,
   , dist_(0, 1.0)
   , arrival_dist_(p)
 {
-    reconfigure();
-
     rx_thread_ = std::thread(&SlottedALOHA::rxWorker, this);
     tx_thread_ = std::thread(&SlottedALOHA::txWorker, this);
     tx_slot_thread_ = std::thread(&SlottedALOHA::txSlotWorker, this);
     tx_notifier_thread_ = std::thread(&SlottedALOHA::txNotifier, this);
+
+    modify([&]() { reconfigure(); });
 }
 
 SlottedALOHA::~SlottedALOHA()
@@ -77,6 +77,12 @@ void SlottedALOHA::txSlotWorker(void)
 
             if (done_)
                 break;
+
+            // Wait for non-zero slot size
+            if (schedule_.getSlotSize() == 0s) {
+                sleep_until_state_change();
+                continue;
+            }
         }
 
         // Figure out when our next send slot is.

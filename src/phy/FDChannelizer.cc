@@ -22,14 +22,14 @@ FDChannelizer::FDChannelizer(const std::vector<PHYChannel> &channels,
   , nthreads_(nthreads)
   , logger_(logger)
 {
-    reconfigure();
-
     fft_thread_ = std::thread(&FDChannelizer::fftWorker, this);
 
     for (unsigned int tid = 0; tid < nthreads; ++tid)
         demod_threads_.emplace_back(std::thread(&FDChannelizer::demodWorker,
                                                 this,
                                                 tid));
+
+    modify([&]() { reconfigure(); });
 }
 
 FDChannelizer::~FDChannelizer()
@@ -275,10 +275,7 @@ void FDChannelizer::demodWorker(unsigned tid)
 
             // If we are unneeded, sleep
             if (tid >= channels_.size()) {
-                std::unique_lock<std::mutex> lock(wake_mutex_);
-
-                wake_cond_.wait(lock, [this]{ return needs_sync(); });
-
+                sleep_until_state_change();
                 continue;
             }
 
@@ -422,12 +419,7 @@ void FDChannelizer::wake_dependents()
     for (unsigned i = 0; i < nchannels; i++)
         slots_[i]->disable();
 
-    // Wake all workers that might be sleeping.
-    {
-        std::unique_lock<std::mutex> lock(wake_mutex_);
-
-        wake_cond_.notify_all();
-    }
+    Channelizer::wake_dependents();
 }
 
 FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(unsigned chanidx,

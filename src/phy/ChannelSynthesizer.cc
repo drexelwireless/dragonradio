@@ -8,8 +8,7 @@ void ChannelSynthesizer::wake_dependents(void)
     // Disable the modulated packet queue
     queue_.disable();
 
-    // Disable the sink
-    sink.disable();
+    Synthesizer::wake_dependents();
 }
 
 void ChannelSynthesizer::reconfigure(void)

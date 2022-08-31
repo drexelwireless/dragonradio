@@ -77,12 +77,6 @@ private:
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
 
-    /** @brief Mutex for waking demodulators. */
-    std::mutex wake_mutex_;
-
-    /** @brief Condition variable for waking demodulators. */
-    std::condition_variable wake_cond_;
-
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<TDChannelDemodulator>> demods_;
 
