@@ -146,12 +146,6 @@ private:
     /** @brief Number of synthesizer threads. */
     unsigned nthreads_;
 
-    /** @brief Mutex for waking modulators. */
-    std::mutex wake_mutex_;
-
-    /** @brief Condition variable for waking modulators. */
-    std::condition_variable wake_cond_;
-
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<MultichannelModulator>> mods_;
 

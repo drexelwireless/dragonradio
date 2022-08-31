@@ -71,10 +71,7 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 
             // If we have no channels, sleep
             if (channels_.size() == 0 || !chanidx_) {
-                std::unique_lock<std::mutex> lock(wake_mutex_);
-
-                wake_cond_.wait(lock, [this]{ return needs_sync(); });
-
+                sleep_until_state_change();
                 continue;
             } else {
                 // Reconfigure the modulator
@@ -105,11 +102,4 @@ template <class ChannelModulator>
 void ParallelChannelSynthesizer<ChannelModulator>::wake_dependents()
 {
     ChannelSynthesizer::wake_dependents();
-
-    // Wake all workers that might be sleeping.
-    {
-        std::unique_lock<std::mutex> lock(wake_mutex_);
-
-        wake_cond_.notify_all();
-    }
 }

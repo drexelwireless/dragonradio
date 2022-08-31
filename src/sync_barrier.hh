@@ -90,6 +90,14 @@ public:
         return true;
     }
 
+    /** @brief Sleep until state change */
+    void sleep_until_state_change()
+    {
+        std::unique_lock<std::mutex> lock(wake_mutex_);
+
+        wake_cond_.wait(lock, [this]{ return needs_sync(); });
+    }
+
 protected:
     /** @brief Modify state gated by a synchronization barrier */
     /** The state mutex must be held before constructing a scoped_sync */
@@ -130,8 +138,20 @@ protected:
     /** @brief Done flag. */
     bool done_;
 
+    /** @brief Mutex for waking threads */
+    std::mutex wake_mutex_;
+
+    /** @brief Condition variable for waking threads */
+    std::condition_variable wake_cond_;
+
     /** @brief Wake all threads dependent on synchronized values */
-    virtual void wake_dependents() = 0;
+    virtual void wake_dependents()
+    {
+        // Wake all threads that are sleeping until state changes
+        std::unique_lock<std::mutex> lock(wake_mutex_);
+
+        wake_cond_.notify_all();
+    }
 
 private:
     /** @brief Synchronization flag. */
