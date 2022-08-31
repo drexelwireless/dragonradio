@@ -22,14 +22,14 @@ FDChannelizer::FDChannelizer(const std::vector<PHYChannel> &channels,
   , nthreads_(nthreads)
   , logger_(logger)
 {
-    reconfigure();
-
     fft_thread_ = std::thread(&FDChannelizer::fftWorker, this);
 
     for (unsigned int tid = 0; tid < nthreads; ++tid)
         demod_threads_.emplace_back(std::thread(&FDChannelizer::demodWorker,
                                                 this,
                                                 tid));
+
+    modify([&]() { reconfigure(); });
 }
 
 FDChannelizer::~FDChannelizer()

@@ -18,12 +18,12 @@ TDChannelizer::TDChannelizer(const std::vector<PHYChannel> &channels,
   , nthreads_(nthreads)
   , logger_(logger)
 {
-    reconfigure();
-
     for (unsigned int tid = 0; tid < nthreads; ++tid)
         demod_threads_.emplace_back(std::thread(&TDChannelizer::demodWorker,
                                     this,
                                     tid));
+
+    modify([&]() { reconfigure(); });
 }
 
 TDChannelizer::~TDChannelizer()

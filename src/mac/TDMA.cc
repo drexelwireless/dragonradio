@@ -27,12 +27,12 @@ TDMA::TDMA(std::shared_ptr<Radio> radio,
                slot_send_lead_time,
                5)
 {
-    reconfigure();
-
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
     tx_thread_ = std::thread(&TDMA::txWorker, this);
     tx_slot_thread_ = std::thread(&TDMA::txSlotWorker, this);
     tx_notifier_thread_ = std::thread(&TDMA::txNotifier, this);
+
+    modify([&]() { reconfigure(); });
 }
 
 TDMA::~TDMA()
@@ -77,12 +77,12 @@ void TDMA::txSlotWorker(void)
 
             if (done_)
                 break;
-        }
 
-        // Wait until we can transmit
-        if (!can_transmit_) {
-            sleep_until_state_change();
-            continue;
+            // Wait until we can transmit
+            if (!can_transmit_) {
+                sleep_until_state_change();
+                continue;
+            }
         }
 
         t_now = WallClock::now();
