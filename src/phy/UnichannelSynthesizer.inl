@@ -84,12 +84,6 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             if (done_)
                 return;
 
-            // If we have no schedule or channels, yield and try again
-            if (schedule_.nchannels() == 0 || channels_.size() == 0) {
-                std::this_thread::yield();
-                continue;
-            }
-
             // Cache which channel we use in each slot
             size_t nslots = schedule_.nslots();
 
@@ -100,6 +94,12 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 
             // We need to update the modulator
             mod.release();
+        }
+
+        // Wait until we have a schedule and channels
+        if (schedule_.nchannels() == 0 || channels_.size() == 0) {
+            sleep_until_state_change();
+            continue;
         }
 
         // If we don't have a slot, try again

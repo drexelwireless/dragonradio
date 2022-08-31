@@ -79,7 +79,7 @@ void MAC::rxWorker(void)
 
         // Wait for period to be known
         if (rx_period_samps_ == 0) {
-            sleep_for(100ms);
+            sleep_until_state_change();
             continue;
         }
 
@@ -245,4 +245,6 @@ void MAC::wake_dependents()
 
         tx_records_cond_.notify_all();
     }
+
+    sync_barrier::wake_dependents();
 }

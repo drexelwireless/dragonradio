@@ -79,6 +79,12 @@ void SlottedALOHA::txSlotWorker(void)
                 break;
         }
 
+        // Wait for non-zero slot size
+        if (schedule_.getSlotSize() == 0s) {
+            sleep_until_state_change();
+            continue;
+        }
+
         // Figure out when our next send slot is.
         auto slot_size = schedule_.getSlotSize();
 
