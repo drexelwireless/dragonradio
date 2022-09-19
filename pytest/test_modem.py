@@ -35,6 +35,11 @@ def channel(draw) -> Channel:
     fs = draw(st.sampled_from([1e6, 2e6, 3e6, 5e6, 10e6, 15e6, 20e6, 25e6]))
     cbw = draw(st.sampled_from([100e3, 250e3, 300e3, 1e6, 2e6, 3e6, 5e6]).filter(lambda cbw: cbw < fs and fs/cbw <= 25))
     fc = draw(st.sampled_from([1e6*x for x in  range(0, 25)]).filter(lambda fc: fc + cbw/2 < fs))
+    sign = draw(st.booleans())
+
+    if sign:
+        fc = -fc
+
     return (cbw, fc, fs)
 
 ModemPair = Tuple[LiquidModulator, LiquidDemodulator]
