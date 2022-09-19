@@ -16,17 +16,9 @@
 class MultichannelSynthesizer : public SlotSynthesizer
 {
 public:
-    /** @brief Filter length */
-    /** We need two factors of 5 because we need to support 25MHz bandwidth.
-     * The rest of the factors of 2 are for good measure.
-     */
-    static constexpr unsigned P = 25*64+1;
+    using Upsampler = dragonradio::signal::FDUpsampler<C>;
 
-    /** @brief Overlap factor */
-    static constexpr unsigned V = 4;
-
-    using Upsampler = dragonradio::signal::FDUpsampler<C,P,V>;
-
+    static constexpr auto P = Upsampler::P;
     static constexpr auto N = Upsampler::N;
     static constexpr auto L = Upsampler::L;
     static constexpr auto O = Upsampler::O;
