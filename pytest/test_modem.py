@@ -134,7 +134,7 @@ class TestModulation(TestCase):
            payload=st.binary(max_size=1500),
            upsample=resampler,
            downsample=resampler)
-    @settings(deadline=timedelta(seconds=1))
+    @settings(deadline=None)
     def test_ofdm_resampled(self, modem: ModemPair, channel: Channel, ms: str, payload: bytes, upsample: Resampler, downsample: Resampler):
         mod, demod = modem
         (cbw, Fc, Fs) = channel
