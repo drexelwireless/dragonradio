@@ -22,27 +22,15 @@
 class FDChannelizer : public Channelizer
 {
 public:
-    /** @brief Filter length */
-    /** We need two factors of 5 because we need to support 25MHz bandwidth. The
-     * remaining factors of 2 get us to a filter of order 12800, which is about
-     * how many taps we need for a 50kHz passband transition in 80MHz of
-     * bandwidth.
-     */
-    static constexpr unsigned P = 25*512+1;
+    using C = std::complex<float>;
 
-    /** @brief Overlap factor */
-    static constexpr unsigned V = 4;
+    using Downsampler = dragonradio::signal::FDDownsampler<C>;
 
-    using Downsampler = dragonradio::signal::FDDownsampler<C,P,V>;
-
-    /** @brief Length of FFT */
-    static constexpr unsigned N = V*(P-1);
-
-    /** @brief Size of FFT overlap */
-    static constexpr unsigned O = P-1;
-
-    /** @brief Number of new samples consumed per input block */
-    static constexpr unsigned L = N - (P-1);
+    static constexpr auto P = Downsampler::P;
+    static constexpr auto V = Downsampler::V;
+    static constexpr auto N = Downsampler::N;
+    static constexpr auto O = Downsampler::O;
+    static constexpr auto L = Downsampler::L;
 
     FDChannelizer(const std::vector<PHYChannel> &channels,
                   double rx_rate,

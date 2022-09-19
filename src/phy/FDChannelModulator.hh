@@ -12,17 +12,9 @@ class FDChannelModulator : public ChannelModulator {
 public:
     using C = std::complex<float>;
 
-    /** @brief Filter length */
-    /** We need two factors of 5 because we need to support 25MHz bandwidth.
-     * The rest of the factors of 2 are for good measure.
-     */
-    static constexpr unsigned P = 25*64+1;
+    using Upsampler = dragonradio::signal::FDUpsampler<C>;
 
-    /** @brief Overlap factor */
-    static constexpr unsigned V = 8;
-
-    using Upsampler = dragonradio::signal::FDUpsampler<C,P,V>;
-
+    static constexpr auto P = Upsampler::P;
     static constexpr auto N = Upsampler::N;
 
     FDChannelModulator(const PHYChannel &channel,
