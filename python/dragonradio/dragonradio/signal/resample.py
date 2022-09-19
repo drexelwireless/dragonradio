@@ -136,3 +136,14 @@ def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -
     resampled = resampled[delay//D:]
 
     return resampled
+
+def fdresample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
+    resampler = dragonradio.signal.FDResamplerCCC(U, D, 1, theta, h)
+
+    # Append samples to compensate for filter
+    delay = int(resampler.delay)
+
+    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+
+    # Correct for filter delay and tail end of signal
+    return resampled[delay//D:(delay+len(sig)*U)//D]
