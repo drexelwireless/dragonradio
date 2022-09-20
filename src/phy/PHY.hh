@@ -36,27 +36,33 @@ struct PHYChannel {
     PHYChannel() = delete;
 
     PHYChannel(const Channel& channel_,
-               const std::vector<evm_thresh_t>& evm_thresh_,
-               const Taps& taps_,
-               std::shared_ptr<PHY> phy_)
+               std::shared_ptr<PHY> phy_,
+               const std::vector<evm_thresh_t>& evm_thresh_)
       : channel(channel_)
-      , evm_thresh(evm_thresh_)
-      , taps(taps_)
       , phy(phy_)
+      , evm_thresh(evm_thresh_)
+      , I(1)
+      , D(1)
     {
     }
 
     /** @brief The channel */
     Channel channel;
 
+    /** @brief PHY for channel */
+    std::shared_ptr<PHY> phy;
+
     /** @brief EVM threshold table */
     std::vector<evm_thresh_t> evm_thresh;
 
+    /** @brief Interpolation rate */
+    unsigned I;
+
+    /** @brief Decimation rate */
+    unsigned D;
+
     /** @brief FIR filter taps */
     Taps taps;
-
-    /** @brief PHY for channel */
-    std::shared_ptr<PHY> phy;
 };
 
 /** @brief A modulated data packet to be sent over the radio */
