@@ -69,12 +69,12 @@ public:
 
     virtual ~FlexFrame() = default;
 
-    unsigned getMinRXRateOversample(void) const override
+    unsigned getRXOversampleFactor(void) const override
     {
         return 2;
     }
 
-    unsigned getMinTXRateOversample(void) const override
+    unsigned getTXOversampleFactor(void) const override
     {
         return 2;
     }

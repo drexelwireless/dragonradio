@@ -23,7 +23,7 @@ public:
       : ChannelModulator(channel, chanidx, tx_rate)
       , resampler_(channel.I,
                    channel.D,
-                   channel.phy->getMinTXRateOversample(),
+                   channel.phy->getTXOversampleFactor(),
                    channel.channel.fc/tx_rate,
                    channel.taps)
     {

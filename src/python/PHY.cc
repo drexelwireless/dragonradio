@@ -34,21 +34,21 @@ class PyPHY : public PHY {
 public:
     using PHY::PHY;
 
-    unsigned getMinRXRateOversample(void) const override
+    unsigned getRXOversampleFactor(void) const override
     {
         PYBIND11_OVERLOAD_PURE(
             unsigned,
             PHY,
-            getMinRXRateOversample,
+            getRXOversampleFactor,
         );
     }
 
-    unsigned getMinTXRateOversample(void) const override
+    unsigned getTXOversampleFactor(void) const override
     {
         PYBIND11_OVERLOAD_PURE(
             unsigned,
             PHY,
-            getMinTXRateOversample,
+            getTXOversampleFactor,
         );
     }
 
@@ -286,16 +286,16 @@ void exportPHYs(py::module &m)
                 self.setMCSTable(table);
             },
             "Table of modulation and coding schemes")
-        .def_property_readonly("min_rx_rate_oversample",
-            &PHY::getMinRXRateOversample,
-            "Minimum oversample rate needed for RX")
-        .def_property_readonly("min_tx_rate_oversample",
-            &PHY::getMinTXRateOversample,
-            "Minimum oversample rate needed for TX")
-        .def("getMinRXRateOversample",
-            &PHY::getMinRXRateOversample)
-        .def("getMinTXRateOversample",
-            &PHY::getMinTXRateOversample)
+        .def_property_readonly("rx_oversample_factor",
+            &PHY::getRXOversampleFactor,
+            "float: oversample factor required for received signal")
+        .def_property_readonly("tx_oversample_factor",
+            &PHY::getTXOversampleFactor,
+            "float: oversample factor of transmitted signal")
+        .def("getRXOversampleFactor",
+            &PHY::getRXOversampleFactor)
+        .def("getTXOversampleFactor",
+            &PHY::getTXOversampleFactor)
         .def("getModulatedSize",
             &PHY::getModulatedSize)
         .def("mkPacketModulator",
