@@ -17,6 +17,7 @@ from dragonradio.liquid import MCS, LiquidModulator, LiquidDemodulator
 import dragonradio.liquid
 from dragonradio.packet import Header
 from dragonradio.signal import Resampler
+import dragonradio.signal.pyresample as pyresample
 
 try:
     import dragonradio.tools.modem as modem
@@ -25,7 +26,7 @@ except:
 
 resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.resample,
                                                            dragonradio.signal.resample_and_mix,
-                                                           dragonradio.signal.fdresample])
+                                                           pyresample.fdresample])
 """A resampler"""
 
 Channel = Tuple[float, float, float]

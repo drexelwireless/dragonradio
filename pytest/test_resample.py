@@ -9,19 +9,20 @@ from numpy.typing import ArrayLike
 from hypothesis import assume, example, given, settings, strategies as st
 
 import dragonradio.signal
+import dragonradio.signal.pyresample as pyresample
 from dragonradio.signal import Resampler
 
 resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.resample,
                                                            dragonradio.signal.resample_and_mix,
-                                                           dragonradio.signal.fdresample])
+                                                           pyresample.fdresample])
 """A resampler"""
 
 upsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.upsample,
-                                                           dragonradio.signal.fdupsample])
+                                                           pyresample.fdupsample])
 """An upsampler"""
 
 downsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.downsample,
-                                                             dragonradio.signal.fddownsample])
+                                                             pyresample.fddownsample])
 """An downsampler"""
 
 def rms(xs: ArrayLike):
@@ -67,7 +68,7 @@ class TestResampling(TestCase):
     @example(Fc=450e3,
              rate=50.0,
              n=100000,
-             resample=dragonradio.signal.fdresample)
+             resample=pyresample.fdresample)
     @settings(deadline=None)
     def test_tone(self, Fc: float, rate: float, n: int, resample: Resampler):
         self._test_tone(Fs=1e6, Fc=Fc, rate=rate, n=n, resample=resample)
