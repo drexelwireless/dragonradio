@@ -364,21 +364,26 @@ void exportPHYs(py::module &m)
     // Export class PHYChannel to Python
     py::class_<PHYChannel, std::shared_ptr<PHYChannel>>(m, "PHYChannel")
         .def(py::init<const Channel&,
-                      const std::vector<evm_thresh_t>&,
-                      const Taps&,
-                      std::shared_ptr<PHY>>())
+                      std::shared_ptr<PHY>,
+                      const std::vector<evm_thresh_t>&>())
         .def_readwrite("channel",
             &PHYChannel::channel,
             "Channel: Channel")
-        .def_readwrite("evm_thresh",
-            &PHYChannel::evm_thresh,
-            "EVM threshold table")
-        .def_readwrite("taps",
-            &PHYChannel::taps,
-            "FIR filter taps")
         .def_readwrite("phy",
             &PHYChannel::phy,
             "PHY: PHY for channel")
+        .def_readwrite("evm_thresh",
+            &PHYChannel::evm_thresh,
+            "EVM threshold table")
+        .def_readwrite("I",
+            &PHYChannel::I,
+            "Interpolation rate")
+        .def_readwrite("D",
+            &PHYChannel::D,
+            "Decimation rate")
+        .def_readwrite("taps",
+            &PHYChannel::taps,
+            "FIR filter taps")
         ;
 
     // Export vector of PHYChannels
