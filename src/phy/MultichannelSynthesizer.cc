@@ -474,7 +474,7 @@ MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(const PHYC
   , fdnsamples(0)
   , resampler(channel.I,
               channel.D,
-              channel.phy->getMinTXRateOversample(),
+              channel.phy->getTXOversampleFactor(),
               channel.channel.fc/tx_rate,
               channel.taps)
 {

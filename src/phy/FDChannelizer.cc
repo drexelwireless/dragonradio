@@ -429,7 +429,7 @@ FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(unsigned chanidx,
   , seq_(0)
   , resampler_(channel.I,
                channel.D,
-               channel.phy->getMinRXRateOversample(),
+               channel.phy->getRXOversampleFactor(),
                channel.channel.fc/rx_rate,
                channel.taps)
 {

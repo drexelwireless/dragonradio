@@ -774,7 +774,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if config.rx_bandwidth is not None:
             want_rx_rate = config.rx_bandwidth
         else:
-            rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+            rx_rate_oversample = config.rx_oversample_factor*self.phy.rx_oversample_factor
 
             want_rx_rate = rate*rx_rate_oversample
             want_rx_rate = min(want_rx_rate, config.max_bandwidth)
@@ -805,7 +805,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if config.tx_bandwidth is not None and not config.tx_upsample:
             want_tx_rate = config.tx_bandwidth
         else:
-            tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
+            tx_rate_oversample = config.tx_oversample_factor*self.phy.tx_oversample_factor
 
             want_tx_rate = rate*tx_rate_oversample
             want_tx_rate = min(want_tx_rate, config.max_bandwidth)
