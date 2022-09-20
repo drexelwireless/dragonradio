@@ -34,7 +34,7 @@ void exportChannels(py::module &m)
         .def(py::self > py::self)
         .def(hash(py::self))
         .def("__repr__", [](const Channel& self) {
-            return py::str("Channel(fc={}, bw={})").format(self.fc, self.bw);
+            return py::str("Channel(fc={:g}, bw={:g})").format(self.fc, self.bw);
          })
         .def(py::pickle(
             [](const Channel &self) {
