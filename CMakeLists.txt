@@ -20,7 +20,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 set(CMAKE_CXX_FLAGS_INIT "-Wall -pedantic")
-set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=haswell")
 set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g3")
 
 set(CMAKE_CXX_STANDARD 17)
