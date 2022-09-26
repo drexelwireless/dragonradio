@@ -8,7 +8,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 #
 # See:
 #   https://cliutils.gitlab.io/modern-cmake/chapters/features.html
-set(default_build_type "Release")
+set(default_build_type "RelWithDebInfo")
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
@@ -19,9 +19,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-set(CMAKE_CXX_FLAGS_INIT "-Wall -pedantic")
-set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native")
-set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g3")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=haswell -DNDEBUG -Wall -pedantic")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -march=haswell -g3 -Wall -pedantic")
+set(CMAKE_CXX_FLAGS_DEBUG "-Og -g3 -Wall -pedantic")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
