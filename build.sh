@@ -25,7 +25,7 @@ sudo apt install -y python3-virtualenv virtualenv
 
 CC=gcc
 CXX=g++
-CFLAGS="-Ofast -march=native"
+CFLAGS="-Ofast -march=haswell"
 
 # Build and install libcorrect
 (
