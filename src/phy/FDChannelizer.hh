@@ -11,6 +11,7 @@
 
 #include "Logger.hh"
 #include "SafeQueue.hh"
+#include "dsp/FDDownsampler.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
@@ -31,6 +32,8 @@ public:
 
     /** @brief Overlap factor */
     static constexpr unsigned V = 4;
+
+    using Downsampler = dragonradio::signal::FDDownsampler<C,P,V>;
 
     /** @brief Length of FFT */
     static constexpr unsigned N = V*(P-1);
@@ -81,26 +84,8 @@ private:
         /** @brief Channel IQ buffer sequence number */
         unsigned seq_;
 
-        /** @brief Oversample factor */
-        unsigned X_;
-
-        /** @brief Decimation factor */
-        unsigned D_;
-
-        /** @brief Number of FFT bins to rotate */
-        int Nrot_;
-
-        /** @brief Filter delay */
-        size_t delay_;
-
-        /** @brief IFFT */
-        fftw::FFT<C> ifft_;
-
-        /** @brief Vector containing rotated FFT input */
-        fftw::vector<C> temp_;
-
-        /** @brief Frequency-domain filter */
-        fftw::vector<C> H_;
+        /** @brief Frequency-domain downsampler */
+        Downsampler downsampler_;
     };
 
     /** @brief A demodulation slot */
