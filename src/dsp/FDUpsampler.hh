@@ -123,14 +123,15 @@ public:
     }
 
     /** @brief Upsample a frequency domain block of data
+     * @param in The buffer that contains the input frequency domain data.
      * @param out The buffer that will contain the upsampled frequency domain data.
      */
-    void upsampleBlock(T out[N])
+    void upsampleBlock(const T* in, T* out)
     {
         const unsigned Ni = X*N/I; // Size of forward FFT for input
         const int      n = N/I;    // Size of input block, not counting
                                    // oversampling
-        auto           fftout = fft.out.begin();
+        auto           temp = in[n/2] / 2.0f;
 
         // Copy FFT buffer to out, upsampling and frequency shifting by rotating
         // bins. Note that we don't copy bins that result from oversampling on
@@ -138,42 +139,28 @@ public:
         //
         // Since N is always even, we need to split the bin at the Nyquist
         // frequency.
-        if (Nrot == 0) {
-            std::copy(fftout,
-                      fftout + n/2,
-                      out);
-            std::copy(fftout + Ni - n/2 + 1,
-                      fftout + Ni,
-                      out + N - n/2 + 1);
+        assert(Nrot >= 0);
 
-            auto temp = fftout[n/2] / 2.0f;
+        if (Nrot == 0) {
+            std::copy(in,
+                      in + n/2,
+                      out);
+            std::copy(in + Ni - n/2 + 1,
+                      in + Ni,
+                      out + N - n/2 + 1);
 
             out[n/2] += temp;
             out[N - n/2] = temp;
-        } else if (Nrot > 0) {
-            std::copy(fftout,
-                      fftout + n/2,
+        } else {
+            std::copy(in,
+                      in + n/2,
                       out + Nrot);
-            std::copy(fftout + Ni - n/2 + 1,
-                      fftout + Ni,
+            std::copy(in + Ni - n/2 + 1,
+                      in + Ni,
                       out + Nrot - n/2 + 1);
-
-            auto temp = fftout[n/2] / 2.0f;
 
             out[Nrot + n/2] += temp;
             out[Nrot - n/2] = temp;
-        } else {
-            std::copy(fftout,
-                      fftout + n/2,
-                      out + N + Nrot);
-            std::copy(fftout + Ni - n/2 + 1,
-                      fftout + Ni,
-                      out + N + Nrot - n/2 + 1);
-
-            auto temp = fftout[n/2] / 2.0f;
-
-            out[N + Nrot + n/2] += temp;
-            out[N + Nrot - n/2] = temp;
         }
     }
 
@@ -234,7 +221,7 @@ public:
 
             // Copy FFT buffer to output, upsampling and frequency shifting by
             // shifting bins.
-            upsampleBlock(ifft.in.data());
+            upsampleBlock(fft.out.data(), ifft.in.data());
 
             // Perform inverse FFT to convert back to time domain
             ifft.execute();
@@ -332,7 +319,7 @@ public:
 
             // Copy FFT buffer to output, upsampling and frequency shifting by
             // shifting bins.
-            upsampleBlock(out + fdnsamples);
+            upsampleBlock(fft.out.data(), out + fdnsamples);
             fdnsamples += N;
 
             // If we flushed a partial block, return.
