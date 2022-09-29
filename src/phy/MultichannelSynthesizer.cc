@@ -483,12 +483,15 @@ size_t MultichannelSynthesizer::MultichannelModulator::upsample(void)
 {
     return Upsampler::upsample(iqbuf->data() + iqbufoff,
                                iqbuf->size() - iqbufoff,
-                               fdbuf->data(),
+                               fdbuf->data() + fdnsamples,
                                1.0f,
                                false,
-                               nsamples,
-                               delay + max_samples,
-                               fdnsamples);
+                               [&](size_t n) {
+                                  fdnsamples += Upsampler::N;
+                                  nsamples += n;
+
+                                  return nsamples < delay + max_samples;
+                               });
 }
 
 void MultichannelSynthesizer::MultichannelModulator::flush(Slot &slot)
@@ -498,12 +501,15 @@ void MultichannelSynthesizer::MultichannelModulator::flush(Slot &slot)
 
         Upsampler::upsample(nullptr,
                             0,
-                            fdbuf->data(),
+                            fdbuf->data() + fdnsamples,
                             1.0f,
                             true,
-                            nsamples,
-                            delay + max_samples,
-                            fdnsamples);
+                            [&](size_t n) {
+                                fdnsamples += Upsampler::N;
+                                nsamples += n;
+
+                                return nsamples < delay + max_samples;
+                            });
     } else
         partial_fftoff = std::nullopt;
 

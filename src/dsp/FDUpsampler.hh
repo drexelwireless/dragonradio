@@ -250,27 +250,22 @@ public:
         return nsamples;
     }
 
-    /** @brief Incrementally upsample time domain data
+    /** @brief Incrementally upsample time domain data to produce frequency domain data
      * @param in Input buffer containing signal to upsample
      * @param count Number of input samples
      * @param out Frequency domain output buffer
      * @param g Gain (linear)
      * @param flush Flush remaining samples in FFT with zeros (no more signal)
-     * @param nsamples The number of valid UN-overlapped time-domain samples
-     * represented by the FFT blocks in the frequency domain buffer.
-     * @param max_nsamples Maximum number of time-domain samples.
-     * @param fdnsamples Number of valid samples in the frequency-domain buffer.
-     * Always a multiple of N.
+     * @param f Function to call when output samples are generated
      * @return Offset of first unconsumed sample in input buffer
      */
+    template<class F>
     size_t upsample(const T* in,
                     size_t count,
                     T* out,
                     const float g,
                     bool flush,
-                    size_t& nsamples,
-                    size_t max_nsamples,
-                    size_t& fdnsamples)
+                    F&& f)
     {
         const unsigned Ni = X*N/I; // Size of forward FFT for input
         const unsigned Li = X*L/I; // Number of samples consumed per input block
@@ -281,7 +276,9 @@ public:
         //   * Scaling compensation for the FFT
         const float k = g/static_cast<float>(Ni);
 
-        while (nsamples < max_nsamples) {
+        // We must allow inoff == count here to allow the upsampler to be
+        // flushed *without* requiring additional samples.
+        while (inoff <= count) {
             size_t avail = count - inoff;
 
             // If we don't have enough samples for a full FFT block...
@@ -319,8 +316,8 @@ public:
 
             // Copy FFT buffer to output, upsampling and frequency shifting by
             // shifting bins.
-            upsampleBlock(fft.out.data(), out + fdnsamples);
-            fdnsamples += N;
+            upsampleBlock(fft.out.data(), out);
+            out += N;
 
             // If we flushed a partial block, return.
             //
@@ -332,19 +329,24 @@ public:
             if (fftoff + avail < Ni) {
                 inoff += avail;
                 fftoff += avail;
-                nsamples += I*fftoff/X - O;
+
+                f(I*fftoff/X - O);
 
                 break;
             } else if (fftoff <= Li) {
                 inoff += Li - fftoff;
                 fftoff = 0;
-                nsamples += L;
+
+                if (!f(L))
+                    break;
             } else {
                 std::copy(fft.in.begin() + Li,
                           fft.in.end(),
                           fft.in.begin());
                 fftoff -= Li;
-                nsamples += L;
+
+                if (!f(L))
+                    break;
             }
         }
 
