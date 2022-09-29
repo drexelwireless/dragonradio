@@ -419,7 +419,7 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
                 fdnsamples = 0;
             } else {
                 // Copy the previously output FFT block
-                upsampleBlock(fdbuf->data());
+                upsampleBlock(fft.out.data(), fdbuf->data());
 
                 // We start with a full FFT block of samples
                 nsamples = L;
