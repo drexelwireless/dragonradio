@@ -358,6 +358,33 @@ public:
         }
     }
 
+    /** @brief Resample frequency domain data
+     * @param in Input buffer containing frequency domain signal to resample
+     * @param count Number of input samples
+     * @param f Function to call with resampled time domain data
+     */
+    template<class F>
+    void resampleFromFD(const T* in, size_t count, F&& f)
+    {
+        const unsigned Ni = _i(N);
+        const unsigned Oo = _o(O);
+        const unsigned Lo = _o(L);
+
+        for (size_t inoff = 0; inoff < count; inoff += Ni) {
+            assert(count - inoff >= Ni);
+
+            // Resample input FFT block as we copy frequency domain signal to
+            // IFFT input buffer.
+            resampleBlock(in + inoff, ifft_.in.data());
+
+            // Perform IFFT
+            ifft_.execute();
+
+            // Call f with time domain data
+            f(ifft_.out.data() + Oo, Lo);
+        }
+    }
+
 protected:
     /** @brief Interpolation factor */
     const unsigned I;
