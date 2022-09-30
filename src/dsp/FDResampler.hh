@@ -376,6 +376,42 @@ public:
         }
     }
 
+    class ToTimeDomain
+    {
+    public:
+        ToTimeDomain(void)
+          : ifft(N, FFTW_BACKWARD, FFTW_MEASURE)
+        {
+        }
+
+        size_t toTimeDomain(const T* in, size_t count, T* out)
+        {
+            size_t outoff = 0;
+
+            while (count >= N) {
+                // Copy data into IFFT buffer
+                std::copy(in, in + N, ifft.in.begin());
+
+                // Perform IFFT
+                ifft.execute();
+
+                // Copy time-domain data into IQ buffer
+                std::copy(ifft.out.begin() + O,
+                          ifft.out.end(),
+                          out + outoff);
+
+                count -= N;
+                in += N;
+                outoff += L;
+            }
+
+            return outoff;
+        }
+
+        /** @brief FFT */
+        fftw::FFT<T> ifft;
+    };
+
 protected:
     /** @brief Interpolation factor */
     const unsigned I;
