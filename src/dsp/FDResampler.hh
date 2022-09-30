@@ -13,6 +13,7 @@
 #include <xsimd/stl/algorithms.hpp>
 
 #include "dsp/fftcopy.hh"
+#include "dsp/fmcopy.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Resample.hh"
 
@@ -227,29 +228,19 @@ public:
 
             // Copy data into FFT buffer, multiplying by g if it is not unity.
             if (fftoff_ + avail < Ni) {
-                if (g == 1.0f)
-                    std::copy(in + inoff,
-                              in + inoff + avail,
-                              fft_.in.begin() + fftoff_);
-                else
-                    xsimd::transform(in + inoff,
-                                     in + inoff + avail,
-                                     fft_.in.begin() + fftoff_,
-                                     [&](const auto& x) { return g*x; });
+                fmcopy(in + inoff,
+                       in + inoff + avail,
+                       fft_.in.begin() + fftoff_,
+                       g);
 
                 std::fill(fft_.in.begin() + fftoff_ + avail,
                           fft_.in.end(),
                           0);
             } else {
-                if (g == 1.0f)
-                    std::copy(in + inoff,
-                              in + inoff + Ni - fftoff_,
-                              fft_.in.begin() + fftoff_);
-                else
-                    xsimd::transform(in + inoff,
-                                     in + inoff + Ni - fftoff_,
-                                     fft_.in.begin() + fftoff_,
-                                     [&](const auto& x) { return g*x; });
+                fmcopy(in + inoff,
+                       in + inoff + Ni - fftoff_,
+                       fft_.in.begin() + fftoff_,
+                       g);
             }
 
             // Perform FFT
