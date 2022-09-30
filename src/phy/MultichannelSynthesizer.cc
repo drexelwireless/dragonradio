@@ -59,7 +59,7 @@ public:
      */
     size_t upsampledSize(size_t n)
     {
-        return upsampler.I*n/upsampler.X;
+        return n/upsampler.getRate();
     }
 
     /** @brief Perform frequency-domain upsampling on current IQ buffer.
@@ -519,13 +519,13 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
             // If partial_fftoff is set, we flushed our FFT buffer to yield a
             // partial block, so we need to rewind the FFT upsampler.
             if (partial_fftoff) {
-                upsampler.fftoff = *partial_fftoff;
+                upsampler.restoreFFTOffset(*partial_fftoff);
 
                 nsamples = 0;
                 fdnsamples = 0;
             } else {
                 // Copy the previously output FFT block
-                upsampler.upsampleBlock(upsampler.fft.out.data(), fdbuf->data());
+                upsampler.copyFFTOut(fdbuf->data());
 
                 // We start with a full FFT block of samples
                 nsamples = L;
@@ -539,7 +539,7 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
 
             // This sets up the FFT buffer so that the first prev_slot->npartial
             // samples we output will be zero.
-            upsampler.reset(upsampler.X*prev_slot->npartial/upsampler.I);
+            upsampler.reset(prev_slot->npartial/upsampler.getRate());
 
             nsamples = 0;
             fdnsamples = 0;
@@ -602,7 +602,7 @@ size_t MultichannelSynthesizer::MultichannelModulator::upsample(void)
 void MultichannelSynthesizer::MultichannelModulator::flush(Slot &slot)
 {
     if (nsamples < delay + max_samples) {
-        partial_fftoff = upsampler.fftoff;
+        partial_fftoff = upsampler.saveFFTOffset();
 
         upsampler.upsample(nullptr,
                            0,

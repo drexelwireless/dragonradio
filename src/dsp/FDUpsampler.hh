@@ -361,23 +361,29 @@ public:
         return n > O ? n - O : 0;
     }
 
-    /** @brief Oversample factor */
-    const unsigned X;
+    /** @brief Save FFT offset
+     * @return Current FFT offset
+     */
+    std::optional<size_t> saveFFTOffset() const
+    {
+        return fftoff;
+    }
 
-    /** @brief Interpolation factor */
-    const unsigned I;
+    /** @brief Restore FFT offset
+     * @param fftoff_ New FFT offset
+     */
+    void restoreFFTOffset(size_t fftoff_)
+    {
+        fftoff = fftoff_;
+    }
 
-    /** @brief Number of bins to rotate */
-    int Nrot;
-
-    /** @brief FFT */
-    fftw::FFT<T> fft;
-
-    /** @brief Inverse FFT */
-    fftw::FFT<T> ifft;
-
-    /** @brief Offset into FFT input at which to place new data */
-    size_t fftoff;
+    /** @brief Copy most recent FFT output block
+     * @param out Frequency domain buffer
+     */
+    void copyFFTOut(T* out)
+    {
+        upsampleBlock(fft.out.data(), out);
+    }
 
     class ToTimeDomain
     {
@@ -414,6 +420,25 @@ public:
         /** @brief FFT */
         fftw::FFT<T> ifft;
     };
+
+protected:
+    /** @brief Oversample factor */
+    const unsigned X;
+
+    /** @brief Interpolation factor */
+    const unsigned I;
+
+    /** @brief Number of bins to rotate */
+    int Nrot;
+
+    /** @brief FFT */
+    fftw::FFT<T> fft;
+
+    /** @brief Inverse FFT */
+    fftw::FFT<T> ifft;
+
+    /** @brief Offset into FFT input at which to place new data */
+    size_t fftoff;
 };
 
 }
