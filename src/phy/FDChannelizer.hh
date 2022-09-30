@@ -11,7 +11,7 @@
 
 #include "Logger.hh"
 #include "SafeQueue.hh"
-#include "dsp/FDDownsampler.hh"
+#include "dsp/FDResampler.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
@@ -24,13 +24,13 @@ class FDChannelizer : public Channelizer
 public:
     using C = std::complex<float>;
 
-    using Downsampler = dragonradio::signal::FDDownsampler<C>;
+    using Resampler = dragonradio::signal::FDResampler<C>;
 
-    static constexpr auto P = Downsampler::P;
-    static constexpr auto V = Downsampler::V;
-    static constexpr auto N = Downsampler::N;
-    static constexpr auto O = Downsampler::O;
-    static constexpr auto L = Downsampler::L;
+    static constexpr auto P = Resampler::P;
+    static constexpr auto V = Resampler::V;
+    static constexpr auto N = Resampler::N;
+    static constexpr auto O = Resampler::O;
+    static constexpr auto L = Resampler::L;
 
     FDChannelizer(const std::vector<PHYChannel> &channels,
                   double rx_rate,
@@ -72,8 +72,8 @@ private:
         /** @brief Channel IQ buffer sequence number */
         unsigned seq_;
 
-        /** @brief Frequency-domain downsampler */
-        Downsampler downsampler_;
+        /** @brief Frequency-domain resampler */
+        Resampler resampler_;
     };
 
     /** @brief A demodulation slot */

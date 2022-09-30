@@ -427,10 +427,11 @@ FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(unsigned chanidx,
                                                           double rx_rate)
   : ChannelDemodulator(chanidx, channel, rx_rate)
   , seq_(0)
-  , downsampler_(channel.phy->getMinRXRateOversample(),
-                 rx_rate/channel.channel.bw,
-                 channel.channel.fc/rx_rate,
-                 channel.taps)
+  , resampler_(channel.I,
+               channel.D,
+               channel.phy->getMinRXRateOversample(),
+               channel.channel.fc/rx_rate,
+               channel.taps)
 {
     // Channel bandwidth must be less that total available bandwidth
     assert(channel.channel.bw <= rx_rate);
@@ -463,7 +464,7 @@ void FDChannelizer::FDChannelDemodulator::timestamp(const MonoClock::time_point 
     demod_->timestamp(timestamp,
                       snapshot_off,
                       offset,
-                      downsampler_.getDelay(),
+                      resampler_.getDelay(),
                       rate_,
                       rx_rate_);
 }
@@ -471,7 +472,6 @@ void FDChannelizer::FDChannelDemodulator::timestamp(const MonoClock::time_point 
 void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* data,
                                                      size_t count)
 {
-    downsampler_.downsample(data,
-                            count,
-                            [&](const C* out, size_t n) { demod_->demodulate(out, n); });
+    resampler_.resampleFromFD(data, count,
+                              [&](const C* out, size_t n) { demod_->demodulate(out, n); });
 }
