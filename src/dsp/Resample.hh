@@ -27,6 +27,15 @@ public:
     /** @brief Get group delay */
     virtual double getDelay(void) const = 0;
 
+    /** @brief Compute number of samples in a resampled signal
+     * @param count Number of samples in source signal
+     * @return Number of samples in resampled signal
+     */
+    virtual size_t resampledSize(size_t count) const
+    {
+        return getRate()*count;
+    }
+
     /** @brief Maximum number of output samples produced for given number input
      * samples
      * @param count Number of input samples
@@ -57,6 +66,11 @@ public:
     virtual double getRate(void) const = 0;
 
     virtual double getDelay(void) const = 0;
+
+    virtual size_t resampledSize(size_t count) const
+    {
+        return getRate()*count;
+    }
 
     virtual size_t neededOut(size_t count) const = 0;
 
@@ -93,6 +107,11 @@ public:
     double getRate(void) const override
     {
         return static_cast<double>(getInterpolationRate())/static_cast<double>(getDecimationRate());
+    }
+
+    size_t resampledSize(size_t count) const override
+    {
+        return getInterpolationRate()*count/getDecimationRate();
     }
 };
 
