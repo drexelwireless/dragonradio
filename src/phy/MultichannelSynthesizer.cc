@@ -17,7 +17,7 @@ namespace py = pybind11;
 #include "stats/Estimator.hh"
 
 /** @brief Channel modulator for multichannel modulation */
-class MultichannelSynthesizer::MultichannelModulator : public ChannelModulator, private Upsampler {
+class MultichannelSynthesizer::MultichannelModulator : public ChannelModulator {
 public:
     MultichannelModulator(const PHYChannel &channel,
                           unsigned chanidx,
@@ -59,7 +59,7 @@ public:
      */
     size_t upsampledSize(size_t n)
     {
-        return I*n/X;
+        return upsampler.I*n/upsampler.X;
     }
 
     /** @brief Perform frequency-domain upsampling on current IQ buffer.
@@ -114,6 +114,9 @@ public:
     /** @brief Number of valid samples in the frequency-domain buffer */
     /** This will be a multiple of N */
     size_t fdnsamples;
+
+    /** @brief Frequency domain upsampler */
+    Upsampler upsampler;
 };
 
 MultichannelSynthesizer::MultichannelSynthesizer(const std::vector<PHYChannel> &channels,
@@ -463,13 +466,13 @@ MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(const PHYC
                                                                       unsigned chanidx,
                                                                       double tx_rate)
   : ChannelModulator(channel, chanidx, tx_rate)
-  , Upsampler(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, channel.channel.fc/tx_rate)
   , fdbuf(nullptr)
   , delay(0)
   , nsamples(0)
   , max_samples(0)
   , npartial(0)
   , fdnsamples(0)
+  , upsampler(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, channel.channel.fc/tx_rate)
 {
 }
 
@@ -516,13 +519,13 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
             // If partial_fftoff is set, we flushed our FFT buffer to yield a
             // partial block, so we need to rewind the FFT upsampler.
             if (partial_fftoff) {
-                fftoff = *partial_fftoff;
+                upsampler.fftoff = *partial_fftoff;
 
                 nsamples = 0;
                 fdnsamples = 0;
             } else {
                 // Copy the previously output FFT block
-                upsampleBlock(fft.out.data(), fdbuf->data());
+                upsampler.upsampleBlock(upsampler.fft.out.data(), fdbuf->data());
 
                 // We start with a full FFT block of samples
                 nsamples = L;
@@ -536,7 +539,7 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
 
             // This sets up the FFT buffer so that the first prev_slot->npartial
             // samples we output will be zero.
-            reset(X*prev_slot->npartial/I);
+            upsampler.reset(upsampler.X*prev_slot->npartial/upsampler.I);
 
             nsamples = 0;
             fdnsamples = 0;
@@ -551,7 +554,7 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
         // this case by seeing if the number of samples output in the previous
         // slot is equal to the size of the slot.
         if (prev_slot && nsamples != delay + prev_slot->full_slot_samples)
-            reset();
+            upsampler.reset();
 
         nsamples = 0;
         fdnsamples = 0;
@@ -563,10 +566,10 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
 bool MultichannelSynthesizer::MultichannelModulator::fits(ModPacket &mpkt, const bool overfill)
 {
     // This is the number of samples the upsampled signal will need
-    size_t n = I*(mpkt.samples->size() - mpkt.samples->delay)/X;
+    size_t n = upsampledSize(mpkt.samples->size() - mpkt.samples->delay);
 
-    if (nsamples + npending() + n <= delay + max_samples ||
-        (nsamples + npending() < delay + max_samples && overfill)) {
+    if (nsamples + upsampler.npending() + n <= delay + max_samples ||
+        (nsamples + upsampler.npending() < delay + max_samples && overfill)) {
         mpkt.start = nsamples;
         mpkt.nsamples = n;
 
@@ -584,35 +587,34 @@ void MultichannelSynthesizer::MultichannelModulator::setIQBuffer(std::shared_ptr
 
 size_t MultichannelSynthesizer::MultichannelModulator::upsample(void)
 {
-    return Upsampler::upsample(iqbuf->data() + iqbufoff,
-                               iqbuf->size() - iqbufoff,
-                               fdbuf->data() + fdnsamples,
-                               1.0f,
-                               false,
-                               [&](size_t n) {
+    return upsampler.upsample(iqbuf->data() + iqbufoff,
+                              iqbuf->size() - iqbufoff,
+                              fdbuf->data() + fdnsamples,
+                              1.0f,
+                              false,
+                              [&](size_t n) {
                                   fdnsamples += Upsampler::N;
                                   nsamples += n;
-
                                   return nsamples < delay + max_samples;
-                               });
+                              });
 }
 
 void MultichannelSynthesizer::MultichannelModulator::flush(Slot &slot)
 {
     if (nsamples < delay + max_samples) {
-        partial_fftoff = fftoff;
+        partial_fftoff = upsampler.fftoff;
 
-        Upsampler::upsample(nullptr,
-                            0,
-                            fdbuf->data() + fdnsamples,
-                            1.0f,
-                            true,
-                            [&](size_t n) {
-                                fdnsamples += Upsampler::N;
-                                nsamples += n;
+        upsampler.upsample(nullptr,
+                           0,
+                           fdbuf->data() + fdnsamples,
+                           1.0f,
+                           true,
+                           [&](size_t n) {
+                               fdnsamples += Upsampler::N;
+                               nsamples += n;
 
-                                return nsamples < delay + max_samples;
-                            });
+                               return nsamples < delay + max_samples;
+                           });
     } else
         partial_fftoff = std::nullopt;
 
