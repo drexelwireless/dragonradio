@@ -10,7 +10,6 @@
 
 #include <xsimd/xsimd.hpp>
 
-#include "Math.hh"
 #include "dsp/Filter.hh"
 #include "dsp/Resample.hh"
 #include "dsp/TableNCO.hh"
@@ -314,23 +313,6 @@ public:
         reconfigure();
     }
 
-    /** @brief Construct a polyphase rational resampler
-     * @param r Resampling rate
-     * @param taps The taps for the prototype FIR filter
-     */
-    RationalResampler(double r, const std::vector<C>& taps = {1.0})
-      : Pfb<T,C>(1, taps)
-      , m_(1)
-    {
-        long l, m;
-
-        frap(r, 200, l, m);
-
-        l_ = l;
-        m_ = m;
-        reconfigure();
-    }
-
     RationalResampler() = delete;
 
     virtual ~RationalResampler() = default;
@@ -352,17 +334,6 @@ public:
 
     void setRate(unsigned l, unsigned m)
     {
-        l_ = l;
-        m_ = m;
-        reconfigure();
-    }
-
-    void setRate(double rate)
-    {
-        long l, m;
-
-        frap(rate, 200, l, m);
-
         l_ = l;
         m_ = m;
         reconfigure();
@@ -434,19 +405,6 @@ public:
      */
     MixingRationalResampler(unsigned l, unsigned m, double theta, const std::vector<C> &taps)
       : RationalResampler<T,C>(l, m, taps)
-      , theta_(theta)
-      , nco_(0.0)
-    {
-        reconfigure();
-    }
-
-    /** @brief Construct a polyphase rational resampler
-     * @param r The resampling rate
-     * @param theta The frequency shift (normalized frequency)
-     * @param taps The taps for the prototype FIR filter.
-     */
-    MixingRationalResampler(double r, double theta, const std::vector<C> &taps)
-      : RationalResampler<T,C>(r, taps)
       , theta_(theta)
       , nco_(0.0)
     {

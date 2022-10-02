@@ -154,11 +154,6 @@ void exportDragonRationalResampler(py::module &m, const char *name)
             py::arg("l"),
             py::arg("m"),
             py::arg("taps") = std::vector<C>{1.0})
-        .def(py::init<double,
-                      const std::vector<C>&>(),
-            "Construct a polyphase rational resampler",
-            py::arg("rate"),
-            py::arg("taps") = std::vector<C>{1.0})
         ;
 }
 
@@ -180,13 +175,6 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
             "Construct a polyphase mixing rational resampler",
             py::arg("l"),
             py::arg("m"),
-            py::arg("theta"),
-            py::arg("taps") = std::vector<C>{1.0})
-        .def(py::init<double,
-                      double,
-                      const std::vector<C>&>(),
-            "Construct a polyphase mixing rational resampler",
-            py::arg("rate"),
             py::arg("theta"),
             py::arg("taps") = std::vector<C>{1.0})
         .def_property("theta",
