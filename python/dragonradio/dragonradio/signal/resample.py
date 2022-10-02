@@ -68,8 +68,7 @@ def downsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> 
     return resampled
 
 def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
-    resampler = dragonradio.signal.RationalResamplerCCC(p/q)
-    resampler.taps = h
+    resampler = dragonradio.signal.RationalResamplerCCC(p, q, h)
 
     if theta != 0 and p/q < 1.0:
         # Frequency shift
@@ -92,7 +91,7 @@ def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np
     return resampled
 
 def resample_and_mix(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
-    resampler = dragonradio.signal.MixingRationalResamplerCCC(p/q, theta, h)
+    resampler = dragonradio.signal.MixingRationalResamplerCCC(p, q, theta, h)
 
     # Append samples to compensate for filter delay
     delay = int(resampler.delay)
