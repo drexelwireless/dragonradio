@@ -34,6 +34,7 @@ public:
     Pfb(unsigned l, const std::vector<C> &taps)
       : l_(l)
       , taps_(taps)
+      , adjtaps_(taps)
       , w_(1)
     {
         reconfigure();
