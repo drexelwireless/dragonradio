@@ -86,7 +86,7 @@ public:
       : chanidx_(chanidx)
       , channel_(channel)
       , rx_rate_(rx_rate)
-      , rate_(channel.phy->getRXOversampleFactor()*channel.channel.bw/rx_rate)
+      , rate_(channel.channel.bw/rx_rate)
       , fshift_(channel.channel.fc/rx_rate)
       , demod_(channel.phy->mkPacketDemodulator(chanidx, channel.channel))
     {
