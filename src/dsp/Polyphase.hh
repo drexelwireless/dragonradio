@@ -37,6 +37,9 @@ public:
       , adjtaps_(taps)
       , w_(1)
     {
+        if (taps.size() == 0)
+            throw std::range_error("Polyphase filter taps must be non-empty");
+
         reconfigure();
     }
 
@@ -66,6 +69,9 @@ public:
     /** @brief Set prototype filter taps */
     void setTaps(const std::vector<C> &taps)
     {
+        if (taps.size() == 0)
+            throw std::range_error("Polyphase filter taps must be non-empty");
+
         taps_ = taps;
         adjtaps_ = taps;
         reconfigure();
@@ -119,6 +125,7 @@ protected:
         // from the protoype filter, and we add additional 0 taps to ensure
         // every channel gets the same number of taps
         n_ = (ntaps + l_ - 1) / l_;
+        assert(n_ > 0);
 
         // Resize sample window
         w_.resize(n_);
