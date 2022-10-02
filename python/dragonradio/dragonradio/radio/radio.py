@@ -948,9 +948,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         rate = Fraction(chan.channel.bw/self.usrp.rx_rate).limit_denominator(config.max_denom)
 
-        chan.I = rate.numerator
-        chan.D = rate.denominator
-
         if rate == 1:
             chan.taps = np.array([1])
         else:
@@ -970,6 +967,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             logger.debug('Created prototype lowpass filter for channelizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
                         len(chan.taps), wp, ws, fs)
 
+        # Compensate for oversampling
+        rate = rate * chan.phy.rx_oversample_factor
+
+        # Set channel interpolation and decimation factors
+        chan.I = rate.numerator
+        chan.D = rate.denominator
+
         return chan
 
     def mkSynthesizerChannel(self, chan: PHYChannel) -> PHYChannel:
@@ -979,9 +983,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         chan = PHYChannel(chan.channel, chan.phy, chan.evm_thresh)
 
         rate = Fraction(self.usrp.tx_rate/chan.channel.bw).limit_denominator(config.max_denom)
-
-        chan.I = rate.numerator
-        chan.D = rate.denominator
 
         if rate == 1:
             chan.taps = np.array([1])
@@ -1003,6 +1004,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
             logger.debug('Created prototype lowpass filter for synthesizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
                         len(chan.taps), wp, ws, fs)
+
+        # Compensate for oversampling
+        rate = rate / chan.phy.tx_oversample_factor
+
+        # Set channel interpolation and decimation factors
+        chan.I = rate.numerator
+        chan.D = rate.denominator
 
         return chan
 
