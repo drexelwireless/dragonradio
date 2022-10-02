@@ -68,6 +68,8 @@ public:
      */
     void add(T x)
     {
+        assert(n_ > 0);
+
         w_[read_idx_++] = 0;
         w_[(read_idx_ + n_ - 1) & mask_] = x;
         read_idx_ &= mask_;
