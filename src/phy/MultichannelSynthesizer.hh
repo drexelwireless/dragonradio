@@ -4,7 +4,7 @@
 #ifndef MULTICHANNELSYNTHESIZER_H_
 #define MULTICHANNELSYNTHESIZER_H_
 
-#include "dsp/FDUpsampler.hh"
+#include "dsp/FDResampler.hh"
 #include "phy/PHY.hh"
 #include "phy/SlotSynthesizer.hh"
 
@@ -12,12 +12,12 @@
 class MultichannelSynthesizer : public SlotSynthesizer
 {
 public:
-    using Upsampler = dragonradio::signal::FDUpsampler<C>;
+    using Resampler = dragonradio::signal::FDResampler<C>;
 
-    static constexpr auto P = Upsampler::P;
-    static constexpr auto N = Upsampler::N;
-    static constexpr auto L = Upsampler::L;
-    static constexpr auto O = Upsampler::O;
+    static constexpr auto P = Resampler::P;
+    static constexpr auto N = Resampler::N;
+    static constexpr auto L = Resampler::L;
+    static constexpr auto O = Resampler::O;
 
     MultichannelSynthesizer(const std::vector<PHYChannel> &channels,
                             double tx_rate,
@@ -46,7 +46,7 @@ private:
     std::vector<std::thread> mod_threads_;
 
     /** @brief OLS time domain converter */
-    Upsampler::ToTimeDomain timedomain_;
+    Resampler::ToTimeDomain timedomain_;
 
     /** @brief Gain necessary to compensate for simultaneous transmission */
     float g_multichan_;
