@@ -19,7 +19,7 @@ using C = std::complex<float>;
 using F = float;
 
 template<class I, class O, class C>
-class MultiStageResampler : public Resampler<I,O> {
+class MultiStageResampler : public dragonradio::signal::Resampler<I,O> {
 public:
    /** @brief Create a liquid multi-stage resampler
     * @param rate Resampling rate
@@ -83,7 +83,7 @@ public:
 };
 
 template<>
-class MultiStageResampler<C,C,F> : public Resampler<C,C> {
+class MultiStageResampler<C,C,F> : public dragonradio::signal::Resampler<C,C> {
 public:
    /** @brief Create a liquid multi-stage resampler
     * @param rate Resampling rate
