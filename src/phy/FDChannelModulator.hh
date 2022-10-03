@@ -1,10 +1,10 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef FDCHANNELMODULATOR_H_
 #define FDCHANNELMODULATOR_H_
 
-#include "dsp/FDUpsampler.hh"
+#include "dsp/FDResampler.hh"
 #include "phy/Synthesizer.hh"
 
 /** @brief Channel state for frequency-domain modulation */
@@ -12,25 +12,22 @@ class FDChannelModulator : public ChannelModulator {
 public:
     using C = std::complex<float>;
 
-    /** @brief Filter length */
-    /** We need two factors of 5 because we need to support 25MHz bandwidth.
-     * The rest of the factors of 2 are for good measure.
-     */
-    static constexpr unsigned P = 25*64+1;
+    using Resampler = dragonradio::signal::FDResampler<C>;
 
-    /** @brief Overlap factor */
-    static constexpr unsigned V = 8;
-
-    using Upsampler = dragonradio::signal::FDUpsampler<C,P,V>;
-
-    static constexpr auto N = Upsampler::N;
+    static constexpr auto P = Resampler::P;
+    static constexpr auto N = Resampler::N;
 
     FDChannelModulator(const PHYChannel &channel,
                        unsigned chanidx,
                        double tx_rate)
       : ChannelModulator(channel, chanidx, tx_rate)
-      , upsampler_(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, channel.channel.fc/tx_rate)
+      , resampler_(channel.I,
+                   channel.D,
+                   channel.phy->getMinTXRateOversample(),
+                   channel.channel.fc/tx_rate,
+                   channel.taps)
     {
+        resampler_.setExact(true);
     }
 
     FDChannelModulator() = delete;
@@ -42,11 +39,8 @@ public:
                   ModPacket &mpkt) override final;
 
 protected:
-    /** @brief Frequency domain upsampler */
-    Upsampler upsampler_;
-
-    /** @brief OLS time domain converter */
-    Upsampler::ToTimeDomain timedomain_;
+    /** @brief Frequency domain resampler */
+    Resampler resampler_;
 };
 
 #endif /* FDCHANNELMODULATOR_H_ */

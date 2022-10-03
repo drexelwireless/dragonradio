@@ -18,7 +18,8 @@ public:
                        unsigned chanidx,
                        double tx_rate)
       : ChannelModulator(channel, chanidx, tx_rate)
-      , upsampler_(channel.channel.bw == 0.0 ? 1.0 : tx_rate/(channel.phy->getMinTXRateOversample()*channel.channel.bw),
+      , upsampler_(channel.I,
+                   channel.D,
                    channel.channel.fc/tx_rate,
                    channel.taps)
     {

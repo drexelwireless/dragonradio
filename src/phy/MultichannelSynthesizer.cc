@@ -1,5 +1,8 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
+
+#include <atomic>
+#include <mutex>
 
 #include <xsimd/xsimd.hpp>
 #include <xsimd/stl/algorithms.hpp>
@@ -12,6 +15,109 @@ namespace py = pybind11;
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/PHY.hh"
 #include "stats/Estimator.hh"
+
+/** @brief Channel modulator for multichannel modulation */
+class MultichannelSynthesizer::MultichannelModulator : public ChannelModulator {
+public:
+    MultichannelModulator(const PHYChannel &channel,
+                          unsigned chanidx,
+                          double tx_rate);
+    MultichannelModulator() = delete;
+
+    ~MultichannelModulator() = default;
+
+    void modulate(std::shared_ptr<NetPacket> pkt,
+                  const float g,
+                  ModPacket &mpkt) override;
+
+    /** @brief Specify the next slot to modulate.
+     * @param prev_slot The previous slot
+     * @param slot The new slot
+     * @param overfill true if this slot can be overfilled
+     */
+    void nextSlot(const Slot *prev_slot, Slot &slot, const bool overfill);
+
+    /** @brief Determine whether or not a modulated packet will fit in
+     * the current frequency domain buffer.
+     * @param mpkt The modulated packet
+     * @param overfill Flag that is true if the slot can be overfilled
+     * @return true if the packet will fit in the slot, false otherwise
+     */
+    /** If the packet will fit in the slot, nsamples is updated
+     * appropriately.
+     */
+    bool fits(ModPacket &mpkt, const bool overfill);
+
+    /** @brief Set current IQ buffer to be upsampled.
+     * @param iqbuf
+     */
+    void setIQBuffer(std::shared_ptr<IQBuf> &&iqbuf);
+
+    /** @brief Calculate how many samples will be in upsampled signal.
+     * @@param n Number of samples in original signal.
+     * @return Number of samples in upsampled signal.
+     */
+    size_t upsampledSize(size_t n)
+    {
+        return n/resampler.getRate();
+    }
+
+    /** @brief Perform frequency-domain upsampling on current IQ buffer.
+     * @return Number of samples read from the input buffer.
+     */
+    size_t upsample(void);
+
+    /** @brief Perform frequency-domain upsampling on current IQ buffer.
+     * @param slot Current slot.
+     */
+    void flush(Slot &slot);
+
+    /** @brief Mutex for channel state */
+    std::mutex mutex;
+
+    /** @brief Packet whose modulated signal is the IQ buffer */
+    std::shared_ptr<NetPacket> pkt;
+
+    /** @brief IQ buffer being upsampled */
+    std::shared_ptr<IQBuf> iqbuf;
+
+    /** @brief Offset of unmodulated data in IQ buffer */
+    size_t iqbufoff;
+
+    /** @brief Frequency domain buffer into which we upsample */
+    IQBuf *fdbuf;
+
+    /** @brief Number of time domain samples in the frequency domain buffer
+     * to delay.
+     */
+    size_t delay;
+
+    /** @brief Number of valid time-domain samples represented by data in
+     * the frequency domain buffer.
+     */
+    /** This represents the number of valid UN-overlapped time-domain
+     * samples represented by the FFT blocks in the frequency domain buffer.
+     */
+    size_t nsamples;
+
+    /** @brief Maximum number of time-domain samples. */
+    size_t max_samples;
+
+    /** @brief Number of time-domain samples represented by final FFT block
+     * that are included in nsamples.
+     */
+    size_t npartial;
+
+    /** @brief FFT buffer offset before flush of partial block. */
+    std::optional<size_t> partial_fftoff;
+
+    /** @brief Number of valid samples in the frequency-domain buffer */
+    /** This will be a multiple of N */
+    size_t fdnsamples;
+
+    /** @brief Frequency domain resampler */
+    Resampler resampler;
+};
 
 MultichannelSynthesizer::MultichannelSynthesizer(const std::vector<PHYChannel> &channels,
                                                  double tx_rate,
@@ -360,14 +466,20 @@ MultichannelSynthesizer::MultichannelModulator::MultichannelModulator(const PHYC
                                                                       unsigned chanidx,
                                                                       double tx_rate)
   : ChannelModulator(channel, chanidx, tx_rate)
-  , Upsampler(channel.phy->getMinTXRateOversample(), tx_rate/channel.channel.bw, channel.channel.fc/tx_rate)
   , fdbuf(nullptr)
   , delay(0)
   , nsamples(0)
   , max_samples(0)
   , npartial(0)
   , fdnsamples(0)
+  , resampler(channel.I,
+              channel.D,
+              channel.phy->getMinTXRateOversample(),
+              channel.channel.fc/tx_rate,
+              channel.taps)
 {
+    resampler.setParallelizable(true);
+    resampler.setExact(true);
 }
 
 void MultichannelSynthesizer::MultichannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
@@ -413,13 +525,13 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
             // If partial_fftoff is set, we flushed our FFT buffer to yield a
             // partial block, so we need to rewind the FFT upsampler.
             if (partial_fftoff) {
-                fftoff = *partial_fftoff;
+                resampler.restoreFFTOffset(*partial_fftoff);
 
                 nsamples = 0;
                 fdnsamples = 0;
             } else {
                 // Copy the previously output FFT block
-                upsampleBlock(fdbuf->data());
+                resampler.copyFFTOut(fdbuf->data());
 
                 // We start with a full FFT block of samples
                 nsamples = L;
@@ -433,7 +545,7 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
 
             // This sets up the FFT buffer so that the first prev_slot->npartial
             // samples we output will be zero.
-            reset(X*prev_slot->npartial/I);
+            resampler.reset(prev_slot->npartial/resampler.getRate());
 
             nsamples = 0;
             fdnsamples = 0;
@@ -444,11 +556,11 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
     } else {
         // If we are NOT continuing modulation of a slot, re-initialize the FFT
         // buffer. When a packet ends exactly on a slot boundary, npartial will
-        // be 0, but we DO NOT want to re-initialize the upsampler. We test for
+        // be 0, but we DO NOT want to re-initialize the resampler. We test for
         // this case by seeing if the number of samples output in the previous
         // slot is equal to the size of the slot.
         if (prev_slot && nsamples != delay + prev_slot->full_slot_samples)
-            reset();
+            resampler.reset();
 
         nsamples = 0;
         fdnsamples = 0;
@@ -460,10 +572,10 @@ void MultichannelSynthesizer::MultichannelModulator::nextSlot(const Slot *prev_s
 bool MultichannelSynthesizer::MultichannelModulator::fits(ModPacket &mpkt, const bool overfill)
 {
     // This is the number of samples the upsampled signal will need
-    size_t n = I*(mpkt.samples->size() - mpkt.samples->delay)/X;
+    size_t n = upsampledSize(mpkt.samples->size() - mpkt.samples->delay);
 
-    if (nsamples + npending() + n <= delay + max_samples ||
-        (nsamples + npending() < delay + max_samples && overfill)) {
+    if (nsamples + resampler.npending() + n <= delay + max_samples ||
+        (nsamples + resampler.npending() < delay + max_samples && overfill)) {
         mpkt.start = nsamples;
         mpkt.nsamples = n;
 
@@ -481,29 +593,34 @@ void MultichannelSynthesizer::MultichannelModulator::setIQBuffer(std::shared_ptr
 
 size_t MultichannelSynthesizer::MultichannelModulator::upsample(void)
 {
-    return Upsampler::upsample(iqbuf->data() + iqbufoff,
-                               iqbuf->size() - iqbufoff,
-                               fdbuf->data(),
-                               1.0f,
-                               false,
-                               nsamples,
-                               delay + max_samples,
-                               fdnsamples);
+    return resampler.resampleToFD(iqbuf->data() + iqbufoff,
+                                  iqbuf->size() - iqbufoff,
+                                  fdbuf->data() + fdnsamples,
+                                  1.0f,
+                                  false,
+                                  [&](size_t n) {
+                                      fdnsamples += Resampler::N;
+                                      nsamples += n;
+                                      return nsamples < delay + max_samples;
+                                  });
 }
 
 void MultichannelSynthesizer::MultichannelModulator::flush(Slot &slot)
 {
     if (nsamples < delay + max_samples) {
-        partial_fftoff = fftoff;
+        partial_fftoff = resampler.saveFFTOffset();
 
-        Upsampler::upsample(nullptr,
-                            0,
-                            fdbuf->data(),
-                            1.0f,
-                            true,
-                            nsamples,
-                            delay + max_samples,
-                            fdnsamples);
+        resampler.resampleToFD(nullptr,
+                               0,
+                               fdbuf->data() + fdnsamples,
+                               1.0f,
+                               true,
+                               [&](size_t n) {
+                                   fdnsamples += Resampler::N;
+                                   nsamples += n;
+
+                                   return nsamples < delay + max_samples;
+                               });
     } else
         partial_fftoff = std::nullopt;
 

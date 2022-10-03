@@ -13,6 +13,7 @@
 #include <xsimd/stl/algorithms.hpp>
 
 #include "dsp/fftcopy.hh"
+#include "dsp/fmcopy.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Resample.hh"
 
@@ -184,15 +185,58 @@ public:
 
     void reset(void) override
     {
-        const unsigned Oi = _i(O);
-
-        fftoff_ = Oi;
-        std::fill(fft_.in.begin(), fft_.in.begin() + Oi, 0);
+        reset(0);
     }
 
     size_t resample(const C *in, size_t count, C *out) override
     {
         return resample(in, count, out, 1.0);
+    }
+
+    /** @brief Reset the resampler state
+     * @param offset The offset at which samples should be output
+     */
+    /** The first offset samples output will be zero */
+    void reset(size_t offset)
+    {
+        const unsigned Oi = _i(O);
+
+        fftoff_ = Oi + offset;
+        assert(fftoff_ <= fft_.in.size());
+        std::fill(fft_.in.begin(), fft_.in.begin() + fftoff_, 0);
+    }
+
+    /** @brief Return number of pending output samples in buffer */
+    size_t npending(void) const
+    {
+        const unsigned Oo = _o(O);
+        size_t         n = I*fftoff_/D;
+
+        return n > Oo ? n - Oo : 0;
+    }
+
+    /** @brief Save FFT offset
+     * @return Current FFT offset
+     */
+    std::optional<size_t> saveFFTOffset() const
+    {
+        return fftoff_;
+    }
+
+    /** @brief Restore FFT offset
+     * @param fftoff New FFT offset
+     */
+    void restoreFFTOffset(size_t fftoff)
+    {
+        fftoff_ = fftoff;
+    }
+
+    /** @brief Copy most recent FFT output block
+     * @param out Frequency domain buffer
+     */
+    void copyFFTOut(T* out)
+    {
+        resampleBlock(fft_.out.data(), out);
     }
 
     /** @brief Resample time domain data
@@ -227,29 +271,19 @@ public:
 
             // Copy data into FFT buffer, multiplying by g if it is not unity.
             if (fftoff_ + avail < Ni) {
-                if (g == 1.0f)
-                    std::copy(in + inoff,
-                              in + inoff + avail,
-                              fft_.in.begin() + fftoff_);
-                else
-                    xsimd::transform(in + inoff,
-                                     in + inoff + avail,
-                                     fft_.in.begin() + fftoff_,
-                                     [&](const auto& x) { return g*x; });
+                fmcopy(in + inoff,
+                       in + inoff + avail,
+                       fft_.in.begin() + fftoff_,
+                       g);
 
                 std::fill(fft_.in.begin() + fftoff_ + avail,
                           fft_.in.end(),
                           0);
             } else {
-                if (g == 1.0f)
-                    std::copy(in + inoff,
-                              in + inoff + Ni - fftoff_,
-                              fft_.in.begin() + fftoff_);
-                else
-                    xsimd::transform(in + inoff,
-                                     in + inoff + Ni - fftoff_,
-                                     fft_.in.begin() + fftoff_,
-                                     [&](const auto& x) { return g*x; });
+                fmcopy(in + inoff,
+                       in + inoff + Ni - fftoff_,
+                       fft_.in.begin() + fftoff_,
+                       g);
             }
 
             // Perform FFT
@@ -357,6 +391,169 @@ public:
             }
         }
     }
+
+    /** @brief Resample frequency domain data
+     * @param in Input buffer containing frequency domain signal to resample
+     * @param count Number of input samples
+     * @param f Function to call with resampled time domain data
+     */
+    template<class F>
+    void resampleFromFD(const T* in, size_t count, F&& f)
+    {
+        const unsigned Ni = _i(N);
+        const unsigned Oo = _o(O);
+        const unsigned Lo = _o(L);
+
+        for (size_t inoff = 0; inoff < count; inoff += Ni) {
+            assert(count - inoff >= Ni);
+
+            // Resample input FFT block as we copy frequency domain signal to
+            // IFFT input buffer.
+            resampleBlock(in + inoff, ifft_.in.data());
+
+            // Perform IFFT
+            ifft_.execute();
+
+            // Call f with time domain data
+            f(ifft_.out.data() + Oo, Lo);
+        }
+    }
+
+    /** @brief Resample time domain data to produce intermediate frequency domain data
+     * @param in Time domain signal to resample
+     * @param count Number of input samples
+     * @param out Frequency domain output buffer
+     * @param g Gain (linear)
+     * @param flush Flush remaining samples in FFT with zeros (no more signal)
+     * @param f Function to call when output samples are generated
+     * @return Offset of first unconsumed sample in input buffer
+     */
+    template<class F>
+    size_t resampleToFD(const T* in,
+                        size_t count,
+                        T* out,
+                        const float g,
+                        bool flush,
+                        F&& f)
+    {
+        const unsigned Ni = _i(N);
+        const unsigned Li = _i(L);
+        const unsigned Oi = _i(O);
+        const unsigned No = _o(N);
+        const unsigned Oo = _o(O);
+
+        size_t inoff = 0;  // Offset into input buffer
+
+        // We must allow inoff == count here to allow the upsampler to be
+        // flushed *without* requiring additional samples.
+        while (inoff <= count) {
+            size_t avail = count - inoff;
+
+            // If we don't have enough samples for a full FFT block...
+            if (fftoff_ + avail < Ni) {
+                fmcopy(in + inoff,
+                       in + inoff + avail,
+                       fft_.in.begin() + fftoff_,
+                       g);
+
+                // If we are flushing the upsampler and we have some signal
+                // pending, fill the rest of FFT block with zeros.
+                if (flush && fftoff_ + avail > Oi) {
+                    std::fill(fft_.in.begin() + fftoff_ + avail,
+                              fft_.in.end(),
+                              0);
+                // We're not flushing, so return immediately so we can process a
+                // full block later when more data is available.
+                } else {
+                    inoff += avail;
+                    fftoff_ += avail;
+                    return inoff;
+                }
+            } else {
+                fmcopy(in + inoff,
+                       in + inoff + Ni - fftoff_,
+                       fft_.in.begin() + fftoff_,
+                       g);
+            }
+
+            // Perform the FFT
+            fft_.execute();
+
+            // Resample the block, copying to output
+            resampleBlock(fft_.out.data(), out);
+            out += No;
+
+            // If we flushed a partial block, return. If fftoff_ + avail < Ni,
+            // we must be flushing because if flush were false, we would have
+            // returned above instead of filling the buffer with zeroes.
+            if (fftoff_ + avail < Ni) {
+                size_t n = I*(fftoff_ + avail)/D;
+
+                inoff += avail;
+                fftoff_ = 0;
+
+                f(n - Oo);
+
+                break;
+            // If the FFT buffer held up to Li samples, we can get all the
+            // overlap data we need for the next FFT from the input buffer.
+            } else if (fftoff_ <= Li) {
+                inoff += Li - fftoff_;
+                fftoff_ = 0;
+
+                if (!f(L))
+                    break;
+            // Otherwise, we need to reuse some of the data in the current FFT
+            // buffer for the overlap.
+            } else {
+                std::copy(fft_.in.begin() + Li,
+                          fft_.in.end(),
+                          fft_.in.begin());
+                fftoff_ -= Li;
+
+                if (!f(L))
+                    break;
+            }
+        }
+
+        return inoff;
+    }
+
+    class ToTimeDomain
+    {
+    public:
+        ToTimeDomain(void)
+          : ifft(N, FFTW_BACKWARD, FFTW_MEASURE)
+        {
+        }
+
+        size_t toTimeDomain(const T* in, size_t count, T* out)
+        {
+            size_t outoff = 0;
+
+            while (count >= N) {
+                // Copy data into IFFT buffer
+                std::copy(in, in + N, ifft.in.begin());
+
+                // Perform IFFT
+                ifft.execute();
+
+                // Copy time-domain data into IQ buffer
+                std::copy(ifft.out.begin() + O,
+                          ifft.out.end(),
+                          out + outoff);
+
+                count -= N;
+                in += N;
+                outoff += L;
+            }
+
+            return outoff;
+        }
+
+        /** @brief FFT */
+        fftw::FFT<T> ifft;
+    };
 
 protected:
     /** @brief Interpolation factor */

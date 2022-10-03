@@ -656,9 +656,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             config.tx_oversample_factor,
             cbw)
 
-        self.setChannels(channels)
+        self.setChannels([PHYChannel(chan, self.phy, self.evm_thresholds) for chan in channels])
 
-    def setChannels(self, channels: Sequence[Channel]):
+    def setChannels(self, channels: Sequence[PHYChannel]):
         """Set current channels.
 
         This function will configure the necessary RX and TX rates and
@@ -676,7 +676,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if self.mac is not None:
             self.mac.rateChange()
 
-    def setRXChannels(self, channels: Sequence[Channel]):
+    def setRXChannels(self, channels: Sequence[PHYChannel]):
         """Configure RX chain for channels"""
         # Initialize channelizer
         self.setRXRate(self.bandwidth)
@@ -685,7 +685,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # determine filter parameters
         self.setChannelizerChannels(channels)
 
-    def setTXChannels(self, channels: Sequence[Channel]):
+    def setTXChannels(self, channels: Sequence[PHYChannel]):
         """Configure TX chain for channels"""
         if self.config.tx_upsample:
             self.setTXRate(self.bandwidth)
@@ -693,15 +693,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         else:
             self.setTXChannelIdx(self.tx_channel_idx)
 
-    def setChannelizerChannels(self, channels: Sequence[Channel]):
+    def setChannelizerChannels(self, channels: Sequence[PHYChannel]):
         """Set channelizer's channels."""
-        self.channelizer.channels = \
-            PHYChannels([PHYChannel(chan, self.evm_thresholds, self.genChannelizerTaps(chan), self.phy) for chan in channels])
+        self.channelizer.channels = PHYChannels([self.mkChannelizerChannel(chan) for chan in channels])
 
-    def setSynthesizerChannels(self, channels: Sequence[Channel]):
+    def setSynthesizerChannels(self, channels: Sequence[PHYChannel]):
         """Set synthesizer's channels."""
-        self.synthesizer.channels = \
-            PHYChannels([PHYChannel(chan, self.evm_thresholds, self.genSynthesizerTaps(chan), self.phy) for chan in channels])
+        self.synthesizer.channels = PHYChannels([self.mkSynthesizerChannel(chan) for chan in channels])
 
         # LLC needs to know transmitting channels
         self.controller.channels = self.synthesizer.channels
@@ -869,22 +867,24 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self._tx_channel_idx = channel_idx
 
         # Get the channel corresponding to the channel index
-        channel = self.channels[channel_idx]
+        chan: PHYChannel = self.channels[channel_idx]
 
         # Set TX rate to the channel's bandwidth. This will compensate for
         # any necessary oversampling.
-        self.setTXRate(channel.bw)
+        self.setTXRate(chan.channel.bw)
 
         # Set TX frequency to configured radio frequency plus the center
         # frequency offset of our TX channel.
-        logger.info("Setting TX frequency offset to %g", channel.fc)
-        self.usrp.tx_frequency = self.frequency + channel.fc
+        logger.info("Setting TX frequency offset to %g", chan.channel.fc)
+        self.usrp.tx_frequency = self.frequency + chan.channel.fc
 
         # Set synthesizer channel to a "dummy" channel. From the
         # synthesizer's perspective, it is operating with a single a channel
         # whose center frequency is 0 and whose bandwidth is the bandwidth
         # of the "true" channel.
-        self.setSynthesizerChannels([Channel(0, channel.bw)])
+        dummy_chan = PHYChannel(Channel(0, chan.channel.bw), chan.phy, chan.evm_thresh)
+
+        self.setSynthesizerChannels([dummy_chan])
 
         # Notify MAC of TX/RX rate change
         if self.mac is not None:
@@ -932,57 +932,71 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if isinstance(self.controller, SmartController):
             self.controller.environmentDiscontinuity()
 
-    def genChannelizerTaps(self, channel: Channel) -> np.ndarray:
+    def mkChannelizerChannel(self, chan: PHYChannel) -> PHYChannel:
         """Generate channelizer filter taps for given channel"""
         config = self.config
 
-        rate = Fraction(channel.bw/self.usrp.rx_rate).limit_denominator(config.max_denom)
+        chan = PHYChannel(chan.channel, chan.phy, chan.evm_thresh)
+
+        rate = Fraction(chan.channel.bw/self.usrp.rx_rate).limit_denominator(config.max_denom)
+
+        chan.I = rate.numerator
+        chan.D = rate.denominator
+
         if rate == 1:
-            return np.array([1])
+            chan.taps = np.array([1])
+        else:
+            ws = self.usrp.rx_rate/max(rate.numerator, rate.denominator)
+            wp = config.wp_cutoff*ws
+            fs = self.usrp.rx_rate
 
-        ws = self.usrp.rx_rate/max(rate.numerator, rate.denominator)
-        wp = config.wp_cutoff*ws
-        fs = self.usrp.rx_rate
+            if config.channelizer == 'timedomain':
+                numtaps = config.poly_taps*rate.denominator
+                if numtaps % 2 == 0:
+                    numtaps += 1
+            elif config.channelizer == 'freqdomain':
+                numtaps = FDChannelizer.P
 
-        if config.channelizer == 'timedomain':
-            numtaps = config.poly_taps*rate.denominator
-            if numtaps % 2 == 0:
-                numtaps += 1
-        elif config.channelizer == 'freqdomain':
-            numtaps = FDChannelizer.P
+            chan.taps = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
 
-        h = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
+            logger.debug('Created prototype lowpass filter for channelizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
+                        len(chan.taps), wp, ws, fs)
 
-        logger.debug('Created prototype lowpass filter for channelizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
-                     len(h), wp, ws, fs)
-        return h
+        return chan
 
-    def genSynthesizerTaps(self, channel: Channel) -> np.ndarray:
+    def mkSynthesizerChannel(self, chan: PHYChannel) -> PHYChannel:
         """Generate synthesizer filter taps for given channel"""
         config = self.config
 
-        rate = Fraction(channel.bw/self.usrp.tx_rate).limit_denominator(config.max_denom)
+        chan = PHYChannel(chan.channel, chan.phy, chan.evm_thresh)
+
+        rate = Fraction(self.usrp.tx_rate/chan.channel.bw).limit_denominator(config.max_denom)
+
+        chan.I = rate.numerator
+        chan.D = rate.denominator
+
         if rate == 1:
-            return np.array([1])
+            chan.taps = np.array([1])
+        else:
+            ws = self.usrp.tx_rate/max(rate.numerator, rate.denominator)
+            wp = config.wp_cutoff*ws
+            fs = self.usrp.tx_rate
 
-        ws = self.usrp.tx_rate/max(rate.numerator, rate.denominator)
-        wp = config.wp_cutoff*ws
-        fs = self.usrp.tx_rate
+            if config.synthesizer == 'timedomain':
+                numtaps = config.poly_taps*rate.denominator
+                if numtaps % 2 == 0:
+                    numtaps += 1
+            elif config.synthesizer == 'freqdomain':
+                numtaps = FDSynthesizer.P
+            elif config.synthesizer == 'multichannel':
+                numtaps = MultichannelSynthesizer.P
 
-        if config.synthesizer == 'timedomain':
-            numtaps = config.poly_taps*rate.denominator
-            if numtaps % 2 == 0:
-                numtaps += 1
-        elif config.synthesizer == 'freqdomain':
-            numtaps = FDSynthesizer.P
-        elif config.synthesizer == 'multichannel':
-            numtaps = MultichannelSynthesizer.P
+            chan.taps = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
 
-        h = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
+            logger.debug('Created prototype lowpass filter for synthesizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
+                        len(chan.taps), wp, ws, fs)
 
-        logger.debug('Created prototype lowpass filter for synthesizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
-                     len(h), wp, ws, fs)
-        return h
+        return chan
 
     def configureMAC(self, mac_class: Type[MAC]):
         """Configure MAC"""

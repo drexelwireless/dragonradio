@@ -123,14 +123,15 @@ public:
     }
 
     /** @brief Upsample a frequency domain block of data
+     * @param in The buffer that contains the input frequency domain data.
      * @param out The buffer that will contain the upsampled frequency domain data.
      */
-    void upsampleBlock(T out[N])
+    void upsampleBlock(const T* in, T* out)
     {
         const unsigned Ni = X*N/I; // Size of forward FFT for input
         const int      n = N/I;    // Size of input block, not counting
                                    // oversampling
-        auto           fftout = fft.out.begin();
+        auto           temp = in[n/2] / 2.0f;
 
         // Copy FFT buffer to out, upsampling and frequency shifting by rotating
         // bins. Note that we don't copy bins that result from oversampling on
@@ -138,42 +139,28 @@ public:
         //
         // Since N is always even, we need to split the bin at the Nyquist
         // frequency.
-        if (Nrot == 0) {
-            std::copy(fftout,
-                      fftout + n/2,
-                      out);
-            std::copy(fftout + Ni - n/2 + 1,
-                      fftout + Ni,
-                      out + N - n/2 + 1);
+        assert(Nrot >= 0);
 
-            auto temp = fftout[n/2] / 2.0f;
+        if (Nrot == 0) {
+            std::copy(in,
+                      in + n/2,
+                      out);
+            std::copy(in + Ni - n/2 + 1,
+                      in + Ni,
+                      out + N - n/2 + 1);
 
             out[n/2] += temp;
             out[N - n/2] = temp;
-        } else if (Nrot > 0) {
-            std::copy(fftout,
-                      fftout + n/2,
+        } else {
+            std::copy(in,
+                      in + n/2,
                       out + Nrot);
-            std::copy(fftout + Ni - n/2 + 1,
-                      fftout + Ni,
+            std::copy(in + Ni - n/2 + 1,
+                      in + Ni,
                       out + Nrot - n/2 + 1);
-
-            auto temp = fftout[n/2] / 2.0f;
 
             out[Nrot + n/2] += temp;
             out[Nrot - n/2] = temp;
-        } else {
-            std::copy(fftout,
-                      fftout + n/2,
-                      out + N + Nrot);
-            std::copy(fftout + Ni - n/2 + 1,
-                      fftout + Ni,
-                      out + N + Nrot - n/2 + 1);
-
-            auto temp = fftout[n/2] / 2.0f;
-
-            out[N + Nrot + n/2] += temp;
-            out[N + Nrot - n/2] = temp;
         }
     }
 
@@ -234,7 +221,7 @@ public:
 
             // Copy FFT buffer to output, upsampling and frequency shifting by
             // shifting bins.
-            upsampleBlock(ifft.in.data());
+            upsampleBlock(fft.out.data(), ifft.in.data());
 
             // Perform inverse FFT to convert back to time domain
             ifft.execute();
@@ -263,27 +250,22 @@ public:
         return nsamples;
     }
 
-    /** @brief Incrementally upsample time domain data
+    /** @brief Incrementally upsample time domain data to produce frequency domain data
      * @param in Input buffer containing signal to upsample
      * @param count Number of input samples
      * @param out Frequency domain output buffer
      * @param g Gain (linear)
      * @param flush Flush remaining samples in FFT with zeros (no more signal)
-     * @param nsamples The number of valid UN-overlapped time-domain samples
-     * represented by the FFT blocks in the frequency domain buffer.
-     * @param max_nsamples Maximum number of time-domain samples.
-     * @param fdnsamples Number of valid samples in the frequency-domain buffer.
-     * Always a multiple of N.
+     * @param f Function to call when output samples are generated
      * @return Offset of first unconsumed sample in input buffer
      */
+    template<class F>
     size_t upsample(const T* in,
                     size_t count,
                     T* out,
                     const float g,
                     bool flush,
-                    size_t& nsamples,
-                    size_t max_nsamples,
-                    size_t& fdnsamples)
+                    F&& f)
     {
         const unsigned Ni = X*N/I; // Size of forward FFT for input
         const unsigned Li = X*L/I; // Number of samples consumed per input block
@@ -294,7 +276,9 @@ public:
         //   * Scaling compensation for the FFT
         const float k = g/static_cast<float>(Ni);
 
-        while (nsamples < max_nsamples) {
+        // We must allow inoff == count here to allow the upsampler to be
+        // flushed *without* requiring additional samples.
+        while (inoff <= count) {
             size_t avail = count - inoff;
 
             // If we don't have enough samples for a full FFT block...
@@ -332,8 +316,8 @@ public:
 
             // Copy FFT buffer to output, upsampling and frequency shifting by
             // shifting bins.
-            upsampleBlock(out + fdnsamples);
-            fdnsamples += N;
+            upsampleBlock(fft.out.data(), out);
+            out += N;
 
             // If we flushed a partial block, return.
             //
@@ -345,19 +329,24 @@ public:
             if (fftoff + avail < Ni) {
                 inoff += avail;
                 fftoff += avail;
-                nsamples += I*fftoff/X - O;
+
+                f(I*fftoff/X - O);
 
                 break;
             } else if (fftoff <= Li) {
                 inoff += Li - fftoff;
                 fftoff = 0;
-                nsamples += L;
+
+                if (!f(L))
+                    break;
             } else {
                 std::copy(fft.in.begin() + Li,
                           fft.in.end(),
                           fft.in.begin());
                 fftoff -= Li;
-                nsamples += L;
+
+                if (!f(L))
+                    break;
             }
         }
 
@@ -372,23 +361,29 @@ public:
         return n > O ? n - O : 0;
     }
 
-    /** @brief Oversample factor */
-    const unsigned X;
+    /** @brief Save FFT offset
+     * @return Current FFT offset
+     */
+    std::optional<size_t> saveFFTOffset() const
+    {
+        return fftoff;
+    }
 
-    /** @brief Interpolation factor */
-    const unsigned I;
+    /** @brief Restore FFT offset
+     * @param fftoff_ New FFT offset
+     */
+    void restoreFFTOffset(size_t fftoff_)
+    {
+        fftoff = fftoff_;
+    }
 
-    /** @brief Number of bins to rotate */
-    int Nrot;
-
-    /** @brief FFT */
-    fftw::FFT<T> fft;
-
-    /** @brief Inverse FFT */
-    fftw::FFT<T> ifft;
-
-    /** @brief Offset into FFT input at which to place new data */
-    size_t fftoff;
+    /** @brief Copy most recent FFT output block
+     * @param out Frequency domain buffer
+     */
+    void copyFFTOut(T* out)
+    {
+        upsampleBlock(fft.out.data(), out);
+    }
 
     class ToTimeDomain
     {
@@ -425,6 +420,25 @@ public:
         /** @brief FFT */
         fftw::FFT<T> ifft;
     };
+
+protected:
+    /** @brief Oversample factor */
+    const unsigned X;
+
+    /** @brief Interpolation factor */
+    const unsigned I;
+
+    /** @brief Number of bins to rotate */
+    int Nrot;
+
+    /** @brief FFT */
+    fftw::FFT<T> fft;
+
+    /** @brief Inverse FFT */
+    fftw::FFT<T> ifft;
+
+    /** @brief Offset into FFT input at which to place new data */
+    size_t fftoff;
 };
 
 }
