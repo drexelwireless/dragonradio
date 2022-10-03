@@ -774,9 +774,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if config.rx_bandwidth is not None:
             want_rx_rate = config.rx_bandwidth
         else:
-            rx_rate_oversample = config.rx_oversample_factor*self.phy.min_rx_rate_oversample
+            if config.channel_bandwidth is None or config.channel_bandwidth == rate:
+                phy_rx_oversample_factors = [chan.phy.rx_oversample_factor for chan in self.channels]
+                rx_oversample_factor = max(config.rx_oversample_factor, *phy_rx_oversample_factors)
+            else:
+                rx_oversample_factor = config.rx_oversample_factor
 
-            want_rx_rate = rate*rx_rate_oversample
+            want_rx_rate = rate*rx_oversample_factor
             want_rx_rate = min(want_rx_rate, config.max_bandwidth)
 
         want_rx_rate = self.findValidRate(want_rx_rate)
@@ -805,9 +809,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if config.tx_bandwidth is not None and not config.tx_upsample:
             want_tx_rate = config.tx_bandwidth
         else:
-            tx_rate_oversample = config.tx_oversample_factor*self.phy.min_tx_rate_oversample
+            if config.channel_bandwidth is None or config.channel_bandwidth == rate:
+                phy_tx_oversample_factors = [chan.phy.tx_oversample_factor for chan in self.channels]
+                tx_oversample_factor = max(config.tx_oversample_factor, *phy_tx_oversample_factors)
+            else:
+                tx_oversample_factor = config.tx_oversample_factor
 
-            want_tx_rate = rate*tx_rate_oversample
+            want_tx_rate = rate*tx_oversample_factor
             want_tx_rate = min(want_tx_rate, config.max_bandwidth)
 
         want_tx_rate = self.findValidRate(want_tx_rate)
@@ -940,9 +948,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         rate = Fraction(chan.channel.bw/self.usrp.rx_rate).limit_denominator(config.max_denom)
 
-        chan.I = rate.numerator
-        chan.D = rate.denominator
-
         if rate == 1:
             chan.taps = np.array([1])
         else:
@@ -962,6 +967,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             logger.debug('Created prototype lowpass filter for channelizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
                         len(chan.taps), wp, ws, fs)
 
+        # Compensate for oversampling
+        rate = rate * chan.phy.rx_oversample_factor
+
+        # Set channel interpolation and decimation factors
+        chan.I = rate.numerator
+        chan.D = rate.denominator
+
         return chan
 
     def mkSynthesizerChannel(self, chan: PHYChannel) -> PHYChannel:
@@ -971,9 +983,6 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         chan = PHYChannel(chan.channel, chan.phy, chan.evm_thresh)
 
         rate = Fraction(self.usrp.tx_rate/chan.channel.bw).limit_denominator(config.max_denom)
-
-        chan.I = rate.numerator
-        chan.D = rate.denominator
 
         if rate == 1:
             chan.taps = np.array([1])
@@ -995,6 +1004,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
             logger.debug('Created prototype lowpass filter for synthesizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
                         len(chan.taps), wp, ws, fs)
+
+        # Compensate for oversampling
+        rate = rate / chan.phy.tx_oversample_factor
+
+        # Set channel interpolation and decimation factors
+        chan.I = rate.numerator
+        chan.D = rate.denominator
 
         return chan
 

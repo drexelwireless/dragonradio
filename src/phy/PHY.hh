@@ -208,13 +208,19 @@ public:
      * bandwidth) needed for demodulation
      * @return The minimum RX oversample rate
      */
-    virtual unsigned getMinRXRateOversample(void) const = 0;
+    virtual unsigned getRXOversampleFactor(void) const
+    {
+        return 1;
+    }
 
     /** @brief Return the minimum oversample rate (with respect to PHY
      * bandwidth) needed for modulation
      * @return The minimum TX oversample rate
      */
-    virtual unsigned getMinTXRateOversample(void) const = 0;
+    virtual unsigned getTXOversampleFactor(void) const
+    {
+        return 1;
+    }
 
     /** @brief Calculate size of modulated data */
     virtual size_t getModulatedSize(mcsidx_t mcsidx, size_t n) = 0;
