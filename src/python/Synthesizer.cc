@@ -78,6 +78,9 @@ void exportSynthesizers(py::module &m)
             py::arg("channels"),
             py::arg("tx_rate"),
             py::arg("nthreads"))
+        .def_readonly_static("P",
+            &FDChannelModulator::P,
+            "int: Maximum prototype filter length.")
         ;
 
     // Export class SlotSynthesizer to Python
@@ -116,5 +119,8 @@ void exportSynthesizers(py::module &m)
             py::arg("channels"),
             py::arg("tx_rate"),
             py::arg("nthreads"))
+        .def_readonly_static("P",
+            &MultichannelSynthesizer::P,
+            "int: Maximum prototype filter length.")
         ;
 }

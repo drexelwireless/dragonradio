@@ -3,6 +3,7 @@
 
 """Radio class for managing the radio."""
 import asyncio
+from fractions import Fraction
 from functools import cached_property
 import importlib_resources
 import ipaddress
@@ -935,24 +936,24 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Generate channelizer filter taps for given channel"""
         config = self.config
 
-        # Calculate channelizer taps
-        if channel.bw == self.usrp.rx_rate:
-            return [1]
+        rate = Fraction(channel.bw/self.usrp.rx_rate).limit_denominator(config.max_denom)
+        if rate == 1:
+            return np.array([1])
 
-        if config.channelizer == 'freqdomain':
-            wp = 0.95*channel.bw
-            ws = channel.bw
-            fs = self.usrp.rx_rate
+        ws = self.usrp.rx_rate/max(rate.numerator, rate.denominator)
+        wp = config.wp_cutoff*ws
+        fs = self.usrp.rx_rate
 
-            h = dragonradio.signal.autolowpass(wp, ws, fs, ftype=config.channelizer_ftype, Nmax=FDChannelizer.P)
-        else:
-            wp = 0.9*channel.bw
-            ws = 1.1*channel.bw
-            fs = self.usrp.rx_rate
+        if config.channelizer == 'timedomain':
+            numtaps = config.poly_taps*rate.denominator
+            if numtaps % 2 == 0:
+                numtaps += 1
+        elif config.channelizer == 'freqdomain':
+            numtaps = FDChannelizer.P
 
-            h = dragonradio.signal.autolowpass(wp, ws, fs)
+        h = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
 
-        logger.debug('Created prototype lowpass filter for channelizer: N=%d; wp=%g; ws=%g; fs=%g',
+        logger.debug('Created prototype lowpass filter for channelizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
                      len(h), wp, ws, fs)
         return h
 
@@ -960,20 +961,26 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Generate synthesizer filter taps for given channel"""
         config = self.config
 
-        if channel.bw == self.usrp.tx_rate:
-            return [1]
+        rate = Fraction(channel.bw/self.usrp.tx_rate).limit_denominator(config.max_denom)
+        if rate == 1:
+            return np.array([1])
 
-        if config.synthesizer == 'freqdomain' or config.synthesizer == 'multichannel':
-            # Frequency-space synthesizers don't apply a filter
-            return [1]
-
-        wp = 0.9*channel.bw
-        ws = 1.1*channel.bw
+        ws = self.usrp.tx_rate/max(rate.numerator, rate.denominator)
+        wp = config.wp_cutoff*ws
         fs = self.usrp.tx_rate
 
-        h = dragonradio.signal.autolowpass(wp, ws, fs)
+        if config.synthesizer == 'timedomain':
+            numtaps = config.poly_taps*rate.denominator
+            if numtaps % 2 == 0:
+                numtaps += 1
+        elif config.synthesizer == 'freqdomain':
+            numtaps = FDSynthesizer.P
+        elif config.synthesizer == 'multichannel':
+            numtaps = MultichannelSynthesizer.P
 
-        logger.debug('Created prototype lowpass filter for synthesizer: N=%d; wp=%g; ws=%g; fs=%g',
+        h = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
+
+        logger.debug('Created prototype lowpass filter for synthesizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
                      len(h), wp, ws, fs)
         return h
 

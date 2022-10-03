@@ -253,11 +253,19 @@ class Config:
     tx_upsample: bool = True
     """If True, upsample transmitted data"""
 
+    # Filter parameters
+    ftype: str = 'ls'
+    """Algorithm used to construct low-pass filter for channelizer."""
+    wp_cutoff: float = 0.95
+    """Passband cutoff as a fraction of stopband."""
+    poly_taps: int = 30
+    """Maximum number of taps in a polyphase subfilter"""
+    max_denom: int = 2000
+    """Maximum denominator for rational resampler rate"""
+
     # Channelizer parameters
     channelizer: str = 'freqdomain'
     "Channelizer to use"
-    channelizer_ftype: str = 'firpm1f2'
-    """Algorithm used to construct low-pass filter for channelizer."""
 
     # Synthesizer parameters
     synthesizer: str = 'freqdomain'
@@ -898,15 +906,17 @@ class Config:
                          dest='tx_upsample',
                          help='use USRP\'s hardware upsampler on TX')
 
+        # Filter parameters
+        phy.add_argument('--ftype', action='store',
+                         choices=['kaiser', 'ls', 'firpm1f', 'firpm1f2'],
+                         dest='ftype',
+                         help='algorithm used to construct low-pass filter for channelizer')
+
         # Channelizer parameters
         phy.add_argument('--channelizer', action='store',
                          choices=sorted(CHANNELIZER_NAMES.keys()),
                          dest='channelizer',
                          help='set channelization algorithm')
-        phy.add_argument('--channelizer-ftype', action='store',
-                         choices=['kaiser', 'ls', 'firpm1f', 'firpm1f2'],
-                         dest='channelizer_ftype',
-                         help='algorithm used to construct low-pass filter for channelizer')
 
         # Synthesizer parameters
         phy.add_argument('--synthesizer', action='store',
