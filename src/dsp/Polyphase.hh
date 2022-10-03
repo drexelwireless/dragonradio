@@ -16,14 +16,16 @@
 #include "dsp/TableNCO.hh"
 #include "dsp/Window.hh"
 
-namespace dragonradio::signal {
+namespace dragonradio::signal::pfb {
+
+using dragonradio::signal::Resampler;
 
 /** @brief A polyphase filter bank
  * @tparam T The type of samples
  * @tparam C The type of filter taps
  */
 template <class T, class C>
-class Pfb : public Resampler<T,T>
+class Pfb : virtual public Resampler<T,T>
 {
 public:
     /** @brief Construct a polyphase filter bank
@@ -145,7 +147,10 @@ protected:
     }
 };
 
-/** @brief An upsampler that uses a polyphase filter bank */
+/** @brief An upsampler that uses a polyphase filter bank
+ * @tparam T The type of samples
+ * @tparam C The type of filter taps
+ */
 template <class T, class C>
 class Upsampler : public Pfb<T,C> {
 protected:
@@ -208,7 +213,10 @@ protected:
     }
 };
 
-/** @brief A downsampler that uses a polyphase filter bank */
+/** @brief A downsampler that uses a polyphase filter bank
+ * @tparam T The type of samples
+ * @tparam C The type of filter taps
+ */
 template <class T, class C>
 class Downsampler : public Pfb<T,C> {
 protected:
@@ -280,9 +288,12 @@ protected:
     }
 };
 
-/** @brief A rational resampler that uses a polyphase filter bank */
+/** @brief A rational resampler that uses a polyphase filter bank
+ * @tparam T The type of samples
+ * @tparam C The type of filter taps
+ */
 template <class T, class C>
-class RationalResampler : public Pfb<T,C> {
+class RationalResampler : public Pfb<T,C>, public dragonradio::signal::RationalResampler<T,T> {
 protected:
     using Pfb<T,C>::l_;
     using Pfb<T,C>::n_;
@@ -292,11 +303,11 @@ protected:
 
 public:
     /** @brief Construct a polyphase rational resampler
-     * @param l The upsampling rate
-     * @param m The downsampling rate
+     * @param l The interpolation rate
+     * @param m The decimation rate
      * @param taps The taps for the prototype FIR filter
      */
-    RationalResampler(unsigned l, unsigned m, const std::vector<C> &taps)
+    RationalResampler(unsigned l, unsigned m, const std::vector<C>& taps = {1.0})
       : Pfb<T,C>(l, taps)
       , m_(m)
     {
@@ -304,16 +315,17 @@ public:
     }
 
     /** @brief Construct a polyphase rational resampler
-     * @param r The resampler rate
+     * @param r Resampling rate
      * @param taps The taps for the prototype FIR filter
      */
-    RationalResampler(double r, const std::vector<C> &taps = {1.0})
+    RationalResampler(double r, const std::vector<C>& taps = {1.0})
       : Pfb<T,C>(1, taps)
       , m_(1)
     {
         long l, m;
 
         frap(r, 200, l, m);
+
         l_ = l;
         m_ = m;
         reconfigure();
@@ -325,15 +337,15 @@ public:
 
     double getRate(void) const override
     {
-        return static_cast<double>(l_)/m_;
+        return static_cast<double>(l_)/static_cast<double>(m_);
     }
 
-    unsigned getUpRate(void) const
+    unsigned getInterpolationRate(void) const override
     {
         return l_;
     }
 
-    unsigned getDownRate(void) const
+    unsigned getDecimationRate(void) const override
     {
         return m_;
     }
@@ -350,6 +362,7 @@ public:
         long l, m;
 
         frap(rate, 200, l, m);
+
         l_ = l;
         m_ = m;
         reconfigure();
@@ -385,7 +398,7 @@ public:
     }
 
 protected:
-    /** @brief Downsampling rate */
+    /** @brief Decimation rate */
     unsigned m_;
 
     /** @brief Upsampled input sample index */
@@ -414,11 +427,10 @@ protected:
 
 public:
     /** @brief Construct a polyphase rational resampler
-     * @param l The upsampling rate
-     * @param m The downsampling rate
+     * @param l The interpolation rate
+     * @param m The decimation rate
      * @param rad The frequency shift (radians)
-     * @param taps The taps for the prototype FIR filter. The filter must be
-     * designed to run at the upsampler rater.
+     * @param taps The taps for the prototype FIR filter.
      */
     MixingRationalResampler(unsigned l, unsigned m, double rad, const std::vector<C> &taps)
       : RationalResampler<T,C>(l, m, taps)
@@ -429,10 +441,9 @@ public:
     }
 
     /** @brief Construct a polyphase rational resampler
-     * @param r The resampler rate
-     * @param rad Frequency shift (radians)
-     * @param taps The taps for the prototype FIR filter. The filter must be
-     * designed to run at the upsampler rater.
+     * @param r The resampling rate
+     * @param rad The frequency shift (radians)
+     * @param taps The taps for the prototype FIR filter.
      */
     MixingRationalResampler(double r, double rad, const std::vector<C> &taps)
       : RationalResampler<T,C>(r, taps)

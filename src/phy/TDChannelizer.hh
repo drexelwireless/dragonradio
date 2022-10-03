@@ -71,7 +71,7 @@ private:
         IQBuf resamp_buf_;
 
         /** @brief Resampler */
-        dragonradio::signal::MixingRationalResampler<C,C> resamp_;
+        dragonradio::signal::pfb::MixingRationalResampler<C,C> resamp_;
     };
 
     /** @brief Number of demodulation threads. */

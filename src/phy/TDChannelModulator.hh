@@ -12,7 +12,7 @@ class TDChannelModulator : public ChannelModulator {
 public:
     using C = std::complex<float>;
 
-    using Upsampler = dragonradio::signal::MixingRationalResampler<C,C>;
+    using Upsampler = dragonradio::signal::pfb::MixingRationalResampler<C,C>;
 
     TDChannelModulator(const PHYChannel &channel,
                        unsigned chanidx,
