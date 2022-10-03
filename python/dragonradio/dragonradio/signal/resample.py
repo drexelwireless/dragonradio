@@ -27,6 +27,46 @@ def resample_and_filter(sig: ArrayLike, rate: float, fshift: float, resample: Re
 
     return resample(frate.numerator, frate.denominator, h, sig, fshift=fshift)
 
+def upsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> np.ndarray:
+    if q != 1:
+        raise ValueError("upsample: can only upsample")
+
+    if fshift != 0:
+        raise ValueError("upsample: cannot frequency shift")
+
+    resampler = dragonradio.signal.UpsamplerCCC(p)
+    resampler.taps = h
+
+    # Append samples to compensate for filter
+    delay = int(resampler.delay)
+
+    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+
+    # Remove prefix consisting of transient samples
+    resampled = resampled[delay//q:]
+
+    return resampled
+
+def downsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> np.ndarray:
+    if p != 1:
+        raise ValueError("downsample: can only downsample")
+
+    if fshift != 0:
+        raise ValueError("downsample: cannot frequency shift")
+
+    resampler = dragonradio.signal.DownsamplerCCC(q)
+    resampler.taps = h
+
+    # Append samples to compensate for filter
+    delay = int(resampler.delay)
+
+    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+
+    # Remove prefix consisting of transient samples
+    resampled = resampled[delay//q:]
+
+    return resampled
+
 def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, fshift: float=0) -> np.ndarray:
     resampler = dragonradio.signal.RationalResamplerCCC(p/q)
     resampler.taps = h
