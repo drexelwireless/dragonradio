@@ -7,7 +7,7 @@
 #include <atomic>
 #include <mutex>
 
-#include "dsp/FDResample.hh"
+#include "dsp/FDUpsampler.hh"
 #include "dsp/FFTW.hh"
 #include "phy/PHY.hh"
 #include "phy/SlotSynthesizer.hh"
@@ -25,7 +25,7 @@ public:
     /** @brief Overlap factor */
     static constexpr unsigned V = 4;
 
-    using Upsampler = FDUpsampler<C,P,V>;
+    using Upsampler = dragonradio::signal::FDUpsampler<C,P,V>;
 
     static constexpr auto N = Upsampler::N;
     static constexpr auto L = Upsampler::L;

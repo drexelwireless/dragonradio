@@ -8,11 +8,17 @@
 
 #include "dsp/Polyphase.hh"
 #include "dsp/Resample.hh"
+#include "dsp/FDDownsampler.hh"
+#include "dsp/FDResampler.hh"
+#include "dsp/FDUpsampler.hh"
 #include "liquid/Resample.hh"
 #include "python/PyModules.hh"
 
 using dragonradio::signal::Resampler;
 using dragonradio::signal::pfb::Pfb;
+using dragonradio::signal::FDDownsampler;
+using dragonradio::signal::FDResampler;
+using dragonradio::signal::FDUpsampler;
 
 template <class I, class O>
 void exportResampler(py::module &m, const char *name)
@@ -229,6 +235,110 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
         ;
 }
 
+template <class T>
+void exportDragonFDUpsampler(py::module &m, const char *name)
+{
+    py::class_<FDUpsampler<T>,
+               dragonradio::signal::Resampler<T,T>,
+               std::shared_ptr<FDUpsampler<T>>>(m, name)
+        .def(py::init<unsigned,
+                      unsigned,
+                      double>(),
+            "Construct a frequency domain upsampler",
+            py::arg("X"),
+            py::arg("I"),
+            py::arg("theta"))
+        .def_readonly_static("P",
+            &FDUpsampler<T>::P,
+            "int: Maximum prototype filter length.")
+        .def_readonly_static("V",
+            &FDUpsampler<T>::V,
+            "int: Overlap factor.")
+        .def_readonly_static("N",
+            &FDUpsampler<T>::N,
+            "int: FFT size.")
+        .def_readonly_static("L",
+            &FDUpsampler<T>::L,
+            "int: Samples consumer per input block.")
+        ;
+}
+
+template <class T>
+void exportDragonFDDownsampler(py::module &m, const char *name)
+{
+    py::class_<FDDownsampler<T>,
+               dragonradio::signal::Resampler<T,T>,
+               std::shared_ptr<FDDownsampler<T>>>(m, name)
+        .def(py::init<unsigned,
+                      unsigned,
+                      double,
+                      const std::vector<T>&>(),
+            "Construct a frequency domain downsampler",
+            py::arg("X"),
+            py::arg("D"),
+            py::arg("theta"),
+            py::arg("taps") = std::vector<C>{static_cast<C>(1.0)})
+        .def_readonly_static("P",
+            &FDUpsampler<T>::P,
+            "int: Maximum prototype filter length.")
+        .def_readonly_static("V",
+            &FDDownsampler<T>::V,
+            "int: Overlap factor.")
+        .def_readonly_static("N",
+            &FDDownsampler<T>::N,
+            "int: FFT size.")
+        .def_readonly_static("O",
+            &FDDownsampler<T>::O,
+            "int: overlap size.")
+        .def_readonly_static("L",
+            &FDDownsampler<T>::L,
+            "int: Samples consumer per input block.")
+        ;
+}
+
+template <class T>
+void exportDragonFDResampler(py::module &m, const char *name)
+{
+    py::class_<FDResampler<T>,
+               dragonradio::signal::RationalResampler<T,T>,
+               std::shared_ptr<FDResampler<T>>>(m, name)
+        .def(py::init<unsigned,
+                      unsigned,
+                      unsigned,
+                      double,
+                      const std::vector<T>&>(),
+            "Construct a frequency domain resampler",
+            py::arg("I"),
+            py::arg("D"),
+            py::arg("X") = 1,
+            py::arg("theta") = 0.0,
+            py::arg("taps") = std::vector<C>{static_cast<C>(1.0)})
+        .def_property("exact",
+            &FDResampler<T>::getExact,
+            &FDResampler<T>::setExact,
+            "bool: If True, then resampling is exact")
+        .def_property("parallel",
+            &FDResampler<T>::getParallelizable,
+            &FDResampler<T>::setParallelizable,
+            "bool: If True, then resampling is parallelizable")
+        .def_readonly_static("P",
+            &FDResampler<T>::P,
+            "int: Maximum prototype filter length.")
+        .def_readonly_static("V",
+            &FDResampler<T>::V,
+            "int: Overlap factor.")
+        .def_readonly_static("N",
+            &FDResampler<T>::N,
+            "int: FFT size.")
+        .def_readonly_static("O",
+            &FDResampler<T>::O,
+            "int: overlap size.")
+        .def_readonly_static("L",
+            &FDResampler<T>::L,
+            "int: Samples consumer per input block.")
+        ;
+}
+
 void exportResamplers(py::module &m)
 {
     using C = std::complex<float>;
@@ -251,4 +361,8 @@ void exportResamplers(py::module &m)
     exportDragonRationalResampler<C,C>(m, "RationalResamplerCCC");
 
     exportDragonMixingRationalResampler<C,C>(m, "MixingRationalResamplerCCC");
+
+    exportDragonFDUpsampler<C>(m, "FDUpsamplerCCC");
+    exportDragonFDDownsampler<C>(m, "FDDownsamplerCCC");
+    exportDragonFDResampler<C>(m, "FDResamplerCCC");
 }

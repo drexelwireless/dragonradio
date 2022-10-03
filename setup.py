@@ -41,7 +41,7 @@ ext_modules = [
             DEPENDENCIES / 'xsimd/include',
             'src',
         ],
-        libraries = ['liquid', 'FLAC', 'FLAC++', 'firpm'],
+        libraries = ['liquid', 'FLAC', 'FLAC++', 'firpm', 'fftw3'],
         library_dirs = ['/usr/local/lib'],
     ),
 ]

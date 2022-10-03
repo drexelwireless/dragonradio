@@ -14,14 +14,17 @@ from dragonradio.signal import Resampler
 
 resampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.resample,
                                                            dragonradio.signal.resample_and_mix,
+                                                           dragonradio.signal.fdresample,
                                                            pyresample.fdresample])
 """A resampler"""
 
 upsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.upsample,
+                                                           dragonradio.signal.fdupsample,
                                                            pyresample.fdupsample])
 """An upsampler"""
 
 downsampler: st.SearchStrategy[Resampler] = st.sampled_from([dragonradio.signal.downsample,
+                                                             dragonradio.signal.fddownsample,
                                                              pyresample.fddownsample])
 """An downsampler"""
 
