@@ -4,7 +4,7 @@
 #ifndef FDCHANNELMODULATOR_H_
 #define FDCHANNELMODULATOR_H_
 
-#include "dsp/FDResample.hh"
+#include "dsp/FDUpsampler.hh"
 #include "phy/Synthesizer.hh"
 
 /** @brief Channel state for frequency-domain modulation */
@@ -21,7 +21,7 @@ public:
     /** @brief Overlap factor */
     static constexpr unsigned V = 8;
 
-    using Upsampler = FDUpsampler<C,P,V>;
+    using Upsampler = dragonradio::signal::FDUpsampler<C,P,V>;
 
     static constexpr auto N = Upsampler::N;
 
