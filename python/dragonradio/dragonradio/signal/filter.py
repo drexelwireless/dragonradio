@@ -134,6 +134,7 @@ def autolowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
     else:
         raise ValueError('Unknown filter type {}'.format(ftype))
 
+@lru_cache
 def lowpass(numtaps: int, wp: float, ws: float, fs: float, ftype: str='ls', beta: Optional[float]=None) -> np.ndarray:
     """Return a lowpass filter.
 
