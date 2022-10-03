@@ -104,10 +104,10 @@ class OFDM(dragonradio.PHY):
         self.taper_len = taper_len
         self.subcarriers = subcarriers
 
-    def getMinRXRateOversample(self):
+    def getRXOversampleFactor(self):
         return 1
 
-    def getMinTXRateOversample(self):
+    def getTXOversampleFactor(self):
         return 1
 
     def getModulatedSize(self, mcsidx, n):

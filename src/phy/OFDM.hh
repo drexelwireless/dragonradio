@@ -109,16 +109,6 @@ public:
 
     virtual ~OFDM() = default;
 
-    unsigned getMinRXRateOversample(void) const override
-    {
-        return 1;
-    }
-
-    unsigned getMinTXRateOversample(void) const override
-    {
-        return 1;
-    }
-
     liquid::OFDMSubcarriers getSubcarriers(void) const
     {
         return p_;

@@ -138,6 +138,12 @@ class DumpConfigAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         namespace.dump(values)
 
+class OversampleConfigAction(argparse.Action):
+    """Set both TX and RX oversample factor."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        namespace.tx_oversample_factor = values
+        namespace.rx_oversample_factor = values
+
 def parser():
     """Return the default configuration parser."""
     return Config().parser()
@@ -860,6 +866,10 @@ class Config:
                             dest='tx_oversample_factor',
                             metavar='X',
                             help='set TX oversample factor')
+        freqbw.add_argument('--oversample', action=OversampleConfigAction, type=float,
+                            dest='oversample_factor',
+                            metavar='X',
+                            help='set TX and RX oversample factor')
         freqbw.add_argument('--channel-bandwidth', action='store', type=float,
                             dest='channel_bandwidth',
                             metavar='HZ',

@@ -113,7 +113,7 @@ public:
       : channel_(channel)
       , chanidx_(chanidx)
       // XXX Protected against channel with zero bandwidth
-      , rate_(channel.channel.bw == 0.0 ? 1.0 : tx_rate/(channel.phy->getMinTXRateOversample()*channel.channel.bw))
+      , rate_(tx_rate/channel.channel.bw)
       , fshift_(channel.channel.fc/tx_rate)
       , mod_(channel.phy->mkPacketModulator())
     {
