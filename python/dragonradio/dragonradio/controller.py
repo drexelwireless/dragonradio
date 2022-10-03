@@ -29,7 +29,7 @@ from dragonradio.internal import mkFlowStats, mkSpectrumStats
 import dragonradio.net
 from dragonradio.protobuf import handle, handler, TCPProtoServer
 import dragonradio.radio
-from dragonradio.radio import ConfigException
+from dragonradio.radio import ConfigException, PHYChannel
 import dragonradio.remote as remote
 import dragonradio.schedule
 import dragonradio.tasks
@@ -70,6 +70,7 @@ class Voxel:
 
         self.tx = None
         """"Transmitting node"""
+
         self.rx = []
         """Receiving nodes"""
 
@@ -112,6 +113,14 @@ class Voxel:
         usage.receiver_info.extend(receivers)
 
         return usage
+
+def channelToVoxel(tx: int, fs: float, phychan: PHYChannel):
+        vox = Voxel()
+        vox.f_start = fs + phychan.channel.fc - phychan.channel.bw/2
+        vox.f_end = fs + phychan.channel.fc + phychan.channel.bw/2
+        vox.tx = tx
+
+        return vox
 
 @handler(remote.Request)
 @handler(internal.Message)
@@ -742,14 +751,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         for chan in radio.channels:
             transmitters = set(self.neighbors)
 
-            f_start = radio.frequency + chan.fc - chan.bw/2
-            f_end = radio.frequency + chan.fc + chan.bw/2
-
             for tx in transmitters:
-                vox = Voxel()
-                vox.f_start = f_start
-                vox.f_end = f_end
-                vox.tx = tx
+                vox = channelToVoxel(tx, radio.frequency, chan)
 
                 await self.updateVoxelUsage(vox)
 
@@ -767,25 +770,19 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         voxels = []
 
         for chanidx in range(0, nchannels):
+            chan = radio.channels[chanidx]
+
             transmitters = set(sched[chanidx])
             if 0 in transmitters:
                 transmitters.remove(0)
 
-            if len(transmitters) != 0:
-                chan = radio.channels[chanidx]
-                f_start = radio.frequency + chan.fc - chan.bw/2
-                f_end = radio.frequency + chan.fc + chan.bw/2
+            for tx in transmitters:
+                vox = channelToVoxel(tx, radio.frequency, chan)
 
-                for tx in transmitters:
-                    vox = Voxel()
-                    vox.f_start = f_start
-                    vox.f_end = f_end
-                    vox.tx = tx
+                await self.updateVoxelUsage(vox)
 
-                    await self.updateVoxelUsage(vox)
-
-                    if vox.duty_cycle != 0:
-                        voxels.append(vox)
+                if vox.duty_cycle != 0:
+                    voxels.append(vox)
 
         return voxels
 
@@ -1053,10 +1050,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     duty_cycle = load.nsamples[idx]/nsamples
 
                     if duty_cycle != 0:
-                        vox = Voxel()
-                        vox.f_start = self.radio.frequency + chan.fc - chan.bw/2
-                        vox.f_end = self.radio.frequency + chan.fc + chan.bw/2
-                        vox.duty_cycle = duty_cycle
+                        vox = channelToVoxel(radio.node_id, radio.frequency, chan)
                         voxels.append(vox)
 
             if len(voxels) != 0:

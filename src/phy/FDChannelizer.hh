@@ -11,6 +11,7 @@
 
 #include "Logger.hh"
 #include "SafeQueue.hh"
+#include "dsp/FDResampler.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
@@ -21,25 +22,15 @@
 class FDChannelizer : public Channelizer
 {
 public:
-    /** @brief Filter length */
-    /** We need two factors of 5 because we need to support 25MHz bandwidth. The
-     * remaining factors of 2 get us to a filter of order 12800, which is about
-     * how many taps we need for a 50kHz passband transition in 80MHz of
-     * bandwidth.
-     */
-    static constexpr unsigned P = 25*512+1;
+    using C = std::complex<float>;
 
-    /** @brief Overlap factor */
-    static constexpr unsigned V = 4;
+    using Resampler = dragonradio::signal::FDResampler<C>;
 
-    /** @brief Length of FFT */
-    static constexpr unsigned N = V*(P-1);
-
-    /** @brief Size of FFT overlap */
-    static constexpr unsigned O = P-1;
-
-    /** @brief Number of new samples consumed per input block */
-    static constexpr unsigned L = N - (P-1);
+    static constexpr auto P = Resampler::P;
+    static constexpr auto V = Resampler::V;
+    static constexpr auto N = Resampler::N;
+    static constexpr auto O = Resampler::O;
+    static constexpr auto L = Resampler::L;
 
     FDChannelizer(const std::vector<PHYChannel> &channels,
                   double rx_rate,
@@ -81,26 +72,8 @@ private:
         /** @brief Channel IQ buffer sequence number */
         unsigned seq_;
 
-        /** @brief Oversample factor */
-        unsigned X_;
-
-        /** @brief Decimation factor */
-        unsigned D_;
-
-        /** @brief Number of FFT bins to rotate */
-        int Nrot_;
-
-        /** @brief Filter delay */
-        size_t delay_;
-
-        /** @brief IFFT */
-        fftw::FFT<C> ifft_;
-
-        /** @brief Vector containing rotated FFT input */
-        fftw::vector<C> temp_;
-
-        /** @brief Frequency-domain filter */
-        fftw::vector<C> H_;
+        /** @brief Frequency-domain resampler */
+        Resampler resampler_;
     };
 
     /** @brief A demodulation slot */

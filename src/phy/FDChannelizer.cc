@@ -427,40 +427,17 @@ FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(unsigned chanidx,
                                                           double rx_rate)
   : ChannelDemodulator(chanidx, channel, rx_rate)
   , seq_(0)
-  , X_(channel.phy->getMinRXRateOversample())
-  , D_(rx_rate/channel.channel.bw)
-  , ifft_(X_*N/D_, FFTW_BACKWARD, FFTW_MEASURE)
-  , temp_(N)
-  , H_(N)
+  , resampler_(channel.I,
+               channel.D,
+               channel.phy->getMinRXRateOversample(),
+               channel.channel.fc/rx_rate,
+               channel.taps)
 {
     // Channel bandwidth must be less that total available bandwidth
     assert(channel.channel.bw <= rx_rate);
 
     // Channel bandwidth must evenly divide total bandwidth
     assert(fmod(rx_rate_, channel.channel.bw) == 0);
-
-    // Number of FFT bins to rotate
-    Nrot_ = N*channel.channel.fc/rx_rate;
-    if (Nrot_ < 0)
-        Nrot_ += N;
-
-    // Compute frequency-domain filter
-    fftw::FFT<C> fft(N, FFTW_FORWARD, FFTW_MEASURE);
-
-    std::fill(fft.in.begin(), fft.in.end(), 0);
-    assert(channel.taps.size() <= P);
-    std::copy(channel.taps.begin(), channel.taps.end(), fft.in.begin());
-    fft.execute(fft.in.data(), H_.data());
-
-    // Compute filter delay
-    delay_ = round((channel.taps.size() - 1) / 2.0);
-
-    // Apply 1/(N*D) factor to filter since FFTW doesn't multiply by 1/N for
-    // IFFT, and we need to compensate for summation during decimation.
-    const C invN = 1.0/(N*D_);
-
-    xsimd::transform(H_.begin(), H_.end(), H_.begin(),
-        [&](const auto& x) { return x*invN; });
 }
 
 void FDChannelizer::FDChannelDemodulator::updateSeq(unsigned seq)
@@ -487,7 +464,7 @@ void FDChannelizer::FDChannelDemodulator::timestamp(const MonoClock::time_point 
     demod_->timestamp(timestamp,
                       snapshot_off,
                       offset,
-                      delay_,
+                      resampler_.getDelay(),
                       rate_,
                       rx_rate_);
 }
@@ -495,41 +472,6 @@ void FDChannelizer::FDChannelDemodulator::timestamp(const MonoClock::time_point 
 void FDChannelizer::FDChannelDemodulator::demodulate(const std::complex<float>* data,
                                                      size_t count)
 {
-    const unsigned n = N/D_;
-
-    for (; count > 0; count -= N, data += N) {
-        // Shift FFT bins as we copy into temp buffer
-        std::rotate_copy(data, data + Nrot_, data + N, temp_.begin());
-
-        // Apply filter
-        xsimd::transform(temp_.begin(), temp_.end(), H_.begin(), temp_.begin(),
-            [](const auto& x, const auto& y) { return x*y; });
-
-        // Decimate by summing strides of temp buffer, placing result in IFFT
-        // input buffer
-        std::copy(temp_.begin(), temp_.begin() + n, ifft_.in.begin());
-
-        for (unsigned i = 1; i < D_; ++i)
-            xsimd::transform(temp_.begin() + i*n,
-                             temp_.begin() + (i+1)*n,
-                             temp_.begin(),
-                             temp_.begin(),
-                [](const auto& x, const auto& y) { return x+y; });
-
-        // Oversample if needed
-        if (X_ != 1) {
-            std::copy(temp_.begin() + n/2,
-                      temp_.begin() + n,
-                      temp_.begin() + X_*n - n/2);
-            std::fill(temp_.begin() + n/2,
-                      temp_.begin() + n,
-                      0);
-        }
-
-        // Perform IFFT
-        ifft_.execute(temp_.data(), ifft_.out.data());
-
-        // Demodulate
-        demod_->demodulate(ifft_.out.data() + X_*O/D_, X_*L/D_);
-    }
+    resampler_.resampleFromFD(data, count,
+                              [&](const C* out, size_t n) { demod_->demodulate(out, n); });
 }
