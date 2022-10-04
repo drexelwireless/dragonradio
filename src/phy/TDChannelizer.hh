@@ -32,50 +32,7 @@ public:
     void stop(void);
 
 private:
-    /** @brief Channel state for time-domain demodulation */
-    class TDChannelDemodulator : public ChannelDemodulator {
-    public:
-        TDChannelDemodulator(unsigned chanidx,
-                             const PHYChannel &channel,
-                             double rx_rate)
-          : ChannelDemodulator(chanidx, channel, rx_rate)
-          , seq_(0)
-          , delay_(round((channel.taps.size() - 1)/2.0))
-          , resamp_buf_(0)
-          , resamp_(channel.I,
-                    channel.D,
-                    channel.channel.fc/rx_rate,
-                    channel.taps)
-        {
-        }
-
-        virtual ~TDChannelDemodulator() = default;
-
-        /** @brief Update IQ buffer sequence number */
-        void updateSeq(unsigned seq);
-
-        void reset(void) override;
-
-        void timestamp(const MonoClock::time_point &timestamp,
-                       std::optional<ssize_t> snapshot_off,
-                       ssize_t offset) override;
-
-        void demodulate(const std::complex<float>* data,
-                        size_t count) override;
-
-    protected:
-        /** @brief Channel IQ buffer sequence number */
-        unsigned seq_;
-
-        /** @brief Filter delay */
-        size_t delay_;
-
-        /** @brief Resampling buffer */
-        IQBuf resamp_buf_;
-
-        /** @brief Resampler */
-        dragonradio::signal::pfb::MixingRationalResampler<C,C> resamp_;
-    };
+    class TDChannelDemodulator;
 
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
