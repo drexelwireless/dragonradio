@@ -1,6 +1,9 @@
 // Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#ifndef TIMERQUEUE_H_
+#define TIMERQUEUE_H_
+
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -126,3 +129,5 @@ protected:
     /** @brief Timer callback */
     T callback_;
 };
+
+#endif /* TIMERQUEUE_H_ */
