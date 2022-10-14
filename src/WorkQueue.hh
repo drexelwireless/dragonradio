@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef WORKQUEUE_H_
@@ -39,9 +39,15 @@ public:
         work_q_.push(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
     }
 
-    void submit(const std::function<void(void)>& item);
+    void submit(const std::function<void(void)>& item)
+    {
+        work_q_.push(item);
+    }
 
-    void submit(std::function<void(void)>&& item);
+    void submit(std::function<void(void)>&& item)
+    {
+        work_q_.push(std::move(item));
+    }
 
 private:
     std::atomic<bool> done_;
