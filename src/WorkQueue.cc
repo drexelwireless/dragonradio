@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "WorkQueue.hh"
@@ -33,16 +33,6 @@ void WorkQueue::stop(void)
         if (threads_[i].joinable())
             threads_[i].join();
     }
-}
-
-void WorkQueue::submit(const std::function<void(void)>& item)
-{
-    work_q_.push(item);
-}
-
-void WorkQueue::submit(std::function<void(void)>&& item)
-{
-    work_q_.push(std::move(item));
 }
 
 void WorkQueue::run_worker(void)
