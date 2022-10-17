@@ -108,7 +108,7 @@ public:
     void logSend(const std::shared_ptr<NetPacket> &pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)]() { logSend_(pkt->tx_timestamp, kNotDropped, *pkt); });
+            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)]() { logSend_(pkt->timestamps.tx_timestamp, kNotDropped, *pkt); });
     }
 
     void logPHYDrop(const MonoClock::time_point& t,

@@ -27,7 +27,7 @@ bool DummyController::pull(std::shared_ptr<NetPacket> &pkt)
             pkt->internal_flags.assigned_seq = 1;
         }
 
-        pkt->llc_timestamp = MonoClock::now();
+        pkt->timestamps.llc_timestamp = MonoClock::now();
 
         return true;
     } else

@@ -527,29 +527,32 @@ struct NetPacket : public Packet
     /** @brief IQ sample buffer containing modulated packet */
     std::shared_ptr<IQBuf> samples;
 
-    /** @brief Wall-clock time when packet was read from tun/tap */
-    WallClock::time_point tuntap_timestamp;
+    /** @brief Packet event timestamps */
+    struct Timestamps {
+        /** @brief Wall-clock time when packet was read from tun/tap */
+        WallClock::time_point tuntap_timestamp;
 
-    /** @brief Time when packet was enqueued */
-    std::optional<MonoClock::time_point> enqueue_timestamp;
+        /** @brief Time when packet was enqueued */
+        std::optional<MonoClock::time_point> enqueue_timestamp;
 
-    /** @brief Dequeue start timestamp */
-    std::optional<MonoClock::time_point> dequeue_start_timestamp;
+        /** @brief Dequeue start timestamp */
+        std::optional<MonoClock::time_point> dequeue_start_timestamp;
 
-    /** @brief Dequeue end timestamp */
-    std::optional<MonoClock::time_point> dequeue_end_timestamp;
+        /** @brief Dequeue end timestamp */
+        std::optional<MonoClock::time_point> dequeue_end_timestamp;
 
-    /** @brief Time when packet exited LLC */
-    MonoClock::time_point llc_timestamp;
+        /** @brief Time when packet exited LLC */
+        MonoClock::time_point llc_timestamp;
 
-    /** @brief Modulation start timestamp */
-    MonoClock::time_point mod_start_timestamp;
+        /** @brief Modulation start timestamp */
+        MonoClock::time_point mod_start_timestamp;
 
-    /** @brief Modulation end timestamp */
-    MonoClock::time_point mod_end_timestamp;
+        /** @brief Modulation end timestamp */
+        MonoClock::time_point mod_end_timestamp;
 
-    /** @brief Packet transmission timestamp */
-    MonoClock::time_point tx_timestamp;
+        /** @brief Packet transmission timestamp */
+        MonoClock::time_point tx_timestamp;
+    } timestamps;
 
     /** @brief Return true if the packet's deadline has passed, false otherwise */
     bool deadlinePassed(const MonoClock::time_point &now)

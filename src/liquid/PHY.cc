@@ -91,8 +91,8 @@ void PHY::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
         work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
     // Record modulation latency
-    pkt->mod_start_timestamp = mod_start;
-    pkt->mod_end_timestamp = mod_end;
+    pkt->timestamps.mod_start_timestamp = mod_start;
+    pkt->timestamps.mod_end_timestamp = mod_end;
 
     // Fill in the ModPacket
     mpkt.offset = iqbuf->delay;
