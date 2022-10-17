@@ -119,7 +119,8 @@ get_packet:
     if (pkt->hdr.nexthop == kNodeBroadcast) {
         pkt->mcsidx = mcsidx_broadcast_;
         pkt->g = broadcast_gain.getLinearGain();
-        pkt->llc_timestamp = MonoClock::now();
+        pkt->timestamps.llc_timestamp = MonoClock::now();
+
         return true;
     }
 
@@ -231,7 +232,7 @@ get_packet:
         pkt->g = ack_gain.getLinearGain();
     }
 
-    pkt->llc_timestamp = MonoClock::now();
+    pkt->timestamps.llc_timestamp = MonoClock::now();
     return true;
 }
 
@@ -585,12 +586,12 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
                 std::lock_guard<std::mutex> lock(timestamps_mutex_);
                 Timestamps                  &ts = timestamps_[nhood_->me->id];
 
-                ts.timestamps_sent.insert_or_assign(*pkt.timestamp_seq, pkt.tx_timestamp);
+                ts.timestamps_sent.insert_or_assign(*pkt.timestamp_seq, pkt.timestamps.tx_timestamp);
             }
 
             logTimeSync(LOGDEBUG, "Transmitted timestamp: tseq_sent=%u; t_sent=%f",
                 (unsigned) *pkt.timestamp_seq,
-                (double) pkt.tx_timestamp.time_since_epoch().count());
+                (double) pkt.timestamps.tx_timestamp.time_since_epoch().count());
         }
     }
 }

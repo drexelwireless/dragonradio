@@ -311,7 +311,7 @@ void TunTap::worker(void)
         pkt->ehdr().data_len = nread;
         pkt->resize(sizeof(ExtendedHeader) + nread);
         pkt->timestamp = MonoClock::now();
-        pkt->tuntap_timestamp = WallClock::to_wall_time(pkt->timestamp);
+        pkt->timestamps.tuntap_timestamp = WallClock::to_wall_time(pkt->timestamp);
         source.push(std::move(pkt));
     }
 }
