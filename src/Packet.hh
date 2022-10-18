@@ -337,6 +337,9 @@ struct Packet : public buffer<unsigned char>
     /** @brief Append a "set unack" control message to a packet */
     void appendSetUnack(const Seq &unack);
 
+    /** @brief Get SACKs */
+    std::vector<Seq::uint_type> getSACKs(void) const;
+
     /** @brief Return iterator to beginning control data. */
     iterator begin() const
     {
