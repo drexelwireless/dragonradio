@@ -237,6 +237,31 @@ void Packet::appendSetUnack(const Seq &unack)
     appendControl(msg);
 }
 
+std::vector<Seq::uint_type> Packet::getSACKs(void) const
+{
+    std::vector<Seq::uint_type> sacks;
+
+    for(auto it = begin(); it != end(); ++it) {
+        switch (it->type) {
+            case ControlMsg::Type::kSelectiveAck:
+            {
+                ControlMsg::SelectiveAck ack;
+
+                ::memcpy(&ack, &(it->ack), sizeof(ack));
+
+                sacks.push_back(ack.begin);
+                sacks.push_back(ack.end);
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
+
+    return sacks;
+}
+
 const struct mgenhdr *Packet::getMGENHdr(void) const
 {
     const struct ip *iph = getIPHdr();

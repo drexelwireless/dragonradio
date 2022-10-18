@@ -772,29 +772,9 @@ void Logger::logARQEvent_(const MonoClock::time_point& t,
 void Logger::logARQSACKEvent_(const Packet& pkt,
                               ARQEventType type,
                               NodeId node,
-                              Seq unack)
+                              Seq unack,
+                              const std::vector<Seq::uint_type>& sacks)
 {
-    // Extract SACKs
-    std::vector<Seq::uint_type> sacks;
-
-    for(auto it = pkt.begin(); it != pkt.end(); ++it) {
-        switch (it->type) {
-            case ControlMsg::Type::kSelectiveAck:
-            {
-                ControlMsg::SelectiveAck ack;
-
-                ::memcpy(&ack, &(it->ack), sizeof(ack));
-
-                sacks.push_back(ack.begin);
-                sacks.push_back(ack.end);
-            }
-            break;
-
-            default:
-                break;
-        }
-    }
-
     // Log event
     ARQEventEntry entry;
 

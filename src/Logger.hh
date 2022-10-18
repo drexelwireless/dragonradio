@@ -164,7 +164,7 @@ public:
                      Seq unack)
     {
         if (getCollectSource(kARQEvents))
-            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSendSACK, node, unack); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt), sacks=pkt->getSACKs()](){ logARQSACKEvent_(*pkt, kSendSACK, node, unack, sacks); });
     }
 
     void logNAK(const MonoClock::time_point& t,
@@ -188,7 +188,7 @@ public:
                  Seq unack)
     {
         if (getCollectSource(kARQEvents))
-            log_q_.push([=, pkt=std::shared_ptr<RadioPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSACK, node, unack); });
+            log_q_.push([=, pkt=std::shared_ptr<RadioPacket>(pkt), sacks=pkt->getSACKs()](){ logARQSACKEvent_(*pkt, kSACK, node, unack, sacks); });
     }
 
     void logSNAK(const MonoClock::time_point& t,
@@ -324,7 +324,8 @@ private:
     void logARQSACKEvent_(const Packet& pkt,
                           ARQEventType type,
                           NodeId node,
-                          Seq unack);
+                          Seq unack,
+                          const std::vector<Seq::uint_type>& sacks);
 };
 
 #endif /* LOGGER_H_ */
