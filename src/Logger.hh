@@ -99,37 +99,37 @@ public:
         log_q_.push([=](){ logSnapshot_(snapshot); });
     }
 
-    void logRecv(const std::shared_ptr<RadioPacket> &pkt)
+    void logRecv(const std::shared_ptr<RadioPacket>& pkt)
     {
         if (getCollectSource(kRecvPackets))
-            log_q_.push([=, pkt = std::shared_ptr<RadioPacket>(pkt)]() { logRecv_(*pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<RadioPacket>(pkt)]() { logRecv_(*pkt); });
     }
 
-    void logSend(const std::shared_ptr<NetPacket> &pkt)
+    void logSend(const std::shared_ptr<NetPacket>& pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)]() { logSend_(pkt->timestamps.tx_timestamp, kNotDropped, *pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt)]() { logSend_(pkt->timestamps.tx_timestamp, kNotDropped, *pkt); });
     }
 
     void logPHYDrop(const MonoClock::time_point& t,
-                    const std::shared_ptr<NetPacket> &pkt)
+                    const std::shared_ptr<NetPacket>& pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kPHYDrop, *pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kPHYDrop, *pkt); });
     }
 
     void logLinkLayerDrop(const MonoClock::time_point& t,
-                          const std::shared_ptr<NetPacket> &pkt)
+                          const std::shared_ptr<NetPacket>& pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kLinkLayerDrop, *pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kLinkLayerDrop, *pkt); });
     }
 
     void logQueueDrop(const MonoClock::time_point& t,
-                      const std::shared_ptr<NetPacket> &pkt)
+                      const std::shared_ptr<NetPacket>& pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kQueueDrop, *pkt); });
+            log_q_.push([=, kt=std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kQueueDrop, *pkt); });
     }
 
     void logEvent(const MonoClock::time_point& t,
@@ -164,7 +164,7 @@ public:
                      Seq unack)
     {
         if (getCollectSource(kARQEvents))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSendSACK, node, unack); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSendSACK, node, unack); });
     }
 
     void logNAK(const MonoClock::time_point& t,
@@ -188,7 +188,7 @@ public:
                  Seq unack)
     {
         if (getCollectSource(kARQEvents))
-            log_q_.push([=, pkt = std::shared_ptr<RadioPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSACK, node, unack); });
+            log_q_.push([=, pkt=std::shared_ptr<RadioPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSACK, node, unack); });
     }
 
     void logSNAK(const MonoClock::time_point& t,
