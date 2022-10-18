@@ -99,37 +99,37 @@ public:
         log_q_.push([=](){ logSnapshot_(snapshot); });
     }
 
-    void logRecv(const std::shared_ptr<RadioPacket> &pkt)
+    void logRecv(const std::shared_ptr<RadioPacket>& pkt)
     {
         if (getCollectSource(kRecvPackets))
-            log_q_.push([=, pkt = std::shared_ptr<RadioPacket>(pkt)]() { logRecv_(*pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<RadioPacket>(pkt)]() { logRecv_(*pkt); });
     }
 
-    void logSend(const std::shared_ptr<NetPacket> &pkt)
+    void logSend(const std::shared_ptr<NetPacket>& pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)]() { logSend_(pkt->tx_timestamp, kNotDropped, *pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt), info=NetPacketInfo(*pkt)]() { logSend_(info.timestamps.tx_timestamp, kNotDropped, *pkt, info); });
     }
 
     void logPHYDrop(const MonoClock::time_point& t,
-                    const std::shared_ptr<NetPacket> &pkt)
+                    const std::shared_ptr<NetPacket>& pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kPHYDrop, *pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt), info=NetPacketInfo(*pkt)](){ logSend_(t, kPHYDrop, *pkt, info); });
     }
 
     void logLinkLayerDrop(const MonoClock::time_point& t,
-                          const std::shared_ptr<NetPacket> &pkt)
+                          const std::shared_ptr<NetPacket>& pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kLinkLayerDrop, *pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt), info=NetPacketInfo(*pkt)](){ logSend_(t, kLinkLayerDrop, *pkt, info); });
     }
 
     void logQueueDrop(const MonoClock::time_point& t,
-                      const std::shared_ptr<NetPacket> &pkt)
+                      const std::shared_ptr<NetPacket>& pkt)
     {
         if (getCollectSource(kSentPackets))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logSend_(t, kQueueDrop, *pkt); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt), info=NetPacketInfo(*pkt)](){ logSend_(t, kQueueDrop, *pkt, info); });
     }
 
     void logEvent(const MonoClock::time_point& t,
@@ -164,7 +164,7 @@ public:
                      Seq unack)
     {
         if (getCollectSource(kARQEvents))
-            log_q_.push([=, pkt = std::shared_ptr<NetPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSendSACK, node, unack); });
+            log_q_.push([=, pkt=std::shared_ptr<NetPacket>(pkt), sacks=pkt->getSACKs()](){ logARQSACKEvent_(*pkt, kSendSACK, node, unack, sacks); });
     }
 
     void logNAK(const MonoClock::time_point& t,
@@ -188,7 +188,7 @@ public:
                  Seq unack)
     {
         if (getCollectSource(kARQEvents))
-            log_q_.push([=, pkt = std::shared_ptr<RadioPacket>(pkt)](){ logARQSACKEvent_(*pkt, kSACK, node, unack); });
+            log_q_.push([=, pkt=std::shared_ptr<RadioPacket>(pkt), sacks=pkt->getSACKs()](){ logARQSACKEvent_(*pkt, kSACK, node, unack, sacks); });
     }
 
     void logSNAK(const MonoClock::time_point& t,
@@ -256,12 +256,55 @@ private:
         kPHYDrop
     };
 
+    struct NetPacketInfo {
+        /** @brief Internal flags */
+        Packet::InternalFlags internal_flags;
+
+        /** @brief Index of channel on which the packet was sent/received */
+        unsigned chanidx;
+
+        /** @brief Channel on which the packet was sent/received */
+        Channel channel;
+
+        /** @brief MCS index of packet */
+        mcsidx_t mcsidx;
+
+        /** @brief Offset of start of packet from beginning of sample buffer */
+        size_t offset;
+
+        /** @brief Number of modulated samples */
+        size_t nsamples;
+
+        /** @brief IQ sample buffer containing modulated packet */
+        std::shared_ptr<IQBuf> samples;
+
+        /** @brief Number of retransmissions. */
+        unsigned nretrans;
+
+        /** @brief Packet event timestamps */
+        NetPacket::Timestamps timestamps;
+
+        NetPacketInfo(const NetPacket& pkt)
+          : internal_flags(pkt.internal_flags)
+          , chanidx(pkt.chanidx)
+          , channel(pkt.channel)
+          , mcsidx(pkt.mcsidx)
+          , offset(pkt.offset)
+          , nsamples(pkt.nsamples)
+          , samples(std::move(pkt.samples))
+          , nretrans(pkt.nretrans)
+          , timestamps(pkt.timestamps)
+        {
+        }
+    };
+
     void logSend_(const MonoClock::time_point& t,
                   DropType dropped,
-                  NetPacket &pkt);
+                  const NetPacket& pkt,
+                  const NetPacketInfo& info);
 
     void logEvent_(const MonoClock::time_point& t,
-                   char *event);
+                   const char* event);
 
     enum ARQEventType {
         kSendNAK = 0,
@@ -278,10 +321,11 @@ private:
                       NodeId node,
                       Seq seq);
 
-    void logARQSACKEvent_(Packet &pkt,
+    void logARQSACKEvent_(const Packet& pkt,
                           ARQEventType type,
                           NodeId node,
-                          Seq unack);
+                          Seq unack,
+                          const std::vector<Seq::uint_type>& sacks);
 };
 
 #endif /* LOGGER_H_ */

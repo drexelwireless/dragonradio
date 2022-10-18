@@ -174,11 +174,8 @@ void MAC::txNotifier(void)
 
         if (record.timestamp) {
             // Timestamp packets
-            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
-                std::lock_guard<std::mutex> lock((*it)->pkt->mutex);
-
-                (*it)->pkt->tx_timestamp = *record.timestamp + MonoClock::duration((record.delay + (*it)->start)/tx_rate_);
-            }
+            for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
+                (*it)->pkt->timestamps.tx_timestamp = *record.timestamp + MonoClock::duration((record.delay + (*it)->start)/tx_rate_);
 
             // Record the record's load
             {
@@ -200,8 +197,6 @@ void MAC::txNotifier(void)
             std::shared_ptr<IQBuf> &first = record.iqbufs.front();
 
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
-                std::lock_guard<std::mutex> lock((*it)->pkt->mutex);
-
                 (*it)->pkt->chanidx = (*it)->chanidx;
                 (*it)->pkt->channel.fc = tx_fc_off_.value_or((*it)->channel.fc);
                 (*it)->pkt->channel.bw = (*it)->channel.bw;
