@@ -196,7 +196,7 @@ get_packet:
 
         // If this packet is a retransmission, increment the retransmission
         // count, otherwise set it to 0.
-        if (pkt->internal_flags.retransmission)
+        if (pkt->retransmission)
             ++pkt->nretrans;
 
         // Update send window metrics
@@ -217,7 +217,7 @@ get_packet:
         // in the hope that we can get this packet through before its deadline
         // passes.
         if (decrease_retrans_mcsidx_ &&
-            pkt->internal_flags.retransmission &&
+            pkt->retransmission &&
             pkt->deadline &&
             pkt->mcsidx == sendw.mcsidx &&
             pkt->mcsidx > mcsidx_min_)
@@ -961,7 +961,7 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     entry.pkt->clearControl();
 
     // Mark the packet as a retransmission
-    entry.pkt->internal_flags.retransmission = 1;
+    entry.pkt->retransmission = true;
 
     // Re-queue the packet. The ACK and MCS will be set properly upon
     // retransmission.

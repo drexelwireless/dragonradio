@@ -23,10 +23,6 @@ void exportPacket(py::module &m)
             [](Packet::InternalFlags &self) { return self.invalid_payload; },
             [](Packet::InternalFlags &self, uint8_t f) { self.invalid_payload = f; },
             "Is payload invalid?")
-        .def_property("retransmission",
-            [](Packet::InternalFlags &self) { return self.retransmission; },
-            [](Packet::InternalFlags &self, uint8_t f) { self.retransmission = f; },
-            "Is this a retransmission?")
         .def_property("assigned_seq",
             [](Packet::InternalFlags &self) { return self.assigned_seq; },
             [](Packet::InternalFlags &self, uint8_t f) { self.assigned_seq = f; },
