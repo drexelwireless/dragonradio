@@ -167,6 +167,7 @@ struct Packet : public buffer<unsigned char>
       , hdr(hdr_)
       , payload_size(0)
       , internal_flags({0})
+      , retransmission(false)
       , mcsidx(0)
     {
     }
@@ -176,6 +177,7 @@ struct Packet : public buffer<unsigned char>
       , hdr({0})
       , payload_size(0)
       , internal_flags({0})
+      , retransmission(false)
       , mcsidx(0)
     {
         assert(n >= sizeof(ExtendedHeader));
@@ -186,6 +188,7 @@ struct Packet : public buffer<unsigned char>
       , hdr(hdr_)
       , payload_size(0)
       , internal_flags({0})
+      , retransmission(false)
       , mcsidx(0)
     {
         assert(n >= sizeof(ExtendedHeader));
@@ -231,9 +234,6 @@ struct Packet : public buffer<unsigned char>
         /** @brief Set if the packet had invalid payload */
         uint8_t invalid_payload : 1;
 
-        /** @brief Set if the packet is a retransmission */
-        uint8_t retransmission : 1;
-
         /** @brief Set if the packet has an assigned sequence number */
         uint8_t assigned_seq : 1;
 
@@ -243,6 +243,9 @@ struct Packet : public buffer<unsigned char>
         /** @brief Set if the packet contains a selective ACK */
         uint8_t has_selective_ack : 1;
     } internal_flags;
+
+    /** @brief Set if the packet is a retransmission */
+    bool retransmission;
 
     /** @brief Index of channel on which the packet was sent/received */
     unsigned chanidx;
