@@ -664,12 +664,12 @@ void Logger::logRecv_(RadioPacket &pkt)
 
 void Logger::logSend_(const MonoClock::time_point& t,
                       DropType dropped,
-                      NetPacket &pkt)
+                      const NetPacket& pkt)
 {
-    PacketSendEntry entry;
-    Header          &hdr = pkt.hdr;
-    ExtendedHeader  &ehdr = pkt.ehdr();
-    u_flags         u;
+    PacketSendEntry      entry;
+    const Header         &hdr = pkt.hdr;
+    const ExtendedHeader &ehdr = pkt.ehdr();
+    u_flags              u;
 
     u.flags = hdr.flags;
 
@@ -737,7 +737,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
 }
 
 void Logger::logEvent_(const MonoClock::time_point& t,
-                       char *event)
+                       const char* event)
 {
     EventEntry entry;
 
@@ -768,7 +768,7 @@ void Logger::logARQEvent_(const MonoClock::time_point& t,
     arq_event_->write(&entry, 1);
 }
 
-void Logger::logARQSACKEvent_(Packet &pkt,
+void Logger::logARQSACKEvent_(const Packet& pkt,
                               ARQEventType type,
                               NodeId node,
                               Seq unack)

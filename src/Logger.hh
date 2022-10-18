@@ -258,10 +258,10 @@ private:
 
     void logSend_(const MonoClock::time_point& t,
                   DropType dropped,
-                  NetPacket &pkt);
+                  const NetPacket& pkt);
 
     void logEvent_(const MonoClock::time_point& t,
-                   char *event);
+                   const char* event);
 
     enum ARQEventType {
         kSendNAK = 0,
@@ -278,7 +278,7 @@ private:
                       NodeId node,
                       Seq seq);
 
-    void logARQSACKEvent_(Packet &pkt,
+    void logARQSACKEvent_(const Packet& pkt,
                           ARQEventType type,
                           NodeId node,
                           Seq unack);
