@@ -1,9 +1,10 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef ELEMENT_HH_
 #define ELEMENT_HH_
 
+#include <atomic>
 #include <functional>
 #include <memory>
 
@@ -178,8 +179,10 @@ public:
     /** @brief Pull a packet from the port. */
     bool pull(T& pkt)
     {
-        if (upstream_)
-            return upstream_->recv(pkt);
+        Port<Out, Pull, T>* upstream = upstream_.load(std::memory_order_acquire);
+
+        if (upstream)
+            return upstream->recv(pkt);
         else
             return false;
     }
@@ -187,20 +190,26 @@ public:
     /** @brief Enable the port. */
     void enable(void)
     {
-        if (upstream_)
-            return upstream_->enable();
+        Port<Out, Pull, T>* upstream = upstream_.load(std::memory_order_acquire);
+
+        if (upstream)
+            return upstream->enable();
     }
 
     /** @brief Disable the port. */
     void disable(void)
     {
-        if (upstream_)
-            return upstream_->disable();
+        Port<Out, Pull, T>* upstream = upstream_.load(std::memory_order_acquire);
+
+        if (upstream)
+            return upstream->disable();
     }
 
     /** @brief Connect the port to an upstream pull port. */
     void connect(std::shared_ptr<Element> element, Port<Out, Pull, T>* p)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         if (upstream_ != nullptr)
             throw std::exception();
 
@@ -214,6 +223,8 @@ public:
     /** @brief Disconnect the port from its upstream pull port. */
     void disconnect(void)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         if (upstream_ == nullptr)
             return;
 
@@ -225,8 +236,11 @@ public:
     }
 
 protected:
+    /** @brief Mutex for upstream port */
+    std::mutex mutex_;
+
     /** @brief The upstream pull port. */
-    Port<Out, Pull, T>* upstream_;
+    std::atomic<Port<Out, Pull, T>*> upstream_;
 
     /** @brief The upstream pull port's Element. */
     std::shared_ptr<Element> upstream_element_;
@@ -258,20 +272,26 @@ public:
     /** @brief Push a packet out the port. */
     void push(const T& pkt)
     {
-        if (downstream_)
-            downstream_->send(pkt);
+        Port<In, Push, T>* downstream = downstream_.load(std::memory_order_acquire);
+
+        if (downstream)
+            downstream->send(pkt);
     }
 
     /** @brief Push a packet out the port. */
     void push(T&& pkt)
     {
-        if (downstream_)
-            downstream_->send(std::move(pkt));
+        Port<In, Push, T>* downstream = downstream_.load(std::memory_order_acquire);
+
+        if (downstream)
+            downstream->send(std::move(pkt));
     }
 
     /** @brief Connect the port to a downstream push port. */
     void connect(std::shared_ptr<Element> element, Port<In, Push, T>* p)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         if (downstream_ != nullptr)
             throw std::exception();
 
@@ -285,6 +305,8 @@ public:
     /** @brief Disconnect the port from its downstream push port. */
     void disconnect(void)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         if (downstream_ == nullptr)
             return;
 
@@ -296,8 +318,11 @@ public:
     }
 
 protected:
+    /** @brief Mutex for downstream port */
+    std::mutex mutex_;
+
     /** @brief The downstream push port. */
-    Port<In, Push, T>* downstream_;
+    std::atomic<Port<In, Push, T>*> downstream_;
 
     /** @brief The downstream push port's Element. */
     std::shared_ptr<Element> downstream_element_;
