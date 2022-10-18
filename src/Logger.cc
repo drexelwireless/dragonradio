@@ -664,7 +664,8 @@ void Logger::logRecv_(RadioPacket &pkt)
 
 void Logger::logSend_(const MonoClock::time_point& t,
                       DropType dropped,
-                      const NetPacket& pkt)
+                      const NetPacket& pkt,
+                      const NetPacketInfo& info)
 {
     PacketSendEntry      entry;
     const Header         &hdr = pkt.hdr;
@@ -679,7 +680,7 @@ void Logger::logSend_(const MonoClock::time_point& t,
     entry.wall_timestamp = pkt.wall_timestamp ? std::chrono::duration<double>(*pkt.wall_timestamp - t_start_).count() : 0.0;
     entry.deadline = pkt.deadline ? std::chrono::duration<double>(*pkt.deadline - mono_t_start_).count() : 0.0;
     entry.dropped = dropped;
-    entry.nretrans = pkt.nretrans;
+    entry.nretrans = info.nretrans;
     entry.curhop = hdr.curhop;
     entry.nexthop = hdr.nexthop;
     entry.seq = hdr.seq;
@@ -690,29 +691,29 @@ void Logger::logSend_(const MonoClock::time_point& t,
     entry.data_len = ehdr.data_len;
     entry.mgen_flow_uid =  pkt.mgen_flow_uid.value_or(0);
     entry.mgen_seqno =  pkt.mgen_seqno.value_or(0);
-    entry.mcsidx =  pkt.mcsidx;
+    entry.mcsidx =  info.mcsidx;
 
     if (dropped == kNotDropped) {
-        entry.fc = pkt.channel.fc;
-        entry.bw = pkt.channel.bw;
-        entry.tuntap_latency = pkt.wall_timestamp ? std::chrono::duration<double>(pkt.timestamps.tuntap_timestamp - *pkt.wall_timestamp).count() : 0;
-        entry.enqueue_latency = pkt.timestamps.enqueue_timestamp ? std::chrono::duration<double>(*pkt.timestamps.enqueue_timestamp - pkt.timestamp).count() : 0;
-        entry.dequeue_latency = (pkt.timestamps.dequeue_end_timestamp && pkt.timestamps.dequeue_start_timestamp)
-                                ? std::chrono::duration<double>(*pkt.timestamps.dequeue_end_timestamp - *pkt.timestamps.dequeue_start_timestamp).count() : 0;
-        entry.queue_latency = pkt.timestamps.dequeue_end_timestamp ? std::chrono::duration<double>(*pkt.timestamps.dequeue_end_timestamp - pkt.timestamp).count() : 0;
-        entry.llc_latency = std::chrono::duration<double>(pkt.timestamps.llc_timestamp - pkt.timestamp).count();
-        entry.mod_latency = std::chrono::duration<double>(pkt.timestamps.mod_end_timestamp - pkt.timestamps.mod_start_timestamp).count();
-        entry.synth_latency = std::chrono::duration<double>(pkt.timestamps.mod_end_timestamp - pkt.timestamp).count();
+        entry.fc = info.channel.fc;
+        entry.bw = info.channel.bw;
+        entry.tuntap_latency = pkt.wall_timestamp ? std::chrono::duration<double>(info.timestamps.tuntap_timestamp - *pkt.wall_timestamp).count() : 0;
+        entry.enqueue_latency = info.timestamps.enqueue_timestamp ? std::chrono::duration<double>(*info.timestamps.enqueue_timestamp - pkt.timestamp).count() : 0;
+        entry.dequeue_latency = (info.timestamps.dequeue_end_timestamp && info.timestamps.dequeue_start_timestamp)
+                                ? std::chrono::duration<double>(*info.timestamps.dequeue_end_timestamp - *info.timestamps.dequeue_start_timestamp).count() : 0;
+        entry.queue_latency = info.timestamps.dequeue_end_timestamp ? std::chrono::duration<double>(*info.timestamps.dequeue_end_timestamp - pkt.timestamp).count() : 0;
+        entry.llc_latency = std::chrono::duration<double>(info.timestamps.llc_timestamp - pkt.timestamp).count();
+        entry.mod_latency = std::chrono::duration<double>(info.timestamps.mod_end_timestamp - info.timestamps.mod_start_timestamp).count();
+        entry.synth_latency = std::chrono::duration<double>(info.timestamps.mod_end_timestamp - pkt.timestamp).count();
         entry.size = pkt.size();
-        entry.nsamples = pkt.nsamples;
-        if (pkt.samples && getCollectSource(kSentIQ)) {
+        entry.nsamples = info.nsamples;
+        if (info.samples && getCollectSource(kSentIQ)) {
             // It's possible that a packet's content is split across two successive
             // IQ buffers. If this happens, we won't have all of the packet's IQ
             // data, so we need to clamp nsamples.
-            assert(pkt.offset <= pkt.samples->size());
-            entry.iq_data.p = pkt.samples->data() + pkt.offset;
-            entry.iq_data.len = std::min(pkt.nsamples,
-                                        (unsigned) pkt.samples->size() - pkt.offset);
+            assert(info.offset <= info.samples->size());
+            entry.iq_data.p = info.samples->data() + info.offset;
+            entry.iq_data.len = std::min(info.nsamples,
+                                        (unsigned) info.samples->size() - info.offset);
         } else {
             entry.iq_data.p = nullptr;
             entry.iq_data.len = 0;
