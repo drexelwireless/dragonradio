@@ -16,6 +16,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 #include "Logger.hh"
+#include "WorkQueue.hh"
 #include "util/capabilities.hh"
 #include "phy/PHY.hh"
 
@@ -160,6 +161,9 @@ int main(int argc, char** argv)
             fprintf(stderr, "Python exception: %s\n", e.what());
             ret = EXIT_FAILURE;
         }
+
+        // Stop the work queue
+        work_queue.stop();
     }
 
     // Ensure snapshot collector is gracefully closed
