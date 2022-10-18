@@ -167,6 +167,7 @@ struct Packet : public buffer<unsigned char>
       , hdr(hdr_)
       , payload_size(0)
       , internal_flags({0})
+      , retransmission(false)
       , mcsidx(0)
     {
     }
@@ -176,6 +177,7 @@ struct Packet : public buffer<unsigned char>
       , hdr({0})
       , payload_size(0)
       , internal_flags({0})
+      , retransmission(false)
       , mcsidx(0)
     {
         assert(n >= sizeof(ExtendedHeader));
@@ -186,13 +188,11 @@ struct Packet : public buffer<unsigned char>
       , hdr(hdr_)
       , payload_size(0)
       , internal_flags({0})
+      , retransmission(false)
       , mcsidx(0)
     {
         assert(n >= sizeof(ExtendedHeader));
     }
-
-    /** @brief Mutex for accessing packet */
-    std::mutex mutex;
 
     /** @brief Header */
     Header hdr;
@@ -234,9 +234,6 @@ struct Packet : public buffer<unsigned char>
         /** @brief Set if the packet had invalid payload */
         uint8_t invalid_payload : 1;
 
-        /** @brief Set if the packet is a retransmission */
-        uint8_t retransmission : 1;
-
         /** @brief Set if the packet has an assigned sequence number */
         uint8_t assigned_seq : 1;
 
@@ -246,6 +243,9 @@ struct Packet : public buffer<unsigned char>
         /** @brief Set if the packet contains a selective ACK */
         uint8_t has_selective_ack : 1;
     } internal_flags;
+
+    /** @brief Set if the packet is a retransmission */
+    bool retransmission;
 
     /** @brief Index of channel on which the packet was sent/received */
     unsigned chanidx;
@@ -336,6 +336,9 @@ struct Packet : public buffer<unsigned char>
 
     /** @brief Append a "set unack" control message to a packet */
     void appendSetUnack(const Seq &unack);
+
+    /** @brief Get SACKs */
+    std::vector<Seq::uint_type> getSACKs(void) const;
 
     /** @brief Return iterator to beginning control data. */
     iterator begin() const
@@ -530,29 +533,32 @@ struct NetPacket : public Packet
     /** @brief IQ sample buffer containing modulated packet */
     std::shared_ptr<IQBuf> samples;
 
-    /** @brief Wall-clock time when packet was read from tun/tap */
-    WallClock::time_point tuntap_timestamp;
+    /** @brief Packet event timestamps */
+    struct Timestamps {
+        /** @brief Wall-clock time when packet was read from tun/tap */
+        WallClock::time_point tuntap_timestamp;
 
-    /** @brief Time when packet was enqueued */
-    std::optional<MonoClock::time_point> enqueue_timestamp;
+        /** @brief Time when packet was enqueued */
+        std::optional<MonoClock::time_point> enqueue_timestamp;
 
-    /** @brief Dequeue start timestamp */
-    std::optional<MonoClock::time_point> dequeue_start_timestamp;
+        /** @brief Dequeue start timestamp */
+        std::optional<MonoClock::time_point> dequeue_start_timestamp;
 
-    /** @brief Dequeue end timestamp */
-    std::optional<MonoClock::time_point> dequeue_end_timestamp;
+        /** @brief Dequeue end timestamp */
+        std::optional<MonoClock::time_point> dequeue_end_timestamp;
 
-    /** @brief Time when packet exited LLC */
-    MonoClock::time_point llc_timestamp;
+        /** @brief Time when packet exited LLC */
+        MonoClock::time_point llc_timestamp;
 
-    /** @brief Modulation start timestamp */
-    MonoClock::time_point mod_start_timestamp;
+        /** @brief Modulation start timestamp */
+        MonoClock::time_point mod_start_timestamp;
 
-    /** @brief Modulation end timestamp */
-    MonoClock::time_point mod_end_timestamp;
+        /** @brief Modulation end timestamp */
+        MonoClock::time_point mod_end_timestamp;
 
-    /** @brief Packet transmission timestamp */
-    MonoClock::time_point tx_timestamp;
+        /** @brief Packet transmission timestamp */
+        MonoClock::time_point tx_timestamp;
+    } timestamps;
 
     /** @brief Return true if the packet's deadline has passed, false otherwise */
     bool deadlinePassed(const MonoClock::time_point &now)

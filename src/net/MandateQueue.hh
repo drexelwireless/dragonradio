@@ -386,8 +386,8 @@ public:
             SubQueue &subq = qs_[idx];
 
             if (subq.active && subq.pop(pkt, *this, dequeue_start, bonus)) {
-                pkt->dequeue_start_timestamp = dequeue_start;
-                pkt->dequeue_end_timestamp = MonoClock::now();
+                pkt->timestamps.dequeue_start_timestamp = dequeue_start;
+                pkt->timestamps.dequeue_end_timestamp = MonoClock::now();
 
                 if (bonus)
                     bonus_idx_ = idx+1;
@@ -871,7 +871,7 @@ protected:
             }
 
             // Timestamp enqueue operation
-            pkt->enqueue_timestamp = MonoClock::now();
+            pkt->timestamps.enqueue_timestamp = MonoClock::now();
         }
 
         void postEmplace()

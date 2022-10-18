@@ -119,7 +119,8 @@ get_packet:
     if (pkt->hdr.nexthop == kNodeBroadcast) {
         pkt->mcsidx = mcsidx_broadcast_;
         pkt->g = broadcast_gain.getLinearGain();
-        pkt->llc_timestamp = MonoClock::now();
+        pkt->timestamps.llc_timestamp = MonoClock::now();
+
         return true;
     }
 
@@ -195,7 +196,7 @@ get_packet:
 
         // If this packet is a retransmission, increment the retransmission
         // count, otherwise set it to 0.
-        if (pkt->internal_flags.retransmission)
+        if (pkt->retransmission)
             ++pkt->nretrans;
 
         // Update send window metrics
@@ -216,7 +217,7 @@ get_packet:
         // in the hope that we can get this packet through before its deadline
         // passes.
         if (decrease_retrans_mcsidx_ &&
-            pkt->internal_flags.retransmission &&
+            pkt->retransmission &&
             pkt->deadline &&
             pkt->mcsidx == sendw.mcsidx &&
             pkt->mcsidx > mcsidx_min_)
@@ -231,7 +232,7 @@ get_packet:
         pkt->g = ack_gain.getLinearGain();
     }
 
-    pkt->llc_timestamp = MonoClock::now();
+    pkt->timestamps.llc_timestamp = MonoClock::now();
     return true;
 }
 
@@ -571,15 +572,7 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
         }
 
         // Cancel the selective ACK timer when we actually have sent a selective ACK
-        Packet::InternalFlags internal_flags;
-
-        {
-            std::lock_guard<std::mutex> lock(pkt.mutex);
-
-            internal_flags = pkt.internal_flags;
-        }
-
-        if (internal_flags.has_selective_ack) {
+        if (pkt.internal_flags.has_selective_ack) {
             RecvWindow                  &recvw = getRecvWindow(pkt.hdr.nexthop);
             std::lock_guard<std::mutex> lock(recvw.mutex);
 
@@ -593,12 +586,12 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
                 std::lock_guard<std::mutex> lock(timestamps_mutex_);
                 Timestamps                  &ts = timestamps_[nhood_->me->id];
 
-                ts.timestamps_sent.insert_or_assign(*pkt.timestamp_seq, pkt.tx_timestamp);
+                ts.timestamps_sent.insert_or_assign(*pkt.timestamp_seq, pkt.timestamps.tx_timestamp);
             }
 
             logTimeSync(LOGDEBUG, "Transmitted timestamp: tseq_sent=%u; t_sent=%f",
                 (unsigned) *pkt.timestamp_seq,
-                (double) pkt.tx_timestamp.time_since_epoch().count());
+                (double) pkt.timestamps.tx_timestamp.time_since_epoch().count());
         }
     }
 }
@@ -964,15 +957,11 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // timeout.
     timer_queue_.cancel(entry);
 
-    {
-        std::lock_guard<std::mutex> lock(entry.pkt->mutex);
+    // Clear any control information in the packet
+    entry.pkt->clearControl();
 
-        // Clear any control information in the packet
-        entry.pkt->clearControl();
-
-        // Mark the packet as a retransmission
-        entry.pkt->internal_flags.retransmission = 1;
-    }
+    // Mark the packet as a retransmission
+    entry.pkt->retransmission = true;
 
     // Re-queue the packet. The ACK and MCS will be set properly upon
     // retransmission.
@@ -1233,8 +1222,6 @@ inline void appendSelectiveACK(const std::shared_ptr<NetPacket> &pkt,
 
 void SmartController::appendFeedback(const std::shared_ptr<NetPacket> &pkt, RecvWindow &recvw)
 {
-    std::lock_guard<std::mutex> lock(pkt->mutex);
-
     // Append statistics
     if (recvw.short_evm && recvw.short_rssi)
         pkt->appendShortTermReceiverStats(*recvw.short_evm, *recvw.short_rssi);
