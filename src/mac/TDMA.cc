@@ -103,6 +103,8 @@ void TDMA::txSlotWorker(void)
             // Determine how many samples were sent beyond the end of the slot,
             // i.e., the number of overfilled samples.
             if (slot) {
+                std::lock_guard<std::mutex> lock(slot->mutex);
+
                 noverfill = slot->length() < slot->max_samples ? 0 : slot->length() - slot->max_samples;
 
                 noverfill %= tx_full_slot_samps_;
