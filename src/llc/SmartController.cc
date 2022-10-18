@@ -571,15 +571,7 @@ void SmartController::transmitted(std::list<std::unique_ptr<ModPacket>> &mpkts)
         }
 
         // Cancel the selective ACK timer when we actually have sent a selective ACK
-        Packet::InternalFlags internal_flags;
-
-        {
-            std::lock_guard<std::mutex> lock(pkt.mutex);
-
-            internal_flags = pkt.internal_flags;
-        }
-
-        if (internal_flags.has_selective_ack) {
+        if (pkt.internal_flags.has_selective_ack) {
             RecvWindow                  &recvw = getRecvWindow(pkt.hdr.nexthop);
             std::lock_guard<std::mutex> lock(recvw.mutex);
 
@@ -964,15 +956,11 @@ void SmartController::retransmit(SendWindow::Entry &entry)
     // timeout.
     timer_queue_.cancel(entry);
 
-    {
-        std::lock_guard<std::mutex> lock(entry.pkt->mutex);
+    // Clear any control information in the packet
+    entry.pkt->clearControl();
 
-        // Clear any control information in the packet
-        entry.pkt->clearControl();
-
-        // Mark the packet as a retransmission
-        entry.pkt->internal_flags.retransmission = 1;
-    }
+    // Mark the packet as a retransmission
+    entry.pkt->internal_flags.retransmission = 1;
 
     // Re-queue the packet. The ACK and MCS will be set properly upon
     // retransmission.
@@ -1233,8 +1221,6 @@ inline void appendSelectiveACK(const std::shared_ptr<NetPacket> &pkt,
 
 void SmartController::appendFeedback(const std::shared_ptr<NetPacket> &pkt, RecvWindow &recvw)
 {
-    std::lock_guard<std::mutex> lock(pkt->mutex);
-
     // Append statistics
     if (recvw.short_evm && recvw.short_rssi)
         pkt->appendShortTermReceiverStats(*recvw.short_evm, *recvw.short_rssi);

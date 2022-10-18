@@ -666,11 +666,10 @@ void Logger::logSend_(const MonoClock::time_point& t,
                       DropType dropped,
                       NetPacket &pkt)
 {
-    std::lock_guard<std::mutex> lock(pkt.mutex);
-    PacketSendEntry             entry;
-    Header                      &hdr = pkt.hdr;
-    ExtendedHeader              &ehdr = pkt.ehdr();
-    u_flags                     u;
+    PacketSendEntry entry;
+    Header          &hdr = pkt.hdr;
+    ExtendedHeader  &ehdr = pkt.ehdr();
+    u_flags         u;
 
     u.flags = hdr.flags;
 

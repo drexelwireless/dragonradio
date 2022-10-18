@@ -191,9 +191,6 @@ struct Packet : public buffer<unsigned char>
         assert(n >= sizeof(ExtendedHeader));
     }
 
-    /** @brief Mutex for accessing packet */
-    std::mutex mutex;
-
     /** @brief Header */
     Header hdr;
 
