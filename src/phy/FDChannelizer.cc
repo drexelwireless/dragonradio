@@ -12,6 +12,7 @@
 
 namespace py = pybind11;
 
+#include "spin.hh"
 #include "phy/FDChannelizer.hh"
 #include "phy/PHY.hh"
 
@@ -228,28 +229,19 @@ void FDChannelizer::fftWorker(void)
         size_t inoff = 0;           // Offset into input buffer
         size_t outoff = 0;          // Offset into output buffer
 
-        for (int spin_count = 0;; ++spin_count) {
-            complete = iqbuf->complete.load(std::memory_order_acquire);
-            nsamples = iqbuf->nsamples.load(std::memory_order_acquire);
+        for (;;) {
+            // Wait until either the buffer is complete or until we have enough
+            // samples to process a full FFT block.
+            spin_until([&](std::memory_order order){ complete = iqbuf->complete.load(order);
+                                                     nsamples = iqbuf->nsamples.load(order);
 
-            // If we don't have enough samples for a full FFT, wait for more if
-            // the buffer *is not* complete, or stop processing samples if the
-            // buffer *is* complete.
+                                                     return complete || nsamples - inoff >= needed;
+                                                   });
+
             if (nsamples - inoff < needed) {
-                if (complete)
-                    break;
-
-                if (spin_count < 16)
-                    _mm_pause();
-                else {
-                    std::this_thread::yield();
-                    spin_count = 0;
-                }
-
-                continue;
+                assert(complete);
+                break;
             }
-
-            spin_count = 0;
 
             // Use needed samples from the input buffer
             assert(fftoff + needed == N);
@@ -385,19 +377,16 @@ void FDChannelizer::demodWorker(unsigned tid)
             channel = channels_[chanidx].channel;
 
             // Demodulate data as it is received
-            for (int spin_count = 0; !complete; ++spin_count) {
-                complete = fdbuf->complete.load(std::memory_order_acquire);
-                n = fdbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
+            while (!complete) {
+                spin_until([&](std::memory_order order){ complete = fdbuf->complete.load(order);
+                                                         n = fdbuf->nsamples.load(order) - ndemodulated;
+
+                                                         return complete || n != 0;
+                                                       });
 
                 if (n != 0) {
                     demod.demodulate(fdbuf->data() + ndemodulated, n);
                     ndemodulated += n;
-                    spin_count = 0;
-                } else if (spin_count < 16) {
-                    _mm_pause();
-                } else {
-                    std::this_thread::yield();
-                    spin_count = 0;
                 }
             }
 

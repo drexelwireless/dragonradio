@@ -16,6 +16,7 @@
 #include <xsimd/stl/algorithms.hpp>
 
 #include "buffer.hh"
+#include "spin.hh"
 #include "Clock.hh"
 
 /** @brief A buffer of IQ samples */
@@ -160,18 +161,9 @@ public:
     /** @brief Wait for the buffer to start filling. */
     void waitToStartFilling(void)
     {
-        for (int spin_count = 0;; ++spin_count) {
-            if (nsamples.load(std::memory_order_acquire) != 0 ||
-                complete.load(std::memory_order_acquire))
-                break;
-
-            if (spin_count < 16)
-                _mm_pause();
-            else {
-                std::this_thread::yield();
-                spin_count = 0;
-            }
-        }
+        spin_until([&](std::memory_order order){ return nsamples.load(order) != 0
+                                                     || complete.load(order);
+                                               });
     }
 
     /** @brief Zero all data in the buffer */

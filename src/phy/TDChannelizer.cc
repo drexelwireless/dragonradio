@@ -176,18 +176,22 @@ void TDChannelizer::demodWorker(unsigned tid)
             size_t ndemodulated = 0; // How many samples we've already demodulated
             size_t n = 0;
 
+            // Set parameters for the callback
             received = false;
             channel = channels_[chanidx].channel;
 
-            for (;;) {
-                complete = iqbuf->complete.load(std::memory_order_acquire);
-                n = iqbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
+            // Demodulate data as it is received
+            while (!complete) {
+                spin_until([&](std::memory_order order){ complete = iqbuf->complete.load(order);
+                                                         n = iqbuf->nsamples.load(order) - ndemodulated;
+
+                                                         return complete || n != 0;
+                                                       });
 
                 if (n != 0) {
                     demod.demodulate(iqbuf->data() + ndemodulated, n);
                     ndemodulated += n;
-                } else if (complete)
-                    break;
+                }
             }
 
             // Save the snapshot offset of the next IQ buffer here if we know
