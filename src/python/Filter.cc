@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <pybind11/pybind11.h>
@@ -30,9 +30,10 @@ void exportFilter(py::module &m, const char *name)
         .def("execute",
             [](Filter<I,O> &filt, pyarray_I in) -> pyarray_O
             {
-                auto      inbuf = in.request();
-                pyarray_O outarr(inbuf.size);
-                auto      outbuf = outarr.request();
+                auto                   inbuf = in.request();
+                pyarray_O              outarr(inbuf.size);
+                auto                   outbuf = outarr.request();
+                py::gil_scoped_release release;
 
                 filt.execute(reinterpret_cast<I*>(inbuf.ptr),
                              reinterpret_cast<O*>(outbuf.ptr),
@@ -66,8 +67,9 @@ void exportLiquidIIR(py::module &m, const char *name)
 
     py::class_<liquid::IIR<I,O,C>, Filter<I,O>, std::unique_ptr<liquid::IIR<I,O,C>>>(m, name)
         .def(py::init([](pyarray_C b, pyarray_C a) {
-            py::buffer_info b_buf = b.request();
-            py::buffer_info a_buf = b.request();
+            py::buffer_info        b_buf = b.request();
+            py::buffer_info        a_buf = b.request();
+            py::gil_scoped_release release;
 
             if (b_buf.ndim != 1 || a_buf.ndim != 1)
                 throw std::runtime_error("Number of dimensions must be one");
@@ -79,7 +81,8 @@ void exportLiquidIIR(py::module &m, const char *name)
                                       static_cast<C*>(a_buf.ptr), a_buf.size);
         }))
         .def(py::init([](pyarray_C sos) {
-            py::buffer_info sos_buf = sos.request();
+            py::buffer_info        sos_buf = sos.request();
+            py::gil_scoped_release release;
 
             if (sos_buf.ndim != 2 || sos_buf.shape[1] != 6)
                 throw std::runtime_error("SOS array must have shape Nx6");
@@ -189,7 +192,8 @@ void exportFirpm(py::module &m)
         py::arg("strategy") = pm::init_t::UNIFORM,
         py::arg("depth") = 0u,
         py::arg("rstrategy") = pm::init_t::UNIFORM,
-        py::arg("prec") = 165ul);
+        py::arg("prec") = 165ul,
+        py::call_guard<py::gil_scoped_release>());
 
     m.def("firpm1f",
         &dragonradio::signal::firpm1f,
@@ -204,7 +208,8 @@ void exportFirpm(py::module &m)
         py::arg("strategy") = pm::init_t::UNIFORM,
         py::arg("depth") = 0u,
         py::arg("rstrategy") = pm::init_t::UNIFORM,
-        py::arg("prec") = 165ul);
+        py::arg("prec") = 165ul,
+        py::call_guard<py::gil_scoped_release>());
 
     m.def("firpm1f2",
         &dragonradio::signal::firpm1f2,
@@ -219,7 +224,8 @@ void exportFirpm(py::module &m)
         py::arg("strategy") = pm::init_t::UNIFORM,
         py::arg("depth") = 0u,
         py::arg("rstrategy") = pm::init_t::UNIFORM,
-        py::arg("prec") = 165ul);
+        py::arg("prec") = 165ul,
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void exportFilters(py::module &m)
