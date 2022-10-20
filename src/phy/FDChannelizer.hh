@@ -47,64 +47,8 @@ public:
     void stop(void);
 
 private:
-    /** @brief Channel state for time-domain demodulation */
-    class FDChannelDemodulator : public ChannelDemodulator {
-    public:
-        FDChannelDemodulator(unsigned chanidx,
-                             const PHYChannel &channel,
-                             double rate);
-
-        virtual ~FDChannelDemodulator() = default;
-
-        /** @brief Update IQ buffer sequence number */
-        void updateSeq(unsigned seq);
-
-        void reset(void) override;
-
-        void timestamp(const MonoClock::time_point &timestamp,
-                       std::optional<ssize_t> snapshot_off,
-                       ssize_t offset) override;
-
-        void demodulate(const std::complex<float>* data,
-                        size_t count) override;
-
-    protected:
-        /** @brief Channel IQ buffer sequence number */
-        unsigned seq_;
-
-        /** @brief Frequency-domain resampler */
-        Resampler resampler_;
-    };
-
-    /** @brief A demodulation slot */
-    struct Slot {
-        Slot() = default;
-
-        // So we can emplace
-        Slot(const std::shared_ptr<IQBuf>& iqbuf_,
-             const std::shared_ptr<IQBuf>& fdbuf_,
-             ssize_t fd_offset_) noexcept
-          : iqbuf(iqbuf_)
-          , fdbuf(fdbuf_)
-          , fd_offset(fd_offset_)
-        {
-        }
-
-        /** @brief The slot's time-domain samples */
-        std::shared_ptr<IQBuf> iqbuf;
-
-        /** @brief The slot's frequency-domain samples */
-        std::shared_ptr<IQBuf> fdbuf;
-
-        /** @brief Offset of frequency-domain samples from time-domain samples
-         * (in samples)
-         */
-        /** This is used to account for the fact that the frequency-domain
-         * buffer may hold some samples from the previous slot's time-domain
-         * buffer that didn't fit in a full size N FFT.
-         */
-        ssize_t fd_offset;
-    };
+    class FDChannelDemodulator;
+    struct Slot;
 
     /** @brief Number of demodulation threads. */
     unsigned nthreads_;
