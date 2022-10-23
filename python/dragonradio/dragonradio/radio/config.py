@@ -264,6 +264,8 @@ class Config:
     """Algorithm used to construct low-pass filter for channelizer."""
     wp_cutoff: float = 0.95
     """Passband cutoff as a fraction of stopband."""
+    max_taps: Optional[int] = None
+    """Maximum number of filter taps"""
     poly_taps: int = 30
     """Maximum number of taps in a polyphase subfilter"""
     max_denom: int = 2000
@@ -921,6 +923,9 @@ class Config:
                          choices=['kaiser', 'ls', 'firpm1f', 'firpm1f2'],
                          dest='ftype',
                          help='algorithm used to construct low-pass filter for channelizer')
+        phy.add_argument('--max-taps', action='store', type=int,
+                         dest='max_taps',
+                         help='maximum number of filter taps')
 
         # Channelizer parameters
         phy.add_argument('--channelizer', action='store',

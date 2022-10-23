@@ -957,10 +957,18 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
             if config.channelizer == 'timedomain':
                 numtaps = config.poly_taps*rate.denominator
-                if numtaps % 2 == 0:
-                    numtaps += 1
             elif config.channelizer == 'freqdomain':
                 numtaps = FDChannelizer.P
+            else:
+                raise ConfigException('Unknown channelizer type: %s' % config.channelizer)
+
+            # Ensure there are no more than max_taps taps
+            if config.max_taps:
+                numtaps = min(config.max_taps, numtaps)
+
+            # Ensure number of taps is odd
+            if numtaps % 2 == 0:
+                numtaps += 1
 
             chan.taps = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
 
@@ -993,12 +1001,20 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
             if config.synthesizer == 'timedomain':
                 numtaps = config.poly_taps*rate.denominator
-                if numtaps % 2 == 0:
-                    numtaps += 1
             elif config.synthesizer == 'freqdomain':
                 numtaps = FDSynthesizer.P
             elif config.synthesizer == 'multichannel':
                 numtaps = MultichannelSynthesizer.P
+            else:
+                raise ConfigException('Unknown synthesizer type: %s' % config.synthesizer)
+
+            # Ensure there are no more than max_taps taps
+            if config.max_taps:
+                numtaps = min(config.max_taps, numtaps)
+
+            # Ensure number of taps is odd
+            if numtaps % 2 == 0:
+                numtaps += 1
 
             chan.taps = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
 
