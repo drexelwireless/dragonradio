@@ -945,35 +945,18 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         config = self.config
 
         chan = PHYChannel(chan.channel, chan.phy, chan.evm_thresh)
-
         rate = Fraction(chan.channel.bw/self.usrp.rx_rate).limit_denominator(config.max_denom)
 
-        if rate == 1:
-            chan.taps = np.array([1])
+        # Determine number of filter taps
+        if config.channelizer == 'timedomain':
+            numtaps = config.poly_taps*rate.denominator
+        elif config.channelizer == 'freqdomain':
+            numtaps = FDChannelizer.P
         else:
-            ws = self.usrp.rx_rate/max(rate.numerator, rate.denominator)
-            wp = config.wp_cutoff*ws
-            fs = self.usrp.rx_rate
+            raise ConfigException('Unknown channelizer type: %s' % config.channelizer)
 
-            if config.channelizer == 'timedomain':
-                numtaps = config.poly_taps*rate.denominator
-            elif config.channelizer == 'freqdomain':
-                numtaps = FDChannelizer.P
-            else:
-                raise ConfigException('Unknown channelizer type: %s' % config.channelizer)
-
-            # Ensure there are no more than max_taps taps
-            if config.max_taps:
-                numtaps = min(config.max_taps, numtaps)
-
-            # Ensure number of taps is odd
-            if numtaps % 2 == 0:
-                numtaps += 1
-
-            chan.taps = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
-
-            logger.debug('Created prototype lowpass filter for channelizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
-                        len(chan.taps), wp, ws, fs)
+        # Create lowpass filter
+        chan.taps = self.lowpass(rate, self.usrp.rx_rate, numtaps, "channelizer")
 
         # Compensate for oversampling
         rate = rate * chan.phy.rx_oversample_factor
@@ -989,37 +972,20 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         config = self.config
 
         chan = PHYChannel(chan.channel, chan.phy, chan.evm_thresh)
-
         rate = Fraction(self.usrp.tx_rate/chan.channel.bw).limit_denominator(config.max_denom)
 
-        if rate == 1:
-            chan.taps = np.array([1])
+        # Determine number of filter taps
+        if config.synthesizer == 'timedomain':
+            numtaps = config.poly_taps*rate.denominator
+        elif config.synthesizer == 'freqdomain':
+            numtaps = FDSynthesizer.P
+        elif config.synthesizer == 'multichannel':
+            numtaps = MultichannelSynthesizer.P
         else:
-            ws = self.usrp.tx_rate/max(rate.numerator, rate.denominator)
-            wp = config.wp_cutoff*ws
-            fs = self.usrp.tx_rate
+            raise ConfigException('Unknown synthesizer type: %s' % config.synthesizer)
 
-            if config.synthesizer == 'timedomain':
-                numtaps = config.poly_taps*rate.denominator
-            elif config.synthesizer == 'freqdomain':
-                numtaps = FDSynthesizer.P
-            elif config.synthesizer == 'multichannel':
-                numtaps = MultichannelSynthesizer.P
-            else:
-                raise ConfigException('Unknown synthesizer type: %s' % config.synthesizer)
-
-            # Ensure there are no more than max_taps taps
-            if config.max_taps:
-                numtaps = min(config.max_taps, numtaps)
-
-            # Ensure number of taps is odd
-            if numtaps % 2 == 0:
-                numtaps += 1
-
-            chan.taps = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
-
-            logger.debug('Created prototype lowpass filter for synthesizer: numtaps=%d; wp=%g; ws=%g; fs=%g',
-                        len(chan.taps), wp, ws, fs)
+        # Create lowpass filter
+        chan.taps = self.lowpass(rate, self.usrp.tx_rate, numtaps, "synthesizer")
 
         # Compensate for oversampling
         rate = rate / chan.phy.tx_oversample_factor
@@ -1029,6 +995,30 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         chan.D = rate.denominator
 
         return chan
+
+    def lowpass(self, rate: Fraction, fs: float, numtaps: int, desc: str) -> np.ndarray:
+        config = self.config
+
+        if rate == 1:
+            taps = np.array([1])
+        else:
+            ws = fs/max(rate.numerator, rate.denominator)
+            wp = config.wp_cutoff*ws
+
+            # Ensure there are no more than max_taps taps
+            if config.max_taps:
+                numtaps = min(config.max_taps, numtaps)
+
+            # Ensure number of taps is odd
+            if numtaps % 2 == 0:
+                numtaps += 1
+
+            taps = dragonradio.signal.lowpass(numtaps, wp, ws, fs, ftype=config.ftype)
+
+            logger.debug('Created prototype lowpass filter for %s: numtaps=%d; wp=%g; ws=%g; fs=%g',
+                         desc, len(taps), wp, ws, fs)
+
+        return taps
 
     def configureMAC(self, mac_class: Type[MAC]):
         """Configure MAC"""
