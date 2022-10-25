@@ -114,47 +114,48 @@ class ReceiveView(LogView):
                               '(evm {:03.1f}dB, rssi {:03.1f}dB, fc {:03.1f}MHz) {}'.\
               format(self.pkt.seq, self.pkt.src, self.pkt.evm, self.pkt.rssi, self.pkt.fc/1e6, msg))
 
-            t0 = slots.ts[0]
+            if not slots.empty:
+                t0 = slots.t_start
 
-            self.specgram.plot(slots.fs, slots.iq_data, t0)
+                self.specgram.plot(slots.fs, slots.iq_data, t0)
 
-            # Mark all packets in the current specgram
-            pkts = self.logs[self.node_id].findReceivedPackets(t0, t0+len(slots.iq_data)/slots.fs)
-            if not self.show_header_invalid:
-                pkts = pkts[pkts.header_valid == True]
+                # Mark all packets in the current specgram
+                pkts = self.logs[self.node_id].findReceivedPackets(t0, t0+len(slots.iq_data)/slots.fs)
+                if not self.show_header_invalid:
+                    pkts = pkts[pkts.header_valid == True]
 
-            for _, pkt in pkts.iterrows():
-                # Plot voxel occupied by packet
-                if 'chan_bw' in pkt:
-                    if pkt.seq == self.pkt.seq and pkt.fc == self.pkt.fc:
-                        alpha = 0.9
-                    else:
-                        alpha = 0.3
+                for _, pkt in pkts.iterrows():
+                    # Plot voxel occupied by packet
+                    if 'chan_bw' in pkt:
+                        if pkt.seq == self.pkt.seq and pkt.fc == self.pkt.fc:
+                            alpha = 0.9
+                        else:
+                            alpha = 0.3
 
-                    if pkt.payload_valid:
-                        color = 'k'
-                    else:
-                        color = 'r'
+                        if pkt.payload_valid:
+                            color = 'k'
+                        else:
+                            color = 'r'
 
-                    self.specgram.plotVoxel(pkt.start-t0, pkt.end-t0, pkt.fc, pkt.chan_bw,
-                                            linewidth=1,
-                                            edgecolor=color,
-                                            facecolor='none',
-                                            alpha=alpha)
+                        self.specgram.plotVoxel(pkt.start-t0, pkt.end-t0, pkt.fc, pkt.chan_bw,
+                                                linewidth=1,
+                                                edgecolor=color,
+                                                facecolor='none',
+                                                alpha=alpha)
 
-                # Display packet bracket at top of plot
-                self.bracketPacket(pkt, t0, self.specgram.ax)
+                    # Display packet bracket at top of plot
+                    self.bracketPacket(pkt, t0, self.specgram.ax)
 
-            # Mark all slots in the current specgram
-            for t in slots.ts:
-                self.markSlot(self.specgram.ax, t-t0)
+                # Mark all slots in the current specgram
+                for t in slots.ts:
+                    self.markSlot(self.specgram.ax, t-t0)
 
-            self.constellation.plot(self.pkt.symbols)
-            self.waveform.plot(sig, sigslop=self.sigslop)
-            self.psd.plot(slots.fs, sig)
-            self.papr.plot(sig)
+                self.constellation.plot(self.pkt.symbols)
+                self.waveform.plot(sig, sigslop=self.sigslop)
+                self.psd.plot(slots.fs, sig)
+                self.papr.plot(sig)
 
-            self.fig.canvas.draw()
+                self.fig.canvas.draw()
 
     def update_slider(self, val):
         idx = int(val)
