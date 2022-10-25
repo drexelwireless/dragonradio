@@ -6,6 +6,7 @@ from matplotlib.backend_bases import Event
 from matplotlib.collections import PathCollection
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 from matplotlib.text import Annotation
 from matplotlib.widgets import CheckButtons
 
@@ -96,7 +97,7 @@ class Plot:
             self.fig.canvas.manager.set_window_title(title)
 
 class AnnotatedPlot(Plot):
-    AnnotationItem = Union[Line2D, PathCollection]
+    AnnotationItem = Union[Line2D, PathCollection, Rectangle]
 
     axes: Dict[Axes, Annotation]
     """Mapping from axis to axis annotation"""
@@ -160,17 +161,26 @@ class AnnotatedPlot(Plot):
 
     def updateAnnotation(self, annot: Annotation, item: AnnotationItem, ind: dict):
         # Data point index
-        idx = ind['ind'][0]
-
         if isinstance(item, Line2D):
+            idx = ind['ind'][0]
+            ppr_item = item.df.iloc[idx]
+
             annot.xy = (item.get_xdata()[idx], item.get_ydata()[idx])
         elif isinstance(item, PathCollection):
+            idx = ind['ind'][0]
+            ppr_item = item.df.iloc[idx]
+
             annot.xy = item.get_offsets()[idx]
+        elif isinstance(item, Rectangle):
+            ppr_item = item.df
+
+            annot.xy = (item.xy[0] + item.get_width()/2,
+                        item.xy[1] + item.get_height()/2)
         else:
             raise ValueError("Line must be either a Line2D or a PathCollection")
 
         annot.set_visible(True)
-        annot.set_text(item.ppr(item.df.iloc[idx]))
+        annot.set_text(item.ppr(ppr_item))
 
 # See:
 #   https://stackoverflow.com/questions/11551049/matplotlib-plot-zooming-with-scroll-wheel
