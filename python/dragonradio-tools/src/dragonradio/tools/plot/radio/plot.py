@@ -65,7 +65,7 @@ def pprTXRecord(rec):
     return "nsamples={nsamples}".\
         format(nsamples=rec.nsamples)
 
-class SpecgramPlot(Plot):
+class SpecgramPlot(AnnotatedPlot):
     """A spectrogram plot"""
 
     nfft: int = 256
@@ -87,17 +87,21 @@ class SpecgramPlot(Plot):
                  nfft: int=256,
                  noverlap: int=128,
                  scale: float=1e3,
-                 cmap: Colormap=plt.get_cmap('viridis')):
+                 cmap: Colormap=plt.get_cmap('viridis'),
+                 **kwargs):
         if noverlap >= nfft:
             noverlap = nfft/2
 
-        super().__init__(fig, ax=ax)
+        super().__init__(fig, ax=ax, **kwargs)
 
         self.scale = scale # kHz
         self.nfft = nfft
         self.noverlap = noverlap
         self.cmap = cmap
         self.cb = None
+
+        # Connect annotations
+        self.connect_hover()
 
     def plot(self, Fs: float, w: np.ndarray, t0: float):
         xticks = mp.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x+t0))
@@ -120,10 +124,16 @@ class SpecgramPlot(Plot):
         self.ax.yaxis.set_major_formatter(yticks)
         #self.ax.axis('tight')
 
-    def plotPacketVoxel(self, pkt: Packet, t0: float, **kwargs):
-        self.plotVoxel(pkt.start-t0, pkt.end-t0, pkt.fc, pkt.chan_bw, **kwargs)
+        self.addAnnotationAxis(self.ax)
 
-    def plotVoxel(self, t_start: float, t_end: float, fc: float, bw: float, **kwargs):
+    def plotPacketVoxel(self, pkt: Packet, t0: float, ppr: Callable=pprReceivedPacket, **kwargs):
+        patch = self.plotVoxel(pkt.start-t0, pkt.end-t0, pkt.fc, pkt.chan_bw, **kwargs)
+
+        patch.df = pkt
+        patch.ppr = ppr
+        self.addAnnotationItem(self.ax, patch)
+
+    def plotVoxel(self, t_start: float, t_end: float, fc: float, bw: float, **kwargs) -> Rectangle:
         f_bot = fc-0.5*bw
         f_height = bw
 
@@ -131,7 +141,7 @@ class SpecgramPlot(Plot):
                                   t_end-t_start,
                                   f_height,
                                   **kwargs)
-        self.ax.add_patch(rect)
+        return self.ax.add_patch(rect)
 
     def markSlot(self, t: float, color: str='r', **kwargs):
         self.ax.axvline(t, color=color, **kwargs)
