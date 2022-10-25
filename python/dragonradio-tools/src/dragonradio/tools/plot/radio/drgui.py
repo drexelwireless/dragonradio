@@ -10,8 +10,30 @@ from matplotlib.widgets import Button, Slider
 import matplotlib.pyplot as plt
 
 from dragonradio.signal import decompressIQData
-from dragonradio.tools.logging.command_line import Command
+from dragonradio.tools.logging import LogCollection, Packet
+from dragonradio.tools.logging.command_line import Command, add_annotate_args
 from .plot import ConstellationPlot, PAPRPlot, PSDPlot, SpecgramPlot, WaveformPlot
+
+def pprReceivedPacket(logs: LogCollection, pkt: Packet):
+    """Pretty print a received packet"""
+    pkt_sent = logs[pkt.curhop].findSentPacket(pkt)
+    if pkt_sent is not None:
+        t_sent = pkt_sent.aligned_timestamp
+        t_recv = pkt.aligned_timestamp
+        delta = t_recv - t_sent
+        delta_s = f"{delta:g}"
+    else:
+        delta_s = ''
+
+    return f"seq={pkt.seq:}\n" \
+           f"curhop={pkt.curhop:}\n" \
+           f"nexthop={pkt.nexthop:}\n" \
+           f"size={pkt.size:}\n" \
+           f"data_len={pkt.data_len:}\n" \
+           f"ms={pkt.ms:}\n" \
+           f"evm={pkt.evm:2.0f}\n" \
+           f"rssi={pkt.rssi:2.0f}\n" \
+           f"clock delta={delta_s:}"
 
 class LogView:
     def __init__(self, logs, viewer):
@@ -35,7 +57,9 @@ class ReceiveView(LogView):
     def __init__(self, logs, viewer, node_id,
                  show_header_invalid=False,
                  nfft=256,
-                 sigslop=0):
+                 sigslop=0,
+                 annotate=False,
+                 sticky=False):
         super().__init__(logs, viewer)
 
         self.node_id = node_id
@@ -45,7 +69,10 @@ class ReceiveView(LogView):
         self.pktidx = 0
 
         self.fig = plt.figure()
-        self.specgram = SpecgramPlot(self.fig, self.fig.add_subplot(2,1,1), nfft=nfft)
+        self.specgram = SpecgramPlot(self.fig, self.fig.add_subplot(2,1,1),
+                                     nfft=nfft,
+                                     annotate=annotate,
+                                     sticky=sticky)
         self.constellation = ConstellationPlot(self.fig, self.fig.add_subplot(2,4,5))
         self.waveform = WaveformPlot(self.fig, self.fig.add_subplot(2,4,6))
         self.psd = PSDPlot(self.fig, self.fig.add_subplot(2,4,7), nfft=nfft)
@@ -140,7 +167,8 @@ class ReceiveView(LogView):
                                                       linewidth=1,
                                                       edgecolor=color,
                                                       facecolor='none',
-                                                      alpha=alpha)
+                                                      alpha=alpha,
+                                                      ppr=lambda pkt: pprReceivedPacket(self.logs, pkt))
 
                     # Display packet bracket at top of plot
                     if pkt.seq == self.pkt.seq:
@@ -385,11 +413,12 @@ class LogViewer:
                 return
 
     @cached_fig
-    def rxView(self, node_id, nfft=256, show_header_invalid=False, sigslop=0):
+    def rxView(self, node_id, nfft=256, show_header_invalid=False, sigslop=0, **kwargs):
         view = ReceiveView(self.logs, self, node_id,
                            nfft=nfft,
                            show_header_invalid=show_header_invalid,
-                           sigslop=sigslop)
+                           sigslop=sigslop,
+                           **kwargs)
         view.fig.show()
         return view
 
@@ -433,6 +462,8 @@ class DrGUICommand(Command):
                             dest='show_invalid_headers',
                             help='show invalid headers when displaying RX log')
 
+        add_annotate_args(parser)
+
     def handle(self, parser, args):
         mp.use('GTK3Agg')
 
@@ -450,8 +481,11 @@ class DrGUICommand(Command):
                 print("Cannot find node {}.".format(node_id), file=sys.stderr)
             else:
                 view = viewer.rxView(node_id,
-                                    nfft=args.nfft,
-                                    show_header_invalid=args.show_invalid_headers, sigslop=args.sigslop)
+                                     nfft=args.nfft,
+                                     show_header_invalid=args.show_invalid_headers,
+                                     sigslop=args.sigslop,
+                                     annotate=args.annotate,
+                                     sticky=args.sticky)
                 view.plot(0)
 
         for node_id in args.snapshots:
