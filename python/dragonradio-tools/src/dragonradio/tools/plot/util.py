@@ -1,9 +1,10 @@
 """Plotting utilities"""
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import Event
 from matplotlib.collections import PathCollection
+from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.text import Annotation
 from matplotlib.widgets import CheckButtons
@@ -69,12 +70,15 @@ def plotFIRResponse(ax, taps, fs, wp=None, ws=None, alpha=1.0, worN=512):
 
 class Plot:
     """A matplotlib plot"""
-    def __init__(self, fig, ax=None):
-        self.fig = fig
-        """A matplotlib Figure"""
+    fig: Figure
+    """A matplotlib Figure"""
 
+    ax: Optional[Axes] = None
+    """A matplotlib Axis"""
+
+    def __init__(self, fig: Figure, ax: Optional[Axes]=None):
+        self.fig = fig
         self.ax = ax
-        """A matplotlib Axis"""
 
         # This hack ensures that a reference to the Plot object hangs around as
         # long as the figure does. This is necessary for things like
