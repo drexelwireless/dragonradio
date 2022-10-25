@@ -33,29 +33,13 @@ class Slots:
     slots: pd.DataFrame
     """Slots containing received IQ data"""
 
-    ts: List[float]
-    """Timestamps of slots in the set"""
-
     offset: int
     """Offset of sample 0 of packet"""
-
-    fs: float
-    """Sample rate of IQ data"""
-
-    fc: float
-    """Sample center frequency"""
 
     def __init__(self, pkt: pd.DataFrame, slots: pd.DataFrame, offset: int):
         self.pkt = pkt
         self.slots = slots
-        self.ts = list(slots.timestamp)
-
         self.offset = offset
-
-        self.fs = slots.iloc[0].fs
-
-        if 'fc' in slots:
-            self.fc = slots.iloc[0].fc
 
     def __getitem__(self, idx):
         if isinstance(idx, slice):
@@ -64,9 +48,46 @@ class Slots:
             return self.iq_data[self.offset+idx]
 
     @cached_property
+    def empty(self) -> bool:
+        """Return True if we don't have IQ data for this slot"""
+        return len(self.slots) == 0
+
+    @cached_property
+    def ts(self) -> List[float]:
+        """Timestamps of slots"""
+        return list(self.slots.timestamp)
+
+    @cached_property
+    def fs(self) -> Optional[float]:
+        """Sample rate of IQ data"""
+        if len(self.slots) > 0:
+            return self.slots.iloc[0].fs
+        else:
+            return None
+
+    @cached_property
+    def fc(self) -> Optional[float]:
+        """Sample center frequency"""
+        if len(self.slots) > 0:
+            return self.slots.iloc[0].fc
+        else:
+            return None
+
+    @cached_property
+    def t_start(self) -> Optional[float]:
+        """Start time of slot samples"""
+        if len(self.slots) > 0:
+            return self.ts[0]
+        else:
+            return None
+
+    @cached_property
     def iq_data(self) -> np.ndarray:
         """Combined IQ data of slots in the set"""
-        return np.concatenate([decompressIQData(sig) for sig in self.slots.iq_data])
+        if len(self.slots) == 0:
+            return np.array([], dtype='complex64')
+        else:
+            return np.concatenate([decompressIQData(sig) for sig in self.slots.iq_data])
 
 DROPPED: List[str] = ['transmitted', 'll_drop', 'queue_drop', 'phy_drop']
 """Category names for packet 'dropped' status"""
