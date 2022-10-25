@@ -4,19 +4,23 @@
 from enum import Enum
 import math
 import re
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import matplotlib as mp
+from matplotlib.axes import Axes
+from matplotlib.colorbar import Colorbar
+from matplotlib.colors import Colormap
 from matplotlib.figure import Figure
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+
 import numpy as np
 
 from dragonradio.tools.logging import LogCollection, COLOR_CAT
 from dragonradio.tools.colosseum import ReservationLog, Scorer
 from dragonradio.tools.plot.colosseum import plotStages
-from dragonradio.tools.plot.util import AnnotatedPlot
+from dragonradio.tools.plot.util import AnnotatedPlot, Plot
 from dragonradio.tools.plot.util import plotCCDF, zoomFactory, addCheckboxWidget
 
 def pprEvent(e):
@@ -57,21 +61,41 @@ def pprTXRecord(rec):
     return "nsamples={nsamples}".\
         format(nsamples=rec.nsamples)
 
-class SpecgramPlot:
+class SpecgramPlot(Plot):
     """A spectrogram plot"""
-    def __init__(self, fig, ax, nfft=256, noverlap=128, scale=1e3, cmap=plt.get_cmap('viridis')):
+
+    nfft: int = 256
+    """Size of FFT"""
+
+    overlap: int = 128
+    """FFT overlap"""
+
+    scale: float = 1e3
+    """Frequency scaling factor"""
+
+    cmap: Colormap
+    """Color map"""
+
+    cb: Optional[Colorbar] = None
+    """Color bar"""
+
+    def __init__(self, fig: Figure, ax: Axes,
+                 nfft: int=256,
+                 noverlap: int=128,
+                 scale: float=1e3,
+                 cmap: Colormap=plt.get_cmap('viridis')):
         if noverlap >= nfft:
             noverlap = nfft/2
 
-        self.fig = fig
-        self.ax = ax
+        super().__init__(fig, ax=ax)
+
         self.scale = scale # kHz
         self.nfft = nfft
         self.noverlap = noverlap
         self.cmap = cmap
         self.cb = None
 
-    def plot(self, Fs, w, t0):
+    def plot(self, Fs: float, w: np.ndarray, t0: float):
         xticks = mp.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x+t0))
         yticks = mp.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x/self.scale))
 
@@ -101,11 +125,10 @@ class SpecgramPlot:
                                   **kwargs)
         self.ax.add_patch(rect)
 
-class ConstellationPlot:
+class ConstellationPlot(Plot):
     """A constellation plot"""
-    def __init__(self, fig, ax):
-        self.fig = fig
-        self.ax = ax
+    def __init__(self, fig: Figure, ax: Axes):
+        super().__init__(fig, ax=ax)
 
     def plot(self, data, title='Constellation'):
         self.ax.clear()
@@ -116,11 +139,10 @@ class ConstellationPlot:
         self.ax.set_ylabel('Q')
         #self.constellation.axis('tight')
 
-class WaveformPlot:
+class WaveformPlot(Plot):
     """A waveform plot"""
-    def __init__(self, fig, ax):
-        self.fig = fig
-        self.ax = ax
+    def __init__(self, fig: Figure, ax: Axes):
+        super().__init__(fig, ax=ax)
 
     def plot(self, sig, title='Waveform', sigslop=0):
         self.ax.clear()
@@ -137,15 +159,22 @@ class WaveformPlot:
 
         self.fig.canvas.mpl_connect('scroll_event', zoomFactory(self.fig, self.ax, base_scale=2.0))
 
-class PSDPlot:
+class PSDPlot(Plot):
     """A PSD plot"""
-    def __init__(self, fig, ax, nfft=256, scale=1e3):
-        self.fig = fig
-        self.ax = ax
-        self.scale = scale # kHz
+
+    nfft: int = 256
+    """Size of FFT"""
+
+    scale: float = 1e3
+    """Frequency scaling factor"""
+
+    def __init__(self, fig: Figure, ax: Axes, nfft=256, scale=1e3):
+        super().__init__(fig, ax=ax)
+
+        self.scale = scale
         self.nfft = nfft
 
-    def plot(self, Fs, sig, title='PSD'):
+    def plot(self, Fs: float, sig: np.ndarray, title: str='PSD'):
         xticks = mp.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x/self.scale))
 
         self.ax.clear()
@@ -156,16 +185,15 @@ class PSDPlot:
         self.ax.xaxis.set_major_formatter(xticks)
         #self.ax.axis('tight')
 
-class PAPRPlot:
+class PAPRPlot(Plot):
     """A PAPR plot"""
-    def __init__(self, fig, ax):
-        self.fig = fig
-        self.ax = ax
+    def __init__(self, fig: Figure, ax: Axes):
+        super().__init__(fig, ax=ax)
 
     # See:
     #   https://www.dsprelated.com/showcode/238.php
     #   https://www.dsprelated.com/showarticle/962.php
-    def plot(self, sig, title='CCDF of PAPR'):
+    def plot(self, sig: np.ndarray, title: str='CCDF of PAPR'):
         P = sig.real**2 + sig.imag**2
         Pratio = P/np.mean(P)
         with np.errstate(divide='ignore'):
@@ -184,13 +212,15 @@ class PAPRPlot:
         self.fig.canvas.mpl_connect('scroll_event', zoomFactory(self.fig, self.ax, base_scale=2.0))
 
 class ReservationPlot(AnnotatedPlot):
-    def __init__(self, fig, *args, logs: LogCollection=None, **kwargs):
+    logs: LogCollection
+    """Logs to plot"""
+
+    def __init__(self, fig: Figure, *args, logs: LogCollection=None, **kwargs):
         super().__init__(fig, *args, **kwargs)
 
-        self.logs: LogCollection = logs
-        """Logs to plot"""
+        self.logs = logs
 
-    def plotStages(self, ax=None):
+    def plotStages(self, ax: Optional[Axes]=None):
         # If logs are taken from a Colosseum reservation, plot stage markers
         if self.logs.reservation is not None:
             scorer = Scorer(self.logs.reservation)
@@ -227,21 +257,23 @@ class RadioMetricPlot(ReservationPlot):
                      , 'tx_latency': 'Packet TX Latency (sec)'
                      }
 
-    def __init__(self, fig, ax, logs,
-                 metric=None,
-                 latency=None,
-                 nodes=None,
-                 checkboxes=True,
-                 only_transmitted_packets=True,
-                 include_retransmissions=False,
-                 only_invalid_packets=False,
-                 include_invalid_packets=False,
-                 filt=lambda x : x,
+    metric: str
+    """The metric to plot"""
+
+    def __init__(self, fig: Figure, ax: Axes, logs: LogCollection,
+                 metric: str,
+                 latency: Optional[str]=None,
+                 nodes: List[int]=None,
+                 checkboxes: bool=True,
+                 only_transmitted_packets: bool=True,
+                 include_retransmissions: bool=False,
+                 only_invalid_packets: bool=False,
+                 include_invalid_packets: bool=False,
+                 filt: Callable=lambda x : x,
                  **kwargs):
         super().__init__(fig, ax, logs=logs, **kwargs)
 
         self.metric = metric
-        """The metric to plot"""
 
         self.addAnnotationAxis(ax)
 
@@ -332,10 +364,10 @@ class RadioMetricPlot(ReservationPlot):
         if checkboxes:
             self.fig.subplots_adjust(right=0.83)
             addCheckboxWidget(self.fig,
-                            self.annotations[ax],
-                            ax=ax,
-                            match_legend=True,
-                            height_factor=0.15)
+                              self.annotations[ax],
+                              ax=ax,
+                              match_legend=True,
+                              height_factor=0.15)
 
         ax.set_xlabel('Time (sec)')
         ax.set_ylabel(ylabel)
@@ -364,7 +396,13 @@ class RadioMetricPlot(ReservationPlot):
         self.connect_hover()
 
 class EventPlot(ReservationPlot):
-    def __init__(self, logs, fig=None, ax=None, **kwargs):
+    series: List = []
+    """Event series to plot"""
+
+    cats: List = []
+    """Categories"""
+
+    def __init__(self, logs: LogCollection, fig=None, ax=None, **kwargs):
         if fig is None:
             fig = plt.figure(figsize=(14,4))
 
@@ -374,12 +412,9 @@ class EventPlot(ReservationPlot):
         super().__init__(fig, ax, logs=logs, **kwargs)
 
         self.series = []
-        """Event series to plot"""
-
         self.cats = []
-        """Categories"""
 
-    def addEventCategory(self, node_id, k, ppr, filt=None):
+    def addEventCategory(self, node_id, k, ppr, filt: Optional[Callable]=None):
         if k == 'TXRECORD':
             df = self.logs[node_id].event_cats.tx_records
         elif k == 'SEND':
@@ -438,13 +473,16 @@ class EventPlot(ReservationPlot):
         self.connect_hover()
 
 class TrafficPlot(ReservationPlot):
+    filt: Callable
+    """DataFrame filter"""
+
     def __init__(self,
                  fig: Figure,
                  logs: LogCollection,
                  src: Optional[int],
                  dest: Optional[int],
                  y: str='seq',
-                 filt=lambda x : x,
+                 filt: Callable=lambda x : x,
                  by_flow: bool=True,
                  flows: List[int]=[],
                  mac_errors: bool=False,
@@ -453,7 +491,6 @@ class TrafficPlot(ReservationPlot):
         super().__init__(fig, logs=logs, **kwargs)
 
         self.filt = filt
-        """DataFrame filter"""
 
         # Try to determine src and dest from flows if they are not given
         if src is None and dest is None and len(flows) != 0:
