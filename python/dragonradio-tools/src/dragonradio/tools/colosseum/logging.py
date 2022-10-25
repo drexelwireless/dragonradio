@@ -674,7 +674,7 @@ class ReservationLog(DataFrameCache):
                     dragonlog_path = self.stderrLogPath(path, srn)
 
                     if dragonlog_path.is_file():
-                        with dragonlog_path.open('r') as f:
+                        with dragonlog_path.open('r', errors='ignore') as f:
                             text = f.read()
 
                         m = re.search(r'UHD Error', text, re.M)
