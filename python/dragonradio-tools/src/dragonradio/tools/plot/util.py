@@ -1,6 +1,11 @@
 """Plotting utilities"""
+from typing import Dict, List, Union
+
+from matplotlib.axes import Axes
+from matplotlib.backend_bases import Event
 from matplotlib.collections import PathCollection
 from matplotlib.lines import Line2D
+from matplotlib.text import Annotation
 from matplotlib.widgets import CheckButtons
 
 import numpy as np
@@ -87,44 +92,54 @@ class Plot:
             self.fig.canvas.manager.set_window_title(title)
 
 class AnnotatedPlot(Plot):
+    AnnotationItem = Union[Line2D, PathCollection]
+
+    axes: Dict[Axes, Annotation]
+    """Mapping from axis to axis annotation"""
+
+    annotations: Dict[Axes, List[AnnotationItem]]
+    """Mapping from axis to plotted lines"""
+
+    annotate: bool = False
+    """Should the plot show annotations?"""
+
+    sticky: bool = False
+    """Should annotation stick to previous hotspot?"""
+
     def __init__(self, fig, ax=None, annotate=False, sticky=False):
         super().__init__(fig, ax=ax)
 
+        self.axes = {}
         self.annotations = {}
-        """Mapping from axis to axis annotation"""
-
-        self.lines = {}
-        """Mapping from axis to plotted lines"""
-
         self.annotate = annotate
-        """Should the plot show annotations?"""
-
         self.sticky = sticky
-        """Should annotation stick to previous hotspot?"""
 
-    def addAnnotation(self, ax):
-        self.annotations[ax] = ax.annotate('',
-                                           visible=False,
-                                           xy=(0,0),
-                                           xycoords='data',
-                                           xytext=(20,20),
-                                           textcoords='offset pixels',
-                                           bbox=dict(boxstyle='round', fc='w'),
-                                           arrowprops=dict(arrowstyle='->'))
-        self.lines[ax] = []
+    def addAnnotationAxis(self, ax: Axes):
+        self.axes[ax] = ax.annotate('',
+                                    visible=False,
+                                    xy=(0,0),
+                                    xycoords='data',
+                                    xytext=(20,20),
+                                    textcoords='offset pixels',
+                                    bbox=dict(boxstyle='round', fc='w'),
+                                    arrowprops=dict(arrowstyle='->'))
+        self.annotations[ax] = []
 
-    def addLine(self, ax, line):
-        self.lines[ax].append(line)
+    def addAnnotationItem(self, ax: Axes, item: Union[Line2D, PathCollection]):
+        self.annotations[ax].append(item)
 
     def connect_hover(self):
         """Connect hover event to show annotations"""
         if self.annotate:
             self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
 
-    def hover(self, event):
-        if event.inaxes in self.annotations:
-            annot = self.annotations[event.inaxes]
-            for line in self.lines[event.inaxes]:
+    def hover(self, event: Event):
+        if event.inaxes in self.axes:
+            # Get annotation for this axis
+            annot = self.axes[event.inaxes]
+
+            # Find annotation item corresponding to this event
+            for line in self.annotations[event.inaxes]:
                 if not line.get_visible():
                     continue
 
@@ -134,23 +149,24 @@ class AnnotatedPlot(Plot):
                     self.fig.canvas.draw_idle()
                     return
 
+            # If we have no annotation item, hide the annotation
             if not self.sticky:
                 annot.set_visible(False)
                 self.fig.canvas.draw_idle()
 
-    def updateAnnotation(self, annot, line, ind):
+    def updateAnnotation(self, annot: Annotation, item: AnnotationItem, ind: dict):
         # Data point index
         idx = ind['ind'][0]
 
-        if isinstance(line, Line2D):
-            annot.xy = (line.get_xdata()[idx], line.get_ydata()[idx])
-        elif isinstance(line, PathCollection):
-            annot.xy = line.get_offsets()[idx]
+        if isinstance(item, Line2D):
+            annot.xy = (item.get_xdata()[idx], item.get_ydata()[idx])
+        elif isinstance(item, PathCollection):
+            annot.xy = item.get_offsets()[idx]
         else:
             raise ValueError("Line must be either a Line2D or a PathCollection")
 
         annot.set_visible(True)
-        annot.set_text(line.ppr(line.df.iloc[idx]))
+        annot.set_text(item.ppr(item.df.iloc[idx]))
 
 # See:
 #   https://stackoverflow.com/questions/11551049/matplotlib-plot-zooming-with-scroll-wheel

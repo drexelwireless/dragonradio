@@ -243,7 +243,7 @@ class RadioMetricPlot(ReservationPlot):
         self.metric = metric
         """The metric to plot"""
 
-        self.addAnnotation(ax)
+        self.addAnnotationAxis(ax)
 
         yticks = None
 
@@ -322,7 +322,7 @@ class RadioMetricPlot(ReservationPlot):
                             label=str(node_id))
             line.df = df
             line.ppr = ppr
-            self.addLine(ax, line)
+            self.addAnnotationItem(ax, line)
 
         if metric in self.RECV_METRICS:
             self.fig.suptitle('Received Packet Metric')
@@ -332,7 +332,7 @@ class RadioMetricPlot(ReservationPlot):
         if checkboxes:
             self.fig.subplots_adjust(right=0.83)
             addCheckboxWidget(self.fig,
-                            self.lines[ax],
+                            self.annotations[ax],
                             ax=ax,
                             match_legend=True,
                             height_factor=0.15)
@@ -350,7 +350,7 @@ class RadioMetricPlot(ReservationPlot):
             ax.set_yticklabels(labels[lo:hi])
 
         if not checkboxes:
-            ax.legend(handles=self.lines[ax], loc='upper right')
+            ax.legend(handles=self.annotations[ax], loc='upper right')
 
         # Set window title
         if self.logs.reservation:
@@ -418,7 +418,7 @@ class EventPlot(ReservationPlot):
         self.ax.set_yticks(range(len(self.cats)))
         self.ax.set_yticklabels(["Node {}: {}".format(s[0], s[1]) for s in self.cats])
 
-        self.addAnnotation(self.ax)
+        self.addAnnotationAxis(self.ax)
 
         for (_node_id, _k, x, y, c, df, ppr) in self.series:
             line, = self.ax.plot(x, np.full(len(x), y),
@@ -430,7 +430,7 @@ class EventPlot(ReservationPlot):
 
             line.df = df
             line.ppr = ppr
-            self.addLine(self.ax, line)
+            self.addAnnotationItem(self.ax, line)
 
         # Plot stage markers
         self.plotStages()
@@ -542,9 +542,9 @@ class TrafficPlot(ReservationPlot):
         self.fig.tight_layout()
         self.fig.subplots_adjust(right=0.83)
         if src is not None:
-            addCheckboxWidget(self.fig, self.lines[sent_ax], ax=sent_ax, match_legend=True)
+            addCheckboxWidget(self.fig, self.annotations[sent_ax], ax=sent_ax, match_legend=True)
         if dest is not None:
-            addCheckboxWidget(self.fig, self.lines[recv_ax], ax=recv_ax, match_legend=True)
+            addCheckboxWidget(self.fig, self.annotations[recv_ax], ax=recv_ax, match_legend=True)
 
         # Attach hover event handler
         self.connect_hover()
@@ -574,10 +574,10 @@ class TrafficPlot(ReservationPlot):
 
         line.df = df
         line.ppr = ppr
-        self.addLine(ax, line)
+        self.addAnnotationItem(ax, line)
 
     def plotSentTraffic(self, ax, src, dest, y, by_flow=True):
-        self.addAnnotation(ax)
+        self.addAnnotationAxis(ax)
 
         send_df = self.logs[src].send
 
@@ -625,7 +625,7 @@ class TrafficPlot(ReservationPlot):
         ax.set_ylabel(self.Y_LABELS[y])
 
     def plotRecvTraffic(self, ax, src, dest, y, by_flow=False):
-        self.addAnnotation(ax)
+        self.addAnnotationAxis(ax)
 
         recv_df = self.logs[dest].recv
 

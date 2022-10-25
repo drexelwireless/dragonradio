@@ -348,12 +348,12 @@ class FlowPlot(AnnotatedPlot):
                           label=label)
         line.df = self.df[idx]
         line.ppr = pprMgen
-        self.addLine(ax, line)
+        self.addAnnotationItem(ax, line)
         lines.append(line)
 
     def plotSent(self):
         self.send_ax = self.fig.add_subplot(311)
-        self.addAnnotation(self.send_ax)
+        self.addAnnotationAxis(self.send_ax)
 
         self.send_lines = []
 
@@ -382,7 +382,7 @@ class FlowPlot(AnnotatedPlot):
         self.listen_ax = self.fig.add_subplot(312,
                                               sharex=self.send_ax,
                                               sharey=self.send_ax)
-        self.addAnnotation(self.listen_ax)
+        self.addAnnotationAxis(self.listen_ax)
 
         self.recv_lines = []
 
@@ -408,7 +408,7 @@ class FlowPlot(AnnotatedPlot):
     def plotLatency(self):
         self.latency_ax = self.fig.add_subplot(313,
                                                sharex=self.send_ax)
-        self.addAnnotation(self.latency_ax)
+        self.addAnnotationAxis(self.latency_ax)
 
         self.lat_lines = []
 
