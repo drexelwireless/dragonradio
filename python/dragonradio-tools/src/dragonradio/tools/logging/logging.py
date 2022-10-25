@@ -8,6 +8,7 @@ import logging
 import os
 import re
 from typing import List, Optional, Tuple
+from typing_extensions import TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -21,13 +22,15 @@ from dragonradio.tools.colosseum.logging import ReservationLog
 
 logger = logging.getLogger(__name__)
 
+Packet: TypeAlias = pd.Series
+
 def enumCategories(cls) -> CategoricalDtype:
     """Return a CategoricalDtype for a pybind11 enum"""
     return CategoricalDtype(categories=cls.__members__.keys())
 
 class Slots:
     """Slots containing IQ data for a received packet"""
-    pkt: pd.DataFrame
+    pkt: Packet
     """Received packet"""
 
     slots: pd.DataFrame
@@ -36,7 +39,7 @@ class Slots:
     offset: int
     """Offset of sample 0 of packet"""
 
-    def __init__(self, pkt: pd.DataFrame, slots: pd.DataFrame, offset: int):
+    def __init__(self, pkt: Packet, slots: pd.DataFrame, offset: int):
         self.pkt = pkt
         self.slots = slots
         self.offset = offset
@@ -487,7 +490,7 @@ class Log:
 
         return slots[(slots.start <= t) & (t < slots.end)]
 
-    def findPacketSlots(self, pkt: pd.DataFrame):
+    def findPacketSlots(self, pkt: Packet):
         """Find slots during which a packet was received.
 
         Args:
@@ -557,7 +560,7 @@ class Log:
 
         return send[idx]
 
-    def findReceivedPacketIndex(self, pkt: pd.DataFrame) -> Optional[pd.Series]:
+    def findReceivedPacketIndex(self, pkt: Packet) -> Optional[pd.Series]:
         """Find the index of received packet given sequence number.
 
         Args:
@@ -575,7 +578,7 @@ class Log:
         else:
             return None
 
-    def findSentPacketIndex(self, pkt: pd.DataFrame) -> Optional[pd.Series]:
+    def findSentPacketIndex(self, pkt: Packet) -> Optional[pd.Series]:
         """Find the index of sent packet corresponding to received packet pkt.
 
         Args:
@@ -595,7 +598,7 @@ class Log:
         else:
             return None
 
-    def findSentPacket(self, pkt: pd.DataFrame) -> Optional[pd.Series]:
+    def findSentPacket(self, pkt: Packet) -> Optional[pd.Series]:
         """Find the sent packet corresponding to received packet pkt.
 
         Args:
@@ -701,7 +704,7 @@ class LogCollection:
         else:
             return datetime.datetime.fromtimestamp(min(starts))
 
-    def findPacketSlots(self, pkt: pd.Series, dest: int) -> Optional[Slots]:
+    def findPacketSlots(self, pkt: Packet, dest: int) -> Optional[Slots]:
         """
         Find slots during which a packet was received.
 

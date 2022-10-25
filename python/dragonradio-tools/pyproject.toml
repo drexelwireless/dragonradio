@@ -20,6 +20,7 @@ dependencies = [
     "requests",
     "rich",
     "scipy",
+    "typing-extensions",
     "xdg"
 ]
 

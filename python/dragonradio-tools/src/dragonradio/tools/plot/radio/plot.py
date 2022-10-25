@@ -21,13 +21,11 @@ import numpy as np
 
 import pandas as pd
 
-from dragonradio.tools.logging import LogCollection, COLOR_CAT
+from dragonradio.tools.logging import LogCollection, Packet, COLOR_CAT
 from dragonradio.tools.colosseum import ReservationLog, Scorer
 from dragonradio.tools.plot.colosseum import plotStages
 from dragonradio.tools.plot.util import AnnotatedPlot, Plot
 from dragonradio.tools.plot.util import plotCCDF, zoomFactory, addCheckboxWidget
-
-Packet = pd.Series
 
 def pprEvent(e):
     """Pretty print an event"""
