@@ -78,9 +78,12 @@ class Scorer(DataFrameCache):
         return [df.loc[stage].max_score for stage in self.stages]
 
     @cached_property
-    def stage_scores(self) -> pd.DataFrame:
+    def stage_scores(self) -> Optional[pd.DataFrame]:
         """Stage scores"""
         df = self.ensemble_mp_score
+
+        if df is None or df.empty:
+            return None
 
         stages = self.stages
         stage_scores = []
@@ -115,8 +118,11 @@ class Scorer(DataFrameCache):
         return sum(self.max_stage_scores)
 
     @cached_property
-    def final_match_score(self) -> float:
+    def final_match_score(self) -> Optional[float]:
         """Final match score"""
+        if self.stage_scores is None:
+            return None
+
         return sum(self.stage_scores)
 
     def phase3_score(self, team : Optional[int]=None) -> float:
@@ -199,6 +205,9 @@ class Scorer(DataFrameCache):
         """Scored traffic with duplicate received packets dropped"""
         df = self.reservation.traffic
 
+        if df is None or df.empty:
+            return None
+
         # Delete flow 0
         df.drop(df.index[df.flow_uid == 0], inplace=True)
 
@@ -220,6 +229,9 @@ class Scorer(DataFrameCache):
         df['stage'] = np.NaN
         for stage in self.stages:
             df.loc[df.mp>=stage, 'stage'] = stage
+        if df.stage.isnull().values.any():
+            logger.info('Observed traffic that does not belong to a stage')
+            return None
         df.stage = df.stage.astype(int)
 
         # Set index on team and flow_uid
@@ -363,13 +375,17 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('per_mp_score')
-    def per_mp_score(self) -> pd.DataFrame:
+    def per_mp_score(self) -> Optional[pd.DataFrame]:
         """Flow score per measurement period.
 
         This DataFrame has an index on team, flow_uid, stage, and mp.
         """
         # Get traffic summary and gates
         df = self.traffic_summary
+
+        if df is None or df.empty:
+            return None
+
         gates_df = self.gates
 
         #
@@ -506,12 +522,15 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('mp_score')
-    def mp_score(self) -> pd.DataFrame:
+    def mp_score(self) -> Optional[pd.DataFrame]:
         """Measurement period scores.
 
         This DataFrame has an index on team, stage, and mp.
         """
         df = self.per_mp_score
+
+        if df is None or df.empty:
+            return None
 
         #
         # Calculate aggregate per-MP score
@@ -536,6 +555,9 @@ class Scorer(DataFrameCache):
         """Ensemble score"""
         df = self.mp_score
 
+        if df is None or df.empty:
+            return None
+
         df = df.groupby(['mp']).agg({ 'mp_score': 'min'
                                     , 'max_mp_score': 'min'
                                     })
@@ -544,10 +566,13 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('threshold_success')
-    def threshold_success(self) -> pd.DataFrame:
+    def threshold_success(self) -> Optional[pd.DataFrame]:
         """Threshold success"""
         df = self.mp_score
         thresholds_df = self.scenario.environment
+
+        if df is None or thresholds_df is None:
+            return None
 
         # Attach thresholds to MP scores
         logger.info('Joining thresholds and MP scores')
@@ -564,9 +589,12 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('ensemble_threshold_success')
-    def ensemble_threshold_success(self) -> pd.DataFrame:
+    def ensemble_threshold_success(self) -> Optional[pd.DataFrame]:
         """Ensemble threshold success"""
         df = self.threshold_success
+
+        if df is None:
+            return None
 
         df = df.groupby(['mp']).agg({'threshold_success': 'sum'})
         nteams = len(self.reservation.teams)
@@ -576,11 +604,14 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_dataframe_property('pe_score')
-    def pe_score(self) -> pd.DataFrame:
+    def pe_score(self) -> Optional[pd.DataFrame]:
         """Points earned"""
         df = self.threshold_success
         ensemble_success_df = self.ensemble_threshold_success
         mp_ensemble_score_df = self.ensemble_mp_score
+
+        if df is None:
+            return None
 
         # Join with ensemble success
         cols = pd.Index(['threshold_success'])
@@ -596,28 +627,39 @@ class Scorer(DataFrameCache):
         return df
 
     @cached_property
-    def score(self) -> pd.DataFrame:
+    def score(self) -> Optional[pd.DataFrame]:
         """Phase 3 scores"""
         df = self.pe_score
+
+        if df is None:
+            return None
+
         df['score'] = df.groupby('team').pe_score.cumsum()
         df['max_score'] = df.groupby('team').max_mp_score.cumsum()
 
         return df
 
     @cached_property
-    def ensemble_score(self) -> pd.DataFrame:
+    def ensemble_score(self) -> Optional[pd.DataFrame]:
         """Phase 3 ensemble score"""
         df = self.ensemble_mp_score
+
+        if df is None:
+            return None
+
         df['score'] = df.mp_score.cumsum()
         df['max_score'] = df.max_mp_score.cumsum()
 
         return df
 
     @cached_property
-    def flows(self) -> pd.DataFrame:
+    def flows(self) -> Optional[pd.DataFrame]:
         """Per-flow score information, sorted in descending order by lost points"""
         score_df = self.per_mp_score
         traffic_df = self.traffic
+
+        if score_df is None or traffic_df is None:
+            return None
 
         flows = score_df.index.get_level_values('flow_uid').unique()
 
