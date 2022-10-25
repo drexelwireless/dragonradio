@@ -12,16 +12,22 @@ from matplotlib.colorbar import Colorbar
 from matplotlib.colors import Colormap
 from matplotlib.figure import Figure
 import matplotlib.patches as patches
+from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from matplotlib.transforms import blended_transform_factory
 
 import numpy as np
+
+import pandas as pd
 
 from dragonradio.tools.logging import LogCollection, COLOR_CAT
 from dragonradio.tools.colosseum import ReservationLog, Scorer
 from dragonradio.tools.plot.colosseum import plotStages
 from dragonradio.tools.plot.util import AnnotatedPlot, Plot
 from dragonradio.tools.plot.util import plotCCDF, zoomFactory, addCheckboxWidget
+
+Packet = pd.Series
 
 def pprEvent(e):
     """Pretty print an event"""
@@ -107,6 +113,7 @@ class SpecgramPlot(Plot):
 
         self.cb = self.fig.colorbar(cax, ax=self.ax)
         self.cb.set_label('Intensity (dB)')
+
         self.ax.set_aspect('auto')
         self.ax.set_xlabel('Time (sec)')
         self.ax.set_ylabel('Frequency (kHz)')
@@ -114,6 +121,9 @@ class SpecgramPlot(Plot):
         self.ax.xaxis.set_major_formatter(xticks)
         self.ax.yaxis.set_major_formatter(yticks)
         #self.ax.axis('tight')
+
+    def plotPacketVoxel(self, pkt: Packet, t0: float, **kwargs):
+        self.plotVoxel(pkt.start-t0, pkt.end-t0, pkt.fc, pkt.chan_bw, **kwargs)
 
     def plotVoxel(self, t_start: float, t_end: float, fc: float, bw: float, **kwargs):
         f_bot = fc-0.5*bw
@@ -124,6 +134,40 @@ class SpecgramPlot(Plot):
                                   f_height,
                                   **kwargs)
         self.ax.add_patch(rect)
+
+    def markSlot(self, t: float, color: str='r', **kwargs):
+        self.ax.axvline(t, color=color, **kwargs)
+
+    def bracketPacket(self, pkt: Packet, t0: float, **kwargs):
+        t_start = pkt.start - t0
+        t_end = pkt.end - t0
+
+        if pkt.payload_valid:
+            color = 'k'
+        else:
+            color = 'r'
+
+        # See:
+        #   https://stackoverflow.com/questions/30311809/is-it-possible-to-anchor-a-matplotlib-annotation-to-a-data-coordinate-in-the-x-a
+        tform = blended_transform_factory(self.ax.transData, self.ax.transAxes)
+
+        self.ax.annotate('',
+                         xy=(t_start, 1),
+                         xytext=(t_end, 1),
+                         xycoords=tform,
+                         arrowprops=dict(arrowstyle='<->',
+                                         connectionstyle='bar, armA=20.0, armB=20.0, fraction=0.0',
+                                         ec='k'))
+
+        self.ax.text((t_start + t_end) / 2,
+                     1.1,
+                     str(pkt.seq),
+                     transform=tform,
+                     ha='center',
+                     va='bottom',
+                     rotation=45,
+                     color=color,
+                     **kwargs)
 
 class ConstellationPlot(Plot):
     """A constellation plot"""

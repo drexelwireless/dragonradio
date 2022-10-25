@@ -8,7 +8,6 @@ import sys
 import matplotlib as mp
 from matplotlib.widgets import Button, Slider
 import matplotlib.pyplot as plt
-from matplotlib.transforms import blended_transform_factory
 
 from dragonradio.signal import decompressIQData
 from dragonradio.tools.logging.command_line import Command
@@ -137,18 +136,23 @@ class ReceiveView(LogView):
                         else:
                             color = 'r'
 
-                        self.specgram.plotVoxel(pkt.start-t0, pkt.end-t0, pkt.fc, pkt.chan_bw,
-                                                linewidth=1,
-                                                edgecolor=color,
-                                                facecolor='none',
-                                                alpha=alpha)
+                        self.specgram.plotPacketVoxel(pkt, t0,
+                                                      linewidth=1,
+                                                      edgecolor=color,
+                                                      facecolor='none',
+                                                      alpha=alpha)
 
                     # Display packet bracket at top of plot
-                    self.bracketPacket(pkt, t0, self.specgram.ax)
+                    if pkt.seq == self.pkt.seq:
+                        weight = 'bold'
+                    else:
+                        weight = 'normal'
+
+                    self.specgram.bracketPacket(pkt, t0, weight=weight)
 
                 # Mark all slots in the current specgram
                 for t in slots.ts:
-                    self.markSlot(self.specgram.ax, t-t0)
+                    self.specgram.markSlot(t-t0)
 
                 self.constellation.plot(self.pkt.symbols)
                 self.waveform.plot(sig, sigslop=self.sigslop)
@@ -181,47 +185,6 @@ class ReceiveView(LogView):
 
             view = self.viewer.txView(self.pkt.curhop)
             view.plot(idx)
-
-    def markSlot(self, ax, t, **kwargs):
-        ax.axvline(t, color='r')
-
-    def bracketPacket(self, pkt, t0, ax):
-        t_start = pkt.start - t0
-        t_end = pkt.end - t0
-
-        # If the packet we are marking is the current packet, its label appears
-        # in red. Otherwise, its label appears in black.
-        if pkt.seq == self.pkt.seq:
-            weight = 'bold'
-        else:
-            weight = 'normal'
-
-        if pkt.payload_valid:
-            color = 'k'
-        else:
-            color = 'r'
-
-        # See:
-        #   https://stackoverflow.com/questions/30311809/is-it-possible-to-anchor-a-matplotlib-annotation-to-a-data-coordinate-in-the-x-a
-        tform = blended_transform_factory(ax.transData, ax.transAxes)
-
-        ax.annotate('',
-                    xy=(t_start, 1),
-                    xytext=(t_end, 1),
-                    xycoords=tform,
-                    arrowprops=dict(arrowstyle='<->',
-                                    connectionstyle='bar, armA=20.0, armB=20.0, fraction=0.0',
-                                    ec='k'))
-
-        ax.text((t_start + t_end) / 2,
-                1.1,
-                str(pkt.seq),
-                transform=tform,
-                ha='center',
-                va='bottom',
-                weight=weight,
-                rotation=45,
-                color=color)
 
     def note(self, ax, msg, t, y, **kwargs):
         ax.annotate(msg,
