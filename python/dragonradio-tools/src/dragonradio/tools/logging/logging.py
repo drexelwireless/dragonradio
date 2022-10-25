@@ -576,7 +576,7 @@ class Log:
             return None
 
     def findSentPacketIndex(self, pkt: pd.DataFrame) -> Optional[pd.Series]:
-        """Find the index of sent packet given sequence number.
+        """Find the index of sent packet corresponding to received packet pkt.
 
         Args:
             seq: A sequence number
@@ -594,6 +594,21 @@ class Log:
             return send.index[idx].tolist()[closest]
         else:
             return None
+
+    def findSentPacket(self, pkt: pd.DataFrame) -> Optional[pd.Series]:
+        """Find the sent packet corresponding to received packet pkt.
+
+        Args:
+            seq: A sequence number
+
+        Returns:
+            The packet or None.
+        """
+        idx = self.findSentPacketIndex(pkt)
+        if idx is None:
+            return None
+        else:
+            return self.send.iloc[idx]
 
 class LogCollection:
     """A collection of DragonRadio logs"""
