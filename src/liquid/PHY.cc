@@ -189,9 +189,9 @@ int PHY::PacketDemodulator::callback(unsigned char *  header_,
     pkt->cfo = stats_.cfo;
 
     // Save channel info
+    pkt->bw = rx_rate_;
     pkt->chanidx = chanidx_;
     pkt->channel = channel_;
-    pkt->bw = rx_rate_;
     pkt->mcsidx = getMCSIndex(phy_.mcs_table, stats_);
 
     // The start and end variables contain full-rate sample offsets of the frame

@@ -194,6 +194,10 @@ struct PacketSendEntry {
     float fc;
     /** @brief Bandwidth [Hz] */
     float bw;
+    /** @brief Channel center frequency [Hz] */
+    float chan_fc;
+    /** @brief Bandwidth [Hz] */
+    float chan_bw;
     /** @brief Latency between packet creation and tun/tap read [sec] */
     double tuntap_latency;
     /** @brief Enqueue latency [sec] */
@@ -374,6 +378,8 @@ void Logger::open(const std::string& filename)
     h5_packet_send.insertMember("mcsidx", HOFFSET(PacketSendEntry, mcsidx), H5::PredType::NATIVE_UINT8);
     h5_packet_send.insertMember("fc", HOFFSET(PacketSendEntry, fc), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("bw", HOFFSET(PacketSendEntry, bw), H5::PredType::NATIVE_FLOAT);
+    h5_packet_send.insertMember("chan_fc", HOFFSET(PacketSendEntry, chan_fc), H5::PredType::NATIVE_FLOAT);
+    h5_packet_send.insertMember("chan_bw", HOFFSET(PacketSendEntry, chan_bw), H5::PredType::NATIVE_FLOAT);
     h5_packet_send.insertMember("tuntap_latency", HOFFSET(PacketSendEntry, tuntap_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("enqueue_latency", HOFFSET(PacketSendEntry, enqueue_latency), H5::PredType::NATIVE_DOUBLE);
     h5_packet_send.insertMember("dequeue_latency", HOFFSET(PacketSendEntry, dequeue_latency), H5::PredType::NATIVE_DOUBLE);
@@ -695,7 +701,9 @@ void Logger::logSend_(const MonoClock::time_point& t,
 
     if (dropped == kNotDropped) {
         entry.fc = info.channel.fc;
-        entry.bw = info.channel.bw;
+        entry.bw = info.bw;
+        entry.chan_fc = info.channel.fc;
+        entry.chan_bw = info.channel.bw;
         entry.tuntap_latency = pkt.wall_timestamp ? std::chrono::duration<double>(info.timestamps.tuntap_timestamp - *pkt.wall_timestamp).count() : 0;
         entry.enqueue_latency = info.timestamps.enqueue_timestamp ? std::chrono::duration<double>(*info.timestamps.enqueue_timestamp - pkt.timestamp).count() : 0;
         entry.dequeue_latency = (info.timestamps.dequeue_end_timestamp && info.timestamps.dequeue_start_timestamp)

@@ -182,6 +182,7 @@ void MAC::txNotifier(void)
             std::shared_ptr<IQBuf> &first = record.iqbufs.front();
 
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
+                (*it)->pkt->bw = tx_rate_;
                 (*it)->pkt->chanidx = (*it)->chanidx;
                 (*it)->pkt->channel.fc = tx_fc_off_.value_or((*it)->channel.fc);
                 (*it)->pkt->channel.bw = (*it)->channel.bw;

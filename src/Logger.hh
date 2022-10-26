@@ -260,6 +260,9 @@ private:
         /** @brief Internal flags */
         Packet::InternalFlags internal_flags;
 
+        /** @brief Bandwidth (Hz) of entire signal */
+        float bw;
+
         /** @brief Index of channel on which the packet was sent/received */
         unsigned chanidx;
 
@@ -286,6 +289,7 @@ private:
 
         NetPacketInfo(const NetPacket& pkt)
           : internal_flags(pkt.internal_flags)
+          , bw(pkt.bw)
           , chanidx(pkt.chanidx)
           , channel(pkt.channel)
           , mcsidx(pkt.mcsidx)

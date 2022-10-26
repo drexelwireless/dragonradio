@@ -254,6 +254,9 @@ struct Packet : public buffer<unsigned char>
     /** @brief Set if the packet is a retransmission */
     bool retransmission;
 
+    /** @brief Bandwidth (Hz) of entire signal */
+    float bw;
+
     /** @brief Index of channel on which the packet was sent/received */
     unsigned chanidx;
 
@@ -606,9 +609,6 @@ struct RadioPacket : public Packet
 
     /** @brief Carrier frequency offset (f/Fs) */
     float cfo;
-
-    /** @brief Bandwidth (Hz) of entire received signal */
-    float bw;
 
     /** @brief Timestamp of MAC slot containing this packet */
     MonoClock::time_point slot_timestamp;
