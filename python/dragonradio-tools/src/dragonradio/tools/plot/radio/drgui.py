@@ -14,6 +14,15 @@ from dragonradio.tools.logging import LogCollection, Packet
 from dragonradio.tools.logging.command_line import Command, add_annotate_args
 from .plot import ConstellationPlot, PAPRPlot, PSDPlot, SpecgramPlot, WaveformPlot
 
+def pprSentPacket(pkt: Packet):
+    """Pretty print a sent packet"""
+    return f"seq={pkt.seq:}\n" \
+           f"curhop={pkt.curhop:}\n" \
+           f"nexthop={pkt.nexthop:}\n" \
+           f"size={pkt.size:}\n" \
+           f"data_len={pkt.data_len:}\n" \
+           f"ms={pkt.ms:}"
+
 def pprReceivedPacket(logs: LogCollection, pkt: Packet):
     """Pretty print a received packet"""
     pkt_sent = logs[pkt.curhop].findSentPacket(pkt)
@@ -54,6 +63,15 @@ class LogView:
 
 class ReceiveView(LogView):
     """View of received packets"""
+    plot_recv: bool = True
+    """Should received packets be plotted?"""
+
+    plot_sent: bool = True
+    """Should sent packets be plotted?"""
+
+    plot_slot_boundaries: bool = True
+    """Should slot boundaries be plotted?"""
+
     def __init__(self, logs, viewer, node_id,
                  show_header_invalid=False,
                  nfft=256,
@@ -145,42 +163,55 @@ class ReceiveView(LogView):
 
                 self.specgram.plot(slots.fs, slots.iq_data, t0)
 
-                # Mark all packets in the current specgram
-                pkts = self.logs[self.node_id].findReceivedPackets(slots.t_start, slots.t_end)
-                if not self.show_header_invalid:
-                    pkts = pkts[pkts.header_valid == True]
+                # Plot received packet voxels
+                if self.plot_recv:
+                    pkts = self.logs[self.node_id].findReceivedPackets(slots.t_start, slots.t_end)
+                    if not self.show_header_invalid:
+                        pkts = pkts[pkts.header_valid == True]
 
-                for _, pkt in pkts.iterrows():
-                    # Plot voxel occupied by packet
-                    if 'chan_bw' in pkt:
-                        if pkt.seq == self.pkt.seq and pkt.fc == self.pkt.fc:
-                            alpha = 0.9
+                    for _, pkt in pkts.iterrows():
+                        # Plot voxel occupied by packet
+                        if 'chan_bw' in pkt:
+                            if pkt.seq == self.pkt.seq and pkt.fc == self.pkt.fc:
+                                alpha = 0.9
+                            else:
+                                alpha = 0.3
+
+                            if pkt.payload_valid:
+                                color = 'k'
+                            else:
+                                color = 'r'
+
+                            self.specgram.plotPacketVoxel(pkt, t0,
+                                                          linewidth=1,
+                                                          edgecolor=color,
+                                                          facecolor='none',
+                                                          alpha=alpha,
+                                                          ppr=lambda pkt: pprReceivedPacket(self.logs, pkt))
+
+                        # Display packet bracket at top of plot
+                        if pkt.seq == self.pkt.seq:
+                            weight = 'bold'
                         else:
-                            alpha = 0.3
+                            weight = 'normal'
 
-                        if pkt.payload_valid:
-                            color = 'k'
-                        else:
-                            color = 'r'
+                        self.specgram.bracketPacket(pkt, t0, weight=weight)
 
+                # Plot sent packet voxels
+                if self.plot_sent:
+                    pkts = self.logs[self.node_id].findSentPackets(slots.t_start, slots.t_end)
+                    for _, pkt in pkts.iterrows():
                         self.specgram.plotPacketVoxel(pkt, t0,
                                                       linewidth=1,
-                                                      edgecolor=color,
+                                                      edgecolor='k',
                                                       facecolor='none',
-                                                      alpha=alpha,
-                                                      ppr=lambda pkt: pprReceivedPacket(self.logs, pkt))
-
-                    # Display packet bracket at top of plot
-                    if pkt.seq == self.pkt.seq:
-                        weight = 'bold'
-                    else:
-                        weight = 'normal'
-
-                    self.specgram.bracketPacket(pkt, t0, weight=weight)
+                                                      alpha=0.3,
+                                                      ppr=pprSentPacket)
 
                 # Mark all slots in the current specgram
-                for _, slot in slots.slots.iterrows():
-                    self.specgram.markSlot(slot.start-t0)
+                if self.plot_slot_boundaries:
+                    for _, slot in slots.slots.iterrows():
+                        self.specgram.markSlot(slot.start-t0)
 
                 self.constellation.plot(self.pkt.symbols)
                 self.waveform.plot(sig, sigslop=self.sigslop)
