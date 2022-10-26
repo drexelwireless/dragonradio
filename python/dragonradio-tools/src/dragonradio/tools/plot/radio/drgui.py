@@ -146,7 +146,7 @@ class ReceiveView(LogView):
                 self.specgram.plot(slots.fs, slots.iq_data, t0)
 
                 # Mark all packets in the current specgram
-                pkts = self.logs[self.node_id].findReceivedPackets(t0, t0+len(slots.iq_data)/slots.fs)
+                pkts = self.logs[self.node_id].findReceivedPackets(slots.t_start, slots.t_end)
                 if not self.show_header_invalid:
                     pkts = pkts[pkts.header_valid == True]
 
@@ -179,8 +179,8 @@ class ReceiveView(LogView):
                     self.specgram.bracketPacket(pkt, t0, weight=weight)
 
                 # Mark all slots in the current specgram
-                for t in slots.ts:
-                    self.specgram.markSlot(t-t0)
+                for _, slot in slots.slots.iterrows():
+                    self.specgram.markSlot(slot.start-t0)
 
                 self.constellation.plot(self.pkt.symbols)
                 self.waveform.plot(sig, sigslop=self.sigslop)

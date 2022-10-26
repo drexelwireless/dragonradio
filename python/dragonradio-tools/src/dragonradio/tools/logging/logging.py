@@ -56,11 +56,6 @@ class Slots:
         return len(self.slots) == 0
 
     @cached_property
-    def ts(self) -> List[float]:
-        """Timestamps of slots"""
-        return list(self.slots.timestamp)
-
-    @cached_property
     def fs(self) -> Optional[float]:
         """Sample rate of IQ data"""
         if len(self.slots) > 0:
@@ -80,7 +75,15 @@ class Slots:
     def t_start(self) -> Optional[float]:
         """Start time of slot samples"""
         if len(self.slots) > 0:
-            return self.ts[0]
+            return self.slots.iloc[0].start
+        else:
+            return None
+
+    @cached_property
+    def t_end(self) -> Optional[float]:
+        """Start time of slot samples"""
+        if len(self.slots) > 0:
+            return self.slots.iloc[-1].end
         else:
             return None
 
