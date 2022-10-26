@@ -294,6 +294,9 @@ class Log:
         df = self._loadDataset('recv')
         self._fixMCS(df)
 
+        # Compute number of samples in packet
+        df['nsamples'] = df.end_samples - df.start_samples
+
         has_slot_timestamp = 'slot_timestamp' in df
 
         if not has_slot_timestamp:
