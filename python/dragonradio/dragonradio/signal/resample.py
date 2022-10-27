@@ -136,8 +136,9 @@ def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -
 
     return resampled
 
-def fdresample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np.ndarray:
+def fdresample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, exact: bool=False) -> np.ndarray:
     resampler = dragonradio.signal.FDResamplerCCC(U, D, 1, theta, h)
+    resampler.exact = exact
 
     # Append samples to compensate for filter
     delay = int(resampler.delay)
@@ -146,3 +147,6 @@ def fdresample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> 
 
     # Correct for filter delay and tail end of signal
     return resampled[delay//D:(delay+len(sig)*U)//D]
+
+def fdresample_exact(*args, exact=True, **kwargs):
+    return fdresample(*args, exact=exact, **kwargs)
