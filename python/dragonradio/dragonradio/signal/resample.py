@@ -40,7 +40,7 @@ def upsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np
     # Append samples to compensate for filter
     delay = int(resampler.delay)
 
-    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+    resampled = resampler.resample(np.append(sig, np.zeros(delay//p)))
 
     # Remove prefix consisting of transient samples
     resampled = resampled[delay//q:]
@@ -60,7 +60,7 @@ def downsample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> 
     # Append samples to compensate for filter
     delay = int(resampler.delay)
 
-    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+    resampled = resampler.resample(np.append(sig, np.zeros(delay//p)))
 
     # Remove prefix consisting of transient samples
     resampled = resampled[delay//q:]
@@ -78,7 +78,7 @@ def resample(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> np
     # Append samples to compensate for filter
     delay = int(resampler.delay)
 
-    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+    resampled = resampler.resample(np.append(sig, np.zeros(delay//p)))
 
     # Remove prefix consisting of transient samples
     resampled = resampled[delay//q:]
@@ -97,9 +97,9 @@ def resample_and_mix(p: int, q: int, h: ArrayLike, sig: ArrayLike, theta: float=
     delay = int(resampler.delay)
 
     if p/q > 1.0:
-        resampled = resampler.resampleMixUp(np.append(sig, np.zeros(delay)))
+        resampled = resampler.resampleMixUp(np.append(sig, np.zeros(delay//p)))
     else:
-        resampled = resampler.resampleMixDown(np.append(sig, np.zeros(delay)))
+        resampled = resampler.resampleMixDown(np.append(sig, np.zeros(delay//p)))
 
     # Remove prefix consisting of transient samples
     return resampled[delay//q:]
@@ -113,10 +113,10 @@ def fdupsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -> 
     # Append samples to compensate for filter
     delay = int(resampler.delay)
 
-    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+    resampled = resampler.resample(np.append(sig, np.zeros(delay//U)))
 
     # Remove prefix consisting of transient samples
-    resampled = resampled[delay//U:]
+    resampled = resampled[delay//D:]
 
     return resampled
 
@@ -129,7 +129,7 @@ def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0) -
     # Append samples to compensate for filter
     delay = int(resampler.delay)
 
-    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+    resampled = resampler.resample(np.append(sig, np.zeros(delay//U)))
 
     # Remove prefix consisting of transient samples
     resampled = resampled[delay//D:]
@@ -143,10 +143,10 @@ def fdresample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, exa
     # Append samples to compensate for filter
     delay = int(resampler.delay)
 
-    resampled = resampler.resample(np.append(sig, np.zeros(delay)))
+    resampled = resampler.resample(np.append(sig, np.zeros(delay//U)))
 
     # Correct for filter delay and tail end of signal
-    return resampled[delay//D:(delay+len(sig)*U)//D]
+    return resampled[delay//D:]
 
 def fdresample_exact(*args, exact=True, **kwargs):
     return fdresample(*args, exact=exact, **kwargs)
