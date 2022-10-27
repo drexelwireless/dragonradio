@@ -12,13 +12,13 @@ class TDChannelModulator : public ChannelModulator {
 public:
     using C = std::complex<float>;
 
-    using Upsampler = dragonradio::signal::pfb::MixingRationalResampler<C,C>;
+    using Resampler = dragonradio::signal::pfb::MixingRationalResampler<C,C>;
 
     TDChannelModulator(const PHYChannel &channel,
                        unsigned chanidx,
                        double tx_rate)
       : ChannelModulator(channel, chanidx, tx_rate)
-      , upsampler_(channel.I,
+      , resampler_(channel.I,
                    channel.D,
                    channel.channel.fc/tx_rate,
                    channel.taps)
@@ -33,8 +33,8 @@ public:
                   float g,
                   ModPacket &mpkt) override final;
 protected:
-    /** @brief Time domain upsampler */
-    Upsampler upsampler_;
+    /** @brief Time domain resampler */
+    Resampler resampler_;
 };
 
 #endif /* TDCHANNELMODULATOR_H_ */

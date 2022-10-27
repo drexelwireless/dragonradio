@@ -15,21 +15,39 @@ void FDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
         // when we resample.
         mod_->modulate(std::move(pkt), 1.0f, mpkt);
 
-        // Perform overlap-save on modulated signal to upsample it.
-        auto   iqbuf = std::move(mpkt.samples);
-        auto   iqbuf_up = std::make_shared<IQBuf>(resampler_.neededOut(iqbuf->size()));
-        size_t nsamples;
+        // Get samples from ModPacket
+        auto iqbuf = std::move(mpkt.samples);
 
+        // Compensate for delay
+        size_t         delay = ceil(resampler_.getDelay());
+        const unsigned I =  resampler_.getInterpolationRate();
+        const unsigned D =  resampler_.getDecimationRate();
+
+        if (delay != 0)
+            iqbuf->append(delay/I);
+
+        // Allocate buffer for upsampled signal
+        auto     iqbuf_up = std::make_shared<IQBuf>(resampler_.neededOut(iqbuf->size()));
+        unsigned nsamples;
+
+        // Reset resampler state
+        resampler_.reset();
+
+        // Resample signal
         nsamples = resampler_.resample(iqbuf->data(),
                                        iqbuf->size(),
                                        iqbuf_up->data(),
                                        g_effective);
-
+        assert(nsamples <= iqbuf_up->size());
+        // Resize output buffer
         iqbuf_up->resize(nsamples);
 
+        // Indicate delay
+        iqbuf_up->delay = delay/D;
+
         // Put samples back into ModPacket
-        mpkt.offset = 0;
-        mpkt.nsamples = iqbuf_up->size();
+        mpkt.offset = iqbuf_up->delay;
+        mpkt.nsamples = iqbuf_up->size() - iqbuf_up->delay;
         mpkt.samples = std::move(iqbuf_up);
     } else {
         // Modulate packet and apply gain
