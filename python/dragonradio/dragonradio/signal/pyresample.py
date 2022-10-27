@@ -62,7 +62,8 @@ def fdupsample(U: int, D: int, h: Optional[ArrayLike], sig: ArrayLike, theta: fl
     # Compensate for interpolation
     upsampled *= U
 
-    return upsampled
+    # Correct for tail end of signal
+    return upsampled[:len(sig)*U//D]
 
 def fddownsample(U: int, D: int, h: ArrayLike, sig: ArrayLike, theta: float=0, P: int=128*3*25+1) -> np.ndarray:
     # Overlap factor
