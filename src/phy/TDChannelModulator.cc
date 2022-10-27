@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "phy/TDChannelModulator.hh"
@@ -18,20 +18,33 @@ void TDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
         // Get samples from ModPacket
         auto iqbuf = std::move(mpkt.samples);
 
-        // Append zeroes to compensate for delay
-        iqbuf->append(ceil(resampler_.getDelay()));
+        // Compensate for delay
+        size_t         delay = ceil(resampler_.getDelay());
+        const unsigned I =  resampler_.getInterpolationRate();
+        const unsigned D =  resampler_.getDecimationRate();
 
-        // Resample and mix up
+        if (delay != 0)
+            iqbuf->append(delay/I);
+
+        // Allocate buffer for upsampled signal
         auto     iqbuf_up = std::make_shared<IQBuf>(resampler_.neededOut(iqbuf->size()));
-        unsigned nw;
+        unsigned nsamples;
 
+        // Reset resampler state
         resampler_.reset();
-        nw = resampler_.resampleMixUp(iqbuf->data(), iqbuf->size(), g_effective, iqbuf_up->data());
-        assert(nw <= iqbuf_up->size());
-        iqbuf_up->resize(nw);
+
+        // Resample signal
+        nsamples = resampler_.resampleMixUp(iqbuf->data(),
+                                            iqbuf->size(),
+                                            g_effective,
+                                            iqbuf_up->data());
+        assert(nsamples <= iqbuf_up->size());
+
+        // Resize output buffer
+        iqbuf_up->resize(nsamples);
 
         // Indicate delay
-        iqbuf_up->delay = floor(resampler_.getRate()*resampler_.getDelay());
+        iqbuf_up->delay = delay/D;
 
         // Put samples back into ModPacket
         mpkt.offset = iqbuf_up->delay;
