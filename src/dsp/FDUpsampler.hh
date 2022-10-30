@@ -50,8 +50,8 @@ public:
     FDUpsampler(unsigned X_, unsigned I_, double theta)
       : X(X_)
       , I(I_)
-      , fft(X*N/I, FFTW_FORWARD, FFTW_MEASURE)
-      , ifft(N, FFTW_BACKWARD, FFTW_MEASURE)
+      , fft(X*N/I, FFTW_FORWARD)
+      , ifft(N, FFTW_BACKWARD)
     {
         if (fabs(N*theta - round(N*theta)) > 1e-10) {
             std::stringstream msg;
@@ -389,7 +389,7 @@ public:
     {
     public:
         ToTimeDomain(void)
-          : ifft(N, FFTW_BACKWARD, FFTW_MEASURE)
+          : ifft(N, FFTW_BACKWARD)
         {
         }
 
