@@ -128,7 +128,7 @@ namespace fftw
     public:
         using C = std::complex<float>;
 
-        FFT(unsigned N_, int sign, unsigned flags)
+        FFT(unsigned N_, int sign, unsigned flags=FFTW_MEASURE)
           : N(N_)
           , in(N_)
           , out(N_)
