@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef FFTW_H_
@@ -13,7 +13,7 @@
 
 namespace fftw
 {
-    /** @brief Creation of FFTW plans is not re-rentrant, so we need to protect
+    /** @brief Creation of FFTW plans is not re-entrant, so we need to protect
      * access with a mutex.
      */
     extern std::mutex mutex;
@@ -128,30 +128,30 @@ namespace fftw
     public:
         using C = std::complex<float>;
 
-        FFT(unsigned N, int sign, unsigned flags)
-          : in(N)
-          , out(N)
-          , N_(N)
+        FFT(unsigned N_, int sign, unsigned flags)
+          : N(N_)
+          , in(N_)
+          , out(N_)
         {
-            std::lock_guard<std::mutex> lck(fftw::mutex);
+            std::lock_guard<std::mutex> lock(fftw::mutex);
 
             plan_ = fftwf_plan_dft_1d(N,
-                reinterpret_cast<fftwf_complex*>(in.data()),
-                reinterpret_cast<fftwf_complex*>(out.data()),
-                sign,
-                flags);
+                                      reinterpret_cast<fftwf_complex*>(in.data()),
+                                      reinterpret_cast<fftwf_complex*>(out.data()),
+                                      sign,
+                                      flags);
         }
 
         virtual ~FFT()
         {
-            std::lock_guard<std::mutex> lck(fftw::mutex);
+            std::lock_guard<std::mutex> lock(fftw::mutex);
 
             fftwf_destroy_plan(plan_);
         }
 
         unsigned getSize(void) const
         {
-            return N_;
+            return N;
         }
 
         void execute(void)
@@ -166,14 +166,16 @@ namespace fftw
                               reinterpret_cast<fftwf_complex*>(out));
         }
 
+        /** @brief Size of FFT */
+        const unsigned N;
+
+        /** @brief Input buffer */
         vector<C> in;
 
+        /** @brief Output buffer */
         vector<C> out;
 
     protected:
-        /** @brief Size of FFT */
-        unsigned N_;
-
         /** @brief FFTW plan */
         fftwf_plan plan_;
     };
