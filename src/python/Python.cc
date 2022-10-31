@@ -20,6 +20,7 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     auto msignal = m.def_submodule("signal");
 
 #if defined(PYMODULE)
+    exportFFTW(msignal);
     exportResamplers(msignal);
     exportNCOs(msignal);
     exportFilters(msignal);
@@ -32,6 +33,7 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
 
     exportLiquid(mliquid);
 #else /* !defined(PYMODULE) */
+    exportFFTW(msignal);
     exportResamplers(msignal);
     exportNCOs(msignal);
     exportFilters(msignal);

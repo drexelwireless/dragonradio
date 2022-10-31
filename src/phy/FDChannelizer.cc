@@ -180,7 +180,7 @@ void FDChannelizer::fftWorker(void)
     std::shared_ptr<IQBuf>  iqbuf;
     std::shared_ptr<IQBuf>  fdbuf;
     unsigned                seq = 0;
-    fftw::FFT<C>            fft(N, FFTW_FORWARD, FFTW_MEASURE);
+    fftw::FFT<C>            fft(N, FFTW_FORWARD);
     size_t                  fftoff = O;
 
     for (;;) {

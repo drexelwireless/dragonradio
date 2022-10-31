@@ -25,6 +25,7 @@ ext_modules = [
                 'src/liquid/OFDM.cc',
                 'src/liquid/Resample.cc',
                 'src/python/Channels.cc',
+                'src/python/FFTW.cc',
                 'src/python/Filter.cc',
                 'src/python/Header.cc',
                 'src/python/IQBuffer.cc',

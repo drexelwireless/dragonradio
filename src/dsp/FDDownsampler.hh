@@ -52,8 +52,8 @@ public:
     FDDownsampler(unsigned X, unsigned D, double theta, const std::vector<T>& taps = {1.0})
       : X(X)
       , D(D)
-      , fft_(N, FFTW_FORWARD, FFTW_MEASURE)
-      , ifft_(X*N/D, FFTW_BACKWARD, FFTW_MEASURE)
+      , fft_(N, FFTW_FORWARD)
+      , ifft_(X*N/D, FFTW_BACKWARD)
       , temp_(N)
       , H_(N)
     {
@@ -89,7 +89,7 @@ public:
             Nrot_ += N;
 
         // Compute frequency-domain filter
-        fftw::FFT<T> fft(N, FFTW_FORWARD, FFTW_MEASURE);
+        fftw::FFT<T> fft(N, FFTW_FORWARD);
 
         std::fill(fft.in.begin(), fft.in.end(), 0);
         std::copy(taps.begin(), taps.end(), fft.in.begin());
