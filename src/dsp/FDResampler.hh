@@ -58,8 +58,8 @@ public:
       , X(X_)
       , exact_(false)
       , parallel_(false)
-      , fft_(_i(N), FFTW_FORWARD, FFTW_MEASURE)
-      , ifft_(_o(N), FFTW_BACKWARD, FFTW_MEASURE)
+      , fft_(_i(N), FFTW_FORWARD)
+      , ifft_(_o(N), FFTW_BACKWARD)
       , H_(I*_i(N))
       , temp_(I*_i(N))
     {
@@ -104,7 +104,7 @@ public:
             Nrot_ += N;
 
         // Compute frequency-domain filter
-        fftw::FFT<T> fft(I*_i(N), FFTW_FORWARD, FFTW_MEASURE);
+        fftw::FFT<T> fft(I*_i(N), FFTW_FORWARD);
 
         std::fill(fft.in.begin(), fft.in.end(), 0);
         std::copy(taps.begin(), taps.end(), fft.in.begin());
@@ -523,7 +523,7 @@ public:
     {
     public:
         ToTimeDomain(void)
-          : ifft(N, FFTW_BACKWARD, FFTW_MEASURE)
+          : ifft(N, FFTW_BACKWARD)
         {
         }
 
