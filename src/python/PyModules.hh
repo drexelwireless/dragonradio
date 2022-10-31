@@ -65,6 +65,7 @@ using RadioOutPush = RadioOutWrapper<Push>;
 using RadioOutPull = RadioOutWrapper<Pull>;
 #endif /* !defined(PYMODULE) */
 
+void exportFFTW(py::module &m);
 void exportResamplers(py::module &m);
 void exportNCOs(py::module &m);
 void exportFilters(py::module &m);

@@ -179,6 +179,11 @@ namespace fftw
         /** @brief FFTW plan */
         fftwf_plan plan_;
     };
+
+    /** @brief Create FFT plans (forward/backwards) for complex float FFT
+     * @param N FFT size
+     */
+    void planFFTs(unsigned N);
 }
 
 #endif /* FFTW_H_ */
