@@ -15,6 +15,8 @@ import random
 import re
 import signal
 import subprocess
+import sys
+import time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type
 
 from ipykernel.kernelapp import IPKernelApp
@@ -113,6 +115,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if config.firmware_path is not None:
             self.flash_firmware(config.firmware_path)
 
+        # Plan FFTs
+        self.planFFTs()
+
         # Initialize USRP
         self.configureUSRP()
 
@@ -153,6 +158,19 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         if self.nhood is not None:
             self.nhood.removeListener(self)
+
+    def planFFTs(self):
+        """Create FFTW plans for FFTs we will need"""
+        print("Planning FFTs: ", end='', flush=True, file=sys.stderr)
+        t1 = time.time()
+
+        N = dragonradio.radio.dragonradio.signal.FDResamplerCCC.N
+        for n in [N]:
+            print(f"{n:}...", end='', flush=True, file=sys.stderr)
+            dragonradio.radio.dragonradio.signal.planFFTs(n)
+
+        t2 = time.time()
+        print(f"done ({t2-t1:.1f} sec)", flush=True, file=sys.stderr)
 
     def vivado(self, *args) -> subprocess.Popen:
         """Invoke Vivado firmware flashing TCL script in batch mode.
