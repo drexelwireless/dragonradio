@@ -12,4 +12,13 @@ void exportFFTW(py::module &m)
           &fftw::planFFTs,
           py::call_guard<py::gil_scoped_release>(),
           "plan FFTs");
+
+    m.def("exportWisdom",
+          &fftw::exportWisdom,
+          py::call_guard<py::gil_scoped_release>(),
+          "export FFTW wisdom");
+    m.def("importWisdom",
+          &fftw::importWisdom,
+          py::call_guard<py::gil_scoped_release>(),
+          "import FFTW wisdom");
 }
