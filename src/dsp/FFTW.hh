@@ -186,6 +186,16 @@ namespace fftw
      * @param N FFT size
      */
     void planFFTs(unsigned N);
+
+    /** @brief Export FFTW wisdom
+     * @param path Path of wisdom file
+     */
+    void exportWisdom(const std::string& path);
+
+    /** @brief Import FFTW wisdom
+     * @param path Path of wisdom file
+     */
+    void importWisdom(const std::string& path);
 }
 
 #endif /* FFTW_H_ */

@@ -259,6 +259,10 @@ class Config:
     tx_upsample: bool = True
     """If True, upsample transmitted data"""
 
+    # FFTW parameters
+    fftw_wisdom: Optional[str] = '/tmp/dragonwisdom'
+    """Path to FFTW wisdom file"""
+
     # Filter parameters
     ftype: str = 'ls'
     """Algorithm used to construct low-pass filter for channelizer."""
@@ -582,6 +586,13 @@ class Config:
                     d[attr] = getattr(self, attr)
 
         return d
+
+    @property
+    def fftw_wisdom_path(self) -> Optional[Path]:
+        if self.fftw_wisdom is None:
+            return None
+        else:
+            return Path(self.fftw_wisdom)
 
     @property
     def mac_class(self) -> Type[MAC]:
