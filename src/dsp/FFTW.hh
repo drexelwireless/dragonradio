@@ -140,6 +140,8 @@ namespace fftw
                                       reinterpret_cast<fftwf_complex*>(out.data()),
                                       sign,
                                       flags);
+            if (!plan_)
+                throw std::runtime_error("Could not create FFTW plan");
         }
 
         virtual ~FFT()
