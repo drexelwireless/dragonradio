@@ -10,18 +10,18 @@
 
 #include "Estimator.hh"
 
-using namespace std::literals::chrono_literals;
-
 /** @brief A statistical estimator over a time window */
 template<class Clock, class T>
 class TimeWindowEstimator : public Estimator<T> {
 public:
     using entry = std::pair<typename Clock::time_point, T>;
 
-    explicit TimeWindowEstimator(typename Clock::duration twindow=1s)
+    explicit TimeWindowEstimator(typename Clock::duration twindow=std::chrono::seconds(1))
       : twindow_(twindow)
     {
     }
+
+    TimeWindowEstimator() = delete;
 
     virtual ~TimeWindowEstimator() = default;
 
@@ -40,7 +40,7 @@ public:
     /** @brief Get start of window */
     std::optional<typename Clock::time_point> getTimeWindowStart() const
     {
-        if (window_.size() == 0)
+        if (window_.empty())
             return std::nullopt;
         else
             return window_.begin()->first;
@@ -49,7 +49,7 @@ public:
     /** @brief Get end of window */
     std::optional<typename Clock::time_point> getTimeWindowEnd() const
     {
-        if (window_.size() == 0)
+        if (window_.empty())
             return std::nullopt;
         else
             return window_.rbegin()->first;
@@ -59,14 +59,14 @@ public:
     {
         purge(Clock::now());
 
-        return window_.size() != 0;
+        return !window_.empty();
     }
 
     std::optional<T> value(void) const override
     {
         purge(Clock::now());
 
-        if (window_.size() == 0)
+        if (window_.empty())
             return std::nullopt;
         else
             return _value();
@@ -76,7 +76,7 @@ public:
     {
         purge(Clock::now());
 
-        if (window_.size() == 0)
+        if (window_.empty())
             return default_value;
         else
             return _value();
@@ -121,8 +121,9 @@ public:
     using TimeWindowEstimator<Clock, T>::twindow_;
     using TimeWindowEstimator<Clock, T>::window_;
 
-    explicit TimeWindowMean(typename Clock::duration twindow=1s)
+    explicit TimeWindowMean(typename Clock::duration twindow=std::chrono::seconds(1))
       : TimeWindowEstimator<Clock, T>(twindow)
+      , sum_(0)
     {
     }
 
@@ -138,7 +139,11 @@ public:
     {
         purge(t);
 
-        sum_ += x;
+        if (window_.empty())
+            sum_ = x;
+        else
+            sum_ += x;
+
         window_.push_back(std::make_pair(t, x));
     }
 
@@ -170,7 +175,7 @@ public:
     using TimeWindowMean<Clock, T>::sum_;
     using TimeWindowMean<Clock, T>::purge;
 
-    explicit TimeWindowMeanRate(typename Clock::duration twindow=1s)
+    explicit TimeWindowMeanRate(typename Clock::duration twindow=std::chrono::seconds(1))
       : TimeWindowMean<Clock, T>(twindow)
     {
     }
@@ -191,7 +196,7 @@ public:
     using TimeWindowEstimator<Clock, T>::twindow_;
     using TimeWindowEstimator<Clock, T>::window_;
 
-    explicit TimeWindowMin(typename Clock::duration twindow=1s)
+    explicit TimeWindowMin(typename Clock::duration twindow=std::chrono::seconds(1))
       : TimeWindowEstimator<Clock, T>(twindow)
     {
     }
@@ -202,7 +207,7 @@ public:
     {
         purge(t);
 
-        if (x <= min_) {
+        if (window_.empty() || x <= min_) {
             min_ = x;
             window_.clear();
         }
@@ -255,7 +260,7 @@ public:
     using TimeWindowEstimator<Clock, T>::twindow_;
     using TimeWindowEstimator<Clock, T>::window_;
 
-    explicit TimeWindowMax(typename Clock::duration twindow=1s)
+    explicit TimeWindowMax(typename Clock::duration twindow=std::chrono::seconds(1))
       : TimeWindowEstimator<Clock, T>(twindow)
     {
     }
@@ -266,7 +271,7 @@ public:
     {
         purge(t);
 
-        if (x >= max_) {
+        if (window_.empty() || x >= max_) {
             max_ = x;
             window_.clear();
         }
