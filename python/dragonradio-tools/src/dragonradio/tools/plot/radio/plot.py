@@ -102,6 +102,7 @@ class SpecgramPlot(AnnotatedPlot):
 
         # Connect annotations
         self.connect_hover()
+        self.connect_pick()
 
     def plot(self, Fs: float, w: np.ndarray, t0: float):
         xticks = mp.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x+t0))
@@ -141,6 +142,8 @@ class SpecgramPlot(AnnotatedPlot):
                                   t_end-t_start,
                                   f_height,
                                   **kwargs)
+        rect.set_picker(True)
+
         return self.ax.add_patch(rect)
 
     def markSlot(self, t: float, color: str='r', **kwargs):
