@@ -139,7 +139,11 @@ public:
     {
         purge(t);
 
-        sum_ += x;
+        if (window_.empty())
+            sum_ = x;
+        else
+            sum_ += x;
+
         window_.push_back(std::make_pair(t, x));
     }
 
@@ -203,7 +207,7 @@ public:
     {
         purge(t);
 
-        if (x <= min_) {
+        if (window_.empty() || x <= min_) {
             min_ = x;
             window_.clear();
         }
@@ -267,7 +271,7 @@ public:
     {
         purge(t);
 
-        if (x >= max_) {
+        if (window_.empty() || x >= max_) {
             max_ = x;
             window_.clear();
         }
