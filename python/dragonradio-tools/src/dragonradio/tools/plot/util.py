@@ -180,6 +180,10 @@ class AnnotatedPlot(Plot):
         if self.annotate:
             self.fig.canvas.mpl_connect("motion_notify_event", self.hover)
 
+    def connect_pick(self):
+        """Connect pick event"""
+        self.fig.canvas.mpl_connect("pick_event", self.on_pick)
+
     def hover(self, event: Event):
         ann = self.findAnnotation(event)
 
@@ -200,6 +204,12 @@ class AnnotatedPlot(Plot):
             annot.set_text(ppr(elem))
 
         self.fig.canvas.draw_idle()
+
+    def on_pick(self, event: Event):
+        self.pick_artist(event.artist)
+
+    def pick_artist(self, artist):
+        pass
 
 # See:
 #   https://stackoverflow.com/questions/11551049/matplotlib-plot-zooming-with-scroll-wheel
