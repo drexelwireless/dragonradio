@@ -169,9 +169,11 @@ class ReceiveView(LogView):
                     if not self.show_header_invalid:
                         pkts = pkts[pkts.header_valid == True]
 
-                    for _, pkt in pkts.iterrows():
+                    for idx, pkt in pkts.iterrows():
                         # Plot voxel occupied by packet
                         if 'chan_bw' in pkt:
+                            pkt.idx = idx
+
                             if pkt.seq == self.pkt.seq and pkt.fc == self.pkt.fc:
                                 alpha = 0.9
                             else:
@@ -200,7 +202,9 @@ class ReceiveView(LogView):
                 # Plot sent packet voxels
                 if self.plot_sent:
                     pkts = self.logs[self.node_id].findSentPackets(slots.t_start, slots.t_end)
-                    for _, pkt in pkts.iterrows():
+                    for idx, pkt in pkts.iterrows():
+                        pkt.idx = idx
+
                         self.specgram.plotPacketVoxel(pkt, t0,
                                                       linewidth=1,
                                                       edgecolor='k',
