@@ -124,6 +124,8 @@ class ReceiveView(LogView):
                            valstep=1)
         self.spos.on_changed(self.update_slider)
 
+        self.specgram.pick_artist = self.pick_artist
+
     def received(self, node_id):
         recv = self.logs[node_id].recv
         if self.show_header_invalid:
@@ -248,6 +250,13 @@ class ReceiveView(LogView):
 
             view = self.viewer.txView(self.pkt.curhop)
             view.plot(idx)
+
+    def pick_artist(self, artist):
+        if hasattr(artist, 'df'):
+            item = artist.df
+
+            if hasattr(item, 'idx') and item.nexthop == self.node_id:
+                self.plot(item.idx)
 
     def note(self, ax, msg, t, y, **kwargs):
         ax.annotate(msg,
