@@ -42,7 +42,7 @@ public:
     /** @brief Get start of window */
     std::optional<typename Clock::time_point> getTimeWindowStart() const
     {
-        if (window_.size() == 0)
+        if (window_.empty())
             return std::nullopt;
         else
             return window_.begin()->first;
@@ -51,7 +51,7 @@ public:
     /** @brief Get end of window */
     std::optional<typename Clock::time_point> getTimeWindowEnd() const
     {
-        if (window_.size() == 0)
+        if (window_.empty())
             return std::nullopt;
         else
             return window_.rbegin()->first;
@@ -61,14 +61,14 @@ public:
     {
         purge(Clock::now());
 
-        return window_.size() != 0;
+        return !window_.empty();
     }
 
     std::optional<T> value(void) const override
     {
         purge(Clock::now());
 
-        if (window_.size() == 0)
+        if (window_.empty())
             return std::nullopt;
         else
             return _value();
@@ -78,7 +78,7 @@ public:
     {
         purge(Clock::now());
 
-        if (window_.size() == 0)
+        if (window_.empty())
             return default_value;
         else
             return _value();
