@@ -23,6 +23,8 @@ public:
     {
     }
 
+    TimeWindowEstimator() = delete;
+
     virtual ~TimeWindowEstimator() = default;
 
     /** @brief Get the current time window */
