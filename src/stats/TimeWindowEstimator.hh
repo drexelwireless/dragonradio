@@ -123,6 +123,7 @@ public:
 
     explicit TimeWindowMean(typename Clock::duration twindow=1s)
       : TimeWindowEstimator<Clock, T>(twindow)
+      , sum_(0)
     {
     }
 
