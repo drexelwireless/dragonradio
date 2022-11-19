@@ -300,7 +300,7 @@ void Logger::open(const std::string& filename)
     h5_tx_record.insertMember("timestamp", HOFFSET(TXRecordEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_tx_record.insertMember("mono_timestamp", HOFFSET(TXRecordEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_tx_record.insertMember("nsamples", HOFFSET(TXRecordEntry, nsamples), H5::PredType::NATIVE_INT64);
-    h5_tx_record.insertMember("fs", HOFFSET(TXRecordEntry, fs), H5::PredType::NATIVE_DOUBLE);
+    h5_tx_record.insertMember("fs", HOFFSET(TXRecordEntry, fs), H5::PredType::NATIVE_FLOAT);
 
     // H5 type for snapshots
     H5::CompType h5_snapshot(sizeof(SnapshotEntry));
