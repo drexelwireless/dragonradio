@@ -30,6 +30,7 @@ public:
         if (++arrived_ == count_) {
             arrived_ = 0;
             phase_++;
+            lock.unlock();
             cv_.notify_all();
         } else {
             auto phase = phase_;
