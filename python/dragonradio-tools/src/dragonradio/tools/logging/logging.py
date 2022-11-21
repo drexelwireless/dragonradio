@@ -576,6 +576,18 @@ class Log:
         """
         return self._findItemsInRange(self.send, t1, t2)
 
+    def findTXRecords(self, t1: float, t2: float) -> pd.Series:
+        """Find TX records for transmissions during a time interval.
+
+        Args:
+            t1: Beginning of time interval.
+            t2: End of time interval.
+
+        Returns:
+            A data frame of TX records.
+        """
+        return self._findItemsInRange(self.tx_records, t1, t2)
+
     def findReceivedPacketIndex(self, pkt: Packet) -> Optional[pd.Series]:
         """Find the index of received packet given sequence number.
 
