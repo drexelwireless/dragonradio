@@ -88,10 +88,10 @@ public:
         }
     }
 
-    void logTXRecord(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs)
+    void logTXRecord(const std::optional<MonoClock::time_point> &t, size_t delay, size_t nsamples, double fs)
     {
         if (getCollectSource(kTXRecords))
-            log_q_.push([=](){ logTXRecord_(t, nsamples, fs); });
+            log_q_.push([=](){ logTXRecord_(t, delay, nsamples, fs); });
     }
 
     void logSnapshot(std::shared_ptr<Snapshot> snapshot)
@@ -243,7 +243,7 @@ private:
 
     void logSlot_(const IQBuf &buf);
 
-    void logTXRecord_(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs);
+    void logTXRecord_(const std::optional<MonoClock::time_point> &t, size_t delay, size_t nsamples, double fs);
 
     void logSnapshot_(std::shared_ptr<Snapshot> snapshot);
 

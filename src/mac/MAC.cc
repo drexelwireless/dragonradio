@@ -215,7 +215,7 @@ void MAC::txNotifier(void)
 
         // Log the TX record
         if (logger_)
-            logger_->logTXRecord(record.timestamp, record.nsamples, tx_rate_);
+            logger_->logTXRecord(record.timestamp, record.delay, record.nsamples, tx_rate_);
     }
 }
 
