@@ -51,6 +51,8 @@ struct TXRecordEntry {
     double timestamp;
     /** @brief Monotonic TX timestamp. */
     double mono_timestamp;
+    /** @brief Offset of start of transmission. */
+    int32_t start;
     /** @brief Number of samples. */
     int64_t nsamples;
     /** @brief Sampling frequency [Hz] */
@@ -299,6 +301,7 @@ void Logger::open(const std::string& filename)
 
     h5_tx_record.insertMember("timestamp", HOFFSET(TXRecordEntry, timestamp), H5::PredType::NATIVE_DOUBLE);
     h5_tx_record.insertMember("mono_timestamp", HOFFSET(TXRecordEntry, mono_timestamp), H5::PredType::NATIVE_DOUBLE);
+    h5_tx_record.insertMember("start", HOFFSET(TXRecordEntry, start), H5::PredType::NATIVE_INT32);
     h5_tx_record.insertMember("nsamples", HOFFSET(TXRecordEntry, nsamples), H5::PredType::NATIVE_INT64);
     h5_tx_record.insertMember("fs", HOFFSET(TXRecordEntry, fs), H5::PredType::NATIVE_FLOAT);
 
@@ -557,12 +560,16 @@ void Logger::logSlot_(const IQBuf &buf)
     slots_->write(&entry, 1);
 }
 
-void Logger::logTXRecord_(const std::optional<MonoClock::time_point> &t, size_t nsamples, double fs)
+void Logger::logTXRecord_(const std::optional<MonoClock::time_point> &t,
+                          size_t delay,
+                          size_t nsamples,
+                          double fs)
 {
     TXRecordEntry entry;
 
     entry.timestamp = t ? std::chrono::duration<double>(WallClock::to_wall_time(*t) - t_start_).count() : 0;
     entry.mono_timestamp = t ? std::chrono::duration<double>(*t - mono_t_start_).count() : 0;
+    entry.start = delay;
     entry.nsamples = nsamples;
     entry.fs = fs;
 
