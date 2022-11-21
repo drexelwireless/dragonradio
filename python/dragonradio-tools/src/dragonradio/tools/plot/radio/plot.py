@@ -146,6 +146,17 @@ class SpecgramPlot(AnnotatedPlot):
 
         return self.ax.add_patch(rect)
 
+    def plotTXRecord(self, t0: float, tx: pd.DataFrame,
+                     edgecolor: str='k', facecolor: str='none', alpha: float=0.8):
+        t_start = tx.start - t0
+        t_end = tx.end - t0
+
+        self.plotVoxel(t_start, t_end, 0, tx.fs,
+                       linewidth=0.4,
+                       edgecolor=edgecolor,
+                       facecolor=facecolor,
+                       alpha=alpha)
+
     def markSlot(self, t: float, color: str='r', alpha: float=0.6, **kwargs):
         self.ax.axvline(t, color=color, alpha=alpha, **kwargs)
 

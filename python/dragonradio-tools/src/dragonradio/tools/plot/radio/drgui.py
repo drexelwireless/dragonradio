@@ -69,10 +69,10 @@ class ReceiveView(LogView):
     plot_sent: bool = True
     """Should sent packets be plotted?"""
 
-    plot_rx_slot_boundaries: bool = True
+    plot_rx_slot_boundaries: bool = False
     """Should received slot boundaries be plotted?"""
 
-    plot_slot_boundaries: bool = True
+    plot_slot_boundaries: bool = False
     """Should slot boundaries be plotted?"""
 
     def __init__(self, logs, viewer, node_id,
