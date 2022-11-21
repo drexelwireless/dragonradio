@@ -146,8 +146,8 @@ class SpecgramPlot(AnnotatedPlot):
 
         return self.ax.add_patch(rect)
 
-    def markSlot(self, t: float, color: str='r', **kwargs):
-        self.ax.axvline(t, color=color, **kwargs)
+    def markSlot(self, t: float, color: str='r', alpha: float=0.6, **kwargs):
+        self.ax.axvline(t, color=color, alpha=alpha, **kwargs)
 
     def bracketPacket(self, pkt: Packet, t0: float, **kwargs):
         t_start = pkt.start - t0
