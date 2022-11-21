@@ -75,6 +75,9 @@ class ReceiveView(LogView):
     plot_slot_boundaries: bool = False
     """Should slot boundaries be plotted?"""
 
+    plot_tx_records: bool = True
+    """Should TX records be plotted?"""
+
     def __init__(self, logs, viewer, node_id,
                  show_header_invalid=False,
                  nfft=256,
@@ -231,6 +234,16 @@ class ReceiveView(LogView):
                     while t_slot < slots.t_end:
                         self.specgram.markSlot(t_slot-t0, color='b')
                         t_slot += slot_size
+
+                # Display TX records
+                if self.plot_tx_records:
+                    for node_id in self.logs.nodes:
+                        if node_id == self.node_id:
+                            continue
+
+                        tx_records = self.logs[node_id].findTXRecords(slots.t_start, slots.t_end)
+                        for _, tx in tx_records.iterrows():
+                            self.specgram.plotTXRecord(t0, tx)
 
                 self.constellation.plot(self.pkt.symbols)
                 self.waveform.plot(sig, sigslop=self.sigslop)
