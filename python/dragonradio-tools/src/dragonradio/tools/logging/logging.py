@@ -334,8 +334,12 @@ class Log:
         """Sent MAC transmissions"""
         df = self._loadDataset('tx_records')
 
-        df['start'] = df.aligned_timestamp
-        df['end'] = df.aligned_timestamp + df.nsamples / df.fs
+        if 'start' in df:
+            df['start'] = df.aligned_timestamp + df.start / df.fs
+        else:
+            df['start'] = df.aligned_timestamp
+
+        df['end'] = df.start + df.nsamples / df.fs
 
         return df
 
