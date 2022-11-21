@@ -530,7 +530,25 @@ class Log:
 
         return Slots(pkt, slots.iloc[i_start:i_end+1], offset)
 
-    def findReceivedPackets(self, t1: float, t2: float) -> pd.Series:
+    def _findItemsInRange(self, df: pd.DataFrame, t1: float, t2: float) -> pd.DataFrame:
+        """Find items in a DataFrame with start and end times that intersect
+        with the time range [t1, t2].
+
+        Args:
+            df (pd.DataFrame): DataFrame with start and end columns.
+            t1 (float): Start of time range
+            t2 (float): End of time range
+
+        Returns:
+            pd.DataFrame: DataFrame items where [start, end] intersects [t1, t2]
+        """
+        idx = ((t1 >= df.start) & (t1 < df.end)) | \
+              ((t2 >= df.start) & (t2 < df.end)) | \
+              ((t1 < df.start) & (t2 > df.end))
+
+        return df[idx]
+
+    def findReceivedPackets(self, t1: float, t2: float) -> pd.DataFrame:
         """Find packets received during a time interval.
 
         Args:
@@ -540,15 +558,9 @@ class Log:
         Returns:
             A data frame of packets.
         """
-        recv = self.recv
+        return self._findItemsInRange(self.recv, t1, t2)
 
-        idx = ((t1 >= recv.start) & (t1 < recv.end)) | \
-              ((t2 >= recv.start) & (t2 < recv.end)) | \
-              ((t1 < recv.start) & (t2 > recv.end))
-
-        return recv[idx]
-
-    def findSentPackets(self, t1: float, t2: float) -> pd.Series:
+    def findSentPackets(self, t1: float, t2: float) -> pd.DataFrame:
         """Find packets sent during a time interval.
 
         Args:
@@ -558,13 +570,7 @@ class Log:
         Returns:
             A data frame of packets.
         """
-        send = self.send
-
-        idx = ((t1 >= send.start) & (t1 < send.end)) | \
-              ((t2 >= send.start) & (t2 < send.end)) | \
-              ((t1 < send.start) & (t2 > send.end))
-
-        return send[idx]
+        return self._findItemsInRange(self.send, t1, t2)
 
     def findReceivedPacketIndex(self, pkt: Packet) -> Optional[pd.Series]:
         """Find the index of received packet given sequence number.
