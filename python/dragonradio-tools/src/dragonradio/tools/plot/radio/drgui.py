@@ -69,6 +69,9 @@ class ReceiveView(LogView):
     plot_sent: bool = True
     """Should sent packets be plotted?"""
 
+    plot_rx_slot_boundaries: bool = True
+    """Should received slot boundaries be plotted?"""
+
     plot_slot_boundaries: bool = True
     """Should slot boundaries be plotted?"""
 
@@ -214,10 +217,20 @@ class ReceiveView(LogView):
                                                       alpha=0.3,
                                                       ppr=pprSentPacket)
 
-                # Mark all slots in the current specgram
-                if self.plot_slot_boundaries:
+                # Mark all received slots in the current specgram
+                if self.plot_rx_slot_boundaries:
                     for _, slot in slots.slots.iterrows():
                         self.specgram.markSlot(slot.start-t0)
+
+                # Mark all slots in the current specgram
+                if self.plot_slot_boundaries:
+                    offset = self.logs.start.timestamp()
+                    slot_size = self.logs[self.node_id].config['slot_size']
+                    t_slot = slots.t_start + slot_size - (slots.t_start + offset) % slot_size
+
+                    while t_slot < slots.t_end:
+                        self.specgram.markSlot(t_slot-t0, color='b')
+                        t_slot += slot_size
 
                 self.constellation.plot(self.pkt.symbols)
                 self.waveform.plot(sig, sigslop=self.sigslop)
