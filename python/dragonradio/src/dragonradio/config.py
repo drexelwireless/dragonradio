@@ -817,6 +817,11 @@ class Config:
                          default=argparse.SUPPRESS,
                          dest='log_sources',
                          help='log IQ data')
+        log.add_argument('--log-tx-records', action=ExtendAction,
+                         const=['log_tx_records'],
+                         default=argparse.SUPPRESS,
+                         dest='log_sources',
+                         help='log TX records data')
         log.add_argument('--log-iface', action='append',
                          dest='log_interfaces',
                          metavar='IFACE',
