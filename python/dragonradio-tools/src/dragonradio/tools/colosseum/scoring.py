@@ -474,7 +474,7 @@ class Scorer(DataFrameCache):
         # and then fill forward
         df.loc[df.nbytes_sent == 0, 'goal'] = np.NaN
 
-        df['goal'] = df.groupby(['team', 'flow_uid'], sort=False)['goal'].apply(lambda x: x.ffill())
+        df['goal'] = df.groupby(['team', 'flow_uid'], sort=False, group_keys=False)['goal'].apply(lambda x: x.ffill())
 
         # Set remaining NaN goals to 0
         df['goal'].fillna(0, inplace=True)
