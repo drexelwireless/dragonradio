@@ -12,6 +12,7 @@ from matplotlib.text import Annotation
 from matplotlib.widgets import CheckButtons
 
 import numpy as np
+import pandas as pd
 import scipy.signal as signal
 
 # See:
@@ -157,7 +158,10 @@ class AnnotatedPlot(Plot):
     def indexAnnotationItem(self, item: AnnotationItem, ind: dict) -> AnnotationItemElement:
         if isinstance(item, Line2D):
             idx = ind['ind'][0]
-            idx_item = item.df.iloc[idx]
+            if isinstance(item.df, pd.DataFrame):
+                idx_item = item.df.iloc[idx]
+            else:
+                idx_item = item.df
 
             xy = (item.get_xdata()[idx], item.get_ydata()[idx])
         elif isinstance(item, PathCollection):
