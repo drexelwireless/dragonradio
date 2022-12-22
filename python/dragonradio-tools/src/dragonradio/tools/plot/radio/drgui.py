@@ -78,6 +78,9 @@ class ReceiveView(LogView):
     plot_tx_records: bool = True
     """Should TX records be plotted?"""
 
+    plot_events: bool = True
+    """Should MAC/USRP events be plotted?"""
+
     def __init__(self, logs, viewer, node_id,
                  show_header_invalid=False,
                  nfft=256,
@@ -244,6 +247,24 @@ class ReceiveView(LogView):
                         tx_records = self.logs[node_id].findTXRecords(slots.t_start, slots.t_end)
                         for _, tx in tx_records.iterrows():
                             self.specgram.plotTXRecord(t0, tx)
+
+                # Plot MAC events
+                if self.plot_events:
+                    for node_id in self.logs.nodes:
+                        if node_id == self.node_id:
+                            continue
+
+                        self.specgram.plotEvents(self.logs[node_id],
+                                                 'USRP',
+                                                 t0,
+                                                 slots.t_start,
+                                                 slots.t_end)
+
+                        self.specgram.plotEvents(self.logs[node_id],
+                                                 'MAC',
+                                                 t0,
+                                                 slots.t_start,
+                                                 slots.t_end)
 
                 self.constellation.plot(self.pkt.symbols)
                 self.waveform.plot(sig, sigslop=self.sigslop)

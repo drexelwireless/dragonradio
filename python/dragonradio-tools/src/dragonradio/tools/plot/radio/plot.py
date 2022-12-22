@@ -21,7 +21,7 @@ import numpy as np
 
 import pandas as pd
 
-from dragonradio.tools.logging import LogCollection, Packet, COLOR_CAT
+from dragonradio.tools.logging import Log, LogCollection, Packet, COLOR_CAT
 from dragonradio.tools.colosseum import ReservationLog, Scorer
 from dragonradio.tools.plot.colosseum import plotStages
 from dragonradio.tools.plot.util import AnnotatedPlot, Plot
@@ -156,6 +156,20 @@ class SpecgramPlot(AnnotatedPlot):
                        edgecolor=edgecolor,
                        facecolor=facecolor,
                        alpha=alpha)
+
+    def plotEvents(self, log: Log, cat: str, t0: float, t_start: float, t_end: float):
+        df = log.event_cats.events
+
+        events = df[(df.category == cat)
+                  & (df.aligned_timestamp >= t_start)
+                  & (df.aligned_timestamp <= t_end)]
+
+        for _, e in events.iterrows():
+            patch = self.ax.axvline(e.aligned_timestamp - t0, color='r', alpha=0.6)
+
+            patch.df = e
+            patch.ppr = pprEvent
+            self.addAnnotationItem(self.ax, patch)
 
     def markSlot(self, t: float, color: str='r', alpha: float=0.6, **kwargs):
         self.ax.axvline(t, color=color, alpha=alpha, **kwargs)
