@@ -368,7 +368,7 @@ class Scorer(DataFrameCache):
         logger.info('Calculating gates')
 
         df = pd.DataFrame(self.readIncumbentGates(),
-                          columns=['mp', 'gate']).astype({ 'mp': int , 'gate': np.bool })
+                          columns=['mp', 'gate']).astype({ 'mp': int , 'gate': bool })
         df.set_index(['mp'], inplace=True)
         df.sort_index(inplace=True)
 
