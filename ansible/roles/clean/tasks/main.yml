@@ -1,2 +1,7 @@
+- name: Remove root cache
+  file:
+    path: /root/.cache
+    state: absent
+
 - name: Clean apt cache
   shell: apt clean
