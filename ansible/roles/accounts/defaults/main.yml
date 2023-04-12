@@ -1,0 +1,7 @@
+srn_user_uid: 4000
+srn_user_gid: 4000
+srn_user_password: dragonradio
+
+remove_ubuntu_user: true
+
+root_password: dragonradio
