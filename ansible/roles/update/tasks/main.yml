@@ -1,3 +1,12 @@
+- name: Stop ubuntu-advantage
+  shell: systemctl stop ubuntu-advantage.service
+  when: disable_ubuntu_advantage
+  ignore_errors: true
+
+- name: Disable ubuntu-advantage
+  shell: systemctl disable ubuntu-advantage.service
+  when: disable_ubuntu_advantage
+
 - name: Update and upgrade apt packages
   block:
     - name: Wait for dpkg lock
