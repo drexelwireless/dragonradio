@@ -1,0 +1,45 @@
+# See:
+#   https://colosseumneu.freshdesk.com/support/solutions/articles/61000253508-traffic-generation
+- name: Install packages needed to build mgen
+  apt:
+    state: present
+    pkg:
+      - g++
+      - libpcap-dev
+
+- name: Clone mgen repository
+  command:
+    argv:
+      - git
+      - clone
+      - --recursive
+      - https://github.com/USNavalResearchLaboratory/mgen.git
+  args:
+    chdir: /tmp
+
+- name: Check out mgen tag
+  command:
+    argv:
+      - git
+      - checkout
+      - "{{ tag }}"
+  args:
+    chdir: /tmp/mgen
+
+- name: Build mgen
+  command: make -f Makefile.linux
+  args:
+    chdir: /tmp/mgen/makefiles
+
+- name: Install mgen
+  command: cp "/tmp/mgen/makefiles/{{item}}" /usr/local/bin
+  with_items:
+    - mgen
+    - mpmgr
+
+- name: Remove mgen leftovers
+  file:
+    state: absent
+    path: "/tmp/{{item}}"
+  with_items:
+    - mgen
