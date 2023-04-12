@@ -1,13 +1,13 @@
 - name: Create srn-user group
   group:
     name: srn-user
-    gid: 4000
+    gid: "{{ srn_user_gid }}"
 
 - name: Create srn-user user
   user:
     name: srn-user
-    uid: 4000
-    password: "{{ password }}"
+    uid: "{{ srn_user_uid }}"
+    password: "{{ srn_user_password | password_hash }}"
     group: srn-user
     groups: sudo
 
@@ -16,14 +16,12 @@
     name: user
     state: absent
     remove: yes
+  when: remove_ubuntu_user
 
 - name: Change root password
   user:
-    name: "{{ item }}"
-    password: "{{ password }}"
-  with_items:
-    - root
-    - srn-user
+    name: root
+    password: "{{ root_password | password_hash }}"
 
 - name: Allow password authentication
   lineinfile:
