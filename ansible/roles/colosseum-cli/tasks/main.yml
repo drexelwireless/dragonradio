@@ -19,11 +19,15 @@
 
 - name: Install colosseumcli requirements
   command: /opt/colosseumcli/bin/pip3 install -r /tmp/colosseumcli-requirements.txt
+  retries: 5
+  delay: 5
 
 - name: Install colosseumcli
   shell: /opt/colosseumcli/bin/python3 setup.py install
   args:
     chdir: /tmp/colosseumcli-18.05.0
+  retries: 5
+  delay: 5
 
 - name: Create link for /usr/local/bin/colosseumcli
   file:
