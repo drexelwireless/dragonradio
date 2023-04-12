@@ -1,7 +1,7 @@
-[containers]
-dragonradio-2004-base server=https://cloud-images.ubuntu.com/releases alias=20.04/amd64
-
-[containers:vars]
-ansible_connection=lxd
-usb=false
-vivado=false
+all:
+  children:
+    containers:
+      hosts:
+        dragonradio-2004-base:
+          server: https://cloud-images.ubuntu.com/releases
+          alias: 20.04/amd64
