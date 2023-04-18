@@ -27,7 +27,7 @@ pickleshare==0.7.5
 pkgconfig==1.5.5
 platformdirs==4.3.6
 prompt_toolkit==3.0.51
-protobuf==3.19.4
+protobuf==3.19.6
 psutil==7.0.0
 ptyprocess==0.7.0
 pure_eval==0.2.3
