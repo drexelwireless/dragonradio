@@ -4,10 +4,11 @@
     pkg:
       - autoconf
       - automake
-      - libtool
       - curl
-      - make
       - g++
+      - libtool
+      - make
+      - ninja-build
       - unzip
 
 - name: Fetch protobuf {{version}}
@@ -17,14 +18,18 @@
     remote_src: yes
     extra_opts: --no-same-owner
 
-- name: Install protobuf {{version}}
+- name: Create protobuf build directory
+  file:
+    state: directory
+    path: /tmp/protobuf-{{version}}/build
+
+- name: Build and install protobuf {{version}}
   shell: "{{item}}"
   args:
-    chdir: /tmp/protobuf-{{version}}
+    chdir: /tmp/protobuf-{{version}}/build
   with_items:
-    - ./configure
-    - make
-    - make install
+    - cmake -G Ninja ../cmake
+    - ninja install
     - ldconfig
 
 - name: Remove protobuf {{version}} leftovers
