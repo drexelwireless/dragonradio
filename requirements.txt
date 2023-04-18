@@ -26,7 +26,7 @@ pexpect==4.8.0
 pickleshare==0.7.5
 platformdirs==3.10.0
 prompt-toolkit==3.0.39
-protobuf==3.19.4
+protobuf==3.19.6
 psutil==5.9.5
 ptyprocess==0.7.0
 pure-eval==0.2.2
