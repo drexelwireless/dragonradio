@@ -75,7 +75,7 @@ function(generate_python_proto OUTPUT PROTO)
   get_filename_component(OUTPUTDIR ${OUTPUT} DIRECTORY)
 
   add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT}
-                     COMMAND ${Protobuf_PROTOC_EXECUTABLE} --python_out=${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUTDIR} -I${CMAKE_CURRENT_SOURCE_DIR}/proto ${PROTO}
+                     COMMAND ${Protobuf_PROTOC_EXECUTABLE} --python_out=${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUTDIR} --pyi_out=${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUTDIR} -I${CMAKE_CURRENT_SOURCE_DIR}/proto ${PROTO}
                      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/proto/${PROTO}
                      COMMENT "Generating protobuf file ${OUTPUT}")
 endfunction()
