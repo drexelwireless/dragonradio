@@ -340,26 +340,31 @@ class ReservationLog(DataFrameCache):
     def traffic_logs_path(self) -> Path:
         return self.path / 'traffic_logs'
 
-    @cached_property
-    def reservation_info(self) -> Tuple[str, int]:
+    @classmethod
+    def get_reservation_info(cls, path: Path) -> Tuple[str, int]:
         """Reservation type and ID"""
-        m = re.match(r'^FREEPLAY-RESERVATION-(\d+)$', self.path.name)
+        m = re.match(r'^FREEPLAY-RESERVATION-(\d+)$', path.name)
         if m:
             return ('Freeplay', int(m.group(1)))
 
-        m = re.match(r'^RESERVATION-(\d+)$', self.path.name)
+        m = re.match(r'^RESERVATION-(\d+)$', path.name)
         if m:
             return ('Batch', int(m.group(1)))
 
-        m = re.match(r'^MATCH-\d+-RES-(\d+)$', self.path.name)
+        m = re.match(r'^MATCH-\d+-RES-(\d+)$', path.name)
         if m:
             return ('Match', int(m.group(1)))
 
-        m = re.match(r'^scrimmage(\d+)-.*-(\d+)$', self.path.name)
+        m = re.match(r'^scrimmage(\d+)-.*-(\d+)$', path.name)
         if m:
             return ('Scrimmage {}'.format(m.groups(1)), int(m.group(2)))
 
-        raise Exception('Cannot determine reservation ID: %s' % self.path)
+        raise ValueError('Cannot determine reservation ID: %s' % path)
+
+    @cached_property
+    def reservation_info(self) -> Tuple[str, int]:
+        """Reservation type and ID"""
+        return self.get_reservation_info(self.path)
 
     @cached_property
     def reservation_type(self) -> str:
