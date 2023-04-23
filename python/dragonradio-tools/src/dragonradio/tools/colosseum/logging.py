@@ -151,8 +151,10 @@ class BatchInput:
 
             if 'srn_number' in node:
                 srn_id = node['srn_number']
-            else:
+            elif res.match_config is not None:
                 srn_id = res.match_config.scenario_to_srn[traffic_id]
+            else:
+                continue
 
             self.srns.add(srn_id)
 
@@ -387,46 +389,57 @@ class ReservationLog(DataFrameCache):
         return self.reservation_info[1]
 
     @cached_property
-    def match_config(self) -> MatchConfig:
+    def match_config(self) -> Optional[MatchConfig]:
         """Match configuration"""
         if os.path.exists(self.match_config_path):
             return MatchConfig(self, self.match_config_path)
 
-        raise RuntimeError('Cannot find match configuration for %s' % self.path)
+        return None
 
     @cached_property
     def match_start_time(self) -> datetime:
         """Match start time (seconds since epoch)"""
+        assert self.match_config is not None
         return self.match_config.date_started
 
     @cached_property
     def match_id(self) -> Optional[int]:
         """Match ID"""
+        assert self.match_config is not None
         return self.match_config.match_id
 
     @cached_property
-    def batch_input(self) -> BatchInput:
+    def batch_input(self) -> Optional[BatchInput]:
         """Batch input"""
         if os.path.exists(self.batch_input_path):
             return BatchInput(self, self.batch_input_path)
         elif os.path.exists(self.freeplay_path):
             return BatchInput(self, self.freeplay_path)
 
-        raise RuntimeError('Cannot find batch configuration for %s' % self.path)
+        return None
 
     @cached_property
-    def rf_scenario(self) -> int:
+    def rf_scenario(self) -> Optional[int]:
         """RF Scenario ID"""
+        if self.batch_input is None:
+            return None
+
         return self.batch_input.rf_scenario
 
     @cached_property
-    def traffic_scenario(self) -> int:
+    def traffic_scenario(self) -> Optional[int]:
         """Traffic Scenario ID"""
+        if self.batch_input is None:
+            return None
+
         return self.batch_input.traffic_scenario
 
     @cached_property
     def start_time(self) -> Optional[datetime]:
         """Reservation start time (seconds since epoch)"""
+        if self.match_config is None:
+            return None
+
         return self.match_config.date_started
 
     @cached_property
@@ -461,18 +474,18 @@ class ReservationLog(DataFrameCache):
     @cached_property
     def scenario_to_srn(self) -> Mapping[int, int]:
         """Map from scenario node to SRN"""
-        if os.path.exists(self.match_config_path):
-            return self.match_config.scenario_to_srn
-        else:
+        if self.match_config is None:
             return self.batch_input.scenario_to_srn
+
+        return self.match_config.scenario_to_srn
 
     @cached_property
     def srn_to_scenario(self) -> Mapping[int, int]:
         """Map from SRN to scenario node"""
-        if os.path.exists(self.match_config_path):
-            return self.match_config.srn_to_scenario
-        else:
+        if self.match_config is None:
             return self.batch_input.srn_to_scenario
+
+        return self.match_config.srn_to_scenario
 
     @cached_property
     def teams(self) -> List[int]:
@@ -483,6 +496,9 @@ class ReservationLog(DataFrameCache):
             if batch_path.exists():
                 batch = BatchInput(self, batch_path)
                 return batch.teams
+
+        if self.batch_input is None:
+            return []
 
         return self.batch_input.teams
 
@@ -652,7 +668,7 @@ class ReservationLog(DataFrameCache):
                 m = re.match(r'^.*-srn{}-RES{}$'.format(srn, self.reservation_id), path.name)
                 if m:
                     core_path = path / 'cores'
-                    if core_path.is_dir and len(list(core_path.iterdir())) != 0:
+                    if core_path.is_dir() and len(list(core_path.iterdir())) != 0:
                         nodes.add(srn)
 
         return nodes
