@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 import os
 import re
-from typing import FrozenSet
+from typing import FrozenSet, Optional
 
 import pandas as pd
 
@@ -32,13 +32,24 @@ class Scenario(DataFrameCache):
     reservation: ReservationLog
     """Reservation to score"""
 
-    def __init__(self, reservation: ReservationLog, **kwargs):
+    scenarios_root: Path
+    """Root directory for scenarios"""
+
+    def __init__(self,
+                 reservation: ReservationLog,
+                 scenarios_root: Optional[Path]=None,
+                 **kwargs):
         super().__init__(**kwargs)
 
         if reservation is None:
             raise ValueError("Reservation must not be None")
 
         self.reservation = reservation
+
+        if scenarios_root is None:
+            self.scenarios_root = importlib_resources.files('dragonradio.tools.colosseum.data.scenarios')
+        else:
+            self.scenarios_root = scenarios_root
 
     @property
     def cache_path(self):
@@ -52,7 +63,7 @@ class Scenario(DataFrameCache):
 
     @property
     def scenarios_path(self) -> Path:
-        return importlib_resources.files('dragonradio.tools.colosseum.data.scenarios').joinpath(str(self.rf_scenario))
+        return self.scenarios_root / str(self.rf_scenario)
 
     #@cached_dataframe_property('mandates')
     @cached_property
