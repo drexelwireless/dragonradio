@@ -1,6 +1,6 @@
 # Copyright 2018-2022 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import cached_property
 import json
@@ -250,6 +250,10 @@ class ReservationStatus(Enum):
     active = 'Active'
     complete = 'Complete'
     error = 'Error'
+    incomplete = 'Incomplete'
+
+INCOMPLETE_AGE: timedelta = timedelta(hours=24)
+"""Reservations older than this are marked incomplete rather than active"""
 
 class ReservationLog(DataFrameCache):
     """A Colosseum reservation log"""
@@ -308,6 +312,13 @@ class ReservationLog(DataFrameCache):
             else:
                 return ReservationStatus.complete
         else:
+            # If the reservation log
+            modified = datetime.fromtimestamp(self.path.stat().st_mtime, tz=timezone.utc)
+            now = datetime.now(tz=timezone.utc)
+
+            if now - modified > INCOMPLETE_AGE:
+                return ReservationStatus.incomplete
+
             return ReservationStatus.active
 
     @property
