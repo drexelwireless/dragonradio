@@ -670,6 +670,10 @@ class Config:
             if 'RF' in config_parser:
                 for key in config_parser['RF']:
                     config[key] = float(config_parser['RF'][key])
+
+            if 'NODE' in config_parser:
+                for key in config_parser['NODE']:
+                    config[key] = int(config_parser['NODE'][key])
         else:
             raise ConfigException(f"Unknown configuration file extension: {path.suffix:}.")
 
