@@ -109,7 +109,7 @@ pip install -c requirements.txt --no-binary h5py --no-build-isolation h5py
 pip install -r requirements.txt
 
 # Install dragonradio package in development mode
-pip install -c requirements.txt -e python/dragonradio
+pip install -c requirements.txt python/dragonradiocpp-stubs -e python/dragonradio
 
 # Build dragonradio
 (
