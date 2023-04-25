@@ -1,0 +1,39 @@
+[project]
+name = "dragonradiocpp-stubs"
+description = "Type stubs for DragonRadio"
+authors = [
+    {name = "Geoffrey Mainland", email = "mainland@drexel.edu"},
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/drexelwireless/dragonradio"
+
+[build-system]
+requires = [
+    "setuptools>=45",
+    "setuptools_scm[toml]>=6.2",
+    "wheel",
+    "pybind11==2.11.1",
+]
+
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+git_describe_command = [
+    "git",
+    "describe",
+    "--dirty",
+    "--tags",
+    "--long",
+    "--match",
+    "v*[0-9]*",
+]
+root = "../.."

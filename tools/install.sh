@@ -17,6 +17,7 @@ pip install --upgrade pip setuptools wheel
 BASEDIR=$(dirname "$0")
 
 pip install -r requirements.txt \
-  -e "$BASEDIR/.." \
+  "$BASEDIR/.." \
+  "$BASEDIR/../python/dragonradiocpp-stubs" \
   -e "$BASEDIR/../python/dragonradio" \
   -e "$BASEDIR/../python/dragonradio-tools"
