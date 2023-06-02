@@ -169,9 +169,6 @@ void FDChannelizer::checkChannels(const std::vector<PHYChannel> &channels, doubl
 
         if (chan.channel.fc - chan.channel.bw/2 < -rx_rate/2)
             throw std::range_error("Channel does not fit in available bandwidth.");
-
-        if (fmod(rx_rate, chan.channel.bw) != 0)
-            throw std::range_error("Channel bandwidth must evenly divide total bandwidth.");
     }
 }
 
@@ -494,9 +491,6 @@ FDChannelizer::FDChannelDemodulator::FDChannelDemodulator(unsigned chanidx,
 {
     // Channel bandwidth must be less that total available bandwidth
     assert(channel.channel.bw <= rx_rate);
-
-    // Channel bandwidth must evenly divide total bandwidth
-    assert(fmod(rx_rate_, channel.channel.bw) == 0);
 }
 
 void FDChannelizer::FDChannelDemodulator::updateSeq(unsigned seq)
