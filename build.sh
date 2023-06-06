@@ -14,7 +14,7 @@ sudo apt install -y ninja-build
 # For capabilities
 sudo apt install -y libcap-dev
 
-# Install Python 3.8
+# Install Python 3
 sudo apt install -y python3 python3-dev python3-distutils python3-pip
 
 # For UHD
@@ -90,7 +90,7 @@ sudo uhd_images_downloader
 
 # Create virtualenv
 rm -rf venv
-virtualenv -p python3.8 venv
+virtualenv -p python3 venv
 . venv/bin/activate
 
 # Update to latest pip and setuptools
