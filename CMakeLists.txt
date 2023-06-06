@@ -90,7 +90,7 @@ add_custom_target(requirements.txt
                   ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt)
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/pip freeze --exclude-editable >${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/pip freeze --exclude-editable --exclude pkg_resources >${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt
   COMMENT "Generating requirements.txt")
 
 add_executable(flexframedemod EXCLUDE_FROM_ALL util/flexframedemod.cc)
