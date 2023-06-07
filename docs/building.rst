@@ -19,7 +19,13 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
      sudo apt install -y ansible lxd
      lxd init
 
-   You will also need to edit ``/etc/subuid`` and ``/etc/subgid``. The Colosseum instructions on how to `prepare a container`_ will be helpful.
+   Depending on the age of your Ubuntu installation, you may need a more recent version of ansible. You can install the most recent version using ``pip``:
+
+   .. code-block:: bash
+
+      pip install --user --upgrade ansible
+
+   You may also need to edit ``/etc/subuid`` and ``/etc/subgid``. The Colosseum instructions on how to `prepare a container`_ will be helpful.
 
 #. Check out the DragonRadio source code. Since DragonRadio uses submodules, it is import to use the ``--recursive`` flag when cloning the repository.
 
@@ -33,9 +39,17 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
 
    .. code-block:: bash
 
-      cd ansible && ansible-playbook -i inventory playbooks/dragonradio.yml
+      (cd ansible && ansible-playbook -e container=dragonradio-2004-base playbooks/dragonradio.yml)
 
    This will result in a ``dragonradio-2004-base`` image in the top-level ``images`` directory. The password for the ``root`` and ``srn-user`` users in this image is ``dragonradio``.
+
+   The base image can be built against other source containers. For example, a base image built on Ubuntu 22.04 can be built as follows:
+
+   .. code-block:: bash
+
+      (cd ansible && ansible-playbook -e source=ubuntu:22.04 -e container=dragonradio-2204-base playbooks/dragonradio.yml)
+
+   If you receive an error of the form ``Unsupported parameters for (lxd_container) module: ignore_volatile_options``, then you need to update ``ansible``.
 
 #. Build a DragonRadio image
 
