@@ -1,0 +1,45 @@
+- name: Create LXD container from {{ source }}
+  lxd_container:
+    name: "{{ container }}"
+    source:
+      type: image
+      mode: pull
+      server: "{{ servers[source.split(':')[0]].url }}"
+      protocol: "{{ servers[source.split(':')[0]].protocol }}"
+      alias: "{{ source.split(':')[1] }}"
+    profiles: "{{ profiles }}"
+    wait_for_ipv4_addresses: "{{ wait_for_ipv4_addresses }}"
+    timeout: 600
+    ignore_volatile_options: false
+
+- name: Set auto start
+  shell: "lxc config set {{container}} boot.autostart true"
+  when: autostart != None
+
+- name: Set MAC address
+  block:
+  - name: Set MAC address to {{macaddr}}
+    command: lxc config set "{{container}}" volatile.eth0.hwaddr "{{macaddr}}"
+
+  - name: Restart after setting MAC address
+    command: lxc restart "{{container}}"
+  when: macaddr != None
+
+- name: Enable security.nesting
+  shell: "lxc config set {{container}} security.nesting true"
+  when: nesting
+
+- name: Enable security.privileged
+  shell: "lxc config set {{container}} security.privileged true"
+  when: privileged
+
+- name: Set IPv4 address
+  lxd_container:
+    name: "{{container}}"
+    devices:
+      eth0:
+        nictype: bridged
+        parent: "{{ bridge_device }}"
+        type: nic
+        ipv4.address: "{{ ipv4 }}"
+  when: ipv4 != None

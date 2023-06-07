@@ -1,0 +1,14 @@
+source: ubuntu:20.04
+profiles: [ "default" ]
+wait_for_ipv4_addresses: true
+macaddr:
+ipv4:
+autostart: false
+nesting: false
+privileged: false
+bridge_device: lxdbr0
+servers: { 'local':        {'protocol': 'lxd',           'url': 'unix://'}
+         , 'images':       {'protocol': 'simplestreams', 'url': 'https://images.linuxcontainers.org'}
+         , 'ubuntu':       {'protocol': 'simplestreams', 'url': 'https://cloud-images.ubuntu.com/releases'}
+         , 'ubuntu-daily': {'protocol': 'simplestreams', 'url': 'https://cloud-images.ubuntu.com/daily'}
+         }

@@ -1,0 +1,13 @@
+- name: Stop container
+  shell: lxc stop -f "{{container}}"
+
+- name: Publish container
+  shell: lxc publish "{{container}}" --alias "{{container}}"
+
+- name: Create image export directory
+  file:
+    path: "{{lxd_export_dir}}"
+    state: directory
+
+- name: Export container
+  shell: lxc image export "{{container}}" "{{lxd_export_dir}}"/"{{container}}"

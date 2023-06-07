@@ -1,7 +1,0 @@
-all:
-  children:
-    containers:
-      hosts:
-        dragonradio-2004-base:
-          server: https://cloud-images.ubuntu.com/releases
-          alias: 20.04/amd64

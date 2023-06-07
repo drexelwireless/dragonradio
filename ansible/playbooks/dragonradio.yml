@@ -1,33 +1,34 @@
 - hosts: localhost
   connection: local
   roles:
-    - role: lxd-create-containers
-      containers:
-        - dragonradio-2004-base
+    - lxd-create-container
+  tasks:
+    - name: Add host {{ container }}
+      add_host:
+        name: "{{ container }}"
 
-- hosts: dragonradio-2004-base
-  connection: local
+- hosts: "{{ container }}"
+  connection: lxd
   become: false
   roles:
-    - update
+    - role: update
+      disable_ubuntu_advantage: true
     - base
     - dragonradio-base
     - accounts
     - colosseum-cli
     - role: mgen
-      tag: bfe21e8d
+      tag: "{{ mgen_version }}"
     - role: gpsd
-      version: 3.21
+      version: "{{ gpsd_version }}"
     - role: protobuf
-      version: 3.19.4
+      version: "{{ protobuf_version }}"
     - role: vivado2019.1-lab
-      when: vivado | bool
+      when: vivado | default(false) | bool
     - clean
 
 - hosts: localhost
   connection: local
   roles:
-    - role: lxd-export-containers
-      containers:
-        - dragonradio-2004-base
+    - role: lxd-export-container
       lxd_export_dir: ../../images

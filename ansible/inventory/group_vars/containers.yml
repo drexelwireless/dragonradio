@@ -1,6 +1,0 @@
-ansible_connection: lxd
-usb: false
-vivado: false
-
-# Always disable the ubuntu-advantage service
-disable_ubuntu_advantage: true
