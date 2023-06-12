@@ -343,7 +343,7 @@ class RadioMetricPlot(ReservationPlot):
     def __init__(self, fig: Figure, ax: Axes, logs: LogCollection,
                  metric: str,
                  latency: Optional[str]=None,
-                 nodes: List[int]=None,
+                 nodes: Optional[List[int]]=None,
                  checkboxes: bool=True,
                  only_transmitted_packets: bool=True,
                  include_retransmissions: bool=False,
@@ -362,14 +362,34 @@ class RadioMetricPlot(ReservationPlot):
         if nodes is None:
             nodes = logs.nodes
 
+        # Determine how to print packet info in annotations
+        if metric in self.RECV_METRICS:
+            ppr = pprReceivedPacket
+        else:
+            ppr = pprSentPacket
+
+        # Determine y axis label
+        if latency is not None:
+            metrics = latency.split(',')
+            if len(metrics) != 2:
+                raise Exception('Latency must specify two metrics, but got %s' % latency)
+
+            metric_from, metric_to = metrics
+
+            def strip_latency(s):
+                return re.sub('_latency', '', s)
+
+            ylabel = f"Latency from {strip_latency(metric_from):} to {strip_latency(metric_to):}"
+        else:
+            ylabel = self.METRIC_YLABELS[metric]
+
+        # Plot per-node metrics
         for node_id in sorted(nodes):
             # Determine DataFrame containing metric and annotation printer
             if metric in self.RECV_METRICS:
                 df = logs[node_id].recv
-                ppr = pprReceivedPacket
             else:
                 df = logs[node_id].send
-                ppr = pprSentPacket
 
                 if only_transmitted_packets:
                     df = df.loc[df.dropped == 'transmitted']
@@ -390,20 +410,9 @@ class RadioMetricPlot(ReservationPlot):
             # log.
             x = df.aligned_timestamp
 
-            # Determine y axis
+            # Determine y axis data
             if latency is not None:
-                metrics = latency.split(',')
-                if len(metrics) != 2:
-                    raise Exception('Latency must specify two metrics, but got %s' % latency)
-
-                metric_from, metric_to = metrics
-
                 y = df[metric_to] - df[metric_from]
-
-                def strip_latency(s):
-                    return re.sub('_latency', '', s)
-
-                ylabel = f"Latency from {strip_latency(metric_from):} to {strip_latency(metric_to):}"
             else:
                 if metric == 'interarrival' or metric == 'interdeparture':
                     df.set_index(['timestamp'], inplace=True)
@@ -417,9 +426,6 @@ class RadioMetricPlot(ReservationPlot):
                     y = df['mcsidx']
                 else:
                     y = df[metric]
-
-                # Determine y label
-                ylabel = self.METRIC_YLABELS[metric]
 
             # If this is a modulation scheme metric, set ticks appropriately
             if metric in self.MS_METRICS:
