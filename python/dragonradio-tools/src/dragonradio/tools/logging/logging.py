@@ -6,7 +6,9 @@ import datetime
 from functools import cached_property
 import logging
 import os
+from pathlib import Path
 import re
+import sys
 from typing import List, Optional, Tuple
 from typing_extensions import TypeAlias
 
@@ -15,6 +17,8 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 import h5py
+
+from rich import print
 
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 from dragonradio.signal import decompressIQData
@@ -677,8 +681,10 @@ class LogCollection:
             for onepath in path:
                 try:
                     self.load(onepath, start_time=start_time, srn_logs_path=srn_logs_path, srns=srns)
-                except:
-                    logger.exception('Could not load %s', onepath)
+                except FileNotFoundError:
+                    print(f"[red]Log file {onepath:} does not exist.[/red]", file=sys.stderr)
+                except OSError:
+                    print(f"[red]Log file {onepath:} appears to be corrupt.[/red]", file=sys.stderr)
         elif os.path.isdir(path):
             if self.reservation is not None:
                 raise ValueError("Already loaded a reservation")
@@ -700,20 +706,22 @@ class LogCollection:
 
             for srn in self.reservation.our_srns:
                 if srns is None or srn in srns:
-                    try:
-                        path = os.path.join(self.reservation.srn_logs[srn],
-                                            f'node-{srn:03d}',
-                                            'radio.h5')
-                        log = Log(path, log_collection=self)
-                        self.logs[log.node_id] = log
-                    except OSError:
-                        logging.exception("Could not open HDF5 log file %s", path)
+                    path = self.reservation.srn_logs[srn]/ f'node-{srn:03d}'/ 'radio.h5'
+                    self._add_log(path)
         else:
-            log = Log(path, log_collection=self)
-            self.logs[log.node_id] = log
+            self._add_log(path)
 
     def __getitem__(self, idx):
       return self.logs[idx]
+
+    def _add_log(self, path: Path):
+        try:
+            log = Log(path, log_collection=self)
+            self.logs[log.node_id] = log
+        except FileNotFoundError:
+            print(f"[red]Log file {path:} does not exist.[/red]", file=sys.stderr)
+        except OSError:
+            print(f"[red]Log file {path:} appears to be corrupt.[/red]", file=sys.stderr)
 
     @property
     def nodes(self):
