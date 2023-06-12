@@ -300,8 +300,14 @@ def addCheckboxWidget(fig, lines,
     def func(label):
         index = labels.index(label)
         lines[index].set_visible(not lines[index].get_visible())
-        fig.canvas.draw()
+        # Most references call draw *before* flush_events, e.g.:
+        #
+        # https://stackoverflow.com/questions/4098131/how-to-update-a-plot-in-matplotlib
+        #
+        # However, it seems we actually need to call flush_events first to
+        # reliably trigger a redraw.
         fig.canvas.flush_events()
+        fig.canvas.draw()
 
     check.on_clicked(func)
 
