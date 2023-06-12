@@ -380,7 +380,7 @@ class RadioMetricPlot(ReservationPlot):
             # Restrict packets
             if only_invalid_packets:
                 df = df.loc[(df.header_valid == 1) & (df.payload_valid == 0)]
-            elif include_invalid_packets:
+            elif not include_invalid_packets:
                 df = df.loc[(df.header_valid == 1) & (df.payload_valid == 1)]
 
             # Apply DataFrame filter
