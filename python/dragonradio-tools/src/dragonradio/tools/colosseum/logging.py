@@ -291,6 +291,9 @@ class ReservationLog(DataFrameCache):
         else:
             self.path = Path(path).resolve()
 
+            if not self.path.is_dir():
+                raise ValueError(f"{path:} does not exist")
+
         if srn_logs_path is None:
             self.srn_logs_path = self.path
         else:
