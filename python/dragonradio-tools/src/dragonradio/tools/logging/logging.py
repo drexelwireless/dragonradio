@@ -1,15 +1,16 @@
-# Copyright 2018-2021 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 """Support for working with DragonRadio log files"""
 import ast
 import datetime
+from datetime import datetime
 from functools import cached_property
 import logging
 import os
 from pathlib import Path
 import re
 import sys
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 from typing_extensions import TypeAlias
 
 import numpy as np
@@ -647,9 +648,25 @@ class Log:
 
 class LogCollection:
     """A collection of DragonRadio logs"""
+
+    logs: Dict[int, Log]
+    """Logs in the collection"""
+
+    start_time: Optional[datetime]=None
+    """Time zero for log events (seconds since the epoch)"""
+
+    cache_path: Optional[Path]=None
+    """Path to cache holding serialized DataFrames"""
+
+    reservation: Optional[ReservationLog]=None
+    """Colosseum reservation associate with this log collection"""
+
+    _start: Optional[datetime]=None
+    """Time zero for logs"""
+
     def __init__(self,
-                 start_time=None,
-                 cache_path=None):
+                 start_time: Optional[datetime]=None,
+                 cache_path: Optional[Path]=None):
         """Initialize a collection of DragonRadio logs.
 
         Args:
@@ -659,23 +676,15 @@ class LogCollection:
         Returns:
             None
         """
-
         self.logs = {}
-        """Logs in the collection"""
-
         self.start_time = start_time
-        """Time zero for log events (seconds since the epoch)"""
-
         self.cache_path = cache_path
-        """Path to cache holding serialized DataFrames"""
 
-        self.reservation = None
-        """Colosseum reservation associate with this log collection"""
-
-        self._start = None
-        """Time zero for logs"""
-
-    def load(self, path, start_time=None, srn_logs_path=None, srns=None):
+    def load(self,
+             path: Union[List[Path], Path],
+             start_time: Optional[datetime]=None,
+             srn_logs_path: Optional[Path]=None,
+             srns: Optional[Sequence[int]]=None):
         """Load a log into the collection"""
         if isinstance(path, list):
             for onepath in path:
@@ -729,7 +738,7 @@ class LogCollection:
         return self.logs.keys()
 
     @property
-    def start(self):
+    def start(self) -> Optional[datetime]:
         """Time zero for log events (seconds since the epoch)"""
         if self._start is not None:
             return self._start
@@ -738,7 +747,7 @@ class LogCollection:
         if len(starts) == 0:
             return None
         else:
-            return datetime.datetime.fromtimestamp(min(starts))
+            return datetime.fromtimestamp(min(starts))
 
     def findPacketSlots(self, pkt: Packet, dest: int) -> Optional[Slots]:
         """

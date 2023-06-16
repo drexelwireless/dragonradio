@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 from threading import RLock
 import time
-from typing import Optional
+from typing import Callable, Optional
 from weakref import WeakValueDictionary
 import xdg
 
@@ -35,18 +35,21 @@ class FileLock(object):
         os.remove(self._lockpath)
 
 class cached_dataframe_property:
-    def __init__(self, key):
+    key: str
+    """Path to cached data"""
+
+    attrname: Optional[str] = None
+    """Attribute name"""
+
+    func: Callable[['DataFrameCache'], Optional[pd.DataFrame]]
+    """Function to compute DataFrame"""
+
+    lock: RLock
+    """Lock"""
+
+    def __init__(self, key: str):
         self.key = key
-        """Path to cached data"""
-
-        self.attrname = None
-        """Attribute name"""
-
-        self.func = None
-        """Function to compute DataFrame"""
-
         self.lock = RLock()
-        """Lock"""
 
     def __call__(self, func):
         self.func = func

@@ -1,4 +1,4 @@
-# Copyright 2018-2022 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 from datetime import datetime, timedelta, timezone
 from enum import Enum
@@ -117,7 +117,7 @@ class BatchInput:
     srn_to_scenario: MutableMapping[int, int]
     """Map from SRN to scenario node"""
 
-    def __init__(self, res, path):
+    def __init__(self, res: 'ReservationLog', path: Path):
         self.reservation = res
         self.path = path
         self.teams = []
