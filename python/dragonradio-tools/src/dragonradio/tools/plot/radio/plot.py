@@ -1,4 +1,4 @@
-# Copyright 2018-2022 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 """Plotting utilities for DragonRadio"""
 from enum import Enum
@@ -309,7 +309,7 @@ class ReservationPlot(AnnotatedPlot):
             plotStages(ax, scorer)
 
 class RadioMetricPlot(ReservationPlot):
-    RECV_METRICS = frozenset(['cfo', 'evm', 'rssi', 'mcsidx', 'ms', 'interarrival', 'demod_latency', 'rx_latency'])
+    RECV_METRICS = frozenset(['cfo', 'evm', 'rssi', 'mcsidx', 'ms', 'interarrival', 'demod_latency', 'tuntap_latency', 'rx_latency'])
 
     MS_METRICS = frozenset(['ms', 'sent_ms'])
 
@@ -341,7 +341,7 @@ class RadioMetricPlot(ReservationPlot):
     """The metric to plot"""
 
     def __init__(self, fig: Figure, ax: Axes, logs: LogCollection,
-                 metric: str,
+                 metric: Optional[str]=None,
                  latency: Optional[str]=None,
                  nodes: Optional[List[int]]=None,
                  checkboxes: bool=True,
@@ -362,13 +362,9 @@ class RadioMetricPlot(ReservationPlot):
         if nodes is None:
             nodes = logs.nodes
 
-        # Determine how to print packet info in annotations
-        if metric in self.RECV_METRICS:
-            ppr = pprReceivedPacket
-        else:
-            ppr = pprSentPacket
-
         # Determine y axis label
+        plot_recv: bool= False
+
         if latency is not None:
             metrics = latency.split(',')
             if len(metrics) != 2:
@@ -376,18 +372,36 @@ class RadioMetricPlot(ReservationPlot):
 
             metric_from, metric_to = metrics
 
+            if self.is_recv_metric(metric_from) != self.is_recv_metric(metric_to):
+                raise Exception('Latency metrics must both be either receive or transmit metrics')
+
+            plot_recv = self.is_recv_metric(metric_from)
+
             def strip_latency(s):
                 return re.sub('_latency', '', s)
 
             ylabel = f"Latency from {strip_latency(metric_from):} to {strip_latency(metric_to):}"
         else:
+            plot_recv = self.is_recv_metric(metric)
+
             ylabel = self.METRIC_YLABELS[metric]
+
+        # Determine how to print packet info in annotations
+        if plot_recv:
+            ppr = pprReceivedPacket
+        else:
+            ppr = pprSentPacket
 
         # Plot per-node metrics
         for node_id in sorted(nodes):
             # Determine DataFrame containing metric and annotation printer
-            if metric in self.RECV_METRICS:
+            if plot_recv:
                 df = logs[node_id].recv
+
+                if only_invalid_packets:
+                    df = df.loc[(df.header_valid == 1) & (df.payload_valid == 0)]
+                elif not include_invalid_packets:
+                    df = df.loc[(df.header_valid == 1) & (df.payload_valid == 1)]
             else:
                 df = logs[node_id].send
 
@@ -396,12 +410,6 @@ class RadioMetricPlot(ReservationPlot):
 
                 if not include_retransmissions:
                     df = df.loc[df.nretrans == 0]
-
-            # Restrict packets
-            if only_invalid_packets:
-                df = df.loc[(df.header_valid == 1) & (df.payload_valid == 0)]
-            elif not include_invalid_packets:
-                df = df.loc[(df.header_valid == 1) & (df.payload_valid == 1)]
 
             # Apply DataFrame filter
             df = filt(df)
@@ -480,6 +488,9 @@ class RadioMetricPlot(ReservationPlot):
 
         # Attach hover event handler
         self.connect_hover()
+
+    def is_recv_metric(self, metric: str):
+        return metric in self.RECV_METRICS
 
 class EventPlot(ReservationPlot):
     series: List = []
