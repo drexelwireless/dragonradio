@@ -61,7 +61,10 @@ It is relatively painless to build an ``lxc`` image that can run directly on the
 
    The image wil be placed in the ``images`` directory and have a name of the form ``REF-DATE-HASH``, where ``REF`` is a ``git`` reference, ``DATE`` is the build date, and ``HASH`` is the ``git`` hash of the version of the radio use to build the image.
 
-   The ``build-image.sh`` script takes one optional flag, ``-s``, which will install the ``dragonradio`` service in the generated image. This service automatically starts the radio on boot, making the image ready-to-run in batch mode in the Colosseum.
+   The ``build-image.sh`` script takes one following optional flags:
+
+   * ``-s``. Installs the ``dragonradio`` service in the generated image. This service automatically starts the radio on boot, making the image ready-to-run in batch mode in the Colosseum.
+   * ``-b CONTAINER``. Use the base image ``CONTAINER``. Defaults to ``dragonradio-2004-base``.
 
 Building the documentation
 --------------------------

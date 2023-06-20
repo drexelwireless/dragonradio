@@ -3,10 +3,15 @@
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 set -e
 
+BASECONTAINER="dragonradio-2004-base"
+
 usage() { echo "Usage: $0 [-s] REV" 1>&2; exit 1; }
 
-while getopts "s" opt; do
+while getopts "b:s" opt; do
     case "${opt}" in
+        b)
+            BASECONTAINER="$OPTARG"
+            ;;
         s)
             SERVICE=1
             ;;
