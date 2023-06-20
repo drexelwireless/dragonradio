@@ -234,7 +234,7 @@ class ProtobufProtocol(asyncio.Protocol):
 
     def data_received(self, data):
         async def f():
-            with await self.buffer_lock:
+            async with self.buffer_lock:
                 self.buffer.extend(data)
                 self.buffer_cond.notify_all()
 
@@ -266,7 +266,7 @@ class ProtobufProtocol(asyncio.Protocol):
         return msg
 
     async def _recvBytes(self, count):
-        with await self.buffer_lock:
+        async with self.buffer_lock:
             await self.buffer_cond.wait_for(lambda: len(self.buffer) >= count)
 
             data = self.buffer[:count]
