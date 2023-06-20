@@ -43,8 +43,7 @@ class GPSDClient:
     async def connect(self):
         """Connect to gpsd"""
         self.reader, self.writer = await asyncio.open_connection(self.server_host,
-                                                                 self.server_port,
-                                                                 loop=self.loop)
+                                                                 self.server_port)
 
     async def watch(self, enable):
         """Set whether or not to watch GPS info"""
