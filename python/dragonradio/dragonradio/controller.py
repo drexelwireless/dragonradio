@@ -384,7 +384,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     time.time(),
                     timestamp)
 
-                with await self.radio.lock:
+                async with self.radio.lock:
                     self.started = True
                     self.scenario_start_time = timestamp
 
@@ -516,7 +516,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 logger.info('Stopping radio tasks')
                 await self.radio.stopTasks()
 
-                with await self.radio.lock:
+                async with self.radio.lock:
                     # Remove all nodes
                     for node in self.neighbors.values():
                         await self.removeNode(node)
@@ -741,7 +741,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def installMACSchedule(self, seq, sched):
         """Install a new MAC schedule"""
-        with await self.radio.lock:
+        async with self.radio.lock:
             radio = self.radio
 
             if self.schedule_seq is not None and seq <= self.schedule_seq:
@@ -778,7 +778,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         """
         config = self.config
 
-        with await self.voxel_lock:
+        async with self.voxel_lock:
             # Look up most recent usage report by this node on this channel
             duty_cycle = 0
 
@@ -880,7 +880,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         timestamp = self.scenario_start_time + mp*config.measurement_period
 
         # Get updated scores
-        with await self.scorer_lock:
+        async with self.scorer_lock:
             self.scorer.updateScore(self.currentMP())
 
             scores = self.scorer.scores
@@ -1117,7 +1117,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def updateFlowStatistics(self, node_id, timestamp, sources, sinks):
         """Update flow statistics from reported source and sink stats"""
-        with await self.scorer_lock:
+        async with self.scorer_lock:
             for flow in sources:
                 # Record maximum MP
                 max_mp = flow.first_mp + min(len(flow.npackets), len(flow.nbytes)) - 1
@@ -1209,7 +1209,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     spectrum.end.get_timestamp(),
                     vox)
 
-        with await self.voxel_lock:
+        async with self.voxel_lock:
             self.historical_voxel_usage += historical_usage
             self.current_voxel_usage[node_id] = load
 
@@ -1313,7 +1313,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
         If we are the gateway node, this will trigger a new TDMA schedule.
         """
-        with await self.radio.lock:
+        async with self.radio.lock:
             if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
                 old_bandwidth = self.radio.bandwidth
 
@@ -1405,7 +1405,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     async def getHistoricalSpectrumUsage(self):
         """Get historical voxel usage from controller and convert it into CIL
         voxels for spectrum usage report"""
-        with await self.voxel_lock:
+        async with self.voxel_lock:
             voxels = self.historical_voxel_usage
             self.historical_voxel_usage = []
 
