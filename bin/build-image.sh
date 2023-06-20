@@ -88,6 +88,7 @@ lxc exec "$CONTAINER" -- chown -R root:root /root/dragonradio
 echo "Building dragonradio"
 
 lxc exec "$CONTAINER" bash <<EOF
+apt update
 cd /root/dragonradio
 ./build.sh
 cd /root/dragonradio/tools
