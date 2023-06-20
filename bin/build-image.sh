@@ -107,6 +107,14 @@ EOF
 fi
 
 #
+# Clean caches
+#
+lxc exec "$CONTAINER" bash <<EOF
+rm -rf /root/.cache
+apt clean
+EOF
+
+#
 # Export the container
 #
 echo "Exporting $CONTAINER"
