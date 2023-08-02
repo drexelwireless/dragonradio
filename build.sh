@@ -58,8 +58,8 @@ CFLAGS="-Ofast -march=haswell"
 )
 
 # Download firmware
-sudo apt install -y python-is-python3 python3-requests
-sudo pip install --upgrade urllib3
+sudo apt install -y python-is-python3 python3-requests python3-urllib3
+
 sudo uhd_images_downloader
 
 # Build and install liquid-dsp
