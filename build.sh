@@ -7,7 +7,7 @@ sudo apt install -y autoconf automake build-essential cmake
 sudo apt install -y libboost-dev libboost-date-time-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev libboost-system-dev libboost-serialization-dev libboost-test-dev libboost-thread-dev
 sudo apt install -y libfftw3-dev
 sudo apt install -y libhdf5-dev
-sudo apt install -y libflac8 libflac-dev libflac++-dev
+sudo apt install -y libflac-dev libflac++-dev
 sudo apt install -y libeigen3-dev
 sudo apt install -y ninja-build
 
