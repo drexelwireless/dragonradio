@@ -10,6 +10,7 @@ import json
 import logging
 import math
 import os
+from pathlib import Path
 import random
 import time
 
@@ -33,6 +34,7 @@ from dragonradio.radio import ConfigException, PHYChannel
 import dragonradio.remote as remote
 import dragonradio.schedule
 import dragonradio.tasks
+from dragonradio.util import save_dataframe
 
 logger = logging.getLogger('controller')
 
@@ -892,20 +894,22 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         if self.config.logdir is None:
             return
 
-        path = os.path.join(self.config.logdir, 'timestamps.h5')
+        path = Path(self.config.logdir) / 'timestamps.h5'
 
         if self.radio.timesync is not None:
             (sigma, delta, tau) = self.radio.timesync
 
             df_timesync = pd.DataFrame([(delta, sigma, tau)],
                                        columns=['delta', 'sigma', 'tau'])
-            df_timesync.to_hdf(path, 'timesync', index=False)
+            save_dataframe(df_timesync, path, 'timesync')
 
-        df_me_timestamps = pd.DataFrame(self.radio.me_timestamps, columns=['t_send', 't_recv'])
-        df_me_timestamps.to_hdf(path, 'me_timestamps', index=False)
+        if len(self.radio.me_timestamps) != 0:
+            df_me_timestamps = pd.DataFrame(self.radio.me_timestamps, columns=['t_send', 't_recv'], dtype=float)
+            save_dataframe(df_me_timestamps, path, 'me_timestamps')
 
-        df_master_timestamps = pd.DataFrame(self.radio.master_timestamps, columns=['t_send', 't_recv'])
-        df_master_timestamps.to_hdf(path, 'master_timestamps', index=False)
+        if len(self.radio.master_timestamps) != 0:
+            df_master_timestamps = pd.DataFrame(self.radio.master_timestamps, columns=['t_send', 't_recv'], dtype=float)
+            save_dataframe(df_master_timestamps, path, 'master_timestamps')
 
     def logCSV(self, data, columns, filename):
         """Log data to CSV file"""
