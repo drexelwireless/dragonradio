@@ -99,12 +99,17 @@ virtualenv -p python3.8 venv
 # Update to latest pip and setuptools
 pip install --upgrade pip setuptools wheel
 
+# Install h5py prerequisites
+pip install -c requirements.txt numpy cython pkgconfig
+
+# Force h5py to be built so that it uses the system's hdf5 library
+pip install -c requirements.txt --no-binary h5py --no-build-isolation h5py
+
+# Install other required Python packages
+pip install -r requirements.txt
+
 # Install dragonradio package in development mode
-#
-# XXX We must use the system HDF5 library to avoid linking conflicts when
-# embedding in dragonradio, so we set PIP_NO_BINARY=tables to ensure the tables
-# package is built from source.
-PIP_NO_BINARY=tables pip install -r requirements.txt -e python/dragonradio
+pip install -c requirements.txt -e python/dragonradio
 
 # Build dragonradio
 (
