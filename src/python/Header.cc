@@ -8,6 +8,12 @@
 
 void exportHeader(py::module &m)
 {
+    // Export class Seq to Python
+    py::class_<Seq>(m, "Seq");
+
+    // Export class NodeId to Python
+    py::class_<NodeId>(m, "NodeId");
+
     // Export Header::Flags class to Python
     py::class_<Header::Flags>(m, "HeaderFlags")
         .def_property("syn",
