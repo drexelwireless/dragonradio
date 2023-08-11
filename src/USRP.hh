@@ -92,7 +92,7 @@ public:
         std::chrono::steady_clock::time_point t1_steady;
     };
 
-    USRP(const std::string& addr);
+    USRP(const std::string& dev_addr);
     ~USRP();
 
     USRP() = delete;
@@ -223,37 +223,37 @@ public:
     }
 
     /** @brief Get the TX frontend specification.
-     * @param chan The channel index
+     * @param mboard The motherboard index
      */
-    std::string getTXSubdevSpec(size_t chan=0) const
+    std::string getTXSubdevSpec(size_t mboard=0) const
     {
-        return usrp_->get_tx_subdev_spec(chan).to_string();
+        return usrp_->get_tx_subdev_spec(mboard).to_string();
     }
 
     /** @brief Set the TX frontend specification.
      * @param spec The frontend specification
-     * @param chan The channel index
+     * @param mboard The motherboard index
      */
-    void setTXSubdevSpec(const std::string &spec, size_t chan=0) const
+    void setTXSubdevSpec(const std::string &spec, size_t mboard=0) const
     {
-        usrp_->set_tx_subdev_spec(spec, chan);
+        usrp_->set_tx_subdev_spec(spec, mboard);
     }
 
     /** @brief Get the RX frontend specification.
-     * @param chan The channel index
+     * @param mboard The motherboard index
      */
-    std::string getRXSubdevSpec(size_t chan=0) const
+    std::string getRXSubdevSpec(size_t mboard=0) const
     {
-        return usrp_->get_rx_subdev_spec(chan).to_string();
+        return usrp_->get_rx_subdev_spec(mboard).to_string();
     }
 
     /** @brief Set the RX frontend specification.
      * @param spec The frontend specification
-     * @param chan The channel index
+     * @param mboard The motherboard index
      */
-    void setRXSubdevSpec(const std::string &spec, size_t chan=0) const
+    void setRXSubdevSpec(const std::string &spec, size_t mboard=0) const
     {
-        usrp_->set_rx_subdev_spec(spec, chan);
+        usrp_->set_rx_subdev_spec(spec, mboard);
     }
 
     /** @brief Get the master clock rate
