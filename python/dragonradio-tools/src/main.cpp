@@ -11,7 +11,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(_dragonradio_tools_mgen, m) {
+PYBIND11_MODULE(dragonradiocpp_tools_mgen, m) {
     PYBIND11_NUMPY_DTYPE(Send,
         timestamp,
         flow,

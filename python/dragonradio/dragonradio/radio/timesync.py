@@ -8,7 +8,7 @@ import math
 import numpy as np
 
 try:
-    from _dragonradio.radio import clock
+    from dragonradiocpp.radio import clock
 except:
     pass
 

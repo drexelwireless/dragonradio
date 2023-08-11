@@ -7,7 +7,7 @@ from setuptools import setup
 
 ext_modules = [
     Pybind11Extension(
-        '_dragonradio_tools_mgen',
+        'dragonradiocpp_tools_mgen',
         sorted([ 'src/main.cpp'
                , 'src/mgen.cpp'
                ]),

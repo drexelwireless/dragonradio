@@ -19,10 +19,10 @@ import libconf
 
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 
-from _dragonradio.radio import MAC, PHY
-from _dragonradio.radio import FDMA, SlottedALOHA, TDMA
-from _dragonradio.radio import FDChannelizer, TDChannelizer
-from _dragonradio.radio import FDSynthesizer, TDSynthesizer, MultichannelSynthesizer
+from dragonradiocpp.radio import MAC, PHY
+from dragonradiocpp.radio import FDMA, SlottedALOHA, TDMA
+from dragonradiocpp.radio import FDChannelizer, TDChannelizer
+from dragonradiocpp.radio import FDSynthesizer, TDSynthesizer, MultichannelSynthesizer
 from dragonradio.liquid import FlexFrame, NewFlexFrame, OFDM
 
 logger = logging.getLogger('config')

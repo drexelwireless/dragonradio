@@ -12,7 +12,7 @@ DEPENDENCIES = TOPDIR / 'extern'
 
 ext_modules = [
     Pybind11Extension(
-        '_dragonradio',
+        'dragonradiocpp',
         sorted(['src/IQCompression.cc',
                 'src/IQCompression/FLAC.cc',
                 'src/Math.cc',
