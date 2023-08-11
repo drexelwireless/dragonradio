@@ -274,6 +274,91 @@ void exportControllers(py::module &m)
                       size_t>())
         ;
 
+    // Export class TimestampsProxy to Python
+    py::class_<TimestampsProxy, std::unique_ptr<TimestampsProxy>>(m, "Timestamps")
+        .def("__getitem__",
+            &TimestampsProxy::operator [])
+        .def("__contains__",
+            &TimestampsProxy::contains)
+        .def("keys",
+            &TimestampsProxy::keys)
+        ;
+
+    // Export class SendWindowsProxy to Python
+    py::class_<SendWindowProxy, std::unique_ptr<SendWindowProxy>>(m, "SendWindow")
+        .def_property_readonly("short_per",
+            &SendWindowProxy::getShortPER,
+            "Short-term packet error rate (unitless)")
+        .def_property_readonly("long_per",
+            &SendWindowProxy::getLongPER,
+            "Long-term packet error rate (unitless)")
+        .def_property_readonly("short_evm",
+            &SendWindowProxy::getShortEVM,
+            "Short-term EVM (dB)")
+        .def_property_readonly("long_evm",
+            &SendWindowProxy::getLongEVM,
+            "Long-term EVM (dB)")
+        .def_property_readonly("short_rssi",
+            &SendWindowProxy::getShortRSSI,
+            "Short-term RSSI (dB)")
+        .def_property_readonly("long_rssi",
+            &SendWindowProxy::getLongRSSI,
+            "Long-term RSSI (dB)")
+        .def_property_readonly("mcsidx",
+            &SendWindowProxy::getMCSIdx,
+            "MCS index")
+        ;
+
+    // Export class SendWindowsProxy to Python
+    py::class_<SendWindowsProxy, std::unique_ptr<SendWindowsProxy>>(m, "SendWindows")
+        .def("__getitem__",
+            [](SendWindowsProxy &proxy, NodeId key) -> std::unique_ptr<SendWindowProxy>
+            {
+                try {
+                    return std::make_unique<SendWindowProxy>(proxy[key]);
+                } catch (const std::out_of_range&) {
+                    throw py::key_error("node '" + std::to_string(key) + "' does not have a send window");
+                }
+            })
+        .def("__contains__",
+            &SendWindowsProxy::contains)
+        .def("keys",
+            &SendWindowsProxy::keys)
+        ;
+
+    // Export class ReceiveWindowProxy to Python
+    py::class_<ReceiveWindowProxy, std::unique_ptr<ReceiveWindowProxy>>(m, "ReceiveWindow")
+        .def_property_readonly("short_evm",
+            &ReceiveWindowProxy::getShortEVM,
+            "Short-term EVM (dB)")
+        .def_property_readonly("long_evm",
+            &ReceiveWindowProxy::getLongEVM,
+            "Long-term EVM (dB)")
+        .def_property_readonly("short_rssi",
+            &ReceiveWindowProxy::getShortRSSI,
+            "Short-term RSSI (dB)")
+        .def_property_readonly("long_rssi",
+            &ReceiveWindowProxy::getLongRSSI,
+            "Long-term RSSI (dB)")
+        ;
+
+    // Export class ReceiveWindowsProxy to Python
+    py::class_<ReceiveWindowsProxy, std::unique_ptr<ReceiveWindowsProxy>>(m, "ReceiveWindows")
+        .def("__getitem__",
+            [](ReceiveWindowsProxy &proxy, NodeId key) -> std::unique_ptr<ReceiveWindowProxy>
+            {
+                try {
+                    return std::make_unique<ReceiveWindowProxy>(proxy[key]);
+                } catch (const std::out_of_range&) {
+                    throw py::key_error("node '" + std::to_string(key) + "' does not have a receive window");
+                }
+            })
+        .def("__contains__",
+            &ReceiveWindowsProxy::contains)
+        .def("keys",
+            &ReceiveWindowsProxy::keys)
+        ;
+
     // Export class SmartController to Python
     py::class_<SmartController, Controller, std::shared_ptr<SmartController>>(m, "SmartController")
         .def(py::init<std::shared_ptr<Neighborhood>,
@@ -448,90 +533,5 @@ void exportControllers(py::module &m)
         .def("environmentDiscontinuity",
             &SmartController::environmentDiscontinuity,
             "Inform the controller that an environmental discontinuity has ocurred")
-        ;
-
-    // Export class TimestampsProxy to Python
-    py::class_<TimestampsProxy, std::unique_ptr<TimestampsProxy>>(m, "Timestamps")
-        .def("__getitem__",
-            &TimestampsProxy::operator [])
-        .def("__contains__",
-            &TimestampsProxy::contains)
-        .def("keys",
-            &TimestampsProxy::keys)
-        ;
-
-    // Export class SendWindowsProxy to Python
-    py::class_<SendWindowProxy, std::unique_ptr<SendWindowProxy>>(m, "SendWindow")
-        .def_property_readonly("short_per",
-            &SendWindowProxy::getShortPER,
-            "Short-term packet error rate (unitless)")
-        .def_property_readonly("long_per",
-            &SendWindowProxy::getLongPER,
-            "Long-term packet error rate (unitless)")
-        .def_property_readonly("short_evm",
-            &SendWindowProxy::getShortEVM,
-            "Short-term EVM (dB)")
-        .def_property_readonly("long_evm",
-            &SendWindowProxy::getLongEVM,
-            "Long-term EVM (dB)")
-        .def_property_readonly("short_rssi",
-            &SendWindowProxy::getShortRSSI,
-            "Short-term RSSI (dB)")
-        .def_property_readonly("long_rssi",
-            &SendWindowProxy::getLongRSSI,
-            "Long-term RSSI (dB)")
-        .def_property_readonly("mcsidx",
-            &SendWindowProxy::getMCSIdx,
-            "MCS index")
-        ;
-
-    // Export class SendWindowsProxy to Python
-    py::class_<SendWindowsProxy, std::unique_ptr<SendWindowsProxy>>(m, "SendWindows")
-        .def("__getitem__",
-            [](SendWindowsProxy &proxy, NodeId key) -> std::unique_ptr<SendWindowProxy>
-            {
-                try {
-                    return std::make_unique<SendWindowProxy>(proxy[key]);
-                } catch (const std::out_of_range&) {
-                    throw py::key_error("node '" + std::to_string(key) + "' does not have a send window");
-                }
-            })
-        .def("__contains__",
-            &SendWindowsProxy::contains)
-        .def("keys",
-            &SendWindowsProxy::keys)
-        ;
-
-    // Export class ReceiveWindowProxy to Python
-    py::class_<ReceiveWindowProxy, std::unique_ptr<ReceiveWindowProxy>>(m, "ReceiveWindow")
-        .def_property_readonly("short_evm",
-            &ReceiveWindowProxy::getShortEVM,
-            "Short-term EVM (dB)")
-        .def_property_readonly("long_evm",
-            &ReceiveWindowProxy::getLongEVM,
-            "Long-term EVM (dB)")
-        .def_property_readonly("short_rssi",
-            &ReceiveWindowProxy::getShortRSSI,
-            "Short-term RSSI (dB)")
-        .def_property_readonly("long_rssi",
-            &ReceiveWindowProxy::getLongRSSI,
-            "Long-term RSSI (dB)")
-        ;
-
-    // Export class ReceiveWindowsProxy to Python
-    py::class_<ReceiveWindowsProxy, std::unique_ptr<ReceiveWindowsProxy>>(m, "ReceiveWindows")
-        .def("__getitem__",
-            [](ReceiveWindowsProxy &proxy, NodeId key) -> std::unique_ptr<ReceiveWindowProxy>
-            {
-                try {
-                    return std::make_unique<ReceiveWindowProxy>(proxy[key]);
-                } catch (const std::out_of_range&) {
-                    throw py::key_error("node '" + std::to_string(key) + "' does not have a receive window");
-                }
-            })
-        .def("__contains__",
-            &ReceiveWindowsProxy::contains)
-        .def("keys",
-            &ReceiveWindowsProxy::keys)
         ;
 }
