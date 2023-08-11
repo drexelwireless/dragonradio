@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Drexel University
+// Copyright 2018-2023 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <pybind11/embed.h>
@@ -42,6 +42,8 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportHeader(mpacket);
     exportPacket(mpacket);
 
+    exportSnapshot(mradio);
+
     exportLogger(mlogging);
 
     exportClock(mradio);
@@ -50,20 +52,19 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportUSRP(mradio);
     exportEstimators(mradio);
     exportElement(mradio);
+    exportPHYs(mradio);
     exportControllers(mradio);
-    exportNet(mradio);
     exportCIL(mradio);
+    exportNet(mradio);
     exportFlow(mradio);
     exportNode(mradio);
     exportNeighborhood(mradio);
     exportModem(mradio);
-    exportPHYs(mradio);
     exportChannels(mradio);
     exportChannelizers(mradio);
     exportSynthesizers(mradio);
     exportMACs(mradio);
     exportIQBuffer(mradio);
-    exportSnapshot(mradio);
 
     exportLiquid(mliquid);
     exportLiquidPHYs(mliquid);
