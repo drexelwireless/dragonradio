@@ -1,6 +1,10 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <pybind11/pybind11.h>
+#include <pybind11/chrono.h>
+#include <pybind11/stl.h>
+
 #include "Clock.hh"
 #include "python/PyModules.hh"
 #include "stats/Estimator.hh"
