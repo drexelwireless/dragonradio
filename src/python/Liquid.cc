@@ -244,7 +244,7 @@ void exportLiquid(py::module &m)
         .def("demodulate",
             demodulate,
             "Demodulate a signal",
-            py::arg("buffer"))
+            py::arg("buf"))
         ;
 
     // We need to use the py::multiple_inheritance{} annotation because these
