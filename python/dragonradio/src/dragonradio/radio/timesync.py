@@ -1,20 +1,23 @@
-# Copyright 2018-2021 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Support for time synchronization."""
 import logging
 import math
+from typing import Any, Iterable, Tuple
+from typing_extensions import TypeAlias
 
 import numpy as np
+import numpy.typing as npt
 
-try:
-    from dragonradiocpp.radio import clock
-except:
-    pass
+from dragonradio.radio import Config, Radio
+from dragonradio.radio import clock
+
+Timestamps: TypeAlias =  Iterable[Tuple[float, float]]
 
 logger = logging.getLogger('timesync')
 
-def synchronize(config, radio):
+def synchronize(config: 'Config', radio: 'Radio'):
     """Use timestamps to synchronize our clock with the time master (the gateway)"""
     # Perform linear regression on all timestamps
     me_timestamps = radio.me_timestamps
@@ -51,31 +54,31 @@ def synchronize(config, radio):
                                    "sigma={:g}; "
                                    "delta={:g}").format(sigma, delta))
 
-def timestampRegression(echoed, master, no_skew=False):
+def timestampRegression(echoed: Timestamps, master: Timestamps, no_skew: bool=False) -> Tuple[float, float, float]:
     """Perform a linear regression on timestamps to determine clock skew and delta"""
     # pylint: disable=too-many-locals
-    avec = np.array([a for (a, _) in echoed])
-    bvec = np.array([b for (_, b) in echoed])
+    avec: npt.NDArray[np.float64] = np.array([a for (a, _) in echoed])
+    bvec: npt.NDArray[np.float64] = np.array([b for (_, b) in echoed])
 
-    cvec = np.array([c for (c, _) in master])
-    dvec = np.array([d for (_, d) in master])
+    cvec: npt.NDArray[np.float64]  = np.array([c for (c, _) in master])
+    dvec: npt.NDArray[np.float64]  = np.array([d for (_, d) in master])
 
-    abar = np.mean(avec)
-    bbar = np.mean(bvec)
+    abar: float = np.mean(avec)
+    bbar: float = np.mean(bvec)
 
-    cbar = np.mean(cvec)
-    dbar = np.mean(dvec)
+    cbar: float = np.mean(cvec)
+    dbar: float = np.mean(dvec)
 
     if no_skew:
         sigma = 1.0
     else:
-        covab = np.sum((avec - abar)*(bvec - bbar))
-        vara = np.sum(np.square(avec - abar))
+        covab: float = np.sum((avec - abar)*(bvec - bbar))
+        vara: float = np.sum(np.square(avec - abar))
 
-        covcd = np.sum((cvec - cbar)*(dvec - dbar))
-        vard = np.sum(np.square(dvec - dbar))
+        covcd: float = np.sum((cvec - cbar)*(dvec - dbar))
+        vard: float = np.sum(np.square(dvec - dbar))
 
-        sigma = (covab + covcd)/(vara + vard)
+        sigma: float = (covab + covcd)/(vara + vard)
 
     delta_plus_tau = bbar - sigma*abar
     delta_minus_tau = cbar - sigma*dbar

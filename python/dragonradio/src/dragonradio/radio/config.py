@@ -1,10 +1,9 @@
-# Copyright 2018-2022 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Radio configuration"""
 import argparse
 import configparser
-from enum import Enum
 import json
 import logging
 import os
@@ -12,21 +11,22 @@ from pathlib import Path
 from pprint import pformat
 import platform
 import re
-from typing import Any, List, Mapping, Optional, Type
+from typing import Any, Dict, List, Mapping, Optional, Type
 import yaml
 
-import libconf
+import libconf # type: ignore
 
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 
 from dragonradiocpp.radio import MAC, PHY
 from dragonradiocpp.radio import FDMA, SlottedALOHA, TDMA
-from dragonradiocpp.radio import FDChannelizer, TDChannelizer
-from dragonradiocpp.radio import FDSynthesizer, TDSynthesizer, MultichannelSynthesizer
+from dragonradiocpp.radio import Channelizer, FDChannelizer, TDChannelizer
+from dragonradiocpp.radio import Synthesizer, FDSynthesizer, TDSynthesizer, MultichannelSynthesizer
 from dragonradio.liquid import FlexFrame, NewFlexFrame, OFDM
 
 logger = logging.getLogger('config')
 
+MAC_NAMES: Dict[str, Type[MAC]]
 MAC_NAMES = { 'aloha': SlottedALOHA
             , 'tdma': TDMA
             , 'tdma-fdma': TDMA
@@ -39,6 +39,7 @@ def str2mac(name: str) -> Type[MAC]:
 
     raise ConfigException(f"{name:} is not a valid MAC")
 
+PHY_NAMES: Dict[str, Type[PHY]]
 PHY_NAMES = { 'ofdm': OFDM
             , 'flexframe': FlexFrame
             , 'newflexframe': NewFlexFrame
@@ -50,22 +51,24 @@ def str2phy(name: str) -> Type[PHY]:
 
     raise ConfigException(f"{name:} is not a valid PHY")
 
+CHANNELIZER_NAMES: Dict[str, Type[Channelizer]]
 CHANNELIZER_NAMES = { 'freqdomain': FDChannelizer
                     , 'timedomain': TDChannelizer
                     }
 
-def str2channelizer(name: str) -> Type[PHY]:
+def str2channelizer(name: str) -> Type[Channelizer]:
     if name in CHANNELIZER_NAMES:
         return CHANNELIZER_NAMES[name]
 
     raise ConfigException(f"{name:} is not a valid channelizer")
 
+SYNTHESIZER_NAMES: Dict[str, Type[Synthesizer]]
 SYNTHESIZER_NAMES = { 'freqdomain': FDSynthesizer
                     , 'timedomain': TDSynthesizer
                     , 'multichannel': MultichannelSynthesizer
                     }
 
-def str2synthesizer(name: str) -> Type[PHY]:
+def str2synthesizer(name: str) -> Type[Synthesizer]:
     if name in SYNTHESIZER_NAMES:
         return SYNTHESIZER_NAMES[name]
 
@@ -219,7 +222,7 @@ class Config:
     """Oversample factor on RX"""
     tx_oversample_factor: float = 1.0
     """Oversample factor on TX"""
-    channel_bandwidth: float = 1e6
+    channel_bandwidth: Optional[float] = 1e6
     """Default channel bandwidth for FDMA"""
 
     # TX/RX gain parameters
@@ -277,23 +280,23 @@ class Config:
     """Synthesizer to use"""
 
     # General liquid modulation options
-    check: CRCScheme = 'crc32'
+    check: str = 'crc32'
     """CRCScheme: default Liquid CRC scheme"""
-    fec0: FECScheme = 'rs8'
+    fec0: str = 'rs8'
     """default Liquid inner FEC"""
-    fec1: FECScheme = 'none'
+    fec1: str = 'none'
     """default Liquid outer FEC"""
-    ms: ModulationScheme = 'qpsk'
+    ms: str = 'qpsk'
     """default Liquid modulation scheme"""
 
     # Header MCS
-    header_check: CRCScheme = 'crc32'
+    header_check: str = 'crc32'
     """Liquid CRC scheme for header"""
-    header_fec0: FECScheme = 'none'
+    header_fec0: str = 'none'
     """Liquid inner FEC for header"""
-    header_fec1: FECScheme = 'v29p78'
+    header_fec1: str = 'v29p78'
     """Liquid outer FEC for header"""
-    header_ms: ModulationScheme = 'bpsk'
+    header_ms: str = 'bpsk'
     """Liquid modulation scheme for header"""
 
     # Soft decoding options
@@ -403,7 +406,7 @@ class Config:
     """minimum MCS index"""
     amc_mcsidx_max: Optional[int] = None
     """maximum MCS index"""
-    amc_mcsidx_init: Optional[int] = 0
+    amc_mcsidx_init: int = 0
     """initial MCS index"""
     amc_mcsidx_up_per_threshold: float = 0.04
     """Packet error rate threshold for increasing MCS index"""
@@ -605,15 +608,15 @@ class Config:
         return str2phy(self.phy)
 
     @property
-    def channelizer_class(self) -> Type[MAC]:
+    def channelizer_class(self) -> Type[Channelizer]:
         return str2channelizer(self.channelizer)
 
     @property
-    def synthesizer_class(self) -> Type[MAC]:
+    def synthesizer_class(self) -> Type[Synthesizer]:
         return str2synthesizer(self.synthesizer)
 
     @property
-    def logdir(self):
+    def logdir(self) -> Optional[str]:
         """Log directory"""
         if self.logdir_:
             return self.logdir_
@@ -629,7 +632,7 @@ class Config:
         return self.logdir_
 
     @property
-    def log_level(self):
+    def log_level(self) -> Any:
         """Log level"""
         return logging.getLevelName(self.loglevel)
 
@@ -708,7 +711,7 @@ class Config:
     def parser(self):
         """Create an argument parser and populate it with arguments."""
         parser = argparse.ArgumentParser(description='Run dragonradio.',
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self.addArguments(parser)
         return parser
 

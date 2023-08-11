@@ -20,7 +20,8 @@ dependencies = [
     "python-daemon",
     "pyyaml",
     "pyzmq",
-    "scipy"
+    "scipy",
+    "typing_extensions"
 ]
 
 [project.urls]

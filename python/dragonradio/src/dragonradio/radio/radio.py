@@ -1,8 +1,9 @@
-# Copyright 2018-2022 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Radio class for managing the radio."""
 import asyncio
+from asyncio import AbstractEventLoop
 from fractions import Fraction
 from functools import cached_property
 import importlib_resources
@@ -17,27 +18,43 @@ import signal
 import subprocess
 import sys
 import time
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
+from typing_extensions import TypeAlias
 
 from ipykernel.kernelapp import IPKernelApp
 import numpy as np
 
-try:
-  from dragonradiocpp.radio import *
-  from dragonradiocpp.logging import Logger, EventCategory, setLogLevel, setPrintLogLevel
-except:
-  pass
+from dragonradiocpp.radio import Channel, PHYChannel, PHYChannels
+from dragonradiocpp.radio import PHY
+from dragonradiocpp.radio import FDMA, MAC, SlottedALOHA, SlottedMAC, TDMA
+from dragonradiocpp.radio import Channelizer, FDChannelizer
+from dragonradiocpp.radio import Synthesizer, FDSynthesizer, MultichannelSynthesizer
+from dragonradiocpp.radio import Controller, ControllerNetLink, DummyController, SmartController
+from dragonradiocpp.radio import Node, Neighborhood, NeighborhoodListener
+from dragonradiocpp.radio import Schedule
+from dragonradiocpp.radio import USRP
+from dragonradiocpp.radio import TunTap
+from dragonradiocpp.radio import SnapshotCollector
+from dragonradiocpp.radio import MandateQueue, Queue, REDQueue, SimpleQueue, TailDropQueue
+from dragonradiocpp.radio import FlowPerformance, PacketCompressor, NetFilter, NetFirewall
+from dragonradiocpp.radio import AutoGain
+from dragonradiocpp.radio import clock, work_queue
+
+from dragonradiocpp.logging import Logger, EventCategory, setLogLevel, setPrintLogLevel
 
 import dragonradio.channels
-from dragonradio.liquid import MCS # pylint: disable=no-name-in-module
+import dragonradio.liquid
+from dragonradio.liquid import MCS
 import dragonradio.net
-from dragonradio.radio.config import Config, ConfigException, str2mac
 import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
 import dragonradio.signal
 import dragonradio.tasks
 
+from .config import Config, ConfigException, str2mac
 from .version import version as __version__
+
+NetQueue: TypeAlias = Union[ControllerNetLink, Queue]
 
 logger = logging.getLogger('radio')
 
@@ -59,7 +76,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     _tx_channel_idx: int = 0
     """TX channel index"""
 
-    phy: Optional[PHY] = None
+    usrp: USRP
+    """The radio's USRP"""
+
+    phy: PHY
     """The radio's PHY"""
 
     mac: Optional[MAC] = None
@@ -68,25 +88,43 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     mac_schedule: Schedule
     """Our MAC schedule"""
 
-    channels: List[Channel]
+    channels: Sequence[PHYChannel]
     """Radio channels"""
 
-    channelizer: Optional[Channelizer] = None
+    channelizer: Channelizer
     """The radio's channelizer"""
 
-    synthesizer: Optional[Synthesizer] = None
+    synthesizer: Synthesizer
     """The radio's synthesizer"""
 
     nhood: Optional[Neighborhood] = None
     """One-hop neighborhood"""
 
-    timesync : Optional[Tuple[float, float, float]] = None
+    timesync: Optional[Tuple[float, float, float]]=None
     """Time synchronization parameters"""
+
+    netq: NetQueue
+    """Network queue"""
+
+    tuntap: TunTap
+    """tun/tap component"""
+
+    flowperf: FlowPerformance
+    """Flow performance"""
+
+    packet_compressor: PacketCompressor
+    """Packet compressor"""
+
+    netfilter: NetFilter
+    """Network filter"""
+
+    netfirewall: NetFirewall
+    """Network firewall"""
 
     kernel: Optional[IPKernelApp] = None
     """IPython kernel"""
 
-    def __init__(self, config: Config, mac: str, loop: asyncio.AbstractEventLoop=None):
+    def __init__(self, config: Config, mac: str, loop: Optional[AbstractEventLoop]=None):
         if loop is None:
             loop = asyncio.get_event_loop()
 
@@ -169,10 +207,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         print("Planning FFTs: ", end='', flush=True, file=sys.stderr)
         t1 = time.time()
 
-        N = dragonradio.radio.dragonradio.signal.FDResamplerCCC.N
+        N = dragonradio.signal.FDResamplerCCC.N
         for n in [N]:
             print(f"{n:}...", end='', flush=True, file=sys.stderr)
-            dragonradio.radio.dragonradio.signal.planFFTs(n)
+            dragonradio.signal.planFFTs(n)
 
         t2 = time.time()
         print(f"done ({t2-t1:.1f} sec)", flush=True, file=sys.stderr)
@@ -183,7 +221,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         if config.fftw_wisdom_path is not None and config.fftw_wisdom_path.exists():
             print("Importing wisdom", flush=True, file=sys.stderr)
-            dragonradio.radio.dragonradio.signal.importWisdom(str(config.fftw_wisdom_path))
+            dragonradio.signal.importWisdom(str(config.fftw_wisdom_path))
 
     def exportFFTWWisdom(self):
         """Export FFTW wisdom"""
@@ -192,7 +230,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if config.fftw_wisdom_path is not None:
             print("Exporting wisdom", flush=True, file=sys.stderr)
             try:
-                dragonradio.radio.dragonradio.signal.exportWisdom(str(config.fftw_wisdom_path))
+                dragonradio.signal.exportWisdom(str(config.fftw_wisdom_path))
             except:
                 logging.exception("Could not export wisdom")
 
@@ -238,6 +276,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         while True:
             p = self.vivado('program', str(firmware_path))
+            assert p.stdout is not None
             stdout = p.stdout.read()
 
             if p.returncode == 0:
@@ -263,6 +302,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             self.startSnapshots()
 
         # Add radio nodes to the network if number of nodes was specified
+        assert self.nhood is not None
         if self.config.num_nodes is not None and not self.config.manet:
             for i in range(0, self.config.num_nodes):
                 self.nhood.addNeighbor(i+1)
@@ -289,6 +329,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """
         if self.config.kernel:
             self.kernel = IPKernelApp.instance()
+
+            assert self.kernel is not None
             self.kernel.initialize(["python"])
             self.kernel.shell.user_ns.update(user_ns)
             self.kernel.start()
@@ -339,13 +381,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         await super().stopTasks()
 
-    def neighborAdded(self, node : Node):
+    def neighborAdded(self, node: Node):
         dragonradio.net.addStaticARPEntry(self.tuntap.iface,
                                           self.config.tap_ipaddr % node.id,
                                           self.config.tap_macaddr % node.id)
         logging.debug("Neighbor %d added", node.id)
 
-    def neighborRemoved(self, node : Node):
+    def neighborRemoved(self, node: Node):
         dragonradio.net.deleteARPEntry(self.tuntap.iface,
                                        self.config.tap_ipaddr % node.id)
         logging.debug("Neighbor %d removed", node.id)
@@ -389,7 +431,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                            use_pps=config.clock_use_pps)
 
         # Set USRP as clock's time keeper
-        dragonradio.radio.clock.time_keeper = self.usrp
+        clock.time_keeper = self.usrp
 
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
         self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
@@ -532,9 +574,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # Allow Controller access to the network queue
         self.controller.net_link = self.netq
 
-    def mkPHY(self, header_mcs, mcs_table):
+    def mkPHY(self, header_mcs: MCS, mcs_table):
         """Construct a PHY from configuration parameters"""
-        config = self.config
+        config: Config = self.config
+        phy: PHY
 
         if issubclass(config.phy_class, dragonradio.liquid.OFDM):
             phy = config.phy_class(header_mcs,
@@ -545,18 +588,25 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                    config.cp_len,
                                    config.taper_len,
                                    config.subcarriers)
-        else:
+        elif issubclass(config.phy_class, dragonradio.liquid.FlexFrame):
             phy = config.phy_class(header_mcs,
                                    mcs_table,
                                    config.soft_header,
                                    config.soft_payload)
+        elif issubclass(config.phy_class, dragonradio.liquid.NewFlexFrame):
+            phy = config.phy_class(header_mcs,
+                                   mcs_table,
+                                   config.soft_header,
+                                   config.soft_payload)
+        else:
+            raise ValueError(f'Unknown PHY: {config.phy:}')
 
         return phy
 
     def mkNeighborhood(self) -> Neighborhood:
         return Neighborhood(self.node_id)
 
-    def mkChannelizer(self):
+    def mkChannelizer(self) -> Channelizer:
         """Construct a Channelizer according to configuration parameters"""
         config = self.config
 
@@ -580,6 +630,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         if config.amc and not config.arq:
             raise ConfigException('AMC requires ARQ')
+
+        assert self.nhood is not None
+
+        controller: Controller
 
         if config.arq:
             controller = SmartController(self.nhood,
@@ -638,9 +692,11 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         return controller
 
-    def mkNetQueue(self) -> Queue:
+    def mkNetQueue(self) -> NetQueue:
         """Construct a network queue according to configuration parameters"""
         config = self.config
+
+        netq: NetQueue
 
         if config.queue == 'fifo':
             netq = SimpleQueue(SimpleQueue.FIFO)
@@ -746,6 +802,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             # Set channels after setting TX rate
             self.setSynthesizerChannels(channels)
         else:
+            assert self.tx_channel_idx is not None
             self.setTXChannelIdx(self.tx_channel_idx)
 
     def setChannelizerChannels(self, channels: Sequence[PHYChannel]):
@@ -819,7 +876,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         clock_rate = self.usrp.clock_rate
 
         # Compute decimation rate
-        dec_rate = math.floor(clock_rate/min_rate)
+        dec_rate: float = math.floor(clock_rate/min_rate)
 
         logger.debug('Desired rate: %g', min_rate)
         logger.debug('Desired decimation: %g', dec_rate)
@@ -1012,6 +1069,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                 self.configureDefaultChannels()
             else:
                 if not self.config.tx_upsample:
+                    assert self.tx_channel_idx is not None
                     self.setTXChannelIdx(self.tx_channel_idx)
         except:
             self.setBandwidthAndFrequency(old_bandwidth, old_frequency)
@@ -1055,8 +1113,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         """Generate synthesizer filter taps for given channel"""
         config = self.config
 
-        chan = PHYChannel(chan.channel, chan.phy, chan.evm_thresh)
-        rate = Fraction(self.usrp.tx_rate/chan.channel.bw).limit_denominator(config.max_denom)
+        rate: Fraction = Fraction(self.usrp.tx_rate/chan.channel.bw).limit_denominator(config.max_denom)
 
         # Determine number of filter taps
         if config.synthesizer == 'timedomain':
@@ -1161,6 +1218,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                  self.synthesizer,
                                  config.slot_size)
 
+        assert self.mac is not None
         self.mac.accurate_tx_timestamps = config.mac_accurate_tx_timestamps
 
         if isinstance(self.mac, SlottedMAC):
@@ -1198,6 +1256,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if not isinstance(self.mac, SlottedALOHA):
             logger.debug("Cannot change ALOHA channel for non-ALOHA MAC")
 
+        assert isinstance(self.mac, SlottedALOHA)
+
         if self.config.tx_upsample:
             self.mac.slotidx = channel_idx
         else:
@@ -1210,11 +1270,14 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         resampling on TX, it installs a schedule with one slot. The ALOHA slot
         is set to 0.
         """
+        assert isinstance(self.mac, SlottedALOHA)
+
         config = self.config
 
         self.mac.slotidx = 0
 
         # All nodes can transmit
+        assert self.nhood is not None
         for node_id in self.nhood.neighbors.keys():
             self.controller.setEmcon(node_id, False)
 
@@ -1227,7 +1290,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         else:
             self.setTXChannelIdx(0)
 
-            self.mac_schedule = Schedule([[1]],
+            self.mac_schedule = Schedule([[True]],
                                          slot_size=config.slot_size,
                                          guard_size=config.guard_size,
                                          superslots=False)
@@ -1247,10 +1310,14 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                 to None. If no MAC is specified, the MAC from the radio
                 configuration is used.
         """
-        nchannels = len(self.channels)
+        nchannels: int = len(self.channels)
+        nodes: Sequence[int]
+        sched: dragonradio.schedule.Schedule
+
         if self.config.manet and self.config.num_nodes is not None:
             nodes = range(1, self.config.num_nodes + 1)
         else:
+            assert self.nhood is not None
             nodes = sorted(list(self.nhood.neighbors))
 
         if nchannels == 1:
@@ -1300,6 +1367,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if 0 in nodes_with_slot:
             nodes_with_slot.remove(0)
 
+        assert self.nhood is not None
         for node_id in self.nhood.neighbors.keys():
             self.controller.setEmcon(node_id, node_id not in nodes_with_slot)
 
@@ -1326,11 +1394,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                          guard_size=config.guard_size,
                                          superslots=config.superslots)
 
+        assert self.mac is not None
         self.mac.schedule = self.mac_schedule
         self.synthesizer.schedule = self.mac_schedule
 
     def synchronizeClock(self):
         """Use timestamps to synchronize our clock with the time master (the gateway)"""
+        assert self.nhood is not None
         if self.nhood.time_master is None:
             return
 
@@ -1339,11 +1409,13 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         timesync.synchronize(self.config, self)
 
-    def getRadioLogPath(self):
+    def getRadioLogPath(self) -> str:
         """
         Determine where the HDF5 log file created by the low-level radio will
         live.
         """
+        assert self.config.logdir is not None
+
         path = os.path.join(self.config.logdir, 'radio.h5')
         if not os.path.exists(path):
             return path
@@ -1367,6 +1439,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         config = self.config
         collector = self.snapshot_collector
+
+        assert collector is not None
+        assert config.snapshot_frequency is not None
 
         try:
             if config.snapshot_duration != config.snapshot_frequency:
@@ -1443,7 +1518,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             return [(mcs, self.mkAutoGain())]
 
     @property
-    def evm_thresholds(self):
+    def evm_thresholds(self) -> List[Optional[float]]:
         """EVM thresholds for each MCS"""
         # pylint: disable=no-else-return
 
@@ -1463,8 +1538,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             return [None for _ in self.mcs_table]
 
     @property
-    def me_timestamps(self):
+    def me_timestamps(self) -> Iterable[Tuple[float, float]]:
         """Timestamps for this node"""
+        assert self.nhood is not None
+
         if isinstance(self.controller, SmartController):
             me = self.nhood.me
             if me.id in self.controller.timestamps:
@@ -1475,8 +1552,10 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             return []
 
     @property
-    def master_timestamps(self):
+    def master_timestamps(self) -> Iterable[Tuple[float, float]]:
         """Timestamps for time master"""
+        assert self.nhood is not None
+
         if isinstance(self.controller, SmartController) and self.nhood.time_master is not None:
             master = self.nhood.neighbors[self.nhood.time_master]
             if master.id in self.controller.timestamps:

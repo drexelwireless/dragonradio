@@ -7,23 +7,36 @@ from asyncio import AbstractEventLoop, Task
 import io
 import logging
 from logging import Logger
-from typing import List, Optional
+from typing import Any, Coroutine, List, Optional, TypeVar
+
+T = TypeVar('T')
 
 class TaskManager:
     """Manage asyncio tasks"""
-    loop: Optional[AbstractEventLoop]=None
+    _loop: Optional[AbstractEventLoop] = None
     """asyncio event loop"""
 
     tasks: List[Task]
     """A list of asyncio tasks"""
 
     def __init__(self, loop: Optional[AbstractEventLoop]=None):
-        self.loop = loop
+        self._loop = loop
         self.tasks = []
 
-    def createTask(self, task: Task, name: Optional[str]=None):
+    @property
+    def loop(self) -> AbstractEventLoop:
+        if self._loop is not None:
+            return self._loop
+
+        return asyncio.get_event_loop()
+
+    @loop.setter
+    def loop(self, loop: AbstractEventLoop):
+        self._loop = loop
+
+    def createTask(self, task: Coroutine[Any, Any, Any], name: Optional[str]=None):
         """Create and add a task to event loop"""
-        async def task_wrapper(task: Task) -> Task:
+        async def task_wrapper(task: Coroutine[Any, Any, T]) -> T:
             try:
                 return await task
             except:
@@ -31,10 +44,8 @@ class TaskManager:
                 raise
 
         def f():
-            assert self.loop is not None
             self.addTask(self.loop.create_task(task_wrapper(task), name=name))
 
-        assert self.loop is not None
         self.loop.call_soon_threadsafe(f)
 
     def addTask(self, task: Task):
@@ -84,8 +95,9 @@ async def stopEventLoop(loop: AbstractEventLoop, logger: Optional[Logger]=None):
         # Cancel unfinished tasks
         logger.info('Cancelling unfinished tasks')
 
-        for _task in unfinished_tasks:
-            pass #task.cancel()
+        for task in unfinished_tasks:
+            task.cancel()
+            #pass
 
     # Wait for unfinished tasks
     await asyncio.gather(*tasks, return_exceptions=True)

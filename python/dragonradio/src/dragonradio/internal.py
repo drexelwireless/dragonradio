@@ -91,7 +91,7 @@ def mkFlowStats(min_mp, max_mp, flowperf):
 
     return stats
 
-def mkSpectrumStats(start, end, voxels):
+def mkSpectrumStats(start: float, end: float, voxels) -> SpectrumStats:
     """Convert dragonradio.FlowStats to internal SpectrumStats"""
     stats = internal.SpectrumStats()
     stats.start.set_timestamp(start)
