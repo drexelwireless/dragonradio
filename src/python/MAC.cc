@@ -58,6 +58,33 @@ void exportMACs(py::module &m)
             "int: Number of slots")
         ;
 
+    // Export class MAC::Load to Python
+    using Load = MAC::Load;
+
+    py::class_<Load, std::shared_ptr<Load>>(m, "Load")
+        .def_property_readonly("start",
+            [](Load &self) -> double
+            {
+                return self.start.time_since_epoch().count();
+            },
+            "float: Start of load measurement period (sec)")
+        .def_property_readonly("end",
+            [](Load &self) -> double
+            {
+                return self.end.time_since_epoch().count();
+            },
+            "float: End of load measurement period (sec)")
+        .def_property_readonly("period",
+            [](Load &self) -> double
+            {
+                return (self.end - self.start).count();
+            },
+            "float: Measurement period (sec)")
+        .def_readwrite("nsamples",
+            &SlottedMAC::Load::nsamples,
+            "int: Load per channel measured in number of samples")
+        ;
+
     // Export class MAC to Python
     py::class_<MAC, std::shared_ptr<MAC>>(m, "MAC")
         .def("stop",
@@ -87,33 +114,6 @@ void exportMACs(py::module &m)
         .def("popLoad",
             &MAC::popLoad,
             "Get current load and reset load counters")
-        ;
-
-    // Export class MAC::Load to Python
-    using Load = MAC::Load;
-
-    py::class_<Load, std::shared_ptr<Load>>(m, "Load")
-        .def_property_readonly("start",
-            [](Load &self) -> double
-            {
-                return self.start.time_since_epoch().count();
-            },
-            "float: Start of load measurement period (sec)")
-        .def_property_readonly("end",
-            [](Load &self) -> double
-            {
-                return self.end.time_since_epoch().count();
-            },
-            "float: End of load measurement period (sec)")
-        .def_property_readonly("period",
-            [](Load &self) -> double
-            {
-                return (self.end - self.start).count();
-            },
-            "float: Measurement period (sec)")
-        .def_readwrite("nsamples",
-            &SlottedMAC::Load::nsamples,
-            "int: Load per channel measured in number of samples")
         ;
 
     // Export class FDMA to Python
