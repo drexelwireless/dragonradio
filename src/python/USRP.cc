@@ -12,7 +12,7 @@ void exportUSRP(py::module &m)
 {
     py::class_<USRP, Radio, MonoClock::TimeKeeper, std::shared_ptr<USRP>>(m, "USRP")
         .def(py::init<const std::string&>(),
-            "USRP device address"_a)
+            "dev_addr"_a)
         .def_property_readonly("mboard",
             &USRP::getMboard)
         .def_property("auto_dc_offset",
@@ -62,24 +62,24 @@ void exportUSRP(py::module &m)
             })
         .def("getTXAntennas",
             &USRP::getTXAntennas,
-            "channel index"_a=0)
+            "chan"_a=0)
         .def("getTXAntenna",
             &USRP::getTXAntenna,
-            "channel index"_a=0)
+            "chan"_a=0)
         .def("setTXAntenna",
             &USRP::setTXAntenna,
             "antenna"_a,
-            "channel index"_a=0)
+            "chan"_a=0)
         .def("getRXAntennas",
             &USRP::getRXAntennas,
-            "channel index"_a=0)
+            "chan"_a=0)
         .def("getRXAntenna",
             &USRP::getRXAntenna,
-            "channel index"_a=0)
+            "chan"_a=0)
         .def("setRXAntenna",
             &USRP::setRXAntenna,
             "antenna"_a,
-            "channel index"_a=0)
+            "chan"_a=0)
         // Subdevices
         .def_property("tx_subdev_spec",
             [](std::shared_ptr<USRP> self)
@@ -101,18 +101,18 @@ void exportUSRP(py::module &m)
             })
         .def("getTXSubdevSpec",
             &USRP::getTXSubdevSpec,
-            "channel index"_a=0)
+            "mboard"_a=0)
         .def("setTXSubdevSpec",
             &USRP::setTXSubdevSpec,
-            "frontend specification"_a,
-            "channel index"_a=0)
+            "spec"_a,
+            "mboard"_a=0)
         .def("getRXSubdevSpec",
             &USRP::getRXSubdevSpec,
-            "channel index"_a=0)
+            "mboard"_a=0)
         .def("setRXSubdevSpec",
             &USRP::setRXSubdevSpec,
-            "frontend specification"_a,
-            "channel index"_a=0)
+            "spec"_a,
+            "mboard"_a=0)
         // Master clock rate
         .def_property_readonly("clock_rate_ranges",
             [](std::shared_ptr<USRP> self)
