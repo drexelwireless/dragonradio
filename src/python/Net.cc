@@ -69,14 +69,16 @@ void exportNet(py::module &m)
         ;
 
     // Export class SimpleNetQueue to Python
-    auto simple_queue_class = py::class_<SimpleNetQueue, NetQueue, ControllerNetLink, std::shared_ptr<SimpleNetQueue>>(m, "SimpleQueue")
-        .def(py::init<SimpleNetQueue::QueueType>())
-        ;
+    auto simple_queue_class = py::class_<SimpleNetQueue, NetQueue, ControllerNetLink, std::shared_ptr<SimpleNetQueue>>(m, "SimpleQueue");
 
     py::enum_<SimpleNetQueue::QueueType>(simple_queue_class, "QueueType")
         .value("FIFO", SimpleNetQueue::FIFO)
         .value("LIFO", SimpleNetQueue::LIFO)
         .export_values();
+
+    simple_queue_class
+        .def(py::init<SimpleNetQueue::QueueType>())
+        ;
 
     // Export class SizedNetQueue to Python
     py::class_<SizedNetQueue, NetQueue, ControllerNetLink, std::shared_ptr<SizedNetQueue>>(m, "SizedQueue")
@@ -125,7 +127,14 @@ void exportNet(py::module &m)
         ;
 
     // Export class MandateNetQueue to Python
-    auto mandate_queue_class = py::class_<MandateNetQueue, NetQueue, ControllerNetLink, std::shared_ptr<MandateNetQueue>>(m, "MandateQueue")
+    auto mandate_queue_class = py::class_<MandateNetQueue, NetQueue, ControllerNetLink, std::shared_ptr<MandateNetQueue>>(m, "MandateQueue");
+
+    py::enum_<MandateNetQueue::QueueType>(mandate_queue_class, "QueueType")
+        .value("FIFO", MandateNetQueue::FIFO)
+        .value("LIFO", MandateNetQueue::LIFO)
+        .export_values();
+
+    mandate_queue_class
         .def(py::init<>())
         .def_property("bonus_phase",
             &MandateNetQueue::getBonusPhase,
@@ -155,11 +164,6 @@ void exportNet(py::module &m)
             &MandateNetQueue::getQueuePriorities,
             "Queue priorities")
         ;
-
-    py::enum_<MandateNetQueue::QueueType>(mandate_queue_class, "QueueType")
-        .value("FIFO", MandateNetQueue::FIFO)
-        .value("LIFO", MandateNetQueue::LIFO)
-        .export_values();
 
     // Export class TunTap to Python
     py::class_<TunTap, std::shared_ptr<TunTap>>(m, "TunTap")
