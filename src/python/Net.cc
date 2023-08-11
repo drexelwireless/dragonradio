@@ -24,41 +24,6 @@ PYBIND11_MAKE_OPAQUE(MandateMap)
 
 void exportNet(py::module &m)
 {
-    // Export port wrapper classes to Python
-    py::class_<NetInPush, std::unique_ptr<NetInPush>>(m, "NetInPush")
-        .def("__lshift__", [](NetInPush *in, NetOutPush *out) { out->port->connect(in->element, in->port); } )
-        .def("disconnect", [](NetInPush *in) { if (in->port->isConnected()) { reinterpret_cast<NetOut<Push>*>(in->port->partner())->disconnect(); } })
-        ;
-    py::class_<NetInPull, std::unique_ptr<NetInPull>>(m, "NetInPull")
-        .def("__lshift__", [](NetInPull *in, NetOutPull *out) { in->port->connect(out->element, out->port); } )
-        .def("disconnect", [](NetInPull *in) { in->port->disconnect(); } )
-        ;
-    py::class_<NetOutPull, std::unique_ptr<NetOutPull>>(m, "NetOutPull")
-        .def("__rshift__", [](NetOutPull *out, NetInPull *in) { in->port->connect(out->element, out->port); } )
-        .def("disconnect", [](NetOutPull *out) { if (out->port->isConnected()) { reinterpret_cast<NetIn<Pull>*>(out->port->partner())->disconnect(); } })
-        ;
-    py::class_<NetOutPush, std::unique_ptr<NetOutPush>>(m, "NetOutPush")
-        .def("__rshift__", [](NetOutPush *out, NetInPush *in) { out->port->connect(in->element, in->port); } )
-        .def("disconnect", [](NetOutPush *out) { out->port->disconnect(); } )
-        ;
-
-    py::class_<RadioInPush, std::unique_ptr<RadioInPush>>(m, "RadioInPush")
-        .def("__lshift__", [](RadioInPush *in, RadioOutPush *out) { out->port->connect(in->element, in->port); } )
-        .def("disconnect", [](RadioInPush *in) { if (in->port->isConnected()) { reinterpret_cast<RadioOut<Push>*>(in->port->partner())->disconnect(); } })
-        ;
-    py::class_<RadioInPull, std::unique_ptr<RadioInPull>>(m, "RadioInPull")
-        .def("__lshift__", [](RadioInPull *in, RadioOutPull *out) { in->port->connect(out->element, out->port); } )
-        .def("disconnect", [](RadioInPull *in) { in->port->disconnect(); } )
-        ;
-    py::class_<RadioOutPull, std::unique_ptr<RadioOutPull>>(m, "RadioOutPull")
-        .def("__rshift__", [](RadioOutPull *out, RadioInPull *in) { in->port->connect(out->element, out->port); } )
-        .def("disconnect", [](RadioOutPull *out) { if (out->port->isConnected()) { reinterpret_cast<RadioIn<Pull>*>(out->port->partner())->disconnect(); } })
-        ;
-    py::class_<RadioOutPush, std::unique_ptr<RadioOutPush>>(m, "RadioOutPush")
-        .def("__rshift__", [](RadioOutPush *out, RadioInPush *in) { out->port->connect(in->element, in->port); } )
-        .def("disconnect", [](RadioOutPush *out) { out->port->disconnect(); } )
-        ;
-
     // Export class NetQueue to Python
     py::class_<NetQueue, std::shared_ptr<NetQueue>>(m, "Queue")
         .def_property_readonly("push", [](std::shared_ptr<NetQueue> element) { return exposePort(element, &element->in); } )

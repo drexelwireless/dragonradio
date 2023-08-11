@@ -50,6 +50,7 @@ add_library(DragonRadio
   python/Channels.cc
   python/Clock.cc
   python/Controller.cc
+  python/Element.cc
   python/Estimator.cc
   python/FFTW.cc
   python/Filter.cc
