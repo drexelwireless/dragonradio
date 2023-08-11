@@ -2,19 +2,21 @@
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """MAC schedule construction"""
-import numpy as np
 from typing import Dict, Sequence, Tuple
+from typing_extensions import TypeAlias
 
-NodeId = int
+import numpy as np
+
+NodeId: TypeAlias = int
 """A node ID"""
 
-ChannelIdx = int
+ChannelIdx: TypeAlias = int
 """A channel index"""
 
-NodeAssignments = Dict[NodeId, ChannelIdx]
+NodeAssignments: TypeAlias = Dict[NodeId, ChannelIdx]
 """A map from node to assignment channel"""
 
-Schedule = np.ndarray
+Schedule: TypeAlias = np.ndarray
 """A MAC schedule.
 
 A schedule is an n x m array, where n is the number of channels and m is the

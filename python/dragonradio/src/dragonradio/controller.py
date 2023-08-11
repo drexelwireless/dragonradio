@@ -1,8 +1,7 @@
-# Copyright 2018-2022 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Controller for intelligent radio functionality"""
-# pylint: disable=no-member
 
 import asyncio
 import ipaddress
@@ -13,77 +12,93 @@ import os
 from pathlib import Path
 import random
 import time
+from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing_extensions import TypeAlias
 
+import netifaces # type: ignore
 import numpy as np
 import pandas as pd
-
-import netifaces
-
-import sc2.cil_pb2 as cil
 
 from dragonradio.collab import CILServer
 import dragonradio.collab
 from dragonradio.gpsd import GPSDClient
 import dragonradio.internal as internal
 from dragonradio.internal import InternalProtoClient, InternalProtoServer
-from dragonradio.internal import mkFlowStats, mkSpectrumStats
+from dragonradio.internal import FlowStats, mkFlowStats, mkSpectrumStats
 import dragonradio.net
 from dragonradio.protobuf import handle, handler, TCPProtoServer
 import dragonradio.radio
-from dragonradio.radio import ConfigException, PHYChannel
+from dragonradio.radio import PHYChannel
+from dragonradio.radio.radio import Config, ConfigException, Radio
 import dragonradio.remote as remote
 import dragonradio.schedule
 import dragonradio.tasks
 from dragonradio.util import save_dataframe
 
+import sc2.cil_pb2 as cil
+
+MP: TypeAlias = int
+
+NodeId: TypeAlias = int
+
+FlowUID: TypeAlias = int
+
+FlowLink: TypeAlias = Tuple[NodeId, NodeId]
+
+Load: TypeAlias = Dict[Tuple[float, float], float]
+
+VoxelUsage: TypeAlias = Tuple[float, float, 'Voxel']
+
 logger = logging.getLogger('controller')
 
-INTERNAL_BCAST_ADDR = '10.10.10.255'
+INTERNAL_BCAST_ADDR: str = '10.10.10.255'
 
-def internalNodeIP(node_id):
+def internalNodeIP(node_id: int) -> str:
     """Return IP address of radio node on internal network"""
     return '10.10.10.{:d}'.format(node_id)
 
-def darpaNodeNet(node_id):
+def darpaNodeNet(node_id: int) -> str:
     """Return IP subnet of radio node on DARPA's network."""
     return '192.168.{:d}.0'.format(node_id+100)
 
-def darpaNodeNetmask():
+def darpaNodeNetmask() -> str:
     """Return IP subnet mask of radio node on DARPA's network."""
     return '255.255.255.0'
 
-def darpaNodeIP(node_id, octet=0):
+def darpaNodeIP(node_id: int, octet: int=0) -> str:
     """Return IP address of radio node on DARPA's network."""
     return '192.168.{:d}.{:d}'.format(node_id+100, octet)
 
-def darpaNodeMAC(node_id, octet=0):
+def darpaNodeMAC(node_id: int, octet: int=0) -> str:
     """Return MAC address of radio node on DARPA's network."""
-    return  '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.\
+    return '02:10:{:02x}:{:02x}:{:02x}:{:02x}'.\
         format(192, 168, node_id+100, octet)
 
 class Voxel:
     """A voxel"""
+    f_start: float = 0
+    """Frequency start"""
+
+    f_end: float = 0
+    """Frequency end"""
+
+    tx: int
+    """"Transmitting node"""
+
+    rx: List[int]
+    """Receiving nodes"""
+
+    duty_cycle: float = 1.0
+    """Duty cycle (fraction)"""
+
     def __init__(self):
-        self.f_start = 0
-        """Frequency start"""
-
-        self.f_end = 0
-        """Frequency end"""
-
-        self.tx = None
-        """"Transmitting node"""
-
         self.rx = []
-        """Receiving nodes"""
-
-        self.duty_cycle = 1.0
-        """Duty cycle (fraction)"""
 
     def __str__(self):
         return 'Voxel(f_start={}, f_end={}, tx={}, rx={}, duty_cycle={})'.\
             format(self.f_start, self.f_end, self.tx, self.rx, self.duty_cycle)
 
-    def toCILVoxel(self, start, end, rx_gain, tx_gain, measured):
+    def toCILVoxel(self, start: float, end: float, rx_gain: float, tx_gain: float, measured: bool) -> cil.SpectrumVoxelUsage:
         """Convert Voxel to a CIL voxel.
 
         Arguments:
@@ -116,13 +131,13 @@ class Voxel:
 
         return usage
 
-def channelToVoxel(tx: int, fs: float, phychan: PHYChannel):
-        vox = Voxel()
-        vox.f_start = fs + phychan.channel.fc - phychan.channel.bw/2
-        vox.f_end = fs + phychan.channel.fc + phychan.channel.bw/2
-        vox.tx = tx
+def channelToVoxel(tx: int, fs: float, phy_chan: PHYChannel) -> Voxel:
+    vox = Voxel()
+    vox.f_start = fs + phy_chan.channel.fc - phy_chan.channel.bw/2
+    vox.f_end = fs + phy_chan.channel.fc + phy_chan.channel.bw/2
+    vox.tx = tx
 
-        return vox
+    return vox
 
 @handler(remote.Request)
 @handler(internal.Message)
@@ -131,102 +146,121 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     This class implements all high-level control necessary for the Colosseum.
     """
-    def __init__(self, config):
+    config: Config
+    """Radio configuration"""
+
+    radio: Optional[Radio] = None
+    """Radio"""
+
+    dumpcap_tasks: List[asyncio.Task]
+    """dumpcap tasks"""
+
+    dumpcap_procs: List[asyncio.subprocess.Process]
+    """dumpcap procs we've started"""
+
+    _state: remote.State = remote.BOOTING
+    """Current radio state"""
+
+    started: bool = False
+    """Has the radio been started?"""
+
+    done: bool = False
+    """Is the radio done?"""
+
+    bootstrapped: bool = False
+    """Has the radio already been bootstrapped?"""
+
+    has_traffic_iface: bool = False
+    """Do we have a Colosseum traffic interface?"""
+
+    scorer: Optional[dragonradio.radio.Scorer] = None
+    """Match scorer"""
+
+    scorer_lock: asyncio.Lock
+    """Lock on scorer"""
+
+    flow_links: Dict[FlowUID, FlowLink]
+    """Link, i.e., source/destination pair, for each flow"""
+
+    stats_max_mp: Dict[NodeId, MP]
+    """Maximum MP for which stats have been received from each SRN"""
+
+    max_reported_mp: MP = 0
+    """Maximum MP for which flow statistics have been reported"""
+
+    reported_mandate_performance: List[Tuple[MP, int, float]]
+    """Reported mandate performance"""
+
+    historical_voxel_usage: List[Tuple[float, float, Voxel]]
+    """Historical voxel usage"""
+
+    current_voxel_usage: Dict
+    """Current voxel usage"""
+
+    voxel_lock: asyncio.Lock
+    """Lock on voxel usage"""
+
+    tdma_reschedule: asyncio.Event
+    """Event to trigger rescheduling"""
+
+    schedule: Optional[dragonradio.schedule.Schedule] = None
+    """Current TDMA schedule"""
+
+    schedule_seq: int = 0
+    """Current TDMA schedule sequence number."""
+
+    schedule_nodes: List[NodeId]
+    """Nodes in the TDMA schedule"""
+
+    mandates: dragonradio.radio.MandateMap
+    """Current mandated outcomes"""
+
+    gpsd_client: Optional[GPSDClient] = None
+    """gpsd client"""
+
+    remote_server: Optional[TCPProtoServer] = None
+    """Remote protocol server"""
+
+    remote_server_task: asyncio.Task
+    """Remote protocol server task"""
+
+    internal_server: Optional[InternalProtoServer] = None
+    """Internal protocol server"""
+
+    internal_server_task: asyncio.Task
+    """Internal protocol server task"""
+
+    internal_client: Optional[InternalProtoClient] = None
+    """Internal protocol client"""
+
+    node_internal_clients: Dict[NodeId, InternalProtoClient]
+    """Node internal protocol clients"""
+
+    # Provide default start time
+    scenario_start_time: float
+
+    def __init__(self, config: Config):
         CILServer.__init__(self)
         dragonradio.radio.NeighborhoodListener.__init__(self)
 
         self.config = config
-        """Our Config"""
-
-        self.radio = None
-        """Our Radio"""
 
         self.dumpcap_tasks = []
-        """dumpcap tasks"""
-
         self.dumpcap_procs = []
-        """dumpcap procs we've started"""
-
-        self._state = remote.BOOTING
-        """Current radio state"""
-
-        self.started = False
-        """Has the radio been started?"""
-
-        self.done = False
-        """Is the radio done?"""
-
-        self.bootstrapped = False
-        """Has the radio already been bootstrapped?"""
 
         self.has_traffic_iface = config.traffic_iface in netifaces.interfaces()
-        """Do we have a Colosseum traffic interface?"""
-
-        self.scorer = None
-        """Match scorer"""
-
-        self.scorer_lock = None
-        """Lock on scorer"""
 
         self.flow_links = {}
-        """Link, i.e., source/destination pair, for each flow"""
-
         self.stats_max_mp = {}
-        """Maximum MP for which stats have been received from each SRN"""
-
-        self.max_reported_mp = 0
-        """Maximum MP for which flow statistics have been reported"""
 
         self.reported_mandate_performance = []
-        """Reported mandate performance"""
-
         self.historical_voxel_usage = []
-        """Historical voxel usage"""
-
         self.current_voxel_usage = {}
-        """Current voxel usage"""
-
-        self.voxel_lock = None
-        """Lock on voxel usage"""
-
-        self.tdma_reschedule = None
-        """Event to trigger rescheduling"""
-
-        self.schedule = None
-        """Current TDMA schedule"""
-
-        self.schedule_seq = 0
-        """Current TDMA schedule sequence number."""
 
         self.schedule_nodes = []
-        """Nodes in the TDMA schedule"""
-
-        self.mandates = {}
-        """Current mandated outcomes"""
-
-        self.gpsd_client = None
-        """gpsd client"""
-
-        self.remote_server = None
-        """Remote protocol server"""
-
-        self.remote_server_task = None
-        """Remote protocol server task"""
-
-        self.internal_server = None
-        """Internal protocol server"""
-
-        self.internal_server_task = None
-        """Internal protocol server task"""
-
-        self.internal_client = None
-        """Internal protocol client"""
-
-        self.controller_tasks = []
-        """Controller tasks"""
+        self.mandates = dragonradio.radio.MandateMap()
 
         self.node_internal_clients = {}
-        """Node internal protocol clients"""
 
         # Provide default start time
         self.scenario_start_time = math.floor(time.time())
@@ -239,7 +273,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     def __del__(self):
         try:
             if self.radio is not None:
-                self.radio.nhood.removeListener(self)
+                if self.radio.nhood is not None:
+                    self.radio.nhood.removeListener(self)
         except:
             logger.exception("Could not remove controller as neighborhood listener")
 
@@ -248,13 +283,13 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         return self._state
 
     @state.setter
-    def state(self, new_state):
+    def state(self, new_state: remote.State):
         if new_state != self._state:
             old_state = self._state
             self._state = new_state
             self.stateChange(old_state, new_state)
 
-    def stateChange(self, old_state, new_state):
+    def stateChange(self, old_state: remote.State, new_state: remote.State):
         pass
 
     def timeToMP(self, t, closest=False):
@@ -280,12 +315,12 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
         # Set center frequency and bandwidth.
         if hasattr(self.config, 'center_frequency'):
-            self.config.frequency = self.config.center_frequency
+            self.config.frequency = getattr(self.config, 'center_frequency')
         else:
             logger.warning('Center frequency not specified; using %f', self.config.frequency)
 
         if hasattr(self.config, 'rf_bandwidth'):
-            self.config.bandwidth = self.config.rf_bandwidth
+            self.config.bandwidth = getattr(self.config, 'rf_bandwidth')
         else:
             logger.warning('Bandwidth not specified; using %f', self.config.bandwidth)
 
@@ -294,6 +329,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         self.radio = radio
 
         # Listen for neighborhood events
+        assert self.radio.nhood is not None
+
         self.radio.nhood.addListener(self)
 
         # Collect snapshots if requested
@@ -321,9 +358,9 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             self.this_node.is_gateway = True
 
         # Start the internal protocol server
-        self.internal_server = InternalProtoServer(self,
-                                                   loop=self.loop,
-                                                   listen_ip='0.0.0.0')
+        self.internal_server = InternalProtoServer(handler_obj=self,
+                                                   listen_ip='0.0.0.0',
+                                                   loop=self.loop)
         self.internal_server_task = self.internal_server.start()
 
         # If we are the gateway, start an internal protocol client connected to
@@ -374,6 +411,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def startRadio(self, timestamp=None):
         """Start the radio"""
+        assert self.radio is not None
+
         if timestamp is None:
             timestamp = time.time()
 
@@ -412,13 +451,15 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
         This stops the radio, but the remote API will continue to function.
         """
+        assert self.radio is not None
+
         if not self.done:
             try:
                 self.done = True
                 self.state = remote.STOPPING
 
                 # Stop the collaboration server
-                if self.collab_server:
+                if self.collab_server is not None:
                     try:
                         await self.stopCollab()
                     except: # pylint: disable=bare-except
@@ -435,12 +476,12 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     await asyncio.gather(self.internal_server_task, return_exceptions=True)
 
                 # Close internal protocol client
-                if self.internal_client:
+                if self.internal_client is not None:
                     logger.info('Stopping internal protocol client')
                     self.internal_client.close()
 
                 # Stop the gpsd client
-                if self.gpsd_client:
+                if self.gpsd_client is not None:
                     logger.info('Stopping gpsd client')
                     await self.gpsd_client.stop()
 
@@ -469,7 +510,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                         await self.removeNode(node)
 
                 # Close the logger
-                if self.radio.logger:
+                if self.radio.logger is not None:
                     self.radio.logger.close()
 
                 # Update radio state to FINISHED
@@ -488,6 +529,9 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         await self.stopRadio()
 
         # Stop listening for neighborhood events
+        assert self.radio is not None
+        assert self.radio.nhood is not None
+
         self.radio.nhood.removeListener(self)
 
         # Stop remote server
@@ -508,7 +552,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             async def f(controller):
                 p = await asyncio.create_subprocess_exec(
                     'dumpcap', '-i', iface, '-q', '-w', self.pcapFile(iface),
-                    stdin=None, stdout=None, stderr=None, loop=self.loop)
+                    stdin=None, stdout=None, stderr=None)
                 controller.dumpcap_procs.append(p)
 
             self.dumpcap_tasks.append(self.loop.create_task(f(self)))
@@ -545,8 +589,9 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 for iface in self.config.log_interfaces:
                     if iface in netifaces.interfaces():
                         try:
-                            p = await asyncio.create_subprocess_exec('xz', self.pcapFile(iface),
-                                stdin=None, stdout=None, stderr=None, loop=self.loop)
+                            p = await asyncio.create_subprocess_exec(
+                                'xz', self.pcapFile(iface),
+                                stdin=None, stdout=None, stderr=None)
                             xzprocs.append(p)
                         except: # pylint: disable=bare-except
                             logger.exception('Could not xz %s', self.pcapFile(iface))
@@ -561,6 +606,9 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     @property
     def this_node(self):
         """Return the current node"""
+        assert self.radio is not None
+        assert self.radio.nhood is not None
+
         return self.radio.nhood.me
 
     @property
@@ -569,8 +617,11 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         return self.this_node.is_gateway
 
     @property
-    def neighbors(self):
+    def neighbors(self) -> Dict[int, dragonradio.radio.Node]:
         """Return known nodes"""
+        assert self.radio is not None
+        assert self.radio.nhood is not None
+
         return self.radio.nhood.neighbors
 
     def neighborAdded(self, node : dragonradio.radio.Node):
@@ -674,12 +725,12 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 stdout, _stderr = await p.communicate()
                 logger.info('IP route for %s:\n%s', ip, stdout.decode('utf-8'))
 
-    def getDestinations(self, node_id):
+    def getDestinations(self, node_id: NodeId) -> Set[NodeId]:
         """Return a list of nodes given node transmits to"""
         destinations = set()
 
         for _, link in self.flow_links.items():
-            (src, dest) = link
+            src, dest = link
             # Don't include broadcasts
             if node_id == src and dest != 255:
                 destinations.add(dest)
@@ -688,6 +739,9 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def installMACSchedule(self, seq, sched):
         """Install a new MAC schedule"""
+        assert self.radio is not None
+        assert self.radio.nhood is not None
+
         async with self.radio.lock:
             radio = self.radio
 
@@ -696,7 +750,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     seq, self.schedule_seq)
                 return
 
-            if not np.array_equal(sched, self.schedule):
+            if self.schedule is None or not np.array_equal(sched, self.schedule):
                 if not self.bootstrapped:
                     logger.info('Switching to TDMA MAC')
                     self.bootstrapped = True
@@ -716,7 +770,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
             self.schedule_seq = seq
 
-    async def updateVoxelUsage(self, vox):
+    async def updateVoxelUsage(self, vox: Voxel):
         """Get voxel usage
 
         Arguments:
@@ -741,10 +795,12 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     vox.f_end -= config.spec_chan_trim_hi*bw
 
                     # Set receivers
-                    vox.rx = self.getDestinations(vox.tx)
+                    vox.rx = list(self.getDestinations(vox.tx))
 
     async def alohaToVoxels(self):
         """Determine voxel usage for ALOHA"""
+        assert self.radio is not None
+
         radio = self.radio
 
         voxels = []
@@ -764,6 +820,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def scheduleToVoxels(self, sched):
         """Determine voxel usage from schedule"""
+        assert self.radio is not None
+
         radio = self.radio
 
         (nchannels, _nslots) = sched.shape
@@ -796,6 +854,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         """
         if self.has_traffic_iface:
             logger.debug('Caching ARP table entries for traffic interface')
+            assert self.radio is not None
 
             node_id = self.radio.node_id
 
@@ -827,6 +886,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         timestamp = self.scenario_start_time + mp*config.measurement_period
 
         # Get updated scores
+        assert self.scorer is not None
+
         async with self.scorer_lock:
             self.scorer.updateScore(self.currentMP())
 
@@ -834,11 +895,11 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
         # Updated mandated outcomes using scoring data from measurement period
         # mp
-        mandates_achieved = 0
-        total_score_achieved = 0
-        mandates = []
+        mandates_achieved: int = 0
+        total_score_achieved: float = 0
+        mandates: List[dragonradio.radio.Mandate] = []
 
-        for (flow_uid, mandate) in self.mandates.items():
+        for flow_uid, mandate in self.mandates.items():
             mandates.append(mandate)
 
             # Get radio IDs involved in this flow
@@ -891,6 +952,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                         'score_reported.csv')
 
     def saveTimestamps(self):
+        assert self.radio is not None
+
         if self.config.logdir is None:
             return
 
@@ -913,12 +976,13 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     def logCSV(self, data, columns, filename):
         """Log data to CSV file"""
-        config = self.config
+        if self.config.logdir is None:
+            return
 
         try:
             df = pd.DataFrame(data, columns=columns)
             logger.info('Logging to %s', filename)
-            df.to_csv(os.path.join(config.logdir, filename), index=False)
+            df.to_csv(os.path.join(self.config.logdir, filename), index=False)
         except: # pylint: disable=bare-except
             logger.exception('Exception when writing %s', filename)
 
@@ -957,6 +1021,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def updateStatus(self):
         """Update status"""
+        assert self.radio is not None
+
         config = self.config
         radio = self.radio
         node_id = radio.node_id
@@ -996,6 +1062,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             A pair of lists of internal.FlowStats values representing flow
             statistics for sources and sinks, respectively, for this node.
         """
+        assert self.radio is not None
+
         config = self.config
         radio = self.radio
 
@@ -1024,6 +1092,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             A list of internal.SpectrumStats values representing spectrum usage
             statistics for this node.
         """
+        assert self.radio is not None
+
         config = self.config
         radio = self.radio
         mac = radio.mac
@@ -1034,6 +1104,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             if config.tx_upsample:
                 channels = radio.channels
             else:
+                assert radio.tx_channel_idx is not None
                 channels = [radio.channels[radio.tx_channel_idx]]
 
             # Get per-channel load from MAC
@@ -1046,7 +1117,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             # been transmitted over the loaded period.
             nsamples = fs*load.period
 
-            voxels = []
+            voxels: List[Voxel] = []
 
             for idx, chan in enumerate(channels):
                 if idx < len(load.nsamples):
@@ -1062,8 +1133,12 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
         return spectrum_usage
 
-    async def updateFlowStatistics(self, node_id, timestamp, sources, sinks):
+    async def updateFlowStatistics(self, node_id: int, timestamp: float,
+                                   sources: Sequence[FlowStats],
+                                   sinks: Sequence[FlowStats]):
         """Update flow statistics from reported source and sink stats"""
+        assert self.scorer is not None
+
         async with self.scorer_lock:
             for flow in sources:
                 # Record maximum MP
@@ -1128,13 +1203,16 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 self.scorer.updateReceivedStatistics(flow.flow_uid,
                                                      timestamp,
                                                      flow.first_mp,
-                                                     flow.npackets,
-                                                     flow.nbytes)
+                                                     list(flow.npackets),
+                                                     list(flow.nbytes))
 
-    async def updateSpectrumStatistics(self, node_id, _timestamp, reports):
+    async def updateSpectrumStatistics(self,
+                                       node_id: NodeId,
+                                       _timestamp: float,
+                                       reports: Sequence[internal.SpectrumStats]):
         """Update flow statistics from reported source and sink stats"""
-        load = {}
-        historical_usage = []
+        load: Load = {}
+        historical_usage: List[VoxelUsage] = []
 
         for spectrum in reports:
             for usage in spectrum.voxels:
@@ -1143,7 +1221,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 vox.f_end = usage.f_end
                 vox.duty_cycle = usage.duty_cycle
                 vox.tx = node_id
-                vox.rx = self.getDestinations(node_id)
+                vox.rx = list(self.getDestinations(node_id))
 
                 historical_usage.append((spectrum.start.get_timestamp(),
                                          spectrum.end.get_timestamp(),
@@ -1162,6 +1240,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def createSchedule(self, nslots=10):
         """Create a new TDMA schedule"""
+        assert self.radio is not None
+
         radio = self.radio
 
         if self.config.mac == 'fdma':
@@ -1248,6 +1328,9 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         if self.schedule is None:
             return
 
+        if self.internal_client is None:
+            return
+
         await self.internal_client.sendSchedule(self.schedule_seq,
                                                 self.schedule_nodes,
                                                 self.schedule,
@@ -1260,18 +1343,21 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
         If we are the gateway node, this will trigger a new TDMA schedule.
         """
+        assert self.radio is not None
+
         async with self.radio.lock:
             if bandwidth != self.config.bandwidth or frequency != self.config.frequency:
                 old_bandwidth = self.radio.bandwidth
 
                 self.radio.setBandwidthAndFrequency(bandwidth, frequency)
-                if self.collab_server:
+                if self.collab_server is not None:
                     self.forceSpectrumUsageUpdate()
 
                 # If only the center frequency has changed, keep the old
                 # schedule. Otherwise create a new schedule.
                 if self.radio.bandwidth != old_bandwidth:
                     if self.bootstrapped:
+                        assert self.radio.mac is not None
                         self.radio.mac.schedule = []
 
                     if self.is_gateway:
@@ -1306,6 +1392,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def discoverNeighbors(self):
         """Task to discover neighbors"""
+        assert self.radio is not None
+
         radio = self.radio
 
         #
@@ -1326,7 +1414,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                     chanidx = random.randint(0, len(radio.channels)-1)
                     radio.setALOHAChannel(chanidx)
 
-                radio.controller.broadcastHello()
+                if isinstance(radio.controller, dragonradio.radio.SmartController):
+                    radio.controller.broadcastHello()
 
                 await asyncio.sleep(period - delta)
             except asyncio.CancelledError:
@@ -1336,11 +1425,14 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     async def synchronizeClock(self):
         """Task to synchronize clock with the gateway node"""
+        assert self.radio is not None
+
         radio = self.radio
         config = self.config
 
         while not self.done:
             try:
+                assert config.clock_sync_period is not None
                 await asyncio.sleep(config.clock_sync_period)
 
                 radio.synchronizeClock()
@@ -1352,6 +1444,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     async def getHistoricalSpectrumUsage(self):
         """Get historical voxel usage from controller and convert it into CIL
         voxels for spectrum usage report"""
+        assert self.radio is not None
+
         async with self.voxel_lock:
             voxels = self.historical_voxel_usage
             self.historical_voxel_usage = []
@@ -1364,6 +1458,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     async def getPredictedSpectrumUsage(self, when):
         """Get predicated voxel usage from controller and convert it into CIL
         voxels for spectrum usage report"""
+        assert self.radio is not None
+
         mac = self.radio.mac
 
         if mac is None:
@@ -1425,6 +1521,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
     def setMandates(self, mandates):
         """Set our mandated outcomes and update flowperf"""
+        assert self.radio is not None
+
         radio = self.radio
 
         # Set our mandated outcomes
@@ -1455,6 +1553,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         The specified flows, the internal control port, and all broadcast
         packets will be allowed through the packet firewall.
         """
+        assert self.radio is not None
+
         radio = self.radio
 
         allowed = set(flows)
@@ -1467,6 +1567,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     @handle('Request.update_environment')
     def _handleUpdateEnvironment(self, req):
         """Handle an environment update"""
+        assert self.radio is not None
+
         self.radio.environmentDiscontinuity()
 
         logger.info('Update environment: timestamp=%f\n%s',
@@ -1517,6 +1619,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     @handle('Message.schedule')
     def _handleSchedule(self, msg):
         """Handle a schedule message from gateway."""
+        assert self.radio is not None
+
         config = self.config
         radio = self.radio
 
