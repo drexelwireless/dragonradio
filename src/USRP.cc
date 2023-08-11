@@ -19,14 +19,14 @@
 
 using namespace std::literals::chrono_literals;
 
-USRP::USRP(const std::string& addr)
+USRP::USRP(const std::string& dev_addr)
   : auto_dc_offset_(false)
 {
     done_.store(false, std::memory_order_release);
 
     RaiseCaps caps({CAP_SYS_NICE});
 
-    usrp_ = uhd::usrp::multi_usrp::make(addr);
+    usrp_ = uhd::usrp::multi_usrp::make(dev_addr);
 
     tx_underflow_count_.store(0, std::memory_order_release);
     tx_late_count_.store(0, std::memory_order_release);
