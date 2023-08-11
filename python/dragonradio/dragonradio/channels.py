@@ -4,7 +4,7 @@
 """Channel planning"""
 from typing import List
 
-from _dragonradio.radio import Channel
+from dragonradiocpp.radio import Channel
 
 def defaultChannelPlan(bandwidth: float, cbw: float,
                        cgbw: float=0,

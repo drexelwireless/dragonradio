@@ -8,9 +8,9 @@ namespace py = pybind11;
 #include "python/PyModules.hh"
 
 #if defined(PYMODULE)
-PYBIND11_MODULE(_dragonradio, m) {
+PYBIND11_MODULE(dragonradiocpp, m) {
 #else /* !defined(PYMODULE) */
-PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
+PYBIND11_EMBEDDED_MODULE(dragonradiocpp, m) {
 #endif /* !defined(PYMODULE) */
     auto mliquid = m.def_submodule("liquid");
     auto mlogging = m.def_submodule("logging");

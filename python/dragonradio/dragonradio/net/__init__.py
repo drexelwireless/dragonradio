@@ -2,6 +2,6 @@
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 try:
-  from _dragonradio.net import *
+  from dragonradiocpp.net import *
 except:
   pass

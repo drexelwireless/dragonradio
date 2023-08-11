@@ -23,8 +23,8 @@ from ipykernel.kernelapp import IPKernelApp
 import numpy as np
 
 try:
-  from _dragonradio.radio import *
-  from _dragonradio.logging import Logger, EventCategory, setLogLevel, setPrintLogLevel
+  from dragonradiocpp.radio import *
+  from dragonradiocpp.logging import Logger, EventCategory, setLogLevel, setPrintLogLevel
 except:
   pass
 

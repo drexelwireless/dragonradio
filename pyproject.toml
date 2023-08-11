@@ -1,3 +1,15 @@
+[project]
+name = "dragonradiocpp"
+description = "Internal Python interface to DragonRadio"
+authors = [
+  {name = "Geoffrey Mainland", email = "mainland@drexel.edu"},
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/drexelwireless/dragonradio"
+
 [build-system]
 requires = [
     "setuptools>=45",
