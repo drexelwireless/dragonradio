@@ -185,6 +185,13 @@ class PlotRadioMetricCommand(Command):
         super().__init__(*args, **kwargs)
 
     def add_arguments(self, parser):
+        parser.add_argument('--src', type=int,
+                            metavar='NODEID',
+                            help='Restrict to SRN source')
+        parser.add_argument('--dest', type=int,
+                            metavar='NODEID',
+                            help='Restrict to SRN destination')
+
         parser.add_argument('--flow', type=int, action='append',
                             dest='flows',
                             metavar='FLOW',
@@ -276,6 +283,12 @@ class PlotRadioMetricCommand(Command):
                             help='include invalid packets when displaying metrics')
 
     def handle(self, parser, args):
+        if args.src is not None:
+            self.filter_by(lambda df: df[df.src == args.src])
+
+        if args.dest is not None:
+            self.filter_by(lambda df: df[df.dest == args.dest])
+
         if args.flows:
             self.filter_by(lambda df: df[df.mgen_flow_uid.isin(args.flows)])
 
