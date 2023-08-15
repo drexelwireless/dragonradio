@@ -26,7 +26,9 @@ import dragonradio.internal as internal
 from dragonradio.internal import InternalProtoClient, InternalProtoServer
 from dragonradio.internal import FlowStats, mkFlowStats, mkSpectrumStats
 import dragonradio.net
-from dragonradio.protobuf import handle, handler, TCPProtoServer
+from dragonradio.protobuf.handler import handle, handler
+from dragonradio.protobuf.tcp import TCPProtoServer
+from dragonradio.protobuf.timestamp import getTimestamp, setTimestamp
 import dragonradio.radio
 from dragonradio.radio import PHYChannel
 from dragonradio.radio.radio import Config, ConfigException, Radio
@@ -116,8 +118,8 @@ class Voxel:
         usage.spectrum_voxel.freq_start = self.f_start
         usage.spectrum_voxel.freq_end = self.f_end
         usage.spectrum_voxel.duty_cycle.value = self.duty_cycle
-        usage.spectrum_voxel.time_start.set_timestamp(start)
-        usage.spectrum_voxel.time_end.set_timestamp(end)
+        setTimestamp(usage.spectrum_voxel.time_start, start)
+        setTimestamp(usage.spectrum_voxel.time_end, end)
 
         usage.transmitter_info.radio_id = self.tx
         usage.transmitter_info.power_db.value = tx_gain
@@ -383,9 +385,9 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
         # Start the RPC server
         self.remote_server = TCPProtoServer(self, loop=self.loop)
-        self.remote_server_task = self.remote_server.startServer(remote.Request,
-                                                                 remote.REMOTE_HOST,
-                                                                 remote.REMOTE_PORT)
+        self.remote_server_task = self.remote_server.start_server(remote.Request,
+                                                                  remote.REMOTE_HOST,
+                                                                  remote.REMOTE_PORT)
 
         # Cache ARP table entries for Colosseum traffic interface
         self.cacheTrafficInterfaceARP()
@@ -1223,15 +1225,15 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                 vox.tx = node_id
                 vox.rx = list(self.getDestinations(node_id))
 
-                historical_usage.append((spectrum.start.get_timestamp(),
-                                         spectrum.end.get_timestamp(),
+                historical_usage.append((getTimestamp(spectrum.start),
+                                         getTimestamp(spectrum.end),
                                          vox))
 
                 load[(vox.f_start, vox.f_end)] = usage.duty_cycle
 
                 logger.debug("Spectrum usage: start=%s; end=%s; voxel=%s",
-                    spectrum.start.get_timestamp(),
-                    spectrum.end.get_timestamp(),
+                    getTimestamp(spectrum.start),
+                    getTimestamp(spectrum.end),
                     vox)
 
         async with self.voxel_lock:
@@ -1605,15 +1607,15 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             n.loc.lat = loc.location.latitude
             n.loc.lon = loc.location.longitude
             n.loc.alt = loc.location.elevation
-            n.loc.timestamp = loc.timestamp.get_timestamp()
+            n.loc.timestamp = getTimestamp(loc.timestamp)
 
         # Update statistics
         self.createTask(self.updateFlowStatistics(node_id,
-                                                  msg.status.timestamp.get_timestamp(),
+                                                  getTimestamp(msg.status.timestamp),
                                                   msg.status.source_flows,
                                                   msg.status.sink_flows))
         self.createTask(self.updateSpectrumStatistics(node_id,
-                                                      msg.status.timestamp.get_timestamp(),
+                                                      getTimestamp(msg.status.timestamp),
                                                       msg.status.spectrum_stats))
 
     @handle('Message.schedule')

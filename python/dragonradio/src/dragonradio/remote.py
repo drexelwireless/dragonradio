@@ -4,8 +4,7 @@
 """Support for remote radio protocol"""
 import time
 
-from dragonradio.protobuf import rpc
-from dragonradio.protobuf import TCPProtoClient
+from dragonradio.protobuf.tcp import TCPProtoClient, rpc
 from dragonradio.remote_pb2 import * # pylint: disable=wildcard-import,unused-wildcard-import
 import dragonradio.remote_pb2 as remote
 

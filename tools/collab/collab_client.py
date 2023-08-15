@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 import argparse
 import asyncio
-import functools
 import logging
 import netifaces
-import os
 import signal
-import socket
-import struct
-import sys
 from types import SimpleNamespace
-import zmq.asyncio
 
-from dragonradio.protobuf import *
 from dragonradio.collab import CILServer
 from dragonradio.gpsd import GPSDClient
 
@@ -99,12 +92,16 @@ class DummyController(CILServer):
             self.done = True
 
             # Stop collaboration server
-            logger.info('Stopping collaboration server')
+            logging.info('Stopping collaboration server')
             await self.stopCollab()
 
             # Stop gpsd client
-            logger.info('Stopping gpsd client')
+            logging.info('Stopping gpsd client')
             await self.gpsd_client.stop()
+
+            # Stop tasks client
+            logging.info('Stopping tasks')
+            await self.stopTasks()
 
             # Stop event loop
             logging.info('Stopping event loop')
