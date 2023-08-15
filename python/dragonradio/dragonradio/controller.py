@@ -1050,6 +1050,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
                     if duty_cycle != 0:
                         vox = channelToVoxel(radio.node_id, radio.frequency, chan)
+                        vox.duty_cycle = duty_cycle
                         voxels.append(vox)
 
             if len(voxels) != 0:
