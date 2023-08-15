@@ -100,7 +100,10 @@ class DataFrameCache:
     _df_cache: WeakValueDictionary
     """DataFrame cache"""
 
-    def __init__(self, cache_path: Optional[Path]=None):
+    nocache: bool=False
+    """Disable reading from file system cache"""
+
+    def __init__(self, nocache: bool=False, cache_path: Optional[Path]=None):
         if cache_path is None:
             self._cache_path = xdg.xdg_cache_home() / 'dragonradio' / 'dataframe'
         else:
@@ -108,6 +111,7 @@ class DataFrameCache:
 
         self._lock = RLock()
         self._df_cache = WeakValueDictionary()
+        self.nocache = nocache
 
     @property
     def cache_path(self) -> Path:
@@ -120,7 +124,7 @@ class DataFrameCache:
             if key in self._df_cache:
                 return self._df_cache[key]
 
-            if self._cache_path is None:
+            if self._cache_path is None or self.nocache:
                 return None
 
             # Now look in the file system cache
