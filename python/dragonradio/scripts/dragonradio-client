@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 import argparse
 import asyncio
 import json
+import logging
 import os
-from pprint import pprint
 import psutil
-import sys
-import time
 
-from dragonradio.protobuf import *
 import dragonradio.remote as remote
 
 def main():

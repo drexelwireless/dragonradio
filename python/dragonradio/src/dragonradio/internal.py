@@ -1,69 +1,73 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Support for internal DragonRadio protocol"""
+from asyncio import AbstractEventLoop
 import logging
 import time
+from typing import Any, Optional, Sequence
 
-from dragonradio.protobuf import getTimestamp, setTimestamp
-from dragonradio.protobuf import UDPProtoClient, UDPProtoServer
-from dragonradio.protobuf import handler, send
-from dragonradio.internal_pb2 import * # pylint: disable=wildcard-import,unused-wildcard-import
-import dragonradio.internal_pb2 as internal
+import dragonradio.radio
+from dragonradio.radio import Node
+from dragonradio.protobuf.handler import send
+from dragonradio.protobuf.timestamp import setTimestamp
+from dragonradio.protobuf.udp import UDPProtoClient, UDPProtoServer
+from dragonradio.internal_pb2 import FlowStats, Message, SpectrumStats, SpectrumUsage
 
 logger = logging.getLogger('internal')
 
-INTERNAL_PORT = 4096
+INTERNAL_PORT: int = 4096
 """Port for internal control protocol messages"""
 
-# Monkey patch Timestamp class to support setting timestamps using
-# floating-point seconds
-internal.TimeStamp.set_timestamp = setTimestamp
-internal.TimeStamp.get_timestamp = getTimestamp
-
-@handler(internal.Message)
 class InternalProtoServer(UDPProtoServer):
     """Server for internal protocol"""
+    listen_ip: str
+    """IP address on which to listen"""
+
     def __init__(self,
-                 handler_obj,
-                 loop=None,
-                 listen_ip=None):
+                 handler_obj: Any,
+                 listen_ip: str,
+                 loop: Optional[AbstractEventLoop]=None):
         super().__init__(handler_obj, loop=loop)
+
         self.listen_ip = listen_ip
-        """IP address on which to listen"""
 
     def start(self):
         """Start internal protocol server"""
-        return self.startServer(internal.Message, self.listen_ip, INTERNAL_PORT)
+        return self.start_server(Message, self.listen_ip, INTERNAL_PORT)
 
 class InternalProtoClient(UDPProtoClient):
     """Client for internal protocol"""
-    def __init__(self,
-                 server_host=None,
-                 **kwargs):
+    def __init__(self, server_host: str, **kwargs):
         UDPProtoClient.__init__(self, server_host=server_host, server_port=INTERNAL_PORT, **kwargs)
 
         self.server_host = server_host
 
         self.open()
 
-    @send(internal.Message)
-    async def sendStatus(self, msg, me, sources, sinks, spectrum):
+    @send(Message)
+    async def sendStatus(self,
+                         msg: Message,
+                         me: Node,
+                         sources: Sequence[FlowStats],
+                         sinks: Sequence[FlowStats],
+                         spectrum: Sequence[SpectrumStats]):
         """Send a status message"""
         msg.status.radio_id = me.id
-        msg.status.timestamp.set_timestamp(time.time())
+        setTimestamp(msg.status.timestamp, time.time())
         msg.status.loc.location.latitude = me.loc.lat
         msg.status.loc.location.longitude = me.loc.lon
         msg.status.loc.location.elevation = me.loc.alt
-        msg.status.loc.timestamp.set_timestamp(me.loc.timestamp)
+        setTimestamp(msg.status.loc.timestamp, me.loc.timestamp)
         msg.status.source_flows.extend(sources)
         msg.status.sink_flows.extend(sinks)
         msg.status.spectrum_stats.extend(spectrum)
 
         logger.debug("Sending status %s", msg)
 
-    @send(internal.Message)
-    async def sendSchedule(self, msg, seq, nodes, sched, fc, bw, start_time):
+    @send(Message)
+    async def sendSchedule(self,
+                           msg: Message, seq, nodes, sched, fc, bw, start_time):
         """Send a schedule message"""
         (nchannels, nslots) = sched.shape
 
@@ -76,12 +80,16 @@ class InternalProtoClient(UDPProtoClient):
         msg.schedule.nodes.extend(nodes)
         msg.schedule.schedule.extend(sched.reshape(nchannels*nslots))
 
-def mkFlowStats(min_mp, max_mp, flowperf):
+def mkFlowStats(min_mp: int, max_mp: int, flowperf: dragonradio.radio.FlowStats) -> FlowStats:
     """Convert dragonradio.FlowStats to internal FlowStats"""
-    first_mp = min(min_mp, flowperf.low_mp)
+    first_mp: int = min_mp
+
+    if flowperf.low_mp is not None:
+        min(first_mp, flowperf.low_mp)
+
     mpstats = flowperf.stats[first_mp:max_mp+1]
 
-    stats = internal.FlowStats()
+    stats = FlowStats()
     stats.flow_uid = flowperf.flow_uid
     stats.src = flowperf.src
     stats.dest = flowperf.dest
@@ -93,14 +101,15 @@ def mkFlowStats(min_mp, max_mp, flowperf):
 
 def mkSpectrumStats(start: float, end: float, voxels) -> SpectrumStats:
     """Convert dragonradio.FlowStats to internal SpectrumStats"""
-    stats = internal.SpectrumStats()
-    stats.start.set_timestamp(start)
-    stats.end.set_timestamp(end)
+    stats = SpectrumStats()
+
+    setTimestamp(stats.start, start)
+    setTimestamp(stats.end, end)
 
     internal_voxels = []
 
     for vox in voxels:
-        usage = internal.SpectrumUsage()
+        usage = SpectrumUsage()
         usage.f_start = vox.f_start
         usage.f_end = vox.f_end
         usage.duty_cycle = vox.duty_cycle

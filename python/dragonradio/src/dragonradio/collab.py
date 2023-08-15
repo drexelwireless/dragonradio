@@ -1,28 +1,37 @@
-# Copyright 2018-2020 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
 """Collaboration support"""
 import asyncio
-from functools import (wraps)
+from asyncio import AbstractEventLoop
 import logging
 import socket
 import struct
 import time
+from typing import Dict, Optional, Sequence, Tuple
+
+from google.protobuf.message import Message
 
 import sc2.cil_pb2 as cil
 import sc2.registration_pb2 as registration
 
-from dragonradio.protobuf import handle, handler, send
-from dragonradio.protobuf import getTimestamp, setTimestamp
-from dragonradio.protobuf import ZMQProtoClient, ZMQProtoServer
+import dragonradio.radio
+try:
+    from dragonradio.radio.radio import Config, Radio
+except:
+    pass
+
+from dragonradio.protobuf.handler import ProtobufHandler, handle, handler, send
+from dragonradio.protobuf.timestamp import getTimestamp, setTimestamp
+from dragonradio.protobuf.zmq import ZMQProtoClient, ZMQProtoServer
 import dragonradio.tasks
 
 logger = logging.getLogger('collab')
 
-CIL_VERSION = (3, 6, 0)
+CIL_VERSION: Tuple[int, int, int] = (3, 6, 0)
 """CIL protocol version"""
 
-MAX_LOCATION_AGE = 45
+MAX_LOCATION_AGE: float = 45
 """Maximum location age (sec)"""
 
 SPECTRUM_USAGE_MAX_RATE: float = 30.5
@@ -34,26 +43,17 @@ SPECTRUM_USAGE_MIN_RATE: float = 0.5
 SPECTRUM_VOXEL_MAX_TIME_OFFSET: float = 60.5
 """Maximum offset between CIL report timestamp and voxel timestamp"""
 
-# Monkey patch Timestamp class to support setting timestamps using
-# floating-point seconds.
-cil.TimeStamp.set_timestamp = setTimestamp
-cil.TimeStamp.get_timestamp = getTimestamp
-
 def ipIntToString(ip_int: int) -> str:
     """Convert integer formatted IP to IP string"""
     return socket.inet_ntoa(struct.pack('!L', ip_int))
 
-def ipIntToString(ip_int):
-    """Convert integer formatted IP to IP string"""
-    return socket.inet_ntoa(struct.pack('!L',ip_int))
-
-def ipStringToInt(ip_string):
+def ipStringToInt(ip_string: str) -> int:
     """Convert string formatted IP to IP int"""
-    return struct.unpack('!L',socket.inet_aton(ip_string))[0]
+    return struct.unpack('!L', socket.inet_aton(ip_string))[0]
 
 # See:
-#   https://stackoverflow.com/questions/49622924/wait-for-timeout-or-event-being-set-for-asyncio-event pylint: disable=line-too-long
-async def wait_for_event(evt, timeout): # pylint: disable=invalid-name
+#   https://stackoverflow.com/questions/49622924/wait-for-timeout-or-event-being-set-for-asyncio-event
+async def wait_for_event(evt: asyncio.Event, timeout: float) -> bool:
     """Wait for an event with a timeout"""
     try:
         await asyncio.wait_for(evt.wait(), timeout)
@@ -62,38 +62,12 @@ async def wait_for_event(evt, timeout): # pylint: disable=invalid-name
 
     return evt.is_set()
 
-def mkReceiverInfo(radio_id, rx_gain):
+def mkReceiverInfo(radio_id: int, rx_gain: float) -> cil.ReceiverInfo:
     """Make a CIL ReceiverInfo object"""
     rx_info = cil.ReceiverInfo()
     rx_info.radio_id = radio_id
     rx_info.power_db.value = rx_gain
     return rx_info
-
-def sendCIL(f):
-    """Automatically add support to a function for constructing and sending a
-    CIL protobuf message. Should be used to decorate the methods of a
-    ZMQProtoClient subclass.
-
-    Args:
-        cls (class): The message class to send.
-    """
-    @wraps(f)
-    async def wrapper(self, *args, **kwargs):
-        timestamp = kwargs.pop('timestamp', time.time())
-
-        msg = cil.CilMessage()
-        msg.sender_network_id = ipStringToInt(self.local_ip)
-        msg.msg_count = self.msg_count
-        msg.timestamp.set_timestamp(timestamp)
-        msg.network_type.network_type = cil.NetworkType.COMPETITOR
-
-        self.msg_count += 1
-
-        await f(self, msg, *args, **kwargs)
-
-        logger.debug('Sending message %s', msg)
-        await self.send(msg)
-    return wrapper
 
 class RegistrationClient(ZMQProtoClient):
     """CIL registration client"""
@@ -101,17 +75,17 @@ class RegistrationClient(ZMQProtoClient):
         super().__init__(**kwargs)
 
     @send(registration.TalkToServer)
-    async def register(self, msg, local_ip):
+    async def register(self, msg: registration.TalkToServer, local_ip: str):
         """Send a register message"""
         msg.register.my_ip_address = ipStringToInt(local_ip)
 
     @send(registration.TalkToServer)
-    async def keepalive(self, msg, nonce):
+    async def keepalive(self, msg: registration.TalkToServer, nonce: int):
         """Send a keepalive message"""
         msg.keepalive.my_nonce = nonce
 
     @send(registration.TalkToServer)
-    async def leave(self, msg, nonce):
+    async def leave(self, msg: registration.TalkToServer, nonce: int):
         """Send a leave message"""
         msg.leave.my_nonce = nonce
 
@@ -122,30 +96,49 @@ class CILClient(ZMQProtoClient):
                          server_port=peer_port,
                          **kwargs)
         self.local_ip = local_ip
-        self.msg_count = 1
+        self.msg_count = 0
         self.open()
         self.loop.create_task(self.hello())
 
-    @sendCIL
-    async def hello(self, msg):
+    async def send_msg(self, msg: Message):
+        if isinstance(msg, cil.CilMessage):
+            self.msg_count += 1
+
+            msg.sender_network_id = ipStringToInt(self.local_ip)
+            msg.msg_count = self.msg_count
+            msg.network_type.network_type = cil.NetworkType.COMPETITOR
+
+            if not msg.HasField('timestamp'):
+                setTimestamp(msg.timestamp, time.time())
+
+        await super().send_msg(msg)
+
+    @send(cil.CilMessage)
+    async def hello(self, msg: cil.CilMessage):
         """Send a hello message"""
         msg.hello.version.major = CIL_VERSION[0]
         msg.hello.version.minor = CIL_VERSION[1]
         msg.hello.version.patch = CIL_VERSION[2]
 
-    @sendCIL
-    async def locationUpdate(self, msg, locations):
+    @send(cil.CilMessage)
+    async def locationUpdate(self,
+                             msg: cil.CilMessage,
+                             locations: Sequence[cil.LocationInfo]):
         """Send a location update message"""
         msg.location_update.locations.extend(locations)
 
-    @sendCIL
-    async def spectrumUsage(self, msg, usage):
+    @send(cil.CilMessage)
+    async def spectrumUsage(self,
+                            msg: cil.CilMessage,
+                            usage: Sequence[cil.SpectrumVoxelUsage],
+                            timestamp: Optional[float]=None):
         """Send a spectrum usage message"""
         # Explicitly choose a timestamp so we know what it is to check for valid
         # usage
-        timestamp = time.time()
+        if timestamp is None:
+            timestamp = time.time()
 
-        msg.timestamp.set_timestamp(timestamp)
+        setTimestamp(msg.timestamp, timestamp)
 
         # Only send valid voxel usage
         def valid(usage: cil.SpectrumVoxelUsage) -> bool:
@@ -162,22 +155,22 @@ class CILClient(ZMQProtoClient):
 
         msg.spectrum_usage.voxels.extend([u for u in usage if valid(u)])
 
-    @sendCIL
+    @send(cil.CilMessage)
     async def detailedPerformance(self,
-                                  msg,
-                                  performance,
-                                  timestamp,
-                                  mandates_achieved,
-                                  total_score_achieved,
-                                  scoring_point_threshold):
+                                  msg: cil.CilMessage,
+                                  performance: Sequence[cil.MandatePerformance],
+                                  mandates_achieved: int,
+                                  total_score_achieved: int,
+                                  scoring_point_threshold: int,
+                                  timestamp: Optional[float]=None):
         """Send a detailed performance message"""
-        msg.detailed_performance.mandate_count = len(performance)
-        if timestamp is not None:
-            msg.detailed_performance.timestamp.set_timestamp(timestamp)
-        else:
-            # Pretend this performance metric is from 5 seconds ago
-            msg.detailed_performance.timestamp.set_timestamp(time.time() - 5)
+        # Of we don't have a timestamp, pretend this performance metric is from
+        # 5 seconds ago
+        if timestamp is None:
+            timestamp = time.time() - 5
 
+        msg.detailed_performance.mandate_count = len(performance)
+        setTimestamp(msg.detailed_performance.timestamp, timestamp)
         msg.detailed_performance.mandates.extend(performance)
         msg.detailed_performance.mandates_achieved = mandates_achieved
         msg.detailed_performance.total_score_achieved = total_score_achieved
@@ -185,54 +178,67 @@ class CILClient(ZMQProtoClient):
 
 @handler(registration.TellClient)
 @handler(cil.CilMessage)
-class CILServer(dragonradio.tasks.TaskManager):
+class CILServer(dragonradio.tasks.TaskManager, ProtobufHandler):
     """Base class for CIL server."""
-    def __init__(self):
-        super().__init__()
 
-        self.registration_client = None
-        """Registration client"""
+    config: 'Config'
+    """Radio configuration"""
 
-        self.registration_nonce = None
-        """Registration server nonce"""
+    radio: Optional['Radio'] = None
+    """Radio"""
 
-        self.registration_max_keepalive = 30
-        """Maximum time between registration heartbeats"""
+    done: bool = False
+    """Is the radio done?"""
 
-        self.collab_server = None
-        """CIL server"""
+    #neighbors: Dict[int, dragonradio.radio.Node]
+    """Neighbors"""
 
-        self.collab_ip = None
-        """Local IP address of collaboration server"""
+    registration_client: RegistrationClient
+    """Registration client"""
+
+    registration_nonce: Optional[int] = None
+    """Registration server nonce"""
+
+    registration_max_keepalive: float = 30.0
+    """Maximum time between registration heartbeats"""
+
+    collab_server: Optional[ZMQProtoServer] = None
+    """CIL server"""
+
+    collab_ip: str
+    """Local IP address of collaboration server"""
+
+    collab_peers: Dict[str, CILClient]
+    """CIL peers"""
+
+    collab_spectrum_update_event: asyncio.Event
+    """Event used to signal CIL spectrum update"""
+
+    scenario_started: bool = False
+    """Have we received mandates?"""
+
+    _scenario_start_time: float
+    """RF scenario start time, in seconds since the epoch"""
+
+    scoring_percent_threshold: float = 0
+    """Scoring percent threshold"""
+
+    scoring_point_threshold: int = 0
+    """Scoring point threshold"""
+
+    def __init__(self, loop: Optional[AbstractEventLoop]=None):
+        ProtobufHandler.__init__(self)
+        dragonradio.tasks.TaskManager.__init__(self, loop)
 
         self.collab_peers = {}
-        """CIL peers"""
-
-        self.collab_spectrum_update_event = None
-        """Event used to signal CIL spectrum update"""
-
-        self.collab_tasks = []
-        """asyncio tasks"""
-
-        self.scenario_started = False
-        """Have we received mandates?"""
-
-        self._scenario_start_time = None
-        """RF scenario start time, in seconds since the epoch"""
-
-        self.scoring_percent_threshold = 0
-        """Scoring percent threshold"""
-
-        self.scoring_point_threshold = 0
-        """Scoring point threshold"""
 
     @property
-    def scenario_start_time(self):
+    def scenario_start_time(self) -> float:
         """RF scenario start time, in seconds since the epoch"""
         return self._scenario_start_time
 
     @scenario_start_time.setter
-    def scenario_start_time(self, t):
+    def scenario_start_time(self, t: float):
         """Set scenario start time"""
         logger.info('RF scenario start time set: %f', t)
         self._scenario_start_time = t
@@ -247,12 +253,12 @@ class CILServer(dragonradio.tasks.TaskManager):
         self.registration_client.open()
 
         self.collab_server = ZMQProtoServer(self, loop=self.loop)
-        self.addTask(self.collab_server.startServer(cil.CilMessage,
-                                                    self.collab_ip,
-                                                    self.config.collab_peer_port))
-        self.addTask(self.collab_server.startServer(registration.TellClient,
-                                                    self.collab_ip,
-                                                    self.config.collab_client_port))
+        self.addTask(self.collab_server.start_server(cil.CilMessage,
+                                                     self.collab_ip,
+                                                     self.config.collab_peer_port))
+        self.addTask(self.collab_server.start_server(registration.TellClient,
+                                                     self.collab_ip,
+                                                     self.config.collab_client_port))
 
         self.collab_spectrum_update_event = asyncio.Event()
 
@@ -274,7 +280,7 @@ class CILServer(dragonradio.tasks.TaskManager):
         self.collab_spectrum_update_event.set()
 
         # Leave the collaboration network
-        if self.registration_nonce:
+        if self.registration_nonce is not None:
             logger.info('Leaving collaboration network')
             try:
                 await self.registration_client.leave(self.registration_nonce)
@@ -335,7 +341,7 @@ class CILServer(dragonradio.tasks.TaskManager):
         """Task to send heartbeat messages"""
         try:
             while not self.done:
-                if self.registration_nonce:
+                if self.registration_nonce is not None:
                     try:
                         await self.registration_client.keepalive(self.registration_nonce)
                     except: #pylint: disable=bare-except
@@ -354,14 +360,14 @@ class CILServer(dragonradio.tasks.TaskManager):
                 # Calculate locations
                 locations = []
 
-                for _node_id, n in self.neighbors.items():
+                for n in self.neighbors.values():
                     if n.loc.timestamp > time.time() - MAX_LOCATION_AGE:
                         info = cil.LocationInfo()
                         info.radio_id = n.id
                         info.location.latitude = n.loc.lat
                         info.location.longitude = n.loc.lon
                         info.location.elevation = n.loc.alt
-                        info.timestamp.set_timestamp(n.loc.timestamp)
+                        setTimestamp(info.timestamp, n.loc.timestamp)
 
                         locations.append(info)
 
@@ -452,10 +458,10 @@ class CILServer(dragonradio.tasks.TaskManager):
                     for _ip, p in self.collab_peers.items():
                         try:
                             await p.detailedPerformance(new_performance,
-                                                        timestamp,
                                                         mandates_achieved,
                                                         total_score_achieved,
-                                                        self.scoring_point_threshold)
+                                                        self.scoring_point_threshold,
+                                                        timestamp=timestamp)
                         except: #pylint: disable=bare-except
                             logger.exception("Exception when sending detailed performance")
 
@@ -471,36 +477,36 @@ class CILServer(dragonradio.tasks.TaskManager):
                 logger.exception("Exception when sending detailed performance")
 
     @handle('TellClient.inform')
-    async def _handleInform(self, msg):
+    async def _handleInform(self, msg: registration.TellClient):
         """Handle neighbor inform message"""
         self.registration_nonce = msg.inform.client_nonce
         self.registration_max_keepalive = msg.inform.keepalive_seconds
         self.setNeighbors(msg.inform.neighbors)
 
     @handle('TellClient.notify')
-    async def _handleNotify(self, msg):
+    async def _handleNotify(self, msg: registration.TellClient):
         """Handle neighbor notification message"""
         self.setNeighbors(msg.notify.neighbors)
 
     @handle('CilMessage.hello')
-    async def _handleHello(self, msg):
+    async def _handleHello(self, msg: cil.CilMessage):
         """Handle hello message"""
 
     @handle('CilMessage.spectrum_usage')
-    async def _handleSpectrumUsage(self, msg):
+    async def _handleSpectrumUsage(self, msg: cil.CilMessage):
         """Handle spectrum usage message"""
         logger.info('Received spectrum usage: %s', msg)
 
     @handle('CilMessage.location_update')
-    async def _handleLocationUpdate(self, msg):
+    async def _handleLocationUpdate(self, msg: cil.CilMessage):
         """Handle location update message"""
         logger.info('Received location update: %s', msg)
 
     @handle('CilMessage.detailed_performance')
-    async def _handleDetailedPerformance(self, msg):
+    async def _handleDetailedPerformance(self, msg: cil.CilMessage):
         """Handle detailed performance message"""
         logger.info('Received detailed performance: %s', msg)
 
     @handle('CilMessage.incumbent_notify')
-    async def _handleIncumbentNotify(self, msg):
+    async def _handleIncumbentNotify(self, msg: cil.CilMessage):
         """Handle incumbent notification message"""
