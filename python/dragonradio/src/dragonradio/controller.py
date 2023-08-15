@@ -33,7 +33,7 @@ from dragonradio.protobuf.timestamp import getTimestamp, setTimestamp
 import dragonradio.radio
 from dragonradio.radio import PHYChannel
 from dragonradio.radio.radio import Config, ConfigException, Radio
-import dragonradio.remote as remote
+import dragonradio.remote.client as remote
 import dragonradio.schedule
 import dragonradio.tasks
 from dragonradio.util import save_dataframe
@@ -387,8 +387,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         # Start the RPC server
         self.remote_server = TCPProtoServer(self, loop=self.loop)
         self.remote_server_task = self.remote_server.start_server(remote.Request,
-                                                                  remote.REMOTE_HOST,
-                                                                  remote.REMOTE_PORT)
+                                                                  remote.DEFAULT_HOST,
+                                                                  remote.DEFAULT_PORT)
 
         # Cache ARP table entries for Colosseum traffic interface
         self.cacheTrafficInterfaceARP()
