@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 from threading import RLock
 import time
-from typing import Callable, Optional
+from typing import Callable, Literal, Optional
 from weakref import WeakValueDictionary
 import xdg
 
@@ -86,6 +86,11 @@ class cached_dataframe_property:
         return df
 
 class DataFrameCache:
+    # We need fastparquet for time deltas. See:
+    #   https://pandas.pydata.org/pandas-docs/stable/io.html#parquet
+    engine: Literal['fastparquet']='fastparquet'
+    """Parquet engine"""
+
     _cache_path: Path
     """Path to cache holding serialized DataFrames"""
 
@@ -108,11 +113,6 @@ class DataFrameCache:
     def cache_path(self) -> Path:
         """Path to cache holding serialized DataFrames"""
         return self._cache_path
-
-    #engine='pyarrow'
-    # We need fastparquet for time deltas. See:
-    #   https://pandas.pydata.org/pandas-docs/stable/io.html#parquet
-    engine='fastparquet'
 
     def get_dataframe(self, key):
         with self._lock:
