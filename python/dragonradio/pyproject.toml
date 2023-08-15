@@ -35,6 +35,9 @@ dev = [
     "types-python-dateutil"
 ]
 
+[project.scripts]
+dragonradio-client = "dragonradio.remote.command_line:client"
+
 [build-system]
 requires = [
     "setuptools>=45",
@@ -47,7 +50,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 zip-safe = false
 include-package-data = true
-script-files = ["scripts/dragonradio-client"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
