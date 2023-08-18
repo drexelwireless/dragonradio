@@ -25,16 +25,23 @@ CIL_VERSION = (3, 6, 0)
 MAX_LOCATION_AGE = 45
 """Maximum location age (sec)"""
 
-MAX_SPECTRUM_USAGE_UPDATE_PERIOD = 30.5
+SPECTRUM_USAGE_MAX_RATE: float = 30.5
 """Maximum time allowed between spectrum updates (sec)"""
 
-MIN_SPECTRUM_USAGE_UPDATE_PERIOD = 0.5
+SPECTRUM_USAGE_MIN_RATE: float = 0.5
 """Minimum time allowed between spectrum updates (sec)"""
+
+SPECTRUM_VOXEL_MAX_TIME_OFFSET: float = 60.5
+"""Maximum offset between CIL report timestamp and voxel timestamp"""
 
 # Monkey patch Timestamp class to support setting timestamps using
 # floating-point seconds.
 cil.TimeStamp.set_timestamp = setTimestamp
 cil.TimeStamp.get_timestamp = getTimestamp
+
+def ipIntToString(ip_int: int) -> str:
+    """Convert integer formatted IP to IP string"""
+    return socket.inet_ntoa(struct.pack('!L', ip_int))
 
 def ipIntToString(ip_int):
     """Convert integer formatted IP to IP string"""
@@ -132,9 +139,28 @@ class CILClient(ZMQProtoClient):
         msg.location_update.locations.extend(locations)
 
     @sendCIL
-    async def spectrumUsage(self, msg, voxels):
+    async def spectrumUsage(self, msg, usage):
         """Send a spectrum usage message"""
-        msg.spectrum_usage.voxels.extend(voxels)
+        # Explicitly choose a timestamp so we know what it is to check for valid
+        # usage
+        timestamp = time.time()
+
+        msg.timestamp.set_timestamp(timestamp)
+
+        # Only send valid voxel usage
+        def valid(usage: cil.SpectrumVoxelUsage) -> bool:
+            time_start = getTimestamp(usage.spectrum_voxel.time_start)
+            if abs(time_start - timestamp) > SPECTRUM_VOXEL_MAX_TIME_OFFSET:
+                return False
+
+            if usage.spectrum_voxel.HasField('time_end'):
+                time_end = getTimestamp(usage.spectrum_voxel.time_end)
+                if time_end < time_start or abs(time_end - timestamp) > SPECTRUM_VOXEL_MAX_TIME_OFFSET:
+                   return False
+
+            return True
+
+        msg.spectrum_usage.voxels.extend([u for u in usage if valid(u)])
 
     @sendCIL
     async def detailedPerformance(self,
@@ -388,8 +414,8 @@ class CILServer(dragonradio.tasks.TaskManager):
 
                     now = time.time()
 
-                    if timestamp and now - timestamp < MIN_SPECTRUM_USAGE_UPDATE_PERIOD:
-                        delta = timestamp + 2*MIN_SPECTRUM_USAGE_UPDATE_PERIOD - now
+                    if timestamp and now - timestamp < SPECTRUM_USAGE_MIN_RATE:
+                        delta = timestamp + 2*SPECTRUM_USAGE_MIN_RATE - now
                     else:
                         break
             except asyncio.CancelledError:
