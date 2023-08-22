@@ -26,6 +26,7 @@ import dragonradio.internal as internal
 from dragonradio.internal import InternalProtoClient, InternalProtoServer
 from dragonradio.internal import FlowStats, mkFlowStats, mkSpectrumStats
 import dragonradio.net
+import dragonradio.proto.sc2.cil_pb2 as cil
 from dragonradio.protobuf.handler import handle, handler
 from dragonradio.protobuf.tcp import TCPProtoServer
 from dragonradio.protobuf.timestamp import getTimestamp, setTimestamp
@@ -36,8 +37,6 @@ import dragonradio.remote.client as remote
 import dragonradio.schedule
 import dragonradio.tasks
 from dragonradio.util import save_dataframe
-
-import sc2.cil_pb2 as cil
 
 MP: TypeAlias = int
 

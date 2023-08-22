@@ -12,15 +12,14 @@ from typing import Dict, Optional, Sequence, Tuple
 
 from google.protobuf.message import Message
 
-import sc2.cil_pb2 as cil
-import sc2.registration_pb2 as registration
-
 import dragonradio.radio
 try:
     from dragonradio.radio.radio import Config, Radio
 except:
     pass
 
+import dragonradio.proto.sc2.cil_pb2 as cil
+import dragonradio.proto.sc2.registration_pb2 as registration
 from dragonradio.protobuf.handler import ProtobufHandler, handle, handler, send
 from dragonradio.protobuf.timestamp import getTimestamp, setTimestamp
 from dragonradio.protobuf.zmq import ZMQProtoClient, ZMQProtoServer

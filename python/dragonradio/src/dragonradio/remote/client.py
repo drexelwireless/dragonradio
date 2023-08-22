@@ -5,8 +5,8 @@
 import time
 
 from dragonradio.protobuf.tcp import TCPProtoClient, rpc
-from dragonradio.remote_pb2 import * # pylint: disable=wildcard-import,unused-wildcard-import
-import dragonradio.remote_pb2 as remote
+from dragonradio.proto.remote_pb2 import * # pylint: disable=wildcard-import,unused-wildcard-import
+import dragonradio.proto.remote_pb2 as remote
 
 DEFAULT_HOST: str = '127.0.0.1'
 """Default host for remote control protocol messages"""
