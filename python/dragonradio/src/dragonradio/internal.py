@@ -16,30 +16,38 @@ from dragonradio.protobuf.udp import UDPProtoClient, UDPProtoServer
 
 logger = logging.getLogger('internal')
 
-INTERNAL_PORT: int = 4096
-"""Port for internal control protocol messages"""
+DEFAULT_LISTEN_IP: str = '0.0.0.0'
+"""Default IP on which to listen for internal control protocol messages"""
+
+DEFAULT_PORT: int = 4096
+"""Default port for internal control protocol messages"""
 
 class InternalProtoServer(UDPProtoServer):
     """Server for internal protocol"""
     listen_ip: str
     """IP address on which to listen"""
 
+    listen_port: int
+    """IP port on which to listen"""
+
     def __init__(self,
                  handler_obj: Any,
-                 listen_ip: str,
+                 listen_ip: str=DEFAULT_LISTEN_IP,
+                 listen_port: int=DEFAULT_PORT,
                  loop: Optional[AbstractEventLoop]=None):
         super().__init__(handler_obj, loop=loop)
 
         self.listen_ip = listen_ip
+        self.listen_port = listen_port
 
     def start(self):
         """Start internal protocol server"""
-        return self.start_server(Message, self.listen_ip, INTERNAL_PORT)
+        return self.start_server(Message, self.listen_ip, self.listen_port)
 
 class InternalProtoClient(UDPProtoClient):
     """Client for internal protocol"""
     def __init__(self, server_host: str, **kwargs):
-        UDPProtoClient.__init__(self, server_host=server_host, server_port=INTERNAL_PORT, **kwargs)
+        UDPProtoClient.__init__(self, server_host=server_host, server_port=DEFAULT_PORT, **kwargs)
 
         self.server_host = server_host
 
