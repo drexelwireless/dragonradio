@@ -43,6 +43,7 @@ from dragonradiocpp.radio import clock, work_queue
 from dragonradiocpp.logging import Logger, EventCategory, setLogLevel, setPrintLogLevel
 
 import dragonradio.channels
+from dragonradio.config import Config, ConfigException, str2mac
 import dragonradio.liquid
 from dragonradio.liquid import MCS
 import dragonradio.net
@@ -51,8 +52,6 @@ import dragonradio.schedule
 import dragonradio.signal
 import dragonradio.tasks
 from dragonradio.version import version as __version__
-
-from .config import Config, ConfigException, str2mac
 
 NetQueue: TypeAlias = Union[ControllerNetLink, Queue]
 

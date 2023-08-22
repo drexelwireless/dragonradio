@@ -10,7 +10,8 @@ from typing_extensions import TypeAlias
 import numpy as np
 import numpy.typing as npt
 
-from dragonradio.radio import Config, Radio
+from dragonradio.config import Config
+from dragonradio.radio import Radio
 from dragonradio.radio import clock
 
 Timestamps: TypeAlias =  Iterable[Tuple[float, float]]

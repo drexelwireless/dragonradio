@@ -18,7 +18,7 @@ from dragonradio.controller import Controller
 
 RADIOCONF_PATH: Path = Path('/root/radio_api/radio.conf')
 
-class SC2Config(dragonradio.radio.Config):
+class SC2Config(dragonradio.config.Config):
     bootstrap: bool = False
     "Immediately bootstrap the radio"
 

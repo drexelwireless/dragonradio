@@ -172,7 +172,7 @@ def cancel_loop():
 
 def main():
     # Create configuration and set defaults
-    config = dragonradio.radio.Config()
+    config = dragonradio.config.Config()
 
     config.mac = 'tdma'
     config.num_nodes = 2

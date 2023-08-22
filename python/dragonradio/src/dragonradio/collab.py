@@ -14,7 +14,8 @@ from google.protobuf.message import Message
 
 import dragonradio.radio
 try:
-    from dragonradio.radio.radio import Config, Radio
+    from dragonradio.config import Config
+    from dragonradio.radio.radio import Radio
 except:
     pass
 
