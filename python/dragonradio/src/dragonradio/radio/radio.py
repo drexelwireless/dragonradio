@@ -50,9 +50,9 @@ import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
 import dragonradio.signal
 import dragonradio.tasks
+from dragonradio.version import version as __version__
 
 from .config import Config, ConfigException, str2mac
-from .version import version as __version__
 
 NetQueue: TypeAlias = Union[ControllerNetLink, Queue]
 

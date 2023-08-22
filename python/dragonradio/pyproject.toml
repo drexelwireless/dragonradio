@@ -65,4 +65,4 @@ git_describe_command = [
     "v*[0-9]*",
 ]
 root = "../.."
-write_to = "python/dragonradio/src/dragonradio/radio/version.py"
+write_to = "python/dragonradio/src/dragonradio/version.py"
