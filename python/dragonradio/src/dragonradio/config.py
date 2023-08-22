@@ -13,6 +13,7 @@ import platform
 import re
 from typing import Any, Dict, List, Mapping, Optional, Type
 import yaml
+import yaml.parser
 
 import libconf # type: ignore
 
@@ -662,8 +663,17 @@ class Config:
             path (Path): Path to a configuration file.
         """
         if path.suffix == '.conf':
-            with path.open('r') as fp:
-                config = libconf.load(fp)
+            # We try to read a .conf file as a libconf file first. If this
+            # fails, attempt to parse it as a YAML file.
+            try:
+                with path.open('r') as fp:
+                    config = libconf.load(fp)
+            except libconf.ConfigParseError:
+                    config = None
+
+            if config is None:
+                with path.open('r') as fp:
+                    config = yaml.safe_load(fp)
         elif path.suffix == '.json':
             with path.open('r') as fp:
                 config = json.load(fp)
