@@ -119,7 +119,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    config.addArguments(parser)
+    config.add_arguments(parser)
     parser.add_argument('-n', action='store', type=int, dest='num_nodes',
                         default=2,
                         help='set number of nodes in network')
