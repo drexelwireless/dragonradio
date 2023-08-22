@@ -115,7 +115,7 @@ def parseHuman(n):
     return float(m.group(1))* SUFFIX[m.group(2).lower()]
 
 def main():
-    config = dragonradio.radio.Config()
+    config = dragonradio.config.Config()
 
     parser = argparse.ArgumentParser(description='Run dragonradio.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)

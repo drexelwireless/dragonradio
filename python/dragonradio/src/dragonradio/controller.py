@@ -22,6 +22,7 @@ import pandas as pd
 
 from dragonradio.collab import CILServer
 import dragonradio.collab
+from dragonradio.config import Config, ConfigException
 from dragonradio.gpsd import GPSDClient
 import dragonradio.internal as internal
 from dragonradio.internal import InternalProtoClient, InternalProtoServer
@@ -33,7 +34,7 @@ from dragonradio.protobuf.tcp import TCPProtoServer
 from dragonradio.protobuf.timestamp import getTimestamp, setTimestamp
 import dragonradio.radio
 from dragonradio.radio import PHYChannel
-from dragonradio.radio.radio import Config, ConfigException, Radio
+from dragonradio.radio.radio import Radio
 import dragonradio.remote.client as remote
 import dragonradio.schedule
 import dragonradio.tasks

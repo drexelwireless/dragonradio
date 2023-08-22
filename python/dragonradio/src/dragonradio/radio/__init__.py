@@ -4,7 +4,6 @@
 from dragonradiocpp.radio import *
 
 try:
-    from .config import *
     from .radio import *
 except:
     pass
