@@ -359,9 +359,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             self.this_node.is_gateway = True
 
         # Start the internal protocol server
-        self.internal_server = InternalProtoServer(handler_obj=self,
-                                                   listen_ip='0.0.0.0',
-                                                   loop=self.loop)
+        self.internal_server = InternalProtoServer(self, loop=self.loop)
         self.internal_server_task = self.internal_server.start()
 
         # If we are the gateway, start an internal protocol client connected to
@@ -1542,8 +1540,8 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
             radio.netq.mandates = mandates
 
             # Make internal traffic very high priority
-            radio.netq.setFlowQueuePriority(internal.INTERNAL_PORT, (99, 0.0))
-            radio.netq.setFlowQueueType(internal.INTERNAL_PORT, dragonradio.radio.MandateQueue.FIFO)
+            radio.netq.setFlowQueuePriority(internal.DEFAULT_PORT, (99, 0.0))
+            radio.netq.setFlowQueueType(internal.DEFAULT_PORT, dragonradio.radio.MandateQueue.FIFO)
         else:
             # Set allowed flows
             self.setAllowedFlows([flow_uid for (flow_uid, _mandate) in mandates.items()])
@@ -1559,7 +1557,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         radio = self.radio
 
         allowed = set(flows)
-        allowed.add(internal.INTERNAL_PORT)
+        allowed.add(internal.DEFAULT_PORT)
 
         radio.netfirewall.allow_broadcasts = True
         radio.netfirewall.allowed = allowed
