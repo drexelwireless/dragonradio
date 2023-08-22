@@ -697,14 +697,33 @@ class Config:
             with path.open('w') as fp:
                 yaml.safe_dump(self.asdict(), fp)
 
-    def parser(self):
+    def parser(self, description: str='Run dragonradio.'):
         """Create an argument parser and populate it with arguments."""
-        parser = argparse.ArgumentParser(description='Run dragonradio.',
+        parser = argparse.ArgumentParser(description=description,
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        self.addArguments(parser)
+
+        # Add arguments
+        self.add_arguments(parser)
+
+        # Set defaults
+        defaults = {}
+
+        for act in parser._actions: # pylint: disable=protected-access
+            if not isinstance(act, LogLevelAction) and not isinstance(act, ExtendAction):
+                dest = act.dest
+                if hasattr(self, dest) and parser.get_default(dest) != argparse.SUPPRESS:
+                    defaults[dest] = getattr(self, dest)
+
+        parser.set_defaults(**defaults)
+
+        # Set up logging
+        logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
+                            level=logging.DEBUG)
+
+
         return parser
 
-    def addArguments(self, parser: argparse.ArgumentParser):
+    def add_arguments(self, parser: argparse.ArgumentParser):
         """
         Populate an ArgumentParser with arguments corresponding to configuration
         parameters.
@@ -1207,18 +1226,3 @@ class Config:
                             dest='collab_server_ip',
                             metavar='IP',
                             help='set collaboration server IP address')
-
-        # Set defaults
-        defaults = {}
-
-        for act in parser._actions: # pylint: disable=protected-access
-            if not isinstance(act, LogLevelAction) and not isinstance(act, ExtendAction):
-                dest = act.dest
-                if hasattr(self, dest) and parser.get_default(dest) != argparse.SUPPRESS:
-                    defaults[dest] = getattr(self, dest)
-
-        parser.set_defaults(**defaults)
-
-        # Set up logging
-        logging.basicConfig(format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
-                            level=logging.DEBUG)
