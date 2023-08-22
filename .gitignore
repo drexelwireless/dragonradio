@@ -11,7 +11,7 @@ tmp/
 /docs/doxygen/
 /dragonradio
 /images
-/python/dragonradio/src/dragonradio/radio/version.py
+/python/dragonradio/src/dragonradio/version.py
 /python/dragonradio-tools/src/dragonradio/tools/version.py
 /tools/venv/
 /venv/
