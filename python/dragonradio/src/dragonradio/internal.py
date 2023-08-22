@@ -9,10 +9,10 @@ from typing import Any, Optional, Sequence
 
 import dragonradio.radio
 from dragonradio.radio import Node
+from dragonradio.proto.internal_pb2 import FlowStats, Message, SpectrumStats, SpectrumUsage
 from dragonradio.protobuf.handler import send
 from dragonradio.protobuf.timestamp import setTimestamp
 from dragonradio.protobuf.udp import UDPProtoClient, UDPProtoServer
-from dragonradio.internal_pb2 import FlowStats, Message, SpectrumStats, SpectrumUsage
 
 logger = logging.getLogger('internal')
 

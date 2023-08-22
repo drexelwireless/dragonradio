@@ -12,7 +12,7 @@ import time
 
 import zmq
 
-import sc2.registration_pb2 as reg
+import dragonradio.proto.sc2.registration_pb2 as reg
 
 from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
