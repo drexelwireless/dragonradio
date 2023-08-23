@@ -12,6 +12,6 @@ tmp/
 /dragonradio
 /images
 /python/dragonradio/src/dragonradio/radio/version.py
-/python/dragonradio-tools/dragonradio/tools/version.py
+/python/dragonradio-tools/src/dragonradio/tools/version.py
 /tools/venv/
 /venv/

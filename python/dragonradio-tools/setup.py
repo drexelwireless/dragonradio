@@ -8,8 +8,8 @@ from setuptools import setup
 ext_modules = [
     Pybind11Extension(
         'dragonradiocpp_tools_mgen',
-        sorted([ 'src/main.cpp'
-               , 'src/mgen.cpp'
+        sorted([ 'csrc/main.cpp'
+               , 'csrc/mgen.cpp'
                ]),
     ),
 ]

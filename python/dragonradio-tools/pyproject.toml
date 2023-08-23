@@ -1,3 +1,37 @@
+[project]
+name = "dragonradio-tools"
+description = " DragonRadio data collection and processing tools"
+authors = [
+    {name = "Geoffrey Mainland", email = "mainland@drexel.edu"},
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+dependencies = [
+    "fastparquet",
+    "h5py",
+    "importlib_resources",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "pycairo",
+    "PyGObject",
+    "python-snappy",
+    "requests",
+    "scipy",
+]
+
+[project.urls]
+homepage = "https://github.com/drexelwireless/dragonradio"
+
+[project.scripts]
+drgui = "dragonradio.tools.plot.radio.drgui:drgui"
+dumpevents = "dragonradio.tools.plot.radio.command_line:dump_events"
+plot-mgen-metric = "dragonradio.tools.plot.mgen.command_line:plot_mgen_metric"
+plot-score = "dragonradio.tools.plot.colosseum.command_line:plot_score"
+plot-events = "dragonradio.tools.plot.radio.command_line:plot_events"
+plot-traffic = "dragonradio.tools.plot.radio.command_line:plot_traffic"
+plot-radio-metric = "dragonradio.tools.plot.radio.command_line:plot_radio_metric"
+
 [build-system]
 requires = [
     "setuptools>=45",
@@ -19,4 +53,4 @@ git_describe_command = [
     "v*[0-9]*",
 ]
 root = "../.."
-write_to = "python/dragonradio-tools/dragonradio/tools/version.py"
+write_to = "python/dragonradio-tools/src/dragonradio/tools/version.py"
