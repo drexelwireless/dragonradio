@@ -1,1 +1,3 @@
+global-include py.typed
+global-include *.pyi
 recursive-include dragonradio/radio/tcl *
