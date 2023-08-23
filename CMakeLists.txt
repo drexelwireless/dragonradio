@@ -66,10 +66,10 @@ target_link_libraries(dragonradio PRIVATE DragonRadio)
 
 add_custom_target(python ALL
                   DEPENDS
-                  ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/sc2/cil_pb2.py
-                  ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/sc2/registration_pb2.py
-                  ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/dragonradio/internal_pb2.py
-                  ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/dragonradio/remote_pb2.py)
+                  ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/src/sc2/cil_pb2.py
+                  ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/src/sc2/registration_pb2.py
+                  ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/src/dragonradio/internal_pb2.py
+                  ${CMAKE_CURRENT_SOURCE_DIR}/python/dragonradio/src/dragonradio/remote_pb2.py)
 
 function(generate_python_proto OUTPUT PROTO)
   get_filename_component(OUTPUTDIR ${OUTPUT} DIRECTORY)
@@ -80,10 +80,10 @@ function(generate_python_proto OUTPUT PROTO)
                      COMMENT "Generating protobuf file ${OUTPUT}")
 endfunction()
 
-generate_python_proto(python/dragonradio/sc2/cil_pb2.py cil.proto)
-generate_python_proto(python/dragonradio/sc2/registration_pb2.py registration.proto)
-generate_python_proto(python/dragonradio/dragonradio/internal_pb2.py internal.proto)
-generate_python_proto(python/dragonradio/dragonradio/remote_pb2.py remote.proto)
+generate_python_proto(python/dragonradio/src/sc2/cil_pb2.py cil.proto)
+generate_python_proto(python/dragonradio/src/sc2/registration_pb2.py registration.proto)
+generate_python_proto(python/dragonradio/src/dragonradio/internal_pb2.py internal.proto)
+generate_python_proto(python/dragonradio/src/dragonradio/remote_pb2.py remote.proto)
 
 add_custom_target(requirements.txt
                   DEPENDS

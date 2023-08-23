@@ -1,3 +1,31 @@
+[project]
+name = "dragonradio"
+description = "Python support for DragonRadio"
+authors = [
+    {name = "Geoffrey Mainland", email = "mainland@drexel.edu"},
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+dependencies = [
+    "h5py",
+    "importlib_resources",
+    "ipykernel",
+    "ipython",
+    "libconf",
+    "netifaces",
+    "numpy",
+    "pandas",
+    "protobuf==3.20.3",
+    "psutil",
+    "python-daemon",
+    "pyyaml",
+    "pyzmq",
+    "scipy"
+]
+
+[project.urls]
+homepage = "https://github.com/drexelwireless/dragonradio"
+
 [build-system]
 requires = [
     "setuptools>=45",
@@ -6,6 +34,14 @@ requires = [
 ]
 
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+script-files = ["scripts/dragonradio-client"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools_scm]
 git_describe_command = [
@@ -18,4 +54,4 @@ git_describe_command = [
     "v*[0-9]*",
 ]
 root = "../.."
-write_to = "python/dragonradio/dragonradio/radio/version.py"
+write_to = "python/dragonradio/src/dragonradio/radio/version.py"
