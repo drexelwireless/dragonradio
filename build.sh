@@ -1,6 +1,16 @@
 #!/bin/sh
 set -e
 
+while getopts "d" arg; do
+  case "$arg" in
+    d)
+      EXTRA="[dev]"
+      ;;
+    *)
+      ;;
+  esac
+done
+
 umask 022
 
 sudo apt install -y autoconf automake build-essential cmake
@@ -110,6 +120,11 @@ pip install -r requirements.txt
 
 # Install dragonradio package in development mode
 pip install -c requirements.txt python/dragonradiocpp-stubs -e python/dragonradio
+#
+# XXX We must use the system HDF5 library to avoid linking conflicts when
+# embedding in dragonradio, so we set PIP_NO_BINARY=h5py to ensure the h5py
+# package is built from source.
+PIP_NO_BINARY=h5py pip install -r requirements.txt python/dragonradiocpp-stubs -e "python/dragonradio${EXTRA}"
 
 # Build dragonradio
 (

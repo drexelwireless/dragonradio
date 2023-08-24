@@ -1,6 +1,16 @@
 #!/bin/sh
 set -e
 
+while getopts "d" arg; do
+  case "$arg" in
+    d)
+      EXTRA="[dev]"
+      ;;
+    *)
+      ;;
+  esac
+done
+
 sudo apt install -y python3-tk
 sudo apt install -y libffi-dev libgirepository1.0-dev libcairo2-dev pkg-config gir1.2-gtk-3.0
 sudo apt install -y libsnappy-dev
@@ -19,5 +29,5 @@ BASEDIR=$(dirname "$0")
 pip install -r requirements.txt \
   "$BASEDIR/.." \
   "$BASEDIR/../python/dragonradiocpp-stubs" \
-  -e "$BASEDIR/../python/dragonradio" \
+  -e "$BASEDIR/../python/dragonradio${EXTRA}" \
   -e "$BASEDIR/../python/dragonradio-tools"

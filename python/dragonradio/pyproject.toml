@@ -26,6 +26,15 @@ dependencies = [
 [project.urls]
 homepage = "https://github.com/drexelwireless/dragonradio"
 
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "pandas-stubs",
+    "types-PyYAML",
+    "types-protobuf",
+    "types-python-dateutil"
+]
+
 [build-system]
 requires = [
     "setuptools>=45",
