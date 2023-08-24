@@ -19,5 +19,5 @@ BASEDIR=$(dirname "$0")
 pip install -r requirements.txt \
   "$BASEDIR/.." \
   "$BASEDIR/../python/dragonradiocpp-stubs" \
-  -e "$BASEDIR/../python/dragonradio" \
+  -e "$BASEDIR/../python/dragonradio[dev]" \
   -e "$BASEDIR/../python/dragonradio-tools"
