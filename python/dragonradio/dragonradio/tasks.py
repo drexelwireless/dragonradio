@@ -53,7 +53,9 @@ class TaskManager:
         results = await asyncio.gather(*self.tasks, return_exceptions=True)
 
         for task in self.tasks:
-            if not task.cancelled and task.exception() is not None:
+            # XXX A task may not yet be done despite the fact that we awaited on
+            # gather!
+            if not task.cancelled() and (task.done() and task.exception() is not None):
                 f = io.StringIO()
                 task.print_stack(file=f)
                 logger.error(f.getvalue())
