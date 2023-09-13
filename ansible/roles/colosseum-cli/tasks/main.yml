@@ -14,13 +14,22 @@
     src: files/requirements.txt
     dest: /tmp/colosseumcli-requirements.txt
 
+- name: Create virtual environment for colosseumcli
+  command: virtualenv -p python3 /opt/colosseumcli
+
 - name: Install colosseumcli requirements
-  shell: pip3 install -r /tmp/colosseumcli-requirements.txt
+  command: /opt/colosseumcli/bin/pip3 install -r /tmp/colosseumcli-requirements.txt
 
 - name: Install colosseumcli
-  shell: python3 setup.py install
+  shell: /opt/colosseumcli/bin/python3 setup.py install
   args:
     chdir: /tmp/colosseumcli-18.05.0
+
+- name: Create link for /usr/local/bin/colosseumcli
+  file:
+    src: /opt/colosseumcli/bin/colosseumcli
+    dest: /usr/local/bin/colosseumcli
+    state: link
 
 - name: Remove colosseumcli leftovers
   file:
