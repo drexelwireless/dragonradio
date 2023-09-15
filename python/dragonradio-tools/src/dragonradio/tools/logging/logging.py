@@ -5,6 +5,7 @@ import ast
 import datetime
 from datetime import datetime
 from functools import cached_property
+import json
 import logging
 import os
 from pathlib import Path
@@ -238,14 +239,18 @@ class Log:
         """Radio configuration"""
         config = self.h5file.attrs['config']
 
-        # Rewrite new-style pybind11 enumerations
-        config = re.sub(r'<(?:CRCScheme|FECScheme|ModulationScheme).(\w*): \d+>', r"'\1'", config, re.M)
+        # First try to decode config as JSON and then, if that fails, as a
+        # python literal
+        try:
+            return json.loads(config)
+        except json.decoder.JSONDecodeError:
+            # Rewrite new-style pybind11 enumerations
+            config = re.sub(r'<(?:CRCScheme|FECScheme|ModulationScheme).(\w*): \d+>', r"'\1'", config, re.M)
 
-        # Rewrite old-style pybind11 enumerations
-        config = re.sub(r'(?:CRCScheme|FECScheme|ModulationScheme).(\w*)', r"'\1'", config, re.M)
+            # Rewrite old-style pybind11 enumerations
+            config = re.sub(r'(?:CRCScheme|FECScheme|ModulationScheme).(\w*)', r"'\1'", config, re.M)
 
-        # Now we can evaluate the config as a python literal
-        return ast.literal_eval(config)
+            return ast.literal_eval(config)
 
     @cached_property
     def events(self) -> pd.DataFrame:
