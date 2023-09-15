@@ -8,6 +8,7 @@ from fractions import Fraction
 from functools import cached_property
 import importlib_resources
 import ipaddress
+import json
 import logging
 import math
 import os
@@ -447,7 +448,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             self.logger = Logger(path)
             self.logger.setAttribute('version', __version__)
             self.logger.setAttribute('node_id', self.node_id)
-            self.logger.setAttribute('config', str(config))
+            self.logger.setAttribute('config', json.dumps(config.asdict()))
 
             if hasattr(config, 'log_sources'):
                 for source in config.log_sources:
