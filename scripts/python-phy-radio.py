@@ -1,17 +1,11 @@
 # Copyright 2018-2020 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
-import argparse
 import asyncio
-from concurrent.futures import CancelledError
 import logging
-import os
-import random
-import signal
-import sys
 
 import dragonradio
-import dragonradio.radio
+import dragonradio.controller
 
 class OFDMModulator(dragonradio.PacketModulator):
     def __init__(self,
@@ -142,9 +136,9 @@ class OFDM(dragonradio.PHY):
                                self.taper_len,
                                self.subcarriers)
 
-class Radio(dragonradio.radio.Radio):
+class Radio(dragonradio.controller.Radio):
     def __init__(self, *args, **kwargs):
-        dragonradio.radio.Radio.__init__(self, *args, **kwargs)
+        dragonradio.controller.Radio.__init__(self, *args, **kwargs)
 
     def mkPHY(self, header_mcs, mcs_table):
         return OFDM(self.snapshot_collector,
@@ -195,7 +189,7 @@ def main():
         config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events', 'log_arq_events']
 
     # Create the radio
-    radio = dragonradio.radio.Radio(config, config.mac)
+    radio = Radio(config, config.mac)
 
     # Run the radio
     return radio.start()

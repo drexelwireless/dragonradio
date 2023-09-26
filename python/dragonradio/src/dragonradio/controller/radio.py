@@ -47,11 +47,12 @@ from dragonradio.config import Config, ConfigException, str2mac
 import dragonradio.liquid
 from dragonradio.liquid import MCS
 import dragonradio.net
-import dragonradio.radio.timesync as timesync
 import dragonradio.schedule
 import dragonradio.signal
 import dragonradio.tasks
 from dragonradio.version import version as __version__
+
+from .timesync import synchronize
 
 NetQueue: TypeAlias = Union[ControllerNetLink, Queue]
 
@@ -241,7 +242,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         Returns:
             subprocess.Popen: Vivado process
         """
-        tcl_path = importlib_resources.files('dragonradio.radio.tcl').joinpath('hardware_utils.tcl')
+        tcl_path = importlib_resources.files('dragonradio.controller.data').joinpath('hardware_utils.tcl')
 
         # Construct vivado command
         command = [ str(self.config.vivado_path)
@@ -1406,7 +1407,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         if self.node_id == self.nhood.time_master:
             return
 
-        timesync.synchronize(self.config, self)
+        synchronize(self.config, self)
 
     def getRadioLogPath(self) -> str:
         """

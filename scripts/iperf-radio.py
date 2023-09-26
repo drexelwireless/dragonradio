@@ -16,7 +16,7 @@ import sys
 import time
 
 import dragonradio
-import dragonradio.radio
+import dragonradio.controller
 
 IPERF_PORT = 5000
 
@@ -178,7 +178,7 @@ def main():
         writer = csv.writer(sys.stdout)
 
     # Create the radio object
-    radio = dragonradio.radio.Radio(config, 'tdma')
+    radio = dragonradio.controller.Radio(config, 'tdma')
 
     #
     # Configure the MAC
