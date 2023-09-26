@@ -33,11 +33,12 @@ from dragonradio.protobuf.tcp import TCPProtoServer
 from dragonradio.protobuf.timestamp import getTimestamp, setTimestamp
 import dragonradio.radio
 from dragonradio.radio import PHYChannel
-from dragonradio.radio.radio import Radio
 import dragonradio.remote.client as remote
 import dragonradio.schedule
 import dragonradio.tasks
 from dragonradio.util import save_dataframe
+
+from .radio import Radio
 
 MP: TypeAlias = int
 
@@ -407,7 +408,7 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
         logger.info('Controller terminated')
 
     def mkRadio(self, *args, **kwargs):
-        return dragonradio.radio.Radio(*args, **kwargs)
+        return Radio(*args, **kwargs)
 
     async def startRadio(self, timestamp=None):
         """Start the radio"""

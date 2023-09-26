@@ -7,8 +7,8 @@ from itertools import chain, cycle, starmap
 import logging
 import random
 
-import dragonradio
-import dragonradio.radio
+import dragonradio.config
+import dragonradio.controller
 
 class CycleTXGain:
     """Class for managing TX gain cycling"""
@@ -108,7 +108,7 @@ def main():
         config.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events', 'log_arq_events']
 
     # Create the radio
-    radio = dragonradio.radio.Radio(config, config.mac)
+    radio = dragonradio.controller.Radio(config, config.mac)
 
     # Start TX gain cycling task
     user_ns = {}
