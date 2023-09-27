@@ -26,9 +26,10 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportFilters(msignal);
     exportIQCompression(msignal);
 
+    exportChannels(mradio);
+
     exportHeader(mpacket);
 
-    exportChannels(mradio);
     exportModem(mradio);
 
     exportLiquid(mliquid);
@@ -38,6 +39,8 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportNCOs(msignal);
     exportFilters(msignal);
     exportIQCompression(msignal);
+
+    exportChannels(mradio);
 
     exportHeader(mpacket);
     exportPacket(mpacket);
@@ -60,7 +63,6 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportNode(mradio);
     exportNeighborhood(mradio);
     exportModem(mradio);
-    exportChannels(mradio);
     exportChannelizers(mradio);
     exportSynthesizers(mradio);
     exportMACs(mradio);
