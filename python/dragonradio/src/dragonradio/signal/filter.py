@@ -9,7 +9,7 @@ from typing import Optional
 import numpy as np
 import scipy.signal as signal
 
-import dragonradio.signal
+import dragonradio.signal.firpm
 
 def bellangerord(delta1, delta2, fs, deltaf):
     """Estimate filter order.
