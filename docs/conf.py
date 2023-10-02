@@ -54,8 +54,6 @@ extensions = [
     'sphinx_sitemap'
 ]
 
-autodoc_mock_imports = ['google.protobuf']
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['.templates']
 
