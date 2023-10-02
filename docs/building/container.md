@@ -45,6 +45,13 @@ The following instructions will build an LXC image based on Ubuntu 20.04 that co
    $ (cd ansible && ansible-playbook -e source=ubuntu:22.04 -e container=dragonradio-2204-base playbooks/dragonradio.yml)
    ```
 
+   There are also several ansible variables that control which components are include in the base image:
+
+     * `usb`: when true, `libusb` is installed, which is required for USRP devices that use a USB interface, like the B210.
+     * `vivado`: when true, the Vivado lab tools are installed. These tools are required for flashing the USRP with alternate firmware. Installation of the Vivado tools substantially increases the size of the image, so only include them if you need to flash USRP firmware.
+
+   These variables can be set on the `ansible-playbook` command line with the `--extra-vars` (or `-e`) flag just as the `container` and `source` ansible variables were set above.
+
    If you receive an error of the form `Unsupported parameters for (lxd_container) module: ignore_volatile_options`, then you need to update `ansible`.
 
 1. Build a DragonRadio image
