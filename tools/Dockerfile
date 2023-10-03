@@ -21,6 +21,7 @@ RUN apt-get update \
     curl \
     git \
     netcat \
+    ninja-build \
     rsync \
     sudo \
     vim \
@@ -54,11 +55,15 @@ RUN apt-get update \
     libflac++-dev \
     libflac-dev \
     libhdf5-dev \
+    python-is-python3 \
     python3 \
     python3-dev \
     python3-distutils \
     python3-mako \
+    python3-numpy \
     python3-pip \
+    python3-requests \
+    python3-urllib3 \
     python3-virtualenv \
     virtualenv \
     # For DragonRadio tools
@@ -73,14 +78,15 @@ RUN apt-get update \
 #
 # Install protobuf
 #
-ARG PROTOBUF_VERSION=3.19.4
+ARG PROTOBUF_VERSION=3.20.3
 RUN wget https://github.com/google/protobuf/releases/download/v${PROTOBUF_VERSION}/protobuf-python-${PROTOBUF_VERSION}.tar.gz -O /tmp/protobuf.tar.gz \
  && cd /tmp \
  && tar xf protobuf.tar.gz \
  && cd protobuf-${PROTOBUF_VERSION} \
- && ./configure \
- && make -j10 \
- && make install \
+ && mkdir build \
+ && cd build \
+ && cmake -G Ninja ../cmake \
+ && ninja install \
  && ldconfig \
  && rm -rf /tmp/protobuf-${PROTOBUF_VERSION}
 
@@ -99,14 +105,16 @@ RUN groupadd --gid $USER_GID $USERNAME \
 #
 # Install dragonradio libraries
 #
+ARG DRAGONRADIO_VERSION=1.0.0
+
 COPY . /dragonradio
 RUN cd /dragonradio \
-  && SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0 ./build.sh \
+  && SETUPTOOLS_SCM_PRETEND_VERSION=${DRAGONRADIO_VERSION} ./build.sh \
   && rm -rf build venv \
-  && virtualenv -p python3.8 /venv \
+  && virtualenv -p python3 /venv \
   && . /venv/bin/activate \
   && pip install --upgrade pip \
-  && SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0 pip install -r tools/requirements.txt \
+  && SETUPTOOLS_SCM_PRETEND_VERSION=${DRAGONRADIO_VERSION} pip install -r tools/requirements.txt \
        . \
        python/dragonradio \
        python/dragonradio-tools \
