@@ -391,7 +391,7 @@ class SendView(LogView):
 
     def link_to_rx(self, event):
         if self.viewer:
-            idx = self.logs[self.pkt.nexthop].findReceivedPacketIndex(self.pkt.seq)
+            idx = self.logs[self.pkt.nexthop].findReceivedPacketIndex(self.pkt)
             if idx is None:
                 logging.warning('Could not find received packet')
                 return

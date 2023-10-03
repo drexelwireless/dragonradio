@@ -108,9 +108,10 @@ class SpecgramPlot(AnnotatedPlot):
         xticks = mp.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x+t0))
         yticks = mp.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x/self.scale))
 
-        self.ax.clear()
-        if self.cb:
+        # XXX colorbar must be removed before clearing axis
+        if self.cb is not None:
             self.cb.remove()
+        self.ax.clear()
 
         _pxx, _freq, _t, cax = self.ax.specgram(w, NFFT=self.nfft, noverlap=self.noverlap, Fs=Fs, cmap=self.cmap)
 
