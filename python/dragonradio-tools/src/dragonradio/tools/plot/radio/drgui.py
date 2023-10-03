@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-# Copyright 2018-2022 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 from functools import wraps
 import logging
 import sys
+from typing import Any, Dict
 
 import matplotlib as mp
+from matplotlib.figure import Figure
 from matplotlib.widgets import Button, Slider
 import matplotlib.pyplot as plt
 
@@ -45,12 +47,22 @@ def pprReceivedPacket(logs: LogCollection, pkt: Packet):
            f"clock delta={delta_s:}"
 
 class LogView:
-    def __init__(self, logs, viewer):
-        self.logs = logs
-        """A LogCollection"""
+    logs: LogCollection
+    """A LogCollection"""
 
+    viewer: 'LogViewer'
+    """Responsible LogViewer"""
+
+    node_id: int
+    "ID of node whose log is being viewed"
+
+    fig: Figure
+    """Figure representing view"""
+
+    def __init__(self, logs: LogCollection, viewer: 'LogViewer', node_id: int):
+        self.logs = logs
         self.viewer = viewer
-        """Responsible LogViewer"""
+        self.node_id = node_id
 
     def set_window_title(self, title: str):
         """Set window title.
@@ -81,15 +93,17 @@ class ReceiveView(LogView):
     plot_events: bool = True
     """Should MAC/USRP events be plotted?"""
 
-    def __init__(self, logs, viewer, node_id,
-                 show_header_invalid=False,
-                 nfft=256,
-                 sigslop=0,
-                 annotate=False,
-                 sticky=False):
-        super().__init__(logs, viewer)
+    def __init__(self,
+                 logs: LogCollection,
+                 viewer: 'LogViewer',
+                 node_id: int,
+                 show_header_invalid: bool=False,
+                 nfft: int=256,
+                 sigslop: int =0,
+                 annotate: bool=False,
+                 sticky: bool=False):
+        super().__init__(logs, viewer, node_id)
 
-        self.node_id = node_id
         self.show_header_invalid = show_header_invalid
         self.sigslop = sigslop
 
@@ -135,14 +149,14 @@ class ReceiveView(LogView):
 
         self.specgram.pick_artist = self.pick_artist
 
-    def received(self, node_id):
+    def received(self, node_id: int):
         recv = self.logs[node_id].recv
         if self.show_header_invalid:
             return recv
         else:
             return recv[recv.header_valid == True]
 
-    def plot(self, idx):
+    def plot(self, idx: int):
         recv = self.received(self.node_id)
 
         if idx >= 0 and idx < len(recv):
@@ -316,10 +330,12 @@ class ReceiveView(LogView):
 
 class SendView(LogView):
     """View of sent packets"""
-    def __init__(self, logs, viewer, node_id, nfft=256):
-        super().__init__(logs, viewer)
-
-        self.node_id = node_id
+    def __init__(self,
+                 logs: LogCollection,
+                 viewer: 'LogViewer',
+                 node_id: int,
+                 nfft: int=256):
+        super().__init__(logs, viewer, node_id)
 
         self.pktidx = 0
 
@@ -401,10 +417,12 @@ class SendView(LogView):
 
 class SnapshotView(LogView):
     """View of snapshots"""
-    def __init__(self, logs, viewer, node_id, nfft=256):
-        super().__init__(logs, viewer)
-
-        self.node_id = node_id
+    def __init__(self,
+                 logs: LogCollection,
+                 viewer: 'LogViewer',
+                 node_id: int,
+                 nfft: int=256):
+        super().__init__(logs, viewer, node_id)
 
         self.snapshotidx = 0
 
@@ -490,12 +508,15 @@ def cached_fig(f):
     return wrapper
 
 class LogViewer:
+    logs: LogCollection
+    """Collection of DragonRadio logs"""
+
+    figures: Dict[str, Dict[Any, Figure]]
+    """Cached figures"""
+
     def __init__(self, logs):
         self.logs = logs
-        """Collection of DragonRadio logs"""
-
         self.figures = {}
-        """Cached figures"""
 
     def closeView(self, fig):
         for key in self.figures:
@@ -504,7 +525,7 @@ class LogViewer:
                 return
 
     @cached_fig
-    def rxView(self, node_id, nfft=256, show_header_invalid=False, sigslop=0, **kwargs):
+    def rxView(self, node_id: int, nfft: int=256, show_header_invalid: bool=False, sigslop: int=0, **kwargs):
         view = ReceiveView(self.logs, self, node_id,
                            nfft=nfft,
                            show_header_invalid=show_header_invalid,
@@ -514,13 +535,13 @@ class LogViewer:
         return view
 
     @cached_fig
-    def txView(self, node_id, nfft=256):
+    def txView(self, node_id: int, nfft: int=256):
         view = SendView(self.logs, self, node_id, nfft=nfft)
         view.fig.show()
         return view
 
     @cached_fig
-    def snapshotView(self, node_id, nfft=256):
+    def snapshotView(self, node_id: int, nfft: int=256):
         view = SnapshotView(self.logs, self, node_id, nfft=nfft)
         view.fig.show()
         return view
