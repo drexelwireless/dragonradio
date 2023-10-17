@@ -53,10 +53,13 @@ The primary tools for plotting log and scoring data are:
 * `plot-events`: Plot logged DragonRadio events on a timeline.
 * `plot-mgen-metric`: Plot a MGEN metric: rate, packet count, latency, interarrival time, loss, and late packet count. This script was built to mimic the style of plot produced by the `trpr` tool.
 * `plot-radio-metric`: Plot DragonRadio per-packet metrics, like EVM and transmission latency.
-* `plot-score`: Plot SC2 phase 2 and phase 3 scores. This script can also dump various score-related metrics to a CSV file and print all flows in deceasing order of number of possible points lost. The `--plot-score` flag will plot the Phase 3 score.
-* `plot-traffic`: Plot packet traffic as a function of time. This can provide a very detailed view of *every* packet sent and received by any node.
+* `plot-traffic`: Plot packet traffic as a function of time. This can provide a very detailed view of every packet sent and received by any node.
+
+The following tools are specific to the Colosseum (and SC2). The plotting tools plot SC2-specific metrics and must be used with Colosseum reservation logs.
+
 * `sc2-batch`: Prepare a Colosseum batch file from a template.
 * `sc2-diagnostics`: Check node connectivity, display SC2 scores, and report nodes that lost phase 3 points.
+* `sc2-plot`: Plot SC2 phase 2 and phase 3 scores. This script can also dump various score-related metrics to a CSV file and print all flows in deceasing order of number of possible points lost. The `--plot-score` flag will plot the Phase 3 score.
 * `sc2-score`: Compute SC2 scores and can produce a variety of reports. See the help (`-h`) for descriptions of the various options. The most useful flag is `--problem-flows`, which shows all traffic flows that lost points ordered by number of points lost.
 
 Use the `-h` or `--help` flag to see available options.

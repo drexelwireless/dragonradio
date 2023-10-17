@@ -1,13 +1,13 @@
-# Copyright 2018-2021 Drexel University
+# Copyright 2018-2023 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 import matplotlib as mp
 import matplotlib.pyplot as plt
 
 from dragonradio.tools.colosseum import Scorer
 from dragonradio.tools.logging.command_line import add_annotate_args, Command
-from dragonradio.tools.plot.colosseum import ScorePlot, FlowPlot
+from dragonradio.tools.colosseum.plot import ScorePlot, FlowPlot
 
-class PlotScoreCommand(Command):
+class SC2PlotCommand(Command):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -48,8 +48,8 @@ class PlotScoreCommand(Command):
 
             plt.show()
 
-def plot_score():
+def sc2_plot():
     mp.use('GTK3Agg')
 
-    cmd = PlotScoreCommand()
+    cmd = SC2PlotCommand()
     cmd.run('Plot Colosseum scores and flows')

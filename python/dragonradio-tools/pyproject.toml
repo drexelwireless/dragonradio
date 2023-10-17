@@ -31,12 +31,12 @@ homepage = "https://github.com/drexelwireless/dragonradio"
 drgui = "dragonradio.tools.plot.radio.drgui:drgui"
 dumpevents = "dragonradio.tools.plot.radio.command_line:dump_events"
 plot-mgen-metric = "dragonradio.tools.plot.mgen.command_line:plot_mgen_metric"
-plot-score = "dragonradio.tools.plot.colosseum.command_line:plot_score"
 plot-events = "dragonradio.tools.plot.radio.command_line:plot_events"
 plot-traffic = "dragonradio.tools.plot.radio.command_line:plot_traffic"
 plot-radio-metric = "dragonradio.tools.plot.radio.command_line:plot_radio_metric"
 sc2-batch = "dragonradio.tools.colosseum.command_line:sc2_batch"
 sc2-diagnostics = "dragonradio.tools.colosseum.command_line:sc2_diagnostics"
+sc2-plot = "dragonradio.tools.colosseum.command_line:sc2_plot"
 sc2-score = "dragonradio.tools.colosseum.command_line:sc2_score"
 
 [build-system]
