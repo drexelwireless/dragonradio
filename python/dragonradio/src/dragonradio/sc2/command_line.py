@@ -24,9 +24,13 @@ class Command:
     config: SC2Config
     """SC2 configuration"""
 
-    def __init__(self, description: str='Run SC2 variant of dragonradio.'):
+    def __init__(self, description: str='Run SC2 variant of dragonradio.', config: Optional[SC2Config]=None):
         self.description = description
-        self.config = SC2Config()
+
+        if config is None:
+            self.config = SC2Config()
+        else:
+            self.config = config
 
     def add_arguments(self, parser: argparse.ArgumentParser):
         parser.add_argument('action', choices=['start', 'stop', 'restart', 'status'])
