@@ -38,7 +38,7 @@ import dragonradio.schedule
 import dragonradio.tasks
 from dragonradio.util import save_dataframe
 
-from .radio import Radio
+from dragonradio.controller import Radio
 
 MP: TypeAlias = int
 

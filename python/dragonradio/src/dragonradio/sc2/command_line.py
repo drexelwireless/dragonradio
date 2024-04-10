@@ -13,9 +13,8 @@ from typing import Optional
 import daemon
 import daemon.pidfile
 
-from dragonradio.controller import Controller
-
 from .config import SC2Config
+from .controller import Controller
 
 class Command:
     description: str
