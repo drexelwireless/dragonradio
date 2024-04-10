@@ -473,8 +473,8 @@ class Scorer(DataFrameCache):
                   (df.npackets_sent > 0) & \
                   ((df.npackets_recv/df.npackets_sent) >= 0.9)
 
-        # Score goals
-        df['goal'] = tp_good | ft_good
+        # Score goals and make sure goal column is int
+        df['goal'] = (tp_good | ft_good).astype(int)
 
         # Now we need to handle MPs with no traffic. We set their score to NaN
         # and then fill forward
@@ -487,9 +487,6 @@ class Scorer(DataFrameCache):
 
         # If we are gated, goal is 0
         df.loc[df.gate == True, 'goal'] = 0
-
-        # Make sure goal column is int
-        df.goal = df.goal.astype(int)
 
         #
         # Calculate achieved duration
