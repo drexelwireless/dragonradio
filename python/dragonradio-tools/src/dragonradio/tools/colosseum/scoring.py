@@ -424,7 +424,7 @@ class Scorer(DataFrameCache):
         df = df.join(gates_df[cols], how='left')
 
         # Replace NaN gate values with 0
-        df['gate'].fillna(0, inplace=True)
+        df.fillna({'gate': 0}, inplace=True)
 
         # Convert gate column to bool
         df.gate = df.gate.astype(bool)
@@ -483,7 +483,7 @@ class Scorer(DataFrameCache):
         df['goal'] = df.groupby(['team', 'flow_uid'], sort=False, group_keys=False)['goal'].apply(lambda x: x.ffill())
 
         # Set remaining NaN goals to 0
-        df['goal'].fillna(0, inplace=True)
+        df.fillna({'goal': 0}, inplace=True)
 
         # If we are gated, goal is 0
         df.loc[df.gate == True, 'goal'] = 0
@@ -492,7 +492,7 @@ class Scorer(DataFrameCache):
         # Calculate achieved duration
         #
         df['achieved_duration'] = df.loc[df['goal'] == 1].groupby(['team', 'flow_uid', (df['goal'] != df['goal'].shift(1)).cumsum()]).cumcount()+1
-        df['achieved_duration'].fillna(0, inplace=True)
+        df.fillna({'achieved_duration': 0}, inplace=True)
 
         #
         # Calculate stable goals
