@@ -374,7 +374,7 @@ class Scorer(DataFrameCache):
         logger.info('Calculating gates')
 
         df = pd.DataFrame(self.readIncumbentGates(),
-                          columns=['mp', 'gate']).astype({ 'mp': int , 'gate': bool })
+                          columns=['mp', 'gate']).astype({ 'mp': int , 'gate': float })
         df.set_index(['mp'], inplace=True)
         df.sort_index(inplace=True)
 
@@ -423,10 +423,10 @@ class Scorer(DataFrameCache):
         cols = pd.Index(['gate'])
         df = df.join(gates_df[cols], how='left')
 
-        # Replace NaN gate values with False
-        df['gate'].fillna(False, inplace=True)
+        # Replace NaN gate values with 0
+        df['gate'].fillna(0, inplace=True)
 
-        # Make sure gate column is bool
+        # Convert gate column to bool
         df.gate = df.gate.astype(bool)
 
         #
