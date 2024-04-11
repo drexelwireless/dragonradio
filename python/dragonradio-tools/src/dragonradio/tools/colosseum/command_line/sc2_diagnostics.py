@@ -148,7 +148,7 @@ class SC2DiagnosticsCommand(Command):
 
             if args.check_evm:
                 for curhop in srn_df.curhop.unique():
-                    df = srn_df.loc[srn_df.curhop == curhop].groupby('mp').agg({'evm': [np.median, np.mean, np.std]})
+                    df = srn_df.loc[srn_df.curhop == curhop].groupby('mp').agg({'evm': ['median', 'mean', 'std']})
 
                     # Look for suspicious EVM levels.
                     #
