@@ -345,6 +345,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             c.TerminalInteractiveShell.loop_runner = 'asyncio'
             c.TerminalInteractiveShell.autoawait = True
 
+            logging.getLogger('parso.cache').disabled = True
+            logging.getLogger('parso.python.diff').disabled = True
+
             try:
                 shell = IPython.terminal.embed.InteractiveShellEmbed.instance(config=c, user_ns=user_ns)
                 shell.enable_gui('asyncio')
