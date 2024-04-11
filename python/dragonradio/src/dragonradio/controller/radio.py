@@ -345,7 +345,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             c.TerminalInteractiveShell.autoawait = True
 
             try:
-                shell = IPython.terminal.embed.InteractiveShellEmbed(config=c, user_ns=user_ns)
+                shell = IPython.terminal.embed.InteractiveShellEmbed.instance(config=c, user_ns=user_ns)
                 shell.enable_gui('asyncio')
                 shell()
 
