@@ -411,7 +411,7 @@ class Scorer(DataFrameCache):
             stage_start = int(stage // MP)
             stage_end = self.stage_end[stage]
 
-            return df.unstack(['team', 'stage', 'flow_uid']).reindex(range(stage_start, stage_end+1)).fillna(0).stack(['team', 'stage', 'flow_uid'])
+            return df.unstack(['team', 'stage', 'flow_uid']).reindex(range(stage_start, stage_end+1)).fillna(0).stack(['team', 'stage', 'flow_uid'], future_stack=True)
 
         df = df.groupby(['stage'], as_index=False).apply(fillMissingMPs).droplevel(0)
 
