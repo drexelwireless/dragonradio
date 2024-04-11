@@ -339,6 +339,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         elif self.config.interactive:
             import IPython.terminal.embed
             from traitlets.config import Config
+
             c = Config()
 
             c.TerminalInteractiveShell.loop_runner = 'asyncio'
