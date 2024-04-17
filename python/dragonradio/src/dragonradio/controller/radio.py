@@ -1307,7 +1307,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     def installSimpleMACSchedule(self, mac_class: Optional[Type[MAC]]=None):
         """Install a simple static schedule.
 
-        If there is only one channel, a pue TDMA schedule will be installed.
+        If there is only one channel, a pure TDMA schedule will be installed.
         Otherwise, a greedy schedule that attempts to give each node a full
         channel will be installed.
 
