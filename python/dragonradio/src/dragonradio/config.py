@@ -759,6 +759,11 @@ class Config:
         def enumHelp(cls):
             return ', '.join(sorted(cls.__members__.keys()))
 
+        # Script
+        parser.add_argument('script',
+                            metavar='FILE',
+                            help='Python radio script')
+
         # Node ID
         parser.add_argument('--team', action='store', type=int,
                             dest='team',
