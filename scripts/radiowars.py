@@ -1,6 +1,7 @@
 # Copyright 2018-2024 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
+import argparse
 import logging
 from typing import List, Optional, Sequence, Type
 
@@ -12,9 +13,9 @@ from dragonradio.sc2.config import SC2Config
 from dragonradio.schedule import Schedule
 from dragonradiocpp.radio import MAC
 
-class MyRadio(Radio):
+class RadioWarsRadio(Radio):
     def __init__(self, *args, **kwargs):
-        super.__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def installSimpleMACSchedule(self, mac_class: Optional[Type[MAC]]=None):
         """Set a simple static MAC schedule."""
@@ -48,9 +49,19 @@ class MyRadio(Radio):
 
         return sched
 
-class Command(Command):
+class RadioWarsController(Controller):
+    def mkRadio(self, *args, **kwargs):
+        return RadioWarsRadio(*args, **kwargs)
+
+class RadioWarsCommand(Command):
     def mkController(self):
-        return Controller(self.config)
+        return RadioWarsController(self.config)
+
+    def handle(self, parser: argparse.ArgumentParser, args: SC2Config) -> int:
+        if args.log_directory:
+            args.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events']
+
+        return super().handle(parser, args)
 
 def main():
     config = SC2Config()
@@ -75,7 +86,7 @@ def main():
 
     ## END modifications
 
-    command = Command(config=config)
+    command = RadioWarsCommand(config=config)
     command.run()
 
 if __name__ == '__main__':
