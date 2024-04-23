@@ -139,7 +139,7 @@ int main(int argc, char** argv)
         // Pass our command-line arguments to Python, but skip the first
         // argument, which is the name of this binary. Instead, Python will see
         // the name of the script we run as the first argument.
-        py::scoped_interpreter guard{ true, argc-1, argv+1, true };
+        py::scoped_interpreter guard{ true, argc, argv, true };
 
         // Activate any Python virtual environment
         activateVirtualenv();
