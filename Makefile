@@ -1,3 +1,12 @@
+requirements.txt:
+	./venv/bin/pip freeze \
+		--exclude-editable \
+		--exclude pkg_resources \
+		--exclude setuptools \
+		--exclude wheel \
+		--exclude dragonradiocpp-stubs \
+		>$@
+
 .PHONY: stubs
 stubs:
 	./venv/bin/pip install "pybind11-stubgen==2.2.2"
