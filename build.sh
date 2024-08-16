@@ -134,6 +134,6 @@ PIP_NO_BINARY=h5py pip install -r requirements.txt python/dragonradiocpp-stubs -
   CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" cmake ..;
   make -j10;
   cd ..;
-  ln -sf build/dragonradio;
+  ln -sf build/dragonradio .;
   ln -sf ../../build/dragonradio venv/bin/dragonpython
 )
