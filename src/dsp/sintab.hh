@@ -1,10 +1,11 @@
-// Copyright 2018-2022 Drexel University
+// Copyright 2018-2024 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #ifndef SINTAB_HH_
 #define SINTAB_HH_
 
 #include <complex>
+#include <cstdint>
 
 #include "Math.hh"
 

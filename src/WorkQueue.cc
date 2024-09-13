@@ -1,7 +1,9 @@
-// Copyright 2018-2022 Drexel University
+// Copyright 2018-2024 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "WorkQueue.hh"
+
+#include <cstdio>
 
 WorkQueue work_queue;
 
