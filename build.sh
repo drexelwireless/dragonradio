@@ -25,7 +25,7 @@ sudo apt install -y ninja-build
 sudo apt install -y libcap-dev
 
 # Install Python 3
-sudo apt install -y python3 python3-dev python3-distutils python3-pip
+sudo apt install -y python3 python3-dev python3-pip
 
 # For UHD
 sudo apt install -y python3-mako python3-numpy
