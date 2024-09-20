@@ -13,7 +13,7 @@ dependencies = [
     "ipython",
     "libconf",
     "netifaces",
-    "numpy<2",
+    "numpy",
     "pandas",
     "protobuf==3.20.3",
     "psutil",
