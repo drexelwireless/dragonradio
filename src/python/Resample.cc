@@ -39,16 +39,19 @@ void exportResampler(py::module &m, const char *name)
         .def("resample",
             [](Resampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
             {
-                auto                   inbuf = sig.request();
-                pyarray_O              outarr(resamp.neededOut(inbuf.size));
-                auto                   outbuf = outarr.request();
-                unsigned               nw;
-                py::gil_scoped_release release;
+                auto      inbuf = sig.request();
+                pyarray_O outarr(resamp.neededOut(inbuf.size));
+                auto      outbuf = outarr.request();
+                unsigned  nw;
 
-                nw = resamp.resample(static_cast<I*>(inbuf.ptr),
-                                     inbuf.size,
-                                     static_cast<O*>(outbuf.ptr));
-                assert(nw <= outbuf.size);
+                {
+                    py::gil_scoped_release release;
+
+                    nw = resamp.resample(static_cast<I*>(inbuf.ptr),
+                                        inbuf.size,
+                                        static_cast<O*>(outbuf.ptr));
+                    assert(nw <= outbuf.size);
+                }
 
                 outarr.resize({nw});
 
@@ -188,16 +191,19 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
         .def("resampleMixUp",
           [](dragonradio::signal::pfb::MixingRationalResampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
           {
-              auto                   inbuf = sig.request();
-              pyarray_O              outarr(resamp.neededOut(inbuf.size));
-              auto                   outbuf = outarr.request();
-              unsigned               nw;
-              py::gil_scoped_release release;
+              auto      inbuf = sig.request();
+              pyarray_O outarr(resamp.neededOut(inbuf.size));
+              auto      outbuf = outarr.request();
+              unsigned  nw;
 
-              nw = resamp.resampleMixUp(static_cast<I*>(inbuf.ptr),
-                                        inbuf.size,
-                                        static_cast<O*>(outbuf.ptr));
-              assert(nw <= outbuf.size);
+              {
+                  py::gil_scoped_release release;
+
+                  nw = resamp.resampleMixUp(static_cast<I*>(inbuf.ptr),
+                                            inbuf.size,
+                                            static_cast<O*>(outbuf.ptr));
+                  assert(nw <= outbuf.size);
+              }
 
               outarr.resize({nw});
 
@@ -207,16 +213,19 @@ void exportDragonMixingRationalResampler(py::module &m, const char *name)
         .def("resampleMixDown",
           [](dragonradio::signal::pfb::MixingRationalResampler<I,O> &resamp, pyarray_I sig) -> pyarray_O
           {
-              auto                   inbuf = sig.request();
-              pyarray_O              outarr(resamp.neededOut(inbuf.size));
-              auto                   outbuf = outarr.request();
-              unsigned               nw;
-              py::gil_scoped_release release;
+              auto      inbuf = sig.request();
+              pyarray_O outarr(resamp.neededOut(inbuf.size));
+              auto      outbuf = outarr.request();
+              unsigned  nw;
 
-              nw = resamp.resampleMixDown(static_cast<I*>(inbuf.ptr),
-                                          inbuf.size,
-                                          static_cast<O*>(outbuf.ptr));
-              assert(nw <= outbuf.size);
+              {
+                  py::gil_scoped_release release;
+
+                  nw = resamp.resampleMixDown(static_cast<I*>(inbuf.ptr),
+                                              inbuf.size,
+                                              static_cast<O*>(outbuf.ptr));
+                  assert(nw <= outbuf.size);
+              }
 
               outarr.resize({nw});
 
