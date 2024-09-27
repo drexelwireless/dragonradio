@@ -119,7 +119,7 @@ def autolowpass(wp, ws, fs, ftype='kaiser', atten=60, Nmax=301):
         desired = [1, 1, 0, 0]
         weights = [1, 1]
 
-        return signal.firls(Nmax, bands, desired, weights, fs=fs)
+        return signal.firls(Nmax, bands, desired, weight=weights, fs=fs)
 
     # Use firpm
     N = bellangerord(0.001, 0.001, fs, ws-wp)
@@ -162,7 +162,7 @@ def lowpass(numtaps: int, wp: float, ws: float, fs: float, ftype: str='ls', beta
     weights = [1, 1]
 
     if ftype == 'ls':
-        return signal.firls(numtaps, bands, desired, weights, fs=fs)
+        return signal.firls(numtaps, bands, desired, weight=weights, fs=fs)
     elif ftype == 'remez1f':
         desired = [1, 0]
 
