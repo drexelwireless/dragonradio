@@ -25,8 +25,6 @@ class TestCompression(TestCase):
 
         print("sc16 conversion savings:", 1.0 - (2.0*len(sig_sc16))/(8.0*len(sig_fc32)))
 
-        return True
-
     def test_compression(self):
         sig = complex64_strategy(1024)
         sig_fc32 = sig.astype(np.complex64)
@@ -38,5 +36,3 @@ class TestCompression(TestCase):
         self.assertLess(max(abs(sig_fc32_2 - sig_fc32)), 2e-4)
 
         print("FLAC compression savings:", 1.0 - len(data)/(8.0*len(sig_fc32)))
-
-        return True
