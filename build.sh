@@ -79,7 +79,10 @@ sudo uhd_images_downloader
   rm -rf build;
   mkdir build;
   cd build;
-  cmake -G Ninja ..;
+  # XXX
+  # Unset HOME so that git ignores ~/.gitconfig. Without this, rewriting
+  # https:// URLs to git:// URLs can cause the checkout of googletest to hang.
+  HOME="" cmake -G Ninja ..;
   ninja;
   sudo ninja install;
   sudo ldconfig;
