@@ -27,6 +27,7 @@ add_library(DragonRadio
   phy/ChannelSynthesizer.inl
   phy/FDChannelModulator.cc
   phy/FDChannelizer.cc
+  phy/FixedSignalSynthesizer.cc
   phy/MultichannelSynthesizer.cc
   phy/PHY.cc
   phy/RadioPacketQueue.cc

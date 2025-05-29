@@ -10,6 +10,7 @@
 #include "phy/Channel.hh"
 #include "phy/ChannelSynthesizer.inl"
 #include "phy/FDChannelModulator.hh"
+#include "phy/FixedSignalSynthesizer.hh"
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/Synthesizer.hh"
 #include "phy/TDChannelModulator.hh"
@@ -87,5 +88,26 @@ void exportSynthesizers(py::module &m)
         .def_readonly_static("P",
             &MultichannelSynthesizer::P,
             "int: Maximum prototype filter length.")
+        ;
+
+    // Export class FixedSignalSynthesizer to Python
+    py::class_<FixedSignalSynthesizer, Synthesizer, std::shared_ptr<FixedSignalSynthesizer>>(m, "FixedSignalSynthesizer")
+        .def(py::init<const std::vector<PHYChannel>&,
+                      double>(),
+            py::arg("channels"),
+            py::arg("tx_rate"))
+        .def("setSignal",
+            [](const std::shared_ptr<FixedSignalSynthesizer> &self, const py::array_t<std::complex<float>> &iq) {
+                self->setSignal(std::make_shared<IQBuf>(iq.data(), iq.size()));
+            },
+            py::arg("iq"))
+        .def_property("signal",
+            [](FixedSignalSynthesizer &self) {
+                return self.getSignal();
+            },
+            [](FixedSignalSynthesizer &self, const py::array_t<std::complex<float>> &iq) {
+                self.setSignal(std::make_shared<IQBuf>(iq.data(), iq.size()));
+            },
+            "Signal to transmit")
         ;
 }
