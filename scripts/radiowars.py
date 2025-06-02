@@ -94,6 +94,9 @@ class RadioWarsCommand(Command):
         if args.log_directory:
             args.log_sources += ['log_recv_packets', 'log_sent_packets', 'log_events']
 
+        args.bandwidth = 20e6
+        args.channel_bandwidth = 20e6
+
         return super().handle(parser, args)
 
 def chirp(f0: float, f1: float, Fs: float, T: float) -> np.ndarray:
