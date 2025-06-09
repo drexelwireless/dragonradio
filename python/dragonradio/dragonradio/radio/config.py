@@ -549,6 +549,17 @@ class Config:
     traffic_iface: str = 'tr0'
     """Name of Colosseum traffic interface"""
 
+    # Static scenario
+    #
+    # These options allow of to statically set the scenario in which the radio
+    # is running. The Colosseum no longer correctly passes mandates or
+    # environment changes, so we have to do it ourselves.
+    colosseum_scenario: Optional[str] = None
+    """Static Colosseum scenario"""
+
+    colosseum_scenario_node: Optional[int] = None
+    """Static Colosseum scenario node"""
+
     def __init__(self):
         self.node_id = getNodeIdFromHostname()
 
@@ -1204,6 +1215,16 @@ class Config:
                             dest='collab_server_ip',
                             metavar='IP',
                             help='set collaboration server IP address')
+
+        # Static scenario options
+        scenario = parser.add_argument_group('Colosseum scenario')
+
+        scenario.add_argument('--scenario', type=str,
+                              dest='colosseum_scenario',
+                              help='static Colosseum scenario')
+        scenario.add_argument('--scenario-node', type=int,
+                              dest='colosseum_scenario_node',
+                              help='static Colosseum scenario node')
 
         # Set defaults
         defaults = {}

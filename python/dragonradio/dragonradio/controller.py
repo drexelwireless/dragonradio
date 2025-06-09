@@ -17,6 +17,7 @@ import time
 import numpy as np
 import pandas as pd
 
+import importlib_resources
 import netifaces
 
 import sc2.cil_pb2 as cil
@@ -403,9 +404,61 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
                         self.createTask(self.distributeScheduleViaBroadcast(),
                                         name='distribute schedule')
 
+                    if self.config.colosseum_scenario is not None:
+                        self.createTask(self.staticMandatedOutcomes(),
+                                        name='static scenario mandated outcomes updates')
+                        self.createTask(self.staticEnvironmentUpdates(),
+                                        name='static scenario environment updates')
+
                     self.state = remote.ACTIVE
             except:
                 logging.exception("Could not start radio")
+
+    def scenario_path(self, component: str) -> str:
+        assert self.config.colosseum_scenario is not None
+
+        scenario = self.config.colosseum_scenario
+        scenario_node = self.config.colosseum_scenario_node
+        if scenario_node is None:
+            scenario_node = 1
+
+        return importlib_resources.files('colosseum.scenarios').joinpath(str(self.config.colosseum_scenario)).joinpath(component).joinpath("Node{scenario_node}{component}_{scenario}.json".format(scenario=scenario, scenario_node=scenario_node, component=component.replace("_", "")))
+
+    async def staticMandatedOutcomes(self):
+        if self.config.colosseum_scenario is None:
+            return
+
+        with open(self.scenario_path("Mandated_Outcomes"), "r") as f:
+            updates = sorted(json.load(f), key=lambda x: x['timestamp'])
+
+        for update in updates:
+            delta = update["timestamp"]
+            goals = update["scenario_goals"]
+
+            deadline = self.scenario_start_time + delta
+            now = time.time()
+
+            await asyncio.sleep(deadline - now)
+
+            self.updateMandatedOutcomes(goals, time.time())
+
+    async def staticEnvironmentUpdates(self):
+        if self.config.colosseum_scenario is None:
+            return
+
+        with open(self.scenario_path("Environment"), "r") as f:
+            updates = sorted(json.load(f), key=lambda x: x['timestamp'])
+
+        for update in updates:
+            delta = update["timestamp"]
+            envs = update["environment"]
+
+            deadline = self.scenario_start_time + delta
+            now = time.time()
+
+            await asyncio.sleep(deadline - now)
+
+            self.updateEnvironment(envs, time.time())
 
     async def stopRadio(self):
         """Stop the radio.
@@ -1408,20 +1461,25 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     @handle('Request.update_mandated_outcomes')
     def _handleUpdateMandatedOutcomes(self, req):
         """Handle mandated outcomes update"""
-        logger.info('Update mandated outcomes: timestamp=%f\n%s',
-            req.timestamp,
-            req.update_mandated_outcomes.goals)
-
         # Parse goals as JSON
         goals = json.loads(req.update_mandated_outcomes.goals)
 
-        # Create scoring info from goals
-        self.loop.run_in_executor(None, self.updateGoals, goals, req.timestamp)
+        # Update mandated outcomes
+        self.updateMandatedOutcomes(goals, req.timestamp)
 
         resp = remote.Response()
         resp.status.state = self.state
         resp.status.info = 'Mandated outcomes updated'
         return resp
+
+    def updateMandatedOutcomes(self, goals, timestamp):
+        logger.info('Update mandated outcomes: timestamp=%f; delta=%f\n%s',
+                    timestamp,
+                    timestamp - self.scenario_start_time,
+                    json.dumps(goals))
+
+        # Create scoring info from goals
+        self.loop.run_in_executor(None, self.updateGoals, goals, timestamp)
 
     def setMandates(self, mandates):
         """Set our mandated outcomes and update flowperf"""
@@ -1467,13 +1525,24 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
     @handle('Request.update_environment')
     def _handleUpdateEnvironment(self, req):
         """Handle an environment update"""
+        envs = json.loads(req.update_environment.environment)
+
+        # Update environment
+        self.updateEnvironment(envs, req.timestamp)
+
+        resp = remote.Response()
+        resp.status.state = self.state
+        resp.status.info = 'Environment updated'
+        return resp
+
+    def updateEnvironment(self, envs, timestamp):
+        logger.info('Update environment: timestamp=%f; delta=%f\n%s',
+                    timestamp,
+                    timestamp - self.scenario_start_time,
+                    json.dumps(envs))
+
         self.radio.environmentDiscontinuity()
 
-        logger.info('Update environment: timestamp=%f\n%s',
-            req.timestamp,
-            req.update_environment.environment)
-
-        envs = json.loads(req.update_environment.environment)
         # Environment messages contain a *list* of updates...
         for env in envs:
             bandwidth = env.get('scenario_rf_bandwidth', self.config.bandwidth)
@@ -1484,11 +1553,6 @@ class Controller(CILServer, dragonradio.radio.NeighborhoodListener):
 
             self.createTask(self.setBandwidthAndFrequency(bandwidth, frequency),
                             "Reconfigure bandwidth and frequency")
-
-        resp = remote.Response()
-        resp.status.state = self.state
-        resp.status.info = 'Environment updated'
-        return resp
 
     @handle('Message.status')
     def _handleStatus(self, msg):
