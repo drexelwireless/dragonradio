@@ -1,0 +1,2177 @@
+[
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5071,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5072,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5073,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5074,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5075,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5076,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5077,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5078,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5079,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5080,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5081,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5082,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5083,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5084,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5085,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5086,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5087,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5088,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5089,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5090,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5091,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5092,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5093,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5094,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5095,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5096,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5097,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5098,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5099,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5100,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5101,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5102,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5103,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5104,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5105,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5106,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5107,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5108,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5109,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5110,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5111,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5112,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5113,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5114,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5115,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5116,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5117,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5118,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5119,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5120,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5121,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5122,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5123,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5124,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5125,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5126,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5127,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5128,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5129,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5130,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5131,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5132,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5133,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5134,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5135,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5136,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5137,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5138,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5139,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5140,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    }
+  ],
+  "timestamp": 15.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5421,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5422,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5423,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5424,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5425,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5426,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5427,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5428,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5429,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5430,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5431,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5432,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5433,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5434,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5435,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5436,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5437,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5438,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5439,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5440,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5441,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5442,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5443,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5444,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5445,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5446,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5447,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5448,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5449,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5450,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5451,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5452,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5453,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5454,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5455,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5456,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5457,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5458,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5459,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5460,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5461,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5462,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5463,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5464,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5465,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5466,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5467,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5468,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5469,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5470,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5471,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5472,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5473,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5474,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5475,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5476,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5477,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5478,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5479,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5480,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5481,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5482,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5483,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5484,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5485,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5486,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5487,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5488,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5489,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5490,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    }
+  ],
+  "timestamp": 195.0
+},
+{
+  "scenario_goals": [
+    {
+      "flow_uid": 5771,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5772,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5773,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5774,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5775,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5776,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5777,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5778,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5779,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5780,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5781,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5782,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5783,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5784,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5785,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5786,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5787,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5788,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5789,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5790,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5791,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5792,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5793,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5794,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5795,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5796,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5797,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5798,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5799,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5800,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5801,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5802,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5803,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5804,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5805,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5806,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5807,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5808,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5809,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5810,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5811,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5812,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5813,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5814,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5815,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5816,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5817,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5818,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5819,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5820,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5821,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5822,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5823,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5824,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5825,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5826,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5827,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5828,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5829,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5830,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5831,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5832,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5833,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5834,
+      "goal_set": "Voice",
+      "goal_type": "VOIP",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 0.37,
+        "min_throughput_bps": 4770.0
+      }
+    },
+    {
+      "flow_uid": 5835,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5836,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5837,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5838,
+      "goal_set": "C2",
+      "goal_type": "BFT",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "max_latency_s": 1.0,
+        "min_throughput_bps": 260.0
+      }
+    },
+    {
+      "flow_uid": 5839,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    },
+    {
+      "flow_uid": 5840,
+      "goal_set": "Files",
+      "goal_type": "File",
+      "hold_period": 10,
+      "point_value": 1,
+      "requirements": {
+        "file_transfer_deadline_s": 30.0
+      }
+    }
+  ],
+  "timestamp": 405.0
+}
+]
