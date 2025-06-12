@@ -12,7 +12,7 @@ while getopts "d" arg; do
 done
 
 sudo apt install -y python3-tk
-sudo apt install -y libffi-dev libgirepository1.0-dev libcairo2-dev pkg-config gir1.2-gtk-3.0
+sudo apt install -y gir1.2-gtk-3.0 libcairo2-dev libffi-dev libgirepository-2.0-dev pkg-config
 sudo apt install -y libsnappy-dev
 
 # Create virtualenv
