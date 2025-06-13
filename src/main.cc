@@ -60,17 +60,12 @@ void activateVirtualenv(void)
     }
 }
 
-bool endswith(const char *s1, const char *s2)
-{
-    return strlen(s1) >= strlen(s2) && strcmp(s1 + strlen(s1) - strlen(s2), s2) == 0;
-}
-
 int main(int argc, char** argv)
 {
-    // If this binary's name ends in "python,"" just run the python interpreter.
-    // This provides a standard Python interpreter with the complete dragonradio
-    // module available, which is useful for, e.g., mypy.
-    if (argc > 0 && endswith(argv[0], "python")) {
+    // If this binary's name contains the string "python," just run the python
+    // interpreter. This provides a standard Python interpreter with the
+    // complete dragonradio module available, which is useful for, e.g., mypy.
+    if (argc > 0 && std::string(argv[0]).find("python") != std::string::npos ) {
         return Py_BytesMain(argc, argv);
     }
 
