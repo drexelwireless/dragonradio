@@ -207,9 +207,7 @@ void FDChannelizer::fftWorker(void)
         iqbuf->waitToStartFilling();
 
         // Create a frequency-domain buffer
-        auto max_samples = iqbuf->max_samples.load(std::memory_order_acquire);
-
-        fdbuf = std::make_shared<IQBuf>(N*(1 + (max_samples + L - 1)/L));
+        fdbuf = std::make_shared<IQBuf>(N*(1 + (iqbuf->size() + L - 1)/L));
         fdbuf->timestamp = *iqbuf->timestamp;
         fdbuf->seq = iqbuf->seq;
         fdbuf->fc = iqbuf->fc;
