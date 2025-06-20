@@ -7,7 +7,7 @@
 
 namespace py = pybind11;
 
-#include "Logger.hh"
+#include "logging.hh"
 #include "phy/PHY.hh"
 #include "phy/TDChannelizer.hh"
 
@@ -81,8 +81,10 @@ void TDChannelizer::push(const std::shared_ptr<IQBuf> &iqbuf)
     std::lock_guard<std::mutex> lock(mutex_);
     unsigned                    nchannels = channels_.size();
 
-    for (unsigned i = 0; i < nchannels; ++i)
-        iqbufs_[i]->push(iqbuf);
+    for (unsigned i = 0; i < nchannels; ++i) {
+        if (!iqbufs_[i]->push(iqbuf))
+            logPHY(LOGWARNING, "Dropping time domain buffer");
+    }
 }
 
 void TDChannelizer::stop(void)
@@ -231,7 +233,7 @@ void TDChannelizer::reconfigure(void)
 
     for (unsigned i = 0; i < nchannels; i++) {
         if (!iqbufs_[i])
-            iqbufs_[i] = std::make_unique<SafeQueue<std::shared_ptr<IQBuf>>>();
+            iqbufs_[i] = std::make_unique<RingBuffer<std::shared_ptr<IQBuf>, 4>>();
 
         demods_[i] = std::make_unique<TDChannelDemodulator>(i,
                                                             channels_[i],

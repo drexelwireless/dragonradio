@@ -12,6 +12,7 @@
 
 namespace py = pybind11;
 
+#include "logging.hh"
 #include "spin.hh"
 #include "phy/FDChannelizer.hh"
 #include "phy/PHY.hh"
@@ -135,7 +136,8 @@ void FDChannelizer::setRXRate(double rate)
 
 void FDChannelizer::push(const std::shared_ptr<IQBuf> &buf)
 {
-    tdbufs_.push(buf);
+    if (!tdbufs_.push(buf))
+        logPHY(LOGWARNING, "Dropping time domain buffer");
 }
 
 void FDChannelizer::stop(void)
@@ -217,8 +219,10 @@ void FDChannelizer::fftWorker(void)
         // Make the frequency-domain buffer available to the individual channels
         unsigned nchannels = channels_.size();
 
-        for (unsigned i = 0; i < nchannels; ++i)
-            slots_[i]->emplace(iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O));
+        for (unsigned i = 0; i < nchannels; ++i) {
+            if (!slots_[i]->emplace(iqbuf, fdbuf, -static_cast<ssize_t>(fftoff - O)))
+                logPHY(LOGWARNING, "Dropping frequency domain buffer");
+        }
 
         // Perform overlap-save on input buffer as data becomes available
         bool   complete;            // Is the buffer complete?
@@ -436,7 +440,7 @@ void FDChannelizer::reconfigure(void)
 
     for (unsigned i = 0; i < nchannels; i++) {
         if (!slots_[i])
-            slots_[i] = std::make_unique<SafeQueue<Slot>>();
+            slots_[i] = std::make_unique<RingBuffer<Slot, 4>>();
 
         demods_[i] = std::make_unique<FDChannelDemodulator>(i,
                                                             channels_[i],

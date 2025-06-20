@@ -11,7 +11,7 @@
 #include <list>
 #include <mutex>
 
-#include "SafeQueue.hh"
+#include "RingBuffer.hh"
 #include "dsp/Polyphase.hh"
 #include "dsp/TableNCO.hh"
 #include "phy/Channel.hh"
@@ -41,7 +41,7 @@ private:
     std::vector<std::unique_ptr<TDChannelDemodulator>> demods_;
 
     /** @brief Packets to demodulate */
-    std::vector<std::unique_ptr<SafeQueue<std::shared_ptr<IQBuf>>>> iqbufs_;
+    std::vector<std::unique_ptr<RingBuffer<std::shared_ptr<IQBuf>, 4>>> iqbufs_;
 
     /** @brief Demodulation worker threads. */
     std::vector<std::thread> demod_threads_;

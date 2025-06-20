@@ -10,7 +10,7 @@
 #include <mutex>
 
 #include "Logger.hh"
-#include "SafeQueue.hh"
+#include "RingBuffer.hh"
 #include "dsp/FDResampler.hh"
 #include "dsp/FFTW.hh"
 #include "dsp/Polyphase.hh"
@@ -54,13 +54,13 @@ private:
     unsigned nthreads_;
 
     /** @brief Time-domain IQ buffers to demodulate */
-    SafeQueue<std::shared_ptr<IQBuf>> tdbufs_;
+    RingBuffer<std::shared_ptr<IQBuf>, 4> tdbufs_;
 
     /** @brief Channel state for demodulation. */
     std::vector<std::unique_ptr<FDChannelDemodulator>> demods_;
 
     /** @brief Frequency-domain packets to demodulate */
-    std::vector<std::unique_ptr<SafeQueue<Slot>>> slots_;
+    std::vector<std::unique_ptr<RingBuffer<Slot, 4>>> slots_;
 
     /** @brief FFT worker thread. */
     std::thread fft_thread_;
