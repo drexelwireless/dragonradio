@@ -60,7 +60,7 @@ private:
     std::vector<std::unique_ptr<FDChannelDemodulator>> demods_;
 
     /** @brief Frequency-domain packets to demodulate */
-    std::vector<std::unique_ptr<RingBuffer<Slot, 4>>> slots_;
+    std::vector<std::unique_ptr<RingBuffer<Slot, 16>>> slots_;
 
     /** @brief FFT worker thread. */
     std::thread fft_thread_;

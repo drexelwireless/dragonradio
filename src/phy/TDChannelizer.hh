@@ -41,7 +41,7 @@ private:
     std::vector<std::unique_ptr<TDChannelDemodulator>> demods_;
 
     /** @brief Packets to demodulate */
-    std::vector<std::unique_ptr<RingBuffer<std::shared_ptr<IQBuf>, 4>>> iqbufs_;
+    std::vector<std::unique_ptr<RingBuffer<std::shared_ptr<IQBuf>, 16>>> iqbufs_;
 
     /** @brief Demodulation worker threads. */
     std::vector<std::thread> demod_threads_;

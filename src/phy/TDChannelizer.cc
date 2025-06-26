@@ -233,7 +233,7 @@ void TDChannelizer::reconfigure(void)
 
     for (unsigned i = 0; i < nchannels; i++) {
         if (!iqbufs_[i])
-            iqbufs_[i] = std::make_unique<RingBuffer<std::shared_ptr<IQBuf>, 4>>();
+            iqbufs_[i] = std::make_unique<RingBuffer<std::shared_ptr<IQBuf>, 16>>();
 
         demods_[i] = std::make_unique<TDChannelDemodulator>(i,
                                                             channels_[i],

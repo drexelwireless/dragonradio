@@ -440,7 +440,7 @@ void FDChannelizer::reconfigure(void)
 
     for (unsigned i = 0; i < nchannels; i++) {
         if (!slots_[i])
-            slots_[i] = std::make_unique<RingBuffer<Slot, 4>>();
+            slots_[i] = std::make_unique<RingBuffer<Slot, 16>>();
 
         demods_[i] = std::make_unique<FDChannelDemodulator>(i,
                                                             channels_[i],
