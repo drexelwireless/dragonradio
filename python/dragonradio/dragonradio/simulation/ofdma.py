@@ -17,6 +17,8 @@ import numpy as np
 _HEADER = struct.Struct("!4sBBIH")  # magic/version, source, destination, sequence, length
 _MAGIC = b"DOF1"
 _CRC = struct.Struct("!I")
+MODULATIONS = {"qpsk": 2, "16qam": 4}
+_A16 = 1 / np.sqrt(10)
 
 
 @dataclass(frozen=True)
@@ -62,6 +64,9 @@ class OFDMAConfig:
     sample_rate: float = 1e6
     max_payload: int = 256
     allocations: Tuple[Allocation, ...] = field(default_factory=_default_allocations)
+    # Static data-tone constellation, configured out of band at both ends.
+    # "qpsk" is the v1 wire format; "16qam" is Gray-mapped square 16-QAM.
+    modulation: str = "qpsk"
 
     def __post_init__(self):
         if not isinstance(self.nfft, int) or self.nfft < 16 or self.nfft % 2:
@@ -72,6 +77,8 @@ class OFDMAConfig:
             raise ValueError("sample_rate must be positive and finite")
         if not isinstance(self.max_payload, int) or not 0 <= self.max_payload <= 65535:
             raise ValueError("invalid maximum payload")
+        if self.modulation not in MODULATIONS:
+            raise ValueError("modulation must be one of " + ", ".join(MODULATIONS))
         if len(self.allocations) not in (1, 2) or len({a.user_id for a in self.allocations}) != len(self.allocations):
             raise ValueError("configure one OFDM user or two distinct OFDMA users")
         occupied = set()
@@ -92,9 +99,13 @@ class OFDMAConfig:
         return self.nfft + self.cp_len
 
     @property
+    def bits_per_symbol(self):
+        return MODULATIONS[self.modulation]
+
+    @property
     def data_symbols(self):
         bits = (_HEADER.size + self.max_payload + _CRC.size) * 8
-        return max(math.ceil(bits / (2 * len(a.data))) for a in self.allocations)
+        return max(math.ceil(bits / (self.bits_per_symbol * len(a.data))) for a in self.allocations)
 
     @property
     def frame_samples(self):
@@ -116,10 +127,25 @@ def _qpsk(bits):
     return ((1 - 2 * b[:, 0]) + 1j * (1 - 2 * b[:, 1])) / np.sqrt(2)
 
 
-def _hard_bits(symbols):
-    out = np.empty(2 * len(symbols), dtype=np.uint8)
-    out[0::2] = np.real(symbols) < 0
-    out[1::2] = np.imag(symbols) < 0
+def _map(bits, bits_per_symbol=2):
+    """Unit-average-power mapping; 16-QAM is Gray per axis (sign, magnitude)."""
+    if bits_per_symbol == 2:
+        return _qpsk(bits)
+    b = np.asarray(bits).reshape(-1, 4).astype(float)
+    return ((1 - 2 * b[:, 0]) * (1 + 2 * b[:, 1]) + 1j * (1 - 2 * b[:, 2]) * (1 + 2 * b[:, 3])) * _A16
+
+
+def _hard_bits(symbols, bits_per_symbol=2):
+    if bits_per_symbol == 2:
+        out = np.empty(2 * len(symbols), dtype=np.uint8)
+        out[0::2] = np.real(symbols) < 0
+        out[1::2] = np.imag(symbols) < 0
+        return out
+    out = np.empty(4 * len(symbols), dtype=np.uint8)
+    out[0::4] = np.real(symbols) < 0
+    out[1::4] = np.abs(np.real(symbols)) > 2 * _A16
+    out[2::4] = np.imag(symbols) < 0
+    out[3::4] = np.abs(np.imag(symbols)) > 2 * _A16
     return out
 
 
@@ -153,7 +179,7 @@ class OFDMATransmitter:
         self.training = _training(config)
         self.maps = {}
         for a in config.allocations:
-            capacity = 2 * config.data_symbols * len(a.data)
+            capacity = config.bits_per_symbol * config.data_symbols * len(a.data)
             prbs = _scramble(np.zeros(capacity, dtype=np.uint8), a.user_id)
             pilots = 1 - 2 * ((np.arange(config.data_symbols)[:, None] + np.arange(len(a.pilots))[None, :] + a.user_id) % 2)
             self.maps[a.user_id] = (_indices(a.data, config.nfft), _indices(a.pilots, config.nfft), prbs, pilots)
@@ -173,9 +199,9 @@ class OFDMATransmitter:
             if len(packet.payload) > cfg.max_payload:
                 raise ValueError("payload exceeds configured frame capacity")
             bits = np.unpackbits(np.frombuffer(packet.encode(), dtype=np.uint8))
-            capacity = 2 * cfg.data_symbols * len(a.data)
+            capacity = cfg.bits_per_symbol * cfg.data_symbols * len(a.data)
             data_bins, pilot_bins, prbs, pilots = self.maps[a.user_id]
-            symbols = _qpsk(np.bitwise_xor(np.pad(bits, (0, capacity - bits.size)), prbs))
+            symbols = _map(np.bitwise_xor(np.pad(bits, (0, capacity - bits.size)), prbs), cfg.bits_per_symbol)
             grid[2:, data_bins] = symbols.reshape(cfg.data_symbols, -1)
             grid[2:, pilot_bins] = pilots
         return grid
@@ -212,7 +238,7 @@ class OFDMAReceiver:
         self.data_pos = [a.carriers.index(k) for k in a.data]
         self.pilot_pos = [a.carriers.index(k) for k in a.pilots]
         self.pilots = 1 - 2 * ((np.arange(config.data_symbols)[:, None] + np.arange(len(a.pilots))[None, :] + a.user_id) % 2)
-        self.prbs = _scramble(np.zeros(2 * config.data_symbols * len(a.data), dtype=np.uint8), user_id)
+        self.prbs = _scramble(np.zeros(config.bits_per_symbol * config.data_symbols * len(a.data), dtype=np.uint8), user_id)
         self.time_index = np.arange(config.frame_samples)
 
     def demodulate(self, samples):
@@ -250,8 +276,8 @@ class OFDMAReceiver:
         equalized = grid[2:, bins] / estimate
         phase = np.angle(np.sum(self.pilots * equalized[:, self.pilot_pos], axis=1))
         recovered = (equalized[:, self.data_pos] * np.exp(-1j * phase[:, None])).reshape(-1)
-        bits = _hard_bits(recovered)
-        decisions = _qpsk(bits)
+        bits = _hard_bits(recovered, cfg.bits_per_symbol)
+        decisions = _map(bits, cfg.bits_per_symbol)
         # Decision-directed EVM, not a comparison with transmitter ground truth.
         result.evm_db = float(10 * np.log10(max(float(np.mean(np.abs(recovered - decisions) ** 2)), 1e-20)))
         raw = np.packbits(np.bitwise_xor(bits, self.prbs)).tobytes()

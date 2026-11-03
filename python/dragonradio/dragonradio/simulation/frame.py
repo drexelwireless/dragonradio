@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .fast import make_phy
+from .fast import NativeStream, make_phy
 from .ofdma import Packet
 
 
@@ -28,9 +28,12 @@ class FrameEngine:
     OFDM uses one allocation/packet; OFDMA uses two. Packet sequence numbers are
     independent. Engines are stateful and must not be shared between threads.
     """
-    def __init__(self, config, implementation="auto"):
+    def __init__(self, config, implementation="auto", library=None, chase_bits=4, stream="auto"):
+        if stream not in ("auto", "native", "python"):
+            raise ValueError("stream must be auto, native or python")
         self.config = config
-        self.transmitter, self.receivers, self.implementation = make_phy(config, implementation)
+        self.stream = stream
+        self.transmitter, self.receivers, self.implementation = make_phy(config, implementation, library, chase_bits)
 
     def build(self, packets):
         packets = tuple(packets)
@@ -42,7 +45,13 @@ class FrameEngine:
         return self.receivers[user_id].demodulate(samples)
 
     def stream_receiver(self, user_id):
-        return StreamReceiver(self.receivers[user_id], self.config)
+        receiver = self.receivers[user_id]
+        native = getattr(receiver, "supports_stream", False)
+        if self.stream == "native" and not native:
+            raise ValueError("persistent native stream requires the v2 native engine")
+        if native and self.stream != "python":
+            return NativeStream(receiver)
+        return StreamReceiver(receiver, self.config)
 
 
 class StreamReceiver:
@@ -89,6 +98,10 @@ class StreamReceiver:
             self.buffer = self.buffer[cursor:].copy()
             self.sample_offset += cursor
         return results
+
+    @property
+    def pending_samples(self):
+        return len(self.buffer)
 
     def reset(self):
         self.buffer = np.empty(0, dtype=np.complex64)

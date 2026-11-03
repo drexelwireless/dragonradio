@@ -20,6 +20,7 @@ class LiquidOFDM:
         pointer, size, long = ctypes.c_void_p, ctypes.c_size_t, ctypes.c_long
         signatures = {
             "create": ([ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p], pointer),
+            "create_mcs": ([ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_int], pointer),
             "destroy": ([pointer], None),
             "assemble": ([pointer, pointer, size], long),
             "write": ([pointer, pointer, size], long),
@@ -28,13 +29,23 @@ class LiquidOFDM:
             "error": ([], ctypes.c_char_p),
         }
         for name, (arguments, result) in signatures.items():
-            function = getattr(self.lib, "dr_liquid_" + name)
+            function = getattr(self.lib, "dr_liquid_" + name, None)
+            if function is None:
+                if name == "create_mcs":
+                    continue   # bridge built before 16-QAM support
+                raise RuntimeError("modem bridge lacks dr_liquid_" + name)
             function.argtypes, function.restype = arguments, result
         mask = ["."] * config.nfft
         allocation = config.allocations[0]
         for k in allocation.carriers:
             mask[k % config.nfft] = "P" if k in allocation.pilots else "+"
-        self.handle = self.lib.dr_liquid_create(config.nfft, config.cp_len, "".join(mask).encode())
+        bps = getattr(config, "bits_per_symbol", 2)
+        if bps == 2:
+            self.handle = self.lib.dr_liquid_create(config.nfft, config.cp_len, "".join(mask).encode())
+        elif hasattr(self.lib, "dr_liquid_create_mcs") and self.lib.dr_liquid_create_mcs.argtypes:
+            self.handle = self.lib.dr_liquid_create_mcs(config.nfft, config.cp_len, "".join(mask).encode(), bps)
+        else:
+            raise RuntimeError("modem bridge lacks 16-QAM support; rebuild with scripts/build-modem.py")
         if not self.handle:
             raise RuntimeError(self.lib.dr_liquid_error().decode())
         self.buffer = np.empty(config.max_payload + 256, dtype=np.uint8)

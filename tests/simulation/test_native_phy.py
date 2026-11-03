@@ -51,7 +51,7 @@ class NativePHYTest(unittest.TestCase):
                 decoded.extend(decoder.feed(samples[start:start + 97]))
             decoded.extend(decoder.feed([], final=True))
             self.assertEqual([r.packet for r in decoded if r.ok], expected)
-            self.assertLess(len(decoder.buffer), cfg.frame_samples)
+            self.assertLess(decoder.pending_samples, cfg.frame_samples)
 
     def test_stream_recovers_after_crc_failed_frame(self):
         cfg = ofdm_config()

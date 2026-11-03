@@ -8,14 +8,18 @@
 #include "liquid/OFDM.hh"
 
 struct LiquidBridge {
+    // Header always QPSK/CRC32/uncoded; the payload constellation is selectable
+    // (the receiver reads it from the decoded flexframe header).
     liquid::MCS mcs{LIQUID_CRC_32, LIQUID_FEC_NONE, LIQUID_FEC_NONE, LIQUID_MODEM_QPSK};
+    liquid::MCS payload_mcs;
     liquid::OFDMModulator mod;
     liquid::OFDMDemodulator demod;
     size_t pending = 0;
-    LiquidBridge(unsigned n, unsigned cp, const std::string &mask)
-      : mod(mcs, n, cp, 0, liquid::OFDMSubcarriers(mask)),
+    LiquidBridge(unsigned n, unsigned cp, const std::string &mask, modulation_scheme payload = LIQUID_MODEM_QPSK)
+      : payload_mcs{LIQUID_CRC_32, LIQUID_FEC_NONE, LIQUID_FEC_NONE, payload},
+        mod(mcs, n, cp, 0, liquid::OFDMSubcarriers(mask)),
         demod(mcs, false, false, n, cp, 0, liquid::OFDMSubcarriers(mask)) {
-        mod.setPayloadMCS(mcs);
+        mod.setPayloadMCS(payload_mcs);
     }
 };
 
@@ -25,6 +29,13 @@ const char *dr_liquid_error() { return bridge_error.c_str(); }
 void *dr_liquid_create(unsigned n, unsigned cp, const char *mask) {
     try { return new LiquidBridge(n, cp, mask); }
     catch (const std::exception &e) { bridge_error = e.what(); return nullptr; }
+}
+// bits_per_symbol: 2 = QPSK (identical to dr_liquid_create), 4 = 16-QAM payload.
+void *dr_liquid_create_mcs(unsigned n, unsigned cp, const char *mask, int bits_per_symbol) {
+    try {
+        if (bits_per_symbol != 2 && bits_per_symbol != 4) throw std::runtime_error("unsupported payload modulation");
+        return new LiquidBridge(n, cp, mask, bits_per_symbol == 4 ? LIQUID_MODEM_QAM16 : LIQUID_MODEM_QPSK);
+    } catch (const std::exception &e) { bridge_error = e.what(); return nullptr; }
 }
 void dr_liquid_destroy(void *handle) { delete static_cast<LiquidBridge *>(handle); }
 // Length-prefixed queue for arbitrary streaming blocks, including blocks that

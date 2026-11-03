@@ -60,5 +60,5 @@ class NoiseAndTheoryTest(unittest.TestCase):
             good=[r for r in results if r.ok]
             self.assertEqual([r.packet for r in good],expected)
             sequences.append([r.start_sample for r in good])
-            self.assertLess(len(rx.buffer),cfg.frame_samples)
+            self.assertLess(rx.pending_samples,cfg.frame_samples)
         self.assertEqual(*sequences)
