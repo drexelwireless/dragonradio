@@ -1,0 +1,670 @@
+<title>Native OFDM PHY v2 Benchmark</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+/* Layout: one 1080px reading column of sections; charts span it, text holds ~68ch. */
+:root {
+  --bg: #f4f6f8; --surface: #fcfcfb; --ink: #101820; --ink-2: #48535e; --muted: #7b8691;
+  --grid: #e2e5e9; --axis: #c3c8ce; --rule: rgba(16,24,32,.10);
+  --s-v2: #2a78d6; --s-v1: #eb6834; --s-legacy: #1baf7a;
+  --good: #0ca30c; --good-ink: #006300; --bad: #d03b3b; --bad-ink: #b02a2a;
+  --chip-bg: #e7ebf0; --heat-0: #eef4fc; --heat-1: #b7d3f6; --heat-2: #6da7ec; --heat-3: #256abf; --heat-4: #104281;
+  --f-display: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1116; --surface: #161a20; --ink: #eef1f4; --ink-2: #b9c1c9; --muted: #8a939c;
+  --grid: #272d35; --axis: #3a414a; --rule: rgba(255,255,255,.10);
+  --s-v2: #3987e5; --s-v1: #d95926; --s-legacy: #199e70;
+  --good: #0ca30c; --good-ink: #3fc23f; --bad: #e66767; --bad-ink: #ef8a8a;
+  --chip-bg: #232931; --heat-0: #1b2633; --heat-1: #184f95; --heat-2: #2a78d6; --heat-3: #6da7ec; --heat-4: #b7d3f6;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1116; --surface: #161a20; --ink: #eef1f4; --ink-2: #b9c1c9; --muted: #8a939c;
+  --grid: #272d35; --axis: #3a414a; --rule: rgba(255,255,255,.10);
+  --s-v2: #3987e5; --s-v1: #d95926; --s-legacy: #199e70;
+  --good: #0ca30c; --good-ink: #3fc23f; --bad: #e66767; --bad-ink: #ef8a8a;
+  --chip-bg: #232931; --heat-0: #1b2633; --heat-1: #184f95; --heat-2: #2a78d6; --heat-3: #6da7ec; --heat-4: #b7d3f6;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--f-body); margin: 0; }
+.page { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; display: grid; gap: 44px; }
+header { display: grid; gap: 12px; }
+.eyebrow { font: 500 12px/1.4 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 600 clamp(28px, 4.2vw, 40px)/1.15 var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font: 600 24px/1.25 var(--f-display); margin: 0; text-wrap: balance; }
+h3 { font: 600 15px/1.4 var(--f-body); margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 17px; color: var(--ink-2); max-width: 70ch; }
+.meta { font: 12.5px/1.6 var(--f-mono); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.meta b { color: var(--ink-2); font-weight: 500; }
+section { display: grid; gap: 16px; min-width: 0; }
+.prose { display: grid; gap: 10px; }
+.prose ul { margin: 0; padding-left: 20px; max-width: 70ch; display: grid; gap: 6px; }
+code, .mono { font-family: var(--f-mono); font-size: .9em; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 18px 12px; display: grid; gap: 10px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 16px; }
+.panel-head p { color: var(--ink-2); font-size: 13.5px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; }
+.chart { position: relative; width: 100%; min-width: 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font: 11px var(--f-mono); }
+.chart .axis-title { fill: var(--ink-2); font: 500 11.5px var(--f-body); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.legend button { font: 12.5px var(--f-body); color: var(--ink-2); background: none; border: 1px solid transparent; border-radius: 999px; padding: 3px 9px 3px 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.legend button:hover { border-color: var(--rule); }
+.legend button[aria-pressed="false"] { opacity: .42; }
+.legend button:focus-visible, .chips button:focus-visible { outline: 2px solid var(--s-v2); outline-offset: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { font: 12.5px var(--f-mono); color: var(--ink-2); background: var(--chip-bg); border: 1px solid transparent; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12); padding: 8px 10px; font: 12px/1.5 var(--f-body); min-width: 160px; z-index: 5; }
+.tip[hidden] { display: none !important; }
+.tip .row { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.tip .row span:last-child { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.tip .head { font: 500 11.5px var(--f-mono); color: var(--muted); margin-bottom: 2px; }
+.scroll { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 500 12px var(--f-body); color: var(--muted); }
+td.num, th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.status { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--f-mono); white-space: nowrap; }
+.status svg { flex: none; }
+.status.pass { color: var(--good-ink); } .status.fail { color: var(--bad-ink); }
+.heat td.num { text-align: center; min-width: 58px; }
+.heat .na { color: var(--muted); background: repeating-linear-gradient(135deg, transparent 0 5px, var(--rule) 5px 6px); }
+.verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px; }
+.figure { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; display: grid; gap: 2px; }
+.figure .v { font: 600 26px/1.2 var(--f-body); }
+.figure .l { font-size: 13px; color: var(--ink-2); }
+details { font-size: 13.5px; }
+details summary { cursor: pointer; color: var(--ink-2); width: fit-content; }
+details summary:focus-visible { outline: 2px solid var(--s-v2); outline-offset: 2px; }
+details[open] summary { margin-bottom: 8px; }
+.note { font-size: 13px; color: var(--ink-2); }
+.key { display: inline-block; vertical-align: middle; }
+footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-top: 1px solid var(--rule); padding-top: 18px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+<header>
+  <div class="eyebrow">DragonRadio · native PHY revision · simulation only</div>
+  <h1>Native OFDM PHY v2 benchmark</h1>
+  <p class="lede" id="lede"></p>
+  <div class="meta" id="meta"></div>
+</header>
+
+<section aria-labelledby="h-verdict">
+  <h2 id="h-verdict">Verdict</h2>
+  <div class="verdict" id="figures"></div>
+  <div class="panel">
+    <div class="panel-head"><h3>Acceptance gates declared before measurement</h3><p id="gate-count"></p></div>
+    <div class="scroll"><table id="gates"><thead><tr><th>Gate</th><th>Result</th><th>Evidence</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="prose" id="misses"></div>
+</section>
+
+<section aria-labelledby="h-changes">
+  <h2 id="h-changes">What changed in v2</h2>
+  <div class="prose"><ul>
+    <li><b>Acquisition.</b> A Schmidl-Cox metric over the two identical training blocks detects frames regardless of carrier offset. Fine timing uses an FFT correlation with a segmented fallback, and the one-block ambiguity in the offset estimate is resolved by three coherent hypotheses.</li>
+    <li><b>Streaming in C++.</b> Each sample enters a running metric once, and decoding runs only at detection peaks. Python crosses the C interface once per transport chunk instead of once per 256-sample hop.</li>
+    <li><b>Early header rejection.</b> After the first data symbol the receiver checks 40 known header bits and drops frames for other destinations. This costs no delivery: the Chase search fixes at most two bits.</li>
+    <li><b>Static 16-QAM.</b> Gray-mapped 16-QAM on data tones, configured at both ends. QPSK stays the default and its waveform is byte-identical to v1. The liquid comparator gained a matched 16-QAM payload mode.</li>
+    <li><b>Chase switch.</b> The bounded CRC-aided Chase search can be disabled, so its effect is measured rather than assumed.</li>
+  </ul></div>
+</section>
+
+<section aria-labelledby="h-theory">
+  <h2 id="h-theory">Against theory</h2>
+  <div class="prose"><p id="theory-text"></p></div>
+  <div class="panel">
+    <div class="panel-head"><h3>Bit error rate with known timing and channel</h3><p>v2 transmitter, AWGN, noise referenced to unit symbol energy</p></div>
+    <div class="legend" id="lg-oracle"></div>
+    <div class="chart" id="c-oracle"></div>
+    <details><summary>Table view</summary><div class="scroll"><table id="t-oracle"></table></div></details>
+  </div>
+</section>
+
+<section aria-labelledby="h-channels">
+  <h2 id="h-channels">Error rate and throughput by channel</h2>
+  <div class="prose"><p id="channel-text"></p></div>
+  <div class="chips" id="profiles" role="group" aria-label="Channel profile"></div>
+  <div class="legend" id="lg-practical"></div>
+  <div class="pair">
+    <div class="panel">
+      <div class="panel-head"><h3>Packet delivery, worst user</h3><p id="pdr-sub"></p></div>
+      <div class="chart" id="c-pdr"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Aggregate goodput</h3><p>Verified payload bits over all airtime</p></div>
+      <div class="chart" id="c-goodput"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>SNR needed for 90% delivery to the worst user</h3><p>Sample-domain SNR in dB; lower is better; hatched cells never reach 90% by 30 dB</p></div>
+    <div class="scroll"><table class="heat" id="t-required"></table></div>
+  </div>
+</section>
+
+<section aria-labelledby="h-cfo">
+  <h2 id="h-cfo">Carrier frequency offset tolerance</h2>
+  <div class="prose"><p id="cfo-text"></p></div>
+  <div class="panel">
+    <div class="panel-head"><h3>Packet delivery against carrier offset</h3><div class="chips" id="cfo-snr" role="group" aria-label="Noise condition"></div></div>
+    <div class="legend" id="lg-cfo"></div>
+    <div class="chart" id="c-cfo"></div>
+  </div>
+</section>
+
+<section aria-labelledby="h-payload">
+  <h2 id="h-payload">Payload size</h2>
+  <div class="prose"><p id="payload-text"></p></div>
+  <div class="panel">
+    <div class="panel-head"><h3>Goodput at 30 dB against payload size</h3><p>AWGN; training and header overhead amortize with length</p></div>
+    <div class="legend" id="lg-payload"></div>
+    <div class="chart" id="c-payload"></div>
+  </div>
+</section>
+
+<section aria-labelledby="h-cpu">
+  <h2 id="h-cpu">Computation time</h2>
+  <div class="prose"><p id="cpu-text"></p></div>
+  <div class="pair">
+    <div class="panel">
+      <div class="panel-head"><h3>Per-frame kernel time</h3><p>Median microseconds per call, one pinned core</p></div>
+      <div class="legend" id="lg-kernel"></div>
+      <div class="chart" id="c-kernel"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Streaming receive cost</h3><div class="chips" id="chunks" role="group" aria-label="Transport chunk size"></div></div>
+      <div class="legend" id="lg-stream"></div>
+      <div class="chart" id="c-stream"></div>
+    </div>
+  </div>
+  <div class="prose"><p class="note" id="chase-text"></p></div>
+</section>
+
+<section aria-labelledby="h-method">
+  <h2 id="h-method">Method and limits</h2>
+  <div class="prose"><ul id="method"></ul></div>
+</section>
+
+<footer id="footer"></footer>
+</div>
+<script>
+const DATA = /*__REPORT_DATA__*/null;
+</script>
+<script>
+(function () {
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function h(tag, props, parent) {
+  const e = document.createElement(tag);
+  Object.assign(e, props || {});
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const fmt = {
+  pct: (v) => (v * 100).toFixed(v >= 0.995 || v <= 0.005 ? 0 : 1) + "%",
+  kbps: (v) => (v / 1e3).toFixed(0) + " kb/s",
+  sci: (v) => v === 0 ? "0" : v.toExponential(1).replace("e-", "e−"),
+  db: (v) => v + " dB",
+};
+function markerShape(g, kind, x, y, color, r) {
+  const ring = css("--surface");
+  if (kind === "square") return el("rect", { x: x - r, y: y - r, width: 2 * r, height: 2 * r, rx: 1.5, fill: color, stroke: ring, "stroke-width": 2 }, g);
+  return el("circle", { cx: x, cy: y, r: r, fill: color, stroke: ring, "stroke-width": 2 }, g);
+}
+function keySvg(s) {
+  const svg = el("svg", { width: 26, height: 12, viewBox: "0 0 26 12", class: "key", "aria-hidden": "true" });
+  el("line", { x1: 1, y1: 6, x2: 25, y2: 6, stroke: css(s.color), "stroke-width": s.theory ? 1.5 : 2, "stroke-dasharray": s.theory ? "2 3" : (s.dash ? "5 3" : "none"), "stroke-linecap": "round" }, svg);
+  if (s.marker) markerShape(svg, s.marker, 13, 6, css(s.color), 3.2);
+  return svg;
+}
+// Shared legend: buttons toggle series ids in a Set and call onChange.
+function legend(host, items, hidden, onChange) {
+  host.textContent = "";
+  for (const s of items) {
+    const b = h("button", { type: "button" }, host);
+    b.setAttribute("aria-pressed", hidden.has(s.id) ? "false" : "true");
+    b.appendChild(keySvg(s));
+    b.appendChild(document.createTextNode(s.label));
+    b.addEventListener("click", () => {
+      if (hidden.has(s.id)) hidden.delete(s.id); else hidden.add(s.id);
+      b.setAttribute("aria-pressed", hidden.has(s.id) ? "false" : "true");
+      onChange();
+    });
+  }
+}
+function tooltip(host) {
+  let t = host.querySelector(".tip");
+  if (!t) { t = h("div", { className: "tip" }, host); t.hidden = true; t.setAttribute("role", "status"); }
+  return t;
+}
+function placeTip(host, tip, px, py) {
+  const w = host.clientWidth, tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = px + 14, y = py - th - 10;
+  if (x + tw > w) x = px - tw - 14;
+  if (x < 0) x = 0;
+  if (y < 0) y = py + 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function tipRows(tip, head, rows) {
+  tip.textContent = "";
+  h("div", { className: "head", textContent: head }, tip);
+  for (const r of rows) {
+    const row = h("div", { className: "row" }, tip);
+    const left = h("span", {}, row);
+    left.style.display = "inline-flex"; left.style.alignItems = "center"; left.style.gap = "6px";
+    if (r.series) left.appendChild(keySvg(r.series));
+    left.appendChild(document.createTextNode(r.label));
+    h("span", { textContent: r.value }, row);
+  }
+}
+
+// Line chart. opts: x{min,max,ticks,fmt,title}, y{min,max,ticks,fmt,title,log}, series[], hidden Set.
+function lineChart(host, opts) {
+  const draw = () => {
+    host.querySelectorAll("svg").forEach((n) => n.remove());
+    const W = Math.max(300, host.clientWidth), H = opts.height || Math.round(Math.min(340, Math.max(240, W * 0.52)));
+    const longest = Math.max(...opts.y.ticks.map((t) => opts.y.fmt(t).length));
+    const m = { l: Math.round(30 + longest * 6.9), r: 14, t: 10, b: 44 };
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opts.aria || "" });
+    host.insertBefore(svg, host.firstChild);
+    const X = (v) => m.l + (v - opts.x.min) / (opts.x.max - opts.x.min) * (W - m.l - m.r);
+    const ylog = !!opts.y.log;
+    const yv = (v) => ylog ? Math.log10(Math.max(v, opts.y.min)) : v;
+    const y0 = yv(opts.y.min), y1 = yv(opts.y.max);
+    const Y = (v) => m.t + (1 - (yv(v) - y0) / (y1 - y0)) * (H - m.t - m.b);
+    const grid = el("g", {}, svg);
+    for (const t of opts.y.ticks) {
+      el("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: css("--grid"), "stroke-width": 1 }, grid);
+      const tx = el("text", { x: m.l - 8, y: Y(t) + 3.5, "text-anchor": "end" }, grid); tx.textContent = opts.y.fmt(t);
+    }
+    el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: css("--axis"), "stroke-width": 1 }, grid);
+    for (const t of opts.x.ticks) {
+      el("line", { x1: X(t), x2: X(t), y1: H - m.b, y2: H - m.b + 4, stroke: css("--axis") }, grid);
+      const tx = el("text", { x: X(t), y: H - m.b + 17, "text-anchor": "middle" }, grid); tx.textContent = opts.x.fmt(t);
+    }
+    const xt = el("text", { x: m.l + (W - m.l - m.r) / 2, y: H - 6, "text-anchor": "middle", class: "axis-title" }, svg); xt.textContent = opts.x.title;
+    const yt = el("text", { x: 12, y: m.t + (H - m.t - m.b) / 2, "text-anchor": "middle", class: "axis-title", transform: `rotate(-90 12 ${m.t + (H - m.t - m.b) / 2})` }, svg); yt.textContent = opts.y.title;
+    const clip = "clip" + Math.random().toString(36).slice(2);
+    const defs = el("defs", {}, svg);
+    const cp = el("clipPath", { id: clip }, defs);
+    el("rect", { x: m.l - 6, y: m.t - 6, width: W - m.l - m.r + 12, height: H - m.t - m.b + 12 }, cp);
+    const plot = el("g", { "clip-path": `url(#${clip})` }, svg);
+    const visible = opts.series.filter((s) => !opts.hidden.has(s.id));
+    for (const s of visible) {
+      if (s.noLine) continue;
+      // On a log axis a curve ends where it leaves the plotted range; it is never pinned to the floor.
+      const pts = s.points.filter((p) => p[1] !== null && (!ylog || p[1] >= opts.y.min));
+      if (!pts.length) continue;
+      const d = pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(Math.max(p[1], opts.y.min)).toFixed(1)).join(" ");
+      el("path", { d, fill: "none", stroke: css(s.color), "stroke-width": s.theory ? 1.5 : 2, "stroke-dasharray": s.theory ? "2 4" : (s.dash ? "6 4" : "none"), "stroke-linejoin": "round", "stroke-linecap": "round" }, plot);
+    }
+    for (const s of visible) {
+      if (!s.marker) continue;
+      for (const p of s.points) if (p[1] !== null && (!ylog || p[1] >= opts.y.min)) markerShape(plot, s.marker, X(p[0]), Y(p[1]), css(s.color), s.markerR || 3.6);
+    }
+    // Hover: snap to the nearest x present in the data.
+    const xs = [...new Set(visible.filter((s) => !s.theory).flatMap((s) => s.points.map((p) => p[0])))].sort((a, b) => a - b);
+    const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
+    const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
+    const tip = tooltip(host);
+    const move = (evt) => {
+      if (!xs.length) return;
+      const box = svg.getBoundingClientRect(), sx = (evt.clientX - box.left) * W / box.width;
+      let best = xs[0];
+      for (const v of xs) if (Math.abs(X(v) - sx) < Math.abs(X(best) - sx)) best = v;
+      cross.setAttribute("x1", X(best)); cross.setAttribute("x2", X(best)); cross.setAttribute("visibility", "visible");
+      const rows = [];
+      for (const s of visible) {
+        if (s.theory) { if (opts.theoryAt) { const v = opts.theoryAt(s, best); if (v !== null) rows.push({ series: s, label: s.label, value: opts.y.fmtTip ? opts.y.fmtTip(v) : opts.y.fmt(v) }); } continue; }
+        const p = s.points.find((q) => q[0] === best);
+        if (p && p[1] !== null) rows.push({ series: s, label: s.label, value: (opts.y.fmtTip || opts.y.fmt)(p[1]) + (p[2] ? " " + p[2] : "") });
+      }
+      tipRows(tip, opts.x.tipFmt ? opts.x.tipFmt(best) : opts.x.fmt(best), rows);
+      tip.hidden = false;
+      placeTip(host, tip, X(best) * box.width / W, (evt.clientY - box.top));
+    };
+    hit.addEventListener("pointermove", move);
+    hit.addEventListener("pointerdown", move);
+    hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
+  };
+  draw();
+  return draw;
+}
+
+// Grouped horizontal bars. groups: [{label, bars: [{series, value, note}]}]
+function barChart(host, opts) {
+  const draw = () => {
+    host.querySelectorAll("svg").forEach((n) => n.remove());
+    const W = Math.max(300, host.clientWidth);
+    const labelW = Math.min(150, Math.round(W * 0.34));
+    const bar = 13, gap = 2, groupGap = 14;
+    const groups = opts.groups.map((g) => ({ ...g, bars: g.bars.filter((b) => !opts.hidden.has(b.series.id)) })).filter((g) => g.bars.length);
+    let H = 8;
+    for (const g of groups) H += g.bars.length * (bar + gap) - gap + groupGap;
+    H += 30;
+    const m = { l: labelW, r: 64, t: 4, b: 30 };
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opts.aria || "" });
+    host.insertBefore(svg, host.firstChild);
+    const max = opts.max || Math.max(...groups.flatMap((g) => g.bars.map((b) => b.value))) * 1.05;
+    const X = (v) => m.l + v / max * (W - m.l - m.r);
+    const ticks = opts.ticks(max);
+    for (const t of ticks) {
+      el("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, stroke: css("--grid") }, svg);
+      const tx = el("text", { x: X(t), y: H - m.b + 15, "text-anchor": "middle" }, svg); tx.textContent = opts.fmt(t);
+    }
+    const xt = el("text", { x: m.l + (W - m.l - m.r) / 2, y: H - 2, "text-anchor": "middle", class: "axis-title" }, svg); xt.textContent = opts.title;
+    el("line", { x1: X(0), x2: X(0), y1: m.t, y2: H - m.b, stroke: css("--axis") }, svg);
+    const tip = tooltip(host);
+    let y = m.t + 6;
+    for (const g of groups) {
+      const gh = g.bars.length * (bar + gap) - gap;
+      const lab = el("text", { x: m.l - 10, y: y + gh / 2 + 4, "text-anchor": "end", class: "axis-title" }, svg); lab.textContent = g.label;
+      for (const b of g.bars) {
+        const w = Math.max(1, X(b.value) - X(0)), r = Math.min(4, w / 2);
+        const x0 = X(0), c = css(b.series.color);
+        const d = `M${x0} ${y} H${x0 + w - r} Q${x0 + w} ${y} ${x0 + w} ${y + r} V${y + bar - r} Q${x0 + w} ${y + bar} ${x0 + w - r} ${y + bar} H${x0} Z`;
+        const p = el("path", { d, fill: c }, svg);
+        if (b.series.dash) { p.setAttribute("fill-opacity", "0.55"); p.setAttribute("stroke", c); p.setAttribute("stroke-width", "1"); }
+        const v = el("text", { x: x0 + w + 6, y: y + bar - 2.5 }, svg); v.textContent = opts.fmt(b.value);
+        const hit = el("rect", { x: m.l - labelW, y: y - 1, width: W, height: bar + 2, fill: "transparent" }, svg);
+        const show = (evt) => {
+          const box = svg.getBoundingClientRect();
+          tipRows(tip, g.label, [{ series: b.series, label: b.series.label, value: opts.fmtTip ? opts.fmtTip(b.value) : opts.fmt(b.value) }].concat(b.note ? [{ label: b.note[0], value: b.note[1] }] : []));
+          tip.hidden = false;
+          placeTip(host, tip, (x0 + w) * box.width / W, (y) * box.height / H);
+        };
+        hit.addEventListener("pointermove", show);
+        hit.addEventListener("pointerdown", show);
+        hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+        y += bar + gap;
+      }
+      y += groupGap - gap;
+    }
+  };
+  draw();
+  return draw;
+}
+window.RV = { el, h, css, fmt, legend, lineChart, barChart, keySvg };
+})();
+</script>
+<style>
+/* Heat-table cells: one blue ramp, text ink chosen per cell luminance and theme. */
+:root { --heat-ink-lo: #101820; --heat-ink-hi: #ffffff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --heat-ink-lo: #eef1f4; --heat-ink-hi: #0b0f14; } }
+:root[data-theme="dark"] { --heat-ink-lo: #eef1f4; --heat-ink-hi: #0b0f14; }
+.h0 { background: var(--heat-0); color: var(--heat-ink-lo); } .h1 { background: var(--heat-1); color: var(--heat-ink-lo); }
+.h2 { background: var(--heat-2); color: var(--heat-ink-hi); } .h3 { background: var(--heat-3); color: var(--heat-ink-hi); }
+.h4 { background: var(--heat-4); color: var(--heat-ink-hi); }
+</style>
+<script>
+(function () {
+"use strict";
+const D = DATA, { h, fmt, legend, lineChart, barChart } = window.RV;
+const $ = (id) => document.getElementById(id);
+const S = {
+  "legacy-qpsk": { label: "Legacy liquid, QPSK", color: "--s-legacy", marker: "circle" },
+  "legacy-16qam": { label: "Legacy liquid, 16-QAM", color: "--s-legacy", marker: "square" },
+  "v1-ofdm-qpsk": { label: "v1 OFDM, QPSK", color: "--s-v1", marker: "circle" },
+  "v1-ofdma-qpsk": { label: "v1 OFDMA, QPSK", color: "--s-v1", marker: "circle", dash: true },
+  "v2-ofdm-qpsk": { label: "v2 OFDM, QPSK", color: "--s-v2", marker: "circle" },
+  "v2-ofdma-qpsk": { label: "v2 OFDMA, QPSK", color: "--s-v2", marker: "circle", dash: true },
+  "v2-ofdm-16qam": { label: "v2 OFDM, 16-QAM", color: "--s-v2", marker: "square" },
+  "v2-ofdma-16qam": { label: "v2 OFDMA, 16-QAM", color: "--s-v2", marker: "square", dash: true },
+  "v2-ofdm-qpsk-nochase": { label: "v2 OFDM, QPSK, Chase off", color: "--ink-2", marker: "circle", dash: true },
+  "v2-ofdm-qpsk-pystream": { label: "v2 receiver, Python stream", color: "--muted", marker: null },
+};
+for (const k in S) S[k].id = k;
+const PROFILE = { "awgn": "AWGN", "multipath-cp": "Multipath within CP", "beyond-cp": "Multipath beyond CP", "rayleigh": "Flat Rayleigh",
+  "sfo-50ppm": "+50 ppm clock", "cfo+0.18": "CFO +0.18", "cfo-0.18": "CFO −0.18", "cfo+0.6": "CFO +0.6", "cfo-0.6": "CFO −0.6" };
+const pm = (v) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
+const x = (n, d) => n.toFixed(d === undefined ? 1 : d) + "×";
+const env = (m) => D.envelope[m].noiseless;
+const req = (m, p) => D.required[m][p];
+const curve = (m, p) => D.curves[m][p];
+const at = (m, p, snr) => curve(m, p).find((r) => r.snr === snr);
+const st = (name, kind, chunk) => D.stream[name][kind][String(chunk || 4096)].median;
+const redraws = [];
+const tie = (draw) => { redraws.push(draw); return draw; };
+
+// ---------- header
+$("lede").textContent = "The hardware-free native OFDM and two-user OFDMA receiver was revised for acquisition range, streaming cost and throughput. "
+  + "This report compares the revision (v2) with the frozen original (v1), the DragonRadio liquidDSP OFDM wrappers, and analytic theory, using "
+  + D.packets_per_point.toLocaleString() + " packets per user at every point. Everything here is simulation; no radio was opened.";
+const meta = [["Run", D.run], ["Commit", (D.commit || "unknown").slice(0, 10)], ["Host", "gridgpu01 · " + (D.cpu || "") ], ["Timing core", String(D.core)], ["Started", (D.started || "").replace("T", " ").slice(0, 16) + " UTC"]];
+for (const [k, v] of meta) { const s = h("span", {}, $("meta")); s.append(k + " "); h("b", { textContent: v }, s); }
+
+// ---------- verdict
+const gp = (m) => at(m, "awgn", 30).goodput;
+const figures = [
+  ["±" + env("v2-ofdm-qpsk")[1].toFixed(2), "subcarrier CFO with every packet delivered; v1 managed ±" + env("v1-ofdm-qpsk")[1].toFixed(2) + ", liquid ±" + env("legacy-qpsk")[1].toFixed(2)],
+  [x(st("v1-ofdm-qpsk", "idle") / st("v2-ofdm-qpsk", "idle")), "less streaming CPU than v1 on idle noise, and " + x(st("legacy-qpsk", "idle") / st("v2-ofdm-qpsk", "idle"), 2) + " less than liquid"],
+  [x(st("legacy-qpsk", "loaded") / st("v2-ofdm-qpsk", "loaded")), "less CPU than liquid under saturated two-destination traffic"],
+  [(gp("v2-ofdma-16qam") / 1e6).toFixed(2) + " Mb/s", "peak two-user goodput with 16-QAM OFDMA, " + x(gp("v2-ofdma-16qam") / gp("legacy-qpsk"), 1) + " legacy QPSK at 1 MS/s"],
+];
+for (const [v, l] of figures) { const f = h("div", { className: "figure" }, $("figures")); h("div", { className: "v", textContent: v }, f); h("div", { className: "l", textContent: l }, f); }
+const icon = (pass) => {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", "14"); svg.setAttribute("height", "14"); svg.setAttribute("viewBox", "0 0 14 14"); svg.setAttribute("aria-hidden", "true");
+  const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  c.setAttribute("cx", "7"); c.setAttribute("cy", "7"); c.setAttribute("r", "6.5"); c.setAttribute("fill", getComputedStyle(document.documentElement).getPropertyValue(pass ? "--good" : "--bad").trim());
+  svg.appendChild(c);
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  p.setAttribute("d", pass ? "M4 7.2l2 2 4-4.4" : "M4.6 4.6l4.8 4.8M9.4 4.6l-4.8 4.8");
+  p.setAttribute("stroke", "#fff"); p.setAttribute("stroke-width", "1.7"); p.setAttribute("fill", "none"); p.setAttribute("stroke-linecap", "round");
+  svg.appendChild(p);
+  return svg;
+};
+const passed = D.gates.filter((g) => g.passed).length;
+$("gate-count").textContent = passed + " of " + D.gates.length + " met";
+for (const g of D.gates) {
+  const tr = h("tr", {}, $("gates").tBodies[0]);
+  h("td", { textContent: g.name }, tr);
+  const td = h("td", {}, tr);
+  const s = h("span", { className: "status " + (g.passed ? "pass" : "fail") }, td);
+  s.appendChild(icon(g.passed)); s.append(g.passed ? "Met" : "Not met");
+  h("td", { textContent: g.evidence }, tr);
+}
+const p1500 = (m) => D.payload_sweep[m]["30"]["1500"].goodput;
+const miss = [
+  "Two targets were missed, both because of structure rather than tuning.",
+  "Under saturated two-user OFDMA traffic, v1 was already limited by per-packet decoding rather than idle search. v2 still uses "
+    + x(st("v1-ofdma-qpsk", "loaded") / st("v2-ofdma-qpsk", "loaded"), 2) + " less CPU than v1 and " + x(st("legacy-qpsk", "loaded") / st("v2-ofdma-qpsk", "loaded"), 1)
+    + " less than liquid. But its per-sample scan alone costs " + st("v2-ofdma-qpsk", "idle").toFixed(0) + " ms per airtime second for two receivers, above the "
+    + (st("v1-ofdma-qpsk", "loaded") / 3).toFixed(0) + " ms that a one-third target implies.",
+  "At 256 bytes, single-user 16-QAM needs 7 data symbols where QPSK needs 13, but both frames carry the same two training symbols, which caps the gain at 15/9 = 1.67×. "
+    + "At 1500 bytes the measured ratio is " + x(p1500("v2-ofdm-16qam") / p1500("v2-ofdm-qpsk"), 2) + ".",
+];
+for (const t of miss) h("p", { textContent: t }, $("misses"));
+
+// ---------- theory
+const qp = D.oracle.filter((r) => r.mod === "qpsk"), qm = D.oracle.filter((r) => r.mod === "16qam");
+const bits = D.oracle.reduce((a, r) => a + r.bits, 0);
+$("theory-text").textContent = "With timing and channel known, measured bit error rate follows the textbook curves for Gray QPSK, Pb = ½·erfc(√(Eb/N0)), and Gray 16-QAM "
+  + "across 0 to 14 dB Eb/N0. All " + D.oracle.length + " points fall within the six-sigma consistency check, over " + (bits / 1e6).toFixed(0) + " million bits. "
+  + "This validates the FFT normalization and the 16-QAM mapping. It says nothing about acquisition or channel estimation, which the practical study covers.";
+const oSeries = [
+  { id: "th-q", label: "Theory, QPSK", color: "--muted", theory: true, points: D.oracle_theory.qpsk },
+  { id: "th-16", label: "Theory, 16-QAM", color: "--ink-2", theory: true, points: D.oracle_theory["16qam"] },
+  { id: "m-q", label: "Measured, QPSK", color: "--s-v2", marker: "circle", noLine: true, points: qp.map((r) => [r.ebno, r.ber > 0 ? r.ber : null]) },
+  { id: "m-16", label: "Measured, 16-QAM", color: "--s-v2", marker: "square", noLine: true, points: qm.map((r) => [r.ebno, r.ber > 0 ? r.ber : null]) },
+];
+const oHidden = new Set();
+const nearestTheory = (s, xv) => { let b = s.points[0]; for (const p of s.points) if (Math.abs(p[0] - xv) < Math.abs(b[0] - xv)) b = p; return b[1]; };
+const oDraw = tie(lineChart($("c-oracle"), { series: oSeries, hidden: oHidden, aria: "Bit error rate against Eb/N0, measured and theoretical",
+  x: { min: 0, max: 14, ticks: [0, 2, 4, 6, 8, 10, 12, 14], fmt: (v) => v + " dB", title: "Eb/N0 per data bit" },
+  y: { min: 1e-7, max: 0.3, log: true, ticks: [1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1], fmt: fmt.sci, title: "Bit error rate" },
+  theoryAt: nearestTheory }));
+legend($("lg-oracle"), oSeries, oHidden, oDraw);
+const to = $("t-oracle");
+to.innerHTML = "<thead><tr><th>Modulation</th><th class='num'>Eb/N0</th><th class='num'>Bits</th><th class='num'>Errors</th><th class='num'>Measured</th><th class='num'>Theory</th><th>Check</th></tr></thead>";
+const tb = h("tbody", {}, to);
+for (const r of D.oracle) {
+  const tr = h("tr", {}, tb);
+  [[r.mod === "qpsk" ? "QPSK" : "16-QAM"], [r.ebno + " dB", 1], [r.bits.toLocaleString(), 1], [r.errors.toLocaleString(), 1], [fmt.sci(r.ber), 1], [fmt.sci(r.theory), 1], [r.ok ? "within 6σ" : "outside 6σ"]]
+    .forEach(([t, n]) => h("td", { textContent: t, className: n ? "num" : "" }, tr));
+}
+
+// ---------- channels
+const PMODES = ["legacy-qpsk", "legacy-16qam", "v1-ofdm-qpsk", "v1-ofdma-qpsk", "v2-ofdm-qpsk", "v2-ofdma-qpsk", "v2-ofdm-16qam", "v2-ofdma-16qam", "v2-ofdm-qpsk-nochase"];
+const pHidden = new Set(["v1-ofdma-qpsk", "v2-ofdm-qpsk-nochase"]);
+let profile = "awgn";
+const theorySeries = [
+  { id: "th-qpsk", label: "Independent-bit theory, QPSK (AWGN)", color: "--muted", theory: true, points: D.theory_per.qpsk.map(([s, per]) => [s, 1 - per]) },
+  { id: "th-16qam", label: "Independent-bit theory, 16-QAM (AWGN)", color: "--ink-2", theory: true, points: D.theory_per["16qam"].map(([s, per]) => [s, 1 - per]) },
+];
+const ciNote = (r) => "[" + fmt.pct(r.ci[0]) + "–" + fmt.pct(r.ci[1]) + "]";
+const pdrSeries = () => PMODES.map((m) => ({ ...S[m], points: curve(m, profile).map((r) => [r.snr, r.pdr, ciNote(r)]) }))
+  .concat(profile === "awgn" ? theorySeries : []);
+const gpSeries = () => PMODES.map((m) => ({ ...S[m], points: curve(m, profile).map((r) => [r.snr, r.goodput]) }));
+const xs = { min: 0, max: 30, ticks: [0, 5, 10, 15, 20, 25, 30], fmt: (v) => v + " dB", title: "Sample-domain SNR" };
+let pdrDraw, gpDraw;
+const drawPractical = () => {
+  pdrDraw = lineChart($("c-pdr"), { series: pdrSeries(), hidden: pHidden, aria: "Worst-user packet delivery against SNR",
+    x: xs, y: { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], fmt: (v) => (v * 100).toFixed(0) + "%", fmtTip: fmt.pct, title: "Packets delivered" },
+    theoryAt: nearestTheory });
+  gpDraw = lineChart($("c-goodput"), { series: gpSeries(), hidden: pHidden, aria: "Aggregate goodput against SNR",
+    x: xs, y: { min: 0, max: 2e6, ticks: [0, 5e5, 1e6, 1.5e6, 2e6], fmt: (v) => (v / 1e6).toFixed(1) + " Mb/s", fmtTip: fmt.kbps, title: "Goodput" } });
+  $("pdr-sub").textContent = PROFILE[profile] + "; " + D.packets_per_point.toLocaleString() + " packets per user per point";
+};
+drawPractical();
+redraws.push(drawPractical);
+legend($("lg-practical"), PMODES.map((m) => S[m]).concat(theorySeries), pHidden, drawPractical);
+for (const p of D.profiles) {
+  const b = h("button", { type: "button", textContent: PROFILE[p] }, $("profiles"));
+  b.setAttribute("aria-pressed", p === profile ? "true" : "false");
+  b.addEventListener("click", () => { profile = p; for (const c of $("profiles").children) c.setAttribute("aria-pressed", c === b ? "true" : "false"); drawPractical(); });
+}
+const tr0 = $("t-required");
+const head = h("tr", {}, h("thead", {}, tr0));
+h("th", { textContent: "Receiver" }, head);
+for (const p of D.profiles) h("th", { textContent: PROFILE[p], className: "num" }, head);
+const body = h("tbody", {}, tr0);
+for (const m of PMODES) {
+  const tr = h("tr", {}, body);
+  const name = h("td", {}, tr); name.style.whiteSpace = "nowrap";
+  name.appendChild(window.RV.keySvg(S[m])); name.append(" " + S[m].label);
+  for (const p of D.profiles) {
+    const v = req(m, p);
+    const cls = v === null ? "na" : v <= 10 ? "h0" : v <= 14 ? "h1" : v <= 18 ? "h2" : v <= 22 ? "h3" : "h4";
+    h("td", { textContent: v === null ? "—" : v, className: "num " + cls, title: v === null ? "never reaches 90% by 30 dB" : v + " dB" }, tr);
+  }
+}
+const ch = [];
+ch.push("Each panel uses the same packets and channel draws for every receiver, so differences are paired. v2 matches v1 at every point where v1 can acquire, which is every channel except the ±0.6 subcarrier offsets. There v1 and liquid deliver nothing and v2 behaves as it does at zero offset.");
+ch.push("In AWGN, native QPSK reaches 90% delivery at " + req("v2-ofdm-qpsk", "awgn") + " dB against " + req("legacy-qpsk", "awgn") + " dB for liquid, and native 16-QAM at "
+  + req("v2-ofdm-16qam", "awgn") + " dB against " + req("legacy-16qam", "awgn") + " dB. Measured curves sit slightly to the left of the independent-bit theory because the bounded Chase search repairs up to two bits per packet; with Chase disabled the requirement rises to "
+  + req("v2-ofdm-qpsk-nochase", "awgn") + " dB.");
+ch.push("Flat Rayleigh fading and multipath beyond the 16-sample cyclic prefix remain losses for every receiver. Without coding or diversity no receiver change removes them; they mark the edge of the uncoded envelope.");
+for (const t of ch) h("p", { textContent: t }, $("channel-text"));
+
+// ---------- CFO
+const CMODES = ["legacy-qpsk", "legacy-16qam", "v1-ofdm-qpsk", "v1-ofdma-qpsk", "v2-ofdm-qpsk", "v2-ofdma-qpsk", "v2-ofdm-16qam"];
+const cHidden = new Set(["legacy-16qam", "v1-ofdma-qpsk"]);
+let cfoKey = "noiseless";
+const drawCfo = () => lineChart($("c-cfo"), { series: CMODES.map((m) => ({ ...S[m], markerR: 2.6, points: D.cfo[m][cfoKey] })), hidden: cHidden,
+  aria: "Packet delivery against carrier frequency offset",
+  x: { min: -1.5, max: 1.5, ticks: [-1.5, -1, -0.5, 0, 0.5, 1, 1.5], fmt: (v) => pm(v).replace(".00", "").replace(/0$/, ""), tipFmt: (v) => pm(v) + " subcarrier", title: "Carrier offset, subcarrier spacings (1 = 7.8125 kHz)" },
+  y: { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], fmt: (v) => (v * 100).toFixed(0) + "%", fmtTip: fmt.pct, title: "Packets delivered" } });
+let cDraw = drawCfo();
+redraws.push(() => { cDraw = drawCfo(); });
+legend($("lg-cfo"), CMODES.map((m) => S[m]), cHidden, () => { cDraw = drawCfo(); });
+for (const [k, l] of [["noiseless", "Noiseless"], ["20dB", "20 dB SNR"]]) {
+  const b = h("button", { type: "button", textContent: l }, $("cfo-snr"));
+  b.setAttribute("aria-pressed", k === cfoKey ? "true" : "false");
+  b.addEventListener("click", () => { cfoKey = k; for (const c of $("cfo-snr").children) c.setAttribute("aria-pressed", c === b ? "true" : "false"); cDraw = drawCfo(); });
+}
+const khz = (v) => (v * 7.8125).toFixed(1) + " kHz";
+$("cfo-text").textContent = "Independent radio oscillators leave a carrier offset that the receiver must remove. v2 delivers every packet from " + pm(env("v2-ofdm-qpsk")[0]) + " to " + pm(env("v2-ofdm-qpsk")[1])
+  + " subcarrier (±" + khz(env("v2-ofdm-qpsk")[1]) + " at 1 MS/s) for OFDM, both OFDMA users and 16-QAM, with or without noise. v1 stops at ±" + env("v1-ofdm-qpsk")[1].toFixed(2)
+  + " (±" + khz(env("v1-ofdm-qpsk")[1]) + ") and liquid at ±" + env("legacy-qpsk")[1].toFixed(2) + " (±" + khz(env("legacy-qpsk")[1]) + "). At a 1 GHz carrier each part per million of relative oscillator error is 1 kHz."
+  + (D.triage ? " On this x86_64 host the pinned liquid build acquires symmetrically; its undefined negative-frequency conversion, which breaks negative offsets on arm64, is still flagged by the sanitizer." : "");
+
+// ---------- payload
+const YMODES = ["legacy-qpsk", "legacy-16qam", "v2-ofdm-qpsk", "v2-ofdma-qpsk", "v2-ofdm-16qam", "v2-ofdma-16qam"];
+const yHidden = new Set();
+const sizes = [64, 256, 1024, 1500];
+const drawPayload = () => lineChart($("c-payload"), { series: YMODES.map((m) => ({ ...S[m], points: sizes.map((n) => [n, D.payload_sweep[m]["30"][String(n)].goodput]) })), hidden: yHidden,
+  aria: "Goodput against payload size", x: { min: 0, max: 1560, ticks: [64, 256, 512, 1024, 1500], fmt: (v) => v + " B", title: "Payload per packet" },
+  y: { min: 0, max: 2.5e6, ticks: [0, 5e5, 1e6, 1.5e6, 2e6, 2.5e6], fmt: (v) => (v / 1e6).toFixed(1) + " Mb/s", fmtTip: fmt.kbps, title: "Goodput at 30 dB" } });
+let yDraw = drawPayload();
+redraws.push(() => { yDraw = drawPayload(); });
+legend($("lg-payload"), YMODES.map((m) => S[m]), yHidden, () => { yDraw = drawPayload(); });
+$("payload-text").textContent = "At high SNR goodput is fixed by framing: payload bits over the whole frame, including training, header, pilots and cyclic prefix. Native framing is "
+  + x(D.payload_sweep["v2-ofdm-qpsk"]["30"]["256"].goodput / D.payload_sweep["legacy-qpsk"]["30"]["256"].goodput, 2) + " as efficient as liquid's at 256 bytes and "
+  + x(p1500("v2-ofdm-qpsk") / p1500("legacy-qpsk"), 2) + " at 1500. 16-QAM OFDMA reaches " + (p1500("v2-ofdma-16qam") / 1e6).toFixed(2) + " Mb/s at 1500 bytes. "
+  + "For context, the ideal Shannon capacity of the 750 kHz occupied band at 20 dB is " + (D.shannon["20"] / 1e6).toFixed(1) + " Mb/s; closing that gap needs coding and adaptive modulation, not receiver changes.";
+
+// ---------- CPU
+const KMODES = ["legacy-qpsk", "legacy-16qam", "v1-ofdm-qpsk", "v1-ofdma-qpsk", "v2-ofdm-qpsk", "v2-ofdma-qpsk", "v2-ofdm-16qam", "v2-ofdma-16qam"];
+const kHidden = new Set();
+const us = (v) => v.toFixed(0) + " µs";
+const airtime = (m) => ["Frame airtime", (D.frames[m].frame_samples).toFixed(0) + " µs"];
+const drawKernel = () => barChart($("c-kernel"), { hidden: kHidden, aria: "Per-frame transmit and receive time",
+  groups: [{ label: "Transmit", bars: KMODES.map((m) => ({ series: S[m], value: D.kernel[m].tx, note: airtime(m) })) },
+           { label: "Receive", bars: KMODES.map((m) => ({ series: S[m], value: D.kernel[m].rx, note: ["p99", us(D.kernel[m].rx_p99)] })) }],
+  ticks: (mx) => [0, 50, 100, 150, 200].filter((t) => t <= mx), fmt: us, title: "Microseconds per frame" });
+let kDraw = drawKernel();
+redraws.push(() => { kDraw = drawKernel(); });
+legend($("lg-kernel"), KMODES.map((m) => S[m]), kHidden, () => { kDraw = drawKernel(); });
+const SMODES = ["legacy-qpsk", "v1-ofdm-qpsk", "v2-ofdm-qpsk-pystream", "v2-ofdm-qpsk", "v1-ofdma-qpsk", "v2-ofdma-qpsk", "legacy-16qam", "v2-ofdm-16qam", "v2-ofdma-16qam"];
+const sHidden = new Set(["legacy-16qam", "v2-ofdm-16qam", "v2-ofdma-16qam"]);
+let chunk = 4096;
+const ms = (v) => v.toFixed(0) + " ms";
+const drawStream = () => barChart($("c-stream"), { hidden: sHidden, aria: "Streaming CPU per second of airtime",
+  groups: [["idle", "Idle noise"], ["loaded", "Saturated traffic"]].map(([k, l]) => ({ label: l, bars: SMODES.map((m) => ({ series: S[m], value: st(m, k, chunk),
+    note: ["Real-time headroom", x(1000 / st(m, k, chunk), 0)] })) })),
+  ticks: (mx) => [0, 100, 200, 300, 400].filter((t) => t <= mx), fmt: ms, fmtTip: (v) => v.toFixed(1) + " ms per airtime second", title: "CPU per second of airtime, two receivers" });
+let sDraw = drawStream();
+redraws.push(() => { sDraw = drawStream(); });
+legend($("lg-stream"), SMODES.map((m) => S[m]), sHidden, () => { sDraw = drawStream(); });
+for (const c of [512, 4096, 65536]) {
+  const b = h("button", { type: "button", textContent: c.toLocaleString() + " samples" }, $("chunks"));
+  b.setAttribute("aria-pressed", c === chunk ? "true" : "false");
+  b.addEventListener("click", () => { chunk = c; for (const e of $("chunks").children) e.setAttribute("aria-pressed", e === b ? "true" : "false"); sDraw = drawStream(); });
+}
+$("cpu-text").textContent = "All timings come from one pinned core of the grid host, each receiver in its own process, in three randomized blocks. Per frame, v2 receives in "
+  + us(D.kernel["v2-ofdm-qpsk"].rx) + " against " + us(D.kernel["v1-ofdm-qpsk"].rx) + " for v1 and " + us(D.kernel["legacy-qpsk"].rx) + " for liquid, and transmits in "
+  + us(D.kernel["v2-ofdm-qpsk"].tx) + " (v1 " + us(D.kernel["v1-ofdm-qpsk"].tx) + "). Streaming is where the revision matters most. With 4096-sample chunks, two v2 receivers spend "
+  + st("v2-ofdm-qpsk", "idle").toFixed(0) + " ms of CPU per second of idle noise against " + st("v1-ofdm-qpsk", "idle").toFixed(0) + " for v1 and " + st("legacy-qpsk", "idle").toFixed(0)
+  + " for liquid. The gray bar runs the v2 receiver through the old Python stream and shows that the gain comes from moving the stream into C++, not from the new detector alone.";
+const nc = at("v2-ofdm-qpsk-nochase", "awgn", 10), wc = at("v2-ofdm-qpsk", "awgn", 10);
+$("chase-text").textContent = "Chase search ablation: at 10 dB AWGN, v2 OFDM delivers " + fmt.pct(wc.pdr) + " of packets with Chase and " + fmt.pct(nc.pdr) + " without, at an average of "
+  + (wc.chase || 0).toFixed(1) + " extra CRC checks per packet. Its receive time at 20 dB is " + us(D.kernel["v2-ofdm-qpsk"].rx) + " with Chase and " + us(D.kernel["v2-ofdm-qpsk-nochase"].rx) + " without, because the search runs only after a CRC failure.";
+
+// ---------- method
+const method = [
+  "Simulation only: no radio was opened and nothing was transmitted. Results do not establish over-the-air, full-stack MAC/ARQ, coded or real-time performance.",
+  "Practical study: " + D.seeds + " seeds × " + D.frames_per_seed + " frames per point, " + D.payload + "-byte payloads with CRC32 and no forward error correction, nine channel profiles, SNR 0 to 30 dB in 2 dB steps.",
+  "Noise variance is fixed from transmitted active-frame power, so attenuation and fading reduce SNR. For native frames Eb/N0 = SNR + 1.25 dB − 10·log10(bits per symbol); theory curves use that mapping and do not apply exactly to liquid's framing.",
+  "Goodput counts verified payload bits over total frame airtime with no inter-frame gaps. OFDMA frames carry one packet per user; each OFDMA user has an independent channel.",
+  "Legacy is the original DragonRadio liquidDSP OFDM wrapper at pinned revision d39f1c0f, built on the grid host; v1 is the frozen pre-revision native engine built from the same commit.",
+  "Software timing: idle captures are 2 s of receiver noise; saturated captures are back-to-back 256-byte frames at 25 dB with 64-sample gaps, decoded by one receiver per destination. CPU includes receiver construction.",
+  D.repeat ? "Repeatability: an earlier complete run (" + D.repeat.run + ") produced identical delivery in all " + D.repeat.practical_identical + " cells and streaming CPU within a median " + (100 * D.repeat.stream_median_abs_dev).toFixed(1) + "% (maximum " + (100 * D.repeat.stream_max_abs_dev).toFixed(1) + "%)." : null,
+  "Series colors are the reference palette's first three categorical slots, which it documents as passing all-pairs color-vision checks in both themes; OFDMA is dashed and 16-QAM uses square markers.",
+].filter(Boolean);
+for (const t of method) h("li", { textContent: t }, $("method"));
+const foot = [D.tests + " on the grid host before measurement.", "Reproduce: python scripts/report-native-revision.py --run simulation-results/grid/" + D.run + " --output report.html, after grid/run-native-revision.sh."];
+for (const t of foot) h("div", { textContent: t }, $("footer"));
+
+let pending = 0;
+window.addEventListener("resize", () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(() => redraws.forEach((f) => f())); });
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+if (mq.addEventListener) mq.addEventListener("change", () => redraws.forEach((f) => f()));
+new MutationObserver(() => redraws.forEach((f) => f())).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>

@@ -527,3 +527,15 @@ firmware or host change. Generated reports live in `simulation-results/` (git-ig
 Provision the isolated Linux build container with the legacy dependency set, reproduce
 the legacy `dragonradio` build there, then start P1 step 2 against `FastPHYCore.hh`.
 
+## 11. Native PHY v2 revision status, 2026-11-03
+
+Implemented and measured (simulation only, gridgpu01): CFO-robust acquisition
+(+/-1.30 subcarrier), persistent C++ streaming receiver, early header rejection,
+static 16-QAM with a matched liquid 16-QAM mode, and a Chase on/off switch. The
+frozen v1 engine is kept in `tests/reference_native_v1`. Nine of eleven declared
+gates met; the two misses (saturated-OFDMA CPU versus v1/3, single-user 16-QAM
+gain at 256 bytes) are explained in `docs/native-revision.rst`, which also holds
+the plan, method and results. This narrows the P4 software item and the native
+CFO risk noted in section 10; it does not change the P1-P8 order, and no
+production `--phy` default changed.
+

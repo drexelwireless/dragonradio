@@ -91,3 +91,41 @@ Quality cells run in parallel worker processes, one cell per process. Timing
 runs sequentially on otherwise idle cores. Every report records source and
 library hashes, host, compiler and seeds. Results are simulation only: no
 OTA, full-stack, FEC-parity or real-time claims follow from them.
+
+Results, 2026-11-03 (executed on gridgpu01)
+-------------------------------------------
+
+Run ``native-revision-20261103-0200-4146d151`` at commit ``4146d151`` on
+gridgpu01 (2x Xeon Gold 6240, Ubuntu 24.04), unattended under tmux. Simulation
+only; no SDR opened, no RF transmitted, no reservation created. Results are in
+``simulation-results/grid/`` (git-ignored). The report is regenerated with
+``python scripts/report-native-revision.py --run <run dir> --output report.html``.
+
+Nine of eleven declared gates were met:
+
+* Regression suite: 59 tests passed (1 skipped: the C++ header test needs
+  system FFTW headers). QPSK v2 frames byte-identical to v1.
+* No false accepts in 3,456,000 decode attempts.
+* Oracle BER within six sigma of Gray QPSK and Gray 16-QAM theory at all 30
+  Eb/N0 points. An earlier run calibrated noise from per-packet measured Es,
+  which biased 16-QAM BER 1-3% high; the harness now references nominal Es = 1.
+* CFO: every packet delivered from -1.30 to +1.30 subcarrier (v1 +/-0.25,
+  pinned liquid +/-0.55 on x86_64), noiseless and at 20 dB.
+* Packet delivery never worse than v1 within 95% intervals; identical
+  everywhere except +/-0.6 subcarrier CFO, where only v2 decodes.
+* Streaming CPU, 4096-sample chunks, two receivers: idle 29 ms per airtime
+  second (v1 177, liquid 36); saturated OFDM 74 ms (v1 227, liquid 147).
+* **Not met:** saturated OFDMA CPU 50 ms versus v1 64 ms (1.3x, target 3x).
+  v1 was already decode-bound there and v2's per-sample scan alone costs
+  about 29 ms for two receivers. Still 2.9x below liquid.
+* **Not met:** 16-QAM OFDM goodput 1.67x QPSK at 256 bytes (target 1.8x); two
+  fixed training symbols cap the ratio at 15/9. 1.92x at 1500 bytes. OFDMA met
+  the target at 1.80x (1.90 Mb/s).
+
+Per-frame kernels: v2 OFDM receive 69 us (v1 88, liquid 198), transmit 43 us
+(v1 45). Chase search lowers the 90%-delivery SNR from 12 to 10 dB in AWGN at
+no cost when CRC passes. An earlier complete run agreed on delivery in all
+1296 cells and on streaming CPU within 2.2%.
+
+Remaining limits: Rayleigh and beyond-CP losses need coding or diversity; no
+OTA, MAC/ARQ, FEC-parity or real-time scheduling claim follows from these runs.
