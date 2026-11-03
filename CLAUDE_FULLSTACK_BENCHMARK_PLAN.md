@@ -598,6 +598,9 @@ Implemented and run on gridgpu01 without a radio (details: `docs/fullstack-simul
   receiver's window and redelivers the first packet. This is a protocol
   decision.
 
+Evidence: a from-scratch gridgpu01 workspace built from commit 8a7bf612 passed
+all `tests/fullstack` programs, all eight scenarios and all eight variant runs.
+
 Runs are wall-clock paced; deterministic virtual time is not implemented. Still
 open in P2: tap interfaces in network namespaces with real UDP, TCP bulk and
 request/response traffic; jitter, timed grants, queue limits and expiry;

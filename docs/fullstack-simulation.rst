@@ -87,7 +87,15 @@ bit-reproducible. A deterministic virtual-time mode is not implemented.
 Results (gridgpu01, 72 threads)
 -------------------------------
 
-All scenarios passed. Delivery counts unique application packets. A frame is
+All scenarios passed. The tables below are from the development workspace. A
+from-scratch rerun at commit 8a7bf612 also passed: a fresh workspace from
+``git archive`` via ``grid/setup-fullstack-build.sh``, then
+``build-fullstack.sh`` with all four ``tests/fullstack`` programs, all eight
+scenarios and all eight variant runs. Its numbers agree; for example,
+saturated goodput was 340.7 kb/s (99.4%) and erasure-arq needed 218
+retransmissions.
+
+Delivery counts unique application packets. A frame is
 one PHY transmission attempt. Per-receiver invalid-header counts were zero in
 every run.
 
