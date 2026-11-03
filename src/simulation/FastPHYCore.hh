@@ -43,10 +43,8 @@ inline CD cmul(CD a, CD b) { return CD(a.real() * b.real() - a.imag() * b.imag()
 inline float cnorm(C a) { return a.real() * a.real() + a.imag() * a.imag(); }
 // FFTW planning is not thread-safe; one lock is shared by all including units.
 inline std::mutex planner_mutex;
-inline bool valid_packet(const unsigned char *p, int count, int user) {
-    if (count < 16 || std::memcmp(p, "DOF1", 4) || p[5] != user || p[4] > 254) return false;
-    int end = 12 + (int(p[10]) << 8) + p[11];
-    if (end + 4 > count) return false;
+// IEEE 802.3 CRC-32 (zlib.crc32).
+inline uint32_t crc32(const unsigned char *p, int count) {
     static const std::vector<uint32_t> table = [] {
         std::vector<uint32_t> t(256);
         for (uint32_t j = 0; j < 256; ++j) {
@@ -57,10 +55,17 @@ inline bool valid_packet(const unsigned char *p, int count, int user) {
         return t;
     }();
     uint32_t crc = 0xffffffffU;
-    for (int j = 0; j < end; ++j) crc = table[(crc ^ p[j]) & 255] ^ (crc >> 8);
-    crc ^= 0xffffffffU;
-    uint32_t expected = (uint32_t(p[end]) << 24) | (uint32_t(p[end + 1]) << 16) | (uint32_t(p[end + 2]) << 8) | p[end + 3];
-    return crc == expected;
+    for (int j = 0; j < count; ++j) crc = table[(crc ^ p[j]) & 255] ^ (crc >> 8);
+    return crc ^ 0xffffffffU;
+}
+inline uint32_t load_be32(const unsigned char *p) {
+    return (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8) | p[3];
+}
+inline bool valid_packet(const unsigned char *p, int count, int user) {
+    if (count < 16 || std::memcmp(p, "DOF1", 4) || p[5] != user || p[4] > 254) return false;
+    int end = 12 + (int(p[10]) << 8) + p[11];
+    if (end + 4 > count) return false;
+    return crc32(p, end) == load_be32(p + end);
 }
 struct User {
     int id;
@@ -276,9 +281,9 @@ struct FastPHY {
     // Fine timing and CFO resolution around a coarse peak. Writes the chosen
     // start, coherent score and CFO (rad/sample). Returns false if no
     // candidate reaches the coherent threshold.
-    bool refine(const C *in, int count, int coarse, CD p, int &start, double &score, double &omega) {
+    bool refine(const C *in, int count, int coarse, CD p, int &start, double &score, double &omega, int need = 0) {
         const int plen = int(preamble.size()), L = length;
-        const int candidates = count - frame + 1;
+        const int candidates = count - (need > 0 ? need : frame) + 1;
         const int lo = std::max(0, coarse - fine_window), hi = std::min(candidates - 1, coarse + fine_window);
         if (hi < lo) return false;
         const double omega0 = std::arg(p) / L;
@@ -405,19 +410,21 @@ struct FastPHY {
         return decode(in, start, omega, *it, out, capacity, metrics);
     }
 
-    int decode(const C *in, int start, double omega0, const User &a, unsigned char *out, int capacity, double *metrics) {
+    // Refine the fractional CFO on the repeated training symbols (keeping the
+    // integer block ambiguity chosen during acquisition), derotate `samples`
+    // samples from `start` into `corrected`, and estimate the channel from the
+    // training with a CP-limited FIR model chosen by BIC. Returns rad/sample.
+    double prepare(const C *in, int start, double omega0, int samples) {
         const int L = length;
-        // Refine the fractional CFO on the repeated training symbols, keeping the
-        // integer block ambiguity chosen during acquisition.
+        if (samples > int(corrected.size())) throw std::runtime_error("frame exceeds receiver buffer");
         CD repeated{};
         for (int j = 0; j < n; ++j)
             repeated += CD(cmulc(in[start + L + cp + j], in[start + cp + j]));
         double fractional = std::arg(repeated) / L;
         double wrap = 2 * double(PI) / L;
         double omega = fractional + wrap * std::round((omega0 - fractional) / wrap);
-        metrics[2] = omega * n / (2 * double(PI));
         C rotation = std::polar(1.f, float(-omega)), phase(1, 0);
-        for (int j = 0; j < frame; ++j) {
+        for (int j = 0; j < samples; ++j) {
             corrected[j] = cmul(in[start + j], phase);
             phase = cmul(phase, rotation);
             if (j % 256 == 255) phase /= std::abs(phase);
@@ -429,7 +436,6 @@ struct FastPHY {
             for (int k = 0; k < n; ++k)
                 if (cnorm(training[k]) > 0) estimate[k] += cmulc(fd[k], training[k]) * (0.5f * scale);
         }
-        // CP-limited FIR order selected by Bayesian information criterion.
         if (!models.empty()) {
             std::vector<C> best_estimate(active.size()), prediction(active.size());
             double best_score = INFINITY;
@@ -453,10 +459,90 @@ struct FastPHY {
             }
             for (size_t j = 0; j < active.size(); ++j) estimate[active[j]] = best_estimate[j];
         }
-        for (int k : a.data) if (std::abs(estimate[k]) < 1e-8) return RX_SPECTRAL_NULL;
-        for (int k : a.pilots) if (std::abs(estimate[k]) < 1e-8) return RX_SPECTRAL_NULL;
+        return omega;
+    }
+    // Zero-forcing inverse on the user's tones; false on a spectral null.
+    bool invert(const User &a) {
+        for (int k : a.data) if (std::abs(estimate[k]) < 1e-8) return false;
+        for (int k : a.pilots) if (std::abs(estimate[k]) < 1e-8) return false;
         for (int k : a.data) inverse[k] = std::conj(estimate[k]) / std::norm(estimate[k]);
         for (int k : a.pilots) inverse[k] = std::conj(estimate[k]) / std::norm(estimate[k]);
+        return true;
+    }
+    // Equalize data symbol s (0 = first after training) into row; returns the
+    // raw common pilot phase of that symbol.
+    double symbol(const User &a, int s, C *row) {
+        const int L = length;
+        std::copy(corrected.begin() + (s + 2) * L + cp, corrected.begin() + (s + 3) * L, td.begin());
+        fftwf_execute(forward);
+        C common{};
+        for (size_t j = 0; j < a.pilots.size(); ++j) {
+            int k = a.pilots[j];
+            common += cmul(fd[k], inverse[k]) * (((s + j + a.id) % 2) ? -1.f : 1.f);
+        }
+        for (size_t j = 0; j < a.data.size(); ++j)
+            row[j] = cmul(fd[a.data[j]], inverse[a.data[j]]);
+        return std::arg(common);
+    }
+    static void unwrap(std::vector<double> &phases, int s) {
+        if (!s) return;
+        while (phases[s] - phases[s - 1] > PI) phases[s] -= 2 * PI;
+        while (phases[s] - phases[s - 1] < -PI) phases[s] += 2 * PI;
+    }
+    // Least-squares line through per-symbol phases [first, first+count).
+    static void phase_line(const std::vector<double> &phases, int count, double &intercept, double &slope) {
+        double sx = 0, sy = 0, sxx = 0, sxy = 0;
+        for (int s = 0; s < count; ++s) { sx += s; sy += phases[s]; sxx += double(s) * s; sxy += s * phases[s]; }
+        double denominator = count * sxx - sx * sx;
+        slope = denominator ? (count * sxy - sx * sy) / denominator : 0;
+        intercept = (sy - slope * sx) / count;
+    }
+    // Hard bits and max-log reliabilities for one equalized point.
+    static float demap(C z, float gain, int bits_per_symbol, int *hard, float *confidence) {
+        if (bits_per_symbol == 2) {
+            hard[0] = z.real() < 0; hard[1] = z.imag() < 0;
+            confidence[0] = std::abs(z.real()) * gain;
+            confidence[1] = std::abs(z.imag()) * gain;
+            return cnorm(z - C(hard[0] ? -Q : Q, hard[1] ? -Q : Q));
+        }
+        const float axis[2] = {z.real(), z.imag()};
+        for (int c = 0; c < 2; ++c) {
+            float v = axis[c], mag = std::abs(v);
+            hard[2 * c] = v < 0;
+            hard[2 * c + 1] = mag > 2 * A16;
+            confidence[2 * c] = mag * gain;
+            confidence[2 * c + 1] = std::abs(mag - 2 * A16) * gain;
+        }
+        return cnorm(z - C((1 - 2 * hard[0]) * (1 + 2 * hard[1]) * A16, (1 - 2 * hard[2]) * (1 + 2 * hard[3]) * A16));
+    }
+    // Bounded CRC-aided Chase search over the `limit` least reliable of the
+    // first `used_bits` bits of out: singles then pairs. Returns true when
+    // `valid()` accepts; trials counts the additional checks.
+    template <class Valid>
+    static bool chase_search(unsigned char *out, int used_bits, const float *confidence, int limit, Valid valid, double &trials) {
+        std::vector<int> weakest(used_bits);
+        std::iota(weakest.begin(), weakest.end(), 0);
+        int candidates = std::min(limit, used_bits);
+        std::partial_sort(weakest.begin(), weakest.begin() + candidates, weakest.end(),
+                          [&](int x, int y){ return confidence[x] < confidence[y]; });
+        auto flip = [&](int bit){ out[bit / 8] ^= 1 << (7 - bit % 8); };
+        for (int i = 0; i < candidates; ++i) {
+            flip(weakest[i]); ++trials;
+            if (valid()) return true;
+            flip(weakest[i]);
+        }
+        for (int i = 0; i < candidates; ++i) for (int j = i + 1; j < candidates; ++j) {
+            flip(weakest[i]); flip(weakest[j]); ++trials;
+            if (valid()) return true;
+            flip(weakest[i]); flip(weakest[j]);
+        }
+        return false;
+    }
+
+    int decode(const C *in, int start, double omega0, const User &a, unsigned char *out, int capacity, double *metrics) {
+        const double omega = prepare(in, start, omega0, frame);
+        metrics[2] = omega * n / (2 * double(PI));
+        if (!invert(a)) return RX_SPECTRAL_NULL;
         const int nd = int(a.data.size());
         int bits = bps * ns * nd, bytes = (bits + 7) / 8;
         if (bytes > capacity) throw std::runtime_error("short RX output buffer");
@@ -466,82 +552,32 @@ struct FastPHY {
         std::vector<double> phases(ns);
         std::vector<float> confidence(bits);
         for (int s = 0; s < ns; ++s) {
-            std::copy(corrected.begin() + (s + 2) * L + cp, corrected.begin() + (s + 3) * L, td.begin());
-            fftwf_execute(forward);
-            C common{};
-            for (size_t j = 0; j < a.pilots.size(); ++j) {
-                int k = a.pilots[j];
-                common += cmul(fd[k], inverse[k]) * (((s + j + a.id) % 2) ? -1.f : 1.f);
-            }
-            double angle = std::arg(common);
-            if (s) {
-                while (angle - phases[s - 1] > PI) angle -= 2 * PI;
-                while (angle - phases[s - 1] < -PI) angle += 2 * PI;
-            }
-            phases[s] = angle;
-            for (int j = 0; j < nd; ++j)
-                recovered[s * nd + j] = cmul(fd[a.data[j]], inverse[a.data[j]]);
-            if (s == 0 && header_mismatch(a, recovered.data(), angle) > kHeaderBitTolerance)
+            phases[s] = symbol(a, s, recovered.data() + s * nd);
+            unwrap(phases, s);
+            if (s == 0 && header_mismatch(a, recovered.data(), phases[0]) > kHeaderBitTolerance)
                 return RX_HEADER_REJECT;
         }
-        // Residual CFO/common phase: least-squares line over the burst.
-        double sx = 0, sy = 0, sxx = 0, sxy = 0;
-        for (int s = 0; s < ns; ++s) { sx += s; sy += phases[s]; sxx += s * s; sxy += s * phases[s]; }
-        double denominator = ns * sxx - sx * sx;
-        double slope = denominator ? (ns * sxy - sx * sy) / denominator : 0;
-        double intercept = (sy - slope * sx) / ns;
-        metrics[2] += slope * n / (2 * double(PI) * L);
+        double intercept, slope;
+        phase_line(phases, ns, intercept, slope);
+        metrics[2] += slope * n / (2 * double(PI) * length);
         for (int s = 0; s < ns; ++s) {
             C correction = std::polar(scale, float(-(intercept + slope * s)));
             for (int j = 0; j < nd; ++j) {
                 C z = cmul(recovered[s * nd + j], correction);
                 int bit = bps * (s * nd + j);
-                float gain = cnorm(estimate[a.data[j]]);
                 int hard[4];
-                if (bps == 2) {
-                    hard[0] = z.real() < 0; hard[1] = z.imag() < 0;
-                    confidence[bit] = std::abs(z.real()) * gain;
-                    confidence[bit + 1] = std::abs(z.imag()) * gain;
-                } else {
-                    // Max-log reliabilities for Gray 16-QAM (sign, magnitude) per axis.
-                    const float axis[2] = {z.real(), z.imag()};
-                    for (int c = 0; c < 2; ++c) {
-                        float v = axis[c], mag = std::abs(v);
-                        hard[2 * c] = v < 0;
-                        hard[2 * c + 1] = mag > 2 * A16;
-                        confidence[bit + 2 * c] = mag * gain;
-                        confidence[bit + 2 * c + 1] = std::abs(mag - 2 * A16) * gain;
-                    }
-                }
-                error += cnorm(z - map(hard));
+                error += demap(z, cnorm(estimate[a.data[j]]), bps, hard, confidence.data() + bit);
                 for (int b = 0; b < bps; ++b) out[(bit + b) / 8] |= (hard[b] ^ a.prbs[bit + b]) << (7 - (bit + b) % 8);
             }
         }
         metrics[3] = 10 * std::log10(std::max(error / (ns * nd), 1e-20));
         metrics[4] = 0;
         if (chase > 0 && !valid_packet(out, bytes, a.id)) {
-            // Bounded CRC-aided Chase detection over the least reliable bits:
-            // at most chase + chase*(chase-1)/2 additional CRC checks. Neither
-            // payload ground truth nor simulator parameters are consulted.
             int used_bits = bits;
             int end = 12 + (int(out[10]) << 8) + out[11] + 4;
             if (end >= 16 && end <= bytes) used_bits = std::min(bits, end * 8);
-            std::vector<int> weakest(used_bits);
-            std::iota(weakest.begin(), weakest.end(), 0);
-            int candidates = std::min(chase, used_bits);
-            std::partial_sort(weakest.begin(), weakest.begin() + candidates, weakest.end(),
-                              [&](int x, int y){ return confidence[x] < confidence[y]; });
-            auto flip = [&](int bit){ out[bit / 8] ^= 1 << (7 - bit % 8); };
-            for (int i = 0; i < candidates; ++i) {
-                flip(weakest[i]); ++metrics[4];
-                if (valid_packet(out, bytes, a.id)) return bytes;
-                flip(weakest[i]);
-            }
-            for (int i = 0; i < candidates; ++i) for (int j = i + 1; j < candidates; ++j) {
-                flip(weakest[i]); flip(weakest[j]); ++metrics[4];
-                if (valid_packet(out, bytes, a.id)) return bytes;
-                flip(weakest[i]); flip(weakest[j]);
-            }
+            chase_search(out, used_bits, confidence.data(), chase,
+                         [&]{ return valid_packet(out, bytes, a.id); }, metrics[4]);
         }
         return bytes;
     }
