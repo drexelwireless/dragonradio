@@ -13,3 +13,5 @@ tmp/
 /python/dragonradio/dragonradio/radio/version.py
 /tools/venv/
 /venv/
+/.venv-simulation/
+/simulation-results/

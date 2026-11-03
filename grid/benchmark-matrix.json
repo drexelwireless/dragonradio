@@ -1,0 +1,365 @@
+{
+  "schema": 1,
+  "status": "design only; no reservations or RF authorization",
+  "modes": [
+    "legacy-ofdm",
+    "native-ofdm",
+    "native-ofdma"
+  ],
+  "comparison_tiers": [
+    "matched-uncoded-QPSK-CRC32",
+    "matched-coded",
+    "production-config"
+  ],
+  "initial_sample_rate": 1000000,
+  "candidate_rate_sweep": [
+    1000000,
+    2000000,
+    5000000
+  ],
+  "rates_require_actual_readback": true,
+  "strong_definition": "calibrated reference PER <=1e-3 with independent-trial confidence and no clipping",
+  "weak_definition": "calibrated reference PER 0.10..0.30 near waterfall; hold RF setting fixed across modes",
+  "directed_pairs": [
+    {
+      "tx": "N210",
+      "rx": "N210",
+      "strength": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx": "N210",
+      "strength": "weak"
+    },
+    {
+      "tx": "N210",
+      "rx": "X310",
+      "strength": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx": "X310",
+      "strength": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx": "N210",
+      "strength": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx": "N210",
+      "strength": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx": "X310",
+      "strength": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx": "X310",
+      "strength": "weak"
+    }
+  ],
+  "downlink_trios": [
+    {
+      "tx": "N210",
+      "rx1": "N210",
+      "rx2": "N210",
+      "link1": "strong",
+      "link2": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx1": "N210",
+      "rx2": "N210",
+      "link1": "strong",
+      "link2": "weak"
+    },
+    {
+      "tx": "N210",
+      "rx1": "N210",
+      "rx2": "N210",
+      "link1": "weak",
+      "link2": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx1": "N210",
+      "rx2": "N210",
+      "link1": "weak",
+      "link2": "weak"
+    },
+    {
+      "tx": "N210",
+      "rx1": "N210",
+      "rx2": "X310",
+      "link1": "strong",
+      "link2": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx1": "N210",
+      "rx2": "X310",
+      "link1": "strong",
+      "link2": "weak"
+    },
+    {
+      "tx": "N210",
+      "rx1": "N210",
+      "rx2": "X310",
+      "link1": "weak",
+      "link2": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx1": "N210",
+      "rx2": "X310",
+      "link1": "weak",
+      "link2": "weak"
+    },
+    {
+      "tx": "N210",
+      "rx1": "X310",
+      "rx2": "N210",
+      "link1": "strong",
+      "link2": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx1": "X310",
+      "rx2": "N210",
+      "link1": "strong",
+      "link2": "weak"
+    },
+    {
+      "tx": "N210",
+      "rx1": "X310",
+      "rx2": "N210",
+      "link1": "weak",
+      "link2": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx1": "X310",
+      "rx2": "N210",
+      "link1": "weak",
+      "link2": "weak"
+    },
+    {
+      "tx": "N210",
+      "rx1": "X310",
+      "rx2": "X310",
+      "link1": "strong",
+      "link2": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx1": "X310",
+      "rx2": "X310",
+      "link1": "strong",
+      "link2": "weak"
+    },
+    {
+      "tx": "N210",
+      "rx1": "X310",
+      "rx2": "X310",
+      "link1": "weak",
+      "link2": "strong"
+    },
+    {
+      "tx": "N210",
+      "rx1": "X310",
+      "rx2": "X310",
+      "link1": "weak",
+      "link2": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx1": "N210",
+      "rx2": "N210",
+      "link1": "strong",
+      "link2": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx1": "N210",
+      "rx2": "N210",
+      "link1": "strong",
+      "link2": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx1": "N210",
+      "rx2": "N210",
+      "link1": "weak",
+      "link2": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx1": "N210",
+      "rx2": "N210",
+      "link1": "weak",
+      "link2": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx1": "N210",
+      "rx2": "X310",
+      "link1": "strong",
+      "link2": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx1": "N210",
+      "rx2": "X310",
+      "link1": "strong",
+      "link2": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx1": "N210",
+      "rx2": "X310",
+      "link1": "weak",
+      "link2": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx1": "N210",
+      "rx2": "X310",
+      "link1": "weak",
+      "link2": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx1": "X310",
+      "rx2": "N210",
+      "link1": "strong",
+      "link2": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx1": "X310",
+      "rx2": "N210",
+      "link1": "strong",
+      "link2": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx1": "X310",
+      "rx2": "N210",
+      "link1": "weak",
+      "link2": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx1": "X310",
+      "rx2": "N210",
+      "link1": "weak",
+      "link2": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx1": "X310",
+      "rx2": "X310",
+      "link1": "strong",
+      "link2": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx1": "X310",
+      "rx2": "X310",
+      "link1": "strong",
+      "link2": "weak"
+    },
+    {
+      "tx": "X310",
+      "rx1": "X310",
+      "rx2": "X310",
+      "link1": "weak",
+      "link2": "strong"
+    },
+    {
+      "tx": "X310",
+      "rx1": "X310",
+      "rx2": "X310",
+      "link1": "weak",
+      "link2": "weak"
+    }
+  ],
+  "subband_variants": [
+    "normal",
+    "swapped"
+  ],
+  "environments": [
+    "cabled-attenuated",
+    "OTA-LOS",
+    "OTA-multipath"
+  ],
+  "offered_load_fractions_of_legacy_capacity": [
+    0.1,
+    0.5,
+    0.8,
+    0.95,
+    1.1
+  ],
+  "repeats": {
+    "exploratory": 3,
+    "confirmatory_minimum_independent_blocks": 10
+  },
+  "controls": [
+    "equal-total-RF-power",
+    "equal-spectrum-and-rate",
+    "randomized-paired-mode-order",
+    "fixed-geometry-and-attenuation",
+    "independent-clocks-first"
+  ],
+  "required_before_execute": [
+    "owner-and-finite-reservation-id",
+    "available-node-trio",
+    "image-fingerprint-and-UHD-FPGA-compatibility",
+    "experiment-specific-RF-approval",
+    "frequency-bandwidth-power-window",
+    "calibration-and-cleanup-plan"
+  ],
+  "simulation": {
+    "payload_bytes": [
+      64,
+      256
+    ],
+    "reference_snr_db": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      30
+    ],
+    "profiles": [
+      "awgn",
+      "cfo-positive",
+      "cfo-negative",
+      "multipath-cp",
+      "beyond-cp",
+      "rayleigh",
+      "sfo-50ppm"
+    ],
+    "independent_seeds": [
+      2026,
+      2027,
+      2028
+    ],
+    "future_profiles": [
+      "Rician",
+      "time-correlated-fading",
+      "negative-and-long-stream-SFO",
+      "phase-noise",
+      "IQ-imbalance",
+      "quantization",
+      "clipping",
+      "measured-channel-replay"
+    ]
+  }
+}

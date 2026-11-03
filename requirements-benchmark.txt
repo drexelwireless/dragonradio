@@ -1,0 +1,2 @@
+# Optional figure generation; not required by the runtime or benchmark harness.
+matplotlib>=3.7,<4

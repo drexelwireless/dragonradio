@@ -1,6 +1,18 @@
 # Copyright 2018-2020 Drexel University
 # Author: Geoffrey Mainland <mainland@drexel.edu>
 
+# Dispatch before importing the native runtime, which is unavailable on many
+# simulation hosts. The normal radio path continues below unchanged.
+import sys
+from pathlib import Path
+
+if __name__ == '__main__' and '--simulate' in sys.argv[1:]:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'python' / 'dragonradio'))
+    from dragonradio.simulation.__main__ import main as simulation_main
+    simulation_args = list(sys.argv[1:])
+    simulation_args.remove('--simulate')
+    raise SystemExit(simulation_main(simulation_args))
+
 import asyncio
 from concurrent.futures import CancelledError
 from itertools import chain, cycle, starmap

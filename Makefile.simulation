@@ -1,0 +1,33 @@
+# Portable targets: never compile or initialize UHD, TAP, or Linux capabilities.
+PYTHON ?= python3
+SIM_ARGS ?= --profile multipath --frames 200 --output simulation-results/multipath.json
+
+.PHONY: sim sim-test sim-build phy-build modem-build phy-benchmark frame-sim grid-package
+sim:
+	$(PYTHON) scripts/sim-radio.py $(SIM_ARGS)
+
+sim-test:
+	PYTHONPATH=python/dragonradio $(PYTHON) -m unittest discover -s tests/simulation -v
+
+sim-build:
+	$(PYTHON) -m compileall -q python/dragonradio/dragonradio/simulation scripts/sim-radio.py
+
+phy-build:
+	$(PYTHON) scripts/build-phy.py
+
+modem-build:
+	$(PYTHON) scripts/build-modem.py --fetch
+
+phy-benchmark:
+	$(PYTHON) scripts/benchmark-phy.py
+
+frame-sim:
+	$(PYTHON) scripts/frame-radio.py --mode ofdm --engine native --frames 100
+	$(PYTHON) scripts/frame-radio.py --mode ofdma --engine native --frames 100
+
+grid-package:
+	$(PYTHON) scripts/package-grid.py
+
+.PHONY: phy-characterize
+phy-characterize:
+	$(PYTHON) scripts/characterize-phy.py --output simulation-results/characterization.json $(CHARACTERIZE_ARGS)

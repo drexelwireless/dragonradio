@@ -1,0 +1,10 @@
+{
+  "reservation_id": "REPLACE_WITH_OWN_FINITE_RESERVATION_ID",
+  "rf_approval_reference": "REPLACE_WITH_THIS_EXPERIMENT_APPROVAL",
+  "campaign": "/home/USER/dragonradio-results/trial01",
+  "shared_results": "/home/USER/dragonradio-results/trial01",
+  "capture_seconds": 15,
+  "tx": {"host": "gridTX", "host_key_alias": "gridTX-reservation-ID", "root": "/tmp/dragonradio-frame", "python": "/path/to/uhd-python", "sdr_config": "/home/USER/tx.json"},
+  "rx1": {"host": "gridRX1", "host_key_alias": "gridRX1-reservation-ID", "root": "/tmp/dragonradio-frame", "python": "/path/to/uhd-python", "sdr_config": "/home/USER/rx1.json"},
+  "rx2": {"host": "gridRX2", "host_key_alias": "gridRX2-reservation-ID", "root": "/tmp/dragonradio-frame", "python": "/path/to/uhd-python", "sdr_config": "/home/USER/rx2.json"}
+}

@@ -109,6 +109,7 @@ class Modulator : public ::Modulator {
 public:
     Modulator(const MCS &header_mcs)
       : header_mcs_(header_mcs)
+      , payload_mcs_(header_mcs)
     {
     }
 

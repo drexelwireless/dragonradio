@@ -4,7 +4,7 @@
 #include <pybind11/pybind11.h>
 
 #include "Header.hh"
-#include "python/PyModules.hh"
+namespace py = pybind11;
 
 void exportHeader(py::module &m)
 {
@@ -52,8 +52,9 @@ void exportHeader(py::module &m)
         .def_readwrite("nexthop",
             &Header::nexthop,
             "Next hop")
-        .def_readwrite("seq",
-            &Header::seq,
+        .def_property("seq",
+            [](const Header &self) { return static_cast<Seq::uint_type>(self.seq); },
+            [](Header &self, Seq::uint_type seq) { self.seq = Seq{seq}; },
             "Packet sequence number")
         .def_readwrite("flags",
             &Header::flags,

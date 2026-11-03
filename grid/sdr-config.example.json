@@ -1,0 +1,11 @@
+{
+  "device_args": "",
+  "center_frequency": null,
+  "sample_rate": 1000000,
+  "gain_db": 0,
+  "antenna": "",
+  "channel": 0,
+  "clock_source": "internal",
+  "time_source": "",
+  "peak_amplitude": 0.5
+}

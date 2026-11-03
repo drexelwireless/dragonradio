@@ -169,6 +169,9 @@ python/dragonradio/dragonradio/%_pb2.py : proto/%.proto
 print-% :
 	@echo $* = $($*)
 
+# Hardware-free PHY experiments; these targets do not build the native radio.
+include Makefile.simulation
+
 #
 # Rules for virtual goals
 #
