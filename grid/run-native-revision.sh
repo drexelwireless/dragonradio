@@ -48,7 +48,7 @@ tail -3 "$results/tests.log" | tee -a "$results/STATUS"
 status "triage of pinned liquid CFO behavior on this architecture"
 "$PY" scripts/triage-liquid-cfo.py --output "$results/liquid-cfo-triage.json" --fftw-prefix "$workspace/prefix" > "$results/triage.log" 2>&1 \
   || status "triage failed (non-fatal; see triage.log)"
-workers=$(( $(nproc) - 8 ))
+workers=$(( $(getconf _NPROCESSORS_ONLN) - 8 ))   # not nproc: it honors OMP_NUM_THREADS=1
 status "quality study with $workers workers"
 "$PY" scripts/bench-native-revision.py quality --output "$results" --workers "$workers" > "$results/quality.log" 2>&1
 status "software study pinned to CPU $core"
