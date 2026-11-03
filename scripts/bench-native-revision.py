@@ -54,7 +54,7 @@ def quality(a):
     snrs = [0, 10, 20] if quick else list(range(0, 32, 2))
     modes = list(rv.MODES)
     profiles = ["awgn", "cfo-0.6"] if quick else list(rv.PROFILES)
-    meta = dict(provenance=rv.provenance(ROOT), seeds=seeds, frames_per_seed=frames, snrs_db=snrs,
+    meta = dict(provenance=rv.provenance(ROOT), studies=a.studies, seeds=seeds, frames_per_seed=frames, snrs_db=snrs,
                 modes=rv.MODES, profiles=profiles, payload=rv.PAYLOAD, quick=quick, workers=a.workers,
                 hardware_opened=False, started=time.strftime("%Y-%m-%dT%H:%M:%S%z"))
     save(out / "meta.json", meta)
@@ -63,28 +63,36 @@ def quality(a):
         # 1. Oracle BER (known timing/channel) versus theory.
         ebnos = [0, 4, 8] if quick else [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
         tasks = [(mod, e, s, frames) for mod in ("qpsk", "16qam") for e in ebnos for s in seeds]
-        cells = run_pool(pool, rv.oracle_cell, tasks, "oracle")
-        save(out / "oracle.json", dict(meta=meta, rows=rv.aggregate_oracle(cells)))
+        if "oracle" in a.studies:
+            cells = run_pool(pool, rv.oracle_cell, tasks, "oracle")
+            save(out / "oracle.json", dict(meta=meta, rows=rv.aggregate_oracle(cells)))
         # 2. CFO acquisition envelope.
         cfos = [round(x * 0.05, 2) for x in range(-30, 31)] if not quick else [-1.0, -0.5, 0.0, 0.5, 1.0]
         cfo_modes = ["legacy-qpsk", "v1-ofdm-qpsk", "v1-ofdma-qpsk", "v2-ofdm-qpsk", "v2-ofdma-qpsk", "v2-ofdm-16qam", "legacy-16qam"]
         tasks = [(m, c, snr, 20 if quick else 200) for m in cfo_modes for c in cfos for snr in (None, 20.0)]
-        save(out / "cfo.json", dict(meta=meta, rows=run_pool(pool, rv.cfo_cell, tasks, "cfo")))
+        if "cfo" in a.studies:
+            save(out / "cfo.json", dict(meta=meta, rows=run_pool(pool, rv.cfo_cell, tasks, "cfo")))
         # 3. Practical PER and goodput.
         tasks = [(m, p, snr, s, frames, rv.PAYLOAD) for m in modes for p in profiles for snr in snrs for s in seeds]
         random.Random(1).shuffle(tasks)   # balance load across workers
-        cells = run_pool(pool, rv.practical_cell, tasks, "practical")
-        rows = rv.aggregate_practical(cells)
-        save(out / "practical.json", dict(meta=meta, rows=rows))
+        rows = []
+        if "practical" in a.studies:
+            cells = run_pool(pool, rv.practical_cell, tasks, "practical")
+            rows = rv.aggregate_practical(cells)
+            save(out / "practical.json", dict(meta=meta, rows=rows))
         # 4. Payload sweep (AWGN, robust and waterfall points).
         payload_modes = ["legacy-qpsk", "legacy-16qam", "v2-ofdm-qpsk", "v2-ofdma-qpsk", "v2-ofdm-16qam", "v2-ofdma-16qam"]
         payloads = [64, 256] if quick else [64, 256, 1024, 1500]
         tasks = [(m, "awgn", snr, s, max(10, frames // 2), size) for m in payload_modes for size in payloads
                  for snr in (12.0, 20.0, 30.0) for s in seeds[:5]]
-        cells = run_pool(pool, rv.practical_cell, tasks, "payload")
-        save(out / "payload.json", dict(meta=meta, rows=rv.aggregate_practical(cells)))
-    gates = dict(oracle_theory_consistent=all(r["theory_consistent_6sigma"] for r in json.loads((out / "oracle.json").read_text())["rows"]),
-                 no_false_accepts=all(u["false_accepts"] == 0 for r in rows for u in r["users"].values()))
+        if "payload" in a.studies:
+            cells = run_pool(pool, rv.practical_cell, tasks, "payload")
+            save(out / "payload.json", dict(meta=meta, rows=rv.aggregate_practical(cells)))
+    gates = {}
+    if "oracle" in a.studies:
+        gates["oracle_theory_consistent"] = all(r["theory_consistent_6sigma"] for r in json.loads((out / "oracle.json").read_text())["rows"])
+    if rows:
+        gates["no_false_accepts"] = all(u["false_accepts"] == 0 for r in rows for u in r["users"].values())
     meta["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     meta["gates"] = gates
     save(out / "meta.json", meta)
@@ -148,6 +156,8 @@ def main():
     q.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 4))
     q.add_argument("--seeds", type=int, default=20)
     q.add_argument("--quick", action="store_true")
+    q.add_argument("--studies", nargs="+", choices=("oracle", "cfo", "practical", "payload"),
+                   default=["oracle", "cfo", "practical", "payload"])
     s = sub.add_parser("software")
     s.add_argument("--output", type=Path, required=True)
     s.add_argument("--core", type=int)

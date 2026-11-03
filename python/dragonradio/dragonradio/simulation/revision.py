@@ -250,13 +250,17 @@ def oracle_cell(task):
     bins = np.array(cfg.allocations[0].data) % cfg.nfft
     rng = np.random.default_rng(seed * 7919 + int(ebno * 10) + (0 if modulation == "qpsk" else 500000))
     errors = total = packet_errors = 0
+    energies = []
     for sequence in range(frames):
         packet = Packet(0, 1, sequence, rng.bytes(PAYLOAD))
         waveform = tx.modulate([packet])
         grid = np.fft.fft(waveform.reshape(-1, cfg.symbol_samples)[:, cfg.cp_len:], axis=1, norm="ortho")
         symbols = grid[2:, bins].reshape(-1)
-        es = float(np.mean(np.abs(symbols) ** 2))
-        n0 = es / (bps * 10 ** (ebno / 10))
+        # Noise is referenced to the constellation's nominal unit average
+        # energy. A per-packet measured Es varies for 16-QAM (not for QPSK) and
+        # correlates noise with the symbol mix, biasing BER 1-3% high.
+        energies.append(float(np.mean(np.abs(symbols) ** 2)))
+        n0 = 1.0 / (bps * 10 ** (ebno / 10))
         received = waveform + math.sqrt(n0 / 2) * (rng.standard_normal(len(waveform)) + 1j * rng.standard_normal(len(waveform)))
         detected = np.fft.fft(received.reshape(-1, cfg.symbol_samples)[:, cfg.cp_len:], axis=1, norm="ortho")[2:, bins].reshape(-1)
         length = len(packet.encode()) * 8
@@ -265,7 +269,8 @@ def oracle_cell(task):
         total += length
         packet_errors += count > 0
     return dict(modulation=modulation, ebno_db=ebno, seed=seed, bits=total, bit_errors=errors,
-                packets=frames, packet_errors=packet_errors)
+                packets=frames, packet_errors=packet_errors, mean_measured_es=float(np.mean(energies)),
+                noise_reference="nominal Es = 1 (unit-average-power constellation)")
 
 
 def aggregate_oracle(cells):
