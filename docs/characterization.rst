@@ -113,8 +113,9 @@ All oracle consistency checks passed; no practical false accepts were observed.
 This is exploratory characterization, not enough trials to certify rare PER.
 
 AWGN robust-link cases passed; fixed-noise Rayleigh cases retain residual losses
-at high reference SNR because some blocks are in deep fades. The known pinned
-liquidDSP negative-CFO failure persists. Beyond-CP cases fail badly even at high
+at high reference SNR because some blocks are in deep fades. The pinned
+liquidDSP negative-CFO failure persists on macOS arm64 but not on Linux x86_64;
+see *Negative-CFO triage* below. Beyond-CP cases fail badly even at high
 SNR; increasing CP or adding a suitable equalizer is required for that channel
 envelope rather than hiding those cases in an average.
 
@@ -154,8 +155,45 @@ legacy control, for two sequential receiver replays. These captures represent
 different protocol airtimes, which are also recorded in the software reports.
 Do not infer software parity with legacy from the copy optimization alone.
 
-The full-stack handoff also requires a CRC-aided correction ablation and
-triage of the pinned legacy negative-CFO failure before broad receiver claims.
+The full-stack handoff also requires a CRC-aided correction ablation before
+broad receiver claims. The negative-CFO triage is complete (next section).
+
+Negative-CFO triage (P0, 2026-11-02)
+------------------------------------
+
+Cause: undefined behavior in the pinned liquidDSP NCO, not the DragonRadio
+wrapper, subcarrier mask, channel model or CFO estimator. ``nco_crcf_constrain``
+in ``src/nco/src/nco.c`` converts a possibly negative ``double`` directly to
+``uint32_t``. C leaves that conversion undefined. arm64 saturates it to 0, so
+every negative NCO frequency set by the synchronizer becomes 0 Hz; x86_64
+compilers usually produce the wrapped two's-complement value, which works.
+Evidence, all noiseless with no wrapper:
+
+* A standalone C driver linked to the pinned ``libliquid`` reproduces the
+  failure with the experiment mask, its mirror image and liquid's default mask.
+* Instrumented acquisition shows a correct S0 estimate (-0.1000 subcarrier for
+  -0.10 injected) and successful S1 sync, but NCO frequency 0 afterwards; the
+  header decodes and the payload fails from the uncorrected rotation.
+* ``-fsanitize=float-cast-overflow`` reports the conversion at ``nco.c:345``.
+* Replacing only that conversion with ``(uint32_t)(int64_t)round(...)`` restores
+  full delivery from -0.55 to +0.55 subcarrier on arm64.
+* The Linux x86_64 characterization already delivered 300/300 at -0.18.
+
+Reproduce with ``python scripts/triage-liquid-cfo.py --output
+simulation-results/liquid-cfo-triage.json``. It builds the patched NCO only as
+a copy in ``build/triage``. The pinned comparator is unchanged, and existing
+studies keep using it; a corrected comparator would be a separately labelled
+version with its own rerun curves. Linux x86_64 grid nodes run the pinned
+code without this symptom, but the behavior still relies on undefined
+conversion, so record compiler/architecture with every legacy result.
+
+The same sweep exposed a native limit: native OFDM and OFDMA acquire only from
+about -0.25 to +0.25 subcarrier (preamble correlation metric falls below its
+0.20 threshold at 0.30), narrower than corrected liquid's +/-0.55. At 1 MS/s
+and FFT128 one subcarrier is 7.8125 kHz, so native tolerates about 2 kHz of
+total relative offset. Measure real N210/X310 offsets in the cabled pilot; a
+wider native acquisition (segmented/differential correlation or coarse CFO
+search) is P4 work, not implemented.
 
 Linux cross-check
 -----------------

@@ -11,8 +11,8 @@ def main():
     output = root / "build" / "dragonradio-frame-grid.tar.gz"
     output.parent.mkdir(exist_ok=True)
     files = ["Makefile.simulation", "requirements-simulation.txt", "requirements-benchmark.txt", "LICENSE", "README.md", "CLAUDE_FULLSTACK_BENCHMARK_PLAN.md", "tests/reference_stream_v1.py"]
-    directories = ["python/dragonradio/dragonradio/simulation", "src/simulation", "tests/simulation", "tests/reference_phy_v1", "grid"]
-    files += ["scripts/" + name for name in ("build-phy.py", "build-modem.py", "benchmark-phy.py", "frame-radio.py", "sim-radio.py", "standalone-radio.py", "package-grid.py", "plot-phy-benchmark.py", "ota-phy.py", "summarize-ota.py", "plot-ota-demo.py", "characterize-phy.py", "plot-characterization.py", "compare-software.py")]
+    directories = ["python/dragonradio/dragonradio/simulation", "src/simulation", "tests/simulation", "tests/reference_phy_v1", "tests/triage", "grid"]
+    files += ["scripts/" + name for name in ("build-phy.py", "build-modem.py", "benchmark-phy.py", "frame-radio.py", "sim-radio.py", "standalone-radio.py", "package-grid.py", "plot-phy-benchmark.py", "ota-phy.py", "summarize-ota.py", "plot-ota-demo.py", "characterize-phy.py", "plot-characterization.py", "compare-software.py", "triage-liquid-cfo.py", "baseline-manifest.py")]
     files += ["docs/" + name for name in ("simulation.rst", "native-phy.rst", "native-phy-evaluation.rst", "ota-grid.rst", "images/phy-benchmark.png", "images/ota-demo.png", "characterization.rst", "images/characterization.png")]
     # The liquidDSP comparison must retain the original wrappers and dependency
     # source identifiers. No compiled binaries are copied between architectures.

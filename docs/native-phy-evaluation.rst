@@ -129,9 +129,10 @@ exceeded the frozen initial OFDMA receiver on identical IQ inputs at every point
 
 The negative-CFO multipath-user2 profile exposed a failure of this pinned
 liquidDSP configuration, even at high SNR. A separate unity-channel check also
-failed at -0.12/-0.18 subcarrier CFO while passing at zero/positive CFO. The cause
-has not been isolated, and this must not be generalized to other liquidDSP
-versions or settings. The standalone timing comparison uses the positive-CFO
+failed at -0.12/-0.18 subcarrier CFO while passing at zero/positive CFO. The
+cause was later isolated to an undefined float-to-unsigned conversion in the
+pinned NCO that saturates on arm64 (see ``characterization.rst``, *Negative-CFO
+triage*); Linux x86_64 builds pass. Do not generalize it to other versions. The standalone timing comparison uses the positive-CFO
 multipath-user1 profile where both modems decode successfully.
 
 Early failed acquisition can be quicker than decoding a valid packet. Accordingly

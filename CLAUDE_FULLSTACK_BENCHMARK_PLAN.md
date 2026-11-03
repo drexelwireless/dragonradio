@@ -16,8 +16,9 @@ network stack, or simulation results as RF results.**
   recoverable checkpoint including untracked files before refactoring.
 - Production `--phy ofdm` constructs `dragonradio.liquid.OFDM` in
   `python/dragonradio/dragonradio/radio/radio.py::Radio.mkPHY`. Preserve it.
-- The new engine is `src/simulation/FastPHY.cc` (FFTW, no liquid/UHD), with C ABI
-  bindings in `simulation/fast.py`. It implements static uncoded QPSK OFDM and
+- The new engine is `src/simulation/FastPHYCore.hh` (FFTW, no liquid/UHD; extracted
+  from `FastPHY.cc` in P1 step 1), with a thin C ABI in `src/simulation/FastPHY.cc`
+  and ctypes bindings in `simulation/fast.py`. It implements static uncoded QPSK OFDM and
   two-user downlink OFDMA. It is not currently selected by the production MAC.
 - `simulation/frame.py::NativePacketAdapter` retains native packet fields at a
   frame boundary; it is **not** a completed C++ PacketModulator/PacketDemodulator.
@@ -104,6 +105,8 @@ build only as a separately labelled experiment.
 
 ### P0 baseline triage
 
+**Done 2026-11-02; see section 10.** Root cause: undefined negative float to
+`uint32_t` conversion in the pinned `nco.c`, saturating on arm64. Original task:
 Reproduce the negative-CFO issue in the isolated legacy bridge and the complete
 legacy receiver using the same IQ, then isolate mask/training, estimator and
 wrapper effects. Preserve the pinned result, but do not turn a configuration
@@ -474,3 +477,53 @@ on the basis of the existing successful uncoded frame demonstrations.
 - No full-stack native adapter, matched production FEC, full-stack simulated
   transport, new reservation, radio firmware update or OTA transmission was
   performed in this exploratory round. P1–P8 remain development/execution work.
+
+## 10. Phase status, 2026-11-02 (second session)
+
+Everything below ran on macOS 26.5 arm64 (Apple clang 21, FFTW 3.3.11, Python
+3.14.4, NumPy 2.5.4) with no SDR opened, no RF transmitted, no reservation, and no
+firmware or host change. Generated reports live in `simulation-results/` (git-ignored).
+
+### Implemented and verified
+
+| Item | Evidence | Gate |
+|---|---|---|
+| P0 recoverable checkpoint | `refs/checkpoints/p0-2026-11-02` = `37d91adc`: commit of the whole working tree incl. untracked files on top of `da3808d2`. Branch, index and working tree untouched. Restore one file with `git checkout refs/checkpoints/p0-2026-11-02 -- PATH`. | n/a |
+| P0 regression suite | 47 existing tests passed before changes; 48 (47 + new core-header test) after. | pass |
+| P0 theory calibration | `scripts/characterize-phy.py --quality-only --frames 100 --profiles awgn cfo-positive cfo-negative --snrs 0 8 20 30` -> `p0-recheck-macos.json` (sha256 `2ca89322…`). 12/12 oracle BER points within the 6-sigma QPSK check; 72 practical cells and 12 asymmetric controls, zero false accepts. Reduced profile set; the full 294-cell study is the earlier `characterization.json`. | pass |
+| P0 negative-CFO triage | `scripts/triage-liquid-cfo.py` -> `liquid-cfo-triage-macos.json` (`e261e1aa…`). Pinned build, all three masks: full delivery only from -0.05 to +0.55 subcarrier. NCO-fixed copy: -0.55 to +0.55. UBSan flags `nco.c:345`. Linux x86_64 report already showed 300/300 at -0.18. | root cause isolated |
+| P0 provenance manifest | `scripts/baseline-manifest.py` -> `baseline-manifest-macos.json`: git HEAD/checkpoint, SHA-256 of every dirty/untracked source, the three backends, toolchain and host. | pass |
+| P1 step 1: core extraction | `FastPHYCore.hh` (namespace `dragonradio::native`) + thin ABI. Same six exported `dr_fast_*` symbols. Golden check (`simulation-results/p1-core-extraction/golden.py`): waveform and decoder-metric hashes for OFDM, OFDMA and 64-byte OFDM identical before/after, 60 packets x 3 channels each. FFTW planner lock is now one `inline` object across translation units; channel-model and TX-size validation moved into `add_channel_model`/`write_checked`. `tests/simulation/test_core_header.py` builds two C++ units from the header with `-Wall -Werror` and checks a bit-identical frame vs ctypes. | pass |
+
+### New findings that change later phases
+
+- **Legacy comparator is architecture-dependent.** Existing pinned studies remain
+  valid as "pinned, arm64" or "pinned, x86_64". Any corrected-NCO comparator must be a
+  separately labelled version with rerun curves; it was not substituted anywhere.
+  Record compiler and architecture with every legacy result.
+- **Native CFO acquisition is narrow.** Native OFDM/OFDMA acquire only within about
+  +/-0.25 subcarrier (+/-2 kHz at 1 MS/s, FFT128). The preamble correlation metric
+  drops to 0.176 at 0.30, below the 0.20 threshold. Corrected liquid reaches +/-0.55.
+  Each 1 ppm of relative oscillator error is 1 kHz at a 1 GHz carrier, so independent
+  N210/X310 clocks can exceed native's range. Measure actual offsets in the first
+  cabled PHY pilot. Widening acquisition is P4 work and is **not implemented**.
+
+### Proposed / not started (unchanged scope)
+
+- P1 steps 2-6: `src/phy/NativeOFDM.*` implementing `PHY`, header/MTU versioning,
+  `ModPacket`/timestamp semantics, Python binding and `--phy native-ofdm`, Modem.hh
+  liquid separation. **Blocker:** production headers need UHD, liquid, xsimd and
+  pybind11, none installed on this Mac (`src/Clock.hh`, `IQBuffer.hh`, `Packet.hh`).
+  Build and test in the owner-approved isolated Linux container (section 3); writing
+  untestable production code here would not meet the P1 gate.
+- P2-P5 (simulated I/O through the real MAC, matched FEC, software hardening, full-
+  stack OFDMA): not started; depend on P1.
+- P6-P8 (cabled hardware, OTA matrices, release decision): not started; need grid
+  reservation, RF approval and owner sign-off. Nothing here authorizes them.
+- Linux reruns of the two new scripts on the grid controller workspace: not run.
+
+### Next blocker
+
+Provision the isolated Linux build container with the legacy dependency set, reproduce
+the legacy `dragonradio` build there, then start P1 step 2 against `FastPHYCore.hh`.
+

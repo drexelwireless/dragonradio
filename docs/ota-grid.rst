@@ -59,11 +59,15 @@ The manifest provides that denominator; offered traffic is saturated. Also run
 an equal offered-load experiment by pacing all three at the slowest candidate's
 measured rate before drawing conclusions about queueing latency.
 
-The existing liquidDSP version has a known negative-CFO failure in the pinned
-configuration. The default simulation uses positive 0.1-subcarrier CFO and a
-short multipath channel. Repeat with ``--cfo -0.18`` and save a separate
-``--output``; retain failures as measurements rather than tuning only one
-candidate's channel. This is not a claim about every liquidDSP version.
+The pinned liquidDSP NCO uses an undefined negative float to ``uint32_t``
+conversion. On arm64 (Apple Silicon) every negative CFO correction becomes
+zero and legacy packets fail; Linux x86_64 builds wrap correctly and pass. See
+``docs/characterization.rst`` (*Negative-CFO triage*). The default simulation
+uses positive 0.1-subcarrier CFO and a short multipath channel. Repeat with
+``--cfo -0.18`` and save a separate ``--output``; retain failures as
+measurements rather than tuning only one candidate's channel. Native OFDM/OFDMA
+acquisition is limited to roughly +/-0.25 subcarrier (about +/-2 kHz here);
+measure the radios' actual relative offset before the first RF trial.
 
 Grid preparation and reservation procedure
 -----------------------------------------
