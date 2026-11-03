@@ -539,3 +539,31 @@ the plan, method and results. This narrows the P4 software item and the native
 CFO risk noted in section 10; it does not change the P1-P8 order, and no
 production `--phy` default changed.
 
+
+## 12. P1 status, 2026-11-03: native OFDM in the production stack
+
+Implemented and tested without a radio (details: `docs/native-fullstack.rst`):
+
+- `--phy native-ofdm` builds `NativeOFDM` (`src/phy/NativeOFDM.cc`) on the framed
+  native engine (`src/simulation/NativeFrame.hh`, wire format v2: QPSK header
+  section with the DragonRadio Header, MCS index, constellation, length and
+  CRC-32; variable QPSK/16-QAM payload with CRC-32). Liquid OFDM stays default.
+- Production team/next-hop/own-transmission filtering runs on the decoded header
+  before any payload work; unwanted frames are skipped by length.
+- Only CRC-32 uncoded QPSK/16-QAM MCS entries are accepted; RS/Viterbi/64-QAM/
+  CRC-16 are rejected with an explicit error. The production default coded
+  tables therefore cannot be used with the native PHY until P3.
+- `MonoClock` uses the host clock when no USRP is attached (was a null
+  dereference). Two missing standard includes fixed for GCC 13.
+- Evidence: `tests/fullstack/test_native_ofdm.cc` and `python_native_phy.py`
+  pass on gridgpu01 from a from-scratch workspace built from commit 635b31ae
+  (`grid/setup-fullstack-build.sh` + `grid/build-fullstack.sh`), and the C++
+  test also passed under AddressSanitizer. The workspace is a modernized
+  toolchain (UHD 4.6, Python 3.12, pybind11 2.13.6), not the historical image.
+
+P1 items still open: backend-neutral MCS metadata (`phy/Modem.hh` still uses
+liquid types), per-symbol logging for native frames, fragmentation above the
+configured maximum payload, and an end-to-end `Radio` run, which needs the P2
+simulated I/O boundary because `Radio` opens a USRP before building the PHY.
+Next: P2 (simulated IQ transport/clock at the USRP boundary so the real MAC,
+ARQ, synthesizer and channelizer run against simulated channels).

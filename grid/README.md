@@ -51,3 +51,13 @@ tmux new-session -d -s drbench "bash run-native-revision.sh src.tar.gz liquid.ta
 liquid archive must contain the pinned checkout with bootstrap-generated
 `configure` **and** `config.h.in` (an archive with only `configure` fails at
 `config.status`). See `docs/native-revision.rst` for the study design.
+
+## Full-stack build workspace (no sudo)
+
+`setup-fullstack-build.sh SOURCE.tar.gz LIQUID.tar.gz WORKSPACE` unpacks the
+Ubuntu 24.04 development packages the production radio needs into a private
+workspace, builds the pinned liquidDSP, xsimd and firpm, and installs the
+Python package dependencies into a venv. `build-fullstack.sh WORKSPACE`
+builds the `dragonradio` executable and runs `tests/fullstack`. This is a
+modernized toolchain (UHD 4.6, Python 3.12); see `docs/native-fullstack.rst`.
+No radio is opened by either script.
