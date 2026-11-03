@@ -133,6 +133,19 @@ class NativeFrameTest(unittest.TestCase):
         self.assertEqual([r.payload for r in results if r.ok], [f[1] for f in frames if f[0][1] in (7, 255)])
         self.assertTrue(all(r.payload == b"" and r.samples > 0 for r in results if not r.wanted))
 
+    def test_skipping_unwanted_frames_across_compaction(self):
+        # Unwanted long frames are skipped before their tail arrives; with small
+        # chunks the skip target lies beyond the buffer when it compacts.
+        frames = [(bytes([1, 9 if i % 3 else 7, i, 0, 0]), bytes([i]) * 1500, 0, 2) for i in range(60)]
+        x = np.concatenate([np.concatenate((self.modem.modulate(*f), np.zeros(70, np.complex64))) for f in frames])
+        self.assertGreater(len(x), 4 * 65536)
+        for chunk in (97, 1000):
+            stream = self.modem.stream(nexthop_filter=7)
+            results = self.run_stream(stream, x, chunk)
+            self.assertEqual([r.payload for r in results if r.ok], [f[1] for f in frames if f[0][1] == 7])
+            self.assertEqual(sum(1 for r in results if r.header_valid and not r.wanted), 40)
+            self.assertLess(stream.pending_samples, 70000)
+
     def test_corrupted_payload_consumes_frame_and_recovers(self):
         f = [(b"\x01\x02\x00\x00\x00", bytes(range(200)), 1, 2), (b"\x01\x02\x01\x00\x00", bytes(range(100)), 1, 4)]
         bad = self.modem.modulate(*f[0])

@@ -109,6 +109,14 @@ protected:
     /** @brief Get the current UHD time. */
     static uhd::time_spec_t getTimeNow() noexcept
     {
+        // Without an attached USRP (simulation, PHY tests) use the host's
+        // monotonic clock; previously this dereferenced a null pointer. With a
+        // USRP the device time is used exactly as before.
+        if (!usrp_) {
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count();
+            return uhd::time_spec_t(static_cast<int64_t>(ns / 1000000000), static_cast<double>(ns % 1000000000) * 1e-9);
+        }
         while (true) {
             try {
                 return usrp_->get_time_now();

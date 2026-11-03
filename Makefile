@@ -85,6 +85,7 @@ SOURCES := \
     phy/FDChannelModulator.cc \
     phy/FDChannelizer.cc \
     phy/MultichannelSynthesizer.cc \
+    phy/NativeOFDM.cc \
     phy/OverlapTDChannelizer.cc \
     phy/PHY.cc \
     phy/RadioPacketQueue.cc \
@@ -118,6 +119,7 @@ SOURCES := \
     python/MAC.cc \
     python/Modem.cc \
     python/NCO.cc \
+    python/NativePHY.cc \
     python/Net.cc \
     python/PHY.cc \
     python/Packet.cc \

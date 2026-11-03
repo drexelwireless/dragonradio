@@ -183,6 +183,11 @@ class Config:
         self.taper_len = 4
         self.subcarriers = None
 
+        # Native OFDM parameters (--phy native-ofdm). The PHY accepts only
+        # CRC-32, uncoded QPSK/16-QAM MCS entries until matched FEC exists.
+        self.native_max_payload = 4096
+        self.native_chase_bits = 4
+
         # MAC parameters
         self.mac = 'tdma-fdma'
         """Mac"""
@@ -624,7 +629,7 @@ class Config:
         phy = parser.add_argument_group('PHY')
 
         phy.add_argument('--phy', action='store',
-                         choices=['flexframe', 'newflexframe', 'ofdm'],
+                         choices=['flexframe', 'newflexframe', 'ofdm', 'native-ofdm'],
                          dest='phy',
                          help='set PHY')
         phy.add_argument('--max-channels', action='store', type=int,
@@ -705,6 +710,18 @@ class Config:
         ofdm.add_argument('--subcarriers', action='store', type=str,
                           dest='subcarriers',
                           help='set OFDM subcarrier allocation (.=null, P=pilot, +=data)')
+
+        # Native OFDM options
+        native = parser.add_argument_group('Native OFDM')
+
+        native.add_argument('--native-max-payload', action='store', type=int,
+                            dest='native_max_payload',
+                            metavar='BYTES',
+                            help='set largest native-ofdm payload (bytes)')
+        native.add_argument('--native-chase-bits', action='store', type=int,
+                            dest='native_chase_bits',
+                            metavar='N',
+                            help='set CRC-aided Chase search size (0 disables)')
 
         # MAC parameters
         mac = parser.add_argument_group('MAC')

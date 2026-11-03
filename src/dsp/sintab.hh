@@ -5,6 +5,7 @@
 #define SINTAB_HH_
 
 #include <complex>
+#include <cstdint>
 
 template<int INTBITS>
 class sintab {

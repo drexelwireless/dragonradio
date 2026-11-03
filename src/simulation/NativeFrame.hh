@@ -430,7 +430,9 @@ struct FramedStream {
         compact();
     }
     void compact() {
-        int keep = pos;
+        // pos may lie beyond the buffered samples after skipping an unwanted
+        // frame whose tail has not arrived; never erase past the buffer.
+        int keep = std::min(pos, int(buffer.size()));
         if (in_region || region_closed) keep = std::min(keep, best);
         if (pending) keep = std::min(keep, int(pending->start - base));
         const int keep_from = keep - margin() - 1;
