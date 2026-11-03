@@ -195,6 +195,13 @@ struct FastPHY {
         return C((1 - 2 * b[0]) * (1 + 2 * b[1]) * A16, (1 - 2 * b[2]) * (1 + 2 * b[3]) * A16);
     }
     void write(const unsigned char *bytes, const int *sizes, C *out) {
+        // Constellation size fixed at compile time keeps the per-tone loop as
+        // tight as v1's QPSK-only writer.
+        if (bps == 2) write_impl<2>(bytes, sizes, out);
+        else write_impl<4>(bytes, sizes, out);
+    }
+    template <int BPS>
+    void write_impl(const unsigned char *bytes, const int *sizes, C *out) {
         for (int s = 0; s < ns + 2; ++s) {
             std::fill(fd.begin(), fd.end(), C{});
             if (s < 2) std::copy(training.begin(), training.end(), fd.begin());
@@ -202,15 +209,17 @@ struct FastPHY {
                 int byte_offset = 0;
                 for (size_t u = 0; u < users.size(); ++u) {
                     const User &a = users[u];
-                    for (size_t j = 0; j < a.data.size(); ++j) {
-                        int bit = bps * ((s - 2) * int(a.data.size()) + int(j));
-                        int signs[4];
-                        for (int b = 0; b < bps; ++b) {
-                            int k = bit + b;
-                            int value = k < sizes[u] * 8 ? ((bytes[byte_offset + k / 8] >> (7 - k % 8)) & 1) : 0;
-                            signs[b] = value ^ a.prbs[k];
+                    const int nd = int(a.data.size()), limit = sizes[u] * 8;
+                    const unsigned char *src = bytes + byte_offset, *prbs = a.prbs.data();
+                    for (int j = 0; j < nd; ++j) {
+                        const int bit = BPS * ((s - 2) * nd + j);
+                        int b[BPS];
+                        for (int k = 0; k < BPS; ++k) {
+                            const int i = bit + k;
+                            b[k] = (i < limit ? ((src[i >> 3] >> (7 - (i & 7))) & 1) : 0) ^ prbs[i];
                         }
-                        fd[a.data[j]] = map(signs);
+                        if constexpr (BPS == 2) fd[a.data[j]] = C(b[0] ? -Q : Q, b[1] ? -Q : Q);
+                        else fd[a.data[j]] = C((1 - 2 * b[0]) * (1 + 2 * b[1]) * A16, (1 - 2 * b[2]) * (1 + 2 * b[3]) * A16);
                     }
                     for (size_t j = 0; j < a.pilots.size(); ++j)
                         fd[a.pilots[j]] = ((s - 2 + j + a.id) % 2) ? -1.f : 1.f;
