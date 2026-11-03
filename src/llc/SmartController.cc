@@ -254,14 +254,28 @@ void SmartController::received(std::shared_ptr<RadioPacket> &&pkt)
             // first packet after the sender has advanced its window. This
             // should not happen because the sender will only open up its window
             // if it has seen its SYN packet ACK'ed.
+            //
+            // A retransmitted SYN (its ACK was lost) is the exception: it has
+            // the same sequence number and data as the SYN that opened this
+            // window. Resetting for it would deliver that packet again and
+            // re-deliver everything after it, so keep the window; the SYN is
+            // ACK'ed again below and then dropped as a duplicate.
             if ((pkt->hdr.nexthop == this_node_id) &&
-                (!recvw.active || pkt->hdr.flags.syn || !recvw.contains(pkt->hdr.seq))) {
+                (!recvw.active || pkt->hdr.flags.syn || !recvw.contains(pkt->hdr.seq)) &&
+                !(pkt->hdr.flags.syn && recvw.isSYNRetransmission(*pkt))) {
                 // This is a new connection, so cancel selective ACK timer for the
                 // old receive window
                 timer_queue_.cancel(recvw);
 
                 // Reset the receive window
                 recvw.reset(pkt->hdr.seq);
+
+                // Remember the SYN that opened it
+                if (pkt->hdr.flags.syn && !pkt->internal_flags.invalid_payload) {
+                    Seq syn_seq = pkt->hdr.seq; // Header is packed
+
+                    recvw.syn = std::make_pair(syn_seq, RecvWindow::dataHash(*pkt));
+                }
             }
 
             // Immediately NAK non-broadcast data packets with a bad payload if
@@ -1947,9 +1961,39 @@ RecvWindow::RecvWindow(Node &n,
     long_rssi.setTimeWindow(controller.long_stats_window_);
 }
 
+bool RecvWindow::isSYNRetransmission(const RadioPacket &pkt) const
+{
+    Seq seq = pkt.hdr.seq; // Header is packed
+
+    return active
+        && !pkt.internal_flags.invalid_payload
+        && syn
+        && syn->first == seq
+        && syn->second == dataHash(pkt);
+}
+
+uint64_t RecvWindow::dataHash(const RadioPacket &pkt)
+{
+    // FNV-1a over the data bytes. The extended header (which carries the
+    // piggybacked ACK) and appended control messages differ between
+    // retransmissions and are excluded.
+    size_t               n = std::min<size_t>(pkt.ehdr().data_len,
+                                              pkt.size() > sizeof(ExtendedHeader) ? pkt.size() - sizeof(ExtendedHeader) : 0);
+    const unsigned char *d = pkt.data() + sizeof(ExtendedHeader);
+    uint64_t             h = 0xcbf29ce484222325ull;
+
+    for (size_t i = 0; i < n; ++i) {
+        h ^= d[i];
+        h *= 0x100000001b3ull;
+    }
+
+    return h ^ n;
+}
+
 void RecvWindow::reset(Seq seq)
 {
     active = true;
+    syn.reset();
 
     ack = seq;
     max = seq - 1;

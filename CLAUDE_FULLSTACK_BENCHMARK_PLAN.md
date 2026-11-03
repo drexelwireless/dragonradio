@@ -588,15 +588,19 @@ Implemented and run on gridgpu01 without a radio (details: `docs/fullstack-simul
   ACK loss, asymmetric links, saturation and an impaired channel. They also
   run 4 receive/transmit-chain and PHY variants. All pass. Saturated goodput
   was 340 kb/s, 99.2% of the TDMA bound.
-- Two defects found and fixed, each with a regression test:
+- Three defects found and fixed, each with a regression test:
   - The native PHY lost frames starting at a receive-buffer boundary (P1
     adapter: `isFrameOpen`).
   - `Queue::canPop` held ACK-only packets behind a closed send window, which
     stalled a simultaneous open for 0.56 s. This is a production queue change
     that applies to hardware too.
-- Known issue, reported and not changed: a retransmitted SYN resets the
-  receiver's window and redelivers the first packet. This is a protocol
-  decision.
+  - A retransmitted SYN reset the receiver's window and redelivered the first
+    packet (and, if late, later duplicates too). The receive window now
+    recognizes a SYN with the same sequence number and data hash as a
+    retransmission. Remaining limit: a restarted sender whose first packet is
+    byte-identical to its last first packet loses that packet; fixing that
+    needs a header change. This is a production ARQ change that applies to
+    hardware too.
 
 Evidence: a from-scratch gridgpu01 workspace built from commit 8a7bf612 passed
 all `tests/fullstack` programs, all eight scenarios and all eight variant runs.

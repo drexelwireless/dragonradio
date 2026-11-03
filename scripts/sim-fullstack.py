@@ -163,8 +163,9 @@ def evaluate(scenario, outdir, results, air, nodes):
             rec = results[dest]['received'].get(f'{src}:{port}', {})
             unique = rec.get('unique', 0)
             seqs = set(rec.get('seqs', []))
-            # Known production ARQ behavior: every retransmitted SYN resets the
-            # receiver's window and redelivers the first packet (app seq 0).
+            # Diagnostic: duplicates of app seq 0 seen with repeated SYNs. Before
+            # the receive-window fix, every retransmitted SYN redelivered the
+            # first packet; any duplicate now fails the run.
             syns = sum(1 for r in results[dest].get('rx_frames', []) if r[1] == src and r[4] & 1 and r[6])
             dups = rec.get('dup_seqs', [])
             syn_redeliveries = min(dups.count(0), max(0, syns - 1))
@@ -225,7 +226,7 @@ def evaluate(scenario, outdir, results, air, nodes):
         if 'max_delivery' in exp:
             checks.append((f'{f["flow"]} delivery <= {exp["max_delivery"]}', f['delivery'] is not None and f['delivery'] <= exp['max_delivery']))
         if 'max_app_duplicates' in exp:
-            checks.append((f'{f["flow"]} application duplicates other than SYN redelivery == 0', f['app_duplicates_other'] <= exp['max_app_duplicates']))
+            checks.append((f'{f["flow"]} application duplicates == 0', f['app_duplicates'] <= exp['max_app_duplicates']))
         checks.append((f'{f["flow"]} no corrupt payloads', f['corrupt'] == 0))
     if 'min_retransmissions' in exp:
         retx = sum(l.get('retransmissions', 0) for l in links.values())

@@ -166,8 +166,8 @@ every run.
   with one frame per burst at this load. With ARQ on, all 801 packets arrived
   after 215 retransmissions.
 * **Reverse-link loss.** Losing 41 of 122 reverse frames (ACKs) cost 96
-  retransmissions. No packet was delivered twice except in the SYN case
-  below.
+  retransmissions. Before the SYN fix (defect 3), this run delivered the
+  first packet twice more; after it, nothing was delivered twice.
 
 Every transmitted burst reached the relay at least 3.7 ms before its air
 time. The mean lead was 8–11 ms against the MAC's 5 ms send lead, and no
@@ -213,8 +213,8 @@ the default ``v29p78`` header code.
 Defects found and fixed
 -----------------------
 
-Both were found by these runs. Each has a regression test that fails before
-the fix and passes after it.
+All three were found by these runs. Each has a regression test that fails
+before the fix and passes after it.
 
 1. **Native PHY dropped frames that started at a receive-buffer boundary**
    (P1 adapter bug). ``TDChannelizer`` and ``FDChannelizer`` reset the
@@ -239,25 +239,45 @@ the fix and passes after it.
    packet to a node with a closed window, the unsequenced ACK included. The
    comments in ``SmartController::getPacket`` say unsequenced packets can
    always be sent. Both ACKs waited about 0.56 s for the SYN retransmission
-   timer, and the retransmitted SYN then caused a duplicate delivery (next
-   section). ``canPop`` now always passes unsequenced packets. The fix applies
+   timer, and the retransmitted SYN then caused a duplicate delivery
+   (defect 3). ``canPop`` now always passes unsequenced packets. The fix applies
    to hardware runs too. Test: ``tests/fullstack/test_net_queue.cc``. After
    the fix, clean bidirectional runs show no retransmissions at start-up and
    no duplicates.
 
+3. **A retransmitted SYN redelivered the first packet** (production ARQ
+   bug). ``SmartController::received`` treated every SYN as a new connection,
+   resetting the receive window. When a SYN's ACK is lost, the sender
+   retransmits the SYN about every 0.56 s, and the receiver delivered
+   application packet 0 again each time. That happened twice in ``ack-loss``
+   and once in ``asymmetric``. A late duplicate SYN after the window had
+   advanced was worse: the reset reopened the window at 0, so ordinary
+   duplicates of later packets were delivered again too.
+
+   The receive window now remembers the sequence number and an FNV-1a hash of
+   the data bytes of the SYN that opened it (``RecvWindow::syn``). A SYN that
+   matches both is a retransmission: the receiver ACKs it again, keeps its
+   window and drops it as a duplicate. The hash excludes the extended header
+   (which carries the piggybacked ACK) and control messages, which change
+   between retransmissions. A SYN with different data still starts a new
+   connection, as a restarted sender should.
+
+   Remaining limit: a sender that restarts and sends a first packet
+   byte-identical to its previous first packet is taken for a retransmission,
+   and that one packet is not delivered. The header has no connection
+   identifier or spare flag, so this can't be distinguished without a wire
+   format change.
+
+   Test: ``tests/fullstack/test_arq_syn.cc`` drives the real controller with
+   a SYN, two retransmissions, more data, a late duplicate SYN, an ordinary
+   duplicate, and a restart with different data. Before the fix it delivered
+   10 packets; after it, the expected 6. In the rerun, the ``ack-loss``
+   receiver saw the SYN three times and ``asymmetric`` twice, with no
+   application duplicates. Every scenario now fails on any application
+   duplicate.
+
 Known issue (not changed)
 -------------------------
-
-**A retransmitted SYN redelivers the first packet.**
-``SmartController::received`` treats every SYN as a new connection: it
-resets the receive window and delivers the packet again. If the ACK for a SYN
-is lost, the sender retransmits the SYN about every 0.56 s and the receiver
-redelivers application packet 0 each time. This was seen twice in
-``ack-loss`` and once in ``asymmetric``. A SYN retransmission cannot be told
-apart from a restarted sender with the current header, so the fix is a
-protocol decision. Options include a connection identifier, or ignoring a
-duplicate SYN while the window has not advanced. The driver reports these as
-``syn_redeliveries`` and fails on any other application duplicate.
 
 **Spurious tail retransmissions.** In the clean runs, the last few packets
 before traffic stops are sometimes retransmitted once. Their ACK has no
