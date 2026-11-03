@@ -33,3 +33,21 @@ is not portable. The normal `build-modem.py --fetch` checkout after a successful
 local build is suitable; archive its `liquid-src/` directory, excluding compiled
 objects/libraries. Keep dependency versions and hashes with the results. This
 helper requires network access but neither sudo nor an SDR.
+
+## Native PHY revision benchmark (CPU only)
+
+`run-native-revision.sh SOURCE.tar.gz LIQUID.tar.gz RESULTS_DIR [CORE]` builds
+native v2, the frozen v1 engine and the pinned liquid bridge in a private
+`/tmp` workspace, runs the regression suite and the liquid CFO triage, then
+`scripts/bench-native-revision.py quality` (parallel) and `software` (pinned to
+CORE). Run it under tmux so it survives the controlling laptop disconnecting:
+
+```sh
+git archive --format=tar.gz --prefix=dragonradio/ -o src.tar.gz HEAD
+tmux new-session -d -s drbench "bash run-native-revision.sh src.tar.gz liquid.tar.gz ~/dragonradio-bench/RUN 20 > ~/dragonradio-bench/RUN.log 2>&1"
+```
+
+`RESULTS_DIR/STATUS` records progress; `DONE` or `FAILED` marks the end. The
+liquid archive must contain the pinned checkout with bootstrap-generated
+`configure` **and** `config.h.in` (an archive with only `configure` fails at
+`config.status`). See `docs/native-revision.rst` for the study design.
