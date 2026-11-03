@@ -43,6 +43,7 @@ PYBIND11_EMBEDDED_MODULE(_dragonradio, m) {
     exportLiquid(mliquid);
     exportLiquidPHYs(mliquid);
     exportNativePHYs(mradio);
+    exportSim(mradio);
     exportChannels(mradio);
     exportChannelizers(mradio);
     exportSynthesizers(mradio);

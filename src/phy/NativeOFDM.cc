@@ -198,7 +198,13 @@ NativeOFDM::PacketDemodulator::~PacketDemodulator()
 
 bool NativeOFDM::PacketDemodulator::isFrameOpen(void)
 {
-    return stream_->frame_open();
+    // TDChannelizer and FDChannelizer reset the demodulator at each new
+    // receive buffer unless this returns true. Detection scans with lookahead,
+    // so the tail of every buffer is unscanned when the next one arrives; a
+    // preamble there would be lost by the reset. Report the stream as busy
+    // while it holds such samples (P2 finding; contiguous buffers only, the
+    // channelizers still reset on a sequence discontinuity).
+    return stream_->holds_samples();
 }
 
 void NativeOFDM::PacketDemodulator::reset(const Channel &channel)

@@ -180,7 +180,9 @@ public:
                 it->second = node;
 
                 // Add ARP entry
-                if (node_id != this_node_id_)
+                // Add ARP entry (there is no tap device when simulated
+                // traffic stands in for it)
+                if (node_id != this_node_id_ && tuntap_)
                     tuntap_->addARPEntry(node_id);
             } else
                 return it->second;

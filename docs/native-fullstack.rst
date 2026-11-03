@@ -88,12 +88,17 @@ xsimd and firpm at their pinned revisions and portable ``-O2``. It is not the
 historical Ubuntu 20.04 / UHD 3.9 / Python 3.8 image, and nothing here was run
 against a USRP. Two sources needed missing standard includes for GCC 13.
 
+P2 follow-up: full-stack simulation (``docs/fullstack-simulation.rst``) ran
+``Radio`` end to end and found that the native demodulator dropped frames
+starting at a receive-buffer boundary, because ``TDChannelizer`` and
+``FDChannelizer`` reset it between buffers. ``isFrameOpen`` now stays true
+while unscanned samples remain; the channelizer-protocol test was added to
+``test_native_ofdm.cc``.
+
 Not done (proposed)
 -------------------
 
 * Over-the-air or cabled operation; real-time scheduling under load.
-* Running ``Radio`` end to end (it opens a USRP first); the simulated I/O
-  boundary for MAC/ARQ is P2.
 * FEC (P3); backend-neutral MCS metadata (``phy/Modem.hh`` still uses liquid
   types); per-symbol logging (``RadioPacket.symbols``) for native frames.
 * OFDMA in the production stack (P5); fragmentation above

@@ -173,6 +173,46 @@ static void verify(const char *name, const Run &run, const std::vector<std::shar
     }
 }
 
+
+// Drive the demodulator the way TDChannelizer and FDChannelizer do: one
+// timestamp() per contiguous receive buffer, preceded by reset() unless the
+// demodulator reports isFrameOpen(). Buffer boundaries are cut at varying
+// distances after each frame start, where an unscanned preamble straddles
+// the boundary (receive buffers end up to one recv chunk past a slot
+// boundary, and TDMA frames start at slot boundaries).
+static size_t channelizerProtocol(const char *name, PHY &phy, const Run &run, bool check)
+{
+    std::vector<std::shared_ptr<RadioPacket>> got;
+    auto demod = phy.mkPacketDemodulator();
+    demod->setCallback([&](std::shared_ptr<RadioPacket> &&p) { got.push_back(std::move(p)); });
+    std::vector<size_t> cuts;
+    for (size_t i = 0; i < run.expected.size(); ++i)
+        cuts.push_back(run.expected[i].offset + (i * 13) % 240);
+    size_t start = 0;
+    for (size_t b = 0; b <= cuts.size(); ++b) {
+        size_t end = b < cuts.size() ? cuts[b] : run.iq.size();
+        if (!demod->isFrameOpen())
+            demod->reset(Channel(0.0, 1e6));
+        demod->timestamp(MonoClock::time_point{100.0 + start / 1e6}, std::nullopt, 0, 0, 1.0f, 1e6f);
+        demod->demodulate(run.iq.data() + start, end - start);
+        start = end;
+    }
+    std::vector<const Expected *> wanted;
+    for (const auto &e : run.expected) if (e.spec.wanted) wanted.push_back(&e);
+    if (check) {
+        CHECK(got.size() == wanted.size(), "%s: delivered %zu packets across buffer boundaries, expected %zu", name, got.size(), wanted.size());
+        for (size_t i = 0; i < std::min(got.size(), wanted.size()); ++i) {
+            const auto &p = *got[i];
+            const Expected &e = *wanted[i];
+            CHECK(static_cast<uint16_t>(p.hdr.seq) == e.spec.seq && p.size() == e.body.size()
+                  && std::memcmp(p.data(), e.body.data(), e.body.size()) == 0, "%s[%zu]: packet differs", name, i);
+            CHECK(std::fabs((p.timestamp - MonoClock::time_point{100.0}).get_real_secs() - e.offset / 1e6) < 1e-9,
+                  "%s[%zu]: absolute timestamp across buffers", name, i);
+        }
+    }
+    return got.size();
+}
+
 static void scenario(const char *name, PHY &phy, bool exact_sizes, int timing_tolerance, double cfo, unsigned M)
 {
     PHY::setNodeId(2);
@@ -184,6 +224,14 @@ static void scenario(const char *name, PHY &phy, bool exact_sizes, int timing_to
     Run noisy = run;
     impair(noisy.iq, cfo, M, 25.0);
     verify((std::string(name) + " +CFO/noise").c_str(), noisy, demodulateAll(phy, noisy.iq, 4096), timing_tolerance + 2);
+    if (exact_sizes)
+        channelizerProtocol((std::string(name) + " buffers").c_str(), phy, run, true);
+    else {
+        size_t wanted = 0;
+        for (const auto &e : run.expected) wanted += e.spec.wanted;
+        std::printf("%-34s %zu of %zu delivered with boundaries just after frame starts (informational)\n",
+                    name, channelizerProtocol(name, phy, run, false), wanted);
+    }
     size_t controls = 0;
     for (const auto &e : run.expected) controls += e.control;
     std::printf("%-34s %zu frames (%zu with control), %zu samples: checked\n", name, run.expected.size(), controls, run.iq.size());

@@ -11,7 +11,7 @@
 #include "USRP.hh"
 #include "util/capabilities.hh"
 
-USRP::USRP(const std::string& addr,
+UHDUSRP::UHDUSRP(const std::string& addr,
            const std::optional<std::string>& tx_subdev,
            const std::optional<std::string>& rx_subdev,
            double freq,
@@ -19,8 +19,7 @@ USRP::USRP(const std::string& addr,
            const std::string& rx_ant,
            float tx_gain,
            float rx_gain)
-  : auto_dc_offset_(false)
-  , done_(false)
+  : done_(false)
 {
     RaiseCaps caps({CAP_SYS_NICE});
 
@@ -75,10 +74,10 @@ USRP::USRP(const std::string& addr,
     }
 
     // Start thread that receives TX errors
-    tx_error_thread_ = std::thread(&USRP::txErrorWorker, this);
+    tx_error_thread_ = std::thread(&UHDUSRP::txErrorWorker, this);
 }
 
-USRP::~USRP()
+UHDUSRP::~UHDUSRP()
 {
     stop();
 }
@@ -91,7 +90,7 @@ USRP::~USRP()
 
 const int kMaxLOLockCount = 100;
 
-void USRP::setTXFrequency(double freq)
+void UHDUSRP::setTXFrequency(double freq)
 {
     int count;
 
@@ -118,7 +117,7 @@ void USRP::setTXFrequency(double freq)
     logUSRP(LOGDEBUG, "TX frequency set to %g", freq);
 }
 
-void USRP::setRXFrequency(double freq)
+void UHDUSRP::setRXFrequency(double freq)
 {
     int count;
 
@@ -145,7 +144,7 @@ void USRP::setRXFrequency(double freq)
     logUSRP(LOGDEBUG, "RX frequency set to %g", freq);
 }
 
-void USRP::burstTX(std::optional<MonoClock::time_point> when_,
+void UHDUSRP::burstTX(std::optional<MonoClock::time_point> when_,
                    bool start_of_burst,
                    bool end_of_burst,
                    std::list<std::shared_ptr<IQBuf>>& bufs)
@@ -200,7 +199,7 @@ void USRP::burstTX(std::optional<MonoClock::time_point> when_,
     }
 }
 
-void USRP::stopTXBurst(void)
+void UHDUSRP::stopTXBurst(void)
 {
     uhd::tx_metadata_t tx_md; // TX metadata for UHD
 
@@ -211,7 +210,7 @@ void USRP::stopTXBurst(void)
     t_next_tx_ = std::nullopt;
 }
 
-void USRP::startRXStream(MonoClock::time_point when)
+void UHDUSRP::startRXStream(MonoClock::time_point when)
 {
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 
@@ -221,14 +220,14 @@ void USRP::startRXStream(MonoClock::time_point when)
     rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
-void USRP::stopRXStream(void)
+void UHDUSRP::stopRXStream(void)
 {
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
 
     rx_stream_->issue_stream_cmd(stream_cmd);
 }
 
-bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
+bool UHDUSRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
 {
     uhd::time_spec_t t_end = t_start.t + static_cast<double>(nsamps)/rx_rate_;
     size_t           ndelivered = 0;
@@ -318,7 +317,7 @@ bool USRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
     }
 }
 
-void USRP::stop(void)
+void UHDUSRP::stop(void)
 {
     done_ = true;
 
@@ -326,7 +325,7 @@ void USRP::stop(void)
         tx_error_thread_.join();
 }
 
-void USRP::determineDeviceType(void)
+void UHDUSRP::determineDeviceType(void)
 {
     std::string mboard = usrp_->get_mboard_name();
 
@@ -338,7 +337,7 @@ void USRP::determineDeviceType(void)
         device_type_ = kUSRPUnknown;
 }
 
-void USRP::txErrorWorker(void)
+void UHDUSRP::txErrorWorker(void)
 {
     uhd::async_metadata_t async_md;
     const char *msg;

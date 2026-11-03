@@ -118,6 +118,16 @@ class Config:
         self.time_source = None
         """Time source for the USRP device"""
 
+        # Full-stack simulation (P2). With sim_air set, a SimUSRP connected to
+        # that air relay replaces the UHD device; with sim_traffic set,
+        # synthetic UDP traffic replaces the tun/tap interface.
+        self.sim_air = None
+        self.sim_traffic = False
+        self.sim_rx_latency = 2e-3
+        self.sim_noise_db = -60.0
+        self.sim_clock_rate = 200e6
+        self.sim_seed = None
+
         # Frequency and bandwidth
         # Default frequency in the Colosseum is 1GHz
         self.frequency = 1e9
@@ -564,6 +574,31 @@ class Config:
                           dest='time_source',
                           metavar='CLOCK',
                           help='set time source')
+
+        simulation = parser.add_argument_group('Full-stack simulation')
+
+        simulation.add_argument('--sim-air', action='store',
+                                dest='sim_air',
+                                metavar='SOCKET',
+                                help='use a simulated device connected to this air relay socket')
+        simulation.add_argument('--sim-traffic', action='store_const', const=True,
+                                dest='sim_traffic',
+                                help='use synthetic traffic instead of a tun/tap interface')
+        simulation.add_argument('--sim-rx-latency', action='store', type=float,
+                                dest='sim_rx_latency',
+                                metavar='SEC',
+                                help='delay before simulated RX samples are released')
+        simulation.add_argument('--sim-noise-db', action='store', type=float,
+                                dest='sim_noise_db',
+                                metavar='DB',
+                                help='simulated receiver noise power per sample (dB)')
+        simulation.add_argument('--sim-clock-rate', action='store', type=float,
+                                dest='sim_clock_rate',
+                                metavar='HZ',
+                                help='simulated master clock rate')
+        simulation.add_argument('--sim-seed', action='store', type=int,
+                                dest='sim_seed',
+                                help='seed for simulated noise and erasures')
 
         # Frequency and bandwidth
         freqbw = parser.add_argument_group('Frequency and bandwidth')

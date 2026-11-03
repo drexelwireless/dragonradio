@@ -567,3 +567,39 @@ configured maximum payload, and an end-to-end `Radio` run, which needs the P2
 simulated I/O boundary because `Radio` opens a USRP before building the PHY.
 Next: P2 (simulated IQ transport/clock at the USRP boundary so the real MAC,
 ARQ, synthesizer and channelizer run against simulated channels).
+
+## 13. P2 status, 2026-11-03: production radio over simulated I/O
+
+Implemented and run on gridgpu01 without a radio (details: `docs/fullstack-simulation.rst`):
+
+- `USRP` is now an abstract device interface. `UHDUSRP` is the unchanged
+  hardware implementation, and Python `USRP(...)` still builds it.
+  `SimUSRP` (`--sim-air SOCKET`) exchanges timestamped IQ bursts through
+  `scripts/sim-air.py`. It keeps UHD timing semantics: exact sample
+  placement, late-burst drop, underflow, chunked RX with
+  undersample/oversample, overflow and bounded queues. The directed link model
+  covers gain, CFO, delay and burst erasure, plus receiver noise.
+- `--sim-traffic` (`SimTraffic`) generates and checks tap-equivalent
+  Ethernet/IPv4/UDP frames with hashed, sequenced payloads. `RxRecorder` logs
+  every PHY reception. With the production `send` log, this accounts for
+  each attempt.
+- `scripts/sim-fullstack.py` and `grid/run-sim-fullstack.sh` run 8 two-node
+  scenarios: clean with and without ARQ, burst erasure with and without ARQ,
+  ACK loss, asymmetric links, saturation and an impaired channel. They also
+  run 4 receive/transmit-chain and PHY variants. All pass. Saturated goodput
+  was 340 kb/s, 99.2% of the TDMA bound.
+- Two defects found and fixed, each with a regression test:
+  - The native PHY lost frames starting at a receive-buffer boundary (P1
+    adapter: `isFrameOpen`).
+  - `Queue::canPop` held ACK-only packets behind a closed send window, which
+    stalled a simultaneous open for 0.56 s. This is a production queue change
+    that applies to hardware too.
+- Known issue, reported and not changed: a retransmitted SYN resets the
+  receiver's window and redelivers the first packet. This is a protocol
+  decision.
+
+Runs are wall-clock paced; deterministic virtual time is not implemented. Still
+open in P2: tap interfaces in network namespaces with real UDP, TCP bulk and
+request/response traffic; jitter, timed grants, queue limits and expiry;
+more than two nodes; device gain modeling. Next: those P2 items, or P3 (matched
+FEC), so the production coded MCS tables can run on the native PHY.

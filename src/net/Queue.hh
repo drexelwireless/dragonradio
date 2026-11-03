@@ -91,10 +91,17 @@ protected:
     /** @brief Nodes' send window statuses */
     std::unordered_map<NodeId, bool> send_window_status_;
 
-    /** @brief Return true if the packet can be popped */
+    /** @brief Return true if the packet can be popped
+     *
+     * A closed send window holds back only sequenced data. Unsequenced
+     * packets (the controller's ACK/NAK/control packets) always pass: the
+     * controller sends them regardless of window state, and holding an ACK
+     * behind a closed window deadlocks a simultaneous open until the SYN
+     * retransmission timer fires (found in P2 full-stack simulation).
+     */
     bool canPop(const T& pkt)
     {
-        if (pkt->hdr.nexthop == kNodeBroadcast || pkt->internal_flags.assigned_seq)
+        if (pkt->hdr.nexthop == kNodeBroadcast || pkt->internal_flags.assigned_seq || pkt->hdr.flags.has_seq == 0)
             return true;
 
         std::lock_guard<std::mutex> lock(send_window_status_mutex_);

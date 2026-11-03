@@ -329,6 +329,10 @@ struct FramedStream {
     FramedStream(FramedPHY &p, want_type w = nullptr) : phy(p), want(std::move(w)) {}
     int margin() const { return 2 * phy.core->fine_window + 8; }
     bool frame_open() const { return in_region || region_closed || pending.has_value(); }
+    // True while a reset would discard input that may hold a frame: an open
+    // frame, samples not yet scanned (detection needs lookahead), or the
+    // unreceived tail of a frame being skipped.
+    bool holds_samples() const { return frame_open() || pos != (long long)buffer.size(); }
     long long pending_samples() const { return (long long)buffer.size() - pos; }
     void reset() {
         buffer.clear(); q.clear(); e.clear();

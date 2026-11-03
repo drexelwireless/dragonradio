@@ -13,19 +13,24 @@ void exportUSRP(py::module &m)
         .value("N210", USRP::kUSRPN210)
         .value("X310", USRP::kUSRPX310)
         .value("Unknown", USRP::kUSRPUnknown)
+        .value("Simulated", USRP::kSimulated)
         .export_values();
 
     py::implicitly_convertible<py::str, USRP::DeviceType>();
 
     py::class_<USRP, std::shared_ptr<USRP>>(m, "USRP")
-        .def(py::init<const std::string&,
-                      const std::optional<std::string>&,
-                      const std::optional<std::string>&,
-                      double,
-                      const std::string&,
-                      const std::string&,
-                      float,
-                      float>())
+        // USRP(...) still constructs the UHD hardware implementation.
+        .def(py::init([](const std::string& addr,
+                         const std::optional<std::string>& tx_subdev,
+                         const std::optional<std::string>& rx_subdev,
+                         double freq,
+                         const std::string& tx_ant,
+                         const std::string& rx_ant,
+                         float tx_gain,
+                         float rx_gain) -> std::shared_ptr<USRP>
+            {
+                return std::make_shared<UHDUSRP>(addr, tx_subdev, rx_subdev, freq, tx_ant, rx_ant, tx_gain, rx_gain);
+            }))
         .def_property_readonly("device_type",
             &USRP::getDeviceType)
         .def_property_readonly("clock_rate",
@@ -99,5 +104,11 @@ void exportUSRP(py::module &m)
             &USRP::getTimeSource)
         .def("setTimeSource",
             &USRP::setTimeSource)
+        .def("stop",
+            &USRP::stop)
+        .def_property_readonly("tx_underflow_count",
+            &USRP::getTXUnderflowCount)
+        .def_property_readonly("tx_late_count",
+            &USRP::getTXLateCount)
         ;
 }

@@ -190,6 +190,21 @@ class Radio(dragonradio.tasks.TaskManager):
         """Construct USRP object from configuration parameters"""
         config = self.config
 
+        if config.sim_air is not None:
+            # Simulated device: same interface to the MAC, IQ exchanged with
+            # other simulated nodes through the air relay.
+            seed = config.sim_seed if config.sim_seed is not None else config.node_id
+            self.usrp = SimUSRP(config.sim_air,
+                                config.node_id,
+                                self.frequency,
+                                config.sim_clock_rate,
+                                config.sim_rx_latency,
+                                seed)
+            self.usrp.noise_power = config.sim_noise_db
+            self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
+            self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
+            return
+
         # Create the USRP
         self.usrp = USRP(config.addr,
                          config.tx_subdev,
@@ -266,16 +281,24 @@ class Radio(dragonradio.tasks.TaskManager):
         int_net = ipaddress.IPv4Network(config.internal_net)
         ext_net = ipaddress.IPv4Network(config.external_net)
 
-        # Create tun/tap interface and net neighborhood
-        self.tuntap = TunTap(config.tap_iface,
-                             config.tap_ipaddr,
-                             str(int_net.netmask),
-                             config.tap_macaddr,
-                             False,
-                             config.mtu,
-                             self.node_id)
+        # Create tun/tap interface and net neighborhood. Synthetic traffic
+        # produces and consumes the same Ethernet frames without a tap device.
+        if config.sim_traffic:
+            self.tuntap = SimTraffic(self.node_id,
+                                     config.tap_ipaddr,
+                                     config.tap_macaddr,
+                                     config.mtu)
+            self.radionet = RadioNet(None, self.node_id)
+        else:
+            self.tuntap = TunTap(config.tap_iface,
+                                 config.tap_ipaddr,
+                                 str(int_net.netmask),
+                                 config.tap_macaddr,
+                                 False,
+                                 config.mtu,
+                                 self.node_id)
 
-        self.radionet = RadioNet(self.tuntap, self.node_id)
+            self.radionet = RadioNet(self.tuntap, self.node_id)
 
         # Configure the controller
         self.controller = self.mkController(self.evm_thresholds)

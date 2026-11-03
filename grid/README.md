@@ -61,3 +61,13 @@ Python package dependencies into a venv. `build-fullstack.sh WORKSPACE`
 builds the `dragonradio` executable and runs `tests/fullstack`. This is a
 modernized toolchain (UHD 4.6, Python 3.12); see `docs/native-fullstack.rst`.
 No radio is opened by either script.
+
+## Full-stack simulation (P2, CPU only)
+
+`run-sim-fullstack.sh WORKSPACE OUTDIR [--scenario NAME ...]` runs
+`scripts/sim-fullstack.py` in a workspace built as above: one `dragonradio`
+process per node running the production radio (native OFDM PHY, channelizer,
+synthesizer, ARQ controller, queue, TDMA MAC) over a simulated device
+(`SimUSRP`) connected to `scripts/sim-air.py`, with synthetic UDP traffic in
+place of the tap interface. It needs no privileges and opens no radio. Runs are
+wall-clock paced; see `docs/fullstack-simulation.rst`.

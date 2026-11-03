@@ -86,6 +86,8 @@ SOURCES := \
     phy/FDChannelizer.cc \
     phy/MultichannelSynthesizer.cc \
     phy/NativeOFDM.cc \
+    sim/SimTraffic.cc \
+    sim/SimUSRP.cc \
     phy/OverlapTDChannelizer.cc \
     phy/PHY.cc \
     phy/RadioPacketQueue.cc \
@@ -120,6 +122,7 @@ SOURCES := \
     python/Modem.cc \
     python/NCO.cc \
     python/NativePHY.cc \
+    python/Sim.cc \
     python/Net.cc \
     python/PHY.cc \
     python/Packet.cc \

@@ -81,6 +81,7 @@ void exportLiquid(py::module &m);
 void exportPHYs(py::module &m);
 void exportLiquidPHYs(py::module &m);
 void exportNativePHYs(py::module &m);
+void exportSim(py::module &m);
 void exportChannels(py::module &m);
 void exportChannelizers(py::module &m);
 void exportSynthesizers(py::module &m);
