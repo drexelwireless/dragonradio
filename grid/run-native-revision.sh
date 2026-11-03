@@ -38,6 +38,7 @@ status "building native v2, frozen v1 and pinned liquid bridge"
 "$PY" scripts/build-phy.py --fftw-prefix "$workspace/prefix"
 "$PY" scripts/build-phy.py --variant reference-v1 --fftw-prefix "$workspace/prefix"
 "$PY" scripts/build-modem.py --liquid-source "$workspace/liquid-source" --fftw-prefix "$workspace/prefix" > "$results/build-modem.log" 2>&1
+[ -e build/modem/liquid-src ] || ln -s "$workspace/liquid-source" build/modem/liquid-src   # triage expects it here
 cp build/phy/manifest.json "$results/build-phy-manifest.json"
 cp build/modem/manifest.json "$results/build-modem-manifest.json"
 "$PY" scripts/baseline-manifest.py --output "$results/manifest.json" > /dev/null
