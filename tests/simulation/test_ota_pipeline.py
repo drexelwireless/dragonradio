@@ -140,6 +140,32 @@ class Pipeline(unittest.TestCase):
         self.assertNotIn('ota-fullstack.py', ssh)
         self.assertTrue((run / 'stage-6.done').exists())
 
+    def test_image_only_rehearsal(self):
+        # No workspace: nothing installed, health on the image's own tools,
+        # no simulation gate, and stage 5 refused.
+        campaign = json.loads((ROOT / 'grid/ota-campaign.n210-x310.json').read_text())
+        campaign.update(workspace_commit='image-only', workspace_tar='',
+                        workspace=str(self.tmp / 'node' / 'drfs-ws'), results_root=str(self.tmp / 'results'),
+                        ssh={'head': 'head.example', 'key': '/dev/null'})
+        self.campaign.write_text(json.dumps(campaign))
+        hosts = ['grid04', 'grid08', 'grid01', 'grid15', 'grid60', 'grid61', 'grid39', 'grid58', 'grid59']
+        (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
+        run = self.tmp / 'run-image'
+        p = self.pipeline(run, STOP_BEFORE='5')
+        log = (run / 'pipeline.log').read_text()
+        self.assertEqual(p.returncode, 0, log + p.stderr)
+        ssh = (self.state / 'ssh.log').read_text()
+        self.assertIn('krd26/dragonradio-class-gr310-20261027-v2 grid04', ssh)
+        self.assertNotIn('tar -xzf', ssh)
+        self.assertIn('IMAGE_ONLY=1 bash', ssh)
+        self.assertNotIn('run-sim-fullstack.sh', ssh)
+        self.assertIn('sim gate: skipped', log)
+        self.assertFalse((self.tmp / 'node' / 'drfs-ws').exists())
+        run2 = self.tmp / 'run-image-rf'
+        p = self.pipeline(run2)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn('trials refused: image-only campaign', (run2 / 'pipeline.log').read_text())
+
     def test_not_approved_campaign_refuses_rf(self):
         campaign = json.loads(self.campaign.read_text())
         campaign['rf_approval_reference'] = 'NOT-APPROVED-rehearsal-only'

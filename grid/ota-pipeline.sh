@@ -20,6 +20,10 @@
 #
 # DRY_RUN=1 stops after stage 0. STOP_BEFORE=N stops before stage N (e.g. 5:
 # everything up to RF, then stop the reservation).
+#
+# Image-only rehearsal: a campaign whose "workspace_tar" is empty installs
+# nothing; stage 3 checks the image's own UHD, DragonRadio and reference
+# inputs, stage 4 is skipped, and stage 5 is refused (no radio to run).
 set -uo pipefail
 
 RUN_ARG=${1:?usage: ota-pipeline.sh RUN_DIR CAMPAIGN.json}
@@ -38,7 +42,8 @@ KEY=$(cfg 'c["ssh"]["key"]'); KEY=${KEY/#\~/$HOME}
 IMAGE=$(cfg 'c["image"]')
 DURATION=$(cfg 'c.get("reservation_duration", "4h")')
 WS=$(cfg 'c["workspace"]')
-WS_TAR=$(cfg 'c["workspace_tar"]')
+WS_TAR=$(cfg 'c["workspace_tar"] or ""')
+IMAGE_ONLY=0; [ -z "$WS_TAR" ] && IMAGE_ONLY=1
 COMMIT=$(cfg 'c["workspace_commit"]')
 # Reserved nodes: the union over the campaign's cells (host, radio address, clock source).
 HOSTS=$("$PY" "$HERE/ota-campaign.py" hosts "$CAMPAIGN") || { echo "campaign nodes do not validate" >&2; exit 2; }
@@ -91,10 +96,14 @@ trap cleanup EXIT
 s0_preflight() {
     "$PY" "$HERE/ota-campaign.py" plan "$CAMPAIGN" --run-dir "$RUN" >> "$RUN/pipeline.log" 2>&1 \
         || die "campaign does not validate (see pipeline.log)"
-    [ -s "$WS_TAR" ] || die "workspace tarball $WS_TAR missing"
-    local tar_commit
-    tar_commit=$(tar -xzOf "$WS_TAR" "$(basename "$WS")/dragonradio/COMMIT" 2>/dev/null)
-    [ "$tar_commit" = "$COMMIT" ] || die "workspace tarball commit $tar_commit, campaign says $COMMIT"
+    if [ "$IMAGE_ONLY" = 1 ]; then
+        log "preflight: image-only rehearsal (no workspace): nothing is installed, no trial can run"
+    else
+        [ -s "$WS_TAR" ] || die "workspace tarball $WS_TAR missing"
+        local tar_commit
+        tar_commit=$(tar -xzOf "$WS_TAR" "$(basename "$WS")/dragonradio/COMMIT" 2>/dev/null)
+        [ "$tar_commit" = "$COMMIT" ] || die "workspace tarball commit $tar_commit, campaign says $COMMIT"
+    fi
     gridcli status | grep -q "'disabled': False" || die "Grid is disabled or unreachable"
     head_ssh getent hosts "${DNS_CANARY:-gridgpu01}" > /dev/null || die "name resolution on $HEAD is broken"
     local ready n
@@ -135,6 +144,13 @@ s2_install() {
     for n in $NODES; do
         tries=0
         until head_ssh getent hosts "$n" > /dev/null || [ $tries -ge 10 ]; do tries=$((tries + 1)); sleep 30; done
+        if [ "$IMAGE_ONLY" = 1 ]; then
+            # First contact pins the host key; record what the image carries.
+            node_ssh "$n" "hostname; cat /usr/local/share/sdr-class-image/* 2>/dev/null; nproc; grep -m1 'model name' /proc/cpuinfo" \
+                > "$RUN/install-$n.log" 2>&1 || die "first contact with $n failed (install-$n.log)"
+            log "install: $n reachable (image only, nothing installed)"
+            continue
+        fi
         node_ssh "$n" "rm -rf '$WS' && mkdir -p '$(dirname "$WS")' && tar -xzf '$WS_TAR' -C '$(dirname "$WS")' && cat '$WS/dragonradio/COMMIT'" \
             > "$RUN/install-$n.log" 2>&1 || die "install on $n failed (install-$n.log)"
         grep -qx "$COMMIT" "$RUN/install-$n.log" || die "install on $n: wrong commit"
@@ -144,12 +160,14 @@ s2_install() {
 
 s3_health() {
     # Every node is checked (a full picture for the rehearsal), then any failure fails the stage.
+    # The check runs from RUN (shared home), so it needs no workspace on the node.
+    cp "$HERE/ota-node-health.sh" "$RUN/ota-node-health.sh"
     local n addr ref i=0 addrs refs bad=""
     read -r -a addrs <<< "$ADDRS"
     read -r -a refs <<< "$REFS"
     for n in $NODES; do
         addr=${addrs[$i]}; ref=${refs[$i]}; i=$((i + 1))
-        if node_ssh "$n" "bash '$WS/dragonradio/grid/ota-node-health.sh' '$WS' '$addr' '$COMMIT' '$ref'" > "$RUN/health-$n.log" 2>&1; then
+        if node_ssh "$n" "IMAGE_ONLY=$IMAGE_ONLY bash '$RUN/ota-node-health.sh' '$WS' '$addr' '$COMMIT' '$ref'" > "$RUN/health-$n.log" 2>&1; then
             log "health: $n ok ($(grep -m1 -o 'Mboard: .*' "$RUN/health-$n.log"); reference $ref)"
         else
             log "health: $n FAILED: $(grep FAIL "$RUN/health-$n.log" | tr '\n' ' ')"
@@ -164,6 +182,7 @@ s4_gate() {
     # family, whose containers may run on different hosts), in simulation:
     # native and the liquid production configuration.
     local n try phy
+    if [ "$IMAGE_ONLY" = 1 ]; then log "sim gate: skipped (image-only rehearsal, no workspace)"; return 0; fi
     for n in $GATE_NODES; do
         for phy in native liquid; do
             local args=""; [ $phy = liquid ] && args="-- --phy ofdm -c rs8"
@@ -181,6 +200,7 @@ s4_gate() {
 }
 
 s5_trials() {
+    [ "$IMAGE_ONLY" = 1 ] && { log "trials refused: image-only campaign (no workspace)"; return 1; }
     "$PY" "$HERE/ota-campaign.py" run "$CAMPAIGN" --run-dir "$RUN" --reservation "$(cat "$RUN/reservation.id")" \
         --python "$PY" --execute 2>&1 | tee -a "$RUN/pipeline.log"
     return "${PIPESTATUS[0]}"

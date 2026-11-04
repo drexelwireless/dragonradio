@@ -24,10 +24,16 @@ if [ "$(id -u)" = 0 ]; then echo "privilege=root"
 elif sudo -n true 2>/dev/null; then echo "privilege=sudo"
 else fail "neither root nor passwordless sudo (the radio needs CAP_NET_ADMIN for its tap)"; fi
 [ -c /dev/net/tun ] && echo "tun=yes" || fail "/dev/net/tun missing"
-commit=$(cat "$ws/dragonradio/COMMIT" 2>/dev/null || echo none)
-echo "commit=$commit"
-[ -z "$want" ] || [ "$commit" = "$want" ] || fail "workspace commit $commit, expected $want"
-[ -x "$ws/dragonradio/dragonradio" ] || fail "no radio executable in $ws"
+# IMAGE_ONLY=1: no workspace installed; check the image's own UHD and DragonRadio.
+if [ "${IMAGE_ONLY:-0}" = 1 ]; then
+    echo "image_versions=$(cat /usr/local/share/sdr-class-image/* 2>/dev/null | tr '\n' ' ' | head -c 400)"
+    [ -x /usr/local/dragonradio/dragonradio ] && echo "image_dragonradio=yes" || fail "the image has no /usr/local/dragonradio"
+else
+    commit=$(cat "$ws/dragonradio/COMMIT" 2>/dev/null || echo none)
+    echo "commit=$commit"
+    [ -z "$want" ] || [ "$commit" = "$want" ] || fail "workspace commit $commit, expected $want"
+    [ -x "$ws/dragonradio/dragonradio" ] || fail "no radio executable in $ws"
+fi
 avail=$(df --output=avail -k /tmp | tail -1)
 echo "tmp_free_kb=$avail"
 [ "$avail" -gt 2000000 ] || fail "less than 2 GB free in /tmp"
@@ -35,6 +41,7 @@ echo "tmp_free_kb=$avail"
 
 export LD_LIBRARY_PATH="$ws/prefix/lib:$ws/deps/usr/lib/x86_64-linux-gnu:$ws/deps/usr/lib/x86_64-linux-gnu/hdf5/serial"
 probe="$ws/deps/usr/bin/uhd_usrp_probe"
+[ "${IMAGE_ONLY:-0}" = 1 ] && probe=/usr/local/bin/uhd_usrp_probe
 [ -x "$probe" ] || probe=$(command -v uhd_usrp_probe || true)
 [ -n "$probe" ] || { fail "no uhd_usrp_probe"; exit $status; }
 host_ip=${addr#addr=}
@@ -52,8 +59,41 @@ fi
 echo "$out" | grep -q "Mboard:" || fail "probe found no motherboard at $addr"
 if [ "$reference" = external ]; then
     # External 10 MHz locked and PPS edges arriving (the shared-PPS nodes).
-    ref=$(env PYTHONPATH="$ws/dragonradio/python/dragonradio:$ws/venv/lib/python3.12/site-packages" \
-          timeout 60 "$ws/dragonradio/dragonradio" "$ws/dragonradio/scripts/usrp-ref-check.py" --addr "$addr" 2>&1)
+    if [ "${IMAGE_ONLY:-0}" = 1 ]; then
+        # The image's gr-uhd, read-only: the same check as scripts/usrp-ref-check.py.
+        ref=$(timeout 60 python3 - "$addr" 2>&1 <<'PY'
+import sys, time
+from gnuradio import uhd
+u = uhd.usrp_source(sys.argv[1], uhd.stream_args(cpu_format='fc32', channels=[0]))
+old = (u.get_clock_source(0), u.get_time_source(0))
+u.set_clock_source('external', 0)
+u.set_time_source('external', 0)
+locked = 'unknown'
+if 'ref_locked' in u.get_mboard_sensor_names(0):
+    t0 = time.time()
+    while not u.get_mboard_sensor('ref_locked', 0).to_bool() and time.time() - t0 < 2:
+        time.sleep(0.05)
+    locked = 'yes' if u.get_mboard_sensor('ref_locked', 0).to_bool() else 'no'
+edges, last, t0 = 0, u.get_time_last_pps(0).get_real_secs(), time.time()
+while time.time() - t0 < 4:
+    t = u.get_time_last_pps(0).get_real_secs()
+    if t != last:
+        edges, last = edges + 1, t
+    time.sleep(0.005)
+u.set_clock_source(old[0], 0)
+u.set_time_source(old[1], 0)
+ok = locked in ('yes', 'unknown') and edges >= 2
+print(f'mboard={u.get_usrp_info(0).get("mboard_id", "")}')
+print(f'ref_locked={locked}')
+print(f'pps_edges={edges}')
+print(f'restored={old[0]}/{old[1]}')
+print(f'reference_ok={"yes" if ok else "no"}')
+PY
+)
+    else
+        ref=$(env PYTHONPATH="$ws/dragonradio/python/dragonradio:$ws/venv/lib/python3.12/site-packages" \
+              timeout 60 "$ws/dragonradio/dragonradio" "$ws/dragonradio/scripts/usrp-ref-check.py" --addr "$addr" 2>&1)
+    fi
     echo "$ref" | sed 's/^/ref_check: /'
     echo "$ref" | grep -qx "reference_ok=yes" || fail "external reference not locked or no PPS (ref_check lines above)"
 fi

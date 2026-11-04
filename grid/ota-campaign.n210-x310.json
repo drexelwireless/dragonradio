@@ -6,7 +6,7 @@
   "reverse data and ACK",
   "timesync HELLO broadcasts"
  ],
- "image": "dragonradio/ubuntu2404-20260225-20064ad9",
+ "image": "krd26/dragonradio-class-gr310-20261027-v2",
  "reservation_duration": "4h",
  "workspace": "/tmp/drfs-ws",
  "workspace_tar": "/home/krd26/dragonradio-ota/ws-REPLACE.tar.gz",
