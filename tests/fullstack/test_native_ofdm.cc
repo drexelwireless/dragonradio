@@ -168,7 +168,7 @@ static void verify(const char *name, const Run &run, const std::vector<std::shar
         CHECK(p.mcsidx == e.spec.mcs, "%s[%zu]: mcs %u != %u", name, i, p.mcsidx, e.spec.mcs);
         const long long dstart = static_cast<long long>(p.start_samples) - static_cast<long long>(e.offset);
         CHECK(std::llabs(dstart) <= timing_tolerance, "%s[%zu]: start %zu vs %zu", name, i, p.start_samples, e.offset);
-        CHECK(std::fabs((p.timestamp - MonoClock::time_point{MonoClock::duration(100.0)}).count() - p.start_samples / 1e6) < 1e-9, "%s[%zu]: timestamp", name, i);
+        CHECK(std::fabs(std::chrono::duration<double>(p.timestamp - MonoClock::time_point{MonoClock::duration(100.0)}).count() - p.start_samples / 1e6) < 1e-9, "%s[%zu]: timestamp", name, i);
         CHECK(p.channel == Channel(0.0, 1e6) && p.bw == 1e6f, "%s[%zu]: channel", name, i);
     }
 }
@@ -206,7 +206,7 @@ static size_t channelizerProtocol(const char *name, PHY &phy, const Run &run, bo
             const Expected &e = *wanted[i];
             CHECK(static_cast<uint16_t>(p.hdr.seq) == e.spec.seq && p.size() == e.body.size()
                   && std::memcmp(p.data(), e.body.data(), e.body.size()) == 0, "%s[%zu]: packet differs", name, i);
-            CHECK(std::fabs((p.timestamp - MonoClock::time_point{MonoClock::duration(100.0)}).count() - e.offset / 1e6) < 1e-9,
+            CHECK(std::fabs(std::chrono::duration<double>(p.timestamp - MonoClock::time_point{MonoClock::duration(100.0)}).count() - e.offset / 1e6) < 1e-9,
                   "%s[%zu]: absolute timestamp across buffers", name, i);
         }
     }
