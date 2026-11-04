@@ -108,10 +108,14 @@ struct Impairments {
     double iq_phase_deg = 0.0;      ///< Q-branch phase skew (degrees)
     std::complex<float> dc{0.0f, 0.0f}; ///< DC offset added after IQ imbalance
     /** @brief Couple this device's own transmissions into its receiver at
-     * this gain (dB), as TX-to-RX leakage does on a real front end; NaN (the
+     * this gain (dB), as TX-to-RX leakage does on a real front end; unset (the
      * default) leaves the receiver deaf to its own transmissions.
      */
-    double tx_leakage_db = std::numeric_limits<double>::quiet_NaN();
+    /** The old branch used NaN for "unset". Under -Ofast (-ffinite-math-only)
+     * std::isnan is folded to false, which turned leakage on with a NaN gain
+     * and put NaN into every receiver while its node transmitted.
+     */
+    std::optional<double> tx_leakage_db;
 
     bool receiverActive(void) const
     {
@@ -137,6 +141,8 @@ struct Stats {
     uint64_t rx_overflow_samples = 0;///< Samples skipped by overflows
     uint64_t rx_streams = 0;         ///< RX stream starts
     uint64_t rx_clipped = 0;         ///< I or Q components clipped by the ADC model
+    uint64_t tx_nonfinite = 0;       ///< Non-finite samples handed to burstTX (sent as is)
+    uint64_t rx_nonfinite = 0;       ///< Non-finite samples delivered by burstRX
 };
 
 /** @brief A simulated radio device connected to an air relay.

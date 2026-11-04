@@ -524,6 +524,24 @@ int main()
               "unique %lu dup %lu corrupt %lu ooo %lu", r.unique, r.duplicates, r.corrupt, r.out_of_order);
     }
 
+    // 20. Without leakage (the default) a device does not hear itself, and
+    // nothing it renders is non-finite. Under -Ofast the old NaN "unset"
+    // sentinel enabled leakage with a NaN gain here.
+    {
+        auto s0 = a.getStats();
+        auto y = exchange(a, a, 500, 5000, burst(3000));
+        double e = 0;
+        bool finite = true;
+        for (auto v : y) {
+            finite &= std::isfinite(v.real()) && std::isfinite(v.imag());
+            e += std::norm(v);
+        }
+        CHECK(finite, "own transmission rendered non-finite samples");
+        CHECK(finite && e < 1e-12, "device hears itself without leakage (energy %g)", e);
+        CHECK(a.getStats().rx_nonfinite == s0.rx_nonfinite, "rx_nonfinite counted %llu",
+              (unsigned long long) (a.getStats().rx_nonfinite - s0.rx_nonfinite));
+    }
+
     // 16. Untimed, continuous RX (how this branch's MAC reads: startRXStream()
     // then burstRX(nullopt, ...) back to back): consecutive buffers are
     // contiguous in time, and a burst lands at its time on that timeline.

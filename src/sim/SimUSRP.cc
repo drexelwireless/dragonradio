@@ -418,10 +418,12 @@ void SimUSRP::sendBurst(int64_t start, const std::complex<float> *x, size_t n)
 
     stats_.tx_bursts++;
     stats_.tx_samples += n;
+    for (size_t i = 0; i < n; ++i)
+        stats_.tx_nonfinite += !std::isfinite(x[i].real()) || !std::isfinite(x[i].imag());
 
     // TX-to-RX leakage: the burst also reaches this device's own receiver,
     // at its own sample index (same clock, no carrier offset).
-    if (!std::isnan(impairments_.tx_leakage_db)) {
+    if (impairments_.tx_leakage_db) {
         std::lock_guard<std::mutex> lock(rx_mutex_);
         Burst                       b;
 
@@ -429,7 +431,7 @@ void SimUSRP::sendBurst(int64_t start, const std::complex<float> *x, size_t n)
         b.start = start;
         b.fs = fs;
         b.shift_hz = fc - rx_freq_.load(std::memory_order_relaxed);
-        b.gain = static_cast<float>(std::pow(10.0, impairments_.tx_leakage_db/20.0));
+        b.gain = static_cast<float>(std::pow(10.0, *impairments_.tx_leakage_db/20.0));
         b.x.assign(x, x + n);
         if (b.end() > rendered_upto_ && queued_samples_ + n <= kMaxQueuedSamples) {
             queued_samples_ += n;
@@ -735,11 +737,17 @@ bool SimUSRP::burstRX(std::optional<MonoClock::time_point> t_start, size_t nsamp
 
         render(pos, c, &buf[ndelivered]);
 
+        uint64_t nonfinite = 0;
+
+        for (size_t i = ndelivered; i < ndelivered + c; ++i)
+            nonfinite += !std::isfinite(buf[i].real()) || !std::isfinite(buf[i].imag());
+
         {
             std::lock_guard<std::mutex> lock(rx_mutex_);
 
             rx_pos_ = pos + c;
             stats_.rx_samples += c;
+            stats_.rx_nonfinite += nonfinite;
         }
 
         if (ndelivered == 0) {

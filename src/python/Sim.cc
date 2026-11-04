@@ -16,6 +16,15 @@ void exportSim(py::module &m)
     using sim::SimUSRP;
     using sim::SimTraffic;
 
+    // Clock readings as float seconds, for the scenario scripts' clock
+    // samples (MonoClock time points have no Python conversion).
+    m.def("monoNow",
+        []() { return static_cast<double>(MonoClock::now().time_since_epoch().count()); },
+        "MonoClock (device) time now (sec)");
+    m.def("wallNow",
+        []() { return static_cast<double>(WallClock::now().time_since_epoch().count()); },
+        "WallClock time now (sec)");
+
     // A Radio, as USRP is, so the MACs take it unchanged; the USRP-only
     // properties the controller reads (clock rate and sources, max samps)
     // have simulated equivalents. Antennas and subdevices do not exist.
@@ -142,8 +151,7 @@ void exportSim(py::module &m)
             {
                 sim::Impairments imp;
 
-                if (tx_leakage_db)
-                    imp.tx_leakage_db = *tx_leakage_db;
+                imp.tx_leakage_db = tx_leakage_db;
                 imp.gain_model = gain_model;
                 imp.tx_gain_ref_db = tx_gain_ref_db;
                 imp.rx_gain_ref_db = rx_gain_ref_db;
@@ -175,7 +183,7 @@ void exportSim(py::module &m)
                 d["iq_amp_db"] = imp.iq_amp_db;
                 d["iq_phase_deg"] = imp.iq_phase_deg;
                 d["dc_offset"] = imp.dc;
-                d["tx_leakage_db"] = std::isnan(imp.tx_leakage_db) ? py::none() : py::cast(imp.tx_leakage_db);
+                d["tx_leakage_db"] = imp.tx_leakage_db ? py::cast(*imp.tx_leakage_db) : py::none();
                 return d;
             })
         .def_property("noise_power",
@@ -203,6 +211,8 @@ void exportSim(py::module &m)
                 d["rx_overflow_samples"] = s.rx_overflow_samples;
                 d["rx_streams"] = s.rx_streams;
                 d["rx_clipped"] = s.rx_clipped;
+                d["tx_nonfinite"] = s.tx_nonfinite;
+                d["rx_nonfinite"] = s.rx_nonfinite;
                 return d;
             })
         ;

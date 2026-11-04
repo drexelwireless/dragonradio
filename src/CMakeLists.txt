@@ -112,6 +112,9 @@ target_link_libraries(DragonRadio PUBLIC ${LIQUIDDSP_LIBRARIES})
 # rest of -Ofast is kept, as for the liquid PHYs.
 set_source_files_properties(phy/NativeOFDM.cc phy/NativeOFDMA.cc python/NativePHY.cc
                             PROPERTIES COMPILE_OPTIONS "-fno-finite-math-only")
+# The simulated device counts non-finite samples it sends and delivers.
+set_source_files_properties(sim/SimUSRP.cc
+                            PROPERTIES COMPILE_OPTIONS "-fno-finite-math-only")
 
 # Native PHY FEC (src/simulation/NativeFEC.hh): the libfec API, from libfec or
 # libcorrect's libfec-compatible shim, the library liquid-dsp's FEC also uses.
