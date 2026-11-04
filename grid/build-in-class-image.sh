@@ -9,7 +9,7 @@
 # Usage: build-in-class-image.sh SRC_DIR [JOBS]
 #   SRC_DIR  this tree (e.g. extracted from git archive); built in SRC_DIR/build
 # Then run the radio with:
-#   VIRTUAL_ENV=/usr/local/dragonradio/venv PYTHONPATH=SRC_DIR/python/dragonradio/src SRC_DIR/build/dragonradio SCRIPT
+#   VIRTUAL_ENV=SRC_DIR/venv SRC_DIR/build/dragonradio SCRIPT
 set -euo pipefail
 src=$(realpath "$1"); jobs=${2:-$(nproc)}
 image=/usr/local/dragonradio
@@ -29,4 +29,15 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.
     -DCMAKE_CXX_FLAGS="-include cstdint -include cstdio" -DPython3_EXECUTABLE="$image/venv/bin/python"
 make -C build -j "$jobs"
 ln -sfn build/dragonradio dragonradio
-echo "built $(cat COMMIT 2>/dev/null || echo '?') in $src/build"
+# A venv for this tree: the image's venv installs its own DragonRadio package as
+# an editable install, whose import hook would win over PYTHONPATH. This venv
+# sees this tree's package first, then the image venv's third-party packages
+# (a .pth path entry, so the image's editable-install hook is not loaded).
+py=$("$image/venv/bin/python" -c 'import sys; print(f"python{sys.version_info[0]}.{sys.version_info[1]}")')
+rm -rf venv
+python3 -m venv --system-site-packages venv
+site=venv/lib/$py/site-packages
+echo "$src/python/dragonradio/src" > "$site/00-dragonradio-port.pth"
+"$image/venv/bin/python" -c 'import site; print("\n".join(p for p in site.getsitepackages() if "/usr/local/dragonradio/venv" in p))' > "$site/50-image-venv.pth"
+venv/bin/python -c "import dragonradio, sys; assert dragonradio.__file__.startswith('$src'), dragonradio.__file__; print('venv python package:', dragonradio.__file__)"
+echo "built $(cat COMMIT 2>/dev/null || echo '?') in $src/build; run: VIRTUAL_ENV=$src/venv $src/build/dragonradio SCRIPT"
