@@ -869,7 +869,7 @@ to the workspace.
 Verification on gridgpu01:
 
 - **Tests.** All 13 `tests/fullstack` programs and the embedded-Python test
-  pass, from an offline bundle setup at `117edddf`. 78 Python simulation
+  pass, from an offline bundle setup at `117edddf`. 81 Python simulation
   tests pass (8 skipped: optional legacy bridges). This includes the
   pipeline against a fake ssh/gridcli: a dry run, stages 0–4 then stop,
   and a health failure that stops the reservation.
