@@ -20,7 +20,7 @@ import numpy as np
 
 import dragonradio
 import dragonradio.radio
-from _dragonradio.radio import RxRecorder  # pylint: disable=no-name-in-module
+from _dragonradio.radio import RxRecorder, work_meters  # pylint: disable=no-name-in-module
 from _dragonradio.radio import Mandate, MandateMap, MandateQueue  # pylint: disable=no-name-in-module
 
 logger = logging.getLogger('sim-node')
@@ -76,6 +76,44 @@ def parse_set(s):
     return key, value
 
 
+def hist_percentile(hist, q, bins):
+    """Upper edge of the latency-histogram bin holding quantile q."""
+    lo, ratio, _n = bins
+    total = sum(hist)
+    if not total:
+        return None
+    target = q*total
+    acc = 0
+    for i, c in enumerate(hist):
+        acc += c
+        if acc >= target:
+            return lo*ratio**(i + 1)
+    return lo*ratio**len(hist)
+
+
+def traffic_summary(traffic, bins):
+    """Bounded per-flow receive statistics (compact or detailed mode)."""
+    out = {}
+    for (src, port), st in traffic.received.items():
+        lat = st['latency']
+        e = {'src': src, 'port': port, 'unique': st['unique'], 'duplicates': st['duplicates'],
+             'corrupt': st['corrupt'], 'out_of_order': st['out_of_order'], 'stale': st['stale'],
+             'bytes': st['bytes'], 'first_rx': st['first_rx'], 'last_rx': st['last_rx']}
+        if lat:
+            e.update(latency_mean=sum(lat)/len(lat), latency_p50=percentile(lat, 0.5),
+                     latency_p95=percentile(lat, 0.95), latency_p99=percentile(lat, 0.99),
+                     latency_p999=percentile(lat, 0.999), latency_max=max(lat))
+        elif st['unique']:
+            h = st['latency_hist']
+            e.update(latency_mean=st['latency_sum']/st['unique'], latency_min=st['latency_min'],
+                     latency_max=st['latency_max'],
+                     latency_p50=hist_percentile(h, 0.5, bins), latency_p95=hist_percentile(h, 0.95, bins),
+                     latency_p99=hist_percentile(h, 0.99, bins), latency_p999=hist_percentile(h, 0.999, bins),
+                     latency_hist={str(i): c for i, c in enumerate(h) if c}, per_second=st['per_second'])
+        out[f'{src}:{port}'] = e
+    return out
+
+
 def percentile(xs, q):
     if not xs:
         return None
@@ -123,18 +161,37 @@ async def experiment(radio, config):
         t_start = time.monotonic()
         if traffic:
             traffic.start()
+
+        # Periodic counters for long runs: device, traffic and PHY totals.
+        async def periodic_stats():
+            bins = type(traffic).latency_bins if traffic else None
+            with open(config.stats_file, 'a') as f:
+                while True:
+                    rec = {'mono': time.monotonic(), 'device': radio.usrp.stats, 'work': work_meters(),
+                           'rx_counts': {str(k): v for k, v in radio.rx_recorder.counts.items()}}
+                    if traffic:
+                        rec['flows'] = [{'port': fl['port'], 'dest': fl['dest'], 'sent': fl['sent']} for fl in traffic.flows]
+                        rec['received'] = {k: {kk: v[kk] for kk in ('unique', 'duplicates', 'corrupt', 'stale', 'bytes',
+                                                                    'latency_p50', 'latency_p99', 'latency_max') if kk in v}
+                                           for k, v in traffic_summary(traffic, bins).items()}
+                    f.write(json.dumps(rec) + '\n')
+                    f.flush()
+                    await asyncio.sleep(config.stats_interval)
+        stats_task = asyncio.create_task(periodic_stats()) if config.stats_file else None
         await asyncio.sleep(config.duration)
         if traffic:
             traffic.stop()
         t_stop = time.monotonic()
         await asyncio.sleep(config.drain)
+        if stats_task:
+            stats_task.cancel()
 
         # Host monotonic time of this snapshot (the simulation clock): frames
         # a peer sends after it cannot appear in rx_frames.
         snapshot_mono = time.monotonic()
         rx_frames = radio.rx_recorder.records
         received = {}
-        for (src, port), st in (traffic.received.items() if traffic else []):
+        for (src, port), st in (traffic.received.items() if traffic and traffic.detail else []):
             lat = st['latency']
             received[f'{src}:{port}'] = {
                 'src': src, 'port': port,
@@ -162,6 +219,11 @@ async def experiment(radio, config):
             # Every frame the PHY handed up: (timestamp, curhop, nexthop, seq,
             # flags, header_valid, payload_valid, data_len, mcsidx, evm, rssi, cfo)
             'rx_frames': rx_frames,
+            'rx_counts': {str(k): v for k, v in radio.rx_recorder.counts.items()},
+            'work_meters': work_meters(),
+            'soak': config.soak,
+            'compact_received': (traffic_summary(traffic, type(traffic).latency_bins)
+                                 if traffic and not traffic.detail else None),
             'snapshot_mono': snapshot_mono,
             'links': [list(l) for l in config.links],
             'mandates': [list(m) for m in config.mandates],
@@ -196,6 +258,10 @@ def main():
     exp.add_argument('--duration', type=float, default=10.0, help='seconds of traffic')
     exp.add_argument('--drain', type=float, default=3.0, help='seconds after traffic stops')
     exp.add_argument('--results', required=True, help='JSON results path')
+    exp.add_argument('--soak', action='store_true',
+                     help='long run: bounded traffic statistics and PHY counts instead of per-packet records')
+    exp.add_argument('--stats-file', help='append periodic device/traffic/PHY counters (JSON lines) here')
+    exp.add_argument('--stats-interval', type=float, default=10.0, help='seconds between --stats-file records')
     exp.add_argument('--set', action='append', type=parse_set, dest='config_overrides', default=[],
                      metavar='KEY=VALUE', help='set a configuration attribute (e.g. header_fec1=none)')
 
@@ -223,6 +289,10 @@ def main():
     # Record every demodulated frame between the channelizer and the
     # controller; packets pass through unchanged.
     radio.rx_recorder = RxRecorder()
+    if config.soak:
+        radio.rx_recorder.keep_records = False
+        if config.sim_traffic:
+            radio.tuntap.detail = False
     radio.channelizer.source.disconnect()
     radio.channelizer.source >> radio.rx_recorder.input  # pylint: disable=pointless-statement
     radio.rx_recorder.output >> radio.controller.radio_in  # pylint: disable=pointless-statement

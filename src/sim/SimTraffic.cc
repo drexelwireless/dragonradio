@@ -1,5 +1,7 @@
 // Synthetic IP traffic in place of the tun/tap device (phase P2).
 
+#include <algorithm>
+#include <cmath>
 #include <arpa/inet.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
@@ -15,6 +17,7 @@
 #include "sim/SimTraffic.hh"
 #include "util/net.hh"
 #include "util/sprintf.hh"
+#include "util/threads.hh"
 
 using namespace std::placeholders;
 
@@ -111,6 +114,7 @@ SimTraffic::SimTraffic(NodeId node_id,
   , logger_(logger)
   , running_(false)
   , foreign_(0)
+  , detail_(true)
 {
 }
 
@@ -223,6 +227,7 @@ void SimTraffic::start(void)
 
     running_ = true;
     worker_ = std::thread(&SimTraffic::worker, this);
+    setThreadName(worker_, "dr-simtraffic");
 }
 
 void SimTraffic::stop(void)
@@ -338,6 +343,11 @@ void SimTraffic::send(std::shared_ptr<RadioPacket>&& pkt)
 
     uint64_t seq = get<uint64_t>(app + 8);
 
+    if (!detail_) {
+        receiveCompact(st, seq, size, t_rx, get<int64_t>(app + 16));
+        return;
+    }
+
     if (!seen_[key].insert(seq).second) {
         st.duplicates++;
         st.dup_seqs.push_back(seq);
@@ -356,6 +366,66 @@ void SimTraffic::send(std::shared_ptr<RadioPacket>&& pkt)
     st.seqs.push_back(seq);
     st.arrivals.push_back(t_rx*1e-9);
     st.latency.push_back((t_rx - get<int64_t>(app + 16))*1e-9);
+}
+
+void SimTraffic::receiveCompact(RecvStats &st, uint64_t seq, size_t size, int64_t t_rx, int64_t t_tx)
+{
+    // Duplicate detection over a sliding window of the last kWindow sequence
+    // numbers (ARQ redelivers within its window, which is much smaller).
+    if (st.window.empty())
+        st.window.assign(kWindow / 64, 0);
+    auto bit = [&](uint64_t s) -> uint64_t& { return st.window[(s % kWindow) / 64]; };
+    const uint64_t mask_of = 1;
+    if (st.unique > 0 && seq + kWindow <= st.max_seq) {
+        st.stale++;
+        return;
+    }
+    if (st.unique == 0 || seq > st.max_seq) {
+        // Clear the slots the window advances over.
+        const uint64_t from = st.unique == 0 ? 0 : st.max_seq + 1;
+        if (st.unique == 0 || seq - from >= kWindow)
+            std::fill(st.window.begin(), st.window.end(), 0);
+        else
+            for (uint64_t s = from; s < seq; ++s)
+                bit(s) &= ~(mask_of << (s % 64));
+    } else if (bit(seq) & (mask_of << (seq % 64))) {
+        st.duplicates++;
+        if (st.dup_seqs.size() < 1000)
+            st.dup_seqs.push_back(seq);
+        return;
+    } else {
+        st.out_of_order++;
+    }
+    bit(seq) |= mask_of << (seq % 64);
+    st.max_seq = std::max(st.max_seq, seq);
+
+    const double t = t_rx*1e-9, latency = (t_rx - t_tx)*1e-9;
+    if (st.unique == 0) {
+        st.first_rx = t;
+        st.latency_min = st.latency_max = latency;
+        st.latency_hist.assign(kLatencyBins, 0);
+    }
+    st.last_rx = t;
+    st.unique++;
+    st.bytes += size;
+    st.latency_sum += latency;
+    st.latency_min = std::min(st.latency_min, latency);
+    st.latency_max = std::max(st.latency_max, latency);
+    size_t bin = 0;
+    if (latency > kLatencyMin)
+        bin = std::min(kLatencyBins - 1, static_cast<size_t>(std::log(latency/kLatencyMin)/std::log(kLatencyRatio)));
+    st.latency_hist[bin]++;
+    const size_t second = static_cast<size_t>(t - st.first_rx);
+    if (second >= st.per_second.size())
+        st.per_second.resize(second + 1, 0);
+    st.per_second[second]++;
+}
+
+void SimTraffic::setDetail(bool detail)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    detail_ = detail;
 }
 
 std::vector<SimTraffic::Flow> SimTraffic::getFlows(void)

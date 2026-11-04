@@ -54,7 +54,27 @@ public:
         std::vector<uint64_t> seqs;  ///< Unique sequence numbers in arrival order
         std::vector<double> arrivals; ///< Arrival time of each unique packet (MonoClock sec)
         std::vector<uint64_t> dup_seqs; ///< Sequence numbers delivered more than once
+        // Compact mode (setDetail(false)) keeps bounded state instead of the
+        // per-packet vectors above, for long soak runs (P4):
+        double latency_sum = 0;       ///< Sum of one-way latencies (sec)
+        double latency_min = 0;       ///< Minimum one-way latency (sec)
+        double latency_max = 0;       ///< Maximum one-way latency (sec)
+        std::vector<uint64_t> latency_hist; ///< Counts per kLatencyBins bin
+        std::vector<uint32_t> per_second; ///< Unique arrivals per second since first_rx
+        uint64_t stale = 0;           ///< Arrivals older than the duplicate window (not counted unique)
+        std::vector<uint64_t> window; ///< Seen bitmap of the last kWindow sequence numbers
     };
+
+    /** @brief Latency histogram: bin i covers [kLatencyMin * kLatencyRatio^i,
+     * kLatencyMin * kLatencyRatio^(i+1)); bin 0 also holds smaller values and
+     * the last bin larger ones. 1% resolution from 1 us to about 1000 s.
+     */
+    static constexpr double kLatencyMin = 1e-6;
+    static constexpr double kLatencyRatio = 1.01;
+    static constexpr size_t kLatencyBins = 2084;
+
+    /** @brief Duplicate-detection window in compact mode (sequence numbers). */
+    static constexpr uint64_t kWindow = 1 << 16;
 
     /** @brief Construct.
      * @param node_id This node's ID
@@ -92,6 +112,14 @@ public:
     /** @brief Number of delivered frames that were not synthetic traffic. */
     uint64_t getForeign(void);
 
+    /** @brief Keep per-packet records (default) or bounded summaries.
+     * Must be set before traffic arrives.
+     */
+    void setDetail(bool detail);
+
+    /** @brief True if per-packet records are kept. */
+    bool getDetail(void) const { return detail_; }
+
     /** @brief Build a frame (exposed for tests). */
     std::vector<uint8_t> buildFrame(NodeId dest, uint16_t port, uint64_t seq, size_t size, int64_t tx_ns);
 
@@ -109,10 +137,13 @@ private:
     std::map<std::pair<NodeId, uint16_t>, RecvStats> recv_;
     std::map<std::pair<NodeId, uint16_t>, std::unordered_set<uint64_t>> seen_;
     uint64_t foreign_;
+    bool detail_;
 
     std::thread worker_;
 
     void send(std::shared_ptr<RadioPacket>&& pkt);
+
+    void receiveCompact(RecvStats &st, uint64_t seq, size_t size, int64_t t_rx, int64_t t_tx);
 
     void worker(void);
 };

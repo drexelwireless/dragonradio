@@ -4,6 +4,7 @@
 #define SIM_RXRECORDER_HH_
 
 #include <cstring>
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -37,8 +38,39 @@ public:
         float cfo;
     };
 
+    /** @brief Per-source totals, kept in both modes. */
+    struct Counts {
+        uint64_t frames = 0;          ///< Frames handed up (any validity)
+        uint64_t header_valid = 0;
+        uint64_t payload_valid = 0;
+        uint64_t data_valid = 0;      ///< Valid payloads carrying data
+    };
+
     RxRecorder() = default;
     virtual ~RxRecorder() = default;
+
+    /** @brief Keep one record per frame (default) or only counts (long runs). */
+    void setKeepRecords(bool keep)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        keep_ = keep;
+    }
+
+    bool getKeepRecords(void)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        return keep_;
+    }
+
+    /** @brief Totals keyed by curhop; invalid headers are under key -1. */
+    std::map<int, Counts> getCounts(void)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        return counts_;
+    }
 
     std::vector<Record> getRecords(void)
     {
@@ -67,13 +99,21 @@ protected:
 
         std::lock_guard<std::mutex> lock(mutex_);
 
-        records_.push_back(r);
+        Counts &c = counts_[r.header_valid ? r.curhop : -1];
+        c.frames++;
+        c.header_valid += r.header_valid;
+        c.payload_valid += r.payload_valid;
+        c.data_valid += r.payload_valid && r.data_len > 0;
+        if (keep_)
+            records_.push_back(r);
         return true;
     }
 
 private:
     std::mutex mutex_;
     std::vector<Record> records_;
+    std::map<int, Counts> counts_;
+    bool keep_ = true;
 };
 
 }

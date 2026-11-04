@@ -98,6 +98,15 @@ void exportSim(py::module &m)
             py::arg("size"),
             py::arg("count") = 0,
             py::arg("start") = 0.0)
+        .def_property("detail",
+            &SimTraffic::getDetail,
+            &SimTraffic::setDetail,
+            "Keep per-packet records (True) or bounded summaries (False, for soak runs)")
+        .def_property_readonly_static("latency_bins",
+            [](py::object)
+            {
+                return py::make_tuple(SimTraffic::kLatencyMin, SimTraffic::kLatencyRatio, SimTraffic::kLatencyBins);
+            })
         .def("start", &SimTraffic::start, py::call_guard<py::gil_scoped_release>())
         .def("stop", &SimTraffic::stop, py::call_guard<py::gil_scoped_release>())
         .def("buildFrame",
@@ -146,6 +155,12 @@ void exportSim(py::module &m)
                     e["latency"] = st.latency;
                     e["seqs"] = st.seqs;
                     e["dup_seqs"] = st.dup_seqs;
+                    e["latency_sum"] = st.latency_sum;
+                    e["latency_min"] = st.latency_min;
+                    e["latency_max"] = st.latency_max;
+                    e["latency_hist"] = st.latency_hist;
+                    e["per_second"] = st.per_second;
+                    e["stale"] = st.stale;
                     d[py::make_tuple(key.first, key.second)] = e;
                 }
                 return d;
@@ -155,6 +170,26 @@ void exportSim(py::module &m)
 
     py::class_<sim::RxRecorder, RadioProcessor, std::shared_ptr<sim::RxRecorder>>(m, "RxRecorder")
         .def(py::init<>())
+        .def_property("keep_records",
+            &sim::RxRecorder::getKeepRecords,
+            &sim::RxRecorder::setKeepRecords,
+            "Keep one record per frame (True) or only per-source counts (False)")
+        .def_property_readonly("counts",
+            [](sim::RxRecorder &self)
+            {
+                py::dict d;
+
+                for (const auto &[src, c] : self.getCounts()) {
+                    py::dict e;
+
+                    e["frames"] = c.frames;
+                    e["header_valid"] = c.header_valid;
+                    e["payload_valid"] = c.payload_valid;
+                    e["data_valid"] = c.data_valid;
+                    d[py::int_(src)] = e;
+                }
+                return d;
+            })
         .def_property_readonly("records",
             [](sim::RxRecorder &self)
             {
