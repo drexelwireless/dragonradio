@@ -29,6 +29,11 @@ int main()
     static_assert(sizeof(Header) == 5, "Header layout unchanged");
 
     NetPacket pkt(sizeof(ExtendedHeader));
+    pkt.hdr.flags = {0};
+    pkt.ehdr().src = 1;
+    pkt.ehdr().dest = 2;
+    pkt.ehdr().ack = Seq{0};
+    pkt.ehdr().data_len = 0;   // control messages follow the (empty) data
     pkt.appendSelectiveAck(Seq{10}, Seq{20});
     pkt.appendNak(Seq{7});
     pkt.appendSetUnack(Seq{65530});

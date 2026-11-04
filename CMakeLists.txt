@@ -100,6 +100,7 @@ target_link_libraries(flexframedemod PRIVATE ${LIQUIDDSP_LIBRARIES})
 enable_testing()
 
 add_subdirectory(test)
+add_subdirectory(tests/fullstack)
 
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
                   DEPENDS tests)
