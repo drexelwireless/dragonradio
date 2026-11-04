@@ -35,9 +35,10 @@ ln -sfn build/dragonradio dragonradio
 # (a .pth path entry, so the image's editable-install hook is not loaded).
 py=$("$image/venv/bin/python" -c 'import sys; print(f"python{sys.version_info[0]}.{sys.version_info[1]}")')
 rm -rf venv
-python3 -m venv --system-site-packages venv
+# virtualenv (as the image), which provides bin/activate_this.py for the radio's embedded Python.
+virtualenv -q --system-site-packages -p python3 venv
 site=venv/lib/$py/site-packages
 echo "$src/python/dragonradio/src" > "$site/00-dragonradio-port.pth"
 "$image/venv/bin/python" -c 'import site; print("\n".join(p for p in site.getsitepackages() if "/usr/local/dragonradio/venv" in p))' > "$site/50-image-venv.pth"
-venv/bin/python -c "import dragonradio, sys; assert dragonradio.__file__.startswith('$src'), dragonradio.__file__; print('venv python package:', dragonradio.__file__)"
+venv/bin/python -c "import dragonradio.config as c; assert c.__file__.startswith('$src'), c.__file__; print('venv python package:', c.__file__)"
 echo "built $(cat COMMIT 2>/dev/null || echo '?') in $src/build; run: VIRTUAL_ENV=$src/venv $src/build/dragonradio SCRIPT"
