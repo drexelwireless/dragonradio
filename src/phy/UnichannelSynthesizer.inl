@@ -2,6 +2,8 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "UnichannelSynthesizer.hh"
+#include "util/WorkMeter.hh"
+#include "util/threads.hh"
 
 #include <pybind11/pybind11.h>
 
@@ -22,6 +24,7 @@ UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(std::shared_ptr<P
                                               this,
                                               std::ref(mod_reconfigure_[i]),
                                               i));
+        setThreadName(mod_threads_.back(), "dr-mod", i);
     }
 }
 
@@ -73,6 +76,8 @@ void UnichannelSynthesizer<ChannelModulator>::stop(void)
 template <class ChannelModulator>
 void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &reconfig, unsigned tid)
 {
+    static std::atomic<unsigned> next_meter{0};
+    WorkMeter meter("dr-mod", next_meter++);
     Channels                           channels;
     Schedule                           schedule;
     double                             tx_rate = tx_rate_;
@@ -178,7 +183,11 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             // Modulate the packet
             float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
-            mod->modulate(std::move(pkt), g, *mpkt);
+            {
+                WorkMeter::Scope work(meter);
+
+                mod->modulate(std::move(pkt), g, *mpkt);
+            }
 
             {
                 std::lock_guard<std::mutex> lock(slot->mutex);

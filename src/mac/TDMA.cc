@@ -30,9 +30,13 @@ TDMA::TDMA(std::shared_ptr<USRP> usrp,
   , tdma_schedule_(nslots)
 {
     rx_thread_ = std::thread(&TDMA::rxWorker, this);
+    setThreadName(rx_thread_, "dr-mac-rx");
     tx_thread_ = std::thread(&TDMA::txWorker, this);
+    setThreadName(tx_thread_, "dr-mac-tx");
     tx_slot_thread_ = std::thread(&TDMA::txSlotWorker, this);
+    setThreadName(tx_slot_thread_, "dr-mac-slot");
     tx_notifier_thread_ = std::thread(&TDMA::txNotifier, this);
+    setThreadName(tx_notifier_thread_, "dr-mac-notify");
 }
 
 TDMA::~TDMA()

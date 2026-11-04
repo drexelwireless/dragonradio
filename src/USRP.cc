@@ -10,6 +10,7 @@
 #include "Clock.hh"
 #include "USRP.hh"
 #include "util/capabilities.hh"
+#include "util/threads.hh"
 
 UHDUSRP::UHDUSRP(const std::string& addr,
            const std::optional<std::string>& tx_subdev,
@@ -75,6 +76,7 @@ UHDUSRP::UHDUSRP(const std::string& addr,
 
     // Start thread that receives TX errors
     tx_error_thread_ = std::thread(&UHDUSRP::txErrorWorker, this);
+    setThreadName(tx_error_thread_, "dr-usrp-txerr");
 }
 
 UHDUSRP::~UHDUSRP()

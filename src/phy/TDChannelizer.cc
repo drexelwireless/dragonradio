@@ -10,6 +10,8 @@ namespace py = pybind11;
 #include "Logger.hh"
 #include "phy/PHY.hh"
 #include "phy/TDChannelizer.hh"
+#include "util/WorkMeter.hh"
+#include "util/threads.hh"
 
 using namespace std::placeholders;
 
@@ -24,10 +26,12 @@ TDChannelizer::TDChannelizer(std::shared_ptr<PHY> phy,
   , reconfigure_sync_(nthreads+1)
   , logger_(logger)
 {
-    for (unsigned int tid = 0; tid < nthreads; ++tid)
+    for (unsigned int tid = 0; tid < nthreads; ++tid) {
         demod_threads_.emplace_back(std::thread(&TDChannelizer::demodWorker,
                                     this,
                                     tid));
+        setThreadName(demod_threads_.back(), "dr-demod", tid);
+    }
 
     reconfigure();
 }
@@ -108,6 +112,7 @@ void TDChannelizer::stop(void)
 
 void TDChannelizer::demodWorker(unsigned tid)
 {
+    WorkMeter meter("dr-demod", tid);
     std::shared_ptr<IQBuf> prev_iqbuf;
     std::shared_ptr<IQBuf> iqbuf;
     std::optional<ssize_t> next_snapshot_off;
@@ -195,7 +200,11 @@ void TDChannelizer::demodWorker(unsigned tid)
                 n = iqbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
 
                 if (n != 0) {
-                    demod.demodulate(iqbuf->data() + ndemodulated, n);
+                    {
+                        WorkMeter::Scope work(meter);
+
+                        demod.demodulate(iqbuf->data() + ndemodulated, n);
+                    }
                     ndemodulated += n;
                 } else if (complete)
                     break;

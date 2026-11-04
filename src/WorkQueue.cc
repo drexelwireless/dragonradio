@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "WorkQueue.hh"
+#include "util/threads.hh"
 
 WorkQueue work_queue;
 
@@ -20,8 +21,10 @@ WorkQueue::~WorkQueue()
 
 void WorkQueue::addThreads(unsigned int nthreads)
 {
-    for (unsigned int i = 0; i < nthreads; ++i)
+    for (unsigned int i = 0; i < nthreads; ++i) {
         threads_.emplace_back(&WorkQueue::run_worker, this);
+        setThreadName(threads_.back(), "dr-work", i);
+    }
 }
 
 void WorkQueue::stop(void)

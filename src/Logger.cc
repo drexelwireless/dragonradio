@@ -11,6 +11,7 @@
 #include "Clock.hh"
 #include "IQCompression.hh"
 #include "Logger.hh"
+#include "util/threads.hh"
 
 std::shared_ptr<Logger> logger;
 
@@ -415,6 +416,7 @@ void Logger::open(const std::string& filename)
 
     // Start worker thread
     worker_thread_ = std::thread(&Logger::worker, this);
+    setThreadName(worker_thread_, "dr-logger");
 
     is_open_ = true;
 }

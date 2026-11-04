@@ -2,6 +2,8 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include "ParallelChannelSynthesizer.hh"
+#include "util/WorkMeter.hh"
+#include "util/threads.hh"
 
 #include <pybind11/pybind11.h>
 
@@ -18,10 +20,12 @@ ParallelChannelSynthesizer<ChannelModulator>::ParallelChannelSynthesizer(std::sh
   , reconfigure_(true)
   , reconfigure_sync_(nthreads+1)
 {
-    for (size_t i = 0; i < nthreads; ++i)
+    for (size_t i = 0; i < nthreads; ++i) {
         mod_threads_.emplace_back(std::thread(&ParallelChannelSynthesizer::modWorker,
                                               this,
                                               i));
+        setThreadName(mod_threads_.back(), "dr-mod", static_cast<unsigned>(i));
+    }
 
     reconfigure();
 }
@@ -95,6 +99,7 @@ void ParallelChannelSynthesizer<ChannelModulator>::reconfigure(void)
 template <class ChannelModulator>
 void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 {
+    WorkMeter meter("dr-mod", tid);
     std::unique_ptr<ChannelModulator> mod;
     std::shared_ptr<NetPacket>        pkt;
     std::unique_ptr<ModPacket>        mpkt;
@@ -135,7 +140,11 @@ void ParallelChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
         std::unique_ptr<ModPacket> mpkt = std::make_unique<ModPacket>();
         float                      g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
-        mod->modulate(std::move(pkt), g, *mpkt);
+        {
+            WorkMeter::Scope work(meter);
+
+            mod->modulate(std::move(pkt), g, *mpkt);
+        }
 
         // Add the packet to the queue
         queue_.push(std::move(mpkt));

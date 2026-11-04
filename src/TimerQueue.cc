@@ -75,6 +75,8 @@ void TimerQueue::start(void)
         done_ = false;
 
         timer_worker_thread_ = std::thread(&TimerQueue::timer_worker, this);
+
+        setThreadName(timer_worker_thread_, "dr-timer");
     }
 }
 

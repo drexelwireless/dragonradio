@@ -11,6 +11,8 @@ namespace py = pybind11;
 #include "phy/MultichannelSynthesizer.hh"
 #include "phy/PHY.hh"
 #include "stats/Estimator.hh"
+#include "util/WorkMeter.hh"
+#include "util/threads.hh"
 
 MultichannelSynthesizer::MultichannelSynthesizer(std::shared_ptr<PHY> phy,
                                                  double tx_rate,
@@ -22,10 +24,12 @@ MultichannelSynthesizer::MultichannelSynthesizer(std::shared_ptr<PHY> phy,
   , reconfigure_(true)
   , reconfigure_sync_(nthreads+1)
 {
-    for (size_t i = 0; i < nthreads; ++i)
+    for (size_t i = 0; i < nthreads; ++i) {
         mod_threads_.emplace_back(std::thread(&MultichannelSynthesizer::modWorker,
                                               this,
                                               i));
+        setThreadName(mod_threads_.back(), "dr-mod", static_cast<unsigned>(i));
+    }
 
     reconfigure();
 }
@@ -168,6 +172,7 @@ void MultichannelSynthesizer::reconfigure(void)
 
 void MultichannelSynthesizer::modWorker(unsigned tid)
 {
+    WorkMeter meter("dr-mod", tid);
     std::shared_ptr<Slot>      prev_slot;
     std::shared_ptr<Slot>      slot;
     std::unique_ptr<ModPacket> mpkt;
@@ -291,7 +296,11 @@ void MultichannelSynthesizer::modWorker(unsigned tid)
                 if (!mpkt->pkt) {
                     float g = phy_->mcs_table[pkt->mcsidx].autogain.getSoftTXGain()*g_multichan_;
 
-                    mod.modulate(std::move(pkt), g, *mpkt);
+                    {
+                        WorkMeter::Scope work(meter);
+
+                        mod.modulate(std::move(pkt), g, *mpkt);
+                    }
                 }
 
                 // Determine whether or not we can fit this modulated packet.

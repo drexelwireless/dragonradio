@@ -15,6 +15,14 @@ void setRealtimePriority(void);
 /** @brief Make current thread high-priority. */
 void makeThisThreadHighPriority(void);
 
+/** @brief Name a thread (visible in /proc/PID/task/TID/comm, ps, top).
+ * Linux truncates names to 15 characters. Observability only.
+ */
+void setThreadName(std::thread &t, const char *name);
+
+/** @brief Name a thread with an index suffix, e.g. "dr-demod" 0 -> "dr-demod0" */
+void setThreadName(std::thread &t, const char *name, unsigned index);
+
 /** @brief Pin thread to given CPU */
 void pinThreadToCPU(pthread_t t, int cpu_num);
 

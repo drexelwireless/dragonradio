@@ -13,6 +13,7 @@
 
 #include "logging.hh"
 #include "sim/SimUSRP.hh"
+#include "util/threads.hh"
 
 namespace sim {
 
@@ -159,6 +160,8 @@ SimUSRP::SimUSRP(const std::string& air_path,
     setMaxRXSamps(2048);
 
     reader_ = std::thread(&SimUSRP::reader, this);
+
+    setThreadName(reader_, "dr-sim-reader");
 
     logUSRP(LOGINFO, "Simulated device node %u connected to %s", node_id_, air_path.c_str());
 }

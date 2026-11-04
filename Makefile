@@ -141,6 +141,7 @@ SOURCES := \
     util/exec.cc \
     util/net.cc \
     util/threads.cc \
+    util/WorkMeter.cc \
     util/sprintf.cc
 
 OBJECTS := $(patsubst %.cc,$(OBJDIR)/%.o,$(SOURCES))

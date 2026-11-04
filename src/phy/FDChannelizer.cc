@@ -14,6 +14,8 @@ namespace py = pybind11;
 
 #include "phy/FDChannelizer.hh"
 #include "phy/PHY.hh"
+#include "util/WorkMeter.hh"
+#include "util/threads.hh"
 
 using namespace std::placeholders;
 
@@ -29,11 +31,14 @@ FDChannelizer::FDChannelizer(std::shared_ptr<PHY> phy,
   , logger_(logger)
 {
     fft_thread_ = std::thread(&FDChannelizer::fftWorker, this);
+    setThreadName(fft_thread_, "dr-chan-fft");
 
-    for (unsigned int tid = 0; tid < nthreads; ++tid)
+    for (unsigned int tid = 0; tid < nthreads; ++tid) {
         demod_threads_.emplace_back(std::thread(&FDChannelizer::demodWorker,
                                                 this,
                                                 tid));
+        setThreadName(demod_threads_.back(), "dr-demod", tid);
+    }
 
     reconfigure();
 }
@@ -130,6 +135,7 @@ void FDChannelizer::fftWorker(void)
     unsigned               seq = 0;
     fftw::FFT<C>           fft(N, FFTW_FORWARD, FFTW_MEASURE);
     size_t                 fftoff = O;
+    WorkMeter              meter("dr-chan-fft");
 
     while (!done_) {
         // Get a time-domain IQ buffer
@@ -199,6 +205,8 @@ void FDChannelizer::fftWorker(void)
 
             spin_count = 0;
 
+            WorkMeter::Scope work(meter);
+
             // Use needed samples from the input buffer
             assert(fftoff + needed == N);
             std::copy(iqbuf->data() + inoff,
@@ -261,6 +269,7 @@ void FDChannelizer::demodWorker(unsigned tid)
     bool                   received = false; // Have we received any packets?
     Channels               channels;         // Local copy of channels
     Channel                channel;          // Current channel being demodulated
+    WorkMeter              meter("dr-demod", tid);
 
     PHY::PacketDemodulator::callback_type callback = [&] (std::shared_ptr<RadioPacket> &&pkt) {
         received = true;
@@ -351,6 +360,8 @@ void FDChannelizer::demodWorker(unsigned tid)
                 n = fdbuf->nsamples.load(std::memory_order_acquire) - ndemodulated;
 
                 if (n != 0) {
+                    WorkMeter::Scope work(meter);
+
                     demod.demodulate(fdbuf->data() + ndemodulated, n);
                     ndemodulated += n;
                     spin_count = 0;

@@ -5,6 +5,8 @@
 
 #include "phy/PHY.hh"
 #include "phy/OverlapTDChannelizer.hh"
+#include "util/WorkMeter.hh"
+#include "util/threads.hh"
 
 using namespace std::placeholders;
 
@@ -25,12 +27,14 @@ OverlapTDChannelizer::OverlapTDChannelizer(std::shared_ptr<PHY> phy,
   , logger_(logger)
 {
     net_thread_ = std::thread(&OverlapTDChannelizer::netWorker, this);
+    setThreadName(net_thread_, "dr-chan-net");
 
     for (unsigned int i = 0; i < nthreads; ++i) {
         demod_reconfigure_[i].store(false, std::memory_order_relaxed);
         demod_threads_.emplace_back(std::thread(&OverlapTDChannelizer::demodWorker,
                                     this,
                                     std::ref(demod_reconfigure_[i])));
+        setThreadName(demod_threads_.back(), "dr-demod", i);
     }
 }
 
@@ -91,6 +95,8 @@ void OverlapTDChannelizer::stop(void)
 
 void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
 {
+    static std::atomic<unsigned> next_meter{0};
+    WorkMeter meter("dr-demod", next_meter++);
     std::unique_ptr<OverlapTDChannelDemodulator> demod;
     RadioPacketQueue::barrier                    b;
     unsigned                                     channelidx;
@@ -146,8 +152,12 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
                          buf1_off,
                          rx_rate_);
 
-        demod->demodulate(buf1->data() + buf1_off,
-                          buf1_nsamples);
+        {
+            WorkMeter::Scope work(meter);
+
+            demod->demodulate(buf1->data() + buf1_off,
+                              buf1_nsamples);
+        }
 
         // Wait for the second buffer to start to fill. If demodulation is very
         // fast, it is possible for us to finish demodulating the first buffer
@@ -185,8 +195,12 @@ void OverlapTDChannelizer::demodWorker(std::atomic<bool> &reconfig)
                 n = std::min(buf2->nsamples.load(std::memory_order_acquire) - ndemodulated, nwanted);
 
                 if (n != 0) {
-                    demod->demodulate(&(*buf2)[ndemodulated],
-                                      n);
+                    {
+                        WorkMeter::Scope work(meter);
+
+                        demod->demodulate(&(*buf2)[ndemodulated],
+                                          n);
+                    }
 
                     ndemodulated += n;
                     nwanted -= n;

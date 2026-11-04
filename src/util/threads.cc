@@ -2,6 +2,7 @@
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
 #include <math.h>
+#include <stdio.h>
 
 #include <atomic>
 
@@ -33,6 +34,22 @@ void setRealtimePriority(pthread_t t)
         logScheduler(LOGERROR, "pthread_setschedparam: %s; error=%d",
             strerror(ret),
             ret);
+}
+
+void setThreadName(std::thread &t, const char *name)
+{
+    char buf[16];
+
+    snprintf(buf, sizeof(buf), "%s", name);
+    pthread_setname_np(t.native_handle(), buf);
+}
+
+void setThreadName(std::thread &t, const char *name, unsigned index)
+{
+    char buf[16];
+
+    snprintf(buf, sizeof(buf), "%s%u", name, index);
+    pthread_setname_np(t.native_handle(), buf);
 }
 
 void makeThisThreadHighPriority(void)

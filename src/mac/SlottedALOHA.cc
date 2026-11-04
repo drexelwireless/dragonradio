@@ -34,9 +34,14 @@ SlottedALOHA::SlottedALOHA(std::shared_ptr<USRP> usrp,
     reconfigure();
 
     rx_thread_ = std::thread(&SlottedALOHA::rxWorker, this);
+
+    setThreadName(rx_thread_, "dr-mac-rx");
     tx_thread_ = std::thread(&SlottedALOHA::txWorker, this);
+    setThreadName(tx_thread_, "dr-mac-tx");
     tx_slot_thread_ = std::thread(&SlottedALOHA::txSlotWorker, this);
+    setThreadName(tx_slot_thread_, "dr-mac-slot");
     tx_notifier_thread_ = std::thread(&SlottedALOHA::txNotifier, this);
+    setThreadName(tx_notifier_thread_, "dr-mac-notify");
 }
 
 SlottedALOHA::~SlottedALOHA()

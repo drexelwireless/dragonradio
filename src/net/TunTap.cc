@@ -271,6 +271,7 @@ void TunTap::start(void)
 {
     done_ = false;
     worker_thread_ = std::thread(&TunTap::worker, this);
+    setThreadName(worker_thread_, "dr-tuntap");
 }
 
 void TunTap::stop(void)

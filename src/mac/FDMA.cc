@@ -4,6 +4,7 @@
 #include "Clock.hh"
 #include "USRP.hh"
 #include "mac/FDMA.hh"
+#include "util/threads.hh"
 
 FDMA::FDMA(std::shared_ptr<USRP> usrp,
            std::shared_ptr<PHY> phy,
@@ -25,8 +26,11 @@ FDMA::FDMA(std::shared_ptr<USRP> usrp,
   , channel_synthesizer_(synthesizer)
 {
     rx_thread_ = std::thread(&FDMA::rxWorker, this);
+    setThreadName(rx_thread_, "dr-mac-rx");
     tx_thread_ = std::thread(&FDMA::txWorker, this);
+    setThreadName(tx_thread_, "dr-mac-tx");
     tx_notifier_thread_ = std::thread(&FDMA::txNotifier, this);
+    setThreadName(tx_notifier_thread_, "dr-mac-notify");
 }
 
 FDMA::~FDMA()
