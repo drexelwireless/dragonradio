@@ -22,7 +22,7 @@
    "nodes": [
     {
      "id": 1,
-     "host": "grid04",
+     "host": "grid08",
      "family": "N210",
      "addr": "addr=192.168.10.2",
      "tx_gain": 10,
@@ -32,7 +32,7 @@
     },
     {
      "id": 2,
-     "host": "grid08",
+     "host": "grid19",
      "family": "N210",
      "addr": "addr=192.168.10.2",
      "tx_gain": 10,
@@ -44,7 +44,7 @@
    "strata": {
     "pair_type": "N210<->N210",
     "strength": "strong",
-    "placement": "grid04-grid08 (radio map 2026-10-25: tone SNR 102.6 dB weaker direction)",
+    "placement": "grid08-grid19 (radio map 2026-10-25: tone SNR 102.2 dB weaker direction)",
     "power": "TX 10/10 dB, RX 20/20 dB",
     "clock": "shared 10 MHz + PPS (OctoClock)"
    }
