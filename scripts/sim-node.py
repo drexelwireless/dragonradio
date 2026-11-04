@@ -85,6 +85,8 @@ def parse_set(s):
     key, sep, value = s.partition('=')
     if not sep:
         raise ValueError(f'bad --set {s!r}; expected KEY=VALUE')
+    if value == 'None':
+        return key, None
     for conv in (int, float):
         try:
             return key, conv(value)

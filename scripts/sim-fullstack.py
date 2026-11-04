@@ -282,8 +282,11 @@ def node_command(args, scenario, node, sock, outdir):
            '--results', str(outdir / f'node{node}.json'),
            # This branch's radios share FFTW wisdom (/tmp/dragonwisdom) by
            # default; nodes starting together on one host raced on that file
-           # ("Could not import wisdom"). One file per node for the run.
-           '--set', f'fftw_wisdom={Path(args.outdir).resolve()}/fftw-wisdom-node{node}']
+           # ("Could not import wisdom"). Per-node files avoided the race but
+           # made start-up uneven (a node without wisdom plans for 4 s and
+           # starts traffic 4 s late, past its peers' drain). No wisdom, as on
+           # the old branch: every node plans the same.
+           '--set', 'fftw_wisdom=None']
     if sc['arq']:
         cmd.append('--arq')
     for (dest, port, pps, size) in sc['flows'].get(node, []):
