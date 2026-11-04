@@ -40,5 +40,6 @@ virtualenv -q --system-site-packages -p python3 venv
 site=venv/lib/$py/site-packages
 echo "$src/python/dragonradio/src" > "$site/00-dragonradio-port.pth"
 "$image/venv/bin/python" -c 'import site; print("\n".join(p for p in site.getsitepackages() if "/usr/local/dragonradio/venv" in p))' > "$site/50-image-venv.pth"
-venv/bin/python -c "import dragonradio.config as c; assert c.__file__.startswith('$src'), c.__file__; print('venv python package:', c.__file__)"
+# (dragonradio.config imports the C++ module, which only the radio embeds: locate, don't import)
+venv/bin/python -c "import importlib.util as u; o = u.find_spec('dragonradio.config').origin; assert o.startswith('$src'), o; print('venv python package:', o)"
 echo "built $(cat COMMIT 2>/dev/null || echo '?') in $src/build; run: VIRTUAL_ENV=$src/venv $src/build/dragonradio SCRIPT"

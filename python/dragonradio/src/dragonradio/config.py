@@ -357,8 +357,12 @@ class Config:
     """ARQ window size"""
     arq_enforce_ordering: bool = False
     """Should ARQ enforce packet ordering?"""
-    arq_max_retransmissions: Optional[int] = None
-    """Maximum number of times a packet is allowed to be retransmitted"""
+    arq_max_retransmissions: Optional[int] = 8
+    """Maximum number of times a packet is allowed to be retransmitted.
+
+    Default 8 since 2026-11-04 (was None, unlimited). A negative value or None
+    means unlimited. SYN packets are always retransmitted, and a packet's
+    deadline still applies. See docs/defaults-2026-11.rst."""
     arq_unreachable_timeout: Optional[float] = None
     """Timeout after which a node is marked unreachable (sec)"""
     arq_proactive_unreachable: bool = False
@@ -487,6 +491,10 @@ class Config:
     # Tail drop queue options
     tail_drop_max_size: int = 5*1500
     """Tail drop queue maximum size (bytes)"""
+    tail_drop_push_out: bool = True
+    """When the tail drop queue is full, push out packets whose destination's
+    send window is closed (default since 2026-11-04; False restores plain tail
+    drop). See docs/defaults-2026-11.rst."""
 
     # RED queue options
     red_gentle: bool = True
@@ -1148,7 +1156,8 @@ class Config:
         arq.add_argument('--max-retransmissions', action='store', type=int,
                          dest='arq_max_retransmissions',
                          metavar='COUNT',
-                         help='set maximum number of retransmission attempts')
+                         help='set maximum number of retransmission attempts '
+                              '(default 8; negative means unlimited)')
         arq.add_argument('--unreachable-timout', action='store', type=float,
                          dest='arq_unreachable_timeout',
                          metavar='SEC',
@@ -1258,6 +1267,9 @@ class Config:
         net.add_argument('--taildrop', action='store_const', const='taildrop',
                          dest='queue',
                          help='use tail drop network queue algorithm')
+        net.add_argument('--no-taildrop-push-out', action='store_const', const=False,
+                         dest='tail_drop_push_out',
+                         help='plain tail drop: never push out packets for a blocked destination')
         net.add_argument('--red', action='store_const', const='red',
                          dest='queue',
                          help='use RED network queue algorithm')

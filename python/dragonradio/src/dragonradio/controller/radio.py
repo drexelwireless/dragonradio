@@ -683,7 +683,9 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
             # ARQ parameters
             controller.enforce_ordering = config.arq_enforce_ordering
-            controller.max_retransmissions = config.arq_max_retransmissions
+            # A negative limit means unlimited (None), as the default once was.
+            max_retx = config.arq_max_retransmissions
+            controller.max_retransmissions = None if max_retx is not None and max_retx < 0 else max_retx
             controller.unreachable_timeout = config.arq_unreachable_timeout
             controller.proactive_unreachable = config.arq_proactive_unreachable
             controller.purge_unreachable = config.arq_purge_unreachable
@@ -745,6 +747,7 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
             netq.use_wall_timestamp = config.mandate_use_wall_timestamp
         elif config.queue == 'taildrop':
             netq = TailDropQueue(config.tail_drop_max_size)
+            netq.push_out = config.tail_drop_push_out
         elif config.queue == 'red':
             netq = REDQueue(config.red_gentle,
                             config.red_min_thresh,
