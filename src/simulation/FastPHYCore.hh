@@ -58,6 +58,18 @@ inline uint32_t crc32(const unsigned char *p, int count) {
     for (int j = 0; j < count; ++j) crc = table[(crc ^ p[j]) & 255] ^ (crc >> 8);
     return crc ^ 0xffffffffU;
 }
+// True if every component is finite. A branch-free reduction (vectorizable),
+// unlike an early-exit loop over std::isfinite.
+inline bool all_finite(const C *x, int count) {
+    const float *f = reinterpret_cast<const float *>(x);
+    uint32_t bad = 0;
+    for (int j = 0; j < 2 * count; ++j) {
+        uint32_t u;
+        std::memcpy(&u, f + j, sizeof(u));
+        bad |= uint32_t((u & 0x7f800000U) == 0x7f800000U);   // exponent all ones: inf or NaN
+    }
+    return bad == 0;
+}
 inline uint32_t load_be32(const unsigned char *p) {
     return (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8) | p[3];
 }
@@ -680,9 +692,8 @@ struct Stream {
         return true;
     }
     void feed(const C *in, int count, bool final, std::vector<Result> &results) {
-        for (int j = 0; j < count; ++j)
-            if (!std::isfinite(in[j].real()) || !std::isfinite(in[j].imag()))
-                throw std::runtime_error("stream must contain finite IQ");
+        if (!all_finite(in, count))
+            throw std::runtime_error("stream must contain finite IQ");
         const int L = phy.length;
         const int old = int(buffer.size());
         buffer.insert(buffer.end(), in, in + count);

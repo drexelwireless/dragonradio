@@ -72,6 +72,14 @@ struct FramedPHY {
     std::vector<int> data_bins, pilot_bins;
     std::unique_ptr<FastPHY> core;
     int user_id;
+    // Per-frame workspaces, reused across frames (one engine per modulator
+    // or demodulator thread; P4: no allocation per received frame).
+    struct Workspace {
+        std::vector<C> rows;
+        std::vector<double> phases;
+        std::vector<unsigned char> bytes, descrambled, soft;
+        std::vector<float> confidence;
+    } ws;
 
     // bins are FFT indices in [0, n); one allocation (full-band OFDM).
     FramedPHY(int n_, int cp_, const std::vector<int> &data, const std::vector<int> &pilots,
@@ -213,14 +221,19 @@ struct FramedPHY {
         const double omega = f.prepare(in, start, omega0, header_span());
         metrics[2] = omega * n / (2 * double(PI));
         if (!f.invert(a)) return fh;
-        std::vector<C> rows(H * nd);
-        std::vector<double> phases(H);
+        std::vector<C> &rows = ws.rows;
+        std::vector<double> &phases = ws.phases;
+        rows.resize(size_t(H) * nd);
+        phases.resize(H);
         for (int s = 0; s < H; ++s) { phases[s] = f.symbol(a, s, rows.data() + s * nd); FastPHY::unwrap(phases, s); }
         double intercept, slope;
         FastPHY::phase_line(phases, H, intercept, slope);
         const int air_bits = header_air * 8;
-        std::vector<unsigned char> on_air(header_air, 0), descrambled(air_bits, 0);
-        std::vector<float> confidence(air_bits);
+        std::vector<unsigned char> &on_air = ws.bytes, &descrambled = ws.descrambled;
+        std::vector<float> &confidence = ws.confidence;
+        on_air.assign(header_air, 0);
+        descrambled.assign(air_bits, 0);
+        confidence.resize(air_bits);
         double noise = 0;
         int points = 0;
         for (int s = 0; s < H; ++s) {
@@ -244,7 +257,8 @@ struct FramedPHY {
         unsigned char header[kHeaderBytes] = {0};
 #if defined(DRAGONRADIO_NATIVE_FEC)
         if (header_stage) {
-            std::vector<unsigned char> soft_in(air_bits);
+            std::vector<unsigned char> &soft_in = ws.soft;
+            soft_in.resize(air_bits);
             soft_bits(descrambled.data(), confidence.data(), air_bits, noise / std::max(points, 1), Q, soft_in.data());
             header_stage->decode_soft(soft_in.data(), header);
         } else
@@ -284,16 +298,25 @@ struct FramedPHY {
         metrics[2] = omega * n / (2 * double(PI));
         payload.clear();
         if (!f.invert(a)) return false;
-        std::vector<C> rows(total * nd);
-        std::vector<double> phases(total);
+        std::vector<C> &rows = ws.rows;
+        std::vector<double> &phases = ws.phases;
+        rows.resize(size_t(total) * nd);
+        phases.resize(total);
         for (int s = 0; s < total; ++s) { phases[s] = f.symbol(a, s, rows.data() + s * nd); FastPHY::unwrap(phases, s); }
         double intercept, slope;
         FastPHY::phase_line(phases, total, intercept, slope);
         metrics[2] += slope * n / (2 * double(PI) * f.length);
         const int used = on_air_bytes(fh.length, fh.fec0, fh.fec1) * 8, header_bits = 2 * H * nd;
-        std::vector<unsigned char> body((used + 7) / 8, 0);
-        std::vector<float> confidence(used);
-        std::vector<unsigned char> descrambled(fh.coded() ? used : 0);
+        // Soft input only matters to a convolutional outer stage: liquid's
+        // soft decoder (and NativeFEC's port of it) hard-decides the soft bits
+        // of any other outer code, so those decode from hard decisions (P4).
+        const bool soft_input = fh.coded() && soft && fec::detail::conv(fh.fec1);
+        std::vector<unsigned char> &body = ws.bytes;
+        std::vector<float> &confidence = ws.confidence;
+        std::vector<unsigned char> &descrambled = ws.descrambled;
+        body.assign((used + 7) / 8, 0);
+        confidence.resize(used);
+        descrambled.resize(soft_input ? used : 0);
         double error = 0, noise = 0;
         int points = 0;
         for (int s = H; s < total; ++s) {
@@ -311,7 +334,7 @@ struct FramedPHY {
                     const int b = hard[k] ^ a.prbs[header_bits + bit + k];
                     body[(bit + k) / 8] |= b << (7 - (bit + k) % 8);
                     confidence[bit + k] = conf[k];
-                    if (fh.coded()) descrambled[bit + k] = (unsigned char)b;
+                    if (soft_input) descrambled[bit + k] = (unsigned char)b;
                 }
             }
         }
@@ -320,9 +343,10 @@ struct FramedPHY {
             if (!fec::kAvailable) return false;
             fec::Packetizer &pk = packetizers.get(fh.length, fh.fec0, fh.fec1);
             payload.assign(fh.length, 0);
-            if (!soft)
+            if (!soft_input)
                 return pk.decode(body.data(), payload.data());
-            std::vector<unsigned char> soft_in(used);
+            std::vector<unsigned char> &soft_in = ws.soft;
+            soft_in.resize(used);
             soft_bits(descrambled.data(), confidence.data(), used, noise / std::max(points, 1), bps == 2 ? Q : A16, soft_in.data());
             return pk.decode_soft(soft_in.data(), payload.data());
         }
@@ -338,16 +362,62 @@ struct FramedPHY {
     // from approximate LLRs |LLR| = 4 * (d_min / 2) * confidence / N0, where
     // confidence is the distance to the decision boundary times |H|^2 and N0
     // the mean pre-equalization error power of the section.
+    //
+    // The value is lround(255 p) for a decided 1 and lround(255 (1 - p)) for
+    // a decided 0, p = 1 / (1 + exp(-llr)) (soft_bits_reference). Instead of
+    // an exp and lround per bit, it is computed from the 127 LLRs at which
+    // lround(255 p) steps (P4: this was 30-45% of coded demodulation).
     static void soft_bits(const unsigned char *decided, const float *confidence, int count, double n0,
                           double half_dmin, unsigned char *out) {
+        static const SoftTable table;
         n0 = std::max(n0, 1e-12);
+        const double k = 4 * half_dmin / n0;
         for (int i = 0; i < count; ++i) {
-            const double llr = 4 * half_dmin * confidence[i] / n0;
-            const double p = 1 / (1 + std::exp(-std::min(llr, 60.0)));   // P(decided bit correct)
-            const double v = decided[i] ? 255 * p : 255 * (1 - p);
-            out[i] = (unsigned char)std::lround(std::min(255.0, std::max(0.0, v)));
+            const double llr = k * confidence[i];
+            if (!(llr >= 1e-12)) {
+                // Near the tie p = 1/2 the reference's double rounding decides
+                // (lround(127.5) = 128 for both decisions); use it directly.
+                out[i] = soft_bits_reference(decided[i], llr);
+                continue;
+            }
+            const int v1 = table.value(llr);   // lround(255 p), 128..255
+            out[i] = (unsigned char)(decided[i] ? v1 : 255 - v1);
         }
     }
+    // The per-bit formula soft_bits replaces (kept for tests).
+    static unsigned char soft_bits_reference(unsigned char decided, double llr) {
+        const double p = 1 / (1 + std::exp(-std::min(llr, 60.0)));   // P(decided bit correct)
+        const double v = decided ? 255 * p : 255 * (1 - p);
+        return (unsigned char)std::lround(std::min(255.0, std::max(0.0, v)));
+    }
+    // lround(255 / (1 + exp(-llr))) for llr >= 0 by threshold counting:
+    // the value is 128 + #{j in 128..254 : llr >= logit((j + 0.5) / 255)}.
+    struct SoftTable {
+        static constexpr int kSteps = 127;
+        static constexpr double kScale = 64;       // start index resolution (1/64 nat)
+        double threshold[kSteps];
+        std::vector<unsigned char> start;          // count of thresholds <= i / kScale
+        SoftTable() {
+            for (int j = 0; j < kSteps; ++j) {
+                const double q = (128 + j + 0.5) / 255;
+                threshold[j] = std::log(q / (1 - q));
+            }
+            const int bins = int(threshold[kSteps - 1] * kScale) + 2;
+            start.resize(bins);
+            int c = 0;
+            for (int i = 0; i < bins; ++i) {
+                while (c < kSteps && threshold[c] <= i / kScale) ++c;
+                start[i] = (unsigned char)c;
+            }
+        }
+        int value(double llr) const {
+            if (!(llr > 0)) return 128;
+            if (llr >= threshold[kSteps - 1]) return 255;
+            int c = start[std::min<size_t>(size_t(llr * kScale), start.size() - 1)];
+            while (c < kSteps && llr >= threshold[c]) ++c;
+            return 128 + c;
+        }
+    };
 
 private:
     static void store_be32(unsigned char *p, uint32_t v) {
@@ -511,9 +581,8 @@ struct FramedStream {
         return finish(final, results);
     }
     void feed(const C *in, int count, bool final, std::vector<Result> &results) {
-        for (int j = 0; j < count; ++j)
-            if (!std::isfinite(in[j].real()) || !std::isfinite(in[j].imag()))
-                throw std::runtime_error("stream must contain finite IQ");
+        if (!all_finite(in, count))
+            throw std::runtime_error("stream must contain finite IQ");
         const int L = phy.length_samples();
         const int old = int(buffer.size());
         buffer.insert(buffer.end(), in, in + count);
