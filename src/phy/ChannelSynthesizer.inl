@@ -3,6 +3,7 @@
 
 #include <pybind11/pybind11.h>
 
+#include "logging.hh"
 #include "phy/ChannelSynthesizer.hh"
 
 namespace py = pybind11;
@@ -165,6 +166,7 @@ void ChannelSynthesizer<ChannelModulator>::push_slot(const WallClock::time_point
 
     slot_ = slot;
     slot_deadline_ = when;
+    ++slot_gen_;
 
     txrecord_.timestamp = WallClock::to_mono_time(when);
     txrecord_.delay = prev_oversample;
@@ -202,6 +204,7 @@ TXSlot ChannelSynthesizer<ChannelModulator>::pop_slot(void)
         slot.txrecord = std::move(txrecord_);
 
         slot_.reset();
+        ++slot_gen_;
         high_water_mark_ = 0;
     }
 
@@ -228,13 +231,16 @@ void ChannelSynthesizer<ChannelModulator>::stop(void)
 }
 
 template <class ChannelModulator>
-bool ChannelSynthesizer<ChannelModulator>::push(std::unique_ptr<ModPacket>&& mpkt)
+bool ChannelSynthesizer<ChannelModulator>::push(std::unique_ptr<ModPacket>&& mpkt, std::optional<uint64_t> *full_slot)
 {
     {
         std::unique_lock<std::mutex> lock(queue_mutex_);
 
-        if (!can_push(mpkt->nsamples))
+        if (!can_push(mpkt->nsamples)) {
+            if (full_slot && slot_)
+                *full_slot = slot_gen_;
             return false;
+        }
 
         mpkt->start = txrecord_.nsamples;
 
@@ -259,13 +265,14 @@ bool ChannelSynthesizer<ChannelModulator>::can_push(size_t nsamples) const
 }
 
 template <class ChannelModulator>
-bool ChannelSynthesizer<ChannelModulator>::wait_until_can_push(void)
+bool ChannelSynthesizer<ChannelModulator>::wait_until_can_push(std::optional<uint64_t> full_slot)
 {
     std::unique_lock<std::mutex> lock(queue_mutex_);
+    auto                         ready = [&]{ return can_push(1) && (!full_slot || slot_gen_ != *full_slot); };
 
-    producer_cv_.wait(lock, [&]{ return needs_sync() || can_push(1); });
+    producer_cv_.wait(lock, [&]{ return needs_sync() || ready(); });
 
-    return can_push(1);
+    return ready();
 }
 
 template <class ChannelModulator>
@@ -273,11 +280,15 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
 {
     std::unique_ptr<ChannelModulator> mod;
     std::shared_ptr<NetPacket>        pkt;
+    std::optional<uint64_t>           full_slot; // Slot pkt did not fit in
 
     for (;;) {
         // Synchronize on state change
         if (needs_sync()) {
             sync();
+
+            // The schedule may have changed (FDMA has no slots to wait for).
+            full_slot.reset();
 
             if (done_)
                 return;
@@ -294,9 +305,12 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             }
         }
 
-        // Wait until we can push
-        if (!wait_until_can_push())
+        // Wait until we can push, and if pkt did not fit in a slot, until
+        // that slot is over
+        if (!wait_until_can_push(full_slot))
             continue;
+
+        full_slot.reset();
 
         // Get a packet to modulate. We may already have a packet if the last
         // push failed.
@@ -312,11 +326,18 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
         mod->modulate(std::move(pkt), g, *mpkt);
 
         // If we didn't successfully push the packet, save the packet and try
-        // again next time
-        if (!push(std::move(mpkt))) {
-            if (max_samples_ && mpkt->nsamples >= *max_samples_)
+        // again next time. A packet that did not fit in the rest of a slot
+        // cannot fit later in the same slot (the high-water mark is fixed
+        // when the slot is pushed and other threads only add samples), so
+        // push records the slot and we wait for the next one. Retrying at
+        // once re-modulated the packet in a tight loop until the slot was
+        // popped (tests/fullstack/test_synth_slot.cc; codex/ofdma-simulation
+        // f0f0f3b8 fixed the same bug in UnichannelSynthesizer).
+        if (!push(std::move(mpkt), &full_slot)) {
+            if (max_samples_ && mpkt->nsamples >= *max_samples_) {
                 logPHY(LOGWARNING, "Modulated packet is larger than slot!");
-            else
+                full_slot.reset();
+            } else
                 pkt = std::move(mpkt->pkt);
         }
     }

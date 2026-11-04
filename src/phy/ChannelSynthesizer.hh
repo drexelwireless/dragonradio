@@ -59,6 +59,9 @@ protected:
     /** @brief Deadline of slot we should synthesize. */
     WallClock::time_point slot_deadline_;
 
+    /** @brief Slot generation, incremented by push_slot and pop_slot. */
+    uint64_t slot_gen_ = 0;
+
     /** @brief Maximum number of samples in a packet */
     std::optional<size_t> max_samples_;
 
@@ -83,15 +86,22 @@ protected:
     /** @brief Threads running modWorker */
     std::vector<std::thread> mod_threads_;
 
-    /** @brief Push a modulated packet onto the queue */
-    bool push(std::unique_ptr<ModPacket>&& mpkt);
+    /** @brief Push a modulated packet onto the queue
+     * @param mpkt The modulated packet
+     * @param full_slot If the packet does not fit in the current slot, set to
+     * that slot's generation
+     */
+    bool push(std::unique_ptr<ModPacket>&& mpkt, std::optional<uint64_t> *full_slot = nullptr);
 
     /** @brief Can we push a modulated packet? */
     /** The queue mutex must be held by the caller */
     bool can_push(size_t nsamples) const;
 
-    /** @brief Wait until we can push a packet */
-    bool wait_until_can_push(void);
+    /** @brief Wait until we can push a packet
+     * @param full_slot If set, also wait until the slot with this generation
+     * has ended
+     */
+    bool wait_until_can_push(std::optional<uint64_t> full_slot = std::nullopt);
 
     /** @brief Modulation worker */
     void modWorker(unsigned tid);
