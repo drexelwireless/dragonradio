@@ -41,5 +41,11 @@ void exportRadio(py::module &m)
             "float: Time required for TX ramp-up (sec)")
         .def_property_readonly("now",
             &Radio::now)
+        .def_property_readonly("tx_underflow_count",
+            &Radio::getTXUnderflowCount,
+            "int: TX underflows since the last read (reading resets it)")
+        .def_property_readonly("tx_late_count",
+            &Radio::getTXLateCount,
+            "int: late TX bursts since the last read (reading resets it)")
         ;
 }

@@ -11,6 +11,7 @@ set(FULLSTACK_TESTS
   test_native_qam
   test_net_queue
   test_packet_align
+  test_sim_device
   test_timer_wake
 )
 add_custom_target(fullstack-tests)

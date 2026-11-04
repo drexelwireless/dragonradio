@@ -77,6 +77,7 @@ void exportClock(py::module &m);
 void exportWorkQueue(py::module &m);
 void exportRadio(py::module &m);
 void exportUSRP(py::module &m);
+void exportSim(py::module &m);
 void exportEstimators(py::module &m);
 void exportElement(py::module &m);
 void exportNet(py::module &m);

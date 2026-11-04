@@ -73,10 +73,13 @@ add_library(DragonRadio
   python/Packet.cc
   python/Radio.cc
   python/Resample.cc
+  python/Sim.cc
   python/Snapshot.cc
   python/Synthesizer.cc
   python/USRP.cc
   python/WorkQueue.cc
+  sim/SimTraffic.cc
+  sim/SimUSRP.cc
   util/exec.cc
   util/net.cc
   util/ssprintf.cc
