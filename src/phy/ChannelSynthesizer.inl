@@ -236,7 +236,9 @@ void ChannelSynthesizer<ChannelModulator>::stop(void)
 }
 
 template <class ChannelModulator>
-bool ChannelSynthesizer<ChannelModulator>::push(std::unique_ptr<ModPacket>&& mpkt, std::optional<uint64_t> *full_slot)
+bool ChannelSynthesizer<ChannelModulator>::push(std::unique_ptr<ModPacket>&& mpkt,
+                                                std::optional<uint64_t> *full_slot,
+                                                bool *empty_slot)
 {
     {
         std::unique_lock<std::mutex> lock(queue_mutex_);
@@ -244,6 +246,8 @@ bool ChannelSynthesizer<ChannelModulator>::push(std::unique_ptr<ModPacket>&& mpk
         if (!can_push(mpkt->nsamples)) {
             if (full_slot && slot_)
                 *full_slot = slot_gen_;
+            if (empty_slot)
+                *empty_slot = slot_ && txrecord_.nsamples == 0;
             return false;
         }
 
@@ -291,6 +295,8 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
     std::deque<std::shared_ptr<NetPacket>> held;
     unsigned                               max_users = 1;
     constexpr size_t                       kMaxHeld = 4;
+    // Modulate pkt alone: its burst with a partner did not fit in a slot.
+    bool                                   solo = false;
 
     for (;;) {
         // Synchronize on state change
@@ -313,6 +319,16 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                                                          *chanidx_,
                                                          tx_rate_);
                 max_users = channels_[*chanidx_].phy->getMaxBurstUsers();
+
+                // One kicker serves the synthesizer, and a kick ends
+                // whichever pop is blocked, so batching needs a single
+                // modulation thread (the default).
+                if (max_users > 1 && nthreads_ > 1) {
+                    if (tid == 0)
+                        logPHY(LOGWARNING, "OFDMA burst batching needs one modulation thread; %u configured: one packet per burst",
+                               nthreads_);
+                    max_users = 1;
+                }
             }
         }
 
@@ -341,7 +357,7 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
         // unsuitable is held, in order. Other PHYs never get here.
         std::vector<std::shared_ptr<NetPacket>> burst;
 
-        if (max_users > 1 && pkt->hdr.nexthop != kNodeBroadcast) {
+        if (max_users > 1 && !solo && pkt->hdr.nexthop != kNodeBroadcast) {
             auto suitable = [&](const std::shared_ptr<NetPacket> &p) {
                 return p->hdr.nexthop != kNodeBroadcast && p->hdr.nexthop != pkt->hdr.nexthop;
             };
@@ -366,6 +382,8 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
         std::unique_ptr<ModPacket> mpkt = std::make_unique<ModPacket>();
         float                      g = channels_[*chanidx_].phy->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
+        solo = false;
+
         if (burst.empty())
             mod->modulate(std::move(pkt), g, *mpkt);
         else {
@@ -381,8 +399,21 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
         // once re-modulated the packet in a tight loop until the slot was
         // popped (tests/fullstack/test_synth_slot.cc; codex/ofdma-simulation
         // f0f0f3b8 fixed the same bug in UnichannelSynthesizer).
-        if (!push(std::move(mpkt), &full_slot)) {
-            if (max_samples_ && mpkt->nsamples >= *max_samples_) {
+        bool empty_slot = false;
+
+        if (!push(std::move(mpkt), &full_slot, &empty_slot)) {
+            if (!mpkt->partners.empty() && (empty_slot || (max_samples_ && mpkt->nsamples >= *max_samples_))) {
+                // A burst that cannot fit in a slot (it did not fit in an
+                // empty one): a two-user burst is longer than either packet
+                // alone (each user gets part of the tones), so send the
+                // packets separately. max_samples_ alone does not catch
+                // this: a one-slot schedule leaves it unset.
+                pkt = std::move(mpkt->pkt);
+                for (auto p = mpkt->partners.rbegin(); p != mpkt->partners.rend(); ++p)
+                    held.push_front(std::move(*p));
+                solo = true;
+                full_slot.reset();
+            } else if (max_samples_ && mpkt->nsamples >= *max_samples_) {
                 logPHY(LOGWARNING, "Modulated packet is larger than slot!");
                 full_slot.reset();
             } else {

@@ -96,8 +96,12 @@ protected:
      * @param mpkt The modulated packet
      * @param full_slot If the packet does not fit in the current slot, set to
      * that slot's generation
+     * @param empty_slot If the packet does not fit, set to whether the slot
+     * held nothing else (it can then never fit in a slot)
      */
-    bool push(std::unique_ptr<ModPacket>&& mpkt, std::optional<uint64_t> *full_slot = nullptr);
+    bool push(std::unique_ptr<ModPacket>&& mpkt,
+              std::optional<uint64_t> *full_slot = nullptr,
+              bool *empty_slot = nullptr);
 
     /** @brief Can we push a modulated packet? */
     /** The queue mutex must be held by the caller */

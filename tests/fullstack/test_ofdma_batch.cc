@@ -15,6 +15,7 @@
 //  3. One next hop only: single-user bursts; each waits about burst_wait for a
 //     partner (bounded by the kick, not by the next packet).
 //  4. Broadcast packets never carry a partner.
+//  5. A two-user burst too long for a slot is split: the packets go out alone.
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -181,6 +182,54 @@ int main()
     }
 
     synth->stop();
+
+    // 5. A slot that holds one packet but not a two-user burst (each user
+    // gets part of the tones, so the burst is longer than either packet):
+    // the packets go out alone; before, the burst was dropped as "larger
+    // than slot" with both packets.
+    {
+        auto mod = static_cast<PHY&>(*phy).mkPacketModulator();
+        ModPacket one, two;
+
+        mod->modulate(mkPacket(2, 0), 1.0f, one);
+        mod->modulateBurst({mkPacket(2, 0), mkPacket(3, 1)}, 1.0f, two);
+        std::printf("one packet %zu samples, two-user burst %zu samples\n", one.nsamples, two.nsamples);
+        CHECK(two.nsamples > one.nsamples + 100, "burst not longer than one packet");
+
+        const double slot = (one.nsamples + (two.nsamples - one.nsamples)/2)/fs;
+        auto         synth2 = std::make_shared<Synth>(std::vector<PHYChannel>{chan}, fs, 1);
+        auto         queue2 = std::make_shared<SimpleQueue<std::shared_ptr<NetPacket>>>(SimpleQueue<std::shared_ptr<NetPacket>>::FIFO);
+
+        synth2->setSchedule(Schedule(Schedule::sched_type{{true}}, std::chrono::duration<double>(slot), std::chrono::duration<double>(0.0)));
+        synth2->sink.connect(queue2, &queue2->out);
+        synth2->setBurstQueue(queue2);
+        synth2->setBurstWait(0.020);
+        for (uint16_t i = 0; i < 4; ++i)
+            queue2->push(mkPacket(i % 2 ? 3 : 2, 400 + i));
+
+        std::vector<unsigned> seqs;
+        size_t                partners = 0;
+
+        for (int k = 0; k < 8 && seqs.size() < 4; ++k) {
+            TXSlot s = runSlot(*synth2, 0.1);
+
+            if (getenv("OFDMA_DEBUG"))
+                std::printf("  slot %d: %zu samples, %zu bursts, queue %zu\n", k, (size_t) s.txrecord.nsamples,
+                            s.txrecord.mpkts.size(), queue2->size());
+
+            for (auto &m : s.txrecord.mpkts) {
+                seqs.push_back(static_cast<uint16_t>(m->pkt->hdr.seq));
+                partners += m->partners.size();
+            }
+        }
+        std::printf("short slots: %zu packets sent, %zu partners\n", seqs.size(), partners);
+        CHECK(seqs.size() == 4 && partners == 0, "expected 4 packets sent alone, got %zu packets and %zu partners",
+              seqs.size(), partners);
+        for (size_t i = 0; i < seqs.size(); ++i)
+            CHECK(seqs[i] == 400 + i, "packet %zu has seq %u, expected %zu", i, seqs[i], 400 + i);
+        synth2->stop();
+    }
+
     std::printf(failures ? "FAILED (%d failures)\n" : "PASSED (0 failures)\n", failures);
     return failures ? 1 : 0;
 }
