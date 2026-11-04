@@ -1,0 +1,44 @@
+#!/bin/bash
+# Read-only check of one grid radio node for grid/ota-pipeline.sh (stage 3).
+# Usage: ota-node-health.sh WORKSPACE ADDR [COMMIT]
+# Prints key=value lines and the radio probe. Opens the radio only through
+# uhd_usrp_probe (read-only: no stream, no transmission). Exits non-zero on a
+# problem that rules the node out.
+set -uo pipefail
+ws=$1; addr=$2; want=${3:-}
+status=0
+fail() { echo "FAIL $*"; status=1; }
+
+echo "host=$(hostname)"
+echo "os=$(. /etc/os-release && echo "$ID-$VERSION_ID")"
+echo "cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs) nproc=$(nproc)"
+ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo unknown)
+echo "ntp=$ntp"
+[ "$ntp" = yes ] || fail "host clock not NTP-synchronized (needed for the trial start time and PPS second)"
+if [ "$(id -u)" = 0 ]; then echo "privilege=root"
+elif sudo -n true 2>/dev/null; then echo "privilege=sudo"
+else fail "neither root nor passwordless sudo (the radio needs CAP_NET_ADMIN for its tap)"; fi
+[ -c /dev/net/tun ] && echo "tun=yes" || fail "/dev/net/tun missing"
+commit=$(cat "$ws/dragonradio/COMMIT" 2>/dev/null || echo none)
+echo "commit=$commit"
+[ -z "$want" ] || [ "$commit" = "$want" ] || fail "workspace commit $commit, expected $want"
+[ -x "$ws/dragonradio/dragonradio" ] || fail "no radio executable in $ws"
+avail=$(df --output=avail -k /tmp | tail -1)
+echo "tmp_free_kb=$avail"
+[ "$avail" -gt 2000000 ] || fail "less than 2 GB free in /tmp"
+! pgrep -x dragonradio >/dev/null || fail "a dragonradio process is already running"
+
+export LD_LIBRARY_PATH="$ws/prefix/lib:$ws/deps/usr/lib/x86_64-linux-gnu:$ws/deps/usr/lib/x86_64-linux-gnu/hdf5/serial"
+probe="$ws/deps/usr/bin/uhd_usrp_probe"
+[ -x "$probe" ] || probe=$(command -v uhd_usrp_probe || true)
+[ -n "$probe" ] || { fail "no uhd_usrp_probe"; exit $status; }
+host_ip=${addr#addr=}
+ping -c1 -W2 "$host_ip" >/dev/null 2>&1 && echo "radio_ping=yes" || fail "radio $host_ip does not answer ping"
+out=$(timeout 120 "$probe" --args "$addr" 2>&1)
+echo "$out" | grep -E "UHD|Mboard:|Device:|FPGA Version|FW Version|Time sources|Clock sources|ref_locked|Sensors|serial" | sort -u | head -30
+if echo "$out" | grep -qi "compatib"; then
+    echo "$out" | grep -i -m3 "compatib"
+    fail "FPGA/firmware not compatible with this UHD; do not flash without approval"
+fi
+echo "$out" | grep -q "Mboard:" || fail "probe found no motherboard at $addr"
+exit $status

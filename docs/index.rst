@@ -6,6 +6,7 @@ Welcome to DragonRadio's documentation!
    :caption: Contents:
 
    intro
+   defaults-2026-11
    overview
    building
    running
@@ -21,6 +22,7 @@ Welcome to DragonRadio's documentation!
    pre-ota
    ofdma-fullstack
    ota-grid
+   ota-fullstack-grid
    characterization
    container
    colosseum

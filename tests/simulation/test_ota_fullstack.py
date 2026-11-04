@@ -84,13 +84,49 @@ class DryRun(unittest.TestCase):
             self.assertIn('--ready-file', s)
             self.assertIn('--time-master 1', s)
             self.assertIn('workspace commit mismatch', s)
-            self.assertIn('ip netns add', s)
-            self.assertIn('ip link set eth', s)       # USRP interface moved into the namespace ...
-            self.assertIn('netns 1', s)               # ... and back on exit
+            # Default: the container's own network; no namespace, the USRP
+            # interface untouched, and no sudo unless the user is not root.
+            self.assertNotIn('ip netns', s)
+            self.assertNotIn('ip link set eth', s)
+            self.assertIn('if [ "$(id -u)" = 0 ]; then SUDO=; elif sudo -n true', s)
+            self.assertEqual([l for l in s.splitlines() if 'sudo' in l and 'id -u' not in l and not l.startswith('#')], [])
+            self.assertIn('tap0 already exists', s)
             self.assertNotIn('--sim-air', s)
+            self.assertNotIn('--sync-time-to-pps', s)
+            # The radio and apps get the workspace's libraries and packages.
+            self.assertIn('env PYTHONPATH=/tmp/drfs-ws/dragonradio/python/dragonradio:', s)
+            self.assertIn('LD_LIBRARY_PATH=/tmp/drfs-ws/prefix/lib:', s)
+            self.assertIn('start_wall', s)
             # Every generated radio command line parses as shell.
             radio = next(l for l in s.splitlines() if 'sim-node.py' in l)
             self.assertIsInstance(shlex.split(radio.replace('"$LOCAL', '"/x')), list)
+
+    def test_namespace_and_sudo_options(self):
+        plan = filled_plan()
+        plan.update(netns=True, privilege='sudo')
+        rc, out, _err = self.run_main(plan)
+        self.assertEqual(rc, 0)
+        s = json.loads(out)['nodes']['1']['script']
+        self.assertIn('$SUDO ip netns add', s)
+        self.assertIn('ip link set eth1 netns "$NS"', s)    # USRP interface moved into the namespace ...
+        self.assertIn('netns 1', s)                         # ... and back on exit
+        self.assertIn('SUDO="sudo -n"', s)
+        self.assertIn('$SUDO ip netns exec drfs-t001 env PYTHONPATH=', s)
+
+    def test_shared_pps(self):
+        plan = filled_plan()
+        for n in plan['nodes']:
+            n.update(clock_source='external', time_source='external')
+        rc, out, _err = self.run_main(plan)
+        self.assertEqual(rc, 0)
+        built = json.loads(out)
+        for n in built['nodes'].values():
+            self.assertIn('--clock-source external --time-source external --sync-time-to-pps', n['script'])
+        self.assertTrue(any('PPS' in w for w in built['warnings']))
+        plan['nodes'][0].update(time_source='none', sync_time_to_pps=True)
+        rc, _out, err = self.run_main(plan)
+        self.assertEqual(rc, 2)
+        self.assertIn('sync_time_to_pps needs time_source external', err)
 
     def test_traffic_maps_to_apps(self):
         plan = filled_plan()

@@ -21,9 +21,23 @@ per-node, per-trial network namespace. The controller:
    evaluate_tap), adding the plan's strata for scripts/summarize-fullstack.py.
 
 Nothing here allocates or stops reservations, flashes radios or changes
-host configuration outside the trial namespace. The node script needs
-`sudo -n` for the namespace, the moved USRP interface and the radio's
-capabilities; that, the RF approval and the reservation are the operator's.
+host configuration beyond the trial's tap interface (and, with "netns",
+its namespace). On the grid every node is its own LXC container in which
+users have full admin rights, so no sudo setup or approval is needed.
+Commands that need privilege (the radio's tap interface, namespaces) run
+directly when the node script runs as root, and through `sudo -n` when it
+runs as an admin user ("privilege": "auto", the default; "root" or "sudo"
+force one). The RF approval and the reservation are the operator's.
+
+Network: by default the radio's tap interface and the applications use the
+container's own network stack (each node is a separate container, so
+nothing collides), and the USRP interface stays where it is. "netns": true
+runs them in a per-trial namespace instead, moving the USRP interface in
+(and back on exit) when "usrp_iface" is given.
+
+Shared PPS: a node with "time_source": "external" gets --sync-time-to-pps,
+so device time is set at a PPS edge and every radio on the same PPS counts
+the same seconds.
 
 Usage:
   ota-fullstack.py --plan PLAN.json                 # validate and print commands
@@ -31,6 +45,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -88,7 +103,9 @@ def validate(plan):
     ids = [n.get('id') for n in nodes]
     require(sorted(ids) == list(range(1, len(nodes) + 1)), 'node ids must be 1..N')
     require(len({n.get('host') for n in nodes}) == len(nodes), 'hosts must be distinct')
-    require(len({n.get('addr') for n in nodes}) == len(nodes), 'device addresses must be distinct')
+    # Grid nodes each reach their own radio at the same local address, so a
+    # device is identified by host and address together.
+    require(len({(n.get('host'), n.get('addr')) for n in nodes}) == len(nodes), 'devices (host, addr) must be distinct')
     for n in nodes:
         for key in ('host', 'workspace', 'addr', 'family', 'tx_gain', 'rx_gain'):
             require(key in n and n[key] not in ('', None) and PLACEHOLDER not in str(n[key]),
@@ -102,12 +119,23 @@ def validate(plan):
         if n['family'] == 'N210':
             require(n.get('time_source', '') in ('', 'none', 'external', 'mimo'),
                     f'node {n["id"]}: N210 time_source must be empty, none, external or mimo')
-        if n.get('usrp_iface'):
+        if n.get('usrp_iface') and plan.get('netns', False):
             require('usrp_iface_addr' in n, f'node {n["id"]}: usrp_iface needs usrp_iface_addr (host side, CIDR)')
+        if n.get('sync_time_to_pps'):
+            require(n.get('time_source') == 'external', f'node {n["id"]}: sync_time_to_pps needs time_source external')
+    require(plan.get('privilege', 'auto') in ('auto', 'root', 'sudo'), 'privilege must be auto, root or sudo')
+    require(isinstance(plan.get('netns', False), bool), 'netns must be true or false')
+    require(isinstance(plan.get('ssh_options', []), list) and all(isinstance(o, str) for o in plan.get('ssh_options', [])),
+            'ssh_options must be a list of strings')
+    require(5 <= plan.get('start_lead_s', 20) <= 120, 'start_lead_s must be 5..120')
+    require(10 <= plan.get('go_timeout_s', 90) <= 300, 'go_timeout_s must be 10..300')
     ts = plan.get('timesync', {})
     require(ts.get('time_master') in ids, 'timesync.time_master must be a node id: independent clocks need it')
     if all(n.get('time_source') == 'external' and n.get('clock_source') == 'external' for n in nodes):
-        warnings.append('all nodes on external PPS/10 MHz: timesync assumes no skew (radio/timesync.py)')
+        warnings.append('all nodes on external PPS/10 MHz: device times are set at a PPS edge; '
+                        'timesync then fits a residual offset only (radio/timesync.py)')
+    elif any(n.get('time_source') == 'external' for n in nodes):
+        warnings.append('only some nodes use an external time source: their clocks are independent of the others')
     for t in plan['traffic']:
         require(t.get('kind') in APP_KINDS, f'traffic kind must be one of {sorted(APP_KINDS)}')
         require(t.get('src') in ids and t.get('dst') in ids and t['src'] != t['dst'], 'traffic src/dst must be distinct node ids')
@@ -152,8 +180,9 @@ def node_script(plan, node):
     shared = f'{plan["results_root"]}/{trial}'
     ns = f'drfs-{trial}'[:15]
     warmup, duration, drain = plan.get('warmup_s', 20), plan['duration_s'], plan.get('drain_s', 5)
-    go_wait = plan.get('go_timeout_s', 60)
-    total = int(warmup + duration + drain + go_wait + 30)
+    go_wait = plan.get('go_timeout_s', 90)
+    lead = plan.get('start_lead_s', 20)
+    total = int(warmup + duration + drain + go_wait + lead + 30)
     ts = plan['timesync']
     radio = [f'{ws}/dragonradio/dragonradio', f'{ws}/dragonradio/scripts/sim-node.py', '--hardware',
              '--addr', node['addr'], '-i', str(nid), '-n', str(len(plan['nodes'])),
@@ -163,60 +192,86 @@ def node_script(plan, node):
         radio += ['--clock-source', node['clock_source']]
     if node.get('time_source'):
         radio += ['--time-source', node['time_source']]
+    if node.get('sync_time_to_pps', node.get('time_source') == 'external'):
+        radio += ['--sync-time-to-pps']
     radio += PHYS[plan['phy']] + plan.get('radio_args', []) + node.get('radio_args', [])
     radio += ['--arq', '-l', f'{local}/logs', '--log-invalid-headers',
               '--time-master', str(ts['time_master']), '--hello-period', str(ts.get('hello_period', 0.5)),
               '--timesync-period', str(ts.get('period', 2.0)),
-              '--warmup', str(warmup + go_wait), '--duration', str(duration), '--drain', str(drain),
+              '--warmup', str(warmup + go_wait + lead), '--duration', str(duration), '--drain', str(drain),
               '--ready-file', f'{local}/ready.json', '--results', f'{local}/node{nid}.json']
     app = [f'{ws}/venv/bin/python', f'{ws}/dragonradio/scripts/sim-netapp.py'] + app_args(plan, nid) + [
         '--duration', str(duration), '--linger', str(drain), '--results', f'{local}/app{nid}.json']
     patterns = ' '.join(f'{k}={q(v)}' for k, v in CONTINUITY.items())
-    nsexec = f'sudo -n ip netns exec {ns}'
+    # The workspace's private libraries and Python packages (as in
+    # grid/run-sim-fullstack.sh), passed through env so sudo keeps them.
+    wsenv = ('env PYTHONPATH=' + q(f'{ws}/dragonradio/python/dragonradio:{ws}/venv/lib/python3.12/site-packages')
+             + ' LD_LIBRARY_PATH=' + q(f'{ws}/prefix/lib:{ws}/deps/usr/lib/x86_64-linux-gnu:'
+                                       f'{ws}/deps/usr/lib/x86_64-linux-gnu/hdf5/serial'))
+    privilege = plan.get('privilege', 'auto')
+    priv = '$SUDO'                      # set by the preflight below
+    use_ns = plan.get('netns', False)
+    move_iface = use_ns and node.get('usrp_iface')
+    nsexec = f'{priv} ip netns exec {ns}' if use_ns else priv
+    run = nsexec + ' '
+    app_run = run if use_ns else ''     # applications need no privilege outside a namespace
     lines = [
         '#!/bin/bash',
         f'# Full-stack OTA trial {trial}, node {nid} ({node["family"]} {node["addr"]} on {node["host"]}).',
         f'# Reservation {plan["reservation_id"]}; RF approval {plan["rf_approval_reference"]}. Generated by ota-fullstack.py.',
         'set -euo pipefail',
-        f'LOCAL={q(local)}; SHARED={q(shared)}; NS={q(ns)}',
+        f'LOCAL={q(local)}; SHARED={q(shared)}; NS={q(ns)}; SUDO=',
         'mkdir -p "$LOCAL/logs"',
         'cleanup() {',
         '  set +e',
-        '  [ -n "${RADIO:-}" ] && kill -INT "$RADIO" 2>/dev/null && sleep 5 && kill -KILL "$RADIO" 2>/dev/null',
-        '  [ -n "${APP:-}" ] && kill "$APP" 2>/dev/null',
+        '  [ -n "${RADIO:-}" ] && $SUDO kill -INT "$RADIO" 2>/dev/null && sleep 5 && $SUDO kill -KILL "$RADIO" 2>/dev/null',
+        f'  [ -n "${{APP:-}}" ] && {"$SUDO " if use_ns else ""}kill "$APP" 2>/dev/null',
     ]
-    if node.get('usrp_iface'):
+    if move_iface:
         lines += [f'  {nsexec} ip link set {q(node["usrp_iface"])} netns 1 2>/dev/null',
-                  f'  sudo -n ip addr replace {q(node["usrp_iface_addr"])} dev {q(node["usrp_iface"])} 2>/dev/null',
-                  f'  sudo -n ip link set {q(node["usrp_iface"])} up 2>/dev/null']
-    lines += ['  sudo -n ip netns del "$NS" 2>/dev/null',
-              '  mkdir -p "$SHARED/node' + str(nid) + '" && cp -r "$LOCAL"/. "$SHARED/node' + str(nid) + '/"',
+                  f'  {priv} ip addr replace {q(node["usrp_iface_addr"])} dev {q(node["usrp_iface"])} 2>/dev/null',
+                  f'  {priv} ip link set {q(node["usrp_iface"])} up 2>/dev/null']
+    if use_ns:
+        lines += [f'  {priv} ip netns del "$NS" 2>/dev/null']
+    lines += ['  mkdir -p "$SHARED/node' + str(nid) + '" && cp -r "$LOCAL"/. "$SHARED/node' + str(nid) + '/"',
               '}',
               'trap cleanup EXIT INT TERM',
               '# Preflight (read-only): workspace commit, no other radio, disk space.',
               f'[ "$(cat {q(ws)}/dragonradio/COMMIT 2>/dev/null)" = {q(plan["workspace_commit"])} ] || {{ echo "workspace commit mismatch"; exit 10; }}',
               '! pgrep -x dragonradio >/dev/null || { echo "another dragonradio is running"; exit 11; }',
+              '# Privilege: root runs commands directly; an admin user uses sudo -n.',
+              {'auto': 'if [ "$(id -u)" = 0 ]; then SUDO=; elif sudo -n true 2>/dev/null; then SUDO="sudo -n"; '
+                       'else echo "neither root nor passwordless sudo"; exit 16; fi',
+               'root': '[ "$(id -u)" = 0 ] || { echo "not root"; exit 16; }; SUDO=',
+               'sudo': 'sudo -n true || { echo "sudo -n does not work on this host"; exit 16; }; SUDO="sudo -n"'}[privilege],
+              *([] if use_ns else
+                ['! ip link show tap0 >/dev/null 2>&1 || { echo "tap0 already exists"; exit 17; }',
+                 '! ip -o -4 addr show | grep -q " 10\\.10\\.10\\." || { echo "10.10.10.0/24 already in use on this host"; exit 18; }']),
               '[ "$(df --output=avail -k "$LOCAL" | tail -1)" -gt 2000000 ] || { echo "less than 2 GB free on node-local disk"; exit 12; }',
-              f'# Private network namespace for the tap interface and applications.',
-              'sudo -n ip netns add "$NS"',
-              f'{nsexec} ip link set lo up']
-    if node.get('usrp_iface'):
+              ]
+    if use_ns:
+        lines += ['# Private network namespace for the tap interface and applications.',
+                  f'{priv} ip netns add "$NS"',
+                  f'{nsexec} ip link set lo up']
+    if move_iface:
         lines += [f'# The USRP Ethernet interface moves into the namespace for the trial (restored on exit).',
-                  f'sudo -n ip link set {q(node["usrp_iface"])} netns "$NS"',
+                  f'{priv} ip link set {q(node["usrp_iface"])} netns "$NS"',
                   f'{nsexec} ip addr add {q(node["usrp_iface_addr"])} dev {q(node["usrp_iface"])}',
                   f'{nsexec} ip link set {q(node["usrp_iface"])} up']
     lines += [f'# Radio (finite: timeout {total} s).',
-              f'{nsexec} timeout --signal=INT --kill-after=10s {total}s {shlex.join(radio)} > "$LOCAL/radio.log" 2>&1 &',
+              f'{run}{wsenv} timeout --signal=INT --kill-after=10s {total}s {shlex.join(radio)} > "$LOCAL/radio.log" 2>&1 &',
               'RADIO=$!',
               f'# Readiness barrier: radio up, then wait for the controller\'s GO (all nodes ready).',
               f'for i in $(seq 1 {int(warmup * 10)}); do [ -e "$LOCAL/ready.json" ] && break; kill -0 "$RADIO" || exit 13; sleep 0.1; done',
               '[ -e "$LOCAL/ready.json" ] || { echo "radio did not become ready"; exit 14; }',
               f'cp "$LOCAL/ready.json" "$SHARED/node{nid}-ready.json"',
-              f'for i in $(seq 1 {int(go_wait * 10)}); do [ -e "$SHARED/GO" ] && break; sleep 0.1; done',
+              '# Listing the directory makes NFS revalidate it, so a new GO is seen promptly.',
+              f'for i in $(seq 1 {int(go_wait * 5)}); do ls "$SHARED" >/dev/null; [ -e "$SHARED/GO" ] && break; sleep 0.2; done',
               '[ -e "$SHARED/GO" ] || { echo "no GO from controller"; exit 15; }',
-              '# Applications start 2 s after GO on this host\'s CLOCK_MONOTONIC (servers listen at once).',
-              'START=$(python3 -c "import time; print(time.monotonic() + 2.0)")',
-              f'{nsexec} timeout --signal=INT --kill-after=5s {int(duration + drain + 15)}s {shlex.join(app)} --start-at "$START" > "$LOCAL/app.log" 2>&1 &',
+              '# Applications start at the GO file\'s wall-clock time (NTP), mapped to CLOCK_MONOTONIC.',
+              'START=$(python3 -c "import json, sys, time; t = json.load(open(sys.argv[1]))[\'start_wall\']; '
+              'print(time.monotonic() + max(0.0, t - time.time()))" "$SHARED/GO")',
+              f'{app_run}{wsenv} timeout --signal=INT --kill-after=5s {int(duration + drain + 15)}s {shlex.join(app)} --start-at "$START" > "$LOCAL/app.log" 2>&1 &',
               'APP=$!',
               'wait "$APP" || echo "app exit $?"',
               'APP=',
@@ -235,8 +290,11 @@ def node_script(plan, node):
 
 
 def ssh_command(plan, node):
-    ssh = ['ssh', '-x', '-F', '/dev/null', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
-           '-o', 'StrictHostKeyChecking=yes']
+    ssh = ['ssh', '-x', '-F', '/dev/null', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=60',
+           '-o', 'ServerAliveInterval=30', '-o', 'StrictHostKeyChecking=yes']
+    # Grid containers are reached through the login server (ProxyCommand,
+    # identity file, per-reservation known_hosts): plan "ssh_options".
+    ssh += plan.get('ssh_options', [])
     if node.get('host_key_alias'):
         ssh += ['-o', 'HostKeyAlias=' + node['host_key_alias']]
     if plan.get('known_hosts'):
@@ -305,13 +363,19 @@ def execute(plan, built):
             log = open(trial_dir / f'node{nid}.ssh.log', 'x')
             logs.append(log)
             procs[nid] = subprocess.Popen(n['ssh'], stdin=open(path), stdout=log, stderr=subprocess.STDOUT)
-        deadline = time.monotonic() + plan.get('warmup_s', 20) + 30
-        while not all((trial_dir / f'node{nid}-ready.json').exists() for nid in procs):
+        deadline = time.monotonic() + plan.get('warmup_s', 20) + plan.get('ready_timeout_s', 120)
+
+        def ready(nid):
+            os.listdir(trial_dir)       # revalidate the NFS directory
+            return (trial_dir / f'node{nid}-ready.json').exists()
+        while not all(ready(nid) for nid in procs):
             if time.monotonic() > deadline or any(p.poll() is not None for p in procs.values()):
                 raise RuntimeError('not every node became ready; no GO written; inspect node logs')
             time.sleep(0.2)
-        (trial_dir / 'GO').write_text(json.dumps({'wall': time.time()}))
-        limit = plan.get('warmup_s', 20) + plan.get('go_timeout_s', 60) + plan['duration_s'] + plan.get('drain_s', 5) + 90
+        now = time.time()
+        (trial_dir / 'GO').write_text(json.dumps({'wall': now, 'start_wall': now + plan.get('start_lead_s', 20)}))
+        limit = (plan.get('warmup_s', 20) + plan.get('go_timeout_s', 90) + plan.get('start_lead_s', 20)
+                 + plan['duration_s'] + plan.get('drain_s', 5) + 120)
         for nid, p in procs.items():
             p.wait(timeout=limit)
     finally:

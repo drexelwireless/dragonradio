@@ -340,10 +340,21 @@ stratum key and a ``pair_block``.
 eleven plan rejections, and checks the summary's stratification and
 exclusion.
 
-**Requires on a radio host (not done here):** passwordless ``sudo -n`` for
-``ip netns``, moving the USRP interface and the radio's capabilities
-(CAP_NET_ADMIN for the tap, CAP_SYS_NICE for real-time priority). Also the
-reservation, the RF approval, and the read-only device probe.
+**Requires on a radio host (not done here):** root or passwordless sudo
+for the radio's capabilities (CAP_NET_ADMIN for the tap, CAP_SYS_NICE for
+real-time priority), the reservation, the RF approval and the read-only
+device probe.
+
+**Updated 2026-11-04.** On the grid, users have full admin rights in their
+LXC containers, so no sudo setup or approval is needed. The node script now
+runs privileged commands directly as root or through ``sudo -n``
+(``"privilege": "auto"``). By default it uses the container's own network
+stack instead of a per-trial namespace (``"netns": false``), so the USRP
+interface is never moved. It also passes the workspace's library and Python
+paths to the radio, which the first version omitted, and starts
+applications at a wall-clock time carried in GO. Device identity is now
+host plus address, since every grid node reaches its radio at the same
+local address. The grid procedure is :doc:`ota-fullstack-grid`.
 
 Native constellations for the production AMC tables
 ---------------------------------------------------

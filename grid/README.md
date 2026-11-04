@@ -1,5 +1,14 @@
 # SDR grid PHY tests
 
+**Full-stack OTA (production radio, MAC/ARQ, tap):** see
+[docs/ota-fullstack-grid.rst](../docs/ota-fullstack-grid.rst).
+`make-ota-workspace.sh` builds the node workspace, `ota-campaign.py` turns a
+campaign (`ota-campaign.shared-pps.example.json`) into paired native/liquid
+trials, `ota-pipeline.sh` reserves, installs, health-checks, runs a
+simulation gate, runs the trials and stops the reservation, and
+`ota-node-health.sh` is its read-only node check. Everything below this
+paragraph is the earlier PHY-only experiment.
+
 Start with [the complete procedure](../docs/ota-grid.rst). The runner compares
 legacy liquidDSP OFDM, native OFDM and simultaneous native OFDMA. It preserves
 production OFDM and does not integrate the production MAC/ARQ or default FEC.
