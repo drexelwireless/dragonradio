@@ -1,11 +1,12 @@
 #!/bin/bash
 # Read-only check of one grid radio node for grid/ota-pipeline.sh (stage 3).
-# Usage: ota-node-health.sh WORKSPACE ADDR [COMMIT]
+# Usage: ota-node-health.sh WORKSPACE ADDR [COMMIT] [REFERENCE]
 # Prints key=value lines and the radio probe. Opens the radio only through
-# uhd_usrp_probe (read-only: no stream, no transmission). Exits non-zero on a
+# uhd_usrp_probe and, with REFERENCE=external, scripts/usrp-ref-check.py
+# (read-only: no tuning, no stream, no transmission). Exits non-zero on a
 # problem that rules the node out.
 set -uo pipefail
-ws=$1; addr=$2; want=${3:-}
+ws=$1; addr=$2; want=${3:-}; reference=${4:-}
 status=0
 fail() { echo "FAIL $*"; status=1; }
 
@@ -49,4 +50,11 @@ if echo "$out" | grep -qi "compatib"; then
     fail "FPGA/firmware not compatible with this UHD; do not flash without approval"
 fi
 echo "$out" | grep -q "Mboard:" || fail "probe found no motherboard at $addr"
+if [ "$reference" = external ]; then
+    # External 10 MHz locked and PPS edges arriving (the shared-PPS nodes).
+    ref=$(env PYTHONPATH="$ws/dragonradio/python/dragonradio:$ws/venv/lib/python3.12/site-packages" \
+          timeout 60 "$ws/dragonradio/dragonradio" "$ws/dragonradio/scripts/usrp-ref-check.py" --addr "$addr" 2>&1)
+    echo "$ref" | sed 's/^/ref_check: /'
+    echo "$ref" | grep -qx "reference_ok=yes" || fail "external reference not locked or no PPS (ref_check lines above)"
+fi
 exit $status

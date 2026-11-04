@@ -10,9 +10,10 @@
 # created (it also has the campaign's time limit).
 #
 #   0 preflight  no RF   campaign validates; Grid up; nodes READY; workspace tarball matches
-#   1 launch     no RF   one reservation for the campaign's nodes, --no-flash, no services
+#   1 launch     no RF   one reservation for the campaign's nodes (all cells), --no-flash, no services
 #   2 install    no RF   extract the prebuilt workspace on every node (node-local /tmp)
-#   3 health     no RF   NTP, privilege, tun, radio ping, read-only uhd_usrp_probe (FPGA compat)
+#   3 health     no RF   NTP, privilege, tun, radio ping, read-only uhd_usrp_probe (FPGA compat),
+#                        external reference lock and PPS edges on nodes that use them
 #   4 sim-gate   no RF   clean-arq in simulation on a node, native and liquid: the exact build
 #   5 trials     RF      grid/ota-campaign.py run --execute: paired native/liquid trials
 #   6 stop       no RF   stop the reservation
@@ -39,8 +40,12 @@ DURATION=$(cfg 'c.get("reservation_duration", "4h")')
 WS=$(cfg 'c["workspace"]')
 WS_TAR=$(cfg 'c["workspace_tar"]')
 COMMIT=$(cfg 'c["workspace_commit"]')
-NODES=$(cfg '[n["host"] for n in c["nodes"]]')
-ADDRS=$(cfg '[n["addr"] for n in c["nodes"]]')
+# Reserved nodes: the union over the campaign's cells (host, radio address, clock source).
+HOSTS=$("$PY" "$HERE/ota-campaign.py" hosts "$CAMPAIGN") || { echo "campaign nodes do not validate" >&2; exit 2; }
+NODES=$(awk '{print $1}' <<< "$HOSTS" | xargs)
+ADDRS=$(awk '{print $2}' <<< "$HOSTS" | xargs)
+REFS=$(awk '{print $3}' <<< "$HOSTS" | xargs)
+GATE_NODES=$(awk '!seen[$4]++ {print $1}' <<< "$HOSTS" | xargs)   # first node of each radio family
 SSH_COMMON=(-F /dev/null -x -n -o BatchMode=yes -o IdentitiesOnly=yes -i "$KEY" -o GSSAPIAuthentication=no
             -o ConnectTimeout=60 -o ServerAliveInterval=30 -o LogLevel=ERROR)
 
@@ -138,32 +143,39 @@ s2_install() {
 }
 
 s3_health() {
-    local n addr i=0 addrs
+    # Every node is checked (a full picture for the rehearsal), then any failure fails the stage.
+    local n addr ref i=0 addrs refs bad=""
     read -r -a addrs <<< "$ADDRS"
+    read -r -a refs <<< "$REFS"
     for n in $NODES; do
-        addr=${addrs[$i]}; i=$((i + 1))
-        if node_ssh "$n" "bash '$WS/dragonradio/grid/ota-node-health.sh' '$WS' '$addr' '$COMMIT'" > "$RUN/health-$n.log" 2>&1; then
-            log "health: $n ok ($(grep -m1 -o 'Mboard: .*' "$RUN/health-$n.log"))"
+        addr=${addrs[$i]}; ref=${refs[$i]}; i=$((i + 1))
+        if node_ssh "$n" "bash '$WS/dragonradio/grid/ota-node-health.sh' '$WS' '$addr' '$COMMIT' '$ref'" > "$RUN/health-$n.log" 2>&1; then
+            log "health: $n ok ($(grep -m1 -o 'Mboard: .*' "$RUN/health-$n.log"); reference $ref)"
         else
-            die "health: $n FAILED: $(grep FAIL "$RUN/health-$n.log" | tr '\n' ' ')"
+            log "health: $n FAILED: $(grep FAIL "$RUN/health-$n.log" | tr '\n' ' ')"
+            bad="$bad $n"
         fi
     done
+    [ -z "$bad" ] || die "health failed on:$bad (health-NODE.log)"
 }
 
 s4_gate() {
-    # The exact build, on a radio node's CPU, in simulation: native and the liquid production configuration.
-    local n; n=$(awk '{print $1}' <<< "$NODES")
-    local try phy
-    for phy in native liquid; do
-        local args=""; [ $phy = liquid ] && args="-- --phy ofdm -c rs8"
-        for try in 1 2; do
-            if node_ssh "$n" "bash '$WS/dragonradio/grid/run-sim-fullstack.sh' '$WS' '$RUN/gate-$phy-$try' --scenario clean-arq $args" \
-                > "$RUN/gate-$phy-$try.log" 2>&1 && grep -q "PASSED" "$RUN/gate-$phy-$try.log" \
-                && ! grep -q "FAILED" "$RUN/gate-$phy-$try.log"; then
-                log "sim gate: $phy clean-arq passed on $n (try $try)"; break
-            fi
-            log "sim gate: $phy clean-arq failed on $n (try $try; gate-$phy-$try.log)"
-            [ $try = 2 ] && return 1
+    # The exact build, on a radio node's CPU (the first node of each radio
+    # family, whose containers may run on different hosts), in simulation:
+    # native and the liquid production configuration.
+    local n try phy
+    for n in $GATE_NODES; do
+        for phy in native liquid; do
+            local args=""; [ $phy = liquid ] && args="-- --phy ofdm -c rs8"
+            for try in 1 2; do
+                local g="gate-$n-$phy-$try"
+                if node_ssh "$n" "bash '$WS/dragonradio/grid/run-sim-fullstack.sh' '$WS' '$RUN/$g' --scenario clean-arq $args" \
+                    > "$RUN/$g.log" 2>&1 && grep -q "PASSED" "$RUN/$g.log" && ! grep -q "FAILED" "$RUN/$g.log"; then
+                    log "sim gate: $phy clean-arq passed on $n (try $try)"; break
+                fi
+                log "sim gate: $phy clean-arq failed on $n (try $try; $g.log)"
+                [ $try = 2 ] && return 1
+            done
         done
     done
 }

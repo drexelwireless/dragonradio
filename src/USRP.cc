@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -150,9 +151,92 @@ void UHDUSRP::setRXFrequency(double freq)
     logUSRP(LOGDEBUG, "RX frequency set to %g", freq);
 }
 
+/** True when the motherboard reports its reference locked; true when it has
+ * no ref_locked sensor (nothing to check). */
+static bool referenceLocked(uhd::usrp::multi_usrp::sptr usrp)
+{
+    const auto names = usrp->get_mboard_sensor_names(0);
+
+    if (std::find(names.begin(), names.end(), "ref_locked") == names.end())
+        return true;
+
+    return usrp->get_mboard_sensor("ref_locked", 0).to_bool();
+}
+
+std::map<std::string, std::string> checkReferenceUHD(const std::string& addr,
+                                                     const std::string& clock_source,
+                                                     const std::string& time_source,
+                                                     double seconds)
+{
+    using std::chrono::steady_clock;
+
+    // Opens the device without tuning, setting gains or creating streams:
+    // nothing is transmitted.
+    auto usrp = uhd::usrp::multi_usrp::make(addr);
+    std::map<std::string, std::string> r;
+
+    r["mboard"] = usrp->get_mboard_name(0);
+
+    const std::string old_clock = usrp->get_clock_source(0);
+    const std::string old_time = usrp->get_time_source(0);
+
+    usrp->set_clock_source(clock_source, 0);
+    usrp->set_time_source(time_source, 0);
+
+    const auto names = usrp->get_mboard_sensor_names(0);
+
+    if (std::find(names.begin(), names.end(), "ref_locked") == names.end()) {
+        r["ref_locked"] = "unknown";
+    } else {
+        // Lock can take a moment after switching the source.
+        bool locked = false;
+        const auto deadline = steady_clock::now() + std::chrono::seconds(2);
+
+        while (!(locked = usrp->get_mboard_sensor("ref_locked", 0).to_bool())
+               && steady_clock::now() < deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        r["ref_locked"] = locked ? "yes" : "no";
+    }
+
+    // Count PPS edges: the time of the last PPS changes at each edge.
+    int              edges = 0;
+    uhd::time_spec_t last = usrp->get_time_last_pps(0);
+    const auto       deadline = steady_clock::now() + std::chrono::duration<double>(seconds);
+
+    while (steady_clock::now() < deadline) {
+        const uhd::time_spec_t t = usrp->get_time_last_pps(0);
+
+        if (t != last) {
+            ++edges;
+            last = t;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    r["pps_edges"] = std::to_string(edges);
+    r["seconds"] = std::to_string(seconds);
+
+    usrp->set_clock_source(old_clock, 0);
+    usrp->set_time_source(old_time, 0);
+    r["restored"] = old_clock + "/" + old_time;
+
+    return r;
+}
+
 double UHDUSRP::syncTimeToPPS(double timeout)
 {
     using std::chrono::steady_clock;
+
+    // With an external reference, its lock is checked first: an unlocked
+    // reference still passes PPS edges, but the sample clock then drifts.
+    if (usrp_->get_clock_source(0) == "external") {
+        const auto lock_deadline = steady_clock::now() + std::chrono::duration<double>(timeout);
+
+        while (!referenceLocked(usrp_)) {
+            if (steady_clock::now() > lock_deadline)
+                throw std::runtime_error("syncTimeToPPS: the external 10 MHz reference is not locked");
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    }
 
     // Wait for a PPS edge, so that the time is set early in a second.
     const uhd::time_spec_t last = usrp_->get_time_last_pps();

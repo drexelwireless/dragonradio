@@ -54,6 +54,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PLACEHOLDER = 'REPLACE'
+# An approval reference starting with this validates (for dry runs and the
+# no-RF rehearsal) but is refused by --execute.
+NOT_APPROVED = 'NOT-APPROVED'
 FAMILIES = ('N210', 'X310', 'B210')
 PHYS = {'native-ofdm': ['--phy', 'native-ofdm'], 'ofdm': ['--phy', 'ofdm']}
 APP_KINDS = {'udp', 'tcp-bulk', 'tcp-rr'}
@@ -409,6 +412,10 @@ def main(argv=None):
         print(json.dumps(dict(built, dry_run=True,
                               note='nothing was executed; rerun with --execute in the approved window'), indent=1))
         return 0
+    if plan['rf_approval_reference'].startswith(NOT_APPROVED):
+        print(f'refusing to execute: rf_approval_reference is {plan["rf_approval_reference"]!r} '
+              '(a rehearsal campaign; fill in this experiment\'s approval)', file=sys.stderr)
+        return 2
     summary = execute(plan, built)
     print(json.dumps({k: summary[k] for k in ('passed', 'continuity_ok', 'valid_for_rf_conclusions')}, indent=1))
     return 0 if summary['passed'] else 1

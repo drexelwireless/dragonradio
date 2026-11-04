@@ -5,6 +5,7 @@
 #define USRP_H_
 
 #include <atomic>
+#include <map>
 #include <deque>
 #include <list>
 #include <optional>
@@ -452,5 +453,16 @@ private:
     /** @brief Worker that receives TX errors. */
     void txErrorWorker(void);
 };
+
+/** Read-only check of a UHD device's external reference: opens the device
+ * (no tuning, no streams, nothing transmitted), selects the given clock and
+ * time sources, reports whether the reference is locked ("yes", "no", or
+ * "unknown" without a ref_locked sensor) and how many PPS edges arrive in
+ * the given time, then restores the previous sources.
+ */
+std::map<std::string, std::string> checkReferenceUHD(const std::string& addr,
+                                                     const std::string& clock_source,
+                                                     const std::string& time_source,
+                                                     double seconds);
 
 #endif /* USRP_H_ */

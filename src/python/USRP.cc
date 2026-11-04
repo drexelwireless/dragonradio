@@ -116,4 +116,13 @@ void exportUSRP(py::module &m)
         .def_property_readonly("tx_late_count",
             &USRP::getTXLateCount)
         ;
+
+    m.def("checkReference",
+        &checkReferenceUHD,
+        "Read-only reference check: lock state and PPS edges counted over `seconds` (nothing is transmitted)",
+        py::arg("addr"),
+        py::arg("clock_source") = "external",
+        py::arg("time_source") = "external",
+        py::arg("seconds") = 4.0,
+        py::call_guard<py::gil_scoped_release>());
 }

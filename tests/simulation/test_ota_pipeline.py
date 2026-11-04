@@ -32,7 +32,7 @@ echo "$host: $cmd" >> "$state/ssh.log"
 if [ "$host" = head.example ]; then
   case $cmd in
     "gridcli -q status") echo "{'disabled': False, 'status_message': ''}" ;;
-    "gridcli -q nodes") echo "grid91 READY"; echo "grid92 READY" ;;
+    "gridcli -q nodes") if [ -e "$state/nodes" ]; then cat "$state/nodes"; else echo "grid91 READY"; echo "grid92 READY"; fi ;;
     getent*) echo "10.0.0.1 x" ;;
     "gridcli -q reservation schedule"*) echo "$cmd" | sed -n 's/.*--name \([^ ]*\).*/\1/p' > "$state/name" ;;
     "gridcli -q reservations") echo "777 \"$(cat "$state/name")\" (me)" ;;
@@ -112,6 +112,46 @@ class Pipeline(unittest.TestCase):
         self.assertNotIn('ota-fullstack.py', ssh)              # no trial ran
         self.assertEqual((self.tmp / 'node' / 'drfs-ws' / 'dragonradio' / 'COMMIT').read_text().strip(), COMMIT)
 
+    def test_cells_rehearsal(self):
+        # The N210/X310 cells campaign: one reservation for the union of the
+        # cells' nodes, the external reference checked where a cell uses it,
+        # the simulation gate on the first node of each family, and no RF.
+        campaign = json.loads((ROOT / 'grid/ota-campaign.n210-x310.json').read_text())
+        campaign.update(workspace_commit=COMMIT, workspace=str(self.tmp / 'node' / 'drfs-ws'),
+                        workspace_tar=str(self.tar), results_root=str(self.tmp / 'results'),
+                        ssh={'head': 'head.example', 'key': '/dev/null'})
+        self.campaign.write_text(json.dumps(campaign))
+        hosts = ['grid04', 'grid08', 'grid01', 'grid15', 'grid60', 'grid61', 'grid39', 'grid58', 'grid59']
+        (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
+        run = self.tmp / 'run-cells'
+        p = self.pipeline(run, STOP_BEFORE='5')
+        log = (run / 'pipeline.log').read_text()
+        self.assertEqual(p.returncode, 0, log + p.stderr)
+        self.assertEqual(len(list((run / 'plans').glob('*.json'))), 36)   # 3 blocks x 6 cells x 2 PHYs
+        ssh = (self.state / 'ssh.log').read_text()
+        self.assertIn('dragonradio/ubuntu2404-20260225-20064ad9 ' + ' '.join(hosts) + ' --name', ssh)
+        health = {line.split(':')[0]: line for line in ssh.splitlines() if 'ota-node-health.sh' in line}
+        self.assertEqual(sorted(health), sorted(hosts))
+        for h in hosts:
+            want = "'external'" if h in ('grid04', 'grid08', 'grid01', 'grid15') else "'internal'"
+            self.assertTrue(health[h].endswith(want), health[h])
+        gates = sorted({line.split(':')[0] for line in ssh.splitlines() if 'run-sim-fullstack.sh' in line})
+        self.assertEqual(gates, ['grid04', 'grid60'])                     # first N210, first X310
+        self.assertNotIn('ota-fullstack.py', ssh)
+        self.assertTrue((run / 'stage-6.done').exists())
+
+    def test_not_approved_campaign_refuses_rf(self):
+        campaign = json.loads(self.campaign.read_text())
+        campaign['rf_approval_reference'] = 'NOT-APPROVED-rehearsal-only'
+        self.campaign.write_text(json.dumps(campaign))
+        run = self.tmp / 'run-na'
+        p = self.pipeline(run)
+        log = (run / 'pipeline.log').read_text()
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn('stage 5 (trials) failed', log)
+        self.assertNotIn('ota-fullstack.py', (self.state / 'ssh.log').read_text())
+        self.assertTrue((self.state / 'stopped').exists())
+
     def test_health_failure_stops_reservation(self):
         (self.state / 'health-fail').write_text('')
         run = self.tmp / 'run-fail'
@@ -154,6 +194,57 @@ class Campaign(unittest.TestCase):
         self.c['nodes'][0]['tx_gain'] = 25
         with self.assertRaises(self.mod.CampaignError):
             self.mod.plans(self.c, '/tmp/run', '777')
+
+    def cells_campaign(self):
+        c = json.loads((ROOT / 'grid/ota-campaign.n210-x310.json').read_text())
+        c.update(workspace_commit=COMMIT)
+        return c
+
+    def test_cells(self):
+        c = self.cells_campaign()
+        plans = self.mod.plans(c, '/tmp/run', '777')
+        self.assertEqual(len(plans), 36)
+        ids = [p['trial_id'] for p in plans]
+        self.assertEqual(len(set(ids)), 36)
+        self.assertIn('pps-mixed01-b01-XS-ofdm', ids)
+        for b in (1, 2, 3):
+            runs = sorted((p['strata']['cell'], p['phy']) for p in plans if p['strata']['pair_block'] == b)
+            self.assertEqual(runs, sorted((cell, phy) for cell in ('S1', 'W1', 'XS', 'XW', 'NXS', 'NXW')
+                                          for phy in ('native-ofdm', 'ofdm')))
+        xs = next(p for p in plans if p['strata']['cell'] == 'XS')
+        self.assertEqual([n['host'] for n in xs['nodes']], ['grid60', 'grid61'])
+        self.assertEqual(xs['strata']['pair_type'], 'X310<->X310')
+        self.assertEqual(xs['nodes'][0]['addr'], 'addr=192.168.40.2')
+        self.assertEqual(xs['strata']['carrier_map'], 'single channel')
+        for p in plans:
+            self.mod.ota.build(p)                    # every plan validates
+        hosts = self.mod.hosts(c)
+        self.assertEqual([h[0] for h in hosts],
+                         ['grid04', 'grid08', 'grid01', 'grid15', 'grid60', 'grid61', 'grid39', 'grid58', 'grid59'])
+        self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid01'], 'external')   # external in W1
+        self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid61'], 'internal')
+
+    def test_cells_reject_conflicts(self):
+        c = self.cells_campaign()
+        c['cells'][4]['nodes'][0]['addr'] = 'addr=192.168.10.3'           # grid01 elsewhere 192.168.10.2
+        with self.assertRaises(self.mod.CampaignError):
+            self.mod.plans(c, '/tmp/run', '777')
+        c = self.cells_campaign()
+        c['cells'][1]['name'] = 'S1'
+        with self.assertRaises(self.mod.CampaignError):
+            self.mod.plans(c, '/tmp/run', '777')
+        c = self.cells_campaign()
+        c['cells'][2]['nodes'][0]['tx_gain'] = 21
+        with self.assertRaises(self.mod.CampaignError):
+            self.mod.plans(c, '/tmp/run', '777')
+
+    def test_not_approved_run_refused(self):
+        c = self.cells_campaign()
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / 'c.json'
+            path.write_text(json.dumps(c))
+            self.assertEqual(self.mod.main(['run', str(path), '--run-dir', d, '--reservation', '777', '--execute']), 2)
+            self.assertFalse((Path(d) / 'plans').exists())
 
     def test_run_requires_execute(self):
         with tempfile.TemporaryDirectory() as d:
