@@ -7,6 +7,9 @@
 #include <atomic>
 #include <functional>
 #include <list>
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
 #include "IQBuffer.hh"
 #include "Packet.hh"
@@ -88,6 +91,19 @@ struct ModPacket
 
     /** @brief The un-modulated packet. */
     std::shared_ptr<NetPacket> pkt;
+
+    /** @brief Further packets carried in the same burst (OFDMA).
+     *
+     * They share this ModPacket's samples, offset and nsamples: one IQ buffer
+     * and one transmission. The MAC accounts the airtime once and reports
+     * each packet's transmission to the controller separately.
+     */
+    std::vector<std::shared_ptr<NetPacket>> partners;
+
+    /** @brief True for the MAC's per-packet copy of a burst partner: same
+     * samples as the burst's first packet, airtime not counted again.
+     */
+    bool burst_partner = false;
 };
 
 /** @brief A physical layer protocol that can provide a modulator and
@@ -110,6 +126,19 @@ public:
         virtual void modulate(std::shared_ptr<NetPacket> pkt,
                               const float gain,
                               ModPacket &mpkt) = 0;
+
+        /** @brief Modulate up to getMaxBurstUsers() packets for different
+         * destinations into one burst (OFDMA). The first packet is
+         * mpkt.pkt, the rest mpkt.partners.
+         */
+        virtual void modulateBurst(std::vector<std::shared_ptr<NetPacket>> pkts,
+                                   const float gain,
+                                   ModPacket &mpkt)
+        {
+            if (pkts.size() != 1)
+                throw std::logic_error("this PHY carries one packet per burst");
+            modulate(std::move(pkts.front()), gain, mpkt);
+        }
 
     protected:
         /** @brief Our PHY */
@@ -224,6 +253,11 @@ public:
 
     /** @brief Calculate size of modulated data */
     virtual size_t getModulatedSize(mcsidx_t mcsidx, size_t n) = 0;
+
+    /** @brief Packets (for different destinations) one burst can carry: 1,
+     * or more for a downlink OFDMA PHY (PacketModulator::modulateBurst).
+     */
+    virtual unsigned getMaxBurstUsers(void) const { return 1; }
 
     /** @brief Create a Modulator for this %PHY */
     virtual std::shared_ptr<PacketModulator> mkPacketModulator(void) = 0;

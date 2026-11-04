@@ -28,6 +28,8 @@ add_library(DragonRadio
   phy/FDChannelModulator.cc
   phy/FDChannelizer.cc
   phy/MultichannelSynthesizer.cc
+  phy/NativeOFDM.cc
+  phy/NativeOFDMA.cc
   phy/PHY.cc
   phy/RadioPacketQueue.cc
   phy/Synthesizer.cc
@@ -62,6 +64,7 @@ add_library(DragonRadio
   python/Logger.cc
   python/MAC.cc
   python/Modem.cc
+  python/NativePHY.cc
   python/NCO.cc
   python/Neighborhood.cc
   python/Net.cc

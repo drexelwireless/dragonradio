@@ -71,6 +71,8 @@ PYBIND11_EMBEDDED_MODULE(dragonradiocpp, m) {
     exportLiquid(mliquid);
     exportLiquidPHYs(mliquid);
 
+    exportNativePHYs(mradio);
+
     exportNetUtil(mnet);
 #endif /* !defined(PYMODULE) */
 }

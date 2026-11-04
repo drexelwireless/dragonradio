@@ -99,5 +99,6 @@ void exportSnapshot(py::module &m);
 
 void exportLiquid(py::module &m);
 void exportLiquidPHYs(py::module &m);
+void exportNativePHYs(py::module &m);
 
 #endif /* PYMODULES_H_ */
