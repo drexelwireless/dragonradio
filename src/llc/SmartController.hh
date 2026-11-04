@@ -9,9 +9,11 @@
 
 #include <list>
 #include <map>
+#include <optional>
 #include <random>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include "heap.hh"
 #include "Clock.hh"
@@ -346,6 +348,23 @@ struct RecvWindow  {
 
     /** @brief Explicit NAK window index */
     size_t explicit_nak_idx;
+
+    /** @brief Sequence number and data hash of the SYN that opened this
+     * window, if its payload was valid.
+     *
+     * A SYN is retransmitted unchanged when its ACK is lost. Matching both
+     * lets the receiver recognize the retransmission instead of treating it
+     * as a new connection, which would deliver it again.
+     */
+    std::optional<std::pair<Seq, uint64_t>> syn;
+
+    /** @brief Return true if a valid SYN packet retransmits the one that
+     * opened this window.
+     */
+    bool isSYNRetransmission(const RadioPacket &pkt) const;
+
+    /** @brief Hash of a packet's data bytes (excluding headers and control) */
+    static uint64_t dataHash(const RadioPacket &pkt);
 
     /** @brief Return true if sequence number is in the receive window */
     inline bool contains(Seq seq)
