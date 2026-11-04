@@ -3,6 +3,7 @@
 # failure. Build with `make fullstack-tests`; run with `ctest -L fullstack`.
 set(FULLSTACK_TESTS
   test_arq_syn
+  test_fd_channelizer
   test_logger_chunks
   test_native_fec
   test_native_ofdm
