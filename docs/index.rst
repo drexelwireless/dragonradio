@@ -23,6 +23,7 @@ Welcome to DragonRadio's documentation!
    ofdma-fullstack
    ota-grid
    ota-fullstack-grid
+   ota-study-plan
    characterization
    container
    colosseum

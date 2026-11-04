@@ -149,7 +149,9 @@ Copy ``grid/ota-campaign.shared-pps.example.json`` and fill in:
 * **Nodes.** Names of two grid nodes whose radios share a 10 MHz and PPS
   distribution, their families and addresses. Grid convention: X310 at
   ``addr=192.168.40.2``, N210 at ``addr=192.168.10.2``. N210s need
-  ``time_source`` ``external`` here too, never ``internal``.
+  ``time_source`` ``external`` here too, never ``internal``. The N210s
+  with the OctoClock, and the strong and weak pairs among them, are in
+  :doc:`ota-study-plan`.
 * **RF approval.** This experiment's approval reference, covering forward
   data, reverse data with ACKs, and timesync HELLO broadcasts: TDMA with ARQ
   transmits from every node. A previous experiment's frequency approval
