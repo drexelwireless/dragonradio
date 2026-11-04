@@ -103,6 +103,18 @@ target_link_libraries(DragonRadio PRIVATE ${FLACXX_LIBRARIES})
 target_include_directories(DragonRadio PUBLIC ${LIQUIDDSP_INCLUDE_DIRS})
 target_link_libraries(DragonRadio PUBLIC ${LIQUIDDSP_LIBRARIES})
 
+# Native PHY FEC (src/simulation/NativeFEC.hh): the libfec API, from libfec or
+# libcorrect's libfec-compatible shim, the library liquid-dsp's FEC also uses.
+find_path(FEC_INCLUDE_DIR fec.h)
+find_library(FEC_LIBRARY fec)
+if(FEC_INCLUDE_DIR AND FEC_LIBRARY)
+  target_compile_definitions(DragonRadio PUBLIC DRAGONRADIO_NATIVE_FEC)
+  target_include_directories(DragonRadio PUBLIC ${FEC_INCLUDE_DIR})
+  target_link_libraries(DragonRadio PUBLIC ${FEC_LIBRARY})
+else()
+  message(WARNING "libfec (fec.h) not found: the native PHY supports only FEC none")
+endif()
+
 target_include_directories(DragonRadio PUBLIC ${FFTW3_INCLUDE_DIRS})
 target_link_libraries(DragonRadio PUBLIC ${FFTW3_LIBRARIES} ${FFTW3F_LIBRARIES})
 

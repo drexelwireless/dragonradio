@@ -8,6 +8,7 @@
 #include <xsimd/stl/algorithms.hpp>
 
 #include "Logger.hh"
+#include "logging.hh"
 #include "WorkQueue.hh"
 #include "dsp/FFTW.hh"
 #include "liquid/OFDM.hh"
@@ -224,8 +225,8 @@ void NativeOFDM::PacketModulator::modulate(std::shared_ptr<NetPacket> pkt,
     if (autogain.needCalcAutoSoftGain0dBFS())
         work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
-    pkt->mod_start_timestamp = mod_start;
-    pkt->mod_end_timestamp = mod_end;
+    pkt->timestamps.mod_start_timestamp = mod_start;
+    pkt->timestamps.mod_end_timestamp = mod_end;
 
     mpkt.offset = iqbuf->delay;
     mpkt.nsamples = iqbuf->size() - iqbuf->delay;
@@ -361,6 +362,11 @@ void NativeOFDM::PacketDemodulator::deliver(const FramedStream::Result &r)
     pkt->end_samples = end;
     pkt->demod_latency = (now - timestamp).count();
     pkt->payload_len = payload.size();
+
+    // As the liquid PHYs on this branch: a packet with an invalid payload is
+    // logged here, because it will not be logged in the TunTap component.
+    if (logger_ && logger_->getCollectSource(Logger::kRecvPackets) && pkt->internal_flags.invalid_payload)
+        logger_->logRecv(pkt);
 
     callback_(std::move(pkt));
 

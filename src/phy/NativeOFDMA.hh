@@ -56,6 +56,7 @@ public:
         ssize_t offset_ = 0;
         long long sample_start_ = 0;
         long long sample_end_ = 0;
+        std::shared_ptr<Logger> logger_;
     };
 
     /** @param allocation Two-user allocation: "equal", "1:2" or "2:1" (slot 0 : slot 1) */

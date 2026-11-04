@@ -7,6 +7,7 @@
 #include <xsimd/stl/algorithms.hpp>
 
 #include "Logger.hh"
+#include "logging.hh"
 #include "WorkQueue.hh"
 #include "dsp/FFTW.hh"
 #include "phy/NativeOFDMA.hh"
@@ -141,8 +142,8 @@ void NativeOFDMA::PacketModulator::modulateBurst(std::vector<std::shared_ptr<Net
         work_queue.submit(&AutoGain::autoSoftGain0dBFS, &autogain, g, iqbuf);
 
     for (auto &p : pkts) {
-        p->mod_start_timestamp = mod_start;
-        p->mod_end_timestamp = mod_end;
+        p->timestamps.mod_start_timestamp = mod_start;
+        p->timestamps.mod_end_timestamp = mod_end;
     }
     mpkt.offset = iqbuf->delay;
     mpkt.nsamples = iqbuf->size() - iqbuf->delay;
@@ -158,6 +159,7 @@ NativeOFDMA::PacketDemodulator::PacketDemodulator(NativeOFDMA &phy, unsigned cha
   , ofdma_(phy)
   , frame_(phy.mkOFDMA())
   , timestamp_(0.0s)
+  , logger_(logger)
 {
     // Demodulate only the user slots the production filter wants.
     stream_ = std::make_unique<FramedOFDMAStream>(*frame_, [](const OFDMAUser &u) {
@@ -253,6 +255,11 @@ void NativeOFDMA::PacketDemodulator::deliver(const FramedOFDMAStream::Result &r)
     pkt->end_samples = end;
     pkt->demod_latency = (now - timestamp).count();
     pkt->payload_len = payload.size();
+
+    // As the liquid PHYs on this branch: a packet with an invalid payload is
+    // logged here, because it will not be logged in the TunTap component.
+    if (logger_ && logger_->getCollectSource(Logger::kRecvPackets) && pkt->internal_flags.invalid_payload)
+        logger_->logRecv(pkt);
 
     callback_(std::move(pkt));
 

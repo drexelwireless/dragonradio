@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "Logger.hh"
 #include "liquid/Modem.hh"
 #include "phy/PHY.hh"
 #include "simulation/NativeFrame.hh"
