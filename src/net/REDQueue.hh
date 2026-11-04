@@ -154,7 +154,11 @@ public:
             } else if (gentle_ && avg_ < 2*max_thresh_) {
                 count_++;
 
-                double p_a = max_p_*(avg_ - max_thresh_)/max_thresh_;
+                // Gentle RED: the drop probability rises linearly from max_p
+                // at max_thresh to 1 at 2*max_thresh. (This was
+                // max_p*(avg - max_thresh)/max_thresh, which fell to 0 just
+                // above max_thresh and reached only max_p.)
+                double p_a = max_p_ + (1.0 - max_p_)*(avg_ - max_thresh_)/max_thresh_;
 
                 if (dist_(gen_) < p_a) {
                     mark = true;

@@ -24,7 +24,13 @@ constexpr int kMDCNumElements = 512;
 constexpr size_t kRDCCNumElements = 512;
 
 /** @brief Total size of the raw data chunk cache, in bytes */
-constexpr size_t kRDCCNumBytes = 16*1024*kBlockSize;
+/** HDF5 gives every open dataset its own cache of this size. 8 MB since
+ * 2026-11-04 (was 64 MB, which let a long run hold up to 64 MB per large
+ * dataset): two chunks of rows up to 256 bytes (ExtensibleDataSet.cc).
+ * Datasets are append-only, so only the chunk being written needs to be
+ * cached. See docs/defaults-2026-11.rst.
+ */
+constexpr size_t kRDCCNumBytes = 2*1024*kBlockSize;
 
 /** @brief Preemption policy */
 constexpr double kRDCCW0 = 0.0;
