@@ -14,7 +14,11 @@ echo "os=$(. /etc/os-release && echo "$ID-$VERSION_ID")"
 echo "cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs) nproc=$(nproc)"
 ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo unknown)
 echo "ntp=$ntp"
-[ "$ntp" = yes ] || fail "host clock not NTP-synchronized (needed for the trial start time and PPS second)"
+# A container shares its host's kernel clock, so timedatectl inside it may
+# report "no" while the host is synchronized. Warn only: the trial start time
+# tolerates seconds, and the radio's timesync removes any whole-second
+# disagreement in the PPS time within its first fit.
+[ "$ntp" = yes ] || echo "WARN host clock not reported NTP-synchronized"
 if [ "$(id -u)" = 0 ]; then echo "privilege=root"
 elif sudo -n true 2>/dev/null; then echo "privilege=sudo"
 else fail "neither root nor passwordless sudo (the radio needs CAP_NET_ADMIN for its tap)"; fi
@@ -33,7 +37,11 @@ probe="$ws/deps/usr/bin/uhd_usrp_probe"
 [ -x "$probe" ] || probe=$(command -v uhd_usrp_probe || true)
 [ -n "$probe" ] || { fail "no uhd_usrp_probe"; exit $status; }
 host_ip=${addr#addr=}
-ping -c1 -W2 "$host_ip" >/dev/null 2>&1 && echo "radio_ping=yes" || fail "radio $host_ip does not answer ping"
+if command -v ping >/dev/null; then
+    ping -c1 -W2 "$host_ip" >/dev/null 2>&1 && echo "radio_ping=yes" || fail "radio $host_ip does not answer ping"
+else
+    echo "radio_ping=skipped (no ping); the probe below checks the radio"
+fi
 out=$(timeout 120 "$probe" --args "$addr" 2>&1)
 echo "$out" | grep -E "UHD|Mboard:|Device:|FPGA Version|FW Version|Time sources|Clock sources|ref_locked|Sensors|serial" | sort -u | head -30
 if echo "$out" | grep -qi "compatib"; then
