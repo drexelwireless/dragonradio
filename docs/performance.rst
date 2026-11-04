@@ -507,7 +507,9 @@ drops anywhere.
   (a small program writing 120-byte rows through ``ExtensibleDataSet``) plateaus at 121 MB for two datasets after 500k rows
   each and stays flat to 2.5M. The 2–10 MS/s runs had not reached that bound
   in 10–30 minutes; at 1 MS/s it is flat (9–28 kB/min). This is not a leak,
-  but a long logged run costs up to 64 MB per large dataset.
+  but a long logged run costs up to 64 MB per large dataset. (Changed
+  2026-11-04: 8 MB per dataset and 16,384-row chunks; see
+  :doc:`defaults-2026-11`.)
 * **Verdict.**
 
   - Strict gate (at least 2x, zero late or overflow, bounded queues, no

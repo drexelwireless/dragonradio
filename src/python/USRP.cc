@@ -104,6 +104,11 @@ void exportUSRP(py::module &m)
             &USRP::getTimeSource)
         .def("setTimeSource",
             &USRP::setTimeSource)
+        .def("syncTimeToPPS",
+            &USRP::syncTimeToPPS,
+            "Align device time to the PPS input (time source external); returns the edge's offset from the host's whole second",
+            py::arg("timeout") = 3.0,
+            py::call_guard<py::gil_scoped_release>())
         .def("stop",
             &USRP::stop)
         .def_property_readonly("tx_underflow_count",

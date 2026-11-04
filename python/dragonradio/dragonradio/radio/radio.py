@@ -233,6 +233,17 @@ class Radio(dragonradio.tasks.TaskManager):
         if config.time_source is not None:
             self.usrp.time_source = config.time_source
 
+        # Radios sharing a PPS: count device time from the same edge.
+        if config.sync_time_to_pps:
+            if config.time_source != 'external':
+                logger.warning('--sync-time-to-pps with time source %s; PPS alignment expects external',
+                               config.time_source)
+            frac = self.usrp.syncTimeToPPS()
+            logger.info('Device time set at PPS edge; edge was %+.3f s from the host whole second', frac)
+            if abs(frac) > 0.4:
+                logger.warning('PPS edge is near the host half second (%+.3f s): radios may disagree by 1 s',
+                               frac)
+
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
         self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
 
@@ -516,7 +527,11 @@ class Radio(dragonradio.tasks.TaskManager):
 
             # ARQ parameters
             controller.enforce_ordering = config.arq_enforce_ordering
-            controller.max_retransmissions = config.arq_max_retransmissions
+            # A negative count means unlimited (the default before 2026-11-04).
+            if config.arq_max_retransmissions is not None and config.arq_max_retransmissions < 0:
+                controller.max_retransmissions = None
+            else:
+                controller.max_retransmissions = config.arq_max_retransmissions
             controller.ack_delay = config.arq_ack_delay
             controller.ack_delay_estimation_window = config.arq_ack_delay_estimation_window
             controller.retransmission_delay = config.arq_retransmission_delay
@@ -571,6 +586,7 @@ class Radio(dragonradio.tasks.TaskManager):
             netq.bonus_phase = config.mandate_bonus_phase
         elif config.queue == 'taildrop':
             netq = TailDropQueue(config.tail_drop_max_size)
+            netq.push_out = config.tail_drop_push_out
         elif config.queue == 'red':
             netq = REDQueue(config.red_gentle,
                             config.red_min_thresh,

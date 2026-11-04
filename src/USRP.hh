@@ -8,6 +8,7 @@
 #include <deque>
 #include <list>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 #include <string>
 #include <thread>
@@ -114,6 +115,20 @@ public:
 
     /** @brief Set RX gain (dB). */
     virtual void setRXGain(float db) = 0;
+
+    /** @brief Align device time to a shared PPS (time source "external"). */
+    /** Waits for a PPS edge, then sets the time of the following edge to the
+     * host's whole second, so every radio on the same PPS whose host clock
+     * agrees (NTP) to well under half a second gets the same device time.
+     * Returns the host time of the observed edge minus its whole second, in
+     * [-0.5, 0.5): near +/-0.5 the radios may disagree by one second.
+     * Throws if no edge arrives within timeout seconds. Not supported by
+     * the simulated device.
+     */
+    virtual double syncTimeToPPS(double timeout)
+    {
+        throw std::runtime_error("syncTimeToPPS: not supported by this device");
+    }
 
     /** @brief Get automatic DC offset correction. */
     bool getAutoDCOffset(bool enable)
@@ -307,6 +322,8 @@ public:
     {
         return usrp_->get_master_clock_rate(0);
     }
+
+    double syncTimeToPPS(double timeout) override;
 
     double getTXFrequency(void) override
     {

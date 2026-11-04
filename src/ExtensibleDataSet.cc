@@ -9,8 +9,13 @@ constexpr size_t kBlockSize = 4*1024;
 /** @brief We allocate capacity in multiples of this. */
 constexpr size_t kAllocGranularity = 1024*kBlockSize;
 
-/** @brief We chunk in multiples of this. */
-constexpr size_t kChunkGranularity = 32*kBlockSize;
+/** @brief Rows per chunk. */
+/** 16,384 rows since 2026-11-04 (was 131,072): about 2 MB for a 120-byte
+ * row, so the logger's per-dataset chunk cache (Logger.cc) can hold the
+ * chunk being appended to while staying small. Chunking is invisible to
+ * readers. See docs/defaults-2026-11.rst.
+ */
+constexpr size_t kChunkGranularity = 4*kBlockSize;
 
 ExtensibleDataSet::ExtensibleDataSet(const Group& loc, const std::string& name, const H5::DataType &dt)
   : dt_(dt)

@@ -2,6 +2,12 @@
 
 This is Drexel's software-defined radio. Please see the [DragonRadio documentation](https://drexelwireless.github.io/dragonradio/) for further information.
 
+**Default changes, November 2026.** The ARQ retransmission limit is now 8
+(was unlimited), the `--taildrop` queue pushes out packets for blocked
+destinations when full, and the HDF5 logger uses a smaller chunk cache.
+Each can be reverted with an option. See
+[docs/defaults-2026-11.rst](docs/defaults-2026-11.rst).
+
 ## Hardware-free simulation and OFDMA prototype
 
 The experimental simulation mode runs on macOS or Linux with Python and NumPy,

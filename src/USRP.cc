@@ -5,6 +5,10 @@
 #include <sys/time.h>
 
 #include <atomic>
+#include <chrono>
+#include <cmath>
+#include <stdexcept>
+#include <thread>
 
 #include "logging.hh"
 #include "Clock.hh"
@@ -144,6 +148,45 @@ void UHDUSRP::setRXFrequency(double freq)
     rx_freq_ = usrp_->get_rx_freq();
 
     logUSRP(LOGDEBUG, "RX frequency set to %g", freq);
+}
+
+double UHDUSRP::syncTimeToPPS(double timeout)
+{
+    using std::chrono::steady_clock;
+
+    // Wait for a PPS edge, so that the time is set early in a second.
+    const uhd::time_spec_t last = usrp_->get_time_last_pps();
+    const auto             deadline = steady_clock::now() + std::chrono::duration<double>(timeout);
+
+    while (usrp_->get_time_last_pps() == last) {
+        if (steady_clock::now() > deadline)
+            throw std::runtime_error("syncTimeToPPS: no PPS edge; check the time source and the PPS input");
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    struct timespec t;
+
+    clock_gettime(CLOCK_REALTIME, &t);
+
+    // The edge just passed: the nearest whole host second names it, and the
+    // next edge is one second later.
+    const double host = static_cast<double>(t.tv_sec) + 1e-9*static_cast<double>(t.tv_nsec);
+    const double edge = std::round(host);
+
+    usrp_->set_time_next_pps(uhd::time_spec_t(static_cast<time_t>(edge) + 1, 0.0));
+
+    // Let that edge pass, then check that it took.
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+
+    const uhd::time_spec_t pps = usrp_->get_time_last_pps();
+
+    if (pps.get_full_secs() != static_cast<time_t>(edge) + 1)
+        throw std::runtime_error("syncTimeToPPS: the device time did not take at the PPS edge");
+
+    logUSRP(LOGINFO, "time set at PPS edge to %lld (edge %+.3f s from the host's whole second)",
+        static_cast<long long>(pps.get_full_secs()), host - edge);
+
+    return host - edge;
 }
 
 void UHDUSRP::burstTX(std::optional<MonoClock::time_point> when_,

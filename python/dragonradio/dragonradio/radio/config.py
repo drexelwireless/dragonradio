@@ -117,6 +117,13 @@ class Config:
         """Clock source for the USRP device"""
         self.time_source = None
         """Time source for the USRP device"""
+        self.sync_time_to_pps = False
+        """Set device time at a PPS edge after selecting the time source.
+
+        For radios sharing a PPS (time source "external"): every radio's
+        device time then counts the same seconds, so TDMA slots line up
+        from the start. Without it the device time is set from the host
+        clock, as before. Added 2026-11-04."""
 
         # Full-stack simulation (P2). With sim_air set, a SimUSRP connected to
         # that air relay replaces the UHD device; with sim_traffic set,
@@ -249,8 +256,13 @@ class Config:
         """ARQ window size"""
         self.arq_enforce_ordering = False
         """Should ARQ enforce packet ordering?"""
-        self.arq_max_retransmissions = None
-        """Maximum number of times a packet is allowed to be retransmitted"""
+        self.arq_max_retransmissions = 8
+        """Maximum number of times a packet is allowed to be retransmitted.
+
+        Default 8 since 2026-11-04 (was None, unlimited). A negative value
+        or None means unlimited. SYN packets are always retransmitted, and a
+        packet's deadline still applies. See docs/defaults-2026-11.rst.
+        """
         self.arq_ack_delay = 100e-3
         """Maximum delay before an explicit ACK is sent (sec)"""
         self.arq_ack_delay_estimation_window = 1
@@ -342,6 +354,10 @@ class Config:
         # Tail drop queue options
         self.tail_drop_max_size = 5*1500
         "Tail drop queue maximum size (bytes)"
+        self.tail_drop_push_out = True
+        """When the tail drop queue is full, push out packets whose
+        destination's send window is closed (default since 2026-11-04;
+        False restores plain tail drop). See docs/defaults-2026-11.rst."""
 
         # RED queue options
         self.red_gentle = True
@@ -596,6 +612,9 @@ class Config:
                           dest='time_source',
                           metavar='CLOCK',
                           help='set time source')
+        usrp.add_argument('--sync-time-to-pps', action='store_const', const=True,
+                          dest='sync_time_to_pps',
+                          help='set device time at a PPS edge (use with --time-source external)')
 
         simulation = parser.add_argument_group('Full-stack simulation')
 
@@ -888,7 +907,8 @@ class Config:
         arq.add_argument('--max-retransmissions', action='store', type=int,
                          dest='arq_max_retransmissions',
                          metavar='COUNT',
-                         help='set maximum number of retransmission attempts')
+                         help='set maximum number of retransmission attempts '
+                              '(default 8; negative means unlimited)')
         arq.add_argument('--explicit-nak-window', action='store', type=int,
                          dest='arq_explicit_nak_win',
                          metavar='NPACKETS',
@@ -988,6 +1008,9 @@ class Config:
         net.add_argument('--taildrop', action='store_const', const='taildrop',
                          dest='queue',
                          help='use tail drop network queue algorithm')
+        net.add_argument('--no-taildrop-push-out', action='store_const', const=False,
+                         dest='tail_drop_push_out',
+                         help='plain tail drop: never push out packets for a blocked destination')
         net.add_argument('--red', action='store_const', const='red',
                          dest='queue',
                          help='use RED network queue algorithm')

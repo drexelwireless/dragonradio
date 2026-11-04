@@ -96,6 +96,23 @@ int main()
             if (q3.pop(out))
                 seqs.push_back(static_cast<uint16_t>(out->hdr.seq));
         CHECK(seqs == std::vector<unsigned>({0, 1, 2, 3}), "open-window tail drop changed");
+
+        // Push-out is the default; setPushOut(false) restores plain tail drop,
+        // where the open node's packet is dropped on arrival.
+        TailDropQueue<std::shared_ptr<NetPacket>> q4(3000);
+        CHECK(q4.getPushOut(), "push-out is not the default");
+        q4.setPushOut(false);
+        q4.setSendWindowStatus(3, false);
+        for (uint16_t i = 0; i < 4; ++i)
+            q4.push(data(3, i, 1000));
+        q4.push(data(2, 100, 1000));
+        CHECK(!q4.pop(out), "plain tail drop kept the arrival at a full queue");
+        q4.setSendWindowStatus(3, true);
+        seqs.clear();
+        for (int i = 0; i < 4; ++i)
+            if (q4.pop(out))
+                seqs.push_back(static_cast<uint16_t>(out->hdr.seq));
+        CHECK(seqs == std::vector<unsigned>({0, 1, 2, 3}), "plain tail drop pushed out a blocked packet");
     }
 
     // Gentle RED: between max_thresh and 2*max_thresh the drop probability
