@@ -48,6 +48,12 @@ void TimerQueue::start(void)
     if (done_.load(std::memory_order_acquire)) {
         done_.store(false, std::memory_order_release);
 
+        // Install the (process-wide) wake handler before the worker exists: a
+        // timer scheduled right after start() wakes the worker with SIGWAKE,
+        // whose default action would otherwise kill the process if the
+        // worker had not yet run makeThreadWakeable().
+        makeThreadWakeable();
+
         timer_worker_thread_ = std::thread(&TimerQueue::timer_worker, this);
     }
 }
