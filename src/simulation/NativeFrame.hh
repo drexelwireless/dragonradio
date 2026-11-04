@@ -315,6 +315,7 @@ struct FramedPHY {
         FastPHY::phase_line(phases, H, intercept, slope);
         const int air_bits = header_air * 8;
         std::vector<unsigned char> &on_air = ws.bytes, &descrambled = ws.descrambled;
+        const unsigned char *const prbs = scramble_.data();
         std::vector<float> &confidence = ws.confidence;
         on_air.assign(header_air, 0);
         descrambled.assign(air_bits, 0);
@@ -332,7 +333,7 @@ struct FramedPHY {
                 noise += FastPHY::demap(cmul(rows[s * nd + j], correction), gain, 2, hard, conf) * gain;
                 ++points;
                 for (int k = 0; k < 2 && bit + k < air_bits; ++k) {
-                    const int b = hard[k] ^ scramble_[bit + k];
+                    const int b = hard[k] ^ prbs[bit + k];
                     on_air[(bit + k) / 8] |= b << (7 - (bit + k) % 8);
                     descrambled[bit + k] = (unsigned char)b;
                     confidence[bit + k] = conf[k];
@@ -397,6 +398,10 @@ struct FramedPHY {
         // soft decoder (and NativeFEC's port of it) hard-decides the soft bits
         // of any other outer code, so those decode from hard decisions (P4).
         const bool soft_input = fh.coded() && soft && fec::detail::conv(fh.fec1);
+        // Local pointer: stores to the unsigned char body may alias the
+        // vector's own pointer, which made the compiler reload it per bit
+        // (P4: 30% slower native demodulation until hoisted).
+        const unsigned char *const prbs = scramble_.data();
         std::vector<unsigned char> &body = ws.bytes;
         std::vector<float> &confidence = ws.confidence;
         std::vector<unsigned char> &descrambled = ws.descrambled;
@@ -405,25 +410,37 @@ struct FramedPHY {
         descrambled.resize(soft_input ? used : 0);
         double error = 0, noise = 0;
         int points = 0;
-        for (int s = H; s < total; ++s) {
-            C correction = std::polar(f.scale, float(-(intercept + slope * s)));
-            for (int j = 0; j < nd; ++j) {
-                const int bit = bps * ((s - H) * nd + j);
-                int hard[8];
-                float conf[8];
-                const float gain = cnorm(f.estimate[a.data[j]]);
-                const C z = cmul(rows[s * nd + j], correction);
-                const float e = (bps == 2 || bps == 4) ? FastPHY::demap(z, gain, bps, hard, conf) : cons.demap(z, gain, hard, conf);
-                error += e;
-                noise += e * gain;     // pre-equalization noise power estimate
-                ++points;
-                for (int k = 0; k < bps && bit + k < used; ++k) {
-                    const int b = hard[k] ^ scramble_[header_bits + bit + k];
-                    body[(bit + k) / 8] |= b << (7 - (bit + k) % 8);
-                    confidence[bit + k] = conf[k];
-                    if (soft_input) descrambled[bit + k] = (unsigned char)b;
+        // The loop is instantiated twice: the original QPSK/16-QAM demapper
+        // (FastPHY::demap, 4-entry arrays) and the general constellation
+        // demapper. One loop with both behind a runtime branch made native
+        // demodulation 30% slower (P4 finding on 5db6052f).
+        auto demap_all = [&](auto demapper, auto &hard, auto &conf) {
+            for (int s = H; s < total; ++s) {
+                C correction = std::polar(f.scale, float(-(intercept + slope * s)));
+                for (int j = 0; j < nd; ++j) {
+                    const int bit = bps * ((s - H) * nd + j);
+                    const float gain = cnorm(f.estimate[a.data[j]]);
+                    const float e = demapper(cmul(rows[s * nd + j], correction), gain, hard, conf);
+                    error += e;
+                    noise += e * gain;     // pre-equalization noise power estimate
+                    ++points;
+                    for (int k = 0; k < bps && bit + k < used; ++k) {
+                        const int b = hard[k] ^ prbs[header_bits + bit + k];
+                        body[(bit + k) / 8] |= b << (7 - (bit + k) % 8);
+                        confidence[bit + k] = conf[k];
+                        if (soft_input) descrambled[bit + k] = (unsigned char)b;
+                    }
                 }
             }
+        };
+        if (bps == 2 || bps == 4) {
+            int hard[4];
+            float conf[4];
+            demap_all([bps](C z, float gain, int *h, float *c) { return FastPHY::demap(z, gain, bps, h, c); }, hard, conf);
+        } else {
+            int hard[8];
+            float conf[8];
+            demap_all([&cons](C z, float gain, int *h, float *c) { return cons.demap(z, gain, h, c); }, hard, conf);
         }
         metrics[3] = 10 * std::log10(std::max(error / std::max(points, 1), 1e-20));
         if (fh.coded()) {
