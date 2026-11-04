@@ -254,7 +254,8 @@ def node_command(args, scenario, node, sock, outdir):
     # absolute host monotonic time on every node.
     for (offset, slots) in sc.get('schedules', []):
         cmd += ['--schedule-at', f'{args.schedule_base + offset:.6f}:' + ','.join(str(n) for n in slots)]
-    return cmd + sc.get('radio_args', []) + sc.get('node_args', {}).get(node, []) + args.extra
+    node_extra = [a for (n, extra) in (args.node_extra or []) if int(n) == node for a in shlex.split(extra)]
+    return cmd + sc.get('radio_args', []) + sc.get('node_args', {}).get(node, []) + args.extra + node_extra
 
 
 # Seconds allowed for a tap node's radio to start before applications begin.
@@ -730,6 +731,8 @@ def main():
     parser.add_argument('--duration', type=float, default=20.0)
     parser.add_argument('--drain', type=float, default=4.0)
     parser.add_argument('--timeout', type=float, default=40.0, help='extra seconds before nodes are killed')
+    parser.add_argument('--node-extra', action='append', nargs=2, metavar=('NODE', 'ARGS'),
+                        help='extra radio arguments for one node (shell words), e.g. --node-extra 2 "--sim-clock-ppm 5"')
     parser.add_argument('extra', nargs='*', help='extra radio arguments (after --)')
     args = parser.parse_args()
     scenarios = args.scenario or list(SCENARIOS)
