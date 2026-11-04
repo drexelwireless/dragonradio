@@ -157,6 +157,14 @@ with wrong bytes.
 With about 10 errors at each 1% crossing, differences under about 0.3 dB are
 within noise.
 
+**Reproduction.** A from-scratch workspace built from commit a9e7d30b with
+``grid/setup-fullstack-build.sh`` installed libcorrect and FEC-enabled liquid
+and passed every ``tests/fullstack`` program. A 300-packet rerun of the
+benchmark agreed with these crossings within its coarser resolution, about
+0.5 dB. Examples: native ``rs8`` 7.6 dB, liquid ``rs8`` 9.3 dB, native soft
+``v27`` 4.2 dB. The clean-arq, ack-loss, saturation and tap-tcp-bulk
+scenarios, and liquid production clean-arq and erasure-arq, passed.
+
 * **The uncoded native header limits coding gain.** With an uncoded header,
   every QPSK code stalls near 11 dB: at 6–8 dB most losses are
   header/acquisition failures, and payloads whose header arrived decode.

@@ -673,6 +673,9 @@ Implemented and measured on gridgpu01, in simulation only (details:
 - **Full stack.** All 23 P2 scenarios pass with the coded header. Native `rs8`
   and liquid production pass the clean, erasure, saturation and tap TCP
   scenarios.
+- **Reproduction.** A from-scratch workspace from commit a9e7d30b passed
+  every `tests/fullstack` program, a 300-packet PER rerun (agrees within about
+  0.5 dB) and native and liquid-production full-stack scenarios.
 - **Not done.** Constellations beyond QPSK/16-QAM natively; `v39`/`v615` and
   block codes; theory for punctured codes; channels other than AWGN in the
   PER study; native per-symbol logging.
