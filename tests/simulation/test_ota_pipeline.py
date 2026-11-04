@@ -121,7 +121,7 @@ class Pipeline(unittest.TestCase):
                         workspace_tar=str(self.tar), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
-        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid39', 'grid58', 'grid59']
+        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid44', 'grid57', 'grid59']
         (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
         run = self.tmp / 'run-cells'
         p = self.pipeline(run, STOP_BEFORE='5')
@@ -148,7 +148,7 @@ class Pipeline(unittest.TestCase):
                         workspace=str(self.tmp / 'node' / 'drfs-ws'), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
-        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid39', 'grid58', 'grid59']
+        hosts = ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid44', 'grid57', 'grid59']
         (self.state / 'nodes').write_text(''.join(f'{h} READY\n' for h in hosts))
         run = self.tmp / 'run-image'
         p = self.pipeline(run, STOP_BEFORE='5')
@@ -246,7 +246,7 @@ class Campaign(unittest.TestCase):
             self.mod.ota.build(p)                    # every plan validates
         hosts = self.mod.hosts(c)
         self.assertEqual([h[0] for h in hosts],
-                         ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid39', 'grid58', 'grid59'])
+                         ['grid08', 'grid19', 'grid01', 'grid15', 'grid60', 'grid61', 'grid44', 'grid57', 'grid59'])
         self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid01'], 'external')   # external in W1
         self.assertEqual(dict((h, clk) for h, _, clk, _ in hosts)['grid61'], 'internal')
 

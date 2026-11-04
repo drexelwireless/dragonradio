@@ -116,7 +116,7 @@
    "nodes": [
     {
      "id": 1,
-     "host": "grid39",
+     "host": "grid44",
      "family": "X310",
      "addr": "addr=192.168.40.2",
      "tx_gain": 5,
@@ -125,7 +125,7 @@
     },
     {
      "id": 2,
-     "host": "grid58",
+     "host": "grid57",
      "family": "X310",
      "addr": "addr=192.168.40.2",
      "tx_gain": 5,
@@ -136,7 +136,7 @@
    "strata": {
     "pair_type": "X310<->X310",
     "strength": "weak",
-    "placement": "grid39-grid58 (radio map 2026-10-25: tone SNR 61.0 dB at TX/RX 5 dB)",
+    "placement": "grid44-grid57 (radio map 2026-10-25: tone SNR 72.1 dB at TX/RX 5 dB)",
     "power": "TX 5/5 dB, RX 10/10 dB",
     "clock": "independent oscillators, timesync only"
    }
