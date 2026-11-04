@@ -40,6 +40,14 @@ surprise. Each has a way to get the old behavior back.
      - The drop probability ramps from ``max_p`` to 1, as specified
      - Not configurable (it was a bug)
 
+One crash fix also affects every hardware run: ``TimerQueue::start`` (and
+``TunTap::start``) now install the SIGUSR1 wake handler before creating
+their worker thread. Before, a timer scheduled right after start-up could
+signal a worker that had not yet installed it, and the signal's default
+action killed the radio. It is more likely on a loaded host
+(``tests/fullstack/test_timer_wake.cc``: 194 of 200 one-CPU start-ups
+killed before the fix, 0 after).
+
 Nothing else about the defaults changed: liquid OFDM is still the default
 PHY, the default queue is still FIFO (unbounded, so the tail-drop change
 applies only with ``--taildrop``), and the native PHY and OFDMA are opt-in
@@ -110,8 +118,12 @@ Where the evidence is
 * Build and tests: every ``tests/fullstack`` program, including the new
   ``test_logger_chunks``, and the Python simulation tests pass on gridgpu01
   (2026-11-04).
-* The full-stack scenario suite was rerun with the new defaults; see the
-  plan's section 18 for the result.
+* The full-stack scenario suite was rerun with the new defaults: 19/31
+  passed on a heavily loaded host. Every failure but one had counted late
+  or partially late bursts on the simulated device. The other,
+  ``clock-offset-sync``, lost one frame before the first clock fit, as the
+  previous build also did. The retransmission limit dropped no packet in
+  any scenario. Details are in the plan's section 18.
 * ``syncTimeToPPS`` has no hardware-free test: it only runs against a real
   device. It is first exercised by the shared-PPS OTA campaign
   (:doc:`ota-fullstack-grid`).

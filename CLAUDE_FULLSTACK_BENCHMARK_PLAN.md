@@ -813,3 +813,85 @@ Not met or open:
 - Unequal allocation is not demonstrated without a per-destination fair
   scheduler, which does not exist.
 - Two users only, fixed allocations; no OTA.
+
+## 18. Defaults and OTA readiness, 2026-11-04 (evening)
+
+Owner decisions on the overnight run's open questions, made the default and
+documented for radio users in `docs/defaults-2026-11.rst` (linked from
+`README.md`). Each can be reverted with an option.
+
+- **ARQ retransmission limit 8** (was unlimited; `f7b06bf0`).
+  `--max-retransmissions -1` restores unlimited. SYNs and deadlines are
+  unchanged.
+- **Tail-drop push-out stays the default** (`fe23d959`).
+  `--no-taildrop-push-out` restores plain tail drop.
+- **Logger chunk cache** 8 MB per dataset (was 64 MB), 16,384-row chunks
+  (was 131,072). `test_logger_chunks`: 400k rows to two datasets read back
+  exactly, 16.5 MB heap growth.
+- **New, opt-in `--sync-time-to-pps`:** device time is set at a PPS edge for
+  radios sharing a PPS. Hardware-only; untested until the first OTA
+  campaign.
+- **Crash fix `117edddf`:** `TimerQueue`/`TunTap` installed the SIGUSR1 wake
+  handler only in their worker thread. A timer scheduled at start-up could
+  kill the process. It was found when `test_arq_syn` died on a loaded host.
+  `test_timer_wake`: 194/200 one-CPU start-ups killed before, 0 after.
+  Affects hardware runs.
+- **Sudo is not needed.** Grid users have full admin rights in their LXC
+  containers. The OTA node script runs privileged commands as root, or
+  through `sudo -n` when run as an admin user.
+
+OTA runner fixes (`7d68226d`). Without them the first hardware trial would
+have failed:
+
+- The radio was started without the workspace's `LD_LIBRARY_PATH` and
+  `PYTHONPATH`.
+- Device identity required distinct addresses, but every grid node reaches
+  its radio at 192.168.40.2 or 192.168.10.2.
+- The GO barrier went over NFS without a start time.
+
+The container's own network replaces the per-trial namespace, so the USRP
+interface is never moved.
+
+Grid tooling for the first campaign (`docs/ota-fullstack-grid.rst`):
+
+- `grid/make-ota-workspace.sh`;
+- `grid/ota-campaign.py` (paired native/liquid blocks);
+- `grid/ota-pipeline.sh`: preflight, reservation, install, read-only
+  health, simulation gate on a radio node, trials, stop. It is resumable,
+  stops the reservation on failure, and has `DRY_RUN=1` and
+  `STOP_BEFORE=5`;
+- `grid/ota-node-health.sh`.
+
+The first campaign uses two nodes with a shared 10 MHz/PPS. The image is
+`dragonradio/ubuntu2404-20260225-20064ad9`; the bundle's UHD 4.6 is private
+to the workspace.
+
+Verification on gridgpu01:
+
+- **Tests.** All 13 `tests/fullstack` programs and the embedded-Python test
+  pass, from an offline bundle setup at `117edddf`. 78 Python simulation
+  tests pass (8 skipped: optional legacy bridges). This includes the
+  pipeline against a fake ssh/gridcli: a dry run, stages 0–4 then stop,
+  and a health failure that stops the reservation.
+- **Workspace.** `~/dragonradio-ota/ws-117edddf.tar.gz` (772 MB).
+  `clean-arq` passed with native. Liquid delivered every packet but failed
+  the frame check on one partially late RX burst.
+- **Scenario suite with the new defaults: 19/31 pass**, on a host at load
+  15–20 from other sessions. Every failure but one has counted late or
+  partially late bursts on the simulated device. The exception,
+  `clock-offset-sync`, lost one frame before the first clock fit, as on
+  the previous build. `ofdma-unequal` is the known gap. The retransmission
+  limit dropped no packet in any scenario (`arq-drops` 0 everywhere). The
+  previous build passed 23/31 on a quieter host with the same failure
+  classes. No correctness regression.
+
+Nothing was reserved or transmitted. Before the first trial, the owner
+must provide:
+
+- the node pair with a shared reference;
+- this experiment's RF approval reference, frequency and gain cap;
+- the strata.
+
+The campaign template is `~/dragonradio-ota/campaign-pps01.json`. Run
+`STOP_BEFORE=5` first: a rehearsal that reserves and checks the real nodes
+without transmitting.
