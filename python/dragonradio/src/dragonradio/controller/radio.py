@@ -128,7 +128,11 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
     def __init__(self, config: Config, mac: str, loop: Optional[AbstractEventLoop]=None):
         if loop is None:
-            loop = asyncio.get_event_loop()
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
 
         dragonradio.tasks.TaskManager.__init__(self, loop)
         NeighborhoodListener.__init__(self)

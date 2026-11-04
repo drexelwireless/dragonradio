@@ -571,7 +571,7 @@ class Config:
         """
         d = dict()
 
-        for attr in self.__annotations__:
+        for attr in type(self).__annotations__:
             if attr[-1] != '_':
                 d[attr] = getattr(self, attr)
 
