@@ -58,17 +58,13 @@ inline uint32_t crc32(const unsigned char *p, int count) {
     for (int j = 0; j < count; ++j) crc = table[(crc ^ p[j]) & 255] ^ (crc >> 8);
     return crc ^ 0xffffffffU;
 }
-// True if every component is finite. A branch-free reduction (vectorizable),
-// unlike an early-exit loop over std::isfinite.
+// True if every component is finite. An early-exit loop: at portable -O2 it
+// measured 0.8 ns/sample, against 2.4 for a branch-free bit-test reduction
+// that the compiler did not vectorize (P4).
 inline bool all_finite(const C *x, int count) {
-    const float *f = reinterpret_cast<const float *>(x);
-    uint32_t bad = 0;
-    for (int j = 0; j < 2 * count; ++j) {
-        uint32_t u;
-        std::memcpy(&u, f + j, sizeof(u));
-        bad |= uint32_t((u & 0x7f800000U) == 0x7f800000U);   // exponent all ones: inf or NaN
-    }
-    return bad == 0;
+    for (int j = 0; j < count; ++j)
+        if (!std::isfinite(x[j].real()) || !std::isfinite(x[j].imag())) return false;
+    return true;
 }
 inline uint32_t load_be32(const unsigned char *p) {
     return (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8) | p[3];
