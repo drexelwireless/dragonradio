@@ -1,0 +1,5 @@
+# LeakSanitizer suppressions for grid/build-sanitized.sh.
+# pybind11 internals and CPython interpreter state are not freed at
+# interpreter shutdown in tests that embed Python.
+leak:pybind11::detail::get_internals
+leak:libpython3

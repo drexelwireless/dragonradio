@@ -15,3 +15,7 @@ tmp/
 /venv/
 /.venv-simulation/
 /simulation-results/
+/obj-asan/
+/obj-tsan/
+/dragonradio-asan
+/dragonradio-tsan

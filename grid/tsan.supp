@@ -1,0 +1,4 @@
+# ThreadSanitizer suppressions for grid/build-sanitized.sh.
+# The embedded CPython runtime is not instrumented; its GIL hand-offs look
+# like races to TSan.
+race:libpython3
