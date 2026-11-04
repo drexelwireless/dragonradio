@@ -5,7 +5,10 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include <algorithm>
 #include <atomic>
+#include <cmath>
+#include <stdexcept>
 #include <chrono>
 #include <random>
 
@@ -119,11 +122,53 @@ void USRP::syncTime(double random_bias, bool use_pps)
     std::lock_guard lock(clock_mutex_);
 
     if (use_pps) {
-        uhd::time_spec_t now = get_clock_time() + bias;
-        uhd::time_spec_t t_next_pps = now.get_full_secs() + 1.0;
+        // Radios sharing a PPS (and NTP-synchronized hosts) must all name the
+        // same edge. Wait for an edge first, so the time is set early in a
+        // second: the nearest whole host second names the edge just seen and
+        // the next edge is one second later. Setting "the next PPS" without
+        // this can pick the wrong second when called near a second boundary.
+        using std::chrono::steady_clock;
 
-        usrp_->set_time_next_pps(t_next_pps);
-        std::this_thread::sleep_for(1s);
+        // With an external reference, its lock is checked first: an unlocked
+        // reference still passes PPS edges, but the sample clock then drifts.
+        if (usrp_->get_clock_source(0) == "external") {
+            const auto names = usrp_->get_mboard_sensor_names(0);
+
+            if (std::find(names.begin(), names.end(), "ref_locked") != names.end()) {
+                const auto lock_deadline = steady_clock::now() + 3s;
+
+                while (!usrp_->get_mboard_sensor("ref_locked", 0).to_bool()) {
+                    if (steady_clock::now() > lock_deadline)
+                        throw std::runtime_error("syncTime: the external 10 MHz reference is not locked");
+                    std::this_thread::sleep_for(50ms);
+                }
+            }
+        }
+
+        const uhd::time_spec_t last = usrp_->get_time_last_pps();
+        const auto             deadline = steady_clock::now() + 3s;
+
+        while (usrp_->get_time_last_pps() == last) {
+            if (steady_clock::now() > deadline)
+                throw std::runtime_error("syncTime: no PPS edge in 3 s; check the time source and the PPS input");
+            std::this_thread::sleep_for(5ms);
+        }
+
+        const double host = (get_clock_time() + bias).get_real_secs();
+        const double edge = std::round(host);
+
+        usrp_->set_time_next_pps(uhd::time_spec_t(static_cast<time_t>(edge) + 1, 0.0));
+
+        // Let that edge pass, then check that it took.
+        std::this_thread::sleep_for(1100ms);
+
+        if (usrp_->get_time_last_pps().get_full_secs() != static_cast<time_t>(edge) + 1)
+            throw std::runtime_error("syncTime: the device time did not take at the PPS edge");
+
+        logUSRP(LOGINFO, "time set at PPS edge to %lld (edge %+.3f s from the host's whole second)",
+            static_cast<long long>(edge) + 1, host - edge);
+        if (std::abs(host - edge) > 0.4)
+            logUSRP(LOGWARNING, "PPS edge within 0.1 s of the host's half second: radios may disagree by a second");
     } else {
 #if 1
         uhd::time_spec_t now = get_clock_time() + bias;
