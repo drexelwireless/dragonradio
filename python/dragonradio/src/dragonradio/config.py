@@ -20,6 +20,7 @@ import libconf # type: ignore
 from dragonradio.liquid import CRCScheme, FECScheme, ModulationScheme
 
 from dragonradiocpp.radio import MAC, PHY
+from dragonradiocpp.radio import NativeOFDM, NativeOFDMA
 from dragonradiocpp.radio import FDMA, SlottedALOHA, TDMA
 from dragonradiocpp.radio import Channelizer, FDChannelizer, TDChannelizer
 from dragonradiocpp.radio import Synthesizer, FDSynthesizer, TDSynthesizer, MultichannelSynthesizer
@@ -44,6 +45,8 @@ PHY_NAMES: Dict[str, Type[PHY]]
 PHY_NAMES = { 'ofdm': OFDM
             , 'flexframe': FlexFrame
             , 'newflexframe': NewFlexFrame
+            , 'native-ofdm': NativeOFDM
+            , 'native-ofdma': NativeOFDMA
             }
 
 def str2phy(name: str) -> Type[PHY]:
@@ -315,6 +318,19 @@ class Config:
     """OFDM taper length"""
     subcarriers: Optional[str] = None
     """string specifying OFDM subcarriers: '.' = null; 'P' = pilot; '+' = data."""
+
+    # Native OFDM parameters (--phy native-ofdm, --phy native-ofdma)
+    native_max_payload: int = 4096
+    """Largest native-ofdm payload (bytes)"""
+    native_chase_bits: int = 4
+    """CRC-aided Chase search size (0 disables)"""
+    native_header_fec: str = 'v29'
+    """Native header section code (none, v27, v29): a link parameter both ends share.
+    v29 (r1/2 K=9, soft) gives the header the robustness of liquid's coded header."""
+    ofdma_allocation: str = 'equal'
+    """Native downlink OFDMA two-user tone split (equal, 1:2, 2:1)"""
+    ofdma_burst_wait: float = 0.002
+    """Longest wait for a second destination's packet when batching an OFDMA burst (sec)"""
 
     # MAC parameters
     mac: str = 'tdma-fdma'
@@ -1042,6 +1058,30 @@ class Config:
         ofdm.add_argument('--subcarriers', action='store', type=str,
                           dest='subcarriers',
                           help='set OFDM subcarrier allocation (.=null, P=pilot, +=data)')
+
+        # Native OFDM options
+        native = parser.add_argument_group('Native OFDM')
+
+        native.add_argument('--native-max-payload', action='store', type=int,
+                            dest='native_max_payload',
+                            metavar='BYTES',
+                            help='set largest native-ofdm payload (bytes)')
+        native.add_argument('--native-header-fec', action='store',
+                            choices=['none', 'v27', 'v29'],
+                            dest='native_header_fec',
+                            help='set native-ofdm header section code')
+        native.add_argument('--native-chase-bits', action='store', type=int,
+                            dest='native_chase_bits',
+                            metavar='N',
+                            help='set CRC-aided Chase search size (0 disables)')
+        native.add_argument('--ofdma-allocation', action='store',
+                            choices=['equal', '1:2', '2:1'],
+                            dest='ofdma_allocation',
+                            help='native-ofdma two-user tone split (slot 0 : slot 1)')
+        native.add_argument('--ofdma-burst-wait', action='store', type=float,
+                            dest='ofdma_burst_wait',
+                            metavar='SEC',
+                            help='longest wait for a second destination when batching an OFDMA burst')
 
         # MAC parameters
         mac = parser.add_argument_group('MAC')

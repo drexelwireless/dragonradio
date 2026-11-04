@@ -28,6 +28,7 @@ import numpy as np
 from dragonradiocpp.liquid import CRCScheme, FECScheme, LiquidPHY, ModulationScheme
 from dragonradiocpp.radio import Channel, PHYChannel, PHYChannels
 from dragonradiocpp.radio import PHY
+from dragonradiocpp.radio import NativeOFDM, NativeOFDMA
 from dragonradiocpp.radio import FDMA, MAC, SlottedALOHA, SlottedMAC, TDMA
 from dragonradiocpp.radio import Channelizer, FDChannelizer
 from dragonradiocpp.radio import Synthesizer, FDSynthesizer, MultichannelSynthesizer
@@ -608,6 +609,32 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                                    mcs_table,
                                    config.soft_header,
                                    config.soft_payload)
+        elif issubclass(config.phy_class, NativeOFDMA):
+            # Downlink OFDMA: one burst carries up to two packets for different
+            # destinations on disjoint tones; its header section is the OFDMA
+            # control header (always v29 coded).
+            phy = config.phy_class(mcs_table,
+                                   config.M,
+                                   config.cp_len,
+                                   config.subcarriers,
+                                   config.native_max_payload,
+                                   config.soft_payload,
+                                   config.ofdma_allocation)
+        elif issubclass(config.phy_class, NativeOFDM):
+            # The native PHY carries its own header section (native_header_fec),
+            # so header_mcs and soft_header do not apply. Payload FEC follows the
+            # MCS table (liquid-compatible coding) and soft_payload selects
+            # soft-decision decoding as for liquid. It does not taper symbols.
+            if config.taper_len:
+                logger.info('native-ofdm does not taper symbols; ignoring taper_len=%d', config.taper_len)
+            phy = config.phy_class(mcs_table,
+                                   config.M,
+                                   config.cp_len,
+                                   config.subcarriers,
+                                   config.native_max_payload,
+                                   config.native_chase_bits,
+                                   config.soft_payload,
+                                   config.native_header_fec)
         else:
             raise ValueError(f'Unknown PHY: {config.phy:}')
 
