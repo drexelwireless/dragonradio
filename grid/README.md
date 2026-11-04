@@ -85,3 +85,46 @@ rate over AWGN for native and liquid OFDM, uncoded and with `rs8`, `v27` and
 `v29p78`, through the production PHY classes. `scripts/report-fec.py --run
 OUTDIR --output report.html` adds the theory references. See
 `docs/native-fec.rst`.
+
+## Software performance (P4, CPU only)
+
+See `docs/performance.rst`.
+
+- `run-p4-bench.sh WORKSPACE OUTDIR [core] [packets]`: stage profile,
+  cold construction and streaming throughput of the production PHY
+  classes on one pinned core.
+- `run-p4-ab.sh WORKSPACE A_BIN B_BIN OUTDIR [blocks] [core]`: paired
+  before/after comparison in randomized blocks.
+- `run-sim-soak.sh WORKSPACE OUTDIR --phy native|liquid --rate R --duration S
+  --cores1 ... --cores2 ... --cores-air C`: a real-time soak of two radios
+  over the simulated device, scored against the real-time gate.
+- `build-sanitized.sh WORKSPACE asan|tsan OUTDIR`: an ASan/UBSan or TSan
+  build in `obj-asan`/`obj-tsan`, with all tests and full-stack scenarios.
+- `scripts/report-performance.py --bench B --ab AB --soak S --output
+  report.html`: HTML report.
+
+Keep timing runs off the hyperthread siblings of their cores (on gridgpu01
+CPU N and N+36 share a core; even CPUs are socket 0).
+
+## Pre-OTA tools (CPU only)
+
+See `docs/pre-ota.rst`.
+
+- `scripts/sim-osc-sweep.py --workspace WS --outdir DIR`: oscillator and
+  sample-clock offset tolerance of each PHY through the full stack.
+- `sim-fullstack.py --scenario clock-offset-nosync|clock-offset-sync|clock-skew-sync`:
+  independent node clocks and the radio's timesync.
+- `scripts/package-fullstack.py --workspace WS`: full-source bundle with
+  pinned dependency sources, Ubuntu 24.04 packages, wheels and a hash
+  manifest. Its `setup.sh WORKSPACE` builds offline
+  (`setup-fullstack-build.sh` with `VENDOR=`).
+- `scripts/ota-fullstack.py --plan PLAN.json`
+  (`fullstack-plan.example.json`): full-stack OTA runner. It is a DRY RUN
+  unless `--execute`, which transmits and needs this experiment's approval.
+  `scripts/summarize-fullstack.py` gives the stratified analysis.
+
+## Downlink OFDMA (P5, simulation)
+
+`sim-fullstack.py --scenario ofdma-both-strong|ofdma-strong-weak|ofdma-one-idle|ofdma-one-disconnected|ofdma-unequal`
+runs `--phy native-ofdma` with a base station and two UEs. See
+`docs/ofdma-fullstack.rst`.

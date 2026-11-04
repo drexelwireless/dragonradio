@@ -682,3 +682,134 @@ Implemented and measured on gridgpu01, in simulation only (details:
 
 Next: P4 (software performance and real-time headroom) or a PHY-only cabled
 pilot, which needs RF authorization and a grid reservation.
+
+
+## 15. P4 status, 2026-11-04: software performance
+
+Measured on gridgpu01 in simulation only (details: `docs/performance.rst`;
+report from `scripts/report-performance.py`). `perf` is unavailable (no
+binary; `perf_event_paranoid` 4), so an in-process SIGPROF sampler
+(`bench/sampler.hh`) attributes stages.
+
+- **Stage costs** (`bench/phy_profile.cc`). Per 1000-byte attempt, strong
+  link, final code (`a85e3c10`): native uncoded 218 us vs liquid 542; native
+  rs8 319 vs liquid 677; soft v27 1043 vs 1592; 16-QAM rs8 261 vs 630. Idle: native 11.8 ns/sample
+  vs liquid 17.3. Cold construction: native 1.3 ms for the PHY object and
+  0.4 ms per modulator or demodulator; liquid builds lazily. Per-verified
+  cost and weak-link PER are in the doc.
+- **The earlier "native streaming slower than legacy" finding no longer
+  holds** for the C++ production path, even before this phase's changes.
+- **Native hot path** (`dcc5b66f`, exact by test): hard decoding for
+  non-convolutional outer codes, a soft-bit threshold table, persistent
+  workspaces. Paired A/B: rs8 0.60x, 16-QAM rs8 0.55x, soft v27 0.81x,
+  uncoded 0.99x, liquid control 1.00x. A slower "branch-free" check was
+  measured and reverted (`87ee3a74`).
+- **Streaming** (`bench/stream_throughput.cc`). Saturated: native rs8 15.7 →
+  25.8 MS/s per core after `dcc5b66f`, liquid rs8 12.1. The constellation
+  commit `5db6052f` later added 30% to native demodulation (code
+  generation of the demap loop; bisected). `a85e3c10` recovered most of it;
+  the final numbers are in the doc. Chunk size (363–65536) changes this
+  by less than 5%; a second demodulator on another core costs less than 5%.
+- **Soak** (`scripts/sim-soak.py`, 30 min, saturated both ways). Busiest
+  radio thread at 1/2/5 MS/s: native 32x / 17x / 7.1x, liquid 20x / 10x /
+  4.2x. The spinning workers are metered (`util/WorkMeter`), and the
+  simulated device's rendering is excluded. On a co-loaded host the gate
+  failed on 1–18 late bursts per node per 30 min, simultaneous across
+  independent runs. Quiet-host series (`9e0cdc53`): headroom at
+  1/2/5/10 MS/s is native 31x / 16x / 6.3x / 3.2x, liquid 20x / 10x / 4.2x / 2.1x.
+  Queues stay bounded, with no overflows, duplicates or corruption. The
+  radios' own late TX bursts were 0–2 per node per run (one coincided with
+  a disk-write burst of mine; no real-time priority in the container).
+  Further late arrivals came from the simulated relay (at most 0.03% of
+  bursts). Heap growth at 2–10 MS/s is the logger's HDF5 chunk cache
+  filling to its 64 MB-per-dataset bound (shown standalone), not a leak.
+  **Strict gate (zero late events): not met at any rate in simulation.
+  Headroom of at least 2x: met through 10 MS/s by both PHYs.**
+- **Defects.** The slot synthesizer re-modulated a non-fitting packet in a
+  tight loop (`f0f0f3b8`; affects hardware). UBSan found misaligned `Seq`
+  accesses in packed control messages (`b37cfae9`; affects hardware). Only
+  MandateQueue timestamps the queue (reported). Threads are now named.
+- **Sanitizers.** ASan+UBSan: clean on every test and three
+  scenarios (after the `Seq` fix). TSan (run with `setarch -R`) found real
+  races: three fixed (`d8758817` IQ buffer start-of-fill ordering, a
+  production change; `cf3f8210` queue stop flags and a lost-wakeup risk, a
+  production change; the simulated clock). Pre-existing ones remain:
+  NetPacket fields shared by the modulator, MAC, controller and logger under
+  ARQ, `IQBuf::resize` against readers, timestamps, and a signal-unsafe call.
+  They are listed in the doc.
+
+Report: `/tmp/dragonradio-fullstack/results/p4-2026-11-04/report.html`
+(gridgpu01, not committed).
+
+Not done: real-time priority (no CAP_SYS_NICE in the container),
+deterministic virtual time, a per-function allocation profile.
+
+## 16. Pre-OTA software status, 2026-11-04
+
+Simulation only (details: `docs/pre-ota.rst`). Nothing was transmitted or
+probed.
+
+- **Simulated device impairments** (`a74b0d78`): per-link SFO, TX/RX gain
+  model, IQ imbalance, DC offset, ADC clipping, one-oscillator offsets,
+  TX-to-RX leakage. Off by default; tested against closed forms.
+- **Where each PHY breaks** (`scripts/sim-osc-sweep.py`, 1 MS/s, M=48).
+  Native acquires to about 1.2 subcarriers (25 ppm at 1 GHz, 10 ppm at
+  2.4 GHz); liquid to about 0.5 (10 ppm and 2 ppm). Native does not track
+  timing drift: it holds to 50 ppm SFO and loses long frames at 100 ppm.
+  Liquid tolerated 500 ppm.
+- **TDMA time sync** (`74691e5e`): independent simulated node clocks
+  (offset and ppm; relay protocol v3). The radio's timestamp protocol
+  (`timesync.py`) runs in simulation with a time master. Node 2 at +15 ms
+  (+20 ppm) converges to within 13–14 us. Without sync, 2→1 frame delivery
+  is 69% (guard 10 ms).
+- **Full-stack bundle** (`ecafe223`, `scripts/package-fullstack.py`):
+  source at a commit, dependency sources at the submodule pins, Ubuntu
+  24.04 packages and wheels, and a hash manifest. Verified offline from
+  scratch in a network namespace with no network; all tests passed. UHD
+  3.9 vs 4.x is documented: the API in use exists in both; FPGA images and
+  the image toolchain must match.
+- **OTA runner** (`10bf82f3`, `scripts/ota-fullstack.py`): dry run by
+  default; `--execute` refused without approval fields. Only the dry run was
+  tested (6 tests, subprocess blocked). `scripts/summarize-fullstack.py`
+  stratifies and excludes trials with continuity errors.
+- **Native constellations** (`5db6052f`): BPSK through 256-QAM (the SRN
+  rs8 AMC table); QPSK/16-QAM byte-identical on the wire. 1% PER with rs8:
+  native 1–2 dB below liquid at every order (BPSK 4.5 vs 5.5 dB, 256-QAM
+  25.5 vs 27.5 dB).
+
+Open: SFO and timing-drift tracking in the native receiver; a common
+reference (GPSDO/PPS) path not exercised; the UHD 3.9 image build untried;
+`--execute` needs sudo on radio hosts.
+
+## 17. P5 status, 2026-11-04: downlink OFDMA in the production stack
+
+Simulation only (details: `docs/ofdma-fullstack.rst`). `--phy native-ofdma`
+implements:
+
+- one burst with one shared IQ buffer and up to two packets for different
+  destinations on disjoint tones (`ModPacket.partners`, airtime counted
+  once);
+- a common v29-coded control header announcing allocation, per-user header,
+  MCS and length;
+- per-destination ARQ that never replays a partner's data;
+- time-separated uplink feedback in the UEs' TDMA slots;
+- slot-synthesizer batching with a bounded wait.
+
+Engine test and five three-node scenarios:
+
+- Both strong: 66–86% of packets share bursts, every frame delivered.
+- One UE idle: single-user bursts on every tone.
+- One UE disconnected: the healthy UE kept 213 kb/s, after a production
+  fix to the tail-drop queue (`fe23d959`: blocked packets starved other
+  destinations, with or without OFDMA; affects hardware runs).
+- One UE weak (63–71% frame delivery): the strong UE was unaffected.
+
+Not met or open:
+
+- No capacity gain on flat channels: two-user bursts pack poorly into 25 ms
+  slots, so goodput is equal to single-user TDMA or up to a quarter lower.
+- A UE whose payloads always fail starves the other unless a finite
+  `--max-retransmissions` is set.
+- Unequal allocation is not demonstrated without a per-destination fair
+  scheduler, which does not exist.
+- Two users only, fixed allocations; no OTA.
