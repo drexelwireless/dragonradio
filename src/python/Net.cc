@@ -89,6 +89,10 @@ void exportNet(py::module &m)
             &TailDropNetQueue::getMaxSize,
             &TailDropNetQueue::setMaxSize,
             "Maximum queue size (bytes)")
+        .def_property("push_out",
+            &TailDropNetQueue::getPushOut,
+            &TailDropNetQueue::setPushOut,
+            "When full, push out packets whose destination's send window is closed")
         ;
 
     // Export class MandateNetQueue to Python

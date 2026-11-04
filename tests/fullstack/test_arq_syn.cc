@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "RadioNet.hh"
+#include "Neighborhood.hh"
 #include "llc/SmartController.hh"
 #include "phy/NativeOFDM.hh"
 
@@ -53,9 +53,9 @@ int main()
     PHY::setNodeId(2);
     const liquid::MCS qpsk(LIQUID_CRC_32, LIQUID_FEC_NONE, LIQUID_FEC_NONE, LIQUID_MODEM_QPSK);
     auto phy = std::make_shared<NativeOFDM>(std::vector<std::pair<liquid::MCS, AutoGain>>{{qpsk, AutoGain()}}, 48, 6, std::nullopt);
-    auto radionet = std::make_shared<RadioNet>(nullptr, 2);
-    auto controller = std::make_shared<SmartController>(radionet, 1500, phy, 0.035, 64, 64,
-        std::vector<SmartController::evm_thresh_t>{std::nullopt});
+    auto nhood = std::make_shared<Neighborhood>(2);
+    auto controller = std::make_shared<SmartController>(nhood, 1500, phy, 64, 64,
+        std::vector<evm_thresh_t>{std::nullopt});
     auto sink = std::make_shared<Sink>();
     controller->radio_out.connect(sink, &sink->in);
 

@@ -28,7 +28,7 @@ static int trial(void)
     Flag t;
 
     q.start();
-    q.run_in(t, 0.001);     // wakes the worker immediately
+    q.run_in(t, MonoClock::duration(0.001));     // wakes the worker immediately
     for (int i = 0; i < 1000 && !t.fired; ++i)
         usleep(1000);
     q.stop();

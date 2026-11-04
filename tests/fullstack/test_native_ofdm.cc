@@ -140,10 +140,10 @@ static void impair(std::vector<fc32> &iq, double cfo_subcarriers, unsigned M, do
 static std::vector<std::shared_ptr<RadioPacket>> demodulateAll(PHY &phy, const std::vector<fc32> &iq, size_t chunk)
 {
     std::vector<std::shared_ptr<RadioPacket>> got;
-    auto demod = phy.mkPacketDemodulator();
+    auto demod = phy.mkPacketDemodulator(0, Channel(0, 1e6));
     demod->setCallback([&](std::shared_ptr<RadioPacket> &&p) { got.push_back(std::move(p)); });
     demod->reset(Channel(0.0, 1e6));
-    demod->timestamp(MonoClock::time_point{100.0}, std::nullopt, 0, 0, 1.0f, 1e6f);
+    demod->timestamp(MonoClock::time_point{MonoClock::duration(100.0)}, std::nullopt, 0, 0, 1.0f, 1e6f);
     for (size_t i = 0; i < iq.size(); i += chunk)
         demod->demodulate(iq.data() + i, std::min(chunk, iq.size() - i));
     return got;
@@ -168,7 +168,7 @@ static void verify(const char *name, const Run &run, const std::vector<std::shar
         CHECK(p.mcsidx == e.spec.mcs, "%s[%zu]: mcs %u != %u", name, i, p.mcsidx, e.spec.mcs);
         const long long dstart = static_cast<long long>(p.start_samples) - static_cast<long long>(e.offset);
         CHECK(std::llabs(dstart) <= timing_tolerance, "%s[%zu]: start %zu vs %zu", name, i, p.start_samples, e.offset);
-        CHECK(std::fabs((p.timestamp - MonoClock::time_point{100.0}).get_real_secs() - p.start_samples / 1e6) < 1e-9, "%s[%zu]: timestamp", name, i);
+        CHECK(std::fabs((p.timestamp - MonoClock::time_point{MonoClock::duration(100.0)}).count() - p.start_samples / 1e6) < 1e-9, "%s[%zu]: timestamp", name, i);
         CHECK(p.channel == Channel(0.0, 1e6) && p.bw == 1e6f, "%s[%zu]: channel", name, i);
     }
 }
@@ -183,7 +183,7 @@ static void verify(const char *name, const Run &run, const std::vector<std::shar
 static size_t channelizerProtocol(const char *name, PHY &phy, const Run &run, bool check)
 {
     std::vector<std::shared_ptr<RadioPacket>> got;
-    auto demod = phy.mkPacketDemodulator();
+    auto demod = phy.mkPacketDemodulator(0, Channel(0, 1e6));
     demod->setCallback([&](std::shared_ptr<RadioPacket> &&p) { got.push_back(std::move(p)); });
     std::vector<size_t> cuts;
     for (size_t i = 0; i < run.expected.size(); ++i)
@@ -193,7 +193,7 @@ static size_t channelizerProtocol(const char *name, PHY &phy, const Run &run, bo
         size_t end = b < cuts.size() ? cuts[b] : run.iq.size();
         if (!demod->isFrameOpen())
             demod->reset(Channel(0.0, 1e6));
-        demod->timestamp(MonoClock::time_point{100.0 + start / 1e6}, std::nullopt, 0, 0, 1.0f, 1e6f);
+        demod->timestamp(MonoClock::time_point{MonoClock::duration(100.0 + start / 1e6)}, std::nullopt, 0, 0, 1.0f, 1e6f);
         demod->demodulate(run.iq.data() + start, end - start);
         start = end;
     }
@@ -206,7 +206,7 @@ static size_t channelizerProtocol(const char *name, PHY &phy, const Run &run, bo
             const Expected &e = *wanted[i];
             CHECK(static_cast<uint16_t>(p.hdr.seq) == e.spec.seq && p.size() == e.body.size()
                   && std::memcmp(p.data(), e.body.data(), e.body.size()) == 0, "%s[%zu]: packet differs", name, i);
-            CHECK(std::fabs((p.timestamp - MonoClock::time_point{100.0}).get_real_secs() - e.offset / 1e6) < 1e-9,
+            CHECK(std::fabs((p.timestamp - MonoClock::time_point{MonoClock::duration(100.0)}).count() - e.offset / 1e6) < 1e-9,
                   "%s[%zu]: absolute timestamp across buffers", name, i);
         }
     }

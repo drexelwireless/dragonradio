@@ -31,7 +31,7 @@ int main()
         SimpleNetQueue q(type);
         std::shared_ptr<NetPacket> out;
 
-        q.setSendWindowStatus(2, false);
+        q.setLinkStatus(2, false);
         q.push(packet(2, true, false));          // new data to node 2: held
         q.push_hi(packet(2, false, false));      // ACK-only to node 2: passes
         q.push(packet(3, true, false));          // data to node 3: passes
@@ -42,7 +42,7 @@ int main()
         q.repush(packet(2, true, true));         // retransmission (assigned seq): passes
         CHECK(q.pop(out) && out->hdr.nexthop == 2 && out->internal_flags.assigned_seq, "retransmission held");
 
-        q.setSendWindowStatus(2, true);
+        q.setLinkStatus(2, true);
         CHECK(q.pop(out) && out->hdr.nexthop == 2 && out->hdr.flags.has_seq == 1, "data released when window opens");
     }
 
@@ -63,12 +63,12 @@ int main()
         TailDropQueue<std::shared_ptr<NetPacket>> q(3000);
         std::shared_ptr<NetPacket> out;
 
-        q.setSendWindowStatus(3, false);
+        q.setLinkStatus(3, false);
         for (uint16_t i = 0; i < 4; ++i)
             q.push(data(3, i, 1000));          // the queue fills with blocked packets (4000 bytes)
         q.push(data(2, 100, 1000));            // a packet to an open node arrives
         CHECK(q.pop(out) && out->hdr.nexthop == 2, "packet to an open node starved by a closed node's packets");
-        q.setSendWindowStatus(3, true);
+        q.setLinkStatus(3, true);
         std::vector<unsigned> kept;
         for (int i = 0; i < 3; ++i)
             if (q.pop(out) && out->hdr.nexthop == 3)
@@ -77,11 +77,11 @@ int main()
 
         // Unchanged when the arrival's own window is closed, or every window is open.
         TailDropQueue<std::shared_ptr<NetPacket>> q2(3000);
-        q2.setSendWindowStatus(3, false);
+        q2.setLinkStatus(3, false);
         for (uint16_t i = 0; i < 4; ++i)
             q2.push(data(3, i, 1000));
         q2.push(data(3, 9, 1000));             // also blocked: dropped as before
-        q2.setSendWindowStatus(3, true);
+        q2.setLinkStatus(3, true);
         std::vector<unsigned> seqs;
         for (int i = 0; i < 4; ++i)
             if (q2.pop(out))
@@ -102,12 +102,12 @@ int main()
         TailDropQueue<std::shared_ptr<NetPacket>> q4(3000);
         CHECK(q4.getPushOut(), "push-out is not the default");
         q4.setPushOut(false);
-        q4.setSendWindowStatus(3, false);
+        q4.setLinkStatus(3, false);
         for (uint16_t i = 0; i < 4; ++i)
             q4.push(data(3, i, 1000));
         q4.push(data(2, 100, 1000));
         CHECK(!q4.pop(out), "plain tail drop kept the arrival at a full queue");
-        q4.setSendWindowStatus(3, true);
+        q4.setLinkStatus(3, true);
         seqs.clear();
         for (int i = 0; i < 4; ++i)
             if (q4.pop(out))

@@ -25,6 +25,7 @@ public:
     TailDropQueue(size_t max_size)
       : SizedQueue<T>()
       , max_size_(max_size)
+      , push_out_(true)
     {
     }
 
@@ -42,6 +43,21 @@ public:
         max_size_ = max_size;
     }
 
+    /** @brief Return true if a full queue pushes out blocked packets. */
+    bool getPushOut(void) const
+    {
+        return push_out_;
+    }
+
+    /** @brief Set whether a full queue pushes out blocked packets. */
+    /** On by default since 2026-11-04. False restores the original tail
+     * drop, where an arrival at a full queue is always dropped.
+     */
+    void setPushOut(bool push_out)
+    {
+        push_out_ = push_out;
+    }
+
     virtual void push(T&& item) override
     {
         {
@@ -57,7 +73,7 @@ public:
             // queued packets that may not (P5 finding; affects hardware runs
             // with --taildrop). With one destination, or every window open,
             // nothing changes.
-            if (mark && canPop(item)) {
+            if (mark && push_out_ && canPop(item)) {
                 for (auto it = q_.begin(); it != q_.end() && size_ > max_size_; ) {
                     if (!canPop(*it)) {
                         size_ -= (*it)->payload_size;
@@ -88,6 +104,9 @@ public:
 protected:
     /** @brief Maximum size. */
     size_t max_size_;
+
+    /** @brief Push out blocked packets when full (see push). */
+    bool push_out_;
 };
 
 using TailDropNetQueue = TailDropQueue<std::shared_ptr<NetPacket>>;
