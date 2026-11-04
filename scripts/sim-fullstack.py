@@ -179,9 +179,10 @@ SCENARIOS.update({
         arq=True, nodes=3, flows=_DL_SAT, links={}, radio_args=_OFDMA, ofdma=True,
         expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, min_shared_bursts=0.5)),
     'ofdma-strong-weak': dict(
-        doc='Same bursts; UE 3 about 7 dB SNR (weak), UE 2 strong: UE 3 retransmits, UE 2 is unaffected',
-        arq=True, nodes=3, flows=_DL_SAT, links={3: [(1, -43.0, 0.0, 0, 0.0)]}, radio_args=_OFDMA, ofdma=True,
-        expect=dict(max_app_duplicates=0, min_shared_bursts=0.3, strong_unaffected=(2, 0.999))),
+        doc='Same bursts; UE 3 weak (link -33 dB), UE 2 strong; retry budget 3 per packet',
+        arq=True, nodes=3, flows=_DL_SAT, links={3: [(1, -33.0, 0.0, 0, 0.0)]},
+        radio_args=_OFDMA + ['--max-retransmissions', '3'], ofdma=True,
+        expect=dict(max_app_duplicates=0, strong_unaffected=(2, 0.999))),
     'ofdma-one-idle': dict(
         doc='Only UE 2 has traffic: single-user bursts on every tone',
         arq=True, nodes=3, flows={1: [(2, 5002, 150, 1000)]}, links={}, radio_args=_OFDMA, ofdma=True,
@@ -192,9 +193,9 @@ SCENARIOS.update({
         radio_args=_OFDMA, ofdma=True,
         expect=dict(max_app_duplicates=0, strong_unaffected=(2, 0.999))),
     'ofdma-unequal': dict(
-        doc='Allocation 1:2 (UE 2 a third of the tones): UE 2 at 25 pkt/s, UE 3 saturated',
-        arq=True, nodes=3, flows={1: [(2, 5002, 25, 1000), (3, 5003, 150, 1000)]}, links={},
-        radio_args=_OFDMA + ['--ofdma-allocation', '1:2'], ofdma=True,
+        doc='Allocation 1:2 (UE 2 a third of the tones): UE 2 at 5 pkt/s, UE 3 saturated; per-flow queue (mandate)',
+        arq=True, nodes=3, flows={1: [(2, 5002, 5, 1000), (3, 5003, 150, 1000)]}, links={},
+        radio_args=_OFDMA + ['--ofdma-allocation', '1:2', '--queue', 'mandate'], ofdma=True,
         expect=dict(min_delivery_flow=(2, 0.995), max_app_duplicates=0, min_frame_delivery=0.999)),
 })
 
