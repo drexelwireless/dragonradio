@@ -129,6 +129,29 @@ void MAC::txNotifier(void)
             tx_records_.pop();
         }
 
+        // Burst partners (OFDMA) become ModPackets of their own for
+        // timestamps, logging and the controller; they share the burst's
+        // samples and are marked so their airtime is counted once.
+        for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
+            ModPacket                               &burst = **it;
+            std::vector<std::shared_ptr<NetPacket>> partners = std::move(burst.partners);
+
+            burst.partners.clear();
+            for (auto &p : partners) {
+                auto c = std::make_unique<ModPacket>();
+
+                c->chanidx = burst.chanidx;
+                c->channel = burst.channel;
+                c->start = burst.start;
+                c->offset = burst.offset;
+                c->nsamples = burst.nsamples;
+                c->samples = burst.samples;
+                c->pkt = std::move(p);
+                c->burst_partner = true;
+                it = record.mpkts.insert(std::next(it), std::move(c));
+            }
+        }
+
         if (record.timestamp) {
             // Timestamp packets
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
@@ -140,6 +163,9 @@ void MAC::txNotifier(void)
 
                 for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
                     unsigned chanidx = (*it)->chanidx;
+
+                    if ((*it)->burst_partner)
+                        continue;
 
                     if (chanidx < load_.nsamples.size())
                         load_.nsamples[chanidx] += (*it)->nsamples;

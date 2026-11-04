@@ -214,8 +214,11 @@ void SlottedMAC::missedSlot(Slot &slot)
     slot.closed.store(true, std::memory_order_relaxed);
 
     // Re-queue packets that were modulated for this slot
-    for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it)
+    for (auto it = slot.mpkts.begin(); it != slot.mpkts.end(); ++it) {
         controller_->missed(std::move((*it)->pkt));
+        for (auto &p : (*it)->partners)   // OFDMA burst partners
+            controller_->missed(std::move(p));
+    }
 }
 
 void SlottedMAC::missedRemainingSlots(slot_queue &q)

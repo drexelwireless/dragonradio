@@ -412,6 +412,17 @@ class Radio(dragonradio.tasks.TaskManager):
                              config.native_chase_bits,
                              config.soft_payload,
                              config.native_header_fec)
+        elif config.phy == 'native-ofdma':
+            # Downlink OFDMA (P5): one burst carries up to two packets for
+            # different destinations on disjoint tones; the header section is
+            # the OFDMA control header (always v29 coded).
+            phy = NativeOFDMA(mcs_table,
+                              config.M,
+                              config.cp_len,
+                              config.subcarriers,
+                              config.native_max_payload,
+                              config.soft_payload,
+                              config.ofdma_allocation)
         else:
             raise ValueError('Unknown PHY: %s' % config.phy)
 
@@ -480,6 +491,9 @@ class Radio(dragonradio.tasks.TaskManager):
                 raise ValueError('Multichannel synthesizer can only be used with a slotted MAC')
             else:
                 raise ValueError('Unknown synthesizer: %s' % config.synthesizer)
+
+        if hasattr(synthesizer, 'burst_wait'):
+            synthesizer.burst_wait = config.ofdma_burst_wait
 
         return synthesizer
 

@@ -91,6 +91,7 @@ SOURCES := \
     phy/FDChannelizer.cc \
     phy/MultichannelSynthesizer.cc \
     phy/NativeOFDM.cc \
+    phy/NativeOFDMA.cc \
     sim/SimTraffic.cc \
     sim/SimUSRP.cc \
     phy/OverlapTDChannelizer.cc \

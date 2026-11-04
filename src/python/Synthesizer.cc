@@ -73,6 +73,10 @@ void exportSynthesizers(py::module &m)
             &SlotSynthesizer::getSuperslots,
             &SlotSynthesizer::setSuperslots,
             "Flag indicating whether or not to use superslots.")
+        .def_property("burst_wait",
+            &SlotSynthesizer::getBurstWait,
+            &SlotSynthesizer::setBurstWait,
+            "Longest wait (s) for a second destination's packet when the PHY carries several per burst (OFDMA)")
         ;
 
     // Export class TDSlotSynthesizer to Python

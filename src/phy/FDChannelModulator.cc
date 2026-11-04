@@ -18,7 +18,7 @@ void FDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
     if (Nrot != 0 || rate_ != 1.0) {
         // Modulate the packet, but don't paply gain yet. We will apply gain
         // when we resample.
-        mod_->modulate(std::move(pkt), 1.0f, mpkt);
+        modulatePHY(std::move(pkt), 1.0f, mpkt);
 
         // Perform overlap-save on modulated signal to upsample it.
         //
@@ -60,7 +60,7 @@ void FDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
         // Modulate packet and apply gain
         auto pkt_g = pkt->g*g;
 
-        mod_->modulate(std::move(pkt), pkt_g, mpkt);
+        modulatePHY(std::move(pkt), pkt_g, mpkt);
     }
 
     // Set channel

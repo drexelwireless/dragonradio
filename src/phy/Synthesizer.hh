@@ -143,7 +143,39 @@ public:
                           float g,
                           ModPacket &mpkt) = 0;
 
+    /** @brief Modulate several packets (different destinations) into one
+     * burst, for PHYs with getMaxBurstUsers() > 1 (OFDMA, P5). The first
+     * packet becomes mpkt.pkt and the rest mpkt.partners; resampling and
+     * mixing are the same as for one packet.
+     */
+    void modulateBurst(std::vector<std::shared_ptr<NetPacket>> pkts,
+                       float g,
+                       ModPacket &mpkt)
+    {
+        auto first = std::move(pkts.front());
+
+        burst_partners_.assign(std::make_move_iterator(pkts.begin() + 1), std::make_move_iterator(pkts.end()));
+        modulate(std::move(first), g, mpkt);
+        burst_partners_.clear();
+    }
+
 protected:
+    /** @brief Partners of the packet being modulated (modulateBurst) */
+    std::vector<std::shared_ptr<NetPacket>> burst_partners_;
+
+    /** @brief Run the PHY modulator on pkt and any burst partners. */
+    void modulatePHY(std::shared_ptr<NetPacket> pkt, float g, ModPacket &mpkt)
+    {
+        if (burst_partners_.empty()) {
+            mod_->modulate(std::move(pkt), g, mpkt);
+        } else {
+            std::vector<std::shared_ptr<NetPacket>> pkts{std::move(pkt)};
+
+            pkts.insert(pkts.end(), burst_partners_.begin(), burst_partners_.end());
+            mod_->modulateBurst(std::move(pkts), g, mpkt);
+        }
+    }
+
     /** @brief Index of channel we are modulating */
     const unsigned chanidx_;
 

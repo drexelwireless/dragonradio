@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 
 #include "phy/NativeOFDM.hh"
+#include "phy/NativeOFDMA.hh"
 #include "python/PyModules.hh"
 
 void exportNativePHYs(py::module &m)
@@ -35,5 +36,25 @@ void exportNativePHYs(py::module &m)
         .def_property_readonly("soft_payload", &NativeOFDM::getSoftPayload)
         .def_property_readonly("header_fec", &NativeOFDM::getHeaderFEC)
         .def_property_readonly_static("fec_available", [](py::object) { return NativeOFDM::fecAvailable(); })
+        ;
+
+    // Export class NativeOFDMA (P5 downlink OFDMA) to Python
+    py::class_<NativeOFDMA, NativeOFDM, std::shared_ptr<NativeOFDMA>>(m, "NativeOFDMA")
+        .def(py::init<const std::vector<std::pair<liquid::MCS, AutoGain>>&,
+                      unsigned int,
+                      unsigned int,
+                      const std::optional<std::string>&,
+                      unsigned int,
+                      bool,
+                      const std::string&>(),
+             py::arg("mcs_table"),
+             py::arg("M"),
+             py::arg("cp_len"),
+             py::arg("subcarriers") = std::nullopt,
+             py::arg("max_payload") = 4096,
+             py::arg("soft_payload") = true,
+             py::arg("allocation") = "equal")
+        .def_property_readonly("allocation", &NativeOFDMA::getAllocation)
+        .def_property_readonly("max_burst_users", &NativeOFDMA::getMaxBurstUsers)
         ;
 }

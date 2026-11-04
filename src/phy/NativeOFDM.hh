@@ -119,7 +119,7 @@ protected:
     /** @brief Create a frame engine (serialized with every other FFTW planner user) */
     std::unique_ptr<dragonradio::native::FramedPHY> mkFrame(void) const;
 
-private:
+protected:
     unsigned int M_, cp_len_, max_payload_, chase_bits_;
     bool soft_payload_;
     dragonradio::native::fec::Code header_fec_;

@@ -127,6 +127,7 @@ public:
                     const Channels &channels)
       : Synthesizer(phy, tx_rate, channels)
       , superslots_(false)
+      , burst_wait_(0.002)
     {
     }
 
@@ -144,6 +145,19 @@ public:
         superslots_.store(superslots, std::memory_order_relaxed);
     }
 
+    /** @brief Longest wait for a second destination's packet when the PHY
+     * carries several packets per burst (OFDMA, P5), seconds.
+     */
+    double getBurstWait(void) const
+    {
+        return burst_wait_.load(std::memory_order_relaxed);
+    }
+
+    void setBurstWait(double sec)
+    {
+        burst_wait_.store(sec, std::memory_order_relaxed);
+    }
+
     /** @brief Modulate a slot. */
     virtual void modulate(const std::shared_ptr<Slot> &slot) = 0;
 
@@ -158,6 +172,9 @@ public:
 
 protected:
     /** @brief Use superslots */
+    /** @brief Batch wait for burst partners (seconds) */
+    std::atomic<double> burst_wait_;
+
     std::atomic<bool> superslots_;
 };
 

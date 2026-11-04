@@ -26,6 +26,10 @@ UnichannelSynthesizer<ChannelModulator>::UnichannelSynthesizer(std::shared_ptr<P
                                               i));
         setThreadName(mod_threads_.back(), "dr-mod", i);
     }
+
+    kicker_.kick = [this]{ sink.kick(); };
+    kicker_.thread = std::thread(&Kicker::run, &kicker_);
+    setThreadName(kicker_.thread, "dr-mod-kick");
 }
 
 template <class ChannelModulator>
@@ -67,6 +71,8 @@ void UnichannelSynthesizer<ChannelModulator>::stop(void)
 
     curslot_cond_.notify_all();
 
+    kicker_.shutdown();
+
     for (size_t i = 0; i < mod_threads_.size(); ++i) {
         if (mod_threads_[i].joinable())
             mod_threads_[i].join();
@@ -87,6 +93,10 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
     std::vector<size_t>                slot_chanidx; // TX channel for each slot
     size_t                             chanidx = 0;  // Index of TX channel
     std::shared_ptr<NetPacket>         pkt;
+    // Packets pulled while looking for an OFDMA burst partner, in order.
+    std::deque<std::shared_ptr<NetPacket>> held;
+    const unsigned                     max_users = phy_->getMaxBurstUsers();
+    constexpr size_t                   kMaxHeld = 4;
 
     while (!done_) {
         // Wait for the next slot
@@ -166,6 +176,10 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
         // Modulate packets for the current slot
         while (!done_) {
             // Get a packet to modulate
+            if (!pkt && !held.empty()) {
+                pkt = std::move(held.front());
+                held.pop_front();
+            }
             if (!pkt) {
                 if (!sink.pull(pkt))
                     continue;
@@ -174,6 +188,32 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             // If the slot is closed, bail.
             if (slot->closed.load(std::memory_order_relaxed))
                 break;
+
+            // OFDMA: a second unicast packet for another destination shares
+            // the burst. Look among held packets, then wait at most the burst
+            // wait for one; anything unsuitable is held, in order.
+            std::vector<std::shared_ptr<NetPacket>> burst;
+
+            if (max_users > 1 && pkt->hdr.nexthop != kNodeBroadcast) {
+                auto suitable = [&](const std::shared_ptr<NetPacket> &p) {
+                    return p->hdr.nexthop != kNodeBroadcast && p->hdr.nexthop != pkt->hdr.nexthop;
+                };
+                auto it = std::find_if(held.begin(), held.end(), suitable);
+
+                if (it != held.end()) {
+                    burst.push_back(std::move(*it));
+                    held.erase(it);
+                } else if (held.size() < kMaxHeld) {
+                    std::shared_ptr<NetPacket> other;
+
+                    if (pullWithin(other, getBurstWait())) {
+                        if (suitable(other))
+                            burst.push_back(std::move(other));
+                        else
+                            held.push_back(std::move(other));
+                    }
+                }
+            }
 
             // If this is a timestamped packet, timestamp it. In any case,
             // modulate it.
@@ -186,7 +226,12 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             {
                 WorkMeter::Scope work(meter);
 
-                mod->modulate(std::move(pkt), g, *mpkt);
+                if (burst.empty()) {
+                    mod->modulate(std::move(pkt), g, *mpkt);
+                } else {
+                    burst.insert(burst.begin(), std::move(pkt));
+                    mod->modulateBurst(std::move(burst), g, *mpkt);
+                }
             }
 
             {
@@ -203,6 +248,8 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
             // closed (P4; tests/fullstack/test_synth_slot.cc).
             if (!pushed) {
                 pkt = std::move(mpkt->pkt);
+                for (auto p = mpkt->partners.rbegin(); p != mpkt->partners.rend(); ++p)
+                    held.push_front(std::move(*p));
                 break;
             }
         }
@@ -211,4 +258,68 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
         // attempting to modulate anything
         prev_slot = std::move(slot);
     }
+}
+
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::Kicker::run(void)
+{
+    std::unique_lock<std::mutex> lock(m);
+
+    while (!stop) {
+        if (!deadline) {
+            cv.wait(lock);
+            continue;
+        }
+        if (cv.wait_until(lock, *deadline) == std::cv_status::timeout && deadline
+            && std::chrono::steady_clock::now() >= *deadline) {
+            deadline.reset();
+            lock.unlock();
+            kick();
+            lock.lock();
+        }
+    }
+}
+
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::Kicker::arm(double sec)
+{
+    std::lock_guard<std::mutex> lock(m);
+
+    deadline = std::chrono::steady_clock::now()
+        + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(sec));
+    cv.notify_all();
+}
+
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::Kicker::cancel(void)
+{
+    std::lock_guard<std::mutex> lock(m);
+
+    deadline.reset();
+    cv.notify_all();
+}
+
+template <class ChannelModulator>
+void UnichannelSynthesizer<ChannelModulator>::Kicker::shutdown(void)
+{
+    {
+        std::lock_guard<std::mutex> lock(m);
+
+        stop = true;
+        cv.notify_all();
+    }
+    if (thread.joinable())
+        thread.join();
+}
+
+template <class ChannelModulator>
+bool UnichannelSynthesizer<ChannelModulator>::pullWithin(std::shared_ptr<NetPacket> &pkt, double sec)
+{
+    // A kick makes the blocked pull return false once. If the deadline
+    // passes just after a packet arrived, the next pull may return false
+    // spuriously, which the worker treats as no packet.
+    kicker_.arm(sec);
+    bool ok = sink.pull(pkt);
+    kicker_.cancel();
+    return ok && pkt;
 }

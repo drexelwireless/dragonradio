@@ -215,6 +215,10 @@ class Config:
         # must share. v29 (r1/2 K=9, soft) gives the header the robustness
         # of liquid's coded (v29p78) header.
         self.native_header_fec = 'v29'
+        # Native downlink OFDMA (P5): two-user tone split and the slot
+        # synthesizer's longest wait for a second destination's packet.
+        self.ofdma_allocation = 'equal'
+        self.ofdma_burst_wait = 0.002
 
         # MAC parameters
         self.mac = 'tdma-fdma'
@@ -713,7 +717,7 @@ class Config:
         phy = parser.add_argument_group('PHY')
 
         phy.add_argument('--phy', action='store',
-                         choices=['flexframe', 'newflexframe', 'ofdm', 'native-ofdm'],
+                         choices=['flexframe', 'newflexframe', 'ofdm', 'native-ofdm', 'native-ofdma'],
                          dest='phy',
                          help='set PHY')
         phy.add_argument('--max-channels', action='store', type=int,
@@ -810,6 +814,14 @@ class Config:
                             dest='native_chase_bits',
                             metavar='N',
                             help='set CRC-aided Chase search size (0 disables)')
+        native.add_argument('--ofdma-allocation', action='store',
+                            choices=['equal', '1:2', '2:1'],
+                            dest='ofdma_allocation',
+                            help='native-ofdma two-user tone split (slot 0 : slot 1)')
+        native.add_argument('--ofdma-burst-wait', action='store', type=float,
+                            dest='ofdma_burst_wait',
+                            metavar='SEC',
+                            help='longest wait for a second destination when batching an OFDMA burst')
 
         # MAC parameters
         mac = parser.add_argument_group('MAC')
