@@ -129,7 +129,7 @@ class Pipeline(unittest.TestCase):
         self.assertEqual(p.returncode, 0, log + p.stderr)
         self.assertEqual(len(list((run / 'plans').glob('*.json'))), 36)   # 3 blocks x 6 cells x 2 PHYs
         ssh = (self.state / 'ssh.log').read_text()
-        self.assertIn('dragonradio/ubuntu2404-20260225-20064ad9 ' + ' '.join(hosts) + ' --name', ssh)
+        self.assertIn('krd26/dragonradio-class-gr310-20261027-v2 ' + ' '.join(hosts) + ' --name', ssh)
         health = {line.split(':')[0]: line for line in ssh.splitlines() if 'ota-node-health.sh' in line}
         self.assertEqual(sorted(health), sorted(hosts))
         for h in hosts:
@@ -144,7 +144,7 @@ class Pipeline(unittest.TestCase):
         # No workspace: nothing installed, health on the image's own tools,
         # no simulation gate, and stage 5 refused.
         campaign = json.loads((ROOT / 'grid/ota-campaign.n210-x310.json').read_text())
-        campaign.update(workspace_commit='image-only', workspace_tar='',
+        campaign.update(workspace_commit='5cf3e7d2876772a1c72e0ae17f6acccb1451c007', workspace_tar='',
                         workspace=str(self.tmp / 'node' / 'drfs-ws'), results_root=str(self.tmp / 'results'),
                         ssh={'head': 'head.example', 'key': '/dev/null'})
         self.campaign.write_text(json.dumps(campaign))
