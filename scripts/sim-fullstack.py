@@ -279,7 +279,11 @@ def node_command(args, scenario, node, sock, outdir):
            '--warmup', str(args.warmup + (TAP_STARTUP if sc.get('tap') else 0)),
            '--duration', str(args.duration),
            '--drain', str(args.drain + (2*args.drain + 2 if sc.get('tap') else 0)),
-           '--results', str(outdir / f'node{node}.json')]
+           '--results', str(outdir / f'node{node}.json'),
+           # This branch's radios share FFTW wisdom (/tmp/dragonwisdom) by
+           # default; nodes starting together on one host raced on that file
+           # ("Could not import wisdom"). One file per node for the run.
+           '--set', f'fftw_wisdom={Path(args.outdir).resolve()}/fftw-wisdom-node{node}']
     if sc['arq']:
         cmd.append('--arq')
     for (dest, port, pps, size) in sc['flows'].get(node, []):
