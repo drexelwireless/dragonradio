@@ -57,6 +57,24 @@ public:
             if (size_ > max_size_)
               mark = true;
 
+            // A full queue must not let packets to a node whose send window
+            // is closed (unreachable or slow to ACK) starve every other
+            // destination: an arrival that may leave pushes out the oldest
+            // queued packets that may not (P5 finding; affects hardware runs
+            // with --taildrop). With one destination, or every window open,
+            // nothing changes.
+            if (mark && canPop(item)) {
+                for (auto it = q_.begin(); it != q_.end() && size_ > max_size_; ) {
+                    if (!canPop(*it)) {
+                        size_ -= (*it)->payload_size;
+                        drop(*it);
+                        it = q_.erase(it);
+                    } else
+                        ++it;
+                }
+                mark = size_ > max_size_;
+            }
+
             if (mark)
                 drop(item);
 

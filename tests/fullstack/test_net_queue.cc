@@ -4,8 +4,10 @@
 // retransmission timer fires and the retransmitted SYN is delivered twice.
 #include <cmath>
 #include <cstdio>
+#include <vector>
 
 #include "net/REDQueue.hh"
+#include "net/TailDropQueue.hh"
 #include "net/SimpleQueue.hh"
 
 static int failures = 0;
@@ -42,6 +44,58 @@ int main()
 
         q.setSendWindowStatus(2, true);
         CHECK(q.pop(out) && out->hdr.nexthop == 2 && out->hdr.flags.has_seq == 1, "data released when window opens");
+    }
+
+    // Tail drop with an unreachable destination (P5 finding): packets to a
+    // node whose send window is closed cannot leave the queue. When the queue
+    // is full they must not starve other destinations: a packet to an open
+    // node pushes out the oldest packet to a closed one. With every window
+    // open, or a single destination, tail drop is unchanged.
+    // (pop() waits only while the queue is empty, then returns false if no
+    // packet may leave, so every pop below returns.)
+    {
+        auto data = [](NodeId nexthop, uint16_t seq, unsigned bytes) {
+            auto p = packet(nexthop, true, false);
+            p->hdr.seq = Seq{seq};
+            p->payload_size = bytes;
+            return p;
+        };
+        TailDropQueue<std::shared_ptr<NetPacket>> q(3000);
+        std::shared_ptr<NetPacket> out;
+
+        q.setSendWindowStatus(3, false);
+        for (uint16_t i = 0; i < 4; ++i)
+            q.push(data(3, i, 1000));          // the queue fills with blocked packets (4000 bytes)
+        q.push(data(2, 100, 1000));            // a packet to an open node arrives
+        CHECK(q.pop(out) && out->hdr.nexthop == 2, "packet to an open node starved by a closed node's packets");
+        q.setSendWindowStatus(3, true);
+        std::vector<unsigned> kept;
+        for (int i = 0; i < 3; ++i)
+            if (q.pop(out) && out->hdr.nexthop == 3)
+                kept.push_back(static_cast<uint16_t>(out->hdr.seq));
+        CHECK(kept == std::vector<unsigned>({1, 2, 3}), "the oldest blocked packet is the one pushed out (kept %zu)", kept.size());
+
+        // Unchanged when the arrival's own window is closed, or every window is open.
+        TailDropQueue<std::shared_ptr<NetPacket>> q2(3000);
+        q2.setSendWindowStatus(3, false);
+        for (uint16_t i = 0; i < 4; ++i)
+            q2.push(data(3, i, 1000));
+        q2.push(data(3, 9, 1000));             // also blocked: dropped as before
+        q2.setSendWindowStatus(3, true);
+        std::vector<unsigned> seqs;
+        for (int i = 0; i < 4; ++i)
+            if (q2.pop(out))
+                seqs.push_back(static_cast<uint16_t>(out->hdr.seq));
+        CHECK(seqs == std::vector<unsigned>({0, 1, 2, 3}), "blocked arrival into a full queue not dropped");
+        TailDropQueue<std::shared_ptr<NetPacket>> q3(3000);
+        for (uint16_t i = 0; i < 4; ++i)
+            q3.push(data(2, i, 1000));
+        q3.push(data(4, 9, 1000));             // all open: tail drop drops the arrival
+        seqs.clear();
+        for (int i = 0; i < 4; ++i)
+            if (q3.pop(out))
+                seqs.push_back(static_cast<uint16_t>(out->hdr.seq));
+        CHECK(seqs == std::vector<unsigned>({0, 1, 2, 3}), "open-window tail drop changed");
     }
 
     // Gentle RED: between max_thresh and 2*max_thresh the drop probability
