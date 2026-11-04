@@ -103,6 +103,13 @@ target_link_libraries(DragonRadio PRIVATE ${FLACXX_LIBRARIES})
 target_include_directories(DragonRadio PUBLIC ${LIQUIDDSP_INCLUDE_DIRS})
 target_link_libraries(DragonRadio PUBLIC ${LIQUIDDSP_LIBRARIES})
 
+# The native PHYs check received samples for NaN/Inf (std::isfinite) and drop
+# frames that contain them. -Ofast (CMAKE_CXX_FLAGS_RELEASE) implies
+# -ffinite-math-only, under which those checks compile to "always finite"; the
+# rest of -Ofast is kept, as for the liquid PHYs.
+set_source_files_properties(phy/NativeOFDM.cc phy/NativeOFDMA.cc python/NativePHY.cc
+                            PROPERTIES COMPILE_OPTIONS "-fno-finite-math-only")
+
 # Native PHY FEC (src/simulation/NativeFEC.hh): the libfec API, from libfec or
 # libcorrect's libfec-compatible shim, the library liquid-dsp's FEC also uses.
 find_path(FEC_INCLUDE_DIR fec.h)
