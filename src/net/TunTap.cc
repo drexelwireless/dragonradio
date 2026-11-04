@@ -270,6 +270,9 @@ void TunTap::send(std::shared_ptr<RadioPacket>&& pkt)
 void TunTap::start(void)
 {
     done_ = false;
+    // Wake handler first: stop() right after start() must not kill the
+    // process with SIGWAKE before the worker installs it (see TimerQueue).
+    makeThreadWakeable();
     worker_thread_ = std::thread(&TunTap::worker, this);
     setThreadName(worker_thread_, "dr-tuntap");
 }

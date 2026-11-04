@@ -74,6 +74,12 @@ void TimerQueue::start(void)
     if (done_) {
         done_ = false;
 
+        // Install the (process-wide) wake handler before the worker exists: a
+        // timer scheduled right after start() wakes the worker with SIGWAKE,
+        // whose default action would otherwise kill the process if the
+        // worker had not yet run makeThreadWakeable().
+        makeThreadWakeable();
+
         timer_worker_thread_ = std::thread(&TimerQueue::timer_worker, this);
 
         setThreadName(timer_worker_thread_, "dr-timer");
