@@ -1,6 +1,7 @@
 // Copyright 2018-2020 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <mutex>
@@ -69,7 +70,7 @@ private:
     heap<Timer> timer_queue_;
 
     /** @brief Flag indicating we are done prcoessing timers. */
-    bool done_;
+    std::atomic<bool> done_;   // read by the timer worker, set by stop (TSan)
 
     /** @brief Thread that runs the timer worker. */
     std::thread timer_worker_thread_;

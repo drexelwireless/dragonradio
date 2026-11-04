@@ -4,6 +4,7 @@
 #ifndef WORKQUEUE_H_
 #define WORKQUEUE_H_
 
+#include <atomic>
 #include <functional>
 #include <thread>
 #include <vector>
@@ -43,7 +44,7 @@ public:
     void submit(std::function<void(void)>&& item);
 
 private:
-    bool done_;
+    std::atomic<bool> done_;   // read by workers, set by stop (TSan)
     std::vector<std::thread> threads_;
     SafeQueue<std::function<void(void)>> work_q_;
 

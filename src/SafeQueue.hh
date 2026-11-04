@@ -137,7 +137,14 @@ public:
     /** @brief Mark the queue as stopped. */
     void stop(void)
     {
-        done_ = true;
+        // Under the lock: a waiter checks done_ under it, so setting it
+        // unlocked raced (TSan) and could lose the wakeup between a waiter's
+        // check and its wait.
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            done_ = true;
+        }
         cond_.notify_all();
     }
 
