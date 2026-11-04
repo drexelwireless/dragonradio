@@ -9,6 +9,9 @@
 # (UHD 4.6, Boost 1.83, Python 3.12, current pybind11), not the historical
 # Ubuntu 20.04 / UHD 3.9 / Python 3.8 image. Versions are recorded in
 # WORKSPACE/build-manifest.txt.
+# With VENDOR=DIR (a bundle from scripts/package-fullstack.py), nothing is
+# fetched: Ubuntu packages come from DIR/debs, Python packages from
+# DIR/wheels, and xsimd/firpm/libcorrect from DIR/*.tar.gz at the same pins.
 set -euo pipefail
 umask 022
 source_bundle=$(realpath "$1"); liquid_bundle=$(realpath "$2"); ws=$3
@@ -16,6 +19,9 @@ XSIMD_REV=3d17850eee16c2556a0cd7083b96be3aa8090f45     # dependencies/xsimd subm
 FIRPM_REV=6b41bce2b8ea913da891c44af2f21af259b2632a     # dependencies/firpm submodule pin
 LIBCORRECT_REV=2c8db6d8d764dc9f72f4b085fb0b7bf9b3c09457 # dependencies/libcorrect submodule pin
 PYBIND11_VERSION=2.13.6                                 # pinned 787d2c8 predates Python 3.11+
+LIQUID_REV=d39f1c0f738c2adca23dec9caa63e7c5bdcebfcb    # dependencies/liquid-dsp submodule pin
+VENDOR=${VENDOR:-}
+[ -z "$VENDOR" ] || VENDOR=$(realpath "$VENDOR")
 [ -e "$ws" ] && { echo "workspace exists: $ws" >&2; exit 2; }
 mkdir -p "$ws"; ws=$(realpath "$ws"); cd "$ws"
 log() { printf '%s %s\n' "$(date -Is)" "$*" | tee -a "$ws/setup.log"; }
@@ -25,8 +31,12 @@ PKGS="libuhd-dev libboost-dev libhdf5-dev libflac++-dev libcap-dev libpython3.12
 # found by ldd on the linked executable.
 RUNTIME="libboost-chrono1.83.0t64 libboost-filesystem1.83.0 libboost-serialization1.83.0 libboost-thread1.83.0 libboost-atomic1.83.0 libboost-program-options1.83.0 libboost-date-time1.83.0 libboost-system1.83.0 libsz2 libogg0 libaec0"
 
-log "resolving dependencies"
 mkdir -p packages deps
+if [ -n "$VENDOR" ] && [ -d "$VENDOR/debs" ]; then
+  log "vendored packages ($(ls "$VENDOR"/debs/*.deb | wc -l))"
+  cp "$VENDOR"/debs/*.deb packages/
+else
+log "resolving dependencies"
 apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances $PKGS 2>/dev/null \
   | grep '^[a-z0-9]' | sort -u > packages/candidates.txt
 : > packages/needed.txt
@@ -39,6 +49,7 @@ done
 sort -u -o packages/needed.txt packages/needed.txt
 log "downloading $(wc -l < packages/needed.txt) packages"
 ( cd packages && while read -r p; do apt download "$p" >/dev/null 2>&1 || echo "skip $p (virtual or unavailable)" >> ../setup.log; done < needed.txt )
+fi
 for deb in packages/*.deb; do dpkg-deb -x "$deb" deps; manifest "deb $(basename "$deb")"; done
 
 P="$ws/deps/usr"
@@ -62,19 +73,33 @@ done
 
 log "python virtualenv"
 python3 -m venv venv
+if [ -n "$VENDOR" ] && [ -d "$VENDOR/wheels" ]; then
+  # Exact versions of the packaging workspace, from bundled wheels.
+  venv/bin/python -m pip install -q --no-index --find-links "$VENDOR/wheels" -r "$VENDOR/wheels/requirements.txt"
+else
 venv/bin/python -m pip install -q "numpy>=1.24,<3" "cmake>=3.27,<4" "pybind11==$PYBIND11_VERSION" "protobuf>=4,<6"
 # dragonradio package dependencies; setup.py pins (numpy 1.21, scipy 1.7, ...)
 # predate Python 3.12, so current releases are used and recorded. netifaces
 # needs a C build against system Python headers and is omitted.
 venv/bin/python -m pip install -q ipython libconf pandas psutil python-daemon pyzmq scipy
+fi
 venv/bin/python -m pip freeze | sed 's/^/pip /' >> "$ws/build-manifest.txt"
 manifest "pybind11 $PYBIND11_VERSION (pip)"
 PYBIND_INC=$(venv/bin/python -c 'import pybind11; print(pybind11.get_include())')
 
 log "xsimd $XSIMD_REV and firpm $FIRPM_REV"
-git clone -q https://github.com/QuantStack/xsimd.git src-xsimd && git -C src-xsimd checkout -q "$XSIMD_REV"
-git clone -q https://github.com/sfilip/firpm.git src-firpm && git -C src-firpm checkout -q "$FIRPM_REV"
-manifest "xsimd $(git -C src-xsimd rev-parse HEAD)"; manifest "firpm $(git -C src-firpm rev-parse HEAD)"
+# Vendored source archives or a clone at the pin; the manifest records the pin.
+fetch() {  # NAME URL REV
+  if [ -n "$VENDOR" ] && [ -e "$VENDOR/$1.tar.gz" ]; then
+    mkdir "src-$1" && tar -xzf "$VENDOR/$1.tar.gz" -C "src-$1" --strip-components=1
+    manifest "$1 $3 (vendored)"
+  else
+    git clone -q "$2" "src-$1" && git -C "src-$1" checkout -q "$3"
+    manifest "$1 $(git -C "src-$1" rev-parse HEAD)"
+  fi
+}
+fetch xsimd https://github.com/QuantStack/xsimd.git "$XSIMD_REV"
+fetch firpm https://github.com/sfilip/firpm.git "$FIRPM_REV"
 fdir=src-firpm/firpm_d    # DragonRadio's FIRDesign.cc uses firpm's double-precision API
 venv/bin/cmake -S "$fdir" -B build-firpm -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$ws/prefix" \
   -DCMAKE_PREFIX_PATH="$P" -DCMAKE_CXX_FLAGS="-I$P/include" \
@@ -86,8 +111,7 @@ venv/bin/cmake --install build-firpm >> build-firpm.log 2>&1
 # installs them before liquid-dsp: liquid's convolutional and Reed-Solomon
 # codes (v27/v29/punctured, rs8) exist only when it finds libfec.
 log "libcorrect $LIBCORRECT_REV with libfec shim"
-git clone -q https://github.com/drexelwireless/libcorrect.git src-libcorrect && git -C src-libcorrect checkout -q "$LIBCORRECT_REV"
-manifest "libcorrect $(git -C src-libcorrect rev-parse HEAD)"
+fetch libcorrect https://github.com/drexelwireless/libcorrect.git "$LIBCORRECT_REV"
 venv/bin/cmake -S src-libcorrect -B build-libcorrect -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$ws/prefix" \
   -DCMAKE_C_FLAGS="-O3" > build-libcorrect.log 2>&1
 venv/bin/cmake --build build-libcorrect -j 16 >> build-libcorrect.log 2>&1
@@ -98,7 +122,7 @@ venv/bin/cmake --install build-libcorrect >> build-libcorrect.log 2>&1
 log "pinned liquidDSP"
 mkdir liquid-src
 tar -xzf "$liquid_bundle" -C liquid-src --strip-components=1
-manifest "liquid $(git -C liquid-src rev-parse HEAD)"
+if [ -e liquid-src/.git ]; then manifest "liquid $(git -C liquid-src rev-parse HEAD)"; else manifest "liquid $LIQUID_REV (archive)"; fi
 ( cd liquid-src && CPPFLAGS="-I$ws/prefix/include -I$P/include" LDFLAGS="-L$ws/prefix/lib -L$P/lib/$ARCH -Wl,-rpath,$ws/prefix/lib" CFLAGS="-O3 -std=gnu99" ./configure --prefix="$ws/prefix" > ../build-liquid.log 2>&1 \
   && make -j 16 >> ../build-liquid.log 2>&1 && make install >> ../build-liquid.log 2>&1 )
 grep -q "#define HAVE_FEC_H 1" liquid-src/config.h || { echo "liquid configured without libfec" >&2; exit 1; }
