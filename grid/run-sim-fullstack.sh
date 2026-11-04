@@ -5,7 +5,8 @@
 # (--sim-air); no USRP is opened.
 #
 # Usage: run-sim-fullstack.sh SRC_DIR OUTDIR [sim-fullstack.py options...]
-#   SRC_DIR  the built tree (SRC_DIR/build/dragonradio, SRC_DIR/venv)
+#   SRC_DIR  the built tree (SRC_DIR/build/dragonradio, SRC_DIR/venv), or an
+#            OTA workspace holding it as SRC_DIR/dragonradio (grid/ota-pipeline.sh)
 #   OUTDIR   results: OUTDIR/SCENARIO/{summary.json,node*.json,node*.log,...},
 #            OUTDIR/summary.json and OUTDIR/run-info.txt
 # Examples:
@@ -14,6 +15,7 @@
 #   run-sim-fullstack.sh /tmp/drport/dragonradio /tmp/drport/sim/one --scenario clean-arq
 set -euo pipefail
 src=$(realpath "$1"); out=$2; shift 2
+[ -x "$src/dragonradio/build/dragonradio" ] && src="$src/dragonradio"
 [ -x "$src/build/dragonradio" ] || { echo "not built: $src/build/dragonradio" >&2; exit 2; }
 # The radio's embedded Python uses this tree's venv (activate_this.py): this
 # tree's dragonradio package first, then the image venv's packages (h5py too).

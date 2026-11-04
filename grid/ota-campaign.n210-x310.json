@@ -1,0 +1,270 @@
+{
+ "campaign_id": "pps-mixed01",
+ "rf_approval_reference": "NOT-APPROVED-rehearsal-only",
+ "rf_approval_covers": [
+  "forward data",
+  "reverse data and ACK",
+  "timesync HELLO broadcasts"
+ ],
+ "image": "krd26/dragonradio-class-gr310-20261027-v2",
+ "reservation_duration": "4h",
+ "workspace": "/tmp/drport",
+ "workspace_tar": "/home/krd26/dragonradio-ota/ws-REPLACE.tar.gz",
+ "workspace_commit": "REPLACE_WITH_THE_40_CHARACTER_COMMIT",
+ "results_root": "/home/krd26/dragonradio-ota/results",
+ "node_local_root": "/tmp/drfs",
+ "frequency": 1300000000,
+ "bandwidth": 1000000,
+ "max_tx_gain": 20,
+ "cells": [
+  {
+   "name": "S1",
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid08",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external"
+    },
+    {
+     "id": 2,
+     "host": "grid19",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external"
+    }
+   ],
+   "strata": {
+    "pair_type": "N210<->N210",
+    "strength": "strong",
+    "placement": "grid08-grid19 (radio map 2026-10-25: tone SNR 102.2 dB weaker direction)",
+    "power": "TX 10/10 dB, RX 20/20 dB",
+    "clock": "shared 10 MHz + PPS (OctoClock)"
+   }
+  },
+  {
+   "name": "W1",
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid01",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external"
+    },
+    {
+     "id": 2,
+     "host": "grid15",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "external",
+     "time_source": "external"
+    }
+   ],
+   "strata": {
+    "pair_type": "N210<->N210",
+    "strength": "weak",
+    "placement": "grid01-grid15 (radio map 2026-10-25: tone SNR 77.6 dB weaker direction)",
+    "power": "TX 10/10 dB, RX 20/20 dB",
+    "clock": "shared 10 MHz + PPS (OctoClock)"
+   }
+  },
+  {
+   "name": "XS",
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid60",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal"
+    },
+    {
+     "id": 2,
+     "host": "grid61",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal"
+    }
+   ],
+   "strata": {
+    "pair_type": "X310<->X310",
+    "strength": "strong",
+    "placement": "grid60-grid61 (radio map 2026-10-25: tone SNR 90.0 dB at TX/RX 5 dB)",
+    "power": "TX 5/5 dB, RX 10/10 dB",
+    "clock": "independent oscillators, timesync only"
+   }
+  },
+  {
+   "name": "XW",
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid44",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal"
+    },
+    {
+     "id": 2,
+     "host": "grid57",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal"
+    }
+   ],
+   "strata": {
+    "pair_type": "X310<->X310",
+    "strength": "weak",
+    "placement": "grid44-grid57 (radio map 2026-10-25: tone SNR 72.1 dB at TX/RX 5 dB)",
+    "power": "TX 5/5 dB, RX 10/10 dB",
+    "clock": "independent oscillators, timesync only"
+   }
+  },
+  {
+   "name": "NXS",
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid01",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "internal"
+    },
+    {
+     "id": 2,
+     "host": "grid61",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal"
+    }
+   ],
+   "strata": {
+    "pair_type": "N210<->X310",
+    "strength": "strong",
+    "placement": "grid01-grid61 (radio map 2026-10-25: tone SNR 81.7 dB weaker direction)",
+    "power": "TX 10/5 dB, RX 20/10 dB",
+    "clock": "independent oscillators, timesync only"
+   }
+  },
+  {
+   "name": "NXW",
+   "nodes": [
+    {
+     "id": 1,
+     "host": "grid15",
+     "family": "N210",
+     "addr": "addr=192.168.10.2",
+     "tx_gain": 10,
+     "rx_gain": 20,
+     "clock_source": "internal"
+    },
+    {
+     "id": 2,
+     "host": "grid59",
+     "family": "X310",
+     "addr": "addr=192.168.40.2",
+     "tx_gain": 5,
+     "rx_gain": 10,
+     "clock_source": "internal"
+    }
+   ],
+   "strata": {
+    "pair_type": "N210<->X310",
+    "strength": "weak",
+    "placement": "grid15-grid59 (radio map 2026-10-25: tone SNR 66.0 dB weaker direction)",
+    "power": "TX 10/5 dB, RX 20/10 dB",
+    "clock": "independent oscillators, timesync only"
+   }
+  }
+ ],
+ "phys": {
+  "native-ofdm": [
+   "-c",
+   "rs8",
+   "-k",
+   "none",
+   "-m",
+   "qpsk"
+  ],
+  "ofdm": [
+   "-c",
+   "rs8",
+   "-k",
+   "none",
+   "-m",
+   "qpsk"
+  ]
+ },
+ "blocks": 3,
+ "seed": 1,
+ "trial": {
+  "warmup_s": 45,
+  "duration_s": 60,
+  "drain_s": 5,
+  "go_timeout_s": 90,
+  "start_lead_s": 20
+ },
+ "timesync": {
+  "time_master": 1,
+  "hello_period": 0.5,
+  "period": 2.0
+ },
+ "traffic": [
+  {
+   "kind": "udp",
+   "src": 1,
+   "dst": 2,
+   "port": 5001,
+   "pps": 40,
+   "size": 500
+  },
+  {
+   "kind": "udp",
+   "src": 2,
+   "dst": 1,
+   "port": 5002,
+   "pps": 40,
+   "size": 500
+  },
+  {
+   "kind": "tcp-rr",
+   "src": 1,
+   "dst": 2,
+   "port": 6001,
+   "count": 100,
+   "size": 64
+  }
+ ],
+ "strata": {
+  "carrier_map": "single channel"
+ },
+ "ssh": {
+  "head": "dwslgrid.ece.drexel.edu",
+  "key": "~/.ssh/id_ed25519"
+ }
+}

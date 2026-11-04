@@ -1,0 +1,38 @@
+{
+  "campaign_id": "pps01",
+  "rf_approval_reference": "REPLACE_WITH_THIS_EXPERIMENT_APPROVAL",
+  "rf_approval_covers": ["forward data", "reverse data and ACK", "timesync HELLO broadcasts"],
+  "image": "krd26/dragonradio-class-gr310-20261027-v2",
+  "reservation_duration": "4h",
+  "workspace": "/tmp/drport",
+  "workspace_tar": "/home/krd26/dragonradio-ota/ws-REPLACE.tar.gz",
+  "workspace_commit": "REPLACE_WITH_THE_40_CHARACTER_COMMIT",
+  "results_root": "/home/krd26/dragonradio-ota/results",
+  "node_local_root": "/tmp/drfs",
+  "frequency": 1300000000,
+  "bandwidth": 1000000,
+  "max_tx_gain": 20,
+  "nodes": [
+    {"id": 1, "host": "REPLACE_gridNN", "family": "X310", "addr": "addr=192.168.40.2",
+     "tx_gain": 10, "rx_gain": 20, "clock_source": "external", "time_source": "external"},
+    {"id": 2, "host": "REPLACE_gridNN", "family": "X310", "addr": "addr=192.168.40.2",
+     "tx_gain": 10, "rx_gain": 20, "clock_source": "external", "time_source": "external"}
+  ],
+  "phys": {
+    "native-ofdm": ["-c", "rs8", "-k", "none", "-m", "qpsk"],
+    "ofdm": ["-c", "rs8", "-k", "none", "-m", "qpsk"]
+  },
+  "blocks": 3,
+  "seed": 1,
+  "trial": {"warmup_s": 45, "duration_s": 60, "drain_s": 5, "go_timeout_s": 90, "start_lead_s": 20},
+  "timesync": {"time_master": 1, "hello_period": 0.5, "period": 2.0},
+  "traffic": [
+    {"kind": "udp", "src": 1, "dst": 2, "port": 5001, "pps": 40, "size": 500},
+    {"kind": "udp", "src": 2, "dst": 1, "port": 5002, "pps": 40, "size": 500},
+    {"kind": "tcp-rr", "src": 1, "dst": 2, "port": 6001, "count": 100, "size": 64}
+  ],
+  "strata": {"pair_type": "X310<->X310", "strength": "REPLACE strong|weak", "placement": "REPLACE rack positions",
+             "power": "REPLACE TX gain 10 dB, antennas", "clock": "shared 10 MHz + PPS",
+             "carrier_map": "single channel"},
+  "ssh": {"head": "dwslgrid.ece.drexel.edu", "key": "~/.ssh/id_ed25519"}
+}
