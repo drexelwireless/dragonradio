@@ -11,7 +11,7 @@ from pathlib import Path
 from pprint import pformat
 import platform
 import re
-from typing import Any, Dict, List, Mapping, Optional, Type
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Type
 import yaml
 import yaml.parser
 
@@ -203,6 +203,37 @@ class Config:
     """Clock source for the USRP device"""
     time_source: Optional[str] = None
     """Time source for the USRP device"""
+
+    # Full-stack simulation (ported from codex/ofdma-simulation, P2). With
+    # sim_air set, a simulated device (SimUSRP) connected to that air relay
+    # replaces the USRP and the radio never opens UHD; with sim_traffic set,
+    # synthetic UDP traffic (SimTraffic) replaces the tun/tap interface.
+    sim_air: Optional[str] = None
+    """Unix socket of the air relay (scripts/sim-air.py); None: use a USRP"""
+    sim_traffic: bool = False
+    """Use synthetic traffic instead of a tun/tap interface"""
+    sim_rx_latency: float = 2e-3
+    """Delay before simulated RX samples are released (sec)"""
+    sim_noise_db: float = -60.0
+    """Simulated receiver noise power per complex sample (dB full scale)"""
+    sim_clock_rate: float = 200e6
+    """Simulated master clock rate (Hz)"""
+    sim_seed: Optional[int] = None
+    """Seed for simulated noise and erasures (default: the node ID)"""
+    sim_gain_ref: Optional[Tuple[float, float]] = None
+    """(TX, RX) reference gains (dB) of the simulated gain model; None: gains do not scale"""
+    sim_adc_full_scale: float = 0.0
+    """Clip received I and Q at +/- this (0: no clipping)"""
+    sim_iq_imbalance: Tuple[float, float] = (0.0, 0.0)
+    """Receiver IQ imbalance (amplitude dB, phase degrees)"""
+    sim_dc_offset: Tuple[float, float] = (0.0, 0.0)
+    """Receiver DC offset (real, imaginary; full-scale units)"""
+    sim_clock_offset: float = 0.0
+    """Simulated device clock offset from the host clock (sec)"""
+    sim_clock_ppm: float = 0.0
+    """Simulated oscillator error (ppm): device clock rate, sample clock and carrier"""
+    sim_tx_leakage_db: Optional[float] = None
+    """Couple own transmissions into the receiver at this gain (dB); None: deaf to own TX"""
 
     # USRP firmware
     vivado_path: Optional[Path] = None
@@ -900,6 +931,63 @@ class Config:
                           dest='tx_rampup',
                           metavar='SEC',
                           help='set time required for TX ramp-up')
+
+        # Full-stack simulation
+        simulation = parser.add_argument_group('Full-stack simulation')
+
+        def floats(s: str) -> Tuple[float, ...]:
+            return tuple(float(v) for v in s.split(':'))
+
+        simulation.add_argument('--sim-air', action='store',
+                                dest='sim_air',
+                                metavar='SOCKET',
+                                help='use a simulated device connected to this air relay socket (never a USRP)')
+        simulation.add_argument('--sim-traffic', action='store_const', const=True,
+                                dest='sim_traffic',
+                                help='use synthetic traffic instead of a tun/tap interface')
+        simulation.add_argument('--sim-rx-latency', action='store', type=float,
+                                dest='sim_rx_latency',
+                                metavar='SEC',
+                                help='delay before simulated RX samples are released')
+        simulation.add_argument('--sim-noise-db', action='store', type=float,
+                                dest='sim_noise_db',
+                                metavar='DB',
+                                help='simulated receiver noise power per sample (dB)')
+        simulation.add_argument('--sim-clock-rate', action='store', type=float,
+                                dest='sim_clock_rate',
+                                metavar='HZ',
+                                help='simulated master clock rate')
+        simulation.add_argument('--sim-seed', action='store', type=int,
+                                dest='sim_seed',
+                                help='seed for simulated noise and erasures')
+        simulation.add_argument('--sim-gain-model', action='store', type=floats,
+                                dest='sim_gain_ref',
+                                metavar='TX_REF_DB:RX_REF_DB',
+                                help='apply TX and RX gain relative to these reference gains')
+        simulation.add_argument('--sim-adc-full-scale', action='store', type=float,
+                                dest='sim_adc_full_scale',
+                                metavar='FS',
+                                help='clip received I and Q at +/- FS (0: no clipping)')
+        simulation.add_argument('--sim-iq-imbalance', action='store', type=floats,
+                                dest='sim_iq_imbalance',
+                                metavar='AMP_DB:PHASE_DEG',
+                                help='receiver IQ imbalance')
+        simulation.add_argument('--sim-dc-offset', action='store', type=floats,
+                                dest='sim_dc_offset',
+                                metavar='RE:IM',
+                                help='receiver DC offset (full-scale units)')
+        simulation.add_argument('--sim-clock-offset', action='store', type=float,
+                                dest='sim_clock_offset',
+                                metavar='SEC',
+                                help='simulated device clock offset from the host clock')
+        simulation.add_argument('--sim-clock-ppm', action='store', type=float,
+                                dest='sim_clock_ppm',
+                                metavar='PPM',
+                                help='simulated oscillator error: device clock rate, sample clock and carrier')
+        simulation.add_argument('--sim-tx-leakage-db', action='store', type=float,
+                                dest='sim_tx_leakage_db',
+                                metavar='DB',
+                                help='couple own transmissions into the receiver at this gain')
 
         # USRP firmware
         firmware = parser.add_argument_group('USRP firmware')

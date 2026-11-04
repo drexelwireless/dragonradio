@@ -36,6 +36,7 @@ from dragonradiocpp.radio import Controller, ControllerNetLink, DummyController,
 from dragonradiocpp.radio import Node, Neighborhood, NeighborhoodListener
 from dragonradiocpp.radio import Schedule
 from dragonradiocpp.radio import USRP
+from dragonradiocpp.radio import SimUSRP, SimTraffic
 from dragonradiocpp.radio import TunTap
 from dragonradiocpp.radio import SnapshotCollector
 from dragonradiocpp.radio import MandateQueue, Queue, REDQueue, SimpleQueue, TailDropQueue
@@ -79,8 +80,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     _tx_channel_idx: int = 0
     """TX channel index"""
 
-    usrp: USRP
-    """The radio's USRP"""
+    usrp: Union[USRP, SimUSRP]
+    """The radio's device: a USRP, or a SimUSRP with --sim-air"""
 
     phy: PHY
     """The radio's PHY"""
@@ -109,8 +110,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
     netq: NetQueue
     """Network queue"""
 
-    tuntap: TunTap
-    """tun/tap component"""
+    tuntap: Union[TunTap, SimTraffic]
+    """tun/tap component (SimTraffic with --sim-traffic)"""
 
     flowperf: FlowPerformance
     """Flow performance"""
@@ -156,9 +157,12 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         # Add global work queue workers
         work_queue.addThreads(1)
 
-        # Flash firmware
+        # Flash firmware (never for a simulated device)
         if config.firmware_path is not None:
-            self.flash_firmware(config.firmware_path)
+            if config.sim_air is not None:
+                logger.warning('Simulated device: not flashing %s', config.firmware_path)
+            else:
+                self.flash_firmware(config.firmware_path)
 
         # Plan FFTs
         self.importFFTWWisdom()
@@ -393,19 +397,27 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         await super().stopTasks()
 
     def neighborAdded(self, node: Node):
-        dragonradio.net.addStaticARPEntry(self.tuntap.iface,
-                                          self.config.tap_ipaddr % node.id,
-                                          self.config.tap_macaddr % node.id)
+        # Synthetic traffic has no interface and so no ARP table.
+        if isinstance(self.tuntap, TunTap):
+            dragonradio.net.addStaticARPEntry(self.tuntap.iface,
+                                              self.config.tap_ipaddr % node.id,
+                                              self.config.tap_macaddr % node.id)
         logging.debug("Neighbor %d added", node.id)
 
     def neighborRemoved(self, node: Node):
-        dragonradio.net.deleteARPEntry(self.tuntap.iface,
-                                       self.config.tap_ipaddr % node.id)
+        if isinstance(self.tuntap, TunTap):
+            dragonradio.net.deleteARPEntry(self.tuntap.iface,
+                                           self.config.tap_ipaddr % node.id)
         logging.debug("Neighbor %d removed", node.id)
 
     def configureUSRP(self):
         """Construct USRP object from configuration parameters"""
         config = self.config
+
+        # With --sim-air the device is simulated; this path never opens UHD.
+        if config.sim_air is not None:
+            self.configureSimulatedDevice()
+            return
 
         # Create the USRP
         self.usrp = USRP(config.addr)
@@ -442,6 +454,61 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
                            use_pps=config.clock_use_pps)
 
         # Set USRP as clock's time keeper
+        clock.time_keeper = self.usrp
+
+        self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
+        self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
+
+    def configureSimulatedDevice(self):
+        """Construct a simulated device (SimUSRP) connected to the air relay.
+
+        The MACs, channelizer and synthesizer see the same Radio interface as
+        with a USRP; IQ samples are exchanged with other simulated nodes
+        through the air relay (scripts/sim-air.py). If the relay cannot be
+        reached, this raises: there is no fallback to a USRP.
+        """
+        config = self.config
+
+        seed = config.sim_seed if config.sim_seed is not None else config.node_id
+
+        self.usrp = SimUSRP(config.sim_air,
+                            config.node_id,
+                            self.frequency,
+                            config.sim_clock_rate,
+                            config.sim_rx_latency,
+                            seed)
+
+        # This node's own clock offset and oscillator error, before the
+        # device becomes the time keeper.
+        self.usrp.setClock(config.sim_clock_offset, config.sim_clock_ppm)
+
+        self.usrp.noise_power = config.sim_noise_db
+
+        tx_ref, rx_ref = config.sim_gain_ref if config.sim_gain_ref else (0.0, 0.0)
+        self.usrp.setImpairments(gain_model=config.sim_gain_ref is not None,
+                                 tx_gain_ref_db=tx_ref,
+                                 rx_gain_ref_db=rx_ref,
+                                 adc_full_scale=config.sim_adc_full_scale,
+                                 iq_amp_db=config.sim_iq_imbalance[0],
+                                 iq_phase_deg=config.sim_iq_imbalance[1],
+                                 dc_offset=complex(*config.sim_dc_offset),
+                                 tx_leakage_db=config.sim_tx_leakage_db)
+
+        self.usrp.tx_gain = config.tx_gain
+        self.usrp.rx_gain = config.rx_gain
+
+        self.usrp.tx_frequency = self.frequency
+        self.usrp.rx_frequency = self.frequency
+
+        self.usrp.tx_lead_time = self.config.tx_lead_time
+
+        self.usrp.tx_rampup = self.config.tx_rampup
+
+        if config.clock_source is not None or config.time_source is not None or config.clock_use_pps:
+            logger.info('Simulated device: ignoring clock source %s, time source %s, use_pps %s',
+                        config.clock_source, config.time_source, config.clock_use_pps)
+
+        # Set the simulated device as clock's time keeper
         clock.time_keeper = self.usrp
 
         self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
@@ -502,18 +569,25 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         int_net = ipaddress.IPv4Network((config.internal_net, config.internal_netmask))
         ext_net = ipaddress.IPv4Network((config.external_net, config.external_netmask))
 
-        # Create tun/tap interface and net neighborhood
-        self.tuntap = TunTap(config.tap_iface,
-                             config.tap_ipaddr,
-                             str(int_net.netmask),
-                             config.tap_macaddr,
-                             False,
-                             config.mtu,
-                             self.node_id)
+        # Create tun/tap interface and net neighborhood. Synthetic traffic
+        # produces and consumes the same Ethernet frames without a tap device.
+        if config.sim_traffic:
+            self.tuntap = SimTraffic(self.node_id,
+                                     config.tap_ipaddr,
+                                     config.tap_macaddr,
+                                     config.mtu)
+        else:
+            self.tuntap = TunTap(config.tap_iface,
+                                 config.tap_ipaddr,
+                                 str(int_net.netmask),
+                                 config.tap_macaddr,
+                                 False,
+                                 config.mtu,
+                                 self.node_id)
 
         # In MANET mode, we may send packets back out the interface from whence
         # they came, so disable ICMP redirects.
-        if config.manet:
+        if config.manet and isinstance(self.tuntap, TunTap):
             self.tuntap.accept_redirects = 0
             self.tuntap.send_redirects = 0
 
