@@ -8,7 +8,9 @@
 #
 # The production Radio is built exactly as standalone-radio.py builds it (PHY,
 # channelizer, synthesizer, controller, queues, MAC); only the device
-# (SimUSRP) and the tap interface (SimTraffic) are simulated.
+# (SimUSRP) is simulated. With --sim-traffic, SimTraffic also stands in for the
+# tap interface; without it, the radio opens a real tap device, normally in a
+# private network namespace (unshare -rn) where scripts/sim-netapp.py runs.
 import asyncio
 import json
 import logging
@@ -64,18 +66,25 @@ def percentile(xs, q):
 
 async def experiment(radio, config):
     try:
-        traffic = radio.tuntap
+        # With --sim-traffic the radio generates traffic itself; otherwise a
+        # real tap interface carries whatever the node's applications send
+        # (scripts/sim-netapp.py in the node's network namespace).
+        traffic = radio.tuntap if config.sim_traffic else None
         for (src, gain_db, cfo_hz, delay, erasure) in config.links:
             radio.usrp.setLink(src, gain_db, cfo_hz, delay, erasure)
+        if config.flows and traffic is None:
+            raise ValueError('--flow requires --sim-traffic')
         for (dest, port, rate, size, count) in config.flows:
             traffic.addFlow(port, dest, rate, size, count, 0.0)
 
         await asyncio.sleep(config.warmup)
         usrp_before = radio.usrp.stats
         t_start = time.monotonic()
-        traffic.start()
+        if traffic:
+            traffic.start()
         await asyncio.sleep(config.duration)
-        traffic.stop()
+        if traffic:
+            traffic.stop()
         t_stop = time.monotonic()
         await asyncio.sleep(config.drain)
 
@@ -84,7 +93,7 @@ async def experiment(radio, config):
         snapshot_mono = time.monotonic()
         rx_frames = radio.rx_recorder.records
         received = {}
-        for (src, port), st in traffic.received.items():
+        for (src, port), st in (traffic.received.items() if traffic else []):
             lat = st['latency']
             received[f'{src}:{port}'] = {
                 'src': src, 'port': port,
@@ -103,9 +112,10 @@ async def experiment(radio, config):
             'bandwidth': config.bandwidth,
             'rx_rate': radio.usrp.rx_rate, 'tx_rate': radio.usrp.tx_rate,
             'traffic_seconds': t_stop - t_start,
-            'flows': traffic.flows,
+            'tap': traffic is None,
+            'flows': traffic.flows if traffic else [],
             'received': received,
-            'foreign_frames': traffic.foreign,
+            'foreign_frames': traffic.foreign if traffic else None,
             'device_before': usrp_before,
             'device': radio.usrp.stats,
             # Every frame the PHY handed up: (timestamp, curhop, nexthop, seq,
@@ -146,8 +156,8 @@ def main():
     except SystemExit as err:
         return err.code
 
-    if config.sim_air is None or not config.sim_traffic:
-        parser.error('sim-node requires --sim-air and --sim-traffic')
+    if config.sim_air is None:
+        parser.error('sim-node requires --sim-air')
 
     for key, value in config.config_overrides:
         if not hasattr(config, key):

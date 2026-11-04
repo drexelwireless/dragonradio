@@ -210,6 +210,71 @@ configuration. The liquid control needs an uncoded header (``--set``, a
 ``sim-node.py`` option) because the workspace's liquidDSP has no libfec for
 the default ``v29p78`` header code.
 
+Real tap interfaces and kernel TCP/UDP
+--------------------------------------
+
+The ``tap-*`` scenarios drop ``--sim-traffic``. Each node runs in its own
+unprivileged user and network namespace (``unshare -rn``). Inside it, the
+production ``TunTap`` creates ``tap0`` at 10.10.10.<node>, and the radio's
+``RadioNet`` adds the static ARP entries. ``scripts/sim-netapp.py`` uses the
+kernel UDP and TCP stacks across the radio link:
+
+* **UDP.** Paced datagrams carry a sequence number, send time and SHA-256.
+* **TCP bulk.** A seeded byte stream is sent, and the receiver returns its
+  byte count and SHA-256.
+* **TCP request/response.** Sequential echo exchanges are timed.
+
+Nothing changes outside the namespaces. The namespaces and their tap devices
+disappear when the node exits. The relay socket is shared through the
+filesystem, and ``CLOCK_MONOTONIC`` is shared because no time namespace is
+created. The kernel's IPv6 and other non-IPv4 frames are dropped by
+``NetFilter`` as on hardware. Each scenario ran once, for 20 s of
+application time, with the same radio settings as above.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Scenario
+     - Traffic
+     - Result
+     - PHY frames rx/tx
+   * - tap-udp
+     - UDP both ways, 40 × 500 B/s
+     - 800/800 and 800/800 delivered; median one-way 78 ms and 77 ms
+     - 895/895, 894/894
+   * - tap-tcp-bulk
+     - 400 kB 1→2
+     - Complete, SHA-256 match; 10.0 s, 320 kb/s
+     - 312/312, 264/264
+   * - tap-tcp-rr
+     - 150 × 64 B echo 1→2
+     - 150/150; RTT median 82 ms, 95th percentile 189 ms
+     - 213/213, 216/216
+   * - tap-bidirectional
+     - 150 kB TCP each way, 60 echoes, UDP 10 × 300 B/s each way, at once
+     - Both transfers complete (267 and 260 kb/s); 60/60 echoes, RTT median
+       82 ms, 95th percentile 582 ms; UDP 200/200 and 200/200
+     - 553/553, 559/559
+   * - tap-tcp-erasure-arq
+     - 200 kB 1→2, 10% burst erasure both ways, ARQ on
+     - Complete, SHA-256 match; 6.4 s, 249 kb/s; 17 and 23 ARQ retransmissions
+     - 163/181, 144/165
+   * - tap-tcp-erasure-noarq
+     - same, ARQ off
+     - Complete, SHA-256 match; 7.4 s, 216 kb/s (TCP recovers alone)
+     - 143/159, 115/131
+
+* **TCP bulk capacity.** Full-size 1514-byte frames take 9956 samples, so two
+  fit per 25 ms transmit window. With 1448 TCP payload bytes per segment, the
+  TDMA bound for one direction is 331 kb/s. TCP reached 320 kb/s, 96.7% of
+  the bound, including slow start and the handshake.
+* **Bidirectional.** The two transfers used separate slots and together
+  carried 527 kb/s. Echo latency at the 95th percentile rose to 582 ms because
+  the echoes wait behind bulk segments in the FIFO queue. There is no priority
+  for small or interactive flows in this configuration.
+* **ARQ under loss.** With 10% burst erasure, link-layer ARQ gave TCP 15% more
+  goodput than TCP's own recovery.
+
 Defects found and fixed
 -----------------------
 
@@ -291,8 +356,8 @@ Not done (proposed)
 
 * Deterministic virtual-time runs. The MAC, controller and timer queue sleep on
   real time, so this needs a clock and sleep abstraction across them.
-* Tap/network namespaces, real UDP sockets, TCP bulk transfer and
-  request/response traffic. Synthetic UDP frames are the first step only.
+* Tap scenarios with more than two nodes, longer and repeated runs, and
+  standard tools such as iperf3, which is not installed in the container.
 * Jitter, timed grants, queue limits and packet expiry, more than two nodes,
   and the collaboration controller.
 * Device gain and AGC modeling, sample-rate conversion between nodes, and

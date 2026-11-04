@@ -70,4 +70,8 @@ process per node running the production radio (native OFDM PHY, channelizer,
 synthesizer, ARQ controller, queue, TDMA MAC) over a simulated device
 (`SimUSRP`) connected to `scripts/sim-air.py`, with synthetic UDP traffic in
 place of the tap interface. It needs no privileges and opens no radio. Runs are
-wall-clock paced; see `docs/fullstack-simulation.rst`.
+wall-clock paced; see `docs/fullstack-simulation.rst`. The `tap-*`
+scenarios run each node in an unprivileged network namespace (`unshare -rn`)
+with a real tap device and kernel UDP/TCP (`scripts/sim-netapp.py`). This
+needs `/dev/net/tun` and unprivileged user namespaces, and changes nothing
+outside the namespaces.

@@ -605,8 +605,19 @@ Implemented and run on gridgpu01 without a radio (details: `docs/fullstack-simul
 Evidence: a from-scratch gridgpu01 workspace built from commit 8a7bf612 passed
 all `tests/fullstack` programs, all eight scenarios and all eight variant runs.
 
+Real tap interfaces, 2026-11-04: each node runs in an unprivileged user and
+network namespace (`unshare -rn`) with the production `TunTap`, and
+`scripts/sim-netapp.py` uses the kernel stacks. Six `tap-*` scenarios pass:
+
+- UDP both ways.
+- TCP bulk at 320 kb/s, 96.7% of the TDMA bound.
+- TCP request/response with a median RTT of 82 ms.
+- Simultaneous bidirectional TCP, request/response and UDP.
+- TCP under 10% burst erasure with ARQ (249 kb/s) and without it (216 kb/s).
+
+No host network change was made.
+
 Runs are wall-clock paced; deterministic virtual time is not implemented. Still
-open in P2: tap interfaces in network namespaces with real UDP, TCP bulk and
-request/response traffic; jitter, timed grants, queue limits and expiry;
-more than two nodes; device gain modeling. Next: those P2 items, or P3 (matched
+open in P2: jitter, timed grants, queue limits and expiry; more than two
+nodes; device gain modeling. Next: those P2 items, or P3 (matched
 FEC), so the production coded MCS tables can run on the native PHY.
