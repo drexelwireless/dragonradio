@@ -166,6 +166,38 @@ SCENARIOS.update({
         expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, max_sync_error_ms=1.0)),
 })
 
+# Downlink OFDMA (P5). Node 1 is the base station; nodes 2 and 3 are UEs.
+# TDMA gives each node one slot, so UE feedback (ACKs) is time separated in
+# the UEs' own slots. Node 1's bursts carry one packet for each UE on half the
+# tones when both have traffic (native-ofdma), otherwise one packet on every
+# tone. rs8 QPSK, ARQ, tail-drop queue.
+_OFDMA = ['--phy', 'native-ofdma', '-c', 'rs8', '-k', 'none', '-m', 'qpsk', '--taildrop', '--set', 'tail_drop_max_size=15000']
+_DL_SAT = {1: [(2, 5002, 75, 1000), (3, 5003, 75, 1000)]}
+SCENARIOS.update({
+    'ofdma-both-strong': dict(
+        doc='Downlink OFDMA to two strong UEs, both saturated',
+        arq=True, nodes=3, flows=_DL_SAT, links={}, radio_args=_OFDMA, ofdma=True,
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, min_shared_bursts=0.5)),
+    'ofdma-strong-weak': dict(
+        doc='Same bursts; UE 3 about 7 dB SNR (weak), UE 2 strong: UE 3 retransmits, UE 2 is unaffected',
+        arq=True, nodes=3, flows=_DL_SAT, links={3: [(1, -43.0, 0.0, 0, 0.0)]}, radio_args=_OFDMA, ofdma=True,
+        expect=dict(max_app_duplicates=0, min_shared_bursts=0.3, strong_unaffected=(2, 0.999))),
+    'ofdma-one-idle': dict(
+        doc='Only UE 2 has traffic: single-user bursts on every tone',
+        arq=True, nodes=3, flows={1: [(2, 5002, 150, 1000)]}, links={}, radio_args=_OFDMA, ofdma=True,
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, max_shared_bursts=0.0)),
+    'ofdma-one-disconnected': dict(
+        doc='UE 3 never hears node 1 and is never heard: UE 2 keeps its service',
+        arq=True, nodes=3, flows=_DL_SAT, links={3: [(1, 0.0, 0.0, 0, 1.0)], 1: [(3, 0.0, 0.0, 0, 1.0)]},
+        radio_args=_OFDMA, ofdma=True,
+        expect=dict(max_app_duplicates=0, strong_unaffected=(2, 0.999))),
+    'ofdma-unequal': dict(
+        doc='Allocation 1:2 (UE 2 a third of the tones): UE 2 at 25 pkt/s, UE 3 saturated',
+        arq=True, nodes=3, flows={1: [(2, 5002, 25, 1000), (3, 5003, 150, 1000)]}, links={},
+        radio_args=_OFDMA + ['--ofdma-allocation', '1:2'], ofdma=True,
+        expect=dict(min_delivery_flow=(2, 0.995), max_app_duplicates=0, min_frame_delivery=0.999)),
+})
+
 # Scenarios over real tap interfaces: each node runs in its own network
 # namespace (unshare -rn) with its radio's tap0 at 10.10.10.<node> and
 # scripts/sim-netapp.py using the kernel UDP/TCP stacks. 'apps' maps node ->
@@ -461,6 +493,39 @@ def evaluate(scenario, outdir, results, air, nodes):
                        all(s is not None for s in sends.values()) and retx >= exp['min_retransmissions']))
     links, device, invalid_headers = common_checks(nodes, results, sends, exp, checks)
 
+    ofdma = None
+    if sc.get('ofdma'):
+        # Bursts from node 1 that carried two packets: send-log rows sharing a
+        # transmission timestamp (one burst) with different next hops.
+        ofdma = {}
+        send1 = sends.get(1)
+        if send1 is not None:
+            rows = send1['rows']
+            rows = rows[(rows['dropped'] == 0) & (rows['nexthop'] != 255)]
+            from collections import defaultdict
+            by_t = defaultdict(set)
+            for r in rows:
+                by_t[float(r['timestamp'])].add(int(r['nexthop']))
+            shared = sum(1 for v in by_t.values() if len(v) > 1)
+            ofdma = {'bursts': len(by_t), 'shared_bursts': shared, 'packets': int(len(rows)),
+                     'shared_fraction_of_packets': (2*shared/len(rows)) if len(rows) else None}
+        frac = ofdma.get('shared_fraction_of_packets') or 0.0
+        if 'min_shared_bursts' in exp:
+            checks.append((f'node 1: {100*frac:.1f}% of packets shared a burst (>= {100*exp["min_shared_bursts"]:.0f}%)',
+                           frac >= exp['min_shared_bursts']))
+        if 'max_shared_bursts' in exp:
+            checks.append((f'node 1: {100*frac:.1f}% of packets shared a burst (<= {100*exp["max_shared_bursts"]:.0f}%)',
+                           frac <= exp['max_shared_bursts']))
+        if 'strong_unaffected' in exp:
+            ue, thresh = exp['strong_unaffected']
+            l = links.get(f'1->{ue}', {})
+            checks.append((f'UE {ue} frame delivery {l.get("frame_delivery", 0):.4f} >= {thresh} despite the other UE',
+                           l.get('frame_delivery', 0) >= thresh))
+        if 'min_delivery_flow' in exp:
+            ue, thresh = exp['min_delivery_flow']
+            f = next((f for f in flows if f['dst'] == ue), None)
+            checks.append((f'flow to UE {ue} delivery >= {thresh}', f is not None and (f['delivery'] or 0) >= thresh))
+
     sync = sync_error(results, nodes)
     if 'max_sync_error_ms' in exp:
         for n, e in (sync or {}).items():
@@ -537,7 +602,7 @@ def evaluate(scenario, outdir, results, air, nodes):
         'links': {str(k): v for k, v in sc['links'].items()},
         'flows': flows, 'device': {str(k): v for k, v in device.items()},
         'links_accounting': links, 'invalid_headers': {str(k): v for k, v in invalid_headers.items()}, 'air': air,
-        'capacity': capacity, 'grants': grants, 'sync': sync,
+        'capacity': capacity, 'grants': grants, 'sync': sync, 'ofdma': ofdma,
         'checks': [{'check': c, 'passed': bool(ok)} for c, ok in checks],
         'passed': all(ok for _, ok in checks),
     }
@@ -771,6 +836,10 @@ def main():
             print(f'   link {name}: frames sent {l.get("frames_sent")} received {l.get("frames_received")}; '
                   f'data attempts {l.get("data_attempts")} (retx {l.get("retransmissions")}) received valid {l.get("data_received_valid")}; '
                   f'bad payload {l.get("payload_invalid")}; drops {l.get("queue_or_deadline_drops")}', flush=True)
+        if s.get('ofdma'):
+            o = s['ofdma']
+            print(f'   ofdma: node 1 sent {o.get("packets")} packets in {o.get("bursts")} bursts; '
+                  f'{o.get("shared_bursts")} bursts carried two UEs', flush=True)
         for n, e in (s.get('sync') or {}).items():
             print(f'   sync node {n}: WallClock error vs time master first {e["first_ms"]:.3f} ms, '
                   f'last {e["last_ms"]:.3f} ms, max over second half {e["max_abs_ms_second_half"]:.3f} ms', flush=True)

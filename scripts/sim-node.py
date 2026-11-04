@@ -12,6 +12,7 @@
 # tap interface; without it, the radio opens a real tap device, normally in a
 # private network namespace (unshare -rn) where scripts/sim-netapp.py runs.
 import asyncio
+import ctypes
 import json
 import logging
 import time
@@ -85,6 +86,24 @@ def parse_set(s):
         except ValueError:
             pass
     return key, value
+
+
+class _MallInfo2(ctypes.Structure):
+    _fields_ = [(name, ctypes.c_size_t) for name in
+                ('arena', 'ordblks', 'smblks', 'hblks', 'hblkhd', 'usmblks', 'fsmblks', 'uordblks', 'fordblks', 'keepcost')]
+
+
+def heap_in_use():
+    """Bytes allocated by malloc and not freed (glibc mallinfo2): the leak
+    check's measure, independent of arena growth and trimming in RSS."""
+    try:
+        libc = ctypes.CDLL(None)
+        libc.mallinfo2.restype = _MallInfo2
+        m = libc.mallinfo2()
+        return {'uordblks': m.uordblks, 'hblkhd': m.hblkhd, 'arena': m.arena, 'fordblks': m.fordblks,
+                'in_use': m.uordblks + m.hblkhd}
+    except (AttributeError, OSError):
+        return None
 
 
 def hist_percentile(hist, q, bins):
@@ -234,7 +253,8 @@ async def experiment(radio, config):
             bins = type(traffic).latency_bins if traffic else None
             with open(config.stats_file, 'a') as f:
                 while True:
-                    rec = {'mono': time.monotonic(), 'device': radio.usrp.stats if hasattr(radio.usrp, 'stats') else None,
+                    rec = {'mono': time.monotonic(), 'heap': heap_in_use(),
+                           'device': radio.usrp.stats if hasattr(radio.usrp, 'stats') else None,
                            'work': work_meters(),
                            'rx_counts': {str(k): v for k, v in radio.rx_recorder.counts.items()}}
                     if traffic:

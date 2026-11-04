@@ -273,10 +273,25 @@ def summarize(args, outdir, procs, monitor, rate, pps, queue_bytes, t_launch):
             node['rss_slope_kb_per_min_whole'] = rss_slope(samples, t_traffic0 + skip, t_traffic1)
             inside = [r for t, r, _ in rss if t_traffic0 + skip <= t <= t_traffic1]
             node['rss_kb_traffic_start_end'] = [inside[0], inside[-1]] if inside else None
-            sl = node['rss_slope_kb_per_min_second_half']
-            # Leak check: < 1 MB per 10 minutes over the second half.
-            checks.append((f'node {n}: RSS slope {sl if sl is None else round(sl, 1)} kB/min over the second half < 100 kB/min',
-                           sl is not None and sl < 100))
+            # Leak check on the heap in use (glibc mallinfo2 from the node's
+            # periodic stats): RSS steps with malloc arena growth and
+            # trimming (seen as +/-15-22 MB steps at the same moment on every
+            # node), which is not a leak. RSS slope is still reported.
+            heap = [(r['mono'], r['heap']['in_use']/1024) for r in stats if r.get('heap')]
+            hs = [(t, h) for t, h in heap if mid <= t <= t_traffic1]
+            if len(hs) >= 3:
+                mx = sum(t for t, _ in hs)/len(hs)
+                my = sum(h for _, h in hs)/len(hs)
+                sxx = sum((t - mx)**2 for t, _ in hs)
+                node['heap_slope_kb_per_min_second_half'] = 60*sum((t - mx)*(h - my) for t, h in hs)/sxx if sxx else None
+                node['heap_kb'] = [[round(t - t_launch, 1), round(h)] for t, h in heap]
+                sl = node['heap_slope_kb_per_min_second_half']
+                checks.append((f'node {n}: heap-in-use slope {sl if sl is None else round(sl, 1)} kB/min over the second half < 100 kB/min',
+                               sl is not None and sl < 100))
+            else:
+                sl = node['rss_slope_kb_per_min_second_half']
+                checks.append((f'node {n}: RSS slope {sl if sl is None else round(sl, 1)} kB/min over the second half < 100 kB/min (no heap stats)',
+                               sl is not None and sl < 100))
         # Device counters during traffic (before = after warm-up).
         dev, before = res['device'], res['device_before']
         delta = {k: dev[k] - before.get(k, 0) for k in dev}

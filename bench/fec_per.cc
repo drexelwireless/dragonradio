@@ -10,7 +10,7 @@
 // failure (header valid, payload invalid), header/acquisition failure (no
 // packet). Demodulation time per packet is measured on one thread per job.
 //
-// Usage: fec_per OUT.csv [packets-per-point] [payload-bytes]
+// Usage: fec_per OUT.csv [packets-per-point] [payload-bytes] [config-substring]
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -190,12 +190,40 @@ int main(int argc, char **argv)
         {"liquid qpsk v29p78 soft", "liquid", M(N, LIQUID_FEC_CONV_V29P78, LIQUID_MODEM_QPSK), true, 0},
         {"liquid qam16 uncoded", "liquid", M(N, N, LIQUID_MODEM_QAM16), true, 0},
         {"liquid qam16 rs8", "liquid", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM16), true, 0},
+        // The production AMC table's other constellations with rs8 (P4 item
+        // 2.5): native Gray rectangular QAM (v29 header) and liquid's.
+        {"native+v29hdr bpsk rs8", "native", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_BPSK), true, 0, "v29"},
+        {"native+v29hdr qam8 rs8", "native", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM8), true, 0, "v29"},
+        {"native+v29hdr qam32 rs8", "native", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM32), true, 0, "v29"},
+        {"native+v29hdr qam64 rs8", "native", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM64), true, 0, "v29"},
+        {"native+v29hdr qam128 rs8", "native", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM128), true, 0, "v29"},
+        {"native+v29hdr qam256 rs8", "native", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM256), true, 0, "v29"},
+        {"liquid bpsk rs8", "liquid", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_BPSK), true, 0},
+        {"liquid qam8 rs8", "liquid", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM8), true, 0},
+        {"liquid qam32 rs8", "liquid", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM32), true, 0},
+        {"liquid qam64 rs8", "liquid", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM64), true, 0},
+        {"liquid qam128 rs8", "liquid", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM128), true, 0},
+        {"liquid qam256 rs8", "liquid", M(LIQUID_FEC_RS_M8, N, LIQUID_MODEM_QAM256), true, 0},
     };
+    const std::string only = argc > 4 ? argv[4] : "";
     struct Job { size_t c; double snr; };
     std::vector<Job> jobs;
     for (size_t c = 0; c < configs.size(); ++c) {
-        const bool q16 = configs[c].mcs.ms == LIQUID_MODEM_QAM16;
-        for (double snr = q16 ? 6.0 : -2.0; snr <= (q16 ? 22.0 : 14.0) + 1e-9; snr += 1.0)
+        if (!only.empty() && configs[c].name.find(only) == std::string::npos)
+            continue;
+        // SNR window per constellation (dB per sample), 17 points.
+        double lo;
+        switch (configs[c].mcs.ms) {
+            case LIQUID_MODEM_BPSK:   lo = -5.0; break;
+            case LIQUID_MODEM_QAM8:   lo = 2.0; break;
+            case LIQUID_MODEM_QAM16:  lo = 6.0; break;
+            case LIQUID_MODEM_QAM32:  lo = 9.0; break;
+            case LIQUID_MODEM_QAM64:  lo = 12.0; break;
+            case LIQUID_MODEM_QAM128: lo = 15.0; break;
+            case LIQUID_MODEM_QAM256: lo = 18.0; break;
+            default:                  lo = -2.0; break;   // QPSK
+        }
+        for (double snr = lo; snr <= lo + 16.0 + 1e-9; snr += 1.0)
             jobs.push_back({c, snr});
     }
     std::vector<Point> results(jobs.size());
