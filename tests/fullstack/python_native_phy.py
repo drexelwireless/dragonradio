@@ -33,7 +33,7 @@ coded = radio.NativeOFDM([(liquid.MCS('crc32', 'rs8', 'none', 'qpsk'), radio.Aut
 check(list(coded.fec) == [('rs8', 'none'), ('none', 'v29p78')] and not coded.soft_payload, "coded table " + str(list(coded.fec)))
 check(coded.getModulatedSize(0, 1500) > phy.getModulatedSize(0, 1500), "rs8 frame longer than uncoded")
 for bad in (liquid.MCS('crc32', 'none', 'h74', 'qpsk'), liquid.MCS('crc32', 'v39', 'none', 'qpsk'),
-            liquid.MCS('crc32', 'none', 'none', 'qam64'), liquid.MCS('crc16', 'none', 'none', 'qpsk')):
+            liquid.MCS('crc32', 'none', 'none', 'psk8'), liquid.MCS('crc16', 'none', 'none', 'qpsk')):
     try:
         radio.NativeOFDM([(bad, radio.AutoGain())], 48, 6)
         check(False, "rejects %r" % (bad,))

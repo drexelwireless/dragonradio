@@ -213,7 +213,8 @@ static size_t channelizerProtocol(const char *name, PHY &phy, const Run &run, bo
     return got.size();
 }
 
-static void scenario(const char *name, PHY &phy, bool exact_sizes, int timing_tolerance, double cfo, unsigned M)
+static void scenario(const char *name, PHY &phy, bool exact_sizes, int timing_tolerance, double cfo, unsigned M,
+                     double snr_db = 25.0)
 {
     PHY::setNodeId(2);
     Run run = modulateAll(phy, specs(), exact_sizes);
@@ -222,7 +223,7 @@ static void scenario(const char *name, PHY &phy, bool exact_sizes, int timing_to
         verify(name, run, got, timing_tolerance);
     }
     Run noisy = run;
-    impair(noisy.iq, cfo, M, 25.0);
+    impair(noisy.iq, cfo, M, snr_db);
     verify((std::string(name) + " +CFO/noise").c_str(), noisy, demodulateAll(phy, noisy.iq, 4096), timing_tolerance + 2);
     if (exact_sizes)
         channelizerProtocol((std::string(name) + " buffers").c_str(), phy, run, true);
@@ -292,6 +293,31 @@ int main()
         scenario("native-ofdm M=128 v27 header, uncoded", header128, true, 0, 1.0, 128);
     }
 
+    // The production AMC table's constellations (P4 item 2.5): BPSK through
+    // 256-QAM with rs8, two per table as the harness alternates MCS 0 and 1.
+    // Frame length falls with bits per tone. Higher orders need more SNR.
+    {
+        auto rs8 = [](modulation_scheme ms) { return liquid::MCS(LIQUID_CRC_32, LIQUID_FEC_RS_M8, LIQUID_FEC_NONE, ms); };
+        const modulation_scheme order[] = {LIQUID_MODEM_BPSK, LIQUID_MODEM_QPSK, LIQUID_MODEM_QAM8, LIQUID_MODEM_QAM16,
+                                           LIQUID_MODEM_QAM32, LIQUID_MODEM_QAM64, LIQUID_MODEM_QAM128, LIQUID_MODEM_QAM256};
+        std::vector<std::pair<liquid::MCS, AutoGain>> amc;
+        for (auto ms : order) amc.push_back({rs8(ms), AutoGain()});
+        NativeOFDM all(amc, 48, 6, std::nullopt, 4096, 4, true, "v29");
+        for (unsigned i = 0; i < 8; ++i)
+            CHECK(all.getBitsPerSymbol()[i] == int(i + 1), "MCS %u bits per tone %d", i, all.getBitsPerSymbol()[i]);
+        for (unsigned i = 1; i < 8; ++i)
+            CHECK(all.getModulatedSize(i, 1500) < all.getModulatedSize(i - 1, 1500), "frame length falls with order (%u)", i);
+        const std::pair<modulation_scheme, modulation_scheme> pairs[] = {
+            {LIQUID_MODEM_BPSK, LIQUID_MODEM_QAM8}, {LIQUID_MODEM_QAM32, LIQUID_MODEM_QAM64}, {LIQUID_MODEM_QAM128, LIQUID_MODEM_QAM256}};
+        const double snr[] = {25.0, 32.0, 40.0};
+        for (int k = 0; k < 3; ++k) {
+            NativeOFDM t({{rs8(pairs[k].first), AutoGain()}, {rs8(pairs[k].second), AutoGain()}}, 48, 6, std::nullopt, 4096, 4, true, "v29");
+            const std::string name = std::string("native-ofdm M=48 rs8 ") + modulation_types[pairs[k].first].name + " / "
+                + modulation_types[pairs[k].second].name;
+            scenario(name.c_str(), t, true, 0, 0.3, 48, snr[k]);
+        }
+    }
+
     // Unsupported MCS entries are rejected, not silently replaced.
     for (auto fec : {LIQUID_FEC_HAMMING74, LIQUID_FEC_GOLAY2412, LIQUID_FEC_CONV_V39}) {
         bool threw = false;
@@ -308,7 +334,7 @@ int main()
     }
     {
         bool threw = false;
-        try { NativeOFDM bad({{liquid::MCS(LIQUID_CRC_32, LIQUID_FEC_NONE, LIQUID_FEC_NONE, LIQUID_MODEM_QAM64), AutoGain()}}, 48, 6, std::nullopt); }
+        try { NativeOFDM bad({{liquid::MCS(LIQUID_CRC_32, LIQUID_FEC_NONE, LIQUID_FEC_NONE, LIQUID_MODEM_PSK8), AutoGain()}}, 48, 6, std::nullopt); }
         catch (const std::invalid_argument &) { threw = true; }
         CHECK(threw, "unsupported constellation accepted");
     }

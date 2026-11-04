@@ -29,6 +29,24 @@ static std::optional<nfec::Code> nativeCode(fec_scheme fs)
     return std::nullopt;
 }
 
+// liquid modulation scheme -> native Gray rectangular QAM bits per tone
+// (Constellation in NativeFrame.hh); 0 if unsupported. The native and liquid
+// constellations of the same order are not the same points or bit labels.
+static int nativeBitsPerSymbol(modulation_scheme ms)
+{
+    switch (ms) {
+        case LIQUID_MODEM_BPSK:   return 1;
+        case LIQUID_MODEM_QPSK:   return 2;
+        case LIQUID_MODEM_QAM8:   return 3;
+        case LIQUID_MODEM_QAM16:  return 4;
+        case LIQUID_MODEM_QAM32:  return 5;
+        case LIQUID_MODEM_QAM64:  return 6;
+        case LIQUID_MODEM_QAM128: return 7;
+        case LIQUID_MODEM_QAM256: return 8;
+        default:                  return 0;
+    }
+}
+
 static_assert(sizeof(Header) == dragonradio::native::kHeaderInfoBytes,
               "native frame header carries exactly one DragonRadio Header");
 
@@ -77,13 +95,13 @@ NativeOFDM::NativeOFDM(const std::vector<std::pair<liquid::MCS, AutoGain>> &mcs_
     mcs_.reserve(mcs_table.size());
     for (unsigned i = 0; i < mcs_table.size(); ++i) {
         const liquid::MCS &mcs = mcs_table[i].first;
-        int bps = mcs.ms == LIQUID_MODEM_QPSK ? 2 : mcs.ms == LIQUID_MODEM_QAM16 ? 4 : 0;
+        int bps = nativeBitsPerSymbol(mcs.ms);
         auto f0 = nativeCode(mcs.fec0), f1 = nativeCode(mcs.fec1);
         const bool coded = (f0 && *f0 != nfec::kNone) || (f1 && *f1 != nfec::kNone);
         if (mcs.check != LIQUID_CRC_32 || !f0 || !f1 || bps == 0 || (coded && !nfec::kAvailable)) {
             std::stringstream msg;
             msg << "native-ofdm does not support MCS " << i << " (" << mcs.description()
-                << "); supported: crc32, QPSK or 16-QAM, FEC none, rs8, v27, v29 or their punctured rates"
+                << "); supported: crc32; BPSK, QPSK, 8-, 16-, 32-, 64-, 128- or 256-QAM; FEC none, rs8, v27, v29 or their punctured rates"
                 << (nfec::kAvailable ? "" : " (this build has no native FEC: only FEC none)");
             throw std::invalid_argument(msg.str());
         }

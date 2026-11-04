@@ -11,7 +11,8 @@
 //       [0]      format byte 0xD3
 //       [1..5]   DragonRadio Header (curhop, nexthop, seq, flags), host order
 //       [6]      MCS index (into the transmitter's table)
-//       [7]      payload bits per symbol: 2 (QPSK) or 4 (Gray 16-QAM)
+//       [7]      payload bits per tone: 1..8 (Constellation: BPSK, QPSK, 8- to
+//                256-QAM; 2 and 4 were the only values before P4 item 2.5)
 //       [8]      inner FEC code, [9] outer FEC code (NativeFEC.hh Code)
 //       [10..11] payload length in bytes, big endian
 //       [12..15] CRC-32 of bytes 0..11, big endian
@@ -51,12 +52,90 @@ inline std::vector<unsigned char> prbs15(uint32_t seed, size_t count) {
     return bits;
 }
 
+// Gray-mapped rectangular QAM with 1..8 bits per tone (BPSK, QPSK, 8-, 16-,
+// 32-, 64-, 128-, 256-QAM). The first ceil(b/2) bits drive I, the rest Q.
+// Per axis with n bits: the first bit is the sign, the remaining n-1 are the
+// Gray-coded magnitude index m, amplitude (2 bin(m) + 1). Unit average
+// power. b = 2 and b = 4 are exactly the original QPSK (+/-1/sqrt 2) and
+// Gray 16-QAM (+/-1, +/-3)/sqrt 10 mappings (wire format unchanged).
+struct Constellation {
+    int bits = 2, bits_i = 1, bits_q = 1;
+    float unit = Q;                    // amplitude of level 1; half the minimum distance
+    std::vector<float> level_i, level_q;   // amplitude by axis bit pattern (MSB first)
+
+    static const Constellation &get(int b) {
+        static const std::vector<Constellation> all = [] {
+            std::vector<Constellation> v(9);
+            for (int k = 1; k <= 8; ++k) v[k] = Constellation(k);
+            return v;
+        }();
+        if (b < 1 || b > 8) throw std::runtime_error("constellation must have 1..8 bits per tone");
+        return all[b];
+    }
+    static bool valid(int b) { return b >= 1 && b <= 8; }
+
+    Constellation() = default;
+    explicit Constellation(int b) : bits(b), bits_i((b + 1) / 2), bits_q(b / 2) {
+        const int li = 1 << bits_i, lq = 1 << bits_q;
+        const double energy = (double(li) * li - 1) / 3 + (bits_q ? (double(lq) * lq - 1) / 3 : 0.0);
+        unit = float(1 / std::sqrt(energy));
+        level_i = axis(bits_i);
+        level_q = axis(bits_q);
+    }
+    // Amplitudes of every n-bit axis pattern.
+    std::vector<float> axis(int n) const {
+        std::vector<float> lv(size_t(1) << n, 0.f);
+        if (n == 0) return lv;
+        for (int p = 0; p < (1 << n); ++p) {
+            const int sign = (p >> (n - 1)) & 1, gray = p & ((1 << (n - 1)) - 1);
+            int m = gray;
+            for (int sh = 1; sh < n; sh <<= 1) m ^= m >> sh;   // Gray to binary
+            lv[p] = float((1 - 2 * sign) * (2 * m + 1)) * unit;
+        }
+        return lv;
+    }
+    C map(const int *b) const {
+        int pi = 0, pq = 0;
+        for (int k = 0; k < bits_i; ++k) pi = (pi << 1) | b[k];
+        for (int k = 0; k < bits_q; ++k) pq = (pq << 1) | b[bits_i + k];
+        return C(level_i[pi], bits_q ? level_q[pq] : 0.f);
+    }
+    // Hard decisions and max-log reliabilities. confidence[k] =
+    // ((x - a')^2 - (x - a)^2) / (4 unit) * gain, a the decided level and a'
+    // the nearest level with bit k flipped, so that soft_bits' LLR
+    // 4 unit confidence / N0 is the max-log LLR. Returns |z - decided|^2.
+    float demap(C z, float gain, int *hard, float *confidence) const {
+        float err = 0;
+        demap_axis(z.real(), level_i, bits_i, gain, hard, confidence, err);
+        if (bits_q) demap_axis(z.imag(), level_q, bits_q, gain, hard + bits_i, confidence + bits_i, err);
+        else err += z.imag() * z.imag();
+        return err;
+    }
+    void demap_axis(float x, const std::vector<float> &lv, int n, float gain, int *hard, float *conf, float &err) const {
+        int best = 0;
+        float bd = INFINITY;
+        for (int p = 0; p < int(lv.size()); ++p) {
+            const float d = (x - lv[p]) * (x - lv[p]);
+            if (d < bd) { bd = d; best = p; }
+        }
+        err += bd;
+        for (int k = 0; k < n; ++k) {
+            const int mask = 1 << (n - 1 - k);
+            hard[k] = (best & mask) != 0;
+            float other = INFINITY;
+            for (int p = 0; p < int(lv.size()); ++p)
+                if ((p & mask) != (best & mask)) other = std::min(other, (x - lv[p]) * (x - lv[p]));
+            conf[k] = (other - bd) / (4 * unit) * gain;
+        }
+    }
+};
+
 struct FrameHeader {
     bool valid = false;
     unsigned char info[kHeaderInfoBytes] = {0, 0, 0, 0, 0};
     int mcsidx = 0, bps = 2, length = 0;
     fec::Code fec0 = fec::kNone, fec1 = fec::kNone;
-    int header_symbols = 0, payload_symbols = 0, samples = 0;
+    int header_symbols = 0, payload_symbols = 0, samples = 0;   // bps: 1..8 (Constellation)
     bool coded() const { return fec0 != fec::kNone || fec1 != fec::kNone; }
 };
 
@@ -72,6 +151,7 @@ struct FramedPHY {
     std::vector<int> data_bins, pilot_bins;
     std::unique_ptr<FastPHY> core;
     int user_id;
+    std::vector<unsigned char> scramble_;   // per-user PRBS, header then payload bits
     // Per-frame workspaces, reused across frames (one engine per modulator
     // or demodulator thread; P4: no allocation per received frame).
     struct Workspace {
@@ -103,8 +183,8 @@ struct FramedPHY {
         // largest coded packet the caller will send (see max_coded_bytes).
         max_on_air = std::max(max_payload + 4, max_on_air_bytes);
         header_symbols = (header_air * 8 + 2 * nd - 1) / (2 * nd);
-        // Worst case is QPSK: enough symbols for header plus the largest payload.
-        const int payload_symbols = (max_on_air * 8 + 2 * nd - 1) / (2 * nd);
+        // Worst case is BPSK: enough symbols for header plus the largest payload.
+        const int payload_symbols = (max_on_air * 8 + nd - 1) / nd;
         const int ns = header_symbols + payload_symbols;
         // Training: +/-1 on active tones in ascending signed-frequency order.
         std::vector<int> active(data);
@@ -114,8 +194,11 @@ struct FramedPHY {
         const auto tbits = prbs15(0x1921, active.size());
         std::vector<C> training(n);
         for (size_t i = 0; i < active.size(); ++i) training[active[i]] = tbits[i] ? -1.f : 1.f;
-        // Scrambler sized for 16-QAM over every symbol (covers all layouts).
-        const auto scramble = prbs15(0x2A00 + user, size_t(4) * ns * nd);
+        // Scrambler sized for 8 bits per tone over every symbol. PRBS-15 from
+        // one seed: its first 4 ns nd bits are the sequence the QPSK/16-QAM
+        // format always used. The core keeps the first 4 ns nd (its own size).
+        scramble_ = prbs15(0x2A00 + user, size_t(8) * ns * nd);
+        const auto &scramble = scramble_;
         int id = user, ndata = nd, npilot = int(pilots.size());
         core = std::make_unique<FastPHY>(n, cp, ns, 1, &id, &ndata, data.data(), &npilot, pilots.data(),
                                          training.data(), scramble.data(), 4, chase_bits);
@@ -146,7 +229,7 @@ struct FramedPHY {
     // Build a frame. Returns its sample count.
     int write(const unsigned char *info, int mcsidx, int bps, const unsigned char *payload, int length, C *out, int capacity,
               fec::Code fec0 = fec::kNone, fec::Code fec1 = fec::kNone) {
-        if (bps != 2 && bps != 4) throw std::runtime_error("unsupported constellation");
+        if (!Constellation::valid(bps)) throw std::runtime_error("unsupported constellation");
         if (length < 0 || length > max_payload) throw std::runtime_error("payload exceeds configured maximum");
         if (mcsidx < 0 || mcsidx > 255) throw std::runtime_error("MCS index out of range");
         if (!fec::valid(fec0) || !fec::valid(fec1)) throw std::runtime_error("invalid FEC code");
@@ -177,6 +260,7 @@ struct FramedPHY {
         }
         FastPHY &f = *core;
         const User &a = f.users[0];
+        const Constellation &cons = Constellation::get(bps);
         const int H = header_symbols, P = payload_symbols(length, bps, fec0, fec1), L = f.length;
         const int header_bits = 2 * H * nd;
         auto bit_of = [](const unsigned char *bytes, int count_bits, int i) {
@@ -188,16 +272,17 @@ struct FramedPHY {
             else {
                 const int d = s - 2;
                 for (int j = 0; j < nd; ++j) {
-                    int b[4];
+                    int b[8];
                     if (d < H) {
                         const int bit = 2 * (d * nd + j);
-                        for (int k = 0; k < 2; ++k) b[k] = bit_of(header_bits_on_air.data(), header_air * 8, bit + k) ^ a.prbs[bit + k];
+                        for (int k = 0; k < 2; ++k) b[k] = bit_of(header_bits_on_air.data(), header_air * 8, bit + k) ^ scramble_[bit + k];
                         f.fd[a.data[j]] = C(b[0] ? -Q : Q, b[1] ? -Q : Q);
                     } else {
                         const int bit = bps * ((d - H) * nd + j);
-                        for (int k = 0; k < bps; ++k) b[k] = bit_of(body.data(), air * 8, bit + k) ^ a.prbs[header_bits + bit + k];
+                        for (int k = 0; k < bps; ++k) b[k] = bit_of(body.data(), air * 8, bit + k) ^ scramble_[header_bits + bit + k];
                         f.fd[a.data[j]] = bps == 2 ? C(b[0] ? -Q : Q, b[1] ? -Q : Q)
-                                                   : C((1 - 2 * b[0]) * (1 + 2 * b[1]) * A16, (1 - 2 * b[2]) * (1 + 2 * b[3]) * A16);
+                                        : bps == 4 ? C((1 - 2 * b[0]) * (1 + 2 * b[1]) * A16, (1 - 2 * b[2]) * (1 + 2 * b[3]) * A16)
+                                                   : cons.map(b);
                     }
                 }
                 for (size_t j = 0; j < a.pilots.size(); ++j)
@@ -247,7 +332,7 @@ struct FramedPHY {
                 noise += FastPHY::demap(cmul(rows[s * nd + j], correction), gain, 2, hard, conf) * gain;
                 ++points;
                 for (int k = 0; k < 2 && bit + k < air_bits; ++k) {
-                    const int b = hard[k] ^ a.prbs[bit + k];
+                    const int b = hard[k] ^ scramble_[bit + k];
                     on_air[(bit + k) / 8] |= b << (7 - (bit + k) % 8);
                     descrambled[bit + k] = (unsigned char)b;
                     confidence[bit + k] = conf[k];
@@ -267,7 +352,7 @@ struct FramedPHY {
         auto valid = [&] {
             const int len = (header[10] << 8) | header[11];
             return header[0] == kFrameFormat && crc32(header, 12) == load_be32(header + 12)
-                && (header[7] == 2 || header[7] == 4) && fec::valid(header[8]) && fec::valid(header[9])
+                && Constellation::valid(header[7]) && fec::valid(header[8]) && fec::valid(header[9])
                 && len <= max_payload
                 && on_air_bytes(len, fec::Code(header[8]), fec::Code(header[9])) <= max_on_air;
         };
@@ -294,6 +379,7 @@ struct FramedPHY {
         FastPHY &f = *core;
         const User &a = f.users[0];
         const int H = fh.header_symbols, P = fh.payload_symbols, total = H + P, bps = fh.bps;
+        const Constellation &cons = Constellation::get(bps);
         const double omega = f.prepare(in, start, omega0, fh.samples);
         metrics[2] = omega * n / (2 * double(PI));
         payload.clear();
@@ -323,15 +409,16 @@ struct FramedPHY {
             C correction = std::polar(f.scale, float(-(intercept + slope * s)));
             for (int j = 0; j < nd; ++j) {
                 const int bit = bps * ((s - H) * nd + j);
-                int hard[4];
-                float conf[4];
+                int hard[8];
+                float conf[8];
                 const float gain = cnorm(f.estimate[a.data[j]]);
-                const float e = FastPHY::demap(cmul(rows[s * nd + j], correction), gain, bps, hard, conf);
+                const C z = cmul(rows[s * nd + j], correction);
+                const float e = (bps == 2 || bps == 4) ? FastPHY::demap(z, gain, bps, hard, conf) : cons.demap(z, gain, hard, conf);
                 error += e;
                 noise += e * gain;     // pre-equalization noise power estimate
                 ++points;
                 for (int k = 0; k < bps && bit + k < used; ++k) {
-                    const int b = hard[k] ^ a.prbs[header_bits + bit + k];
+                    const int b = hard[k] ^ scramble_[header_bits + bit + k];
                     body[(bit + k) / 8] |= b << (7 - (bit + k) % 8);
                     confidence[bit + k] = conf[k];
                     if (soft_input) descrambled[bit + k] = (unsigned char)b;
@@ -347,7 +434,7 @@ struct FramedPHY {
                 return pk.decode(body.data(), payload.data());
             std::vector<unsigned char> &soft_in = ws.soft;
             soft_in.resize(used);
-            soft_bits(descrambled.data(), confidence.data(), used, noise / std::max(points, 1), bps == 2 ? Q : A16, soft_in.data());
+            soft_bits(descrambled.data(), confidence.data(), used, noise / std::max(points, 1), cons.unit, soft_in.data());
             return pk.decode_soft(soft_in.data(), payload.data());
         }
         auto valid = [&] { return crc32(body.data(), fh.length) == load_be32(body.data() + fh.length); };

@@ -4,9 +4,11 @@
 // v2) behind the standard PHY/PacketModulator/PacketDemodulator interfaces.
 // It is selected explicitly (--phy native-ofdm); liquid OFDM stays the default.
 //
-// Supported MCS entries: CRC-32, no FEC, QPSK or 16-QAM payload. Any other
-// entry is rejected at construction with std::invalid_argument; there is no
-// silent fallback. The header section is always QPSK with its own CRC-32.
+// Supported MCS entries: CRC-32; BPSK, QPSK, 8-, 16-, 32-, 64-, 128- or
+// 256-QAM (native Gray rectangular QAM, NativeFrame.hh Constellation); FEC
+// none, rs8, v27, v29 or punctured (NativeFEC.hh). Any other entry is
+// rejected at construction with std::invalid_argument; there is no silent
+// fallback. The header section is always QPSK with its own CRC-32.
 #ifndef PHY_NATIVEOFDM_HH_
 #define PHY_NATIVEOFDM_HH_
 
@@ -99,7 +101,7 @@ public:
     unsigned int getMaxPayload(void) const { return max_payload_; }
     unsigned int getChaseBits(void) const { return chase_bits_; }
     std::string getSubcarriers(void) const { return mask_; }
-    /** @brief Bits per payload symbol for each MCS index (2 or 4) */
+    /** @brief Bits per payload symbol for each MCS index (1..8) */
     const std::vector<int> &getBitsPerSymbol(void) const { return bps_; }
     /** @brief Inner and outer FEC code names for each MCS index */
     std::vector<std::pair<std::string, std::string>> getFEC(void) const;
