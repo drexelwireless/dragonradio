@@ -13,7 +13,7 @@ void TDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
     if (resampler_.getTheta() != 0.0 || resampler_.getRate() != 1.0) {
         // Modulate the packet, but don't paply gain yet. We will apply gain
         // when we resample.
-        mod_->modulate(std::move(pkt), 1.0f, mpkt);
+        modulatePHY(std::move(pkt), 1.0f, mpkt);
 
         // Get samples from ModPacket
         auto iqbuf = std::move(mpkt.samples);
@@ -52,7 +52,7 @@ void TDChannelModulator::modulate(std::shared_ptr<NetPacket> pkt,
         mpkt.samples = std::move(iqbuf_up);
     } else
         // Modulate packet and apply gain
-        mod_->modulate(std::move(pkt), g_effective, mpkt);
+        modulatePHY(std::move(pkt), g_effective, mpkt);
 
     // Set channel
     mpkt.chanidx = chanidx_;

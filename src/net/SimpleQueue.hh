@@ -140,13 +140,30 @@ public:
         cond_.notify_one();
     }
 
+    virtual void kick(void) override
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            kicked_ = true;
+        }
+
+        cond_.notify_all();
+    }
+
     virtual bool pop(T& val) override
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        cond_.wait(lock, [&]{ return !enabled_ || !hiq_.empty() || !q_.empty(); });
+        cond_.wait(lock, [&]{ return !enabled_ || kicked_ || !hiq_.empty() || !q_.empty(); });
 
         if (!enabled_)
+            return false;
+
+        // A kick (see Queue::kick) ends one wait on an empty queue.
+        kicked_ = false;
+
+        if (hiq_.empty() && q_.empty())
             return false;
 
         MonoClock::time_point now = MonoClock::now();
@@ -205,6 +222,9 @@ protected:
 
     /** @brief Flag indicating that the queue is enabled. */
     bool enabled_;
+
+    /** @brief Flag indicating that a pop should stop waiting (kick). */
+    bool kicked_ = false;
 
     /** @brief Condition variable protecting the queue. */
     std::condition_variable cond_;

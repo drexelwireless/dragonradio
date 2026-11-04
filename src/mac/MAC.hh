@@ -246,9 +246,13 @@ protected:
      */
     void abortTXRecord(TXRecord& txrecord)
     {
-        // Re-queue all packets in this TX record
-        for (auto it = txrecord.mpkts.begin(); it != txrecord.mpkts.end(); ++it)
+        // Re-queue all packets in this TX record, including downlink OFDMA
+        // burst partners
+        for (auto it = txrecord.mpkts.begin(); it != txrecord.mpkts.end(); ++it) {
             controller_->missed(std::move((*it)->pkt));
+            for (auto &p : (*it)->partners)
+                controller_->missed(std::move(p));
+        }
     }
 
     /** @brief Worker receiving packets */

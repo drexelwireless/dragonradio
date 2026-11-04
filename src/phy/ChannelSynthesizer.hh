@@ -5,9 +5,15 @@
 #define CHANNELSYNTHESIZER_HH_
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <deque>
+#include <functional>
 #include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <thread>
 
 #include "phy/Channel.hh"
 #include "phy/PHY.hh"
@@ -105,6 +111,33 @@ protected:
 
     /** @brief Modulation worker */
     void modWorker(unsigned tid);
+
+    /** @brief Kicks the burst queue at a deadline: bounds the wait for a
+     * downlink OFDMA burst partner without changing the blocking pull.
+     * Its thread starts the first time it is armed.
+     */
+    struct Kicker {
+        std::mutex m;
+        std::condition_variable cv;
+        std::optional<std::chrono::steady_clock::time_point> deadline;
+        std::shared_ptr<Queue<std::shared_ptr<NetPacket>>> queue;
+        bool stop = false;
+        std::thread thread;
+
+        ~Kicker() { shutdown(); }
+
+        void run(void);
+        void arm(double sec, std::shared_ptr<Queue<std::shared_ptr<NetPacket>>> q);
+        void cancel(void);
+        void shutdown(void);
+    };
+
+    Kicker kicker_;
+
+    /** @brief Pull a packet, waiting at most sec (false on timeout, or
+     * without a burst queue to kick).
+     */
+    bool pullWithin(std::shared_ptr<NetPacket> &pkt, double sec);
 
     void wake_dependents(void) override;
 

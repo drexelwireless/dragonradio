@@ -157,6 +157,33 @@ void MAC::txNotifier(void)
             tx_records_.pop();
         }
 
+        // Downlink OFDMA burst partners become ModPackets of their own for
+        // timestamps, logging and the controller (ARQ is per packet). They
+        // share the burst's samples and are marked so the burst's airtime is
+        // counted once.
+        for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
+            if ((*it)->partners.empty())
+                continue;
+
+            ModPacket                               &burst = **it;
+            std::vector<std::shared_ptr<NetPacket>> partners = std::move(burst.partners);
+
+            burst.partners.clear();
+            for (auto &p : partners) {
+                auto c = std::make_unique<ModPacket>();
+
+                c->chanidx = burst.chanidx;
+                c->channel = burst.channel;
+                c->start = burst.start;
+                c->offset = burst.offset;
+                c->nsamples = burst.nsamples;
+                c->samples = burst.samples;
+                c->pkt = std::move(p);
+                c->burst_partner = true;
+                it = record.mpkts.insert(std::next(it), std::move(c));
+            }
+        }
+
         if (record.timestamp) {
             // Timestamp packets
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it)
@@ -168,6 +195,9 @@ void MAC::txNotifier(void)
 
                 for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
                     unsigned chanidx = (*it)->chanidx;
+
+                    if ((*it)->burst_partner)
+                        continue;
 
                     if (chanidx < load_.nsamples.size())
                         load_.nsamples[chanidx] += (*it)->nsamples;
@@ -202,6 +232,9 @@ void MAC::txNotifier(void)
         // Tell the snapshot collector about local self-transmissions
         if (snapshot_collector_ && record.timestamp) {
             for (auto it = record.mpkts.begin(); it != record.mpkts.end(); ++it) {
+                if ((*it)->burst_partner)
+                    continue;
+
                 MonoClock::time_point timestamp = *record.timestamp + MonoClock::duration((*it)->start/tx_rate_);
 
                 snapshot_collector_->selfTX(timestamp,

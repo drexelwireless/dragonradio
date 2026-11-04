@@ -10,6 +10,7 @@ set(FULLSTACK_TESTS
   test_native_perf
   test_native_qam
   test_net_queue
+  test_ofdma_batch
   test_packet_align
   test_sim_device
   test_synth_slot

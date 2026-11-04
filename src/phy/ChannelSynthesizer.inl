@@ -1,6 +1,8 @@
 // Copyright 2018-2022 Drexel University
 // Author: Geoffrey Mainland <mainland@drexel.edu>
 
+#include <algorithm>
+
 #include <pybind11/pybind11.h>
 
 #include "logging.hh"
@@ -220,6 +222,9 @@ void ChannelSynthesizer<ChannelModulator>::stop(void)
     // XXX We must disconnect the sink in order to stop the modulator threads.
     sink.disconnect();
 
+    // A worker may be waiting for a burst partner
+    kicker_.shutdown();
+
     // Set done flag
     if (modify([&](){ done_ = true; })) {
         // Join on all threads
@@ -281,6 +286,11 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
     std::unique_ptr<ChannelModulator> mod;
     std::shared_ptr<NetPacket>        pkt;
     std::optional<uint64_t>           full_slot; // Slot pkt did not fit in
+    // Downlink OFDMA: packets pulled while looking for a burst partner, in
+    // order, and the PHY's packets per burst.
+    std::deque<std::shared_ptr<NetPacket>> held;
+    unsigned                               max_users = 1;
+    constexpr size_t                       kMaxHeld = 4;
 
     for (;;) {
         // Synchronize on state change
@@ -302,6 +312,7 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
                 mod = std::make_unique<ChannelModulator>(channels_[*chanidx_],
                                                          *chanidx_,
                                                          tx_rate_);
+                max_users = channels_[*chanidx_].phy->getMaxBurstUsers();
             }
         }
 
@@ -313,17 +324,54 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
         full_slot.reset();
 
         // Get a packet to modulate. We may already have a packet if the last
-        // push failed.
+        // push failed, or packets held while looking for a burst partner.
+        if (!pkt && !held.empty()) {
+            pkt = std::move(held.front());
+            held.pop_front();
+        }
+
         if (!pkt) {
             if (!sink.pull(pkt))
                 continue;
         }
 
-        // Modulate the packet
+        // Downlink OFDMA (PHYs with getMaxBurstUsers() > 1): a second unicast
+        // packet for another next hop shares the burst. Look among held
+        // packets, then wait at most the burst wait for one; anything
+        // unsuitable is held, in order. Other PHYs never get here.
+        std::vector<std::shared_ptr<NetPacket>> burst;
+
+        if (max_users > 1 && pkt->hdr.nexthop != kNodeBroadcast) {
+            auto suitable = [&](const std::shared_ptr<NetPacket> &p) {
+                return p->hdr.nexthop != kNodeBroadcast && p->hdr.nexthop != pkt->hdr.nexthop;
+            };
+            auto it = std::find_if(held.begin(), held.end(), suitable);
+
+            if (it != held.end()) {
+                burst.push_back(std::move(*it));
+                held.erase(it);
+            } else if (held.size() < kMaxHeld) {
+                std::shared_ptr<NetPacket> other;
+
+                if (pullWithin(other, getBurstWait())) {
+                    if (suitable(other))
+                        burst.push_back(std::move(other));
+                    else
+                        held.push_back(std::move(other));
+                }
+            }
+        }
+
+        // Modulate the packet (and its burst partner)
         std::unique_ptr<ModPacket> mpkt = std::make_unique<ModPacket>();
         float                      g = channels_[*chanidx_].phy->mcs_table[pkt->mcsidx].autogain.getSoftTXGain();
 
-        mod->modulate(std::move(pkt), g, *mpkt);
+        if (burst.empty())
+            mod->modulate(std::move(pkt), g, *mpkt);
+        else {
+            burst.insert(burst.begin(), std::move(pkt));
+            mod->modulateBurst(std::move(burst), g, *mpkt);
+        }
 
         // If we didn't successfully push the packet, save the packet and try
         // again next time. A packet that did not fit in the rest of a slot
@@ -337,10 +385,101 @@ void ChannelSynthesizer<ChannelModulator>::modWorker(unsigned tid)
             if (max_samples_ && mpkt->nsamples >= *max_samples_) {
                 logPHY(LOGWARNING, "Modulated packet is larger than slot!");
                 full_slot.reset();
-            } else
+            } else {
+                // A burst that does not fit carries all its packets to the
+                // next slot, first packet first.
                 pkt = std::move(mpkt->pkt);
+                for (auto p = mpkt->partners.rbegin(); p != mpkt->partners.rend(); ++p)
+                    held.push_front(std::move(*p));
+            }
         }
     }
+}
+
+template <class ChannelModulator>
+bool ChannelSynthesizer<ChannelModulator>::pullWithin(std::shared_ptr<NetPacket> &pkt, double sec)
+{
+    auto q = getBurstQueue();
+
+    // Without a queue to kick, a pull could block indefinitely: do not wait.
+    if (!q || sec <= 0)
+        return false;
+
+    // A kick makes the blocked pull return false once. If the deadline
+    // passes just after a packet arrived, the next pull on an empty queue may
+    // return false spuriously, which the worker treats as no packet.
+    kicker_.arm(sec, q);
+    bool ok = sink.pull(pkt);
+    kicker_.cancel();
+
+    return ok && pkt;
+}
+
+template <class ChannelModulator>
+void ChannelSynthesizer<ChannelModulator>::Kicker::run(void)
+{
+    std::unique_lock<std::mutex> lock(m);
+
+    while (!stop) {
+        if (!deadline) {
+            cv.wait(lock);
+            continue;
+        }
+
+        if (cv.wait_until(lock, *deadline) == std::cv_status::timeout
+            && deadline
+            && std::chrono::steady_clock::now() >= *deadline) {
+            auto q = queue;
+
+            deadline.reset();
+            lock.unlock();
+            if (q)
+                q->kick();
+            lock.lock();
+        }
+    }
+}
+
+template <class ChannelModulator>
+void ChannelSynthesizer<ChannelModulator>::Kicker::arm(double sec, std::shared_ptr<Queue<std::shared_ptr<NetPacket>>> q)
+{
+    std::lock_guard<std::mutex> lock(m);
+
+    if (stop)
+        return;
+
+    if (!thread.joinable())
+        thread = std::thread(&Kicker::run, this);
+
+    queue = std::move(q);
+    deadline = std::chrono::steady_clock::now()
+        + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(sec));
+    cv.notify_all();
+}
+
+template <class ChannelModulator>
+void ChannelSynthesizer<ChannelModulator>::Kicker::cancel(void)
+{
+    std::lock_guard<std::mutex> lock(m);
+
+    deadline.reset();
+    cv.notify_all();
+}
+
+template <class ChannelModulator>
+void ChannelSynthesizer<ChannelModulator>::Kicker::shutdown(void)
+{
+    {
+        std::lock_guard<std::mutex> lock(m);
+
+        stop = true;
+        deadline.reset();
+        queue.reset();
+        cv.notify_all();
+    }
+
+    if (thread.joinable() && thread.get_id() != std::this_thread::get_id())
+        thread.join();
 }
 
 

@@ -656,8 +656,22 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
 
         self.controller.net_out >> self.synthesizer.sink
 
+        self.configureBurstBatching()
+
         # Allow Controller access to the network queue
         self.controller.net_link = self.netq
+
+    def configureBurstBatching(self):
+        """Let the synthesizer batch downlink OFDMA bursts.
+
+        For PHYs that carry several packets per burst (native-ofdma), the
+        channel synthesizers wait at most ofdma_burst_wait for a packet for a
+        second destination; kicking the network queue bounds that wait. Other
+        PHYs never wait, so this changes nothing for them.
+        """
+        self.synthesizer.burst_wait = self.config.ofdma_burst_wait
+        if isinstance(self.netq, Queue):
+            self.synthesizer.burst_queue = self.netq
 
     def mkPHY(self, header_mcs: MCS, mcs_table):
         """Construct a PHY from configuration parameters"""
@@ -1361,6 +1375,8 @@ class Radio(dragonradio.tasks.TaskManager, NeighborhoodListener):
         self.netq.pop >> self.controller.net_in
 
         self.controller.net_out >> self.synthesizer.sink
+
+        self.configureBurstBatching()
 
         # Re-configure TX chain, which includes synthesizer
         self.setTXChannels(self.channels)

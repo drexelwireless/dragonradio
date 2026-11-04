@@ -5,6 +5,7 @@
 #define QUEUE_HH_
 
 #include <functional>
+#include <list>
 #include <mutex>
 
 #include "Header.hh"
@@ -54,6 +55,18 @@ public:
 
     /** @brief Pop an element from the queue. */
     virtual bool pop(T& val) = 0;
+
+    /** @brief Make a pop that is blocked on an empty queue, or the next such
+     * pop, return false once.
+     */
+    /** This bounds how long the synthesizer waits for a downlink OFDMA burst
+     * partner (ChannelSynthesizer, PHYs with getMaxBurstUsers() > 1) without
+     * changing the blocking pull. Nothing else calls it, so other radios are
+     * unaffected. The default does nothing.
+     */
+    virtual void kick(void)
+    {
+    }
 
     /** @brief The queue's packet input port. */
     Port<In, Push, T> in;

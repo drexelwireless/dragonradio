@@ -11,6 +11,7 @@
 #include "Logger.hh"
 #include "mac/Schedule.hh"
 #include "net/Element.hh"
+#include "net/Queue.hh"
 #include "phy/PHY.hh"
 
 /** @brief A record of packets for transmission */
@@ -285,10 +286,55 @@ public:
     /** @brief Stop modulating. */
     virtual void stop(void) = 0;
 
+    /** @brief Longest wait for a second destination's packet when the PHY
+     * carries several packets per burst (downlink OFDMA), seconds.
+     */
+    /** Only the channel synthesizers (TDSynthesizer, FDSynthesizer) batch
+     * packets into bursts; PHYs with one user per burst never wait.
+     */
+    double getBurstWait(void) const
+    {
+        return burst_wait_.load(std::memory_order_relaxed);
+    }
+
+    /** @brief Set the longest wait for a burst partner (seconds). */
+    void setBurstWait(double sec)
+    {
+        burst_wait_.store(sec, std::memory_order_relaxed);
+    }
+
+    /** @brief Get the queue kicked to end a wait for a burst partner. */
+    std::shared_ptr<Queue<std::shared_ptr<NetPacket>>> getBurstQueue(void) const
+    {
+        std::lock_guard<std::mutex> lock(burst_queue_mutex_);
+
+        return burst_queue_;
+    }
+
+    /** @brief Set the queue kicked to end a wait for a burst partner: the
+     * network queue the controller pulls from. Without it, the synthesizer
+     * only pairs packets it already holds.
+     */
+    void setBurstQueue(std::shared_ptr<Queue<std::shared_ptr<NetPacket>>> q)
+    {
+        std::lock_guard<std::mutex> lock(burst_queue_mutex_);
+
+        burst_queue_ = q;
+    }
+
     /** @brief Input port for packets. */
     NetIn<Pull> sink;
 
 protected:
+    /** @brief Longest wait for a burst partner (seconds) */
+    std::atomic<double> burst_wait_{0.002};
+
+    /** @brief Mutex protecting burst_queue_ */
+    mutable std::mutex burst_queue_mutex_;
+
+    /** @brief Queue kicked to end a wait for a burst partner */
+    std::shared_ptr<Queue<std::shared_ptr<NetPacket>>> burst_queue_;
+
     /** @brief Radio channels */
     std::vector<PHYChannel> channels_;
 
@@ -335,7 +381,39 @@ public:
                           float g,
                           ModPacket &mpkt) = 0;
 
+    /** @brief Modulate several packets (different destinations) into one
+     * burst, for PHYs with getMaxBurstUsers() > 1 (downlink OFDMA). The first
+     * packet becomes mpkt.pkt and the rest mpkt.partners; resampling and
+     * mixing are the same as for one packet.
+     */
+    void modulateBurst(std::vector<std::shared_ptr<NetPacket>> pkts,
+                       float g,
+                       ModPacket &mpkt)
+    {
+        auto first = std::move(pkts.front());
+
+        burst_partners_.assign(std::make_move_iterator(pkts.begin() + 1), std::make_move_iterator(pkts.end()));
+        modulate(std::move(first), g, mpkt);
+        burst_partners_.clear();
+    }
+
 protected:
+    /** @brief Partners of the packet being modulated (modulateBurst) */
+    std::vector<std::shared_ptr<NetPacket>> burst_partners_;
+
+    /** @brief Run the PHY modulator on pkt and any burst partners. */
+    void modulatePHY(std::shared_ptr<NetPacket> pkt, float g, ModPacket &mpkt)
+    {
+        if (burst_partners_.empty()) {
+            mod_->modulate(std::move(pkt), g, mpkt);
+        } else {
+            std::vector<std::shared_ptr<NetPacket>> pkts{std::move(pkt)};
+
+            pkts.insert(pkts.end(), burst_partners_.begin(), burst_partners_.end());
+            mod_->modulateBurst(std::move(pkts), g, mpkt);
+        }
+    }
+
     /** @brief Channel we are modulating */
     const PHYChannel channel_;
 

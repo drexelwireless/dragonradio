@@ -362,13 +362,30 @@ public:
         cond_.notify_one();
     }
 
+    virtual void kick(void) override
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_);
+
+            kicked_ = true;
+        }
+
+        cond_.notify_all();
+    }
+
     virtual bool pop(T &pkt) override
     {
         std::unique_lock<std::mutex> lock(m_);
 
-        cond_.wait(lock, [&]{ return !enabled_ || nitems_ > 0; });
+        cond_.wait(lock, [&]{ return !enabled_ || kicked_ || nitems_ > 0; });
 
         if (!enabled_)
+            return false;
+
+        // A kick (see Queue::kick) ends one wait on an empty queue.
+        kicked_ = false;
+
+        if (nitems_ == 0)
             return false;
 
         MonoClock::time_point dequeue_start = MonoClock::now();
@@ -961,6 +978,9 @@ protected:
 
     /** @brief Flag indicating that the queue is enabled. */
     bool enabled_;
+
+    /** @brief Flag indicating that a pop should stop waiting (kick). */
+    bool kicked_ = false;
 
     /** @brief Packet transmission delay (sec) */
     std::chrono::duration<double> transmission_delay_;

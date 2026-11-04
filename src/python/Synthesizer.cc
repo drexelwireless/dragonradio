@@ -47,6 +47,14 @@ void exportSynthesizers(py::module &m)
             {
                 return exposePort(element, &element->sink);
             })
+        .def_property("burst_wait",
+            &Synthesizer::getBurstWait,
+            &Synthesizer::setBurstWait,
+            "float: Longest wait (s) for a second destination's packet when the PHY carries several per burst (downlink OFDMA)")
+        .def_property("burst_queue",
+            &Synthesizer::getBurstQueue,
+            &Synthesizer::setBurstQueue,
+            "Queue: network queue kicked to end a wait for a burst partner")
         ;
 
     // Export class TDSynthesizer to Python
