@@ -243,7 +243,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('action', choices=['plan', 'run', 'hosts'])
     ap.add_argument('campaign', type=Path)
-    ap.add_argument('--run-dir', type=Path, required=True)
+    ap.add_argument('--run-dir', type=Path, help='run directory (plan and run)')
     ap.add_argument('--reservation', default='PENDING', help='grid reservation ID (known at run time)')
     ap.add_argument('--python', default=sys.executable, help='Python for ota-fullstack.py (needs h5py)')
     ap.add_argument('--execute', action='store_true', help='RUN THE TRIALS: opens radios and transmits')
@@ -254,6 +254,9 @@ def main(argv=None):
             for h, addr, clock, family in hosts(campaign):
                 print(h, addr, clock, family)
             return 0
+        if args.run_dir is None:
+            print(f'{args.action} needs --run-dir', file=sys.stderr)
+            return 2
         if args.action == 'plan':
             for plan, path, warnings in write_plans(campaign, args.run_dir, args.reservation):
                 print(f'{path}: {plan["phy"]} block {plan["strata"]["pair_block"]}'
