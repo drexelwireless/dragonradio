@@ -15,11 +15,11 @@ uhd::usrp::multi_usrp::sptr Clock::usrp_;
 
 uhd::time_spec_t Clock::t0_(0.0);
 
-double Clock::sim_offset_(0.0);
+std::atomic<double> Clock::sim_offset_(0.0);
 
-double Clock::sim_rate_(1.0);
+std::atomic<double> Clock::sim_rate_(1.0);
 
-double Clock::sim_epoch_(0.0);
+std::atomic<double> Clock::sim_epoch_(0.0);
 
 double WallClock::skew_(1.0);
 

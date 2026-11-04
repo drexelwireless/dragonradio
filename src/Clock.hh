@@ -4,6 +4,7 @@
 #ifndef CLOCK_H_
 #define CLOCK_H_
 
+#include <atomic>
 #include <chrono>
 #include <memory>
 
@@ -114,27 +115,31 @@ public:
         auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count();
 
-        sim_epoch_ = ns*1e-9;
-        sim_offset_ = offset;
-        sim_rate_ = 1.0 + 1e-6*ppm;
+        sim_epoch_.store(ns*1e-9, std::memory_order_relaxed);
+        sim_offset_.store(offset, std::memory_order_relaxed);
+        sim_rate_.store(1.0 + 1e-6*ppm, std::memory_order_release);
     }
 
     /** @brief Simulated device clock offset (seconds). */
-    static double getSimulatedClockOffset(void) { return sim_offset_; }
+    static double getSimulatedClockOffset(void) { return sim_offset_.load(std::memory_order_relaxed); }
 
     /** @brief Simulated device clock rate error (ppm). */
-    static double getSimulatedClockPPM(void) { return 1e6*(sim_rate_ - 1.0); }
+    static double getSimulatedClockPPM(void) { return 1e6*(sim_rate_.load(std::memory_order_acquire) - 1.0); }
 
     /** @brief Host monotonic time corresponding to a simulated device time. */
     static double simulatedToHost(double device)
     {
-        return sim_epoch_ + (device - sim_offset_ - sim_epoch_)/sim_rate_;
+        const double rate = sim_rate_.load(std::memory_order_acquire), epoch = sim_epoch_.load(std::memory_order_relaxed);
+
+        return epoch + (device - sim_offset_.load(std::memory_order_relaxed) - epoch)/rate;
     }
 
     /** @brief Simulated device time corresponding to a host monotonic time. */
     static double hostToSimulated(double host)
     {
-        return host + sim_offset_ + (sim_rate_ - 1.0)*(host - sim_epoch_);
+        const double rate = sim_rate_.load(std::memory_order_acquire);
+
+        return host + sim_offset_.load(std::memory_order_relaxed) + (rate - 1.0)*(host - sim_epoch_.load(std::memory_order_relaxed));
     }
 
 protected:
@@ -145,9 +150,10 @@ protected:
     static uhd::time_spec_t t0_;
 
     /** @brief Simulated device clock (no USRP): offset and rate. */
-    static double sim_offset_;
-    static double sim_rate_;
-    static double sim_epoch_;
+    /** Atomics: set from Python while radio threads read the clock. */
+    static std::atomic<double> sim_offset_;
+    static std::atomic<double> sim_rate_;
+    static std::atomic<double> sim_epoch_;
 
     /** @brief Get the current UHD time. */
     static uhd::time_spec_t getTimeNow() noexcept
@@ -162,9 +168,12 @@ protected:
 
             // Independent simulated node clocks (setSimulatedClock); exact
             // host time by default.
-            if (sim_offset_ == 0.0 && sim_rate_ == 1.0)
+            const double rate = sim_rate_.load(std::memory_order_acquire);
+            const double off = sim_offset_.load(std::memory_order_relaxed);
+
+            if (off == 0.0 && rate == 1.0)
                 return host;
-            return host + (sim_offset_ + (sim_rate_ - 1.0)*(host.get_real_secs() - sim_epoch_));
+            return host + (off + (rate - 1.0)*(host.get_real_secs() - sim_epoch_.load(std::memory_order_relaxed)));
         }
         while (true) {
             try {
