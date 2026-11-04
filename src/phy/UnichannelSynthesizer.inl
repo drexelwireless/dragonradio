@@ -195,9 +195,16 @@ void UnichannelSynthesizer<ChannelModulator>::modWorker(std::atomic<bool> &recon
                 pushed = slot->push(mpkt, overfill);
             }
 
-            // If we didn't successfully push the packet, try again next time
-            if (!pushed)
+            // If we didn't successfully push the packet, it cannot fit in
+            // this slot (max_samples is fixed and other threads only add
+            // samples): we are done with this slot and will add the packet to
+            // the next one, as MultichannelSynthesizer does. Retrying here
+            // re-modulated the same packet in a tight loop until the slot
+            // closed (P4; tests/fullstack/test_synth_slot.cc).
+            if (!pushed) {
                 pkt = std::move(mpkt->pkt);
+                break;
+            }
         }
 
         // Remember previous slot so we can wait for a new slot before
