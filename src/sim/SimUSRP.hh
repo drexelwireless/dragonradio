@@ -7,6 +7,7 @@
 #include <complex>
 #include <condition_variable>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <random>
@@ -35,12 +36,16 @@ struct __attribute__((packed)) AirHeader {
     uint32_t nsamples;  ///< Number of complex float32 samples that follow
     uint32_t burst;     ///< Per-node message counter
     uint32_t group;     ///< Per-node TX burst (start_of_burst to end_of_burst)
+    double   clock_ppm; ///< Transmitter oscillator error (ppm): sample clock and carrier (v3)
 };
 
-static_assert(sizeof(AirHeader) == 44, "AirHeader must be 44 bytes");
+static_assert(sizeof(AirHeader) == 52, "AirHeader must be 52 bytes");
 
 constexpr uint32_t kAirMagic = 0x41535244; // "DRSA"
-constexpr uint16_t kAirVersion = 2;
+// v3: start is the first sample's index on the shared host clock (true
+// time), not the transmitter's own device clock, and clock_ppm was added, so
+// nodes with independent clocks (Clock::setSimulatedClock) interoperate.
+constexpr uint16_t kAirVersion = 3;
 constexpr uint8_t  kAirHello = 1;
 constexpr uint8_t  kAirBurst = 2;
 
@@ -94,6 +99,11 @@ struct Impairments {
     double iq_amp_db = 0.0;         ///< Q-branch gain relative to I (dB)
     double iq_phase_deg = 0.0;      ///< Q-branch phase skew (degrees)
     std::complex<float> dc{0.0f, 0.0f}; ///< DC offset added after IQ imbalance
+    /** @brief Couple this device's own transmissions into its receiver at
+     * this gain (dB), as TX-to-RX leakage does on a real front end; NaN (the
+     * default) leaves the receiver deaf to its own transmissions.
+     */
+    double tx_leakage_db = std::numeric_limits<double>::quiet_NaN();
 
     bool receiverActive(void) const
     {

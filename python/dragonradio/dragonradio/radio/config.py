@@ -134,6 +134,13 @@ class Config:
         self.sim_adc_full_scale = 0.0
         self.sim_iq_imbalance = (0.0, 0.0)
         self.sim_dc_offset = 0j
+        # Independent simulated node clock: device time = host time *
+        # (1 + 1e-6 ppm) + offset. The same oscillator error sets this node's
+        # sample clock and carrier offsets.
+        self.sim_clock_offset = 0.0
+        self.sim_clock_ppm = 0.0
+        # TX-to-RX leakage of the simulated front end (dB); None: deaf to own TX.
+        self.sim_tx_leakage_db = None
 
         # Frequency and bandwidth
         # Default frequency in the Colosseum is 1GHz
@@ -624,6 +631,18 @@ class Config:
                                 dest='sim_iq_imbalance',
                                 metavar='AMP_DB:PHASE_DEG',
                                 help='receiver IQ imbalance')
+        simulation.add_argument('--sim-clock-offset', action='store', type=float,
+                                dest='sim_clock_offset',
+                                metavar='SEC',
+                                help='simulated device clock offset from the host clock')
+        simulation.add_argument('--sim-clock-ppm', action='store', type=float,
+                                dest='sim_clock_ppm',
+                                metavar='PPM',
+                                help='simulated oscillator error: device clock rate, sample clock and carrier')
+        simulation.add_argument('--sim-tx-leakage-db', action='store', type=float,
+                                dest='sim_tx_leakage_db',
+                                metavar='DB',
+                                help='couple own transmissions into the receiver at this gain')
         simulation.add_argument('--sim-dc-offset', action='store',
                                 type=lambda s: complex(*(float(v) for v in s.split(':'))),
                                 dest='sim_dc_offset',

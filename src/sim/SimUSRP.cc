@@ -13,6 +13,7 @@
 
 #include "logging.hh"
 #include "sim/SimUSRP.hh"
+#include "Clock.hh"
 #include "util/WorkMeter.hh"
 #include "util/threads.hh"
 
@@ -298,10 +299,13 @@ void SimUSRP::sendBurst(int64_t start, const std::complex<float> *x, size_t n)
     hdr.version = kAirVersion;
     hdr.type = kAirBurst;
     hdr.node = node_id_;
-    hdr.start = start;
+    // On the air, sample indices are on the shared host clock; this device's
+    // clock may have an offset and rate error (Clock::setSimulatedClock).
+    hdr.start = std::llround(Clock::simulatedToHost(static_cast<double>(start)/tx_rate_)*tx_rate_);
     hdr.fs = tx_rate_;
     hdr.fc = tx_freq_;
     hdr.nsamples = n;
+    hdr.clock_ppm = Clock::getSimulatedClockPPM();
     hdr.burst = tx_burst_count_++;
     hdr.group = tx_group_;
 
@@ -325,6 +329,24 @@ void SimUSRP::sendBurst(int64_t start, const std::complex<float> *x, size_t n)
 
     stats_.tx_bursts++;
     stats_.tx_samples += n;
+
+    // TX-to-RX leakage: the burst also reaches this device's own receiver,
+    // at its own sample index (same clock, no carrier offset).
+    if (!std::isnan(impairments_.tx_leakage_db)) {
+        std::lock_guard<std::mutex> lock(rx_mutex_);
+        Burst                       b;
+
+        b.src = node_id_;
+        b.start = start;
+        b.fs = tx_rate_;
+        b.shift_hz = tx_freq_ - rx_freq_;
+        b.gain = static_cast<float>(std::pow(10.0, impairments_.tx_leakage_db/20.0));
+        b.x.assign(x, x + n);
+        if (b.end() > rendered_upto_ && queued_samples_ + n <= kMaxQueuedSamples) {
+            queued_samples_ += n;
+            bursts_.push_back(std::move(b));
+        }
+    }
 }
 
 void SimUSRP::burstTX(std::optional<MonoClock::time_point> when,
@@ -656,7 +678,10 @@ void SimUSRP::reader(void)
             continue;
         }
 
-        double shift = (hdr.fc - rx_freq_) + link.cfo_hz;
+        // Carrier offset: tuning difference, both oscillators' errors (as LO
+        // frequency errors) and the link's own CFO.
+        const double rx_ppm = Clock::getSimulatedClockPPM();
+        double shift = hdr.fc*(1.0 + 1e-6*hdr.clock_ppm) - rx_freq_*(1.0 + 1e-6*rx_ppm) + link.cfo_hz;
 
         // A transmission tuned outside the receiver's sampled band is not heard.
         if (std::abs(hdr.fc - rx_freq_) >= rx_rate_/2)
@@ -665,7 +690,8 @@ void SimUSRP::reader(void)
         Burst b;
 
         b.src = hdr.node;
-        b.start = hdr.start + link.delay;
+        // Map the true-time start to this device's sample clock.
+        b.start = std::llround(Clock::hostToSimulated(static_cast<double>(hdr.start)/hdr.fs)*rx_rate_) + link.delay;
         if (link.jitter > 0) {
             const uint32_t group = hdr.group; // AirHeader is packed
             auto           it = jitter_.find(hdr.node);
@@ -678,8 +704,12 @@ void SimUSRP::reader(void)
         b.fs = hdr.fs;
         b.shift_hz = shift;
         b.gain = static_cast<float>(std::pow(10.0, link.gain_db/20.0));
-        if (link.sfo_ppm != 0.0)
-            b.x = resample(x, 1.0 + 1e-6*link.sfo_ppm);
+        // Sample clock offset: the transmitter's clock relative to ours, from
+        // both nodes' oscillators and the link's own sfo_ppm.
+        const double ratio = (1.0 + 1e-6*hdr.clock_ppm)/(1.0 + 1e-6*rx_ppm)*(1.0 + 1e-6*link.sfo_ppm);
+
+        if (ratio != 1.0)
+            b.x = resample(x, ratio);
         else
             b.x.assign(x.begin(), x.end());
 

@@ -137,6 +137,35 @@ SCENARIOS = {
         expect=dict(min_delivery=0.995, max_app_duplicates=0)),
 }
 
+# Independent node clocks (P4 item 2.2). Node 2's device clock is ahead of
+# node 1's by more than the 10 ms TDMA guard, and every front end couples its
+# own transmissions into its receiver (-30 dB, so a node cannot hear a peer
+# while it transmits). Both directions are saturated (tail-drop queue) so that
+# every slot is filled to its end: misaligned slots then overlap. Without synchronization, node 2's slots overlap node
+# 1's; with the radio's timestamp protocol (HELLO timestamps, node 1 as time
+# master, radio.synchronizeClock every 2 s) their WallClocks align.
+_LEAK = ['--sim-tx-leakage-db', '-30']
+_SYNC = ['--time-master', '1', '--hello-period', '0.5', '--timesync-period', '2']
+_SAT = {1: [(2, 5001, 150, 1000)], 2: [(1, 5002, 150, 1000)]}
+_TAIL = ['--taildrop', '--set', 'tail_drop_max_size=15000']
+SCENARIOS.update({
+    'clock-offset-nosync': dict(
+        doc='Node 2 clock +15 ms (guard 10 ms), TX leakage, no synchronization: overlapping slots lose frames',
+        arq=True, warmup=12.0, flows=_SAT, links={},
+        radio_args=_LEAK + _TAIL, node_args={2: ['--sim-clock-offset', '0.015']},
+        expect=dict(max_frame_delivery=0.95, max_app_duplicates=0)),
+    'clock-offset-sync': dict(
+        doc='Same offset with the timestamp protocol: WallClocks align and every frame is received',
+        arq=True, warmup=12.0, flows=_SAT, links={},
+        radio_args=_LEAK + _TAIL + _SYNC, node_args={2: ['--sim-clock-offset', '0.015']},
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, max_sync_error_ms=1.0)),
+    'clock-skew-sync': dict(
+        doc='Node 2 clock +15 ms and 20 ppm fast (carrier and sample clock too), synchronized',
+        arq=True, warmup=12.0, flows=_SAT, links={},
+        radio_args=_LEAK + _TAIL + _SYNC, node_args={2: ['--sim-clock-offset', '0.015', '--sim-clock-ppm', '20']},
+        expect=dict(max_app_duplicates=0, min_frame_delivery=0.999, max_sync_error_ms=1.0)),
+})
+
 # Scenarios over real tap interfaces: each node runs in its own network
 # namespace (unshare -rn) with its radio's tap0 at 10.10.10.<node> and
 # scripts/sim-netapp.py using the kernel UDP/TCP stacks. 'apps' maps node ->
@@ -225,7 +254,7 @@ def node_command(args, scenario, node, sock, outdir):
     # absolute host monotonic time on every node.
     for (offset, slots) in sc.get('schedules', []):
         cmd += ['--schedule-at', f'{args.schedule_base + offset:.6f}:' + ','.join(str(n) for n in slots)]
-    return cmd + sc.get('radio_args', []) + args.extra
+    return cmd + sc.get('radio_args', []) + sc.get('node_args', {}).get(node, []) + args.extra
 
 
 # Seconds allowed for a tap node's radio to start before applications begin.
@@ -276,7 +305,44 @@ def read_send_log(logdir, node):
 IN_FLIGHT = 0.25
 
 
-def link_accounting(send, frames, src, dst, snapshot):
+def to_host(result, t):
+    """Host monotonic time of a node's device time t (independent clocks)."""
+    c = result.get('clock') or {}
+    return (t - c.get('sim_offset', 0.0))/(1 + 1e-6*c.get('sim_ppm', 0.0))
+
+
+def sync_error(results, nodes):
+    """WallClock of each node minus the time master's at the same host times,
+    from 1 Hz clock samples; returns per node the max |error| (ms) over the
+    second half of the run and the last error."""
+    master = next((results[n]['clock']['time_master'] for n in nodes if (results[n].get('clock') or {}).get('time_master')), None)
+    if master is None or master not in results:
+        return None
+    ms = [s for s in results[master]['clock']['samples'] if 'event' not in s]
+    if len(ms) < 2:
+        return None
+    out = {}
+    for n in nodes:
+        if n == master:
+            continue
+        samples = [s for s in results[n]['clock']['samples'] if 'event' not in s]
+        errs = []
+        for s in samples:
+            # Master's wall clock at this host time (linear between samples).
+            j = next((k for k in range(1, len(ms)) if ms[k]['host'] >= s['host']), None)
+            if j is None:
+                continue
+            a, b = ms[j - 1], ms[j]
+            w = a['wall'] + (b['wall'] - a['wall'])*(s['host'] - a['host'])/(b['host'] - a['host'])
+            errs.append((s['host'], 1e3*(s['wall'] - w)))
+        if errs:
+            half = errs[len(errs)//2:]
+            out[str(n)] = {'max_abs_ms_second_half': max(abs(e) for _, e in half), 'last_ms': errs[-1][1],
+                           'first_ms': errs[0][1], 'series_ms': [round(e, 4) for _, e in errs]}
+    return out
+
+
+def link_accounting(send, frames, src, dst, snapshot, src_result=None, dst_result=None):
     """Per-attempt accounting for frames from src to dst.
 
     send: src's production send log; frames: dst's RxRecorder records taken at
@@ -286,7 +352,10 @@ def link_accounting(send, frames, src, dst, snapshot):
     out = {}
     if send is not None:
         rows = send['rows']
-        rows = rows[rows['mono_timestamp'] + send['origin'] <= snapshot - IN_FLIGHT]
+        t_send = rows['mono_timestamp'] + send['origin']
+        if src_result is not None:
+            t_send = to_host(src_result, t_send)
+        rows = rows[t_send <= snapshot - IN_FLIGHT]
         logged = rows[(rows['nexthop'] == dst) | (rows['nexthop'] == 255)]
         # Packets the queue or ARQ dropped are logged too but never reached
         # the air; count them separately.
@@ -297,7 +366,8 @@ def link_accounting(send, frames, src, dst, snapshot):
         out['data_first_attempts'] = int(np.sum(data['nretrans'] == 0))
         out['retransmissions'] = int(np.sum(data['nretrans'] > 0))
         out['queue_or_deadline_drops'] = int(np.sum(logged['dropped'] != 0))
-    from_src = [r for r in frames if r[1] == src and r[0] <= snapshot - IN_FLIGHT]
+    rx_time = (lambda t: to_host(dst_result, t)) if dst_result is not None else (lambda t: t)
+    from_src = [r for r in frames if r[1] == src and rx_time(r[0]) <= snapshot - IN_FLIGHT]
     out['frames_received'] = len(from_src)
     out['data_received_valid'] = sum(1 for r in from_src if r[6] and r[7] > 0)
     out['payload_invalid'] = sum(1 for r in from_src if r[5] and not r[6])
@@ -390,6 +460,14 @@ def evaluate(scenario, outdir, results, air, nodes):
                        all(s is not None for s in sends.values()) and retx >= exp['min_retransmissions']))
     links, device, invalid_headers = common_checks(nodes, results, sends, exp, checks)
 
+    sync = sync_error(results, nodes)
+    if 'max_sync_error_ms' in exp:
+        for n, e in (sync or {}).items():
+            checks.append((f'node {n} WallClock within {exp["max_sync_error_ms"]} ms of the time master over the second half '
+                           f'(max {e["max_abs_ms_second_half"]:.3f} ms; first {e["first_ms"]:.3f} ms)',
+                           e['max_abs_ms_second_half'] <= exp['max_sync_error_ms']))
+        checks.append(('sync error measured', bool(sync)))
+
     capacity = None
     if sc.get('capacity'):
         capacity = {}
@@ -458,7 +536,7 @@ def evaluate(scenario, outdir, results, air, nodes):
         'links': {str(k): v for k, v in sc['links'].items()},
         'flows': flows, 'device': {str(k): v for k, v in device.items()},
         'links_accounting': links, 'invalid_headers': {str(k): v for k, v in invalid_headers.items()}, 'air': air,
-        'capacity': capacity, 'grants': grants,
+        'capacity': capacity, 'grants': grants, 'sync': sync,
         'checks': [{'check': c, 'passed': bool(ok)} for c, ok in checks],
         'passed': all(ok for _, ok in checks),
     }
@@ -471,11 +549,15 @@ def common_checks(nodes, results, sends, exp, checks):
         for dst in nodes:
             if src != dst:
                 links[f'{src}->{dst}'] = link_accounting(sends[src], results[dst].get('rx_frames', []), src, dst,
-                                                         results[dst]['snapshot_mono'])
+                                                         results[dst]['snapshot_mono'], results[src], results[dst])
     if 'min_frame_delivery' in exp:
         for name, l in links.items():
             if l.get('frames_sent'):
                 checks.append((f'{name} PHY frame delivery >= {exp["min_frame_delivery"]}', l.get('frame_delivery', 0) >= exp['min_frame_delivery']))
+    if 'max_frame_delivery' in exp:
+        worst = min((l.get('frame_delivery', 1.0) for l in links.values() if l.get('frames_sent')), default=1.0)
+        checks.append((f'worst link PHY frame delivery {worst:.3f} <= {exp["max_frame_delivery"]} (the impairment is visible)',
+                       worst <= exp['max_frame_delivery']))
     device = {n: results[n]['device'] for n in nodes}
     for n in nodes:
         d = device[n]
@@ -565,6 +647,7 @@ def run(args, scenario):
     args = copy.copy(args)
     args.nodes = sc.get('nodes', args.nodes)
     args.duration = sc.get('duration', args.duration)
+    args.warmup = sc.get('warmup', args.warmup)
     # Nodes start traffic about this long after launch (radio start-up plus
     # warm-up); timed schedule changes are offsets from it.
     args.schedule_base = time.monotonic() + TAP_STARTUP + args.warmup
@@ -685,6 +768,9 @@ def main():
             print(f'   link {name}: frames sent {l.get("frames_sent")} received {l.get("frames_received")}; '
                   f'data attempts {l.get("data_attempts")} (retx {l.get("retransmissions")}) received valid {l.get("data_received_valid")}; '
                   f'bad payload {l.get("payload_invalid")}; drops {l.get("queue_or_deadline_drops")}', flush=True)
+        for n, e in (s.get('sync') or {}).items():
+            print(f'   sync node {n}: WallClock error vs time master first {e["first_ms"]:.3f} ms, '
+                  f'last {e["last_ms"]:.3f} ms, max over second half {e["max_abs_ms_second_half"]:.3f} ms', flush=True)
         if s.get('invalid_headers'):
             print(f'   invalid headers by receiver: {s["invalid_headers"]}', flush=True)
         for c in s.get('checks', []):

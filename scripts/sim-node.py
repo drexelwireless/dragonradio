@@ -21,6 +21,7 @@ import numpy as np
 import dragonradio
 import dragonradio.radio
 from _dragonradio.radio import RxRecorder, work_meters  # pylint: disable=no-name-in-module
+from _dragonradio.radio import clock, monoNow, wallNow  # pylint: disable=no-name-in-module
 from _dragonradio.radio import Mandate, MandateMap, MandateQueue  # pylint: disable=no-name-in-module
 
 logger = logging.getLogger('sim-node')
@@ -172,6 +173,43 @@ async def experiment(radio, config):
         for (dest, port, rate, size, count) in config.flows:
             traffic.addFlow(port, dest, rate, size, count, 0.0)
 
+        # Time synchronization (radio/timesync.py) without the collaboration
+        # controller: the time master is a gateway, every node broadcasts
+        # timestamped HELLOs, and others periodically fit their WallClock to
+        # the master's. Clock samples pair the shared host clock with this
+        # node's device and wall clocks.
+        if config.time_master is not None and config.time_master == radio.node_id:
+            radio.radionet.this_node.is_gateway = True
+        clock_log = []
+
+        def clock_sample():
+            return {'host': time.monotonic(), 'mono': monoNow().secs, 'wall': wallNow().secs,
+                    'offset': clock.offset.secs, 'skew': clock.skew}
+
+        async def hello_task():
+            while True:
+                radio.controller.broadcastHello()
+                await asyncio.sleep(config.hello_period)
+
+        async def timesync_task():
+            while True:
+                await asyncio.sleep(config.timesync_period)
+                try:
+                    radio.synchronizeClock()
+                except Exception:  # pylint: disable=broad-except
+                    logger.exception('timesync failed')
+                clock_log.append(dict(clock_sample(), event='sync'))
+
+        async def clock_task():
+            while True:
+                clock_log.append(clock_sample())
+                await asyncio.sleep(1.0)
+        if config.hello_period:
+            radio.createTask(hello_task(), name='hello')
+        if config.timesync_period:
+            radio.createTask(timesync_task(), name='timesync')
+        radio.createTask(clock_task(), name='clock samples')
+
         await asyncio.sleep(config.warmup)
         usrp_before = radio.usrp.stats
         t_start = time.monotonic()
@@ -250,6 +288,8 @@ async def experiment(radio, config):
                             if hasattr(radio.usrp, 'impairments') else None),
             'mandates': [list(m) for m in config.mandates],
             'schedules': schedule_log,
+            'clock': {'sim_offset': config.sim_clock_offset, 'sim_ppm': config.sim_clock_ppm,
+                      'time_master': config.time_master, 'samples': clock_log},
             'queue': config.queue,
         }
         with open(config.results, 'w') as f:
@@ -282,6 +322,10 @@ def main():
     exp.add_argument('--duration', type=float, default=10.0, help='seconds of traffic')
     exp.add_argument('--drain', type=float, default=3.0, help='seconds after traffic stops')
     exp.add_argument('--results', required=True, help='JSON results path')
+    exp.add_argument('--time-master', type=int, help='node that is the time master (a gateway)')
+    exp.add_argument('--hello-period', type=float, help='broadcast a timestamped HELLO every this many seconds')
+    exp.add_argument('--timesync-period', type=float,
+                     help='fit WallClock to the time master every this many seconds (radio.synchronizeClock)')
     exp.add_argument('--soak', action='store_true',
                      help='long run: bounded traffic statistics and PHY counts instead of per-packet records')
     exp.add_argument('--stats-file', help='append periodic device/traffic/PHY counters (JSON lines) here')

@@ -62,10 +62,12 @@ void exportSim(py::module &m)
             })
         .def("setImpairments",
             [](SimUSRP &self, bool gain_model, double tx_gain_ref_db, double rx_gain_ref_db, double adc_full_scale,
-               double iq_amp_db, double iq_phase_deg, std::complex<float> dc_offset)
+               double iq_amp_db, double iq_phase_deg, std::complex<float> dc_offset, std::optional<double> tx_leakage_db)
             {
                 sim::Impairments imp;
 
+                if (tx_leakage_db)
+                    imp.tx_leakage_db = *tx_leakage_db;
                 imp.gain_model = gain_model;
                 imp.tx_gain_ref_db = tx_gain_ref_db;
                 imp.rx_gain_ref_db = rx_gain_ref_db;
@@ -82,6 +84,7 @@ void exportSim(py::module &m)
             py::arg("iq_amp_db") = 0.0,
             py::arg("iq_phase_deg") = 0.0,
             py::arg("dc_offset") = std::complex<float>(0.0f, 0.0f),
+            py::arg("tx_leakage_db") = std::nullopt,
             "Set hardware-like gain, IQ imbalance, DC offset and ADC clipping (all off by default)")
         .def_property_readonly("impairments",
             [](SimUSRP &self)
@@ -96,6 +99,7 @@ void exportSim(py::module &m)
                 d["iq_amp_db"] = imp.iq_amp_db;
                 d["iq_phase_deg"] = imp.iq_phase_deg;
                 d["dc_offset"] = imp.dc;
+                d["tx_leakage_db"] = std::isnan(imp.tx_leakage_db) ? py::none() : py::cast(imp.tx_leakage_db);
                 return d;
             })
         .def_property("noise_power",

@@ -194,6 +194,8 @@ class Radio(dragonradio.tasks.TaskManager):
             # Simulated device: same interface to the MAC, IQ exchanged with
             # other simulated nodes through the air relay.
             seed = config.sim_seed if config.sim_seed is not None else config.node_id
+            # Independent node clock, before anything reads the clock.
+            setSimulatedClock(config.sim_clock_offset, config.sim_clock_ppm)
             self.usrp = SimUSRP(config.sim_air,
                                 config.node_id,
                                 self.frequency,
@@ -207,7 +209,8 @@ class Radio(dragonradio.tasks.TaskManager):
                                      adc_full_scale=config.sim_adc_full_scale,
                                      iq_amp_db=config.sim_iq_imbalance[0],
                                      iq_phase_deg=config.sim_iq_imbalance[1],
-                                     dc_offset=config.sim_dc_offset)
+                                     dc_offset=config.sim_dc_offset,
+                                     tx_leakage_db=config.sim_tx_leakage_db)
             self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
             self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
             return

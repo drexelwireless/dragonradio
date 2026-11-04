@@ -99,12 +99,55 @@ public:
     /** @brief Release the USRP used for clock operations. */
     static void releaseUSRP(void);
 
+    /** @brief Give the device clock an offset and rate error when no USRP is
+     * attached (full-stack simulation of independent node clocks).
+     * @param offset Device time minus host time now (seconds)
+     * @param ppm Device clock rate error (parts per million)
+     */
+    /** Device time is host + offset + 1e-6 ppm (host - epoch), where epoch is
+     * the host time of this call, so the clock starts offset by `offset` and
+     * drifts at `ppm`. With a USRP attached this has no effect. Defaults
+     * (0, 0) keep the host clock.
+     */
+    static void setSimulatedClock(double offset, double ppm)
+    {
+        auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+
+        sim_epoch_ = ns*1e-9;
+        sim_offset_ = offset;
+        sim_rate_ = 1.0 + 1e-6*ppm;
+    }
+
+    /** @brief Simulated device clock offset (seconds). */
+    static double getSimulatedClockOffset(void) { return sim_offset_; }
+
+    /** @brief Simulated device clock rate error (ppm). */
+    static double getSimulatedClockPPM(void) { return 1e6*(sim_rate_ - 1.0); }
+
+    /** @brief Host monotonic time corresponding to a simulated device time. */
+    static double simulatedToHost(double device)
+    {
+        return sim_epoch_ + (device - sim_offset_ - sim_epoch_)/sim_rate_;
+    }
+
+    /** @brief Simulated device time corresponding to a host monotonic time. */
+    static double hostToSimulated(double host)
+    {
+        return host + sim_offset_ + (sim_rate_ - 1.0)*(host - sim_epoch_);
+    }
+
 protected:
     /** @brief The USRP used for clock operations. */
     static uhd::usrp::multi_usrp::sptr usrp_;
 
     /** @brief Time zero. */
     static uhd::time_spec_t t0_;
+
+    /** @brief Simulated device clock (no USRP): offset and rate. */
+    static double sim_offset_;
+    static double sim_rate_;
+    static double sim_epoch_;
 
     /** @brief Get the current UHD time. */
     static uhd::time_spec_t getTimeNow() noexcept
@@ -115,7 +158,13 @@ protected:
         if (!usrp_) {
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
                 std::chrono::steady_clock::now().time_since_epoch()).count();
-            return uhd::time_spec_t(static_cast<int64_t>(ns / 1000000000), static_cast<double>(ns % 1000000000) * 1e-9);
+            uhd::time_spec_t host(static_cast<int64_t>(ns / 1000000000), static_cast<double>(ns % 1000000000) * 1e-9);
+
+            // Independent simulated node clocks (setSimulatedClock); exact
+            // host time by default.
+            if (sim_offset_ == 0.0 && sim_rate_ == 1.0)
+                return host;
+            return host + (sim_offset_ + (sim_rate_ - 1.0)*(host.get_real_secs() - sim_epoch_));
         }
         while (true) {
             try {

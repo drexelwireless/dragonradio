@@ -74,4 +74,14 @@ void exportClock(py::module &m)
       ;
 
     m.attr("clock") = std::make_shared<WallClock>();
+
+    // Simulated independent node clocks (no USRP attached).
+    m.def("setSimulatedClock", &Clock::setSimulatedClock,
+        py::arg("offset"), py::arg("ppm"),
+        "Device time = host monotonic * (1 + 1e-6 ppm) + offset when no USRP is attached");
+    m.def("simulatedClock",
+        []() { return py::make_tuple(Clock::getSimulatedClockOffset(), Clock::getSimulatedClockPPM()); },
+        "(offset, ppm) of the simulated device clock");
+    m.def("monoNow", []() { return MonoClock::now(); }, "MonoClock::now()");
+    m.def("wallNow", []() { return WallClock::now(); }, "WallClock::now()");
 }

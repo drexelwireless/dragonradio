@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <complex>
 #include <cstdio>
@@ -16,6 +17,7 @@
 #include <thread>
 #include <vector>
 
+#include "Clock.hh"
 #include "sim/SimTraffic.hh"
 #include "sim/SimUSRP.hh"
 
@@ -446,6 +448,20 @@ int main()
         b.setImpairments(sim::Impairments());
     }
 
+    // 15. TX-to-RX leakage: a device with leakage hears its own transmission
+    // at its own sample index, scaled by the leakage gain.
+    {
+        sim::Impairments imp;
+        imp.tx_leakage_db = -20.0;
+        a.setImpairments(imp);
+        auto y = exchange(a, a, 500, 5000, burst(3000));
+        double err = 0;
+        for (size_t k = 0; k < 3000; ++k)
+            err = std::max(err, (double) std::abs(y[500 + k] - 0.1f * x[k]));
+        CHECK(err < 1e-5, "own transmission leakage error %g", err);
+        a.setImpairments(sim::Impairments());
+    }
+
     // 9. Synthetic traffic: frames are valid Ethernet/IPv4/UDP, delivery is
     //    hashed, deduplicated and corruption is detected.
     {
@@ -482,6 +498,33 @@ int main()
         auto r = t2.getReceived()[{1, 5001}];
         CHECK(r.unique == 2 && r.duplicates == 1 && r.corrupt == 1 && r.out_of_order == 1,
               "unique %lu dup %lu corrupt %lu ooo %lu", r.unique, r.duplicates, r.corrupt, r.out_of_order);
+    }
+
+    // 14. Independent simulated clock (Clock::setSimulatedClock): device
+    // time = host + offset + ppm (host - epoch). Both devices here share the process
+    // clock, so a burst must still land where it was sent: exactly with an
+    // offset only, within one sample with a rate error (two roundings). The
+    // clock only moves forward here (a device's rendering position cannot
+    // move back), so this runs last and leaves the clock set.
+    for (auto [offset, ppm] : {std::pair<double, double>{0.25, 0.0}, {1.5, 0.0}, {1.6, 40.0}}) {
+        const double epoch = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        Clock::setSimulatedClock(offset, ppm);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        const double host = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        const double dev = MonoClock::now().get_real_secs();
+        const double want = host + offset + 1e-6 * ppm * (host - epoch);
+        CHECK(std::abs(dev - want) < 1e-4, "simulated clock %.6f s, expected %.6f s", dev, want);
+        auto y = exchange(a, b, 1000, 6000, burst(3000));
+        int best = 0;
+        double best_err = 1e9;
+        for (int shift = -2; shift <= 2; ++shift) {
+            double err = 0;
+            for (size_t k = 10; k + 10 < 3000; ++k)
+                err = std::max(err, (double) std::abs(y[1000 + shift + k] - x[k]));
+            if (err < best_err) { best_err = err; best = shift; }
+        }
+        CHECK(best_err < 1e-4 && (ppm == 0 ? best == 0 : std::abs(best) <= 1),
+              "clock offset %g ppm %g: burst at %+d samples (error %g)", offset, ppm, best, best_err);
     }
 
     a.stop();

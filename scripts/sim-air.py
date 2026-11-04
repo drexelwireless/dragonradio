@@ -16,9 +16,9 @@ import signal
 import struct
 import time
 
-HEADER = struct.Struct('<IHBBqddIII')   # must match sim::AirHeader (44 bytes)
+HEADER = struct.Struct('<IHBBqddIIId')   # must match sim::AirHeader (52 bytes)
 MAGIC = 0x41535244
-VERSION = 2
+VERSION = 3
 HELLO = 1
 BURST = 2
 
@@ -39,7 +39,7 @@ class Air:
         try:
             while True:
                 hdr = await reader.readexactly(HEADER.size)
-                magic, version, kind, src, start, fs, fc, n, burst, group = HEADER.unpack(hdr)
+                magic, version, kind, src, start, fs, fc, n, burst, group, _ppm = HEADER.unpack(hdr)
                 if magic != MAGIC or version != VERSION:
                     break
                 payload = await reader.readexactly(8*n) if n else b''

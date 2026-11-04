@@ -87,11 +87,13 @@ uint16_t ipChecksum(const uint8_t *p, size_t n)
     return ~sum & 0xffff;
 }
 
+// Send and receive times on the shared host clock: a measuring instrument
+// outside the radios, valid across nodes with independent simulated clocks
+// (Clock::setSimulatedClock). Equal to MonoClock without them.
 int64_t nowNs(void)
 {
-    auto t = MonoClock::now();
-
-    return t.get_full_secs()*1000000000ll + static_cast<int64_t>(t.get_frac_secs()*1e9);
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 }
