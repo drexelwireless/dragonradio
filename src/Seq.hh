@@ -8,7 +8,14 @@
 
 #include <limits>
 
-struct Seq {
+/** @brief A 16-bit wrapping sequence number.
+ *
+ * Packed (alignment 1): Seq fields of the packed wire structures
+ * (ControlMsg, ExtendedHeader) sit at odd offsets, and comparing them through
+ * Seq's member operators with alignment 2 was undefined behavior (UBSan,
+ * P4). Sizes and the packed wire layouts are unchanged.
+ */
+struct __attribute__((packed)) Seq {
     using uint_type = uint16_t;
     using int_type = int16_t;
 
