@@ -329,6 +329,123 @@ int main()
         b.setLink(1, sim::Link());
     }
 
+    // 10. Sample clock offset: a tone burst arrives time-warped by (1 + ppm),
+    // checked against the analytic tone at an exaggerated offset (2000 ppm,
+    // measurable over 4000 samples) and a realistic one (20 ppm).
+    for (double ppm : {2000.0, -2000.0, 20.0, -20.0}) {
+        const size_t n = 4000;
+        const double f0 = 0.05, r = 1 + 1e-6 * ppm;
+        auto tone = std::make_shared<IQBuf>(n);
+        for (size_t k = 0; k < n; ++k)
+            (*tone)[k] = std::polar(0.5f, static_cast<float>(2 * M_PI * f0 * k));
+        sim::Link l;
+        l.sfo_ppm = ppm;
+        b.setLink(1, l);
+        auto y = exchange(a, b, 1000, 8000, {tone});
+        double err = 0;
+        const size_t m = static_cast<size_t>(std::floor((n - 1) / r)) + 1;
+        for (size_t k = 40; k + 40 < m; ++k)
+            err = std::max(err, std::abs(std::complex<double>(y[1000 + k]) - std::polar(0.5, 2 * M_PI * f0 * k * r)));
+        CHECK(err < 2e-3, "SFO %g ppm: interpolation error %g", ppm, err);
+        // Nothing beyond the compressed (or stretched) burst.
+        double after = 0;
+        for (size_t k = m + 20; k < m + 200; ++k)
+            after = std::max(after, (double) std::abs(y[1000 + k]));
+        CHECK(after < 1e-2, "SFO %g ppm: energy after the burst %g", ppm, after);
+        b.setLink(1, sim::Link());
+    }
+
+    // 11. IQ imbalance: a tone exp(j w n) gains an image at -w with power
+    // ratio |nu|^2/|mu|^2, mu = (1 + a e^{j phi})/2, nu = (1 - a e^{-j phi})/2.
+    {
+        sim::Impairments imp;
+        imp.iq_amp_db = 1.0;
+        imp.iq_phase_deg = 5.0;
+        b.setImpairments(imp);
+        const size_t n = 4000;
+        auto tone = std::make_shared<IQBuf>(n);
+        for (size_t k = 0; k < n; ++k)
+            (*tone)[k] = std::polar(0.5f, static_cast<float>(2 * M_PI * 0.1 * k));
+        auto y = exchange(a, b, 0, n, {tone});
+        std::complex<double> up = 0, down = 0;
+        for (size_t k = 0; k < n; ++k) {
+            up += std::complex<double>(y[k]) * std::polar(1.0, -2 * M_PI * 0.1 * k);
+            down += std::complex<double>(y[k]) * std::polar(1.0, 2 * M_PI * 0.1 * k);
+        }
+        const double a_ = std::pow(10.0, 1.0 / 20), phi = 5.0 * M_PI / 180;
+        const std::complex<double> mu = (1.0 + a_ * std::polar(1.0, phi)) / 2.0, nu = (1.0 - a_ * std::polar(1.0, -phi)) / 2.0;
+        const double want = 10 * std::log10(std::norm(nu) / std::norm(mu)), got = 10 * std::log10(std::norm(down) / std::norm(up));
+        CHECK(std::abs(got - want) < 0.1, "IQ image ratio %.2f dB, expected %.2f dB", got, want);
+        b.setImpairments(sim::Impairments());
+    }
+
+    // 12. DC offset is added to every sample.
+    {
+        sim::Impairments imp;
+        imp.dc = fc32(0.01f, -0.02f);
+        b.setImpairments(imp);
+        auto y = exchange(a, b, 0, 3000, {});
+        double err = 0;
+        for (auto v : y)
+            err = std::max(err, (double) std::abs(v - imp.dc));
+        CHECK(err < 1e-7, "DC offset error %g", err);
+        b.setImpairments(sim::Impairments());
+    }
+
+    // 13. Gain model: TX and RX gains scale the signal relative to their
+    // references, RX gain also scales noise, and the ADC clips at full scale.
+    {
+        sim::Impairments imp;
+        imp.gain_model = true;
+        imp.tx_gain_ref_db = 10.0;
+        imp.rx_gain_ref_db = 20.0;
+        a.setImpairments(imp);
+        a.setTXGain(16.0);   // x2 in amplitude
+        b.setImpairments(imp);
+        b.setRXGain(14.0);   // x1/2: net unity
+        auto y = exchange(a, b, 1000, 6000, burst(3000));
+        double err = 0;
+        for (size_t k = 0; k < 3000; ++k)
+            err = std::max(err, (double) std::abs(y[1000 + k] - x[k]));
+        CHECK(err < 1e-5, "TX +6 dB and RX -6 dB: error %g", err);
+
+        // RX gain +12 dB over unity: about 4x amplitude (peaks 3.6), full scale 1.
+        imp.adc_full_scale = 1.0;
+        b.setImpairments(imp);
+        b.setRXGain(26.0);
+        auto s0 = b.getStats();
+        y = exchange(a, b, 1000, 6000, burst(3000));
+        auto s1 = b.getStats();
+        double peak = 0, err_small = 0;
+        unsigned clipped = 0;
+        for (size_t k = 0; k < 3000; ++k) {
+            const fc32 v = y[1000 + k], w = static_cast<float>(std::pow(10.0, 12.0 / 20)) * x[k];
+            peak = std::max({peak, (double) std::abs(v.real()), (double) std::abs(v.imag())});
+            if (std::abs(w.real()) < 0.99f && std::abs(w.imag()) < 0.99f)
+                err_small = std::max(err_small, (double) std::abs(v - w));
+            clipped += (std::abs(w.real()) > 1.0f) + (std::abs(w.imag()) > 1.0f);
+        }
+        CHECK(peak <= 1.0, "ADC output exceeds full scale: %g", peak);
+        CHECK(err_small < 1e-4, "unclipped samples changed: %g", err_small);
+        CHECK(clipped > 0 && s1.rx_clipped - s0.rx_clipped == clipped,
+              "clip counter %llu, expected %u", (unsigned long long) (s1.rx_clipped - s0.rx_clipped), clipped);
+
+        // Noise is input-referred: +10 dB of RX gain gives +10 dB of noise.
+        imp.adc_full_scale = 0.0;
+        b.setImpairments(imp);
+        b.setRXGain(30.0);
+        b.setNoisePower(-20.0);
+        y = exchange(a, b, 0, 50000, {});
+        double p = 0;
+        for (auto v : y)
+            p += std::norm(v);
+        p /= y.size();
+        CHECK(std::abs(10 * std::log10(p) + 10.0) < 0.2, "noise with +10 dB RX gain %g dB, expected -10", 10 * std::log10(p));
+        b.setNoisePower(-300.0);
+        a.setImpairments(sim::Impairments());
+        b.setImpairments(sim::Impairments());
+    }
+
     // 9. Synthetic traffic: frames are valid Ethernet/IPv4/UDP, delivery is
     //    hashed, deduplicated and corruption is detected.
     {

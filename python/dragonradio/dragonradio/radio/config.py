@@ -127,6 +127,13 @@ class Config:
         self.sim_noise_db = -60.0
         self.sim_clock_rate = 200e6
         self.sim_seed = None
+        # Hardware-like impairments of the simulated device (all off by
+        # default): gain model with TX/RX reference gains (dB), ADC full
+        # scale, IQ imbalance (amplitude dB, phase degrees), DC offset.
+        self.sim_gain_ref = None
+        self.sim_adc_full_scale = 0.0
+        self.sim_iq_imbalance = (0.0, 0.0)
+        self.sim_dc_offset = 0j
 
         # Frequency and bandwidth
         # Default frequency in the Colosseum is 1GHz
@@ -603,6 +610,25 @@ class Config:
         simulation.add_argument('--sim-seed', action='store', type=int,
                                 dest='sim_seed',
                                 help='seed for simulated noise and erasures')
+        simulation.add_argument('--sim-gain-model', action='store',
+                                type=lambda s: tuple(float(v) for v in s.split(':')),
+                                dest='sim_gain_ref',
+                                metavar='TX_REF_DB:RX_REF_DB',
+                                help='apply TX and RX gain relative to these reference gains')
+        simulation.add_argument('--sim-adc-full-scale', action='store', type=float,
+                                dest='sim_adc_full_scale',
+                                metavar='FS',
+                                help='clip received I and Q at +/- FS (0: no clipping)')
+        simulation.add_argument('--sim-iq-imbalance', action='store',
+                                type=lambda s: tuple(float(v) for v in s.split(':')),
+                                dest='sim_iq_imbalance',
+                                metavar='AMP_DB:PHASE_DEG',
+                                help='receiver IQ imbalance')
+        simulation.add_argument('--sim-dc-offset', action='store',
+                                type=lambda s: complex(*(float(v) for v in s.split(':'))),
+                                dest='sim_dc_offset',
+                                metavar='RE:IM',
+                                help='receiver DC offset (full-scale units)')
 
         # Frequency and bandwidth
         freqbw = parser.add_argument_group('Frequency and bandwidth')

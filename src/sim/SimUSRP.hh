@@ -66,6 +66,40 @@ struct Link {
      * is shifted by the same amount.
      */
     int64_t jitter = 0;
+
+    /** @brief Transmitter sample clock offset relative to this receiver
+     * (parts per million). Positive: the transmitter's clock is fast, so a
+     * burst of N samples spans N/(1 + 1e-6 sfo_ppm) receiver samples. Bursts
+     * are resampled with a windowed-sinc interpolator (P4 item 2.1).
+     */
+    double sfo_ppm = 0.0;
+};
+
+/** @brief Hardware-like receiver and gain impairments of one device.
+ *
+ * Everything is off by default, which leaves the device exactly as before.
+ * At the receiver, the rendered sum of signal and thermal noise is scaled by
+ * the RX gain, passed through IQ imbalance, offset by DC and clipped at the
+ * ADC full scale, in that order. With the gain model on, the transmitter
+ * scales each burst by its TX gain and the receiver scales signal and noise
+ * by its RX gain, both relative to reference gains, so link gain_db is the
+ * path gain and noise_power is referred to the receiver input at the
+ * reference RX gain.
+ */
+struct Impairments {
+    bool   gain_model = false;      ///< Apply TX and RX gain
+    double tx_gain_ref_db = 0.0;    ///< TX gain giving unit scaling
+    double rx_gain_ref_db = 0.0;    ///< RX gain giving unit scaling
+    double adc_full_scale = 0.0;    ///< Clip I and Q at +/- this (0: no clipping)
+    double iq_amp_db = 0.0;         ///< Q-branch gain relative to I (dB)
+    double iq_phase_deg = 0.0;      ///< Q-branch phase skew (degrees)
+    std::complex<float> dc{0.0f, 0.0f}; ///< DC offset added after IQ imbalance
+
+    bool receiverActive(void) const
+    {
+        return gain_model || adc_full_scale > 0 || iq_amp_db != 0 || iq_phase_deg != 0
+            || dc != std::complex<float>(0.0f, 0.0f);
+    }
 };
 
 /** @brief Counters reported by SimUSRP. */
@@ -84,6 +118,7 @@ struct Stats {
     uint64_t rx_overflows = 0;       ///< Times the reader fell behind
     uint64_t rx_overflow_samples = 0;///< Samples skipped by overflows
     uint64_t rx_streams = 0;         ///< RX stream starts
+    uint64_t rx_clipped = 0;         ///< I or Q components clipped by the ADC model
 };
 
 /** @brief A simulated radio device connected to an air relay.
@@ -247,6 +282,12 @@ public:
     /** @brief Get the directed link model from node @a src to this node. */
     Link getLink(uint8_t src);
 
+    /** @brief Set hardware-like impairments (see Impairments). */
+    void setImpairments(const Impairments &imp);
+
+    /** @brief Get hardware-like impairments. */
+    Impairments getImpairments(void);
+
     /** @brief Receiver noise power per complex sample (dB, unit-power full scale) */
     double getNoisePower(void)
     {
@@ -306,6 +347,8 @@ protected:
     int64_t rendered_upto_;
     bool streaming_;
     std::map<uint8_t, Link> links_;
+    Impairments impairments_;
+    std::vector<std::complex<float>> tx_scaled_;
     std::map<uint8_t, std::pair<uint32_t, int64_t>> jitter_;  ///< Last TX group and its jitter, per source
     double noise_db_;
     float noise_std_;
@@ -367,6 +410,9 @@ protected:
     void sendBurst(int64_t start, const std::complex<float> *x, size_t n);
 
     void render(int64_t n0, size_t n, std::complex<float> *out);
+
+    /** @brief RX gain, IQ imbalance, DC offset and ADC clipping (rx_mutex_ held). */
+    void applyReceiverImpairments(std::complex<float> *y, size_t n);
 
     void waitUntil(const uhd::time_spec_t &t);
 };

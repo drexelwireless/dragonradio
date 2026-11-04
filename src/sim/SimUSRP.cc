@@ -200,6 +200,81 @@ Link SimUSRP::getLink(uint8_t src)
     return it == links_.end() ? Link() : it->second;
 }
 
+void SimUSRP::setImpairments(const Impairments &imp)
+{
+    std::scoped_lock lock(tx_mutex_, rx_mutex_);
+
+    impairments_ = imp;
+}
+
+Impairments SimUSRP::getImpairments(void)
+{
+    std::scoped_lock lock(tx_mutex_, rx_mutex_);
+
+    return impairments_;
+}
+
+namespace {
+
+// Windowed-sinc fractional interpolator: 32 taps, Blackman window, 1024
+// phases (phase quantization at most 1/2048 sample).
+struct Interpolator {
+    static constexpr int kTaps = 32;
+    static constexpr int kPhases = 1024;
+    std::vector<float> table;
+
+    Interpolator() : table(static_cast<size_t>(kPhases + 1)*kTaps)
+    {
+        for (int p = 0; p <= kPhases; ++p) {
+            const double frac = static_cast<double>(p)/kPhases;
+            double       sum = 0;
+
+            for (int k = 0; k < kTaps; ++k) {
+                // Tap k multiplies x[floor(t) - kTaps/2 + 1 + k].
+                const double tau = frac - (k - kTaps/2 + 1);
+                const double sinc = tau == 0 ? 1.0 : std::sin(M_PI*tau)/(M_PI*tau);
+                const double u = (tau + kTaps/2)/kTaps;   // window over [-kTaps/2, kTaps/2]
+                const double w = (u <= 0 || u >= 1) ? 0.0
+                    : 0.42 - 0.5*std::cos(2*M_PI*u) + 0.08*std::cos(4*M_PI*u);
+
+                table[p*kTaps + k] = static_cast<float>(sinc*w);
+                sum += sinc*w;
+            }
+            for (int k = 0; k < kTaps; ++k)
+                table[p*kTaps + k] = static_cast<float>(table[p*kTaps + k]/sum);
+        }
+    }
+};
+
+// y[k] = x(k * ratio), k = 0 .. floor((N - 1)/ratio); zero outside x.
+std::vector<std::complex<float>> resample(const std::vector<std::complex<float>> &x, double ratio)
+{
+    static const Interpolator interp;
+    constexpr int             T = Interpolator::kTaps;
+    const size_t              n = x.empty() ? 0 : static_cast<size_t>(std::floor((x.size() - 1)/ratio)) + 1;
+    std::vector<std::complex<float>> y(n);
+    const int64_t             len = static_cast<int64_t>(x.size());
+
+    for (size_t k = 0; k < n; ++k) {
+        const double  t = k*ratio;
+        const int64_t i = static_cast<int64_t>(std::floor(t));
+        const int     p = static_cast<int>(std::lround((t - i)*Interpolator::kPhases));
+        const float  *h = &interp.table[static_cast<size_t>(p)*T];
+        std::complex<float> acc(0.0f, 0.0f);
+
+        for (int j = 0; j < T; ++j) {
+            const int64_t m = i - T/2 + 1 + j;
+
+            if (m >= 0 && m < len)
+                acc += h[j]*x[m];
+        }
+        y[k] = acc;
+    }
+    return y;
+}
+
+}
+
 void SimUSRP::setNoisePower(double db)
 {
     std::lock_guard<std::mutex> lock(rx_mutex_);
@@ -229,6 +304,15 @@ void SimUSRP::sendBurst(int64_t start, const std::complex<float> *x, size_t n)
     hdr.nsamples = n;
     hdr.burst = tx_burst_count_++;
     hdr.group = tx_group_;
+
+    if (impairments_.gain_model && tx_gain_ != impairments_.tx_gain_ref_db) {
+        const float g = static_cast<float>(std::pow(10.0, (tx_gain_ - impairments_.tx_gain_ref_db)/20.0));
+
+        tx_scaled_.resize(n);
+        for (size_t i = 0; i < n; ++i)
+            tx_scaled_[i] = g*x[i];
+        x = tx_scaled_.data();
+    }
 
     struct iovec iov[2] = { { &hdr, sizeof(hdr) },
                             { const_cast<std::complex<float>*>(x), n*sizeof(std::complex<float>) } };
@@ -379,6 +463,9 @@ void SimUSRP::render(int64_t n0, size_t n, std::complex<float> *out)
                 }
             }
         }
+
+        if (impairments_.receiverActive())
+            applyReceiverImpairments(out, n);
     }
 
     // Retire bursts that end within this chunk.
@@ -391,6 +478,34 @@ void SimUSRP::render(int64_t n0, size_t n, std::complex<float> *out)
     }
 
     rendered_upto_ = std::max(rendered_upto_, n1);
+}
+
+void SimUSRP::applyReceiverImpairments(std::complex<float> *y, size_t n)
+{
+    const Impairments &imp = impairments_;
+    const float g = imp.gain_model ? static_cast<float>(std::pow(10.0, (rx_gain_ - imp.rx_gain_ref_db)/20.0)) : 1.0f;
+    // IQ imbalance: I' = I, Q' = a (sin(phi) I + cos(phi) Q).
+    const float a = static_cast<float>(std::pow(10.0, imp.iq_amp_db/20.0));
+    const float phi = static_cast<float>(imp.iq_phase_deg*M_PI/180.0);
+    const float qi = a*std::sin(phi), qq = a*std::cos(phi);
+    const bool  iq = imp.iq_amp_db != 0 || imp.iq_phase_deg != 0;
+    const float fs = static_cast<float>(imp.adc_full_scale);
+    uint64_t    clipped = 0;
+
+    for (size_t k = 0; k < n; ++k) {
+        float i = g*y[k].real(), q = g*y[k].imag();
+
+        if (iq)
+            q = qi*i + qq*q;
+        i += imp.dc.real();
+        q += imp.dc.imag();
+        if (fs > 0) {
+            if (std::abs(i) > fs) { i = std::copysign(fs, i); ++clipped; }
+            if (std::abs(q) > fs) { q = std::copysign(fs, q); ++clipped; }
+        }
+        y[k] = std::complex<float>(i, q);
+    }
+    stats_.rx_clipped += clipped;
 }
 
 bool SimUSRP::burstRX(MonoClock::time_point t_start, size_t nsamps, IQBuf& buf)
@@ -563,7 +678,10 @@ void SimUSRP::reader(void)
         b.fs = hdr.fs;
         b.shift_hz = shift;
         b.gain = static_cast<float>(std::pow(10.0, link.gain_db/20.0));
-        b.x.assign(x.begin(), x.end());
+        if (link.sfo_ppm != 0.0)
+            b.x = resample(x, 1.0 + 1e-6*link.sfo_ppm);
+        else
+            b.x.assign(x.begin(), x.end());
 
         if (b.end() <= rendered_upto_) {
             stats_.rx_late++;

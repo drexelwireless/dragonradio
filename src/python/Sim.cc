@@ -3,6 +3,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <pybind11/complex.h>
+
 #include "sim/RxRecorder.hh"
 #include "sim/SimTraffic.hh"
 #include "sim/SimUSRP.hh"
@@ -23,10 +25,12 @@ void exportSim(py::module &m)
              py::arg("seed") = 1,
              "Simulated radio device connected to an air relay")
         .def("setLink",
-            [](SimUSRP &self, uint8_t src, double gain_db, double cfo_hz, int64_t delay, double erasure, int64_t jitter)
+            [](SimUSRP &self, uint8_t src, double gain_db, double cfo_hz, int64_t delay, double erasure, int64_t jitter,
+               double sfo_ppm)
             {
                 sim::Link link;
 
+                link.sfo_ppm = sfo_ppm;
                 link.gain_db = gain_db;
                 link.cfo_hz = cfo_hz;
                 link.delay = delay;
@@ -40,6 +44,7 @@ void exportSim(py::module &m)
             py::arg("delay") = 0,
             py::arg("erasure") = 0.0,
             py::arg("jitter") = 0,
+            py::arg("sfo_ppm") = 0.0,
             "Set the directed link model from node src to this node")
         .def("getLink",
             [](SimUSRP &self, uint8_t src)
@@ -52,6 +57,45 @@ void exportSim(py::module &m)
                 d["delay"] = link.delay;
                 d["erasure"] = link.erasure;
                 d["jitter"] = link.jitter;
+                d["sfo_ppm"] = link.sfo_ppm;
+                return d;
+            })
+        .def("setImpairments",
+            [](SimUSRP &self, bool gain_model, double tx_gain_ref_db, double rx_gain_ref_db, double adc_full_scale,
+               double iq_amp_db, double iq_phase_deg, std::complex<float> dc_offset)
+            {
+                sim::Impairments imp;
+
+                imp.gain_model = gain_model;
+                imp.tx_gain_ref_db = tx_gain_ref_db;
+                imp.rx_gain_ref_db = rx_gain_ref_db;
+                imp.adc_full_scale = adc_full_scale;
+                imp.iq_amp_db = iq_amp_db;
+                imp.iq_phase_deg = iq_phase_deg;
+                imp.dc = dc_offset;
+                self.setImpairments(imp);
+            },
+            py::arg("gain_model") = false,
+            py::arg("tx_gain_ref_db") = 0.0,
+            py::arg("rx_gain_ref_db") = 0.0,
+            py::arg("adc_full_scale") = 0.0,
+            py::arg("iq_amp_db") = 0.0,
+            py::arg("iq_phase_deg") = 0.0,
+            py::arg("dc_offset") = std::complex<float>(0.0f, 0.0f),
+            "Set hardware-like gain, IQ imbalance, DC offset and ADC clipping (all off by default)")
+        .def_property_readonly("impairments",
+            [](SimUSRP &self)
+            {
+                sim::Impairments imp = self.getImpairments();
+                py::dict         d;
+
+                d["gain_model"] = imp.gain_model;
+                d["tx_gain_ref_db"] = imp.tx_gain_ref_db;
+                d["rx_gain_ref_db"] = imp.rx_gain_ref_db;
+                d["adc_full_scale"] = imp.adc_full_scale;
+                d["iq_amp_db"] = imp.iq_amp_db;
+                d["iq_phase_deg"] = imp.iq_phase_deg;
+                d["dc_offset"] = imp.dc;
                 return d;
             })
         .def_property("noise_power",
@@ -78,6 +122,7 @@ void exportSim(py::module &m)
                 d["rx_overflows"] = s.rx_overflows;
                 d["rx_overflow_samples"] = s.rx_overflow_samples;
                 d["rx_streams"] = s.rx_streams;
+                d["rx_clipped"] = s.rx_clipped;
                 return d;
             })
         ;

@@ -201,6 +201,13 @@ class Radio(dragonradio.tasks.TaskManager):
                                 config.sim_rx_latency,
                                 seed)
             self.usrp.noise_power = config.sim_noise_db
+            tx_ref, rx_ref = config.sim_gain_ref if config.sim_gain_ref else (0.0, 0.0)
+            self.usrp.setImpairments(gain_model=config.sim_gain_ref is not None,
+                                     tx_gain_ref_db=tx_ref, rx_gain_ref_db=rx_ref,
+                                     adc_full_scale=config.sim_adc_full_scale,
+                                     iq_amp_db=config.sim_iq_imbalance[0],
+                                     iq_phase_deg=config.sim_iq_imbalance[1],
+                                     dc_offset=config.sim_dc_offset)
             self.usrp.rx_max_samps_factor = config.rx_max_samps_factor
             self.usrp.tx_max_samps_factor = config.tx_max_samps_factor
             return

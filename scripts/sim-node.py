@@ -36,14 +36,24 @@ def parse_flow(s):
 
 
 def parse_link(s):
-    """SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER]]]], the link from SRC to this node"""
+    """SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER[:SFO_PPM]]]]], the link from SRC to this node"""
     parts = s.split(':')
-    if not 2 <= len(parts) <= 6:
-        raise ValueError(f'bad link {s!r}; expected SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER]]]]')
-    vals = [int(parts[0]), float(parts[1]), 0.0, 0, 0.0, 0]
+    if not 2 <= len(parts) <= 7:
+        raise ValueError(f'bad link {s!r}; expected SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER[:SFO_PPM]]]]]')
+    vals = [int(parts[0]), float(parts[1]), 0.0, 0, 0.0, 0, 0.0]
     for i, p in enumerate(parts[2:], start=2):
         vals[i] = int(p) if i in (3, 5) else float(p)
     return tuple(vals)
+
+
+def parse_link_ppm(s):
+    """SRC:PPM, one oscillator offset of SRC relative to this node: carrier
+    offset PPM * 1e-6 * frequency and sample clock offset PPM (a USRP derives
+    its LO and ADC clocks from the same reference)"""
+    src, sep, ppm = s.partition(':')
+    if not sep:
+        raise ValueError(f'bad --link-ppm {s!r}; expected SRC:PPM')
+    return int(src), float(ppm)
 
 
 def parse_mandate(s):
@@ -128,8 +138,14 @@ async def experiment(radio, config):
         # real tap interface carries whatever the node's applications send
         # (scripts/sim-netapp.py in the node's network namespace).
         traffic = radio.tuntap if config.sim_traffic else None
-        for (src, gain_db, cfo_hz, delay, erasure, jitter) in config.links:
-            radio.usrp.setLink(src, gain_db, cfo_hz, delay, erasure, jitter)
+        links = {l[0]: list(l) for l in config.links}
+        for (src, ppm) in config.link_ppm:
+            l = links.setdefault(src, [src, 0.0, 0.0, 0, 0.0, 0, 0.0])
+            l[2] += ppm*1e-6*radio.frequency
+            l[6] += ppm
+        for (src, gain_db, cfo_hz, delay, erasure, jitter, sfo_ppm) in links.values():
+            radio.usrp.setLink(src, gain_db, cfo_hz, delay, erasure, jitter, sfo_ppm)
+        applied_links = [radio.usrp.getLink(src) | {'src': src} for src in links]
 
         # Latency mandates, installed as the collaboration controller does:
         # flow performance tracking always, the mandate queue if selected
@@ -226,6 +242,12 @@ async def experiment(radio, config):
                                  if traffic and not traffic.detail else None),
             'snapshot_mono': snapshot_mono,
             'links': [list(l) for l in config.links],
+            'link_ppm': [list(l) for l in config.link_ppm],
+            'applied_links': applied_links,
+            'frequency': radio.frequency,
+            'impairments': ({k: [v.real, v.imag] if isinstance(v, complex) else v
+                             for k, v in radio.usrp.impairments.items()}
+                            if hasattr(radio.usrp, 'impairments') else None),
             'mandates': [list(m) for m in config.mandates],
             'schedules': schedule_log,
             'queue': config.queue,
@@ -249,7 +271,9 @@ def main():
     exp.add_argument('--flow', action='append', type=parse_flow, dest='flows', default=[],
                      metavar='DEST:PORT:RATE:SIZE[:COUNT]', help='add a UDP flow from this node')
     exp.add_argument('--link', action='append', type=parse_link, dest='links', default=[],
-                     metavar='SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER]]]]', help='set the link from SRC to this node')
+                     metavar='SRC:GAIN_DB[:CFO_HZ[:DELAY[:ERASURE[:JITTER[:SFO_PPM]]]]]', help='set the link from SRC to this node')
+    exp.add_argument('--link-ppm', action='append', type=parse_link_ppm, dest='link_ppm', default=[],
+                     metavar='SRC:PPM', help='oscillator offset of SRC: carrier and sample clock (added to --link)')
     exp.add_argument('--mandate', action='append', type=parse_mandate, dest='mandates', default=[],
                      metavar='PORT:MAX_LATENCY_S', help='latency mandate for the flow to PORT')
     exp.add_argument('--schedule-at', action='append', type=parse_schedule, dest='schedules', default=[],
